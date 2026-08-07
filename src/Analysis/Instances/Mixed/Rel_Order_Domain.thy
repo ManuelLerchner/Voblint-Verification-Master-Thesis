@@ -179,7 +179,7 @@ fun forget_relc :: "vname \<Rightarrow> relc \<Rightarrow> relc" where
   "forget_relc x Bot = Bot"
 | "forget_relc x (RelC ps) = RelC {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
 
-lemma forget_relc_sound:
+lemma forget_relc_sound[intro]:
   assumes "s \<in> gamma_rel d"
   shows "s(x := v) \<in> gamma_rel (forget_relc x d)"
   using assms by (cases d) auto
@@ -195,7 +195,7 @@ definition assume_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
              Less (V x) (V y) \<Rightarrow> RelC (insert (x, y) ps)
            | _ \<Rightarrow> RelC ps))"
 
-lemma assume_step_sound:
+lemma assume_step_sound[intro]:
   assumes "s \<in> gamma_rel d" "bval b s"
   shows "s \<in> gamma_rel (assume_step b d)"
 proof (cases d)
@@ -247,7 +247,7 @@ definition assume_not_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
              Less (V x) (V y) \<Rightarrow> RelC (insert (y, x) ps)
            | _ \<Rightarrow> RelC ps))"
 
-lemma assume_not_step_sound:
+lemma assume_not_step_sound[intro]:
   assumes "s \<in> gamma_rel d" "\<not> bval b s"
   shows "s \<in> gamma_rel (assume_not_step b d)"
 proof (cases d)
@@ -329,14 +329,25 @@ definition rel_order_spec :: "(relc, relc) dg_spec" where
      dgs_combine_assign = dgs_combine_assign_rel
    \<rparr>"
 
+named_theorems rel_order_simps
+
+declare
+  dgs_assume_not_rel_def [rel_order_simps]
+  dgs_nop_rel_def        [rel_order_simps]
+  rel_order_spec_def     [rel_order_simps]
+  gammaDG_rel_def        [rel_order_simps]
+  dgs_assume_rel_def     [rel_order_simps]
+  dgs_assign_rel_def     [rel_order_simps]
+  dgs_random_rel_def     [rel_order_simps]
+
 subsection \<open>Per-edge soundness\<close>
 
-lemma dgs_nop_rel_sound:
+lemma dgs_nop_rel_sound[intro]:
   "edge_collect EA_Nop (gammaDG_rel d g) \<subseteq>
      (case dgs_nop_rel d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   unfolding dgs_nop_rel_def by simp
 
-lemma dgs_assign_rel_sound:
+lemma dgs_assign_rel_sound[intro]:
   "edge_collect (EA_Assign x e) (gammaDG_rel d g) \<subseteq>
      (case dgs_assign_rel x e d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
@@ -349,7 +360,7 @@ proof -
     unfolding dgs_assign_rel_def gammaDG_rel_def by simp
 qed
 
-lemma dgs_random_rel_sound:
+lemma dgs_random_rel_sound[intro]:
   "edge_collect (EA_Random x) (gammaDG_rel d g) \<subseteq>
      (case dgs_random_rel x d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
@@ -362,7 +373,7 @@ proof -
     unfolding dgs_random_rel_def gammaDG_rel_def by simp
 qed
 
-lemma dgs_assume_rel_sound:
+lemma dgs_assume_rel_sound[intro]:
   "edge_collect (EA_Assume b) (gammaDG_rel d g) \<subseteq>
      (case dgs_assume_rel b d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
@@ -375,7 +386,7 @@ proof -
     unfolding dgs_assume_rel_def gammaDG_rel_def by simp
 qed
 
-lemma dgs_assume_not_rel_sound:
+lemma dgs_assume_not_rel_sound[intro]:
   "edge_collect (EA_AssumeNot b) (gammaDG_rel d g) \<subseteq>
      (case dgs_assume_not_rel b d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
@@ -388,7 +399,7 @@ proof -
     unfolding dgs_assume_not_rel_def gammaDG_rel_def by simp
 qed
 
-lemma dgs_ret_rel_sound:
+lemma dgs_ret_rel_sound[intro]:
   "edge_collect (EA_Ret e p) (gammaDG_rel d g) \<subseteq>
      (case dg_spec_step rel_order_spec (EA_Ret e p) d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof (cases e)
@@ -410,31 +421,8 @@ qed
 lemma step_sound_rel:
   "edge_collect a (gammaDG_rel d g) \<subseteq>
      (case dg_spec_step rel_order_spec a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-proof (cases a)
-  case EA_Nop
-  then show ?thesis
-    using dgs_nop_rel_sound[of d g] by (simp add: rel_order_spec_def)
-next
-  case (EA_Assign x e)
-  then show ?thesis
-    using dgs_assign_rel_sound[of x e d g] by (simp add: rel_order_spec_def)
-next
-  case (EA_Random x)
-  then show ?thesis
-    using dgs_random_rel_sound[of x d g] by (simp add: rel_order_spec_def)
-next
-  case (EA_Assume b)
-  then show ?thesis
-    using dgs_assume_rel_sound[of b d g] by (simp add: rel_order_spec_def)
-next
-  case (EA_AssumeNot b)
-  then show ?thesis
-    using dgs_assume_not_rel_sound[of b d g] by (simp add: rel_order_spec_def)
-next
-  case (EA_Ret e p)
-  then show ?thesis
-    using dgs_ret_rel_sound[of e p d g] by (simp add: rel_order_spec_def)
-qed
+  apply (cases a)
+  by (auto simp add:rel_order_simps split:option.splits)
 
 subsection \<open>Call-entry and combine soundness -- havoc-based, both trivial via \<open>top_relc\<close>\<close>
 

@@ -220,6 +220,7 @@ syntax
   "_imp2_assign" :: "id \<Rightarrow> imp2_aexp \<Rightarrow> imp2_stmt"            ("_ := _"                 [900, 61] 61)
   "_imp2_random" :: "id \<Rightarrow> imp2_stmt"                         ("_ := random'(')"        [900] 61)
   "_imp2_return" :: "imp2_aexp \<Rightarrow> imp2_stmt"                  ("return _"               61)
+  "_imp2_check"  :: "imp2_bexp \<Rightarrow> imp2_stmt"                  ("'_'_voblint'_check '( _ ')" [0] 61)
   "_imp2_if"     :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"
                                                                ("if '( _ ') { _ } else { _ }" [0, 61, 61] 61)
   "_imp2_while"  :: "imp2_bexp \<Rightarrow> imp2_stmts \<Rightarrow> imp2_stmt"      ("while '( _ ') { _ }"    [0, 61] 61)
@@ -265,6 +266,7 @@ syntax
   "_imp2_false"  :: imp2_bexp                                 ("false")
   "_imp2_less"   :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_bexp"   ("_ < _"                  [50, 51] 50)
   "_imp2_eq"     :: "imp2_aexp \<Rightarrow> imp2_aexp \<Rightarrow> imp2_bexp"   ("_ == _"                 [50, 51] 50)
+  "_imp2_bparen" :: "imp2_bexp \<Rightarrow> imp2_bexp"                ("'(_')"                  [0] 1000)             
   "_imp2_not"    :: "imp2_bexp \<Rightarrow> imp2_bexp"                ("! _"                    [90] 90)
   "_imp2_and"    :: "imp2_bexp \<Rightarrow> imp2_bexp \<Rightarrow> imp2_bexp"   ("_ && _"                 [35, 36] 35)
   "_imp2_or"     :: "imp2_bexp \<Rightarrow> imp2_bexp \<Rightarrow> imp2_bexp"   ("_ || _"                 [30, 31] 30)
@@ -279,6 +281,7 @@ parse_translation \<open>
     val c_Call   = "VIMP_Proc.com.Call"
     val c_Return = "VIMP_Proc.com.Return"
     val c_Random = "VIMP_Proc.com.Random"
+    val c_Check  = "VIMP_Proc.com.Check"
     val c_proc_decl_of = "VIMP_Proc.proc_decl_of"
 
     val c_None    = "Option.option.None"
@@ -374,6 +377,7 @@ parse_translation \<open>
        | (Const ("_imp2_false", _), []) => K c_Bc $ @{term False}
        | (Const ("_imp2_less", _), [a, b]) => K c_Less $ aexp_tr a $ aexp_tr b
        | (Const ("_imp2_eq", _), [a, b]) => K c_Eq   $ aexp_tr a $ aexp_tr b
+       | (Const ("_imp2_bparen", _), [b]) => bexp_tr b
        | (Const ("_imp2_not", _), [b]) => K c_Not $ bexp_tr b
        | (Const ("_imp2_and", _), [a, b]) => K c_And $ bexp_tr a $ bexp_tr b
        | (Const ("_imp2_or", _), [a, b]) => K c_Or $ bexp_tr a $ bexp_tr b
@@ -399,6 +403,7 @@ parse_translation \<open>
           K c_Assign $ HOLogic.mk_string x $ aexp_tr a
       | stmt_tr (Const ("_imp2_random", _) $ Free (x, _)) = K c_Random $ HOLogic.mk_string x
       | stmt_tr (Const ("_imp2_return", _) $ e) = K c_Return $ (K c_Some $ aexp_tr e)
+      | stmt_tr (Const ("_imp2_check", _) $ b) = K c_Check $ bexp_tr b
       | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
@@ -594,5 +599,7 @@ value "(program { void get() { return 42 } void main() { r := get() } } :: imp_p
 (* proc-table entry: formals + result wired through *)
 value "the (prog_table (program { void inc(x) { return x + 1 } void main() { r := inc(5) } }) ''inc'')"
 
+(* boolean negation*)
+value "imp \<lbrakk> __voblint_check(!(x == 0)) \<rbrakk>"
 
 end

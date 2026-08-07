@@ -228,7 +228,9 @@ proof -
              flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some
+             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
+             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
+             action_reduces.check[OF ivl_tf_st_for_reduces]
              TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
 qed
 
@@ -333,7 +335,8 @@ definition flagship_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog))
+      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog)),
+      node_annotation = (\<lambda>_. None)
     \<rparr>"
 
 definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where

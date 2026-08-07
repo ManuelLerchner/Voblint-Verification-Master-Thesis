@@ -82,7 +82,7 @@ abbreviation Sabs :: "(sign abs_state, sign abs_state) dg_spec" where
 
 lemmas sign_Hstep =
   unit_dg_Hstep_for[OF sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    sign_tf_st_for_ret_none sign_tf_st_for_ret_some]
+    sign_tf_st_for_reduces]
 lemmas sign_Henter = unit_dg_Henter_for[OF sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 lemmas sign_Hcomb = unit_dg_Hcomb_for
 

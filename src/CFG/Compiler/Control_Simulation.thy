@@ -120,6 +120,59 @@ next
   then show ?case using jw E by blast
 qed simp_all
 
+text \<open>A located \<^const>\<open>VIMP_Proc.com.Check\<close> sits on the compiled \<^term>\<open>EA_Check cnd\<close> edge, and
+  its source step re-locates the residual \<^const>\<open>SKIP\<close> at that edge's target, exactly as
+  \<open>control_at_assign_edge\<close> and \<open>control_at_random_edge\<close>. The check's own condition is named
+  \<open>cnd\<close>, not \<open>b\<close>: the \<open>IfLeft\<close>/\<open>IfRight\<close> induction cases below bind their own \<open>b\<close> for the
+  unrelated if-guard, and \<open>b\<close> here would be silently shadowed inside those cases.\<close>
+lemma control_at_check_edge:
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = VIMP_Proc.com.Check cnd \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
+   \<exists>j w. v = Statement j \<and> (Statement j, EA_Check cnd, w) \<in> E
+       \<and> control_at \<Pi> p c0 k n SKIP w"
+proof (induction arbitrary: n' en E K rule: control_at.induct)
+  case (Check b' k n0)
+  then show ?case by (auto intro: control_at.CheckDone)
+next
+  case (SeqRight c1 c2 k n0 r v)
+  from SeqRight.prems(2) obtain n2 E2 K2 n1 E1 K1 where
+    c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
+    and E: "E = E1 \<union> E2"
+    by (rule compile_SeqE)
+  from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
+    jw: "v = Statement j" "(Statement j, EA_Check cnd, w) \<in> E2"
+        "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
+  have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
+    using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
+
+  then show ?case using jw E by blast
+next
+  case (IfLeft c1 k n0 r v b c2)
+  from IfLeft.prems(2) obtain n1 E1 K1 n2 E2 K2 where
+    c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
+    and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
+                 (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
+    by (rule compile_IfE)
+  from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
+    jw: "v = Statement j" "(Statement j, EA_Check cnd, w) \<in> E1"
+        "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
+  then show ?case using jw E by blast
+next
+  case (IfRight c2 k n0 c1 r v b)
+  from IfRight.prems(2) obtain n1 E1 K1 n2 E2 K2 where
+    c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
+            = (n2, Statement (Suc n0 + csize c1), E2, K2)"
+    and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
+                 (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
+    by (rule compile_IfE)
+  from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
+    jw: "v = Statement j" "(Statement j, EA_Check cnd, w) \<in> E2"
+        "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
+  then show ?case using jw E by blast
+qed simp_all
+
 text \<open>A located call sits on the compiled \<^term>\<open>CallEdge\<close> into the callee entry, and its source
   step re-locates \<^const>\<open>SKIP\<close> at the call's continuation node.\<close>
 lemma control_at_call_edge:
@@ -459,6 +512,7 @@ inductive intra_step ::
   "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
   IAssign: "intra_step \<Pi> (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
 | IRandom: "intra_step \<Pi> (Random x, s, frs) (SKIP, s(x := v), frs)"
+| ICheck:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) (SKIP, s, frs)"
 | ISeq1:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | ISeq2:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
             intra_step \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs)"
@@ -469,6 +523,7 @@ inductive intra_step ::
 inductive_cases intra_SkipE:   "intra_step \<Pi> (SKIP, s, frs) y"
 inductive_cases intra_AssignE: "intra_step \<Pi> (Assign x a, s, frs) y"
 inductive_cases intra_RandomE: "intra_step \<Pi> (Random x, s, frs) y"
+inductive_cases intra_CheckE:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) y"
 inductive_cases intra_SeqE:    "intra_step \<Pi> (Seq c1 c2, s, frs) y"
 inductive_cases intra_IfE:     "intra_step \<Pi> (If b c1 c2, s, frs) y"
 inductive_cases intra_WhileE:  "intra_step \<Pi> (While b c, s, frs) y"
@@ -542,6 +597,24 @@ next
   then show ?case using out(1,3) jw(3) by auto
 next
   case (RandomDone x k n0) then show ?case by (blast elim: intra_SkipE)
+next
+  case (Check b k n0)
+  from Check.prems(1) have out: "c' = SKIP" "s' = s" "frs' = frs"
+    by (auto elim: intra_CheckE)
+  have ca: "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 (VIMP_Proc.com.Check b) (Statement n0)"
+    by (rule control_at.Check)
+  from control_at_check_edge[OF ca refl Check.prems(2)] obtain j w where
+    jw: "Statement n0 = Statement j" "(Statement j, EA_Check b, w) \<in> E"
+        "control_at \<Pi> p (VIMP_Proc.com.Check b) k n0 SKIP w" by blast
+  have "(Statement j, EA_Check b, w) \<in> intra g"
+    using jw(2) Check.prems(3) by blast
+  from cstep_check[OF this]
+  have "cstep source_global g (Statement j, s, stk) (w, s, stk)" .
+  then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
+    using jw(1) out(2) by (simp add: cstep_star_single)
+  then show ?case using out(1,3) jw(3) by auto
+next
+  case (CheckDone b k n0) then show ?case by (blast elim: intra_SkipE)
 next
   case (SeqLeft c1 n0 r v c2 k)
   from intra_Seq_cases[OF SeqLeft.prems(1)] consider
@@ -877,6 +950,11 @@ lemma seq_after_eq_Assign_iff [simp]:
 lemma seq_after_eq_Random_iff [simp]:
   "(seq_after c afters = Random x) = (c = Random x \<and> afters = [])"
   "(Random x = seq_after c afters) = (c = Random x \<and> afters = [])"
+  by (induction afters arbitrary: c; auto)+
+
+lemma seq_after_eq_Check_iff [simp]:
+  "(seq_after c afters = VIMP_Proc.com.Check b) = (c = VIMP_Proc.com.Check b \<and> afters = [])"
+  "(VIMP_Proc.com.Check b = seq_after c afters) = (c = VIMP_Proc.com.Check b \<and> afters = [])"
   by (induction afters arbitrary: c; auto)+
 
 lemma seq_after_eq_If_iff [simp]:
@@ -1390,6 +1468,7 @@ fun ret_guarded :: "bool \<Rightarrow> com \<Rightarrow> bool" where
   "ret_guarded rok SKIP = True"
 | "ret_guarded rok (Assign x a) = True"
 | "ret_guarded rok (Random x) = True"
+| "ret_guarded rok (VIMP_Proc.com.Check b) = True"
 | "ret_guarded rok (Seq c1 c2) =
      (if c2 = Restore then ret_guarded True c1
       else ret_guarded rok c1 \<and> ret_guarded rok c2)"
@@ -1545,6 +1624,8 @@ next
   case Assign  from Assign.prems(1) show ?case by simp
 next
   case Random  from Random.prems(1) show ?case by simp
+next
+  case Check   from Check.prems(1)  show ?case by simp
 next
   case If      from If.prems(1)     show ?case by simp
 next

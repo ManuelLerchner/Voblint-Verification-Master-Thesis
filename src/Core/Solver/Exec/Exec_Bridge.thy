@@ -135,6 +135,7 @@ where
 | "apply_etf_st etf (EA_AssumeNot b) u = etf_st_assume_not etf b u"
 | "apply_etf_st etf (EA_Ret e p) u =
      (case e of None \<Rightarrow> etf_st_nop etf u | Some a \<Rightarrow> etf_st_assign etf ret_var a u)"
+| "apply_etf_st etf (EA_Check cnd) u = etf_st_nop etf u"
 
 fun etf_combine_st ::
   "('g, 'c) effectful_st_transfer \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
@@ -252,18 +253,19 @@ where
           keep_local publish_side \<rparr>"
 
 lemma apply_etf_st_unit_of_transfer_placed:
-  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-    and ret_some:
-      "\<And>a p. tf_st (EA_Ret (Some a) p) =
-        tf_st (EA_Assign ret_var a)"
+  assumes reduces: "action_reduces tf_st"
   shows
     "apply_etf_st
       (unit_etf_st_of_transfer_placed source_global owner_of locations_of
         keep_local publish_side tf_st enter_st) a u =
       unit_edge_tree_st_placed owner_of locations_of keep_local publish_side
         (tf_st a) u"
-  unfolding unit_etf_st_of_transfer_placed_def
-  by (cases a) (auto simp: ret_none ret_some split: option.splits)
+proof -
+  interpret action_reduces tf_st by (rule reduces)
+  show ?thesis
+    unfolding unit_etf_st_of_transfer_placed_def
+    by (cases a) (auto simp: ret_none ret_some check split: option.splits)
+qed
 
 lemma etf_st_enter_unit_of_transfer_placed:
   "etf_st_enter
@@ -494,11 +496,14 @@ where
   \<rparr>"
 
 lemma apply_etf_st_unit_of_transfer:
-  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-      and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  assumes reduces: "action_reduces tf_st"
   shows "apply_etf_st (unit_etf_st_of_transfer tf_st enter_st) a u = unit_edge_tree_st (tf_st a) u"
-  unfolding unit_etf_st_of_transfer_def
-  by (cases a) (simp_all add: ret_none ret_some split: option.splits)
+proof -
+  interpret action_reduces tf_st by (rule reduces)
+  show ?thesis
+    unfolding unit_etf_st_of_transfer_def
+    by (cases a) (simp_all add: ret_none ret_some check split: option.splits)
+qed
 
 lemma etf_combine_st_unit_of_transfer:
   "etf_combine_st (unit_etf_st_of_transfer tf_st enter_st) dst cc ex = unit_combine_tree_st dst cc ex"
@@ -513,10 +518,9 @@ lemma etf_st_enter_exists_unit_of_transfer:
   using etf_st_enter_unit_of_transfer by blast
 
 lemma apply_etf_st_exists_unit_of_transfer:
-  assumes ret_none: "\<And>p. tf_st (EA_Ret None p) = tf_st EA_Nop"
-      and ret_some: "\<And>a p. tf_st (EA_Ret (Some a) p) = tf_st (EA_Assign ret_var a)"
+  assumes reduces: "action_reduces tf_st"
   shows "\<exists>f. apply_etf_st (unit_etf_st_of_transfer tf_st enter_st) a u = unit_edge_tree_st f u"
-  using apply_etf_st_unit_of_transfer[OF ret_none ret_some] by blast
+  using apply_etf_st_unit_of_transfer[OF reduces] by blast
 
 lemma traverse_unit_edge_tree_st:
   "traverse_rhs (unit_edge_tree_st f u) \<sigma>_st =

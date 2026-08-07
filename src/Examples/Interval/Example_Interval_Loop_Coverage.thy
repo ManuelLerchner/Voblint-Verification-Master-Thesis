@@ -51,7 +51,8 @@ lemma loop_cfg_full:
           (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
           (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
        calls = {},
-       cfg_entry = FunctionEntry ''main'' \<rparr>"
+       cfg_entry = FunctionEntry ''main'',
+       checks = {} \<rparr>"
   by eval
 
 lemma loop_cfg_entry: "cfg_entry loop_cfg = FunctionEntry ''main''"

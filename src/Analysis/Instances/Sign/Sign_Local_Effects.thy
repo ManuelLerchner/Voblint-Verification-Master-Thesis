@@ -59,7 +59,7 @@ next
   then show ?case by (simp add: sup_fun_def)
 qed
 
-lemma assign_sign_local_edge_invariant:
+lemma assign_sign_local_edge_invariant [intro]:
   assumes gl: "\<not> is_global x" and ng: "\<not> aexp_mentions_global e"
   shows "local_edge_invariant (assign_sign x e)"
   unfolding local_edge_invariant_def assign_sign_def
@@ -360,45 +360,36 @@ next
   then have ng1: "\<not> aexp_mentions_global e1" and ng2: "\<not> aexp_mentions_global e2"
     by auto
   show ?case
-  proof (cases res)
-    case False
-    then show ?thesis
-      by (simp add: id_local_edge_invariant)
-  next
-    case True
-    show ?thesis
-      using True
-      unfolding local_edge_invariant_def
-    proof (intro allI impI)
-      fix su :: "sign abs_state"
-      fix g :: "sign abs_state"
-      assume lb: "local_bot_on_locals g"
-      let ?suL = "restrict_local su"
-      have av1: "aval_sign e1 (?suL \<squnion> g) = aval_sign e1 ?suL"
-        using aval_sign_restrict_local_bot[OF ng1 lb, of su] .
-      have av2: "aval_sign e2 (?suL \<squnion> g) = aval_sign e2 ?suL"
-        using aval_sign_restrict_local_bot[OF ng2 lb, of su] .
-      define a where "a = meet_sign (aval_sign e1 ?suL) (aval_sign e2 ?suL)"
-      have inv2: "afilter_sign e2 a (?suL \<squnion> g) =
-          restrict_local (afilter_sign e2 a ?suL) \<squnion> g"
-        using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng2, of a] lb] .
-      have s2_local: "restrict_local (afilter_sign e2 a ?suL) = afilter_sign e2 a ?suL"
-        using local_edge_invariant_local_result[OF afilter_sign_local_edge_invariant[OF ng2, of a], of su] .
-      have inv1: "afilter_sign e1 a
-            (restrict_local (afilter_sign e2 a ?suL) \<squnion> g) =
-          restrict_local (afilter_sign e1 a
-            (restrict_local (afilter_sign e2 a ?suL))) \<squnion> g"
-        using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng1, of a] lb] .
-      show "bfilter_sign (Eq e1 e2) res (?suL \<squnion> g) =
-            restrict_local (bfilter_sign (Eq e1 e2) res ?suL) \<squnion> g"
-        using True av1 av2 inv2 inv1 s2_local
-        unfolding a_def
-        by (simp add: Let_def)
-    qed
+    unfolding local_edge_invariant_def
+  proof (intro allI impI)
+    fix su :: "sign abs_state"
+    fix g :: "sign abs_state"
+    assume lb: "local_bot_on_locals g"
+    let ?suL = "restrict_local su"
+    have av1: "aval_sign e1 (?suL \<squnion> g) = aval_sign e1 ?suL"
+      using aval_sign_restrict_local_bot[OF ng1 lb, of su] .
+    have av2: "aval_sign e2 (?suL \<squnion> g) = aval_sign e2 ?suL"
+      using aval_sign_restrict_local_bot[OF ng2 lb, of su] .
+    define p where "p = inv_eq_sign res (aval_sign e1 ?suL) (aval_sign e2 ?suL)"
+    have inv2: "afilter_sign e2 (snd p) (?suL \<squnion> g) =
+        restrict_local (afilter_sign e2 (snd p) ?suL) \<squnion> g"
+      using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng2, of "snd p"] lb] .
+    have s2_local: "restrict_local (afilter_sign e2 (snd p) ?suL) = afilter_sign e2 (snd p) ?suL"
+      using local_edge_invariant_local_result[OF afilter_sign_local_edge_invariant[OF ng2, of "snd p"], of su] .
+    have inv1: "afilter_sign e1 (fst p)
+          (restrict_local (afilter_sign e2 (snd p) ?suL) \<squnion> g) =
+        restrict_local (afilter_sign e1 (fst p)
+          (restrict_local (afilter_sign e2 (snd p) ?suL))) \<squnion> g"
+      using local_edge_invariantD[OF afilter_sign_local_edge_invariant[OF ng1, of "fst p"] lb] .
+    show "bfilter_sign (Eq e1 e2) res (?suL \<squnion> g) =
+          restrict_local (bfilter_sign (Eq e1 e2) res ?suL) \<squnion> g"
+      using av1 av2 inv2 inv1 s2_local
+      unfolding p_def
+      by (simp add: Let_def case_prod_beta)
   qed
 qed
 
-lemma random_sign_local_edge_invariant:
+lemma random_sign_local_edge_invariant [intro]:
   assumes gl: "\<not> is_global x"
   shows "local_edge_invariant (random_sign x)"
   unfolding local_edge_invariant_def random_sign_def
@@ -425,12 +416,12 @@ proof (intro allI impI)
   qed
 qed
 
-lemma assume_sign_local_edge_invariant:
+lemma assume_sign_local_edge_invariant [intro]:
   assumes ng: "\<not> bexp_mentions_global b"
   shows "local_edge_invariant (assume_sign b)"
   unfolding assume_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
 
-lemma assume_not_sign_local_edge_invariant:
+lemma assume_not_sign_local_edge_invariant [intro]:
   assumes ng: "\<not> bexp_mentions_global b"
   shows "local_edge_invariant (assume_not_sign b)"
   unfolding assume_not_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
@@ -446,34 +437,24 @@ proof (cases a)
     by (auto intro: id_local_edge_invariant)
 next
   case (EA_Assign x e)
-  from loc \<open>a = EA_Assign x e\<close> have gl: "\<not> is_global x"
-    by (simp add: local_edge_action.simps)
-  from loc \<open>a = EA_Assign x e\<close> have ng: "\<not> aexp_mentions_global e"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    using assign_sign_local_edge_invariant[OF gl ng]
-    unfolding \<open>a = EA_Assign x e\<close> apply_tf.simps sign_tf_def by simp
+    using loc unfolding \<open>a = EA_Assign x e\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_Random x)
-  from loc \<open>a = EA_Random x\<close> have gl: "\<not> is_global x"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    using random_sign_local_edge_invariant[OF gl]
-    unfolding \<open>a = EA_Random x\<close> apply_tf.simps sign_tf_def by simp
+    using loc unfolding \<open>a = EA_Random x\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_Assume b)
-  from loc \<open>a = EA_Assume b\<close> have ng: "\<not> bexp_mentions_global b"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    unfolding \<open>a = EA_Assume b\<close> apply_tf.simps
-    by (simp add: sign_tf_def; rule assume_sign_local_edge_invariant)
+    using loc unfolding \<open>a = EA_Assume b\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_AssumeNot b)
-  from loc \<open>a = EA_AssumeNot b\<close> have ng: "\<not> bexp_mentions_global b"
-    by (simp add: local_edge_action.simps)
   then show ?thesis
-    unfolding \<open>a = EA_AssumeNot b\<close> apply_tf.simps
-    by (simp add: sign_tf_def; rule assume_not_sign_local_edge_invariant)
+    using loc unfolding \<open>a = EA_AssumeNot b\<close> apply_tf.simps sign_tf_def
+    by (auto simp: local_edge_action.simps)
 next
   case (EA_Ret e p)
   show ?thesis
@@ -483,14 +464,15 @@ next
       unfolding EA_Ret apply_tf.simps by (auto intro: id_local_edge_invariant)
   next
     case (Some e)
-    have gl: "\<not> is_global ret_var"
-      using loc unfolding EA_Ret Some by simp
-    have ng: "\<not> aexp_mentions_global e"
-      using loc unfolding EA_Ret Some by simp
-    show ?thesis
-      unfolding EA_Ret Some apply_tf.simps sign_tf_def
-      by (simp add: sign_tf_def; rule assign_sign_local_edge_invariant[OF gl ng])
+    then show ?thesis
+      using loc unfolding EA_Ret Some apply_tf.simps sign_tf_def
+      by (auto simp: local_edge_action.simps)
   qed
+next
+  case (EA_Check c)
+  then show ?thesis
+    unfolding \<open>a = EA_Check c\<close> apply_tf_EA_Check apply_tf.simps
+    by (auto intro: id_local_edge_invariant)
 qed
 
 end

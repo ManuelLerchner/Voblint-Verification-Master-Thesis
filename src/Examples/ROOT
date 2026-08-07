@@ -23,6 +23,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
+    Example_Checks_Store_Only
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
@@ -33,6 +35,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Interval *)
     Exec_Ivl_Run
+    (* Interval analogue of G-A1: checks_proven/checks_proven_sound, store-only. *)
+    Example_Interval_Checks_Store_Only
     Example_Interval_Placement
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
@@ -52,6 +56,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Parity *)
     Example_Parity_DG_Flagship
+    Example_Parity_Checks_Store_Only
 
     (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo

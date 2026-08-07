@@ -13,6 +13,9 @@ session Voblint_Core in "." = "Voblint_CFG" +
     "Solver/Exec"
   theories
     Abstract_Domain
+    (* Generic numeric-query interface and its derivations from a
+       backward_domain instance's own narrowing operators. *)
+    Abstract_Numeric_Queries
     Exec_St
     Exec_Placement
     Exec_Backward
@@ -20,6 +23,12 @@ session Voblint_Core in "." = "Voblint_CFG" +
     CFG_Enumeration
     Constraint_System
     Constraint_System_Sound
+    (* Ordinary __goblint_assert checks: store-only checks, with no
+       ghost-domain or additional trace-projection dependency. *)
+    Checks
+    (* Domain-generic sound (incomplete) decision procedure discharging
+       compiled checks, parametric in an arbitrary abstract-state type. *)
+    Abstract_Checks
     LTR_Analysis_Sound
     TD_Side_CFG
     Strategy_Tree_Monad

@@ -160,15 +160,9 @@ next
     by (rule placement_node_coverage[OF coverage])
 qed
 
-lemma placement_ivl_tf_st_ret_none:
-  "ivl_tf_st_for (declared_global placement_prog) (EA_Ret None p) =
-    ivl_tf_st_for (declared_global placement_prog) EA_Nop"
-  by (rule ext) simp
-
-lemma placement_ivl_tf_st_ret_some:
-  "ivl_tf_st_for (declared_global placement_prog) (EA_Ret (Some a) p) =
-    ivl_tf_st_for (declared_global placement_prog) (EA_Assign ret_var a)"
-  by (rule ext) simp
+lemma placement_ivl_tf_st_reduces:
+  "action_reduces (ivl_tf_st_for (declared_global placement_prog))"
+  by unfold_locales (rule ext, simp)+
 
 lemma placement_factory_edge:
   "apply_etf_st placement_ivl_etf_st action node =
@@ -176,8 +170,7 @@ lemma placement_factory_edge:
       placement_keep_local placement_publish_side
       (ivl_tf_st_for (declared_global placement_prog) action) node"
   unfolding placement_ivl_etf_st_def
-  by (rule apply_etf_st_unit_of_transfer_placed[
-    OF placement_ivl_tf_st_ret_none placement_ivl_tf_st_ret_some])
+  by (rule apply_etf_st_unit_of_transfer_placed[OF placement_ivl_tf_st_reduces])
 
 lemma placement_factory_enter:
   "etf_st_enter placement_ivl_etf_st xs es node =

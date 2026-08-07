@@ -533,7 +533,8 @@ definition twice_cs_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = cfg_entry twice_cfg then ''main / root context''
         else owner @ '' / call site='' @ string_of_cfg_node ctx),
-      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main)
+      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main),
+      node_annotation = (\<lambda>_. None)
     \<rparr>"
 
 definition twice_cs_contexts_for_pp :: "pp \<Rightarrow> cfg_node list" where

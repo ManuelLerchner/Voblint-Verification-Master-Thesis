@@ -32,7 +32,8 @@ definition factorial_dot :: String.literal where
        (prog_table factorial_program)
        (prog_procs factorial_program)
        dot_main_name
-       (prog_main factorial_program)"
+       (prog_main factorial_program)
+       no_annotations"
 
 ML_val \<open>
   writeln (@{code factorial_dot})

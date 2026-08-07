@@ -20,7 +20,8 @@ definition demo_cfg :: cfg where
        calls =
          { (Statement 10, CallEdge None [] [], FunctionEntry dpf, Statement 99),
            (Statement 20, CallEdge None [] [], FunctionEntry dpf, Statement 99) },
-       cfg_entry = FunctionEntry dmain \<rparr>"
+       cfg_entry = FunctionEntry dmain,
+       checks = {} \<rparr>"
 
 lemmas demo_defs = demo_cfg_def dmain_def dpf_def
 
@@ -60,7 +61,8 @@ definition nest_cfg :: cfg where
        calls =
          { (FunctionEntry mn, CallEdge None [] [], FunctionEntry pf, Statement 100),
            (FunctionEntry pf, CallEdge None [] [], FunctionEntry pg, Statement 200) },
-       cfg_entry = FunctionEntry mn \<rparr>"
+       cfg_entry = FunctionEntry mn,
+       checks = {} \<rparr>"
 
 lemmas nest_defs = nest_cfg_def mn_def pf_def pg_def
 
@@ -141,7 +143,8 @@ definition mret_cfg :: cfg where
            (Statement 1,      EA_Ret None pf,    FunctionResult pf) },
        calls =
          { (FunctionEntry mn, CallEdge None [] [], FunctionEntry pf, Statement 100) },
-       cfg_entry = FunctionEntry mn \<rparr>"
+       cfg_entry = FunctionEntry mn,
+       checks = {} \<rparr>"
 
 lemmas mret_defs = mret_cfg_def mn_def pf_def bpos_def
 
@@ -241,7 +244,8 @@ definition rec_cfg :: cfg where
            (FunctionEntry pr, EA_Assume bpos,    Statement 1) },
        calls =
          { (Statement 1, CallEdge None [] [], FunctionEntry pr, Statement 200) },
-       cfg_entry = FunctionEntry pr \<rparr>"
+       cfg_entry = FunctionEntry pr,
+       checks = {} \<rparr>"
 
 lemmas rec_defs = rec_cfg_def pr_def bpos_def
 
@@ -353,7 +357,8 @@ definition flat_demo :: cfg where
   "flat_demo =
      \<lparr> intra = { (Statement 0, EA_Nop, Statement 1), (Statement 1, EA_Nop, Statement 2) },
        calls = {},
-       cfg_entry = Statement 0 \<rparr>"
+       cfg_entry = Statement 0,
+       checks = {} \<rparr>"
 
 lemma flat_demo_flat: "flat_cfg flat_demo"
   by (simp add: flat_cfg_def flat_demo_def)

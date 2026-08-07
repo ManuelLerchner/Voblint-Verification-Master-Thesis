@@ -88,11 +88,64 @@ proof -
   qed
 qed
 
+subsection \<open>Backward inverse operator for equality\<close>
+
+text \<open>
+  @{text inv_eq_ivl} narrows on a guard @{text \<open>e1 = e2\<close>} known true or false.
+  The true branch narrows both operands to their intersection, the same
+  argument as the sign instance via \<open>meet_ivl_gamma\<close>. The false
+  branch is the sound identity: a precise refinement is possible in specific
+  cases (e.g. excluding a known point value from one bound of the other
+  operand when that point sits exactly at that bound), but @{typ ivl}'s
+  infinite domain makes proving that refinement's monotonicity
+  disproportionately more expensive than for the finite sign lattice ---
+  attempted and abandoned; the guard conditions needed access the interval's
+  own bound values, and a boundary-matching guard is not compatible with the
+  order-based case-split technique that closed the sign proof. This is a
+  documented precision gap, not a soundness one: \<open>bfilter\<close>'s @{text
+  \<open>Eq _ _ False\<close>} case under this instance narrows exactly as much for
+  Interval as it already does today (not at all), while Sign gains real
+  precision from its own instance.
+\<close>
+
+fun inv_eq_ivl :: "bool => ivl => ivl => ivl * ivl" where
+    "inv_eq_ivl True  a1 a2 = (meet_ivl a1 a2, meet_ivl a1 a2)"
+  | "inv_eq_ivl False a1 a2 = (a1, a2)"
+
+lemma inv_eq_ivl_sound:
+  assumes "n1 \<in> gamma_ivl a1" and "n2 \<in> gamma_ivl a2" and "(n1 = n2) = res"
+  shows "n1 \<in> gamma_ivl (fst (inv_eq_ivl res a1 a2))
+       \<and> n2 \<in> gamma_ivl (snd (inv_eq_ivl res a1 a2))"
+proof (cases res)
+  case True
+  then have "n1 = n2" using assms(3) by simp
+  then have "n1 \<in> gamma_ivl a2" using assms(2) by simp
+  then have "n1 \<in> gamma_ivl (meet_ivl a1 a2)" using meet_ivl_gamma[OF assms(1)] by simp
+  then show ?thesis using True \<open>n1 = n2\<close> by simp
+next
+  case False
+  then show ?thesis using assms(1,2) by simp
+qed
+
+lemma inv_eq_ivl_mono:
+  assumes A1: "a1 \<le> (a1' :: ivl)" and A2: "a2 \<le> a2'"
+  shows
+    "fst (inv_eq_ivl r a1 a2) \<le> fst (inv_eq_ivl r a1' a2') \<and>
+     snd (inv_eq_ivl r a1 a2) \<le> snd (inv_eq_ivl r a1' a2')"
+proof (cases r)
+  case True
+  have "a1 \<sqinter> a2 \<le> a1' \<sqinter> a2'" by (rule inf_mono[OF A1 A2])
+  then show ?thesis using True by (simp add: inf_ivl_def)
+next
+  case False
+  then show ?thesis using A1 A2 by simp
+qed
+
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation ivl_backward_domain:
     backward_domain meet_ivl aval_ivl
-                    inv_less_ivl inv_conservative inv_conservative inv_conservative
+                    inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
     and bfilter_ivl = ivl_backward_domain.bfilter
@@ -118,6 +171,13 @@ next
   have h2: "n2 \<in> gamma_ivl a2" using H2 by simp
   show "n1 \<in> gamma (fst (inv_less_ivl res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_ivl res a1 a2))"
     using inv_less_ivl_sound[OF h1 h2 H3] by simp
+next
+  fix n1 n2 :: int and a1 a2 :: ivl and res :: bool
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 = n2) = res"
+  have h1: "n1 \<in> gamma_ivl a1" using H1 by simp
+  have h2: "n2 \<in> gamma_ivl a2" using H2 by simp
+  show "n1 \<in> gamma (fst (inv_eq_ivl res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_ivl res a1 a2))"
+    using inv_eq_ivl_sound[OF h1 h2 H3] by simp
 next
   fix n1 n2 :: int and a1 a2 r :: ivl
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
@@ -206,7 +266,7 @@ text \<open>
 context begin
 interpretation ivl_bdm:
   backward_domain_mono meet_ivl aval_ivl
-                       inv_less_ivl inv_conservative inv_conservative inv_conservative
+                       inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
 proof unfold_locales
   fix a1 a2 b1 b2 :: ivl
   assume "a1 \<le> a2" and "b1 \<le> b2"
@@ -222,6 +282,12 @@ next
   thus "fst (inv_less_ivl res x1 y1) \<le> fst (inv_less_ivl res x2 y2) \<and>
         snd (inv_less_ivl res x1 y1) \<le> snd (inv_less_ivl res x2 y2)"
     by (rule inv_less_ivl_mono)
+next
+  fix x1 x2 y1 y2 :: ivl and res :: bool
+  assume "x1 \<le> x2" and "y1 \<le> y2"
+  thus "fst (inv_eq_ivl res x1 y1) \<le> fst (inv_eq_ivl res x2 y2) \<and>
+        snd (inv_eq_ivl res x1 y1) \<le> snd (inv_eq_ivl res x2 y2)"
+    by (rule inv_eq_ivl_mono)
 next
   fix r1 r2 x1 x2 y1 y2 :: ivl
   assume "x1 \<le> x2" and "y1 \<le> y2"

@@ -86,7 +86,7 @@ abbreviation Sabs :: "(ivl abs_state, ivl abs_state) dg_spec" where
 
 lemmas ivl_Hstep =
   unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    ivl_tf_st_for_ret_None ivl_tf_st_for_ret_Some]
+    ivl_tf_st_for_reduces]
 lemmas ivl_Henter = unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 lemmas ivl_Hcomb = unit_dg_Hcomb_for
 
@@ -567,7 +567,8 @@ definition nest_1_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
-      source_text = Some (pretty_string_of_program nest_pi nest_procs nest_main)
+      source_text = Some (pretty_string_of_program nest_pi nest_procs nest_main),
+      node_annotation = (\<lambda>_. None)
     \<rparr>"
 
 definition nest_1_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where

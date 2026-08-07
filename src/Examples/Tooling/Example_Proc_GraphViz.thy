@@ -56,12 +56,14 @@ text \<open>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-             @{code proc_table_a} @{code procs_a} @{code dot_main_name} @{code prog_call_p})
+             @{code proc_table_a} @{code procs_a} @{code dot_main_name} @{code prog_call_p}
+             @{code no_annotations})
 \<close>
 
 ML_val \<open>
   writeln (@{code raw_cfg_dot_lit}
-             @{code proc_table_b} @{code procs_b} @{code dot_main_name} @{code prog_if_calls})
+             @{code proc_table_b} @{code procs_b} @{code dot_main_name} @{code prog_if_calls}
+             @{code no_annotations})
 \<close>
 
 end

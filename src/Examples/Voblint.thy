@@ -18,10 +18,15 @@ theory Voblint
     "Voblint_Core.Constraint_System_Sound"
     "Voblint_Core.TD_Side_CFG"
     "Voblint_Core.TD_Side_Eff_Cone_Lemmas"
+    "Voblint_Core.Abstract_Numeric_Queries"
+    "Voblint_Core.Abstract_Checks"
     "Voblint_Analysis.Sign_Domain"
     "Voblint_Analysis.Sign_Side_Soundness"
+    "Voblint_Analysis.Sign_Checks"
     "Voblint_Analysis.Interval_Domain"
     "Voblint_Analysis.Interval_Side_Soundness"
+    "Voblint_Analysis.Interval_Checks"
+    "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Core.DG_Framework"
     "Voblint_Core.DG_Soundness"
     "Voblint_Analysis.Sign_DG"
@@ -37,6 +42,9 @@ theory Voblint
     "Voblint_Analysis.Sign_Named_Global_Eff"
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    Example_Checks_Store_Only
+    Example_Interval_Checks_Store_Only
+    Example_Parity_Checks_Store_Only
     Example_Interval_DG_Flagship
     "Voblint_Formalization.Mixed_Flow_Sound"
     "Voblint_Formalization.Source_Activation_Sound"
@@ -226,6 +234,33 @@ text \<open>
       \<^verbatim>\<open>side_collect_sound_exit_eff_ltr_cone\<close>, \<^verbatim>\<open>threefold_mono\<close>, and
       \<^verbatim>\<open>cone_compatible_etf\<close>.
 
+  \<^bold>\<open>3b. Check discharge.\<close> A domain-generic, sound (incomplete) decision
+    procedure for compiled \<^verbatim>\<open>__voblint_check(...)\<close> conditions, discharged
+    against the computed abstract solver environment at each check's own
+    node --- no store is forwarded between check nodes or to the procedure
+    exit.
+    \<^item> @{theory Voblint_Core.Abstract_Numeric_Queries} --- the generic
+      \<^locale>\<open>abstract_numeric_queries\<close> interface (entailment/refutation of
+      \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation from any
+      \<^locale>\<open>backward_domain\<close> instance's own narrowing operators
+      (\<^locale>\<open>derived_less_queries\<close>, \<^locale>\<open>derived_eq_true_from_less\<close>,
+      \<^locale>\<open>derived_eq_false_from_meet\<close>) --- a sound default a concrete
+      domain may override with sharper, hand-tuned predicates.
+    \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
+      and \<^locale>\<open>abstract_check_domain\<close>: mutually recursive
+      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>bexp\<close>, the three-way
+      \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
+      \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
+      \<^const>\<open>checks_proven\<close>.
+    \<^item> @{theory Voblint_Analysis.Sign_Checks} --- the Sign instance: derived
+      numeric queries (read off \<^const>\<open>inv_less_sign\<close>/\<^const>\<open>inv_eq_sign\<close>/
+      \<^const>\<open>meet_sign\<close>), no hand-built comparison tables.
+    \<^item> @{theory Voblint_Analysis.Interval_Checks} --- the Interval instance:
+      specialized bound-comparison queries (\<^const>\<open>interval_less_true\<close> and
+      siblings, \<open>Interval_Numeric_Queries\<close>), kept independent of the generic
+      derivation because Interval's non-canonical empty representations make
+      the generic \<open>meet = bot\<close> disjointness test strictly less precise.
+
   \<^bold>\<open>4. Concrete domains.\<close> Domain instances used by the proof spine and examples.
     \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice, transfer functions, soundness, monotonicity, display instance.
     \<^item> @{theory Voblint_Analysis.Sign_Side_Soundness} --- Sign at the effectful side IP solver, over \<^const>\<open>ltr_collect\<close>.
@@ -252,6 +287,10 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- executable Sign IP solver, trace soundness, annotated DOT entry points.
+    \<^item> @{theory Voblint_Analysis.Interval_Exec_Sound} --- the Interval counterpart:
+      same node-parametric IP solver soundness (\<^verbatim>\<open>ivl_exec_prog_sound_collecting_at\<close>),
+      the same generic \<^verbatim>\<open>side_collect_sound_in_eff_cone\<close> instantiated at
+      Interval's own transfer facts instead of Sign's.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality over \<^const>\<open>ltr_collect\<close> (\<^verbatim>\<open>mixed_flow_analysis_sound\<close> / \<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
@@ -261,6 +300,16 @@ text \<open>
     complete end-to-end analyses (\<open>Example_Interval_DG_Flagship\<close>, \<open>Exec_Sign_DG_Run\<close>,
     \<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_CallString\<close>,
     \<open>Example_Interval_Source_Ctx\<close>) are indexed separately, above.
+    \<^item> @{theory Voblint_Examples.Example_Checks_Store_Only} --- \<open>__voblint_check(...)\<close>
+      discharged against a computed Sign post-solution, node-locally: one check
+      proved, one refuted (a genuine bug, not merely unproven), one unknown.
+    \<^item> @{theory Voblint_Examples.Example_Parity_Checks_Store_Only} --- the same
+      program, but with a parity domain instead of Sign.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Checks_Store_Only} --- the Interval
+      counterpart, inside a two-sided bound guard (\<open>0 < x \<and> x < 10\<close>) so the
+      checks exercise Interval's numeric bounds, not just its sign; includes a
+      precision comparison showing a bound Interval proves outright that Sign's
+      \<^term>\<open>SPos\<close> alone classifies \<^term>\<open>Check_Unknown\<close>.
     \<^item> @{theory Voblint_Examples.Example_Inc_Proc} --- shared global-increment procedure witness.
     \<^item> @{theory Voblint_Examples.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.

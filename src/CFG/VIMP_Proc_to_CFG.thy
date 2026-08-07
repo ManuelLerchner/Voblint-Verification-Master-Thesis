@@ -44,6 +44,7 @@ fun csize :: "com \<Rightarrow> nat" where
   "csize SKIP = 1"
 | "csize (Assign x a) = 1"
 | "csize (Random x) = 1"
+| "csize (Check c) = 1"
 | "csize (Seq c1 c2) = csize c1 + csize c2"
 | "csize (If b c1 c2) = 1 + csize c1 + csize c2"
 | "csize (While b c) = 1 + csize c"
@@ -68,6 +69,7 @@ fun falls_through :: "com \<Rightarrow> bool" where
   "falls_through SKIP = True"
 | "falls_through (Assign x a) = True"
 | "falls_through (Random x) = True"
+| "falls_through (Check c) = True"
 | "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
 | "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
 | "falls_through (While b c) = True"
@@ -115,6 +117,8 @@ where
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
 | "compile \<Pi> p (Random x) k n =
      (Suc n, Statement n, {(Statement n, EA_Random x, k)}, {})"
+| "compile \<Pi> p (Check c) k n =
+     (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
           (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
@@ -182,7 +186,6 @@ where
              else E),
           K))"
 
-
 fun compile_procs ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
@@ -202,13 +205,21 @@ text \<open>The whole program: every declared procedure, plus \<open>main\<close
   \<open>ps\<close>).  There is no global exit: whole-program completion is \<open>FunctionResult mnm\<close>, and the
   entry is \<open>FunctionEntry mnm\<close>.\<close>
 
+text \<open>\<open>checks\<close> is not collected by a separate counter-threading pass: it is read
+  directly off the compiled edges, exactly the \<^const>\<open>EA_Check\<close> edges
+  \<^const>\<open>compile\<close>'s own \<open>Check c\<close> clause emits. There is only one representation
+  of "where a check sits and what it says" --- the compiled \<^const>\<open>intra\<close> set
+  itself --- so this field cannot drift from it by construction, not merely by
+  a separately proved agreement lemma.\<close>
 definition compile_prog ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg"
 where
   "compile_prog \<Pi> ps mnm main =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
           (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main) n1
-      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>)"
+      in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+           checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
+             ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
 
 subsection \<open>Allocation arithmetic and statement ranges\<close>
 
@@ -337,6 +348,19 @@ proof -
     by (auto simp: Let_def)
   with c1 e1 show ?thesis by (auto intro: that)
 qed
+
+subsection \<open>Check-obligation soundness\<close>
+
+text \<open>Now immediate: \<open>checks\<close> is \<^emph>\<open>defined\<close> (\<^const>\<open>compile_prog\<close>) as the projection of
+  \<^const>\<open>EA_Check\<close> edges out of the compiled program's own \<^const>\<open>intra\<close> set, so every check
+  the whole-program compiler records is sourced at a real \<^const>\<open>EA_Check\<close> edge by
+  construction, not by a separately proved agreement between two independently computed
+  passes.\<close>
+
+corollary compile_prog_checks_sound:
+  assumes "(v, ch) \<in> checks (compile_prog \<Pi> ps mnm main)"
+  shows "\<exists>k'. (v, EA_Check ch, k') \<in> intra (compile_prog \<Pi> ps mnm main)"
+  using assms unfolding compile_prog_def by (auto simp: Let_def split: prod.splits)
 
 text \<open>The \<open>Statement\<close> indices a compiled fragment touches.  Sources are always freshly
   allocated, so they lie in the fragment's own counter range; a target may in addition be the
@@ -736,26 +760,30 @@ proof -
     mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have g: "compile_prog \<Pi> ps mnm main =
-             \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm \<rparr>"
+             \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+              checks = (\<lambda>(u, a, v). (u, ea_check_cond a)) ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>"
     unfolding compile_prog_def by (simp add: procs mainc Let_def)
   show ?thesis
     unfolding wf_cfg_def g
   proof (intro conjI allI impI)
     fix u act ce af assume "(u, act, ce, af) \<in> calls \<lparr>intra = Eprocs \<union> Emain,
-        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm\<rparr>"
+        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+        checks = (\<lambda>(u, a, v). (u, ea_check_cond a)) ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain)\<rparr>"
     then have "(u, act, ce, af) \<in> Kprocs \<or> (u, act, ce, af) \<in> Kmain" by simp
     then show "\<exists>p. ce = FunctionEntry p"
       using compile_procs_call_ce_entry[OF procs] compile_proc_call_ce_entry[OF mainc] by blast
   next
     fix u a v p assume "(u, a, v) \<in> intra \<lparr>intra = Eprocs \<union> Emain,
-        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm\<rparr>"
+        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+        checks = (\<lambda>(u, a, v). (u, ea_check_cond a)) ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain)\<rparr>"
     then have "(u, a, v) \<in> Eprocs \<or> (u, a, v) \<in> Emain" by simp
     then show "v \<noteq> FunctionEntry p"
       using compile_procs_intra_tgt_not_entry[OF procs] compile_proc_intra_tgt_not_entry[OF mainc]
       by blast
   next
     fix u e p v assume "(u, EA_Ret e p, v) \<in> intra \<lparr>intra = Eprocs \<union> Emain,
-        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm\<rparr>"
+        calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
+        checks = (\<lambda>(u, a, v). (u, ea_check_cond a)) ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain)\<rparr>"
     then have "(u, EA_Ret e p, v) \<in> Eprocs \<or> (u, EA_Ret e p, v) \<in> Emain" by simp
     then show "v = FunctionResult p"
       using compile_procs_ret_wf[OF procs] compile_proc_ret_wf[OF mainc] by blast

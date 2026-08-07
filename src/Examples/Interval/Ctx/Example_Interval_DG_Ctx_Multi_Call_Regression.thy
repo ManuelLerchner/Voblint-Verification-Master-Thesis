@@ -32,7 +32,8 @@ definition multi_call_cfg :: cfg where
        calls =
          { (Statement 0, mc_ca1, FunctionEntry mc_f1, Statement 1),
            (Statement 0, mc_ca2, FunctionEntry mc_f2, Statement 2) },
-       cfg_entry = Statement 0 \<rparr>"
+       cfg_entry = Statement 0,
+       checks = {} \<rparr>"
 
 lemmas mc_defs = multi_call_cfg_def mc_ca1_def mc_ca2_def mc_f1_def mc_f2_def
 

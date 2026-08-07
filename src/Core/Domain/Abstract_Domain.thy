@@ -188,6 +188,7 @@ locale backward_domain =
     meet     :: "'a::sound_domain => 'a => 'a"
     and aval_abs  :: "aexp => 'a abs_state => 'a"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
+    and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
     and inv_minus :: "'a => 'a => 'a => 'a * 'a"
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
@@ -199,6 +200,9 @@ locale backward_domain =
   and inv_less_sound:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
+  and inv_eq_sound:
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 = n2) = res
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_eq res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq res a1 a2))"
   and inv_plus_sound:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 + n2 \<in> gamma r
        \<Longrightarrow> n1 \<in> gamma (fst (inv_plus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus r a1 a2))"
@@ -232,9 +236,9 @@ fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter (And b1 b2) False \<sigma> = bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>"
   | "bfilter (Or  b1 b2) True  \<sigma> = bfilter b1 True  \<sigma> \<squnion> bfilter b2 True  \<sigma>"
   | "bfilter (Or  b1 b2) False \<sigma> = bfilter b1 False (bfilter b2 False \<sigma>)"
-  | "bfilter (Eq  e1 e2) True  \<sigma> =
-       (let a = meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
-        in afilter e1 a (afilter e2 a \<sigma>))"
+  | "bfilter (Eq  e1 e2) res  \<sigma> =
+       (let (a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
+        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
   | "bfilter _ _ \<sigma> = \<sigma>"
 
 lemma afilter_sound:
@@ -400,26 +404,19 @@ next
     using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
 next
   case (Eq e1 e2)
-  show ?case proof (cases res)
-    case True
-    have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
-    have eq: "aval e1 s = aval e2 s" using Eq.prems(2) True by simp
-    have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-    have e2a: "aval e1 s \<in> gamma (aval_abs e2 \<sigma>)"
-      using aval_abs_sound[OF gs] eq by simp
-    have ma: "aval e1 s \<in> gamma (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
-      using meet_sound[OF e1a e2a] by simp
-    have me2: "aval e2 s \<in> gamma (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))"
-      using ma eq by simp
-    have gs2: "s \<in> \<lbrakk>afilter e2 (meet (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)) \<sigma>\<rbrakk>"
-      using afilter_sound[OF Eq.prems(1) me2] by simp
-    show ?thesis
-      using afilter_sound[OF gs2 ma]
-      by (simp add: True Let_def)
-  next
-    case False
-    then show ?thesis using Eq.prems(1) by simp
-  qed
+  obtain a1 a2 where pair: "(a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
+    by (cases "inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
+  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by simp
+  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
+    using inv_eq_sound[OF e1a e2a eq] pair[symmetric] by simp
+  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
+    using afilter_sound[OF Eq.prems(1) inv12[THEN conjunct2]] by simp
+  show ?case
+    unfolding bfilter.simps pair[symmetric] Let_def
+    using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
 qed
 
 end
@@ -444,6 +441,24 @@ lemma inv_conservative_sound:
   shows "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
   using assms by (simp add: inv_conservative_def)
 
+text \<open>
+  The same no-op shape for \<open>inv_eq\<close>: unlike \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close>,
+  \<open>inv_eq\<close>'s first argument is \<open>bool\<close> (the assumed truth value, as for
+  \<open>inv_less\<close>), not \<open>'a\<close>, so \<open>inv_conservative\<close> cannot be reused verbatim ---
+  its three arguments all share one type. A domain not yet ready with a real
+  equality narrowing (or one too coarse for it to help) instantiates \<open>inv_eq\<close>
+  with this identity instead.
+\<close>
+
+definition inv_eq_identity :: "bool => 'a => 'a => 'a * 'a" where
+  "inv_eq_identity res a1 a2 = (a1, a2)"
+
+lemma inv_eq_identity_sound:
+  fixes a1 a2 :: "'a::sound_domain"
+  assumes "n1 \<in> gamma a1" and "n2 \<in> gamma a2"
+  shows "n1 \<in> gamma (fst (inv_eq_identity res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_identity res a1 a2))"
+  using assms by (simp add: inv_eq_identity_def)
+
 subsection \<open>Monotone backward-analysis locale\<close>
 
 text \<open>
@@ -465,6 +480,10 @@ locale backward_domain_mono = backward_domain +
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_less res x1 y1) \<le> fst (inv_less res x2 y2) \<and>
        snd (inv_less res x1 y1) \<le> snd (inv_less res x2 y2)"
+  and inv_eq_mono:
+      "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       fst (inv_eq res x1 y1) \<le> fst (inv_eq res x2 y2) \<and>
+       snd (inv_eq res x1 y1) \<le> snd (inv_eq res x2 y2)"
   and inv_plus_mono:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_plus r1 x1 y1) \<le> fst (inv_plus r2 x2 y2) \<and>
@@ -502,6 +521,12 @@ lemma bfilter_Less_unfold:
   "bfilter (Less e1 e2) res \<sigma> =
      afilter e1 (fst (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
                (afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  by (simp add: Let_def case_prod_beta)
+
+lemma bfilter_Eq_unfold:
+  "bfilter (Eq e1 e2) res \<sigma> =
+     afilter e1 (fst (inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
+               (afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_mono:
@@ -629,18 +654,18 @@ next
     by (rule afilter_mono[OF conjunct1[OF iv] step])
 next
   case (Eq e1 e2)
-  show ?case
-  proof (cases res)
-    case True
-    have m: "meet (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1) \<le> meet (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2)"
-      by (rule meet_mono[OF aval_abs_mono[OF Eq.prems] aval_abs_mono[OF Eq.prems]])
-    have step: "afilter e2 (meet (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1)) \<sigma>1
-              \<le> afilter e2 (meet (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2)) \<sigma>2"
-      by (rule afilter_mono[OF m Eq.prems])
-    show ?thesis using afilter_mono[OF m step] by (simp add: True Let_def)
-  next
-    case False thus ?thesis using Eq.prems by simp
-  qed
+  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Eq.prems])
+  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Eq.prems])
+  have iv: "fst (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> fst (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
+          \<and> snd (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
+              \<le> snd (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+    by (rule inv_eq_mono[OF v1 v2])
+  have step: "afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
+            \<le> afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+    by (rule afilter_mono[OF conjunct2[OF iv] Eq.prems])
+  show ?case unfolding bfilter_Eq_unfold
+    by (rule afilter_mono[OF conjunct1[OF iv] step])
 qed
 
 end

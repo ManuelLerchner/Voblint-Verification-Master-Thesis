@@ -56,6 +56,7 @@ datatype edge_action =
   | EA_Assume   (ea_cond: bexp)
   | EA_AssumeNot (ea_cond: bexp)
   | EA_Ret      (ea_ret_val: "aexp option") (ea_ret_proc: pname)
+  | EA_Check    (ea_check_cond: bexp)
 
 datatype call_action =
     CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "aexp list")
@@ -79,6 +80,7 @@ record cfg =
   intra     :: "(cfg_node \<times> edge_action \<times> cfg_node) set"
   calls     :: "(cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
   cfg_entry :: cfg_node
+  checks    :: "(cfg_node \<times> bexp) set"
 
 subsection \<open>Intra edge execution\<close>
 
@@ -93,6 +95,7 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
 | "edge_step (EA_AssumeNot b) s = (if bval b s then {} else {s})"
 | "edge_step (EA_Ret e p) s =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))}"
+| "edge_step (EA_Check c) s = {s}"
 
 subsection \<open>Intra-only execution paths\<close>
 
