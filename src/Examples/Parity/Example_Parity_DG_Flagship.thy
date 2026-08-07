@@ -35,36 +35,45 @@ subsection \<open>1. The program (proper IMP2 program notation, explicit main)\<
 
 text \<open>
   A bounded counting loop that increments by two: initialise \<open>x\<close> to \<open>0\<close>,
-  add \<open>2\<close> while \<open>x < 20\<close>.  No procedures beyond \<open>main\<close>, no globals; \<open>x\<close> is a
-  single flow-sensitive local.  The parity of \<open>x\<close> stays even at every
-  reachable point regardless of the guard, which the analysis must discover,
-  not assume.
+  add \<open>2\<close> while \<open>x < 20\<close>.  No procedures beyond \<open>main\<close>; \<open>x\<close> is a single
+  flow-sensitive local, \<open>Gcount\<close> a second, \<open>G\<close>-prefixed local, and \<open>total\<close>
+  the one declared global despite carrying no naming hint. The parity of
+  \<open>x\<close> stays even at every reachable point regardless of the guard, which the
+  analysis must discover, not assume.
 \<close>
 
 definition parity_program :: imp_prog where
   "parity_program = program {
 
-      global G;
+      global total;
 
-      void main() { 
+      void main() {
         x := 0;
-        y:=1;
-        while (x < 20) { 
-          x := x + 2; 
-          y:=y + 1 
-        }; 
-        G:= x + y
+        Gcount:=1;
+        while (x < 20) {
+          x := x + 2;
+          Gcount:=Gcount + 1
+        };
+        total:= x + Gcount
       }
 }"
 
 definition parity_prog :: "VIMP_Proc.com" where
   "parity_prog = prog_main parity_program"
 
-text \<open>The storage classifier: \<open>G\<close> is declared, so \<open>parity_gs\<close> is the M4 entry point
-  for a family that actually exercises global/local separation through the program's own
-  declaration, not the \<open>is_global\<close> naming convention.\<close>
+text \<open>The storage classifier: \<open>total\<close> is declared global despite its plain
+  name, and \<open>Gcount\<close> stays local despite its \<open>G\<close> prefix, so \<open>parity_gs\<close> is
+  the M4 entry point for a family that actually exercises global/local
+  separation through the program's own declaration, not a naming
+  convention (see \<open>parity_total_global\<close>/\<open>parity_gcount_not_global\<close> below).\<close>
 abbreviation parity_gs :: "vname \<Rightarrow> bool" where
   "parity_gs \<equiv> declared_global parity_program"
+
+lemma parity_total_global [simp]: "parity_gs ''total''"
+  by (simp add: parity_program_def)
+
+lemma parity_gcount_not_global [simp]: "\<not> parity_gs ''Gcount''"
+  by (simp add: parity_program_def)
 
 text \<open>Local shorthand for the executable state's lookup projection, fixed at this
   file's own \<open>parity_gs\<close> classifier.\<close>
@@ -275,14 +284,14 @@ definition parity_graph_config ::
       return_slot_for_pp = (\<lambda>p.
         scope_return_slot (compiled_procedure_scope parity_gs parity_pi [] ''main'' parity_prog
           parity_cfg p)),
-      globals_to_show = [''G''],
+      globals_to_show = [''total''],
       show_local = (\<lambda>_ _ vars d.
         map (\<lambda>x.
           x @ ''='' @ string_of_parity (parity_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ d.
         map (\<lambda>g.
-          g @ ''='' @ string_of_parity (parity_lookup (globs d) g)) [''G'']),
+          g @ ''='' @ string_of_parity (parity_lookup (globs d) g)) [''total'']),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = True,

@@ -10,7 +10,8 @@ begin
 
 text \<open>
   Demonstrates the top-level collecting-semantics theorem applied to the sign
-  domain on the \<open>inc_pi\<close> program (procedure p increments the global Gx).
+  domain on the \<open>inc_pi\<close> program (procedure p increments the declared global
+  \<open>counter\<close>).
 
   The effectful transfer record is the domain interface here.  Its soundness,
   cone compatibility, and threefold monotonicity are discharged by the Sign

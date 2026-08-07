@@ -41,10 +41,10 @@ text \<open>Reuses @{const inc_program} (\<open>Example_Inc_Proc\<close>) direct
 abbreviation inc_gs :: "vname \<Rightarrow> bool" where
   "inc_gs \<equiv> declared_global inc_program"
 
-value "sign_exec_prog inc_gs ''main'' inc_program ''Gx''"
+value "sign_exec_prog inc_gs ''main'' inc_program ''counter''"
 
-lemma inc_gx_nonneg:
-  "sign_exec_prog inc_gs ''main'' inc_program ''Gx'' = SNonNeg"
+lemma inc_counter_nonneg:
+  "sign_exec_prog inc_gs ''main'' inc_program ''counter'' = SNonNeg"
   by eval
 
 lemma inc_terminates: "sign_terminates_prog inc_gs ''main'' inc_program"
@@ -59,7 +59,7 @@ subsection \<open>Annotated CFG visualisation\<close>
 
 text \<open>
   @{const sign_annotated_dot_prog_lit} on the same witness: CFG nodes labelled
-  with sign abstract states from @{const sign_exec_raw} (exit @{thm [source] inc_gx_nonneg}).
+  with sign abstract states from @{const sign_exec_raw} (exit @{thm [source] inc_counter_nonneg}).
 \<close>
 
 

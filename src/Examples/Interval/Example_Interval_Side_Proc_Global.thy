@@ -9,8 +9,8 @@ begin
 text \<open>
   Interval instance of the side-effecting interprocedural witness: the same
   @{const inc_pi} program (a single call to procedure p incrementing the global
-  @{term \<open>''Gx''\<close>}) carried through the @{const side_analyse_eff} solver at the
-  interval domain.  Demonstrates the soundness scaffold is domain-generic by
+  @{term \<open>''counter''\<close>}) carried through the @{const side_analyse_eff} solver at
+  the interval domain.  Demonstrates the soundness scaffold is domain-generic by
   reusing it on a second, infinite-height numeric domain.
 \<close>
 

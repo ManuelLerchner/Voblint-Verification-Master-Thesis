@@ -1710,4 +1710,117 @@ lemma sound_dg_spec_unit_for:
     by (rule gamma_unit_enter_sound_for[OF sound prems])
   done
 
+subsection \<open>The homogeneous analysis under an independent placement policy\<close>
+
+text \<open>
+  \<open>unit_dg_spec_for\<close> packages every D/G step through \<^const>\<open>restrict_local_for\<close>/
+  \<^const>\<open>restrict_global_for\<close>, so a location's storage class (\<open>gs\<close>) alone decides
+  whether its freshly written value survives for the next local read (kept in D)
+  or is dissolved back into the joined side value (kept only in G). \<open>gamma_unit\<close>
+  never inspects that split -- \<open>gamma_unit d g = \<lbrakk>d \<squnion> g\<rbrakk>\<close> only cares about the
+  join -- so any split whose two projections join back to the pre-split value is
+  just as sound as the storage-derived one. \<^const>\<open>unit_dg_spec_placed\<close> already
+  exposes that split as two independent predicates, \<open>keep_local\<close>/\<open>publish_side\<close>;
+  the only requirement is that every location is covered by at least one of them.
+  Unlike \<^const>\<open>wf_split\<close>, covering does not demand exclusivity: a location may
+  sit in both, which is exactly the shape a privatized global needs (kept
+  precisely in D for the current activation and also published to G for other
+  activations).
+\<close>
+
+lemma project_component_cover_sup:
+  fixes sigma :: "'a::bounded_semilattice_sup_bot abs_state"
+  assumes "\<forall>x. p1 x \<or> p2 x"
+  shows "project_component p1 sigma \<squnion> project_component p2 sigma = sigma"
+  unfolding project_component_def using assms by (auto simp: sup_fun_def fun_eq_iff)
+
+lemma project_component_cover_sup2:
+  fixes sigma :: "'a::bounded_semilattice_sup_bot abs_state"
+  assumes "\<forall>x. p1 x \<or> p2 x"
+  shows "project_component p2 sigma \<squnion> project_component p1 sigma = sigma"
+  using project_component_cover_sup[OF assms] by (simp add: sup_commute)
+
+lemma dgs_combine_unit_dg_spec_placed:
+  assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
+  shows "dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g =
+     (let res = combine_collect_abs source_global dst (dc \<squnion> g) (de \<squnion> g)
+      in (project_component publish_side res, project_component keep_local res))"
+proof -
+  have env_join:
+    "fst (unit_combine_step_env_placed source_global keep_local publish_side dc de g) \<squnion>
+       snd (unit_combine_step_env_placed source_global keep_local publish_side dc de g) =
+     combine_abs source_global (dc \<squnion> g) (de \<squnion> g)"
+    unfolding unit_combine_step_env_placed_def
+    by (simp add: Let_def project_component_cover_sup[OF cover])
+  show ?thesis
+    unfolding dgs_combine_def unit_dg_spec_placed_def
+      unit_combine_step_assign_placed_def combine_collect_abs_def Let_def
+    by (simp add: env_join project_component_cover_sup[OF cover])
+qed
+
+lemma gamma_unit_combine_sound_placed:
+  assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
+    and sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
+  shows "combine_collect source_global dst s t \<in>
+           (case dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
+proof -
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
+  have "combine_collect source_global dst s t \<in> \<lbrakk>combine_collect_abs source_global dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+    by (rule combine_collect_sound[OF sc' tc'])
+  then show ?thesis
+    unfolding dgs_combine_unit_dg_spec_placed[OF cover] gamma_unit_def
+    by (simp add: Let_def project_component_cover_sup2[OF cover])
+qed
+
+lemma gamma_unit_enter_sound_placed:
+  assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
+    and sound: "sound_transfer_for gs tf"
+    and sc: "s \<in> gamma_unit dc g"
+  shows "call_enter gs (CallEdge dst pars args) s \<in>
+           (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit d' g')"
+proof -
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
+    by (simp add: call_enter_CallEdge)
+  then show ?thesis
+    unfolding dgs_enter_unit_dg_spec_placed unit_step_placed_def gamma_unit_def
+    by (simp add: Let_def project_component_cover_sup2[OF cover])
+qed
+
+text \<open>The placed generalization of \<open>sound_dg_spec_unit_for\<close>: covering
+  is the only condition \<open>keep_local\<close>/\<open>publish_side\<close> must satisfy, so a
+  non-exclusive (conjunctive) placement is sound whenever an exclusive one
+  would be.\<close>
+theorem sound_dg_spec_unit_placed:
+  assumes sound: "sound_transfer_for gs tf"
+    and cover: "\<forall>x. publish_side x \<or> keep_local x"
+  shows "sound_dg_spec (unit_dg_spec_placed gs keep_local publish_side tf) gamma_unit gs"
+  apply unfold_locales
+  subgoal for d d' g g'
+    by (rule gamma_unit_mono)
+  subgoal for a d g
+    unfolding gamma_unit_def dg_spec_step_unit_placed unit_step_placed_def
+    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
+    by (simp add: Let_def project_component_cover_sup2[OF cover])
+  subgoal premises prems
+    by (rule gamma_unit_combine_sound_placed[OF cover prems])
+  subgoal premises prems
+    by (rule gamma_unit_enter_sound_placed[OF cover sound prems])
+  done
+
+lemma classic_split_cover:
+  "\<forall>x. classic_split_publish_side storage x \<or> classic_split_keep_local storage x"
+  unfolding classic_split_publish_side_def classic_split_keep_local_def by simp
+
+text \<open>The exclusive, storage-derived split (\<open>sound_dg_spec_unit_for\<close>) is the
+  classic instance of \<open>sound_dg_spec_unit_placed\<close>: no separate proof is
+  needed for it, and none is needed for any other covering placement either.\<close>
+corollary sound_dg_spec_unit_for_from_placed:
+  assumes "sound_transfer_for gs tf"
+  shows "sound_dg_spec (unit_dg_spec_for gs tf) gamma_unit gs"
+  unfolding unit_dg_spec_for_classic
+  by (rule sound_dg_spec_unit_placed[OF assms classic_split_cover])
+
 end
