@@ -1,15 +1,5 @@
 # Migration — ghost instrumentation and assertion checking (Track C)
 
-Status: **SUPERSEDED.** Gated on a dependency chain that terminates in issue
-#75 (closed `NOT_PLANNED`), and built on a `cfg_collect_trace`/`trace_witness`
-semantic layer that no longer exists in `src/` (deleted per
-`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`). Real Goblint's ghost mechanism is
-also not source instrumentation (see `docs/GHOST_DOMAIN_SEEDING_MIGRATION.md`
-section 2). Retained for the goal it states (trace-derived fact -> checkable
-value -> proven check) and the example programs (section 7); the replacement
-plan is `docs/GHOST_DOMAIN_SEEDING_MIGRATION.md`. Original status line below,
-kept for the record.
-
 Status: **FUTURE / PLANNED.** Executable validation layer on top of trace/context
 semantics — **not** a replacement for `TRACE_CONTEXT_ANALYSIS_MIGRATION.md`.
 Makes Level-A observables visible as ordinary program checks and validates that a

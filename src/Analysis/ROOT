@@ -39,7 +39,6 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
-    Sign_Ghost_LastWrite_DG
     Parity_Domain
     Parity_Print
     Parity_Transfer

@@ -15,10 +15,6 @@ session Voblint_CFG in "." = "Voblint_VIMP" +
     Located_Exec
     Control_Simulation
     Compile_Certificate
-    Compile_Edge_Determinism
-    (* last_writer over path/intra, edge-action functionality resolved for
-       compile_prog. *)
-    LTR_Last_Write
     CFG_Prune
     (* Per-procedure node classification and edge locality; carries
        valid_ltr_entry_result_eq, the activation procedure-locality theorem. *)

@@ -1,12 +1,5 @@
 # Migration - last-write observables on traces
 
-Status: **SUPERSEDED.** Targets `cfg_collect_trace`/`Trace_Analysis_Sound.thy`,
-which no longer exist in `src/` (replaced by `valid_ltr`/`ltr_collect` per
-`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`). The goal (a `last_writer` observable
-derived from the trace layer, not baked into the solver) is restated against
-the current layer in `docs/GHOST_DOMAIN_SEEDING_MIGRATION.md` section 5.
-Original status line below, kept for the record.
-
 Status: **design only**. No theory changed yet.
 
 This document proposes the least invasive way to add last-write precision to the
