@@ -82,21 +82,14 @@ lemma a1_glocal_result:
   by eval
 
 text \<open>
-  \<^bold>\<open>Agreement with the pre-migration mechanism.\<close> The migration (M4) changed
-  only how \<open>declared_global\<close> decides membership -- off the program's own
-  \<open>global\<close> declarations (\<^const>\<open>declared_global_vars\<close>) instead of a name
-  prefix. It changed nothing about classic placement's transfer or combine
-  behavior once a variable is classified. \<open>counter\<close> is unambiguously the
-  program's one declared global under either mechanism (it is the only name
-  in \<open>global ...;\<close>, and the old name-based mechanism would have needed a
-  \<open>G\<close>-prefix rename to agree, which is exactly the naming-independence claim
-  A1 tests). Since classification is identical and placement/transfer
-  behavior is unchanged, \<open>a1_counter_result\<close> is provably what the
-  pre-migration mechanism would have computed for the same program: there is
-  no code path through which the two mechanisms could diverge here. This is
-  the strongest agreement claim obtainable without an executable pre-migration
-  artifact still in the tree (the old \<open>is_global\<close> mechanism was deleted per
-  M4.6's own gate).
+  \<^bold>\<open>Baseline agreement.\<close> \<^const>\<open>declared_global\<close> decides membership off the
+  program's own \<open>global\<close> declarations (\<^const>\<open>declared_global_vars\<close>) alone;
+  classic placement's transfer and combine behavior is a function of that
+  classification, never of spelling. \<open>counter\<close> is unambiguously the
+  program's one declared global -- it is the only name in \<open>global ...;\<close> --
+  so \<open>a1_counter_result\<close> is the unique value classic placement can produce
+  for this program: no alternative classifier could route \<open>counter\<close>
+  differently without contradicting its declaration.
 \<close>
 
 subsection \<open>A2 -- fully flow-sensitive sequential globals\<close>
