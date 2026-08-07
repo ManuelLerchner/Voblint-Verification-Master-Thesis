@@ -140,10 +140,14 @@ lemma sign_ghost_gamma_mono:
 
 subsection \<open>The node-aware edge hook\<close>
 
+context
+  fixes gs :: "vname \<Rightarrow> bool"
+begin
+
 text \<open>
   \<open>sign_ghost_edge_step\<close> is \<^const>\<open>product_step\<close> (\<open>Ghost_Last_Write_Product.thy\<close>,
   already proved sound per edge) applied to Sign's own \<^const>\<open>apply_tf\<close> transfer, joining the
-  \<open>D\<close> and \<open>G\<close> inputs first exactly as Sign's existing \<^const>\<open>unit_step\<close> does.  Splitting the
+  \<open>D\<close> and \<open>G\<close> inputs first exactly as Sign's existing \<open>unit_step_for\<close> does.  Splitting the
   joined result back into local/global halves reuses \<^const>\<open>restrict_local_for\<close>/
   \<^const>\<open>restrict_global_for\<close> componentwise --- both are already generic in any
   \<^class>\<open>bounded_semilattice_sup_bot\<close> value type, so they apply to the ghost half
@@ -154,7 +158,7 @@ definition sign_ghost_edge_step ::
   "edge_action \<Rightarrow> cfg_node \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl"
 where
   "sign_ghost_edge_step a v d g =
-     (case product_step (apply_tf sign_tf) a v (sg_value (d \<squnion> g), sg_writer (d \<squnion> g)) of
+     (case product_step (apply_tf (sign_tf_for gs)) a v (sg_value (d \<squnion> g), sg_writer (d \<squnion> g)) of
         (d', w') \<Rightarrow> DG d' w')"
 
 definition sign_ghost_edge_local ::
@@ -162,14 +166,14 @@ definition sign_ghost_edge_local ::
 where
   "sign_ghost_edge_local a v d g =
      (let res = sign_ghost_edge_step a v d g
-      in DG (restrict_local_for is_global (sg_value res)) (restrict_local_for is_global (sg_writer res)))"
+      in DG (restrict_local_for gs (sg_value res)) (restrict_local_for gs (sg_writer res)))"
 
 definition sign_ghost_edge_global ::
   "edge_action \<Rightarrow> cfg_node \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl"
 where
   "sign_ghost_edge_global a v d g =
      (let res = sign_ghost_edge_step a v d g
-      in DG (restrict_global_for is_global (sg_value res)) (restrict_global_for is_global (sg_writer res)))"
+      in DG (restrict_global_for gs (sg_value res)) (restrict_global_for gs (sg_writer res)))"
 
 text \<open>
   The one genuinely new tree shape in this file: \<^const>\<open>dg_edge_tree\<close>'s \<open>step\<close> argument is
@@ -210,14 +214,14 @@ text \<open>Per-edge soundness, stated at the raw \<open>(d, g)\<close> level fi
 
 lemma sg_value_edge_local:
   "sg_value (sign_ghost_edge_local a v d g)
-     = restrict_local_for is_global (apply_tf sign_tf a (sg_value d \<squnion> sg_value g))"
-  by (simp add: sign_ghost_edge_local_def sign_ghost_edge_step_def product_step_def sg_value_sup)
-
+     = restrict_local_for gs (apply_tf (sign_tf_for gs) a (sg_value d \<squnion> sg_value g))"
+  unfolding sign_ghost_edge_local_def sign_ghost_edge_step_def product_step_def Let_def
+  by (simp add: sg_value_sup)
 lemma sg_value_edge_global:
   "sg_value (sign_ghost_edge_global a v d g)
-     = restrict_global_for is_global (apply_tf sign_tf a (sg_value d \<squnion> sg_value g))"
-  by (simp add: sign_ghost_edge_global_def sign_ghost_edge_step_def product_step_def sg_value_sup)
-
+     = restrict_global_for gs (apply_tf (sign_tf_for gs) a (sg_value d \<squnion> sg_value g))"
+  unfolding sign_ghost_edge_global_def sign_ghost_edge_step_def product_step_def Let_def
+  by (simp add: sg_value_sup)
 text \<open>The writer-half counterparts of \<open>sg_value_edge_local\<close>/\<open>sg_value_edge_global\<close>: the
   ghost component's own local/global split, in terms of \<^const>\<open>ghost_step\<close> directly. Not
   needed by this file's own \<^locale>\<open>sound_dg_hooks\<close> obligations (which never read the ghost
@@ -227,22 +231,22 @@ text \<open>The writer-half counterparts of \<open>sg_value_edge_local\<close>/\
 
 lemma sg_writer_edge_local:
   "sg_writer (sign_ghost_edge_local a v d g)
-     = restrict_local_for is_global (ghost_step a v (sg_writer d \<squnion> sg_writer g))"
-  by (simp add: sign_ghost_edge_local_def sign_ghost_edge_step_def product_step_def sg_writer_sup)
-
+     = restrict_local_for gs (ghost_step a v (sg_writer d \<squnion> sg_writer g))"
+  unfolding sign_ghost_edge_local_def sign_ghost_edge_step_def product_step_def Let_def
+  by (simp add: sg_writer_sup)
 lemma sg_writer_edge_global:
   "sg_writer (sign_ghost_edge_global a v d g)
-     = restrict_global_for is_global (ghost_step a v (sg_writer d \<squnion> sg_writer g))"
-  by (simp add: sign_ghost_edge_global_def sign_ghost_edge_step_def product_step_def sg_writer_sup)
-
+     = restrict_global_for gs (ghost_step a v (sg_writer d \<squnion> sg_writer g))"
+  unfolding sign_ghost_edge_global_def sign_ghost_edge_step_def product_step_def Let_def
+  by (simp add: sg_writer_sup)
 lemma sign_ghost_edge_sound:
   "edge_collect a (sign_ghost_gamma d g)
      \<subseteq> sign_ghost_gamma (sign_ghost_edge_local a v d g) (sign_ghost_edge_global a v d g)"
 proof -
   have "edge_collect a (sign_ghost_gamma d g) \<subseteq> edge_collect a \<lbrakk>sg_value d \<squnion> sg_value g\<rbrakk>"
     by (simp add: sign_ghost_gamma_def gamma_unit_def)
-  also have "\<dots> \<subseteq> \<lbrakk>apply_tf sign_tf a (sg_value d \<squnion> sg_value g)\<rbrakk>"
-    using sound_transfer.edge_collect_apply_tf_sound[OF sign_is_sound_transfer] by blast
+  also have "\<dots> \<subseteq> \<lbrakk>apply_tf (sign_tf_for gs) a (sg_value d \<squnion> sg_value g)\<rbrakk>"
+    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sign_is_sound_transfer_for] by blast
   also have "\<dots> = sign_ghost_gamma (sign_ghost_edge_local a v d g) (sign_ghost_edge_global a v d g)"
     unfolding sign_ghost_gamma_def gamma_unit_def sg_value_edge_local sg_value_edge_global
     by (simp add: restrict_local_for_global_join)
@@ -288,7 +292,7 @@ text \<open>
     (also classified local, \<open>VIMP_Proc.thy\<close>) would wrongly keep a stale writer fact from a
     previous, unrelated return instead of starting fresh --- a call entry is not an
     \<^const>\<open>edge_writes\<close> event for \<open>ret_var\<close> either, so it must reset the same way every other
-    local does.  Using the same \<open>is_global\<close> classifier already threaded through every other
+    local does.  Using the same \<open>gs\<close> classifier already threaded through every other
     definition in this file is therefore not a simplification of convenience: it is the criterion
     \<^const>\<open>enter_state\<close> itself uses, so this function tracks it exactly instead of approximating
     it through the formal list.  No existing combinator resets a classifier-selected subset of
@@ -299,22 +303,22 @@ definition sign_ghost_combine ::
   "vname option \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<times> sign_ghost_dl"
 where
   "sign_ghost_combine dst dc de g =
-     (let base_res = combine_collect_abs is_global dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g) in
-      let ghost_res = combine_collect_abs is_global dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g) in
-      (DG (restrict_global_for is_global base_res) (restrict_global_for is_global ghost_res),
-       DG (restrict_local_for is_global base_res) (restrict_local_for is_global ghost_res)))"
+     (let base_res = combine_collect_abs gs dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g) in
+      let ghost_res = combine_collect_abs gs dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g) in
+      (DG (restrict_global_for gs base_res) (restrict_global_for gs ghost_res),
+       DG (restrict_local_for gs base_res) (restrict_local_for gs ghost_res)))"
 
 definition ghost_enter_step :: "ghost_lw \<Rightarrow> ghost_lw" where
-  "ghost_enter_step w = (\<lambda>x. if is_global x then w x else FVal None)"
+  "ghost_enter_step w = (\<lambda>x. if gs x then w x else FVal None)"
 
 definition sign_ghost_enter ::
   "vname list \<Rightarrow> aexp list \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<times> sign_ghost_dl"
 where
   "sign_ghost_enter xs es dc g =
-     (let base_res = tf_enter sign_tf xs es (sg_value dc \<squnion> sg_value g) in
+     (let base_res = tf_enter (sign_tf_for gs) xs es (sg_value dc \<squnion> sg_value g) in
       let ghost_res = ghost_enter_step (sg_writer dc \<squnion> sg_writer g) in
-      (DG (restrict_global_for is_global base_res) (restrict_global_for is_global ghost_res),
-       DG (restrict_local_for is_global base_res) (restrict_local_for is_global ghost_res)))"
+      (DG (restrict_global_for gs base_res) (restrict_global_for gs ghost_res),
+       DG (restrict_local_for gs base_res) (restrict_local_for gs ghost_res)))"
 
 definition sign_ghost_combine_tree ::
   "cfg_node \<Rightarrow> call_action \<Rightarrow> cfg_node \<Rightarrow> cfg_node
@@ -334,33 +338,33 @@ where
 
 lemma sg_value_combine_fst:
   "sg_value (fst (sign_ghost_combine dst dc de g))
-     = restrict_global_for is_global (combine_collect_abs is_global dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g))"
+     = restrict_global_for gs (combine_collect_abs gs dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g))"
   by (simp add: sign_ghost_combine_def Let_def)
 
 lemma sg_value_combine_snd:
   "sg_value (snd (sign_ghost_combine dst dc de g))
-     = restrict_local_for is_global (combine_collect_abs is_global dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g))"
+     = restrict_local_for gs (combine_collect_abs gs dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g))"
   by (simp add: sign_ghost_combine_def Let_def)
 
 lemma sg_writer_combine_fst:
   "sg_writer (fst (sign_ghost_combine dst dc de g))
-     = restrict_global_for is_global (combine_collect_abs is_global dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g))"
+     = restrict_global_for gs (combine_collect_abs gs dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g))"
   by (simp add: sign_ghost_combine_def Let_def)
 
 lemma sg_writer_combine_snd:
   "sg_writer (snd (sign_ghost_combine dst dc de g))
-     = restrict_local_for is_global (combine_collect_abs is_global dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g))"
+     = restrict_local_for gs (combine_collect_abs gs dst (sg_writer dc \<squnion> sg_writer g) (sg_writer de \<squnion> sg_writer g))"
   by (simp add: sign_ghost_combine_def Let_def)
 
 lemma sign_ghost_combine_sound:
   assumes sc: "s \<in> sign_ghost_gamma dc g" and tc: "t \<in> sign_ghost_gamma de g"
-  shows "combine_collect is_global dst s t \<in>
+  shows "combine_collect gs dst s t \<in>
            sign_ghost_gamma (snd (sign_ghost_combine dst dc de g)) (fst (sign_ghost_combine dst dc de g))"
 proof -
   have sc': "s \<in> \<lbrakk>sg_value dc \<squnion> sg_value g\<rbrakk>" using sc by (simp add: sign_ghost_gamma_def gamma_unit_def)
   have tc': "t \<in> \<lbrakk>sg_value de \<squnion> sg_value g\<rbrakk>" using tc by (simp add: sign_ghost_gamma_def gamma_unit_def)
-  have "combine_collect is_global dst s t \<in>
-          \<lbrakk>combine_collect_abs is_global dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g)\<rbrakk>"
+  have "combine_collect gs dst s t \<in>
+          \<lbrakk>combine_collect_abs gs dst (sg_value dc \<squnion> sg_value g) (sg_value de \<squnion> sg_value g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     unfolding sign_ghost_gamma_def gamma_unit_def sg_value_combine_fst sg_value_combine_snd
@@ -369,32 +373,32 @@ qed
 
 lemma sg_value_enter_fst:
   "sg_value (fst (sign_ghost_enter xs es dc g))
-     = restrict_global_for is_global (tf_enter sign_tf xs es (sg_value dc \<squnion> sg_value g))"
+     = restrict_global_for gs (tf_enter (sign_tf_for gs) xs es (sg_value dc \<squnion> sg_value g))"
   by (simp add: sign_ghost_enter_def Let_def)
 
 lemma sg_value_enter_snd:
   "sg_value (snd (sign_ghost_enter xs es dc g))
-     = restrict_local_for is_global (tf_enter sign_tf xs es (sg_value dc \<squnion> sg_value g))"
+     = restrict_local_for gs (tf_enter (sign_tf_for gs) xs es (sg_value dc \<squnion> sg_value g))"
   by (simp add: sign_ghost_enter_def Let_def)
 
 lemma sg_writer_enter_fst:
   "sg_writer (fst (sign_ghost_enter xs es dc g))
-     = restrict_global_for is_global (ghost_enter_step (sg_writer dc \<squnion> sg_writer g))"
+     = restrict_global_for gs (ghost_enter_step (sg_writer dc \<squnion> sg_writer g))"
   by (simp add: sign_ghost_enter_def Let_def)
 
 lemma sg_writer_enter_snd:
   "sg_writer (snd (sign_ghost_enter xs es dc g))
-     = restrict_local_for is_global (ghost_enter_step (sg_writer dc \<squnion> sg_writer g))"
+     = restrict_local_for gs (ghost_enter_step (sg_writer dc \<squnion> sg_writer g))"
   by (simp add: sign_ghost_enter_def Let_def)
 
 lemma sign_ghost_enter_sound:
   assumes sc: "s \<in> sign_ghost_gamma dc g"
-  shows "call_enter is_global (CallEdge dst xs es) s \<in>
+  shows "call_enter gs (CallEdge dst xs es) s \<in>
            sign_ghost_gamma (snd (sign_ghost_enter xs es dc g)) (fst (sign_ghost_enter xs es dc g))"
 proof -
   have sc': "s \<in> \<lbrakk>sg_value dc \<squnion> sg_value g\<rbrakk>" using sc by (simp add: sign_ghost_gamma_def gamma_unit_def)
-  have "call_enter is_global (CallEdge dst xs es) s \<in> \<lbrakk>tf_enter sign_tf xs es (sg_value dc \<squnion> sg_value g)\<rbrakk>"
-    using sound_transfer.tf_sound_enterD[OF sign_is_sound_transfer sc']
+  have "call_enter gs (CallEdge dst xs es) s \<in> \<lbrakk>tf_enter (sign_tf_for gs) xs es (sg_value dc \<squnion> sg_value g)\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_forD[OF sign_is_sound_transfer_for sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
     unfolding sign_ghost_gamma_def gamma_unit_def sg_value_enter_fst sg_value_enter_snd
@@ -436,7 +440,7 @@ lemma sides_sign_ghost_enter_tree_Inr:
 lemma sign_ghost_combine_hook_sound:
   assumes s: "s \<in> dg_hook_gamma sign_ghost_gamma \<sigma> caller"
     and t: "t \<in> dg_hook_gamma sign_ghost_gamma \<sigma> (FunctionResult callee)"
-  shows "combine_collect is_global dst s t \<in>
+  shows "combine_collect gs dst s t \<in>
       sign_ghost_gamma
         (locals (traverse_rhs (sign_ghost_combine_tree caller (CallEdge dst fs args) (FunctionResult callee) continuation) \<sigma>))
         (globs (sides_of_rhs (sign_ghost_combine_tree caller (CallEdge dst fs args) (FunctionResult callee) continuation) \<sigma> (Inr ())))"
@@ -447,7 +451,7 @@ lemma sign_ghost_combine_hook_sound:
 
 lemma sign_ghost_enter_hook_sound:
   assumes s: "s \<in> dg_hook_gamma sign_ghost_gamma \<sigma> caller"
-  shows "call_enter is_global (CallEdge dst fs args) s \<in>
+  shows "call_enter gs (CallEdge dst fs args) s \<in>
       sign_ghost_gamma
         (locals (traverse_rhs (sign_ghost_enter_tree caller (CallEdge dst fs args) (FunctionEntry callee)) \<sigma>))
         (globs (sides_of_rhs (sign_ghost_enter_tree caller (CallEdge dst fs args) (FunctionEntry callee)) \<sigma> (Inr ())))"
@@ -459,8 +463,8 @@ subsection \<open>The \<^locale>\<open>sound_dg_hooks\<close> interpretation\<cl
 
 text \<open>
   The capstone of this slice: a genuine \<^locale>\<open>sound_dg_hooks\<close> interpretation for the
-  Sign-times-last-writer product, at the classic \<^const>\<open>is_global\<close> classifier (matching
-  \<open>Sign_DG.thy\<close>'s own choice).  As documented above, this proves base-store preservation only
+  Sign-times-last-writer product, generic in the classifier \<open>gs\<close> (matching
+  \<open>Sign_DG.thy\<close>'s own genericity).  As documented above, this proves base-store preservation only
   --- \<^const>\<open>sign_ghost_gamma\<close> never reads the ghost projection, so every obligation reduces to
   a fact already established for Sign alone.  The second interpretation
   (\<^locale>\<open>sound_dg_hooks_ltr\<close>) adds no further proof obligation (it re-packages
@@ -469,7 +473,7 @@ text \<open>
 \<close>
 
 interpretation sign_ghost_dg:
-  sound_dg_hooks sign_ghost_gamma is_global sign_ghost_edge_tree sign_ghost_combine_tree sign_ghost_enter_tree
+  sound_dg_hooks sign_ghost_gamma gs sign_ghost_edge_tree sign_ghost_combine_tree sign_ghost_enter_tree
   apply unfold_locales
   subgoal by (rule sign_ghost_gamma_mono)
   subgoal for \<sigma> source action destination by (rule sign_ghost_edge_hook_sound)
@@ -478,7 +482,9 @@ interpretation sign_ghost_dg:
   done
 
 interpretation sign_ghost_dg_ltr:
-  sound_dg_hooks_ltr sign_ghost_gamma is_global sign_ghost_edge_tree sign_ghost_combine_tree sign_ghost_enter_tree
+  sound_dg_hooks_ltr sign_ghost_gamma gs sign_ghost_edge_tree sign_ghost_combine_tree sign_ghost_enter_tree
   by unfold_locales
+
+end
 
 end

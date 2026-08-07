@@ -35,6 +35,15 @@ subsection \<open>The source program and its compiled CFG\<close>
 definition gex_prog5 :: imp_prog where
   "gex_prog5 = program { void p() { i := 0 } void main() { if (k < 1) { g := 1; j := 0 } else { g := 2; j := 1 }; p() } }"
 
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
+  gives is trivially false everywhere -- \<open>g\<close>, \<open>j\<close>, \<open>i\<close>, and \<open>ret_var\<close> are all local.\<close>
+abbreviation gex_gs :: "vname \<Rightarrow> bool" where
+  "gex_gs \<equiv> declared_global gex_prog5"
+
+lemma gex_prog5_declared_global_vars [simp]:
+  "declared_global_vars gex_prog5 = []"
+  by (simp add: gex_prog5_def)
+
 definition gex_pi5 :: proc_table where "gex_pi5 = prog_table gex_prog5"
 
 definition gex_g5 :: cfg where
@@ -155,13 +164,13 @@ lemma gex_hook_gen_gn7_pred:
   "entry_call_list gex_g5 gn7 = []"
   unfolding gex_g5_def gex_node_defs by eval+
 
-subsection \<open>Base classifier facts (\<open>is_global\<close> is the fixed naming convention; none of this
-  program's variables start with \<open>G\<close>, so everything here is local)\<close>
+subsection \<open>Base classifier facts (\<open>gex_gs\<close> reads \<^const>\<open>gex_prog5\<close>'s own declared-global
+  list, which is empty, so everything here is local)\<close>
 
-lemma is_global_g: "\<not> is_global ''g''" unfolding is_global_def by simp
-lemma is_global_j: "\<not> is_global ''j''" unfolding is_global_def by simp
-lemma is_global_i: "\<not> is_global ''i''" unfolding is_global_def by simp
-lemma is_global_ret_var: "\<not> is_global ret_var" unfolding is_global_def ret_var_def by simp
+lemma gex_gs_not_g: "\<not> gex_gs ''g''" unfolding declared_global_def by simp
+lemma gex_gs_not_j: "\<not> gex_gs ''j''" unfolding declared_global_def by simp
+lemma gex_gs_not_i: "\<not> gex_gs ''i''" unfolding declared_global_def by simp
+lemma gex_gs_not_ret_var: "\<not> gex_gs ret_var" unfolding declared_global_def ret_var_def by simp
 
 lemma sign_le_STop: "(s::sign) \<le> STop"
   by (cases s) (auto simp: less_eq_sign_def)
@@ -169,9 +178,9 @@ lemma sign_le_STop: "(s::sign) \<le> STop"
 lemma sign_abs_state_le_STop: "(sigma :: sign abs_state) \<le> (\<lambda>_. STop)"
   unfolding le_fun_def by (simp add: sign_le_STop)
 
-lemma restrict_local_for_le_STop: "restrict_local_for is_global (X::sign abs_state) \<le> (\<lambda>_. STop)"
+lemma restrict_local_for_le_STop: "restrict_local_for gex_gs (X::sign abs_state) \<le> (\<lambda>_. STop)"
   using sign_abs_state_le_STop unfolding restrict_local_for_def le_fun_def by auto
-lemma restrict_global_for_le_STop: "restrict_global_for is_global (X::sign abs_state) \<le> (\<lambda>_. STop)"
+lemma restrict_global_for_le_STop: "restrict_global_for gex_gs (X::sign abs_state) \<le> (\<lambda>_. STop)"
   using sign_abs_state_le_STop unfolding restrict_global_for_def le_fun_def by auto
 
 subsection \<open>Ghost writer values\<close>
@@ -180,12 +189,12 @@ text \<open>\<open>gw0\<close> is the raw, unrestricted entry seed (used once, a
   \<open>gw0r\<close> is what every other program point actually sees: \<open>gw0\<close> restricted to local keys,
   since every non-entry node's value has passed through \<^const>\<open>restrict_local_for\<close> at least
   once. \<open>gw_global\<close> is the shared global unknown's stable writer value: since this program
-  declares no variable classified global by \<^const>\<open>is_global\<close>, nothing ever publishes a
+  declares no variable classified global by \<open>gex_gs\<close>, nothing ever publishes a
   non-bottom global writer fact, so the global slot stays at its restricted entry seed forever.\<close>
 
 definition gw0 :: ghost_lw where "gw0 = sign_ghost_entry_writer"
-definition gw0r :: ghost_lw where "gw0r = restrict_local_for is_global gw0"
-definition gw_global :: ghost_lw where "gw_global = restrict_global_for is_global gw0"
+definition gw0r :: ghost_lw where "gw0r = restrict_local_for gex_gs gw0"
+definition gw_global :: ghost_lw where "gw_global = restrict_global_for gex_gs gw0"
 
 definition gw4 :: ghost_lw where "gw4 = gw0(''g'' := FVal (Some gn4))"
 definition gw6 :: ghost_lw where "gw6 = gw0(''g'' := FVal (Some gn6))"
@@ -197,7 +206,7 @@ definition gwpexit_r :: ghost_lw where "gwpexit_r = gwi1r(ret_var := FVal (Some 
 definition gwmexit_r :: ghost_lw where "gwmexit_r = gw7r(ret_var := FVal (Some gn_main_exit))"
 
 lemma gw0r_at_keys: "gw0r ''g'' = FVal None" "gw0r ''i'' = FVal None" "gw0r ''j'' = FVal None" "gw0r ret_var = FVal None"
-  unfolding gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def ret_var_def
+  unfolding gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def ret_var_def
   by simp_all
 
 text \<open>The distinction the entry seed is meant to expose: reached-but-unwritten is
@@ -208,99 +217,135 @@ lemma sign_ghost_entry_writer_not_bot: "sign_ghost_entry_writer x \<noteq> bot"
 subsection \<open>Reusable join/restriction algebra\<close>
 
 lemma gw0_eq_join_global: "gw0 \<squnion> gw_global = gw0"
-  unfolding gw_global_def gw0_def sign_ghost_entry_writer_def restrict_global_for_def is_global_def
+  unfolding gw_global_def gw0_def sign_ghost_entry_writer_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
 
 lemma gw0r_join_global_eq_gw0: "gw0r \<squnion> gw_global = gw0"
-  unfolding gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+  unfolding gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
 
-lemma gw0r_restrict_join_global: "restrict_local_for is_global (gw0r \<squnion> gw_global) = gw0r"
-  unfolding gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw0r_restrict_join_global: "restrict_local_for gex_gs (gw0r \<squnion> gw_global) = gw0r"
+  unfolding gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
 
-lemma gw0r_restrict_global_join_global: "restrict_global_for is_global (gw0r \<squnion> gw_global) = gw_global"
+lemma gw0r_restrict_global_join_global: "restrict_global_for gex_gs (gw0r \<squnion> gw_global) = gw_global"
   unfolding gw0r_join_global_eq_gw0 unfolding gw_global_def by (rule refl)
 
-lemma restrict_local_for_gw0r: "restrict_local_for is_global gw0r = gw0r"
-  unfolding gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def
+lemma restrict_local_for_gw0r: "restrict_local_for gex_gs gw0r = gw0r"
+  unfolding gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def
   by (auto simp: fun_eq_iff)
 
-lemma restrict_local_for_gw4r: "restrict_local_for is_global gw4r = gw4r"
-  unfolding gw4r_def gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def
+lemma restrict_local_for_gw4r: "restrict_local_for gex_gs gw4r = gw4r"
+  unfolding gw4r_def gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def
   by (auto simp: fun_eq_iff)
-lemma restrict_local_for_gw6r: "restrict_local_for is_global gw6r = gw6r"
-  unfolding gw6r_def gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def
+lemma restrict_local_for_gw6r: "restrict_local_for gex_gs gw6r = gw6r"
+  unfolding gw6r_def gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def
   by (auto simp: fun_eq_iff)
-lemma restrict_local_for_gw7r: "restrict_local_for is_global gw7r = gw7r"
-  unfolding gw7r_def gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def
+lemma restrict_local_for_gw7r: "restrict_local_for gex_gs gw7r = gw7r"
+  unfolding gw7r_def gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def
   by (auto simp: fun_eq_iff)
-lemma restrict_local_for_gwi1r: "restrict_local_for is_global gwi1r = gwi1r"
-  unfolding gwi1r_def gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def
+lemma restrict_local_for_gwi1r: "restrict_local_for gex_gs gwi1r = gwi1r"
+  unfolding gwi1r_def gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def
   by (auto simp: fun_eq_iff)
-lemma restrict_local_for_gwpexit_r: "restrict_local_for is_global gwpexit_r = gwpexit_r"
-  unfolding gwpexit_r_def gwi1r_def gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def ret_var_def
+lemma restrict_local_for_gwpexit_r: "restrict_local_for gex_gs gwpexit_r = gwpexit_r"
+  unfolding gwpexit_r_def gwi1r_def gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def ret_var_def
   by (auto simp: fun_eq_iff)
-lemma restrict_local_for_gwmexit_r: "restrict_local_for is_global gwmexit_r = gwmexit_r"
-  unfolding gwmexit_r_def gw7r_def gw0r_def restrict_local_for_def is_global_def gw0_def sign_ghost_entry_writer_def ret_var_def
+lemma restrict_local_for_gwmexit_r: "restrict_local_for gex_gs gwmexit_r = gwmexit_r"
+  unfolding gwmexit_r_def gw7r_def gw0r_def restrict_local_for_def declared_global_def gw0_def sign_ghost_entry_writer_def ret_var_def
   by (auto simp: fun_eq_iff)
 
 
-lemma gw4r_restrict_join_global: "restrict_local_for is_global (gw4r \<squnion> gw_global) = gw4r"
-  unfolding gw4r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw4r_restrict_join_global: "restrict_local_for gex_gs (gw4r \<squnion> gw_global) = gw4r"
+  unfolding gw4r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gw6r_restrict_join_global: "restrict_local_for is_global (gw6r \<squnion> gw_global) = gw6r"
-  unfolding gw6r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw6r_restrict_join_global: "restrict_local_for gex_gs (gw6r \<squnion> gw_global) = gw6r"
+  unfolding gw6r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gwi1r_restrict_join_global: "restrict_local_for is_global (gwi1r \<squnion> gw_global) = gwi1r"
-  unfolding gwi1r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gwi1r_restrict_join_global: "restrict_local_for gex_gs (gwi1r \<squnion> gw_global) = gwi1r"
+  unfolding gwi1r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gw7r_restrict_join_global: "restrict_local_for is_global (gw7r \<squnion> gw_global) = gw7r"
-  unfolding gw7r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw7r_restrict_join_global: "restrict_local_for gex_gs (gw7r \<squnion> gw_global) = gw7r"
+  unfolding gw7r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
 
-lemma gw4r_restrict_global_join_global: "restrict_global_for is_global (gw4r \<squnion> gw_global) = gw_global"
-  unfolding gw4r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw4r_restrict_global_join_global: "restrict_global_for gex_gs (gw4r \<squnion> gw_global) = gw_global"
+  unfolding gw4r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gw6r_restrict_global_join_global: "restrict_global_for is_global (gw6r \<squnion> gw_global) = gw_global"
-  unfolding gw6r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw6r_restrict_global_join_global: "restrict_global_for gex_gs (gw6r \<squnion> gw_global) = gw_global"
+  unfolding gw6r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gwi1r_restrict_global_join_global: "restrict_global_for is_global (gwi1r \<squnion> gw_global) = gw_global"
-  unfolding gwi1r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gwi1r_restrict_global_join_global: "restrict_global_for gex_gs (gwi1r \<squnion> gw_global) = gw_global"
+  unfolding gwi1r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gw7r_restrict_global_join_global: "restrict_global_for is_global (gw7r \<squnion> gw_global) = gw_global"
-  unfolding gw7r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def
+lemma gw7r_restrict_global_join_global: "restrict_global_for gex_gs (gw7r \<squnion> gw_global) = gw_global"
+  unfolding gw7r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
-lemma gwpexit_r_restrict_global_join_global: "restrict_global_for is_global (gwpexit_r \<squnion> gw_global) = gw_global"
-  unfolding gwpexit_r_def gwi1r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def is_global_def ret_var_def
+lemma gwpexit_r_restrict_global_join_global: "restrict_global_for gex_gs (gwpexit_r \<squnion> gw_global) = gw_global"
+  unfolding gwpexit_r_def gwi1r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def declared_global_def ret_var_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
 
 lemma restrict_join_upd:
-  assumes "restrict_local_for is_global (X \<squnion> gw_global) = X" and "\<not> is_global kk"
-  shows "restrict_local_for is_global ((X \<squnion> gw_global)(kk := cv)) = X(kk := cv)"
+  assumes "restrict_local_for gex_gs (X \<squnion> gw_global) = X" and "\<not> gex_gs kk"
+  shows "restrict_local_for gex_gs ((X \<squnion> gw_global)(kk := cv)) = X(kk := cv)"
 proof (rule ext)
   fix x
-  have h: "(if is_global x then bot else (X \<squnion> gw_global) x) = X x"
+  have h: "(if gex_gs x then bot else (X \<squnion> gw_global) x) = X x"
     using assms(1) unfolding restrict_local_for_def fun_eq_iff by blast
-  show "restrict_local_for is_global ((X \<squnion> gw_global)(kk := cv)) x = (X(kk := cv)) x"
+  show "restrict_local_for gex_gs ((X \<squnion> gw_global)(kk := cv)) x = (X(kk := cv)) x"
     unfolding restrict_local_for_def using h assms(2) by (cases "x = kk") auto
 qed
 
 lemma restrict_global_for_upd_local:
-  "\<not> is_global kk \<Longrightarrow> restrict_global_for is_global (X(kk := cv::cfg_node option flat_top)) = restrict_global_for is_global X"
+  "\<not> gex_gs kk \<Longrightarrow> restrict_global_for gex_gs (X(kk := cv::cfg_node option flat_top)) = restrict_global_for gex_gs X"
   unfolding restrict_global_for_def fun_eq_iff by simp
 
-lemma gw4r_j_join: "restrict_local_for is_global ((gw4r \<squnion> gw_global)(''j'' := FVal (Some gn7))) = gw4r(''j'' := FVal (Some gn7))"
-  by (rule restrict_join_upd[OF gw4r_restrict_join_global is_global_j])
-lemma gw6r_j_join: "restrict_local_for is_global ((gw6r \<squnion> gw_global)(''j'' := FVal (Some gn7))) = gw6r(''j'' := FVal (Some gn7))"
-  by (rule restrict_join_upd[OF gw6r_restrict_join_global is_global_j])
+text \<open>Restricting to one half after already having restricted to the other collapses to
+  \<open>bot\<close>: every key is either forced to \<open>bot\<close> by the outer restriction, or was already
+  \<open>bot\<close> from the inner one. This closes the "other side" obligation --- \<open>bot\<close> is below
+  everything --- in every \<open>se_constraint_holds\<close> proof below without re-deriving it per node.\<close>
+lemma restrict_local_for_gw_global_bot: "restrict_local_for gex_gs gw_global = bot"
+  unfolding gw_global_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma restrict_global_for_gw0r_bot: "restrict_global_for gex_gs gw0r = bot"
+  unfolding gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma restrict_global_for_gw_global_fixed: "restrict_global_for gex_gs gw_global = gw_global"
+  unfolding gw_global_def restrict_global_for_def gw0_def sign_ghost_entry_writer_def
+  by (auto simp: fun_eq_iff)
+
+lemma restrict_global_for_gwi1r_bot: "restrict_global_for gex_gs gwi1r = bot"
+  unfolding gwi1r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma restrict_global_for_gw7r_bot: "restrict_global_for gex_gs gw7r = bot"
+  unfolding gw7r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma restrict_global_for_gw4r_bot: "restrict_global_for gex_gs gw4r = bot"
+  unfolding gw4r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma restrict_global_for_gw6r_bot: "restrict_global_for gex_gs gw6r = bot"
+  unfolding gw6r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma restrict_global_for_gwpexit_r_bot: "restrict_global_for gex_gs gwpexit_r = bot"
+  unfolding gwpexit_r_def gwi1r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def restrict_global_for_def ret_var_def
+  by (auto simp: fun_eq_iff bot_flat_top_def)
+
+lemma gw4r_j_join: "restrict_local_for gex_gs ((gw4r \<squnion> gw_global)(''j'' := FVal (Some gn7))) = gw4r(''j'' := FVal (Some gn7))"
+  by (rule restrict_join_upd[OF gw4r_restrict_join_global gex_gs_not_j])
+lemma gw6r_j_join: "restrict_local_for gex_gs ((gw6r \<squnion> gw_global)(''j'' := FVal (Some gn7))) = gw6r(''j'' := FVal (Some gn7))"
+  by (rule restrict_join_upd[OF gw6r_restrict_join_global gex_gs_not_j])
 lemma gw7r_is_join: "gw4r(''j'' := FVal (Some gn7)) \<squnion> gw6r(''j'' := FVal (Some gn7)) = gw7r"
-  unfolding gw4r_def gw6r_def gw7r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def is_global_def
+  unfolding gw4r_def gw6r_def gw7r_def gw0r_def gw0_def sign_ghost_entry_writer_def restrict_local_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def gex_node_defs)
 
-lemma ghost_enter_step_gw7r: "ghost_enter_step (gw7r \<squnion> gw_global) = gw0"
+lemma ghost_enter_step_gw7r: "ghost_enter_step gex_gs (gw7r \<squnion> gw_global) = gw0"
   unfolding ghost_enter_step_def gw7r_def gw0r_def gw_global_def gw0_def sign_ghost_entry_writer_def
-    restrict_local_for_def restrict_global_for_def is_global_def
+    restrict_local_for_def restrict_global_for_def declared_global_def
   by (auto simp: fun_eq_iff sup_flat_top_def less_eq_flat_top_def bot_flat_top_def)
 
 subsection \<open>The witness \<open>sigma\<close>\<close>
@@ -382,55 +427,88 @@ subsection \<open>Generic reduction: only the global publication needs checking\
 
 lemma gex_se_sides_generic:
   fixes a v :: cfg_node and sigma :: "(cfg_node \<times> unit + unit) \<Rightarrow> (sign_ghost_dl, sign_ghost_dl) dg_state"
-  assumes "sides_of_rhs (sign_ghost_edge_tree a act v) sigma (Inr ()) \<le> sigma (Inr ())"
-  shows "sides_of_rhs (sign_ghost_edge_tree a act v) sigma \<le> sigma"
+  assumes "sides_of_rhs (sign_ghost_edge_tree gex_gs a act v) sigma (Inr ()) \<le> sigma (Inr ())"
+  shows "sides_of_rhs (sign_ghost_edge_tree gex_gs a act v) sigma \<le> sigma"
 proof (rule le_funI)
-  fix k show "sides_of_rhs (sign_ghost_edge_tree a act v) sigma k \<le> sigma k"
+  fix k show "sides_of_rhs (sign_ghost_edge_tree gex_gs a act v) sigma k \<le> sigma k"
     using assms by (cases k) (simp_all add: sides_sign_ghost_edge_tree_Inl)
 qed
+
+subsection \<open>Instantiating the hook spine at \<open>gex_gs\<close>\<close>
+
+text \<open>\<open>gex_gs\<close> is a closed term (unlike \<open>Sign_Ghost_LastWrite_DG.thy\<close>'s own \<open>gs\<close>, which is
+  a context-fixed variable), so the hook locales can be interpreted directly here.  A plain
+  \<open>interpretation\<close> never introduces a citable \<open>gex_hook_gen\<close> term for a locale
+  \<open>definition\<close> --- only a \<open>rewrites\<close> clause against an explicit global definition does, matching
+  \<open>Sign_DG.thy\<close>'s own \<open>sign_dg_gamma\<close>/\<open>sound_dg_spec.dg_gamma\<close> pattern.\<close>
+
+definition gex_hook_gen ::
+  "cfg \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow> sign_ghost_dl \<Rightarrow>
+   (cfg_node \<times> unit, unit, (sign_ghost_dl, sign_ghost_dl) dg_state) eqsT"
+where
+  "gex_hook_gen = sound_dg_hooks.hook_gen
+     (sign_ghost_edge_tree gex_gs) (sign_ghost_combine_tree gex_gs) (sign_ghost_enter_tree gex_gs)"
+
+interpretation gex_hooks:
+  sound_dg_hooks sign_ghost_gamma gex_gs "sign_ghost_edge_tree gex_gs" "sign_ghost_combine_tree gex_gs"
+    "sign_ghost_enter_tree gex_gs"
+  rewrites "sound_dg_hooks.hook_gen
+     (sign_ghost_edge_tree gex_gs) (sign_ghost_combine_tree gex_gs) (sign_ghost_enter_tree gex_gs) = gex_hook_gen"
+  apply unfold_locales
+  subgoal by (rule sign_ghost_gamma_mono)
+  subgoal for \<sigma> source action destination by (rule sign_ghost_edge_hook_sound)
+  subgoal for \<sigma> caller dst fs args callee s by (rule sign_ghost_enter_hook_sound)
+  subgoal for \<sigma> caller dst fs args callee continuation s t by (rule sign_ghost_combine_hook_sound)
+  subgoal by (simp add: gex_hook_gen_def)
+  done
+
+interpretation gex_hooks_ltr:
+  sound_dg_hooks_ltr sign_ghost_gamma gex_gs "sign_ghost_edge_tree gex_gs" "sign_ghost_combine_tree gex_gs"
+    "sign_ghost_enter_tree gex_gs"
+  by unfold_locales
 
 lemma gex_sides_fun_single_edge:
   assumes not_entry: "v \<noteq> cfg_entry gex_g5"
     and pred: "intra_predecessor_list gex_g5 v = [(u, a)]"
     and no_combine: "return_call_action_list gex_g5 v = []"
     and no_enter: "entry_call_list gex_g5 v = []"
-  shows "sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (v, ())) sigma
-           = sides_of_rhs (sign_ghost_edge_tree u a v) sigma"
-  unfolding sign_ghost_dg.hook_gen_def
+  shows "sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (v, ())) sigma
+           = sides_of_rhs (sign_ghost_edge_tree gex_gs u a v) sigma"
+  unfolding gex_hooks.hook_gen_def
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def not_entry pred no_combine no_enter
       Let_def sides_of_rhs_seqcomp fun_eq_iff)
 
-lemma sides_sign_ghost_enter_tree_Inl: "sides_of_rhs (sign_ghost_enter_tree cc ca p) sigma (Inl w) = bot"
+lemma sides_sign_ghost_enter_tree_Inl: "sides_of_rhs (sign_ghost_enter_tree gex_gs cc ca p) sigma (Inl w) = bot"
   unfolding sign_ghost_enter_tree_def
   by (cases ca) (simp add: dg_edge_tree_def map_gtree.simps map_ltree.simps sides_of_rhs.simps Let_def)
 
-lemma sides_sign_ghost_combine_tree_Inl: "sides_of_rhs (sign_ghost_combine_tree caller ca ex k) sigma (Inl w) = bot"
+lemma sides_sign_ghost_combine_tree_Inl: "sides_of_rhs (sign_ghost_combine_tree gex_gs caller ca ex k) sigma (Inl w) = bot"
   unfolding sign_ghost_combine_tree_def
   by (cases ca) (simp add: dg_combine_tree_def map_gtree.simps map_ltree.simps sides_of_rhs.simps Let_def)
 
-lemma sides_sign_ghost_enter_tree_Inr_locals: "locals (sides_of_rhs (sign_ghost_enter_tree cc ca p) sigma (Inr ())) = bot"
+lemma sides_sign_ghost_enter_tree_Inr_locals: "locals (sides_of_rhs (sign_ghost_enter_tree gex_gs cc ca p) sigma (Inr ())) = bot"
   unfolding sign_ghost_enter_tree_def
   by (cases ca) (simp add: dg_edge_tree_def map_gtree.simps map_ltree.simps sides_of_rhs.simps Let_def)
 
-lemma sides_sign_ghost_combine_tree_Inr_locals: "locals (sides_of_rhs (sign_ghost_combine_tree caller ca ex k) sigma (Inr ())) = bot"
+lemma sides_sign_ghost_combine_tree_Inr_locals: "locals (sides_of_rhs (sign_ghost_combine_tree gex_gs caller ca ex k) sigma (Inr ())) = bot"
   unfolding sign_ghost_combine_tree_def
   by (cases ca) (simp add: dg_combine_tree_def map_gtree.simps map_ltree.simps sides_of_rhs.simps Let_def)
 
 lemma gex_se_sides_generic_enter:
   fixes cc p :: cfg_node and ca :: call_action
-  assumes "sides_of_rhs (sign_ghost_enter_tree cc ca p) sigma (Inr ()) \<le> sigma (Inr ())"
-  shows "sides_of_rhs (sign_ghost_enter_tree cc ca p) sigma \<le> sigma"
+  assumes "sides_of_rhs (sign_ghost_enter_tree gex_gs cc ca p) sigma (Inr ()) \<le> sigma (Inr ())"
+  shows "sides_of_rhs (sign_ghost_enter_tree gex_gs cc ca p) sigma \<le> sigma"
 proof (rule le_funI)
-  fix k show "sides_of_rhs (sign_ghost_enter_tree cc ca p) sigma k \<le> sigma k"
+  fix k show "sides_of_rhs (sign_ghost_enter_tree gex_gs cc ca p) sigma k \<le> sigma k"
     using assms by (cases k) (simp_all add: sides_sign_ghost_enter_tree_Inl)
 qed
 
 lemma gex_se_sides_generic_combine:
   fixes caller ex k :: cfg_node and ca :: call_action
-  assumes "sides_of_rhs (sign_ghost_combine_tree caller ca ex k) sigma (Inr ()) \<le> sigma (Inr ())"
-  shows "sides_of_rhs (sign_ghost_combine_tree caller ca ex k) sigma \<le> sigma"
+  assumes "sides_of_rhs (sign_ghost_combine_tree gex_gs caller ca ex k) sigma (Inr ()) \<le> sigma (Inr ())"
+  shows "sides_of_rhs (sign_ghost_combine_tree gex_gs caller ca ex k) sigma \<le> sigma"
 proof (rule le_funI)
-  fix j show "sides_of_rhs (sign_ghost_combine_tree caller ca ex k) sigma j \<le> sigma j"
+  fix j show "sides_of_rhs (sign_ghost_combine_tree gex_gs caller ca ex k) sigma j \<le> sigma j"
     using assms by (cases j) (simp_all add: sides_sign_ghost_combine_tree_Inl)
 qed
 
@@ -439,9 +517,9 @@ lemma gex_sides_fun_single_enter:
     and no_edge: "intra_predecessor_list gex_g5 v = []"
     and no_combine: "return_call_action_list gex_g5 v = []"
     and pred: "entry_call_list gex_g5 v = [(caller, action)]"
-  shows "sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (v, ())) sigma
-           = sides_of_rhs (sign_ghost_enter_tree caller action v) sigma"
-  unfolding sign_ghost_dg.hook_gen_def
+  shows "sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (v, ())) sigma
+           = sides_of_rhs (sign_ghost_enter_tree gex_gs caller action v) sigma"
+  unfolding gex_hooks.hook_gen_def
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def not_entry no_edge no_combine pred
       Let_def sides_of_rhs_seqcomp fun_eq_iff)
 
@@ -450,63 +528,63 @@ lemma gex_sides_fun_single_combine:
     and no_edge: "intra_predecessor_list gex_g5 v = []"
     and pred: "return_call_action_list gex_g5 v = [(caller, action, callee_exit)]"
     and no_enter: "entry_call_list gex_g5 v = []"
-  shows "sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (v, ())) sigma
-           = sides_of_rhs (sign_ghost_combine_tree caller action callee_exit v) sigma"
-  unfolding sign_ghost_dg.hook_gen_def
+  shows "sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (v, ())) sigma
+           = sides_of_rhs (sign_ghost_combine_tree gex_gs caller action callee_exit v) sigma"
+  unfolding gex_hooks.hook_gen_def
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def not_entry no_edge pred no_enter
       Let_def sides_of_rhs_seqcomp fun_eq_iff)
 
 subsection \<open>Dependency sets (all 13 covered unknowns)\<close>
 
-lemma gex_dep_main_entry: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_main_entry, ()) = {}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def gex_entry_eval
+lemma gex_dep_main_entry: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_main_entry, ()) = {}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def gex_entry_eval
   by (simp add: gex_main_entry_preds Let_def dep_aux.simps)
-lemma gex_dep_gn2: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn2, ()) = {(gn_main_entry, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn2: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn2, ()) = {(gn_main_entry, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn2_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_gn3: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn3, ()) = {(gn2, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn3: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn3, ()) = {(gn2, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn3_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_gn4: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn4, ()) = {(gn3, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn4: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn4, ()) = {(gn3, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn4_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_gn5: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn5, ()) = {(gn2, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn5: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn5, ()) = {(gn2, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn5_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_gn6: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn6, ()) = {(gn5, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn6: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn6, ()) = {(gn5, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn6_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_gn7: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn7, ()) = {(gn4, ()), (gn6, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn7: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn7, ()) = {(gn4, ()), (gn6, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (auto simp: gex_hook_gen_gn7_pred gex_gn7_not_entry Let_def dep_aux.simps dep_aux_seqcomp sign_ghost_edge_tree_def)
-lemma gex_dep_gn0: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn0, ()) = {(gn_p_entry, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn0: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn0, ()) = {(gn_p_entry, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn0_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_gn1: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn1, ()) = {(gn0, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn1: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn1, ()) = {(gn0, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_gn1_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_p_exit: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_p_exit, ()) = {(gn1, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_p_exit: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_p_exit, ()) = {(gn1, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_p_exit_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_main_exit: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_main_exit, ()) = {(gn8, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_main_exit: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_main_exit, ()) = {(gn8, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_edge_preds gex_main_exit_entry_ne Let_def dep_aux.simps sign_ghost_edge_tree_def)
-lemma gex_dep_p_entry: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_p_entry, ()) = {(gn7, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_p_entry: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn_p_entry, ()) = {(gn7, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (simp add: gex_call_preds gex_p_entry_entry_ne Let_def dep_aux.simps sign_ghost_enter_tree_def
       map_gtree.simps map_ltree.simps dg_edge_tree_def)
-lemma gex_dep_gn8: "dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn8, ()) = {(gn7, ()), (gn_p_exit, ())}"
-  unfolding dep\<^sub>L_def dep_def sign_ghost_dg.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
+lemma gex_dep_gn8: "dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 (gn8, ()) = {(gn7, ()), (gn_p_exit, ())}"
+  unfolding dep\<^sub>L_def dep_def gex_hooks.hook_gen_def side_cfg_T_eff_keyed_seed_trees_def
   by (auto simp: gex_call_preds gex_gn8_entry_ne Let_def dep_aux.simps sign_ghost_combine_tree_def
       map_gtree.simps map_ltree.simps dg_combine_tree_def)
 
 subsection \<open>Per-node \<open>se_constraint_holds\<close>\<close>
 
-lemma gex_se_gn2: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn2, ())) gex_sigma3 (gn2, ())"
+lemma gex_se_gn2: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn2, ())) gex_sigma3 (gn2, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn2_entry_ne gex_edge_preds(1) gex_edge_preds(10,11) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn2_entry_ne gex_edge_preds(1) gex_edge_preds(10,11) refl]
     unfolding traverse_sign_ghost_edge_tree gex_hookD3_main_entry gex_sigma3_Inl_shape gex_hookD3_default[OF insertI1] gex_hookG3_raw
     by (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
         sg_writer_edge_local ghost_step_def edge_write_var.simps gw0_eq_join_global gw0r_def)
@@ -518,52 +596,52 @@ lemma gex_se_gn2: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0
         sg_writer_edge_global ghost_step_def edge_write_var.simps gw_global_def[symmetric] gw0_eq_join_global)
   done
 
-lemma gex_se_gn3: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn3, ())) gex_sigma3 (gn3, ())"
+lemma gex_se_gn3: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn3, ())) gex_sigma3 (gn3, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn3_entry_ne gex_edge_preds(2) gex_edge_preds(12,13) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn3_entry_ne gex_edge_preds(2) gex_edge_preds(12,13) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_default[OF gex_gn3_mem] gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn2_raw[unfolded dg_hook_D_def]
-    by (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
-        sg_writer_edge_local ghost_step_def edge_write_var.simps gw0r_restrict_join_global)
+    by (auto simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
+        sg_writer_edge_local ghost_step_def edge_write_var.simps gw0r_restrict_join_global restrict_local_for_gw_global_bot restrict_local_for_gw0r)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_gn3_entry_ne gex_edge_preds(2) gex_edge_preds(12,13)]
     apply (rule gex_se_sides_generic)
     unfolding sides_sign_ghost_edge_tree_Inr gex_sigma3_gn2_raw gex_sigma3_Inr
     unfolding dg_hook_D_def
-    by (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
-        sg_writer_edge_global ghost_step_def edge_write_var.simps gw0r_restrict_global_join_global)
+    by (auto simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
+        sg_writer_edge_global ghost_step_def edge_write_var.simps gw0r_restrict_global_join_global restrict_global_for_gw0r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_gn5: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn5, ())) gex_sigma3 (gn5, ())"
+lemma gex_se_gn5: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn5, ())) gex_sigma3 (gn5, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn5_entry_ne gex_edge_preds(4) gex_edge_preds(16,17) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn5_entry_ne gex_edge_preds(4) gex_edge_preds(16,17) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_default[OF gex_gn5_mem] gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn2_raw[unfolded dg_hook_D_def]
-    by (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
-        sg_writer_edge_local ghost_step_def edge_write_var.simps gw0r_restrict_join_global)
+    by (auto simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
+        sg_writer_edge_local ghost_step_def edge_write_var.simps gw0r_restrict_join_global restrict_local_for_gw_global_bot restrict_local_for_gw0r)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_gn5_entry_ne gex_edge_preds(4) gex_edge_preds(16,17)]
     apply (rule gex_se_sides_generic)
     unfolding sides_sign_ghost_edge_tree_Inr gex_sigma3_gn2_raw gex_sigma3_Inr
     unfolding dg_hook_D_def
-    by (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
-        sg_writer_edge_global ghost_step_def edge_write_var.simps gw0r_restrict_global_join_global)
+    by (auto simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
+        sg_writer_edge_global ghost_step_def edge_write_var.simps gw0r_restrict_global_join_global restrict_global_for_gw0r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_gn4: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn4, ())) gex_sigma3 (gn4, ())"
+lemma gex_se_gn4: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn4, ())) gex_sigma3 (gn4, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn4_entry_ne gex_edge_preds(3) gex_edge_preds(14,15) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn4_entry_ne gex_edge_preds(3) gex_edge_preds(14,15) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_gn4 gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn3_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
         sg_writer_edge_local ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_join_upd[OF gw0r_restrict_join_global is_global_g] gw4r_def)
+    by (simp add: restrict_join_upd[OF gw0r_restrict_join_global gex_gs_not_g] gw4r_def)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_gn4_entry_ne gex_edge_preds(3) gex_edge_preds(14,15)]
     apply (rule gex_se_sides_generic)
@@ -571,19 +649,19 @@ lemma gex_se_gn4: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0
     unfolding dg_hook_D_def gex_sigma3_gn3_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
         sg_writer_edge_global ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_global_for_upd_local[OF is_global_g] gw0r_restrict_global_join_global)
+    by (auto simp add: restrict_global_for_upd_local[OF gex_gs_not_g] gw0r_restrict_global_join_global restrict_global_for_gw0r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_gn6: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn6, ())) gex_sigma3 (gn6, ())"
+lemma gex_se_gn6: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn6, ())) gex_sigma3 (gn6, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn6_entry_ne gex_edge_preds(5) gex_edge_preds(18,19) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn6_entry_ne gex_edge_preds(5) gex_edge_preds(18,19) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_gn6 gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn5_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
         sg_writer_edge_local ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_join_upd[OF gw0r_restrict_join_global is_global_g] gw6r_def)
+    by (simp add: restrict_join_upd[OF gw0r_restrict_join_global gex_gs_not_g] gw6r_def)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_gn6_entry_ne gex_edge_preds(5) gex_edge_preds(18,19)]
     apply (rule gex_se_sides_generic)
@@ -591,37 +669,37 @@ lemma gex_se_gn6: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0
     unfolding dg_hook_D_def gex_sigma3_gn5_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
         sg_writer_edge_global ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_global_for_upd_local[OF is_global_g] gw0r_restrict_global_join_global)
+    by (auto simp add: restrict_global_for_upd_local[OF gex_gs_not_g] gw0r_restrict_global_join_global restrict_global_for_gw0r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_gn0: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn0, ())) gex_sigma3 (gn0, ())"
+lemma gex_se_gn0: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn0, ())) gex_sigma3 (gn0, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn0_entry_ne gex_edge_preds(6) gex_edge_preds(20,21) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn0_entry_ne gex_edge_preds(6) gex_edge_preds(20,21) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_default[OF gex_gn0_mem] gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_p_entry_raw[unfolded dg_hook_D_def]
-    by (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
-        sg_writer_edge_local ghost_step_def edge_write_var.simps gw0r_restrict_join_global)
+    by (auto simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
+        sg_writer_edge_local ghost_step_def edge_write_var.simps gw0r_restrict_join_global restrict_local_for_gw_global_bot restrict_local_for_gw0r)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_gn0_entry_ne gex_edge_preds(6) gex_edge_preds(20,21)]
     apply (rule gex_se_sides_generic)
     unfolding sides_sign_ghost_edge_tree_Inr gex_sigma3_Inr
     unfolding dg_hook_D_def gex_sigma3_p_entry_raw[unfolded dg_hook_D_def]
-    by (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
-        sg_writer_edge_global ghost_step_def edge_write_var.simps gw0r_restrict_global_join_global)
+    by (auto simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
+        sg_writer_edge_global ghost_step_def edge_write_var.simps gw0r_restrict_global_join_global restrict_global_for_gw0r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_gn1: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn1, ())) gex_sigma3 (gn1, ())"
+lemma gex_se_gn1: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn1, ())) gex_sigma3 (gn1, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_gn1_entry_ne gex_edge_preds(7) gex_edge_preds(22,23) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_gn1_entry_ne gex_edge_preds(7) gex_edge_preds(22,23) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_gn1 gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn0_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
         sg_writer_edge_local ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_join_upd[OF gw0r_restrict_join_global is_global_i] gwi1r_def)
+    by (simp add: restrict_join_upd[OF gw0r_restrict_join_global gex_gs_not_i] gwi1r_def)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_gn1_entry_ne gex_edge_preds(7) gex_edge_preds(22,23)]
     apply (rule gex_se_sides_generic)
@@ -629,19 +707,19 @@ lemma gex_se_gn1: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0
     unfolding dg_hook_D_def gex_sigma3_gn0_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
         sg_writer_edge_global ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_global_for_upd_local[OF is_global_i] gw0r_restrict_global_join_global)
+    by (auto simp add: restrict_global_for_upd_local[OF gex_gs_not_i] gw0r_restrict_global_join_global restrict_global_for_gw0r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_p_exit: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn_p_exit, ())) gex_sigma3 (gn_p_exit, ())"
+lemma gex_se_p_exit: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn_p_exit, ())) gex_sigma3 (gn_p_exit, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_p_exit_entry_ne gex_edge_preds(8) gex_edge_preds(24,25) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_p_exit_entry_ne gex_edge_preds(8) gex_edge_preds(24,25) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_p_exit gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn1_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
         sg_writer_edge_local ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_join_upd[OF gwi1r_restrict_join_global is_global_ret_var] gwpexit_r_def)
+    by (simp add: restrict_join_upd[OF gwi1r_restrict_join_global gex_gs_not_ret_var] gwpexit_r_def)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_p_exit_entry_ne gex_edge_preds(8) gex_edge_preds(24,25)]
     apply (rule gex_se_sides_generic)
@@ -649,19 +727,19 @@ lemma gex_se_p_exit: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d
     unfolding dg_hook_D_def gex_sigma3_gn1_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
         sg_writer_edge_global ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_global_for_upd_local[OF is_global_ret_var] gwi1r_restrict_global_join_global)
+    by (auto simp add: restrict_global_for_upd_local[OF gex_gs_not_ret_var] gwi1r_restrict_global_join_global restrict_global_for_gwi1r_bot restrict_global_for_gw_global_fixed)
   done
 
-lemma gex_se_main_exit: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn_main_exit, ())) gex_sigma3 (gn_main_exit, ())"
+lemma gex_se_main_exit: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn_main_exit, ())) gex_sigma3 (gn_main_exit, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_edge(1)[OF gex_main_exit_entry_ne gex_edge_preds(9) gex_edge_preds(26,27) refl]
+    unfolding gex_hooks.hook_gen_single_edge(1)[OF gex_main_exit_entry_ne gex_edge_preds(9) gex_edge_preds(26,27) refl]
     unfolding traverse_sign_ghost_edge_tree gex_sigma3_Inl_shape gex_hookD3_main_exit gex_hookG3_raw
     unfolding dg_hook_D_def gex_sigma3_gn8_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_local restrict_local_for_le_STop
         sg_writer_edge_local ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_join_upd[OF gw7r_restrict_join_global is_global_ret_var] gwmexit_r_def)
+    by (simp add: restrict_join_upd[OF gw7r_restrict_join_global gex_gs_not_ret_var] gwmexit_r_def)
   subgoal
     unfolding gex_sides_fun_single_edge[OF gex_main_exit_entry_ne gex_edge_preds(9) gex_edge_preds(26,27)]
     apply (rule gex_se_sides_generic)
@@ -669,7 +747,7 @@ lemma gex_se_main_exit: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot 
     unfolding dg_hook_D_def gex_sigma3_gn8_raw[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_edge_global restrict_global_for_le_STop
         sg_writer_edge_global ghost_step_def edge_write_var.simps)
-    by (simp add: restrict_global_for_upd_local[OF is_global_ret_var] gw7r_restrict_global_join_global)
+    by (auto simp add: restrict_global_for_upd_local[OF gex_gs_not_ret_var] gw7r_restrict_global_join_global restrict_global_for_gw7r_bot restrict_global_for_gw_global_fixed)
   done
 
 text \<open>The join at \<open>gn7\<close>: two intra predecessors, so \<open>hook_gen_single_edge\<close> does not apply.
@@ -678,47 +756,48 @@ text \<open>The join at \<open>gn7\<close>: two intra predecessors, so \<open>ho
   final proof does not re-unfold the generator.\<close>
 
 lemma gex_gn7_eq:
-  "eq (sign_ghost_dg.hook_gen gex_g5 bot (DG (\<lambda>_. STop) gw0) s0g) (gn7, ()) sigma =
-     DG (sign_ghost_edge_local (EA_Assign ''j'' (N 0)) gn7 (dg_hook_D sigma gn4) (dg_hook_G sigma)
-         \<squnion> sign_ghost_edge_local (EA_Assign ''j'' (N 1)) gn7 (dg_hook_D sigma gn6) (dg_hook_G sigma)) bot"
-  unfolding sign_ghost_dg.eq_hook_gen sign_ghost_dg.hook_acc_def sign_ghost_dg.hook_trees_def
+  "eq (gex_hook_gen gex_g5 bot (DG (\<lambda>_. STop) gw0) s0g) (gn7, ()) sigma =
+     DG (sign_ghost_edge_local gex_gs (EA_Assign ''j'' (N 0)) gn7 (dg_hook_D sigma gn4) (dg_hook_G sigma)
+         \<squnion> sign_ghost_edge_local gex_gs (EA_Assign ''j'' (N 1)) gn7 (dg_hook_D sigma gn6) (dg_hook_G sigma)) bot"
+  unfolding gex_hooks.eq_hook_gen gex_hooks.hook_acc_def gex_hooks.hook_trees_def
     gex_hook_gen_gn7_pred
   by (simp add: gex_gn7_not_entry traverse_sign_ghost_edge_tree dg_hook_D_def dg_hook_G_def)
 
-lemma gex_gn7_sides_fun: "sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 =
-  sides_of_rhs (sign_ghost_edge_tree gn4 (EA_Assign ''j'' (N 0)) gn7) gex_sigma3
-    \<squnion> sides_of_rhs (sign_ghost_edge_tree gn6 (EA_Assign ''j'' (N 1)) gn7) gex_sigma3"
-  unfolding sign_ghost_dg.hook_gen_def
+lemma gex_gn7_sides_fun: "sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 =
+  sides_of_rhs (sign_ghost_edge_tree gex_gs gn4 (EA_Assign ''j'' (N 0)) gn7) gex_sigma3
+    \<squnion> sides_of_rhs (sign_ghost_edge_tree gex_gs gn6 (EA_Assign ''j'' (N 1)) gn7) gex_sigma3"
+  unfolding gex_hooks.hook_gen_def
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def gex_hook_gen_gn7_pred gex_gn7_not_entry
       Let_def sides_of_rhs_seqcomp fun_eq_iff)
 
-lemma gex_se_gn7_local: "eq (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) (gn7, ()) gex_sigma3 \<le> gex_sigma3 (Inl (gn7, ()))"
+lemma gex_se_gn7_local: "eq (gex_hook_gen gex_g5 bot s0d s0g_val2) (gn7, ()) gex_sigma3 \<le> gex_sigma3 (Inl (gn7, ()))"
   unfolding s0d_def gex_gn7_eq gex_sigma3_Inl_shape gex_hookD3_gn7 gex_hookD3_gn4 gex_hookD3_gn6 gex_hookG3
   apply (simp add: less_eq_dg_state_def sg_value_sup sg_writer_sup sg_value_edge_local restrict_local_for_le_STop sup.bounded_iff)
   apply (simp add: sg_writer_edge_local ghost_step_def edge_write_var.simps)
   by (metis gw4r_j_join gw6r_j_join gw7r_is_join sup_ge1 sup_ge2)
 
-lemma gex_se_gn7_sides_Inr: "globs (sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (Inr ())) \<le> globs (gex_sigma3 (Inr ()))"
+lemma gex_se_gn7_sides_Inr: "globs (sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (Inr ())) \<le> globs (gex_sigma3 (Inr ()))"
   unfolding gex_gn7_sides_fun
   apply (simp only: sup_fun_def)
   unfolding sides_sign_ghost_edge_tree_Inr dg_hook_D_def[symmetric] gex_hookD3_gn4 gex_hookD3_gn6 gex_hookG3_raw gex_sigma3_Inr
   apply (simp add: sup_dg_state_def)
   by (simp add: less_eq_dg_state_def sg_writer_sup sg_writer_edge_global ghost_step_def edge_write_var.simps
-      restrict_global_for_upd_local[OF is_global_j] gw4r_restrict_global_join_global gw6r_restrict_global_join_global
+      restrict_global_for_upd_local[OF gex_gs_not_j] gw4r_restrict_global_join_global gw6r_restrict_global_join_global
+      restrict_global_for_gw4r_bot restrict_global_for_gw6r_bot restrict_global_for_gw_global_fixed
       sg_value_sup sg_value_edge_global restrict_global_for_le_STop sup.bounded_iff)
 
-lemma gex_se_gn7_sides_Inr_locals: "locals (sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (Inr ())) = bot"
+lemma gex_se_gn7_sides_Inr_locals: "locals (sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (Inr ())) = bot"
   unfolding gex_gn7_sides_fun
   by (simp add: sup_fun_def sides_sign_ghost_edge_tree_Inr sup_dg_state_def)
 
-lemma gex_se_gn7_sides_Inr_full: "sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (Inr ()) \<le> gex_sigma3 (Inr ())"
+lemma gex_se_gn7_sides_Inr_full: "sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (Inr ()) \<le> gex_sigma3 (Inr ())"
   unfolding less_eq_dg_state_def
   apply (rule conjI)
   subgoal by (simp add: gex_se_gn7_sides_Inr_locals sg_value_bot sg_writer_bot)
   subgoal using gex_se_gn7_sides_Inr[unfolded less_eq_dg_state_def] by blast
   done
 
-lemma gex_se_gn7: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (gn7, ())"
+lemma gex_se_gn7: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn7, ())) gex_sigma3 (gn7, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal by (rule gex_se_gn7_local)
@@ -734,11 +813,11 @@ lemma gex_se_gn7: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0
 
 subsection \<open>The ENTER case at \<open>gn_p_entry\<close>\<close>
 
-lemma gex_se_p_entry: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn_p_entry, ())) gex_sigma3 (gn_p_entry, ())"
+lemma gex_se_p_entry: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn_p_entry, ())) gex_sigma3 (gn_p_entry, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_enter(1)[OF gex_p_entry_entry_ne gex_call_preds(1) gex_call_preds(2) gex_call_preds(3) refl]
+    unfolding gex_hooks.hook_gen_single_enter(1)[OF gex_p_entry_entry_ne gex_call_preds(1) gex_call_preds(2) gex_call_preds(3) refl]
     unfolding traverse_sign_ghost_enter_tree gex_sigma3_Inl_shape gex_hookD3_default[OF gex_p_entry_mem] gex_hookG3_raw
     unfolding dg_hook_D_def gex_hookD3_gn7[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_enter_snd restrict_local_for_le_STop sg_writer_enter_snd)
@@ -756,16 +835,16 @@ lemma gex_se_p_entry: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0
 
 subsection \<open>The COMBINE case at \<open>gn8\<close>\<close>
 
-lemma gex_se_gn8: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn8, ())) gex_sigma3 (gn8, ())"
+lemma gex_se_gn8: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn8, ())) gex_sigma3 (gn8, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
-    unfolding sign_ghost_dg.hook_gen_single_combine(1)[OF gex_gn8_entry_ne gex_call_preds(4) gex_call_preds(5) gex_call_preds(6) refl]
+    unfolding gex_hooks.hook_gen_single_combine(1)[OF gex_gn8_entry_ne gex_call_preds(4) gex_call_preds(5) gex_call_preds(6) refl]
     unfolding traverse_sign_ghost_combine_tree gex_sigma3_Inl_shape gex_hookD3_gn8 gex_hookG3_raw
     unfolding dg_hook_D_def gex_hookD3_gn7[unfolded dg_hook_D_def] gex_hookD3_p_exit[unfolded dg_hook_D_def]
     apply (simp add: less_eq_dg_state_def sg_value_combine_snd restrict_local_for_le_STop sg_writer_combine_snd)
     apply (simp add: combine_collect_abs_None combine_abs_for_eq_restrict)
-    by (simp add: gw7r_restrict_join_global)
+    by (auto simp add: gw7r_restrict_join_global restrict_local_for_gw_global_bot restrict_local_for_gw7r)
   subgoal
     unfolding gex_sides_fun_single_combine[OF gex_gn8_entry_ne gex_call_preds(4) gex_call_preds(5) gex_call_preds(6)]
     apply (rule gex_se_sides_generic_combine)
@@ -774,24 +853,24 @@ lemma gex_se_gn8: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0
     unfolding gex_hookD3_gn7[unfolded dg_hook_D_def] gex_hookD3_p_exit[unfolded dg_hook_D_def] gex_hookG3_raw
     apply (simp add: sg_value_combine_fst restrict_global_for_le_STop sg_writer_combine_fst)
     apply (simp add: combine_collect_abs_None combine_abs_for_eq_restrict)
-    by (simp add: gwpexit_r_restrict_global_join_global)
+    by (auto simp add: gwpexit_r_restrict_global_join_global restrict_global_for_gwpexit_r_bot restrict_global_for_gw_global_fixed)
   done
 
 subsection \<open>The entry case at \<open>gn_main_entry\<close>\<close>
 
 lemma gex_sides_fun_entry:
-  "sides_of_rhs (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (cfg_entry gex_g5, ())) sigma
+  "sides_of_rhs (gex_hook_gen gex_g5 bot s0d s0g_val2 (cfg_entry gex_g5, ())) sigma
      = (\<lambda>j. if j = Inr () then DG bot s0g_val2 else bot)"
-  unfolding sign_ghost_dg.hook_gen_def gex_entry_eval
+  unfolding gex_hooks.hook_gen_def gex_entry_eval
   by (simp add: side_cfg_T_eff_keyed_seed_trees_def gex_main_entry_preds gex_entry_eval Let_def
       sides_of_rhs_seqcomp fun_eq_iff)
 
-lemma gex_se_main_entry: "se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 (gn_main_entry, ())) gex_sigma3 (gn_main_entry, ())"
+lemma gex_se_main_entry: "se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 (gn_main_entry, ())) gex_sigma3 (gn_main_entry, ())"
   unfolding se_constraint_holds_def
   apply (intro conjI)
   subgoal
     unfolding gex_entry_eval[symmetric]
-    unfolding sign_ghost_dg.hook_gen_entry(1)[OF
+    unfolding gex_hooks.hook_gen_entry(1)[OF
         gex_main_entry_preds(1)[unfolded gex_entry_eval[symmetric]]
         gex_main_entry_preds(2)[unfolded gex_entry_eval[symmetric]]
         gex_main_entry_preds(3)[unfolded gex_entry_eval[symmetric]] refl]
@@ -812,8 +891,8 @@ definition gex_vars :: "(cfg_node \<times> unit) set" where
     (gn5, ()), (gn6, ()), (gn7, ()), (gn8, ()), (gn_p_entry, ()), (gn_p_exit, ()), (gn_main_exit, ())}"
 
 lemma gex_ball:
-  "\<forall>u \<in> gex_vars. dep\<^sub>L (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 u \<subseteq> gex_vars \<and>
-     se_constraint_holds (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2 u) gex_sigma3 u"
+  "\<forall>u \<in> gex_vars. dep\<^sub>L (gex_hook_gen gex_g5 bot s0d s0g_val2) gex_sigma3 u \<subseteq> gex_vars \<and>
+     se_constraint_holds (gex_hook_gen gex_g5 bot s0d s0g_val2 u) gex_sigma3 u"
   unfolding gex_vars_def
   by (auto simp: gex_dep_main_entry gex_dep_gn0 gex_dep_gn1 gex_dep_gn2 gex_dep_gn3 gex_dep_gn4
       gex_dep_gn5 gex_dep_gn6 gex_dep_gn7 gex_dep_gn8 gex_dep_p_entry gex_dep_p_exit gex_dep_main_exit
@@ -821,15 +900,15 @@ lemma gex_ball:
       gex_se_gn7 gex_se_gn8 gex_se_p_entry gex_se_p_exit gex_se_main_exit)
 
 lemma gex_part_post_solution:
-  "part_post_solution (sign_ghost_dg.hook_gen gex_g5 bot s0d s0g_val2) (gn_main_exit, ()) gex_sigma3 gex_vars"
-  by (rule sign_ghost_dg.part_post_solution_of_ball[OF _ gex_ball]) (simp add: gex_vars_def)
+  "part_post_solution (gex_hook_gen gex_g5 bot s0d s0g_val2) (gn_main_exit, ()) gex_sigma3 gex_vars"
+  by (rule gex_hooks.part_post_solution_of_ball[OF _ gex_ball]) (simp add: gex_vars_def)
 
 subsection \<open>Base-store collecting soundness at every covered program point\<close>
 
 lemma gex_ltr_collect_sound:
   assumes sound0: "S0 \<subseteq> sign_ghost_gamma s0d s0g_val2"
-  shows "ltr_collect is_global gex_g5 S0 v \<subseteq> dg_hook_gamma sign_ghost_gamma gex_sigma3 v"
-  apply (rule sign_ghost_dg_ltr.hook_post_solution_collect_sound_ltr[OF gex_part_post_solution])
+  shows "ltr_collect gex_gs gex_g5 S0 v \<subseteq> dg_hook_gamma sign_ghost_gamma gex_sigma3 v"
+  apply (rule gex_hooks_ltr.hook_post_solution_collect_sound_ltr[OF gex_part_post_solution])
   subgoal unfolding gex_entry_eval gex_vars_def by simp
   subgoal unfolding gex_intra_eval gex_vars_def by auto
   subgoal unfolding gex_calls_eval gn_p_entry_def gex_vars_def by auto
