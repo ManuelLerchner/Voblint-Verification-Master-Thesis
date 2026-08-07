@@ -184,5 +184,17 @@ lemma dgEx_inspect:
      (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (STop, STop)"
   by eval
 
+subsection \<open>Executable code generation\<close>
+
+text \<open>
+  \<open>dgEx_sol\<close> exports through Isabelle's code generator, not merely through
+  \<open>eval\<close>/\<open>value\<close>: this is a stronger guarantee, since the code generator
+  demands a complete code equation for every constant on the dependency path
+  rather than falling back to the ML interpreter's built-in evaluation of the
+  logical constants involved.
+\<close>
+
+export_code dgEx_sol in Haskell module_name Sign_Demo
+
 end
 

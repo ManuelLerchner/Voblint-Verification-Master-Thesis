@@ -136,6 +136,16 @@ lemma loop_head_across_update_rules:
         (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"
   unfolding loop_ivl_eqs_def run_menu_def solver_menu_def by eval
 
+subsection \<open>Executable code generation\<close>
+
+text \<open>
+  Both TD entry points, \<open>loop_ivl_sol\<close> (bounded Kleene) and \<open>loop_ivl_td_sol\<close>
+  (Apinis warrowing), export through Isabelle's code generator, not merely
+  through \<open>eval\<close>/\<open>value\<close>.
+\<close>
+
+export_code loop_ivl_sol loop_ivl_td_sol in Haskell module_name Interval_Demo
+
 end
 
 
