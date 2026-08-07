@@ -1,6 +1,9 @@
 theory Interval_Checks
   imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
+    Interval_Exec_Sound
 begin
+
+hide_const phase.N
 
 section \<open>Interval instance of the generic check-discharge interface\<close>
 
@@ -87,5 +90,17 @@ lemma interval_classify_precision_lower_proved:
 lemma interval_classify_precision_upper_proved:
   "interval_classify_check (Less (V ''x'') (N 9)) test_env_precision = Check_Proved"
   unfolding test_env_precision_def by eval
+
+subsection \<open>Whole-program check report\<close>
+
+text \<open>Thin composition, mirroring \<open>sign_check_report\<close>: \<^const>\<open>classify_checks\<close>
+  owns the traversal and ordering, \<^const>\<open>ivl_exec_prog_at\<close> owns the
+  node-indexed Interval environment, and \<open>interval_classify_check\<close> owns the
+  per-check classification.\<close>
+
+definition interval_check_report ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "interval_check_report gs mnm p =
+     classify_checks (prog_cfg mnm p) (ivl_exec_prog_at gs mnm p) interval_classify_check"
 
 end

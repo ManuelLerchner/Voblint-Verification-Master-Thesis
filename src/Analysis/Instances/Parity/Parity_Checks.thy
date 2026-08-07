@@ -1,6 +1,8 @@
 theory Parity_Checks
-  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks"
+  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec_Sound
 begin
+
+hide_const phase.N
 
 section \<open>Parity instance of the generic check-discharge interface\<close>
 
@@ -101,5 +103,17 @@ lemma parity_classify_nested_unknown:
      (Or (Not (Eq (V ''x'') (V ''y''))) (Eq (V ''z'') (N 1)))
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
+
+subsection \<open>Whole-program check report\<close>
+
+text \<open>Thin composition, mirroring \<open>sign_check_report\<close>/\<open>interval_check_report\<close>:
+  \<^const>\<open>classify_checks\<close> owns the traversal and ordering,
+  \<^const>\<open>parity_exec_prog_at\<close> owns the node-indexed Parity environment, and
+  \<open>parity_classify_check\<close> owns the per-check classification.\<close>
+
+definition parity_check_report ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "parity_check_report gs mnm p =
+     classify_checks (prog_cfg mnm p) (parity_exec_prog_at gs mnm p) parity_classify_check"
 
 end

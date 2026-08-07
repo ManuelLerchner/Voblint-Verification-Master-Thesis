@@ -675,5 +675,88 @@ definition raw_cfg_dot_lit ::
   "raw_cfg_dot_lit \<Pi> ps mnm main annotate =
     String.implode (raw_cfg_dot \<Pi> ps mnm main annotate)"
 
+section \<open>Textual check report\<close>
+
+text \<open>
+  A minimal textual rendering of a \<^type>\<open>check_report_entry\<close> list --- kept
+  separate from \<^const>\<open>classify_checks\<close> itself, the same separation
+  \<^const>\<open>check_result_annotation\<close> keeps between classification and its own
+  GraphViz styling. One line per entry: the check's own node, its condition,
+  and its status.
+\<close>
+
+fun string_of_check_result :: "check_result \<Rightarrow> string" where
+  "string_of_check_result Check_Proved = ''PROVED''"
+| "string_of_check_result Check_Refuted = ''REFUTED''"
+| "string_of_check_result Check_Unknown = ''UNKNOWN''"
+
+definition string_of_check_report_entry :: "check_report_entry \<Rightarrow> string" where
+  "string_of_check_report_entry entry =
+     (case entry of (v, cnd, res) \<Rightarrow>
+        string_of_cfg_node v @ '': '' @ string_of_bexp cnd @ ''  '' @ string_of_check_result res)"
+
+definition string_of_check_report :: "check_report_entry list \<Rightarrow> string" where
+  "string_of_check_report report =
+     concat (map (\<lambda>entry. string_of_check_report_entry entry @ nl) report)"
+
+section \<open>Report-driven GraphViz annotation\<close>
+
+text \<open>
+  The GraphViz counterpart of \<^const>\<open>string_of_check_report\<close>: looks up the
+  report entry at a queried node and, if one exists, renders it through
+  \<^const>\<open>check_result_annotation\<close>. This lets a caller's
+  \<open>node_annotation\<close> hook consume a whole-program \<^const>\<open>classify_checks\<close>
+  report directly instead of restating a manually maintained \<^typ>\<open>pp\<close>-to-
+  \<^typ>\<open>bexp\<close> table --- the report already names every checked node once.
+\<close>
+
+definition check_report_node_annotation ::
+    "check_report_entry list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+  "check_report_node_annotation report v =
+     (case find (\<lambda>entry. fst entry = v) report of
+        Some (_, cnd, res) \<Rightarrow> Some (check_result_annotation res cnd)
+      | None \<Rightarrow> None)"
+
+text \<open>
+  A standalone DOT box listing every report entry, styled through the same
+  \<^const>\<open>source_html_label\<close> table \<^const>\<open>raw_cfg_dot\<close> already uses for its
+  source box --- one more read of the same \<^const>\<open>classify_checks\<close> report,
+  not a second check representation.
+\<close>
+
+definition check_report_html_label :: "check_report_entry list \<Rightarrow> string" where
+  "check_report_html_label report = source_html_label (string_of_check_report report)"
+
+definition check_report_dot_cluster :: "check_report_entry list \<Rightarrow> string" where
+  "check_report_dot_cluster report =
+     ''  subgraph cluster_checks {'' @ nl
+       @ ''    label='' @ dq @ ''Checks'' @ dq @ '';'' @ nl
+       @ ''    style=rounded; color=gray70; penwidth=1;'' @ nl
+       @ ''    checks [shape=plain,label='' @ check_report_html_label report @ ''];'' @ nl
+       @ ''  }'' @ nl"
+
+text \<open>Every \<^const>\<open>raw_cfg_dot\<close> output ends in the digraph's own closing
+  brace and newline, on both its well-formed and its \<open>invalid_graph\<close>
+  fallback path, so splicing one more subgraph in immediately before those
+  final two characters is a total operation over any \<^const>\<open>raw_cfg_dot\<close>
+  result, not a fragile parse of DOT syntax.\<close>
+
+definition insert_dot_cluster_before_close :: "string \<Rightarrow> string \<Rightarrow> string" where
+  "insert_dot_cluster_before_close extra dot =
+     take (length dot - 2) dot @ extra @ drop (length dot - 2) dot"
+
+definition raw_cfg_dot_with_report ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+     \<Rightarrow> check_report_entry list \<Rightarrow> string" where
+  "raw_cfg_dot_with_report \<Pi> ps mnm main annotate report =
+     insert_dot_cluster_before_close (check_report_dot_cluster report)
+       (raw_cfg_dot \<Pi> ps mnm main annotate)"
+
+definition raw_cfg_dot_with_report_lit ::
+    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+     \<Rightarrow> check_report_entry list \<Rightarrow> String.literal" where
+  "raw_cfg_dot_with_report_lit \<Pi> ps mnm main annotate report =
+     String.implode (raw_cfg_dot_with_report \<Pi> ps mnm main annotate report)"
+
 end
 

@@ -5,8 +5,6 @@ theory Example_Checks_Store_Only
           "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 text \<open>
   Exercises \<^const>\<open>checks_proven\<close> against a computed (not hand-built) Sign
   post-solution, discharged node-locally through the generic
@@ -315,6 +313,56 @@ proof -
   then show ?thesis by blast
 qed
 
+subsection \<open>Whole-program check report\<close>
+
+text \<open>
+  The entire report in one shot, computed --- not hand-assembled --- from
+  \<^const>\<open>classify_checks\<close> over the compiled \<^const>\<open>intra\<close> edges, in the
+  checks' own compiled order: the same three outcomes the per-node lemmas
+  above establish individually (\<open>checks_ex_classify_1\<close>/\<open>_3\<close>/\<open>_5\<close>), now
+  read off the whole program at once.
+\<close>
+
+lemma checks_ex_report_eval:
+  "sign_check_report checks_ex_gs ''main'' checks_ex_program =
+     [(Statement 1, Less (N 0) (V ''y''), Check_Proved),
+      (Statement 3, Less (N 0) (V ''y''), Check_Refuted),
+      (Statement 5, Eq (V ''z'') (N 1), Check_Unknown)]"
+  by eval
+
+text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
+  program's own compiled CFG and computed environment --- no separate
+  representation to drift from the per-node facts above.\<close>
+
+lemma checks_ex_report_unfold:
+  "sign_check_report checks_ex_gs ''main'' checks_ex_program
+     = classify_checks (prog_cfg ''main'' checks_ex_program) checks_ex_env sign_classify_check"
+  unfolding sign_check_report_def checks_ex_env_def by simp
+
+text \<open>Agreement with the existing per-node classification: the first report
+  entry is derivable directly from \<open>classify_checks_mem_iff\<close> together
+  with the compiled \<^const>\<open>EA_Check\<close> edge (\<open>checks_ex_intra_eval\<close>) and
+  the already-proven node-local classification (\<open>checks_ex_classify_1\<close>),
+  not merely re-derived by \<open>eval\<close>.\<close>
+
+corollary checks_ex_report_agrees_with_node_classification:
+  "(Statement 1, Less (N 0) (V ''y''), Check_Proved)
+     \<in> set (sign_check_report checks_ex_gs ''main'' checks_ex_program)"
+  unfolding checks_ex_report_unfold
+  using classify_checks_mem_iff[of "prog_cfg ''main'' checks_ex_program"
+      "Statement 1" "Less (N 0) (V ''y'')" Check_Proved checks_ex_env sign_classify_check]
+  using checks_ex_intra_eval checks_ex_classify_1
+  by (auto simp: checks_ex_intra_eval)
+
+text \<open>The textual renderer applied to this program's own report --- rendering
+  stays separate from \<^const>\<open>classify_checks\<close> itself, this is just evidence
+  it produces the expected lines for a real computed report.\<close>
+
+lemma checks_ex_report_rendered:
+  "map string_of_check_report_entry (sign_check_report checks_ex_gs ''main'' checks_ex_program) =
+     [''pp1: 0<y  PROVED'', ''pp3: 0<y  REFUTED'', ''pp5: z==1  UNKNOWN'']"
+  by eval
+
 subsection \<open>CFG rendering, checks colored by executable classification\<close>
 
 text \<open>
@@ -322,27 +370,25 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close> pipeline every other example uses
   (\<^const>\<open>raw_cfg_dot_lit\<close>), not a bespoke renderer, through the same
   check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook every other annotated
-  example uses. Unlike the earlier version of this example, the color is not
-  a manually maintained table: it is \<^const>\<open>sign_classify_check\<close> applied to
-  the computed \<^const>\<open>checks_ex_env\<close> at each check's own node, so a change to
-  the program or the solver result changes the rendered color automatically.
+  example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>bexp\<close> table:
+  \<^const>\<open>check_report_node_annotation\<close> looks each node up directly in the
+  computed \<^const>\<open>sign_check_report\<close>, so a change to the program or the
+  solver result changes the rendered color automatically.
   \<^term>\<open>Check_Proved\<close> renders dark green, \<^term>\<open>Check_Refuted\<close> red,
   \<^term>\<open>Check_Unknown\<close> grey. The unrelated \<open>FunctionResult ''main''\<close> exit node
   gets its own neutral-grey annotation through the same hook, so the ordinary
   end-of-procedure node is not visually confused with a refuted check.
 \<close>
 
-definition checks_ex_check_at :: "pp \<Rightarrow> bexp option" where
-  "checks_ex_check_at v =
-     (if v = Statement 1 then Some (Less (N 0) (V ''y''))
-      else if v = Statement 3 then Some (Less (N 0) (V ''y''))
-      else if v = Statement 5 then Some (Eq (V ''z'') (N 1))
-      else None)"
+text \<open>No manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>bexp\<close> table: the check nodes
+  and their conditions are read off \<^const>\<open>sign_check_report\<close>'s own computed
+  report through \<^const>\<open>check_report_node_annotation\<close>.\<close>
 
 definition checks_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "checks_ex_node_annotation v =
-     (case checks_ex_check_at v of
-        Some cnd \<Rightarrow> Some (check_result_annotation (sign_classify_check cnd (checks_ex_env v)) cnd)
+     (case check_report_node_annotation
+             (sign_check_report checks_ex_gs ''main'' checks_ex_program) v of
+        Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult ''main'' then
             Some (Node_Annotation ''''
@@ -356,22 +402,23 @@ text \<open>Validation that the generic renderer's hook actually carries all thr
 lemma checks_ex_annotation_proved:
   "checks_ex_node_annotation (Statement 1) =
      Some (check_result_annotation Check_Proved (Less (N 0) (V ''y'')))"
-  unfolding checks_ex_node_annotation_def checks_ex_check_at_def checks_ex_env_def by eval
+  unfolding checks_ex_node_annotation_def by eval
 
 lemma checks_ex_annotation_refuted:
   "checks_ex_node_annotation (Statement 3) =
      Some (check_result_annotation Check_Refuted (Less (N 0) (V ''y'')))"
-  unfolding checks_ex_node_annotation_def checks_ex_check_at_def checks_ex_env_def by eval
+  unfolding checks_ex_node_annotation_def by eval
 
 lemma checks_ex_annotation_unknown:
   "checks_ex_node_annotation (Statement 5) =
      Some (check_result_annotation Check_Unknown (Eq (V ''z'') (N 1)))"
-  unfolding checks_ex_node_annotation_def checks_ex_check_at_def checks_ex_env_def by eval
+  unfolding checks_ex_node_annotation_def by eval
 
 definition checks_ex_dot_lit :: String.literal where
   "checks_ex_dot_lit =
-     raw_cfg_dot_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
-       ''main'' (prog_main checks_ex_program) checks_ex_node_annotation"
+     raw_cfg_dot_with_report_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
+       ''main'' (prog_main checks_ex_program) checks_ex_node_annotation
+       (sign_check_report checks_ex_gs ''main'' checks_ex_program)"
 
 ML_val \<open>
   writeln (@{code checks_ex_dot_lit})

@@ -12,8 +12,6 @@ theory Example_M4_Acceptance
     Example_Interval_Placement
 begin
 
-hide_const phase.N
-
 text \<open>
   The three Phase 1 acceptance cases named in the M4 design doc (section 6,
   "Analysis roadmap"): A1 (explicitly declared mixed interval analysis), A2

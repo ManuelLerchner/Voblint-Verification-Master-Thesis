@@ -5,8 +5,6 @@ theory Example_Parity_Checks_Store_Only
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
-
 text \<open>
   Third-domain worked example, mirroring
   Voblint_Examples.Example_Checks_Store_Only (Sign) and
@@ -313,31 +311,66 @@ proof -
   then show ?thesis by blast
 qed
 
+subsection \<open>Whole-program check report\<close>
+
+text \<open>
+  The entire report in one shot, computed --- not hand-assembled --- from
+  \<^const>\<open>classify_checks\<close> over the compiled \<^const>\<open>intra\<close> edges, in the
+  checks' own compiled order: the same three outcomes the per-node lemmas
+  above establish individually (\<open>parity_ex_classify_3\<close>/\<open>_4\<close>/\<open>_6\<close>), now read
+  off the whole program at once.
+\<close>
+
+lemma parity_ex_report_eval:
+  "parity_check_report parity_ex_gs ''main'' parity_ex_program =
+     [(Statement 3, Not (Eq (V ''y'') (V ''z'')), Check_Proved),
+      (Statement 4, Eq (V ''y'') (V ''z''), Check_Refuted),
+      (Statement 6, Eq (V ''y'') (V ''w''), Check_Unknown)]"
+  by eval
+
+text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
+  program's own compiled CFG and computed environment --- no separate
+  representation to drift from the per-node facts above.\<close>
+
+lemma parity_ex_report_unfold:
+  "parity_check_report parity_ex_gs ''main'' parity_ex_program
+     = classify_checks (prog_cfg ''main'' parity_ex_program) parity_ex_env parity_classify_check"
+  unfolding parity_check_report_def parity_ex_env_def by simp
+
+text \<open>Agreement with the existing per-node classification: the first report
+  entry is derivable directly from \<open>classify_checks_mem_iff\<close> together with
+  the compiled \<^const>\<open>EA_Check\<close> edge (\<open>parity_ex_intra_eval\<close>) and the
+  already-proven node-local classification (\<open>parity_ex_classify_3\<close>), not
+  merely re-derived by \<open>eval\<close>.\<close>
+
+corollary parity_ex_report_agrees_with_node_classification:
+  "(Statement 3, Not (Eq (V ''y'') (V ''z'')), Check_Proved)
+     \<in> set (parity_check_report parity_ex_gs ''main'' parity_ex_program)"
+  unfolding parity_ex_report_unfold
+  using classify_checks_mem_iff[of "prog_cfg ''main'' parity_ex_program"
+      "Statement 3" "Not (Eq (V ''y'') (V ''z''))" Check_Proved parity_ex_env parity_classify_check]
+  using parity_ex_intra_eval parity_ex_classify_3
+  by (auto simp: parity_ex_intra_eval)
+
 subsection \<open>CFG rendering, checks colored by executable classification\<close>
 
 text \<open>
   The compiled CFG is rendered through the same generic
   \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close> pipeline every other example uses
   (\<^const>\<open>raw_cfg_dot_lit\<close>), through the same check-agnostic
-  \<^type>\<open>graphviz_node_annotation\<close> hook. The color is not a manually
-  maintained table: it is \<^const>\<open>parity_classify_check\<close> applied to the
-  computed \<^const>\<open>parity_ex_env\<close> at each check's own node.
+  \<^type>\<open>graphviz_node_annotation\<close> hook. There is no manually maintained
+  \<^typ>\<open>pp\<close>-to-\<^typ>\<open>bexp\<close> table: \<^const>\<open>check_report_node_annotation\<close> looks
+  each node up directly in the computed \<^const>\<open>parity_check_report\<close>.
   \<^term>\<open>Check_Proved\<close> renders dark green, \<^term>\<open>Check_Refuted\<close> red,
   \<^term>\<open>Check_Unknown\<close> grey. The unrelated \<open>FunctionResult ''main''\<close> exit
   node gets its own neutral-grey annotation through the same hook.
 \<close>
 
-definition parity_ex_check_at :: "pp \<Rightarrow> bexp option" where
-  "parity_ex_check_at v =
-     (if v = Statement 3 then Some (Not (Eq (V ''y'') (V ''z'')))
-      else if v = Statement 4 then Some (Eq (V ''y'') (V ''z''))
-      else if v = Statement 6 then Some (Eq (V ''y'') (V ''w''))
-      else None)"
-
 definition parity_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "parity_ex_node_annotation v =
-     (case parity_ex_check_at v of
-        Some cnd \<Rightarrow> Some (check_result_annotation (parity_classify_check cnd (parity_ex_env v)) cnd)
+     (case check_report_node_annotation
+             (parity_check_report parity_ex_gs ''main'' parity_ex_program) v of
+        Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult ''main'' then
             Some (Node_Annotation ''''
@@ -351,22 +384,23 @@ text \<open>Validation that the generic renderer's hook actually carries all thr
 lemma parity_ex_annotation_proved:
   "parity_ex_node_annotation (Statement 3) =
      Some (check_result_annotation Check_Proved (Not (Eq (V ''y'') (V ''z''))))"
-  unfolding parity_ex_node_annotation_def parity_ex_check_at_def parity_ex_env_def by eval
+  unfolding parity_ex_node_annotation_def by eval
 
 lemma parity_ex_annotation_refuted:
   "parity_ex_node_annotation (Statement 4) =
      Some (check_result_annotation Check_Refuted (Eq (V ''y'') (V ''z'')))"
-  unfolding parity_ex_node_annotation_def parity_ex_check_at_def parity_ex_env_def by eval
+  unfolding parity_ex_node_annotation_def by eval
 
 lemma parity_ex_annotation_unknown:
   "parity_ex_node_annotation (Statement 6) =
      Some (check_result_annotation Check_Unknown (Eq (V ''y'') (V ''w'')))"
-  unfolding parity_ex_node_annotation_def parity_ex_check_at_def parity_ex_env_def by eval
+  unfolding parity_ex_node_annotation_def by eval
 
 definition parity_ex_dot_lit :: String.literal where
   "parity_ex_dot_lit =
-     raw_cfg_dot_lit (prog_table parity_ex_program) (prog_procs parity_ex_program)
-       ''main'' (prog_main parity_ex_program) parity_ex_node_annotation"
+     raw_cfg_dot_with_report_lit (prog_table parity_ex_program) (prog_procs parity_ex_program)
+       ''main'' (prog_main parity_ex_program) parity_ex_node_annotation
+       (parity_check_report parity_ex_gs ''main'' parity_ex_program)"
 
 ML_val \<open>
   writeln (@{code parity_ex_dot_lit})

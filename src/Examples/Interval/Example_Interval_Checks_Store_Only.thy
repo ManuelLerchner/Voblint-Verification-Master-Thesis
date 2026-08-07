@@ -5,7 +5,14 @@ theory Example_Interval_Checks_Store_Only
           "Voblint_Analysis.Sign_Checks" "Voblint_VIMP.VIMP_Notation"
 begin
 
-hide_const phase.N
+text \<open>Both \<open>Interval_Checks\<close> and \<open>Sign_Checks\<close> now carry their own
+  \<open>prog_cfg\<close> (each domain's \<open>*_Exec_Sound\<close> theory defines it locally). This
+  file compares Sign and Interval classification on the same program, so both
+  reach it; hiding Sign's leaves every bare \<open>prog_cfg\<close> below meaning
+  Interval's, matching every fact this file cites from
+  \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>.\<close>
+
+hide_const Sign_Exec_Sound.prog_cfg
 
 text \<open>
   The Interval analogue of \<open>Example_Checks_Store_Only\<close> (Sign): exercises
@@ -267,6 +274,48 @@ proof -
   then show ?thesis by blast
 qed
 
+subsection \<open>Whole-program check report\<close>
+
+text \<open>
+  The entire report in one shot, computed --- not hand-assembled --- from
+  \<^const>\<open>classify_checks\<close> over the compiled \<^const>\<open>intra\<close> edges, in the
+  checks' own compiled order: the same three outcomes the per-node lemmas
+  above establish individually (\<open>checks_ivl_ex_classify_2\<close>/\<open>_3\<close>/\<open>_4\<close>), now
+  read off the whole program at once.
+\<close>
+
+lemma checks_ivl_ex_report_eval:
+  "interval_check_report checks_ivl_ex_gs ''main'' checks_ivl_ex_program =
+     [(Statement 2, Less (V ''x'') (N 11), Check_Proved),
+      (Statement 3, Less (V ''x'') (N 0), Check_Refuted),
+      (Statement 4, Eq (V ''x'') (N 5), Check_Unknown)]"
+  by eval
+
+text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
+  program's own compiled CFG and computed environment --- no separate
+  representation to drift from the per-node facts above.\<close>
+
+lemma checks_ivl_ex_report_unfold:
+  "interval_check_report checks_ivl_ex_gs ''main'' checks_ivl_ex_program
+     = classify_checks (prog_cfg ''main'' checks_ivl_ex_program) checks_ivl_ex_env
+         interval_classify_check"
+  unfolding interval_check_report_def checks_ivl_ex_env_def by simp
+
+text \<open>Agreement with the existing per-node classification: the first report
+  entry is derivable directly from \<open>classify_checks_mem_iff\<close> together with
+  the compiled \<^const>\<open>EA_Check\<close> edge (\<open>checks_ivl_ex_intra_eval\<close>) and the
+  already-proven node-local classification (\<open>checks_ivl_ex_classify_2\<close>), not
+  merely re-derived by \<open>eval\<close>.\<close>
+
+corollary checks_ivl_ex_report_agrees_with_node_classification:
+  "(Statement 2, Less (V ''x'') (N 11), Check_Proved)
+     \<in> set (interval_check_report checks_ivl_ex_gs ''main'' checks_ivl_ex_program)"
+  unfolding checks_ivl_ex_report_unfold
+  using classify_checks_mem_iff[of "prog_cfg ''main'' checks_ivl_ex_program"
+      "Statement 2" "Less (V ''x'') (N 11)" Check_Proved checks_ivl_ex_env interval_classify_check]
+  using checks_ivl_ex_intra_eval checks_ivl_ex_classify_2
+  by (auto simp: checks_ivl_ex_intra_eval)
+
 subsection \<open>CFG rendering, checks colored by executable classification\<close>
 
 text \<open>
@@ -275,21 +324,16 @@ text \<open>
   through the same \<^const>\<open>check_result_annotation\<close> status-to-style mapping
   \<open>Example_Checks_Store_Only\<close> (Sign) uses --- shared there, not redefined
   here, confirming the mapping is analysis-independent: no Interval-specific
-  rendering code was needed. The color is \<^const>\<open>interval_classify_check\<close>
-  applied to the computed \<^const>\<open>checks_ivl_ex_env\<close> at each check's own node.
+  rendering code was needed. There is no manually maintained \<^typ>\<open>pp\<close>-to-
+  \<^typ>\<open>bexp\<close> table either: \<^const>\<open>check_report_node_annotation\<close> looks each
+  node up directly in the computed \<^const>\<open>interval_check_report\<close>.
 \<close>
-
-definition checks_ivl_ex_check_at :: "pp \<Rightarrow> bexp option" where
-  "checks_ivl_ex_check_at v =
-     (if v = Statement 2 then Some (Less (V ''x'') (N 11))
-      else if v = Statement 3 then Some (Less (V ''x'') (N 0))
-      else if v = Statement 4 then Some (Eq (V ''x'') (N 5))
-      else None)"
 
 definition checks_ivl_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "checks_ivl_ex_node_annotation v =
-     (case checks_ivl_ex_check_at v of
-        Some cnd \<Rightarrow> Some (check_result_annotation (interval_classify_check cnd (checks_ivl_ex_env v)) cnd)
+     (case check_report_node_annotation
+             (interval_check_report checks_ivl_ex_gs ''main'' checks_ivl_ex_program) v of
+        Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult ''main'' then
             Some (Node_Annotation ''''
@@ -303,22 +347,23 @@ text \<open>Validation that the generic renderer's hook actually carries all thr
 lemma checks_ivl_ex_annotation_proved:
   "checks_ivl_ex_node_annotation (Statement 2) =
      Some (check_result_annotation Check_Proved (Less (V ''x'') (N 11)))"
-  unfolding checks_ivl_ex_node_annotation_def checks_ivl_ex_check_at_def checks_ivl_ex_env_def by eval
+  unfolding checks_ivl_ex_node_annotation_def by eval
 
 lemma checks_ivl_ex_annotation_refuted:
   "checks_ivl_ex_node_annotation (Statement 3) =
      Some (check_result_annotation Check_Refuted (Less (V ''x'') (N 0)))"
-  unfolding checks_ivl_ex_node_annotation_def checks_ivl_ex_check_at_def checks_ivl_ex_env_def by eval
+  unfolding checks_ivl_ex_node_annotation_def by eval
 
 lemma checks_ivl_ex_annotation_unknown:
   "checks_ivl_ex_node_annotation (Statement 4) =
      Some (check_result_annotation Check_Unknown (Eq (V ''x'') (N 5)))"
-  unfolding checks_ivl_ex_node_annotation_def checks_ivl_ex_check_at_def checks_ivl_ex_env_def by eval
+  unfolding checks_ivl_ex_node_annotation_def by eval
 
 definition checks_ivl_ex_dot_lit :: String.literal where
   "checks_ivl_ex_dot_lit =
-     raw_cfg_dot_lit (prog_table checks_ivl_ex_program) (prog_procs checks_ivl_ex_program)
-       ''main'' (prog_main checks_ivl_ex_program) checks_ivl_ex_node_annotation"
+     raw_cfg_dot_with_report_lit (prog_table checks_ivl_ex_program) (prog_procs checks_ivl_ex_program)
+       ''main'' (prog_main checks_ivl_ex_program) checks_ivl_ex_node_annotation
+       (interval_check_report checks_ivl_ex_gs ''main'' checks_ivl_ex_program)"
 
 ML_val \<open>
   writeln (@{code checks_ivl_ex_dot_lit})

@@ -1,6 +1,8 @@
 theory Sign_Checks
-  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
+  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks" Sign_Exec_Sound
 begin
+
+hide_const phase.N
 
 section \<open>Sign instance of the generic check-discharge interface\<close>
 
@@ -102,6 +104,22 @@ lemma sign_classify_nested_unknown:
      (Or (And (Less (N 0) (V ''x'')) (Less (N 0) (V ''y''))) (Eq (V ''z'') (N 1)))
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
+
+subsection \<open>Whole-program check report\<close>
+
+text \<open>
+  Thin composition, not a restatement: \<^const>\<open>classify_checks\<close> already owns
+  the executable traversal and ordering, \<^const>\<open>sign_exec_prog_at\<close> already
+  owns the node-indexed Sign environment, and \<open>sign_classify_check\<close> above
+  already owns the per-check classification. This wrapper only feeds a
+  compiled program's own three projections through them, the same way
+  \<^const>\<open>sign_exec_prog\<close> feeds them through \<^const>\<open>sign_exec_at\<close>.
+\<close>
+
+definition sign_check_report ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "sign_check_report gs mnm p =
+     classify_checks (prog_cfg mnm p) (sign_exec_prog_at gs mnm p) sign_classify_check"
 
 end
 
