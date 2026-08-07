@@ -35,36 +35,50 @@ subsection \<open>1. The program (proper IMP2 program notation, explicit main)\<
 
 text \<open>
   A bounded counting loop that increments by two: initialise \<open>x\<close> to \<open>0\<close>,
-  add \<open>2\<close> while \<open>x < 20\<close>.  No procedures beyond \<open>main\<close>, no globals; \<open>x\<close> is a
-  single flow-sensitive local.  The parity of \<open>x\<close> stays even at every
-  reachable point regardless of the guard, which the analysis must discover,
-  not assume.
+  add \<open>2\<close> while \<open>x < 20\<close>.  No procedures beyond \<open>main\<close>; \<open>x\<close> is a single
+  flow-sensitive local, \<open>Gcount\<close> a second, \<open>G\<close>-prefixed local, and \<open>total\<close>
+  the one declared global despite carrying no naming hint. The parity of
+  \<open>x\<close> stays even at every reachable point regardless of the guard, which the
+  analysis must discover, not assume.
 \<close>
 
 definition parity_program :: imp_prog where
   "parity_program = program {
 
-      global G;
+      global total;
 
-      void main() { 
+      void main() {
         x := 0;
-        y:=1;
-        while (x < 20) { 
-          x := x + 2; 
-          y:=y + 1 
-        }; 
-        G:= x + y
+        Gcount:=1;
+        while (x < 20) {
+          x := x + 2;
+          Gcount:=Gcount + 1
+        };
+        total:= x + Gcount
       }
 }"
 
 definition parity_prog :: "VIMP_Proc.com" where
   "parity_prog = prog_main parity_program"
 
-text \<open>The storage classifier: \<open>G\<close> is declared, so \<open>parity_gs\<close> is the M4 entry point
-  for a family that actually exercises global/local separation through the program's own
-  declaration, not the \<open>is_global\<close> naming convention.\<close>
+text \<open>The storage classifier: \<open>total\<close> is declared global despite its plain
+  name, and \<open>Gcount\<close> stays local despite its \<open>G\<close> prefix, so \<open>parity_gs\<close> is
+  the M4 entry point for a family that actually exercises global/local
+  separation through the program's own declaration, not a naming
+  convention (see \<open>parity_total_global\<close>/\<open>parity_gcount_not_global\<close> below).\<close>
 abbreviation parity_gs :: "vname \<Rightarrow> bool" where
   "parity_gs \<equiv> declared_global parity_program"
+
+lemma parity_total_global [simp]: "parity_gs ''total''"
+  by (simp add: parity_program_def)
+
+lemma parity_gcount_not_global [simp]: "\<not> parity_gs ''Gcount''"
+  by (simp add: parity_program_def)
+
+text \<open>Local shorthand for the executable state's lookup projection, fixed at this
+  file's own \<open>parity_gs\<close> classifier.\<close>
+abbreviation parity_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "parity_lookup s x \<equiv> lookup_resolved_st_q s (location_of parity_gs x)"
 
 definition parity_pi :: proc_table where
   "parity_pi = prog_table parity_program"
@@ -115,7 +129,7 @@ definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + un
 text \<open>The computed parity of \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''x''))
+   (\<lambda>sol. map (\<lambda>p. (p, parity_lookup (locals (snd sol (Inl (p, ())))) ''x''))
             (map Statement [0,1,2,3]))
    (TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()))"
 
@@ -151,8 +165,8 @@ lemma parity_sound0:
 proof -
   have "fun_of_exec_dg_st_for parity_gs cinit_parity_st \<squnion> fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st)
           = fun_of_exec_dg_st_for parity_gs cinit_parity_st"
-    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for restrict_global_def
-                  sup_fun_def fun_eq_iff)
+    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for
+                  restrict_global_for_def declared_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for)
 qed
@@ -160,11 +174,11 @@ qed
 subsection \<open>7. Inspecting the certified result\<close>
 
 lemma parity_head_computed:
-  "lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' = PEven"
+  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 lemma parity_exit_computed:
-  "lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement 3, ())))) ''x'' = PEven"
+  "parity_lookup (locals (snd parity_sol (Inl (Statement 3, ())))) ''x'' = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 subsection \<open>8. Source-level soundness through the registered analysis\<close>
@@ -174,7 +188,7 @@ text \<open>
   solver success \<open>parity_terminates_c\<close> directly into a source-level guarantee: every
   reachable IMP2 store is bounded by the computed parity at its matched program point,
   read through the semantic accessor \<open>parity_ex_reg.gamma\<close>.  No transport lemma,
-  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
+  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
 \<close>
 
 lemma parity_wf: "wf_compile_input parity_gs parity_pi [] ''main'' parity_prog"
@@ -241,11 +255,11 @@ text \<open>
 \<close>
 
 lemma parity_head_proper:
-  "lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' \<noteq> PTop"
+  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' \<noteq> PTop"
   by (simp add: parity_head_computed)
 
 lemma parity_head_excludes_odd:
-  "n \<in> gamma_parity (lookup_exec_dg_st (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'')
+  "n \<in> gamma_parity (parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'')
      \<Longrightarrow> even n"
   by (simp add: parity_head_computed)
 
@@ -265,19 +279,19 @@ definition parity_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope parity_pi [] ''main'' parity_prog
+        scope_locals (compiled_procedure_scope parity_gs parity_pi [] ''main'' parity_prog
           parity_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope parity_pi [] ''main'' parity_prog
+        scope_return_slot (compiled_procedure_scope parity_gs parity_pi [] ''main'' parity_prog
           parity_cfg p)),
-      globals_to_show = [''G''],
+      globals_to_show = [''total''],
       show_local = (\<lambda>_ _ vars d.
         map (\<lambda>x.
-          x @ ''='' @ string_of_parity (lookup_exec_dg_st d x)) vars),
+          x @ ''='' @ string_of_parity (parity_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ d.
         map (\<lambda>g.
-          g @ ''='' @ string_of_parity (lookup_exec_dg_st (globs d) g)) [''G'']),
+          g @ ''='' @ string_of_parity (parity_lookup (globs d) g)) [''total'']),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = True,

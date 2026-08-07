@@ -52,9 +52,6 @@ text \<open>
 definition ret_var :: vname where
   "ret_var = ''#ret''"
 
-lemma ret_var_not_global [simp]: "\<not> is_global ret_var"
-  by (simp add: ret_var_def is_global_def)
-
 datatype source_location =
     LocalVar pname
   | GlobalVar
@@ -619,7 +616,7 @@ definition source_pi :: "proc_table => bool" where
 text \<open>
   Occurrence of one specific variable is the same syntax-directed walk as
   @{const aexp_mentions_global} (\<open>VIMP_Expr\<close>), with the leaf predicate
-  specialised to an equality test instead of @{const is_global}.
+  specialised to an equality test instead of an arbitrary classifier.
 \<close>
 
 definition aexp_mentions :: "vname => aexp => bool" where

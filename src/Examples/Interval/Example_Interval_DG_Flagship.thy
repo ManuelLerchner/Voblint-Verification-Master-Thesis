@@ -85,6 +85,14 @@ text \<open>
 text \<open>The declaration environment holds exactly \<open>main\<close>: there are no other procedures, and
   \<^const>\<open>wf_compile_input\<close> requires the entry procedure to be declared.\<close>
 
+text \<open>Local shorthand for the executable state's lookup and refinement projections,
+  fixed at this file's own \<open>flagship_gs\<close> classifier.\<close>
+abbreviation flagship_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "flagship_lookup s x \<equiv> lookup_resolved_st_q s (location_of flagship_gs x)"
+
+abbreviation flagship_fun_of :: "('a::bot) exec_dg_st \<Rightarrow> 'a abs_state" where
+  "flagship_fun_of \<equiv> fun_of_resolved_st_q_for flagship_gs"
+
 definition flagship_pi :: proc_table where
   "flagship_pi = prog_table flagship_prog"
 
@@ -144,7 +152,7 @@ definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + 
 text \<open>The computed local interval for \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''x'')))
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (flagship_lookup (locals (snd sol (Inl (p, ())))) ''x'')))
             (map Statement [0,1,2,3]))
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
@@ -179,7 +187,7 @@ proof -
   have "fun_of_exec_dg_st_for flagship_gs cinit_ivl_st \<squnion>
           fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st)
         = fun_of_exec_dg_st_for flagship_gs cinit_ivl_st"
-    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_def sup_fun_def fun_eq_iff)
+    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_for_def declared_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 qed
@@ -193,15 +201,15 @@ text \<open>
 subsection \<open>Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
-  "lookup_exec_dg_st (locals (snd flagship_sol (Inl (Statement 1, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 1, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_body_computed:
-  "lookup_exec_dg_st (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_exit_computed:
-  "lookup_exec_dg_st (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
@@ -239,7 +247,7 @@ text \<open>
   solver success \<open>flagship_terminates_c\<close> directly into a source-level guarantee: every
   reachable VIMP store is bounded by the computed interval at its matched program point,
   read through the semantic accessor \<open>flagship_ex_reg.gamma\<close>.  No transport lemma,
-  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<^const>\<open>fun_of_dg_st\<close> appears in this proof.
+  \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
 \<close>
 
 lemma flagship_wf:
@@ -279,29 +287,32 @@ text \<open>
   something --- it is not the trivial \<open>gamma top = UNIV\<close>.
 \<close>
 
-lemma glob_x_at_head: "lookup_exec_dg_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+lemma glob_x_at_head: "flagship_lookup (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma head_x_bound:
-  "(locals ((fun_of_dg_st \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ())))
-    \<squnion> globs ((fun_of_dg_st \<circ> snd flagship_sol) (Inr ()))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  "(locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ())))
+    \<squnion> globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) ''x'' = Ivl (Fin 0) (Fin 20)"
 proof -
-  have L: "fun_of_exec_dg_st (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
-  have G: "fun_of_exec_dg_st (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+  have G: "flagship_fun_of (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
     using glob_x_at_head
     by (simp add: fun_of_resolved_st_q_for_def)
-  show ?thesis by (simp add: fun_of_dg_st_simps sup_fun_def L G)
+  show ?thesis by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def sup_fun_def L G)
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding ivl_dg_gamma_def ivl_dg.dg_gamma_def gamma_unit_def gamma_state_def
-            ivl_dg.dg_D_def ivl_dg.dg_G_def
+  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
+  unfolding ivl_dg_gamma_def
+            sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
+            gamma_unit_def gamma_state_def
+            sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
+            sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "''x''"])
-  using head_x_bound apply (simp add: fun_of_dg_st_simps sup_fun_def)
+  using head_x_bound apply (simp add: fun_of_dg_st_for_simps sup_fun_def)
   done
 
 subsection \<open>Annotated GraphViz of the computed result\<close>
@@ -320,14 +331,14 @@ definition flagship_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_locals (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_return_slot (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
+        x @ ''='' @ string_of_ivl (flagship_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. [''(none)'']),
       show_global_key = (\<lambda>_. ''Global''),

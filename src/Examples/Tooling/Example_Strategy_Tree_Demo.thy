@@ -51,15 +51,6 @@ text \<open>
 value "traverse_rhs (fib_tree 5) ((\<lambda>_. 0) :: nat + nat \<Rightarrow> nat)"
             
 lemma fib_tree_correct: "traverse_rhs (fib_tree n) \<sigma> = fib n"
-proof (induct n rule: fib.induct)
-  case 1
-  show ?case by simp
-next
-  case 2
-  show ?case by simp
-next
-  case (3 n)
-  then show ?case by (simp add: traverse_seqcomp)
-qed
+  by (induct n rule: fib.induct) auto
 
 end

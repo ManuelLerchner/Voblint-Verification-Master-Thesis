@@ -40,17 +40,26 @@ lemma checks_ivl_ex_checks_eval:
       (Statement 4, Eq (V ''x'') (N 5))}"
   unfolding prog_cfg_def by eval
 
-lemma checks_ivl_ex_solver_terminates: "ivl_terminates_prog ''main'' checks_ivl_ex_program"
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
+  gives is trivially false everywhere.\<close>
+abbreviation checks_ivl_ex_gs :: "vname \<Rightarrow> bool" where
+  "checks_ivl_ex_gs \<equiv> declared_global checks_ivl_ex_program"
+
+lemma checks_ivl_ex_program_declared_global_vars [simp]:
+  "declared_global_vars checks_ivl_ex_program = []"
+  by (simp add: checks_ivl_ex_program_def)
+
+lemma checks_ivl_ex_solver_terminates: "ivl_terminates_prog checks_ivl_ex_gs ''main'' checks_ivl_ex_program"
   by (rule ivl_terminates_prog_via_solve_c) eval
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
-  "checks_ivl_ex_reach v = ltr_collect is_global (prog_cfg ''main'' checks_ivl_ex_program) (cinit_stores is_global) v"
+  "checks_ivl_ex_reach v = ltr_collect checks_ivl_ex_gs (prog_cfg ''main'' checks_ivl_ex_program) (cinit_stores checks_ivl_ex_gs) v"
 
 text \<open>The computed Interval environment at an arbitrary node, not fixed to the
   exit: \<^const>\<open>ivl_exec_prog_at\<close> queries the same solver result
   \<^const>\<open>ivl_exec_prog\<close> reads only at the exit.\<close>
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
-  "checks_ivl_ex_env v = ivl_exec_prog_at ''main'' checks_ivl_ex_program v"
+  "checks_ivl_ex_env v = ivl_exec_prog_at checks_ivl_ex_gs ''main'' checks_ivl_ex_program v"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>x := random()\<close>'s successor) branches on
@@ -226,10 +235,10 @@ text \<open>Non-vacuity: \<open>checks_ivl_ex_reach\<close> is not merely vacuou
   and reaches the guarded branch holding all three checks.\<close>
 lemma checks_ivl_ex_reach2_nonempty: "checks_ivl_ex_reach (Statement 2) \<noteq> {}"
 proof -
-  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores is_global" unfolding cinit_stores_def by simp
+  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ivl_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (FunctionEntry ''main'')"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect is_global (prog_cfg ''main'' checks_ivl_ex_program) (cinit_stores is_global)
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ivl_ex_gs (prog_cfg ''main'' checks_ivl_ex_program) (cinit_stores checks_ivl_ex_gs)
             (cfg_entry (prog_cfg ''main'' checks_ivl_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ivl_ex_reach_def checks_ivl_ex_entry_eval .
@@ -237,22 +246,22 @@ proof -
   have e0: "(FunctionEntry ''main'', EA_Nop, Statement 0) \<in> intra (prog_cfg ''main'' checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' checks_ivl_ex_program"
-        "cinit_stores is_global" "FunctionEntry ''main''" EA_Nop "Statement 0"]
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg ''main'' checks_ivl_ex_program"
+        "cinit_stores checks_ivl_ex_gs" "FunctionEntry ''main''" EA_Nop "Statement 0"]
     using s0 e0 unfolding checks_ivl_ex_reach_def by simp
   have e1: "(Statement 0, EA_Random ''x'', Statement 1) \<in> intra (prog_cfg ''main'' checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s2: "(\<lambda>_. 0)(''x'' := 5) \<in> checks_ivl_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' checks_ivl_ex_program"
-        "cinit_stores is_global" "Statement 0" "EA_Random ''x''" "Statement 1"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg ''main'' checks_ivl_ex_program"
+        "cinit_stores checks_ivl_ex_gs" "Statement 0" "EA_Random ''x''" "Statement 1"
         "(\<lambda>_. 0)(''x'' := 5)"]
     using s1 e1 unfolding checks_ivl_ex_reach_def by force
   have e2: "(Statement 1, EA_Assume (And (Less (N 0) (V ''x'')) (Less (V ''x'') (N 10))), Statement 2)
               \<in> intra (prog_cfg ''main'' checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have "(\<lambda>_. 0)(''x'' := 5) \<in> checks_ivl_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 5)" is_global "prog_cfg ''main'' checks_ivl_ex_program"
-        "cinit_stores is_global" "Statement 1" "EA_Assume (And (Less (N 0) (V ''x'')) (Less (V ''x'') (N 10)))"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 5)" checks_ivl_ex_gs "prog_cfg ''main'' checks_ivl_ex_program"
+        "cinit_stores checks_ivl_ex_gs" "Statement 1" "EA_Assume (And (Less (N 0) (V ''x'')) (Less (V ''x'') (N 10)))"
         "Statement 2" "(\<lambda>_. 0)(''x'' := 5)"]
     using s2 e2 unfolding checks_ivl_ex_reach_def by simp
   then show ?thesis by blast
@@ -330,7 +339,7 @@ definition checks_ivl_ex_mnm :: pname where
   "checks_ivl_ex_mnm = ''main''"
 
 ML_val \<open>
-  writeln (@{code ivl_annotated_dot_prog_lit} @{code checks_ivl_ex_mnm} @{code checks_ivl_ex_program})
+  writeln (@{code ivl_annotated_dot_prog_lit} (@{code declared_global} @{code checks_ivl_ex_program}) @{code checks_ivl_ex_mnm} @{code checks_ivl_ex_program})
 \<close>
 
 end

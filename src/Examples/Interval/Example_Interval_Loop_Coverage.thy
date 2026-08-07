@@ -104,18 +104,18 @@ lemma loop_intra_predecessors_finite: "finite (intra_predecessors loop_cfg v)"
   by (rule finite_intra_predecessors) (simp add: loop_cfg_intra)
 
 lemma loop_postfix:
-  "is_post_fixpoint loop_cfg ivl_tf (\<squnion>) bot loop_s0 loop_env"
+  "is_post_fixpoint loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env"
   unfolding is_post_fixpoint_def
 proof (rule allI)
   fix v
-  let ?I = "(\<lambda>(u, a). apply_tf ivl_tf a (loop_env u)) ` intra_predecessors loop_cfg v"
+  let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for gs) a (loop_env u)) ` intra_predecessors loop_cfg v"
   have finI: "finite ?I" using loop_intra_predecessors_finite by blast
   have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> loop_env v"
     by (auto split: if_splits
-             simp: intra_predecessors_def loop_cfg_intra loop_env_def ivl_tf_def
+             simp: intra_predecessors_def loop_cfg_intra loop_env_def ivl_tf_for_def
                    assign_ivl_def assume_ivl_def assume_not_ivl_def normalize_ivl_def
                    less_eq_ivl_def le_fun_def)
-  show "rhs loop_cfg ivl_tf (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
+  show "rhs loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
   proof (cases "v = cfg_entry loop_cfg")
     case True
     then have "loop_s0 \<le> loop_env v"
@@ -144,8 +144,8 @@ text \<open>
 abbreviation "loop_body_entry \<equiv> Statement 2"
 
 lemma loop_body_x_from_assume:
-  "tf_assume ivl_tf (Less (V ''x'') (N 20)) (loop_env (Statement 1)) ''x'' = Ivl (Fin 0) (Fin 19)"
-  unfolding ivl_tf_def assume_ivl_def loop_env_def
+  "tf_assume (ivl_tf_for gs) (Less (V ''x'') (N 20)) (loop_env (Statement 1)) ''x'' = Ivl (Fin 0) (Fin 19)"
+  unfolding ivl_tf_for_def assume_ivl_def loop_env_def
   by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
         ivl_backward_domain.afilter.simps aval_ivl.simps meet_ivl.simps)
 
@@ -159,15 +159,16 @@ text \<open>The loop head is the assume node where @{term \<open>x < 20\<close>}
 abbreviation "loop_head \<equiv> Statement 1"
 
 lemma loop_head_x_bounded:
+  fixes gs :: "vname \<Rightarrow> bool"
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-  assumes s: "s \<in> ltr_collect is_global loop_cfg S loop_head"
+  assumes s: "s \<in> ltr_collect gs loop_cfg S loop_head"
   shows "0 \<le> s ''x'' \<and> s ''x'' \<le> 20"
 proof -
   have fin_e: "finite (intra loop_cfg)" using compile_prog_finite by simp
   have fin_c: "finite (calls loop_cfg)" using compile_prog_finite by simp
-  have le: "ltr_collect is_global loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
-    using sound_transfer.unified_ltr_post_fixpoint_sound
-          [OF ivl_sound_tf.sound_transfer_axioms fin_e fin_c loop_postfix S_sound]
+  have le: "ltr_collect gs loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
+    using sound_transfer_for.unified_ltr_post_fixpoint_sound_for
+          [OF ivl_is_sound_transfer_for fin_e fin_c loop_postfix S_sound]
     by blast
   from s le have "s \<in> \<lbrakk>loop_env loop_head\<rbrakk>" by blast
   then have "s ''x'' \<in> gamma (loop_env loop_head ''x'')"

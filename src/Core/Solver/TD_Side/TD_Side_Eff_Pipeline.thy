@@ -57,13 +57,13 @@ lemma td_cfg_side_solver_eff_gen:
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes enter_static: "\<And>cl fs as. static_deps (etf_enter etf fs as cl)"
   assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
-  shows "td_cfg_side_solver_eff g etf bot0 s0 gseed"
+  shows "td_cfg_side_solver_eff gs g etf bot0 s0 gseed"
 proof unfold_locales
-  show "is_mono_eq (side_cfg_T_eff g etf bot0 s0 gseed)"
+  show "is_mono_eq (side_cfg_T_eff gs g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_is_mono_eq_gen[OF edge_mono enter_mono comb_mono])
-  show "mono_sides (side_cfg_T_eff g etf bot0 s0 gseed)"
+  show "mono_sides (side_cfg_T_eff gs g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_mono_sides_gen[OF edge_sides_mono enter_sides_mono comb_sides_mono])
-  show "mono_deps (side_cfg_T_eff g etf bot0 s0 gseed)"
+  show "mono_deps (side_cfg_T_eff gs g etf bot0 s0 gseed)"
     by (rule side_cfg_T_eff_mono_deps_gen[OF edge_static enter_static comb_static])
 qed
 
@@ -84,9 +84,9 @@ text \<open>
 \<close>
 
 definition cone_compatible_etf ::
-  "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer \<Rightarrow> bool"
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer \<Rightarrow> bool"
 where
-  "cone_compatible_etf etf \<equiv>
+  "cone_compatible_etf gs etf \<equiv>
      (\<forall>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)) \<and>
      (\<forall>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)) \<and>
      (\<forall>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)) \<and>
@@ -94,55 +94,55 @@ where
      (\<forall>a u. static_deps (apply_etf etf a u)) \<and>
      (\<forall>cc ex dst. static_deps (etf_combine etf dst cc ex)) \<and>
      (\<forall>cl fs as. static_deps (etf_enter etf fs as cl)) \<and>
-     (\<forall>a u \<sigma>' g. local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
-     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))) \<and>
-     (\<forall>cl fs as \<sigma>' g. local_bot_on_locals (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g)))"
+     (\<forall>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
+     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))) \<and>
+     (\<forall>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g)))"
 
 
 
 lemma cone_compatible_etf_edge_dep:
-  "cone_compatible_etf etf \<Longrightarrow> Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
+  "cone_compatible_etf gs etf \<Longrightarrow> Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
   unfolding cone_compatible_etf_def by auto
 
 
 lemma cone_compatible_etf_comb_dep1:
-  "cone_compatible_etf etf \<Longrightarrow> Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  "cone_compatible_etf gs etf \<Longrightarrow> Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   unfolding cone_compatible_etf_def by auto
 
 
 lemma cone_compatible_etf_comb_dep2:
-  "cone_compatible_etf etf \<Longrightarrow> Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  "cone_compatible_etf gs etf \<Longrightarrow> Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_edge_static:
-  "cone_compatible_etf etf \<Longrightarrow> static_deps (apply_etf etf a u)"
+  "cone_compatible_etf gs etf \<Longrightarrow> static_deps (apply_etf etf a u)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_comb_static:
-  "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_combine etf dst cc ex)"
+  "cone_compatible_etf gs etf \<Longrightarrow> static_deps (etf_combine etf dst cc ex)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_edge_inr:
-  "cone_compatible_etf etf \<Longrightarrow>
-     local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+  "cone_compatible_etf gs etf \<Longrightarrow>
+     local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_comb_inr:
-  "cone_compatible_etf etf \<Longrightarrow>
-     local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+  "cone_compatible_etf gs etf \<Longrightarrow>
+     local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_enter_dep:
-  "cone_compatible_etf etf \<Longrightarrow> Inl cl \<in> dep_aux \<sigma>' (etf_enter etf fs as cl)"
+  "cone_compatible_etf gs etf \<Longrightarrow> Inl cl \<in> dep_aux \<sigma>' (etf_enter etf fs as cl)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_enter_static:
-  "cone_compatible_etf etf \<Longrightarrow> static_deps (etf_enter etf fs as cl)"
+  "cone_compatible_etf gs etf \<Longrightarrow> static_deps (etf_enter etf fs as cl)"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_enter_inr:
-  "cone_compatible_etf etf \<Longrightarrow>
-     local_bot_on_locals (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+  "cone_compatible_etf gs etf \<Longrightarrow>
+     local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 

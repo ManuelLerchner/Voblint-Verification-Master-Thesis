@@ -30,9 +30,9 @@ text \<open>
   Both "does this expression mention a global?" and "does this expression
   mention variable x?" are the same syntax-directed walk, differing only in
   the leaf predicate on the mentioned name. Defining the walk once as
-  @{text "_where P"} and instantiating @{text P} to @{const is_global} (below)
-  or to an equality test (\<open>VIMP_Proc.aexp_mentions\<close>) avoids two copies of the
-  same recursion.
+  @{text "_where P"} and instantiating @{text P} to a global-variable
+  classifier (below) or to an equality test (\<open>VIMP_Proc.aexp_mentions\<close>)
+  avoids two copies of the same recursion.
 \<close>
 
 fun aexp_mentions_where :: "(vname \<Rightarrow> bool) \<Rightarrow> aexp \<Rightarrow> bool" where
@@ -52,11 +52,11 @@ fun bexp_mentions_where :: "(vname \<Rightarrow> bool) \<Rightarrow> bexp \<Righ
 
 subsection \<open>Syntactic global-variable occurrence\<close>
 
-definition aexp_mentions_global :: "aexp \<Rightarrow> bool" where
-  "aexp_mentions_global = aexp_mentions_where is_global"
+definition aexp_mentions_global :: "(vname \<Rightarrow> bool) \<Rightarrow> aexp \<Rightarrow> bool" where
+  "aexp_mentions_global gs = aexp_mentions_where gs"
 
-definition bexp_mentions_global :: "bexp \<Rightarrow> bool" where
-  "bexp_mentions_global = bexp_mentions_where is_global"
+definition bexp_mentions_global :: "(vname \<Rightarrow> bool) \<Rightarrow> bexp \<Rightarrow> bool" where
+  "bexp_mentions_global gs = bexp_mentions_where gs"
 
 lemmas mentions_global_defs [simp] =
   aexp_mentions_global_def bexp_mentions_global_def
@@ -68,15 +68,15 @@ text \<open>
 \<close>
 
 lemma aval_eq_on_locals:
-  assumes "\<not> aexp_mentions_global a"
-    and "\<And>x. \<not> is_global x \<Longrightarrow> s1 x = s2 x"
+  assumes "\<not> aexp_mentions_global gs a"
+    and "\<And>x. \<not> gs x \<Longrightarrow> s1 x = s2 x"
   shows "aval a s1 = aval a s2"
   using assms
   by (induction a) auto
 
 lemma bval_eq_on_locals:
-  assumes "\<not> bexp_mentions_global b"
-    and "\<And>x. \<not> is_global x \<Longrightarrow> s1 x = s2 x"
+  assumes "\<not> bexp_mentions_global gs b"
+    and "\<And>x. \<not> gs x \<Longrightarrow> s1 x = s2 x"
   shows "bval b s1 = bval b s2"
   using assms
 proof (induction b)

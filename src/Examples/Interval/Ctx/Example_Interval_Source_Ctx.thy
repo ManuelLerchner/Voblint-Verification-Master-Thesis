@@ -14,7 +14,7 @@ text \<open>
   frame stack.
 \<close>
 
-text \<open>\<open>twice_program\<close> declares no globals, so \<^const>\<open>twice_gs\<close> agrees with \<^const>\<open>is_global\<close>
+text \<open>\<open>twice_program\<close> declares no globals, so \<^const>\<open>twice_gs\<close> is trivially false
   on every name \<^const>\<open>twice_pi\<close> can touch: reprove \<open>twice_wf\<close>'s obligations at
   \<^const>\<open>twice_gs\<close> directly, so the source-level run relation and the \<open>twice_gs\<close>-indexed
   collecting semantics share one classifier end to end.\<close>

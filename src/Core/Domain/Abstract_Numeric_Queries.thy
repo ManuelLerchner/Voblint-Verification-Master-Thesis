@@ -23,7 +23,7 @@ text \<open>
 
 locale derived_less_queries =
   fixes inv_less :: "bool \<Rightarrow> 'a::sound_domain \<Rightarrow> 'a \<Rightarrow> 'a * 'a"
-  assumes derived_inv_less_sound:
+  assumes derived_inv_less_sound[intro]:
     "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
      \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
 begin
@@ -92,7 +92,7 @@ text \<open>
 
 locale derived_eq_true_from_less =
   fixes less_false :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> bool"
-  assumes less_false_sound_for_eq:
+  assumes less_false_sound_for_eq[intro]:
     "less_false a b \<Longrightarrow> i \<in> gamma a \<Longrightarrow> j \<in> gamma b \<Longrightarrow> \<not> i < j"
 begin
 
@@ -117,7 +117,7 @@ sublocale derived_less_queries \<subseteq> derived_eq_true_from_less less_false
 
 locale derived_eq_false_from_meet =
   fixes meet :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> 'a"
-  assumes meet_sound_for_eq:
+  assumes meet_sound_for_eq[intro]:
     "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (meet a b)"
 begin
 
@@ -167,13 +167,13 @@ locale abstract_numeric_queries =
     and less_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
-  assumes less_true_sound:
+  assumes less_true_sound[intro]:
       "less_true a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> i < j"
-    and less_false_sound:
+    and less_false_sound[intro]:
       "less_false a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> \<not> i < j"
-    and eq_true_sound:
+    and eq_true_sound[intro]:
       "eq_true a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> i = j"
-    and eq_false_sound:
+    and eq_false_sound[intro]:
       "eq_false a b \<Longrightarrow> i \<in> gamma_num a \<Longrightarrow> j \<in> gamma_num b \<Longrightarrow> i \<noteq> j"
 
 end

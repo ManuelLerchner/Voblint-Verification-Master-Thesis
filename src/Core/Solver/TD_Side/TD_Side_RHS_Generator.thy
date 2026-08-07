@@ -14,8 +14,12 @@ text \<open>
 subsection \<open>Shared combine-tree infrastructure\<close>
 
 locale sound_rhs_generator_base =
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-  assumes comb: "\<And>cc ex dst. etf_combine etf dst cc ex = unit_combine_tree dst cc ex"
+  fixes gs :: "vname \<Rightarrow> bool"
+    and etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  assumes comb[simp]:
+    "\<And>cc ex dst.
+       etf_combine etf dst cc ex =
+       unit_combine_tree gs dst cc ex"
 begin
 
 lemma dep_aux_comb_call:
@@ -27,7 +31,7 @@ lemma dep_aux_comb_exit:
   by (simp add: comb unit_combine_tree_def)
 
 lemma comb_inr:
-  "\<And>cc ex dst \<sigma> g. local_bot_on_locals (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr g))"
+  "\<And>cc ex dst \<sigma> g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr g))"
   unfolding comb by (rule sides_inr_local_bot_unit_combine_tree)
 
 end
@@ -45,19 +49,19 @@ end
 subsection \<open>Mixed local/unit edge-tree generator\<close>
 
 lemma static_deps_local_edge_tree:
-  "static_deps (local_edge_tree f u)"
+  "static_deps (local_edge_tree gs f u)"
   unfolding static_deps_def using dep_aux_local_edge_tree by blast
 
 lemma dep_aux_local_edge_tree_src:
-  "Inl u \<in> dep_aux \<sigma> (local_edge_tree f u)"
+  "Inl u \<in> dep_aux \<sigma> (local_edge_tree gs f u)"
   by (rule Inl_dep_aux_local_edge_tree)
 
 lemma static_deps_unit_edge_tree:
-  "static_deps (unit_edge_tree f u)"
+  "static_deps (unit_edge_tree gs f u)"
   unfolding static_deps_def unit_edge_tree_def Let_def by simp
 
 lemma dep_aux_unit_edge_tree_src:
-  "Inl u \<in> dep_aux \<sigma> (unit_edge_tree f u)"
+  "Inl u \<in> dep_aux \<sigma> (unit_edge_tree gs f u)"
   unfolding unit_edge_tree_def by simp
 
 text \<open>Each per-edge tree is a local or a unit edge tree.  The disjunction form
@@ -66,13 +70,17 @@ text \<open>Each per-edge tree is a local or a unit edge tree.  The disjunction 
 locale mixed_rhs_generator = sound_rhs_generator_static +
   fixes F :: "edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  assumes edge: "\<And>a u. apply_etf etf a u = local_edge_tree (F a) u
-                       \<or> apply_etf etf a u = unit_edge_tree (F a) u"
-  assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree (Fe fs as) cl"
+  assumes edge:
+      "\<And>a u.
+         apply_etf etf a u = local_edge_tree gs (F a) u
+       \<or> apply_etf etf a u = unit_edge_tree gs (F a) u"
+    and enter[simp]:
+      "\<And>cl fs as.
+         etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
 begin
 
 lemma edge_inr:
-  "local_bot_on_locals (sides_of_rhs (apply_etf etf a u) \<sigma> (Inr g))"
+  "local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma> (Inr g))"
   using edge[of a u]
   by (elim disjE)
      (simp_all add: sides_inr_local_bot_local_edge_tree sides_inr_local_bot_unit_edge_tree)
@@ -88,7 +96,7 @@ lemma dep_aux_edge:
   by (elim disjE) (simp_all add: dep_aux_local_edge_tree_src dep_aux_unit_edge_tree_src)
 
 lemma enter_inr:
-  "local_bot_on_locals (sides_of_rhs (etf_enter etf fs as cl) \<sigma> (Inr g))"
+  "local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma> (Inr g))"
   unfolding enter by (rule sides_inr_local_bot_unit_edge_tree)
 
 lemma static_deps_enter:
@@ -100,7 +108,7 @@ lemma dep_aux_enter:
   unfolding enter by (rule dep_aux_unit_edge_tree_src)
 
 lemma cone_compatible:
-  "cone_compatible_etf etf"
+  "cone_compatible_etf gs etf"
   unfolding cone_compatible_etf_def
   by (intro conjI allI)
      (rule dep_aux_edge, rule dep_aux_comb_call, rule dep_aux_comb_exit, rule dep_aux_enter,
@@ -110,42 +118,44 @@ lemma cone_compatible:
 end
 
 locale mixed_rhs_generator_mono = mixed_rhs_generator +
-  assumes F_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
-    and Fe_mono: "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2"
+  assumes F_mono:
+      "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
+    and Fe_mono:
+      "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2"
 begin
 
 lemma is_mono_eq:
-  "is_mono_eq (side_cfg_T_eff g etf bot0 s0 ())"
+  "is_mono_eq (side_cfg_T_eff gs g etf bot0 s0 ())"
   apply (rule side_cfg_T_eff_is_mono_eq_gen)
   subgoal for a u s1 s2
   proof -
     assume le: "s1 \<le> s2"
     show "traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
-    proof (cases "apply_etf etf a u = local_edge_tree (F a) u")
+    proof (cases "apply_etf etf a u = local_edge_tree gs (F a) u")
       case True
-      then have eq: "apply_etf etf a u = local_edge_tree (F a) u" .
+      then have eq: "apply_etf etf a u = local_edge_tree gs (F a) u" .
       have lu: "s1 (Inl u) \<le> s2 (Inl u)" by (rule le_funD[OF le])
       have lg: "s1 (Inr ()) \<le> s2 (Inr ())" by (rule le_funD[OF le])
       show ?thesis unfolding eq traverse_local_edge_tree
-        by (intro sup_mono restrict_local_mono restrict_global_mono F_mono;
+        by (intro sup_mono restrict_local_for_mono restrict_global_for_mono F_mono;
             simp add: lu lg)
     next
       case False
-      then have eq: "apply_etf etf a u = unit_edge_tree (F a) u" using edge[of a u] by blast
+      then have eq: "apply_etf etf a u = unit_edge_tree gs (F a) u" using edge[of a u] by blast
       show ?thesis unfolding eq traverse_unit_edge_tree
-        by (intro restrict_local_mono F_mono sup_mono; simp add: le le_funD)
+        by (intro restrict_local_for_mono F_mono sup_mono; simp add: le le_funD)
     qed
   qed
   subgoal for cl fs as s1 s2
     by (simp add: enter traverse_unit_edge_tree)
-       (intro restrict_local_mono Fe_mono sup_mono; simp add: le_funD)
+       (intro restrict_local_for_mono Fe_mono sup_mono; simp add: le_funD)
   subgoal for cc ex dst s1 s2
     by (simp add: comb traverse_unit_combine_tree)
-       (intro restrict_local_mono combine_collect_abs_mono sup_mono; simp add: le_funD)
+       (intro restrict_local_for_mono combine_collect_abs_mono sup_mono; simp add: le_funD)
   done
 
 lemma mono_sides:
-  "mono_sides (side_cfg_T_eff g etf bot0 s0 ())"
+  "mono_sides (side_cfg_T_eff gs g etf bot0 s0 ())"
   apply (rule side_cfg_T_eff_mono_sides_gen)
   subgoal for a u s1 s2
   proof -
@@ -154,14 +164,14 @@ lemma mono_sides:
     proof (rule le_funI)
       fix k
       show "sides_of_rhs (apply_etf etf a u) s1 k \<le> sides_of_rhs (apply_etf etf a u) s2 k"
-      proof (cases "apply_etf etf a u = local_edge_tree (F a) u")
+      proof (cases "apply_etf etf a u = local_edge_tree gs (F a) u")
         case True
-        then have eq: "apply_etf etf a u = local_edge_tree (F a) u" .
+        then have eq: "apply_etf etf a u = local_edge_tree gs (F a) u" .
         show ?thesis unfolding eq
           by (cases k; simp add: sides_local_edge_tree_Inl sides_local_edge_tree_Inr)
       next
         case False
-        then have eq: "apply_etf etf a u = unit_edge_tree (F a) u" using edge[of a u] by blast
+        then have eq: "apply_etf etf a u = unit_edge_tree gs (F a) u" using edge[of a u] by blast
         show ?thesis
         proof (cases k)
           case (Inl x)
@@ -173,7 +183,7 @@ lemma mono_sides:
             using Inr le
             by (cases y)
                (simp add: eq sides_unit_edge_tree_Inr,
-                rule restrict_global_mono, rule F_mono, intro sup_mono; simp add: le_fun_def)
+                rule restrict_global_for_mono, rule F_mono, intro sup_mono; simp add: le_fun_def)
         qed
       qed
     qed
@@ -195,7 +205,7 @@ lemma mono_sides:
           using Inr le
           by (cases y)
              (simp add: enter sides_unit_edge_tree_Inr,
-              rule restrict_global_mono, rule Fe_mono, intro sup_mono; simp add: le_fun_def)
+              rule restrict_global_for_mono, rule Fe_mono, intro sup_mono; simp add: le_fun_def)
       qed
     qed
   qed
@@ -216,7 +226,7 @@ lemma mono_sides:
           using Inr le
           by (cases y)
              (simp add: comb sides_unit_combine_tree_Inr,
-              rule restrict_global_mono, rule combine_collect_abs_mono;
+              rule restrict_global_for_mono, rule combine_collect_abs_mono;
               intro sup_mono; simp add: le_fun_def)
       qed
     qed
@@ -224,13 +234,13 @@ lemma mono_sides:
   done
 
 lemma mono_deps:
-  "mono_deps (side_cfg_T_eff g etf bot0 s0 ())"
+  "mono_deps (side_cfg_T_eff gs g etf bot0 s0 ())"
   apply (rule side_cfg_T_eff_mono_deps_gen)
   using static_deps_edge static_deps_enter static_deps_comb
   by simp_all
 
 lemma threefold_mono:
-  "threefold_mono (side_cfg_T_eff g etf bot0 s0 ())"
+  "threefold_mono (side_cfg_T_eff gs g etf bot0 s0 ())"
   unfolding threefold_mono_def
   using is_mono_eq mono_sides mono_deps
   by blast

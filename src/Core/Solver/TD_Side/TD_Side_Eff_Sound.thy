@@ -30,7 +30,7 @@ text \<open>
 
 
 lemma etf_sound_assignD [intro]:
-  assumes "inr_slot_locals_bot is_global \<sigma>"
+  assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
   shows
     "s(x := aval e s)
@@ -39,7 +39,7 @@ lemma etf_sound_assignD [intro]:
   by blast
 
 lemma etf_sound_randomD [intro]:
-  assumes "inr_slot_locals_bot is_global \<sigma>"
+  assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
   shows
     "s(x := v)
@@ -48,7 +48,7 @@ lemma etf_sound_randomD [intro]:
   by blast
 
 lemma etf_sound_assumeD [intro]:
-  assumes "inr_slot_locals_bot is_global \<sigma>"
+  assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
       and "bval b s"
   shows
@@ -57,7 +57,7 @@ lemma etf_sound_assumeD [intro]:
   by blast
 
 lemma etf_sound_assume_notD [intro]:
-  assumes "inr_slot_locals_bot is_global \<sigma>"
+  assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
       and "\<not> bval b s"
   shows
@@ -67,7 +67,7 @@ lemma etf_sound_assume_notD [intro]:
 
 
 lemma edge_collect_etf_sound:
-  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
+  assumes inr: "inr_slot_locals_bot gs \<sigma>"
   shows
     "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
        \<subseteq> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"

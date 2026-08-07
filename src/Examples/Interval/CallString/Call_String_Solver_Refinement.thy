@@ -793,11 +793,18 @@ schematic_goal enter_local_n10_form:
   apply (simp add: Let_def)
   done
 
+text \<open>The fixed-top-value specialisation of \<^const>\<open>enter_frame_D_resolved_q\<close> this file's
+  \<open>enter_local\<close>/\<open>enter_global\<close> facts reduce to, at the interval top value.\<close>
+definition enter_ivl_st :: "ivl resolved_st_q \<Rightarrow> ivl resolved_st_q" where
+  "enter_ivl_st s = enter_frame_D_resolved_q ivl_top s"
+
+text \<open>\<^const>\<open>enter_frame_D_resolved_q\<close> resets every local slot to the fixed top value
+  and leaves globals untouched (\<open>lookup_enter_frame_D_resolved_q\<close>); restricting to
+  locals therefore keeps only that fixed top value and discards \<open>s\<close>/\<open>s'\<close> entirely.\<close>
 lemma restrict_local_resolved_q_enter_frame_D_st_indep:
   "restrict_local_resolved_q (enter_ivl_st s) = restrict_local_resolved_q (enter_ivl_st s')"
-  apply (rule st_eqI_lookup)
-  apply (case_tac loc)
-  by (simp_all add: lookup_restrict_local_resolved_q enter_ivl_st_def)
+  unfolding enter_ivl_st_def
+  by (rule st_eqI_lookup) (simp split: location.splits)
 
 lemma var_p_no_global: "\<not> nest_gs ''p''"
   by simp

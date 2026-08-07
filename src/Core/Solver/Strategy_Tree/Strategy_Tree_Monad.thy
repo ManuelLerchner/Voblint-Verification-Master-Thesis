@@ -20,16 +20,16 @@ where
 | "seqcomp_tree (QueryG g f) k = QueryG g  (\<lambda>d. seqcomp_tree (f d) k)"
 | "seqcomp_tree (Side g v t) k = Side g v  (seqcomp_tree t k)"
 
-lemma traverse_seqcomp:
+lemma traverse_seqcomp[simp]:
   "traverse_rhs (seqcomp_tree t k) \<sigma> = traverse_rhs (k (traverse_rhs t \<sigma>)) \<sigma>"
   by (induction t arbitrary: k) (auto intro: rangeI)
 
-lemma dep_aux_seqcomp:
+lemma dep_aux_seqcomp[simp]:
   "dep_aux \<sigma> (seqcomp_tree t k)
    = dep_aux \<sigma> t \<union> dep_aux \<sigma> (k (traverse_rhs t \<sigma>))"
   by (induction t arbitrary: k) (auto intro: rangeI)
 
-lemma sides_of_rhs_seqcomp:
+lemma sides_of_rhs_seqcomp[simp]:
   fixes t :: "('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree"
   shows "sides_of_rhs (seqcomp_tree t k) \<sigma>
          = sides_of_rhs t \<sigma> \<squnion> sides_of_rhs (k (traverse_rhs t \<sigma>)) \<sigma>"
@@ -46,7 +46,7 @@ next
        (auto simp: Side.IH Let_def sup_fun_def fun_upd_def ac_simps)
 qed
 
-lemma sides_of_rhs_seqcomp_at:
+lemma sides_of_rhs_seqcomp_at[simp]:
   fixes t :: "('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree"
   shows "sides_of_rhs (seqcomp_tree t k) \<sigma> z
          = sides_of_rhs t \<sigma> z \<squnion> sides_of_rhs (k (traverse_rhs t \<sigma>)) \<sigma> z"
@@ -58,7 +58,7 @@ text \<open>
   it receives, then seqcomp_tree t k is monotone in the environment.
 \<close>
 
-lemma seqcomp_mono:
+lemma seqcomp_mono[intro]:
   fixes t :: "('x, 'g, 'd::order_bot) strategy_tree"
   assumes t_mono:
     "\<And>\<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> traverse_rhs t \<sigma>1 \<le> traverse_rhs t \<sigma>2"
@@ -105,7 +105,7 @@ text \<open>
   rules out value-dependent branching that changes which nodes are queried.
 \<close>
 
-lemma static_deps_seqcomp:
+lemma static_deps_seqcomp[intro]:
   fixes t :: "('x, 'g, 'd::order_bot) strategy_tree"
   assumes t_static: "static_deps t"
   assumes k_static: "\<And>v1 v2 \<sigma>1 \<sigma>2. dep_aux \<sigma>1 (k v1) = dep_aux \<sigma>2 (k v2)"

@@ -6,73 +6,6 @@ section \<open>Parity executable seam: transfer mirror and commutation\<close>
 
 instance parity :: bounded_warrowing ..
 
-definition enter_parity_st :: "parity resolved_st_q \<Rightarrow> parity resolved_st_q" where
-  "enter_parity_st = enter_frame_D_resolved_q PTop"
-
-lemma enter_frame_parity_st_commute:
-  "fun_of_resolved_st_q_for is_global (enter_parity_st s) =
-   enter_frame_parity (fun_of_resolved_st_q_for is_global s)"
-  by (simp add: enter_parity_st_def enter_frame_parity_def)
-
-fun parity_tf_st :: "edge_action \<Rightarrow> parity resolved_st_q \<Rightarrow> parity resolved_st_q" where
-    "parity_tf_st EA_Nop s = s"
-  | "parity_tf_st (EA_Assign x a) s =
-       update_resolved_st_q s (location_of is_global x)
-         (aval_parity a (fun_of_resolved_st_q_for is_global s))"
-  | "parity_tf_st (EA_Random x) s =
-       update_resolved_st_q s (location_of is_global x) PTop"
-  | "parity_tf_st (EA_Assume b) s = s"
-  | "parity_tf_st (EA_AssumeNot b) s = s"
-  | "parity_tf_st (EA_Ret e _) s =
-       (case e of None \<Rightarrow> s
-        | Some a \<Rightarrow> update_resolved_st_q s (location_of is_global ret_var)
-            (aval_parity a (fun_of_resolved_st_q_for is_global s)))"
-  | "parity_tf_st (EA_Check cnd) s = s"
-
-lemma parity_tf_st_reduces: "action_reduces parity_tf_st"
-  by unfold_locales (rule ext, simp)+
-
-theorem parity_tf_st_commute:
-  "fun_of_resolved_st_q_for is_global (parity_tf_st a s) =
-   apply_tf parity_tf a (fun_of_resolved_st_q_for is_global s)"
-proof (rule apply_tf_wrap_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for is_global s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for is_global (parity_tf_st a s))"
-    by (rule action_reduces_comp[OF parity_tf_st_reduces])
-  show "fun_of_resolved_st_q_for is_global (parity_tf_st EA_Nop s) =
-      apply_tf parity_tf EA_Nop (fun_of_resolved_st_q_for is_global s)" by simp
-  show "\<And>x e. fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_Assign x e) s) =
-    apply_tf parity_tf (EA_Assign x e) (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: parity_tf_def assign_parity_def)
-  show "\<And>x. fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_Random x) s) =
-    apply_tf parity_tf (EA_Random x) (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: parity_tf_def random_parity_def)
-  show "\<And>b. fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_Assume b) s) =
-    apply_tf parity_tf (EA_Assume b) (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: parity_tf_def assume_parity_def)
-  show "\<And>b. fun_of_resolved_st_q_for is_global
-      (parity_tf_st (EA_AssumeNot b) s) =
-    apply_tf parity_tf (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: parity_tf_def assume_not_parity_def)
-qed
-
-definition parity_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow>
-  parity resolved_st_q \<Rightarrow> parity resolved_st_q" where
-  "parity_enter_st xs es s =
-     bind_formals_resolved_q is_global xs
-       (map (\<lambda>e. aval_parity e (fun_of_resolved_st_q_for is_global s)) es)
-       (enter_parity_st s)"
-
-lemma parity_enter_st_commute:
-  "fun_of_resolved_st_q_for is_global (parity_enter_st xs es s) =
-   tf_enter parity_tf xs es (fun_of_resolved_st_q_for is_global s)"
-  by (simp add: parity_enter_st_def parity_tf_def enter_parity_def enter_D_def
-                enter_frame_parity_def enter_frame_parity_st_commute)
-
 lift_definition top_parity_st :: "parity resolved_st_q" is "(PTop, PTop, [])" .
 
 lemma lookup_top_parity_st [simp]:
@@ -262,36 +195,37 @@ lemma parity_tf_st_for_ret_none_agree:
   using parity_tf_st_for_nop_agree[OF agree location_in]
   by (simp add: apply_tf_EA_Ret_None)
 
-subsection \<open>Executable effectful transfer record\<close>
+subsection \<open>Executable effectful transfer record, generic in the classifier\<close>
 
-text \<open>Mirrors \<open>ivl_etf_st\<close> \<open>Voblint_Analysis.Ivl_Exec\<close>: the executable
+text \<open>Mirrors \<open>ivl_etf_st_for\<close> \<open>Voblint_Analysis.Ivl_Exec\<close>: the executable
   effectful transfer record consumed by \<open>side_cfg_T_eff_st\<close>, built once from
-  \<open>parity_tf_st\<close>/\<open>parity_enter_st\<close> above through the generic
+  \<open>parity_tf_st_for\<close>/\<open>parity_enter_st_for\<close> above through the generic
   \<^theory>\<open>Voblint_Core.Exec_Bridge\<close> wrapper.\<close>
 
-definition parity_etf_st :: "(unit, parity resolved_st_q) effectful_st_transfer" where
-  "parity_etf_st = unit_etf_st_of_transfer parity_tf_st parity_enter_st"
+definition parity_etf_st_for ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (unit, parity resolved_st_q) effectful_st_transfer" where
+  "parity_etf_st_for gs = unit_etf_st_of_transfer gs (parity_tf_st_for gs) (parity_enter_st_for gs)"
 
-lemma parity_etf_st_edge_tree:
-  "apply_etf_st parity_etf_st a u = unit_edge_tree_st (parity_tf_st a) u"
-  unfolding parity_etf_st_def
-  by (rule apply_etf_st_unit_of_transfer[OF parity_tf_st_reduces])
+lemma parity_etf_st_for_edge_tree:
+  "apply_etf_st (parity_etf_st_for gs) a u = unit_edge_tree_st (parity_tf_st_for gs a) u"
+  unfolding parity_etf_st_for_def
+  by (rule apply_etf_st_unit_of_transfer[OF parity_tf_st_for_reduces])
 
-lemma parity_etf_st_combine_tree:
-  "etf_combine_st parity_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  unfolding parity_etf_st_def by (rule etf_combine_st_unit_of_transfer)
+lemma parity_etf_st_for_combine_tree:
+  "etf_combine_st (parity_etf_st_for gs) dst cc ex = unit_combine_tree_st gs dst cc ex"
+  unfolding parity_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
 
-lemma parity_etf_st_enter_tree:
-  "etf_st_enter parity_etf_st xs es u = unit_edge_tree_st (parity_enter_st xs es) u"
-  unfolding parity_etf_st_def by (rule etf_st_enter_unit_of_transfer)
+lemma parity_etf_st_for_enter_tree:
+  "etf_st_enter (parity_etf_st_for gs) xs es u = unit_edge_tree_st (parity_enter_st_for gs xs es) u"
+  unfolding parity_etf_st_for_def by (rule etf_st_enter_unit_of_transfer)
 
-lemma parity_etf_st_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter parity_etf_st xs es u = unit_edge_tree_st f u"
-  using parity_etf_st_enter_tree by blast
+lemma parity_etf_st_for_enter_exists_unit:
+  "\<And>u xs es. \<exists>f. etf_st_enter (parity_etf_st_for gs) xs es u = unit_edge_tree_st f u"
+  using parity_etf_st_for_enter_tree by blast
 
-lemma parity_etf_st_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st parity_etf_st a u = unit_edge_tree_st f u"
-  using parity_etf_st_edge_tree by blast
+lemma parity_etf_st_for_exists_unit:
+  "\<And>a u. \<exists>f. apply_etf_st (parity_etf_st_for gs) a u = unit_edge_tree_st f u"
+  using parity_etf_st_for_edge_tree by blast
 
 end
 

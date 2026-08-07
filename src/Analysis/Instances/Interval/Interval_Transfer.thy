@@ -56,60 +56,14 @@ lemma random_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> random_ivl x sigma1 \<le> random_ivl x sigma2"
   by (simp add: random_ivl_def le_funD le_funI)
 
-subsection \<open>Procedure entry and bundled transfer functions\<close>
+subsection \<open>Classifier-parametric procedure entry and bundled transfer functions\<close>
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
   the formals to the abstract values of the actuals evaluated in the caller.
   Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised by
-  ivl_top as the domain's fully-imprecise reset value.\<close>
-definition enter_frame_ivl :: "ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_frame_ivl = enter_frame_D is_global ivl_top"
-
-definition enter_ivl ::
-    "vname list \<Rightarrow> aexp list \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
-  "enter_ivl = enter_D is_global ivl_top aval_ivl"
-
-lemma enter_frame_ivl_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_ivl \<sigma>\<rbrakk>"
-  unfolding enter_frame_ivl_def
-proof (rule enter_frame_D_sound[OF gs])
-  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
-qed
-
-lemma enter_ivl_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-           \<in> \<lbrakk>enter_ivl xs es \<sigma>\<rbrakk>"
-  unfolding enter_ivl_def
-proof (rule enter_D_sound[OF gs])
-  show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
-next
-  have V: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)"
-    using gs unfolding gamma_state_def by simp
-  show "list_all2 (\<lambda>v a. v \<in> gamma a)
-          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_ivl e \<sigma>) es)"
-    using V by (simp add: list_all2_conv_all_nth aval_ivl_sound)
-qed
-
-definition ivl_tf :: "ivl domain_transfer" where
-  "ivl_tf = (| tf_assign     = assign_ivl,
-               tf_random     = random_ivl,
-               tf_assume     = assume_ivl,
-               tf_assume_not = assume_not_ivl,
-               tf_enter      = enter_ivl,
-               tf_combine    = combine_abs is_global |)"
-
-subsection \<open>Classifier-parametric transfer\<close>
-
-text \<open>
-  \<^const>\<open>ivl_tf\<close> fixes the \<^const>\<open>is_global\<close> classifier inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>.  Placement analyses split
-  store components by a declaration-driven classifier instead, so entry and
-  combine need a version parametric in that classifier.  Assignment and guard
-  transfer never consult a classifier, so only the entry and combine fields
-  change shape.
-\<close>
+  ivl_top as the domain's fully-imprecise reset value.  Entry and combine are
+  the only fields that consult a classifier, so the bundled transfer function
+  is parametric in the classifier throughout.\<close>
 
 definition enter_frame_ivl_for ::
     "(vname => bool) => ivl abs_state => ivl abs_state" where
@@ -162,37 +116,6 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   subgoal by (simp add: combine_states_sound)
   done
 
-text \<open>Conservative generalization: the classifier-fixed definitions are the
-  \<^const>\<open>is_global\<close> instance of the classifier-parametric ones.\<close>
-
-lemma enter_frame_ivl_for_is_global:
-  "enter_frame_ivl_for is_global = enter_frame_ivl"
-  unfolding enter_frame_ivl_for_def enter_frame_ivl_def by (rule refl)
-
-lemma enter_ivl_for_is_global:
-  "enter_ivl_for is_global = enter_ivl"
-  unfolding enter_ivl_for_def enter_ivl_def by (rule refl)
-
-lemma ivl_tf_for_is_global:
-  "ivl_tf_for is_global = ivl_tf"
-  unfolding ivl_tf_for_def ivl_tf_def enter_ivl_for_is_global by (rule refl)
-
-text \<open>\<open>ivl_is_sound_transfer\<close> is the \<^const>\<open>is_global\<close> specialization
-  of \<open>ivl_is_sound_transfer_for\<close>, transported through
-  @{thm [source] sound_transfer_from_for} rather than reproved from scratch.\<close>
-
-interpretation ivl_sound_tf: sound_transfer ivl_tf
-proof -
-  have "sound_transfer_for is_global ivl_tf"
-    using ivl_is_sound_transfer_for[of is_global]
-    by (simp only: ivl_tf_for_is_global)
-  then show "sound_transfer ivl_tf" by (rule sound_transfer_from_for)
-qed
-
-lemma ivl_is_sound_transfer: "sound_transfer ivl_tf"
-  by (rule ivl_sound_tf.sound_transfer_axioms)
-
-
 lemma assume_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_ivl b sigma1 \<le> assume_ivl b sigma2"
   unfolding assume_ivl_def
@@ -203,15 +126,15 @@ lemma assume_not_ivl_mono:
   unfolding assume_not_ivl_def
   by (rule bfilter_ivl_mono)
 
-lemma enter_frame_ivl_mono:
+lemma enter_frame_ivl_for_mono:
   assumes "s1 \<le> s2"
-  shows "enter_frame_ivl s1 \<le> enter_frame_ivl s2"
-  unfolding enter_frame_ivl_def by (rule enter_frame_D_mono[OF assms])
+  shows "enter_frame_ivl_for gs s1 \<le> enter_frame_ivl_for gs s2"
+  unfolding enter_frame_ivl_for_def by (rule enter_frame_D_mono[OF assms])
 
-lemma enter_ivl_mono:
+lemma enter_ivl_for_mono:
   assumes "s1 \<le> s2"
-  shows "enter_ivl xs es s1 \<le> enter_ivl xs es s2"
-  unfolding enter_ivl_def
+  shows "enter_ivl_for gs xs es s1 \<le> enter_ivl_for gs xs es s2"
+  unfolding enter_ivl_for_def
 proof (rule enter_D_mono[OF assms])
   show "list_all2 (\<le>) (map (\<lambda>e. aval_ivl e s1) es)
                        (map (\<lambda>e. aval_ivl e s2) es)"
@@ -222,11 +145,11 @@ lemma assign_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"
   by (simp add: assign_ivl_def aval_ivl_mono le_funD le_funI)
 
-lemma ivl_tf_mono:
-  "s1 \<le> s2 \<Longrightarrow> apply_tf ivl_tf a s1 \<le> apply_tf ivl_tf a s2"
+lemma ivl_tf_for_mono:
+  "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
-     (auto simp: ivl_tf_def assign_ivl_mono random_ivl_mono assume_ivl_mono
-                 assume_not_ivl_mono enter_ivl_mono split: option.splits)
+     (auto simp: ivl_tf_for_def assign_ivl_mono random_ivl_mono assume_ivl_mono
+                 assume_not_ivl_mono enter_ivl_for_mono split: option.splits)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.
@@ -235,12 +158,12 @@ text \<open>
   @{thm [source] ivl_times_core.simps}, @{thm [source] ivl_nonempty.simps};
   examples with assume edges also need @{thm [source] assume_ivl_def},
   @{thm [source] assume_not_ivl_def}, @{thm [source] ivl_backward_domain.bfilter.simps};
-  examples with procedure calls also need @{thm [source] enter_ivl_def},
-  @{thm [source] enter_frame_ivl_def}, @{thm [source] bind_formals_abs_def},
-  @{thm [source] combine_abs_def}, @{thm [source] is_global_def}.
+  examples with procedure calls also need @{thm [source] enter_ivl_for_def},
+  @{thm [source] enter_frame_ivl_for_def}, @{thm [source] bind_formals_abs_def},
+  @{thm [source] combine_abs_def}.
 \<close>
 lemmas ivl_eval_simps =
-  ivl_tf_def assign_ivl_def
+  ivl_tf_for_def assign_ivl_def
   aval_ivl.simps
   plus_ivl.simps plus_eint.simps
   less_eq_ivl_def le_fun_def

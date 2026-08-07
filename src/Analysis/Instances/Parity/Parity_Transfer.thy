@@ -71,69 +71,6 @@ lemma assume_not_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightar
 
 subsection \<open>Bundled transfer functions\<close>
 
-(* Procedure entry: keep globals, reset locals to Top (unknown), then bind the
-   formals to the abstract values of the actuals evaluated in the caller.
-   Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised
-   by PTop as the domain's fully-imprecise reset value. *)
-definition enter_frame_parity :: "parity abs_state => parity abs_state" where
-  "enter_frame_parity = enter_frame_D is_global PTop"
-
-definition enter_parity ::
-    "vname list => aexp list => parity abs_state => parity abs_state" where
-  "enter_parity = enter_D is_global PTop aval_parity"
-
-lemma enter_frame_parity_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_parity \<sigma>\<rbrakk>"
-  unfolding enter_frame_parity_def
-proof (rule enter_frame_D_sound[OF gs])
-  show "gamma PTop = UNIV" by simp
-qed
-
-lemma enter_parity_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-           \<in> \<lbrakk>enter_parity xs es \<sigma>\<rbrakk>"
-  unfolding enter_parity_def
-proof (rule enter_D_sound[OF gs])
-  show "gamma PTop = UNIV" by simp
-next
-  have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)"
-    using gamma_stateD[OF gs] by simp
-  show "list_all2 (\<lambda>v a. v \<in> gamma a)
-          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_parity e \<sigma>) es)"
-    using V by (simp add: list_all2_conv_all_nth aval_parity_sound)
-qed
-
-lemma enter_frame_parity_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_frame_parity s1 \<le> enter_frame_parity s2"
-  unfolding enter_frame_parity_def by (rule enter_frame_D_mono[OF assms])
-
-lemma enter_parity_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_parity xs es s1 \<le> enter_parity xs es s2"
-  unfolding enter_parity_def
-proof (rule enter_D_mono[OF assms])
-  show "list_all2 (\<le>) (map (\<lambda>e. aval_parity e s1) es)
-                       (map (\<lambda>e. aval_parity e s2) es)"
-    using assms by (simp add: list_all2_conv_all_nth aval_parity_mono)
-qed
-
-definition parity_tf :: "parity domain_transfer" where
-  "parity_tf = (| tf_assign     = assign_parity,
-                  tf_random     = random_parity,
-                  tf_assume     = assume_parity,
-                  tf_assume_not = assume_not_parity,
-                  tf_enter      = enter_parity,
-                  tf_combine    = combine_abs is_global |)"
-
-text \<open>
-  The four transfer-function soundness facts for the parity domain, bundled
-  once so example theories cite them instead of re-proving the same blocks.
-  These are the tf_sound_* premises of unified_post_fixpoint_sound / the
-  per-solver soundness theorems.
-\<close>
 lemma assign_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity x a sigma1 \<le> assign_parity x a sigma2"
   by (simp add: assign_parity_def aval_parity_mono le_funD le_funI)
@@ -146,21 +83,13 @@ lemma assume_not_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_parity b sigma1 \<le> assume_not_parity b sigma2"
   by (simp add: assume_not_parity_def)
 
-lemma parity_tf_mono:
-  "s1 \<le> s2 \<Longrightarrow> apply_tf parity_tf a s1 \<le> apply_tf parity_tf a s2"
-  by (cases a)
-     (auto simp: parity_tf_def assign_parity_mono random_parity_mono assume_parity_mono
-                 assume_not_parity_mono enter_parity_mono split: option.splits)
-
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
-  \<^const>\<open>parity_tf\<close> fixes the \<^const>\<open>is_global\<close> classifier inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>. A placement analysis splits
-  store components by a declaration-driven classifier instead, so entry and
-  combine need a version parametric in that classifier; assignment and guard
-  transfer never consult a classifier, so only the entry and combine fields
-  change shape (mirroring \<open>sign_tf_for\<close> for the sign domain).
+  Entry and combine are the only fields that consult a classifier (inside
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>); assignment and guard
+  transfer never do, so the bundled transfer function is parametric in the
+  classifier throughout (mirroring \<open>sign_tf_for\<close> for the sign domain).
 \<close>
 
 definition enter_frame_parity_for ::
@@ -214,24 +143,25 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   subgoal by (simp add: combine_states_sound)
   done
 
-lemma parity_tf_for_is_global: "parity_tf_for is_global = parity_tf"
-  unfolding parity_tf_for_def parity_tf_def enter_parity_for_def enter_parity_def
-    enter_frame_parity_for_def enter_frame_parity_def
-  by (rule refl)
+lemma enter_frame_parity_for_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_frame_parity_for gs s1 \<le> enter_frame_parity_for gs s2"
+  unfolding enter_frame_parity_for_def by (rule enter_frame_D_mono[OF assms])
 
-text \<open>\<open>parity_is_sound_transfer\<close> is the \<^const>\<open>is_global\<close> specialization of
-  \<open>parity_is_sound_transfer_for\<close>, transported through
-  @{thm [source] sound_transfer_from_for} rather than reproved from scratch.\<close>
-
-interpretation parity_sound_tf: sound_transfer parity_tf
-proof -
-  have "sound_transfer_for is_global parity_tf"
-    using parity_is_sound_transfer_for[of is_global]
-    by (simp only: parity_tf_for_is_global)
-  then show "sound_transfer parity_tf" by (rule sound_transfer_from_for)
+lemma enter_parity_for_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_parity_for gs xs es s1 \<le> enter_parity_for gs xs es s2"
+  unfolding enter_parity_for_def
+proof (rule enter_D_mono[OF assms])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_parity e s1) es)
+                       (map (\<lambda>e. aval_parity e s2) es)"
+    using assms by (simp add: list_all2_conv_all_nth aval_parity_mono)
 qed
 
-lemma parity_is_sound_transfer: "sound_transfer parity_tf"
-  by (rule parity_sound_tf.sound_transfer_axioms)
+lemma parity_tf_for_mono:
+  "s1 \<le> s2 \<Longrightarrow> apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
+  by (cases a)
+     (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono assume_parity_mono
+                 assume_not_parity_mono enter_parity_for_mono split: option.splits)
 
 end

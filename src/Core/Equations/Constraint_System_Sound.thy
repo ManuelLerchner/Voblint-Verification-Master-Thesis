@@ -191,43 +191,6 @@ qed
 
 end
 
-context sound_transfer
-begin
-
-text \<open>Concrete edge collection factors through its abstract transfer: a
-  specialization of \<open>edge_collect_apply_tf_sound_for\<close> at @{const is_global},
-  inherited via the @{locale sound_transfer_for} sublocale.\<close>
-lemma edge_collect_apply_tf_sound:
-  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
-  by (rule edge_collect_apply_tf_sound_for)
-
-text \<open>Call-entry companion of \<open>edge_of_bound\<close>: if the abstract enter transfer over \<open>A\<close> is
-  dominated by \<open>B\<close>, the concrete callee-entry store built from a caller store in \<open>[[A]]\<close> lies
-  in \<open>[[B]]\<close>.  The enter analogue of the intra \<open>edge_of_bound\<close>, shared by the LTR and DG
-  call-routing soundness spines.\<close>
-lemma call_enter_of_bound:
-  assumes bound: "tf_enter tf pars args A \<le> B"
-    and s: "s \<in> \<lbrakk>A\<rbrakk>"
-  shows "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
-  by (rule call_enter_of_bound_for[OF bound s])
-
-text \<open>Return-combine companion of \<open>edge_of_bound\<close>/\<open>call_enter_of_bound\<close>: if the
-  per-analysis return combine over \<open>A\<close>, \<open>B\<close> is dominated by \<open>C\<close>, the concrete
-  return combine of stores sound for \<open>A\<close>, \<open>B\<close> lies in \<open>[[C]]\<close>.  Discharged from
-  \<open>tf_sound_combine\<close> exactly as \<open>call_enter_of_bound\<close> is discharged from
-  \<open>tf_sound_enter\<close>; the return-value write itself needs no analysis-specific
-  soundness fact, as \<^const>\<open>combine_assign_abs\<close> is unconditionally sound.\<close>
-lemma combine_of_bound:
-  assumes bound: "tf_combine_collect_abs tf dst A B \<le> C"
-    and s: "s \<in> \<lbrakk>A\<rbrakk>" and t: "t \<in> \<lbrakk>B\<rbrakk>"
-  shows "combine_collect is_global dst s t \<in> \<lbrakk>C\<rbrakk>"
-  by (rule combine_of_bound_for[OF bound s t])
-
-
-
-
-
-end
 
 end
 

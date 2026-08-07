@@ -28,14 +28,17 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'a abs_state"
-  assumes finE: "finite (intra g)"
+  assumes finE[intro]: "finite (intra g)"
     and pp: "part_post_solution
                (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
                   route cmb extra g S bot0 s0d s0g) x0 sigma vars"
-    and sg_cov: "\<And>v c. (v, c) \<in> vars
-        \<Longrightarrow> sg (Inl (v, c)) = locals (sigma (Inl (v, c))) \<squnion> globs (sigma (Inr gk0))"
-    and sg_uncov: "\<And>v c. (v, c) \<notin> vars \<Longrightarrow> \<lbrakk>sg (Inl (v, c))\<rbrakk> = {}"
-    and fwd: "\<And>u a v c. (u, c) \<in> vars \<Longrightarrow> (u, a, v) \<in> intra g
+    and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
+        \<Longrightarrow> sg (Inl (v, c)) =
+          locals (sigma (Inl (v, c))) \<squnion> globs (sigma (Inr gk0))"
+    and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
+        \<Longrightarrow> \<lbrakk>sg (Inl (v, c))\<rbrakk> = {}"
+    and fwd[intro]: "\<And>u a v c. (u, c) \<in> vars
+        \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
 begin
 

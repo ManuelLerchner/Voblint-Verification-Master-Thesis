@@ -61,91 +61,6 @@ lemma random_sign_mono:
 
 subsection \<open>Bundled transfer functions\<close>
 
-(* Procedure entry: keep globals, reset locals to Top (unknown), then bind the
-   formals to the abstract values of the actuals evaluated in the caller.
-   Generic via enter_frame_D/enter_D (Constraint_System.thy), parameterised
-   by STop as the domain's fully-imprecise reset value. *)
-definition enter_frame_sign :: "sign abs_state => sign abs_state" where
-  "enter_frame_sign = enter_frame_D is_global STop"
-
-definition enter_sign ::
-    "vname list => aexp list => sign abs_state => sign abs_state" where
-  "enter_sign = enter_D is_global STop aval_sign"
-
-lemma enter_frame_sign_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "enter_state is_global s \<in> \<lbrakk>enter_frame_sign \<sigma>\<rbrakk>"
-  unfolding enter_frame_sign_def
-proof (rule enter_frame_D_sound[OF gs])
-  show "gamma STop = UNIV" by simp
-qed
-
-lemma enter_sign_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-           \<in> \<lbrakk>enter_sign xs es \<sigma>\<rbrakk>"
-  unfolding enter_sign_def
-proof (rule enter_D_sound[OF gs])
-  show "gamma STop = UNIV" by simp
-next
-  have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    using gamma_stateD[OF gs] by simp
-  show "list_all2 (\<lambda>v a. v \<in> gamma a)
-          (map (\<lambda>e. aval e s) es) (map (\<lambda>e. aval_sign e \<sigma>) es)"
-    using V by (simp add: list_all2_conv_all_nth aval_sign_sound)
-qed
-
-lemma enter_frame_sign_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_frame_sign s1 \<le> enter_frame_sign s2"
-  unfolding enter_frame_sign_def by (rule enter_frame_D_mono[OF assms])
-
-lemma enter_sign_mono:
-  assumes "s1 \<le> s2"
-  shows "enter_sign xs es s1 \<le> enter_sign xs es s2"
-  unfolding enter_sign_def
-proof (rule enter_D_mono[OF assms])
-  show "list_all2 (\<le>) (map (\<lambda>e. aval_sign e s1) es)
-                       (map (\<lambda>e. aval_sign e s2) es)"
-    using assms by (simp add: list_all2_conv_all_nth aval_sign_mono)
-qed
-
-definition sign_tf :: "sign domain_transfer" where
-  "sign_tf = (| tf_assign     = assign_sign,
-                tf_random     = random_sign,
-                tf_assume     = assume_sign,
-                tf_assume_not = assume_not_sign,
-                tf_enter      = enter_sign,
-                tf_combine    = combine_abs is_global |)"
-
-text \<open>
-  The four transfer-function soundness facts for the sign domain, bundled once
-  so example theories cite them instead of re-proving the same blocks.  These
-  are the tf_sound_* premises of unified_post_fixpoint_sound / the
-  per-solver soundness theorems.
-\<close>
-lemma sign_tf_sound_assign:
-  "\<forall>x a \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. st(x := aval a st) \<in> \<lbrakk>tf_assign sign_tf x a \<sigma>\<rbrakk>"
-  unfolding sign_tf_def by (simp add: assign_sign_sound)
-
-lemma sign_tf_sound_random:
-  "\<forall>x \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. st(x := v) \<in> \<lbrakk>tf_random sign_tf x \<sigma>\<rbrakk>"
-  unfolding sign_tf_def by (simp add: random_sign_sound)
-
-lemma sign_tf_sound_assume:
-  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume sign_tf b \<sigma>\<rbrakk>"
-  unfolding sign_tf_def by (simp add: assume_sign_sound)
-
-lemma sign_tf_sound_assume_not:
-  "\<forall>b \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b st \<longrightarrow> st \<in> \<lbrakk>tf_assume_not sign_tf b \<sigma>\<rbrakk>"
-  unfolding sign_tf_def by (simp add: assume_not_sign_sound)
-
-lemma sign_tf_sound_enter:
-  "\<forall>xs (es::aexp list) \<sigma>. \<forall>st \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e st) es) (enter_state is_global st)
-       \<in> \<lbrakk>tf_enter sign_tf xs es \<sigma>\<rbrakk>"
-  unfolding sign_tf_def by (simp add: enter_sign_sound)
-
 lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
   by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
@@ -160,21 +75,13 @@ lemma assume_not_sign_mono:
   unfolding assume_not_sign_def
   by (rule bfilter_sign_mono)
 
-lemma sign_tf_mono:
-  "s1 \<le> s2 \<Longrightarrow> apply_tf sign_tf a s1 \<le> apply_tf sign_tf a s2"
-  by (cases a)
-     (auto simp: sign_tf_def assign_sign_mono random_sign_mono assume_sign_mono
-                 assume_not_sign_mono enter_sign_mono split: option.splits)
-
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
-  \<^const>\<open>sign_tf\<close> fixes the \<^const>\<open>is_global\<close> classifier inside
-  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>. A placement analysis splits
-  store components by a declaration-driven classifier instead, so entry and
-  combine need a version parametric in that classifier; assignment and guard
-  transfer never consult a classifier, so only the entry and combine fields
-  change shape (mirroring \<open>ivl_tf_for\<close> for the interval domain).
+  Entry and combine are the only fields that consult a classifier (inside
+  \<^const>\<open>enter_frame_D\<close> and \<^const>\<open>combine_abs\<close>); assignment and guard
+  transfer never do, so the bundled transfer function is parametric in the
+  classifier throughout (mirroring \<open>ivl_tf_for\<close> for the interval domain).
 \<close>
 
 definition enter_frame_sign_for ::
@@ -228,24 +135,25 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   subgoal by (simp add: combine_states_sound)
   done
 
-lemma sign_tf_for_is_global: "sign_tf_for is_global = sign_tf"
-  unfolding sign_tf_for_def sign_tf_def enter_sign_for_def enter_sign_def
-    enter_frame_sign_for_def enter_frame_sign_def
-  by (rule refl)
+lemma enter_frame_sign_for_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_frame_sign_for gs s1 \<le> enter_frame_sign_for gs s2"
+  unfolding enter_frame_sign_for_def by (rule enter_frame_D_mono[OF assms])
 
-text \<open>\<open>sign_is_sound_transfer\<close> is the \<^const>\<open>is_global\<close> specialization of
-  \<open>sign_is_sound_transfer_for\<close>, transported through
-  @{thm [source] sound_transfer_from_for} rather than reproved from scratch.\<close>
-
-interpretation sign_sound_tf: sound_transfer sign_tf
-proof -
-  have "sound_transfer_for is_global sign_tf"
-    using sign_is_sound_transfer_for[of is_global]
-    by (simp only: sign_tf_for_is_global)
-  then show "sound_transfer sign_tf" by (rule sound_transfer_from_for)
+lemma enter_sign_for_mono:
+  assumes "s1 \<le> s2"
+  shows "enter_sign_for gs xs es s1 \<le> enter_sign_for gs xs es s2"
+  unfolding enter_sign_for_def
+proof (rule enter_D_mono[OF assms])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_sign e s1) es)
+                       (map (\<lambda>e. aval_sign e s2) es)"
+    using assms by (simp add: list_all2_conv_all_nth aval_sign_mono)
 qed
 
-lemma sign_is_sound_transfer: "sound_transfer sign_tf"
-  by (rule sign_sound_tf.sound_transfer_axioms)
+lemma sign_tf_for_mono:
+  "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
+  by (cases a)
+     (auto simp: sign_tf_for_def assign_sign_mono random_sign_mono assume_sign_mono
+                 assume_not_sign_mono enter_sign_for_mono split: option.splits)
 
 end

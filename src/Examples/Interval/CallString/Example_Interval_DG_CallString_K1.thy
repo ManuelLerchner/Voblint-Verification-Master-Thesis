@@ -547,11 +547,11 @@ definition nest_1_graph_config ::
       route = (\<lambda>u ctx action d. cs_route 1 u ctx d action),
       show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope nest_pi nest_procs ''main'' nest_main
+        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs ''main'' nest_main
           nest_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope nest_pi nest_procs ''main'' nest_main
+        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs ''main'' nest_main
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.

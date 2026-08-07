@@ -17,9 +17,9 @@ subsection \<open>The abstract routed hooks\<close>
 abbreviation Sabs :: "(ivl abs_state, ivl abs_state) dg_spec" where
   "Sabs \<equiv> unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)"
 
-text \<open>Unlike \<open>is_global\<close>, \<open>twice_gs\<close> has no pre-registered \<^locale>\<open>sound_dg_spec\<close>
-  interpretation for the diagonal interval spec (\<open>Interval_DG.thy\<close> only registers
-  \<^const>\<open>is_global\<close>): establish it once here, in the chain's shared ancestor, so
+text \<open>Unlike a fixed name-based classifier, \<open>twice_gs\<close> has no pre-registered
+  \<^locale>\<open>sound_dg_spec\<close> interpretation for the diagonal interval spec: establish
+  it once here, in the chain's shared ancestor, so
   every downstream \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close>
   discharges its inherited step/combine/enter obligations automatically.\<close>
 
@@ -43,7 +43,7 @@ definition route_abs_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<
 subsection \<open>The route-consistency core\<close>
 
 text \<open>The post-enter callee state commutes with the refinement morphism: the entered
-  executable store maps (through \<^const>\<open>fun_of_exec_dg_st\<close>) to the entered abstract store.
+  executable store maps (through \<open>fun_of_exec_dg_st_for\<close>) to the entered abstract store.
   This is \<open>ivl_Hstep\<close> read on the returned local component, with the incoming
   global slot defaulted to \<open>bot\<close>.\<close>
 
@@ -92,7 +92,7 @@ subsection \<open>Per-tree transport commutation\<close>
 
 text \<open>The frame-entry seed \<^emph>\<open>read\<close> transports: it reads the seed global slot and
   echoes it back as a local Answer; no routing, so the tree is identical on both
-  carriers and commutes through \<^const>\<open>fun_of_dg_st\<close>.\<close>
+  carriers and commutes through \<open>fun_of_dg_st_for\<close>.\<close>
 
 lemma dg_tree_st_commute_frame_read:
   "dg_tree_st_commute_for twice_gs env
@@ -173,7 +173,7 @@ qed
 
 text \<open>The routed combine tree, reading the shared global through a query instead
   of a fixed \<open>bot\<close>, transports the same way once the extra query commutes: the
-  read slot \<open>gk0\<close> is the same key on both carriers, so \<^const>\<open>fun_of_dg_st\<close>
+  read slot \<open>gk0\<close> is the same key on both carriers, so \<open>fun_of_dg_st_for\<close>
   applied to \<^term>\<open>env (Inr gk0)\<close> is exactly what the abstract side reads at that
   key.\<close>
 

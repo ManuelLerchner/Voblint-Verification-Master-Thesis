@@ -19,23 +19,6 @@ begin
 
 type_synonym 'a exec_dg_st = "'a resolved_st_q"
 
-abbreviation fun_of_exec_dg_st ::
-  "('a::bot) exec_dg_st \<Rightarrow> 'a abs_state" where
-  "fun_of_exec_dg_st \<equiv> fun_of_resolved_st_q_for is_global"
-
-abbreviation lookup_exec_dg_st ::
-  "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
-  "lookup_exec_dg_st s x \<equiv>
-    lookup_resolved_st_q s (location_of is_global x)"
-
-abbreviation update_exec_dg_st ::
-  "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a \<Rightarrow> 'a exec_dg_st" where
-  "update_exec_dg_st s x a \<equiv>
-    update_resolved_st_q s (location_of is_global x) a"
-
-lemma fun_of_exec_dg_st_bot [simp]:
-  "fun_of_exec_dg_st (bot :: ('a::order_bot) exec_dg_st) = bot"
-  by (rule fun_of_resolved_st_q_for_bot)
 subsection \<open>The combined warrowing arity for the executable state\<close>
 
 text \<open>
@@ -45,24 +28,6 @@ text \<open>
 \<close>
 
 text \<open>The quotient carrier inherits the executable lattice structure.\<close>
-
-subsection \<open>The product refinement morphism\<close>
-
-definition fun_of_dg_st ::
-  "(('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state \<Rightarrow> ('a abs_state, 'b abs_state) dg_state"
-where
-  "fun_of_dg_st d = DG (fun_of_exec_dg_st (locals d)) (fun_of_exec_dg_st (globs d))"
-
-lemma fun_of_dg_st_simps [simp]:
-  "locals (fun_of_dg_st d) = fun_of_exec_dg_st (locals d)"
-  "globs (fun_of_dg_st d) = fun_of_exec_dg_st (globs d)"
-  "fun_of_dg_st (DG a b) = DG (fun_of_exec_dg_st a) (fun_of_exec_dg_st b)"
-  by (simp_all add: fun_of_dg_st_def)
-
-lemma fun_of_dg_st_bot [simp]:
-  "fun_of_dg_st (bot :: ('a::bounded_semilattice_sup_bot exec_dg_st,
-                         'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
-  by (simp add: fun_of_dg_st_def bot_dg_state_def fun_of_resolved_st_q_for_bot bot_fun_def)
 
 subsection \<open>Finite-scope D/G representation\<close>
 
@@ -146,7 +111,7 @@ qed
 lemma dg_refines_on_bot:
   "dg_refines_on universe (bot :: (('a::bounded_semilattice_sup_bot) exec_dg_st,
     ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state) bot"
-  by (rule dg_refines_onI) (simp_all add: bot_dg_state_def bot_fun_def)
+  by (simp add: bot_dg_state_def dg_refines_onI)
 
 definition project_abs_on ::
   "pname => (vname => bool) => (scoped_location => bool) =>
@@ -378,35 +343,18 @@ qed
 
 
 
-lemma fun_of_dg_st_sup:
-  "fun_of_dg_st ((a::('c::bounded_semilattice_sup_bot exec_dg_st,
-                      'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<squnion> b)
-     = fun_of_dg_st a \<squnion> fun_of_dg_st b"
-  by (simp add: fun_of_dg_st_def sup_dg_state_def fun_of_resolved_st_q_for_sup)
-
-lemma fun_of_dg_st_mono:
-  "(a::('c::bounded_semilattice_sup_bot exec_dg_st, 'd::bounded_semilattice_sup_bot exec_dg_st) dg_state) \<le> b
-     \<Longrightarrow> fun_of_dg_st a \<le> fun_of_dg_st b"
-  by (auto simp: fun_of_dg_st_def less_eq_dg_state_def fun_of_resolved_st_q_for_mono)
-
 subsection \<open>Classifier-parametric readback\<close>
 
 text \<open>
-  \<^const>\<open>fun_of_exec_dg_st\<close>/\<^const>\<open>fun_of_dg_st\<close> fix the \<^const>\<open>is_global\<close>
-  classifier.  A placed executable state is written with a declaration-driven
-  classifier instead, so reading it back needs the same classifier or the
-  readback consults the wrong slot.  \<open>fun_of_exec_dg_st_for\<close>/\<open>fun_of_dg_st_for\<close>
-  generalize the readback; the classifier-fixed versions are their \<open>is_global\<close>
-  instance.
+  The executable local/side readback, generic in the classifier: a placed
+  executable state is written with a declaration-driven classifier, so
+  reading it back needs the same classifier or the readback consults the
+  wrong slot.
 \<close>
 
 definition fun_of_exec_dg_st_for ::
   "(vname => bool) => ('a::bot) exec_dg_st => 'a abs_state" where
   "fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs"
-
-lemma fun_of_exec_dg_st_for_is_global:
-  "fun_of_exec_dg_st_for is_global = fun_of_exec_dg_st"
-  unfolding fun_of_exec_dg_st_for_def by (rule refl)
 
 lemma fun_of_exec_dg_st_for_bot [simp]:
   "fun_of_exec_dg_st_for gs (bot :: ('a::order_bot) exec_dg_st) = bot"
@@ -424,10 +372,6 @@ where
   "fun_of_dg_st_for gs d =
     DG (fun_of_exec_dg_st_for gs (locals d)) (fun_of_exec_dg_st_for gs (globs d))"
 
-lemma fun_of_dg_st_for_is_global:
-  "fun_of_dg_st_for is_global = fun_of_dg_st"
-  unfolding fun_of_dg_st_for_def fun_of_dg_st_def fun_of_exec_dg_st_for_is_global by (rule refl)
-
 lemma fun_of_dg_st_for_simps [simp]:
   "locals (fun_of_dg_st_for gs d) = fun_of_exec_dg_st_for gs (locals d)"
   "globs (fun_of_dg_st_for gs d) = fun_of_exec_dg_st_for gs (globs d)"
@@ -437,8 +381,7 @@ lemma fun_of_dg_st_for_simps [simp]:
 lemma fun_of_dg_st_for_bot [simp]:
   "fun_of_dg_st_for gs (bot :: ('a::bounded_semilattice_sup_bot exec_dg_st,
                          'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
-  by (simp add: fun_of_dg_st_for_def bot_dg_state_def fun_of_exec_dg_st_for_def
-    fun_of_resolved_st_q_for_bot bot_fun_def)
+  by (simp add: bot_dg_state_def)
 
 lemma fun_of_dg_st_for_sup:
   "fun_of_dg_st_for gs ((a::('c::bounded_semilattice_sup_bot exec_dg_st,
@@ -649,15 +592,6 @@ where
      (let m = combine_resolved_st_q (dc \<squnion> g) (de \<squnion> g)
       in (restrict_global_resolved_q m, restrict_local_resolved_q m))"
 
-definition unit_combine_step_st_assign ::
-  "vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st
-   \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
-where
-  "unit_combine_step_st_assign dst de g merged =
-     (let res = combine_assign_resolved_q is_global dst (lookup_exec_dg_st (de \<squnion> g) ret_var) (fst merged \<squnion> snd merged)
-      in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
-
-
 lemma unit_step_st_commute_for:
   assumes "\<And>s. fun_of_exec_dg_st_for gs (f_st s) = f_abs (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (unit_step_st f_st d g)
@@ -669,27 +603,9 @@ lemma unit_step_st_commute_for:
                 fun_of_resolved_st_q_for_restrict_local fun_of_resolved_st_q_for_restrict_global
                 Let_def fun_eq_iff)
 
-definition unit_dg_spec_st ::
-  "(edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_spec"
-where
-  "unit_dg_spec_st tf_st enter_st = \<lparr>
-    dgs_nop        = unit_step_st (tf_st EA_Nop),
-    dgs_assign     = (\<lambda>x e. unit_step_st (tf_st (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_st (tf_st (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_st (tf_st (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_st (tf_st (EA_AssumeNot b))),
-    dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
-    dgs_combine_env    = unit_combine_step_st_env,
-    dgs_combine_assign = unit_combine_step_st_assign
-  \<rparr>"
-
-
-text \<open>Generic combine-assign, generalizing \<^const>\<open>unit_combine_step_st_assign\<close>: the
-  destination write goes through \<^const>\<open>combine_assign_resolved_q\<close> at whatever
-  classifier \<open>gs\<close> the caller's writes and reads already agree on, not
-  \<^const>\<open>is_global\<close> unconditionally.\<close>
+text \<open>Generic combine-assign: the destination write goes through
+  \<^const>\<open>combine_assign_resolved_q\<close> at whatever classifier \<open>gs\<close> the caller's
+  writes and reads already agree on.\<close>
 definition unit_combine_step_st_assign_for ::
   "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st
    \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
@@ -699,11 +615,6 @@ where
                   (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var))
                   (fst merged \<squnion> snd merged)
       in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
-
-lemma unit_combine_step_st_assign_for_is_global:
-  "unit_combine_step_st_assign_for is_global = unit_combine_step_st_assign"
-  unfolding unit_combine_step_st_assign_for_def unit_combine_step_st_assign_def
-  by (rule refl)
 
 text \<open>Generic diagonal executable D/G specification: the only classifier-dependent
   field is \<open>dgs_combine_assign\<close> -- \<^const>\<open>unit_combine_step_st_env\<close> already reads
@@ -725,12 +636,6 @@ where
     dgs_combine_env    = unit_combine_step_st_env,
     dgs_combine_assign = unit_combine_step_st_assign_for gs
   \<rparr>"
-
-lemma unit_dg_spec_st_for_is_global:
-  "unit_dg_spec_st_for is_global = unit_dg_spec_st"
-  unfolding unit_dg_spec_st_for_def unit_dg_spec_st_def
-    unit_combine_step_st_assign_for_is_global
-  by (rule refl)
 
 text \<open>
   Field-projection shape lemmas for \<^const>\<open>unit_dg_spec_st_for\<close>, classifier-parametric
@@ -806,11 +711,11 @@ text \<open>Not \<open>[simp]\<close>: the whole-function shape competes with th
   whole-function shape is what's needed.\<close>
 lemma fun_of_resolved_st_q_for_restrict_local_for:
   "fun_of_resolved_st_q_for gs (restrict_local_resolved_q s) = restrict_local_for gs (fun_of_resolved_st_q_for gs s)"
-  unfolding restrict_local_for_def by (rule ext) simp
+  by (rule ext) (simp add: restrict_local_for_def fun_of_resolved_st_q_for_restrict_local)
 
 lemma fun_of_resolved_st_q_for_restrict_global_for:
   "fun_of_resolved_st_q_for gs (restrict_global_resolved_q s) = restrict_global_for gs (fun_of_resolved_st_q_for gs s)"
-  unfolding restrict_global_for_def by (rule ext) simp
+  by (rule ext) (simp add: restrict_global_for_def fun_of_resolved_st_q_for_restrict_global)
 
 lemma unit_combine_step_st_commute_for:
   "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
@@ -3049,11 +2954,9 @@ qed
 subsection \<open>Classifier-parametric fold transport\<close>
 
 text \<open>
-  Classifier-parametric counterparts of \<open>side_acc_dg_commute\<close> and
-  \<open>sides_side_rhs_fold_dg_commute\<close>: same fold-commute argument, reading through
-  \<open>fun_of_exec_dg_st_for gs\<close>/\<open>fun_of_dg_st_for gs\<close> instead of the \<open>is_global\<close>-fixed
-  readback.  \<open>dep_aux_side_rhs_fold_dg_commute\<close> already never mentions a
-  readback, so it transports unchanged.
+  Fold-commute lemmas reading through the generic \<open>fun_of_exec_dg_st_for gs\<close>/
+  \<open>fun_of_dg_st_for gs\<close> readback.  \<open>dep_aux_side_rhs_fold_dg_commute\<close> already
+  never mentions a readback, so it transports unchanged.
 \<close>
 
 lemma side_acc_dg_commute_for:
@@ -3400,7 +3303,8 @@ proof -
     for p ts
   proof (induction ts arbitrary: p)
     case Nil
-    thus ?case by (simp add: bot_dg_state_def resolved_default_rep_bot_resolved_st_q)
+    thus ?case 
+      by (auto simp add: bot_dg_state_def resolved_default_rep_bot_resolved_st_q)
   next
     case (Cons t ts)
     have hd: "resolved_default (rep_resolved_st
@@ -3454,17 +3358,6 @@ text \<open>
   context and produces a proof that only looks polymorphic.
 \<close>
 
-definition dg_tree_st_commute ::
-  "('u + 'k \<Rightarrow> (('a::bounded_semilattice_sup_bot) exec_dg_st, ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state)
-   \<Rightarrow> ('u, 'k, ('a exec_dg_st, 'b exec_dg_st) dg_state) strategy_tree
-   \<Rightarrow> ('u, 'k, ('a abs_state, 'b abs_state) dg_state) strategy_tree \<Rightarrow> bool"
-where
-  "dg_tree_st_commute \<sigma>_st t_st t_abs \<longleftrightarrow>
-     fun_of_dg_st (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st)
-   \<and> (\<forall>k. fun_of_dg_st (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st \<circ> \<sigma>_st) k)
-   \<and> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st \<circ> \<sigma>_st) t_abs"
-
-
 definition dg_tree_st_commute_for ::
   "(vname => bool)
    \<Rightarrow> ('u + 'k \<Rightarrow> (('a::bounded_semilattice_sup_bot) exec_dg_st, ('b::bounded_semilattice_sup_bot) exec_dg_st) dg_state)
@@ -3475,11 +3368,6 @@ where
      fun_of_dg_st_for gs (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st)
    \<and> (\<forall>k. fun_of_dg_st_for gs (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_for gs \<circ> \<sigma>_st) k)
    \<and> dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_for gs \<circ> \<sigma>_st) t_abs"
-
-lemma dg_tree_st_commute_for_is_global:
-  "dg_tree_st_commute_for is_global = dg_tree_st_commute"
-  unfolding dg_tree_st_commute_for_def dg_tree_st_commute_def fun_of_dg_st_for_is_global
-  by (rule refl)
 
 lemma dg_tree_st_commute_for_trav:
   "dg_tree_st_commute_for gs \<sigma>_st t_st t_abs
@@ -3756,10 +3644,6 @@ qed
 
 subsection \<open>The monovariant (unit-context) specialisation\<close>
 
-text \<open>
-  The \<open>is_global\<close> instance of \<open>part_post_solution_dg_st_to_abs_for\<close>.
-\<close>
-
 lemma dg_tree_st_commute_dg_cmb_of_for:
   assumes Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
                             = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
@@ -3824,19 +3708,6 @@ proof -
            OF Hstep hr hc he pp'])
 qed
 
-theorem part_post_solution_dg_st_to_abs:
-  assumes Hstep: "\<And>a d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dg_spec_step S_st a d g)
-                          = dg_spec_step S_abs a (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-      and Henter: "\<And>xs es d g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_enter S_st xs es d g)
-                            = dgs_enter S_abs xs es (fun_of_exec_dg_st d) (fun_of_exec_dg_st g)"
-      and Hcomb: "\<And>dst dc de g. map_prod fun_of_exec_dg_st fun_of_exec_dg_st (dgs_combine S_st dst dc de g)
-                            = dgs_combine S_abs dst (fun_of_exec_dg_st dc) (fun_of_exec_dg_st de) (fun_of_exec_dg_st g)"
-      and pp: "part_post_solution (dg_gen_of S_st g bot0 s0d s0g) x s_st vars"
-  shows "part_post_solution (dg_gen_of S_abs g (fun_of_exec_dg_st bot0) (fun_of_exec_dg_st s0d) (fun_of_exec_dg_st s0g))
-           x (fun_of_dg_st o s_st) vars"
-  by (rule part_post_solution_dg_st_to_abs_for[where gs=is_global,
-        unfolded fun_of_exec_dg_st_for_is_global fun_of_dg_st_for_is_global,
-        OF Hstep Henter Hcomb pp])
 
 
 end

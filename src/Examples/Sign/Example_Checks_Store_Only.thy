@@ -46,17 +46,26 @@ lemma checks_ex_checks_eval:
       (Statement 5, Eq (V ''z'') (N 1))}"
   unfolding prog_cfg_def by eval
 
-lemma checks_ex_solver_terminates: "sign_terminates_prog ''main'' checks_ex_program"
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
+  gives is trivially false everywhere.\<close>
+abbreviation checks_ex_gs :: "vname \<Rightarrow> bool" where
+  "checks_ex_gs \<equiv> declared_global checks_ex_program"
+
+lemma checks_ex_program_declared_global_vars [simp]:
+  "declared_global_vars checks_ex_program = []"
+  by (simp add: checks_ex_program_def)
+
+lemma checks_ex_solver_terminates: "sign_terminates_prog checks_ex_gs ''main'' checks_ex_program"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 definition checks_ex_reach :: "pp \<Rightarrow> store set" where
-  "checks_ex_reach v = ltr_collect is_global (prog_cfg ''main'' checks_ex_program) (cinit_stores is_global) v"
+  "checks_ex_reach v = ltr_collect checks_ex_gs (prog_cfg ''main'' checks_ex_program) (cinit_stores checks_ex_gs) v"
 
 text \<open>The computed Sign environment at an arbitrary node, not fixed to the
   exit: \<^const>\<open>sign_exec_prog_at\<close> queries the same solver result
   \<^const>\<open>sign_exec_prog\<close> reads only at the exit.\<close>
 definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
-  "checks_ex_env v = sign_exec_prog_at ''main'' checks_ex_program v"
+  "checks_ex_env v = sign_exec_prog_at checks_ex_gs ''main'' checks_ex_program v"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>__voblint_check(0 < y)\<close>, proved) reaches \<open>Statement 2\<close> reaches
@@ -230,10 +239,10 @@ text \<open>Non-vacuity: \<open>checks_ex_reach\<close> is not merely vacuously 
   chain, the third (unknown) check's own node.\<close>
 lemma checks_ex_reach1_nonempty: "checks_ex_reach (Statement 1) \<noteq> {}"
 proof -
-  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores is_global" unfolding cinit_stores_def by simp
+  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ex_reach (FunctionEntry ''main'')"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect is_global (prog_cfg ''main'' checks_ex_program) (cinit_stores is_global)
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg ''main'' checks_ex_program) (cinit_stores checks_ex_gs)
             (cfg_entry (prog_cfg ''main'' checks_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
@@ -241,14 +250,14 @@ proof -
   have e0: "(FunctionEntry ''main'', EA_Nop, Statement 0) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "FunctionEntry ''main''" EA_Nop "Statement 0"]
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "FunctionEntry ''main''" EA_Nop "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
   have e1: "(Statement 0, EA_Assign ''y'' (N 5), Statement 1) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)(''y'' := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 0" "EA_Assign ''y'' (N 5)" "Statement 1"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign ''y'' (N 5)" "Statement 1"
         "(\<lambda>_. 0)(''y'' := 5)"]
     using s1 e1 unfolding checks_ex_reach_def by simp
   then show ?thesis by blast
@@ -256,10 +265,10 @@ qed
 
 lemma checks_ex_reach5_nonempty: "checks_ex_reach (Statement 5) \<noteq> {}"
 proof -
-  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores is_global" unfolding cinit_stores_def by simp
+  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores checks_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> checks_ex_reach (FunctionEntry ''main'')"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect is_global (prog_cfg ''main'' checks_ex_program) (cinit_stores is_global)
+    have "(\<lambda>_. 0) \<in> ltr_collect checks_ex_gs (prog_cfg ''main'' checks_ex_program) (cinit_stores checks_ex_gs)
             (cfg_entry (prog_cfg ''main'' checks_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding checks_ex_reach_def checks_ex_entry_eval .
@@ -267,40 +276,40 @@ proof -
   have e0: "(FunctionEntry ''main'', EA_Nop, Statement 0) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "FunctionEntry ''main''" EA_Nop "Statement 0"]
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "FunctionEntry ''main''" EA_Nop "Statement 0"]
     using s0 e0 unfolding checks_ex_reach_def by simp
   have e1: "(Statement 0, EA_Assign ''y'' (N 5), Statement 1) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s2: "(\<lambda>_. 0)(''y'' := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 0" "EA_Assign ''y'' (N 5)" "Statement 1"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign ''y'' (N 5)" "Statement 1"
         "(\<lambda>_. 0)(''y'' := 5)"]
     using s1 e1 unfolding checks_ex_reach_def by simp
   have e2: "(Statement 1, EA_Check (Less (N 0) (V ''y'')), Statement 2) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s3: "(\<lambda>_. 0)(''y'' := 5) \<in> checks_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 5)" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 1" "EA_Check (Less (N 0) (V ''y''))" "Statement 2"]
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 5)" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 1" "EA_Check (Less (N 0) (V ''y''))" "Statement 2"]
     using s2 e2 unfolding checks_ex_reach_def by simp
   have e3: "(Statement 2, EA_Assign ''y'' (N 0), Statement 3) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s4: "(\<lambda>_. 0)(''y'' := 0) \<in> checks_ex_reach (Statement 3)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 5)" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 2" "EA_Assign ''y'' (N 0)" "Statement 3"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 5)" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 2" "EA_Assign ''y'' (N 0)" "Statement 3"
         "(\<lambda>_. 0)(''y'' := 0)"]
     using s3 e3 unfolding checks_ex_reach_def by simp
   have e4: "(Statement 3, EA_Check (Less (N 0) (V ''y'')), Statement 4) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s5: "(\<lambda>_. 0)(''y'' := 0) \<in> checks_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 0)" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 3" "EA_Check (Less (N 0) (V ''y''))" "Statement 4"]
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 0)" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (Less (N 0) (V ''y''))" "Statement 4"]
     using s4 e4 unfolding checks_ex_reach_def by simp
   have e5: "(Statement 4, EA_Random ''z'', Statement 5) \<in> intra (prog_cfg ''main'' checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)(''y'' := 0, ''z'' := 7) \<in> checks_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 0)" is_global "prog_cfg ''main'' checks_ex_program"
-        "cinit_stores is_global" "Statement 4" "EA_Random ''z''" "Statement 5"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''y'' := 0)" checks_ex_gs "prog_cfg ''main'' checks_ex_program"
+        "cinit_stores checks_ex_gs" "Statement 4" "EA_Random ''z''" "Statement 5"
         "(\<lambda>_. 0)(''y'' := 0, ''z'' := 7)"]
     using s5 e5 unfolding checks_ex_reach_def by force
   then show ?thesis by blast

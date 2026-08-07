@@ -35,6 +35,15 @@ definition random_guard_program :: imp_prog where
      }
    }"
 
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
+  gives is trivially false everywhere.\<close>
+abbreviation random_guard_gs :: "vname \<Rightarrow> bool" where
+  "random_guard_gs \<equiv> declared_global random_guard_program"
+
+lemma random_guard_program_declared_global_vars [simp]:
+  "declared_global_vars random_guard_program = []"
+  by (simp add: random_guard_program_def)
+
 subsection \<open>Non-vacuity: a concrete run where \<open>random()\<close> returns 42\<close>
 
 text \<open>
@@ -88,7 +97,7 @@ text \<open>
   \<^item> \<^const>\<open>prog_cfg\<close> compiles the source program to a CFG (\<^const>\<open>compile_prog\<close>).
   \<^item> \<^const>\<open>sign_exec_eqs\<close> is \<^emph>\<open>the equation system generator\<close>: it applies
     \<^const>\<open>side_cfg_T_eff_st\<close> to that CFG and the executable sign transfer
-    \<^const>\<open>sign_etf_st\<close>, producing one equation per CFG node.
+    \<open>sign_etf_st_for\<close>, producing one equation per CFG node.
   \<^item> \<^const>\<open>TD_side_always_join_Interp_solve\<close> is \<^emph>\<open>the vendored TD solver\<close>: it
     takes that equation system and a query node and computes a fixpoint,
     \<^const>\<open>sign_exec_raw\<close> being exactly this call.
@@ -97,24 +106,24 @@ text \<open>
   proof unfolds to establish soundness.
 \<close>
 
-value "sign_exec_eqs (prog_table random_guard_program) (prog_procs random_guard_program)
+value "sign_exec_eqs random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
          ''main'' (prog_main random_guard_program)"
 
-value "sign_exec_raw (prog_table random_guard_program) (prog_procs random_guard_program)
+value "sign_exec_raw random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
          ''main'' (prog_main random_guard_program)"
 
-value "sign_exec_prog ''main'' random_guard_program"
+value "sign_exec_prog random_guard_gs ''main'' random_guard_program"
 
-lemma random_guard_exec_y: "sign_exec_prog ''main'' random_guard_program ''y'' = SNonNeg"
+lemma random_guard_exec_y: "sign_exec_prog random_guard_gs ''main'' random_guard_program ''y'' = SNonNeg"
   by eval
 
-lemma random_guard_solver_terminates: "sign_terminates_prog ''main'' random_guard_program"
+lemma random_guard_solver_terminates: "sign_terminates_prog random_guard_gs ''main'' random_guard_program"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 corollary random_guard_exit_sound:
-  "ltr_collect is_global (prog_cfg ''main'' random_guard_program) (cinit_stores is_global)
+  "ltr_collect random_guard_gs (prog_cfg ''main'' random_guard_program) (cinit_stores random_guard_gs)
      (cfg_exit (prog_cfg ''main'' random_guard_program))
-   \<le> \<lbrakk>sign_exec_prog ''main'' random_guard_program\<rbrakk>"
+   \<le> \<lbrakk>sign_exec_prog random_guard_gs ''main'' random_guard_program\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF random_guard_solver_terminates])
 
 text \<open>
@@ -128,13 +137,13 @@ text \<open>
 \<close>
 
 corollary random_guard_exit_y_nonneg:
-  assumes "t \<in> ltr_collect is_global (prog_cfg ''main'' random_guard_program) (cinit_stores is_global)
+  assumes "t \<in> ltr_collect random_guard_gs (prog_cfg ''main'' random_guard_program) (cinit_stores random_guard_gs)
              (cfg_exit (prog_cfg ''main'' random_guard_program))"
   shows "t ''y'' \<ge> 0"
 proof -
-  have t_in: "t \<in> \<lbrakk>sign_exec_prog ''main'' random_guard_program\<rbrakk>"
+  have t_in: "t \<in> \<lbrakk>sign_exec_prog random_guard_gs ''main'' random_guard_program\<rbrakk>"
     using assms random_guard_exit_sound by blast
-  have "t ''y'' \<in> gamma_sign (sign_exec_prog ''main'' random_guard_program ''y'')"
+  have "t ''y'' \<in> gamma_sign (sign_exec_prog random_guard_gs ''main'' random_guard_program ''y'')"
     using gamma_stateD[OF t_in] by simp
   then show ?thesis using random_guard_exec_y by simp
 qed
@@ -151,7 +160,7 @@ text \<open>
 definition random_guard_mnm :: pname where "random_guard_mnm = ''main''"
 
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code random_guard_mnm} @{code random_guard_program})
+  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code random_guard_program}) @{code random_guard_mnm} @{code random_guard_program})
 \<close>
 
 end

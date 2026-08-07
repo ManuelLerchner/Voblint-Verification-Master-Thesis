@@ -47,17 +47,26 @@ lemma parity_ex_checks_eval:
       (Statement 6, Eq (V ''y'') (V ''w''))}"
   unfolding prog_cfg_def by eval
 
-lemma parity_ex_solver_terminates: "parity_terminates_prog ''main'' parity_ex_program"
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
+  gives is trivially false everywhere.\<close>
+abbreviation parity_ex_gs :: "vname \<Rightarrow> bool" where
+  "parity_ex_gs \<equiv> declared_global parity_ex_program"
+
+lemma parity_ex_program_declared_global_vars [simp]:
+  "declared_global_vars parity_ex_program = []"
+  by (simp add: parity_ex_program_def)
+
+lemma parity_ex_solver_terminates: "parity_terminates_prog parity_ex_gs ''main'' parity_ex_program"
   by (rule parity_terminates_prog_via_solve_c) eval
 
 definition parity_ex_reach :: "pp \<Rightarrow> store set" where
-  "parity_ex_reach v = ltr_collect is_global (prog_cfg ''main'' parity_ex_program) (cinit_stores is_global) v"
+  "parity_ex_reach v = ltr_collect parity_ex_gs (prog_cfg ''main'' parity_ex_program) (cinit_stores parity_ex_gs) v"
 
 text \<open>The computed Parity environment at an arbitrary node, not fixed to the
   exit: \<^const>\<open>parity_exec_prog_at\<close> queries the same solver result
   \<^const>\<open>parity_exec_prog\<close> reads only at the exit.\<close>
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
-  "parity_ex_env v = parity_exec_prog_at ''main'' parity_ex_program v"
+  "parity_ex_env v = parity_exec_prog_at parity_ex_gs ''main'' parity_ex_program v"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 0\<close> (\<open>x := random()\<close>) reaches \<open>Statement 1\<close>
@@ -231,10 +240,10 @@ lemma parity_ex_reach3_witness:
   "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)
      \<in> parity_ex_reach (Statement 3)"
 proof -
-  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores is_global" unfolding cinit_stores_def by simp
+  have zero_init: "(\<lambda>_. 0) \<in> cinit_stores parity_ex_gs" unfolding cinit_stores_def by simp
   have s0: "(\<lambda>_. 0) \<in> parity_ex_reach (FunctionEntry ''main'')"
   proof -
-    have "(\<lambda>_. 0) \<in> ltr_collect is_global (prog_cfg ''main'' parity_ex_program) (cinit_stores is_global)
+    have "(\<lambda>_. 0) \<in> ltr_collect parity_ex_gs (prog_cfg ''main'' parity_ex_program) (cinit_stores parity_ex_gs)
             (cfg_entry (prog_cfg ''main'' parity_ex_program))"
       by (rule ltr_collect_init[OF zero_init])
     then show ?thesis unfolding parity_ex_reach_def parity_ex_entry_eval .
@@ -242,30 +251,30 @@ proof -
   have e0: "(FunctionEntry ''main'', EA_Nop, Statement 0) \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> parity_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' parity_ex_program"
-        "cinit_stores is_global" "FunctionEntry ''main''" EA_Nop "Statement 0"]
+    using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg ''main'' parity_ex_program"
+        "cinit_stores parity_ex_gs" "FunctionEntry ''main''" EA_Nop "Statement 0"]
     using s0 e0 unfolding parity_ex_reach_def by simp
   have e1: "(Statement 0, EA_Random ''x'', Statement 1) \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s2: "(\<lambda>_. 0)(''x'' := 7) \<in> parity_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" is_global "prog_cfg ''main'' parity_ex_program"
-        "cinit_stores is_global" "Statement 0" "EA_Random ''x''" "Statement 1"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg ''main'' parity_ex_program"
+        "cinit_stores parity_ex_gs" "Statement 0" "EA_Random ''x''" "Statement 1"
         "(\<lambda>_. 0)(''x'' := 7)"]
     using s1 e1 unfolding parity_ex_reach_def by force
   have e2: "(Statement 1, EA_Assign ''y'' (Times (V ''x'') (N 2)), Statement 2)
               \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s3: "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14) \<in> parity_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7)" is_global "prog_cfg ''main'' parity_ex_program"
-        "cinit_stores is_global" "Statement 1" "EA_Assign ''y'' (Times (V ''x'') (N 2))" "Statement 2"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7)" parity_ex_gs "prog_cfg ''main'' parity_ex_program"
+        "cinit_stores parity_ex_gs" "Statement 1" "EA_Assign ''y'' (Times (V ''x'') (N 2))" "Statement 2"
         "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14)"]
     using s2 e2 unfolding parity_ex_reach_def by force
   have e3: "(Statement 2, EA_Assign ''z'' (Plus (V ''y'') (N 1)), Statement 3)
               \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15) \<in> parity_ex_reach (Statement 3)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14)" is_global
-        "prog_cfg ''main'' parity_ex_program" "cinit_stores is_global"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14)" parity_ex_gs
+        "prog_cfg ''main'' parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 2" "EA_Assign ''z'' (Plus (V ''y'') (N 1))" "Statement 3"
         "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)"]
     using s3 e3 unfolding parity_ex_reach_def by force
@@ -281,23 +290,23 @@ proof -
               \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s4: "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15) \<in> parity_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)" is_global
-        "prog_cfg ''main'' parity_ex_program" "cinit_stores is_global"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)" parity_ex_gs
+        "prog_cfg ''main'' parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 3" "EA_Check (Not (Eq (V ''y'') (V ''z'')))" "Statement 4"]
     using s3_ne e4 unfolding parity_ex_reach_def by force
   have e5: "(Statement 4, EA_Check (Eq (V ''y'') (V ''z'')), Statement 5)
               \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s5: "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15) \<in> parity_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)" is_global
-        "prog_cfg ''main'' parity_ex_program" "cinit_stores is_global"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)" parity_ex_gs
+        "prog_cfg ''main'' parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 4" "EA_Check (Eq (V ''y'') (V ''z''))" "Statement 5"]
     using s4 e5 unfolding parity_ex_reach_def by force
   have e6: "(Statement 5, EA_Random ''w'', Statement 6) \<in> intra (prog_cfg ''main'' parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15, ''w'' := 99) \<in> parity_ex_reach (Statement 6)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)" is_global
-        "prog_cfg ''main'' parity_ex_program" "cinit_stores is_global"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15)" parity_ex_gs
+        "prog_cfg ''main'' parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 5" "EA_Random ''w''" "Statement 6"
         "(\<lambda>_. 0)(''x'' := 7, ''y'' := 14, ''z'' := 15, ''w'' := 99)"]
     using s5 e6 unfolding parity_ex_reach_def by force

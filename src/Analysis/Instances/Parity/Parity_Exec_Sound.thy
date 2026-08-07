@@ -11,9 +11,9 @@ text \<open>
     \<^item> \<open>parity_exec_raw \<Pi> ps main\<close>  -- the raw solver solution
       (\<open>pp + unit \<Rightarrow> parity resolved_st_q\<close>), code-generating, the thing
       @{command value} / \<open>eval\<close> evaluates;
-    \<^item> \<open>parity_exec_at \<Pi> ps main v\<close> -- the analyzer's computed abstract state
+    \<^item> \<open>parity_exec_at gs \<Pi> ps main v\<close> -- the analyzer's computed abstract state
       at node \<open>v\<close> (a \<open>parity abs_state\<close>), read back through
-      \<open>fun_of_resolved_st_q_for is_global\<close>;
+      \<open>fun_of_resolved_st_q_for gs\<close>;
     \<^item> \<open>parity_exec_terminates \<Pi> ps main\<close> -- the single assumption: the
       vendored solver terminates on this program.
 
@@ -24,30 +24,30 @@ text \<open>
 \<close>
 
 definition parity_exec_eqs ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp, unit, parity resolved_st_q) eqsT" where
-  "parity_exec_eqs \<Pi> ps mnm main =
-     side_cfg_T_eff_st (compile_prog \<Pi> ps mnm main) parity_etf_st bot cinit_parity_st ()"
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp, unit, parity resolved_st_q) eqsT" where
+  "parity_exec_eqs gs \<Pi> ps mnm main =
+     side_cfg_T_eff_st (compile_prog \<Pi> ps mnm main) (parity_etf_st_for gs) bot cinit_parity_st ()"
 
 definition parity_exec_raw ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> parity resolved_st_q)" where
-  "parity_exec_raw \<Pi> ps mnm main =
-     snd (TD_side_always_join_Interp_solve (parity_exec_eqs \<Pi> ps mnm main)
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> parity resolved_st_q)" where
+  "parity_exec_raw gs \<Pi> ps mnm main =
+     snd (TD_side_always_join_Interp_solve (parity_exec_eqs gs \<Pi> ps mnm main)
             (cfg_exit (compile_prog \<Pi> ps mnm main)))"
 
 definition parity_exec_at ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> parity abs_state" where
-  "parity_exec_at \<Pi> ps mnm main v =
-     side_env (fun_of_resolved_st_q_for is_global \<circ> parity_exec_raw \<Pi> ps mnm main) v"
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> parity abs_state" where
+  "parity_exec_at gs \<Pi> ps mnm main v =
+     side_env (fun_of_resolved_st_q_for gs \<circ> parity_exec_raw gs \<Pi> ps mnm main) v"
 
 definition parity_exec ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> parity abs_state" where
-  "parity_exec \<Pi> ps mnm main = parity_exec_at \<Pi> ps mnm main (cfg_exit (compile_prog \<Pi> ps mnm main))"
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> parity abs_state" where
+  "parity_exec gs \<Pi> ps mnm main = parity_exec_at gs \<Pi> ps mnm main (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 definition parity_exec_terminates ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "parity_exec_terminates \<Pi> ps mnm main =
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "parity_exec_terminates gs \<Pi> ps mnm main =
      TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(parity resolved_st_q)
-        (parity_exec_eqs \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
+        (parity_exec_eqs gs \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 text \<open>
   Discharging termination by execution, exactly as \<open>sign_exec_terminates_via_solve_c\<close>/
@@ -57,9 +57,9 @@ text \<open>
 \<close>
 
 lemma parity_exec_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (parity_exec_eqs \<Pi> ps mnm main)
+  assumes "TD_side_always_join_Interp_solve_c (parity_exec_eqs gs \<Pi> ps mnm main)
              (cfg_exit (compile_prog \<Pi> ps mnm main)) \<noteq> None"
-  shows "parity_exec_terminates \<Pi> ps mnm main"
+  shows "parity_exec_terminates gs \<Pi> ps mnm main"
   unfolding parity_exec_terminates_def TD_side_always_join_Interp.term_equivalence
             TD_side_always_join_Interp.solve_c_dom_def
   using assms by simp
@@ -76,63 +76,63 @@ text \<open>
 
 theorem parity_exec_sound_collecting_at:
   fixes mnm :: pname and v :: pp
-  assumes solves: "parity_exec_terminates \<Pi> ps mnm main"
+  assumes solves: "parity_exec_terminates gs \<Pi> ps mnm main"
     and reach_v: "cfg_reaches (compile_prog \<Pi> ps mnm main) v (cfg_exit (compile_prog \<Pi> ps mnm main))"
-  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) (cinit_stores is_global) v
-         \<le> \<lbrakk>parity_exec_at \<Pi> ps mnm main v\<rbrakk>"
+  shows "ltr_collect gs (compile_prog \<Pi> ps mnm main) (cinit_stores gs) v
+         \<le> \<lbrakk>parity_exec_at gs \<Pi> ps mnm main v\<rbrakk>"
 proof -
   define g :: cfg where "g = compile_prog \<Pi> ps mnm main"
   define sol :: "pp set \<times> (pp + unit \<Rightarrow> parity resolved_st_q)" where
-    "sol = TD_side_always_join_Interp_solve (parity_exec_eqs \<Pi> ps mnm main) (cfg_exit g)"
-  define \<sigma> :: "pp + unit \<Rightarrow> parity abs_state" where "\<sigma> = fun_of_resolved_st_q_for is_global \<circ> snd sol"
+    "sol = TD_side_always_join_Interp_solve (parity_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g)"
+  define \<sigma> :: "pp + unit \<Rightarrow> parity abs_state" where "\<sigma> = fun_of_resolved_st_q_for gs \<circ> snd sol"
   have fin: "finite (intra g)" unfolding g_def using compile_prog_finite by simp
   have finC: "finite (calls g)" unfolding g_def using compile_prog_finite by simp
   have wf: "wf_cfg g" unfolding g_def by (rule compile_prog_wf)
   have dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(parity resolved_st_q)
-               (parity_exec_eqs \<Pi> ps mnm main) (cfg_exit g)"
+               (parity_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g)"
     using solves unfolding parity_exec_terminates_def g_def by simp
-  have pp0: "part_post_solution (parity_exec_eqs \<Pi> ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
+  have pp0: "part_post_solution (parity_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
     using TD_side_always_join_Interp.partial_post_solution[OF dom, of "fst sol" "snd sol"]
     unfolding sol_def by simp
-  have pp_st: "part_post_solution (side_cfg_T_eff_st g parity_etf_st bot cinit_parity_st ())
+  have pp_st: "part_post_solution (side_cfg_T_eff_st g (parity_etf_st_for gs) bot cinit_parity_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
     using pp0 by (simp add: parity_exec_eqs_def g_def)
   have pp_eff: "part_post_solution
-                  (side_cfg_T_eff g parity_etf bot
-                     (\<lambda>x. if is_global x then PEven else PTop) ())
+                  (side_cfg_T_eff gs g (parity_etf gs) bot
+                     (\<lambda>x. if gs x then PEven else PTop) ())
                   (cfg_exit g) \<sigma> (fst sol)"
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF parity_etf_edge_tree parity_etf_combine_tree
-                parity_etf_st_edge_tree parity_etf_st_combine_tree parity_tf_st_commute
-                parity_etf_enter_tree parity_etf_st_enter_tree parity_enter_st_commute pp_st]
-    by (simp add: \<sigma>_def fun_of_st_cinit_parity_st bot_fun_def)
-  have cone: "cone_compatible_etf parity_etf" by (rule parity_etf_cone_compatible)
-  have srz: "\<And>z. side_rg (parity_exec_eqs \<Pi> ps mnm main z)"
+                parity_etf_st_for_edge_tree parity_etf_st_for_combine_tree parity_tf_st_for_commute
+                parity_etf_enter_tree parity_etf_st_for_enter_tree parity_enter_st_for_commute pp_st]
+    by (simp add: \<sigma>_def fun_of_st_cinit_parity_st_for bot_fun_def)
+  have cone: "cone_compatible_etf gs (parity_etf gs)" by (rule parity_etf_cone_compatible)
+  have srz: "\<And>z. side_rg (parity_exec_eqs gs \<Pi> ps mnm main z)"
     unfolding parity_exec_eqs_def
     by (rule side_rg_side_cfg_T_eff_st_unit
-          [OF parity_etf_st_exists_unit parity_etf_st_enter_exists_unit parity_etf_st_combine_tree])
-  have solpair: "TD_side_always_join_Interp_solve (parity_exec_eqs \<Pi> ps mnm main) (cfg_exit g)
+          [OF parity_etf_st_for_exists_unit parity_etf_st_for_enter_exists_unit parity_etf_st_for_combine_tree])
+  have solpair: "TD_side_always_join_Interp_solve (parity_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp
   have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_resolved_q (snd sol (Inr gg))"
     by (rule TD_side_always_join_solve_Inr_rg[OF dom srz solpair])
-  have inr: "inr_slot_locals_bot is_global \<sigma>"
+  have inr: "inr_slot_locals_bot gs \<sigma>"
     unfolding \<sigma>_def
     using inr_slot_locals_bot_fun_of_resolved_st_q_for_restrict_global_abs rg by blast
   have reach: "cfg_reaches g (cfg_entry g) (cfg_exit g)"
     by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
     by (rule side_cone_in_vars_eff_cone[OF pp_eff fin finC wf cone reach])
-  have entry_le: "(\<lambda>x. if is_global x then PEven else PTop) \<le> side_env \<sigma> (cfg_entry g)"
+  have entry_le: "(\<lambda>x. if gs x then PEven else PTop) \<le> side_env \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
-  have seed_cov: "cinit_stores is_global \<subseteq> \<lbrakk>\<lambda>x. if is_global x then PEven else PTop\<rbrakk>"
+  have seed_cov: "cinit_stores gs \<subseteq> \<lbrakk>\<lambda>x. if gs x then PEven else PTop\<rbrakk>"
     unfolding cinit_stores_def gamma_state_def
     by auto
-  have entry_cov: "cinit_stores is_global \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  have entry_cov: "cinit_stores gs \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
     using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
   have reach_v': "cfg_reaches g v (cfg_exit g)"
     using reach_v unfolding g_def by simp
-  have "ltr_collect is_global g (cinit_stores is_global) v
+  have "ltr_collect gs g (cinit_stores gs) v
         \<le> \<lbrakk>side_env \<sigma> v\<rbrakk>"
     by (rule side_collect_sound_in_eff_cone
           [OF parity_sound_etf pp_eff fin finC wf entry_cov cone inr reach_v'])
@@ -142,9 +142,9 @@ qed
 
 corollary parity_exec_sound_collecting:
   fixes mnm :: pname
-  assumes solves: "parity_exec_terminates \<Pi> ps mnm main"
-  shows "ltr_collect is_global (compile_prog \<Pi> ps mnm main) (cinit_stores is_global) (cfg_exit (compile_prog \<Pi> ps mnm main))
-         \<le> \<lbrakk>parity_exec \<Pi> ps mnm main\<rbrakk>"
+  assumes solves: "parity_exec_terminates gs \<Pi> ps mnm main"
+  shows "ltr_collect gs (compile_prog \<Pi> ps mnm main) (cinit_stores gs) (cfg_exit (compile_prog \<Pi> ps mnm main))
+         \<le> \<lbrakk>parity_exec gs \<Pi> ps mnm main\<rbrakk>"
   unfolding parity_exec_def
   by (rule parity_exec_sound_collecting_at[OF solves cfg_reaches_refl])
 
@@ -163,35 +163,35 @@ text \<open>
 definition prog_cfg :: "pname \<Rightarrow> imp_prog \<Rightarrow> cfg" where
   "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
-definition parity_exec_prog_at :: "pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> parity abs_state" where
-  "parity_exec_prog_at mnm p v = parity_exec_at (prog_table p) (prog_procs p) mnm (prog_main p) v"
+definition parity_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> parity abs_state" where
+  "parity_exec_prog_at gs mnm p v = parity_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v"
 
-definition parity_exec_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> parity abs_state" where
-  "parity_exec_prog mnm p = parity_exec_prog_at mnm p (cfg_exit (prog_cfg mnm p))"
+definition parity_exec_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> parity abs_state" where
+  "parity_exec_prog gs mnm p = parity_exec_prog_at gs mnm p (cfg_exit (prog_cfg mnm p))"
 
-definition parity_terminates_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "parity_terminates_prog mnm p = parity_exec_terminates (prog_table p) (prog_procs p) mnm (prog_main p)"
+definition parity_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "parity_terminates_prog gs mnm p = parity_exec_terminates gs (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 lemma parity_terminates_prog_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c
-             (parity_exec_eqs (prog_table p) (prog_procs p) mnm (prog_main p))
+             (parity_exec_eqs gs (prog_table p) (prog_procs p) mnm (prog_main p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p))) \<noteq> None"
-  shows "parity_terminates_prog mnm p"
+  shows "parity_terminates_prog gs mnm p"
   unfolding parity_terminates_prog_def
   using assms by (rule parity_exec_terminates_via_solve_c)
 
 corollary parity_exec_prog_sound_collecting_at:
-  assumes "parity_terminates_prog mnm p"
+  assumes "parity_terminates_prog gs mnm p"
     and "cfg_reaches (prog_cfg mnm p) v (cfg_exit (prog_cfg mnm p))"
-  shows "ltr_collect is_global (prog_cfg mnm p) (cinit_stores is_global) v
-           \<le> \<lbrakk>parity_exec_prog_at mnm p v\<rbrakk>"
+  shows "ltr_collect gs (prog_cfg mnm p) (cinit_stores gs) v
+           \<le> \<lbrakk>parity_exec_prog_at gs mnm p v\<rbrakk>"
   using assms unfolding parity_terminates_prog_def prog_cfg_def parity_exec_prog_at_def
   by (rule parity_exec_sound_collecting_at)
 
 corollary parity_exec_prog_sound_collecting:
-  assumes "parity_terminates_prog mnm p"
-  shows "ltr_collect is_global (prog_cfg mnm p) (cinit_stores is_global) (cfg_exit (prog_cfg mnm p))
-           \<le> \<lbrakk>parity_exec_prog mnm p\<rbrakk>"
+  assumes "parity_terminates_prog gs mnm p"
+  shows "ltr_collect gs (prog_cfg mnm p) (cinit_stores gs) (cfg_exit (prog_cfg mnm p))
+           \<le> \<lbrakk>parity_exec_prog gs mnm p\<rbrakk>"
   unfolding parity_exec_prog_def
   by (rule parity_exec_prog_sound_collecting_at[OF assms cfg_reaches_refl])
 

@@ -22,7 +22,7 @@ locale abstract_expression_domain =
     and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
   + fixes gamma_state :: "'d \<Rightarrow> store set"
     and aval_abs :: "aexp \<Rightarrow> 'd \<Rightarrow> 'a"
-  assumes aval_abs_sound:
+  assumes aval_abs_sound[intro]:
       "s \<in> gamma_state d \<Longrightarrow> aval e s \<in> gamma_num (aval_abs e d)"
 
 section \<open>A domain-generic sound decision procedure for compiled checks\<close>

@@ -30,6 +30,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Side_Branch_Calls
     Example_Mixed_Flow_Sign
     Example_Sign_Placement
+    Example_Placement_Regression
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
 
@@ -38,6 +39,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Interval analogue of G-A1: checks_proven/checks_proven_sound, store-only. *)
     Example_Interval_Checks_Store_Only
     Example_Interval_Placement
+    Example_M4_Acceptance
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship

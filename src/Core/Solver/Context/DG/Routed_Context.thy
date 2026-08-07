@@ -96,8 +96,8 @@ locale routed_context =
     and g gk0 route bot0 s0d s0g sigma vars x0 sg
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k" +
   fixes enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes finC: "finite (calls g)"
-    and seed_key_ne_gk0: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+  assumes finC[intro,simp]: "finite (calls g)"
+    and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
     and route_enterc_agree:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars

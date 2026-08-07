@@ -41,6 +41,11 @@ text \<open>The storage classifier: \<open>twice_program\<close> declares no glo
 abbreviation twice_gs :: "vname \<Rightarrow> bool" where
   "twice_gs \<equiv> declared_global twice_program"
 
+text \<open>Local shorthand for the executable state's lookup projection, fixed at this
+  file's own \<open>twice_gs\<close> classifier.\<close>
+abbreviation twice_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "twice_lookup s x \<equiv> lookup_resolved_st_q s (location_of twice_gs x)"
+
 definition twice_cfg :: cfg where
   "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
 
@@ -84,7 +89,7 @@ lemma twice_finC: "finite (calls twice_cfg)" unfolding twice_cfg_def using compi
 subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
 
 text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: the entry point for
-  this file, generic in the classifier rather than fixed to \<^const>\<open>is_global\<close>.\<close>
+  this file, generic in the classifier rather than fixed to a name-based convention.\<close>
 
 lemmas ivl_Hstep_for =
   unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
@@ -125,10 +130,10 @@ text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<op
   return sites.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''p''),
-                       string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''#ret''),
-                       string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''x''),
-                       string_of_ivl (lookup_exec_dg_st (locals (snd sol (Inl (p, ())))) ''y'')))
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''p''),
+                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''#ret''),
+                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''x''),
+                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''y'')))
             ([FunctionEntry ''twice'', FunctionResult ''twice'',
               FunctionEntry ''main'', FunctionResult ''main'']
              @ map Statement [0,2,3,4]))
@@ -200,7 +205,7 @@ proof -
   have "fun_of_exec_dg_st_for twice_gs cinit_ivl_st \<squnion>
           fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
-    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_def sup_fun_def fun_eq_iff)
+    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_for_def declared_global_def sup_fun_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 qed
@@ -221,21 +226,21 @@ theorem twice_collect_sound:
 subsection \<open>Inspecting the certified result\<close>
 
 lemma twice_p_at_entry:
-  "lookup_exec_dg_st (locals (snd twice_sol (Inl (FunctionEntry ''twice'', ())))) ''p''
+  "twice_lookup (locals (snd twice_sol (Inl (FunctionEntry ''twice'', ())))) ''p''
      = Ivl (Fin 3) (Fin 10)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_ret_at_exit:
-  "lookup_exec_dg_st (locals (snd twice_sol (Inl (FunctionResult ''twice'', ())))) ''#ret''
+  "twice_lookup (locals (snd twice_sol (Inl (FunctionResult ''twice'', ())))) ''#ret''
      = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_x_computed:
-  "lookup_exec_dg_st (locals (snd twice_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
+  "twice_lookup (locals (snd twice_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_y_computed:
-  "lookup_exec_dg_st (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
+  "twice_lookup (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
@@ -324,18 +329,18 @@ definition twice_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
+        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (lookup_exec_dg_st d x)) vars),
+        x @ ''='' @ string_of_ivl (twice_lookup d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if lookup_exec_dg_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (lookup_exec_dg_st d ret)]),
+        if twice_lookup d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (twice_lookup d ret)]),
       show_global = (\<lambda>_ vars s. [''(none)'']),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),

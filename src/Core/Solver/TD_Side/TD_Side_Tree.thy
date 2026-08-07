@@ -89,23 +89,23 @@ definition entry_seed_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> v
      map (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> (c, fs, as)) (entry_call_list g v)"
 
 definition make_side_rhs_tree_eff ::
-  "cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+  "(vname => bool) \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp
    \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree"
 where
-  "make_side_rhs_tree_eff g etf bot0 s0 gseed v =
-     (let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0);
+  "make_side_rhs_tree_eff gs g etf bot0 s0 gseed v =
+     (let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0);
           t    = side_rhs_fold_eff etf acc0
                    (intra_predecessor_list g v) (entry_seed_list g v)
                    (return_call_list g v)
-      in if v = cfg_entry g then Side gseed (restrict_global s0) t else t)"
+      in if v = cfg_entry g then Side gseed (restrict_global_for gs s0) t else t)"
 
 definition side_cfg_T_eff ::
-  "cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
+  "(vname => bool) \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
    \<Rightarrow> (pp, 'g, 'a abs_state) eqsT"
 where
-  "side_cfg_T_eff g etf bot0 s0 gseed = make_side_rhs_tree_eff g etf bot0 s0 gseed"
+  "side_cfg_T_eff gs g etf bot0 s0 gseed = make_side_rhs_tree_eff gs g etf bot0 s0 gseed"
 
 subsection \<open>Denotation of the effectful fold\<close>
 
@@ -161,9 +161,9 @@ lemma traverse_side_rhs_fold_eff:
   by (rule traverse_fold_rhs_trees)
 
 lemma eq_side_cfg_T_eff:
-  "eq (side_cfg_T_eff g etf bot0 s0 gseed) v \<sigma> =
+  "eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma> =
      side_acc_eff etf
-       (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0)
+       (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0)
        \<sigma> (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)"
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
   by (simp add: traverse_side_rhs_fold_eff Let_def)
@@ -331,7 +331,7 @@ lemma cfg_edge_contributes_to_eq:
   fixes g :: cfg
   assumes "finite (intra g)" and "(u, a, v) \<in> intra g"
   shows "traverse_rhs (edge_constraint_tree etf u a v) \<sigma>
-         \<le> eq (side_cfg_T_eff g etf bot0 s0 gseed) v \<sigma>"
+         \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma>"
 proof -
   have "(u, a) \<in> set (intra_predecessor_list g v)"
     using assms by (simp add: intra_predecessors_def)
@@ -344,7 +344,7 @@ lemma cfg_enter_contributes_to_eq:
   fixes g :: cfg
   assumes "finite (calls g)" and "(cl, CallEdge dst fs as, v, k) \<in> calls g"
   shows "traverse_rhs (etf_enter etf fs as cl) \<sigma>
-         \<le> eq (side_cfg_T_eff g etf bot0 s0 gseed) v \<sigma>"
+         \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma>"
 proof -
   have "(cl, fs, as) \<in> set (entry_seed_list g v)"
     using assms
@@ -358,7 +358,7 @@ lemma cfg_combine_contributes_to_eq:
   fixes g :: cfg
   assumes "finite (calls g)" and "(cc, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
   shows "traverse_rhs (etf_combine etf dst cc (FunctionResult p)) \<sigma>
-         \<le> eq (side_cfg_T_eff g etf bot0 s0 gseed) v \<sigma>"
+         \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma>"
 proof -
   have "(cc, dst, FunctionResult p) \<in> set (return_call_list g v)"
     using assms(2) by (force simp: set_return_call_list[OF assms(1)] return_calls_def)
@@ -369,10 +369,10 @@ qed
 
 lemma entry_local_seed_le_eq:
   fixes g :: cfg
-  shows "restrict_local s0 \<le> eq (side_cfg_T_eff g etf bot0 s0 gseed) (cfg_entry g) \<sigma>"
+  shows "restrict_local_for gs s0 \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) (cfg_entry g) \<sigma>"
 proof -
-  have "restrict_local s0 \<le> bot0 \<squnion> restrict_local s0" by (rule sup_ge2)
-  also have "\<dots> \<le> side_acc_eff etf (bot0 \<squnion> restrict_local s0) \<sigma>
+  have "restrict_local_for gs s0 \<le> bot0 \<squnion> restrict_local_for gs s0" by (rule sup_ge2)
+  also have "\<dots> \<le> side_acc_eff etf (bot0 \<squnion> restrict_local_for gs s0) \<sigma>
                     (intra_predecessor_list g (cfg_entry g))
                     (entry_seed_list g (cfg_entry g))
                     (return_call_list g (cfg_entry g))"
@@ -381,8 +381,8 @@ proof -
 qed
 
 lemma entry_global_seed_le_sides:
-  "restrict_global s0
-   \<le> sides_of_rhs (side_cfg_T_eff g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)"
+  "restrict_global_for gs s0
+   \<le> sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)"
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
   by (simp add: Let_def)
 
@@ -425,22 +425,23 @@ text \<open>
 
 
 definition side_cfg_T_eff_ctx ::
-  "('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "(vname => bool)
+   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
    \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
    \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
 where
-  "side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed =
+  "side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed =
      (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0);
+        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0);
             intra = map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u))
                         (intra_predecessor_list g v);
             enter = map (\<lambda>(cl, fs, as). map_ltree (\<lambda>w. (w, c)) (etf_enter etf fs as cl))
                         (entry_seed_list g v);
             comb  = map (\<lambda>(cc, dst, ex). cmb c dst cc ex) (return_call_list g v);
             t = fold_rhs_trees acc0 (intra @ enter @ comb)
-        in if v = cfg_entry g then Side gseed (restrict_global s0) t else t)"
+        in if v = cfg_entry g then Side gseed (restrict_global_for gs s0) t else t)"
 
 
 text \<open>
@@ -451,9 +452,9 @@ text \<open>
 \<close>
 
 lemma eq_side_cfg_T_eff_ctx:
-  "eq (side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> =
+  "eq (side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> =
      fold_rhs_values
-       (if v = cfg_entry g then bot0 \<squnion> restrict_local s0 else bot0) \<sigma>
+       (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0) \<sigma>
        (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
             (intra_predecessor_list g v)
         @ map (\<lambda>(cl, fs, as). map_ltree (\<lambda>w. (w, ctx)) (etf_enter etf fs as cl))
@@ -550,7 +551,7 @@ text \<open>
 lemma post_sol_tree_le_ctx:
   fixes \<sigma> :: "pp \<times> 'c + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
   assumes post:
-    "eq (side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> \<le> \<sigma> (Inl (v, ctx))"
+    "eq (side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> \<le> \<sigma> (Inl (v, ctx))"
   assumes mem:
     "t \<in> set (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
                   (intra_predecessor_list g v)
@@ -560,7 +561,7 @@ lemma post_sol_tree_le_ctx:
   shows "traverse_rhs t \<sigma> \<le> \<sigma> (Inl (v, ctx))"
 proof -
   have "traverse_rhs t \<sigma>
-          \<le> eq (side_cfg_T_eff_ctx cmb g etf bot0 s0 gseed) (v, ctx) \<sigma>"
+          \<le> eq (side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed) (v, ctx) \<sigma>"
     unfolding eq_side_cfg_T_eff_ctx by (rule traverse_le_fold_rhs_values[OF mem])
   then show ?thesis using post by (rule order_trans)
 qed

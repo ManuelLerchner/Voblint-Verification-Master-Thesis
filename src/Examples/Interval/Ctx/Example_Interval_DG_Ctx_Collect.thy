@@ -201,8 +201,11 @@ text \<open>The reader combines context-sensitive locals with one shared global 
   The initial global value @{text 0} is therefore identical in the root and both callee
   contexts, without copying global state into context-indexed unknowns.\<close>
 
+text \<open>\<open>twice_program\<close> declares no globals, so \<open>twice_gs ''Gx''\<close> is false and the shared
+  global slot for \<open>''Gx''\<close> never receives a write: it stays at \<open>bot\<close>, not the seeded
+  \<open>[0,0]\<close> a name-based \<open>is_global\<close> convention would have given it.\<close>
 lemma global_init_present:
-  "lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = Ivl (Fin 0) (Fin 0)"
+  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = bot"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
 
 lemma global_slot_shared:

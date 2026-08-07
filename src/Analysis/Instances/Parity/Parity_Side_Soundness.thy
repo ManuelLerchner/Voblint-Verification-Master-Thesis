@@ -11,39 +11,39 @@ text \<open>
   global parts.
 \<close>
 
-definition parity_etf :: "(unit, parity) effectful_domain_transfer" where
-  "parity_etf = unit_etf_of_transfer parity_tf"
+definition parity_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (unit, parity) effectful_domain_transfer" where
+  "parity_etf gs = unit_etf_of_transfer gs (parity_tf_for gs)"
 
 lemma parity_etf_edge_tree:
-  "apply_etf parity_etf a u = unit_edge_tree (apply_tf parity_tf a) u"
+  "apply_etf (parity_etf gs) a u = unit_edge_tree gs (apply_tf (parity_tf_for gs) a) u"
   unfolding parity_etf_def apply_etf_unit_of_transfer by simp
 
 lemma parity_etf_enter_tree:
-  "etf_enter parity_etf fs as cl = unit_edge_tree (tf_enter parity_tf fs as) cl"
+  "etf_enter (parity_etf gs) fs as cl = unit_edge_tree gs (tf_enter (parity_tf_for gs) fs as) cl"
   unfolding parity_etf_def unit_etf_of_transfer_def by simp
 
-lemma parity_tf_enter_mono:
-  "s1 \<le> s2 \<Longrightarrow> tf_enter parity_tf fs as s1 \<le> tf_enter parity_tf fs as s2"
-  by (simp add: parity_tf_def enter_parity_mono)
+lemma parity_tf_for_enter_mono:
+  "s1 \<le> s2 \<Longrightarrow> tf_enter (parity_tf_for gs) fs as s1 \<le> tf_enter (parity_tf_for gs) fs as s2"
+  by (simp add: parity_tf_for_def enter_parity_for_mono)
 
 lemma parity_etf_combine_tree:
-  "etf_combine parity_etf dst cc ex = unit_combine_tree dst cc ex"
+  "etf_combine (parity_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
   unfolding parity_etf_def etf_combine_unit_of_transfer by simp
 
 lemma parity_sound_etf:
-  "sound_effectful_transfer parity_etf"
+  "sound_effectful_transfer gs (parity_etf gs)"
   unfolding parity_etf_def
-  by (rule sound_effectful_transfer_unit_of_transfer [OF parity_is_sound_transfer])
+  by (rule sound_effectful_transfer_unit_of_transfer [OF parity_is_sound_transfer_for])
 
-lemma parity_etf_cone_compatible: "cone_compatible_etf parity_etf"
+lemma parity_etf_cone_compatible: "cone_compatible_etf gs (parity_etf gs)"
   by (rule cone_compatible_etf_unit_transfer
         [OF parity_etf_edge_tree parity_etf_enter_tree parity_etf_combine_tree])
 
 lemma parity_etf_threefold_mono:
-  "threefold_mono (side_cfg_T_eff g parity_etf bot0 s0 ())"
+  "threefold_mono (side_cfg_T_eff gs g (parity_etf gs) bot0 s0 ())"
   by (rule threefold_mono_unit_transfer
         [OF parity_etf_edge_tree parity_etf_enter_tree parity_etf_combine_tree
-            parity_tf_mono parity_tf_enter_mono])
+            parity_tf_for_mono parity_tf_for_enter_mono])
 
 section \<open>Parity domain: standalone effectful interprocedural soundness\<close>
 
@@ -59,23 +59,23 @@ theorem side_parity_analysis_sound:
   fixes \<Pi> ps mnm main and s t :: store and s0 :: "parity abs_state"
   assumes s_sound: "s \<in> \<lbrakk>s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect is_global (compile_prog \<Pi> ps mnm main) {s}
+    "t \<in> ltr_collect gs (compile_prog \<Pi> ps mnm main) {s}
        (cfg_exit (compile_prog \<Pi> ps mnm main))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog \<Pi> ps mnm main) parity_etf bot s0 ()
+    "side_cfg_solve_dom_eff gs (compile_prog \<Pi> ps mnm main) (parity_etf gs) bot s0 ()
        (cfg_exit (compile_prog \<Pi> ps mnm main))"
-  shows "t \<in> \<lbrakk>side_analyse_eff \<Pi> ps mnm main parity_etf bot s0 ()
+  shows "t \<in> \<lbrakk>side_analyse_eff gs \<Pi> ps mnm main (parity_etf gs) bot s0 ()
          (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
 proof -
-  have gs: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
+  have sub: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
   have collect:
-    "ltr_collect is_global (compile_prog \<Pi> ps mnm main) {s}
+    "ltr_collect gs (compile_prog \<Pi> ps mnm main) {s}
        (cfg_exit (compile_prog \<Pi> ps mnm main))
-     \<le> \<lbrakk>side_analyse_eff \<Pi> ps mnm main parity_etf bot s0 ()
+     \<le> \<lbrakk>side_analyse_eff gs \<Pi> ps mnm main (parity_etf gs) bot s0 ()
            (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
     by (rule side_analyse_eff_collect_sound_exit_ltr_cone
           [OF parity_sound_etf parity_etf_threefold_mono parity_etf_cone_compatible
-              side_solve_dom gs])
+              side_solve_dom sub])
   show ?thesis using collect collect_exit by blast
 qed
 

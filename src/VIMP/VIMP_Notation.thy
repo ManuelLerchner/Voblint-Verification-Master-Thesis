@@ -40,12 +40,11 @@ text \<open>
   \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)\<close>.
 \<close>
 
-text \<open>
-  \<open>declared_global_vars\<close> is the program's declared-global list,
+text \<open>   \<open>declared_global_vars \<close> is the program's declared-global list,
   exactly as the source wrote it.  Program-context concrete operations use
-  this list through \<open>declared_global\<close>; generic compatibility
-  interfaces retain \<open>VIMP_Globals.is_global\<close> as an explicit
-  classifier instance.
+  this list through  \<open>declared_global \<close>; generic interfaces take any
+  classifier of type  \<open>vname => bool \<close> as an explicit argument instead of a
+  fixed instance.
 
   A list, not a set: the field is finite by its type, not by an assumption
   that would otherwise have to be threaded through every lemma about
@@ -569,11 +568,10 @@ lemma declared_global_vars_two_names [simp]:
      = [''total'', ''x'']"
   by simp
 
-text \<open>
-  \<open>declared_global\<close> checkpoint: a declared non-\<open>G\<close> name reads as global, an
-  undeclared name -- \<open>G\<close>-spelled or not -- reads as local.  This is exactly
-  the discrimination \<^const>\<open>is_global\<close> cannot make, since it classifies by
-  name spelling alone rather than by declaration.
+text \<open>   \<open>declared_global \<close> checkpoint: a declared non- \<open>G \<close> name reads as global, an
+  undeclared name --  \<open>G \<close>-spelled or not -- reads as local.  This is exactly
+  the discrimination a name-spelling classifier cannot make, since it
+  classifies by name spelling alone rather than by declaration.
 \<close>
 
 lemma declared_global_two_names_examples:
