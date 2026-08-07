@@ -48,6 +48,11 @@ text \<open>The storage classifier: \<open>sign_ex_prog\<close> declares no glob
 abbreviation sign_ex_gs :: "vname \<Rightarrow> bool" where
   "sign_ex_gs \<equiv> declared_global sign_ex_prog"
 
+text \<open>Local shorthand for the executable state's lookup projection, fixed at this
+  file's own \<open>sign_ex_gs\<close> classifier.\<close>
+abbreviation sign_ex_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "sign_ex_lookup s x \<equiv> lookup_resolved_st_q s (location_of sign_ex_gs x)"
+
 definition sign_ex_pi :: proc_table where
   "sign_ex_pi = prog_table sign_ex_prog"
 
@@ -174,8 +179,8 @@ text \<open>The diagonal Sign instance joins local answers and global side effec
   each edge. The executable result is therefore sound but imprecise at the exit.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. (lookup_exec_dg_st (locals (snd sol (Inl (Statement 2, ())))) ''x'',
-                       lookup_exec_dg_st (globs (snd sol (Inr ()))) ''x''))
+  "map_option (\<lambda>sol. (sign_ex_lookup (locals (snd sol (Inl (Statement 2, ())))) ''x'',
+                       sign_ex_lookup (globs (snd sol (Inr ()))) ''x''))
      (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (STop, STop)"
   by eval
 

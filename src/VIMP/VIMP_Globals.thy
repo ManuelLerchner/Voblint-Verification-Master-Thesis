@@ -6,12 +6,12 @@ section \<open>Locals and globals over the scalar store\<close>
 
 text \<open>
   The store is a single \<open>vname => int\<close> function; the locals/globals split is a
-  naming convention on top of it, not a separate representation.
-  \<open>is_global\<close> names the split; \<open>combine_states\<close> \<open><s|t>\<close> takes locals from \<open>s\<close>
-  and globals from \<open>t\<close>. This is the splitting a procedure call needs on both
-  ends: on entry the caller's store is saved and locals reset (\<open>enter_state\<close>),
-  on exit the callee's globals are kept and the caller's locals restored
-  (\<open><caller|callee>\<close>).
+  classifier \<open>gs :: vname => bool\<close> layered on top of it, not a separate
+  representation. \<open>combine_states\<close> \<open><s|t>\<close> takes locals from \<open>s\<close> and globals
+  from \<open>t\<close>, as decided by \<open>gs\<close>. This is the splitting a procedure call needs
+  on both ends: on entry the caller's store is saved and locals reset
+  (\<open>enter_state\<close>), on exit the callee's globals are kept and the caller's
+  locals restored (\<open><caller|callee>\<close>).
 
   Self-contained: depends only on the store, not on \<open>com\<close>, small-step, or the
   CFG.
@@ -20,21 +20,6 @@ text \<open>
 (* Procedure names. *)
 type_synonym pname = string
 
-text \<open>A variable is global exactly when its name is empty or starts with
-  @{text G}. Treating the empty name as global makes the predicate total and keeps store
-  entry and combination aligned.\<close>
-definition is_global :: "vname => bool" where
-  "is_global x = (x = [] \<or> hd x = CHR ''G'')"
-
-text \<open>
-  \<open>combine_states gs s t\<close>: take locals from \<open>s\<close>, globals from \<open>t\<close>, where
-  \<open>gs\<close> decides the split. This is the store a procedure call reconstructs on
-  return, so the caller's locals survive the call unless the callee wrote
-  through a global. \<open>gs\<close> is an explicit classifier rather than a fixed
-  constant so a caller can supply \<^const>\<open>is_global\<close> or a declaration-driven
-  classifier, whichever a given layer needs; no mixfix notation, since a
-  genuinely three-argument operation is not a binary one.
-\<close>
 definition combine_states :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
   "combine_states gs s t = (\<lambda>n. if gs n then t n else s n)"
 
@@ -64,16 +49,22 @@ lemma combine_nest_right [simp]:
 
 subsection \<open>Executable examples\<close>
 
-value "is_global ''Gx''"
-value "is_global ''x''"
-value "is_global []"
+text \<open>A name-based classifier, for illustration only: names starting with
+  @{text G} are global. \<open>combine_states\<close> and \<open>enter_state\<close> take any
+  classifier of this type; nothing in this theory is tied to this one.\<close>
+definition example_gs :: "vname \<Rightarrow> bool" where
+  "example_gs x = (x = [] \<or> hd x = CHR ''G'')"
 
-value "combine_states is_global
+value "example_gs ''Gx''"
+value "example_gs ''x''"
+value "example_gs []"
+
+value "combine_states example_gs
          ((\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2)) ((\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)) ''x''"
-value "combine_states is_global
+value "combine_states example_gs
          ((\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2)) ((\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)) ''Gx''"
 
-value "enter_state is_global ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''x''"
-value "enter_state is_global ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''Gx''"
+value "enter_state example_gs ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''x''"
+value "enter_state example_gs ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''Gx''"
 
 end

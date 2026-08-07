@@ -24,12 +24,6 @@ where
      (let res = f (d \<squnion> g) in
       (restrict_global_for gs res, restrict_local_for gs res))"
 
-definition unit_step ::
-  "('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
-   => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
-where
-  "unit_step f d g = (let res = f (d \<squnion> g) in (restrict_global res, restrict_local res))"
-
 definition unit_step_placed ::
   "(vname => bool) => (vname => bool) =>
    ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
@@ -46,12 +40,6 @@ lemma unit_step_for_classic:
     classic_split_keep_local_def classic_split_publish_side_def restrict_global_for_def
     restrict_local_for_def Let_def
   by (simp add: fun_eq_iff)
-
-lemma unit_step_for_is_global:
-  "unit_step_for is_global = unit_step"
-  unfolding unit_step_for_def unit_step_def restrict_global_for_is_global
-    restrict_local_for_is_global
-  by (rule refl)
 
 definition unit_step_resolved_for ::
   "(vname => bool) =>
@@ -201,26 +189,26 @@ lemma pair_of_dg_of_pair [simp]: "pair_of_dg (dg_of_pair p) = p"
 lemma dg_of_pair_of_dg [simp]: "dg_of_pair (pair_of_dg d) = d"
   by (simp add: pair_of_dg_def dg_of_pair_def)
 
-definition merge_dg :: "('a abs_state, 'a abs_state) dg_state \<Rightarrow> 'a abs_state" where
-  "merge_dg d = merge_state (pair_of_dg d)"
+definition merge_dg :: "(vname \<Rightarrow> bool) \<Rightarrow> ('a abs_state, 'a abs_state) dg_state \<Rightarrow> 'a abs_state" where
+  "merge_dg gs d = merge_state gs (pair_of_dg d)"
 
-definition split_dg :: "'a::bot abs_state \<Rightarrow> ('a abs_state, 'a abs_state) dg_state" where
-  "split_dg s = dg_of_pair (split_state s)"
+definition split_dg :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a::bot abs_state \<Rightarrow> ('a abs_state, 'a abs_state) dg_state" where
+  "split_dg gs s = dg_of_pair (split_state gs s)"
 
-lemma merge_split_dg [simp]: "merge_dg (split_dg s) = s"
+lemma merge_split_dg [simp]: "merge_dg gs (split_dg gs s) = s"
   by (simp add: merge_dg_def split_dg_def)
 
 lemma split_dg_bot [simp]:
-  "split_dg (bot :: 'a::bounded_semilattice_sup_bot abs_state) = bot"
+  "split_dg gs (bot :: 'a::bounded_semilattice_sup_bot abs_state) = bot"
   by (simp add: split_dg_def dg_of_pair_def split_state_bot bot_dg_state_def)
 
 lemma split_dg_sup [simp]:
   fixes a b :: "'a::bounded_semilattice_sup_bot abs_state"
-  shows "split_dg (a \<squnion> b) = split_dg a \<squnion> split_dg b"
+  shows "split_dg gs (a \<squnion> b) = split_dg gs a \<squnion> split_dg gs b"
 proof -
-  have sp: "split_state (a \<squnion> b) =
-      (fst (split_state a) \<squnion> fst (split_state b),
-       snd (split_state a) \<squnion> snd (split_state b))"
+  have sp: "split_state gs (a \<squnion> b) =
+      (fst (split_state gs a) \<squnion> fst (split_state gs b),
+       snd (split_state gs a) \<squnion> snd (split_state gs b))"
     by (rule split_state_sup)
   show ?thesis
     unfolding split_dg_def dg_of_pair_def sup_dg_state_def
@@ -229,7 +217,7 @@ qed
 
 lemma split_dg_le_iff [simp]:
   fixes a b :: "'a::order_bot abs_state"
-  shows "split_dg a \<le> split_dg b \<longleftrightarrow> a \<le> b"
+  shows "split_dg gs a \<le> split_dg gs b \<longleftrightarrow> a \<le> b"
   by (auto simp: split_dg_def dg_of_pair_def split_state_def
         less_eq_dg_state_def le_fun_def split: if_splits)
 
@@ -464,12 +452,11 @@ text \<open>
 
 text \<open>The unit env-merge/assign split (defined below as \<open>unit_combine_step_env_for\<close>/
   \<open>unit_combine_step_assign_for\<close>) computes the structural local/global
-  merge and packages it the same way \<^const>\<open>unit_step\<close> packages every other
-  edge, but writes no return value yet; the assign step reconstitutes the
-  full state from that packaging, writes the callee-exit's return slot, and
-  re-splits -- matching \<^const>\<open>combine_collect_abs\<close> exactly once composed.
-  The classic (\<^const>\<open>is_global\<close>-fixed) shape is the instantiation at
-  \<^const>\<open>is_global\<close>, not a separate hand-written pair.\<close>
+  merge and packages it the same way \<^const>\<open>unit_step_for\<close> packages every
+  other edge, but writes no return value yet; the assign step reconstitutes
+  the full state from that packaging, writes the callee-exit's return slot,
+  and re-splits -- matching \<^const>\<open>combine_collect_abs\<close> exactly once
+  composed.\<close>
 definition unit_combine_step_assign_for ::
   "(vname => bool) =>
    vname option => 'a::bounded_semilattice_sup_bot abs_state
@@ -585,18 +572,6 @@ lemma unit_dg_spec_for_classic:
   by (simp add: unit_step_for_classic unit_combine_step_env_for_classic
     unit_combine_step_assign_for_classic fun_eq_iff)
 
-text \<open>The classic (\<^const>\<open>is_global\<close>-fixed) unit analysis is the
-  \<open>_for\<close> spine instantiated at \<^const>\<open>is_global\<close>, not a second,
-  hand-duplicated construction.\<close>
-definition unit_dg_spec ::
-  "'a::sound_domain domain_transfer \<Rightarrow> ('a abs_state, 'a abs_state) dg_spec"
-where
-  "unit_dg_spec tf = unit_dg_spec_for is_global tf"
-
-lemma unit_dg_spec_for_is_global:
-  "unit_dg_spec_for is_global tf = unit_dg_spec tf"
-  unfolding unit_dg_spec_def by (rule refl)
-
 lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
      (let res = combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)
@@ -627,105 +602,6 @@ lemma dgs_enter_unit_dg_spec_for:
      unit_step_for gs (tf_enter tf fs as)"
   unfolding unit_dg_spec_for_def
   by simp
-
-
-
-text \<open>The pre-split combine value is recovered by composition, matching
-  \<^const>\<open>combine_collect_abs\<close> exactly -- the split changes packaging, not
-  the computed answer.\<close>
-lemma dgs_combine_unit_dg_spec:
-  "dgs_combine (unit_dg_spec tf) dst dc de g =
-     (let res = combine_collect_abs is_global dst (dc \<squnion> g) (de \<squnion> g)
-      in (restrict_global res, restrict_local res))"
-  unfolding unit_dg_spec_def dgs_combine_unit_dg_spec_for
-  by (simp add: restrict_global_for_is_global restrict_local_for_is_global)
-
-lemma dg_spec_step_unit:
-  "dg_spec_step (unit_dg_spec tf) a = unit_step (apply_tf tf a)"
-  unfolding unit_dg_spec_def dg_spec_step_unit_for unit_step_for_is_global
-  by (rule refl)
-
-lemma dgs_enter_unit_dg_spec:
-  "dgs_enter (unit_dg_spec tf) fs as = unit_step (tf_enter tf fs as)"
-  unfolding unit_dg_spec_def dgs_enter_unit_dg_spec_for unit_step_for_is_global
-  by (rule refl)
-
-subsection \<open>Monotonicity of the unit analysis, given a monotone domain transfer\<close>
-
-text \<open>
-  A jointly monotone \<open>step\<close> lifts through \<^const>\<open>unit_step\<close> --- the join
-  with the incoming global slot, then the two restrictions, are each
-  monotone on their own. An analysis therefore only has to prove its own
-  \<^const>\<open>apply_tf\<close>/\<^const>\<open>tf_enter\<close> monotone; every \<^const>\<open>unit_dg_spec\<close>
-  built from it inherits monotone \<^const>\<open>dg_spec_step\<close>/\<^const>\<open>dgs_enter\<close>,
-  and \<^const>\<open>dgs_combine\<close> is monotone unconditionally via
-  \<open>combine_collect_abs_mono\<close>, independent of the transfer.
-\<close>
-
-lemma unit_step_fst_mono:
-  assumes f_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> f s1 \<le> f s2"
-    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
-  shows "fst (unit_step f d1 g1) \<le> fst (unit_step f d2 g2)"
-  unfolding unit_step_def Let_def
-  by (simp add: restrict_global_mono[OF f_mono[OF sup_mono[OF d_le g_le]]])
-
-lemma unit_step_snd_mono:
-  assumes f_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> f s1 \<le> f s2"
-    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
-  shows "snd (unit_step f d1 g1) \<le> snd (unit_step f d2 g2)"
-  unfolding unit_step_def Let_def
-  by (simp add: restrict_local_mono[OF f_mono[OF sup_mono[OF d_le g_le]]])
-
-lemma dg_spec_step_unit_dg_spec_fst_mono:
-  assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
-  shows "fst (dg_spec_step (unit_dg_spec tf) a d1 g1)
-           \<le> fst (dg_spec_step (unit_dg_spec tf) a d2 g2)"
-  unfolding dg_spec_step_unit
-  by (rule unit_step_fst_mono[OF tf_mono d_le g_le])
-
-lemma dg_spec_step_unit_dg_spec_snd_mono:
-  assumes tf_mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> apply_tf tf a s1 \<le> apply_tf tf a s2"
-    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
-  shows "snd (dg_spec_step (unit_dg_spec tf) a d1 g1)
-           \<le> snd (dg_spec_step (unit_dg_spec tf) a d2 g2)"
-  unfolding dg_spec_step_unit
-  by (rule unit_step_snd_mono[OF tf_mono d_le g_le])
-
-lemma dgs_enter_unit_dg_spec_fst_mono:
-  assumes tf_enter_mono:
-    "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> tf_enter tf fs as s1 \<le> tf_enter tf fs as s2"
-    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
-  shows "fst (dgs_enter (unit_dg_spec tf) fs as d1 g1)
-           \<le> fst (dgs_enter (unit_dg_spec tf) fs as d2 g2)"
-  unfolding dgs_enter_unit_dg_spec
-  by (rule unit_step_fst_mono[OF tf_enter_mono d_le g_le])
-
-lemma dgs_enter_unit_dg_spec_snd_mono:
-  assumes tf_enter_mono:
-    "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> tf_enter tf fs as s1 \<le> tf_enter tf fs as s2"
-    and d_le: "d1 \<le> d2" and g_le: "g1 \<le> g2"
-  shows "snd (dgs_enter (unit_dg_spec tf) fs as d1 g1)
-           \<le> snd (dgs_enter (unit_dg_spec tf) fs as d2 g2)"
-  unfolding dgs_enter_unit_dg_spec
-  by (rule unit_step_snd_mono[OF tf_enter_mono d_le g_le])
-
-lemma dgs_combine_unit_dg_spec_fst_mono:
-  assumes dc_le: "dc1 \<le> dc2" and de_le: "de1 \<le> de2" and g_le: "g1 \<le> g2"
-  shows "fst (dgs_combine (unit_dg_spec tf) dst dc1 de1 g1)
-           \<le> fst (dgs_combine (unit_dg_spec tf) dst dc2 de2 g2)"
-  unfolding dgs_combine_unit_dg_spec Let_def
-  by (simp add: restrict_global_mono
-                combine_collect_abs_mono[OF sup_mono[OF dc_le g_le] sup_mono[OF de_le g_le]])
-
-lemma dgs_combine_unit_dg_spec_snd_mono:
-  assumes dc_le: "dc1 \<le> dc2" and de_le: "de1 \<le> de2" and g_le: "g1 \<le> g2"
-  shows "snd (dgs_combine (unit_dg_spec tf) dst dc1 de1 g1)
-           \<le> snd (dgs_combine (unit_dg_spec tf) dst dc2 de2 g2)"
-  unfolding dgs_combine_unit_dg_spec Let_def
-  by (simp add: restrict_local_mono
-                combine_collect_abs_mono[OF sup_mono[OF dc_le g_le] sup_mono[OF de_le g_le]])
-
 
 
 fun side_rhs_fold_dg ::
@@ -1322,11 +1198,11 @@ locale td_cfg_side_solver_dg =
       sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
     and extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs t s1 \<le> sides_of_rhs t s2"
-    and intra_static: "\<forall>v c u a. (u, a) \<in> set (pred_sel g v) \<longrightarrow>
+    and intra_static[intro]: "\<forall>v c u a. (u, a) \<in> set (pred_sel g v) \<longrightarrow>
       static_deps (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))"
-    and comb_static: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
+    and comb_static[intro]: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
       static_deps (cmb route c ca cc ex)"
-    and extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
+    and extra_static[intro]: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
 begin
 
 definition cfg_pkg_dg :: "(pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"

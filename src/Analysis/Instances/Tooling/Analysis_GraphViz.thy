@@ -232,8 +232,8 @@ definition cfg_assigned_vars :: "cfg \<Rightarrow> vname list" where
          case ca of CallEdge None _ _ \<Rightarrow> [] | CallEdge (Some x) _ _ \<Rightarrow> [x])
          (cfg_calls_list g)))"
 
-definition compiled_global_vars :: "cfg \<Rightarrow> vname list" where
-  "compiled_global_vars g = filter is_global (cfg_assigned_vars g)"
+definition compiled_global_vars :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> vname list" where
+  "compiled_global_vars gs g = filter gs (cfg_assigned_vars g)"
 
 definition owner_assigned_vars ::
   "cfg \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> string \<Rightarrow> vname list" where
@@ -249,14 +249,14 @@ definition owner_assigned_vars ::
          else []) (cfg_calls_list g)))"
 
 definition compiled_procedure_scope ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
-  "compiled_procedure_scope \<Pi> ps mnm main g p =
+  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> procedure_scope" where
+  "compiled_procedure_scope gs \<Pi> ps mnm main g p =
     (let owner = compiled_owner_of \<Pi> ps mnm main p;
          decl = \<Pi> owner;
          fs = if owner = mnm then [] else
            (case decl of None \<Rightarrow> [] | Some d \<Rightarrow> formals d);
          ret = if owner = mnm then None else Some ret_var;
-         ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> is_global x)
+         ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> gs x)
            (owner_assigned_vars g (compiled_owner_of \<Pi> ps mnm main) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
 

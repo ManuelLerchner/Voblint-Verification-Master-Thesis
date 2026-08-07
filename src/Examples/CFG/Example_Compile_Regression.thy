@@ -4,6 +4,12 @@ begin
 
 section \<open>Examples: procedure-aware CFG compilation\<close>
 
+text \<open>These witnesses build small hand-written commands rather than compiling a source
+  program, so there is no \<^const>\<open>declared_global\<close> table to read a classifier off; they
+  reuse the G-prefix convention directly as a fixed classifier.\<close>
+abbreviation cr_gs :: "vname \<Rightarrow> bool" where
+  "cr_gs \<equiv> (\<lambda>x. x \<noteq> [] \<and> hd x = CHR ''G'')"
+
 lemma ex_return_before_dead:
   assumes "compile \<Pi> p (Seq (Return (Some e)) (Assign yv ay)) k n = (n', en, E, K)"
   shows "\<exists>j. (Statement j, EA_Ret (Some e) p, FunctionResult p) \<in> E"
@@ -47,7 +53,7 @@ theorem example_early_return_skips_dead:
       and sub: "E \<subseteq> intra g"
   shows "control_at \<Pi> p (Seq (Return (Some e)) dead) k n
            (Seq (Return (Some e)) dead) (Statement n)"
-    and "cstep is_global g (Statement n, s, stk)
+    and "cstep cr_gs g (Statement n, s, stk)
            (FunctionResult p, s(ret_var := aval e s), stk)"
     and "\<forall>k. FunctionResult p \<noteq> Statement k"
 proof -
@@ -57,7 +63,7 @@ proof -
   have "(Statement n, EA_Ret (Some e) p, FunctionResult p) \<in> intra g"
     using compile_seq_return_edge[OF comp] sub by blast
   from cstep_ret[OF this]
-  show "cstep is_global g (Statement n, s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
+  show "cstep cr_gs g (Statement n, s, stk) (FunctionResult p, s(ret_var := aval e s), stk)"
     by simp
   show "\<forall>k. FunctionResult p \<noteq> Statement k" by simp
 qed
@@ -66,9 +72,9 @@ theorem example_nested_call_preserves_outer:
   assumes p: "\<Pi> pin = Some decl"
       and comp: "compile \<Pi> pout (Seq (Call (Some rin) pin actuals) after) k n = (n', en, E, K)"
       and sub: "K \<subseteq> calls g"
-  shows "cstep is_global g (Statement n, s, outer # stk)
+  shows "cstep cr_gs g (Statement n, s, outer # stk)
            (FunctionEntry pin,
-            call_enter is_global (CallEdge (Some rin) (formals decl) actuals) s,
+            call_enter cr_gs (CallEdge (Some rin) (formals decl) actuals) s,
             (Statement (Suc n), Some rin, s) # outer # stk)"
 proof -
   have "(Statement n, CallEdge (Some rin) (formals decl) actuals, FunctionEntry pin,
@@ -109,16 +115,16 @@ lemma wrong_call_arity_rejected:
   using assms by simp
 
 lemma reserved_formal_rejected:
-  "~ wf_proc_decl is_global \<Pi> (proc_decl_of [ret_var] SKIP)"
+  "~ wf_proc_decl cr_gs \<Pi> (proc_decl_of [ret_var] SKIP)"
   by (simp add: wf_proc_decl_def proc_decl_of_def valid_formal_def)
 
 lemma duplicate_formals_rejected:
-  "~ wf_proc_decl is_global \<Pi> (proc_decl_of [x, x] SKIP)"
+  "~ wf_proc_decl cr_gs \<Pi> (proc_decl_of [x, x] SKIP)"
   by (simp add: wf_proc_decl_def proc_decl_of_def)
 
 lemma global_formal_rejected:
-  assumes "is_global x"
-  shows "~ wf_proc_decl is_global \<Pi> (proc_decl_of [x] SKIP)"
+  assumes "cr_gs x"
+  shows "~ wf_proc_decl cr_gs \<Pi> (proc_decl_of [x] SKIP)"
   using assms by (simp add: wf_proc_decl_def proc_decl_of_def valid_formal_def)
 
 lemma reserved_assignment_rejected:
@@ -130,7 +136,7 @@ lemma reserved_read_rejected:
   by (simp add: source_aexp_def)
 
 lemma root_return_rejected:
-  "~ wf_compile_input is_global \<Pi> ps mnm (Return e)"
+  "~ wf_compile_input cr_gs \<Pi> ps mnm (Return e)"
   by (simp add: wf_compile_input_def wf_source_program_def)
 
 lemma value_call_requires_value_provider:
@@ -160,17 +166,17 @@ definition fallthrough_pi :: proc_table where
      (if p = ''main'' then Some (proc_decl_of [] SKIP) else None)"
 
 lemma main_fallthrough_accepted:
-  "wf_compile_input is_global fallthrough_pi [] ''main'' SKIP"
+  "wf_compile_input cr_gs fallthrough_pi [] ''main'' SKIP"
   by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
-        wf_proc_decl_def proc_decl_of_def reserved_ret_var_def is_global_def ret_var_def)
+        wf_proc_decl_def proc_decl_of_def reserved_ret_var_def ret_var_def)
 
 lemma missing_main_rejected:
   assumes "\<Pi> mnm = None"
-  shows "~ wf_compile_input is_global \<Pi> ps mnm main"
+  shows "~ wf_compile_input cr_gs \<Pi> ps mnm main"
   using assms
   by (auto simp: wf_compile_input_def wf_source_program_def)
 
 lemma duplicate_procedure_names_rejected:
-  "~ wf_compile_input is_global \<Pi> [p, p] mnm main"
+  "~ wf_compile_input cr_gs \<Pi> [p, p] mnm main"
   by (simp add: wf_compile_input_def)
 end

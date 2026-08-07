@@ -159,8 +159,7 @@ text \<open>
 \<close>
 
 text \<open>Classifier-parametric transport, generic in \<open>gs\<close> throughout: the entry
-  point for any consumer generic in the classifier, rather than fixed to
-  \<^const>\<open>is_global\<close>.\<close>
+                  point for any consumer generic in the classifier.\<close>
 
 lemma unit_dg_Hstep_for:
   assumes commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
@@ -193,7 +192,7 @@ text \<open>
   commutation --- plus the vendored solver's \<^theory_text>\<open>part_post_solution_of_solve_c\<close> adapter
   for its chosen update rule (\<^term>\<open>solve\<close> / \<^term>\<open>solve_c\<close>).  It obtains a reusable
   executable source-soundness theorem \<^theory_text>\<open>run_source_sound\<close> and a semantic concretization
-  accessor \<^theory_text>\<open>gamma\<close>, with no \<^const>\<open>dg_spec_step\<close> trees, \<^const>\<open>fun_of_dg_st\<close>,
+  accessor \<^theory_text>\<open>gamma\<close>, with no \<^const>\<open>dg_spec_step\<close> trees, \<open>fun_of_dg_st_for\<close>,
   \<^const>\<open>part_post_solution\<close>, or transport lemmas exposed to callers.
 \<close>
 
@@ -204,16 +203,30 @@ locale unit_dg_exec_analysis =
     and enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and solve :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
-                   \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state)"
+                   \<Rightarrow> (pp \<times> unit) set \<times>
+                       (pp \<times> unit + unit \<Rightarrow>
+                         ('a exec_dg_st, 'a exec_dg_st) dg_state)"
     and solve_c :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
-                   \<Rightarrow> ((pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state)) option"
-  assumes tf_sound: "sound_transfer_for gs tf"
-    and tf_commute: "\<And>a s. fun_of_exec_dg_st_for gs (tf_st a s) = apply_tf tf a (fun_of_exec_dg_st_for gs s)"
-    and enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st_for gs s)"
-    and reduces: "action_reduces tf_st"
-    and solver_pps: "\<And>eqs x. solve_c eqs x \<noteq> None
-                      \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
+                   \<Rightarrow> ((pp \<times> unit) set \<times>
+                       (pp \<times> unit + unit \<Rightarrow>
+                         ('a exec_dg_st, 'a exec_dg_st) dg_state)) option"
+  assumes tf_sound:
+      "sound_transfer_for gs tf"
+    and tf_commute[simp]:
+      "\<And>a s.
+        fun_of_exec_dg_st_for gs (tf_st a s) =
+        apply_tf tf a (fun_of_exec_dg_st_for gs s)"
+    and enter_commute[simp]:
+      "\<And>xs es s.
+        fun_of_exec_dg_st_for gs (enter_st xs es s) =
+        tf_enter tf xs es (fun_of_exec_dg_st_for gs s)"
+    and reduces:
+      "action_reduces tf_st"
+    and solver_pps:
+      "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow>
+        part_post_solution eqs x
+          (snd (solve eqs x)) (fst (solve eqs x))"
 begin
 
 text \<open>

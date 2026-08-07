@@ -8,7 +8,7 @@ instance ivl :: bounded_warrowing ..
 
 
 text \<open>
-  Executable mirror of @{const ivl_tf} on @{typ "ivl resolved_st_q"}, following
+  Executable mirror of @{const ivl_tf_for} on @{typ "ivl resolved_st_q"}, following
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
   into the generic @{theory Voblint_Core.Exec_Bridge} transport; the certified
   end-to-end soundness theory built on this mirror lives in
@@ -24,61 +24,7 @@ text \<open>
   there, not per domain.
 \<close>
 
-definition assume_ivl_st :: "bexp \<Rightarrow> ivl resolved_st_q \<Rightarrow> ivl resolved_st_q" where
-  "assume_ivl_st b s = bfilter_ivl_st is_global b True s"
-
-definition assume_not_ivl_st :: "bexp \<Rightarrow> ivl resolved_st_q \<Rightarrow> ivl resolved_st_q" where
-  "assume_not_ivl_st b s = bfilter_ivl_st is_global b False s"
-
-lemma assume_ivl_st_commute:
-  "fun_of_resolved_st_q_for is_global (assume_ivl_st b s) =
-   assume_ivl b (fun_of_resolved_st_q_for is_global s)"
-  by (simp add: assume_ivl_st_def assume_ivl_def bfilter_ivl_st_commute)
-
-lemma assume_not_ivl_st_commute:
-  "fun_of_resolved_st_q_for is_global (assume_not_ivl_st b s) =
-   assume_not_ivl b (fun_of_resolved_st_q_for is_global s)"
-  by (simp add: assume_not_ivl_st_def assume_not_ivl_def bfilter_ivl_st_commute)
-
-subsection \<open>Enter mirror\<close>
-
-definition enter_ivl_st :: "ivl resolved_st_q \<Rightarrow> ivl resolved_st_q" where
-  "enter_ivl_st = enter_frame_D_resolved_q ivl_top"
-
-lemma enter_frame_ivl_st_commute:
-  "fun_of_resolved_st_q_for is_global (enter_ivl_st s) =
-   enter_frame_ivl (fun_of_resolved_st_q_for is_global s)"
-  by (simp add: enter_ivl_st_def enter_frame_ivl_def)
-
-subsection \<open>Executable transfer function and seeds\<close>
-
-definition ivl_enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow>
-  ivl resolved_st_q \<Rightarrow> ivl resolved_st_q" where
-  "ivl_enter_st xs es s =
-     bind_formals_resolved_q is_global xs
-       (map (\<lambda>e. aval_ivl e (fun_of_resolved_st_q_for is_global s)) es)
-       (enter_ivl_st s)"
-
-lemma ivl_enter_st_commute:
-  "fun_of_resolved_st_q_for is_global (ivl_enter_st xs es s) =
-   tf_enter ivl_tf xs es (fun_of_resolved_st_q_for is_global s)"
-  by (simp add: ivl_enter_st_def ivl_tf_def enter_ivl_def enter_D_def
-                enter_frame_ivl_def enter_frame_ivl_st_commute)
-
-fun ivl_tf_st :: "edge_action \<Rightarrow> ivl resolved_st_q \<Rightarrow> ivl resolved_st_q" where
-    "ivl_tf_st EA_Nop s = s"
-  | "ivl_tf_st (EA_Assign x a) s =
-       update_resolved_st_q s (location_of is_global x)
-         (aval_ivl a (fun_of_resolved_st_q_for is_global s))"
-  | "ivl_tf_st (EA_Random x) s =
-       update_resolved_st_q s (location_of is_global x) ivl_top"
-  | "ivl_tf_st (EA_Assume b) s = assume_ivl_st b s"
-  | "ivl_tf_st (EA_AssumeNot b) s = assume_not_ivl_st b s"
-  | "ivl_tf_st (EA_Ret None p) s = s"
-  | "ivl_tf_st (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of is_global ret_var)
-         (aval_ivl a (fun_of_resolved_st_q_for is_global s))"
-  | "ivl_tf_st (EA_Check cnd) s = s"
+subsection \<open>Executable transfer function and seeds, generic in the classifier\<close>
 
 definition assume_ivl_st_for ::
   "(vname => bool) => bexp => ivl resolved_st_q => ivl resolved_st_q" where
@@ -155,68 +101,6 @@ lemma fun_of_st_top_ivl_st:
   "fun_of_resolved_st_q_for is_global top_ivl_st =
    (\<lambda>_. Ivl MinInf PlusInf)"
   by (rule ext) simp
-
-lemma ivl_tf_st_reduces: "action_reduces ivl_tf_st"
-  by unfold_locales (rule ext, simp)+
-
-theorem ivl_tf_st_commute:
-  "fun_of_resolved_st_q_for is_global (ivl_tf_st a s) =
-   apply_tf ivl_tf a (fun_of_resolved_st_q_for is_global s)"
-proof (rule apply_tf_wrap_eqI[
-    where H = "\<lambda>f. f (fun_of_resolved_st_q_for is_global s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for is_global (ivl_tf_st a s))"
-    by (rule action_reduces_comp[OF ivl_tf_st_reduces])
-  show "fun_of_resolved_st_q_for is_global (ivl_tf_st EA_Nop s) =
-      apply_tf ivl_tf EA_Nop (fun_of_resolved_st_q_for is_global s)" by simp
-  show "\<And>x e. fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_Assign x e) s) =
-    apply_tf ivl_tf (EA_Assign x e) (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: ivl_tf_def assign_ivl_def)
-  show "\<And>x. fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_Random x) s) =
-    apply_tf ivl_tf (EA_Random x) (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: ivl_tf_def random_ivl_def)
-  show "\<And>b. fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_Assume b) s) =
-    apply_tf ivl_tf (EA_Assume b) (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: ivl_tf_def assume_ivl_st_commute)
-  show "\<And>b. fun_of_resolved_st_q_for is_global
-      (ivl_tf_st (EA_AssumeNot b) s) =
-    apply_tf ivl_tf (EA_AssumeNot b)
-      (fun_of_resolved_st_q_for is_global s)"
-    by (simp add: ivl_tf_def assume_not_ivl_st_commute)
-qed
-
-subsection \<open>Executable effectful transfer record\<close>
-
-definition ivl_etf_st :: "(unit, ivl resolved_st_q) effectful_st_transfer" where
-  "ivl_etf_st = unit_etf_st_of_transfer ivl_tf_st ivl_enter_st"
-
-lemma ivl_etf_st_edge_tree:
-  "apply_etf_st ivl_etf_st a u = unit_edge_tree_st (ivl_tf_st a) u"
-  unfolding ivl_etf_st_def
-  by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_reduces])
-
-lemma ivl_etf_st_combine_tree:
-  "etf_combine_st ivl_etf_st dst cc ex = unit_combine_tree_st dst cc ex"
-  unfolding ivl_etf_st_def by (rule etf_combine_st_unit_of_transfer)
-
-lemma ivl_etf_st_enter_tree:
-  "etf_st_enter ivl_etf_st xs es u = unit_edge_tree_st (ivl_enter_st xs es) u"
-  unfolding ivl_etf_st_def by (rule etf_st_enter_unit_of_transfer)
-
-lemma ivl_etf_st_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter ivl_etf_st xs es u = unit_edge_tree_st f u"
-  using ivl_etf_st_enter_tree by blast
-
-lemma ivl_etf_st_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st ivl_etf_st a u = unit_edge_tree_st f u"
-  using ivl_etf_st_edge_tree by blast
-
-value "fun_of_resolved_st_q_for is_global
-  (ivl_tf_st (EA_Assume (Less (VIMP_Syntax.V ''x'') (VIMP_Syntax.N 20)))
-    (update_resolved_st_q top_ivl_st (location_of is_global ''x'')
-      (Ivl (Fin 0) (Fin 20)))) ''x''"
 
 subsection \<open>Classifier-parametric executable/abstract transfer correspondence\<close>
 
@@ -508,6 +392,33 @@ lemma ivl_enter_st_for_commute:
    tf_enter (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: enter_D_def enter_ivl_for_def ivl_enter_st_for_def
       ivl_tf_for_def)
+
+subsection \<open>Executable effectful transfer record, generic in the classifier\<close>
+
+definition ivl_etf_st_for ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> (unit, ivl resolved_st_q) effectful_st_transfer" where
+  "ivl_etf_st_for gs = unit_etf_st_of_transfer gs (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
+
+lemma ivl_etf_st_for_edge_tree:
+  "apply_etf_st (ivl_etf_st_for gs) a u = unit_edge_tree_st (ivl_tf_st_for gs a) u"
+  unfolding ivl_etf_st_for_def
+  by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_for_reduces])
+
+lemma ivl_etf_st_for_combine_tree:
+  "etf_combine_st (ivl_etf_st_for gs) dst cc ex = unit_combine_tree_st gs dst cc ex"
+  unfolding ivl_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
+
+lemma ivl_etf_st_for_enter_tree:
+  "etf_st_enter (ivl_etf_st_for gs) xs es u = unit_edge_tree_st (ivl_enter_st_for gs xs es) u"
+  unfolding ivl_etf_st_for_def by (rule etf_st_enter_unit_of_transfer)
+
+lemma ivl_etf_st_for_enter_exists_unit:
+  "\<And>u xs es. \<exists>f. etf_st_enter (ivl_etf_st_for gs) xs es u = unit_edge_tree_st f u"
+  using ivl_etf_st_for_enter_tree by blast
+
+lemma ivl_etf_st_for_exists_unit:
+  "\<And>a u. \<exists>f. apply_etf_st (ivl_etf_st_for gs) a u = unit_edge_tree_st f u"
+  using ivl_etf_st_for_edge_tree by blast
 
 end
 

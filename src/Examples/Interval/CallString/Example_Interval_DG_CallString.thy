@@ -26,7 +26,7 @@ subsection \<open>The call-site route\<close>
 
 text \<open>\<open>route_cs\<close> ignores the calling context and the entered data entirely, so it commutes
   with \<^emph>\<open>any\<close> representation map on \<open>'d\<close> --- in particular the executable/abstract
-  refinement \<^const>\<open>fun_of_exec_dg_st\<close> --- for free.  One definition serves both the executable and
+  refinement \<open>fun_of_exec_dg_st_for\<close> --- for free.  One definition serves both the executable and
   the abstract routing hook below.\<close>
 
 definition route_cs :: "pp \<Rightarrow> cfg_node \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> cfg_node" where
@@ -513,11 +513,11 @@ definition twice_cs_graph_config ::
       route = (\<lambda>u ctx action d. route_cs u ctx d action),
       show_context = string_of_cfg_node,
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
+        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.

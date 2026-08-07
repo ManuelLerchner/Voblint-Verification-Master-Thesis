@@ -11,10 +11,6 @@ text \<open>
 \<close>
 
 
-locale sound_dg_spec_ltr = sound_dg_spec S gammaDG is_global
-  for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
-    and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-
 locale sound_dg_spec_ltr_for = sound_dg_spec S gammaDG gs
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -72,47 +68,6 @@ proof -
           [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
   show ?thesis by (rule dg_postfix_collect_sound_ltr_for[OF pf sound0])
 qed
-
-end
-
-text \<open>
-  @{locale sound_dg_spec_ltr} fixes \<open>gs\<close> at @{const is_global} directly in its
-  own extension of @{locale sound_dg_spec}, so it already satisfies
-  @{locale sound_dg_spec_ltr_for} at that same instantiation with no further
-  proof content; the two \<open>dg_postfix_collect_sound_ltr(_for)\<close> theorems below
-  are one-line specializations of the inherited fact rather than a second
-  restatement of the \<open>ltr_collect_semantic_postfix\<close> argument.
-\<close>
-sublocale sound_dg_spec_ltr \<subseteq> sound_dg_spec_ltr_for S gammaDG is_global
-  by unfold_locales
-
-context sound_dg_spec_ltr
-begin
-
-theorem dg_postfix_collect_sound_ltr:
-  assumes pf: "dg_postfix g s0d s0g sigma"
-    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect is_global g S0 v \<subseteq> dg_gamma sigma v"
-  by (rule dg_postfix_collect_sound_ltr_for[OF pf sound0])
-
-corollary dg_post_solution_collect_sound_ltr:
-  assumes pp:
-      "part_post_solution (dg_gen g bot0 s0d s0g) x sigma vars"
-    and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (k, ()) \<in> vars"
-    and finI: "finite (intra g)"
-    and finC: "finite (calls g)"
-    and sound0: "S0 \<subseteq> gammaDG s0d s0g"
-  shows "ltr_collect is_global g S0 v \<subseteq> dg_gamma sigma v"
-  by (rule dg_post_solution_collect_sound_ltr_for
-        [OF pp cover_entry cover_edge cover_enter cover_combine finI finC sound0])
 
 end
 

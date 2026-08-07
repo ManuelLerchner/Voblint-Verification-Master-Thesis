@@ -1540,11 +1540,12 @@ text \<open>
 \<close>
 
 definition indep_dg_spec ::
-  "'d::sound_domain domain_transfer
+  "(vname \<Rightarrow> bool)
+   \<Rightarrow> 'd::sound_domain domain_transfer
    \<Rightarrow> 'g::sound_domain domain_transfer
    \<Rightarrow> ('d abs_state, 'g abs_state) dg_spec"
 where
-  "indep_dg_spec tfD tfG = \<lparr>
+  "indep_dg_spec gs tfD tfG = \<lparr>
     dgs_nop        = (\<lambda>d g. (apply_tf tfG EA_Nop g, apply_tf tfD EA_Nop d)),
     dgs_assign     = (\<lambda>x e d g. (apply_tf tfG (EA_Assign x e) g,
                                  apply_tf tfD (EA_Assign x e) d)),
@@ -1556,21 +1557,21 @@ where
                                apply_tf tfD (EA_AssumeNot b) d)),
     dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
                                    tf_enter tfD xs es d)),
-    dgs_combine_env    = (\<lambda>dc de g. (combine_abs is_global g g, combine_abs is_global dc de)),
+    dgs_combine_env    = (\<lambda>dc de g. (combine_abs gs g g, combine_abs gs dc de)),
     dgs_combine_assign = (\<lambda>dst de g merged.
       (combine_assign_abs dst (g ret_var) (fst merged),
        combine_assign_abs dst (de ret_var) (snd merged)))
   \<rparr>"
 
 lemma dg_spec_step_indep [simp]:
-  "dg_spec_step (indep_dg_spec tfD tfG) a d g
+  "dg_spec_step (indep_dg_spec gs tfD tfG) a d g
    = (apply_tf tfG a g, apply_tf tfD a d)"
   unfolding indep_dg_spec_def
   by (cases a) (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
 
 lemma dgs_combine_indep [simp]:
-  "dgs_combine (indep_dg_spec tfD tfG) dst dc de g
-   = (combine_collect_abs is_global dst g g, combine_collect_abs is_global dst dc de)"
+  "dgs_combine (indep_dg_spec gs tfD tfG) dst dc de g
+   = (combine_collect_abs gs dst g g, combine_collect_abs gs dst dc de)"
   unfolding dgs_combine_def indep_dg_spec_def combine_collect_abs_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
@@ -1578,16 +1579,16 @@ text \<open>The combine obligation of @{locale sound_dg_spec} for the independen
   boundary instead of positional \<open>for\<close> binders.\<close>
 lemma gamma_dg_combine_sound:
   assumes sc: "s \<in> gamma_dg dc g" and tc: "t \<in> gamma_dg de g"
-  shows "combine_collect is_global dst s t \<in>
-           (case dgs_combine (indep_dg_spec tfD tfG) dst dc de g of (g', d') \<Rightarrow> gamma_dg d' g')"
+  shows "combine_collect gs dst s t \<in>
+           (case dgs_combine (indep_dg_spec gs tfD tfG) dst dc de g of (g', d') \<Rightarrow> gamma_dg d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>dc\<rbrakk>" using gamma_dgD1[OF sc] .
-  have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
   have tc': "t \<in> \<lbrakk>de\<rbrakk>" using gamma_dgD1[OF tc] .
+  have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
   have tg: "t \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF tc] .
-  have d_sound: "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs is_global dst dc de\<rbrakk>"
+  have d_sound: "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst dc de\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
-  have g_sound: "combine_collect is_global dst s t \<in> \<lbrakk>combine_collect_abs is_global dst g g\<rbrakk>"
+  have g_sound: "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst g g\<rbrakk>"
     by (rule combine_collect_sound[OF sg tg])
   show ?thesis
     using d_sound g_sound unfolding gamma_dg_def by simp
@@ -1596,27 +1597,27 @@ qed
 text \<open>The enter obligation of @{locale sound_dg_spec} for the independent product:
   each slot's callee-entry store lands in its own @{const tf_enter} image.\<close>
 lemma gamma_dg_enter_sound:
-  assumes soundD: "sound_transfer tfD" and soundG: "sound_transfer tfG"
+  assumes soundD: "sound_transfer_for gs tfD" and soundG: "sound_transfer_for gs tfG"
     and sc: "s \<in> gamma_dg dc g"
-  shows "call_enter is_global (CallEdge dst pars args) s \<in>
-           (case dgs_enter (indep_dg_spec tfD tfG) pars args dc g of (g', d') \<Rightarrow> gamma_dg d' g')"
+  shows "call_enter gs (CallEdge dst pars args) s \<in>
+           (case dgs_enter (indep_dg_spec gs tfD tfG) pars args dc g of (g', d') \<Rightarrow> gamma_dg d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>dc\<rbrakk>" using gamma_dgD1[OF sc] .
   have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
-  have d_sound: "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfD pars args dc\<rbrakk>"
-    using sound_transfer.tf_sound_enterD[OF soundD sc']
+  have d_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfD pars args dc\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_forD[OF soundD sc']
     by (simp add: call_enter_CallEdge)
-  have g_sound: "call_enter is_global (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfG pars args g\<rbrakk>"
-    using sound_transfer.tf_sound_enterD[OF soundG sg]
+  have g_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfG pars args g\<rbrakk>"
+    using sound_transfer_for.tf_sound_enter_forD[OF soundG sg]
     by (simp add: call_enter_CallEdge)
   show ?thesis
     unfolding indep_dg_spec_def gamma_dg_def by (simp add: d_sound g_sound)
 qed
 
 lemma sound_dg_spec_indep:
-  assumes soundD: "sound_transfer tfD"
-    and soundG: "sound_transfer tfG"
-  shows "sound_dg_spec (indep_dg_spec tfD tfG) gamma_dg is_global"
+  assumes soundD: "sound_transfer_for gs tfD"
+    and soundG: "sound_transfer_for gs tfG"
+  shows "sound_dg_spec (indep_dg_spec gs tfD tfG) gamma_dg gs"
   apply unfold_locales
   subgoal for d d' g g'
     by (rule gamma_dg_mono)
@@ -1627,7 +1628,7 @@ lemma sound_dg_spec_indep:
       by (rule edge_collect_mono[OF gamma_dg_le_D])
     have d_transfer:
         "edge_collect a \<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>apply_tf tfD a d\<rbrakk>"
-      by (rule sound_transfer.edge_collect_apply_tf_sound[OF soundD])
+      by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF soundD])
     have d_sound:
         "edge_collect a (gamma_dg d g) \<subseteq> \<lbrakk>apply_tf tfD a d\<rbrakk>"
       using d_input d_transfer by blast
@@ -1636,7 +1637,7 @@ lemma sound_dg_spec_indep:
       by (rule edge_collect_mono[OF gamma_dg_le_G])
     have g_transfer:
         "edge_collect a \<lbrakk>g\<rbrakk> \<subseteq> \<lbrakk>apply_tf tfG a g\<rbrakk>"
-      by (rule sound_transfer.edge_collect_apply_tf_sound[OF soundG])
+      by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF soundG])
     show ?thesis
       using d_sound g_input g_transfer
       unfolding gamma_dg_def by auto
@@ -1644,6 +1645,8 @@ lemma sound_dg_spec_indep:
   subgoal premises prems by (rule gamma_dg_combine_sound[OF prems])
   subgoal premises prems by (rule gamma_dg_enter_sound[OF soundD soundG prems])
   done
+subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
+
 subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
 
 definition gamma_unit ::
@@ -1706,23 +1709,5 @@ lemma sound_dg_spec_unit_for:
   subgoal premises prems
     by (rule gamma_unit_enter_sound_for[OF sound prems])
   done
-
-lemma sound_dg_spec_unit:
-  assumes sound: "sound_transfer tf"
-  shows "sound_dg_spec (unit_dg_spec tf) gamma_unit is_global"
-proof -
-  interpret sound_transfer tf by (rule sound)
-  have "sound_transfer_for is_global tf" by unfold_locales
-  from sound_dg_spec_unit_for[OF this]
-  show ?thesis by (simp add: unit_dg_spec_for_is_global)
-qed
-
-context sound_transfer
-begin
-
-sublocale dg: sound_dg_spec "unit_dg_spec tf" gamma_unit is_global
-  by (rule sound_dg_spec_unit[OF sound_transfer_axioms])
-
-end
 
 end

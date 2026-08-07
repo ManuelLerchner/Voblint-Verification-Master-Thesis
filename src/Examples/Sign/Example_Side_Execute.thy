@@ -17,23 +17,32 @@ text \<open>
 definition x1_prog :: imp_prog where
   "x1_prog = program { void main() { x := 1 } }"
 
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
+  gives is trivially false everywhere -- \<open>x\<close> and \<open>y\<close> are both local.\<close>
+abbreviation x1_gs :: "vname \<Rightarrow> bool" where
+  "x1_gs \<equiv> declared_global x1_prog"
+
+lemma x1_prog_declared_global_vars [simp]:
+  "declared_global_vars x1_prog = []"
+  by (simp add: x1_prog_def)
+
 text \<open>
   Querying the computed abstract state at the exit (these @{command value} calls
   evaluate at build time): \<open>x\<close> is \<open>SPos\<close>, an untouched \<open>y\<close> stays \<open>STop\<close>.
 \<close>
 
-value "sign_exec_prog ''main'' x1_prog ''x''"
-value "sign_exec_prog ''main'' x1_prog ''y''"
+value "sign_exec_prog x1_gs ''main'' x1_prog ''x''"
+value "sign_exec_prog x1_gs ''main'' x1_prog ''y''"
 
 text \<open>The solver computes \<open>x \<mapsto> SPos\<close> at the exit, captured as a theorem
   by code reflection.\<close>
 
 lemma x1_computes_x_pos:
-  "sign_exec_prog ''main'' x1_prog ''x'' = SPos"
+  "sign_exec_prog x1_gs ''main'' x1_prog ''x'' = SPos"
   by eval
 
 lemma x1_y_top:
-  "sign_exec_prog ''main'' x1_prog ''y'' = STop"
+  "sign_exec_prog x1_gs ''main'' x1_prog ''y'' = STop"
   by eval
 
 text \<open>
@@ -42,7 +51,7 @@ text \<open>
   @{thm sign_terminates_prog_via_solve_c} the program lies in the solver's domain.
 \<close>
 
-lemma x1_terminates: "sign_terminates_prog ''main'' x1_prog"
+lemma x1_terminates: "sign_terminates_prog x1_gs ''main'' x1_prog"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 text \<open>
@@ -53,15 +62,15 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))
-   \<le> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
+  "ltr_collect x1_gs (prog_cfg ''main'' x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg ''main'' x1_prog))
+   \<le> \<lbrakk>sign_exec_prog x1_gs ''main'' x1_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
 
 definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"
 
 lemma x1_completed:
-  "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0(''x'' := 1))"
   unfolding pcompletes_def
   apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
@@ -71,18 +80,19 @@ lemma x1_completed:
 
 lemma x1_completed_run_collect:
   "x1_s0(''x'' := 1)
-     \<in> ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))"
+     \<in> ltr_collect x1_gs (prog_cfg ''main'' x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg ''main'' x1_prog))"
 proof -
-  have init: "x1_s0 \<in> cinit_stores is_global"
+  have init: "x1_s0 \<in> cinit_stores x1_gs"
     by (simp add: x1_s0_def cinit_stores_def)
-  have wf: "wf_compile_input is_global (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog)"
+  have wf: "wf_compile_input x1_gs (prog_table x1_prog) (prog_procs x1_prog) ''main'' (prog_main x1_prog)"
     unfolding wf_compile_input_def x1_prog_def
     by (auto simp: wf_source_program_def wf_proc_decl_def source_aexp_def
-          proc_decl_of_def prog_main_name_def ret_var_def reserved_ret_var_def is_global_def
+          proc_decl_of_def prog_main_name_def ret_var_def reserved_ret_var_def
+          declared_global_def
           split: if_splits)
 
   have run:
-    "star (pstep is_global (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
+    "star (pstep x1_gs (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
       (VIMP_Proc.com.SKIP, x1_s0(''x'' := 1), [])"
     using x1_completed unfolding pcompletes_def .
   from source_completes_ltr_collect_exit[OF wf init run]
@@ -90,20 +100,20 @@ proof -
 qed
 
 theorem x1_explicit_completed_run_covered:
-  "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))
-   \<and> x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
+   \<and> x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog x1_gs ''main'' x1_prog\<rbrakk>"
 proof (rule conjI)
-  show "pcompletes is_global (prog_table x1_prog) (prog_main x1_prog) x1_s0
+  show "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0(''x'' := 1))"
     by (rule x1_completed)
 next
   have collect:
     "x1_s0(''x'' := 1) \<in>
-      ltr_collect is_global (prog_cfg ''main'' x1_prog) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' x1_prog))"
+      ltr_collect x1_gs (prog_cfg ''main'' x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg ''main'' x1_prog))"
     using x1_completed_run_collect
     by (simp add: prog_cfg_def)
-  show "x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog ''main'' x1_prog\<rbrakk>"
+  show "x1_s0(''x'' := 1) \<in> \<lbrakk>sign_exec_prog x1_gs ''main'' x1_prog\<rbrakk>"
     using x1_certified_sound collect by blast
 qed
 
@@ -117,7 +127,7 @@ text \<open>
 definition x1_mnm :: pname where "x1_mnm = ''main''"
 
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code x1_mnm} @{code x1_prog})
+  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code x1_prog}) @{code x1_mnm} @{code x1_prog})
 \<close>
 
 end

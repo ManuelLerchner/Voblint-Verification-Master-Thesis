@@ -9,11 +9,17 @@ section \<open>Codegen probe: does sign resolved_st_q execute?\<close>
 instance sign :: bounded_warrowing ..
 
 
+text \<open>This probe has no source program to declare globals, so it fixes a
+  trivial classifier (nothing is global) once and threads it explicitly,
+  rather than reintroducing name-based detection.\<close>
+abbreviation probe_gs :: "vname \<Rightarrow> bool" where
+  "probe_gs \<equiv> (\<lambda>_. False)"
+
 abbreviation sign_lookup :: "sign resolved_st_q => vname => sign" where
-  "sign_lookup s x == lookup_resolved_st_q s (location_of is_global x)"
+  "sign_lookup s x == lookup_resolved_st_q s (location_of probe_gs x)"
 
 abbreviation sign_update :: "sign resolved_st_q => vname => sign => sign resolved_st_q" where
-  "sign_update s x a == update_resolved_st_q s (location_of is_global x) a"
+  "sign_update s x a == update_resolved_st_q s (location_of probe_gs x) a"
 
 text \<open>
   Minimal checks that the executable abstract state sign resolved_st_q evaluates under the

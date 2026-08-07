@@ -9,8 +9,9 @@ begin
 
 text \<open>
   The program compiles through the ordinary VIMP-to-CFG pipeline.  The variable
-  @{text "''x''"} is local according to @{const is_global}.  Per-point answer
-  unknowns carry Sign stores, while the single side unknown carries an Interval
+  @{text "''x''"} is local: this program declares no \<open>global\<close> variables, so
+  its classifier is trivially false everywhere.  Per-point answer unknowns
+  carry Sign stores, while the single side unknown carries an Interval
   store chosen by this analysis.  The side slot is called @{const globs} by the
   generic routing layer, but it is not an VIMP global-variable store.
 
@@ -23,6 +24,12 @@ text \<open>
 
 definition mixed_graphviz_prog :: imp_prog where
   "mixed_graphviz_prog = program { void main() { x := -1; x := 2 } }"
+
+text \<open>No \<open>global\<close> declarations, and this file compiles directly through a bare
+  proc table rather than \<^const>\<open>mixed_graphviz_prog\<close> itself, so the classifier
+  is fixed trivially false rather than derived via \<^const>\<open>declared_global\<close>.\<close>
+abbreviation mixed_graphviz_gs :: "vname \<Rightarrow> bool" where
+  "mixed_graphviz_gs \<equiv> (\<lambda>_. False)"
 
 definition mixed_graphviz_cfg :: cfg where
   "mixed_graphviz_cfg =
@@ -52,8 +59,8 @@ where
                     (mixed_graphviz_global_value ()))"
 
 lemma mixed_graphviz_x_is_local:
-  "\<not> is_global ''x''"
-  by (simp add: is_global_def)
+  "\<not> mixed_graphviz_gs ''x''"
+  by simp
 
 
 
@@ -65,12 +72,12 @@ definition mixed_graphviz_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
+        let sc = compiled_procedure_scope mixed_graphviz_gs (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
           mixed_graphviz_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>_. None),
       globals_to_show =
-        scope_locals (compiled_procedure_scope (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
+        scope_locals (compiled_procedure_scope mixed_graphviz_gs (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
           mixed_graphviz_cfg (cfg_entry mixed_graphviz_cfg)),
       show_local = (\<lambda>_ _ vars st.
         map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),

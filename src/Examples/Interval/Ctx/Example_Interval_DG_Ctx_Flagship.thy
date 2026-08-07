@@ -32,9 +32,9 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ivl: "ivl")
 subsection \<open>The storage classifier\<close>
 
 text \<open>Storage here is decided from \<open>twice_program\<close>'s own
-  declarations (\<^const>\<open>declared_global\<close>) rather than the \<open>is_global\<close> naming
+  declarations (\<^const>\<open>declared_global\<close>) rather than a name-based naming
   convention. \<open>twice_program\<close> declares no globals, so \<^term>\<open>twice_gs\<close> classifies
-  every variable this chain touches as local --- unlike \<^const>\<open>is_global\<close>, which
+  every variable this chain touches as local --- unlike a G-prefix convention, which
   would still treat any \<open>G\<close>-prefixed name as global by naming convention alone.\<close>
 
 abbreviation twice_gs :: "vname \<Rightarrow> bool" where
@@ -173,11 +173,11 @@ definition twice_ctx_graph_config ::
       route = (\<lambda>_ ctx action d. route_ivl d action),
       show_context = string_of_ivl,
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
+        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_pi twice_procs ''main'' twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.

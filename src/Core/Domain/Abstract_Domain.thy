@@ -193,23 +193,23 @@ locale backward_domain =
     and inv_minus :: "'a => 'a => 'a => 'a * 'a"
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
   assumes
-    meet_sound:
+    meet_sound[intro]:
       "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (meet a b)"
-  and aval_abs_sound:
+  and aval_abs_sound[intro]:
       "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
-  and inv_less_sound:
+  and inv_less_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
-  and inv_eq_sound:
+  and inv_eq_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 = n2) = res
        \<Longrightarrow> n1 \<in> gamma (fst (inv_eq res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq res a1 a2))"
-  and inv_plus_sound:
+  and inv_plus_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 + n2 \<in> gamma r
        \<Longrightarrow> n1 \<in> gamma (fst (inv_plus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus r a1 a2))"
-  and inv_minus_sound:
+  and inv_minus_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 - n2 \<in> gamma r
        \<Longrightarrow> n1 \<in> gamma (fst (inv_minus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus r a1 a2))"
-  and inv_times_sound:
+  and inv_times_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 * n2 \<in> gamma r
        \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
 begin
@@ -472,27 +472,27 @@ text \<open>
 \<close>
 
 locale backward_domain_mono = backward_domain +
-  assumes meet_mono:
+  assumes meet_mono[intro]:
       "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> meet a1 b1 \<le> meet a2 b2"
-  and aval_abs_mono:
+  and aval_abs_mono[intro]:
       "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2"
-  and inv_less_mono:
+  and inv_less_mono[intro]:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_less res x1 y1) \<le> fst (inv_less res x2 y2) \<and>
        snd (inv_less res x1 y1) \<le> snd (inv_less res x2 y2)"
-  and inv_eq_mono:
+  and inv_eq_mono[intro]:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_eq res x1 y1) \<le> fst (inv_eq res x2 y2) \<and>
        snd (inv_eq res x1 y1) \<le> snd (inv_eq res x2 y2)"
-  and inv_plus_mono:
+  and inv_plus_mono[intro]:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_plus r1 x1 y1) \<le> fst (inv_plus r2 x2 y2) \<and>
        snd (inv_plus r1 x1 y1) \<le> snd (inv_plus r2 x2 y2)"
-  and inv_minus_mono:
+  and inv_minus_mono[intro]:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_minus r1 x1 y1) \<le> fst (inv_minus r2 x2 y2) \<and>
        snd (inv_minus r1 x1 y1) \<le> snd (inv_minus r2 x2 y2)"
-  and inv_times_mono:
+  and inv_times_mono[intro]:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
        fst (inv_times r1 x1 y1) \<le> fst (inv_times r2 x2 y2) \<and>
        snd (inv_times r1 x1 y1) \<le> snd (inv_times r2 x2 y2)"

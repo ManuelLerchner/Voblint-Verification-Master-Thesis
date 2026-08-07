@@ -21,16 +21,16 @@ definition side_proc_global_s0 :: "sign abs_state" where
   "side_proc_global_s0 = (\<lambda>_. STop)"
 
 theorem proc_global_side_sign_analysis:
-  fixes s t :: store
+  fixes s t :: store and gs :: "vname \<Rightarrow> bool"
   assumes s_sound: "s \<in> \<lbrakk>side_proc_global_s0\<rbrakk>"
   assumes collect_exit:
-    "t \<in> ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) {s}
+    "t \<in> ltr_collect gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) {s}
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
   assumes side_solve_dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) sign_etf bot
+    "side_cfg_solve_dom_eff gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) (sign_etf gs) bot
        side_proc_global_s0 ()
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
-  shows "t \<in> \<lbrakk>side_analyse_eff inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) sign_etf bot side_proc_global_s0 ()
+  shows "t \<in> \<lbrakk>side_analyse_eff gs inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs) bot side_proc_global_s0 ()
          (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
   by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 subsection \<open>Executable sign analysis\<close>
@@ -38,18 +38,21 @@ subsection \<open>Executable sign analysis\<close>
 text \<open>Reuses @{const inc_program} (\<open>Example_Inc_Proc\<close>) directly rather than
   reconstructing an equivalent @{typ imp_prog} from @{const inc_pi}.\<close>
 
-value "sign_exec_prog ''main'' inc_program ''Gx''"
+abbreviation inc_gs :: "vname \<Rightarrow> bool" where
+  "inc_gs \<equiv> declared_global inc_program"
+
+value "sign_exec_prog inc_gs ''main'' inc_program ''Gx''"
 
 lemma inc_gx_nonneg:
-  "sign_exec_prog ''main'' inc_program ''Gx'' = SNonNeg"
+  "sign_exec_prog inc_gs ''main'' inc_program ''Gx'' = SNonNeg"
   by eval
 
-lemma inc_terminates: "sign_terminates_prog ''main'' inc_program"
+lemma inc_terminates: "sign_terminates_prog inc_gs ''main'' inc_program"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 corollary inc_certified_sound:
-  "ltr_collect is_global (prog_cfg ''main'' inc_program) (cinit_stores is_global) (cfg_exit (prog_cfg ''main'' inc_program))
-   \<le> \<lbrakk>sign_exec_prog ''main'' inc_program\<rbrakk>"
+  "ltr_collect inc_gs (prog_cfg ''main'' inc_program) (cinit_stores inc_gs) (cfg_exit (prog_cfg ''main'' inc_program))
+   \<le> \<lbrakk>sign_exec_prog inc_gs ''main'' inc_program\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
 
 subsection \<open>Annotated CFG visualisation\<close>
@@ -63,7 +66,7 @@ text \<open>
 definition inc_prog_mnm :: pname where "inc_prog_mnm = ''main''"
 
 ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} @{code inc_prog_mnm} @{code inc_program})
+  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code inc_program}) @{code inc_prog_mnm} @{code inc_program})
 \<close>
 
 end

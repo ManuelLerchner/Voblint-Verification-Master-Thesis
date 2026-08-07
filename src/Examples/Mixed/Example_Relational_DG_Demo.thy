@@ -46,6 +46,20 @@ definition demo_program :: imp_prog where
 
 subsection \<open>CFG construction\<close>
 
+text \<open>No \<open>global\<close> declarations, so the classifier this program's own source gives
+  is trivially false everywhere.\<close>
+abbreviation demo_gs :: "vname \<Rightarrow> bool" where
+  "demo_gs \<equiv> declared_global demo_program"
+
+lemma demo_program_declared_global_vars [simp]:
+  "declared_global_vars demo_program = []"
+  by (simp add: demo_program_def)
+
+text \<open>Local shorthand for the executable state's lookup projection, fixed at this
+  file's own \<open>demo_gs\<close> classifier.\<close>
+abbreviation demo_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "demo_lookup s x \<equiv> lookup_resolved_st_q s (location_of demo_gs x)"
+
 definition demo_pi :: proc_table where
   "demo_pi = prog_table demo_program"
 
@@ -65,7 +79,7 @@ subsection \<open>Interval, on the same CFG, same generator, same solver menu\<c
 definition demo_ivl_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "demo_ivl_eqs =
-     dg_gen_of (unit_dg_spec_st ivl_tf_st ivl_enter_st) demo_cfg
+     dg_gen_of (unit_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs) (ivl_enter_st_for demo_gs)) demo_cfg
        bot top_ivl_st (restrict_global_resolved_q top_ivl_st)"
 
 definition demo_ivl_sol ::
@@ -102,11 +116,11 @@ text \<open>Interval's bound for \<open>x\<close> (and, symmetrically, \<open>y\
   neither operand had a finite bound for the other to narrow against.\<close>
 
 lemma demo_ivl_x_at_branch:
-  "lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'' = Ivl MinInf PlusInf"
+  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'' = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 lemma demo_ivl_y_at_branch:
-  "lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'' = Ivl MinInf PlusInf"
+  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'' = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 text \<open>\<open>relc\<close>, at the very same point, has recorded the pair directly.
@@ -126,8 +140,8 @@ lemma demo_rel_learns_yx:
 text \<open>Side by side, evaluated in one call: Interval's two bounds stay
   \<open>[-inf,+inf]\<close>; \<open>relc\<close> answers \<open>True\<close> for the pair \<open>(x,y)\<close>.\<close>
 
-value "(lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'',
-        lookup_exec_dg_st (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'',
+value "(demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'',
+        demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'',
         relc_has ''x'' ''y'' (locals (snd demo_rel_sol (Inl (Statement 1, ())))))"
 
 subsection \<open>Rendering the CFG\<close>
@@ -157,10 +171,10 @@ definition demo_rel_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope demo_pi (prog_procs demo_program)
+        scope_locals (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
           prog_main_name (prog_main demo_program) demo_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope demo_pi (prog_procs demo_program)
+        scope_return_slot (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
           prog_main_name (prog_main demo_program) demo_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ _ d. [string_of_relc d]),

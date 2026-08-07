@@ -91,9 +91,9 @@ text \<open>Every family this codebase builds over \<^typ>\<open>edge_action\<cl
   every wrapper lemma and call site keeps citing the same one fact.\<close>
 locale action_reduces =
   fixes F :: "edge_action \<Rightarrow> 'y"
-  assumes ret_none: "\<And>p. F (EA_Ret None p) = F EA_Nop"
-    and ret_some: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
-    and check: "\<And>c. F (EA_Check c) = F EA_Nop"
+  assumes ret_none[simp,intro]: "\<And>p. F (EA_Ret None p) = F EA_Nop"
+    and ret_some[simp,intro]: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
+    and check[simp,intro]: "\<And>c. F (EA_Check c) = F EA_Nop"
 
 text \<open>Composing an \<open>action_reduces\<close> family with any outer function preserves the
   reduction: this is what lets every \<open>_commute\<close>-style theorem below derive
@@ -795,103 +795,11 @@ definition cinit_stores :: "(vname \<Rightarrow> bool) \<Rightarrow> store set" 
 
 text \<open>
   Sound transfer function: a domain_transfer tf that soundly over-approximates
-  the concrete edge actions w.r.t. a sound_domain's concretization.  Bundles the
-  four per-action soundness obligations (assign / assume / assume-not / enter)
-  as locale assumptions.  Concrete domains discharge these once via
-  `interpretation`.
+  the concrete edge actions w.r.t. a sound_domain's concretization, relative to
+  an explicit classifier gs.  Bundles the five per-action soundness obligations
+  (assign / assume / assume-not / enter / combine) as locale assumptions.
+  Concrete domains discharge these once via `interpretation`.
 \<close>
-locale sound_transfer =
-  fixes tf :: "'a::sound_domain domain_transfer"
-  assumes tf_sound_assign:
-    "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
-  assumes tf_sound_random:
-    "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-  assumes tf_sound_assume:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
-       \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-  assumes tf_sound_assume_not:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s
-       \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-  assumes tf_sound_enter:
-    "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-  assumes tf_sound_combine:
-    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-       combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-
-text \<open>Fully-applied destructors for the five raw \<forall>-quantified assumptions above;
-  cited instead of the [rule_format, OF ...] instantiation chain at every call
-  site (or, outside a sound_transfer context, sound_transfer.tf_sound_*D[OF ...]).\<close>
-context sound_transfer
-begin
-
-lemma tf_sound_assignD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
-  using tf_sound_assign by blast
-
-lemma tf_sound_randomD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-  using tf_sound_random by blast
-
-lemma tf_sound_assumeD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-  using tf_sound_assume by blast
-
-lemma tf_sound_assume_notD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-  using tf_sound_assume_not by blast
-
-lemma tf_sound_enterD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-       \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-  using tf_sound_enter by blast
-
-lemma tf_sound_combineD:
-  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-  using tf_sound_combine by blast
-
-end
-
-text \<open>
-  Discharges @{locale sound_transfer} from the five fully-applied soundness
-  facts a domain proves anyway (matching @{text tf_sound_assignD} etc.'s
-  shape), plus a check that @{const tf_combine} is the standard @{const
-  combine_abs}. Every domain's @{text combine} field is @{const combine_abs}
-  today (verified for Sign and Interval); making that a checked premise here
-  turns a silently-repeated per-domain proof of @{text combine_states_sound}
-  into a required, visible fact. A domain with a genuinely different combine
-  cannot use this rule and falls back to `unfold_locales` directly, as before.
-\<close>
-lemma sound_transferI:
-  fixes tf :: "'a::sound_domain domain_transfer"
-  assumes assign: "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
-    and random: "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-    and assm: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    and assm_not: "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-    and enter: "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-    and combine: "tf_combine tf = combine_abs is_global"
-  shows "sound_transfer tf"
-proof unfold_locales
-  show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
-    using assign by blast
-  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-    using random by blast
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    using assm by blast
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-    using assm_not by blast
-  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-       \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-    using enter by blast
-  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>. combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-    unfolding combine using combine_states_sound by blast
-qed
 locale sound_transfer_for =
   fixes gs :: "vname => bool"
     and tf :: "'a::sound_domain domain_transfer"
@@ -990,65 +898,6 @@ proof unfold_locales
     unfolding combine using combine_states_sound by blast
 qed
 
-text \<open>
-  @{locale sound_transfer} fixes @{text gs} at @{const is_global} directly; its
-  five assumptions are @{locale sound_transfer_for}'s five assumptions under
-  that same substitution, so the sublocale below is a pure restatement and
-  makes every @{locale sound_transfer_for} fact available inside a
-  @{locale sound_transfer} context for free.
-\<close>
-sublocale sound_transfer \<subseteq> sound_transfer_for is_global tf
-proof
-  show "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
-    by (rule tf_sound_assign)
-  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-    by (rule tf_sound_random)
-  show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    by (rule tf_sound_assume)
-  show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-    by (rule tf_sound_assume_not)
-  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-    by (rule tf_sound_enter)
-  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-      combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-    by (rule tf_sound_combine)
-qed
-
-text \<open>
-  Reverse of the sublocale above: @{locale sound_transfer_for} instantiated at
-  @{text "gs = is_global"} has exactly @{locale sound_transfer}'s five
-  assumptions, so a domain that already discharged @{locale sound_transfer_for}
-  at @{const is_global} gets @{locale sound_transfer} for free instead of
-  reproving the same five obligations against @{const is_global} directly.
-\<close>
-lemma sound_transfer_from_for:
-  assumes "sound_transfer_for is_global tf"
-  shows "sound_transfer tf"
-proof -
-  interpret sound_transfer_for is_global tf by (rule assms)
-  show ?thesis
-  proof unfold_locales
-    show "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
-      by (rule tf_sound_assign_for)
-    show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-      by (rule tf_sound_random_for)
-    show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-      by (rule tf_sound_assume_for)
-    show "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-      by (rule tf_sound_assume_not_for)
-    show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
-          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-      by (rule tf_sound_enter_for)
-    show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-        combine_states is_global s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-      by (rule tf_sound_combine_for)
-  qed
-qed
-
-
 
 subsection \<open>Effectful transfer function record\<close>
 
@@ -1098,17 +947,17 @@ where
      (case e of None \<Rightarrow> etf_nop etf u | Some a \<Rightarrow> etf_assign etf ret_var a u)"
 | "apply_etf etf (EA_Check c) u = etf_nop etf u"
 
-fun local_edge_action :: "edge_action \<Rightarrow> bool" where
-  "local_edge_action EA_Nop = True"
-| "local_edge_action (EA_Assign x e) =
-    ((~ is_global x) & (~ aexp_mentions_global e))"
-| "local_edge_action (EA_Random x) = (~ is_global x)"
-| "local_edge_action (EA_Assume b) = (~ bexp_mentions_global b)"
-| "local_edge_action (EA_AssumeNot b) = (~ bexp_mentions_global b)"
-| "local_edge_action (EA_Ret e p) =
+fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" where
+  "local_edge_action gs EA_Nop = True"
+| "local_edge_action gs (EA_Assign x e) =
+    ((~ gs x) & (~ aexp_mentions_where gs e))"
+| "local_edge_action gs (EA_Random x) = (~ gs x)"
+| "local_edge_action gs (EA_Assume b) = (~ bexp_mentions_where gs b)"
+| "local_edge_action gs (EA_AssumeNot b) = (~ bexp_mentions_where gs b)"
+| "local_edge_action gs (EA_Ret e p) =
     (case e of None \<Rightarrow> True
-     | Some a \<Rightarrow> ((~ is_global ret_var) & (~ aexp_mentions_global a)))"
-| "local_edge_action (EA_Check c) = True"
+     | Some a \<Rightarrow> ((~ gs ret_var) & (~ aexp_mentions_where gs a)))"
+| "local_edge_action gs (EA_Check c) = True"
 
 text \<open>
   @{const local_edge_action}: the edge neither reads nor writes globals (enter and
@@ -1402,37 +1251,38 @@ lemma inl_slot_globals_bot_le_glob_env:
   by (auto simp: inl_slot_globals_bot_def inl_glob_le_glob_env_def)
 
 locale sound_effectful_transfer =
-  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
+  fixes gs :: "vname => bool"
+    and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
   assumes etf_sound_nop[intro]:
-    "\<forall>u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
          s \<in> \<lbrakk>etf_collecting_full (etf_nop etf u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assign[intro]:
-    "\<forall>x e u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
          s(x := aval e s) \<in> \<lbrakk>etf_collecting_full (etf_assign etf x e u) \<sigma>\<rbrakk>)"
   assumes etf_sound_random[intro]:
-    "\<forall>x u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<forall>v.
          s(x := v) \<in> \<lbrakk>etf_collecting_full (etf_random etf x u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assume[intro]:
-    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
        \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume etf b u) \<sigma>\<rbrakk>)"
   assumes etf_sound_assume_not[intro]:
-    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
        \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not etf b u) \<sigma>\<rbrakk>)"
   assumes etf_sound_enter[intro]:
-    "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-         bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state is_global s)
+         bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> \<lbrakk>etf_collecting_full (etf_enter etf xs es u) \<sigma>\<rbrakk>)"
   assumes etf_sound_combine[intro]:
-    "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot is_global \<sigma> \<longrightarrow>
+    "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
        \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-         combine_collect is_global dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cc ex) \<sigma>\<rbrakk>)"
+         combine_collect gs dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cc ex) \<sigma>\<rbrakk>)"
 
 text \<open>
   The keyed generator filters call-enter edges out of the intra predecessor fold
@@ -1450,23 +1300,23 @@ text \<open>
   supplies this; the CFG well-formedness discharges it at each enter edge.
 \<close>
 
-definition local_formals :: "vname list \<Rightarrow> bool" where
-  "local_formals xs \<longleftrightarrow> (\<forall>x \<in> set xs. \<not> is_global x)"
+definition local_formals :: "(vname => bool) => vname list \<Rightarrow> bool" where
+  "local_formals gs xs \<longleftrightarrow> (\<forall>x \<in> set xs. \<not> gs x)"
 
-lemma local_formals_Nil [simp]: "local_formals []"
+lemma local_formals_Nil [simp]: "local_formals gs []"
   unfolding local_formals_def by simp
 
 text \<open>Concrete companion of \<open>bind_formals_abs_global\<close>: binding local
   formals leaves the global slots of the store untouched.\<close>
 lemma bind_formals_global:
-  assumes lf: "local_formals xs" and g: "is_global x"
+  assumes lf: "local_formals gs xs" and g: "gs x"
   shows "bind_formals xs vs s x = s x"
 proof -
   have "x \<notin> set xs" using lf g by (auto simp: local_formals_def)
   thus ?thesis by (rule bind_formals_nonformal)
 qed
 lemma bind_formals_abs_global:
-  assumes "local_formals xs" and "is_global x"
+  assumes "local_formals gs xs" and "gs x"
   shows "bind_formals_abs xs avs \<sigma> x = \<sigma> x"
   using assms unfolding local_formals_def bind_formals_abs_def
 proof (induction xs arbitrary: avs \<sigma>)
@@ -1489,8 +1339,8 @@ locale sound_effectful_transfer_framed = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
   assumes etf_enter_framed_le[intro]:
     "\<forall>xs (es::aexp list) u \<sigma>.
-       local_formals xs \<longrightarrow>
-       inr_slot_locals_bot is_global \<sigma> \<longrightarrow> inl_slot_globals_bot is_global \<sigma> \<longrightarrow>
+       local_formals gs xs \<longrightarrow>
+       inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_slot_globals_bot gs \<sigma> \<longrightarrow>
        etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
 
 text \<open>
@@ -1505,11 +1355,11 @@ locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
   assumes etf_enter_framed_glob_le[intro]:
     "\<forall>xs (es::aexp list) u \<sigma>.
-       local_formals xs \<longrightarrow>
-       inr_slot_locals_bot is_global \<sigma> \<longrightarrow> inl_glob_le_glob_env is_global \<sigma> \<longrightarrow>
+       local_formals gs xs \<longrightarrow>
+       inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_glob_le_glob_env gs \<sigma> \<longrightarrow>
        etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
 
-sublocale sound_effectful_transfer_framed_le \<subseteq> sound_effectful_transfer_framed etf fresh_frame
+sublocale sound_effectful_transfer_framed_le \<subseteq> sound_effectful_transfer_framed gs etf fresh_frame
   by (simp add: sound_effectful_transfer_framed_def sound_effectful_transfer_axioms
         sound_effectful_transfer_framed_axioms_def
         etf_enter_framed_glob_le inl_slot_globals_bot_le_glob_env)

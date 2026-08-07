@@ -25,52 +25,52 @@ definition sign_init_s0 :: "sign abs_state" where
 
 
 corollary sign_mixed_flow_sound_and_optimal:
-  fixes S :: "store set"
+  fixes S :: "store set" and gs :: "vname \<Rightarrow> bool"
   assumes dom:
-    "side_cfg_solve_dom_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-       sign_etf bot sign_init_s0 ()
+    "side_cfg_solve_dom_eff gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
+       (sign_etf gs) bot sign_init_s0 ()
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))"
   assumes S_sound: "S \<le> \<lbrakk>sign_init_s0\<rbrakk>"
   shows
-    "ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
+    "ltr_collect gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
-     \<le> \<lbrakk>side_analyse_eff inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) sign_etf
+     \<le> \<lbrakk>side_analyse_eff gs inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs)
           bot sign_init_s0 ()
           (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
     and
     "least_part_post_solution
-       (side_cfg_T_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-          sign_etf bot sign_init_s0 ())
+       (side_cfg_T_eff gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
+          (sign_etf gs) bot sign_init_s0 ())
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
-       (td_cfg_side_solver_eff.nu_at
+       (td_cfg_side_solver_eff.nu_at gs
           (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-          sign_etf bot sign_init_s0 ()
+          (sign_etf gs) bot sign_init_s0 ()
           (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))))
-       (td_cfg_side_solver_eff.stabl_at
+       (td_cfg_side_solver_eff.stabl_at gs
           (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-          sign_etf bot sign_init_s0 ()
+          (sign_etf gs) bot sign_init_s0 ()
           (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))))"
 proof -
   note result = mixed_flow_analysis_optimal
     [OF refl refl sign_sound_etf sign_etf_threefold_mono sign_etf_cone_compatible
         dom S_sound]
-  show "ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
+  show "ltr_collect gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
           (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
-        \<le> \<lbrakk>side_analyse_eff inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) sign_etf
+        \<le> \<lbrakk>side_analyse_eff gs inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs)
              bot sign_init_s0 ()
              (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
     using result(1) .
   show "least_part_post_solution
-         (side_cfg_T_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-            sign_etf bot sign_init_s0 ())
+         (side_cfg_T_eff gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
+            (sign_etf gs) bot sign_init_s0 ())
          (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
-         (td_cfg_side_solver_eff.nu_at
+         (td_cfg_side_solver_eff.nu_at gs
             (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-            sign_etf bot sign_init_s0 ()
+            (sign_etf gs) bot sign_init_s0 ()
             (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))))
-         (td_cfg_side_solver_eff.stabl_at
+         (td_cfg_side_solver_eff.stabl_at gs
             (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-            sign_etf bot sign_init_s0 ()
+            (sign_etf gs) bot sign_init_s0 ()
             (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))))"
     using result(2) .
 qed
@@ -80,16 +80,16 @@ text \<open>
 \<close>
 
 corollary sign_mixed_flow_sound_from_pp:
-  fixes \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" and S :: "store set"
+  fixes \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" and S :: "store set" and gs :: "vname \<Rightarrow> bool"
   assumes pp:
     "part_post_solution
-       (side_cfg_T_eff (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
-          sign_etf bot sign_init_s0 ()) (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))) \<sigma> vars"
+       (side_cfg_T_eff gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))
+          (sign_etf gs) bot sign_init_s0 ()) (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>))) \<sigma> vars"
   assumes entry:
     "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
-  assumes inr: "inr_slot_locals_bot is_global \<sigma>"
+  assumes inr: "inr_slot_locals_bot gs \<sigma>"
   shows
-    "ltr_collect is_global (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
+    "ltr_collect gs (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)) S
        (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))
      \<le> \<lbrakk>side_env \<sigma> (cfg_exit (compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
   by (rule mixed_flow_analysis_sound

@@ -36,13 +36,13 @@ locale ltr_gamma =
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
     and seedc :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ROOT: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) seedc"
-    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
+  assumes ROOT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) seedc"
+    and EDGE[intro]: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> acc v c"
-    and CALL: "\<And>u dst pars args p cont c s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+    and CALL[intro]: "\<And>u dst pars args p cont c s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
               \<in> acc (FunctionEntry p) (enterc u c (call_enter gs (CallEdge dst pars args) s))"
-    and COMB: "\<And>cl dst pars args p cont c1 s t es.
+    and COMB[intro]: "\<And>cl dst pars args p cont c1 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc cl c1 \<Longrightarrow> t \<in> acc (FunctionResult p) (enterc cl c1 es)
         \<Longrightarrow> call_enter_store gs g cl s es

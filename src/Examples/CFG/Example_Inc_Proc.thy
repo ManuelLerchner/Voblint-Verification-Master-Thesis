@@ -43,9 +43,9 @@ lemma inc_g_eq_compile:
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma edge_collect_assign_enter_state:
-  fixes s :: store and x :: vname and a :: aexp
-  assumes "enter_state is_global s \<in> S"
-  shows "(enter_state is_global s)(x := aval a (enter_state is_global s))
+  fixes s :: store and x :: vname and a :: aexp and gs :: "vname \<Rightarrow> bool"
+  assumes "enter_state gs s \<in> S"
+  shows "(enter_state gs s)(x := aval a (enter_state gs s))
            \<in> edge_collect (EA_Assign x a) S"
   using assms by auto
 
@@ -61,8 +61,8 @@ lemma combine_after_enter_global_assign_declared:
 
 text \<open>
   The call completion fact for \<^const>\<open>inc_program\<close>, restated with the declaration-driven
-  classifier \<^term>\<open>declared_global inc_program\<close> in place of the prefix-based
-  \<^const>\<open>is_global\<close>.  The instantiation is the only thing that changed:
+  classifier \<^term>\<open>declared_global inc_program\<close> as the concrete instance of the generic
+  classifier argument.  The instantiation is the only thing that changed:
   \<^const>\<open>pstep\<close>/\<^const>\<open>pcompletes\<close> take \<^term>\<open>gs\<close> as an explicit argument, so this proof
   needed no change to \<open>pcompletes_Call_parameterless\<close> or \<open>pcompletes_assign\<close>
   themselves, only to which classifier each is applied at.
