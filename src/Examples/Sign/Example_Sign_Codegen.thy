@@ -61,25 +61,13 @@ definition analyse_sign_gamma_for ::
   "analyse_sign_gamma_for = p_reg.gamma"
 
 text \<open>
-  The native D/G equation system and its solved result, at an arbitrary
-  classifier \<open>gs\<close> and program \<open>p\<close>.  \<open>analyse_sign_eqs_for\<close> and
-  \<open>analyse_sign_for\<close> are exactly \<open>dgEx_eqs\<close> and \<open>dgEx_sol\<close> with \<open>gs\<close> and
-  \<open>p\<close> in place of \<open>sign_ex_gs\<close> and \<open>sign_ex_prog\<close> --- \<^const>\<open>prog_cfg\<close>
-  plays the role \<open>gEx\<close> played there.
-\<close>
+  \<open>analyse_sign_eqs_for\<close>/\<open>analyse_sign_for\<close> (the native D/G equation system and its solved
+  result, at an arbitrary classifier \<open>gs\<close> and program \<open>p\<close>) and \<open>analyse_sign_env_for\<close> now live in
+  \<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close> --- they are pure computation, no dependence on the
+  \<open>unit_dg_exec_analysis\<close> locale \<open>p_reg\<close> interprets here, so they need not sit in this Examples
+  session. Every reference below applies them to this context's fixed \<open>gs\<close>/\<open>p\<close> explicitly, since
+  outside a context a definition takes its fixed variables as ordinary leading arguments.
 
-definition analyse_sign_eqs_for ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "analyse_sign_eqs_for =
-     dg_gen_of
-       (unit_dg_spec_st_for gs (sign_tf_st_for gs) (sign_enter_st_for gs))
-       (prog_cfg prog_main_name p) bot cinit_sign_st cinit_sign_st"
-
-definition analyse_sign_for ::
-  "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "analyse_sign_for = TD_side_always_join_Interp_solve analyse_sign_eqs_for (cfg_exit (prog_cfg prog_main_name p), ())"
-
-text \<open>
   The connection lemma: soundness for an arbitrary \<open>gs\<close> and \<open>p\<close> reuses
   \<open>unit_dg_exec_analysis.run_source_sound\<close> exactly as \<open>dgEx_source_run_sound\<close>
   does, just with the solver-domain, well-formedness, and coverage facts left
@@ -91,23 +79,23 @@ text \<open>
 \<close>
 
 theorem analyse_sign_sound_for:
-  assumes solve: "TD_side_always_join_Interp_solve_c analyse_sign_eqs_for (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst analyse_sign_for"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for gs p)"
       and cover_edge:
-        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst analyse_sign_for"
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_enter:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_combine:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign_for gs p)"
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
       and run: "star (pstep gs (prog_table p)) (prog_main p, s, []) (residual, t, frs)"
       and init: "s \<in> cinit_stores gs"
   shows "\<exists>v stk. csim (prog_table p) (prog_cfg prog_main_name p) (residual, t, frs) (v, t, stk)
-                 \<and> t \<in> analyse_sign_gamma_for (snd analyse_sign_for) v"
+                 \<and> t \<in> analyse_sign_gamma_for (snd (analyse_sign_for gs p)) v"
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
@@ -137,21 +125,21 @@ text \<open>
 \<close>
 
 theorem analyse_sign_collect_sound_for:
-  assumes solve: "TD_side_always_join_Interp_solve_c analyse_sign_eqs_for (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst analyse_sign_for"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for gs p)"
       and cover_edge:
-        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst analyse_sign_for"
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_enter:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_combine:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign_for gs p)"
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
   shows "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v
-           \<subseteq> analyse_sign_gamma_for (snd analyse_sign_for) v"
+           \<subseteq> analyse_sign_gamma_for (snd (analyse_sign_for gs p)) v"
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
@@ -183,13 +171,8 @@ text \<open>
   via \<open>p_reg.gamma_def\<close> and \<open>p_reg.sds\<close>, not a new soundness argument.
 \<close>
 
-definition analyse_sign_env_for :: "pp \<Rightarrow> sign abs_state" where
-  "analyse_sign_env_for v =
-     fun_of_exec_dg_st_for gs (locals (snd analyse_sign_for (Inl (v, ()))))
-     \<squnion> fun_of_exec_dg_st_for gs (globs (snd analyse_sign_for (Inr ())))"
-
 lemma analyse_sign_gamma_eq_env_for:
-  "analyse_sign_gamma_for (snd analyse_sign_for) v = \<lbrakk>analyse_sign_env_for v\<rbrakk>"
+  "analyse_sign_gamma_for (snd (analyse_sign_for gs p)) v = \<lbrakk>analyse_sign_env_for gs p v\<rbrakk>"
   unfolding analyse_sign_gamma_for_def analyse_sign_env_for_def
   by (simp add: p_reg.gamma_def
                 sound_dg_spec.dg_gamma_def[OF p_reg.sds[unfolded sound_dg_spec_ltr_for_def]]
@@ -205,36 +188,12 @@ text \<open>
   per-check classification.
 \<close>
 
-definition analyse_sign_report_for :: "check_report_entry list" where
-  "analyse_sign_report_for = classify_checks (prog_cfg prog_main_name p) analyse_sign_env_for sign_classify_check"
-
 text \<open>
-  The definitional equation above unfolds \<^const>\<open>analyse_sign_env_for\<close> at
-  every check node, and that unfolding mentions \<^const>\<open>analyse_sign_for\<close>
-  twice (once for \<open>locals\<close>, once for \<open>globs\<close>) --- so naive code generation
-  from it would re-run the whole D/G solver twice per check, for an
-  \<open>N\<close>-check program, \<open>2N\<close> solver runs instead of one. The \<open>[code]\<close>
-  equation below is provably equal (a direct \<open>Let\<close>-unfold of the same
-  definitions) but binds \<^term>\<open>snd analyse_sign_for\<close> once, outside the
-  per-check closure \<^const>\<open>classify_checks\<close> applies; the target language
-  compiles that \<open>let\<close> to a single shared thunk, so the generated
-  Haskell/OCaml computes the solved system exactly once per report,
-  regardless of how many checks the program has.
-\<close>
+  \<open>analyse_sign_report_for\<close> itself (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>) needs
+  \<open>sign_classify_check\<close>, defined there rather than in \<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>, so
+  it cannot join \<open>analyse_sign_env_for\<close> in that theory either --- but its soundness still needs
+  \<open>p_reg\<close>, so it stays here.
 
-declare analyse_sign_report_for_def [code del]
-
-lemma analyse_sign_report_for_code [code]:
-  "analyse_sign_report_for =
-     (let sol = snd analyse_sign_for
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ()))))
-                \<squnion> fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))
-           sign_classify_check)"
-  unfolding analyse_sign_report_for_def analyse_sign_env_for_def[abs_def] Let_def
-  by (rule refl)
-
-text \<open>
   Soundness reuses \<open>classify_checks_proved_sound\<close>/\<open>classify_checks_refuted_sound\<close>
   (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>, fully domain-generic already) with
   \<open>analyse_sign_collect_sound_for\<close> and \<open>analyse_sign_gamma_eq_env_for\<close>
@@ -243,28 +202,28 @@ text \<open>
 
 theorem analyse_sign_report_sound_proved_for:
   fixes v :: pp and c :: bexp
-  assumes solve: "TD_side_always_join_Interp_solve_c analyse_sign_eqs_for (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst analyse_sign_for"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for gs p)"
       and cover_edge:
-        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst analyse_sign_for"
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_enter:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_combine:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign_for gs p)"
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
-      and mem: "(v, c, Check_Proved) \<in> set analyse_sign_report_for"
+      and mem: "(v, c, Check_Proved) \<in> set (analyse_sign_report_for gs p)"
   shows "\<forall>s \<in> ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v. bval c s"
 proof -
-  have node_sound: "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v \<subseteq> \<lbrakk>analyse_sign_env_for v\<rbrakk>"
+  have node_sound: "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v \<subseteq> \<lbrakk>analyse_sign_env_for gs p v\<rbrakk>"
     using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
     unfolding analyse_sign_gamma_eq_env_for .
   show ?thesis
     by (rule classify_checks_proved_sound
-          [where g = "prog_cfg prog_main_name p" and env = analyse_sign_env_for
+          [where g = "prog_cfg prog_main_name p" and env = "analyse_sign_env_for gs p"
              and classify = sign_classify_check
              and reach = "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs)"
              and v = v and gamma_state = "gamma_state :: sign abs_state \<Rightarrow> store set",
@@ -273,28 +232,28 @@ qed
 
 theorem analyse_sign_report_sound_refuted_for:
   fixes v :: pp and c :: bexp
-  assumes solve: "TD_side_always_join_Interp_solve_c analyse_sign_eqs_for (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst analyse_sign_for"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for gs p)"
       and cover_edge:
-        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst analyse_sign_for"
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_enter:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign_for gs p)"
       and cover_combine:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
-           \<Longrightarrow> (k, ()) \<in> fst analyse_sign_for"
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign_for gs p)"
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
-      and mem: "(v, c, Check_Refuted) \<in> set analyse_sign_report_for"
+      and mem: "(v, c, Check_Refuted) \<in> set (analyse_sign_report_for gs p)"
   shows "\<forall>s \<in> ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v. \<not> bval c s"
 proof -
-  have node_sound: "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v \<subseteq> \<lbrakk>analyse_sign_env_for v\<rbrakk>"
+  have node_sound: "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v \<subseteq> \<lbrakk>analyse_sign_env_for gs p v\<rbrakk>"
     using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
     unfolding analyse_sign_gamma_eq_env_for .
   show ?thesis
     by (rule classify_checks_refuted_sound
-          [where g = "prog_cfg prog_main_name p" and env = analyse_sign_env_for
+          [where g = "prog_cfg prog_main_name p" and env = "analyse_sign_env_for gs p"
              and classify = sign_classify_check
              and reach = "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs)"
              and v = v and gamma_state = "gamma_state :: sign abs_state \<Rightarrow> store set",
@@ -304,15 +263,10 @@ qed
 end
 
 text \<open>
-  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching the shape
-  \<open>gEx\<close>/\<open>dgEx_eqs\<close>/\<open>dgEx_sol\<close> already use for \<open>sign_ex_gs\<close>.
+  \<open>analyse_sign_eqs\<close>/\<open>analyse_sign\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>) are the
+  \<^const>\<open>declared_global\<close> \<open>p\<close> convenience instances, matching the shape \<open>gEx\<close>/\<open>dgEx_eqs\<close>/\<open>dgEx_sol\<close>
+  already use for \<open>sign_ex_gs\<close>.
 \<close>
-
-definition analyse_sign_eqs :: "imp_prog \<Rightarrow> pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "analyse_sign_eqs p = analyse_sign_eqs_for (declared_global p) p"
-
-definition analyse_sign :: "imp_prog \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "analyse_sign p = analyse_sign_for (declared_global p) p"
 
 corollary analyse_sign_sound:
   fixes p :: imp_prog
@@ -344,15 +298,11 @@ corollary analyse_sign_sound:
             finI finC run init])
 
 text \<open>
-  Convenience instances of the check-report layer at \<^const>\<open>declared_global\<close>
-  \<open>p\<close>, matching \<open>analyse_sign\<close>/\<open>analyse_sign_sound\<close> above.
+  \<open>analyse_sign_env\<close>/\<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>/
+  \<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>) are the check-report layer's own
+  \<^const>\<open>declared_global\<close> \<open>p\<close> convenience instances, matching \<open>analyse_sign\<close>/\<open>analyse_sign_sound\<close>
+  above.
 \<close>
-
-definition analyse_sign_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
-  "analyse_sign_env p = analyse_sign_env_for (declared_global p) p"
-
-definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_sign_report p = analyse_sign_report_for (declared_global p) p"
 
 corollary analyse_sign_report_sound_proved:
   fixes p :: imp_prog and v :: pp and c :: bexp
@@ -451,21 +401,14 @@ lemma analyse_sign_demo2_result:
         (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ())) = Some STop"
   by eval
 
-subsection \<open>Executable code generation\<close>
-
 text \<open>
-  \<open>dgEx_sol\<close>, \<open>analyse_sign_for\<close>, and \<open>analyse_sign\<close> export through
-  Isabelle's code generator, not merely through \<open>eval\<close>/\<open>value\<close>: this is a
-  stronger guarantee, since the code generator demands a complete code
-  equation for every constant on the dependency path rather than falling
-  back to the ML interpreter's built-in evaluation of the logical constants
-  involved.
+  No per-domain \<open>export_code\<close> here: \<^const>\<open>dgEx_sol\<close>, \<^const>\<open>analyse_sign_for\<close>, and
+  \<^const>\<open>analyse_sign\<close> already export cleanly (confirmed once, historically, as the M1
+  codegen-closure milestone), but a caller reaches the same generic, already-sound
+  \<^const>\<open>analyse_sign_report\<close> through the unified dispatcher \<open>analyse\<close>
+  (\<open>Example_Analysis_Dispatch\<close>, downstream), which is the one thing actually exported to
+  Haskell/OCaml --- a second, domain-specific export module here would just be a parallel,
+  redundant API surface for the same computation.
 \<close>
-
-export_code dgEx_sol analyse_sign_for analyse_sign analyse_sign_report
-  in Haskell module_name Sign_Demo file_prefix "Sign_Demo"
-
-export_code dgEx_sol analyse_sign_for analyse_sign analyse_sign_report
-  in OCaml module_name Sign_Demo file_prefix "Sign_Demo_OCaml"
 
 end

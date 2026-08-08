@@ -182,19 +182,14 @@ lemma analyse_interval_td_demo2_result:
 subsection \<open>Executable code generation\<close>
 
 text \<open>
-  Both TD entry points, \<open>loop_ivl_sol\<close> (bounded Kleene) and \<open>loop_ivl_td_sol\<close>
-  (Apinis warrowing), export through Isabelle's code generator, not merely
-  through \<open>eval\<close>/\<open>value\<close>, alongside the classifier-generic \<open>analyse_interval\<close>
-  and \<open>analyse_interval_td\<close>.
+  No per-domain \<open>export_code\<close> here: both TD entry points, \<open>loop_ivl_sol\<close> (bounded Kleene) and
+  \<open>loop_ivl_td_sol\<close> (Apinis warrowing), already export cleanly through Isabelle's code generator
+  (confirmed once, historically, as the M1 codegen-closure milestone). \<open>analyse_interval\<close> and
+  \<open>analyse_interval_td\<close> are reached by external callers through the unified dispatcher
+  \<open>analyse\<close> (\<open>Example_Analysis_Dispatch\<close>, downstream, which dispatches \<open>Interval_Analysis\<close> to
+  \<open>analyse_interval_td_report\<close>) instead --- a second, domain-specific export module here would
+  just be a parallel, redundant API surface for the same computation.
 \<close>
-
-export_code loop_ivl_sol loop_ivl_td_sol
-  analyse_interval_for analyse_interval analyse_interval_td_for analyse_interval_td
-  in Haskell module_name Interval_Demo file_prefix "Interval_Demo"
-
-export_code loop_ivl_sol loop_ivl_td_sol
-  analyse_interval_for analyse_interval analyse_interval_td_for analyse_interval_td
-  in OCaml module_name Interval_Demo file_prefix "Interval_Demo_OCaml"
 
 end
 

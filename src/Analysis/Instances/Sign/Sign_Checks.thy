@@ -121,5 +121,50 @@ definition sign_check_report ::
   "sign_check_report gs mnm p =
      classify_checks (prog_cfg mnm p) (sign_exec_prog_at gs mnm p) sign_classify_check"
 
+subsection \<open>Whole-program check report: the native D/G runtime API\<close>
+
+text \<open>
+  \<open>analyse_sign_report_for\<close> mirrors \<open>sign_check_report\<close> exactly, reading through
+  \<^const>\<open>analyse_sign_env_for\<close> (the native D/G pipeline \<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>
+  computes) instead of \<^const>\<open>sign_exec_prog_at\<close> (the older \<open>side_cfg_T_eff_st\<close> pipeline) ---
+  this is the report function the exported \<open>analyse\<close> API actually dispatches to (see
+  \<open>Example_Analysis_Dispatch\<close>, downstream in Examples), fixed at \<open>prog_main_name\<close> rather than
+  an arbitrary \<open>mnm\<close> since \<open>analyse_sign_env_for\<close> already is.
+\<close>
+
+definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_sign_report_for gs p =
+     classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p) sign_classify_check"
+
+text \<open>
+  The definitional equation above unfolds \<^const>\<open>analyse_sign_env_for\<close> at every check node, and
+  that unfolding mentions \<^const>\<open>analyse_sign_for\<close> twice (once for \<open>locals\<close>, once for \<open>globs\<close>)
+  --- so naive code generation from it would re-run the whole D/G solver twice per check, for an
+  \<open>N\<close>-check program, \<open>2N\<close> solver runs instead of one. The \<open>[code]\<close> equation below is provably
+  equal (a direct \<open>Let\<close>-unfold of the same definitions) but binds \<^term>\<open>snd (analyse_sign_for gs
+  p)\<close> once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the target language
+  compiles that \<open>let\<close> to a single shared thunk, so the generated Haskell/OCaml computes the
+  solved system exactly once per report, regardless of how many checks the program has.
+\<close>
+
+declare analyse_sign_report_for_def [code del]
+
+lemma analyse_sign_report_for_code [code]:
+  "analyse_sign_report_for gs p =
+     (let sol = snd (analyse_sign_for gs p)
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ()))))
+                \<squnion> fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))
+           sign_classify_check)"
+  unfolding analyse_sign_report_for_def analyse_sign_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_sign\<close>'s shape.
+\<close>
+
+definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_sign_report p = analyse_sign_report_for (declared_global p) p"
+
 end
 
