@@ -1,10 +1,11 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Voblint_Analyse(Num(..), Int(..), Nat(..), Char(..), Cfg_node(..), Aexp(..),
-                   Bexp(..), Com(..), Check_result(..), Proc_decl_ext,
-                   Imp_prog_ext, Analysis_kind(..), make, analyse, int_zero,
-                   nat_zero)
+  Voblint_Analyse(Int(..), integer_of_int, Nat, integer_of_nat, Char,
+                   integer_of_char, Cfg_node(..), Aexp(..), Bexp(..), Num,
+                   Com(..), Check_result(..), Proc_decl_ext, Imp_prog_ext,
+                   Analysis_kind(..), char_of_integer, nat_of_integer, make,
+                   analyse)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -16,64 +17,20 @@ import Data.Bits ((.&.), (.|.), (.^.));
 import qualified Prelude;
 import qualified Data.Bits;
 
-data Num = One | Bit0 Num | Bit1 Num;
+newtype Int = Int_of_integer Integer;
 
-equal_num :: Num -> Num -> Bool;
-equal_num (Bit0 x2) (Bit1 x3) = False;
-equal_num (Bit1 x3) (Bit0 x2) = False;
-equal_num One (Bit1 x3) = False;
-equal_num (Bit1 x3) One = False;
-equal_num One (Bit0 x2) = False;
-equal_num (Bit0 x2) One = False;
-equal_num (Bit1 x3) (Bit1 y3) = equal_num x3 y3;
-equal_num (Bit0 x2) (Bit0 y2) = equal_num x2 y2;
-equal_num One One = True;
-
-data Int = Zero_int | Pos Num | Neg Num;
+integer_of_int :: Int -> Integer;
+integer_of_int (Int_of_integer k) = k;
 
 equal_int :: Int -> Int -> Bool;
-equal_int Zero_int Zero_int = True;
-equal_int Zero_int (Pos l) = False;
-equal_int Zero_int (Neg l) = False;
-equal_int (Pos k) Zero_int = False;
-equal_int (Pos k) (Pos l) = equal_num k l;
-equal_int (Pos k) (Neg l) = False;
-equal_int (Neg k) Zero_int = False;
-equal_int (Neg k) (Pos l) = False;
-equal_int (Neg k) (Neg l) = equal_num k l;
+equal_int k l = integer_of_int k == integer_of_int l;
 
 instance Eq Int where {
   a == b = equal_int a b;
 };
 
-less_eq_num :: Num -> Num -> Bool;
-less_eq_num One n = True;
-less_eq_num (Bit0 m) One = False;
-less_eq_num (Bit1 m) One = False;
-less_eq_num (Bit0 m) (Bit0 n) = less_eq_num m n;
-less_eq_num (Bit0 m) (Bit1 n) = less_eq_num m n;
-less_eq_num (Bit1 m) (Bit1 n) = less_eq_num m n;
-less_eq_num (Bit1 m) (Bit0 n) = less_num m n;
-
-less_num :: Num -> Num -> Bool;
-less_num m One = False;
-less_num One (Bit0 n) = True;
-less_num One (Bit1 n) = True;
-less_num (Bit0 m) (Bit0 n) = less_num m n;
-less_num (Bit0 m) (Bit1 n) = less_eq_num m n;
-less_num (Bit1 m) (Bit1 n) = less_num m n;
-less_num (Bit1 m) (Bit0 n) = less_num m n;
-
 less_eq_int :: Int -> Int -> Bool;
-less_eq_int Zero_int Zero_int = True;
-less_eq_int Zero_int (Pos l) = True;
-less_eq_int Zero_int (Neg l) = False;
-less_eq_int (Pos k) Zero_int = False;
-less_eq_int (Pos k) (Pos l) = less_eq_num k l;
-less_eq_int (Pos k) (Neg l) = False;
-less_eq_int (Neg k) Zero_int = True;
-less_eq_int (Neg k) (Pos l) = True;
-less_eq_int (Neg k) (Neg l) = less_eq_num l k;
+less_eq_int k l = integer_of_int k <= integer_of_int l;
 
 class Ord a where {
   less_eq :: a -> a -> Bool;
@@ -81,15 +38,7 @@ class Ord a where {
 };
 
 less_int :: Int -> Int -> Bool;
-less_int Zero_int Zero_int = False;
-less_int Zero_int (Pos l) = True;
-less_int Zero_int (Neg l) = False;
-less_int (Pos k) Zero_int = False;
-less_int (Pos k) (Pos l) = less_num k l;
-less_int (Pos k) (Neg l) = False;
-less_int (Neg k) Zero_int = True;
-less_int (Neg k) (Pos l) = True;
-less_int (Neg k) (Neg l) = less_num l k;
+less_int k l = integer_of_int k < integer_of_int l;
 
 instance Ord Int where {
   less_eq = less_eq_int;
@@ -114,25 +63,23 @@ class (Order a) => Linorder a where {
 instance Linorder Int where {
 };
 
-data Nat = Zero_nat | Suc Nat;
+newtype Nat = Nat Integer;
+
+integer_of_nat :: Nat -> Integer;
+integer_of_nat (Nat x) = x;
 
 equal_nat :: Nat -> Nat -> Bool;
-equal_nat Zero_nat (Suc x2) = False;
-equal_nat (Suc x2) Zero_nat = False;
-equal_nat (Suc x2) (Suc y2) = equal_nat x2 y2;
-equal_nat Zero_nat Zero_nat = True;
+equal_nat m n = integer_of_nat m == integer_of_nat n;
 
 instance Eq Nat where {
   a == b = equal_nat a b;
 };
 
 less_eq_nat :: Nat -> Nat -> Bool;
-less_eq_nat Zero_nat n = True;
-less_eq_nat (Suc m) n = less_nat m n;
+less_eq_nat m n = integer_of_nat m <= integer_of_nat n;
 
 less_nat :: Nat -> Nat -> Bool;
-less_nat n Zero_nat = False;
-less_nat m (Suc n) = less_eq_nat m n;
+less_nat m n = integer_of_nat m < integer_of_nat n;
 
 instance Ord Nat where {
   less_eq = less_eq_nat;
@@ -148,48 +95,23 @@ instance Order Nat where {
 instance Linorder Nat where {
 };
 
-less_eq_bool :: Bool -> Bool -> Bool;
-less_eq_bool False b = True;
-less_eq_bool True b = b;
+newtype Char = Chr Integer;
 
-less_bool :: Bool -> Bool -> Bool;
-less_bool False b = b;
-less_bool True b = False;
-
-instance Ord Bool where {
-  less_eq = less_eq_bool;
-  less = less_bool;
-};
-
-data Char = Char Bool Bool Bool Bool Bool Bool Bool Bool;
+integer_of_char :: Char -> Integer;
+integer_of_char (Chr x) = x;
 
 equal_char :: Char -> Char -> Bool;
-equal_char (Char x1 x2 x3 x4 x5 x6 x7 x8) (Char y1 y2 y3 y4 y5 y6 y7 y8) =
-  x1 == y1 &&
-    x2 == y2 &&
-      x3 == y3 && x4 == y4 && x5 == y5 && x6 == y6 && x7 == y7 && x8 == y8;
+equal_char c d = integer_of_char c == integer_of_char d;
 
 instance Eq Char where {
   a == b = equal_char a b;
 };
 
-lexordp_eq :: forall a. (Ord a) => [a] -> [a] -> Bool;
-lexordp_eq [] ys = True;
-lexordp_eq xs [] = null xs;
-lexordp_eq (x : xs) (y : ys) = less x y || not (less y x) && lexordp_eq xs ys;
-
 less_eq_char :: Char -> Char -> Bool;
-less_eq_char (Char b0 b1 b2 b3 b4 b5 b6 b7) (Char c0 c1 c2 c3 c4 c5 c6 c7) =
-  lexordp_eq [b7, b6, b5, b4, b3, b2, b1, b0] [c7, c6, c5, c4, c3, c2, c1, c0];
-
-lexordp :: forall a. (Ord a) => [a] -> [a] -> Bool;
-lexordp [] ys = not (null ys);
-lexordp xs [] = False;
-lexordp (x : xs) (y : ys) = less x y || not (less y x) && lexordp xs ys;
+less_eq_char c d = integer_of_char c <= integer_of_char d;
 
 less_char :: Char -> Char -> Bool;
-less_char (Char b0 b1 b2 b3 b4 b5 b6 b7) (Char c0 c1 c2 c3 c4 c5 c6 c7) =
-  lexordp [b7, b6, b5, b4, b3, b2, b1, b0] [c7, c6, c5, c4, c3, c2, c1, c0];
+less_char c d = integer_of_char c < integer_of_char d;
 
 instance Ord Char where {
   less_eq = less_eq_char;
@@ -976,6 +898,11 @@ instance Order Edge_action where {
 instance Linorder Edge_action where {
 };
 
+instance Ord Integer where {
+  less_eq = (\ a b -> a <= b);
+  less = (\ a b -> a < b);
+};
+
 data Eint = MinInf | Fin Int | PlusInf;
 
 equal_eint :: Eint -> Eint -> Bool;
@@ -1356,6 +1283,8 @@ instance (Bounded_semilattice_sup_bot a) => Bounded_semilattice_sup_bot (Resolve
 instance (Bounded_warrowing a) => Bounded_warrowing (Resolved_st_q a) where {
 };
 
+data Num = One | Bit0 Num | Bit1 Num;
+
 data Set a = Set [a] | Coset [a];
 
 data Com = SKIP | Assign [Char] Aexp | Random [Char] | Check Bexp | Seq Com Com
@@ -1410,61 +1339,14 @@ data Effectful_st_transfer_ext a b c =
     ([[Char]] -> [Aexp] -> Cfg_node -> Strategy_tree Cfg_node a b)
     (Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b) c;
 
-dup :: Int -> Int;
-dup Zero_int = Zero_int;
-dup (Pos n) = Pos (Bit0 n);
-dup (Neg n) = Neg (Bit0 n);
+plus_nat :: Nat -> Nat -> Nat;
+plus_nat m n = Nat (integer_of_nat m + integer_of_nat n);
 
-uminus_int :: Int -> Int;
-uminus_int Zero_int = Zero_int;
-uminus_int (Pos m) = Neg m;
-uminus_int (Neg m) = Pos m;
+one_nat :: Nat;
+one_nat = Nat (1 :: Integer);
 
-plus_num :: Num -> Num -> Num;
-plus_num One One = Bit0 One;
-plus_num One (Bit0 n) = Bit1 n;
-plus_num One (Bit1 n) = Bit0 (plus_num n One);
-plus_num (Bit0 m) One = Bit1 m;
-plus_num (Bit0 m) (Bit0 n) = Bit0 (plus_num m n);
-plus_num (Bit0 m) (Bit1 n) = Bit1 (plus_num m n);
-plus_num (Bit1 m) One = Bit0 (plus_num m One);
-plus_num (Bit1 m) (Bit0 n) = Bit1 (plus_num m n);
-plus_num (Bit1 m) (Bit1 n) = Bit0 (plus_num (plus_num m n) One);
-
-one_int :: Int;
-one_int = Pos One;
-
-bitM :: Num -> Num;
-bitM One = One;
-bitM (Bit0 n) = Bit1 (bitM n);
-bitM (Bit1 n) = Bit1 (Bit0 n);
-
-sub :: Num -> Num -> Int;
-sub One One = Zero_int;
-sub (Bit0 m) One = Pos (bitM m);
-sub (Bit1 m) One = Pos (Bit0 m);
-sub One (Bit0 n) = Neg (bitM n);
-sub One (Bit1 n) = Neg (Bit0 n);
-sub (Bit0 m) (Bit0 n) = dup (sub m n);
-sub (Bit1 m) (Bit1 n) = dup (sub m n);
-sub (Bit1 m) (Bit0 n) = plus_int (dup (sub m n)) one_int;
-sub (Bit0 m) (Bit1 n) = minus_int (dup (sub m n)) one_int;
-
-plus_int :: Int -> Int -> Int;
-plus_int k Zero_int = k;
-plus_int Zero_int l = l;
-plus_int (Pos m) (Pos n) = Pos (plus_num m n);
-plus_int (Pos m) (Neg n) = sub m n;
-plus_int (Neg m) (Pos n) = sub n m;
-plus_int (Neg m) (Neg n) = Neg (plus_num m n);
-
-minus_int :: Int -> Int -> Int;
-minus_int k Zero_int = k;
-minus_int Zero_int l = uminus_int l;
-minus_int (Pos m) (Pos n) = sub m n;
-minus_int (Pos m) (Neg n) = Pos (plus_num m n);
-minus_int (Neg m) (Pos n) = Neg (plus_num m n);
-minus_int (Neg m) (Neg n) = sub n m;
+suc :: Nat -> Nat;
+suc n = plus_nat n one_nat;
 
 fold :: forall a b. (a -> b -> b) -> [a] -> b -> b;
 fold f [] s = s;
@@ -1550,12 +1432,20 @@ fmfilter p (Fmap_of_list m) = Fmap_of_list (filter (\ (k, _) -> p k) m);
 fmdrop :: forall a b. (Eq a) => a -> Fmap a b -> Fmap a b;
 fmdrop a = fmfilter (\ aa -> not (aa == a));
 
+char_0x74 :: Char;
+char_0x74 = Chr (116 :: Integer);
+
+char_0x72 :: Char;
+char_0x72 = Chr (114 :: Integer);
+
+char_0x65 :: Char;
+char_0x65 = Chr (101 :: Integer);
+
+char_0x23 :: Char;
+char_0x23 = Chr (35 :: Integer);
+
 ret_var :: [Char];
-ret_var =
-  [Char True True False False False True False False,
-    Char False True False False True True True False,
-    Char True False True False False True True False,
-    Char False False True False True True True False];
+ret_var = [char_0x23, char_0x72, char_0x65, char_0x74];
 
 cfg_entry :: forall a. Cfg_ext a -> Cfg_node;
 cfg_entry (Cfg_ext intra calls cfg_entry checks more) = cfg_entry;
@@ -1569,6 +1459,9 @@ cfg_exit g = (case cfg_entry g of {
 
 fmempty :: forall a b. Fmap a b;
 fmempty = Fmap_of_list [];
+
+apsnd :: forall a b c. (a -> b) -> (c, a) -> (c, b);
+apsnd f (x, y) = (x, f y);
 
 infl :: forall a b c d. State_ext a b c d -> Fmap (Sum a b) [a];
 infl (State_ext c infl stabl sigma more) = infl;
@@ -1611,9 +1504,12 @@ side_env ::
   Cfg_node -> [Char] -> b;
 side_env sigma v = sup_fun (sigma (Inl v)) (glob_env sigma);
 
+zero_int :: Int;
+zero_int = Int_of_integer (0 :: Integer);
+
 cinit_ivl_st :: Resolved_st_q Ivl;
 cinit_ivl_st =
-  Abs_resolved_st (Ivl MinInf PlusInf, (Ivl (Fin Zero_int) (Fin Zero_int), []));
+  Abs_resolved_st (Ivl MinInf PlusInf, (Ivl (Fin zero_int) (Fin zero_int), []));
 
 lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
 lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
@@ -1643,22 +1539,8 @@ update_resolved_st_q ::
 update_resolved_st_q (Abs_resolved_st xb) xa x =
   Abs_resolved_st (update_resolved_st xb xa x);
 
-times_num :: Num -> Num -> Num;
-times_num m One = m;
-times_num One n = n;
-times_num (Bit0 m) (Bit0 n) = Bit0 (Bit0 (times_num m n));
-times_num (Bit0 m) (Bit1 n) = Bit0 (times_num m (Bit1 n));
-times_num (Bit1 m) (Bit0 n) = Bit0 (times_num (Bit1 m) n);
-times_num (Bit1 m) (Bit1 n) =
-  Bit1 (plus_num (plus_num m n) (Bit0 (times_num m n)));
-
 times_int :: Int -> Int -> Int;
-times_int k Zero_int = Zero_int;
-times_int Zero_int l = Zero_int;
-times_int (Pos m) (Pos n) = Pos (times_num m n);
-times_int (Pos m) (Neg n) = Neg (times_num m n);
-times_int (Neg m) (Pos n) = Neg (times_num m n);
-times_int (Neg m) (Neg n) = Pos (times_num m n);
+times_int k l = Int_of_integer (integer_of_int k * integer_of_int l);
 
 ivl_top :: Ivl;
 ivl_top = Ivl MinInf PlusInf;
@@ -1692,6 +1574,9 @@ times_ivl :: Ivl -> Ivl -> Ivl;
 times_ivl a b =
   (if ivl_nonempty a && ivl_nonempty b then ivl_times_core a b else bot_ivl);
 
+minus_int :: Int -> Int -> Int;
+minus_int k l = Int_of_integer (integer_of_int k - integer_of_int l);
+
 minus_eint :: Eint -> Eint -> Eint;
 minus_eint (Fin n) (Fin m) = Fin (minus_int n m);
 minus_eint (Fin uu) MinInf = PlusInf;
@@ -1717,6 +1602,9 @@ minus_ivl (Ivl l1 u1) (Ivl l2 u2) =
   (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of {
     (Ivl a b, Ivl c d) -> normalize_ivl (Ivl (minus_eint a d) (minus_eint b c));
   });
+
+plus_int :: Int -> Int -> Int;
+plus_int k l = Int_of_integer (integer_of_int k + integer_of_int l);
 
 plus_eint :: Eint -> Eint -> Eint;
 plus_eint (Fin n) (Fin m) = Fin (plus_int n m);
@@ -1774,6 +1662,9 @@ afilter_ivl_st gs (N v) a s = s;
 
 inf_ivl :: Ivl -> Ivl -> Ivl;
 inf_ivl = meet_ivl;
+
+one_int :: Int;
+one_int = Int_of_integer (1 :: Integer);
 
 inv_less_ivl :: Bool -> Ivl -> Ivl -> (Ivl, Ivl);
 inv_less_ivl True (Ivl l1 u1) (Ivl l2 u2) =
@@ -1839,6 +1730,36 @@ ivl_tf_st_for source_global (EA_Ret (Just a) p) s =
     (aval_ivl a (fun_of_resolved_st_q_for source_global s));
 ivl_tf_st_for source_global (EA_Check cnd) s = s;
 
+divmod_integer :: Integer -> Integer -> (Integer, Integer);
+divmod_integer k l =
+  (if k == (0 :: Integer) then ((0 :: Integer), (0 :: Integer))
+    else (if (0 :: Integer) < l
+           then (if (0 :: Integer) < k then divMod (abs k) (abs l)
+                  else (case divMod (abs k) (abs l) of {
+                         (r, s) ->
+                           (if s == (0 :: Integer)
+                             then (negate r, (0 :: Integer))
+                             else (negate r - (1 :: Integer), l - s));
+                       }))
+           else (if l == (0 :: Integer) then ((0 :: Integer), k)
+                  else apsnd negate
+                         (if k < (0 :: Integer) then divMod (abs k) (abs l)
+                           else (case divMod (abs k) (abs l) of {
+                                  (r, s) ->
+                                    (if s == (0 :: Integer)
+                                      then (negate r, (0 :: Integer))
+                                      else (negate r - (1 :: Integer),
+     negate l - s));
+                                })))));
+
+modulo_integer :: Integer -> Integer -> Integer;
+modulo_integer k l = snd (divmod_integer k l);
+
+char_of_integer :: Integer -> Char;
+char_of_integer k =
+  Chr (if (0 :: Integer) <= k && k < (256 :: Integer) then k
+        else modulo_integer k (256 :: Integer));
+
 map_ltree ::
   forall a b c d. (a -> b) -> Strategy_tree a c d -> Strategy_tree b c d;
 map_ltree h (Answer d) = Answer d;
@@ -1856,13 +1777,6 @@ c_update ca (State_ext c infl stabl sigma more) =
 
 proc_decl_of :: [[Char]] -> Com -> Proc_decl_ext ();
 proc_decl_of xs bdy = Proc_decl_ext xs bdy ();
-
-plus_nat :: Nat -> Nat -> Nat;
-plus_nat Zero_nat n = n;
-plus_nat (Suc m) n = plus_nat m (Suc n);
-
-one_nat :: Nat;
-one_nat = Suc Zero_nat;
 
 csize :: Com -> Nat;
 csize SKIP = one_nat;
@@ -2575,8 +2489,8 @@ plus_sign STop STop = STop;
 
 sign_of_int :: Int -> Sign;
 sign_of_int n =
-  (if less_int n Zero_int then SNeg
-    else (if equal_int n Zero_int then SZero else SPos));
+  (if less_int n zero_int then SNeg
+    else (if equal_int n zero_int then SZero else SPos));
 
 aval_sign :: Aexp -> ([Char] -> Sign) -> Sign;
 aval_sign (N n) sigma = sign_of_int n;
@@ -2737,15 +2651,15 @@ compile ::
                     (Set (Cfg_node, (Edge_action, Cfg_node)),
                       Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node))))));
 compile pi p SKIP k n =
-  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
+  (suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 compile pi p (Assign x a) k n =
-  (Suc n,
+  (suc n,
     (Statement n, (insert (Statement n, (EA_Assign x a, k)) bot_set, bot_set)));
 compile pi p (Random x) k n =
-  (Suc n,
+  (suc n,
     (Statement n, (insert (Statement n, (EA_Random x, k)) bot_set, bot_set)));
 compile pi p (Check c) k n =
-  (Suc n,
+  (suc n,
     (Statement n, (insert (Statement n, (EA_Check c, k)) bot_set, bot_set)));
 compile pi p (Seq c1 c2) k n =
   (case compile pi p c1 (Statement (plus_nat n (csize c1))) n of {
@@ -2755,7 +2669,7 @@ compile pi p (Seq c1 c2) k n =
       });
   });
 compile pi p (If b c1 c2) k n =
-  (case compile pi p c1 k (Suc n) of {
+  (case compile pi p c1 k (suc n) of {
     (n1, (en1, (e1, k1))) ->
       (case compile pi p c2 k n1 of {
         (n2, (en2, (e2, k2))) ->
@@ -2770,7 +2684,7 @@ compile pi p (If b c1 c2) k n =
       });
   });
 compile pi p (While b c) k n =
-  (case compile pi p c (Statement n) (Suc n) of {
+  (case compile pi p c (Statement n) (suc n) of {
     (n1, (en1, (e1, k1))) ->
       (n1, (Statement n,
              (sup_set
@@ -2780,7 +2694,7 @@ compile pi p (While b c) k n =
                k1)));
   });
 compile pi p (Call dst q actuals) k n =
-  (Suc n,
+  (suc n,
     (Statement n,
       (bot_set,
         insert
@@ -2793,13 +2707,13 @@ compile pi p (Call dst q actuals) k n =
               (FunctionEntry q, k)))
           bot_set)));
 compile pi p (Return e) k n =
-  (Suc n,
+  (suc n,
     (Statement n,
       (insert (Statement n, (EA_Ret e p, FunctionResult p)) bot_set, bot_set)));
 compile pi p Restore k n =
-  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
+  (suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 compile pi p Unwind k n =
-  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
+  (suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 
 body :: forall a. Proc_decl_ext a -> Com;
 body (Proc_decl_ext formals body more) = body;
@@ -2816,7 +2730,7 @@ compile_proc pi p decl n =
     r = plus_nat n (csize (body decl));
   } in (case compile pi p (body decl) (Statement r) n of {
          (_, (ben, (e, k))) ->
-           (Suc r,
+           (suc r,
              (insert (FunctionEntry p, (EA_Nop, ben))
                 (if falls_through (body decl)
                   then insert
@@ -2843,11 +2757,14 @@ compile_procs pi (p : ps) n =
       });
   });
 
+zero_nat :: Nat;
+zero_nat = Nat (0 :: Integer);
+
 compile_prog ::
   ([Char] -> Maybe (Proc_decl_ext ())) ->
     [[Char]] -> [Char] -> Com -> Cfg_ext ();
 compile_prog pi ps mnm main =
-  (case compile_procs pi ps Zero_nat of {
+  (case compile_procs pi ps zero_nat of {
     (n1, (eprocs, kprocs)) ->
       (case compile_proc pi mnm (proc_decl_of [] main) n1 of {
         (_, (emain, kmain)) ->
@@ -2862,12 +2779,20 @@ compile_prog pi ps mnm main =
 proc_rep :: forall a. Imp_prog_ext a -> [([Char], Proc_decl_ext ())];
 proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
 
+char_0x6E :: Char;
+char_0x6E = Chr (110 :: Integer);
+
+char_0x6D :: Char;
+char_0x6D = Chr (109 :: Integer);
+
+char_0x69 :: Char;
+char_0x69 = Chr (105 :: Integer);
+
+char_0x61 :: Char;
+char_0x61 = Chr (97 :: Integer);
+
 prog_main_name :: [Char];
-prog_main_name =
-  [Char True False True True False True True False,
-    Char True False False False False True True False,
-    Char True False False True False True True False,
-    Char False True True True False True True False];
+prog_main_name = [char_0x6D, char_0x61, char_0x69, char_0x6E];
 
 prog_table :: Imp_prog_ext () -> [Char] -> Maybe (Proc_decl_ext ());
 prog_table p =
@@ -2906,6 +2831,9 @@ stabl_update ::
   forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
 stabl_update stabla (State_ext c infl stabl sigma more) =
   State_ext c infl (stabla stabl) sigma more;
+
+nat_of_integer :: Integer -> Nat;
+nat_of_integer k = Nat (max (0 :: Integer) k);
 
 unit_step_st ::
   forall a.
@@ -3494,11 +3422,5 @@ analyse ::
   Analysis_kind -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse Sign_Analysis p = analyse_sign_report p;
 analyse Interval_Analysis p = analyse_interval_report p;
-
-int_zero :: Int;
-int_zero = Zero_int;
-
-nat_zero :: Nat;
-nat_zero = Zero_nat;
 
 }

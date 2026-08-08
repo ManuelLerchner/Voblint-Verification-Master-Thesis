@@ -11,38 +11,23 @@
 
 open Voblint_Analyse_OCaml.Voblint_Analyse
 
-(* Isabelle's `num`/`int`/`nat` are unbounded unary/binary encodings with no
-   native-int bridge in the generated code, so small literals are built by
-   hand here rather than exported from Isabelle. *)
-let rec mk_num = function
-  | 1 -> One
-  | n when n mod 2 = 0 -> Bit0 (mk_num (n / 2))
-  | n -> Bit1 (mk_num (n / 2))
+(* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
+   backs Isabelle's `int`/`nat` by the target language's native
+   arbitrary-precision integer -- Zarith's `Z.t` on the OCaml side -- so
+   construction/inspection go through `Int_of_integer`/`nat_of_integer` and
+   their inverses rather than walking a `num`/Peano-successor term. *)
+let mk_int n = Int_of_integer (Z.of_int n)
 
-let mk_int = function
-  | 0 -> int_zero
-  | n when n > 0 -> Pos (mk_num n)
-  | n -> Neg (mk_num (-n))
+let mk_nat n = nat_of_integer (Z.of_int n)
 
-let rec mk_nat = function
-  | 0 -> nat_zero
-  | n -> Suc (mk_nat (n - 1))
-
-(* `vname = char list` uses Isabelle's own bit-vector `char` (`Chara` in
-   OCaml), not OCaml's native `char`, with bit 0 as the least-significant
-   bit -- confirmed by decoding the generated `ret_var` constant from the
-   Haskell output to "#ret". *)
-let mk_char c =
-  let n = Char.code c in
-  let bit i = n land (1 lsl i) <> 0 in
-  Chara (bit 0, bit 1, bit 2, bit 3, bit 4, bit 5, bit 6, bit 7)
+(* `vname = char list` uses Isabelle's own `char` (opaque under
+   Code_Abstract_Char, imported by Example_Analysis_Dispatch), bridged to a
+   native integer by `char_of_integer`/`integer_of_char`. *)
+let mk_char c = char_of_integer (Z.of_int (Char.code c))
 
 let mk_string s = List.init (String.length s) (fun i -> mk_char s.[i])
 
-let un_char (Chara (b0, b1, b2, b3, b4, b5, b6, b7)) =
-  let bit i b = if b then 1 lsl i else 0 in
-  Char.chr (bit 0 b0 lor bit 1 b1 lor bit 2 b2 lor bit 3 b3 lor bit 4 b4
-            lor bit 5 b5 lor bit 6 b6 lor bit 7 b7)
+let un_char c = Char.chr (Z.to_int (integer_of_char c))
 
 let un_string cs = String.init (List.length cs) (fun i -> un_char (List.nth cs i))
 
@@ -67,16 +52,7 @@ let expected_interval =
   [ (Statement (mk_nat 1), (check_cond, Check_Proved));
     (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
 
-let rec show_num n =
-  match n with
-  | One -> "1"
-  | Bit0 m -> string_of_int (2 * int_of_string (show_num m))
-  | Bit1 m -> string_of_int ((2 * int_of_string (show_num m)) + 1)
-
-let show_int = function
-  | Zero_int -> "0"
-  | Pos n -> show_num n
-  | Neg n -> "-" ^ show_num n
+let show_int i = Z.to_string (integer_of_int i)
 
 let rec show_aexp = function
   | N i -> show_int i
@@ -98,9 +74,7 @@ let show_check_result = function
   | Check_Refuted -> "Check_Refuted"
   | Check_Unknown -> "Check_Unknown"
 
-let rec show_nat = function
-  | Zero_nat -> "0"
-  | Suc n -> string_of_int (1 + int_of_string (show_nat n))
+let show_nat n = Z.to_string (integer_of_nat n)
 
 let show_entry (n, (b, r)) =
   Printf.sprintf "(%s, %s, %s)"

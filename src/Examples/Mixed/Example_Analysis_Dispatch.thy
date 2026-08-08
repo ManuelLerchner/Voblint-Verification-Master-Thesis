@@ -1,5 +1,9 @@
 theory Example_Analysis_Dispatch
-  imports Example_Sign_Codegen Voblint_Analysis.Interval_Checks
+  imports
+    Example_Sign_Codegen
+    Voblint_Analysis.Interval_Checks
+    "HOL-Library.Code_Target_Numeral"
+    "HOL-Library.Code_Abstract_Char"
 begin
 
 section \<open>A unified, verified check-report API across domains\<close>
@@ -73,14 +77,25 @@ text \<open>
   external Haskell/OCaml code can build a fresh \<open>imp_prog\<close> and hand it to
   \<open>analyse\<close>, rather than only being able to call \<open>analyse\<close> on values built
   inside Isabelle --- this is what the regression drivers under
-  \<open>codegen/regression\<close> use. \<open>int_zero\<close>/\<open>nat_zero\<close> exist only because the
-  generated \<open>Zero_int\<close>/\<open>Zero_nat\<close> constructors are code-level artifacts of
-  the numeral \<open>code_datatype\<close> setup, not directly citable Isabelle constants
-  themselves --- a named alias for \<open>0\<close> is the standard workaround.
-\<close>
+  \<open>codegen/regression\<close> use.
 
-definition int_zero :: int where "int_zero = 0"
-definition nat_zero :: nat where "nat_zero = 0"
+  \<^theory>\<open>HOL-Library.Code_Target_Numeral\<close> makes \<open>int\<close>/\<open>nat\<close> abstract types
+  backed by the target language's native arbitrary-precision integer
+  (Haskell's \<open>Integer\<close>, OCaml's target-numeral representation) instead of
+  Isabelle's own binary-numeral/Peano-successor encodings, so arithmetic and
+  comparisons inside the exported analyser run on native integers rather
+  than walking a \<open>Num\<close>/\<open>Nat\<close> term. \<open>int_of_integer\<close>/\<open>nat_of_integer\<close> and
+  their inverses \<open>integer_of_int\<close>/\<open>integer_of_nat\<close> are the resulting
+  bridge --- the only way external code can build or inspect an \<open>int\<close>/\<open>nat\<close>
+  once the representation is opaque.
+
+  \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close> ---
+  relevant because \<^typ>\<open>vname\<close> is \<^typ>\<open>char list\<close>, so every variable
+  name and every CFG/map lookup keyed on one compares characters. Locals,
+  globals, and procedure names all resolve to native-integer character
+  comparisons instead of an 8-bit-vector term walk. \<open>char_of_integer\<close> and
+  \<open>integer_of_char\<close> are the resulting bridge.
+\<close>
 
 export_code
   analyse Sign_Analysis Interval_Analysis
@@ -89,9 +104,9 @@ export_code
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
   Check_Proved Check_Refuted Check_Unknown
-  int_zero nat_zero Int.Pos Int.Neg num.One num.Bit0 num.Bit1 Suc
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
-  char.Char
+  char_of_integer integer_of_char
   in Haskell module_name Voblint_Analyse file_prefix "Voblint_Analyse"
 
 export_code
@@ -101,9 +116,9 @@ export_code
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
   Check_Proved Check_Refuted Check_Unknown
-  int_zero nat_zero Int.Pos Int.Neg num.One num.Bit0 num.Bit1 Suc
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
-  char.Char
+  char_of_integer integer_of_char
   in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
 
 end

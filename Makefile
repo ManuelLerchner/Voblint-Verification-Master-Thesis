@@ -68,14 +68,16 @@ codegen-check: codegen
 # codegen/regression/ against the tracked codegen/generated/ sources, and
 # check their output against the values already proved by
 # src/Examples/Mixed/Example_Analysis_Dispatch.thy's dispatch_demo_*
-# lemmas. Requires ghc and ocamlfind on PATH; does not require Isabelle.
+# lemmas. Requires ghc and ocamlfind (+ the zarith package -- Code_Target_Numeral
+# backs int/nat by Zarith's Z.t on the OCaml side) on PATH; does not require
+# Isabelle.
 regression:
 	cd codegen/regression/haskell && \
 	  ghc -i../../generated -o regression-hs Main.hs && \
 	  ./regression-hs
 	cd codegen/regression/ocaml && \
 	  cp ../../generated/Voblint_Analyse_OCaml.ocaml ./Voblint_Analyse_OCaml.ml && \
-	  ocamlfind ocamlopt -package str -linkpkg Voblint_Analyse_OCaml.ml main.ml -o regression-ml && \
+	  ocamlfind ocamlopt -package str,zarith -linkpkg Voblint_Analyse_OCaml.ml main.ml -o regression-ml && \
 	  ./regression-ml
 
 # HTML browser info for all session theories (see Isabelle System Manual, browser_info).

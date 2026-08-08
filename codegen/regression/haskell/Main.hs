@@ -10,50 +10,33 @@
 -- `make codegen` instead.
 module Main (main) where
 
-import Data.Bits (testBit)
 import Prelude hiding (Char, Int, Num)
 import qualified Prelude
 import System.Exit (exitFailure)
 import Voblint_Analyse
 
--- Isabelle's `Num`/`Int`/`Nat` are unbounded unary/binary encodings with no
--- `fromInteger` bridge in the generated code, so small literals are built by
--- hand here rather than exported from Isabelle (which already exports
--- `int_zero`/`nat_zero` as the base cases, since `Zero_int`/`Zero_nat` are
--- code-level artifacts of the numeral `code_datatype` setup, not directly
--- citable Isabelle constants).
-mkNum :: Integer -> Num
-mkNum 1 = One
-mkNum n
-  | even n = Bit0 (mkNum (n `div` 2))
-  | otherwise = Bit1 (mkNum (n `div` 2))
-
+-- `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
+-- backs Isabelle's `int`/`nat` by the target language's native
+-- arbitrary-precision integer, so construction/inspection go through
+-- `Int_of_integer`/`nat_of_integer` and their inverses rather than walking a
+-- `Num`/Peano-successor term.
 mkInt :: Integer -> Int
-mkInt 0 = int_zero
-mkInt n
-  | n > 0 = Pos (mkNum n)
-  | otherwise = Neg (mkNum (negate n))
+mkInt = Int_of_integer
 
 mkNat :: Integer -> Nat
-mkNat 0 = nat_zero
-mkNat n = Suc (mkNat (n - 1))
+mkNat = nat_of_integer
 
--- `vname = char list` uses Isabelle's own bit-vector `Char`, not Prelude's,
--- with bit 0 (`Char b0 ...`) as the least-significant bit -- confirmed by
--- decoding the generated `ret_var` constant (`Char True True False False
--- False True False False, ...`) to "#ret".
+-- `vname = char list` uses Isabelle's own `Char` (opaque under
+-- Code_Abstract_Char, imported by Example_Analysis_Dispatch), bridged to a
+-- native integer by `char_of_integer`/`integer_of_char`.
 mkChar :: Prelude.Char -> Char
-mkChar c = Char (bit 0) (bit 1) (bit 2) (bit 3) (bit 4) (bit 5) (bit 6) (bit 7)
-  where
-    n = fromEnum c
-    bit i = testBit n i
+mkChar = char_of_integer . toInteger . fromEnum
 
 mkString :: Prelude.String -> [Char]
 mkString = map mkChar
 
 unChar :: Char -> Prelude.Char
-unChar (Char b0 b1 b2 b3 b4 b5 b6 b7) =
-  toEnum (sum [2 ^ i | (i, b) <- zip [0 :: Prelude.Int ..] [b0, b1, b2, b3, b4, b5, b6, b7], b])
+unChar = toEnum . fromInteger . integer_of_char
 
 unString :: [Char] -> Prelude.String
 unString = map unChar
@@ -99,10 +82,10 @@ checkCase label actual expected
       return Prelude.False
 
 instance Show Nat where
-  show n = show (toIntegerNat n)
-    where
-      toIntegerNat Zero_nat = 0 :: Integer
-      toIntegerNat (Suc m) = 1 + toIntegerNat m
+  show n = show (integer_of_nat n)
+
+instance Show Int where
+  show i = show (integer_of_int i)
 
 instance Show Cfg_node where
   show (Statement n) = "Statement " ++ show n
@@ -131,18 +114,6 @@ instance Eq Bexp where
   Less a1 a2 == Less b1 b2 = a1 Prelude.== b1 Prelude.&& a2 Prelude.== b2
   Eqb a1 a2 == Eqb b1 b2 = a1 Prelude.== b1 Prelude.&& a2 Prelude.== b2
   _ == _ = Prelude.False
-
-instance Show Num where
-  show n = show (toIntegerNum n)
-    where
-      toIntegerNum One = 1 :: Integer
-      toIntegerNum (Bit0 m) = 2 * toIntegerNum m
-      toIntegerNum (Bit1 m) = 2 * toIntegerNum m + 1
-
-instance Show Int where
-  show Zero_int = "0"
-  show (Pos n) = show n
-  show (Neg n) = "-" ++ show n
 
 instance Show Aexp where
   show (N i) = show i

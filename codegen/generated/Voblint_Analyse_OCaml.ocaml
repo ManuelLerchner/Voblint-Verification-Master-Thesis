@@ -1,14 +1,17 @@
 module Voblint_Analyse : sig
-  type num = One | Bit0 of num | Bit1 of num
-  type int = Zero_int | Pos of num | Neg of num
-  type nat = Zero_nat | Suc of nat
-  type char = Chara of bool * bool * bool * bool * bool * bool * bool * bool
+  type int = Int_of_integer of Z.t
+  val integer_of_int : int -> Z.t
+  type nat
+  val integer_of_nat : nat -> Z.t
+  type char
+  val integer_of_char : char -> Z.t
   type cfg_node = Statement of nat | FunctionEntry of char list |
     FunctionResult of char list
   type aexp = N of int | V of char list | Plus of aexp * aexp |
     Minus of aexp * aexp | Times of aexp * aexp
   type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp
     | Less of aexp * aexp | Eqa of aexp * aexp
+  type num
   type com = SKIP | Assign of char list * aexp | Random of char list |
     Check of bexp | Seq of com * com | If of bexp * com * com |
     While of bexp * com | Call of (char list) option * char list * aexp list |
@@ -17,83 +20,34 @@ module Voblint_Analyse : sig
   type 'a proc_decl_ext
   type 'a imp_prog_ext
   type analysis_kind = Sign_Analysis | Interval_Analysis
+  val char_of_integer : Z.t -> char
+  val nat_of_integer : Z.t -> nat
   val make :
     (char list * unit proc_decl_ext) list ->
       com -> (char list) list -> unit imp_prog_ext
   val analyse :
     analysis_kind ->
       unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
-  val int_zero : int
-  val nat_zero : nat
 end = struct
 
-type num = One | Bit0 of num | Bit1 of num;;
+type int = Int_of_integer of Z.t;;
 
-let rec equal_num x0 x1 = match x0, x1 with Bit0 x2, Bit1 x3 -> false
-                    | Bit1 x3, Bit0 x2 -> false
-                    | One, Bit1 x3 -> false
-                    | Bit1 x3, One -> false
-                    | One, Bit0 x2 -> false
-                    | Bit0 x2, One -> false
-                    | Bit1 x3, Bit1 y3 -> equal_num x3 y3
-                    | Bit0 x2, Bit0 y2 -> equal_num x2 y2
-                    | One, One -> true;;
+let rec integer_of_int (Int_of_integer k) = k;;
 
-type int = Zero_int | Pos of num | Neg of num;;
-
-let rec equal_inta x0 x1 = match x0, x1 with Zero_int, Zero_int -> true
-                     | Zero_int, Pos l -> false
-                     | Zero_int, Neg l -> false
-                     | Pos k, Zero_int -> false
-                     | Pos k, Pos l -> equal_num k l
-                     | Pos k, Neg l -> false
-                     | Neg k, Zero_int -> false
-                     | Neg k, Pos l -> false
-                     | Neg k, Neg l -> equal_num k l;;
+let rec equal_inta k l = Z.equal (integer_of_int k) (integer_of_int l);;
 
 type 'a equal = {equal : 'a -> 'a -> bool};;
 let equal _A = _A.equal;;
 
 let equal_int = ({equal = equal_inta} : int equal);;
 
-let rec less_eq_num x0 n = match x0, n with One, n -> true
-                      | Bit0 m, One -> false
-                      | Bit1 m, One -> false
-                      | Bit0 m, Bit0 n -> less_eq_num m n
-                      | Bit0 m, Bit1 n -> less_eq_num m n
-                      | Bit1 m, Bit1 n -> less_eq_num m n
-                      | Bit1 m, Bit0 n -> less_num m n
-and less_num m x1 = match m, x1 with m, One -> false
-               | One, Bit0 n -> true
-               | One, Bit1 n -> true
-               | Bit0 m, Bit0 n -> less_num m n
-               | Bit0 m, Bit1 n -> less_eq_num m n
-               | Bit1 m, Bit1 n -> less_num m n
-               | Bit1 m, Bit0 n -> less_num m n;;
-
-let rec less_eq_int x0 x1 = match x0, x1 with Zero_int, Zero_int -> true
-                      | Zero_int, Pos l -> true
-                      | Zero_int, Neg l -> false
-                      | Pos k, Zero_int -> false
-                      | Pos k, Pos l -> less_eq_num k l
-                      | Pos k, Neg l -> false
-                      | Neg k, Zero_int -> true
-                      | Neg k, Pos l -> true
-                      | Neg k, Neg l -> less_eq_num l k;;
+let rec less_eq_int k l = Z.leq (integer_of_int k) (integer_of_int l);;
 
 type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool};;
 let less_eq _A = _A.less_eq;;
 let less _A = _A.less;;
 
-let rec less_int x0 x1 = match x0, x1 with Zero_int, Zero_int -> false
-                   | Zero_int, Pos l -> true
-                   | Zero_int, Neg l -> false
-                   | Pos k, Zero_int -> false
-                   | Pos k, Pos l -> less_num k l
-                   | Pos k, Neg l -> false
-                   | Neg k, Zero_int -> true
-                   | Neg k, Pos l -> true
-                   | Neg k, Neg l -> less_num l k;;
+let rec less_int k l = Z.lt (integer_of_int k) (integer_of_int l);;
 
 let ord_int = ({less_eq = less_eq_int; less = less_int} : int ord);;
 
@@ -109,19 +63,17 @@ type 'a linorder = {order_linorder : 'a order};;
 
 let linorder_int = ({order_linorder = order_int} : int linorder);;
 
-type nat = Zero_nat | Suc of nat;;
+type nat = Nat of Z.t;;
 
-let rec equal_nata x0 x1 = match x0, x1 with Zero_nat, Suc x2 -> false
-                     | Suc x2, Zero_nat -> false
-                     | Suc x2, Suc y2 -> equal_nata x2 y2
-                     | Zero_nat, Zero_nat -> true;;
+let rec integer_of_nat (Nat x) = x;;
+
+let rec equal_nata m n = Z.equal (integer_of_nat m) (integer_of_nat n);;
 
 let equal_nat = ({equal = equal_nata} : nat equal);;
 
-let rec less_eq_nat x0 n = match x0, n with Zero_nat, n -> true
-                      | Suc m, n -> less_nat m n
-and less_nat n x1 = match n, x1 with n, Zero_nat -> false
-               | m, Suc n -> less_eq_nat m n;;
+let rec less_eq_nat m n = Z.leq (integer_of_nat m) (integer_of_nat n);;
+
+let rec less_nat m n = Z.lt (integer_of_nat m) (integer_of_nat n);;
 
 let ord_nat = ({less_eq = less_eq_nat; less = less_nat} : nat ord);;
 
@@ -130,14 +82,6 @@ let preorder_nat = ({ord_preorder = ord_nat} : nat preorder);;
 let order_nat = ({preorder_order = preorder_nat} : nat order);;
 
 let linorder_nat = ({order_linorder = order_nat} : nat linorder);;
-
-let rec less_eq_bool x0 b = match x0, b with false, b -> true
-                       | true, b -> b;;
-
-let rec less_bool x0 b = match x0, b with false, b -> b
-                    | true, b -> false;;
-
-let ord_bool = ({less_eq = less_eq_bool; less = less_bool} : bool ord);;
 
 let rec eq _A a b = equal _A a b;;
 
@@ -149,50 +93,17 @@ let rec equal_lista _A
 
 let rec equal_list _A = ({equal = equal_lista _A} : ('a list) equal);;
 
-let rec equal_bool p pa = match p, pa with false, p -> not p
-                     | true, p -> p
-                     | p, false -> not p
-                     | p, true -> p;;
+type char = Chr of Z.t;;
 
-type char = Chara of bool * bool * bool * bool * bool * bool * bool * bool;;
+let rec integer_of_char (Chr x) = x;;
 
-let rec equal_chara
-  (Chara (x1, x2, x3, x4, x5, x6, x7, x8))
-    (Chara (y1, y2, y3, y4, y5, y6, y7, y8)) =
-    equal_bool x1 y1 &&
-      (equal_bool x2 y2 &&
-        (equal_bool x3 y3 &&
-          (equal_bool x4 y4 &&
-            (equal_bool x5 y5 &&
-              (equal_bool x6 y6 && (equal_bool x7 y7 && equal_bool x8 y8))))));;
+let rec equal_chara c d = Z.equal (integer_of_char c) (integer_of_char d);;
 
 let equal_char = ({equal = equal_chara} : char equal);;
 
-let rec null = function [] -> true
-               | x :: xs -> false;;
+let rec less_eq_char c d = Z.leq (integer_of_char c) (integer_of_char d);;
 
-let rec lexordp_eq _A
-  xs ys = match xs, ys with [], ys -> true
-    | xs, [] -> null xs
-    | x :: xs, y :: ys ->
-        less _A x y || not (less _A y x) && lexordp_eq _A xs ys;;
-
-let rec less_eq_char
-  (Chara (b0, b1, b2, b3, b4, b5, b6, b7))
-    (Chara (c0, c1, c2, c3, c4, c5, c6, c7)) =
-    lexordp_eq ord_bool [b7; b6; b5; b4; b3; b2; b1; b0]
-      [c7; c6; c5; c4; c3; c2; c1; c0];;
-
-let rec lexordp _A
-  xs ys = match xs, ys with [], ys -> not (null ys)
-    | xs, [] -> false
-    | x :: xs, y :: ys -> less _A x y || not (less _A y x) && lexordp _A xs ys;;
-
-let rec less_char
-  (Chara (b0, b1, b2, b3, b4, b5, b6, b7))
-    (Chara (c0, c1, c2, c3, c4, c5, c6, c7)) =
-    lexordp ord_bool [b7; b6; b5; b4; b3; b2; b1; b0]
-      [c7; c6; c5; c4; c3; c2; c1; c0];;
+let rec less_char c d = Z.lt (integer_of_char c) (integer_of_char d);;
 
 let ord_char = ({less_eq = less_eq_char; less = less_char} : char ord);;
 
@@ -684,6 +595,11 @@ let order_call_action =
 let linorder_call_action =
   ({order_linorder = order_call_action} : call_action linorder);;
 
+let rec equal_bool p pa = match p, pa with false, p -> not p
+                     | true, p -> p
+                     | p, false -> not p
+                     | p, true -> p;;
+
 type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp |
   Less of aexp * aexp | Eqa of aexp * aexp;;
 
@@ -910,6 +826,8 @@ let order_edge_action =
 
 let linorder_edge_action =
   ({order_linorder = order_edge_action} : edge_action linorder);;
+
+let ord_integer = ({less_eq = Z.leq; less = Z.lt} : Z.t ord);;
 
 type eint = MinInf | Fin of int | PlusInf;;
 
@@ -1274,6 +1192,8 @@ let rec bounded_warrowing_resolved_st_q _A =
      warrowing_bounded_warrowing = (warrowing_resolved_st_q _A)}
     : 'a resolved_st_q bounded_warrowing);;
 
+type num = One | Bit0 of num | Bit1 of num;;
+
 type 'a set = Set of 'a list | Coset of 'a list;;
 
 type com = SKIP | Assign of char list * aexp | Random of char list |
@@ -1350,51 +1270,11 @@ type ('a, 'b, 'c) effectful_st_transfer_ext =
 
 let rec id x = (fun xa -> xa) x;;
 
-let rec dup = function Zero_int -> Zero_int
-              | Pos n -> Pos (Bit0 n)
-              | Neg n -> Neg (Bit0 n);;
+let rec plus_nat m n = Nat (Z.add (integer_of_nat m) (integer_of_nat n));;
 
-let rec uminus_int = function Zero_int -> Zero_int
-                     | Pos m -> Neg m
-                     | Neg m -> Pos m;;
+let one_nat : nat = Nat (Z.of_int 1);;
 
-let rec plus_num x0 x1 = match x0, x1 with One, One -> Bit0 One
-                   | One, Bit0 n -> Bit1 n
-                   | One, Bit1 n -> Bit0 (plus_num n One)
-                   | Bit0 m, One -> Bit1 m
-                   | Bit0 m, Bit0 n -> Bit0 (plus_num m n)
-                   | Bit0 m, Bit1 n -> Bit1 (plus_num m n)
-                   | Bit1 m, One -> Bit0 (plus_num m One)
-                   | Bit1 m, Bit0 n -> Bit1 (plus_num m n)
-                   | Bit1 m, Bit1 n -> Bit0 (plus_num (plus_num m n) One);;
-
-let one_int : int = Pos One;;
-
-let rec bitM = function One -> One
-               | Bit0 n -> Bit1 (bitM n)
-               | Bit1 n -> Bit1 (Bit0 n);;
-
-let rec sub x0 x1 = match x0, x1 with One, One -> Zero_int
-              | Bit0 m, One -> Pos (bitM m)
-              | Bit1 m, One -> Pos (Bit0 m)
-              | One, Bit0 n -> Neg (bitM n)
-              | One, Bit1 n -> Neg (Bit0 n)
-              | Bit0 m, Bit0 n -> dup (sub m n)
-              | Bit1 m, Bit1 n -> dup (sub m n)
-              | Bit1 m, Bit0 n -> plus_int (dup (sub m n)) one_int
-              | Bit0 m, Bit1 n -> minus_int (dup (sub m n)) one_int
-and plus_int k l = match k, l with k, Zero_int -> k
-               | Zero_int, l -> l
-               | Pos m, Pos n -> Pos (plus_num m n)
-               | Pos m, Neg n -> sub m n
-               | Neg m, Pos n -> sub n m
-               | Neg m, Neg n -> Neg (plus_num m n)
-and minus_int k l = match k, l with k, Zero_int -> k
-                | Zero_int, l -> uminus_int l
-                | Pos m, Pos n -> sub m n
-                | Pos m, Neg n -> Pos (plus_num m n)
-                | Neg m, Pos n -> Neg (plus_num m n)
-                | Neg m, Neg n -> sub n m;;
+let rec suc n = plus_nat n one_nat;;
 
 let rec comp f g = (fun x -> f (g x));;
 
@@ -1475,11 +1355,15 @@ let rec fmfilter
 
 let rec fmdrop _A a = fmfilter (fun aa -> not (eq _A aa a));;
 
-let ret_var : char list
-  = [Chara (true, true, false, false, false, true, false, false);
-      Chara (false, true, false, false, true, true, true, false);
-      Chara (true, false, true, false, false, true, true, false);
-      Chara (false, false, true, false, true, true, true, false)];;
+let char_0x74 : char = Chr (Z.of_int 116);;
+
+let char_0x72 : char = Chr (Z.of_int 114);;
+
+let char_0x65 : char = Chr (Z.of_int 101);;
+
+let char_0x23 : char = Chr (Z.of_int 35);;
+
+let ret_var : char list = [char_0x23; char_0x72; char_0x65; char_0x74];;
 
 let rec cfg_entry
   (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
@@ -1490,6 +1374,8 @@ let rec cfg_exit
         | FunctionResult a -> FunctionResult a);;
 
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
+
+let rec apsnd f (x, y) = (x, f y);;
 
 let rec infl (State_ext (c, infl, stabl, sigma, more)) = infl;;
 
@@ -1522,9 +1408,11 @@ let rec side_env _A _B
     sup_fun _B.semilattice_sup_bounded_semilattice_sup_bot (sigma (Inl v))
       (glob_env _A _B sigma);;
 
+let zero_int : int = Int_of_integer Z.zero;;
+
 let cinit_ivl_st : ivl resolved_st_q
   = Abs_resolved_st
-      (Ivl (MinInf, PlusInf), (Ivl (Fin Zero_int, Fin Zero_int), []));;
+      (Ivl (MinInf, PlusInf), (Ivl (Fin zero_int, Fin zero_int), []));;
 
 let rec snd (x1, x2) = x2;;
 
@@ -1547,20 +1435,8 @@ let rec update_resolved_st _A
 let rec update_resolved_st_q _A
   (Abs_resolved_st xb) xa x = Abs_resolved_st (update_resolved_st _A xb xa x);;
 
-let rec times_num
-  m n = match m, n with m, One -> m
-    | One, n -> n
-    | Bit0 m, Bit0 n -> Bit0 (Bit0 (times_num m n))
-    | Bit0 m, Bit1 n -> Bit0 (times_num m (Bit1 n))
-    | Bit1 m, Bit0 n -> Bit0 (times_num (Bit1 m) n)
-    | Bit1 m, Bit1 n -> Bit1 (plus_num (plus_num m n) (Bit0 (times_num m n)));;
-
-let rec times_int k l = match k, l with k, Zero_int -> Zero_int
-                    | Zero_int, l -> Zero_int
-                    | Pos m, Pos n -> Pos (times_num m n)
-                    | Pos m, Neg n -> Neg (times_num m n)
-                    | Neg m, Pos n -> Neg (times_num m n)
-                    | Neg m, Neg n -> Pos (times_num m n);;
+let rec times_int
+  k l = Int_of_integer (Z.mul (integer_of_int k) (integer_of_int l));;
 
 let ivl_top : ivl = Ivl (MinInf, PlusInf);;
 
@@ -1595,6 +1471,9 @@ let rec times_ivl
   a b = (if ivl_nonempty a && ivl_nonempty b then ivl_times_core a b
           else bot_ivla);;
 
+let rec minus_int
+  k l = Int_of_integer (Z.sub (integer_of_int k) (integer_of_int l));;
+
 let rec minus_eint
   x0 x1 = match x0, x1 with Fin n, Fin m -> Fin (minus_int n m)
     | Fin uu, MinInf -> PlusInf
@@ -1617,6 +1496,9 @@ let rec minus_ivl
     (let (Ivl (a, b), Ivl (c, d)) =
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (minus_eint a d, minus_eint b c)));;
+
+let rec plus_int
+  k l = Int_of_integer (Z.add (integer_of_int k) (integer_of_int l));;
 
 let rec plus_eint x0 x1 = match x0, x1 with Fin n, Fin m -> Fin (plus_int n m)
                     | Fin uu, MinInf -> MinInf
@@ -1675,6 +1557,8 @@ let rec afilter_ivl_st
     | gs, N v, a, s -> s;;
 
 let rec inf_ivl x = meet_ivl x;;
+
+let one_int : int = Int_of_integer (Z.of_int 1);;
 
 let rec inv_less_ivl
   x0 x1 x2 = match x0, x1, x2 with
@@ -1740,6 +1624,42 @@ let rec ivl_tf_st_for
           (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
+let rec divmod_integer
+  k l = (if Z.equal k Z.zero then (Z.zero, Z.zero)
+          else (if Z.lt Z.zero l
+                 then (if Z.lt Z.zero k
+                        then (fun k l -> if Z.equal Z.zero l then
+                               (Z.zero, l) else Z.div_rem (Z.abs k) (Z.abs l))
+                               k l
+                        else (let (r, s) =
+                                (fun k l -> if Z.equal Z.zero l then
+                                  (Z.zero, l) else Z.div_rem (Z.abs k)
+                                  (Z.abs l))
+                                  k l
+                                in
+                               (if Z.equal s Z.zero then (Z.neg r, Z.zero)
+                                 else (Z.sub (Z.neg r) (Z.of_int 1),
+Z.sub l s))))
+                 else (if Z.equal l Z.zero then (Z.zero, k)
+                        else apsnd Z.neg
+                               (if Z.lt k Z.zero
+                                 then (fun k l -> if Z.equal Z.zero l then
+(Z.zero, l) else Z.div_rem (Z.abs k) (Z.abs l))
+k l
+                                 else (let (r, s) =
+ (fun k l -> if Z.equal Z.zero l then (Z.zero, l) else Z.div_rem (Z.abs k)
+   (Z.abs l))
+   k l
+ in
+(if Z.equal s Z.zero then (Z.neg r, Z.zero)
+  else (Z.sub (Z.neg r) (Z.of_int 1), Z.sub (Z.neg l) s)))))));;
+
+let rec modulo_integer k l = snd (divmod_integer k l);;
+
+let rec char_of_integer
+  k = Chr (if Z.leq Z.zero k && Z.lt k (Z.of_int 256) then k
+            else modulo_integer k (Z.of_int 256));;
+
 let rec map_ltree
   h x1 = match h, x1 with h, Answer d -> Answer d
     | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
@@ -1753,11 +1673,6 @@ let rec c_update
     State_ext (ca c, infl, stabl, sigma, more);;
 
 let rec proc_decl_of xs bdy = Proc_decl_ext (xs, bdy, ());;
-
-let rec plus_nat x0 n = match x0, n with Zero_nat, n -> n
-                   | Suc m, n -> plus_nat m (Suc n);;
-
-let one_nat : nat = Suc Zero_nat;;
 
 let rec csize
   = function SKIP -> one_nat
@@ -2338,8 +2253,8 @@ let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | STop, STop -> STop;;
 
 let rec sign_of_int
-  n = (if less_int n Zero_int then SNeg
-        else (if equal_inta n Zero_int then SZero else SPos));;
+  n = (if less_int n zero_int then SNeg
+        else (if equal_inta n zero_int then SZero else SPos));;
 
 let rec aval_sign
   x0 sigma = match x0, sigma with N n, sigma -> sign_of_int n
@@ -2497,7 +2412,7 @@ let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
 let rec compile
   pi p x2 k n = match pi, p, x2, k, n with
     pi, p, SKIP, k, n ->
-      (Suc n,
+      (suc n,
         (Statement n,
           (insert
              (equal_prod equal_cfg_node
@@ -2505,7 +2420,7 @@ let rec compile
              (Statement n, (EA_Nop, k)) bot_set,
             bot_set)))
     | pi, p, Assign (x, a), k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (insert
                (equal_prod equal_cfg_node
@@ -2513,7 +2428,7 @@ let rec compile
                (Statement n, (EA_Assign (x, a), k)) bot_set,
               bot_set)))
     | pi, p, Random x, k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (insert
                (equal_prod equal_cfg_node
@@ -2521,7 +2436,7 @@ let rec compile
                (Statement n, (EA_Random x, k)) bot_set,
               bot_set)))
     | pi, p, Check c, k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (insert
                (equal_prod equal_cfg_node
@@ -2542,7 +2457,7 @@ let rec compile
                              (equal_prod equal_cfg_node equal_cfg_node)))
                          k1 k2))))
     | pi, p, If (b, c1, c2), k, n ->
-        (let (n1, (en1, (e1, k1))) = compile pi p c1 k (Suc n) in
+        (let (n1, (en1, (e1, k1))) = compile pi p c1 k (suc n) in
          let (n2, (en2, (e2, k2))) = compile pi p c2 k n1 in
           (n2, (Statement n,
                  (sup_set
@@ -2567,7 +2482,7 @@ let rec compile
                          (equal_prod equal_cfg_node equal_cfg_node)))
                      k1 k2))))
     | pi, p, While (b, c), k, n ->
-        (let (n1, (en1, (e1, k1))) = compile pi p c (Statement n) (Suc n) in
+        (let (n1, (en1, (e1, k1))) = compile pi p c (Statement n) (suc n) in
           (n1, (Statement n,
                  (sup_set
                     (equal_prod equal_cfg_node
@@ -2583,7 +2498,7 @@ let rec compile
                     e1,
                    k1))))
     | pi, p, Call (dst, q, actuals), k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (bot_set,
               insert
@@ -2597,7 +2512,7 @@ let rec compile
                     (FunctionEntry q, k)))
                 bot_set)))
     | pi, p, Return e, k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (insert
                (equal_prod equal_cfg_node
@@ -2605,7 +2520,7 @@ let rec compile
                (Statement n, (EA_Ret (e, p), FunctionResult p)) bot_set,
               bot_set)))
     | pi, p, Restore, k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (insert
                (equal_prod equal_cfg_node
@@ -2613,7 +2528,7 @@ let rec compile
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)))
     | pi, p, Unwind, k, n ->
-        (Suc n,
+        (suc n,
           (Statement n,
             (insert
                (equal_prod equal_cfg_node
@@ -2627,7 +2542,7 @@ let rec compile_proc
   pi p decl n =
     (let r = plus_nat n (csize (body decl)) in
      let (_, (ben, (e, k))) = compile pi p (body decl) (Statement r) n in
-      (Suc r,
+      (suc r,
         (insert
            (equal_prod equal_cfg_node
              (equal_prod equal_edge_action equal_cfg_node))
@@ -2657,9 +2572,11 @@ let rec compile_procs
                            (equal_prod equal_cfg_node equal_cfg_node)))
                        k ka))));;
 
+let zero_nat : nat = Nat Z.zero;;
+
 let rec compile_prog
   pi ps mnm main =
-    (let (n1, (eprocs, kprocs)) = compile_procs pi ps Zero_nat in
+    (let (n1, (eprocs, kprocs)) = compile_procs pi ps zero_nat in
      let (_, (emain, kmain)) = compile_proc pi mnm (proc_decl_of [] main) n1 in
       Cfg_ext
         (sup_set
@@ -2683,11 +2600,15 @@ let rec compile_prog
 let rec proc_rep
   (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = proc_rep;;
 
-let prog_main_name : char list
-  = [Chara (true, false, true, true, false, true, true, false);
-      Chara (true, false, false, false, false, true, true, false);
-      Chara (true, false, false, true, false, true, true, false);
-      Chara (false, true, true, true, false, true, true, false)];;
+let char_0x6E : char = Chr (Z.of_int 110);;
+
+let char_0x6D : char = Chr (Z.of_int 109);;
+
+let char_0x69 : char = Chr (Z.of_int 105);;
+
+let char_0x61 : char = Chr (Z.of_int 97);;
+
+let prog_main_name : char list = [char_0x6D; char_0x61; char_0x69; char_0x6E];;
 
 let rec prog_table
   p = fun_upd (equal_list equal_char)
@@ -2714,6 +2635,8 @@ let rec etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;;
 let rec stabl_update
   stabla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infl, stabla stabl, sigma, more);;
+
+let rec nat_of_integer k = Nat (max ord_integer Z.zero k);;
 
 let rec unit_step_st _A
   f d g =
@@ -3224,9 +3147,5 @@ let rec analyse_interval_report
 let rec analyse
   x0 p = match x0, p with Sign_Analysis, p -> analyse_sign_report p
     | Interval_Analysis, p -> analyse_interval_report p;;
-
-let int_zero : int = Zero_int;;
-
-let nat_zero : nat = Zero_nat;;
 
 end;; (*struct Voblint_Analyse*)

@@ -102,6 +102,9 @@ jobs:
         with:
           ocaml-compiler: '5'
 
+      - name: Install zarith (Code_Target_Numeral backs int/nat by Z.t)
+        run: opam install -y zarith
+
       - name: Compile and run codegen/regression drivers against codegen/generated/
         run: make regression
 
