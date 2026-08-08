@@ -10,6 +10,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     "Mixed"
     "CFG"
     "Tooling"
+    "Regression"
   theories
     (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
     Example_Inc_Proc

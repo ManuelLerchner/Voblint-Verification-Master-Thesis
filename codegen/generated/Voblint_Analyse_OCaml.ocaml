@@ -1,12 +1,30 @@
 module Voblint_Analyse : sig
-  type cfg_node
-  type bexp
-  type check_result
+  type num = One | Bit0 of num | Bit1 of num
+  type int = Zero_int | Pos of num | Neg of num
+  type nat = Zero_nat | Suc of nat
+  type char = Chara of bool * bool * bool * bool * bool * bool * bool * bool
+  type cfg_node = Statement of nat | FunctionEntry of char list |
+    FunctionResult of char list
+  type aexp = N of int | V of char list | Plus of aexp * aexp |
+    Minus of aexp * aexp | Times of aexp * aexp
+  type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp
+    | Less of aexp * aexp | Eqa of aexp * aexp
+  type com = SKIP | Assign of char list * aexp | Random of char list |
+    Check of bexp | Seq of com * com | If of bexp * com * com |
+    While of bexp * com | Call of (char list) option * char list * aexp list |
+    Return of aexp option | Restore | Unwind
+  type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type 'a proc_decl_ext
   type 'a imp_prog_ext
   type analysis_kind = Sign_Analysis | Interval_Analysis
+  val make :
+    (char list * unit proc_decl_ext) list ->
+      com -> (char list) list -> unit imp_prog_ext
   val analyse :
     analysis_kind ->
       unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+  val int_zero : int
+  val nat_zero : nat
 end = struct
 
 type num = One | Bit0 of num | Bit1 of num;;
@@ -2759,6 +2777,10 @@ let rec fold_rhs_trees _A
                 acc res)
               ts);;
 
+let rec make
+  proc_rep prog_main declared_global_vars =
+    Imp_prog_ext (proc_rep, prog_main, declared_global_vars, ());;
+
 let rec prog_cfga
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
@@ -3202,5 +3224,9 @@ let rec analyse_interval_report
 let rec analyse
   x0 p = match x0, p with Sign_Analysis, p -> analyse_sign_report p
     | Interval_Analysis, p -> analyse_interval_report p;;
+
+let int_zero : int = Zero_int;;
+
+let nat_zero : nat = Zero_nat;;
 
 end;; (*struct Voblint_Analyse*)

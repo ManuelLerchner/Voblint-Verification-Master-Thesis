@@ -1,8 +1,10 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Voblint_Analyse(Cfg_node, Bexp, Check_result, Imp_prog_ext, Analysis_kind(..),
-                   analyse)
+  Voblint_Analyse(Num(..), Int(..), Nat(..), Char(..), Cfg_node(..), Aexp(..),
+                   Bexp(..), Com(..), Check_result(..), Proc_decl_ext,
+                   Imp_prog_ext, Analysis_kind(..), make, analyse, int_zero,
+                   nat_zero)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -2975,6 +2977,10 @@ fold_rhs_trees acc [] = Answer acc;
 fold_rhs_trees acc (t : ts) =
   seqcomp_tree t (\ res -> fold_rhs_trees (sup acc res) ts);
 
+make :: [([Char], Proc_decl_ext ())] -> Com -> [[Char]] -> Imp_prog_ext ();
+make proc_rep prog_main declared_global_vars =
+  Imp_prog_ext proc_rep prog_main declared_global_vars ();
+
 prog_cfga :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
 prog_cfga mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
 
@@ -3488,5 +3494,11 @@ analyse ::
   Analysis_kind -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse Sign_Analysis p = analyse_sign_report p;
 analyse Interval_Analysis p = analyse_interval_report p;
+
+int_zero :: Int;
+int_zero = Zero_int;
+
+nat_zero :: Nat;
+nat_zero = Zero_nat;
 
 }

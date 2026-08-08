@@ -16,7 +16,7 @@ AC_DIR          := vendor/autocorrode
 LINTER_DIR      := /tmp/isabelle-linter
 LINTER_TAG      := Isabelle2025-2-v1.0.0
 
-.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch codegen
+.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch codegen codegen-check regression
 
 all: build
 
@@ -57,6 +57,26 @@ build: vendor
 codegen: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
 	AFP=$(AFP) ./scripts/regenerate-codegen.sh
+
+# Regenerate codegen/generated/ and fail if the tracked output drifted from
+# the export_code declarations, i.e. someone edited a *.thy export and forgot
+# to run `make codegen` and commit the result.
+codegen-check: codegen
+	git diff --exit-code -- codegen/generated/
+
+# Compile and run the hand-written Haskell/OCaml drivers under
+# codegen/regression/ against the tracked codegen/generated/ sources, and
+# check their output against the values already proved by
+# src/Examples/Mixed/Example_Analysis_Dispatch.thy's dispatch_demo_*
+# lemmas. Requires ghc and ocamlfind on PATH; does not require Isabelle.
+regression:
+	cd codegen/regression/haskell && \
+	  ghc -i../../generated -o regression-hs Main.hs && \
+	  ./regression-hs
+	cd codegen/regression/ocaml && \
+	  cp ../../generated/Voblint_Analyse_OCaml.ocaml ./Voblint_Analyse_OCaml.ml && \
+	  ocamlfind ocamlopt -package str -linkpkg Voblint_Analyse_OCaml.ml main.ml -o regression-ml && \
+	  ./regression-ml
 
 # HTML browser info for all session theories (see Isabelle System Manual, browser_info).
 # Output is copied to $(HTML_DIR)/ for a repo-local entry point; Isabelle also keeps a

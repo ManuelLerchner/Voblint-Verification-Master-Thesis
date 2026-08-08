@@ -160,6 +160,38 @@ make AFP=/path/to/afp/thys jedit
 
 *Note: For details on agent-assisted development using Isabelle/Q and headless Isabelle/R, see `docs/ISABELLE_AGENT_NOTES.md` and the provided `./scripts/setup.sh`.*
 
+### Executable code generation
+
+Each domain exposes a runtime-program entry point, `analyse_sign` /
+`analyse_interval` (`Voblint_Examples.Example_Sign_Codegen`,
+`Voblint_Analysis.Interval_Checks`), reusing the same native D/G pipeline as
+the soundness theorems -- not a parallel one. `analyse`
+(`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_kind`
+(`Sign_Analysis`/`Interval_Analysis`) to either domain's check report. All
+three, plus the VIMP AST constructors, are exported to Haskell and OCaml so
+external code can build a program and call `analyse` without touching
+Isabelle.
+
+```bash
+# Regenerate codegen/generated/ from the export_code declarations
+make AFP=/path/to/afp/thys codegen
+
+# Fail if codegen/generated/ has drifted from those declarations
+make AFP=/path/to/afp/thys codegen-check
+
+# Compile and run the hand-written Haskell/OCaml drivers under
+# codegen/regression/ against codegen/generated/, and check their output
+# against the values already proved by Example_Analysis_Dispatch.thy's
+# dispatch_demo_sign_unknown / dispatch_demo_interval_precise
+make regression
+```
+
+Generated sources are tracked under `codegen/generated/`; do not hand-edit
+them. `codegen/regression/{haskell,ocaml}/` hold the hand-written drivers
+that exercise the generated code and compare it against the Isabelle-proved
+expected output -- so the generated Haskell/OCaml is checked against the same
+theorems as the Isabelle source, not merely assumed to match it. Both `make
+codegen-check` and `make regression` run in CI (`.github/workflows/ci.yml`).
 
 ### Vendoring the TD solver
 

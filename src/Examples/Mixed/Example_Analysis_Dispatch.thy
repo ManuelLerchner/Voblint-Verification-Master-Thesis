@@ -68,12 +68,42 @@ text \<open>
   The unified dispatcher exports the same way its two branches already do:
   \<open>analyse\<close> genuinely takes the domain choice and the program as runtime
   arguments, not constants baked in at export time.
+
+  The AST constructors and \<open>imp_prog.make\<close> are exported alongside it so
+  external Haskell/OCaml code can build a fresh \<open>imp_prog\<close> and hand it to
+  \<open>analyse\<close>, rather than only being able to call \<open>analyse\<close> on values built
+  inside Isabelle --- this is what the regression drivers under
+  \<open>codegen/regression\<close> use. \<open>int_zero\<close>/\<open>nat_zero\<close> exist only because the
+  generated \<open>Zero_int\<close>/\<open>Zero_nat\<close> constructors are code-level artifacts of
+  the numeral \<open>code_datatype\<close> setup, not directly citable Isabelle constants
+  themselves --- a named alias for \<open>0\<close> is the standard workaround.
 \<close>
 
-export_code analyse Sign_Analysis Interval_Analysis
+definition int_zero :: int where "int_zero = 0"
+definition nat_zero :: nat where "nat_zero = 0"
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_zero nat_zero Int.Pos Int.Neg num.One num.Bit0 num.Bit1 Suc
+  Statement FunctionEntry FunctionResult
+  char.Char
   in Haskell module_name Voblint_Analyse file_prefix "Voblint_Analyse"
 
-export_code analyse Sign_Analysis Interval_Analysis
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_zero nat_zero Int.Pos Int.Neg num.One num.Bit0 num.Bit1 Suc
+  Statement FunctionEntry FunctionResult
+  char.Char
   in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
 
 end
