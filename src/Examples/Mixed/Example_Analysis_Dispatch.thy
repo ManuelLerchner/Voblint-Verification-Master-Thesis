@@ -66,6 +66,88 @@ lemma dispatch_demo_interval_precise:
       (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
   by eval
 
+subsection \<open>A program with a global, a procedure, and a call\<close>
+
+text \<open>
+  \<open>total\<close> is a declared global; \<open>inc\<close> takes one formal and adds it to
+  \<open>total\<close>; \<open>main\<close> calls \<open>inc\<close> twice, then checks the accumulated total ---
+  exercising \<open>imp_prog.make\<close>'s procedure list, \<open>proc_decl_of\<close>'s formals, and
+  \<open>com.Call\<close> together, not just straight-line assignment/check as
+  \<open>dispatch_demo_prog\<close> does above.
+\<close>
+
+definition proc_demo_prog :: imp_prog where
+  "proc_demo_prog =
+     program {
+       global total;
+       void inc(n) {
+         total := total + n
+       }
+       void main() {
+         total := 0;
+         inc(3);
+         inc(4);
+         __voblint_check(0 < total);
+         __voblint_check(total < 100)
+       }
+     }"
+
+text \<open>
+  \<^const>\<open>string_of_check_report\<close>/\<^const>\<open>string_of_action\<close>/
+  \<^const>\<open>string_of_call_action\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>,
+  already an ancestor via \<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>) already
+  print a report/edge/call action; only the two CFG-edge-list joiners are new
+  here.
+\<close>
+
+definition string_of_intra_list ::
+  "(cfg_node \<times> edge_action \<times> cfg_node) list \<Rightarrow> string" where
+  "string_of_intra_list es = join_source ''; ''
+     (map (\<lambda>(u, a, v). string_of_cfg_node u @ '' --['' @ string_of_action a
+             @ '']--> '' @ string_of_cfg_node v) es)"
+
+definition string_of_calls_list ::
+  "(cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list \<Rightarrow> string" where
+  "string_of_calls_list es = join_source ''; ''
+     (map (\<lambda>(call, ca, entry, cont). string_of_cfg_node call @ '' --['' @
+             string_of_call_action ca @ '']--> '' @ string_of_cfg_node entry
+             @ '' ~cont~> '' @ string_of_cfg_node cont) es)"
+
+lemma proc_demo_sign_unknown:
+  "analyse Sign_Analysis proc_demo_prog =
+     [(Statement 5, Less (N 0) (V (STR ''total'')), Check_Unknown),
+      (Statement 6, Less (V (STR ''total'')) (N 100), Check_Unknown)]"
+  by eval
+
+lemma proc_demo_cfg_intra:
+  "string_of_intra_list (cfg_intra_list (prog_cfg prog_main_name proc_demo_prog)) =
+     ''pp0 --[total := (total+n)]--> pp1; pp1 --[return]--> result_inc; ''
+     @ ''pp2 --[total := 0]--> pp3; pp5 --[check(0<total)]--> pp6; ''
+     @ ''pp6 --[check(total<100)]--> pp7; pp7 --[return]--> result_main; ''
+     @ ''entry_inc --[nop]--> pp0; entry_main --[nop]--> pp2''"
+  by eval
+
+lemma proc_demo_cfg_calls:
+  "string_of_calls_list (cfg_calls_list (prog_cfg prog_main_name proc_demo_prog)) =
+     ''pp3 --[call(3)]--> entry_inc ~cont~> pp4; pp4 --[call(4)]--> entry_inc ~cont~> pp5''"
+  by eval
+
+text \<open>
+  \<open>analyse Interval_Analysis proc_demo_prog\<close> (this program: a global, one
+  procedure with a formal, two calls, two checks) does not terminate within
+  several minutes and crashes the evaluating process outright --- reproduced
+  independently in a batch build (segfault after ~145s), an I/R REPL
+  (crashed the daemon), and an I/Q jEdit session (crashed the backend).
+  Confirmed independent of the \<^typ>\<open>String.literal\<close> migration in this
+  branch --- no existing example anywhere in this project previously
+  exercised \<^const>\<open>analyse_interval_report\<close> end-to-end on a program
+  containing an actual \<^const>\<open>com.Call\<close> edge, so this is a pre-existing
+  latent non-termination in Interval's procedure/call handling, newly
+  exposed here, not caused by this migration. Left unevaluated; needs its
+  own investigation.
+\<close>
+
+
 subsection \<open>Executable code generation\<close>
 
 text \<open>
