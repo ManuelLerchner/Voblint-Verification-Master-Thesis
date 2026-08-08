@@ -190,6 +190,23 @@ complete, hypothesis-free instance of this chain: a concrete `Check_Proved`
 verdict `analyse` actually returns, with both facts discharged and no
 assumption left open.
 
+`code_identifier` declarations (`Example_Analysis_Dispatch.thy`) group the
+~60 contributing Isabelle theories into a small number of named modules
+instead of one undifferentiated file. Haskell splits four ways -- `Core`
+(VIMP/CFG/executable state/generic analysis plumbing/the vendored solver;
+these cannot be split further -- real mutual code-level dependencies, e.g.
+the executable state is generically instantiated at the solver's own
+`widening`/`narrowing` type classes), `Sign`, `Interval`, and `Analyse` (the
+public facade: `analysis_kind`, `analyse` itself, ~30 lines). OCaml's
+serializer only ever emits one file regardless of `module_name`/
+`code_identifier`, so the same grouping instead organizes that one file into
+nested `module ... = struct ... end` blocks; there `Sign`/`Interval` fold
+into `Core` rather than staying separate, since splitting them out passes
+Isabelle's own `export_code` checks but `ocamlfind ocamlopt` then rejects an
+unbound type-class dictionary field the OCaml module-signature inference
+doesn't expose across that boundary -- not fixable by regrouping, so `Core`/
+`Analyse` is the finest split both Isabelle and the OCaml compiler accept.
+
 ```bash
 # Regenerate codegen/generated/ from the export_code declarations
 make AFP=/path/to/afp/thys codegen

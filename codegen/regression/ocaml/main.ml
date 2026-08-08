@@ -9,7 +9,8 @@
    Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
    it with `make codegen` instead. *)
 
-open Voblint_Analyse_OCaml.Voblint_Analyse
+open Voblint_Analyse_OCaml.Core
+open Voblint_Analyse_OCaml.Analyse
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native

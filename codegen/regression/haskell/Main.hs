@@ -1,19 +1,20 @@
--- Regression driver for the generated Voblint_Analyse Haskell module.
--- Constructs a VIMP program purely through the exported AST constructors
--- (never touching Isabelle), runs it through the exported `analyse`
--- dispatcher for both domains, and checks the result against the values
--- already proved inside Isabelle by
+-- Regression driver for the generated Haskell modules (VIMP/CFG/Abstract_State/
+-- Solver/Sign/Interval/Analysis/Analyse -- see Example_Analysis_Dispatch.thy's
+-- code_identifier declarations for the grouping). Constructs a VIMP program
+-- purely through the exported AST constructors (never touching Isabelle),
+-- runs it through the exported `analyse` dispatcher for both domains, and
+-- checks the result against the values already proved inside Isabelle by
 -- src/Examples/Mixed/Example_Analysis_Dispatch.thy's
 -- dispatch_demo_sign_unknown / dispatch_demo_interval_precise lemmas.
 --
--- Do not hand-edit codegen/generated/Voblint_Analyse.hs; regenerate it with
--- `make codegen` instead.
+-- Do not hand-edit codegen/generated/hs/*.hs; regenerate with `make codegen`.
 module Main (main) where
 
 import Prelude hiding (Char, Int, Num)
 import qualified Prelude
 import System.Exit (exitFailure)
-import Voblint_Analyse
+import Core
+import Analyse
 
 -- `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
 -- backs Isabelle's `int`/`nat` by the target language's native

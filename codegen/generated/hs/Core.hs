@@ -1,13 +1,24 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Voblint_Analyse(Int(..), integer_of_int, Nat, integer_of_nat, Cfg_node(..),
-                   Aexp(..), Call_action(..), Bexp(..), Edge_action(..), Num,
-                   Set, Char, Com(..), Cfg_ext, Check_result(..), Proc_decl_ext,
-                   Imp_prog_ext, Analysis_kind(..), nat_of_integer, cfg_entry,
-                   char_of_integer, integer_of_char, proc_decl_of,
-                   cfg_calls_list, cfg_intra_list, prog_main_name, prog_cfg,
-                   make, string_of_bexp, analyse)
+  Core(Int(..), integer_of_int, equal_int, less_eq_int, Ord(..), less_int,
+        Preorder, Order, Nat, integer_of_nat, Sum(..), Cfg_node(..), Location,
+        Aexp(..), Finite, Enum, Call_action(..), Bexp(..), Edge_action(..),
+        Dg_state, locals, globs, Sup(..), Semilattice_sup, Bot(..), Order_bot,
+        Widening(..), Bounded_semilattice_sup_bot, Narrowing(..), Warrowing,
+        Bounded_warrowing, Resolved_st_q(..), sup_resolved_st_q,
+        bot_resolved_st_q, Num, Set, Char, Com(..), Cfg_ext, Strategy_tree,
+        Check_result(..), Dg_spec_ext, Proc_decl_ext, Imp_prog_ext,
+        Effectful_st_transfer_ext, max, nat_of_integer, ret_var, cfg_entry,
+        cfg_exit, location_of, sup_fun, side_env, char_of_integer,
+        integer_of_char, proc_decl_of, min, cfg_calls_list, cfg_intra_list,
+        dg_gen_of, one_int, prog_procs, prog_main, prog_main_name, prog_table,
+        plus_int, zero_int, compile_prog, prog_cfg, make, update_resolved_st_q,
+        minus_int, times_int, side_cfg_T_eff_st, declared_global,
+        classify_checks, bind_formals_resolved_q, inv_conservative,
+        enter_frame_D_resolved_q, fun_of_resolved_st_q_for, string_of_bexp,
+        unit_dg_spec_st_for, unit_etf_st_of_transfer, fun_of_exec_dg_st_for,
+        tD_side_always_join_Interp_solve, tD_side_warrowing_apinis_Interp_solve)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -19,6 +30,7 @@ import Data.Bits ((.&.), (.|.), (.^.));
 import qualified Prelude;
 import qualified Data.Bits;
 import qualified Str_Literal;
+import qualified HOL;
 
 newtype Int = Int_of_integer Integer;
 
@@ -291,248 +303,6 @@ instance Enum () where {
   enum = enum_unit;
   enum_all = enum_all_unit;
   enum_ex = enum_ex_unit;
-};
-
-data Sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop;
-
-equal_sign :: Sign -> Sign -> Bool;
-equal_sign SPos STop = False;
-equal_sign STop SPos = False;
-equal_sign SNonNeg STop = False;
-equal_sign STop SNonNeg = False;
-equal_sign SNonNeg SPos = False;
-equal_sign SPos SNonNeg = False;
-equal_sign SZero STop = False;
-equal_sign STop SZero = False;
-equal_sign SZero SPos = False;
-equal_sign SPos SZero = False;
-equal_sign SZero SNonNeg = False;
-equal_sign SNonNeg SZero = False;
-equal_sign SNonPos STop = False;
-equal_sign STop SNonPos = False;
-equal_sign SNonPos SPos = False;
-equal_sign SPos SNonPos = False;
-equal_sign SNonPos SNonNeg = False;
-equal_sign SNonNeg SNonPos = False;
-equal_sign SNonPos SZero = False;
-equal_sign SZero SNonPos = False;
-equal_sign SNeg STop = False;
-equal_sign STop SNeg = False;
-equal_sign SNeg SPos = False;
-equal_sign SPos SNeg = False;
-equal_sign SNeg SNonNeg = False;
-equal_sign SNonNeg SNeg = False;
-equal_sign SNeg SZero = False;
-equal_sign SZero SNeg = False;
-equal_sign SNeg SNonPos = False;
-equal_sign SNonPos SNeg = False;
-equal_sign SBot STop = False;
-equal_sign STop SBot = False;
-equal_sign SBot SPos = False;
-equal_sign SPos SBot = False;
-equal_sign SBot SNonNeg = False;
-equal_sign SNonNeg SBot = False;
-equal_sign SBot SZero = False;
-equal_sign SZero SBot = False;
-equal_sign SBot SNonPos = False;
-equal_sign SNonPos SBot = False;
-equal_sign SBot SNeg = False;
-equal_sign SNeg SBot = False;
-equal_sign STop STop = True;
-equal_sign SPos SPos = True;
-equal_sign SNonNeg SNonNeg = True;
-equal_sign SZero SZero = True;
-equal_sign SNonPos SNonPos = True;
-equal_sign SNeg SNeg = True;
-equal_sign SBot SBot = True;
-
-instance Eq Sign where {
-  a == b = equal_sign a b;
-};
-
-join_sign :: Sign -> Sign -> Sign;
-join_sign SBot b = b;
-join_sign SNeg SBot = SNeg;
-join_sign SNonPos SBot = SNonPos;
-join_sign SZero SBot = SZero;
-join_sign SNonNeg SBot = SNonNeg;
-join_sign SPos SBot = SPos;
-join_sign STop SBot = STop;
-join_sign STop SNeg = STop;
-join_sign STop SNonPos = STop;
-join_sign STop SZero = STop;
-join_sign STop SNonNeg = STop;
-join_sign STop SPos = STop;
-join_sign STop STop = STop;
-join_sign SNeg STop = STop;
-join_sign SNonPos STop = STop;
-join_sign SZero STop = STop;
-join_sign SNonNeg STop = STop;
-join_sign SPos STop = STop;
-join_sign SNeg SNeg = SNeg;
-join_sign SNeg SZero = SNonPos;
-join_sign SNeg SNonPos = SNonPos;
-join_sign SZero SNeg = SNonPos;
-join_sign SZero SZero = SZero;
-join_sign SZero SPos = SNonNeg;
-join_sign SZero SNonPos = SNonPos;
-join_sign SZero SNonNeg = SNonNeg;
-join_sign SNonPos SNeg = SNonPos;
-join_sign SNonPos SZero = SNonPos;
-join_sign SNonPos SNonPos = SNonPos;
-join_sign SNonNeg SZero = SNonNeg;
-join_sign SNonNeg SPos = SNonNeg;
-join_sign SNonNeg SNonNeg = SNonNeg;
-join_sign SPos SZero = SNonNeg;
-join_sign SPos SNonNeg = SNonNeg;
-join_sign SPos SPos = SPos;
-join_sign SNeg SNonNeg = STop;
-join_sign SNeg SPos = STop;
-join_sign SNonPos SNonNeg = STop;
-join_sign SNonPos SPos = STop;
-join_sign SNonNeg SNeg = STop;
-join_sign SNonNeg SNonPos = STop;
-join_sign SPos SNeg = STop;
-join_sign SPos SNonPos = STop;
-
-sup_sign :: Sign -> Sign -> Sign;
-sup_sign = join_sign;
-
-class Sup a where {
-  sup :: a -> a -> a;
-};
-
-instance Sup Sign where {
-  sup = sup_sign;
-};
-
-bot_sign :: Sign;
-bot_sign = SBot;
-
-class Bot a where {
-  bot :: a;
-};
-
-instance Bot Sign where {
-  bot = bot_sign;
-};
-
-sign_le :: Sign -> Sign -> Bool;
-sign_le SBot uu = True;
-sign_le SNeg STop = True;
-sign_le SNonPos STop = True;
-sign_le SZero STop = True;
-sign_le SNonNeg STop = True;
-sign_le SPos STop = True;
-sign_le STop STop = True;
-sign_le SNeg SNeg = True;
-sign_le SNeg SNonPos = True;
-sign_le SNonPos SNonPos = True;
-sign_le SZero SZero = True;
-sign_le SZero SNonPos = True;
-sign_le SZero SNonNeg = True;
-sign_le SNonNeg SNonNeg = True;
-sign_le SPos SPos = True;
-sign_le SPos SNonNeg = True;
-sign_le SNeg SBot = False;
-sign_le SNeg SZero = False;
-sign_le SNeg SNonNeg = False;
-sign_le SNeg SPos = False;
-sign_le SNonPos SBot = False;
-sign_le SNonPos SNeg = False;
-sign_le SNonPos SZero = False;
-sign_le SNonPos SNonNeg = False;
-sign_le SNonPos SPos = False;
-sign_le SZero SBot = False;
-sign_le SZero SNeg = False;
-sign_le SZero SPos = False;
-sign_le SNonNeg SBot = False;
-sign_le SNonNeg SNeg = False;
-sign_le SNonNeg SNonPos = False;
-sign_le SNonNeg SZero = False;
-sign_le SNonNeg SPos = False;
-sign_le SPos SBot = False;
-sign_le SPos SNeg = False;
-sign_le SPos SNonPos = False;
-sign_le SPos SZero = False;
-sign_le STop SBot = False;
-sign_le STop SNeg = False;
-sign_le STop SNonPos = False;
-sign_le STop SZero = False;
-sign_le STop SNonNeg = False;
-sign_le STop SPos = False;
-
-less_eq_sign :: Sign -> Sign -> Bool;
-less_eq_sign a b = sign_le a b;
-
-less_sign :: Sign -> Sign -> Bool;
-less_sign a b = sign_le a b && not (sign_le b a);
-
-instance Ord Sign where {
-  less_eq = less_eq_sign;
-  less = less_sign;
-};
-
-instance Preorder Sign where {
-};
-
-instance Order Sign where {
-};
-
-class (Bot a, Order a) => Order_bot a where {
-};
-
-instance Order_bot Sign where {
-};
-
-widen_sign :: Sign -> Sign -> Sign;
-widen_sign a b = join_sign a b;
-
-class (Order a) => Widening a where {
-  widen :: a -> a -> a;
-};
-
-instance Widening Sign where {
-  widen = widen_sign;
-};
-
-narrow_sign_td :: Sign -> Sign -> Sign;
-narrow_sign_td a b = a;
-
-narrow_sign :: Sign -> Sign -> Sign;
-narrow_sign a b = narrow_sign_td a b;
-
-class (Order a) => Narrowing a where {
-  narrow :: a -> a -> a;
-};
-
-instance Narrowing Sign where {
-  narrow = narrow_sign;
-};
-
-class (Narrowing a, Widening a) => Warrowing a where {
-};
-
-instance Warrowing Sign where {
-};
-
-class (Sup a, Order a) => Semilattice_sup a where {
-};
-
-instance Semilattice_sup Sign where {
-};
-
-class (Semilattice_sup a, Order_bot a) => Bounded_semilattice_sup_bot a where {
-};
-
-class (Bounded_semilattice_sup_bot a,
-        Warrowing a) => Bounded_warrowing a where {
-};
-
-instance Bounded_semilattice_sup_bot Sign where {
-};
-
-instance Bounded_warrowing Sign where {
 };
 
 data Call_action = CallEdge (Maybe String) [String] [Aexp];
@@ -885,120 +655,6 @@ instance Ord Integer where {
   less = (\ a b -> a < b);
 };
 
-data Eint = MinInf | Fin Int | PlusInf;
-
-equal_eint :: Eint -> Eint -> Bool;
-equal_eint (Fin x2) PlusInf = False;
-equal_eint PlusInf (Fin x2) = False;
-equal_eint MinInf PlusInf = False;
-equal_eint PlusInf MinInf = False;
-equal_eint MinInf (Fin x2) = False;
-equal_eint (Fin x2) MinInf = False;
-equal_eint (Fin x2) (Fin y2) = equal_int x2 y2;
-equal_eint PlusInf PlusInf = True;
-equal_eint MinInf MinInf = True;
-
-data Ivl = Ivl Eint Eint;
-
-equal_ivl :: Ivl -> Ivl -> Bool;
-equal_ivl (Ivl x1 x2) (Ivl y1 y2) = equal_eint x1 y1 && equal_eint x2 y2;
-
-instance Eq Ivl where {
-  a == b = equal_ivl a b;
-};
-
-eint_le :: Eint -> Eint -> Bool;
-eint_le MinInf uu = True;
-eint_le (Fin v) PlusInf = True;
-eint_le PlusInf PlusInf = True;
-eint_le (Fin n) (Fin m) = less_eq_int n m;
-eint_le (Fin v) MinInf = False;
-eint_le PlusInf MinInf = False;
-eint_le PlusInf (Fin v) = False;
-
-less_eq_eint :: Eint -> Eint -> Bool;
-less_eq_eint = eint_le;
-
-join_ivl :: Ivl -> Ivl -> Ivl;
-join_ivl (Ivl l1 u1) (Ivl l2 u2) =
-  Ivl (if less_eq_eint l1 l2 then l1 else l2)
-    (if less_eq_eint u2 u1 then u1 else u2);
-
-sup_ivl :: Ivl -> Ivl -> Ivl;
-sup_ivl = join_ivl;
-
-instance Sup Ivl where {
-  sup = sup_ivl;
-};
-
-bot_ivl :: Ivl;
-bot_ivl = Ivl PlusInf MinInf;
-
-instance Bot Ivl where {
-  bot = bot_ivl;
-};
-
-less_eq_ivl :: Ivl -> Ivl -> Bool;
-less_eq_ivl a b =
-  (case (a, b) of {
-    (Ivl l1 u1, Ivl l2 u2) -> less_eq_eint l2 l1 && less_eq_eint u1 u2;
-  });
-
-less_ivl :: Ivl -> Ivl -> Bool;
-less_ivl a b = less_eq_ivl a b && not (less_eq_ivl b a);
-
-instance Ord Ivl where {
-  less_eq = less_eq_ivl;
-  less = less_ivl;
-};
-
-instance Preorder Ivl where {
-};
-
-instance Order Ivl where {
-};
-
-instance Order_bot Ivl where {
-};
-
-widen_ivl_core :: Ivl -> Ivl -> Ivl;
-widen_ivl_core (Ivl l1 u1) (Ivl l2 u2) =
-  Ivl (if less_eq_eint l1 l2 then l1 else MinInf)
-    (if less_eq_eint u2 u1 then u1 else PlusInf);
-
-widen_ivl :: Ivl -> Ivl -> Ivl;
-widen_ivl a b =
-  (if equal_ivl a bot_ivl then b
-    else (if equal_ivl b bot_ivl then a else widen_ivl_core a b));
-
-instance Widening Ivl where {
-  widen = widen_ivl;
-};
-
-narrow_ivl_td :: Ivl -> Ivl -> Ivl;
-narrow_ivl_td (Ivl l1 u1) (Ivl l2 u2) =
-  Ivl (if equal_eint l1 MinInf then l2 else l1)
-    (if equal_eint u1 PlusInf then u2 else u1);
-
-narrow_ivl :: Ivl -> Ivl -> Ivl;
-narrow_ivl a b = narrow_ivl_td a b;
-
-instance Narrowing Ivl where {
-  narrow = narrow_ivl;
-};
-
-instance Warrowing Ivl where {
-};
-
-instance Semilattice_sup Ivl where {
-};
-
-instance Bounded_semilattice_sup_bot Ivl where {
-};
-
-instance Bounded_warrowing Ivl where {
-};
-
 data Dg_state a b = DG a b;
 
 equal_dg_state ::
@@ -1015,6 +671,13 @@ locals (DG x1 x2) = x1;
 globs :: forall a b. Dg_state a b -> b;
 globs (DG x1 x2) = x2;
 
+class Sup a where {
+  sup :: a -> a -> a;
+};
+
+class (Sup a, Order a) => Semilattice_sup a where {
+};
+
 sup_dg_state ::
   forall a b.
     (Semilattice_sup a,
@@ -1024,6 +687,13 @@ sup_dg_state d1 d2 =
 
 instance (Semilattice_sup a, Semilattice_sup b) => Sup (Dg_state a b) where {
   sup = sup_dg_state;
+};
+
+class Bot a where {
+  bot :: a;
+};
+
+class (Bot a, Order a) => Order_bot a where {
 };
 
 bot_dg_state :: forall a b. (Order_bot a, Order_bot b) => Dg_state a b;
@@ -1054,6 +724,24 @@ instance (Order a, Order b) => Order (Dg_state a b) where {
 };
 
 instance (Order_bot a, Order_bot b) => Order_bot (Dg_state a b) where {
+};
+
+class (Order a) => Widening a where {
+  widen :: a -> a -> a;
+};
+
+class (Semilattice_sup a, Order_bot a) => Bounded_semilattice_sup_bot a where {
+};
+
+class (Order a) => Narrowing a where {
+  narrow :: a -> a -> a;
+};
+
+class (Narrowing a, Widening a) => Warrowing a where {
+};
+
+class (Bounded_semilattice_sup_bot a,
+        Warrowing a) => Bounded_warrowing a where {
 };
 
 widen_dg_state ::
@@ -1306,8 +994,6 @@ data Ug_state_ext a b c d = Ug_state_ext (b -> Fmap a c) d;
 
 data Imp_prog_ext a = Imp_prog_ext [(String, Proc_decl_ext ())] Com [String] a;
 
-data Analysis_kind = Sign_Analysis | Interval_Analysis;
-
 data Func_state a b c d =
   Q (a, (a, (State_ext a b c (State_exta a ()), Ug_state_ext a b c d)))
   | I (a, (State_ext a b c (State_exta a ()), Ug_state_ext a b c d))
@@ -1502,235 +1188,12 @@ side_env ::
   Cfg_node -> String -> b;
 side_env sigma v = sup_fun (sigma (Inl v)) (glob_env sigma);
 
-zero_int :: Int;
-zero_int = Int_of_integer (0 :: Integer);
-
-cinit_ivl_st :: Resolved_st_q Ivl;
-cinit_ivl_st =
-  Abs_resolved_st (Ivl MinInf PlusInf, (Ivl (Fin zero_int) (Fin zero_int), []));
-
 sup_fin :: forall a. (Semilattice_sup a) => Set a -> a;
 sup_fin (Set []) = abort_empty_set sup_fin;
 sup_fin (Set (x : xs)) = fold sup xs x;
 
 sup_fset :: forall a. (Semilattice_sup a) => Fset a -> a;
 sup_fset s = sup_fin (fset s);
-
-lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
-lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
-
-fun_of_resolved_st_q_for ::
-  forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
-fun_of_resolved_st_q_for gs s x = lookup_resolved_st_q s (location_of gs x);
-
-inv_conservative :: forall a. a -> a -> a -> (a, a);
-inv_conservative r a1 a2 = (a1, a2);
-
-remove_resolved_key :: forall a. Location -> [(Location, a)] -> [(Location, a)];
-remove_resolved_key loc [] = [];
-remove_resolved_key loca ((loc, a) : ps) =
-  (if equal_location loca loc then remove_resolved_key loca ps
-    else (loc, a) : remove_resolved_key loca ps);
-
-update_resolved_st ::
-  forall a.
-    (Bot a) => (a, (a, [(Location, a)])) ->
-                 Location -> a -> (a, (a, [(Location, a)]));
-update_resolved_st (dl, (dg, ps)) loc a =
-  (dl, (dg, (loc, a) : remove_resolved_key loc ps));
-
-update_resolved_st_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Location -> a -> Resolved_st_q a;
-update_resolved_st_q (Abs_resolved_st xb) xa x =
-  Abs_resolved_st (update_resolved_st xb xa x);
-
-times_int :: Int -> Int -> Int;
-times_int k l = Int_of_integer (integer_of_int k * integer_of_int l);
-
-ivl_top :: Ivl;
-ivl_top = Ivl MinInf PlusInf;
-
-min :: forall a. (Ord a) => a -> a -> a;
-min a b = (if less_eq a b then a else b);
-
-ivl_times_core :: Ivl -> Ivl -> Ivl;
-ivl_times_core (Ivl (Fin l1) (Fin u1)) (Ivl (Fin l2) (Fin u2)) =
-  Ivl (Fin (min (times_int l1 l2)
-             (min (times_int l1 u2) (min (times_int u1 l2) (times_int u1 u2)))))
-    (Fin (max (times_int l1 l2)
-           (max (times_int l1 u2) (max (times_int u1 l2) (times_int u1 u2)))));
-ivl_times_core (Ivl MinInf va) uv = ivl_top;
-ivl_times_core (Ivl PlusInf va) uv = ivl_top;
-ivl_times_core (Ivl v MinInf) uv = ivl_top;
-ivl_times_core (Ivl v PlusInf) uv = ivl_top;
-ivl_times_core uu (Ivl MinInf va) = ivl_top;
-ivl_times_core uu (Ivl PlusInf va) = ivl_top;
-ivl_times_core uu (Ivl v MinInf) = ivl_top;
-ivl_times_core uu (Ivl v PlusInf) = ivl_top;
-
-ivl_nonempty :: Ivl -> Bool;
-ivl_nonempty (Ivl l u) =
-  less_eq_eint l u && not (equal_eint l PlusInf) && not (equal_eint u MinInf);
-
-times_ivl :: Ivl -> Ivl -> Ivl;
-times_ivl a b =
-  (if ivl_nonempty a && ivl_nonempty b then ivl_times_core a b else bot_ivl);
-
-minus_int :: Int -> Int -> Int;
-minus_int k l = Int_of_integer (integer_of_int k - integer_of_int l);
-
-minus_eint :: Eint -> Eint -> Eint;
-minus_eint (Fin n) (Fin m) = Fin (minus_int n m);
-minus_eint (Fin uu) MinInf = PlusInf;
-minus_eint (Fin uv) PlusInf = MinInf;
-minus_eint MinInf MinInf = MinInf;
-minus_eint MinInf (Fin uw) = MinInf;
-minus_eint MinInf PlusInf = MinInf;
-minus_eint PlusInf MinInf = PlusInf;
-minus_eint PlusInf (Fin ux) = PlusInf;
-minus_eint PlusInf PlusInf = PlusInf;
-
-normalize_ivl :: Ivl -> Ivl;
-normalize_ivl v =
-  (case v of {
-    Ivl l u ->
-      (if less_eq_eint l u &&
-            not (equal_eint l PlusInf) && not (equal_eint u MinInf)
-        then v else bot_ivl);
-  });
-
-minus_ivl :: Ivl -> Ivl -> Ivl;
-minus_ivl (Ivl l1 u1) (Ivl l2 u2) =
-  (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of {
-    (Ivl a b, Ivl c d) -> normalize_ivl (Ivl (minus_eint a d) (minus_eint b c));
-  });
-
-plus_int :: Int -> Int -> Int;
-plus_int k l = Int_of_integer (integer_of_int k + integer_of_int l);
-
-plus_eint :: Eint -> Eint -> Eint;
-plus_eint (Fin n) (Fin m) = Fin (plus_int n m);
-plus_eint (Fin uu) MinInf = MinInf;
-plus_eint (Fin uv) PlusInf = PlusInf;
-plus_eint MinInf MinInf = MinInf;
-plus_eint MinInf (Fin uw) = MinInf;
-plus_eint MinInf PlusInf = MinInf;
-plus_eint PlusInf MinInf = PlusInf;
-plus_eint PlusInf (Fin ux) = PlusInf;
-plus_eint PlusInf PlusInf = PlusInf;
-
-plus_ivl :: Ivl -> Ivl -> Ivl;
-plus_ivl (Ivl l1 u1) (Ivl l2 u2) =
-  (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of {
-    (Ivl a b, Ivl c d) -> normalize_ivl (Ivl (plus_eint a c) (plus_eint b d));
-  });
-
-aval_ivl :: Aexp -> (String -> Ivl) -> Ivl;
-aval_ivl (N n) sigma = Ivl (Fin n) (Fin n);
-aval_ivl (V x) sigma = sigma x;
-aval_ivl (Plus a b) sigma = plus_ivl (aval_ivl a sigma) (aval_ivl b sigma);
-aval_ivl (Minus a b) sigma = minus_ivl (aval_ivl a sigma) (aval_ivl b sigma);
-aval_ivl (Times a b) sigma = times_ivl (aval_ivl a sigma) (aval_ivl b sigma);
-
-meet_ivl :: Ivl -> Ivl -> Ivl;
-meet_ivl (Ivl l1 u1) (Ivl l2 u2) =
-  Ivl (if less_eq_eint l2 l1 then l1 else l2)
-    (if less_eq_eint u1 u2 then u1 else u2);
-
-afilter_ivl_st ::
-  (String -> Bool) -> Aexp -> Ivl -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
-afilter_ivl_st gs (V x) a s =
-  update_resolved_st_q s (location_of gs x)
-    (meet_ivl a (fun_of_resolved_st_q_for gs s x));
-afilter_ivl_st gs (Plus e1 e2) a s =
-  (case inv_conservative a (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
-          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
-  });
-afilter_ivl_st gs (Minus e1 e2) a s =
-  (case inv_conservative a (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
-          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
-  });
-afilter_ivl_st gs (Times e1 e2) a s =
-  (case inv_conservative a (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
-          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
-  });
-afilter_ivl_st gs (N v) a s = s;
-
-inf_ivl :: Ivl -> Ivl -> Ivl;
-inf_ivl = meet_ivl;
-
-one_int :: Int;
-one_int = Int_of_integer (1 :: Integer);
-
-inv_less_ivl :: Bool -> Ivl -> Ivl -> (Ivl, Ivl);
-inv_less_ivl True (Ivl l1 u1) (Ivl l2 u2) =
-  (inf_ivl (Ivl l1 u1) (Ivl MinInf (minus_eint u2 (Fin one_int))),
-    inf_ivl (Ivl l2 u2) (Ivl (plus_eint l1 (Fin one_int)) PlusInf));
-inv_less_ivl False (Ivl l1 u1) (Ivl l2 u2) =
-  (inf_ivl (Ivl l1 u1) (Ivl l2 PlusInf), inf_ivl (Ivl l2 u2) (Ivl MinInf u1));
-
-inv_eq_ivl :: Bool -> Ivl -> Ivl -> (Ivl, Ivl);
-inv_eq_ivl True a1 a2 = (meet_ivl a1 a2, meet_ivl a1 a2);
-inv_eq_ivl False a1 a2 = (a1, a2);
-
-bfilter_ivl_st ::
-  (String -> Bool) -> Bexp -> Bool -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
-bfilter_ivl_st gs (Less e1 e2) res s =
-  (case inv_less_ivl res (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
-          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
-  });
-bfilter_ivl_st gs (Not b) res s = bfilter_ivl_st gs b (not res) s;
-bfilter_ivl_st gs (And b1 b2) True s =
-  bfilter_ivl_st gs b1 True (bfilter_ivl_st gs b2 True s);
-bfilter_ivl_st gs (And b1 b2) False s =
-  sup_resolved_st_q (bfilter_ivl_st gs b1 False s)
-    (bfilter_ivl_st gs b2 False s);
-bfilter_ivl_st gs (Or b1 b2) True s =
-  sup_resolved_st_q (bfilter_ivl_st gs b1 True s) (bfilter_ivl_st gs b2 True s);
-bfilter_ivl_st gs (Or b1 b2) False s =
-  bfilter_ivl_st gs b1 False (bfilter_ivl_st gs b2 False s);
-bfilter_ivl_st gs (Eqb e1 e2) res s =
-  (case inv_eq_ivl res (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
-          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
-  });
-bfilter_ivl_st gs (Bc v) uv s = s;
-
-assume_not_ivl_st_for ::
-  (String -> Bool) -> Bexp -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
-assume_not_ivl_st_for source_global b s =
-  bfilter_ivl_st source_global b False s;
-
-assume_ivl_st_for ::
-  (String -> Bool) -> Bexp -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
-assume_ivl_st_for source_global b s = bfilter_ivl_st source_global b True s;
-
-ivl_tf_st_for ::
-  (String -> Bool) -> Edge_action -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
-ivl_tf_st_for source_global EA_Nop s = s;
-ivl_tf_st_for source_global (EA_Assign x a) s =
-  update_resolved_st_q s (location_of source_global x)
-    (aval_ivl a (fun_of_resolved_st_q_for source_global s));
-ivl_tf_st_for source_global (EA_Random x) s =
-  update_resolved_st_q s (location_of source_global x) ivl_top;
-ivl_tf_st_for source_global (EA_Assume b) s =
-  assume_ivl_st_for source_global b s;
-ivl_tf_st_for source_global (EA_AssumeNot b) s =
-  assume_not_ivl_st_for source_global b s;
-ivl_tf_st_for source_global (EA_Ret Nothing p) s = s;
-ivl_tf_st_for source_global (EA_Ret (Just a) p) s =
-  update_resolved_st_q s (location_of source_global ret_var)
-    (aval_ivl a (fun_of_resolved_st_q_for source_global s));
-ivl_tf_st_for source_global (EA_Check cnd) s = s;
 
 divmod_integer :: Integer -> Integer -> (Integer, Integer);
 divmod_integer k l =
@@ -1799,219 +1262,8 @@ csize (Return e) = one_nat;
 csize Restore = one_nat;
 csize Unwind = one_nat;
 
-combine_assign_resolved ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 Maybe String ->
-                   a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-combine_assign_resolved gs dst v s =
-  (case dst of {
-    Nothing -> s;
-    Just x -> update_resolved_st s (location_of gs x) v;
-  });
-
-location_is_global :: Location -> Bool;
-location_is_global (Local_Location x) = False;
-location_is_global (Global_Location x) = True;
-
-location_is_local :: Location -> Bool;
-location_is_local (Local_Location x) = True;
-location_is_local (Global_Location x) = False;
-
-combine_resolved_st ::
-  forall a.
-    (Bot a) => (a, (a, [(Location, a)])) ->
-                 (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-combine_resolved_st sc se =
-  (case sc of {
-    (dlc, (_, psc)) ->
-      (case se of {
-        (_, (dge, pse)) ->
-          (dlc, (dge, filter (\ p -> location_is_local (fst p)) psc ++
-                        filter (\ p -> location_is_global (fst p)) pse));
-      });
-  });
-
-combine_collect_resolved_for ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 Maybe String ->
-                   (a, (a, [(Location, a)])) ->
-                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-combine_collect_resolved_for gs dst sc se =
-  combine_assign_resolved gs dst
-    (lookup_resolved_st se (location_of gs ret_var))
-    (combine_resolved_st sc se);
-
-combine_collect_resolved_for_q ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 Maybe String ->
-                   Resolved_st_q a -> Resolved_st_q a -> Resolved_st_q a;
-combine_collect_resolved_for_q xc xb (Abs_resolved_st xa) (Abs_resolved_st x) =
-  Abs_resolved_st (combine_collect_resolved_for xc xb xa x);
-
-restrict_global_resolved ::
-  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-restrict_global_resolved s =
-  (case s of {
-    (_, (dg, ps)) -> (bot, (dg, filter (\ p -> location_is_global (fst p)) ps));
-  });
-
-restrict_global_resolved_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
-restrict_global_resolved_q (Abs_resolved_st x) =
-  Abs_resolved_st (restrict_global_resolved x);
-
-restrict_local_resolved ::
-  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-restrict_local_resolved s =
-  (case s of {
-    (dl, (_, ps)) -> (dl, (bot, filter (\ p -> location_is_local (fst p)) ps));
-  });
-
-restrict_local_resolved_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
-restrict_local_resolved_q (Abs_resolved_st x) =
-  Abs_resolved_st (restrict_local_resolved x);
-
-unit_combine_tree_st ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
- Maybe String ->
-   Cfg_node -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q a);
-unit_combine_tree_st gs dst cc ex =
-  QueryL cc
-    (\ sc ->
-      QueryL ex
-        (\ se ->
-          QueryG ()
-            (\ g ->
-              let {
-                res = combine_collect_resolved_for_q gs dst
-                        (sup_resolved_st_q sc g) (sup_resolved_st_q se g);
-              } in Side () (restrict_global_resolved_q res)
-                     (Answer (restrict_local_resolved_q res)))));
-
-unit_edge_tree_st ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (Resolved_st_q a -> Resolved_st_q a) ->
- Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q a);
-unit_edge_tree_st f u =
-  QueryL u
-    (\ su ->
-      QueryG ()
-        (\ g ->
-          let {
-            res = f (sup_resolved_st_q su g);
-          } in Side () (restrict_global_resolved_q res)
-                 (Answer (restrict_local_resolved_q res))));
-
-unit_etf_st_of_transfer ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
- (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
-   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
-     Effectful_st_transfer_ext () (Resolved_st_q a) ();
-unit_etf_st_of_transfer gs tf_st enter_st =
-  Effectful_st_transfer_ext (unit_edge_tree_st (tf_st EA_Nop))
-    (\ x e -> unit_edge_tree_st (tf_st (EA_Assign x e)))
-    (\ x -> unit_edge_tree_st (tf_st (EA_Random x)))
-    (\ b -> unit_edge_tree_st (tf_st (EA_Assume b)))
-    (\ b -> unit_edge_tree_st (tf_st (EA_AssumeNot b)))
-    (\ xs es -> unit_edge_tree_st (enter_st xs es)) (unit_combine_tree_st gs)
-    ();
-
-enter_frame_D_resolved ::
-  forall a.
-    (Bot a) => a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-enter_frame_D_resolved top_val s =
-  (case s of {
-    (_, (dg, ps)) ->
-      (top_val, (dg, filter (\ p -> location_is_global (fst p)) ps));
-  });
-
-enter_frame_D_resolved_q ::
-  forall a. (Bot a) => a -> Resolved_st_q a -> Resolved_st_q a;
-enter_frame_D_resolved_q xa (Abs_resolved_st x) =
-  Abs_resolved_st (enter_frame_D_resolved xa x);
-
-bind_formals_resolved ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 [String] ->
-                   [a] ->
-                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-bind_formals_resolved gs xs avs s =
-  fold (\ (x, a) t -> update_resolved_st t (location_of gs x) a) (zip xs avs) s;
-
-bind_formals_resolved_q ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 [String] -> [a] -> Resolved_st_q a -> Resolved_st_q a;
-bind_formals_resolved_q xc xb xa (Abs_resolved_st x) =
-  Abs_resolved_st (bind_formals_resolved xc xb xa x);
-
-ivl_enter_st_for ::
-  (String -> Bool) ->
-    [String] -> [Aexp] -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
-ivl_enter_st_for source_global xs es s =
-  bind_formals_resolved_q source_global xs
-    (map (\ e -> aval_ivl e (fun_of_resolved_st_q_for source_global s)) es)
-    (enter_frame_D_resolved_q ivl_top s);
-
-ivl_etf_st_for ::
-  (String -> Bool) -> Effectful_st_transfer_ext () (Resolved_st_q Ivl) ();
-ivl_etf_st_for gs =
-  unit_etf_st_of_transfer gs (ivl_tf_st_for gs) (ivl_enter_st_for gs);
-
-meet_sign :: Sign -> Sign -> Sign;
-meet_sign SBot uu = SBot;
-meet_sign SNeg SBot = SBot;
-meet_sign SNonPos SBot = SBot;
-meet_sign SZero SBot = SBot;
-meet_sign SNonNeg SBot = SBot;
-meet_sign SPos SBot = SBot;
-meet_sign STop SBot = SBot;
-meet_sign STop SNeg = SNeg;
-meet_sign STop SNonPos = SNonPos;
-meet_sign STop SZero = SZero;
-meet_sign STop SNonNeg = SNonNeg;
-meet_sign STop SPos = SPos;
-meet_sign STop STop = STop;
-meet_sign SNeg STop = SNeg;
-meet_sign SNonPos STop = SNonPos;
-meet_sign SZero STop = SZero;
-meet_sign SNonNeg STop = SNonNeg;
-meet_sign SPos STop = SPos;
-meet_sign SNeg SNeg = SNeg;
-meet_sign SNeg SNonPos = SNeg;
-meet_sign SNonPos SNeg = SNeg;
-meet_sign SNonPos SNonPos = SNonPos;
-meet_sign SNonPos SZero = SZero;
-meet_sign SZero SNonPos = SZero;
-meet_sign SNonPos SNonNeg = SZero;
-meet_sign SNonNeg SNonPos = SZero;
-meet_sign SZero SZero = SZero;
-meet_sign SZero SNonNeg = SZero;
-meet_sign SNonNeg SZero = SZero;
-meet_sign SNonNeg SNonNeg = SNonNeg;
-meet_sign SNonNeg SPos = SPos;
-meet_sign SPos SNonNeg = SPos;
-meet_sign SPos SPos = SPos;
-meet_sign SNeg SZero = SBot;
-meet_sign SNeg SNonNeg = SBot;
-meet_sign SNeg SPos = SBot;
-meet_sign SNonPos SPos = SBot;
-meet_sign SZero SNeg = SBot;
-meet_sign SZero SPos = SBot;
-meet_sign SNonNeg SNeg = SBot;
-meet_sign SPos SNeg = SBot;
-meet_sign SPos SNonPos = SBot;
-meet_sign SPos SZero = SBot;
-
-cinit_sign_st :: Resolved_st_q Sign;
-cinit_sign_st = Abs_resolved_st (STop, (SZero, []));
+min :: forall a. (Ord a) => a -> a -> a;
+min a b = (if less_eq a b then a else b);
 
 dgs_combine_assign ::
   forall a b c. Dg_spec_ext a b c -> Maybe String -> a -> b -> (b, a) -> (b, a);
@@ -2353,269 +1605,15 @@ dg_gen_of s g bot0 s0d s0g =
   side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\ _ -> ())
     (\ _ _ _ _ -> ()) (dg_cmb_of s) (dg_extra_of s g) g s bot0 s0d s0g;
 
+one_int :: Int;
+one_int = Int_of_integer (1 :: Integer);
+
 bot_set :: forall a. Set a;
 bot_set = Set [];
 
 sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
 sup_set (Set xs) a = fold insert xs a;
 sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
-
-times_sign :: Sign -> Sign -> Sign;
-times_sign SBot uu = SBot;
-times_sign SNeg SBot = SBot;
-times_sign SNonPos SBot = SBot;
-times_sign SZero SBot = SBot;
-times_sign SNonNeg SBot = SBot;
-times_sign SPos SBot = SBot;
-times_sign STop SBot = SBot;
-times_sign SZero SNeg = SZero;
-times_sign SZero SNonPos = SZero;
-times_sign SZero SZero = SZero;
-times_sign SZero SNonNeg = SZero;
-times_sign SZero SPos = SZero;
-times_sign SZero STop = SZero;
-times_sign SNeg SZero = SZero;
-times_sign SNonPos SZero = SZero;
-times_sign SNonNeg SZero = SZero;
-times_sign SPos SZero = SZero;
-times_sign STop SZero = SZero;
-times_sign SNeg SNeg = SPos;
-times_sign SPos SPos = SPos;
-times_sign SNeg SPos = SNeg;
-times_sign SPos SNeg = SNeg;
-times_sign SNeg SNonPos = SNonNeg;
-times_sign SNonPos SNeg = SNonNeg;
-times_sign SNeg SNonNeg = SNonPos;
-times_sign SNonNeg SNeg = SNonPos;
-times_sign SPos SNonNeg = SNonNeg;
-times_sign SNonNeg SPos = SNonNeg;
-times_sign SPos SNonPos = SNonPos;
-times_sign SNonPos SPos = SNonPos;
-times_sign SNonNeg SNonNeg = SNonNeg;
-times_sign SNonNeg SNonPos = SNonPos;
-times_sign SNonPos SNonNeg = SNonPos;
-times_sign SNonPos SNonPos = SNonNeg;
-times_sign SNeg STop = STop;
-times_sign SNonPos STop = STop;
-times_sign SNonNeg STop = STop;
-times_sign SPos STop = STop;
-times_sign STop SNeg = STop;
-times_sign STop SNonPos = STop;
-times_sign STop SNonNeg = STop;
-times_sign STop SPos = STop;
-times_sign STop STop = STop;
-
-minus_sign :: Sign -> Sign -> Sign;
-minus_sign SBot uu = SBot;
-minus_sign SNeg SBot = SBot;
-minus_sign SNonPos SBot = SBot;
-minus_sign SZero SBot = SBot;
-minus_sign SNonNeg SBot = SBot;
-minus_sign SPos SBot = SBot;
-minus_sign STop SBot = SBot;
-minus_sign SNeg SPos = SNeg;
-minus_sign SNeg SNonNeg = SNeg;
-minus_sign SPos SNeg = SPos;
-minus_sign SPos SNonPos = SPos;
-minus_sign SNeg SZero = SNeg;
-minus_sign SPos SZero = SPos;
-minus_sign SZero SZero = SZero;
-minus_sign SZero SNeg = SPos;
-minus_sign SZero SPos = SNeg;
-minus_sign SZero SNonNeg = SNonPos;
-minus_sign SZero SNonPos = SNonNeg;
-minus_sign SNonNeg SZero = SNonNeg;
-minus_sign SNonNeg SNeg = SPos;
-minus_sign SNonNeg SNonPos = SNonNeg;
-minus_sign SNonPos SZero = SNonPos;
-minus_sign SNonPos SPos = SNeg;
-minus_sign SNonPos SNonNeg = SNonPos;
-minus_sign SNeg SNeg = STop;
-minus_sign SNeg SNonPos = STop;
-minus_sign SNeg STop = STop;
-minus_sign SNonPos SNeg = STop;
-minus_sign SNonPos SNonPos = STop;
-minus_sign SNonPos STop = STop;
-minus_sign SZero STop = STop;
-minus_sign SNonNeg SNonNeg = STop;
-minus_sign SNonNeg SPos = STop;
-minus_sign SNonNeg STop = STop;
-minus_sign SPos SNonNeg = STop;
-minus_sign SPos SPos = STop;
-minus_sign SPos STop = STop;
-minus_sign STop SNeg = STop;
-minus_sign STop SNonPos = STop;
-minus_sign STop SZero = STop;
-minus_sign STop SNonNeg = STop;
-minus_sign STop SPos = STop;
-minus_sign STop STop = STop;
-
-plus_sign :: Sign -> Sign -> Sign;
-plus_sign SBot uu = SBot;
-plus_sign SNeg SBot = SBot;
-plus_sign SNonPos SBot = SBot;
-plus_sign SZero SBot = SBot;
-plus_sign SNonNeg SBot = SBot;
-plus_sign SPos SBot = SBot;
-plus_sign STop SBot = SBot;
-plus_sign SNeg SNeg = SNeg;
-plus_sign SNeg SNonPos = SNeg;
-plus_sign SNonPos SNeg = SNeg;
-plus_sign SNonPos SNonPos = SNonPos;
-plus_sign SPos SPos = SPos;
-plus_sign SPos SNonNeg = SPos;
-plus_sign SNonNeg SPos = SPos;
-plus_sign SNonNeg SNonNeg = SNonNeg;
-plus_sign SZero SNeg = SNeg;
-plus_sign SZero SNonPos = SNonPos;
-plus_sign SZero SZero = SZero;
-plus_sign SZero SNonNeg = SNonNeg;
-plus_sign SZero SPos = SPos;
-plus_sign SZero STop = STop;
-plus_sign SNeg SZero = SNeg;
-plus_sign SNonPos SZero = SNonPos;
-plus_sign SNonNeg SZero = SNonNeg;
-plus_sign SPos SZero = SPos;
-plus_sign STop SZero = STop;
-plus_sign SNeg SNonNeg = STop;
-plus_sign SNeg SPos = STop;
-plus_sign SNeg STop = STop;
-plus_sign SNonPos SNonNeg = STop;
-plus_sign SNonPos SPos = STop;
-plus_sign SNonPos STop = STop;
-plus_sign SNonNeg SNeg = STop;
-plus_sign SNonNeg SNonPos = STop;
-plus_sign SNonNeg STop = STop;
-plus_sign SPos SNeg = STop;
-plus_sign SPos SNonPos = STop;
-plus_sign SPos STop = STop;
-plus_sign STop SNeg = STop;
-plus_sign STop SNonPos = STop;
-plus_sign STop SNonNeg = STop;
-plus_sign STop SPos = STop;
-plus_sign STop STop = STop;
-
-sign_of_int :: Int -> Sign;
-sign_of_int n =
-  (if less_int n zero_int then SNeg
-    else (if equal_int n zero_int then SZero else SPos));
-
-aval_sign :: Aexp -> (String -> Sign) -> Sign;
-aval_sign (N n) sigma = sign_of_int n;
-aval_sign (V x) sigma = sigma x;
-aval_sign (Plus a b) sigma = plus_sign (aval_sign a sigma) (aval_sign b sigma);
-aval_sign (Minus a b) sigma =
-  minus_sign (aval_sign a sigma) (aval_sign b sigma);
-aval_sign (Times a b) sigma =
-  times_sign (aval_sign a sigma) (aval_sign b sigma);
-
-afilter_sign_st ::
-  (String -> Bool) -> Aexp -> Sign -> Resolved_st_q Sign -> Resolved_st_q Sign;
-afilter_sign_st gs (V x) a s =
-  update_resolved_st_q s (location_of gs x)
-    (meet_sign a (fun_of_resolved_st_q_for gs s x));
-afilter_sign_st gs (Plus e1 e2) a s =
-  (case inv_conservative a (aval_sign e1 (fun_of_resolved_st_q_for gs s))
-          (aval_sign e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s);
-  });
-afilter_sign_st gs (Minus e1 e2) a s =
-  (case inv_conservative a (aval_sign e1 (fun_of_resolved_st_q_for gs s))
-          (aval_sign e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s);
-  });
-afilter_sign_st gs (Times e1 e2) a s =
-  (case inv_conservative a (aval_sign e1 (fun_of_resolved_st_q_for gs s))
-          (aval_sign e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s);
-  });
-afilter_sign_st gs (N v) a s = s;
-
-inv_less_sign :: Bool -> Sign -> Sign -> (Sign, Sign);
-inv_less_sign True a1 a2 =
-  let {
-    a1a = (if sign_le a2 SNonPos then meet_sign a1 SNeg else a1);
-    a = (if sign_le a1 SNonNeg then meet_sign a2 SPos else a2);
-  } in (a1a, a);
-inv_less_sign False a1 a2 =
-  let {
-    a1a = (if sign_le a2 SPos then meet_sign a1 SPos
-            else (if sign_le a2 SNonNeg then meet_sign a1 SNonNeg else a1));
-    a = (if sign_le a1 SNeg then meet_sign a2 SNeg
-          else (if sign_le a1 SNonPos then meet_sign a2 SNonPos else a2));
-  } in (a1a, a);
-
-inv_eq_sign :: Bool -> Sign -> Sign -> (Sign, Sign);
-inv_eq_sign True a1 a2 = (meet_sign a1 a2, meet_sign a1 a2);
-inv_eq_sign False a1 a2 =
-  let {
-    a1a = (if sign_le a1 SZero && sign_le a2 SZero then SBot
-            else (if sign_le a2 SZero && sign_le a1 SNonNeg
-                   then meet_sign a1 SPos
-                   else (if sign_le a2 SZero && sign_le a1 SNonPos
-                          then meet_sign a1 SNeg else a1)));
-    a = (if sign_le a1 SZero && sign_le a2 SZero then SBot
-          else (if sign_le a1 SZero && sign_le a2 SNonNeg then meet_sign a2 SPos
-                 else (if sign_le a1 SZero && sign_le a2 SNonPos
-                        then meet_sign a2 SNeg else a2)));
-  } in (a1a, a);
-
-bfilter_sign_st ::
-  (String -> Bool) -> Bexp -> Bool -> Resolved_st_q Sign -> Resolved_st_q Sign;
-bfilter_sign_st gs (Less e1 e2) res s =
-  (case inv_less_sign res (aval_sign e1 (fun_of_resolved_st_q_for gs s))
-          (aval_sign e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s);
-  });
-bfilter_sign_st gs (Not b) res s = bfilter_sign_st gs b (not res) s;
-bfilter_sign_st gs (And b1 b2) True s =
-  bfilter_sign_st gs b1 True (bfilter_sign_st gs b2 True s);
-bfilter_sign_st gs (And b1 b2) False s =
-  sup_resolved_st_q (bfilter_sign_st gs b1 False s)
-    (bfilter_sign_st gs b2 False s);
-bfilter_sign_st gs (Or b1 b2) True s =
-  sup_resolved_st_q (bfilter_sign_st gs b1 True s)
-    (bfilter_sign_st gs b2 True s);
-bfilter_sign_st gs (Or b1 b2) False s =
-  bfilter_sign_st gs b1 False (bfilter_sign_st gs b2 False s);
-bfilter_sign_st gs (Eqb e1 e2) res s =
-  (case inv_eq_sign res (aval_sign e1 (fun_of_resolved_st_q_for gs s))
-          (aval_sign e2 (fun_of_resolved_st_q_for gs s))
-    of {
-    (a1, a2) -> afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s);
-  });
-bfilter_sign_st gs (Bc v) uv s = s;
-
-assume_not_sign_st_for ::
-  (String -> Bool) -> Bexp -> Resolved_st_q Sign -> Resolved_st_q Sign;
-assume_not_sign_st_for source_global b s =
-  bfilter_sign_st source_global b False s;
-
-assume_sign_st_for ::
-  (String -> Bool) -> Bexp -> Resolved_st_q Sign -> Resolved_st_q Sign;
-assume_sign_st_for source_global b s = bfilter_sign_st source_global b True s;
-
-sign_tf_st_for ::
-  (String -> Bool) -> Edge_action -> Resolved_st_q Sign -> Resolved_st_q Sign;
-sign_tf_st_for source_global EA_Nop s = s;
-sign_tf_st_for source_global (EA_Assign x a) s =
-  update_resolved_st_q s (location_of source_global x)
-    (aval_sign a (fun_of_resolved_st_q_for source_global s));
-sign_tf_st_for source_global (EA_Random x) s =
-  update_resolved_st_q s (location_of source_global x) STop;
-sign_tf_st_for source_global (EA_Assume b) s =
-  assume_sign_st_for source_global b s;
-sign_tf_st_for source_global (EA_AssumeNot b) s =
-  assume_not_sign_st_for source_global b s;
-sign_tf_st_for source_global (EA_Ret Nothing p) s = s;
-sign_tf_st_for source_global (EA_Ret (Just a) p) s =
-  update_resolved_st_q s (location_of source_global ret_var)
-    (aval_sign a (fun_of_resolved_st_q_for source_global s));
-sign_tf_st_for source_global (EA_Check cnd) s = s;
 
 proc_rep :: forall a. Imp_prog_ext a -> [(String, Proc_decl_ext ())];
 proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
@@ -2715,6 +1713,10 @@ compile pi p Restore k n =
 compile pi p Unwind k n =
   (suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 
+location_is_local :: Location -> Bool;
+location_is_local (Local_Location x) = True;
+location_is_local (Global_Location x) = False;
+
 infl_update ::
   forall a b c d.
     (Fmap (Sum a b) [a] -> Fmap (Sum a b) [a]) ->
@@ -2736,6 +1738,29 @@ etf_combine_st ::
     Effectful_st_transfer_ext a b () ->
       Maybe String -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
 etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;
+
+location_is_global :: Location -> Bool;
+location_is_global (Local_Location x) = False;
+location_is_global (Global_Location x) = True;
+
+remove_resolved_key :: forall a. Location -> [(Location, a)] -> [(Location, a)];
+remove_resolved_key loc [] = [];
+remove_resolved_key loca ((loc, a) : ps) =
+  (if equal_location loca loc then remove_resolved_key loca ps
+    else (loc, a) : remove_resolved_key loca ps);
+
+update_resolved_st ::
+  forall a.
+    (Bot a) => (a, (a, [(Location, a)])) ->
+                 Location -> a -> (a, (a, [(Location, a)]));
+update_resolved_st (dl, (dg, ps)) loc a =
+  (dl, (dg, (loc, a) : remove_resolved_key loc ps));
+
+plus_int :: Int -> Int -> Int;
+plus_int k l = Int_of_integer (integer_of_int k + integer_of_int l);
+
+zero_int :: Int;
+zero_int = Int_of_integer (0 :: Integer);
 
 zero_nat :: Nat;
 zero_nat = Nat (0 :: Integer);
@@ -2831,6 +1856,30 @@ compile_prog pi ps mnm main =
 prog_cfg :: String -> Imp_prog_ext () -> Cfg_ext ();
 prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
 
+restrict_global_resolved ::
+  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+restrict_global_resolved s =
+  (case s of {
+    (_, (dg, ps)) -> (bot, (dg, filter (\ p -> location_is_global (fst p)) ps));
+  });
+
+restrict_global_resolved_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
+restrict_global_resolved_q (Abs_resolved_st x) =
+  Abs_resolved_st (restrict_global_resolved x);
+
+restrict_local_resolved ::
+  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+restrict_local_resolved s =
+  (case s of {
+    (dl, (_, ps)) -> (dl, (bot, filter (\ p -> location_is_local (fst p)) ps));
+  });
+
+restrict_local_resolved_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
+restrict_local_resolved_q (Abs_resolved_st x) =
+  Abs_resolved_st (restrict_local_resolved x);
+
 unit_step_st ::
   forall a.
     (Bounded_semilattice_sup_bot a) => (Resolved_st_q a -> Resolved_st_q a) ->
@@ -2840,58 +1889,19 @@ unit_step_st f d g =
     res = f (sup_resolved_st_q d g);
   } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
 
-sign_less_true_of_inv :: Sign -> Sign -> Bool;
-sign_less_true_of_inv a b =
-  equal_sign (fst (inv_less_sign False a b)) bot_sign ||
-    equal_sign (snd (inv_less_sign False a b)) bot_sign;
-
-sign_less_true :: Sign -> Sign -> Bool;
-sign_less_true = sign_less_true_of_inv;
-
-sign_less_false_of_inv :: Sign -> Sign -> Bool;
-sign_less_false_of_inv a b =
-  equal_sign (fst (inv_less_sign True a b)) bot_sign ||
-    equal_sign (snd (inv_less_sign True a b)) bot_sign;
-
-sign_eq_true_of_less :: Sign -> Sign -> Bool;
-sign_eq_true_of_less a b =
-  sign_less_false_of_inv a b && sign_less_false_of_inv b a;
-
-sign_eq_true :: Sign -> Sign -> Bool;
-sign_eq_true = sign_eq_true_of_less;
-
-sign_less_false :: Sign -> Sign -> Bool;
-sign_less_false = sign_less_false_of_inv;
-
-sign_eq_false_of_meet :: Sign -> Sign -> Bool;
-sign_eq_false_of_meet a b = equal_sign (meet_sign a b) bot_sign;
-
-sign_eq_false :: Sign -> Sign -> Bool;
-sign_eq_false = sign_eq_false_of_meet;
-
-sign_check_true :: Bexp -> (String -> Sign) -> Bool;
-sign_check_true (Bc v) d = v;
-sign_check_true (Not b) d = sign_check_false b d;
-sign_check_true (And b1 b2) d = sign_check_true b1 d && sign_check_true b2 d;
-sign_check_true (Or b1 b2) d = sign_check_true b1 d || sign_check_true b2 d;
-sign_check_true (Less a b) d = sign_less_true (aval_sign a d) (aval_sign b d);
-sign_check_true (Eqb a b) d = sign_eq_true (aval_sign a d) (aval_sign b d);
-
-sign_check_false :: Bexp -> (String -> Sign) -> Bool;
-sign_check_false (Bc v) d = not v;
-sign_check_false (Not b) d = sign_check_true b d;
-sign_check_false (And b1 b2) d = sign_check_false b1 d || sign_check_false b2 d;
-sign_check_false (Or b1 b2) d = sign_check_false b1 d && sign_check_false b2 d;
-sign_check_false (Less a b) d = sign_less_false (aval_sign a d) (aval_sign b d);
-sign_check_false (Eqb a b) d = sign_eq_false (aval_sign a d) (aval_sign b d);
-
-sign_enter_st_for ::
-  (String -> Bool) ->
-    [String] -> [Aexp] -> Resolved_st_q Sign -> Resolved_st_q Sign;
-sign_enter_st_for source_global xs es s =
-  bind_formals_resolved_q source_global xs
-    (map (\ e -> aval_sign e (fun_of_resolved_st_q_for source_global s)) es)
-    (enter_frame_D_resolved_q STop s);
+combine_resolved_st ::
+  forall a.
+    (Bot a) => (a, (a, [(Location, a)])) ->
+                 (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+combine_resolved_st sc se =
+  (case sc of {
+    (dlc, (_, psc)) ->
+      (case se of {
+        (_, (dge, pse)) ->
+          (dlc, (dge, filter (\ p -> location_is_local (fst p)) psc ++
+                        filter (\ p -> location_is_global (fst p)) pse));
+      });
+  });
 
 fold_rhs_trees ::
   forall a b c.
@@ -2958,6 +1968,20 @@ char_0x75 = Chr (117 :: Integer);
 
 char_0x7C :: Char;
 char_0x7C = Chr (124 :: Integer);
+
+lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
+lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
+
+update_resolved_st_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Location -> a -> Resolved_st_q a;
+update_resolved_st_q (Abs_resolved_st xb) xa x =
+  Abs_resolved_st (update_resolved_st xb xa x);
+
+minus_int :: Int -> Int -> Int;
+minus_int k l = Int_of_integer (integer_of_int k - integer_of_int l);
+
+times_int :: Int -> Int -> Int;
+times_int k l = Int_of_integer (integer_of_int k * integer_of_int l);
 
 entry_seed_list :: Cfg_ext () -> Cfg_node -> [(Cfg_node, ([String], [Aexp]))];
 entry_seed_list g v =
@@ -3058,6 +2082,29 @@ side_cfg_T_eff_st ::
 side_cfg_T_eff_st g etf bot0_st s0_st gseed =
   make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed;
 
+unit_edge_tree_st ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (Resolved_st_q a -> Resolved_st_q a) ->
+ Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q a);
+unit_edge_tree_st f u =
+  QueryL u
+    (\ su ->
+      QueryG ()
+        (\ g ->
+          let {
+            res = f (sup_resolved_st_q su g);
+          } in Side () (restrict_global_resolved_q res)
+                 (Answer (restrict_local_resolved_q res))));
+
+bind_formals_resolved ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 [String] ->
+                   [a] ->
+                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+bind_formals_resolved gs xs avs s =
+  fold (\ (x, a) t -> update_resolved_st t (location_of gs x) a) (zip xs avs) s;
+
 combine_resolved_st_q ::
   forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a -> Resolved_st_q a;
 combine_resolved_st_q (Abs_resolved_st xa) (Abs_resolved_st x) =
@@ -3081,6 +2128,15 @@ declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
 
 declared_global :: Imp_prog_ext () -> String -> Bool;
 declared_global p x = membera (declared_global_vars p) x;
+
+enter_frame_D_resolved ::
+  forall a.
+    (Bot a) => a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+enter_frame_D_resolved top_val s =
+  (case s of {
+    (_, (dg, ps)) ->
+      (top_val, (dg, filter (\ p -> location_is_global (fst p)) ps));
+  });
 
 uminus_int :: Int -> Int;
 uminus_int k = Int_of_integer (negate (integer_of_int k));
@@ -3126,15 +2182,211 @@ destab_iter_opt (y : ys) i s c =
     (ia, sa) -> destab_iter_opt ys ia sa c;
   });
 
-fun_of_exec_dg_st_for ::
+bind_formals_resolved_q ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 [String] -> [a] -> Resolved_st_q a -> Resolved_st_q a;
+bind_formals_resolved_q xc xb xa (Abs_resolved_st x) =
+  Abs_resolved_st (bind_formals_resolved xc xb xa x);
+
+combine_assign_resolved ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 Maybe String ->
+                   a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+combine_assign_resolved gs dst v s =
+  (case dst of {
+    Nothing -> s;
+    Just x -> update_resolved_st s (location_of gs x) v;
+  });
+
+modulo_nat :: Nat -> Nat -> Nat;
+modulo_nat m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));
+
+divide_integer :: Integer -> Integer -> Integer;
+divide_integer k l = fst (divmod_integer k l);
+
+divide_nat :: Nat -> Nat -> Nat;
+divide_nat m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));
+
+string_of_nat :: Nat -> [Char];
+string_of_nat n =
+  (if less_nat n (nat_of_integer (10 :: Integer))
+    then [char_of_nat (plus_nat n (nat_of_integer (48 :: Integer)))]
+    else string_of_nat (divide_nat n (nat_of_integer (10 :: Integer))) ++
+           [char_of_nat
+              (plus_nat (modulo_nat n (nat_of_integer (10 :: Integer)))
+                (nat_of_integer (48 :: Integer)))]);
+
+string_of_int :: Int -> [Char];
+string_of_int i =
+  (if less_int i zero_int then [char_0x2D] ++ string_of_nat (nat (uminus_int i))
+    else string_of_nat (nat i));
+
+inv_conservative :: forall a. a -> a -> a -> (a, a);
+inv_conservative r a1 a2 = (a1, a2);
+
+combine_collect_resolved_for ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 Maybe String ->
+                   (a, (a, [(Location, a)])) ->
+                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+combine_collect_resolved_for gs dst sc se =
+  combine_assign_resolved gs dst
+    (lookup_resolved_st se (location_of gs ret_var))
+    (combine_resolved_st sc se);
+
+combine_collect_resolved_for_q ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 Maybe String ->
+                   Resolved_st_q a -> Resolved_st_q a -> Resolved_st_q a;
+combine_collect_resolved_for_q xc xb (Abs_resolved_st xa) (Abs_resolved_st x) =
+  Abs_resolved_st (combine_collect_resolved_for xc xb xa x);
+
+unit_combine_tree_st ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ Maybe String ->
+   Cfg_node -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q a);
+unit_combine_tree_st gs dst cc ex =
+  QueryL cc
+    (\ sc ->
+      QueryL ex
+        (\ se ->
+          QueryG ()
+            (\ g ->
+              let {
+                res = combine_collect_resolved_for_q gs dst
+                        (sup_resolved_st_q sc g) (sup_resolved_st_q se g);
+              } in Side () (restrict_global_resolved_q res)
+                     (Answer (restrict_local_resolved_q res)))));
+
+enter_frame_D_resolved_q ::
+  forall a. (Bot a) => a -> Resolved_st_q a -> Resolved_st_q a;
+enter_frame_D_resolved_q xa (Abs_resolved_st x) =
+  Abs_resolved_st (enter_frame_D_resolved xa x);
+
+fun_of_resolved_st_q_for ::
   forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
-fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
+fun_of_resolved_st_q_for gs s x = lookup_resolved_st_q s (location_of gs x);
+
+init_basic_ug_state :: forall a b c. (Order_bot c) => Ug_state_ext a b c ();
+init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
+
+string_of_aexp :: Aexp -> [Char];
+string_of_aexp (N n) = string_of_int n;
+string_of_aexp (V x) = explode x;
+string_of_aexp (Plus a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Minus a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Times a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
+
+string_of_bexp :: Bexp -> [Char];
+string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];
+string_of_bexp (Bc False) =
+  [char_0x66, char_0x61, char_0x6C, char_0x73, char_0x65];
+string_of_bexp (Not b) =
+  [char_0x21, char_0x28] ++ string_of_bexp b ++ [char_0x29];
+string_of_bexp (And b1 b2) =
+  [char_0x28] ++
+    string_of_bexp b1 ++
+      [char_0x26, char_0x26] ++ string_of_bexp b2 ++ [char_0x29];
+string_of_bexp (Or b1 b2) =
+  [char_0x28] ++
+    string_of_bexp b1 ++
+      [char_0x7C, char_0x7C] ++ string_of_bexp b2 ++ [char_0x29];
+string_of_bexp (Less a1 a2) =
+  string_of_aexp a1 ++ [char_0x3C] ++ string_of_aexp a2;
+string_of_bexp (Eqb a1 a2) =
+  string_of_aexp a1 ++ [char_0x3D, char_0x3D] ++ string_of_aexp a2;
+
+combine_assign_resolved_q ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 Maybe String -> a -> Resolved_st_q a -> Resolved_st_q a;
+combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
+  Abs_resolved_st (combine_assign_resolved xc xb xa x);
+
+unit_combine_step_st_assign_for ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ Maybe String ->
+   Resolved_st_q a ->
+     Resolved_st_q a ->
+       (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
+unit_combine_step_st_assign_for gs dst de g merged =
+  let {
+    res = combine_assign_resolved_q gs dst
+            (lookup_resolved_st_q (sup_resolved_st_q de g)
+              (location_of gs ret_var))
+            (sup_resolved_st_q (fst merged) (snd merged));
+  } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
+
+unit_combine_step_st_env ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => Resolved_st_q a ->
+ Resolved_st_q a -> Resolved_st_q a -> (Resolved_st_q a, Resolved_st_q a);
+unit_combine_step_st_env dc de g =
+  let {
+    m = combine_resolved_st_q (sup_resolved_st_q dc g) (sup_resolved_st_q de g);
+  } in (restrict_global_resolved_q m, restrict_local_resolved_q m);
+
+unit_dg_spec_st_for ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
+   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
+     Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
+unit_dg_spec_st_for gs tf_st enter_st =
+  Dg_spec_ext (unit_step_st (tf_st EA_Nop))
+    (\ x e -> unit_step_st (tf_st (EA_Assign x e)))
+    (\ x -> unit_step_st (tf_st (EA_Random x)))
+    (\ b -> unit_step_st (tf_st (EA_Assume b)))
+    (\ b -> unit_step_st (tf_st (EA_AssumeNot b)))
+    (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
+    (unit_combine_step_st_assign_for gs) ();
+
+unit_etf_st_of_transfer ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
+   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
+     Effectful_st_transfer_ext () (Resolved_st_q a) ();
+unit_etf_st_of_transfer gs tf_st enter_st =
+  Effectful_st_transfer_ext (unit_edge_tree_st (tf_st EA_Nop))
+    (\ x e -> unit_edge_tree_st (tf_st (EA_Assign x e)))
+    (\ x -> unit_edge_tree_st (tf_st (EA_Random x)))
+    (\ b -> unit_edge_tree_st (tf_st (EA_Assume b)))
+    (\ b -> unit_edge_tree_st (tf_st (EA_AssumeNot b)))
+    (\ xs es -> unit_edge_tree_st (enter_st xs es)) (unit_combine_tree_st gs)
+    ();
+
+point_update ::
+  forall a b c d.
+    (Set a -> Set a) ->
+      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
+point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
+  State_ext c infl stabl sigma (State_exta (pointa point) more);
 
 rho_update ::
   forall a b c d.
     ((a -> Fmap b c) -> a -> Fmap b c) ->
       Ug_state_ext b a c d -> Ug_state_ext b a c d;
 rho_update rhoa (Ug_state_ext rho more) = Ug_state_ext (rhoa rho) more;
+
+warrow :: forall a. (Warrowing a) => a -> a -> a;
+warrow a b = (if less_eq b a then narrow a b else widen a b);
+
+fun_of_exec_dg_st_for ::
+  forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
+fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
 
 update_global_always_join ::
   forall a b c.
@@ -3149,15 +2401,27 @@ update_global_always_join da orig g d state =
     db = sup da d;
   } in (if db == da then (Nothing, statea) else (Just db, statea));
 
-warrow :: forall a. (Warrowing a) => a -> a -> a;
-warrow a b = (if less_eq b a then narrow a b else widen a b);
+update_global_warrowing_apinis ::
+  forall a b c.
+    (Eq a, Bounded_semilattice_sup_bot a, Warrowing a, Eq b,
+      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
+                                     (Maybe a, Ug_state_ext b c a ());
+update_global_warrowing_apinis da orig g d state =
+  (if fmlookup_default (rho state g) bot orig == d then (Nothing, state)
+    else let {
+           statea =
+             rho_update
+               (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
+               state;
+           db = warrow da (sup_over_origins statea g);
+         } in (Just db, statea));
 
-point_update ::
-  forall a b c d.
-    (Set a -> Set a) ->
-      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
-point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
-  State_ext c infl stabl sigma (State_exta (pointa point) more);
+init_state ::
+  forall a b c.
+    (Bounded_semilattice_sup_bot c,
+      Warrowing c) => State_ext a b c (State_exta a ());
+init_state =
+  State_ext bot_set fmempty bot_set (\ _ -> bot) (State_exta bot_set ());
 
 tD_side_always_join_Interp_solve_rec_c ::
   forall a b c.
@@ -3256,16 +2520,6 @@ tD_side_always_join_Interp_solve_rec_c t s =
            });
   });
 
-init_state ::
-  forall a b c.
-    (Bounded_semilattice_sup_bot c,
-      Warrowing c) => State_ext a b c (State_exta a ());
-init_state =
-  State_ext bot_set fmempty bot_set (\ _ -> bot) (State_exta bot_set ());
-
-init_basic_ug_state :: forall a b c. (Order_bot c) => Ug_state_ext a b c ();
-init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
-
 tD_side_always_join_Interp_solve_c ::
   forall a b c.
     (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
@@ -3292,171 +2546,6 @@ tD_side_always_join_Interp_solve t x =
         (\ _ -> tD_side_always_join_Interp_solve t x);
     Just r -> r;
   });
-
-combine_assign_resolved_q ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 Maybe String -> a -> Resolved_st_q a -> Resolved_st_q a;
-combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
-  Abs_resolved_st (combine_assign_resolved xc xb xa x);
-
-unit_combine_step_st_assign_for ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
- Maybe String ->
-   Resolved_st_q a ->
-     Resolved_st_q a ->
-       (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
-unit_combine_step_st_assign_for gs dst de g merged =
-  let {
-    res = combine_assign_resolved_q gs dst
-            (lookup_resolved_st_q (sup_resolved_st_q de g)
-              (location_of gs ret_var))
-            (sup_resolved_st_q (fst merged) (snd merged));
-  } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
-
-unit_combine_step_st_env ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => Resolved_st_q a ->
- Resolved_st_q a -> Resolved_st_q a -> (Resolved_st_q a, Resolved_st_q a);
-unit_combine_step_st_env dc de g =
-  let {
-    m = combine_resolved_st_q (sup_resolved_st_q dc g) (sup_resolved_st_q de g);
-  } in (restrict_global_resolved_q m, restrict_local_resolved_q m);
-
-unit_dg_spec_st_for ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
- (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
-   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
-     Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
-unit_dg_spec_st_for gs tf_st enter_st =
-  Dg_spec_ext (unit_step_st (tf_st EA_Nop))
-    (\ x e -> unit_step_st (tf_st (EA_Assign x e)))
-    (\ x -> unit_step_st (tf_st (EA_Random x)))
-    (\ b -> unit_step_st (tf_st (EA_Assume b)))
-    (\ b -> unit_step_st (tf_st (EA_AssumeNot b)))
-    (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
-    (unit_combine_step_st_assign_for gs) ();
-
-analyse_sign_eqs_for ::
-  (String -> Bool) ->
-    Imp_prog_ext () ->
-      (Cfg_node, ()) ->
-        Strategy_tree (Cfg_node, ()) ()
-          (Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign_eqs_for gs p =
-  dg_gen_of (unit_dg_spec_st_for gs (sign_tf_st_for gs) (sign_enter_st_for gs))
-    (prog_cfg prog_main_name p) bot_resolved_st_q cinit_sign_st cinit_sign_st;
-
-analyse_sign_for ::
-  (String -> Bool) ->
-    Imp_prog_ext () ->
-      (Set (Cfg_node, ()),
-        Sum (Cfg_node, ()) () ->
-          Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign_for gs p =
-  tD_side_always_join_Interp_solve (analyse_sign_eqs_for gs p)
-    (cfg_exit (prog_cfg prog_main_name p), ());
-
-sign_classify_check :: Bexp -> (String -> Sign) -> Check_result;
-sign_classify_check c d =
-  (if sign_check_true c d then Check_Proved
-    else (if sign_check_false c d then Check_Refuted else Check_Unknown));
-
-analyse_sign_report_for ::
-  (String -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse_sign_report_for gs p =
-  let {
-    sol = snd (analyse_sign_for gs p);
-  } in classify_checks (prog_cfg prog_main_name p)
-         (\ v ->
-           sup_fun (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-             (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
-         sign_classify_check;
-
-analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse_sign_report p = analyse_sign_report_for (declared_global p) p;
-
-modulo_nat :: Nat -> Nat -> Nat;
-modulo_nat m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));
-
-divide_integer :: Integer -> Integer -> Integer;
-divide_integer k l = fst (divmod_integer k l);
-
-divide_nat :: Nat -> Nat -> Nat;
-divide_nat m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));
-
-string_of_nat :: Nat -> [Char];
-string_of_nat n =
-  (if less_nat n (nat_of_integer (10 :: Integer))
-    then [char_of_nat (plus_nat n (nat_of_integer (48 :: Integer)))]
-    else string_of_nat (divide_nat n (nat_of_integer (10 :: Integer))) ++
-           [char_of_nat
-              (plus_nat (modulo_nat n (nat_of_integer (10 :: Integer)))
-                (nat_of_integer (48 :: Integer)))]);
-
-string_of_int :: Int -> [Char];
-string_of_int i =
-  (if less_int i zero_int then [char_0x2D] ++ string_of_nat (nat (uminus_int i))
-    else string_of_nat (nat i));
-
-ivl_exec_eqs ::
-  (String -> Bool) ->
-    (String -> Maybe (Proc_decl_ext ())) ->
-      [String] ->
-        String ->
-          Com -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q Ivl);
-ivl_exec_eqs gs pi ps mnm main =
-  side_cfg_T_eff_st (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
-    bot_resolved_st_q cinit_ivl_st ();
-
-string_of_aexp :: Aexp -> [Char];
-string_of_aexp (N n) = string_of_int n;
-string_of_aexp (V x) = explode x;
-string_of_aexp (Plus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
-string_of_aexp (Minus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
-string_of_aexp (Times a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
-
-string_of_bexp :: Bexp -> [Char];
-string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];
-string_of_bexp (Bc False) =
-  [char_0x66, char_0x61, char_0x6C, char_0x73, char_0x65];
-string_of_bexp (Not b) =
-  [char_0x21, char_0x28] ++ string_of_bexp b ++ [char_0x29];
-string_of_bexp (And b1 b2) =
-  [char_0x28] ++
-    string_of_bexp b1 ++
-      [char_0x26, char_0x26] ++ string_of_bexp b2 ++ [char_0x29];
-string_of_bexp (Or b1 b2) =
-  [char_0x28] ++
-    string_of_bexp b1 ++
-      [char_0x7C, char_0x7C] ++ string_of_bexp b2 ++ [char_0x29];
-string_of_bexp (Less a1 a2) =
-  string_of_aexp a1 ++ [char_0x3C] ++ string_of_aexp a2;
-string_of_bexp (Eqb a1 a2) =
-  string_of_aexp a1 ++ [char_0x3D, char_0x3D] ++ string_of_aexp a2;
-
-update_global_warrowing_apinis ::
-  forall a b c.
-    (Eq a, Bounded_semilattice_sup_bot a, Warrowing a, Eq b,
-      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
-                                     (Maybe a, Ug_state_ext b c a ());
-update_global_warrowing_apinis da orig g d state =
-  (if fmlookup_default (rho state g) bot orig == d then (Nothing, state)
-    else let {
-           statea =
-             rho_update
-               (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
-               state;
-           db = warrow da (sup_over_origins statea g);
-         } in (Just db, statea));
 
 tD_side_warrowing_apinis_Interp_solve_rec_c ::
   forall a b c.
@@ -3582,84 +2671,5 @@ tD_side_warrowing_apinis_Interp_solve t x =
         (\ _ -> tD_side_warrowing_apinis_Interp_solve t x);
     Just r -> r;
   });
-
-analyse_interval_td_raw ::
-  (String -> Bool) ->
-    (String -> Maybe (Proc_decl_ext ())) ->
-      [String] -> String -> Com -> Sum Cfg_node () -> Resolved_st_q Ivl;
-analyse_interval_td_raw gs pi ps mnm main =
-  snd (tD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs gs pi ps mnm main)
-        (cfg_exit (compile_prog pi ps mnm main)));
-
-less_eint :: Eint -> Eint -> Bool;
-less_eint a b = eint_le a b && not (eint_le b a);
-
-interval_less_false :: Ivl -> Ivl -> Bool;
-interval_less_false (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);
-
-interval_eq_false :: Ivl -> Ivl -> Bool;
-interval_eq_false (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) ||
-    (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));
-
-interval_less_true :: Ivl -> Ivl -> Bool;
-interval_less_true (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);
-
-interval_eq_true :: Ivl -> Ivl -> Bool;
-interval_eq_true (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) ||
-    (not (less_eq_eint l2 u2) ||
-      equal_eint l1 u1 && equal_eint l2 u2 && equal_eint l1 l2);
-
-interval_check_false :: Bexp -> (String -> Ivl) -> Bool;
-interval_check_false (Bc v) d = not v;
-interval_check_false (Not b) d = interval_check_true b d;
-interval_check_false (And b1 b2) d =
-  interval_check_false b1 d || interval_check_false b2 d;
-interval_check_false (Or b1 b2) d =
-  interval_check_false b1 d && interval_check_false b2 d;
-interval_check_false (Less a b) d =
-  interval_less_false (aval_ivl a d) (aval_ivl b d);
-interval_check_false (Eqb a b) d =
-  interval_eq_false (aval_ivl a d) (aval_ivl b d);
-
-interval_check_true :: Bexp -> (String -> Ivl) -> Bool;
-interval_check_true (Bc v) d = v;
-interval_check_true (Not b) d = interval_check_false b d;
-interval_check_true (And b1 b2) d =
-  interval_check_true b1 d && interval_check_true b2 d;
-interval_check_true (Or b1 b2) d =
-  interval_check_true b1 d || interval_check_true b2 d;
-interval_check_true (Less a b) d =
-  interval_less_true (aval_ivl a d) (aval_ivl b d);
-interval_check_true (Eqb a b) d =
-  interval_eq_true (aval_ivl a d) (aval_ivl b d);
-
-interval_classify_check :: Bexp -> (String -> Ivl) -> Check_result;
-interval_classify_check c d =
-  (if interval_check_true c d then Check_Proved
-    else (if interval_check_false c d then Check_Refuted else Check_Unknown));
-
-interval_td_check_report ::
-  (String -> Bool) ->
-    String -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-interval_td_check_report gs mnm p =
-  let {
-    raw = analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm
-            (prog_main p);
-  } in classify_checks (prog_cfg mnm p)
-         (side_env (fun_of_resolved_st_q_for gs . raw)) interval_classify_check;
-
-analyse_interval_td_report ::
-  Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse_interval_td_report p =
-  interval_td_check_report (declared_global p) prog_main_name p;
-
-analyse ::
-  Analysis_kind -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse Sign_Analysis p = analyse_sign_report p;
-analyse Interval_Analysis p = analyse_interval_td_report p;
 
 }

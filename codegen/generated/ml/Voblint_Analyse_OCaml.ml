@@ -42,7 +42,20 @@ let asciis_of_literal s = explode ascii_of_char s;;
 
 end;;
 
-module Voblint_Analyse : sig
+module HOL : sig
+  type 'a equal = {equal : 'a -> 'a -> bool}
+  val equal : 'a equal -> 'a -> 'a -> bool
+  val eq : 'a equal -> 'a -> 'a -> bool
+end = struct
+
+type 'a equal = {equal : 'a -> 'a -> bool};;
+let equal _A = _A.equal;;
+
+let rec eq _A a b = equal _A a b;;
+
+end;; (*struct HOL*)
+
+module Core : sig
   type int = Int_of_integer of Z.t
   val integer_of_int : int -> Z.t
   type nat
@@ -68,7 +81,6 @@ module Voblint_Analyse : sig
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type 'a proc_decl_ext
   type 'a imp_prog_ext
-  type analysis_kind = Sign_Analysis | Interval_Analysis
   val nat_of_integer : Z.t -> nat
   val cfg_entry : 'a cfg_ext -> cfg_node
   val char_of_integer : Z.t -> char
@@ -83,10 +95,11 @@ module Voblint_Analyse : sig
   val make :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
+  val analyse_sign_report :
+    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
   val string_of_bexp : bexp -> char list
-  val analyse :
-    analysis_kind ->
-      unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+  val analyse_interval_td_report :
+    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -95,10 +108,7 @@ let rec integer_of_int (Int_of_integer k) = k;;
 
 let rec equal_inta k l = Z.equal (integer_of_int k) (integer_of_int l);;
 
-type 'a equal = {equal : 'a -> 'a -> bool};;
-let equal _A = _A.equal;;
-
-let equal_int = ({equal = equal_inta} : int equal);;
+let equal_int = ({HOL.equal = equal_inta} : int HOL.equal);;
 
 let rec less_eq_int k l = Z.leq (integer_of_int k) (integer_of_int l);;
 
@@ -128,7 +138,7 @@ let rec integer_of_nat (Nat x) = x;;
 
 let rec equal_nata m n = Z.equal (integer_of_nat m) (integer_of_nat n);;
 
-let equal_nat = ({equal = equal_nata} : nat equal);;
+let equal_nat = ({HOL.equal = equal_nata} : nat HOL.equal);;
 
 let rec less_eq_nat m n = Z.leq (integer_of_nat m) (integer_of_nat n);;
 
@@ -144,16 +154,16 @@ let linorder_nat = ({order_linorder = order_nat} : nat linorder);;
 
 type ('a, 'b) sum = Inl of 'a | Inr of 'b;;
 
-let rec eq _A a b = equal _A a b;;
-
 let rec equal_suma _A _B x0 x1 = match x0, x1 with Inl x1, Inr x2 -> false
                            | Inr x2, Inl x1 -> false
-                           | Inr x2, Inr y2 -> eq _B x2 y2
-                           | Inl x1, Inl y1 -> eq _A x1 y1;;
+                           | Inr x2, Inr y2 -> HOL.eq _B x2 y2
+                           | Inl x1, Inl y1 -> HOL.eq _A x1 y1;;
 
-let rec equal_sum _A _B = ({equal = equal_suma _A _B} : ('a, 'b) sum equal);;
+let rec equal_sum _A _B =
+  ({HOL.equal = equal_suma _A _B} : ('a, 'b) sum HOL.equal);;
 
-let equal_literal = ({equal = (fun a b -> ((a : string) = b))} : string equal);;
+let equal_literal =
+  ({HOL.equal = (fun a b -> ((a : string) = b))} : string HOL.equal);;
 
 let ord_literal =
   ({less_eq = (fun a b -> ((a : string) <= b));
@@ -180,13 +190,13 @@ let rec equal_cfg_nodea
     | FunctionEntry x2, FunctionEntry y2 -> ((x2 : string) = y2)
     | Statement x1, Statement y1 -> equal_nata x1 y1;;
 
-let equal_cfg_node = ({equal = equal_cfg_nodea} : cfg_node equal);;
+let equal_cfg_node = ({HOL.equal = equal_cfg_nodea} : cfg_node HOL.equal);;
 
 type ordera = Eq | Lt | Gt;;
 
 let rec comparator_of (_A1, _A2)
   x y = (if less _A2.order_linorder.preorder_order.ord_preorder x y then Lt
-          else (if eq _A1 x y then Eq else Gt));;
+          else (if HOL.eq _A1 x y then Eq else Gt));;
 
 let rec comparator_cfg_node
   x0 x1 = match x0, x1 with
@@ -230,7 +240,7 @@ let rec equal_locationa
     | Global_Location x2, Global_Location y2 -> ((x2 : string) = y2)
     | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
 
-let equal_location = ({equal = equal_locationa} : location equal);;
+let equal_location = ({HOL.equal = equal_locationa} : location HOL.equal);;
 
 type aexp = N of int | V of string | Plus of aexp * aexp | Minus of aexp * aexp
   | Times of aexp * aexp;;
@@ -265,11 +275,13 @@ let rec equal_aexpa
     | V x2, V y2 -> ((x2 : string) = y2)
     | N x1, N y1 -> equal_inta x1 y1;;
 
-let equal_aexp = ({equal = equal_aexpa} : aexp equal);;
+let equal_aexp = ({HOL.equal = equal_aexpa} : aexp HOL.equal);;
 
-let rec equal_proda _A _B (x1, x2) (y1, y2) = eq _A x1 y1 && eq _B x2 y2;;
+let rec equal_proda _A _B
+  (x1, x2) (y1, y2) = HOL.eq _A x1 y1 && HOL.eq _B x2 y2;;
 
-let rec equal_prod _A _B = ({equal = equal_proda _A _B} : ('a * 'b) equal);;
+let rec equal_prod _A _B =
+  ({HOL.equal = equal_proda _A _B} : ('a * 'b) HOL.equal);;
 
 let rec less_eq_prod _A _B
   (x1, y1) (x2, y2) = less _A x1 x2 || less_eq _A x1 x2 && less_eq _B y1 y2;;
@@ -320,7 +332,7 @@ let enum_unit =
 
 let rec equal_unita u v = true;;
 
-let equal_unit = ({equal = equal_unita} : unit equal);;
+let equal_unit = ({HOL.equal = equal_unita} : unit HOL.equal);;
 
 type sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop;;
 
@@ -374,7 +386,7 @@ let rec equal_signa x0 x1 = match x0, x1 with SPos, STop -> false
                       | SNeg, SNeg -> true
                       | SBot, SBot -> true;;
 
-let equal_sign = ({equal = equal_signa} : sign equal);;
+let equal_sign = ({HOL.equal = equal_signa} : sign HOL.equal);;
 
 let rec join_sign x0 b = match x0, b with SBot, b -> b
                     | SNeg, SBot -> SNeg
@@ -547,13 +559,13 @@ let bounded_warrowing_sign =
 
 let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
                           | Some x2, None -> false
-                          | Some x2, Some y2 -> eq _A x2 y2
+                          | Some x2, Some y2 -> HOL.eq _A x2 y2
                           | None, None -> true;;
 
 let rec equal_list _A
   x0 x1 = match x0, x1 with [], x21 :: x22 -> false
     | x21 :: x22, [] -> false
-    | x21 :: x22, y21 :: y22 -> eq _A x21 y21 && equal_list _A x22 y22
+    | x21 :: x22, y21 :: y22 -> HOL.eq _A x21 y21 && equal_list _A x22 y22
     | [], [] -> true;;
 
 type call_action = CallEdge of string option * string list * aexp list;;
@@ -563,7 +575,8 @@ let rec equal_call_actiona
     equal_option equal_literal x1 y1 &&
       (equal_list equal_literal x2 y2 && equal_list equal_aexp x3 y3);;
 
-let equal_call_action = ({equal = equal_call_actiona} : call_action equal);;
+let equal_call_action =
+  ({HOL.equal = equal_call_actiona} : call_action HOL.equal);;
 
 let rec comparator_option
   comp_a x1 x2 = match comp_a, x1, x2 with comp_a, None, None -> Eq
@@ -746,7 +759,8 @@ let rec equal_edge_actiona
         ((x21 : string) = y21) && equal_aexpa x22 y22
     | EA_Nop, EA_Nop -> true;;
 
-let equal_edge_action = ({equal = equal_edge_actiona} : edge_action equal);;
+let equal_edge_action =
+  ({HOL.equal = equal_edge_actiona} : edge_action HOL.equal);;
 
 let rec comparator_bool x0 x1 = match x0, x1 with false, false -> Eq
                           | false, true -> Lt
@@ -891,7 +905,7 @@ type ivl = Ivl of eint * eint;;
 let rec equal_ivla
   (Ivl (x1, x2)) (Ivl (y1, y2)) = equal_eint x1 y1 && equal_eint x2 y2;;
 
-let equal_ivl = ({equal = equal_ivla} : ivl equal);;
+let equal_ivl = ({HOL.equal = equal_ivla} : ivl HOL.equal);;
 
 let rec eint_le x0 uu = match x0, uu with MinInf, uu -> true
                   | Fin v, PlusInf -> true
@@ -975,10 +989,10 @@ let bounded_warrowing_ivl =
 type ('a, 'b) dg_state = DG of 'a * 'b;;
 
 let rec equal_dg_statea _A _B
-  (DG (x1, x2)) (DG (y1, y2)) = eq _A x1 y1 && eq _B x2 y2;;
+  (DG (x1, x2)) (DG (y1, y2)) = HOL.eq _A x1 y1 && HOL.eq _B x2 y2;;
 
 let rec equal_dg_state _A _B =
-  ({equal = equal_dg_statea _A _B} : ('a, 'b) dg_state equal);;
+  ({HOL.equal = equal_dg_statea _A _B} : ('a, 'b) dg_state HOL.equal);;
 
 let rec locals (DG (x1, x2)) = x1;;
 
@@ -1072,7 +1086,7 @@ let rec bounded_semilattice_sup_bot_dg_state _A _B =
 
 let rec map_of _A
   x0 k = match x0, k with [], k -> None
-    | (l, v) :: ps, k -> (if eq _A l k then Some v else map_of _A ps k);;
+    | (l, v) :: ps, k -> (if HOL.eq _A l k then Some v else map_of _A ps k);;
 
 let rec lookup_resolved_st _A
   (dl, (dg, ps)) loc =
@@ -1110,7 +1124,7 @@ let rec equal_resolved_st_qa (_A1, _A2)
   s t = less_eq_resolved_st_q _A2 s t && less_eq_resolved_st_q _A2 t s;;
 
 let rec equal_resolved_st_q (_A1, _A2) =
-  ({equal = equal_resolved_st_qa (_A1, _A2)} : 'a resolved_st_q equal);;
+  ({HOL.equal = equal_resolved_st_qa (_A1, _A2)} : 'a resolved_st_q HOL.equal);;
 
 let rec merge_resolved_st _A
   (dl1, (dg1, ps1)) (dl2, (dg2, ps2)) =
@@ -1289,8 +1303,6 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 type 'a imp_prog_ext =
   Imp_prog_ext of (string * unit proc_decl_ext) list * com * string list * 'a;;
 
-type analysis_kind = Sign_Analysis | Interval_Analysis;;
-
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext)))
@@ -1353,10 +1365,10 @@ let rec filter p (Set xs) = Set (filtera p xs);;
 let rec removeAll _A
   x xa1 = match x, xa1 with x, [] -> []
     | x, y :: xs ->
-        (if eq _A x y then removeAll _A x xs else y :: removeAll _A x xs);;
+        (if HOL.eq _A x y then removeAll _A x xs else y :: removeAll _A x xs);;
 
 let rec membera _A x0 y = match x0, y with [], y -> false
-                     | x :: xs, y -> eq _A x y || membera _A xs y;;
+                     | x :: xs, y -> HOL.eq _A x y || membera _A xs y;;
 
 let rec inserta _A x xs = (if membera _A xs x then xs else x :: xs);;
 
@@ -1373,7 +1385,7 @@ let rec remove _A
 let rec update _A
   k v x2 = match k, v, x2 with k, v, [] -> [(k, v)]
     | k, v, p :: ps ->
-        (if eq _A (fst p) k then (k, v) :: ps else p :: update _A k v ps);;
+        (if HOL.eq _A (fst p) k then (k, v) :: ps else p :: update _A k v ps);;
 
 let rec merge _A qs ps = foldr (fun (a, b) -> update _A a b) ps qs;;
 
@@ -1381,7 +1393,7 @@ let rec fset (Abs_fset x) = x;;
 
 let rec fimage xb xc = Abs_fset (image xb (fset xc));;
 
-let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
+let rec fun_upd _A f a b = (fun x -> (if HOL.eq _A x a then b else f x));;
 
 let rec bind x0 f = match x0, f with None, f -> None
                | Some x, f -> f x;;
@@ -1415,7 +1427,7 @@ let rec intra (Cfg_ext (intra, calls, cfg_entry, checks, more)) = intra;;
 let rec fmfilter
   p (Fmap_of_list m) = Fmap_of_list (filtera (fun (k, _) -> p k) m);;
 
-let rec fmdrop _A a = fmfilter (fun aa -> not (eq _A aa a));;
+let rec fmdrop _A a = fmfilter (fun aa -> not (HOL.eq _A aa a));;
 
 let ret_var : string = "#ret";;
 
@@ -2924,7 +2936,7 @@ let rec update_global_always_join (_A1, _A2) _B _C
        sup _A2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
          da d
        in
-      (if eq _A1 db da then (None, statea) else (Some db, statea)));;
+      (if HOL.eq _A1 db da then (None, statea) else (Some db, statea)));;
 
 let rec warrow _A
   a b = (if less_eq
@@ -2967,7 +2979,7 @@ let rec tD_side_always_join_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                             then warrow _C3 (sigma state1 (Inl x)) d_new
                             else d_new)
                           in
-                         (if eq _C1 (sigma state1 (Inl x)) d_newa
+                         (if HOL.eq _C1 (sigma state1 (Inl x)) d_newa
                            then Some (d_newa,
                                        (point_update
   (fun _ -> remove _A x (point state1))
@@ -3215,9 +3227,50 @@ let rec string_of_bexp
     | Eqa (a1, a2) ->
         string_of_aexp a1 @ [char_0x3D; char_0x3D] @ string_of_aexp a2;;
 
+let rec less_eint a b = eint_le a b && not (eint_le b a);;
+
+let rec interval_less_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
+
+let rec interval_eq_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) ||
+        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
+
+let rec interval_less_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);;
+
+let rec interval_eq_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
+
+let rec interval_check_true
+  x0 d = match x0, d with Bc v, d -> v
+    | Not b, d -> interval_check_false b d
+    | And (b1, b2), d -> interval_check_true b1 d && interval_check_true b2 d
+    | Or (b1, b2), d -> interval_check_true b1 d || interval_check_true b2 d
+    | Less (a, b), d -> interval_less_true (aval_ivl a d) (aval_ivl b d)
+    | Eqa (a, b), d -> interval_eq_true (aval_ivl a d) (aval_ivl b d)
+and interval_check_false
+  x0 d = match x0, d with Bc v, d -> not v
+    | Not b, d -> interval_check_true b d
+    | And (b1, b2), d -> interval_check_false b1 d || interval_check_false b2 d
+    | Or (b1, b2), d -> interval_check_false b1 d && interval_check_false b2 d
+    | Less (a, b), d -> interval_less_false (aval_ivl a d) (aval_ivl b d)
+    | Eqa (a, b), d -> interval_eq_false (aval_ivl a d) (aval_ivl b d);;
+
+let rec interval_classify_check
+  c d = (if interval_check_true c d then Check_Proved
+          else (if interval_check_false c d then Check_Refuted
+                 else Check_Unknown));;
+
 let rec update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
   da orig g d state =
-    (if eq _A1
+    (if HOL.eq _A1
           (fmlookup_default _B (rho state g)
             (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
           d
@@ -3261,7 +3314,7 @@ let rec tD_side_warrowing_apinis_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                             then warrow _C3 (sigma state1 (Inl x)) d_new
                             else d_new)
                           in
-                         (if eq _C1 (sigma state1 (Inl x)) d_newa
+                         (if HOL.eq _C1 (sigma state1 (Inl x)) d_newa
                            then Some (d_newa,
                                        (point_update
   (fun _ -> remove _A x (point state1))
@@ -3370,47 +3423,6 @@ let rec analyse_interval_td_raw
           (ivl_exec_eqs gs pi ps mnm main)
           (cfg_exit (compile_prog pi ps mnm main)));;
 
-let rec less_eint a b = eint_le a b && not (eint_le b a);;
-
-let rec interval_less_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);;
-
-let rec interval_eq_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
-
-let rec interval_less_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
-
-let rec interval_eq_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) ||
-        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
-
-let rec interval_check_false
-  x0 d = match x0, d with Bc v, d -> not v
-    | Not b, d -> interval_check_true b d
-    | And (b1, b2), d -> interval_check_false b1 d || interval_check_false b2 d
-    | Or (b1, b2), d -> interval_check_false b1 d && interval_check_false b2 d
-    | Less (a, b), d -> interval_less_false (aval_ivl a d) (aval_ivl b d)
-    | Eqa (a, b), d -> interval_eq_false (aval_ivl a d) (aval_ivl b d)
-and interval_check_true
-  x0 d = match x0, d with Bc v, d -> v
-    | Not b, d -> interval_check_false b d
-    | And (b1, b2), d -> interval_check_true b1 d && interval_check_true b2 d
-    | Or (b1, b2), d -> interval_check_true b1 d || interval_check_true b2 d
-    | Less (a, b), d -> interval_less_true (aval_ivl a d) (aval_ivl b d)
-    | Eqa (a, b), d -> interval_eq_true (aval_ivl a d) (aval_ivl b d);;
-
-let rec interval_classify_check
-  c d = (if interval_check_true c d then Check_Proved
-          else (if interval_check_false c d then Check_Refuted
-                 else Check_Unknown));;
-
 let rec interval_td_check_report
   gs mnm p =
     (let raw =
@@ -3425,8 +3437,20 @@ let rec interval_td_check_report
 let rec analyse_interval_td_report
   p = interval_td_check_report (declared_global p) prog_main_name p;;
 
-let rec analyse
-  x0 p = match x0, p with Sign_Analysis, p -> analyse_sign_report p
-    | Interval_Analysis, p -> analyse_interval_td_report p;;
+end;; (*struct Core*)
 
-end;; (*struct Voblint_Analyse*)
+module Analyse : sig
+  type analysis_kind = Sign_Analysis | Interval_Analysis
+  val analyse :
+    analysis_kind ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node * (Core.bexp * Core.check_result)) list
+end = struct
+
+type analysis_kind = Sign_Analysis | Interval_Analysis;;
+
+let rec analyse
+  x0 p = match x0, p with Sign_Analysis, p -> Core.analyse_sign_report p
+    | Interval_Analysis, p -> Core.analyse_interval_td_report p;;
+
+end;; (*struct Analyse*)
