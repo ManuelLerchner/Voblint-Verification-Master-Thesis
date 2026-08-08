@@ -148,14 +148,81 @@ text \<open>
   procedure with a formal, two calls, two checks) does not terminate within
   several minutes and crashes the evaluating process outright --- reproduced
   independently in a batch build (segfault after ~145s), an I/R REPL
-  (crashed the daemon), and an I/Q jEdit session (crashed the backend).
-  Confirmed independent of the \<^typ>\<open>String.literal\<close> migration in this
-  branch --- no existing example anywhere in this project previously
-  exercised \<^const>\<open>analyse_interval_report\<close> end-to-end on a program
-  containing an actual \<^const>\<open>com.Call\<close> edge, so this is a pre-existing
-  latent non-termination in Interval's procedure/call handling, newly
-  exposed here, not caused by this migration. Left unevaluated; needs its
-  own investigation.
+  (crashed the daemon), and an I/Q jEdit session (crashed the backend, though
+  \<^verbatim>\<open>Timeout.apply\<close>-guarded evaluation below survives cleanly). Confirmed
+  independent of the \<^typ>\<open>String.literal\<close> migration in this branch --- no
+  existing example anywhere in this project previously exercised
+  \<^const>\<open>analyse_interval_report\<close> end-to-end on a program containing an
+  actual \<^const>\<open>com.Call\<close> edge, so this is a pre-existing latent
+  non-termination, newly exposed here, not caused by this migration.
+
+  Isolated (task #39, three \<^verbatim>\<open>Timeout.apply\<close>-guarded probes below): a call
+  to a procedure that reads/writes no global (\<open>no_global_call_prog\<close>)
+  terminates in under 4 seconds; a call to a procedure that touches one
+  global (\<open>one_call_prog\<close>) times out at 15 seconds; and, decisively,
+  \<open>no_call_global_self_ref_prog\<close> --- no procedure, no call, just
+  \<open>total := 0; total := total + 3\<close> on a declared global --- also times out.
+  The call/return summary is not the cause: a single self-referential global
+  write reproduces it alone.
+
+  The actual mechanism: globals are one flow-insensitive summary point
+  (\<open>Inr ()\<close>). Every transfer built through \<open>unit_edge_tree_st\<close> reads that
+  summary via \<open>QueryG\<close> and publishes its own contribution back to the same
+  summary via \<open>Side\<close>, so an assignment that both reads and grows a global
+  becomes a self-referential equation on \<open>Inr ()\<close>: \<open>total := total + 3\<close>
+  together with the independent base case \<open>total := 0\<close> solves as
+  \<open>G = [0,0] \<squnion> (G + [3,3])\<close>. Kleene iteration from \<open>bot\<close> produces the
+  ascending chain \<open>[0,0]\<close>, \<open>[0,3]\<close>, \<open>[0,6]\<close>, \<open>[0,9]\<close>, \<open>\<dots>\<close> --- the true least
+  fixpoint is \<open>[0,+\<infinity>]\<close>, and plain join
+  (\<^const>\<open>TD_side_always_join_Interp_solve\<close>'s global update is \<open>sup\<close>) never
+  reaches an infinite bound in finitely many steps. This is not an
+  arithmetic bug: it is exactly the flow-insensitive least fixpoint this
+  solve path computes, on a domain whose global-summary update has no
+  widening. \<^const>\<open>analyse_interval_td\<close> (the warrowing variant) does have
+  widening but no soundness proof, and was not tested here.
+\<close>
+
+definition one_call_prog :: imp_prog where
+  "one_call_prog =
+     program {
+       global total;
+       void inc(n) {
+         total := total + n
+       }
+       void main() {
+         total := 0;
+         inc(3);
+         __voblint_check(0 < total)
+       }
+     }"
+
+ML_val \<open>
+val result =
+  Timeout.apply (Time.fromSeconds 15)
+    (fn () => @{code analyse} @{code Interval_Analysis} @{code one_call_prog}) ()
+  handle Timeout.TIMEOUT _ => (writeln "TIMED OUT after 15s (one_call_prog, touches global total)"; [])
+val () = writeln ("done, " ^ Int.toString (length result) ^ " entries")
+\<close>
+
+definition no_global_call_prog :: imp_prog where
+  "no_global_call_prog =
+     program {
+       void noop(n) {
+         skip
+       }
+       void main() {
+         x := 0;
+         noop(3);
+         __voblint_check(0 < x + 1)
+       }
+     }"
+
+ML_val \<open>
+val result2 =
+  Timeout.apply (Time.fromSeconds 15)
+    (fn () => @{code analyse} @{code Interval_Analysis} @{code no_global_call_prog}) ()
+  handle Timeout.TIMEOUT _ => (writeln "TIMED OUT after 15s (no_global_call_prog, touches no global)"; [])
+val () = writeln ("done2, " ^ Int.toString (length result2) ^ " entries")
 \<close>
 
 
@@ -254,5 +321,29 @@ export_code
   EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
   string_of_bexp
   in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
+
+text \<open>Scratch (task #39): no call at all -- one global write that reads its
+  own prior value through the flow-insensitive global summary, plus one
+  independent base-case write. Tests whether the ascending chain
+  [0,0], [0,3], [0,6], ... comes from the call/return summary specifically,
+  or from any self-referential global write.\<close>
+definition no_call_global_self_ref_prog :: imp_prog where
+  "no_call_global_self_ref_prog =
+     program {
+       global total;
+       void main() {
+         total := 0;
+         total := total + 3;
+         __voblint_check(0 < total)
+       }
+     }"
+
+ML_val \<open>
+val result3 =
+  Timeout.apply (Time.fromSeconds 15)
+    (fn () => @{code analyse} @{code Interval_Analysis} @{code no_call_global_self_ref_prog}) ()
+  handle Timeout.TIMEOUT _ => (writeln "TIMED OUT after 15s (no_call_global_self_ref_prog)"; [])
+val () = writeln ("done3, " ^ Int.toString (length result3) ^ " entries")
+\<close>
 
 end
