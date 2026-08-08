@@ -108,7 +108,12 @@ jobs:
         run: opam install -y zarith
 
       - name: Compile and run codegen/regression drivers against codegen/generated/
-        run: make regression
+        # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
+        # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
+        # `make`'s /bin/sh sub-shell then can't find ocamlfind even though opam
+        # install (also just `opam`, not a switch binary) succeeded one step earlier.
+        # `opam exec --` activates the switch environment for this invocation.
+        run: opam exec -- make regression
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
