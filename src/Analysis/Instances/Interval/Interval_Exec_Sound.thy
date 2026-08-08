@@ -202,6 +202,59 @@ corollary ivl_exec_prog_sound_collecting:
   unfolding ivl_exec_prog_def
   by (rule ivl_exec_prog_sound_collecting_at[OF assms cfg_reaches_refl])
 
+text \<open>
+  \<open>analyse_interval_for\<close>/\<open>analyse_interval\<close> fix the main-procedure name to
+  \<open>prog_main_name\<close>, matching the \<open>imp_prog\<close> bracket notation's convention:
+  thin renames of \<open>ivl_exec_prog\<close>/\<open>ivl_terminates_prog\<close>, not a new proof, so
+  callers coming from executable code generation reach the same generic
+  collecting-soundness chain \<open>ivl_exec_prog_sound_collecting\<close> already gives.
+\<close>
+
+definition analyse_interval_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval_for gs p = ivl_exec_prog gs prog_main_name p"
+
+definition analyse_interval :: "imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval p = analyse_interval_for (declared_global p) p"
+
+corollary analyse_interval_sound:
+  assumes "ivl_terminates_prog (declared_global p) prog_main_name p"
+  shows "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))
+           (cfg_exit (prog_cfg prog_main_name p))
+         \<le> \<lbrakk>analyse_interval p\<rbrakk>"
+  unfolding analyse_interval_def analyse_interval_for_def
+  by (rule ivl_exec_prog_sound_collecting[OF assms])
+
+text \<open>
+  \<open>analyse_interval_td\<close>/\<open>analyse_interval_td_for\<close> mirror \<open>analyse_interval\<close>
+  but solve via @{const TD_side_warrowing_apinis_Interp_solve} instead of the
+  always-join rule, following \<open>ivl_exec_raw\<close>/\<open>ivl_exec_at\<close>/\<open>ivl_exec_prog\<close>'s
+  own shape.  No soundness theorem is claimed for them: \<open>ivl_exec_prog_sound_collecting\<close>'s
+  proof leans on solver-specific side-restriction machinery
+  (\<open>TD_side_always_join_solve_Inr_rg\<close>) with no established warrowing-rule
+  analogue anywhere in the codebase.  Proving one is real new proof work ---
+  does warrowing even preserve the same restriction invariant? --- not a
+  rename, so it is left open for the maintainer rather than attempted here.
+\<close>
+
+definition analyse_interval_td_raw ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
+  "analyse_interval_td_raw gs Pi ps mnm main =
+     snd (TD_side_warrowing_apinis_Interp_solve
+            (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main)))"
+
+definition analyse_interval_td_at ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
+  "analyse_interval_td_at gs Pi ps mnm main v =
+     side_env (fun_of_resolved_st_q_for gs \<circ> analyse_interval_td_raw gs Pi ps mnm main) v"
+
+definition analyse_interval_td_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval_td_for gs p =
+     analyse_interval_td_at gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (cfg_exit (prog_cfg prog_main_name p))"
+
+definition analyse_interval_td :: "imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval_td p = analyse_interval_td_for (declared_global p) p"
+
 section \<open>Visualisation convenience\<close>
 
 text \<open>

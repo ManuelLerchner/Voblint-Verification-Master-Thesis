@@ -1,6 +1,7 @@
 #!/bin/sh
 # Regenerates codegen/generated/ from the Isabelle export_code declarations in
-# src/Examples/{Sign,Interval}/Exec_*.thy. Do not hand-edit files under
+# src/Examples/Sign/Example_Sign_Codegen.thy and
+# src/Examples/Interval/Exec_Ivl_Run.thy. Do not hand-edit files under
 # codegen/generated/ -- rerun this script instead.
 set -eu
 
@@ -19,14 +20,14 @@ mkdir -p codegen/generated
 isabelle export \
   -d "$AFP" -d "$TD_DIR" -d . \
   -O codegen/generated -p 3 \
-  -x 'Voblint_Examples.Exec_Sign_DG_Run:code/*/*.hs' \
+  -x 'Voblint_Examples.Example_Sign_Codegen:code/*/*.hs' \
   -x 'Voblint_Examples.Exec_Ivl_Run:code/*/*.hs' \
   Voblint_Examples
 
 isabelle export \
   -d "$AFP" -d "$TD_DIR" -d . \
   -O codegen/generated -p 2 \
-  -x 'Voblint_Examples.Exec_Sign_DG_Run:code/*.ocaml' \
+  -x 'Voblint_Examples.Example_Sign_Codegen:code/*.ocaml' \
   -x 'Voblint_Examples.Exec_Ivl_Run:code/*.ocaml' \
   Voblint_Examples
 

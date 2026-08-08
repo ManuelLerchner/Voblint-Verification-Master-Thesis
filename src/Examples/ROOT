@@ -23,6 +23,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    Example_Sign_Codegen
     (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute
