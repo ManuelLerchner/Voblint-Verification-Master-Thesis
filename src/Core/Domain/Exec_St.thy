@@ -85,7 +85,7 @@ lemma map_of_resolved_none_iff:
 
 lemma fresh_vname_notin:
   "\<exists>x::vname. x \<notin> location_vname ` set (map fst ps @ map fst qs)"
-  by (rule ex_new_if_finite[OF List.infinite_UNIV_listI]) simp
+  by (rule ex_new_if_finite[OF infinite_literal]) simp
 
 lemma location_vname_imageI:
   assumes "loc \<in> set xs"

@@ -61,18 +61,18 @@ text \<open>One state per test, built as an override of an otherwise-unconstrain
   which Sign's four-value lattice cannot distinguish from \<open>STop\<close>.\<close>
 
 definition test_env_bounded :: "ivl abs_state" where
-  "test_env_bounded = (\<lambda>_. ivl_top)(''x'' := Ivl (Fin 4) (Fin 7))"
+  "test_env_bounded = (\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 4) (Fin 7))"
 
 lemma interval_classify_less_proved:
-  "interval_classify_check (Less (V ''x'') (N 11)) test_env_bounded = Check_Proved"
+  "interval_classify_check (Less (V (STR ''x'')) (N 11)) test_env_bounded = Check_Proved"
   unfolding test_env_bounded_def by eval
 
 lemma interval_classify_less_refuted:
-  "interval_classify_check (Less (V ''x'') (N 0)) test_env_bounded = Check_Refuted"
+  "interval_classify_check (Less (V (STR ''x'')) (N 0)) test_env_bounded = Check_Refuted"
   unfolding test_env_bounded_def by eval
 
 lemma interval_classify_eq_unknown:
-  "interval_classify_check (Eq (V ''x'') (N 5)) test_env_bounded = Check_Unknown"
+  "interval_classify_check (Eq (V (STR ''x'')) (N 5)) test_env_bounded = Check_Unknown"
   unfolding test_env_bounded_def by eval
 
 text \<open>The precision gain over Sign: \<open>0 < x\<close> and \<open>x < 8\<close> both hold outright
@@ -81,14 +81,14 @@ text \<open>The precision gain over Sign: \<open>0 < x\<close> and \<open>x < 8\
   classify \<open>x < 8\<close> \<^term>\<open>Check_Unknown\<close> on the same information.\<close>
 
 definition test_env_precision :: "ivl abs_state" where
-  "test_env_precision = (\<lambda>_. ivl_top)(''x'' := Ivl (Fin 4) (Fin 7))"
+  "test_env_precision = (\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 4) (Fin 7))"
 
 lemma interval_classify_precision_lower_proved:
-  "interval_classify_check (Less (N 2) (V ''x'')) test_env_precision = Check_Proved"
+  "interval_classify_check (Less (N 2) (V (STR ''x''))) test_env_precision = Check_Proved"
   unfolding test_env_precision_def by eval
 
 lemma interval_classify_precision_upper_proved:
-  "interval_classify_check (Less (V ''x'') (N 9)) test_env_precision = Check_Proved"
+  "interval_classify_check (Less (V (STR ''x'')) (N 9)) test_env_precision = Check_Proved"
   unfolding test_env_precision_def by eval
 
 subsection \<open>Whole-program check report\<close>

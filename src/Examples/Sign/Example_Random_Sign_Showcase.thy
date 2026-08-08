@@ -59,35 +59,35 @@ text \<open>
 lemma random_guard_run_42:
   fixes s :: store and gs :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
   shows "pcompletes gs \<Pi> (prog_main random_guard_program) s
-           (s(''x'' := 0, ''x'' := 42, ''y'' := 42))"
+           (s((STR ''x'') := 0, (STR ''x'') := 42, (STR ''y'') := 42))"
 proof -
-  have step1: "pcompletes gs \<Pi> (Assign ''x'' (N 0)) s (s(''x'' := 0))"
+  have step1: "pcompletes gs \<Pi> (Assign (STR ''x'') (N 0)) s (s((STR ''x'') := 0))"
     by (metis aval.simps(1) pcompletes_assign)
-  have step2: "pcompletes gs \<Pi> (Random ''x'') (s(''x'' := 0)) ((s(''x'' := 0))(''x'' := 42))"
+  have step2: "pcompletes gs \<Pi> (Random (STR ''x'')) (s((STR ''x'') := 0)) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
     by (rule pcompletes_random)
-  have step12: "pcompletes gs \<Pi> (Seq (Assign ''x'' (N 0)) (Random ''x'')) s
-                  ((s(''x'' := 0))(''x'' := 42))"
+  have step12: "pcompletes gs \<Pi> (Seq (Assign (STR ''x'') (N 0)) (Random (STR ''x''))) s
+                  ((s((STR ''x'') := 0))((STR ''x'') := 42))"
     using pcompletes_Seq[OF step1 step2] .
-  have guard_true: "bval (Less (N 0) (V ''x'')) ((s(''x'' := 0))(''x'' := 42))"
+  have guard_true: "bval (Less (N 0) (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
     by simp
-  have step3: "pcompletes gs \<Pi> (Assign ''y'' (V ''x'')) ((s(''x'' := 0))(''x'' := 42))
-                 (((s(''x'' := 0))(''x'' := 42))(''y'' := 42))"
+  have step3: "pcompletes gs \<Pi> (Assign (STR ''y'') (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))
+                 (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
     by (metis aval.simps(2) fun_upd_def pcompletes_assign)
   have step3if: "pcompletes gs \<Pi>
-      (If (Less (N 0) (V ''x'')) (Assign ''y'' (V ''x'')) (Assign ''y'' (Minus (N 0) (V ''x''))))
-      ((s(''x'' := 0))(''x'' := 42)) (((s(''x'' := 0))(''x'' := 42))(''y'' := 42))"
+      (If (Less (N 0) (V (STR ''x''))) (Assign (STR ''y'') (V (STR ''x''))) (Assign (STR ''y'') (Minus (N 0) (V (STR ''x'')))))
+      ((s((STR ''x'') := 0))((STR ''x'') := 42)) (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
     using pcompletes_IfTrue[OF guard_true step3] .
   have "pcompletes gs \<Pi>
-      (Seq (Seq (Assign ''x'' (N 0)) (Random ''x''))
-        (If (Less (N 0) (V ''x'')) (Assign ''y'' (V ''x'')) (Assign ''y'' (Minus (N 0) (V ''x'')))))
-      s (((s(''x'' := 0))(''x'' := 42))(''y'' := 42))"
+      (Seq (Seq (Assign (STR ''x'') (N 0)) (Random (STR ''x'')))
+        (If (Less (N 0) (V (STR ''x''))) (Assign (STR ''y'') (V (STR ''x''))) (Assign (STR ''y'') (Minus (N 0) (V (STR ''x''))))))
+      s (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
     using pcompletes_Seq[OF step12 step3if] .
   then show ?thesis unfolding random_guard_program_def by simp
 qed
 
 lemma random_guard_run_42_y_nonneg:
   fixes s :: store
-  shows "(s(''x'' := 0, ''x'' := 42, ''y'' := 42)) ''y'' \<ge> 0"
+  shows "(s((STR ''x'') := 0, (STR ''x'') := 42, (STR ''y'') := 42)) (STR ''y'') \<ge> 0"
   by simp
 
 subsection \<open>Through the equation system generator and the TD solver\<close>
@@ -107,23 +107,23 @@ text \<open>
 \<close>
 
 value "sign_exec_eqs random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
-         ''main'' (prog_main random_guard_program)"
+         (STR ''main'') (prog_main random_guard_program)"
 
 value "sign_exec_raw random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
-         ''main'' (prog_main random_guard_program)"
+         (STR ''main'') (prog_main random_guard_program)"
 
-value "sign_exec_prog random_guard_gs ''main'' random_guard_program"
+value "sign_exec_prog random_guard_gs (STR ''main'') random_guard_program"
 
-lemma random_guard_exec_y: "sign_exec_prog random_guard_gs ''main'' random_guard_program ''y'' = SNonNeg"
+lemma random_guard_exec_y: "sign_exec_prog random_guard_gs (STR ''main'') random_guard_program (STR ''y'') = SNonNeg"
   by eval
 
-lemma random_guard_solver_terminates: "sign_terminates_prog random_guard_gs ''main'' random_guard_program"
+lemma random_guard_solver_terminates: "sign_terminates_prog random_guard_gs (STR ''main'') random_guard_program"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 corollary random_guard_exit_sound:
-  "ltr_collect random_guard_gs (prog_cfg ''main'' random_guard_program) (cinit_stores random_guard_gs)
-     (cfg_exit (prog_cfg ''main'' random_guard_program))
-   \<le> \<lbrakk>sign_exec_prog random_guard_gs ''main'' random_guard_program\<rbrakk>"
+  "ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
+     (cfg_exit (prog_cfg (STR ''main'') random_guard_program))
+   \<le> \<lbrakk>sign_exec_prog random_guard_gs (STR ''main'') random_guard_program\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF random_guard_solver_terminates])
 
 text \<open>
@@ -137,13 +137,13 @@ text \<open>
 \<close>
 
 corollary random_guard_exit_y_nonneg:
-  assumes "t \<in> ltr_collect random_guard_gs (prog_cfg ''main'' random_guard_program) (cinit_stores random_guard_gs)
-             (cfg_exit (prog_cfg ''main'' random_guard_program))"
-  shows "t ''y'' \<ge> 0"
+  assumes "t \<in> ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
+             (cfg_exit (prog_cfg (STR ''main'') random_guard_program))"
+  shows "t (STR ''y'') \<ge> 0"
 proof -
-  have t_in: "t \<in> \<lbrakk>sign_exec_prog random_guard_gs ''main'' random_guard_program\<rbrakk>"
+  have t_in: "t \<in> \<lbrakk>sign_exec_prog random_guard_gs (STR ''main'') random_guard_program\<rbrakk>"
     using assms random_guard_exit_sound by blast
-  have "t ''y'' \<in> gamma_sign (sign_exec_prog random_guard_gs ''main'' random_guard_program ''y'')"
+  have "t (STR ''y'') \<in> gamma_sign (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program (STR ''y''))"
     using gamma_stateD[OF t_in] by simp
   then show ?thesis using random_guard_exec_y by simp
 qed
@@ -157,7 +157,7 @@ text \<open>
   each branch, and that \<open>y\<close> is \<open>SNonNeg\<close> at the exit.
 \<close>
 
-definition random_guard_mnm :: pname where "random_guard_mnm = ''main''"
+definition random_guard_mnm :: pname where "random_guard_mnm = (STR ''main'')"
 
 ML_val \<open>
   writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code random_guard_program}) @{code random_guard_mnm} @{code random_guard_program})

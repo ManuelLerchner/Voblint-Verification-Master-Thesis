@@ -10,7 +10,7 @@
 -- `make codegen` instead.
 module Main (main) where
 
-import Prelude hiding (Char, Int, Num)
+import Prelude hiding (Int, Num)
 import qualified Prelude
 import System.Exit (exitFailure)
 import Voblint_Analyse
@@ -26,20 +26,9 @@ mkInt = Int_of_integer
 mkNat :: Integer -> Nat
 mkNat = nat_of_integer
 
--- `vname = char list` uses Isabelle's own `Char` (opaque under
--- Code_Abstract_Char, imported by Example_Analysis_Dispatch), bridged to a
--- native integer by `char_of_integer`/`integer_of_char`.
-mkChar :: Prelude.Char -> Char
-mkChar = char_of_integer . toInteger . fromEnum
-
-mkString :: Prelude.String -> [Char]
-mkString = map mkChar
-
-unChar :: Char -> Prelude.Char
-unChar = toEnum . fromInteger . integer_of_char
-
-unString :: [Char] -> Prelude.String
-unString = map unChar
+-- `vname`/`pname` are Isabelle's `String.literal`, which is already the
+-- target language's native `String` (see Example_Analysis_Dispatch.thy), so
+-- variable/procedure names need no conversion at all.
 
 -- y := 1; check(0 < y); y := 0 - 1; check(0 < y)
 -- Same program as dispatch_demo_prog in Example_Analysis_Dispatch.thy.
@@ -49,25 +38,25 @@ demoProg =
     []
     ( Seq
         ( Seq
-            (Seq (Assign (mkString "y") (N (mkInt 1))) (Check checkCond))
-            (Assign (mkString "y") (Minus (N (mkInt 0)) (N (mkInt 1))))
+            (Seq (Assign "y" (N (mkInt 1))) (Check checkCond))
+            (Assign "y" (Minus (N (mkInt 0)) (N (mkInt 1))))
         )
         (Check checkCond)
     )
     []
   where
-    checkCond = Less (N (mkInt 0)) (V (mkString "y"))
+    checkCond = Less (N (mkInt 0)) (V "y")
 
 expectedSign :: [(Cfg_node, (Bexp, Check_result))]
 expectedSign =
-  [ (Statement (mkNat 1), (Less (N (mkInt 0)) (V (mkString "y")), Check_Unknown)),
-    (Statement (mkNat 3), (Less (N (mkInt 0)) (V (mkString "y")), Check_Unknown))
+  [ (Statement (mkNat 1), (Less (N (mkInt 0)) (V "y"), Check_Unknown)),
+    (Statement (mkNat 3), (Less (N (mkInt 0)) (V "y"), Check_Unknown))
   ]
 
 expectedInterval :: [(Cfg_node, (Bexp, Check_result))]
 expectedInterval =
-  [ (Statement (mkNat 1), (Less (N (mkInt 0)) (V (mkString "y")), Check_Proved)),
-    (Statement (mkNat 3), (Less (N (mkInt 0)) (V (mkString "y")), Check_Refuted))
+  [ (Statement (mkNat 1), (Less (N (mkInt 0)) (V "y"), Check_Proved)),
+    (Statement (mkNat 3), (Less (N (mkInt 0)) (V "y"), Check_Refuted))
   ]
 
 checkCase :: (Eq a, Show a) => Prelude.String -> a -> a -> IO Prelude.Bool
@@ -89,8 +78,8 @@ instance Show Int where
 
 instance Show Cfg_node where
   show (Statement n) = "Statement " ++ show n
-  show (FunctionEntry s) = "FunctionEntry " ++ unString s
-  show (FunctionResult s) = "FunctionResult " ++ unString s
+  show (FunctionEntry s) = "FunctionEntry " ++ s
+  show (FunctionResult s) = "FunctionResult " ++ s
 
 instance Show Check_result where
   show Check_Proved = "Check_Proved"
@@ -117,7 +106,7 @@ instance Eq Bexp where
 
 instance Show Aexp where
   show (N i) = show i
-  show (V s) = unString s
+  show (V s) = s
   show (Plus a b) = "(" ++ show a ++ " + " ++ show b ++ ")"
   show (Minus a b) = "(" ++ show a ++ " - " ++ show b ++ ")"
   show (Times a b) = "(" ++ show a ++ " * " ++ show b ++ ")"

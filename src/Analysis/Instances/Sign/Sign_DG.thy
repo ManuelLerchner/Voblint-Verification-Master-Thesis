@@ -61,15 +61,15 @@ lemma sign_dg_privatized_assign_published_at:
 text \<open>Concrete witness: \<open>g := 5\<close> from the empty state is retained locally
   and published, both at exactly \<open>SPos\<close>.\<close>
 corollary sign_dg_privatized_assign_g_five:
-  assumes gs_g: "gs ''g''"
+  assumes gs_g: "gs (STR ''g'')"
   shows
     "snd (dgs_assign (unit_dg_spec_placed gs sign_keep_all gs (sign_tf_for gs))
-            ''g'' (N 5) bot bot) ''g'' = SPos"
+            (STR ''g'') (N 5) bot bot) (STR ''g'') = SPos"
     "fst (dgs_assign (unit_dg_spec_placed gs sign_keep_all gs (sign_tf_for gs))
-            ''g'' (N 5) bot bot) ''g'' = SPos"
-  using sign_dg_privatized_assign_local[where x = "''g''" and a = "N 5"
+            (STR ''g'') (N 5) bot bot) (STR ''g'') = SPos"
+  using sign_dg_privatized_assign_local[where x = "(STR ''g'')" and a = "N 5"
       and d = "bot::sign abs_state" and g = "bot::sign abs_state"]
-    sign_dg_privatized_assign_published_at[where y = "''g''" and x = "''g''" and a = "N 5"
+    sign_dg_privatized_assign_published_at[where y = "(STR ''g'')" and x = "(STR ''g'')" and a = "N 5"
       and d = "bot::sign abs_state" and g = "bot::sign abs_state", OF gs_g]
   by (simp_all add: bot_fun_def assign_sign_def)
 

@@ -26,11 +26,11 @@ text \<open>
   code generator: lookup / update / sup / order / equality on concrete values.
 \<close>
 
-value "sign_lookup (sign_update (bot :: sign resolved_st_q) ''x'' SPos) ''x''"
-value "sign_lookup (sign_update (bot :: sign resolved_st_q) ''x'' SPos) ''y''"
-value "(sign_update (bot :: sign resolved_st_q) ''x'' SPos) \<squnion> (sign_update bot ''x'' SNeg)"
-value "(sign_update (bot :: sign resolved_st_q) ''x'' SPos) = (sign_update bot ''x'' SPos)"
-value "(sign_update (bot :: sign resolved_st_q) ''x'' SPos) \<le> (sign_update bot ''x'' STop)"
+value "sign_lookup (sign_update (bot :: sign resolved_st_q) (STR ''x'') SPos) (STR ''x'')"
+value "sign_lookup (sign_update (bot :: sign resolved_st_q) (STR ''x'') SPos) (STR ''y'')"
+value "(sign_update (bot :: sign resolved_st_q) (STR ''x'') SPos) \<squnion> (sign_update bot (STR ''x'') SNeg)"
+value "(sign_update (bot :: sign resolved_st_q) (STR ''x'') SPos) = (sign_update bot (STR ''x'') SPos)"
+value "(sign_update (bot :: sign resolved_st_q) (STR ''x'') SPos) \<le> (sign_update bot (STR ''x'') STop)"
 
 section \<open>Running the vendored TD_side solver on a sign resolved_st_q equation system\<close>
 
@@ -58,17 +58,17 @@ text \<open>
 
 fun sign_eqs :: "pp \<Rightarrow> (pp, glob, sign resolved_st_q) strategy_tree" where
   "sign_eqs P0 = Answer bot"
-| "sign_eqs P1 = QueryL P0 (\<lambda>s. Answer (assign_st s ''x'' (N 1)))"
+| "sign_eqs P1 = QueryL P0 (\<lambda>s. Answer (assign_st s (STR ''x'') (N 1)))"
 | "sign_eqs P2 = QueryL P1 (\<lambda>s. Answer
-     (assign_st s ''y'' (Plus (V ''x'') (V ''x''))))"
+     (assign_st s (STR ''y'') (Plus (V (STR ''x'')) (V (STR ''x'')))))"
 
 definition sign_solution :: "pp set \<times> (pp + glob \<Rightarrow> sign resolved_st_q)" where
   "sign_solution = TD_side_always_join_Interp_solve sign_eqs P2"
 
-value "sign_lookup (snd sign_solution (Inl P2)) ''x''"
-value "sign_lookup (snd sign_solution (Inl P2)) ''y''"
-value "sign_lookup (snd sign_solution (Inl P0)) ''x''"
-value "sign_lookup (snd sign_solution (Inl P1)) ''x''"
+value "sign_lookup (snd sign_solution (Inl P2)) (STR ''x'')"
+value "sign_lookup (snd sign_solution (Inl P2)) (STR ''y'')"
+value "sign_lookup (snd sign_solution (Inl P0)) (STR ''x'')"
+value "sign_lookup (snd sign_solution (Inl P1)) (STR ''x'')"
 value "fst sign_solution"
 
 end

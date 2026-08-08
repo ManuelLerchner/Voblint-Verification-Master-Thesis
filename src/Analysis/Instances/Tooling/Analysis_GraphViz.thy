@@ -26,8 +26,8 @@ subsection \<open>CFG and DOT helpers\<close>
 
 fun string_of_action :: "edge_action \<Rightarrow> string" where
   "string_of_action EA_Nop = ''nop''"
-| "string_of_action (EA_Assign x a) = x @ '' := '' @ string_of_aexp a"
-| "string_of_action (EA_Random x) = x @ '' := random()''"
+| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_aexp a"
+| "string_of_action (EA_Random x) = String.explode x @ '' := random()''"
 | "string_of_action (EA_Assume b) = ''['' @ string_of_bexp b @ '']''"
 | "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_bexp b @ '']''"
 | "string_of_action (EA_Ret None p) = ''return''"
@@ -39,7 +39,7 @@ fun string_of_call_action :: "call_action \<Rightarrow> string" where
   "string_of_call_action (CallEdge None fs es) =
     ''call('' @ concat (map string_of_aexp es) @ '')''"
 | "string_of_call_action (CallEdge (Some x) fs es) =
-    x @ '' := call('' @ concat (map string_of_aexp es) @ '')''"
+    String.explode x @ '' := call('' @ concat (map string_of_aexp es) @ '')''"
 
 definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
@@ -106,7 +106,7 @@ datatype ('ctx, 'g) analysis_node =
 
 datatype analysis_edge_kind =
     IntraEdge (aek_action: edge_action)
-  | EnterEdge (aek_enter_proc: pname) (aek_call: call_action)
+  | EnterEdge (aek_enter_proc: string) (aek_call: call_action)
   | CombineEdge (combine_call_pp: pp) (combine_dst: "vname option") (combine_ret: "vname option")
   | CallToReturnEdge (aek_ctr_proc: pname)
   | GlobalReadEdge
@@ -190,7 +190,7 @@ fun compiled_proc_owner ::
             else compiled_proc_owner \<Pi> ps n' k))"
 
 definition compiled_owner_of ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> string" where
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> pname" where
   "compiled_owner_of \<Pi> ps mnm main p =
     (case p of
       FunctionEntry owner \<Rightarrow> owner
@@ -236,7 +236,7 @@ definition compiled_global_vars :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg
   "compiled_global_vars gs g = filter gs (cfg_assigned_vars g)"
 
 definition owner_assigned_vars ::
-  "cfg \<Rightarrow> (pp \<Rightarrow> string) \<Rightarrow> string \<Rightarrow> vname list" where
+  "cfg \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow> pname \<Rightarrow> vname list" where
   "owner_assigned_vars g point_owner owner =
     remdups
       (concat (map (\<lambda>(u, a, _).
@@ -437,8 +437,8 @@ definition analysis_graph_wf ::
       list_all (\<lambda>e. case e of (src, _, dst) \<Rightarrow> src \<in> set ns \<and> dst \<in> set ns) es)"
 fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
   "string_of_cfg_node (Statement n) = ''pp'' @ string_of_nat n"
-| "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ p"
-| "string_of_cfg_node (FunctionResult p) = ''result_'' @ p"
+| "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ String.explode p"
+| "string_of_cfg_node (FunctionResult p) = ''result_'' @ String.explode p"
 
 definition graphviz_exit :: "cfg \<Rightarrow> cfg_node" where
   "graphviz_exit g =
@@ -506,8 +506,8 @@ definition analysis_nodes_in_cluster ::
 definition graphviz_point_label :: "cfg \<Rightarrow> pp \<Rightarrow> string" where
   "graphviz_point_label g p =
     (case p of
-      FunctionEntry owner \<Rightarrow> ''entry_'' @ owner
-    | FunctionResult owner \<Rightarrow> ''exit_'' @ owner
+      FunctionEntry owner \<Rightarrow> ''entry_'' @ String.explode owner
+    | FunctionResult owner \<Rightarrow> ''exit_'' @ String.explode owner
     | Statement _ \<Rightarrow> string_of_cfg_node p)"
 
 definition contextual_node_label ::
@@ -550,7 +550,7 @@ fun enter_bindings :: "vname list \<Rightarrow> aexp list \<Rightarrow> string l
   "enter_bindings [] _ = []"
 | "enter_bindings _ [] = []"
 | "enter_bindings (x # xs) (e # es) =
-    (x @ '' := '' @ string_of_aexp e) # enter_bindings xs es"
+    (String.explode x @ '' := '' @ string_of_aexp e) # enter_bindings xs es"
 
 definition enter_action_label :: "call_action \<Rightarrow> string" where
   "enter_action_label a = string_of_call_action a"
@@ -572,8 +572,8 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
           (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')'' @ dq
     | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
-             (Some x, Some r) \<Rightarrow> ''resume / '' @ x @ '' := '' @ r
-           | (Some x, None) \<Rightarrow> ''resume / '' @ x
+             (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode x @ '' := '' @ String.explode r
+           | (Some x, None) \<Rightarrow> ''resume / '' @ String.explode x
            | (None, _) \<Rightarrow> ''resume'')
         @ dq
     | CallToReturnEdge callee \<Rightarrow> ''style=dotted,color=gray40,constraint=false,label='' @ dq
@@ -655,7 +655,7 @@ definition raw_cfg_graph_config ::
       show_global_key = (\<lambda>_. ''''),
       is_shared_global = (\<lambda>_. False),
       show_internal_globals = False,
-      owner_of = compiled_owner_of \<Pi> ps mnm main,
+      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
       source_text = Some (pretty_string_of_program \<Pi> ps main),
       node_annotation = annotate

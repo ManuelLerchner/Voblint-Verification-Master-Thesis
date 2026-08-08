@@ -28,9 +28,9 @@ value "string_of_sign STop"
 value "string_of_sign SNonPos"
 
 value "aval_sign (Times (N (-2)) (N 3)) (\<lambda>_. SBot)"
-value "aval_sign (Plus (V ''x'') (V ''x'')) ((\<lambda>_. SBot)(''x'' := SPos))"
+value "aval_sign (Plus (V (STR ''x'')) (V (STR ''x''))) ((\<lambda>_. SBot)((STR ''x'') := SPos))"
 
-value "assign_sign ''x'' (N 1) (\<lambda>_. SBot) ''x''"
+value "assign_sign (STR ''x'') (N 1) (\<lambda>_. SBot) (STR ''x'')"
 
 text \<open>Backward guard refinement is the abstract spec @{const assume_sign}.
   Its executable mirror @{text assume_sign_st} on @{text "sign st"} is defined and

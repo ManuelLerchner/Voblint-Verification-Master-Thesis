@@ -11,11 +11,11 @@ theory Example_Proc_Call
 begin
 
 definition main_cfg_name :: pname where
-  "main_cfg_name = ''main''"
+  "main_cfg_name = (STR ''main'')"
 
 text \<open>
   Two parameterless procedures communicate through the global variable
-  @{term \<open>''Gx''\<close>}.  \<open>proc_call_gs\<close> is this program's explicit storage
+  @{term \<open>(STR ''Gx'')\<close>}.  \<open>proc_call_gs\<close> is this program's explicit storage
   classifier: \<open>Gx\<close> is global by declaration, not by its leading letter, so it
   survives call-frame restore while locals are reset to zero.
 
@@ -27,7 +27,7 @@ text \<open>
 \<close>
 
 definition proc_call_gs :: "vname \<Rightarrow> bool" where
-  "proc_call_gs x \<longleftrightarrow> x = ''Gx''"
+  "proc_call_gs x \<longleftrightarrow> x = (STR ''Gx'')"
 
 definition inc_body :: "VIMP_Proc.com" where
   "inc_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
@@ -36,7 +36,7 @@ definition sqr_body :: "VIMP_Proc.com" where
   "sqr_body = imp \<lbrakk> Gx := Gx * Gx \<rbrakk>"
 
 definition proc_pi :: proc_table where
-  "proc_pi = (\<lambda>_. None)(''inc'' := Some (proc_decl_of [] inc_body), ''sqr'' := Some (proc_decl_of [] sqr_body))"
+  "proc_pi = (\<lambda>_. None)((STR ''inc'') := Some (proc_decl_of [] inc_body), (STR ''sqr'') := Some (proc_decl_of [] sqr_body))"
 
 definition main_prog :: "VIMP_Proc.com" where
   "main_prog = imp \<lbrakk>
@@ -46,7 +46,7 @@ definition main_prog :: "VIMP_Proc.com" where
    \<rbrakk>"
 
 definition main_procs :: "pname list" where
-  "main_procs = [''inc'', ''sqr'']"
+  "main_procs = [(STR ''inc''), (STR ''sqr'')]"
 
 subsection \<open>Concrete run\<close>
 
@@ -56,79 +56,79 @@ text \<open>
 \<close>
 
 lemma call_inc_result:
-  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s(''Gx'' := s ''Gx'' + 1))"
+  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') + 1))"
 proof -
   have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
                 (VIMP_Globals.combine_states proc_call_gs s
-                  ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' + 1)))"
+                  ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
-    show "proc_pi ''inc'' = Some (proc_decl_of [] inc_body)"
+    show "proc_pi (STR ''inc'') = Some (proc_decl_of [] inc_body)"
       by (simp add: proc_pi_def)
     show "pcompletes proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
-             ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' + 1))"
+             ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))"
     proof -
       have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
-                 (''Gx'' := aval (Plus (V ''Gx'') (N 1)) (enter_state proc_call_gs s)))"
+                 ((STR ''Gx'') := aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
-      moreover have "aval (Plus (V ''Gx'') (N 1)) (enter_state proc_call_gs s) = s ''Gx'' + 1"
+      moreover have "aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s) = s (STR ''Gx'') + 1"
         by (simp add: enter_state_def proc_call_gs_def)
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
   moreover have
-    "VIMP_Globals.combine_states proc_call_gs s ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' + 1))
-       = s(''Gx'' := s ''Gx'' + 1)"
+    "VIMP_Globals.combine_states proc_call_gs s ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))
+       = s((STR ''Gx'') := s (STR ''Gx'') + 1)"
     by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s(''Gx'' := s ''Gx'' * s ''Gx''))"
+  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
 proof -
   have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
                 (VIMP_Globals.combine_states proc_call_gs s
-                  ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' * s ''Gx'')))"
+                  ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
-    show "proc_pi ''sqr'' = Some (proc_decl_of [] sqr_body)"
+    show "proc_pi (STR ''sqr'') = Some (proc_decl_of [] sqr_body)"
       by (simp add: proc_pi_def)
     show "pcompletes proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
-             ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' * s ''Gx''))"
+             ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
     proof -
       have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
-                 (''Gx'' := aval (Times (V ''Gx'') (V ''Gx'')) (enter_state proc_call_gs s)))"
+                 ((STR ''Gx'') := aval (Times (V (STR ''Gx'')) (V (STR ''Gx''))) (enter_state proc_call_gs s)))"
         by (rule pcompletes_assign)
       moreover have
-        "aval (Times (V ''Gx'') (V ''Gx'')) (enter_state proc_call_gs s) = s ''Gx'' * s ''Gx''"
+        "aval (Times (V (STR ''Gx'')) (V (STR ''Gx''))) (enter_state proc_call_gs s) = s (STR ''Gx'') * s (STR ''Gx'')"
         by (simp add: enter_state_def proc_call_gs_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
   moreover have
     "VIMP_Globals.combine_states proc_call_gs s
-       ((enter_state proc_call_gs s)(''Gx'' := s ''Gx'' * s ''Gx'')) = s(''Gx'' := s ''Gx'' * s ''Gx'')"
+       ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))) = s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))"
     by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
 qed
 
 text \<open>
-  @{const main_prog} terminates in @{term \<open>s(''Gx'' := 25)\<close>} for every
-  initial store, regardless of @{term \<open>''Gx''\<close>}'s starting value.
+  @{const main_prog} terminates in @{term \<open>s((STR ''Gx'') := 25)\<close>} for every
+  initial store, regardless of @{term \<open>(STR ''Gx'')\<close>}'s starting value.
 \<close>
 theorem main_prog_result:
-  "pcompletes proc_call_gs proc_pi main_prog s (s(''Gx'' := 25))"
+  "pcompletes proc_call_gs proc_pi main_prog s (s((STR ''Gx'') := 25))"
 proof -
-  have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s(''Gx'' := 4))"
-    using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "''Gx''" and a = "N 4" and s = s]
+  have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s((STR ''Gx'') := 4))"
+    using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
     by (simp add: pcompletes_def)
-  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s(''Gx'' := 4)) (s(''Gx'' := 5))"
-    using call_inc_result[where s = "s(''Gx'' := 4)"]
+  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
+    using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
     by simp
-  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s(''Gx'' := 5)) (s(''Gx'' := 25))"
-    using call_sqr_result[where s = "s(''Gx'' := 5)"]
+  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25))"
+    using call_sqr_result[where s = "s((STR ''Gx'') := 5)"]
     by simp
   show ?thesis
     unfolding main_prog_def
@@ -147,47 +147,47 @@ text \<open>
   @{text "5 -> inc, continue at 6"} and @{text "6 -> sqr, continue at 7"}.
 \<close>
 
-abbreviation "main_cfg \<equiv> compile_prog proc_pi [''inc'', ''sqr''] main_cfg_name main_prog"
+abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'')] main_cfg_name main_prog"
 
 lemma main_cfg_full:
   "main_cfg =
      \<lparr> intra =
-         {(FunctionEntry ''inc'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
-          (Statement 1, EA_Ret None ''inc'', FunctionResult ''inc''),
-          (FunctionEntry ''sqr'', EA_Nop, Statement 2),
-          (Statement 2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), Statement 3),
-          (Statement 3, EA_Ret None ''sqr'', FunctionResult ''sqr''),
-          (FunctionEntry ''main'', EA_Nop, Statement 4),
-          (Statement 4, EA_Assign ''Gx'' (N 4), Statement 5),
-          (Statement 7, EA_Ret None ''main'', FunctionResult ''main'')},
+         {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
+          (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
+          (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
+          (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
+          (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
+          (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
+          (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
+          (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
+          (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
        calls =
-         {(Statement 5, CallEdge None [] [], FunctionEntry ''inc'', Statement 6),
-          (Statement 6, CallEdge None [] [], FunctionEntry ''sqr'', Statement 7)},
-       cfg_entry = FunctionEntry ''main'',
+         {(Statement 5, CallEdge None [] [], FunctionEntry (STR ''inc''), Statement 6),
+          (Statement 6, CallEdge None [] [], FunctionEntry (STR ''sqr''), Statement 7)},
+       cfg_entry = FunctionEntry (STR ''main''),
        checks = {} \<rparr>"
   by (simp add: main_cfg_name_def) eval
 
-lemma main_cfg_entry: "cfg_entry main_cfg = FunctionEntry ''main''"
+lemma main_cfg_entry: "cfg_entry main_cfg = FunctionEntry (STR ''main'')"
   by (simp add: main_cfg_full)
-lemma main_cfg_exit: "cfg_exit main_cfg = FunctionResult ''main''"
+lemma main_cfg_exit: "cfg_exit main_cfg = FunctionResult (STR ''main'')"
   by (simp add: main_cfg_full cfg_exit_def)
 lemma main_cfg_intra:
   "intra main_cfg =
-     {(FunctionEntry ''inc'', EA_Nop, Statement 0),
-      (Statement 0, EA_Assign ''Gx'' (Plus (V ''Gx'') (N 1)), Statement 1),
-      (Statement 1, EA_Ret None ''inc'', FunctionResult ''inc''),
-      (FunctionEntry ''sqr'', EA_Nop, Statement 2),
-      (Statement 2, EA_Assign ''Gx'' (Times (V ''Gx'') (V ''Gx'')), Statement 3),
-      (Statement 3, EA_Ret None ''sqr'', FunctionResult ''sqr''),
-      (FunctionEntry ''main'', EA_Nop, Statement 4),
-      (Statement 4, EA_Assign ''Gx'' (N 4), Statement 5),
-      (Statement 7, EA_Ret None ''main'', FunctionResult ''main'')}"
+     {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
+      (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
+      (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
+      (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
+      (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
+      (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
+      (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
+      (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
+      (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   by (simp add: main_cfg_full)
 lemma main_cfg_calls:
   "calls main_cfg =
-     {(Statement 5, CallEdge None [] [], FunctionEntry ''inc'', Statement 6),
-      (Statement 6, CallEdge None [] [], FunctionEntry ''sqr'', Statement 7)}"
+     {(Statement 5, CallEdge None [] [], FunctionEntry (STR ''inc''), Statement 6),
+      (Statement 6, CallEdge None [] [], FunctionEntry (STR ''sqr''), Statement 7)}"
   by (simp add: main_cfg_full)
 
  
@@ -212,21 +212,21 @@ text \<open>
   @{text "4"} -- main body entry, before @{text "Gx := 4"};
   @{text "5"} -- after @{text "Gx := 4"}, which is also the call site to inc;
   @{text "0"} -- inc body entry (reached through the call edge from 5);
-  @{text "1"} -- inc body exit, feeding @{term \<open>FunctionResult ''inc''\<close>};
+  @{text "1"} -- inc body exit, feeding @{term \<open>FunctionResult (STR ''inc'')\<close>};
   @{text "6"} -- continuation after inc, which is also the call site to sqr;
   @{text "2"}, @{text "3"} -- sqr body entry and exit;
-  @{text "7"} -- continuation after sqr, feeding @{term \<open>FunctionResult ''main''\<close>}.
+  @{text "7"} -- continuation after sqr, feeding @{term \<open>FunctionResult (STR ''main'')\<close>}.
 \<close>
 
 definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
   "main_prog_env v x =
-     (if v \<in> {Statement 5, FunctionEntry ''inc'', Statement 0} \<and> x = ''Gx''
+     (if v \<in> {Statement 5, FunctionEntry (STR ''inc''), Statement 0} \<and> x = (STR ''Gx'')
         then Ivl (Fin 4) (Fin 4)
-      else if v \<in> {Statement 1, FunctionResult ''inc'', Statement 6,
-                   FunctionEntry ''sqr'', Statement 2} \<and> x = ''Gx''
+      else if v \<in> {Statement 1, FunctionResult (STR ''inc''), Statement 6,
+                   FunctionEntry (STR ''sqr''), Statement 2} \<and> x = (STR ''Gx'')
         then Ivl (Fin 5) (Fin 5)
-      else if v \<in> {Statement 3, FunctionResult ''sqr'', Statement 7,
-                   FunctionResult ''main''} \<and> x = ''Gx''
+      else if v \<in> {Statement 3, FunctionResult (STR ''sqr''), Statement 7,
+                   FunctionResult (STR ''main'')} \<and> x = (STR ''Gx'')
         then Ivl (Fin 25) (Fin 25)
       else Ivl MinInf PlusInf)"
 
@@ -292,7 +292,7 @@ proof (rule allI)
 qed
 
 lemma main_prog_gx_exit_ivl:
-  "main_prog_env (cfg_exit main_cfg) ''Gx'' = Ivl (Fin 25) (Fin 25)"
+  "main_prog_env (cfg_exit main_cfg) (STR ''Gx'') = Ivl (Fin 25) (Fin 25)"
   by (simp add: main_prog_env_def main_cfg_exit)
 
 
@@ -301,7 +301,7 @@ subsection \<open>Interval analysis soundness\<close>
 text \<open>
   For any store that reaches the program exit in the collecting semantics and
   whose initial store is in the concretisation of @{const main_prog_s0},
-  the value of @{term \<open>''Gx''\<close>} lies in @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
+  the value of @{term \<open>(STR ''Gx'')\<close>} lies in @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
 
 
   The proof applies the generic trace-native post-fixpoint theorem to the exhibited
@@ -311,7 +311,7 @@ text \<open>
 theorem main_prog_interval_analysis:
   assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
   assumes s: "s \<in> ltr_collect proc_call_gs main_cfg S (cfg_exit main_cfg)"
-  shows "s ''Gx'' \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
+  shows "s (STR ''Gx'') \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
 proof -
   have fin_e: "finite (intra main_cfg)" using compile_prog_finite by simp
   have fin_c: "finite (calls main_cfg)" using compile_prog_finite by simp
@@ -321,7 +321,7 @@ proof -
           [OF ivl_is_sound_transfer_for fin_e fin_c main_prog_postfix S_sound]
     by blast
   from s le have "s \<in> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>" by blast
-  then have "s ''Gx'' \<in> gamma (main_prog_env (cfg_exit main_cfg) ''Gx'')"
+  then have "s (STR ''Gx'') \<in> gamma (main_prog_env (cfg_exit main_cfg) (STR ''Gx''))"
     unfolding gamma_state_def by blast
   then show ?thesis by (simp add: main_prog_env_def main_cfg_exit)
 qed

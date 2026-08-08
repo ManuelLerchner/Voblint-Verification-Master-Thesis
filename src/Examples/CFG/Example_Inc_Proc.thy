@@ -27,9 +27,9 @@ definition inc_pi :: proc_table where
   "inc_pi = prog_table inc_program"
 
 lemma inc_program_parts:
-  shows "prog_procs inc_program = [''p'']"
+  shows "prog_procs inc_program = [(STR ''p'')]"
     and "prog_table inc_program =
-           [''p'' \<mapsto> proc_decl_of [] (imp \<lbrakk> counter := counter + 1 \<rbrakk>),
+           [(STR ''p'') \<mapsto> proc_decl_of [] (imp \<lbrakk> counter := counter + 1 \<rbrakk>),
             prog_main_name \<mapsto> proc_decl_of [] (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)]"
     and "prog_main inc_program = imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>"
   by (simp_all add: inc_program_def)
@@ -39,20 +39,20 @@ text \<open>\<open>declared_global_vars\<close> for the concrete program: the en
   undeclared and therefore local despite its spelling; \<open>counter\<close> is declared
   global despite carrying no naming hint at all.\<close>
 lemma inc_program_declared_global_vars [simp]:
-  "declared_global_vars inc_program = [''counter'']"
+  "declared_global_vars inc_program = [(STR ''counter'')]"
   by (simp add: inc_program_def)
 
-lemma inc_program_counter_global [simp]: "declared_global inc_program ''counter''"
+lemma inc_program_counter_global [simp]: "declared_global inc_program (STR ''counter'')"
   by simp
 
-lemma inc_program_glocal_not_global [simp]: "\<not> declared_global inc_program ''Glocal''"
+lemma inc_program_glocal_not_global [simp]: "\<not> declared_global inc_program (STR ''Glocal'')"
   by simp
 
 definition inc_g :: cfg where
-  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) ''main'' (prog_main inc_program)"
+  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) (STR ''main'') (prog_main inc_program)"
 
 lemma inc_g_eq_compile:
-  "inc_g = compile_prog inc_pi [''p''] ''main'' (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)"
+  "inc_g = compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)"
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma edge_collect_assign_enter_state:
@@ -63,7 +63,7 @@ lemma edge_collect_assign_enter_state:
   using assms by auto
 
 lemma aval_plus_counter_on_enter_declared:
-  "aval (Plus (V ''counter'') (N 1)) (enter_state (declared_global inc_program) s) = s ''counter'' + 1"
+  "aval (Plus (V (STR ''counter'')) (N 1)) (enter_state (declared_global inc_program) s) = s (STR ''counter'') + 1"
   by (simp add: enter_state_def)
 
 lemma combine_after_enter_global_assign_declared:
@@ -83,32 +83,32 @@ text \<open>
 lemma pcompletes_inc_pcall_declared:
   fixes s :: store
   shows "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
-           (s(''counter'' := s ''counter'' + 1))"
+           (s((STR ''counter'') := s (STR ''counter'') + 1))"
 proof -
   let ?body = "imp \<lbrakk> counter := counter + 1 \<rbrakk>"
-  have g: "declared_global inc_program ''counter''" by simp
+  have g: "declared_global inc_program (STR ''counter'')" by simp
   have run: "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
                 (combine_states (declared_global inc_program) s
-                  ((enter_state (declared_global inc_program) s)(''counter'' := s ''counter'' + 1)))"
+                  ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
-    show "inc_pi ''p'' = Some (proc_decl_of [] ?body)"
+    show "inc_pi (STR ''p'') = Some (proc_decl_of [] ?body)"
       by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
     show "pcompletes (declared_global inc_program) inc_pi ?body
              (enter_state (declared_global inc_program) s)
-             ((enter_state (declared_global inc_program) s)(''counter'' := s ''counter'' + 1))"
+             ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1))"
     proof -
       have "pcompletes (declared_global inc_program) inc_pi ?body
                (enter_state (declared_global inc_program) s)
                ((enter_state (declared_global inc_program) s)
-                 (''counter'' := aval (Plus (V ''counter'') (N 1)) (enter_state (declared_global inc_program) s)))"
+                 ((STR ''counter'') := aval (Plus (V (STR ''counter'')) (N 1)) (enter_state (declared_global inc_program) s)))"
         by (rule pcompletes_assign)
       thus ?thesis using aval_plus_counter_on_enter_declared by simp
     qed
   qed
   moreover have
     "combine_states (declared_global inc_program) s
-       ((enter_state (declared_global inc_program) s)(''counter'' := s ''counter'' + 1))
-       = s(''counter'' := s ''counter'' + 1)"
+       ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1))
+       = s((STR ''counter'') := s (STR ''counter'') + 1)"
     using combine_after_enter_global_assign_declared[OF g] by simp
   ultimately show ?thesis by simp
 qed
@@ -116,7 +116,7 @@ qed
 lemma prog_pcompletes_inc_pcall:
   fixes s :: store
   shows "prog_pcompletes inc_program (imp \<lbrakk> p() \<rbrakk>) s
-          (s(''counter'' := s ''counter'' + 1))"
+          (s((STR ''counter'') := s (STR ''counter'') + 1))"
 proof -
   have storage:
     "storage_global inc_program prog_main_name = declared_global inc_program"
@@ -140,63 +140,63 @@ text \<open>
 \<close>
 lemma cstep_inc_pcall_declared:
   fixes s :: store
-  shows "star (cstep (declared_global inc_program) inc_g) (FunctionEntry ''main'', s, [])
-           (FunctionResult ''main'', s(''Glocal'' := 1, ''counter'' := s ''counter'' + 1), [])"
+  shows "star (cstep (declared_global inc_program) inc_g) (FunctionEntry (STR ''main''), s, [])
+           (FunctionResult (STR ''main''), s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1), [])"
 proof -
   let ?gs = "declared_global inc_program"
-  have e1: "(FunctionEntry ''main'', EA_Nop, Statement 2) \<in> intra inc_g"
-    and e2: "(Statement 2, EA_Assign ''Glocal'' (N 1), Statement 3) \<in> intra inc_g"
-    and e3: "(Statement 3, CallEdge None [] [], FunctionEntry ''p'', Statement 4) \<in> calls inc_g"
-    and e4: "(FunctionEntry ''p'', EA_Nop, Statement 0) \<in> intra inc_g"
-    and e5: "(Statement 0, EA_Assign ''counter'' (Plus (V ''counter'') (N 1)), Statement 1) \<in> intra inc_g"
-    and e6: "(Statement 1, EA_Ret None ''p'', FunctionResult ''p'') \<in> intra inc_g"
-    and e7: "(Statement 4, EA_Ret None ''main'', FunctionResult ''main'') \<in> intra inc_g"
+  have e1: "(FunctionEntry (STR ''main''), EA_Nop, Statement 2) \<in> intra inc_g"
+    and e2: "(Statement 2, EA_Assign (STR ''Glocal'') (N 1), Statement 3) \<in> intra inc_g"
+    and e3: "(Statement 3, CallEdge None [] [], FunctionEntry (STR ''p''), Statement 4) \<in> calls inc_g"
+    and e4: "(FunctionEntry (STR ''p''), EA_Nop, Statement 0) \<in> intra inc_g"
+    and e5: "(Statement 0, EA_Assign (STR ''counter'') (Plus (V (STR ''counter'')) (N 1)), Statement 1) \<in> intra inc_g"
+    and e6: "(Statement 1, EA_Ret None (STR ''p''), FunctionResult (STR ''p'')) \<in> intra inc_g"
+    and e7: "(Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')) \<in> intra inc_g"
     by eval+
-  have g: "?gs ''counter''" by simp
-  have s1: "cstep ?gs inc_g (FunctionEntry ''main'', s, []) (Statement 2, s, [])"
+  have g: "?gs (STR ''counter'')" by simp
+  have s1: "cstep ?gs inc_g (FunctionEntry (STR ''main''), s, []) (Statement 2, s, [])"
     by (rule cstep.Intra[OF e1]) simp
-  have s2: "cstep ?gs inc_g (Statement 2, s, []) (Statement 3, s(''Glocal'' := 1), [])"
+  have s2: "cstep ?gs inc_g (Statement 2, s, []) (Statement 3, s((STR ''Glocal'') := 1), [])"
     by (rule cstep.Intra[OF e2]) simp
-  have s3: "cstep ?gs inc_g (Statement 3, s(''Glocal'' := 1), [])
-              (FunctionEntry ''p'', enter_state ?gs (s(''Glocal'' := 1)),
-               [(Statement 4, None, s(''Glocal'' := 1))])"
+  have s3: "cstep ?gs inc_g (Statement 3, s((STR ''Glocal'') := 1), [])
+              (FunctionEntry (STR ''p''), enter_state ?gs (s((STR ''Glocal'') := 1)),
+               [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     using cstep.Call[OF e3] by simp
   have s4: "cstep ?gs inc_g
-              (FunctionEntry ''p'', enter_state ?gs (s(''Glocal'' := 1)), [(Statement 4, None, s(''Glocal'' := 1))])
-              (Statement 0, enter_state ?gs (s(''Glocal'' := 1)), [(Statement 4, None, s(''Glocal'' := 1))])"
+              (FunctionEntry (STR ''p''), enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])
+              (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e4]) simp
   have s5: "cstep ?gs inc_g
-              (Statement 0, enter_state ?gs (s(''Glocal'' := 1)), [(Statement 4, None, s(''Glocal'' := 1))])
-              (Statement 1, (enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1),
-               [(Statement 4, None, s(''Glocal'' := 1))])"
+              (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])
+              (Statement 1, (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
+               [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e5]) (simp add: enter_state_def)
   have s6: "cstep ?gs inc_g
-              (Statement 1, (enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1),
-               [(Statement 4, None, s(''Glocal'' := 1))])
-              (FunctionResult ''p'', (enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1),
-               [(Statement 4, None, s(''Glocal'' := 1))])"
+              (Statement 1, (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
+               [(Statement 4, None, s((STR ''Glocal'') := 1))])
+              (FunctionResult (STR ''p''), (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
+               [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e6]) (auto simp: ret_var_def)
   have s7: "cstep ?gs inc_g
-              (FunctionResult ''p'', (enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1),
-               [(Statement 4, None, s(''Glocal'' := 1))])
-              (Statement 4, s(''Glocal'' := 1, ''counter'' := s ''counter'' + 1), [])"
+              (FunctionResult (STR ''p''), (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
+               [(Statement 4, None, s((STR ''Glocal'') := 1))])
+              (Statement 4, s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1), [])"
   proof -
     have ret: "cstep ?gs inc_g
-                 (FunctionResult ''p'',
-                  (enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1),
-                  [(Statement 4, None, s(''Glocal'' := 1))])
+                 (FunctionResult (STR ''p''),
+                  (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
+                  [(Statement 4, None, s((STR ''Glocal'') := 1))])
                  (Statement 4,
-                  combine_collect ?gs None (s(''Glocal'' := 1))
-                    ((enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1)), [])"
+                  combine_collect ?gs None (s((STR ''Glocal'') := 1))
+                    ((enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1)), [])"
       by (rule cstep.Return)
-    have eq: "combine_collect ?gs None (s(''Glocal'' := 1))
-                ((enter_state ?gs (s(''Glocal'' := 1)))(''counter'' := s ''counter'' + 1))
-              = s(''Glocal'' := 1, ''counter'' := s ''counter'' + 1)"
+    have eq: "combine_collect ?gs None (s((STR ''Glocal'') := 1))
+                ((enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1))
+              = s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1)"
       by (simp add: combine_collect_None combine_after_enter_global_assign_declared[OF g] fun_upd_twist)
     show ?thesis using ret eq by simp
   qed
-  have s8: "cstep ?gs inc_g (Statement 4, s(''Glocal'' := 1, ''counter'' := s ''counter'' + 1), [])
-              (FunctionResult ''main'', s(''Glocal'' := 1, ''counter'' := s ''counter'' + 1), [])"
+  have s8: "cstep ?gs inc_g (Statement 4, s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1), [])
+              (FunctionResult (STR ''main''), s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1), [])"
     by (rule cstep.Intra[OF e7]) (auto simp: ret_var_def)
   from s1 s2 s3 s4 s5 s6 s7 s8 show ?thesis
     by (meson star.step star_step1)

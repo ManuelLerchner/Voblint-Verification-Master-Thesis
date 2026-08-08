@@ -18,7 +18,7 @@ text \<open>
 \<close>
 
 (* Procedure names. *)
-type_synonym pname = string
+type_synonym pname = String.literal
 
 definition combine_states :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
   "combine_states gs s t = (\<lambda>n. if gs n then t n else s n)"
@@ -53,18 +53,20 @@ text \<open>A name-based classifier, for illustration only: names starting with
   @{text G} are global. \<open>combine_states\<close> and \<open>enter_state\<close> take any
   classifier of this type; nothing in this theory is tied to this one.\<close>
 definition example_gs :: "vname \<Rightarrow> bool" where
-  "example_gs x = (x = [] \<or> hd x = CHR ''G'')"
+  "example_gs x = (x = STR '''' \<or> hd (String.explode x) = CHR ''G'')"
 
-value "example_gs ''Gx''"
-value "example_gs ''x''"
-value "example_gs []"
+value "example_gs (STR ''Gx'')"
+value "example_gs (STR ''x'')"
+value "example_gs (STR '''')"
 
 value "combine_states example_gs
-         ((\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2)) ((\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)) ''x''"
+         ((\<lambda>_. 0::int)(STR ''x'' := 1, STR ''Gx'' := 2))
+         ((\<lambda>_. 0::int)(STR ''x'' := 9, STR ''Gx'' := 5)) (STR ''x'')"
 value "combine_states example_gs
-         ((\<lambda>_. 0::int)(''x'' := 1, ''Gx'' := 2)) ((\<lambda>_. 0::int)(''x'' := 9, ''Gx'' := 5)) ''Gx''"
+         ((\<lambda>_. 0::int)(STR ''x'' := 1, STR ''Gx'' := 2))
+         ((\<lambda>_. 0::int)(STR ''x'' := 9, STR ''Gx'' := 5)) (STR ''Gx'')"
 
-value "enter_state example_gs ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''x''"
-value "enter_state example_gs ((\<lambda>_. 0::int)(''x'' := 7, ''Gx'' := 3)) ''Gx''"
+value "enter_state example_gs ((\<lambda>_. 0::int)(STR ''x'' := 7, STR ''Gx'' := 3)) (STR ''x'')"
+value "enter_state example_gs ((\<lambda>_. 0::int)(STR ''x'' := 7, STR ''Gx'' := 3)) (STR ''Gx'')"
 
 end

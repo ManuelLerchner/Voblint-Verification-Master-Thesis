@@ -1,7 +1,50 @@
+module Str_Literal : sig
+  val literal_of_asciis : Z.t list -> string
+  val asciis_of_literal: string -> Z.t list
+end = struct
+
+(* deliberate clones not relying on List._ module *)
+
+let rec length xs = match xs with
+    [] -> 0
+  | x :: xs -> 1 + length xs;;
+
+let rec nth xs n = match xs with
+  (x :: xs) -> if n <= 0 then x else nth xs (n - 1);;
+
+let rec map_range f n =
+  if n <= 0
+    then []
+    else
+      let m = n - 1
+    in map_range f m @ [f m];;
+
+let implode f xs =
+  String.init (length xs) (fun n -> f (nth xs n));;
+
+let explode f s =
+  map_range (fun n -> f (String.get s n)) (String.length s);;
+
+let z_128 = Z.of_int 128;;
+
+let check_ascii k =
+  if 0 <= k && k < 128
+  then k
+  else failwith "Non-ASCII character in literal";;
+
+let char_of_ascii k = Char.chr (Z.to_int (Z.rem k z_128));;
+
+let ascii_of_char c = Z.of_int (check_ascii (Char.code c));;
+
+let literal_of_asciis ks = implode char_of_ascii ks;;
+
+let asciis_of_literal s = explode ascii_of_char s;;
+
+end;;
+
 module Interval_Demo : sig
   type num
   type nat
-  type char
   type ('a, 'b) sum
   type cfg_node
   type ivl
@@ -16,11 +59,11 @@ module Interval_Demo : sig
   val loop_ivl_td_sol :
     cfg_node set * ((cfg_node, unit) sum -> ivl resolved_st_q)
   val analyse_interval_for :
-    (char list -> bool) -> unit imp_prog_ext -> char list -> ivl
-  val analyse_interval : unit imp_prog_ext -> char list -> ivl
+    (string -> bool) -> unit imp_prog_ext -> string -> ivl
+  val analyse_interval : unit imp_prog_ext -> string -> ivl
   val analyse_interval_td_for :
-    (char list -> bool) -> unit imp_prog_ext -> char list -> ivl
-  val analyse_interval_td : unit imp_prog_ext -> char list -> ivl
+    (string -> bool) -> unit imp_prog_ext -> string -> ivl
+  val analyse_interval_td : unit imp_prog_ext -> string -> ivl
 end = struct
 
 type num = One | Bit0 of num | Bit1 of num;;
@@ -127,78 +170,9 @@ let order_nat = ({preorder_order = preorder_nat} : nat order);;
 
 let linorder_nat = ({order_linorder = order_nat} : nat linorder);;
 
-let rec less_eq_bool x0 b = match x0, b with false, b -> true
-                       | true, b -> b;;
-
-let rec less_bool x0 b = match x0, b with false, b -> b
-                    | true, b -> false;;
-
-let ord_bool = ({less_eq = less_eq_bool; less = less_bool} : bool ord);;
+type ('a, 'b) sum = Inl of 'a | Inr of 'b;;
 
 let rec eq _A a b = equal _A a b;;
-
-let rec equal_lista _A
-  x0 x1 = match x0, x1 with [], x21 :: x22 -> false
-    | x21 :: x22, [] -> false
-    | x21 :: x22, y21 :: y22 -> eq _A x21 y21 && equal_lista _A x22 y22
-    | [], [] -> true;;
-
-let rec equal_list _A = ({equal = equal_lista _A} : ('a list) equal);;
-
-let rec equal_bool p pa = match p, pa with false, p -> not p
-                     | true, p -> p
-                     | p, false -> not p
-                     | p, true -> p;;
-
-type char = Chara of bool * bool * bool * bool * bool * bool * bool * bool;;
-
-let rec equal_chara
-  (Chara (x1, x2, x3, x4, x5, x6, x7, x8))
-    (Chara (y1, y2, y3, y4, y5, y6, y7, y8)) =
-    equal_bool x1 y1 &&
-      (equal_bool x2 y2 &&
-        (equal_bool x3 y3 &&
-          (equal_bool x4 y4 &&
-            (equal_bool x5 y5 &&
-              (equal_bool x6 y6 && (equal_bool x7 y7 && equal_bool x8 y8))))));;
-
-let equal_char = ({equal = equal_chara} : char equal);;
-
-let rec null = function [] -> true
-               | x :: xs -> false;;
-
-let rec lexordp_eq _A
-  xs ys = match xs, ys with [], ys -> true
-    | xs, [] -> null xs
-    | x :: xs, y :: ys ->
-        less _A x y || not (less _A y x) && lexordp_eq _A xs ys;;
-
-let rec less_eq_char
-  (Chara (b0, b1, b2, b3, b4, b5, b6, b7))
-    (Chara (c0, c1, c2, c3, c4, c5, c6, c7)) =
-    lexordp_eq ord_bool [b7; b6; b5; b4; b3; b2; b1; b0]
-      [c7; c6; c5; c4; c3; c2; c1; c0];;
-
-let rec lexordp _A
-  xs ys = match xs, ys with [], ys -> not (null ys)
-    | xs, [] -> false
-    | x :: xs, y :: ys -> less _A x y || not (less _A y x) && lexordp _A xs ys;;
-
-let rec less_char
-  (Chara (b0, b1, b2, b3, b4, b5, b6, b7))
-    (Chara (c0, c1, c2, c3, c4, c5, c6, c7)) =
-    lexordp ord_bool [b7; b6; b5; b4; b3; b2; b1; b0]
-      [c7; c6; c5; c4; c3; c2; c1; c0];;
-
-let ord_char = ({less_eq = less_eq_char; less = less_char} : char ord);;
-
-let preorder_char = ({ord_preorder = ord_char} : char preorder);;
-
-let order_char = ({preorder_order = preorder_char} : char order);;
-
-let linorder_char = ({order_linorder = order_char} : char linorder);;
-
-type ('a, 'b) sum = Inl of 'a | Inr of 'b;;
 
 let rec equal_suma _A _B x0 x1 = match x0, x1 with Inl x1, Inr x2 -> false
                            | Inr x2, Inl x1 -> false
@@ -207,8 +181,21 @@ let rec equal_suma _A _B x0 x1 = match x0, x1 with Inl x1, Inr x2 -> false
 
 let rec equal_sum _A _B = ({equal = equal_suma _A _B} : ('a, 'b) sum equal);;
 
-type cfg_node = Statement of nat | FunctionEntry of char list |
-  FunctionResult of char list;;
+let equal_literal = ({equal = (fun a b -> ((a : string) = b))} : string equal);;
+
+let ord_literal =
+  ({less_eq = (fun a b -> ((a : string) <= b));
+     less = (fun a b -> ((a : string) < b))}
+    : string ord);;
+
+let preorder_literal = ({ord_preorder = ord_literal} : string preorder);;
+
+let order_literal = ({preorder_order = preorder_literal} : string order);;
+
+let linorder_literal = ({order_linorder = order_literal} : string linorder);;
+
+type cfg_node = Statement of nat | FunctionEntry of string |
+  FunctionResult of string;;
 
 let rec equal_cfg_nodea
   x0 x1 = match x0, x1 with FunctionEntry x2, FunctionResult x3 -> false
@@ -217,8 +204,8 @@ let rec equal_cfg_nodea
     | FunctionResult x3, Statement x1 -> false
     | Statement x1, FunctionEntry x2 -> false
     | FunctionEntry x2, Statement x1 -> false
-    | FunctionResult x3, FunctionResult y3 -> equal_lista equal_char x3 y3
-    | FunctionEntry x2, FunctionEntry y2 -> equal_lista equal_char x2 y2
+    | FunctionResult x3, FunctionResult y3 -> ((x3 : string) = y3)
+    | FunctionEntry x2, FunctionEntry y2 -> ((x2 : string) = y2)
     | Statement x1, Statement y1 -> equal_nata x1 y1;;
 
 let equal_cfg_node = ({equal = equal_cfg_nodea} : cfg_node equal);;
@@ -229,14 +216,6 @@ let rec comparator_of (_A1, _A2)
   x y = (if less _A2.order_linorder.preorder_order.ord_preorder x y then Lt
           else (if eq _A1 x y then Eq else Gt));;
 
-let rec comparator_list
-  comp_a x1 x2 = match comp_a, x1, x2 with comp_a, [], [] -> Eq
-    | comp_a, [], y :: ya -> Lt
-    | comp_a, x :: xa, [] -> Gt
-    | comp_a, x :: xa, y :: ya ->
-        (match comp_a x y with Eq -> comparator_list comp_a xa ya | Lt -> Lt
-          | Gt -> Gt);;
-
 let rec comparator_cfg_node
   x0 x1 = match x0, x1 with
     Statement x, Statement y -> comparator_of (equal_nat, linorder_nat) x y
@@ -244,12 +223,12 @@ let rec comparator_cfg_node
     | Statement x, FunctionResult yb -> Lt
     | FunctionEntry x, Statement y -> Gt
     | FunctionEntry x, FunctionEntry ya ->
-        comparator_list (comparator_of (equal_char, linorder_char)) x ya
+        comparator_of (equal_literal, linorder_literal) x ya
     | FunctionEntry x, FunctionResult yb -> Lt
     | FunctionResult x, Statement y -> Gt
     | FunctionResult x, FunctionEntry ya -> Gt
     | FunctionResult x, FunctionResult yb ->
-        comparator_list (comparator_of (equal_char, linorder_char)) x yb;;
+        comparator_of (equal_literal, linorder_literal) x yb;;
 
 let rec le_of_comp
   acomp x y = (match acomp x y with Eq -> true | Lt -> true | Gt -> false);;
@@ -271,18 +250,18 @@ let order_cfg_node = ({preorder_order = preorder_cfg_node} : cfg_node order);;
 let linorder_cfg_node =
   ({order_linorder = order_cfg_node} : cfg_node linorder);;
 
-type location = Local_Location of char list | Global_Location of char list;;
+type location = Local_Location of string | Global_Location of string;;
 
 let rec equal_locationa
   x0 x1 = match x0, x1 with Local_Location x1, Global_Location x2 -> false
     | Global_Location x2, Local_Location x1 -> false
-    | Global_Location x2, Global_Location y2 -> equal_lista equal_char x2 y2
-    | Local_Location x1, Local_Location y1 -> equal_lista equal_char x1 y1;;
+    | Global_Location x2, Global_Location y2 -> ((x2 : string) = y2)
+    | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
 
 let equal_location = ({equal = equal_locationa} : location equal);;
 
-type aexp = N of int | V of char list | Plus of aexp * aexp |
-  Minus of aexp * aexp | Times of aexp * aexp;;
+type aexp = N of int | V of string | Plus of aexp * aexp | Minus of aexp * aexp
+  | Times of aexp * aexp;;
 
 let rec equal_aexpa
   x0 x1 = match x0, x1 with Minus (x41, x42), Times (x51, x52) -> false
@@ -311,7 +290,7 @@ let rec equal_aexpa
         equal_aexpa x41 y41 && equal_aexpa x42 y42
     | Plus (x31, x32), Plus (y31, y32) ->
         equal_aexpa x31 y31 && equal_aexpa x32 y32
-    | V x2, V y2 -> equal_lista equal_char x2 y2
+    | V x2, V y2 -> ((x2 : string) = y2)
     | N x1, N y1 -> equal_inta x1 y1;;
 
 let equal_aexp = ({equal = equal_aexpa} : aexp equal);;
@@ -376,14 +355,18 @@ let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
                           | Some x2, Some y2 -> eq _A x2 y2
                           | None, None -> true;;
 
-type call_action =
-  CallEdge of (char list) option * (char list) list * aexp list;;
+let rec equal_list _A
+  x0 x1 = match x0, x1 with [], x21 :: x22 -> false
+    | x21 :: x22, [] -> false
+    | x21 :: x22, y21 :: y22 -> eq _A x21 y21 && equal_list _A x22 y22
+    | [], [] -> true;;
+
+type call_action = CallEdge of string option * string list * aexp list;;
 
 let rec equal_call_actiona
   (CallEdge (x1, x2, x3)) (CallEdge (y1, y2, y3)) =
-    equal_option (equal_list equal_char) x1 y1 &&
-      (equal_lista (equal_list equal_char) x2 y2 &&
-        equal_lista equal_aexp x3 y3);;
+    equal_option equal_literal x1 y1 &&
+      (equal_list equal_literal x2 y2 && equal_list equal_aexp x3 y3);;
 
 let equal_call_action = ({equal = equal_call_actiona} : call_action equal);;
 
@@ -393,6 +376,14 @@ let rec comparator_option
     | comp_a, Some x, None -> Gt
     | comp_a, Some x, Some y -> comp_a x y;;
 
+let rec comparator_list
+  comp_a x1 x2 = match comp_a, x1, x2 with comp_a, [], [] -> Eq
+    | comp_a, [], y :: ya -> Lt
+    | comp_a, x :: xa, [] -> Gt
+    | comp_a, x :: xa, y :: ya ->
+        (match comp_a x y with Eq -> comparator_list comp_a xa ya | Lt -> Lt
+          | Gt -> Gt);;
+
 let rec comparator_aexp
   x0 x1 = match x0, x1 with
     N x, N y -> comparator_of (equal_int, linorder_int) x y
@@ -401,8 +392,7 @@ let rec comparator_aexp
     | N x, Minus (yd, ye) -> Lt
     | N x, Times (yf, yg) -> Lt
     | V x, N y -> Gt
-    | V x, V ya ->
-        comparator_list (comparator_of (equal_char, linorder_char)) x ya
+    | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
     | V x, Plus (yb, yc) -> Lt
     | V x, Minus (yd, ye) -> Lt
     | V x, Times (yf, yg) -> Lt
@@ -431,12 +421,11 @@ let rec comparator_aexp
 let rec comparator_call_action
   (CallEdge (x, xa, xb)) (CallEdge (y, ya, yb)) =
     (match
-      comparator_option
-        (comparator_list (comparator_of (equal_char, linorder_char))) x y
+      comparator_option (comparator_of (equal_literal, linorder_literal)) x y
       with Eq ->
         (match
-          comparator_list
-            (comparator_list (comparator_of (equal_char, linorder_char))) xa ya
+          comparator_list (comparator_of (equal_literal, linorder_literal)) xa
+            ya
           with Eq -> comparator_list comparator_aexp xb yb | Lt -> Lt
           | Gt -> Gt)
       | Lt -> Lt | Gt -> Gt);;
@@ -456,6 +445,11 @@ let order_call_action =
 
 let linorder_call_action =
   ({order_linorder = order_call_action} : call_action linorder);;
+
+let rec equal_bool p pa = match p, pa with false, p -> not p
+                     | true, p -> p
+                     | p, false -> not p
+                     | p, true -> p;;
 
 type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp |
   Less of aexp * aexp | Eqa of aexp * aexp;;
@@ -500,9 +494,9 @@ let rec equal_bexp
     | Not x2, Not y2 -> equal_bexp x2 y2
     | Bc x1, Bc y1 -> equal_bool x1 y1;;
 
-type edge_action = EA_Nop | EA_Assign of char list * aexp |
-  EA_Random of char list | EA_Assume of bexp | EA_AssumeNot of bexp |
-  EA_Ret of aexp option * char list | EA_Check of bexp;;
+type edge_action = EA_Nop | EA_Assign of string * aexp | EA_Random of string |
+  EA_Assume of bexp | EA_AssumeNot of bexp | EA_Ret of aexp option * string |
+  EA_Check of bexp;;
 
 let rec equal_edge_actiona
   x0 x1 = match x0, x1 with EA_Ret (x61, x62), EA_Check x7 -> false
@@ -549,12 +543,12 @@ let rec equal_edge_actiona
     | EA_Assign (x21, x22), EA_Nop -> false
     | EA_Check x7, EA_Check y7 -> equal_bexp x7 y7
     | EA_Ret (x61, x62), EA_Ret (y61, y62) ->
-        equal_option equal_aexp x61 y61 && equal_lista equal_char x62 y62
+        equal_option equal_aexp x61 y61 && ((x62 : string) = y62)
     | EA_AssumeNot x5, EA_AssumeNot y5 -> equal_bexp x5 y5
     | EA_Assume x4, EA_Assume y4 -> equal_bexp x4 y4
-    | EA_Random x3, EA_Random y3 -> equal_lista equal_char x3 y3
+    | EA_Random x3, EA_Random y3 -> ((x3 : string) = y3)
     | EA_Assign (x21, x22), EA_Assign (y21, y22) ->
-        equal_lista equal_char x21 y21 && equal_aexpa x22 y22
+        ((x21 : string) = y21) && equal_aexpa x22 y22
     | EA_Nop, EA_Nop -> true;;
 
 let equal_edge_action = ({equal = equal_edge_actiona} : edge_action equal);;
@@ -620,7 +614,7 @@ let rec comparator_edge_action
     | EA_Nop, EA_Check yg -> Lt
     | EA_Assign (x, xa), EA_Nop -> Gt
     | EA_Assign (x, xa), EA_Assign (y, ya) ->
-        (match comparator_list (comparator_of (equal_char, linorder_char)) x y
+        (match comparator_of (equal_literal, linorder_literal) x y
           with Eq -> comparator_aexp xa ya | Lt -> Lt | Gt -> Gt)
     | EA_Assign (x, xa), EA_Random yb -> Lt
     | EA_Assign (x, xa), EA_Assume yc -> Lt
@@ -630,7 +624,7 @@ let rec comparator_edge_action
     | EA_Random x, EA_Nop -> Gt
     | EA_Random x, EA_Assign (y, ya) -> Gt
     | EA_Random x, EA_Random yb ->
-        comparator_list (comparator_of (equal_char, linorder_char)) x yb
+        comparator_of (equal_literal, linorder_literal) x yb
     | EA_Random x, EA_Assume yc -> Lt
     | EA_Random x, EA_AssumeNot yd -> Lt
     | EA_Random x, EA_Ret (ye, yf) -> Lt
@@ -656,8 +650,7 @@ let rec comparator_edge_action
     | EA_Ret (x, xa), EA_AssumeNot yd -> Gt
     | EA_Ret (x, xa), EA_Ret (ye, yf) ->
         (match comparator_option comparator_aexp x ye
-          with Eq ->
-            comparator_list (comparator_of (equal_char, linorder_char)) xa yf
+          with Eq -> comparator_of (equal_literal, linorder_literal) xa yf
           | Lt -> Lt | Gt -> Gt)
     | EA_Ret (x, xa), EA_Check yg -> Lt
     | EA_Check x, EA_Nop -> Gt
@@ -975,10 +968,10 @@ type 'a set = Set of 'a list | Coset of 'a list;;
 
 type 'a fset = Abs_fset of 'a set;;
 
-type com = SKIP | Assign of char list * aexp | Random of char list |
-  Check of bexp | Seq of com * com | If of bexp * com * com |
-  While of bexp * com | Call of (char list) option * char list * aexp list |
-  Return of aexp option | Restore | Unwind;;
+type com = SKIP | Assign of string * aexp | Random of string | Check of bexp |
+  Seq of com * com | If of bexp * com * com | While of bexp * com |
+  Call of string option * string * aexp list | Return of aexp option | Restore |
+  Unwind;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
 
@@ -1000,14 +993,13 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
-type 'a proc_decl_ext = Proc_decl_ext of (char list) list * com * 'a;;
+type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a;;
 
 type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
 
 type 'a imp_prog_ext =
-  Imp_prog_ext of
-    (char list * unit proc_decl_ext) list * com * (char list) list * 'a;;
+  Imp_prog_ext of (string * unit proc_decl_ext) list * com * string list * 'a;;
 
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
@@ -1024,13 +1016,13 @@ type ('a, 'b, 'c, 'd) func_state =
 type ('a, 'b, 'c) effectful_st_transfer_ext =
   Effectful_st_transfer_ext of
     (cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (char list -> aexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (char list -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (string -> aexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (string -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (bexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (bexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      ((char list) list ->
+      (string list ->
         aexp list -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      ((char list) option ->
+      (string option ->
         cfg_node -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       'c;;
 
@@ -1178,11 +1170,7 @@ let rec fmfilter
 
 let rec fmdrop _A a = fmfilter (fun aa -> not (eq _A aa a));;
 
-let ret_var : char list
-  = [Chara (true, true, false, false, false, true, false, false);
-      Chara (false, true, false, false, true, true, true, false);
-      Chara (true, false, true, false, false, true, true, false);
-      Chara (false, false, true, false, true, true, true, false)];;
+let ret_var : string = "#ret";;
 
 let rec cfg_entry
   (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
@@ -1234,80 +1222,39 @@ let loop_cfg : unit cfg_ext
       (insert
          (equal_prod equal_cfg_node
            (equal_prod equal_edge_action equal_cfg_node))
-         (FunctionEntry
-            [Chara (true, false, true, true, false, true, true, false);
-              Chara (true, false, false, false, false, true, true, false);
-              Chara (true, false, false, true, false, true, true, false);
-              Chara (false, true, true, true, false, true, true, false)],
-           (EA_Nop, Statement Zero_nat))
+         (FunctionEntry "main", (EA_Nop, Statement Zero_nat))
          (insert
            (equal_prod equal_cfg_node
              (equal_prod equal_edge_action equal_cfg_node))
            (Statement Zero_nat,
-             (EA_Assign
-                ([Chara (false, false, false, true, true, true, true, false)],
-                  N Zero_int),
-               Statement one_nat))
+             (EA_Assign ("x", N Zero_int), Statement one_nat))
            (insert
              (equal_prod equal_cfg_node
                (equal_prod equal_edge_action equal_cfg_node))
              (Statement one_nat,
                (EA_Assume
-                  (Less (V [Chara (false, false, false, true, true, true, true,
-                                    false)],
-                          N (Pos (Bit0 (Bit0 (Bit1 (Bit0 One))))))),
+                  (Less (V "x", N (Pos (Bit0 (Bit0 (Bit1 (Bit0 One))))))),
                  Statement (nat_of_num (Bit0 One))))
              (insert
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement one_nat,
                  (EA_AssumeNot
-                    (Less (V [Chara (false, false, false, true, true, true,
-                                      true, false)],
-                            N (Pos (Bit0 (Bit0 (Bit1 (Bit0 One))))))),
+                    (Less (V "x", N (Pos (Bit0 (Bit0 (Bit1 (Bit0 One))))))),
                    Statement (nat_of_num (Bit1 One))))
                (insert
                  (equal_prod equal_cfg_node
                    (equal_prod equal_edge_action equal_cfg_node))
                  (Statement (nat_of_num (Bit0 One)),
-                   (EA_Assign
-                      ([Chara (false, false, false, true, true, true, true,
-                                false)],
-                        Plus (V [Chara (false, false, false, true, true, true,
- true, false)],
-                               N one_int)),
+                   (EA_Assign ("x", Plus (V "x", N one_int)),
                      Statement one_nat))
                  (insert
                    (equal_prod equal_cfg_node
                      (equal_prod equal_edge_action equal_cfg_node))
                    (Statement (nat_of_num (Bit1 One)),
-                     (EA_Ret
-                        (None,
-                          [Chara (true, false, true, true, false, true, true,
-                                   false);
-                            Chara (true, false, false, false, false, true, true,
-                                    false);
-                            Chara (true, false, false, true, false, true, true,
-                                    false);
-                            Chara (false, true, true, true, false, true, true,
-                                    false)]),
-                       FunctionResult
-                         [Chara (true, false, true, true, false, true, true,
-                                  false);
-                           Chara (true, false, false, false, false, true, true,
-                                   false);
-                           Chara (true, false, false, true, false, true, true,
-                                   false);
-                           Chara (false, true, true, true, false, true, true,
-                                   false)]))
+                     (EA_Ret (None, "main"), FunctionResult "main"))
                    bot_set))))),
-        bot_set,
-        FunctionEntry
-          [Chara (true, false, true, true, false, true, true, false);
-            Chara (true, false, false, false, false, true, true, false);
-            Chara (true, false, false, true, false, true, true, false);
-            Chara (false, true, true, true, false, true, true, false)],
-        bot_set, ());;
+        bot_set, FunctionEntry "main", bot_set, ());;
 
 let cinit_ivl_st : ivl resolved_st_q
   = Abs_resolved_st
@@ -1326,18 +1273,9 @@ let rec make
 
 let loop_prog : unit imp_prog_ext
   = make []
-      (Seq (Assign
-              ([Chara (false, false, false, true, true, true, true, false)],
-                N Zero_int),
-             While (Less (V [Chara (false, false, false, true, true, true, true,
-                                     false)],
-                           N (Pos (Bit0 (Bit0 (Bit1 (Bit0 One)))))),
-                     Assign
-                       ([Chara (false, false, false, true, true, true, true,
-                                 false)],
-                         Plus (V [Chara (false, false, false, true, true, true,
-  true, false)],
-                                N one_int)))))
+      (Seq (Assign ("x", N Zero_int),
+             While (Less (V "x", N (Pos (Bit0 (Bit0 (Bit1 (Bit0 One)))))),
+                     Assign ("x", Plus (V "x", N one_int)))))
       [];;
 
 let rec location_is_global = function Local_Location x -> false
@@ -1753,15 +1691,10 @@ let rec prog_procs p = map fst (proc_rep p);;
 let rec prog_main
   (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = prog_main;;
 
-let prog_main_name : char list
-  = [Chara (true, false, true, true, false, true, true, false);
-      Chara (true, false, false, false, false, true, true, false);
-      Chara (true, false, false, true, false, true, true, false);
-      Chara (false, true, true, true, false, true, true, false)];;
+let prog_main_name : string = "main";;
 
 let rec prog_table
-  p = fun_upd (equal_list equal_char)
-        (map_of (equal_list equal_char) (proc_rep p)) prog_main_name
+  p = fun_upd equal_literal (map_of equal_literal (proc_rep p)) prog_main_name
         (Some (proc_decl_of [] (prog_main p)));;
 
 let rec body (Proc_decl_ext (formals, body, more)) = body;;
@@ -1899,8 +1832,7 @@ let rec declared_global_vars
   (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) =
     declared_global_vars;;
 
-let rec declared_global
-  p x = membera (equal_list equal_char) (declared_global_vars p) x;;
+let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
 let rec insort_key _B
   f x xa2 = match f, x, xa2 with f, x, [] -> [x]
@@ -2049,19 +1981,8 @@ let rec loop_iter_sig
 
 let loop_ivl_sol : cfg_node set * ((cfg_node, unit) sum -> ivl resolved_st_q)
   = (sup_set equal_cfg_node
-       (insert equal_cfg_node
-         (FunctionEntry
-           [Chara (true, false, true, true, false, true, true, false);
-             Chara (true, false, false, false, false, true, true, false);
-             Chara (true, false, false, true, false, true, true, false);
-             Chara (false, true, true, true, false, true, true, false)])
-         (insert equal_cfg_node
-           (FunctionResult
-             [Chara (true, false, true, true, false, true, true, false);
-               Chara (true, false, false, false, false, true, true, false);
-               Chara (true, false, false, true, false, true, true, false);
-               Chara (false, true, true, true, false, true, true, false)])
-           bot_set))
+       (insert equal_cfg_node (FunctionEntry "main")
+         (insert equal_cfg_node (FunctionResult "main") bot_set))
        (image (fun a -> Statement a)
          (insert equal_nat Zero_nat
            (insert equal_nat one_nat

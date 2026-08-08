@@ -282,15 +282,15 @@ definition ivl_graph_config ::
           (compile_prog \<Pi> ps mnm main) p)),
       globals_to_show = compiled_global_vars gs (compile_prog \<Pi> ps mnm main),
       show_local = (\<lambda>_ _ vars s.
-        map (\<lambda>x. x @ ''='' @ show_val (s x)) vars),
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
       format_return = (\<lambda>_ _ ret s.
         if s ret = ivl_top then [] else [''ret='' @ show_val (s ret)]),
       show_global = (\<lambda>_ vars s.
-        map (\<lambda>x. x @ ''='' @ show_val (s x)) vars),
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
       show_global_key = (\<lambda>_. ''Globals''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
-      owner_of = compiled_owner_of \<Pi> ps mnm main,
+      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
       source_text = Some (pretty_string_of_program \<Pi> ps main),
       node_annotation = (\<lambda>_. None)

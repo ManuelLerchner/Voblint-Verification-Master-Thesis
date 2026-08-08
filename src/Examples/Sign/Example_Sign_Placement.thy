@@ -328,7 +328,7 @@ text \<open>The one executable post-solution fact this example needs: \<open>g\<
 lemma sign_placement_dg_td_value:
   "lookup_resolved_st_q
     (locals (snd sign_placement_dg_td_sol (Inl (FunctionResult prog_main_name, ()))))
-    (Global_Location ''g'') = SPos"
+    (Global_Location (STR ''g'')) = SPos"
   by eval
 
 subsection \<open>CFG structure facts\<close>
@@ -343,9 +343,9 @@ lemma sign_placement_hook_lists:
   "intra_predecessor_list sign_placement_cfg (Statement 0) =
      [(FunctionEntry prog_main_name, EA_Nop)]"
   "intra_predecessor_list sign_placement_cfg (Statement 1) =
-     [(Statement 0, EA_Assign ''x'' (N 5))]"
+     [(Statement 0, EA_Assign (STR ''x'') (N 5))]"
   "intra_predecessor_list sign_placement_cfg (Statement 2) =
-     [(Statement 1, EA_Assign ''g'' (V ''x''))]"
+     [(Statement 1, EA_Assign (STR ''g'') (V (STR ''x'')))]"
   "intra_predecessor_list sign_placement_cfg (FunctionResult prog_main_name) =
      [(Statement 2, EA_Ret None prog_main_name)]"
   by eval+
@@ -584,9 +584,9 @@ qed
 lemma sign_placement_se_statement1:
   "se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
       sign_placement_s0d_abs sign_placement_s0g_abs (Statement 1, ())) sign_placement_sigma_abs (Statement 1, ())"
-proof (rule sign_placement_se_edge[where v = "Statement 1" and u = "Statement 0" and a = "EA_Assign ''x'' (N 5)"])
+proof (rule sign_placement_se_edge[where v = "Statement 1" and u = "Statement 0" and a = "EA_Assign (STR ''x'') (N 5)"])
   show "Statement 1 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
-  show "intra_predecessor_list sign_placement_cfg (Statement 1) = [(Statement 0, EA_Assign ''x'' (N 5))]"
+  show "intra_predecessor_list sign_placement_cfg (Statement 1) = [(Statement 0, EA_Assign (STR ''x'') (N 5))]"
     by (rule sign_placement_hook_lists)
   show "return_call_action_list sign_placement_cfg (Statement 1) = []"
     by (rule sign_placement_no_combine_edge_nodes)
@@ -601,10 +601,10 @@ next
       aval_sign (N 5) (dg_hook_D sign_placement_sigma_abs (Statement 0))"
     by simp
   show "lookup_resolved_st_q
-      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign ''x'' (N 5))
+      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''x'') (N 5))
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 0) \<squnion>
          dg_hook_G (snd sign_placement_dg_td_sol))) loc =
-    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign ''x'' (N 5))
+    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign (STR ''x'') (N 5))
       (dg_hook_D sign_placement_sigma_abs (Statement 0) \<squnion>
        dg_hook_G sign_placement_sigma_abs) (location_vname loc)"
     using sign_placement_dg_hook_G_exec_bot sign_placement_dg_hook_G_abs_bot
@@ -619,9 +619,9 @@ qed
 lemma sign_placement_se_statement2:
   "se_constraint_holds (sign_placement_sound_dg_hooks.hook_gen sign_placement_cfg bot
       sign_placement_s0d_abs sign_placement_s0g_abs (Statement 2, ())) sign_placement_sigma_abs (Statement 2, ())"
-proof (rule sign_placement_se_edge[where v = "Statement 2" and u = "Statement 1" and a = "EA_Assign ''g'' (V ''x'')"])
+proof (rule sign_placement_se_edge[where v = "Statement 2" and u = "Statement 1" and a = "EA_Assign (STR ''g'') (V (STR ''x''))"])
   show "Statement 2 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
-  show "intra_predecessor_list sign_placement_cfg (Statement 2) = [(Statement 1, EA_Assign ''g'' (V ''x''))]"
+  show "intra_predecessor_list sign_placement_cfg (Statement 2) = [(Statement 1, EA_Assign (STR ''g'') (V (STR ''x'')))]"
     by (rule sign_placement_hook_lists)
   show "return_call_action_list sign_placement_cfg (Statement 2) = []"
     by (rule sign_placement_no_combine_edge_nodes)
@@ -630,19 +630,19 @@ proof (rule sign_placement_se_edge[where v = "Statement 2" and u = "Statement 1"
   show "(Statement 2, ()) \<in> fst sign_placement_dg_td_sol" by eval
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (Statement 2))"
-  have mem: "location_of (declared_global sign_placement_prog) ''x'' \<in>
+  have mem: "location_of (declared_global sign_placement_prog) (STR ''x'') \<in>
       set (sign_placement_locations_of (Statement 1))"
     by eval
   have val_agree:
-    "aval_sign (V ''x'') (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
+    "aval_sign (V (STR ''x'')) (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 1))) =
-      aval_sign (V ''x'') (dg_hook_D sign_placement_sigma_abs (Statement 1))"
+      aval_sign (V (STR ''x'')) (dg_hook_D sign_placement_sigma_abs (Statement 1))"
     using sign_placement_val_agree[OF mem] by simp
   show "lookup_resolved_st_q
-      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign ''g'' (V ''x''))
+      (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''g'') (V (STR ''x'')))
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 1) \<squnion>
          dg_hook_G (snd sign_placement_dg_td_sol))) loc =
-    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign ''g'' (V ''x''))
+    apply_tf (sign_tf_for (declared_global sign_placement_prog)) (EA_Assign (STR ''g'') (V (STR ''x'')))
       (dg_hook_D sign_placement_sigma_abs (Statement 1) \<squnion>
        dg_hook_G sign_placement_sigma_abs) (location_vname loc)"
     using sign_placement_dg_hook_G_exec_bot sign_placement_dg_hook_G_abs_bot
@@ -836,7 +836,7 @@ next
         rule sign_placement_se_statement0)
   have s1_not_entry: "Statement 1 \<noteq> cfg_entry sign_placement_cfg" by (simp add: sign_placement_cfg_entry)
   have s1_pred: "intra_predecessor_list sign_placement_cfg (Statement 1) =
-      [(Statement 0, EA_Assign ''x'' (N 5))]"
+      [(Statement 0, EA_Assign (STR ''x'') (N 5))]"
     by (rule sign_placement_hook_lists)
   have s1_no_combine: "return_call_action_list sign_placement_cfg (Statement 1) = []"
     by (rule sign_placement_no_combine_edge_nodes)

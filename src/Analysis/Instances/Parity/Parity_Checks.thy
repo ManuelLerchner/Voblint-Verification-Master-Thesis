@@ -59,18 +59,18 @@ text \<open>One state per test, built as an override of an otherwise-unconstrain
   names.\<close>
 
 definition test_env_eo :: "parity abs_state" where
-  "test_env_eo = (\<lambda>_. PTop)(''x'' := PEven, ''y'' := POdd)"
+  "test_env_eo = (\<lambda>_. PTop)((STR ''x'') := PEven, (STR ''y'') := POdd)"
 
 text \<open>Disjoint parity classes: the direct equality is refuted, and its
   negation is proved --- going through \<open>check_false\<close> on the un-negated
   equality, not a one-sided negation of \<open>check_true\<close>.\<close>
 
 lemma parity_classify_eq_refuted:
-  "parity_classify_check (Eq (V ''x'') (V ''y'')) test_env_eo = Check_Refuted"
+  "parity_classify_check (Eq (V (STR ''x'')) (V (STR ''y''))) test_env_eo = Check_Refuted"
   unfolding test_env_eo_def by eval
 
 lemma parity_classify_not_eq_proved:
-  "parity_classify_check (Not (Eq (V ''x'') (V ''y''))) test_env_eo = Check_Proved"
+  "parity_classify_check (Not (Eq (V (STR ''x'')) (V (STR ''y'')))) test_env_eo = Check_Proved"
   unfolding test_env_eo_def by eval
 
 text \<open>Same abstract value on both sides: \<open>x\<close> is \<open>PEven\<close> and the literal \<open>4\<close>
@@ -78,17 +78,17 @@ text \<open>Same abstract value on both sides: \<open>x\<close> is \<open>PEven\
   equality stays unknown rather than falsely proved.\<close>
 
 lemma parity_classify_eq_unknown:
-  "parity_classify_check (Eq (V ''x'') (N 4)) test_env_eo = Check_Unknown"
+  "parity_classify_check (Eq (V (STR ''x'')) (N 4)) test_env_eo = Check_Unknown"
   unfolding test_env_eo_def by eval
 
 text \<open>Nested \<open>Or\<close>: proved through the negated-equality branch alone.\<close>
 
 definition test_env_nested_proved :: "parity abs_state" where
-  "test_env_nested_proved = (\<lambda>_. PTop)(''x'' := PEven, ''y'' := POdd)"
+  "test_env_nested_proved = (\<lambda>_. PTop)((STR ''x'') := PEven, (STR ''y'') := POdd)"
 
 lemma parity_classify_nested_proved:
   "parity_classify_check
-     (Or (Not (Eq (V ''x'') (V ''y''))) (Eq (V ''z'') (N 1)))
+     (Or (Not (Eq (V (STR ''x'')) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
      test_env_nested_proved = Check_Proved"
   unfolding test_env_nested_proved_def by eval
 
@@ -96,11 +96,11 @@ text \<open>Nested \<open>Or\<close>, unknown: neither branch resolves when both
   parity class.\<close>
 
 definition test_env_nested_unknown :: "parity abs_state" where
-  "test_env_nested_unknown = (\<lambda>_. PTop)(''x'' := PEven, ''y'' := PEven)"
+  "test_env_nested_unknown = (\<lambda>_. PTop)((STR ''x'') := PEven, (STR ''y'') := PEven)"
 
 lemma parity_classify_nested_unknown:
   "parity_classify_check
-     (Or (Not (Eq (V ''x'') (V ''y''))) (Eq (V ''z'') (N 1)))
+     (Or (Not (Eq (V (STR ''x'')) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 

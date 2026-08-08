@@ -26,7 +26,7 @@ text \<open>A call selects the point abstraction of the callee formal in the ent
   @{thm activation_collect_sound}.\<close>
 
 definition ivl_enterc :: "cfg_node \<Rightarrow> ivl \<Rightarrow> store \<Rightarrow> ivl" where
-  "ivl_enterc u ctx s = ivl_decode (s ''p'')"
+  "ivl_enterc u ctx s = ivl_decode (s (STR ''p''))"
 
 text \<open>The reader is guarded by the \<^emph>\<open>solved domain\<close> \<open>fst twice_ctx_sol\<close>: the solver
   returns a partial solution, so an unknown outside \<open>vars\<close> is an artefact of the total
@@ -113,9 +113,9 @@ lemma cinit_le_cinit_ivl_st: "cinit_stores twice_gs \<subseteq> \<lbrakk>fun_of_
 
 text \<open>
   \<^bold>\<open>Regression: the callee entry stays absent at the root context.\<close>  \<^const>\<open>cfg_entry\<close>
-  of \<open>twice_cfg\<close> is \<open>FunctionEntry ''main''\<close>, and \<open>main\<close>'s first statement is the call
-  \<open>(Statement 2, CallEdge (Some ''x'') [''p''] [N 3], FunctionEntry ''twice'', Statement 3)\<close>.
-  The polyvariant solver routes \<open>FunctionEntry ''twice''\<close> to the argument contexts
+  of \<open>twice_cfg\<close> is \<open>FunctionEntry (STR ''main'')\<close>, and \<open>main\<close>'s first statement is the call
+  \<open>(Statement 2, CallEdge (Some (STR ''x'')) [(STR ''p'')] [N 3], FunctionEntry (STR ''twice''), Statement 3)\<close>.
+  The polyvariant solver routes \<open>FunctionEntry (STR ''twice'')\<close> to the argument contexts
   \<open>[3,3]\<close> / \<open>[10,10]\<close> and leaves it unpopulated at \<open>bot\<close> --- \<open>p\<close> there is the bottom
   interval.  The activation-local semantics (\<^theory>\<open>Voblint_CFG.CFG_Local_Trace\<close>) creates a
   callee only through the \<open>call\<close> rule, whose entry store is \<^const>\<open>call_enter\<close> of the
@@ -124,12 +124,12 @@ text \<open>
   keep that invariant honest.\<close>
 
 lemma callee_entry_bot_unpopulated:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', bot)))) ''p'' = \<bottom>"
+  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), bot)))) (STR ''p'') = \<bottom>"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def Spoly_def by eval
 
 lemma main_first_stmt_is_call:
-  "(Statement 2, CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3],
-    FunctionEntry ''twice'', Statement 3) \<in> calls twice_cfg"
+  "(Statement 2, CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3],
+    FunctionEntry (STR ''twice''), Statement 3) \<in> calls twice_cfg"
   by eval
 
 subsection \<open>Solved-domain closure facts\<close>
@@ -201,19 +201,19 @@ text \<open>The reader combines context-sensitive locals with one shared global 
   The initial global value @{text 0} is therefore identical in the root and both callee
   contexts, without copying global state into context-indexed unknowns.\<close>
 
-text \<open>\<open>twice_program\<close> declares no globals, so \<open>twice_gs ''Gx''\<close> is false and the shared
-  global slot for \<open>''Gx''\<close> never receives a write: it stays at \<open>bot\<close>, not the seeded
+text \<open>\<open>twice_program\<close> declares no globals, so \<open>twice_gs (STR ''Gx'')\<close> is false and the shared
+  global slot for \<open>(STR ''Gx'')\<close> never receives a write: it stays at \<open>bot\<close>, not the seeded
   \<open>[0,0]\<close> a name-based \<open>is_global\<close> convention would have given it.\<close>
 lemma global_init_present:
-  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr Global))) ''Gx'' = bot"
+  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr Global))) (STR ''Gx'') = bot"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
 
 lemma global_slot_shared:
-  "ivl_ctx_sg (Inl (FunctionEntry ''twice'', ctx_call1)) ''Gx''
-     = ivl_ctx_sg (Inl (FunctionEntry ''twice'', ctx_call2)) ''Gx''"
+  "ivl_ctx_sg (Inl (FunctionEntry (STR ''twice''), ctx_call1)) (STR ''Gx'')
+     = ivl_ctx_sg (Inl (FunctionEntry (STR ''twice''), ctx_call2)) (STR ''Gx'')"
 proof -
-  have "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call1)))) ''Gx''
-      = twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry ''twice'', ctx_call2)))) ''Gx''"
+  have "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')
+      = twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''Gx'')"
     unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
   thus ?thesis
     unfolding ivl_ctx_sg_def
@@ -236,19 +236,19 @@ text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes
   so the routed context is exactly \<open>ctx_call1\<close> / \<open>ctx_call2\<close> --- the executable route agrees
   with the activation route \<^const>\<open>ivl_enterc\<close>.\<close>
 lemma enter_route_exact_call1:
-  assumes "s' = call_enter twice_gs (CallEdge dst [''p''] [VIMP_Syntax.N 3]) s"
+  assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 3]) s"
   shows "ivl_enterc u ctx s' = ctx_call1"
 proof -
-  from assms have "s' = (enter_state twice_gs s)(''p'' := 3)"
+  from assms have "s' = (enter_state twice_gs s)((STR ''p'') := 3)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call1_val)
 qed
 
 lemma enter_route_exact_call2:
-  assumes "s' = call_enter twice_gs (CallEdge dst [''p''] [VIMP_Syntax.N 10]) s"
+  assumes "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 10]) s"
   shows "ivl_enterc u ctx s' = ctx_call2"
 proof -
-  from assms have "s' = (enter_state twice_gs s)(''p'' := 10)"
+  from assms have "s' = (enter_state twice_gs s)((STR ''p'') := 10)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis by (simp add: ivl_enterc_def ivl_decode_def ctx_call2_val)
 qed
@@ -263,9 +263,9 @@ lemma covered_ret5: "(Statement 3, bot) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
 lemma covered_ret7: "(Statement 4, bot) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def by eval
-lemma callee_exit_covered_call1: "(FunctionResult ''twice'', ctx_call1) \<in> fst twice_ctx_sol"
+lemma callee_exit_covered_call1: "(FunctionResult (STR ''twice''), ctx_call1) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call1_def by eval
-lemma callee_exit_covered_call2: "(FunctionResult ''twice'', ctx_call2) \<in> fst twice_ctx_sol"
+lemma callee_exit_covered_call2: "(FunctionResult (STR ''twice''), ctx_call2) \<in> fst twice_ctx_sol"
   unfolding twice_ctx_sol_def twice_ctx_eqs_def ctx_call2_def by eval
 
 text \<open>\<^bold>\<open>enter_route_exact for combine.\<close>  The callee context resumed at a return is the point
@@ -276,7 +276,7 @@ lemma comb_route_call1:
   assumes "call_enter_store twice_gs twice_cfg (Statement 2) s es"
   shows "ivl_enterc u c1 es = ctx_call1"
 proof -
-  have "es = call_enter twice_gs (CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]) s"
+  have "es = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
     using assms twice_calls_shape unfolding call_enter_store_def by fastforce
   thus ?thesis by (rule enter_route_exact_call1)
 qed
@@ -285,7 +285,7 @@ lemma comb_route_call2:
   assumes "call_enter_store twice_gs twice_cfg (Statement 3) s es"
   shows "ivl_enterc u c1 es = ctx_call2"
 proof -
-  have "es = call_enter twice_gs (CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]) s"
+  have "es = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
     using assms twice_calls_shape unfolding call_enter_store_def by fastforce
   thus ?thesis by (rule enter_route_exact_call2)
 qed
@@ -315,12 +315,12 @@ next
   case (RouteAgree u ctx dst pars args p cont s)
   note covU = RouteAgree(1) and ce = RouteAgree(2) and sin = RouteAgree(3)
   from ce twice_calls_shape have
-    "(u = Statement 2 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 3] \<and> p = ''twice'') \<or>
-     (u = Statement 3 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 10] \<and> p = ''twice'')"
+    "(u = Statement 2 \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 3] \<and> p = (STR ''twice'')) \<or>
+     (u = Statement 3 \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 10] \<and> p = (STR ''twice''))"
     by fastforce
   then consider
-      (c1) "u = Statement 2" "pars = [''p'']" "args = [VIMP_Syntax.N 3]" "p = ''twice''"
-    | (c2) "u = Statement 3" "pars = [''p'']" "args = [VIMP_Syntax.N 10]" "p = ''twice''"
+      (c1) "u = Statement 2" "pars = [(STR ''p'')]" "args = [VIMP_Syntax.N 3]" "p = (STR ''twice'')"
+    | (c2) "u = Statement 3" "pars = [(STR ''p'')]" "args = [VIMP_Syntax.N 10]" "p = (STR ''twice'')"
     by blast
   thus ?case
   proof cases
@@ -344,12 +344,12 @@ next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
   from ce twice_calls_shape have
-    "(u = Statement 2 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 3] \<and> p = ''twice'') \<or>
-     (u = Statement 3 \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 10] \<and> p = ''twice'')"
+    "(u = Statement 2 \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 3] \<and> p = (STR ''twice'')) \<or>
+     (u = Statement 3 \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 10] \<and> p = (STR ''twice''))"
     by fastforce
   then consider
-      (c1) "u = Statement 2" "pars = [''p'']" "args = [VIMP_Syntax.N 3]" "p = ''twice''"
-    | (c2) "u = Statement 3" "pars = [''p'']" "args = [VIMP_Syntax.N 10]" "p = ''twice''"
+      (c1) "u = Statement 2" "pars = [(STR ''p'')]" "args = [VIMP_Syntax.N 3]" "p = (STR ''twice'')"
+    | (c2) "u = Statement 3" "pars = [(STR ''p'')]" "args = [VIMP_Syntax.N 10]" "p = (STR ''twice'')"
     by blast
   thus ?case
   proof cases

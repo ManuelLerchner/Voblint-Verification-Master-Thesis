@@ -1,8 +1,8 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Sign_Demo(Char, Sum, Cfg_node, Sign, Bexp, Dg_state, Resolved_st_q, Set,
-             Cfg_ext, Strategy_tree, Check_result, Imp_prog_ext, dgEx_sol,
+  Sign_Demo(Sum, Cfg_node, Sign, Bexp, Dg_state, Resolved_st_q, Set, Cfg_ext,
+             Strategy_tree, Check_result, Imp_prog_ext, dgEx_sol,
              analyse_sign_for, analyse_sign, analyse_sign_report)
   where {
 
@@ -14,6 +14,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
 import Data.Bits ((.&.), (.|.), (.^.));
 import qualified Prelude;
 import qualified Data.Bits;
+import qualified Str_Literal;
 
 data Num = One | Bit0 Num | Bit1 Num;
 
@@ -147,63 +148,6 @@ instance Order Nat where {
 instance Linorder Nat where {
 };
 
-less_eq_bool :: Bool -> Bool -> Bool;
-less_eq_bool False b = True;
-less_eq_bool True b = b;
-
-less_bool :: Bool -> Bool -> Bool;
-less_bool False b = b;
-less_bool True b = False;
-
-instance Ord Bool where {
-  less_eq = less_eq_bool;
-  less = less_bool;
-};
-
-data Char = Char Bool Bool Bool Bool Bool Bool Bool Bool;
-
-equal_char :: Char -> Char -> Bool;
-equal_char (Char x1 x2 x3 x4 x5 x6 x7 x8) (Char y1 y2 y3 y4 y5 y6 y7 y8) =
-  x1 == y1 &&
-    x2 == y2 &&
-      x3 == y3 && x4 == y4 && x5 == y5 && x6 == y6 && x7 == y7 && x8 == y8;
-
-instance Eq Char where {
-  a == b = equal_char a b;
-};
-
-lexordp_eq :: forall a. (Ord a) => [a] -> [a] -> Bool;
-lexordp_eq [] ys = True;
-lexordp_eq xs [] = null xs;
-lexordp_eq (x : xs) (y : ys) = less x y || not (less y x) && lexordp_eq xs ys;
-
-less_eq_char :: Char -> Char -> Bool;
-less_eq_char (Char b0 b1 b2 b3 b4 b5 b6 b7) (Char c0 c1 c2 c3 c4 c5 c6 c7) =
-  lexordp_eq [b7, b6, b5, b4, b3, b2, b1, b0] [c7, c6, c5, c4, c3, c2, c1, c0];
-
-lexordp :: forall a. (Ord a) => [a] -> [a] -> Bool;
-lexordp [] ys = not (null ys);
-lexordp xs [] = False;
-lexordp (x : xs) (y : ys) = less x y || not (less y x) && lexordp xs ys;
-
-less_char :: Char -> Char -> Bool;
-less_char (Char b0 b1 b2 b3 b4 b5 b6 b7) (Char c0 c1 c2 c3 c4 c5 c6 c7) =
-  lexordp [b7, b6, b5, b4, b3, b2, b1, b0] [c7, c6, c5, c4, c3, c2, c1, c0];
-
-instance Ord Char where {
-  less_eq = less_eq_char;
-  less = less_char;
-};
-
-instance Preorder Char where {
-};
-
-instance Order Char where {
-};
-
-instance Linorder Char where {
-};
-
 data Sum a b = Inl a | Inr b;
 
 equal_sum :: forall a b. (Eq a, Eq b) => Sum a b -> Sum a b -> Bool;
@@ -216,7 +160,21 @@ instance (Eq a, Eq b) => Eq (Sum a b) where {
   a == b = equal_sum a b;
 };
 
-data Cfg_node = Statement Nat | FunctionEntry [Char] | FunctionResult [Char];
+instance Ord String where {
+  less_eq = (\ a b -> a <= b);
+  less = (\ a b -> a < b);
+};
+
+instance Preorder String where {
+};
+
+instance Order String where {
+};
+
+instance Linorder String where {
+};
+
+data Cfg_node = Statement Nat | FunctionEntry String | FunctionResult String;
 
 equal_cfg_node :: Cfg_node -> Cfg_node -> Bool;
 equal_cfg_node (FunctionEntry x2) (FunctionResult x3) = False;
@@ -238,29 +196,16 @@ data Ordera = Eqa | Lt | Gt;
 comparator_of :: forall a. (Eq a, Linorder a) => a -> a -> Ordera;
 comparator_of x y = (if less x y then Lt else (if x == y then Eqa else Gt));
 
-comparator_list :: forall a. (a -> a -> Ordera) -> [a] -> [a] -> Ordera;
-comparator_list comp_a [] [] = Eqa;
-comparator_list comp_a [] (y : ya) = Lt;
-comparator_list comp_a (x : xa) [] = Gt;
-comparator_list comp_a (x : xa) (y : ya) =
-  (case comp_a x y of {
-    Eqa -> comparator_list comp_a xa ya;
-    Lt -> Lt;
-    Gt -> Gt;
-  });
-
 comparator_cfg_node :: Cfg_node -> Cfg_node -> Ordera;
 comparator_cfg_node (Statement x) (Statement y) = comparator_of x y;
 comparator_cfg_node (Statement x) (FunctionEntry ya) = Lt;
 comparator_cfg_node (Statement x) (FunctionResult yb) = Lt;
 comparator_cfg_node (FunctionEntry x) (Statement y) = Gt;
-comparator_cfg_node (FunctionEntry x) (FunctionEntry ya) =
-  comparator_list comparator_of x ya;
+comparator_cfg_node (FunctionEntry x) (FunctionEntry ya) = comparator_of x ya;
 comparator_cfg_node (FunctionEntry x) (FunctionResult yb) = Lt;
 comparator_cfg_node (FunctionResult x) (Statement y) = Gt;
 comparator_cfg_node (FunctionResult x) (FunctionEntry ya) = Gt;
-comparator_cfg_node (FunctionResult x) (FunctionResult yb) =
-  comparator_list comparator_of x yb;
+comparator_cfg_node (FunctionResult x) (FunctionResult yb) = comparator_of x yb;
 
 le_of_comp :: forall a. (a -> a -> Ordera) -> a -> a -> Bool;
 le_of_comp acomp x y = (case acomp x y of {
@@ -296,7 +241,7 @@ instance Order Cfg_node where {
 instance Linorder Cfg_node where {
 };
 
-data Location = Local_Location [Char] | Global_Location [Char];
+data Location = Local_Location String | Global_Location String;
 
 equal_location :: Location -> Location -> Bool;
 equal_location (Local_Location x1) (Global_Location x2) = False;
@@ -308,7 +253,7 @@ instance Eq Location where {
   a == b = equal_location a b;
 };
 
-data Aexp = N Int | V [Char] | Plus Aexp Aexp | Minus Aexp Aexp
+data Aexp = N Int | V String | Plus Aexp Aexp | Minus Aexp Aexp
   | Times Aexp Aexp;
 
 equal_aexp :: Aexp -> Aexp -> Bool;
@@ -607,7 +552,7 @@ instance Bounded_semilattice_sup_bot Sign where {
 instance Bounded_warrowing Sign where {
 };
 
-data Call_action = CallEdge (Maybe [Char]) [[Char]] [Aexp];
+data Call_action = CallEdge (Maybe String) [String] [Aexp];
 
 equal_call_action :: Call_action -> Call_action -> Bool;
 equal_call_action (CallEdge x1 x2 x3) (CallEdge y1 y2 y3) =
@@ -624,6 +569,17 @@ comparator_option comp_a Nothing (Just y) = Lt;
 comparator_option comp_a (Just x) Nothing = Gt;
 comparator_option comp_a (Just x) (Just y) = comp_a x y;
 
+comparator_list :: forall a. (a -> a -> Ordera) -> [a] -> [a] -> Ordera;
+comparator_list comp_a [] [] = Eqa;
+comparator_list comp_a [] (y : ya) = Lt;
+comparator_list comp_a (x : xa) [] = Gt;
+comparator_list comp_a (x : xa) (y : ya) =
+  (case comp_a x y of {
+    Eqa -> comparator_list comp_a xa ya;
+    Lt -> Lt;
+    Gt -> Gt;
+  });
+
 comparator_aexp :: Aexp -> Aexp -> Ordera;
 comparator_aexp (N x) (N y) = comparator_of x y;
 comparator_aexp (N x) (V ya) = Lt;
@@ -631,7 +587,7 @@ comparator_aexp (N x) (Plus yb yc) = Lt;
 comparator_aexp (N x) (Minus yd ye) = Lt;
 comparator_aexp (N x) (Times yf yg) = Lt;
 comparator_aexp (V x) (N y) = Gt;
-comparator_aexp (V x) (V ya) = comparator_list comparator_of x ya;
+comparator_aexp (V x) (V ya) = comparator_of x ya;
 comparator_aexp (V x) (Plus yb yc) = Lt;
 comparator_aexp (V x) (Minus yd ye) = Lt;
 comparator_aexp (V x) (Times yf yg) = Lt;
@@ -665,8 +621,8 @@ comparator_aexp (Times x xa) (Times yf yg) = (case comparator_aexp x yf of {
 
 comparator_call_action :: Call_action -> Call_action -> Ordera;
 comparator_call_action (CallEdge x xa xb) (CallEdge y ya yb) =
-  (case comparator_option (comparator_list comparator_of) x y of {
-    Eqa -> (case comparator_list (comparator_list comparator_of) xa ya of {
+  (case comparator_option comparator_of x y of {
+    Eqa -> (case comparator_list comparator_of xa ya of {
              Eqa -> comparator_list comparator_aexp xb yb;
              Lt -> Lt;
              Gt -> Gt;
@@ -739,8 +695,8 @@ equal_bexp (And x31 x32) (And y31 y32) =
 equal_bexp (Not x2) (Not y2) = equal_bexp x2 y2;
 equal_bexp (Bc x1) (Bc y1) = x1 == y1;
 
-data Edge_action = EA_Nop | EA_Assign [Char] Aexp | EA_Random [Char]
-  | EA_Assume Bexp | EA_AssumeNot Bexp | EA_Ret (Maybe Aexp) [Char]
+data Edge_action = EA_Nop | EA_Assign String Aexp | EA_Random String
+  | EA_Assume Bexp | EA_AssumeNot Bexp | EA_Ret (Maybe Aexp) String
   | EA_Check Bexp;
 
 equal_edge_action :: Edge_action -> Edge_action -> Bool;
@@ -869,7 +825,7 @@ comparator_edge_action EA_Nop (EA_Ret ye yf) = Lt;
 comparator_edge_action EA_Nop (EA_Check yg) = Lt;
 comparator_edge_action (EA_Assign x xa) EA_Nop = Gt;
 comparator_edge_action (EA_Assign x xa) (EA_Assign y ya) =
-  (case comparator_list comparator_of x y of {
+  (case comparator_of x y of {
     Eqa -> comparator_aexp xa ya;
     Lt -> Lt;
     Gt -> Gt;
@@ -881,8 +837,7 @@ comparator_edge_action (EA_Assign x xa) (EA_Ret ye yf) = Lt;
 comparator_edge_action (EA_Assign x xa) (EA_Check yg) = Lt;
 comparator_edge_action (EA_Random x) EA_Nop = Gt;
 comparator_edge_action (EA_Random x) (EA_Assign y ya) = Gt;
-comparator_edge_action (EA_Random x) (EA_Random yb) =
-  comparator_list comparator_of x yb;
+comparator_edge_action (EA_Random x) (EA_Random yb) = comparator_of x yb;
 comparator_edge_action (EA_Random x) (EA_Assume yc) = Lt;
 comparator_edge_action (EA_Random x) (EA_AssumeNot yd) = Lt;
 comparator_edge_action (EA_Random x) (EA_Ret ye yf) = Lt;
@@ -909,7 +864,7 @@ comparator_edge_action (EA_Ret x xa) (EA_Assume yc) = Gt;
 comparator_edge_action (EA_Ret x xa) (EA_AssumeNot yd) = Gt;
 comparator_edge_action (EA_Ret x xa) (EA_Ret ye yf) =
   (case comparator_option comparator_aexp x ye of {
-    Eqa -> comparator_list comparator_of xa yf;
+    Eqa -> comparator_of xa yf;
     Lt -> Lt;
     Gt -> Gt;
   });
@@ -1210,8 +1165,8 @@ instance (Bounded_warrowing a) => Bounded_warrowing (Resolved_st_q a) where {
 
 data Set a = Set [a] | Coset [a];
 
-data Com = SKIP | Assign [Char] Aexp | Random [Char] | Check Bexp | Seq Com Com
-  | If Bexp Com Com | While Bexp Com | Call (Maybe [Char]) [Char] [Aexp]
+data Com = SKIP | Assign String Aexp | Random String | Check Bexp | Seq Com Com
+  | If Bexp Com Com | While Bexp Com | Call (Maybe String) String [Aexp]
   | Return (Maybe Aexp) | Restore | Unwind;
 
 newtype Fmap a b = Fmap_of_list [(a, b)];
@@ -1230,18 +1185,18 @@ data Strategy_tree a b c = Answer c | QueryL a (c -> Strategy_tree a b c)
 data Check_result = Check_Proved | Check_Refuted | Check_Unknown;
 
 data Dg_spec_ext a b c =
-  Dg_spec_ext (a -> b -> (b, a)) ([Char] -> Aexp -> a -> b -> (b, a))
-    ([Char] -> a -> b -> (b, a)) (Bexp -> a -> b -> (b, a))
-    (Bexp -> a -> b -> (b, a)) ([[Char]] -> [Aexp] -> a -> b -> (b, a))
-    (a -> a -> b -> (b, a)) (Maybe [Char] -> a -> b -> (b, a) -> (b, a)) c;
+  Dg_spec_ext (a -> b -> (b, a)) (String -> Aexp -> a -> b -> (b, a))
+    (String -> a -> b -> (b, a)) (Bexp -> a -> b -> (b, a))
+    (Bexp -> a -> b -> (b, a)) ([String] -> [Aexp] -> a -> b -> (b, a))
+    (a -> a -> b -> (b, a)) (Maybe String -> a -> b -> (b, a) -> (b, a)) c;
 
 data State_exta a b = State_exta (Set a) b;
 
-data Proc_decl_ext a = Proc_decl_ext [[Char]] Com a;
+data Proc_decl_ext a = Proc_decl_ext [String] Com a;
 
 data Ug_state_ext a b c d = Ug_state_ext (b -> Fmap a c) d;
 
-data Imp_prog_ext a = Imp_prog_ext [([Char], Proc_decl_ext ())] Com [[Char]] a;
+data Imp_prog_ext a = Imp_prog_ext [(String, Proc_decl_ext ())] Com [String] a;
 
 data Func_state a b c d =
   Q (a, (a, (State_ext a b c (State_exta a ()), Ug_state_ext a b c d)))
@@ -1335,12 +1290,8 @@ fmfilter p (Fmap_of_list m) = Fmap_of_list (filter (\ (k, _) -> p k) m);
 fmdrop :: forall a b. (Eq a) => a -> Fmap a b -> Fmap a b;
 fmdrop a = fmfilter (\ aa -> not (aa == a));
 
-ret_var :: [Char];
-ret_var =
-  [Char True True False False False True False False,
-    Char False True False False True True True False,
-    Char True False True False False True True False,
-    Char False False True False True True True False];
+ret_var :: String;
+ret_var = "#ret";
 
 cfg_entry :: forall a. Cfg_ext a -> Cfg_node;
 cfg_entry (Cfg_ext intra calls cfg_entry checks more) = cfg_entry;
@@ -1358,7 +1309,7 @@ fmempty = Fmap_of_list [];
 infl :: forall a b c d. State_ext a b c d -> Fmap (Sum a b) [a];
 infl (State_ext c infl stabl sigma more) = infl;
 
-location_of :: ([Char] -> Bool) -> [Char] -> Location;
+location_of :: (String -> Bool) -> String -> Location;
 location_of gs x = (if gs x then Global_Location x else Local_Location x);
 
 stabl :: forall a b c d. State_ext a b c d -> Set a;
@@ -1409,7 +1360,7 @@ plus_nat :: Nat -> Nat -> Nat;
 plus_nat Zero_nat n = n;
 plus_nat (Suc m) n = plus_nat m (Suc n);
 
-formals :: forall a. Proc_decl_ext a -> [[Char]];
+formals :: forall a. Proc_decl_ext a -> [String];
 formals (Proc_decl_ext formals body more) = formals;
 
 sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
@@ -1436,8 +1387,8 @@ csize Restore = one_nat;
 csize Unwind = one_nat;
 
 compile ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [Char] ->
+  (String -> Maybe (Proc_decl_ext ())) ->
+    String ->
       Com ->
         Cfg_node ->
           Nat ->
@@ -1513,8 +1464,8 @@ body :: forall a. Proc_decl_ext a -> Com;
 body (Proc_decl_ext formals body more) = body;
 
 compile_proc ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [Char] ->
+  (String -> Maybe (Proc_decl_ext ())) ->
+    String ->
       Proc_decl_ext () ->
         Nat ->
           (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
@@ -1534,8 +1485,8 @@ compile_proc pi p decl n =
        });
 
 compile_procs ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [[Char]] ->
+  (String -> Maybe (Proc_decl_ext ())) ->
+    [String] ->
       Nat ->
         (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
                 Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
@@ -1551,12 +1502,12 @@ compile_procs pi (p : ps) n =
       });
   });
 
-proc_decl_of :: [[Char]] -> Com -> Proc_decl_ext ();
+proc_decl_of :: [String] -> Com -> Proc_decl_ext ();
 proc_decl_of xs bdy = Proc_decl_ext xs bdy ();
 
 compile_prog ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [[Char]] -> [Char] -> Com -> Cfg_ext ();
+  (String -> Maybe (Proc_decl_ext ())) ->
+    [String] -> String -> Com -> Cfg_ext ();
 compile_prog pi ps mnm main =
   (case compile_procs pi ps Zero_nat of {
     (n1, (eprocs, kprocs)) ->
@@ -1570,7 +1521,7 @@ compile_prog pi ps mnm main =
       });
   });
 
-make :: [([Char], Proc_decl_ext ())] -> Com -> [[Char]] -> Imp_prog_ext ();
+make :: [(String, Proc_decl_ext ())] -> Com -> [String] -> Imp_prog_ext ();
 make proc_rep prog_main declared_global_vars =
   Imp_prog_ext proc_rep prog_main declared_global_vars ();
 
@@ -1578,32 +1529,23 @@ one_int :: Int;
 one_int = Pos One;
 
 sign_ex_prog :: Imp_prog_ext ();
-sign_ex_prog =
-  make []
-    (Seq (Assign [Char False False False True True True True False] (N one_int))
-      (Assign [Char True False False True True True True False]
-        (V [Char False False False True True True True False])))
-    [];
+sign_ex_prog = make [] (Seq (Assign "x" (N one_int)) (Assign "y" (V "x"))) [];
 
-prog_main_name :: [Char];
-prog_main_name =
-  [Char True False True True False True True False,
-    Char True False False False False True True False,
-    Char True False False True False True True False,
-    Char False True True True False True True False];
+prog_main_name :: String;
+prog_main_name = "main";
 
-proc_rep :: forall a. Imp_prog_ext a -> [([Char], Proc_decl_ext ())];
+proc_rep :: forall a. Imp_prog_ext a -> [(String, Proc_decl_ext ())];
 proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
 
-prog_table :: Imp_prog_ext () -> [Char] -> Maybe (Proc_decl_ext ());
+prog_table :: Imp_prog_ext () -> String -> Maybe (Proc_decl_ext ());
 prog_table p =
   fun_upd (map_of (proc_rep p)) prog_main_name
     (Just (proc_decl_of [] (prog_main p)));
 
-sign_ex_pi :: [Char] -> Maybe (Proc_decl_ext ());
+sign_ex_pi :: String -> Maybe (Proc_decl_ext ());
 sign_ex_pi = prog_table sign_ex_prog;
 
-prog_procs :: Imp_prog_ext () -> [[Char]];
+prog_procs :: Imp_prog_ext () -> [String];
 prog_procs p = map fst (proc_rep p);
 
 gEx :: Cfg_ext ();
@@ -1674,7 +1616,7 @@ cinit_sign_st :: Resolved_st_q Sign;
 cinit_sign_st = Abs_resolved_st (STop, (SZero, []));
 
 dgs_combine_assign ::
-  forall a b c. Dg_spec_ext a b c -> Maybe [Char] -> a -> b -> (b, a) -> (b, a);
+  forall a b c. Dg_spec_ext a b c -> Maybe String -> a -> b -> (b, a) -> (b, a);
 dgs_combine_assign
   (Dg_spec_ext dgs_nop dgs_assign dgs_random dgs_assume dgs_assume_not dgs_enter
     dgs_combine_env dgs_combine_assign more)
@@ -1687,16 +1629,16 @@ dgs_combine_env
   = dgs_combine_env;
 
 dgs_combine ::
-  forall a b. Dg_spec_ext a b () -> Maybe [Char] -> a -> a -> b -> (b, a);
+  forall a b. Dg_spec_ext a b () -> Maybe String -> a -> a -> b -> (b, a);
 dgs_combine s dst dc de g =
   dgs_combine_assign s dst de g (dgs_combine_env s dc de g);
 
 dg_combine_tree ::
   forall a b.
     (Bounded_semilattice_sup_bot a,
-      Bounded_semilattice_sup_bot b) => (Maybe [Char] ->
+      Bounded_semilattice_sup_bot b) => (Maybe String ->
   a -> a -> b -> (b, a)) ->
-  Maybe [Char] ->
+  Maybe String ->
     Cfg_node -> Cfg_node -> Strategy_tree Cfg_node () (Dg_state a b);
 dg_combine_tree comb dst cc ex =
   QueryL cc
@@ -1715,7 +1657,7 @@ dg_spec_combine_tree ::
   forall a b.
     (Bounded_semilattice_sup_bot a,
       Bounded_semilattice_sup_bot b) => Dg_spec_ext a b () ->
-  Maybe [Char] ->
+  Maybe String ->
     Cfg_node -> Cfg_node -> Strategy_tree Cfg_node () (Dg_state a b);
 dg_spec_combine_tree s dst cc ex = dg_combine_tree (dgs_combine s) dst cc ex;
 
@@ -1803,7 +1745,7 @@ dgs_assume_not
     dgs_combine_env dgs_combine_assign more)
   = dgs_assume_not;
 
-dgs_random :: forall a b c. Dg_spec_ext a b c -> [Char] -> a -> b -> (b, a);
+dgs_random :: forall a b c. Dg_spec_ext a b c -> String -> a -> b -> (b, a);
 dgs_random
   (Dg_spec_ext dgs_nop dgs_assign dgs_random dgs_assume dgs_assume_not dgs_enter
     dgs_combine_env dgs_combine_assign more)
@@ -1816,7 +1758,7 @@ dgs_assume
   = dgs_assume;
 
 dgs_assign ::
-  forall a b c. Dg_spec_ext a b c -> [Char] -> Aexp -> a -> b -> (b, a);
+  forall a b c. Dg_spec_ext a b c -> String -> Aexp -> a -> b -> (b, a);
 dgs_assign
   (Dg_spec_ext dgs_nop dgs_assign dgs_random dgs_assume dgs_assume_not dgs_enter
     dgs_combine_env dgs_combine_assign more)
@@ -1924,7 +1866,7 @@ entry_call_list g v =
     (cfg_calls_list g);
 
 dgs_enter ::
-  forall a b c. Dg_spec_ext a b c -> [[Char]] -> [Aexp] -> a -> b -> (b, a);
+  forall a b c. Dg_spec_ext a b c -> [String] -> [Aexp] -> a -> b -> (b, a);
 dgs_enter
   (Dg_spec_ext dgs_nop dgs_assign dgs_random dgs_assume dgs_assume_not dgs_enter
     dgs_combine_env dgs_combine_assign more)
@@ -1958,7 +1900,7 @@ lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
 lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
 
 fun_of_resolved_st_q_for ::
-  forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
+  forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
 fun_of_resolved_st_q_for gs s x = lookup_resolved_st_q s (location_of gs x);
 
 inv_conservative :: forall a. a -> a -> a -> (a, a);
@@ -2122,7 +2064,7 @@ sign_of_int n =
   (if less_int n Zero_int then SNeg
     else (if equal_int n Zero_int then SZero else SPos));
 
-aval_sign :: Aexp -> ([Char] -> Sign) -> Sign;
+aval_sign :: Aexp -> (String -> Sign) -> Sign;
 aval_sign (N n) sigma = sign_of_int n;
 aval_sign (V x) sigma = sigma x;
 aval_sign (Plus a b) sigma = plus_sign (aval_sign a sigma) (aval_sign b sigma);
@@ -2132,7 +2074,7 @@ aval_sign (Times a b) sigma =
   times_sign (aval_sign a sigma) (aval_sign b sigma);
 
 afilter_sign_st ::
-  ([Char] -> Bool) -> Aexp -> Sign -> Resolved_st_q Sign -> Resolved_st_q Sign;
+  (String -> Bool) -> Aexp -> Sign -> Resolved_st_q Sign -> Resolved_st_q Sign;
 afilter_sign_st gs (V x) a s =
   update_resolved_st_q s (location_of gs x)
     (meet_sign a (fun_of_resolved_st_q_for gs s x));
@@ -2186,7 +2128,7 @@ inv_eq_sign False a1 a2 =
   } in (a1a, a);
 
 bfilter_sign_st ::
-  ([Char] -> Bool) -> Bexp -> Bool -> Resolved_st_q Sign -> Resolved_st_q Sign;
+  (String -> Bool) -> Bexp -> Bool -> Resolved_st_q Sign -> Resolved_st_q Sign;
 bfilter_sign_st gs (Less e1 e2) res s =
   (case inv_less_sign res (aval_sign e1 (fun_of_resolved_st_q_for gs s))
           (aval_sign e2 (fun_of_resolved_st_q_for gs s))
@@ -2213,16 +2155,16 @@ bfilter_sign_st gs (Eqb e1 e2) res s =
 bfilter_sign_st gs (Bc v) uv s = s;
 
 assume_not_sign_st_for ::
-  ([Char] -> Bool) -> Bexp -> Resolved_st_q Sign -> Resolved_st_q Sign;
+  (String -> Bool) -> Bexp -> Resolved_st_q Sign -> Resolved_st_q Sign;
 assume_not_sign_st_for source_global b s =
   bfilter_sign_st source_global b False s;
 
 assume_sign_st_for ::
-  ([Char] -> Bool) -> Bexp -> Resolved_st_q Sign -> Resolved_st_q Sign;
+  (String -> Bool) -> Bexp -> Resolved_st_q Sign -> Resolved_st_q Sign;
 assume_sign_st_for source_global b s = bfilter_sign_st source_global b True s;
 
 sign_tf_st_for ::
-  ([Char] -> Bool) -> Edge_action -> Resolved_st_q Sign -> Resolved_st_q Sign;
+  (String -> Bool) -> Edge_action -> Resolved_st_q Sign -> Resolved_st_q Sign;
 sign_tf_st_for source_global EA_Nop s = s;
 sign_tf_st_for source_global (EA_Assign x a) s =
   update_resolved_st_q s (location_of source_global x)
@@ -2273,8 +2215,8 @@ restrict_local_resolved_q (Abs_resolved_st x) =
 
 combine_assign_resolved ::
   forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 Maybe [Char] ->
+    (Bot a) => (String -> Bool) ->
+                 Maybe String ->
                    a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
 combine_assign_resolved gs dst v s =
   (case dst of {
@@ -2284,15 +2226,15 @@ combine_assign_resolved gs dst v s =
 
 combine_assign_resolved_q ::
   forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 Maybe [Char] -> a -> Resolved_st_q a -> Resolved_st_q a;
+    (Bot a) => (String -> Bool) ->
+                 Maybe String -> a -> Resolved_st_q a -> Resolved_st_q a;
 combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
   Abs_resolved_st (combine_assign_resolved xc xb xa x);
 
 unit_combine_step_st_assign_for ::
   forall a.
-    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
- Maybe [Char] ->
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ Maybe String ->
    Resolved_st_q a ->
      Resolved_st_q a ->
        (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
@@ -2343,9 +2285,9 @@ unit_step_st f d g =
 
 unit_dg_spec_st_for ::
   forall a.
-    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
  (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
-   ([[Char]] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
+   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
      Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
 unit_dg_spec_st_for gs tf_st enter_st =
   Dg_spec_ext (unit_step_st (tf_st EA_Nop))
@@ -2356,11 +2298,11 @@ unit_dg_spec_st_for gs tf_st enter_st =
     (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
     (unit_combine_step_st_assign_for gs) ();
 
-declared_global_vars :: forall a. Imp_prog_ext a -> [[Char]];
+declared_global_vars :: forall a. Imp_prog_ext a -> [String];
 declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
   = declared_global_vars;
 
-declared_global :: Imp_prog_ext () -> [Char] -> Bool;
+declared_global :: Imp_prog_ext () -> String -> Bool;
 declared_global p x = membera (declared_global_vars p) x;
 
 enter_frame_D_resolved ::
@@ -2379,8 +2321,8 @@ enter_frame_D_resolved_q xa (Abs_resolved_st x) =
 
 bind_formals_resolved ::
   forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 [[Char]] ->
+    (Bot a) => (String -> Bool) ->
+                 [String] ->
                    [a] ->
                      (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
 bind_formals_resolved gs xs avs s =
@@ -2388,14 +2330,14 @@ bind_formals_resolved gs xs avs s =
 
 bind_formals_resolved_q ::
   forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 [[Char]] -> [a] -> Resolved_st_q a -> Resolved_st_q a;
+    (Bot a) => (String -> Bool) ->
+                 [String] -> [a] -> Resolved_st_q a -> Resolved_st_q a;
 bind_formals_resolved_q xc xb xa (Abs_resolved_st x) =
   Abs_resolved_st (bind_formals_resolved xc xb xa x);
 
 sign_enter_st_for ::
-  ([Char] -> Bool) ->
-    [[Char]] -> [Aexp] -> Resolved_st_q Sign -> Resolved_st_q Sign;
+  (String -> Bool) ->
+    [String] -> [Aexp] -> Resolved_st_q Sign -> Resolved_st_q Sign;
 sign_enter_st_for source_global xs es s =
   bind_formals_resolved_q source_global xs
     (map (\ e -> aval_sign e (fun_of_resolved_st_q_for source_global s)) es)
@@ -2627,7 +2569,7 @@ dgEx_sol ::
       Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
 dgEx_sol = tD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ());
 
-prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
+prog_cfg :: String -> Imp_prog_ext () -> Cfg_ext ();
 prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
 
 sign_less_true_of_inv :: Sign -> Sign -> Bool;
@@ -2659,7 +2601,7 @@ sign_eq_false_of_meet a b = equal_sign (meet_sign a b) bot_sign;
 sign_eq_false :: Sign -> Sign -> Bool;
 sign_eq_false = sign_eq_false_of_meet;
 
-sign_check_true :: Bexp -> ([Char] -> Sign) -> Bool;
+sign_check_true :: Bexp -> (String -> Sign) -> Bool;
 sign_check_true (Bc v) d = v;
 sign_check_true (Not b) d = sign_check_false b d;
 sign_check_true (And b1 b2) d = sign_check_true b1 d && sign_check_true b2 d;
@@ -2667,7 +2609,7 @@ sign_check_true (Or b1 b2) d = sign_check_true b1 d || sign_check_true b2 d;
 sign_check_true (Less a b) d = sign_less_true (aval_sign a d) (aval_sign b d);
 sign_check_true (Eqb a b) d = sign_eq_true (aval_sign a d) (aval_sign b d);
 
-sign_check_false :: Bexp -> ([Char] -> Sign) -> Bool;
+sign_check_false :: Bexp -> (String -> Sign) -> Bool;
 sign_check_false (Bc v) d = not v;
 sign_check_false (Not b) d = sign_check_true b d;
 sign_check_false (And b1 b2) d = sign_check_false b1 d || sign_check_false b2 d;
@@ -2697,13 +2639,13 @@ classify_checks g env classify =
         else Nothing))
     (cfg_intra_list g);
 
-sign_classify_check :: Bexp -> ([Char] -> Sign) -> Check_result;
+sign_classify_check :: Bexp -> (String -> Sign) -> Check_result;
 sign_classify_check c d =
   (if sign_check_true c d then Check_Proved
     else (if sign_check_false c d then Check_Refuted else Check_Unknown));
 
 analyse_sign_eqs_for ::
-  ([Char] -> Bool) ->
+  (String -> Bool) ->
     Imp_prog_ext () ->
       (Cfg_node, ()) ->
         Strategy_tree (Cfg_node, ()) ()
@@ -2713,7 +2655,7 @@ analyse_sign_eqs_for gs p =
     (prog_cfg prog_main_name p) bot_resolved_st_q cinit_sign_st cinit_sign_st;
 
 analyse_sign_for ::
-  ([Char] -> Bool) ->
+  (String -> Bool) ->
     Imp_prog_ext () ->
       (Set (Cfg_node, ()),
         Sum (Cfg_node, ()) () ->
@@ -2730,11 +2672,11 @@ analyse_sign ::
 analyse_sign p = analyse_sign_for (declared_global p) p;
 
 fun_of_exec_dg_st_for ::
-  forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
+  forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
 fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
 
 analyse_sign_report_for ::
-  ([Char] -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+  (String -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report_for gs p =
   let {
     sol = snd (analyse_sign_for gs p);

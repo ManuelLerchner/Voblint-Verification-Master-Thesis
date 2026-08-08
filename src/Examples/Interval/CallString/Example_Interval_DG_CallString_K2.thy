@@ -62,13 +62,13 @@ lemma enter_callers_g_2:
      p = Statement 2 \<longrightarrow> ctx = [Statement 5] \<or> ctx = [Statement 6]"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
 
-lemma callee_covered_f3_2: "(FunctionEntry ''f'', [Statement 5]) \<in> fst nest_2_sol"
+lemma callee_covered_f3_2: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
-lemma callee_covered_f10_2: "(FunctionEntry ''f'', [Statement 6]) \<in> fst nest_2_sol"
+lemma callee_covered_f10_2: "(FunctionEntry (STR ''f''), [Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
-lemma callee_covered_g_f3_2: "(FunctionEntry ''g'', [Statement 2, Statement 5]) \<in> fst nest_2_sol"
+lemma callee_covered_g_f3_2: "(FunctionEntry (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
-lemma callee_covered_g_f10_2: "(FunctionEntry ''g'', [Statement 2, Statement 6]) \<in> fst nest_2_sol"
+lemma callee_covered_g_f10_2: "(FunctionEntry (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
 
 lemma covered_ret6_2: "(Statement 6, []) \<in> fst nest_2_sol"
@@ -80,13 +80,13 @@ lemma covered_ret3_f3_2: "(Statement 3, [Statement 5]) \<in> fst nest_2_sol"
 lemma covered_ret3_f10_2: "(Statement 3, [Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
 
-lemma callee_exit_f3_2: "(FunctionResult ''f'', [Statement 5]) \<in> fst nest_2_sol"
+lemma callee_exit_f3_2: "(FunctionResult (STR ''f''), [Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
-lemma callee_exit_f10_2: "(FunctionResult ''f'', [Statement 6]) \<in> fst nest_2_sol"
+lemma callee_exit_f10_2: "(FunctionResult (STR ''f''), [Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
-lemma callee_exit_g_f3_2: "(FunctionResult ''g'', [Statement 2, Statement 5]) \<in> fst nest_2_sol"
+lemma callee_exit_g_f3_2: "(FunctionResult (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
-lemma callee_exit_g_f10_2: "(FunctionResult ''g'', [Statement 2, Statement 6]) \<in> fst nest_2_sol"
+lemma callee_exit_g_f10_2: "(FunctionResult (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
 
 section \<open>Abstract transport of the routed solution\<close>
@@ -287,14 +287,14 @@ next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
   from ce nest_calls_shape have
-    "(u = Statement 2 \<and> p = ''g'' \<and> cont = Statement 3) \<or>
-     (u = Statement 5 \<and> p = ''f'' \<and> cont = Statement 6) \<or>
-     (u = Statement 6 \<and> p = ''f'' \<and> cont = Statement 7)"
+    "(u = Statement 2 \<and> p = (STR ''g'') \<and> cont = Statement 3) \<or>
+     (u = Statement 5 \<and> p = (STR ''f'') \<and> cont = Statement 6) \<or>
+     (u = Statement 6 \<and> p = (STR ''f'') \<and> cont = Statement 7)"
     by fastforce
   then consider
-      (c1) "u = Statement 2" "p = ''g''"
-    | (c2) "u = Statement 5" "p = ''f''"
-    | (c3) "u = Statement 6" "p = ''f''"
+      (c1) "u = Statement 2" "p = (STR ''g'')"
+    | (c2) "u = Statement 5" "p = (STR ''f'')"
+    | (c3) "u = Statement 6" "p = (STR ''f'')"
     by blast
   thus ?case
   proof cases
@@ -402,15 +402,15 @@ definition nest_2_graph_config ::
       route = (\<lambda>u ctx action d. cs_route 2 u ctx d action),
       show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs ''main'' nest_main
+        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
           nest_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs ''main'' nest_main
+        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (nest_lookup_exec_dg_st d x)) vars),
+        String.explode x @ ''='' @ string_of_ivl (nest_lookup_exec_dg_st d x)) vars),
       format_return = (\<lambda>p ctx ret d.
         if nest_lookup_exec_dg_st d ret = ivl_top then []
         else [''ret='' @ string_of_ivl (nest_lookup_exec_dg_st d ret)]),
@@ -418,7 +418,7 @@ definition nest_2_graph_config ::
       show_global_key = (\<lambda>k. case k of Global2 \<Rightarrow> ''Global'' | Seed2 p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global2 \<Rightarrow> True | Seed2 _ _ \<Rightarrow> False),
       show_internal_globals = False,
-      owner_of = compiled_owner_of nest_pi nest_procs ''main'' nest_main,
+      owner_of = String.explode o compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
@@ -428,10 +428,10 @@ definition nest_2_graph_config ::
 
 definition nest_2_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where
   "nest_2_contexts_for_pp p =
-    (case compiled_owner_of nest_pi nest_procs ''main'' nest_main p of
-       ''main'' \<Rightarrow> [[]]
-     | ''f'' \<Rightarrow> [[Statement 5], [Statement 6]]
-     | _ \<Rightarrow> [[Statement 2, Statement 5], [Statement 2, Statement 6]])"
+    (let owner = compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main p
+     in if owner = (STR ''main'') then [[]]
+        else if owner = (STR ''f'') then [[Statement 5], [Statement 6]]
+        else [[Statement 2, Statement 5], [Statement 2, Statement 6]])"
 
 definition nest_2_local_graph_domain :: "(pp \<times> cfg_node list + gk_2) list" where
   "nest_2_local_graph_domain =
@@ -439,8 +439,8 @@ definition nest_2_local_graph_domain :: "(pp \<times> cfg_node list + gk_2) list
 
 definition nest_2_seed_keys :: "gk_2 list" where
   "nest_2_seed_keys =
-     map (\<lambda>ctx. Seed2 (FunctionEntry ''f'') ctx) [[Statement 5], [Statement 6]]
-     @ map (\<lambda>ctx. Seed2 (FunctionEntry ''g'') ctx) [[Statement 2, Statement 5], [Statement 2, Statement 6]]"
+     map (\<lambda>ctx. Seed2 (FunctionEntry (STR ''f'')) ctx) [[Statement 5], [Statement 6]]
+     @ map (\<lambda>ctx. Seed2 (FunctionEntry (STR ''g'')) ctx) [[Statement 2, Statement 5], [Statement 2, Statement 6]]"
 
 definition nest_2_graph_domain :: "(pp \<times> cfg_node list + gk_2) list" where
   "nest_2_graph_domain =

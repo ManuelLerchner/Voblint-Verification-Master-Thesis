@@ -962,7 +962,7 @@ fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" whe
 text \<open>
   @{const local_edge_action}: the edge neither reads nor writes globals (enter and
   combine are separate).  A global assignment such as
-  @{term \<open>EA_Assign ''Gx'' e\<close>} is not local even when @{term e} mentions only
+  @{term \<open>EA_Assign (STR ''Gx'') e\<close>} is not local even when @{term e} mentions only
   locals.
 \<close>
 

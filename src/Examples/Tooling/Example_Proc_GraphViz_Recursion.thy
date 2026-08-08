@@ -8,7 +8,7 @@ theory Example_Proc_GraphViz_Recursion
 begin
 
 definition dot_main_name :: pname where
-  "dot_main_name = ''main''"
+  "dot_main_name = (STR ''main'')"
 
 text \<open>
   This example exports the interprocedural CFG of a recursive factorial

@@ -34,7 +34,7 @@ definition entered_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow>
      (case ca of CallEdge dst fs as \<Rightarrow> snd (dgs_enter Sabs fs as d bot))"
 
 definition route_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
-  "route_abs d ca = entered_abs d ca ''p''"
+  "route_abs d ca = entered_abs d ca (STR ''p'')"
 
 text \<open>The generic 4-argument routing hook, mirroring \<^const>\<open>route_ivl_gen\<close>.\<close>
 definition route_abs_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
@@ -75,9 +75,9 @@ text \<open>The route-consistency corollary: the abstract route on a pushed-forw
 lemma route_commute:
   "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = route_ivl s ca"
 proof -
-  have "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = entered_abs (fun_of_exec_dg_st_for twice_gs s) ca ''p''"
+  have "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = entered_abs (fun_of_exec_dg_st_for twice_gs s) ca (STR ''p'')"
     by (simp add: route_abs_def)
-  also have "\<dots> = fun_of_exec_dg_st_for twice_gs (entered_ivl s ca) ''p''"
+  also have "\<dots> = fun_of_exec_dg_st_for twice_gs (entered_ivl s ca) (STR ''p'')"
     by (simp add: entered_commute)
   also have "\<dots> = route_ivl s ca"
     by (simp add: route_ivl_def fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)

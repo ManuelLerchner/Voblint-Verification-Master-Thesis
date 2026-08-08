@@ -56,21 +56,101 @@ definition dispatch_demo_prog :: imp_prog where
 
 lemma dispatch_demo_sign_unknown:
   "analyse Sign_Analysis dispatch_demo_prog =
-     [(Statement 1, Less (N 0) (V ''y''), Check_Unknown),
-      (Statement 3, Less (N 0) (V ''y''), Check_Unknown)]"
+     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Unknown),
+      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Unknown)]"
   by eval
 
 lemma dispatch_demo_interval_precise:
   "analyse Interval_Analysis dispatch_demo_prog =
-     [(Statement 1, Less (N 0) (V ''y''), Check_Proved),
-      (Statement 3, Less (N 0) (V ''y''), Check_Refuted)]"
+     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
+      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
   by eval
 
+subsection \<open>Executable code generation\<close>
+
 text \<open>
-  Executable code generation for \<open>analyse\<close> and the raw AST constructors
-  lives downstream, in \<open>Example_Codegen_API\<close>, alongside the
-  \<^typ>\<open>String.literal\<close> program-construction facade built on top of them --
-  one \<open>export_code\<close> surface rather than two.
+  \<open>analyse\<close> genuinely takes the domain choice and the program as runtime
+  arguments, not constants baked in at export time. The raw AST constructors,
+  \<open>imp_prog.make\<close>, and \<open>proc_decl_of\<close> are exported alongside it so external
+  Haskell/OCaml code can build a fresh \<open>imp_prog\<close> and hand it to \<open>analyse\<close>.
+
+  \<^typ>\<open>vname\<close>/\<^typ>\<open>pname\<close> are \<^typ>\<open>String.literal\<close>
+  (\<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>/\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>), already
+  the target language's native string (\<^verbatim>\<open>String\<close> in Haskell,
+  \<^verbatim>\<open>string\<close> in OCaml --- \<^theory>\<open>HOL.String\<close> ships that mapping
+  unconditionally), so \<open>V\<close>/\<open>Assign\<close>/\<open>Random\<close>/\<open>com.Call\<close>/\<open>FunctionEntry\<close>/
+  \<open>FunctionResult\<close>/\<open>proc_decl_of\<close>/\<open>imp_prog.make\<close> below already take and
+  return native strings directly --- no separate construction facade needed.
+
+  \<^theory>\<open>HOL-Library.Code_Target_Numeral\<close> makes \<open>int\<close>/\<open>nat\<close> abstract types
+  backed by the target language's native arbitrary-precision integer
+  (Haskell's \<open>Integer\<close>, OCaml's target-numeral representation) instead of
+  Isabelle's own binary-numeral/Peano-successor encodings, so arithmetic and
+  comparisons inside the exported analyser run on native integers rather
+  than walking a \<open>Num\<close>/\<open>Nat\<close> term. \<open>int_of_integer\<close>/\<open>nat_of_integer\<close> and
+  their inverses \<open>integer_of_int\<close>/\<open>integer_of_nat\<close> are the resulting
+  bridge --- the only way external code can build or inspect an \<open>int\<close>/\<open>nat\<close>
+  once the representation is opaque.
+
+  \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close>, relevant
+  wherever a \<open>char\<close> is inspected directly (e.g. \<^const>\<open>String.explode\<close>'s
+  result) rather than through the opaque \<open>String.literal\<close> above.
+  \<open>char_of_integer\<close>/\<open>integer_of_char\<close> are that bridge.
 \<close>
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make proc_decl_of
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
+  Statement FunctionEntry FunctionResult
+  char_of_integer integer_of_char
+  prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
+  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  checking Haskell
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make proc_decl_of
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
+  Statement FunctionEntry FunctionResult
+  char_of_integer integer_of_char
+  prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
+  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  in Haskell module_name Voblint_Analyse file_prefix "Voblint_Analyse"
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make proc_decl_of
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
+  Statement FunctionEntry FunctionResult
+  char_of_integer integer_of_char
+  prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
+  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make proc_decl_of
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
+  Statement FunctionEntry FunctionResult
+  char_of_integer integer_of_char
+  prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
+  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
 
 end

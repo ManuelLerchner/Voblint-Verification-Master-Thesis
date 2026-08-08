@@ -446,7 +446,7 @@ text \<open>
 lemma analyse_sign_demo2_result:
   "map_option (\<lambda>sol. lookup_resolved_st_q
                         (locals (snd sol (Inl (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ()))))
-                        (location_of (declared_global analyse_sign_demo2_prog) ''c''))
+                        (location_of (declared_global analyse_sign_demo2_prog) (STR ''c'')))
      (TD_side_always_join_Interp_solve_c (analyse_sign_eqs analyse_sign_demo2_prog)
         (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ())) = Some STop"
   by eval

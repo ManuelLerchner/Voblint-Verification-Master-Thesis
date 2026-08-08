@@ -32,8 +32,8 @@ subsection \<open>The concrete program and its compiled CFG\<close>
 
 text \<open>
   A minimal call-free program \<^verbatim>\<open>x := 1; y := x\<close> inside \<open>main\<close>: the body occupies
-  \<open>Statement 0\<close>--\<open>Statement 2\<close> between \<open>FunctionEntry ''main''\<close> and
-  \<open>FunctionResult ''main''\<close>, and \<open>calls\<close> is empty.  \<open>gEx_eq\<close> proves the compilation
+  \<open>Statement 0\<close>--\<open>Statement 2\<close> between \<open>FunctionEntry (STR ''main'')\<close> and
+  \<open>FunctionResult (STR ''main'')\<close>, and \<open>calls\<close> is empty.  \<open>gEx_eq\<close> proves the compilation
   equals the explicit graph, matching the source-soundness pattern in
   \<open>Example_Interval_DG_Flagship\<close>.
 \<close>
@@ -60,7 +60,7 @@ definition gEx :: cfg where
   "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
 
 lemma gEx_calls: "calls gEx = {}" by eval
-lemma gEx_entry: "cfg_entry gEx = FunctionEntry ''main''" by eval
+lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')" by eval
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
@@ -179,8 +179,8 @@ text \<open>The diagonal Sign instance joins local answers and global side effec
   each edge. The executable result is therefore sound but imprecise at the exit.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. (sign_ex_lookup (locals (snd sol (Inl (Statement 2, ())))) ''x'',
-                       sign_ex_lookup (globs (snd sol (Inr ()))) ''x''))
+  "map_option (\<lambda>sol. (sign_ex_lookup (locals (snd sol (Inl (Statement 2, ())))) (STR ''x''),
+                       sign_ex_lookup (globs (snd sol (Inr ()))) (STR ''x'')))
      (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (STop, STop)"
   by eval
 

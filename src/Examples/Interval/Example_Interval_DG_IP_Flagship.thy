@@ -14,7 +14,7 @@ section \<open>The context-insensitive (monovariant) interval flagship\<close>
 
 text \<open>
   This is the non-context IP baseline: every call to \<open>twice\<close> is analyzed
-  under a single, shared abstract state at \<open>FunctionEntry ''twice''\<close>,
+  under a single, shared abstract state at \<open>FunctionEntry (STR ''twice'')\<close>,
   regardless of which call site reached it. It is the flagship the
   context-sensitive siblings sharpen -- \<open>Example_Interval_DG_Ctx_Flagship\<close>
   routes by the entered argument's abstract value, \<open>Example_Interval_DG_CallString\<close>
@@ -47,20 +47,20 @@ abbreviation twice_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightar
   "twice_lookup s x \<equiv> lookup_resolved_st_q s (location_of twice_gs x)"
 
 definition twice_cfg :: cfg where
-  "twice_cfg = compile_prog twice_pi twice_procs ''main'' twice_main"
+  "twice_cfg = compile_prog twice_pi twice_procs (STR ''main'') twice_main"
 
 text \<open>
   The compiled CFG.  Procedure \<open>twice\<close> runs between
-  \<open>FunctionEntry ''twice''\<close> and \<open>FunctionResult ''twice''\<close>: the body's \<open>return p + p\<close>
+  \<open>FunctionEntry (STR ''twice'')\<close> and \<open>FunctionResult (STR ''twice'')\<close>: the body's \<open>return p + p\<close>
   publishes through \<open>EA_Ret\<close> at statement \<open>0\<close>.  \<open>twice\<close> never falls through, so the
   continuation-passing compiler reserves no epilogue edge --- statement \<open>1\<close> is an
   unused index, not a node of the compiled graph.  \<open>main\<close> occupies statements \<open>2..4\<close>:
   \<open>2\<close> is the first call site, continuing directly at \<open>3\<close>, which is also the second
   call site, continuing at \<open>4\<close>.  Both call edges name the same callee entry
-  \<open>FunctionEntry ''twice''\<close> --- this is the monovariant (single-context) view.
+  \<open>FunctionEntry (STR ''twice'')\<close> --- this is the monovariant (single-context) view.
 \<close>
 
-lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry ''main''" by eval
+lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')" by eval
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
@@ -70,10 +70,10 @@ lemma twice_calls_shape:
   "\<forall>(u, ca, ce, cont) \<in> calls twice_cfg.
      case ca of CallEdge dst pars args \<Rightarrow>
        (case ce of FunctionEntry p \<Rightarrow>
-          (u = Statement 2 \<and> dst = Some ''x'' \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 3]
-             \<and> p = ''twice'' \<and> cont = Statement 3) \<or>
-          (u = Statement 3 \<and> dst = Some ''y'' \<and> pars = [''p''] \<and> args = [VIMP_Syntax.N 10]
-             \<and> p = ''twice'' \<and> cont = Statement 4)
+          (u = Statement 2 \<and> dst = Some (STR ''x'') \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 3]
+             \<and> p = (STR ''twice'') \<and> cont = Statement 3) \<or>
+          (u = Statement 3 \<and> dst = Some (STR ''y'') \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 10]
+             \<and> p = (STR ''twice'') \<and> cont = Statement 4)
         | _ \<Rightarrow> True)"
   unfolding twice_cfg_def by eval
 
@@ -130,12 +130,12 @@ text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<op
   return sites.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''p''),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''#ret''),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''x''),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) ''y'')))
-            ([FunctionEntry ''twice'', FunctionResult ''twice'',
-              FunctionEntry ''main'', FunctionResult ''main'']
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''p'')),
+                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''#ret'')),
+                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''x'')),
+                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''y''))))
+            ([FunctionEntry (STR ''twice''), FunctionResult (STR ''twice''),
+              FunctionEntry (STR ''main''), FunctionResult (STR ''main'')]
              @ map Statement [0,2,3,4]))
    (TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()))"
 
@@ -226,21 +226,21 @@ theorem twice_collect_sound:
 subsection \<open>Inspecting the certified result\<close>
 
 lemma twice_p_at_entry:
-  "twice_lookup (locals (snd twice_sol (Inl (FunctionEntry ''twice'', ())))) ''p''
+  "twice_lookup (locals (snd twice_sol (Inl (FunctionEntry (STR ''twice''), ())))) (STR ''p'')
      = Ivl (Fin 3) (Fin 10)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_ret_at_exit:
-  "twice_lookup (locals (snd twice_sol (Inl (FunctionResult ''twice'', ())))) ''#ret''
+  "twice_lookup (locals (snd twice_sol (Inl (FunctionResult (STR ''twice''), ())))) (STR ''#ret'')
      = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_x_computed:
-  "twice_lookup (locals (snd twice_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 6) (Fin 20)"
+  "twice_lookup (locals (snd twice_sol (Inl (Statement 3, ())))) (STR ''x'') = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_y_computed:
-  "twice_lookup (locals (snd twice_sol (Inl (Statement 4, ())))) ''y'' = Ivl (Fin 6) (Fin 20)"
+  "twice_lookup (locals (snd twice_sol (Inl (Statement 4, ())))) (STR ''y'') = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
@@ -275,7 +275,7 @@ qed
 
 subsection \<open>Source-level soundness\<close>
 
-lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs ''main'' twice_main"
+lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') twice_main"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
@@ -294,7 +294,7 @@ proof -
        \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
     unfolding twice_cfg_def twice_sol_def twice_eqs_def
     apply (rule twice_ex_reg.run_source_sound
-      [where Pi=twice_pi and ps=twice_procs and mnm="''main''" and main=twice_main])
+      [where Pi=twice_pi and ps=twice_procs and mnm="(STR ''main'')" and main=twice_main])
     apply (rule twice_terminates_c[unfolded twice_eqs_def twice_cfg_def])
     apply (rule twice_wf)
     apply (rule twice_cover_entry[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
@@ -317,8 +317,8 @@ text \<open>
   The tooling renders the two \<^const>\<open>CallEdge\<close> entries \<^bold>\<open>distinctly\<close> (thick
   purple, labelled \<open>enter\<close>) and the two combine/return edges as \<^bold>\<open>dashed blue\<close>
   (labelled \<open>combine via call@N\<close>).  Each node is annotated with \<open>p\<close>, \<open>#ret\<close>,
-  \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>FunctionEntry ''twice''\<close> shows
-  \<open>p in [3,10]\<close> and \<open>FunctionResult ''twice''\<close> shows \<open>#ret in [6,20]\<close>, while the
+  \<open>x\<close>, \<open>y\<close>; in particular the shared callee entry \<open>FunctionEntry (STR ''twice'')\<close> shows
+  \<open>p in [3,10]\<close> and \<open>FunctionResult (STR ''twice'')\<close> shows \<open>#ret in [6,20]\<close>, while the
   continuations \<open>3\<close> / \<open>4\<close> show \<open>x\<close> / \<open>y in [6,20]\<close>.
 \<close>
 
@@ -329,15 +329,15 @@ definition twice_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
+        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs ''main'' twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (twice_lookup d x)) vars),
+        String.explode x @ ''='' @ string_of_ivl (twice_lookup d x)) vars),
       format_return = (\<lambda>p ctx ret d.
         if twice_lookup d ret = ivl_top then []
         else [''ret='' @ string_of_ivl (twice_lookup d ret)]),
@@ -345,7 +345,7 @@ definition twice_graph_config ::
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
-      owner_of = compiled_owner_of twice_pi twice_procs ''main'' twice_main,
+      owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
       source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main),
       node_annotation = (\<lambda>_. None)

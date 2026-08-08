@@ -28,17 +28,17 @@ abbreviation m48_gs :: "vname \<Rightarrow> bool" where
   "m48_gs \<equiv> declared_global m48_program"
 
 text \<open>Case 1: a declared global with no naming hint at all.\<close>
-lemma m48_total_global [simp]: "m48_gs ''total''"
+lemma m48_total_global [simp]: "m48_gs (STR ''total'')"
   by (simp add: m48_program_def)
 
 text \<open>Case 2: a \<open>G\<close>-spelled local, correctly classified as not global.\<close>
-lemma m48_glocal_not_global [simp]: "\<not> m48_gs ''Glocal''"
+lemma m48_glocal_not_global [simp]: "\<not> m48_gs (STR ''Glocal'')"
   by (simp add: m48_program_def)
 
 text \<open>Case 3: the mixed program computes a real, non-trivial result: \<open>total\<close>
   starts at the \<open>SZero\<close> global seed, \<open>Glocal\<close> is locally \<open>1\<close> (\<open>SPos\<close>), and
   \<open>SZero \<squnion> SPos = SNonNeg\<close>.\<close>
-lemma m48_total_result: "sign_exec_prog m48_gs ''main'' m48_program ''total'' = SNonNeg"
+lemma m48_total_result: "sign_exec_prog m48_gs (STR ''main'') m48_program (STR ''total'') = SNonNeg"
   by eval
 
 subsection \<open>4. Classic exclusive placement\<close>

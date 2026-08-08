@@ -20,27 +20,20 @@ let mk_int n = Int_of_integer (Z.of_int n)
 
 let mk_nat n = nat_of_integer (Z.of_int n)
 
-(* `vname = char list` uses Isabelle's own `char` (opaque under
-   Code_Abstract_Char, imported by Example_Analysis_Dispatch), bridged to a
-   native integer by `char_of_integer`/`integer_of_char`. *)
-let mk_char c = char_of_integer (Z.of_int (Char.code c))
-
-let mk_string s = List.init (String.length s) (fun i -> mk_char s.[i])
-
-let un_char c = Char.chr (Z.to_int (integer_of_char c))
-
-let un_string cs = String.init (List.length cs) (fun i -> un_char (List.nth cs i))
+(* `vname`/`pname` are Isabelle's `String.literal`, which is already OCaml's
+   native `string` (see Example_Analysis_Dispatch.thy), so variable/procedure
+   names need no conversion at all. *)
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch.thy. *)
-let check_cond = Less (N (mk_int 0), V (mk_string "y"))
+let check_cond = Less (N (mk_int 0), V "y")
 
 let demo_prog =
   make []
     (Seq
        (Seq
-          (Seq (Assign (mk_string "y", N (mk_int 1)), Check check_cond),
-           Assign (mk_string "y", Minus (N (mk_int 0), N (mk_int 1))))
+          (Seq (Assign ("y", N (mk_int 1)), Check check_cond),
+           Assign ("y", Minus (N (mk_int 0), N (mk_int 1))))
        , Check check_cond))
     []
 
@@ -56,7 +49,7 @@ let show_int i = Z.to_string (integer_of_int i)
 
 let rec show_aexp = function
   | N i -> show_int i
-  | V s -> un_string s
+  | V s -> s
   | Plus (a, b) -> "(" ^ show_aexp a ^ " + " ^ show_aexp b ^ ")"
   | Minus (a, b) -> "(" ^ show_aexp a ^ " - " ^ show_aexp b ^ ")"
   | Times (a, b) -> "(" ^ show_aexp a ^ " * " ^ show_aexp b ^ ")"
@@ -80,8 +73,8 @@ let show_entry (n, (b, r)) =
   Printf.sprintf "(%s, %s, %s)"
     (match n with
      | Statement k -> "Statement " ^ show_nat k
-     | FunctionEntry s -> "FunctionEntry " ^ un_string s
-     | FunctionResult s -> "FunctionResult " ^ un_string s)
+     | FunctionEntry s -> "FunctionEntry " ^ s
+     | FunctionResult s -> "FunctionResult " ^ s)
     (show_bexp b) (show_check_result r)
 
 let check_case label actual expected =

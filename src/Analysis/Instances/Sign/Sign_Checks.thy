@@ -59,18 +59,18 @@ text \<open>One state per test, built as an override of an otherwise-unconstrain
   (\<open>STop\<close>) environment, so each test exercises exactly the comparison it names.\<close>
 
 definition test_env_pos :: "sign abs_state" where
-  "test_env_pos = (\<lambda>_. STop)(''x'' := SPos)"
+  "test_env_pos = (\<lambda>_. STop)((STR ''x'') := SPos)"
 
 lemma sign_classify_less_proved:
-  "sign_classify_check (Less (N 0) (V ''x'')) test_env_pos = Check_Proved"
+  "sign_classify_check (Less (N 0) (V (STR ''x''))) test_env_pos = Check_Proved"
   unfolding test_env_pos_def by eval
 
 lemma sign_classify_less_refuted:
-  "sign_classify_check (Less (V ''x'') (N 0)) test_env_pos = Check_Refuted"
+  "sign_classify_check (Less (V (STR ''x'')) (N 0)) test_env_pos = Check_Refuted"
   unfolding test_env_pos_def by eval
 
 lemma sign_classify_eq_unknown:
-  "sign_classify_check (Eq (V ''x'') (N 1)) test_env_pos = Check_Unknown"
+  "sign_classify_check (Eq (V (STR ''x'')) (N 1)) test_env_pos = Check_Unknown"
   unfolding test_env_pos_def by eval
 
 text \<open>Negation: \<open>!(x < 0)\<close> is provable under \<open>SNonNeg\<close>, going through
@@ -78,30 +78,30 @@ text \<open>Negation: \<open>!(x < 0)\<close> is provable under \<open>SNonNeg\<
   negation of \<open>check_true\<close>.\<close>
 
 definition test_env_nonneg :: "sign abs_state" where
-  "test_env_nonneg = (\<lambda>_. STop)(''x'' := SNonNeg)"
+  "test_env_nonneg = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
 
 lemma sign_classify_not_proved:
-  "sign_classify_check (Not (Less (V ''x'') (N 0))) test_env_nonneg = Check_Proved"
+  "sign_classify_check (Not (Less (V (STR ''x'')) (N 0))) test_env_nonneg = Check_Proved"
   unfolding test_env_nonneg_def by eval
 
 text \<open>Nested \<open>And\<close>/\<open>Or\<close>: proved through the \<open>And\<close> branch alone, and unknown
   when neither branch resolves.\<close>
 
 definition test_env_nested_proved :: "sign abs_state" where
-  "test_env_nested_proved = (\<lambda>_. STop)(''x'' := SPos, ''y'' := SPos)"
+  "test_env_nested_proved = (\<lambda>_. STop)((STR ''x'') := SPos, (STR ''y'') := SPos)"
 
 lemma sign_classify_nested_proved:
   "sign_classify_check
-     (Or (And (Less (N 0) (V ''x'')) (Less (N 0) (V ''y''))) (Eq (V ''z'') (N 1)))
+     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
      test_env_nested_proved = Check_Proved"
   unfolding test_env_nested_proved_def by eval
 
 definition test_env_nested_unknown :: "sign abs_state" where
-  "test_env_nested_unknown = (\<lambda>_. STop)(''x'' := SNonNeg, ''y'' := SPos)"
+  "test_env_nested_unknown = (\<lambda>_. STop)((STR ''x'') := SNonNeg, (STR ''y'') := SPos)"
 
 lemma sign_classify_nested_unknown:
   "sign_classify_check
-     (Or (And (Less (N 0) (V ''x'')) (Less (N 0) (V ''y''))) (Eq (V ''z'') (N 1)))
+     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 

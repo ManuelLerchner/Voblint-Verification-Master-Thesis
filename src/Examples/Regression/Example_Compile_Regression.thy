@@ -8,7 +8,7 @@ text \<open>These witnesses build small hand-written commands rather than compil
   program, so there is no \<^const>\<open>declared_global\<close> table to read a classifier off; they
   reuse the G-prefix convention directly as a fixed classifier.\<close>
 abbreviation cr_gs :: "vname \<Rightarrow> bool" where
-  "cr_gs \<equiv> (\<lambda>x. x \<noteq> [] \<and> hd x = CHR ''G'')"
+  "cr_gs \<equiv> (\<lambda>x. x \<noteq> STR '''' \<and> hd (String.explode x) = CHR ''G'')"
 
 lemma ex_return_before_dead:
   assumes "compile \<Pi> p (Seq (Return (Some e)) (Assign yv ay)) k n = (n', en, E, K)"
@@ -163,10 +163,12 @@ lemma ignored_value_call_accepted:
 
 definition fallthrough_pi :: proc_table where
   "fallthrough_pi p =
-     (if p = ''main'' then Some (proc_decl_of [] SKIP) else None)"
+     (if p = (STR ''main'') then Some (proc_decl_of [] SKIP) else None)"
+
+lemma explode_ret_hd [simp]: "hd (String.explode (STR ''#ret'')) \<noteq> CHR ''G''" by eval
 
 lemma main_fallthrough_accepted:
-  "wf_compile_input cr_gs fallthrough_pi [] ''main'' SKIP"
+  "wf_compile_input cr_gs fallthrough_pi [] (STR ''main'') SKIP"
   by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
         wf_proc_decl_def proc_decl_of_def reserved_ret_var_def ret_var_def)
 

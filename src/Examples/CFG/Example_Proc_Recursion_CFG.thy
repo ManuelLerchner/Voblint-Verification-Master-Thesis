@@ -26,20 +26,20 @@ definition proc_layout_regression_cfg :: cfg where
   "proc_layout_regression_cfg =
      compile_prog (prog_table proc_layout_regression_prog)
        (prog_procs proc_layout_regression_prog)
-       ''main'' (prog_main proc_layout_regression_prog)"
+       (STR ''main'') (prog_main proc_layout_regression_prog)"
 
 text \<open>A call edge names its callee entry and its continuation directly, so each case below
   reads the callee off the edge instead of off a separate matching relation.\<close>
 
 lemma proc_layout_regression_direct_recursion:
-  "(Statement 1, CallEdge None [] [], FunctionEntry ''f'', Statement 3)
+  "(Statement 1, CallEdge None [] [], FunctionEntry (STR ''f''), Statement 3)
      \<in> calls proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
 lemma proc_layout_regression_mutual_recursion:
-  "(Statement 4, CallEdge None [] [], FunctionEntry ''h'', Statement 5)
+  "(Statement 4, CallEdge None [] [], FunctionEntry (STR ''h''), Statement 5)
      \<in> calls proc_layout_regression_cfg \<and>
-   (Statement 6, CallEdge None [] [], FunctionEntry ''g'', Statement 7)
+   (Statement 6, CallEdge None [] [], FunctionEntry (STR ''g''), Statement 7)
      \<in> calls proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
@@ -47,12 +47,12 @@ text \<open>\<open>g\<close> calls \<open>h\<close>, which is declared after it:
   body is compiled, so a forward call needs no second pass.\<close>
 
 lemma proc_layout_regression_forward_call:
-  "(Statement 4, CallEdge None [] [], FunctionEntry ''h'', Statement 5)
+  "(Statement 4, CallEdge None [] [], FunctionEntry (STR ''h''), Statement 5)
      \<in> calls proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
 lemma proc_layout_regression_ordinary_call:
-  "(Statement 12, CallEdge None [] [], FunctionEntry ''inc'', Statement 13)
+  "(Statement 12, CallEdge None [] [], FunctionEntry (STR ''inc''), Statement 13)
      \<in> calls proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
@@ -61,17 +61,17 @@ text \<open>Layout regression: statement indices are allocated procedure by proc
   the first index of its block, and its \<^const>\<open>EA_Ret\<close> edge the last.\<close>
 
 lemma proc_layout_regression_blocks:
-  "(FunctionEntry ''f'', EA_Nop, Statement 0) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 3, EA_Ret None ''f'', FunctionResult ''f'') \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry ''g'', EA_Nop, Statement 4) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 5, EA_Ret None ''g'', FunctionResult ''g'') \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry ''h'', EA_Nop, Statement 6) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 7, EA_Ret None ''h'', FunctionResult ''h'') \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry ''inc'', EA_Nop, Statement 8) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 9, EA_Ret None ''inc'', FunctionResult ''inc'')
+  "(FunctionEntry (STR ''f''), EA_Nop, Statement 0) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 3, EA_Ret None (STR ''f''), FunctionResult (STR ''f'')) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''g''), EA_Nop, Statement 4) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 5, EA_Ret None (STR ''g''), FunctionResult (STR ''g'')) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''h''), EA_Nop, Statement 6) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 7, EA_Ret None (STR ''h''), FunctionResult (STR ''h'')) \<in> intra proc_layout_regression_cfg \<and>
+   (FunctionEntry (STR ''inc''), EA_Nop, Statement 8) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 9, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc''))
      \<in> intra proc_layout_regression_cfg \<and>
-   (FunctionEntry ''main'', EA_Nop, Statement 10) \<in> intra proc_layout_regression_cfg \<and>
-   (Statement 13, EA_Ret None ''main'', FunctionResult ''main'')
+   (FunctionEntry (STR ''main''), EA_Nop, Statement 10) \<in> intra proc_layout_regression_cfg \<and>
+   (Statement 13, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))
      \<in> intra proc_layout_regression_cfg"
   unfolding proc_layout_regression_cfg_def proc_layout_regression_prog_def by eval
 
