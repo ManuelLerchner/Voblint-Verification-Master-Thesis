@@ -1,5 +1,6 @@
 theory Exec_Ivl_Run
-  imports Voblint_Analysis.Ivl_Exec Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
+  imports Voblint_Analysis.Ivl_Exec Voblint_Analysis.Interval_Exec_Sound
+            Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -136,17 +137,114 @@ lemma loop_head_across_update_rules:
         (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"
   unfolding loop_ivl_eqs_def run_menu_def solver_menu_def by eval
 
+subsection \<open>Whole-program entry point: an arbitrary VIMP program (join rule)\<close>
+
+text \<open>
+  \<open>loop_ivl_eqs\<close> is built from @{const side_cfg_T_eff_st}, the same
+  equation-generation pipeline @{const ivl_exec_eqs} in \<open>Interval_Exec_Sound\<close>
+  uses --- not the native D/G spine (\<open>dg_gen_of\<close>) the Sign flagship
+  (\<open>Exec_Sign_DG_Run\<close>) uses.  That file's own whole-program layer,
+  @{const ivl_exec_prog} / @{const ivl_terminates_prog} /
+  \<open>ivl_exec_prog_sound_collecting\<close>, is already fully generic in the
+  classifier and the program, so \<open>analyse_interval_for\<close>/\<open>analyse_interval\<close>
+  below are thin renames, not a new proof: reusing the existing chain exactly
+  as instructed, rather than re-deriving a parallel one.
+
+  This gives a collecting-level guarantee (\<open>ltr_collect\<close>), the level this
+  pipeline already had proved for it, not the source-run/\<open>csim\<close> level
+  \<open>analyse_sign_sound\<close> gets from the D/G-native chain in the Sign flagship
+  --- \<open>Exec_Ivl_Run\<close> never established a source-run-level theorem for this
+  pipeline, so \<open>analyse_interval_sound\<close> does not manufacture one.
+\<close>
+
+definition analyse_interval_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval_for gs p = ivl_exec_prog gs prog_main_name p"
+
+definition analyse_interval :: "imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval p = analyse_interval_for (declared_global p) p"
+
+corollary analyse_interval_sound:
+  assumes "ivl_terminates_prog (declared_global p) prog_main_name p"
+  shows "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))
+           (cfg_exit (prog_cfg prog_main_name p))
+         \<le> \<lbrakk>analyse_interval p\<rbrakk>"
+  unfolding analyse_interval_def analyse_interval_for_def
+  by (rule ivl_exec_prog_sound_collecting[OF assms])
+
+text \<open>A different program from \<open>loop_prog\<close>, run through the very same
+  \<open>analyse_interval\<close>: the entry point is not specialized to one hard-coded
+  example.\<close>
+
+definition analyse_interval_demo2_prog :: imp_prog where
+  "analyse_interval_demo2_prog = program { void main() { a := 3; b := a + 1 } }"
+
+lemma analyse_interval_demo2_terminates:
+  "ivl_terminates_prog (declared_global analyse_interval_demo2_prog) prog_main_name
+     analyse_interval_demo2_prog"
+  by (rule ivl_terminates_prog_via_solve_c) eval
+
+lemma analyse_interval_demo2_result:
+  "analyse_interval analyse_interval_demo2_prog ''b'' = Ivl (Fin 4) (Fin 4)"
+  unfolding analyse_interval_def analyse_interval_for_def ivl_exec_prog_def
+    ivl_exec_prog_at_def prog_cfg_def
+  by eval
+
+subsection \<open>A warrowing-rule entry point (definition only, no soundness proof yet)\<close>
+
+text \<open>
+  \<open>analyse_interval_td\<close> mirrors \<open>analyse_interval\<close> but solves via
+  @{const TD_side_warrowing_apinis_Interp_solve} (the same rule
+  \<open>loop_ivl_td_sol\<close> uses above) instead of the always-join rule, following
+  \<open>ivl_exec_raw\<close>/\<open>ivl_exec_at\<close>/\<open>ivl_exec_prog\<close>'s own shape.  \<open>M3\<close> is
+  deliberately left open here: \<open>ivl_exec_prog_sound_collecting\<close>'s proof leans
+  on solver-specific side-restriction machinery
+  (\<open>TD_side_always_join_solve_Inr_rg\<close>) with no established warrowing-rule
+  analogue anywhere in the codebase.  Proving one is real new proof work
+  (does warrowing even preserve the same restriction invariant?), not a
+  rename, so it is flagged for the maintainer rather than attempted here.
+\<close>
+
+definition analyse_interval_td_raw ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
+  "analyse_interval_td_raw gs Pi ps mnm main =
+     snd (TD_side_warrowing_apinis_Interp_solve
+            (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main)))"
+
+definition analyse_interval_td_at ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
+  "analyse_interval_td_at gs Pi ps mnm main v =
+     side_env (fun_of_resolved_st_q_for gs \<circ> analyse_interval_td_raw gs Pi ps mnm main) v"
+
+definition analyse_interval_td_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval_td_for gs p =
+     analyse_interval_td_at gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (cfg_exit (prog_cfg prog_main_name p))"
+
+definition analyse_interval_td :: "imp_prog \<Rightarrow> ivl abs_state" where
+  "analyse_interval_td p = analyse_interval_td_for (declared_global p) p"
+
+lemma analyse_interval_td_demo2_result:
+  "analyse_interval_td analyse_interval_demo2_prog ''b'' = Ivl (Fin 4) (Fin 4)"
+  unfolding analyse_interval_td_def analyse_interval_td_for_def analyse_interval_td_at_def
+    analyse_interval_td_raw_def prog_cfg_def
+  by eval
+
 subsection \<open>Executable code generation\<close>
 
 text \<open>
   Both TD entry points, \<open>loop_ivl_sol\<close> (bounded Kleene) and \<open>loop_ivl_td_sol\<close>
   (Apinis warrowing), export through Isabelle's code generator, not merely
-  through \<open>eval\<close>/\<open>value\<close>.
+  through \<open>eval\<close>/\<open>value\<close>, alongside the classifier-generic \<open>analyse_interval\<close>
+  and \<open>analyse_interval_td\<close>.
 \<close>
 
-export_code loop_ivl_sol loop_ivl_td_sol in Haskell module_name Interval_Demo file_prefix "Interval_Demo"
+export_code loop_ivl_sol loop_ivl_td_sol
+  analyse_interval_for analyse_interval analyse_interval_td_for analyse_interval_td
+  in Haskell module_name Interval_Demo file_prefix "Interval_Demo"
 
-export_code loop_ivl_sol loop_ivl_td_sol in OCaml module_name Interval_Demo file_prefix "Interval_Demo_OCaml"
+export_code loop_ivl_sol loop_ivl_td_sol
+  analyse_interval_for analyse_interval analyse_interval_td_for analyse_interval_td
+  in OCaml module_name Interval_Demo file_prefix "Interval_Demo_OCaml"
 
 end
 

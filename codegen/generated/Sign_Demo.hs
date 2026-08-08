@@ -2,7 +2,8 @@
 
 module
   Sign_Demo(Char, Sum, Cfg_node, Sign, Dg_state, Resolved_st_q, Set, Cfg_ext,
-             Strategy_tree, Imp_prog_ext, dgEx_sol, analyse_sign)
+             Strategy_tree, Imp_prog_ext, dgEx_sol, analyse_sign_for,
+             analyse_sign)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -2627,25 +2628,31 @@ dgEx_sol ::
       Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
 dgEx_sol = tD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ());
 
-analyse_sign_eqs ::
-  Imp_prog_ext () ->
-    (Cfg_node, ()) ->
-      Strategy_tree (Cfg_node, ()) ()
-        (Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign_eqs p =
-  dg_gen_of
-    (unit_dg_spec_st_for (declared_global p)
-      (sign_tf_st_for (declared_global p))
-      (sign_enter_st_for (declared_global p)))
+analyse_sign_eqs_for ::
+  ([Char] -> Bool) ->
+    Imp_prog_ext () ->
+      (Cfg_node, ()) ->
+        Strategy_tree (Cfg_node, ()) ()
+          (Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
+analyse_sign_eqs_for gs p =
+  dg_gen_of (unit_dg_spec_st_for gs (sign_tf_st_for gs) (sign_enter_st_for gs))
     (prog_cfg prog_main_name p) bot_resolved_st_q cinit_sign_st cinit_sign_st;
+
+analyse_sign_for ::
+  ([Char] -> Bool) ->
+    Imp_prog_ext () ->
+      (Set (Cfg_node, ()),
+        Sum (Cfg_node, ()) () ->
+          Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
+analyse_sign_for gs p =
+  tD_side_always_join_Interp_solve (analyse_sign_eqs_for gs p)
+    (cfg_exit (prog_cfg prog_main_name p), ());
 
 analyse_sign ::
   Imp_prog_ext () ->
     (Set (Cfg_node, ()),
       Sum (Cfg_node, ()) () ->
         Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign p =
-  tD_side_always_join_Interp_solve (analyse_sign_eqs p)
-    (cfg_exit (prog_cfg prog_main_name p), ());
+analyse_sign p = analyse_sign_for (declared_global p) p;
 
 }

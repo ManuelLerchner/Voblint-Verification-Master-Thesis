@@ -13,11 +13,21 @@ isabelle build -v -j12 -o threads=12 -N -d "$AFP" -d "$TD_DIR" -D . Voblint_Exam
 
 rm -rf codegen/generated
 mkdir -p codegen/generated
+
+# Haskell exports nest one level deeper (code/<module>/<module>.hs) than
+# OCaml (code/<file_prefix>.ocaml), so they need different -p prune counts.
 isabelle export \
   -d "$AFP" -d "$TD_DIR" -d . \
   -O codegen/generated -p 3 \
-  -x 'Voblint_Examples.Exec_Sign_DG_Run:code/**' \
-  -x 'Voblint_Examples.Exec_Ivl_Run:code/**' \
+  -x 'Voblint_Examples.Exec_Sign_DG_Run:code/*/*.hs' \
+  -x 'Voblint_Examples.Exec_Ivl_Run:code/*/*.hs' \
+  Voblint_Examples
+
+isabelle export \
+  -d "$AFP" -d "$TD_DIR" -d . \
+  -O codegen/generated -p 2 \
+  -x 'Voblint_Examples.Exec_Sign_DG_Run:code/*.ocaml' \
+  -x 'Voblint_Examples.Exec_Ivl_Run:code/*.ocaml' \
   Voblint_Examples
 
 echo "Regenerated codegen/generated/:"
