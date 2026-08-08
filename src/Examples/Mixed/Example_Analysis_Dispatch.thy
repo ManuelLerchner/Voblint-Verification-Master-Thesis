@@ -37,6 +37,117 @@ fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
 
+subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
+
+text \<open>
+  \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>
+  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) and \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close>
+  (\<^theory>\<open>Voblint_Examples.Example_Sign_Codegen\<close>) are proved about \<open>analyse_interval_td_report\<close> and
+  \<open>analyse_sign_report\<close> --- the exact constants \<open>analyse\<close> pattern-matches to, one \<open>analyse.simps\<close>
+  equation away. The four corollaries below restate them directly over \<open>analyse\<close>, the constant
+  \<open>export_code\<close> exports, so connecting a runtime verdict to its soundness theorem never requires
+  unfolding the dispatcher by hand.
+
+  \<open>finite (intra (prog_cfg prog_main_name p))\<close> is dropped from the hypothesis lists below: since
+  \<^const>\<open>prog_cfg\<close> is \<^const>\<open>compile_prog\<close> under the hood, it always holds, for every \<open>p\<close>, by
+  \<open>compile_prog_finite\<close> --- not a per-program obligation.
+
+  The remaining hypotheses stay real per-program obligations, not free: solver termination
+  (\<open>analyse_interval_td_terminates\<close> for Interval; \<open>solve \<noteq> None\<close> plus the four \<open>cover_*\<close>
+  solver-exploration facts for Sign) and, for both domains, the checked node's reachability to
+  \<open>cfg_exit\<close>. Nothing in this formalization proves that either solver terminates on every input
+  program, so termination stays a genuine premise --- typically discharged \<open>by eval\<close> on a concrete
+  program via \<open>analyse_interval_td_terminates_via_solve_c\<close> / \<open>TD_side_always_join_Interp_solve_c\<close>
+  reflection, as \<open>dispatch_demo_first_check_certified\<close> below does for one concrete instance.
+  Consequently, a bare \<open>Check_Proved\<close>/\<open>Check_Refuted\<close> value \<open>analyse\<close> returns at runtime is not
+  itself a discharged certificate: turning it into one requires supplying these two facts for the
+  specific program and node.
+\<close>
+
+corollary analyse_interval_proved_sound:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
+                          prog_main_name (prog_main p)"
+      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+      and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           bval c s"
+proof -
+  have fin: "finite (intra (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  show ?thesis
+    by (rule analyse_interval_td_report_sound_proved
+          [OF fin terminates reach_exit mem[unfolded analyse.simps]])
+qed
+
+corollary analyse_interval_refuted_sound:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
+                          prog_main_name (prog_main p)"
+      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+      and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> bval c s"
+proof -
+  have fin: "finite (intra (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  show ?thesis
+    by (rule analyse_interval_td_report_sound_refuted
+          [OF fin terminates reach_exit mem[unfolded analyse.simps]])
+qed
+
+corollary analyse_sign_proved_sound:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+      and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign p)"
+      and cover_edge:
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign p)"
+      and cover_enter:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign p)"
+      and cover_combine:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign p)"
+      and mem: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. bval c s"
+proof -
+  have finI: "finite (intra (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  have finC: "finite (calls (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  show ?thesis
+    by (rule analyse_sign_report_sound_proved
+          [OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC
+              mem[unfolded analyse.simps]])
+qed
+
+corollary analyse_sign_refuted_sound:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+      and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign p)"
+      and cover_edge:
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign p)"
+      and cover_enter:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign p)"
+      and cover_combine:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign p)"
+      and mem: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> bval c s"
+proof -
+  have finI: "finite (intra (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  have finC: "finite (calls (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  show ?thesis
+    by (rule analyse_sign_report_sound_refuted
+          [OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC
+              mem[unfolded analyse.simps]])
+qed
+
 subsection \<open>A program that tells the two domains apart\<close>
 
 text \<open>
@@ -70,6 +181,73 @@ lemma dispatch_demo_interval_precise:
      [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
       (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
   by eval
+
+text \<open>
+  Structural facts about the compiled CFG, computed rather than asserted: the intra edges (there
+  are no calls in this program) and the exit node --- the ingredients \<open>cfg_reaches_intra\<close> below
+  chains into the first check's reachability to \<open>cfg_exit\<close>.
+\<close>
+
+lemma dispatch_demo_intra_eval:
+  "intra (prog_cfg prog_main_name dispatch_demo_prog) =
+     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+      (Statement 0, EA_Assign (STR ''y'') (N 1), Statement 1),
+      (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
+      (Statement 2, EA_Assign (STR ''y'') (Minus (N 0) (N 1)), Statement 3),
+      (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
+      (Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
+  unfolding prog_cfg_def by eval
+
+lemma dispatch_demo_exit_eval:
+  "cfg_exit (prog_cfg prog_main_name dispatch_demo_prog) = FunctionResult (STR ''main'')"
+  unfolding prog_cfg_def by eval
+
+text \<open>Structural reachability of the first check node to the exit --- a fact about the CFG's
+  shape, following the same \<open>cfg_reaches_intra\<close>/\<open>cfg_reaches_trans\<close> chaining as
+  \<open>checks_ivl_ex_statement2_reaches_exit\<close> (\<open>Example_Interval_Checks_Store_Only\<close>).\<close>
+
+lemma dispatch_demo_statement1_reaches_exit:
+  "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 1)
+     (cfg_exit (prog_cfg prog_main_name dispatch_demo_prog))"
+proof -
+  have r1: "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 1) (Statement 2)"
+    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
+  have r2: "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 2) (Statement 3)"
+    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
+  have r3: "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 3) (Statement 4)"
+    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
+  have r4: "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 4)
+              (FunctionResult (STR ''main''))"
+    by (rule cfg_reaches_intra) (simp add: dispatch_demo_intra_eval)
+  show ?thesis
+    unfolding dispatch_demo_exit_eval
+    using r1 r2 r3 r4 cfg_reaches_trans by blast
+qed
+
+text \<open>
+  The end-to-end witness: not just that the soundness machinery \<^emph>\<open>could\<close> certify a runtime
+  verdict, but that it does, for one concrete program and node, with every hypothesis of
+  \<open>analyse_interval_proved_sound\<close> actually discharged rather than left open. \<open>terminates\<close>
+  reflects the same \<open>eval\<close> witness \<open>dispatch_demo_interval_precise\<close> already computes the report
+  from; \<open>reach_exit\<close> is \<open>dispatch_demo_statement1_reaches_exit\<close> above; \<open>mem\<close> reads off
+  \<open>dispatch_demo_interval_precise\<close>. No assumption remains: this is a closed theorem about a
+  concrete \<open>Check_Proved\<close> value \<open>analyse\<close> actually returns.
+\<close>
+
+theorem dispatch_demo_first_check_certified:
+  "\<forall>s \<in> ltr_collect (declared_global dispatch_demo_prog) (prog_cfg prog_main_name dispatch_demo_prog)
+           (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
+     bval (Less (N 0) (V (STR ''y''))) s"
+proof (rule analyse_interval_proved_sound)
+  show "analyse_interval_td_terminates (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
+          (prog_procs dispatch_demo_prog) prog_main_name (prog_main dispatch_demo_prog)"
+    by (rule analyse_interval_td_terminates_via_solve_c) eval
+  show "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 1)
+          (cfg_exit (prog_cfg prog_main_name dispatch_demo_prog))"
+    by (rule dispatch_demo_statement1_reaches_exit)
+  show "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
+    unfolding dispatch_demo_interval_precise by simp
+qed
 
 text \<open>
   \<^const>\<open>string_of_bexp\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>, already an

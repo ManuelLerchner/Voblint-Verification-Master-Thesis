@@ -415,6 +415,36 @@ text \<open>
       \<^verbatim>\<open>dispatch_demo_interval_precise\<close> already proved --- so the generated
       Haskell/OCaml is checked against the same theorems as the Isabelle
       source, not merely assumed to match it.
+
+      \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
+      equations of the HOL constant \<^verbatim>\<open>analyse\<close> and everything it transitively
+      calls --- \<^verbatim>\<open>analyse_sign_report\<close>/\<^verbatim>\<open>analyse_interval_td_report\<close> down to
+      the warrowing solver itself. It is not proving one function and exporting
+      a different, hand-written one: the generated \<^verbatim>\<open>analyse\<close> is a translation
+      of the same equations \<^verbatim>\<open>analyse_sign_report_sound_proved\<close>/\<^verbatim>\<open>_refuted\<close>
+      and \<^verbatim>\<open>analyse_interval_td_report_sound_proved\<close>/\<^verbatim>\<open>_refuted\<close> are proved
+      about. The proof term itself is erased by code generation, as for any
+      \<^verbatim>\<open>export_code\<close> use --- what survives is that the exported constant
+      \<^emph>\<open>is\<close> the proved one, not an assumed match to it.
+      \<^verbatim>\<open>analyse_interval_proved_sound\<close>/\<^verbatim>\<open>analyse_interval_refuted_sound\<close> and
+      \<^verbatim>\<open>analyse_sign_proved_sound\<close>/\<^verbatim>\<open>analyse_sign_refuted_sound\<close> restate those
+      theorems directly over \<^verbatim>\<open>analyse\<close>, so this connection does not require
+      unfolding the dispatcher's \<^verbatim>\<open>fun\<close> equations by hand.
+
+      These soundness theorems are conditional, not automatic: a
+      \<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close> value \<^verbatim>\<open>analyse\<close> returns at runtime is
+      not itself a discharged certificate. Beyond report membership, applying
+      the theorem to a concrete program additionally needs a solver-termination
+      witness for that program --- nothing here proves that either solver
+      terminates on every input, so termination is a genuine per-program fact,
+      typically discharged \<^verbatim>\<open>by eval\<close> via
+      \<^verbatim>\<open>analyse_interval_td_terminates_via_solve_c\<close> --- and a proof that the
+      checked node reaches \<^verbatim>\<open>cfg_exit\<close>, a real structural fact about the
+      compiled CFG, not a formality. \<^verbatim>\<open>dispatch_demo_first_check_certified\<close>
+      is one complete instance of the whole chain with every hypothesis
+      actually discharged: a concrete \<^verbatim>\<open>Check_Proved\<close> value \<^verbatim>\<open>analyse\<close> returns
+      for \<^verbatim>\<open>dispatch_demo_prog\<close>, proved semantically correct with no assumption
+      left open.
 \<close>
 
 text \<open>

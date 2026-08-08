@@ -162,15 +162,33 @@ make AFP=/path/to/afp/thys jedit
 
 ### Executable code generation
 
-Each domain exposes a runtime-program entry point, `analyse_sign` /
-`analyse_interval` (`Voblint_Examples.Example_Sign_Codegen`,
-`Voblint_Analysis.Interval_Checks`), reusing the same native D/G pipeline as
-the soundness theorems -- not a parallel one. `analyse`
+Each domain exposes a runtime-program entry point -- `analyse_sign_report`
+(`Voblint_Examples.Example_Sign_Codegen`, the native D/G pipeline) and
+`analyse_interval_td_report` (`Voblint_Analysis.Interval_Checks`, the
+widening/warrowing-backed solver) -- reusing the exact functions the
+soundness theorems are proved about, not a parallel implementation. `analyse`
 (`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_kind`
 (`Sign_Analysis`/`Interval_Analysis`) to either domain's check report. All
 three, plus the VIMP AST constructors, are exported to Haskell and OCaml so
 external code can build a program and call `analyse` without touching
-Isabelle.
+Isabelle: `export_code` translates the same executable equations the kernel
+checked, so the generated function is not a hand-written stand-in for a
+proved one.
+
+`analyse_interval_proved_sound`/`analyse_interval_refuted_sound` and
+`analyse_sign_proved_sound`/`analyse_sign_refuted_sound`
+(`Example_Analysis_Dispatch.thy`) restate the domains' soundness theorems
+directly over `analyse`, so a runtime verdict connects to its soundness proof
+without unfolding the dispatcher by hand. These theorems are conditional: a
+`Check_Proved`/`Check_Refuted` entry `analyse` returns is not itself a
+discharged certificate. Applying its soundness theorem additionally requires,
+for that program, a solver-termination witness (no result in this
+formalization proves either solver terminates on every input -- termination
+is checked per program, typically `by eval`) and a proof that the checked
+node reaches `cfg_exit`. `dispatch_demo_first_check_certified` is one
+complete, hypothesis-free instance of this chain: a concrete `Check_Proved`
+verdict `analyse` actually returns, with both facts discharged and no
+assumption left open.
 
 ```bash
 # Regenerate codegen/generated/ from the export_code declarations
