@@ -16,7 +16,7 @@ AC_DIR          := vendor/autocorrode
 LINTER_DIR      := /tmp/isabelle-linter
 LINTER_TAG      := Isabelle2025-2-v1.0.0
 
-.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch
+.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch codegen
 
 all: build
 
@@ -51,6 +51,12 @@ bootstrap: vendor
 build: vendor
 	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
 	$(ISABELLE) build -v -j12 -o threads=12 -N -d $(AFP) -d $(TD_DIR) -D . $(SESSION)
+
+# Regenerate codegen/generated/ from the export_code declarations in
+# src/Examples/{Sign,Interval}/Exec_*.thy. Do not hand-edit generated files.
+codegen: vendor
+	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
+	AFP=$(AFP) ./scripts/regenerate-codegen.sh
 
 # HTML browser info for all session theories (see Isabelle System Manual, browser_info).
 # Output is copied to $(HTML_DIR)/ for a repo-local entry point; Isabelle also keeps a

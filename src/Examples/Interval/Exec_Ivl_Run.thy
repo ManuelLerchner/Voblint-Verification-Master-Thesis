@@ -144,7 +144,9 @@ text \<open>
   through \<open>eval\<close>/\<open>value\<close>.
 \<close>
 
-export_code loop_ivl_sol loop_ivl_td_sol in Haskell module_name Interval_Demo
+export_code loop_ivl_sol loop_ivl_td_sol in Haskell module_name Interval_Demo file_prefix "Interval_Demo"
+
+export_code loop_ivl_sol loop_ivl_td_sol in OCaml module_name Interval_Demo file_prefix "Interval_Demo_OCaml"
 
 end
 
