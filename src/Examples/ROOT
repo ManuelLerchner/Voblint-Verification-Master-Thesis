@@ -79,11 +79,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Voblint
   document_files
     (in "../Analysis/document") "root.bib"
-  export_files (in "../../codegen/generated") [3]
-    "Voblint_Examples.Example_Sign_Codegen:code/*/*.hs"
-    "Voblint_Examples.Exec_Ivl_Run:code/*/*.hs"
+  export_files (in "../../codegen/generated/hs") [3]
     "Voblint_Examples.Example_Analysis_Dispatch:code/*/*.hs"
-  export_files (in "../../codegen/generated") [2]
-    "Voblint_Examples.Example_Sign_Codegen:code/*.ocaml"
-    "Voblint_Examples.Exec_Ivl_Run:code/*.ocaml"
+  export_files (in "../../codegen/generated/ml") [2]
     "Voblint_Examples.Example_Analysis_Dispatch:code/*.ocaml"

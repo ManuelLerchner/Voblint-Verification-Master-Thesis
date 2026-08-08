@@ -3126,10 +3126,257 @@ destab_iter_opt (y : ys) i s c =
     (ia, sa) -> destab_iter_opt ys ia sa c;
   });
 
+fun_of_exec_dg_st_for ::
+  forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
+fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
+
+rho_update ::
+  forall a b c d.
+    ((a -> Fmap b c) -> a -> Fmap b c) ->
+      Ug_state_ext b a c d -> Ug_state_ext b a c d;
+rho_update rhoa (Ug_state_ext rho more) = Ug_state_ext (rhoa rho) more;
+
+update_global_always_join ::
+  forall a b c.
+    (Eq a, Bounded_semilattice_sup_bot a, Eq b,
+      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
+                                     (Maybe a, Ug_state_ext b c a ());
+update_global_always_join da orig g d state =
+  let {
+    statea =
+      rho_update (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
+        state;
+    db = sup da d;
+  } in (if db == da then (Nothing, statea) else (Just db, statea));
+
+warrow :: forall a. (Warrowing a) => a -> a -> a;
+warrow a b = (if less_eq b a then narrow a b else widen a b);
+
+point_update ::
+  forall a b c d.
+    (Set a -> Set a) ->
+      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
+point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
+  State_ext c infl stabl sigma (State_exta (pointa point) more);
+
+tD_side_always_join_Interp_solve_rec_c ::
+  forall a b c.
+    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
+      Warrowing c) => (a -> Strategy_tree a b c) ->
+                        Func_state a b c () ->
+                          Maybe (c, (State_ext a b c (State_exta a ()),
+                                      Ug_state_ext a b c ()));
+tD_side_always_join_Interp_solve_rec_c t s =
+  (case s of {
+    Q (y, (x, (state, ug_state))) ->
+      bind (if member x (c state)
+             then Just (sigma state (Inl x),
+                         (point_update (\ _ -> insert x (point state)) state,
+                           ug_state))
+             else tD_side_always_join_Interp_solve_rec_c t
+                    (I (x, (c_update (\ _ -> insert x (c state)) state,
+                             ug_state))))
+        (\ (xd, (statea, ug_statea)) ->
+          Just (xd, (infl_update (\ _ -> fminsert (infl statea) (Inl x) y)
+                       statea,
+                      ug_statea)));
+    I (x, (state, ug_state)) ->
+      (if not (member x (stabl state))
+        then bind (tD_side_always_join_Interp_solve_rec_c t
+                    (R (x, (state, ug_state))))
+               (\ (d_new, (state1, ug_state1)) ->
+                 let {
+                   d_newa =
+                     (if member x (point state)
+                       then warrow (sigma state1 (Inl x)) d_new else d_new);
+                 } in (if sigma state1 (Inl x) == d_newa
+                        then Just (d_newa,
+                                    (point_update
+                                       (\ _ -> remove x (point state1))
+                                       (c_update (\ _ -> remove x (c state1))
+ state1),
+                                      ug_state1))
+                        else (case destab_opt (Inl x) (infl state1)
+                                     (stabl state1) (c state1)
+                               of {
+                               (infl1, stabl1) ->
+                                 tD_side_always_join_Interp_solve_rec_c t
+                                   (I (x,
+(sigma_update (\ _ -> fun_upd (sigma state1) (Inl x) d_newa)
+   (stabl_update (\ _ -> stabl1) (infl_update (\ _ -> infl1) state1)),
+  ug_state1)));
+                             })))
+        else Just (sigma state (Inl x),
+                    (point_update (\ _ -> remove x (point state))
+                       (c_update (\ _ -> remove x (c state)) state),
+                      ug_state)));
+    R (x, (state, ug_state)) ->
+      bind (tD_side_always_join_Interp_solve_rec_c t
+             (E (x, (t x, ((\ _ -> bot),
+                            (stabl_update (\ _ -> insert x (stabl state)) state,
+                              ug_state))))))
+        (\ (xd, (statea, ug_statea)) ->
+          (if member x (stabl statea) then Just (xd, (statea, ug_statea))
+            else tD_side_always_join_Interp_solve_rec_c t
+                   (R (x, (statea, ug_statea)))));
+    E (_, (Answer d, (_, (state, ug_state)))) -> Just (d, (state, ug_state));
+    E (x, (QueryL y g, (sides_a_c_c, (state, ug_state)))) ->
+      bind (tD_side_always_join_Interp_solve_rec_c t
+             (Q (x, (y, (state, ug_state)))))
+        (\ (yd, (statea, ug_statea)) ->
+          tD_side_always_join_Interp_solve_rec_c t
+            (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))));
+    E (x, (QueryG y g, (sides_a_c_c, (state, ug_state)))) ->
+      tD_side_always_join_Interp_solve_rec_c t
+        (E (x, (g (sigma state (Inr y)),
+                 (sides_a_c_c,
+                   (infl_update (\ _ -> fminsert (infl state) (Inr y) x) state,
+                     ug_state)))));
+    E (x, (Side y d ta, (sides_a_c_c, (state, ug_state)))) ->
+      let {
+        da = sup (sides_a_c_c y) d;
+        sides_a_c_ca = fun_upd sides_a_c_c y da;
+      } in (case update_global_always_join (sigma state (Inr y)) x y da ug_state
+             of {
+             (Nothing, ug_statea) ->
+               tD_side_always_join_Interp_solve_rec_c t
+                 (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))));
+             (Just db, ug_statea) ->
+               (case destab_opt (Inr y) (infl state) (stabl state) (c state) of
+                 {
+                 (infla, stabla) ->
+                   tD_side_always_join_Interp_solve_rec_c t
+                     (E (x, (ta, (sides_a_c_ca,
+                                   (sigma_update
+                                      (\ _ -> fun_upd (sigma state) (Inr y) db)
+                                      (stabl_update (\ _ -> stabla)
+(infl_update (\ _ -> infla) state)),
+                                     ug_statea)))));
+               });
+           });
+  });
+
+init_state ::
+  forall a b c.
+    (Bounded_semilattice_sup_bot c,
+      Warrowing c) => State_ext a b c (State_exta a ());
+init_state =
+  State_ext bot_set fmempty bot_set (\ _ -> bot) (State_exta bot_set ());
+
+init_basic_ug_state :: forall a b c. (Order_bot c) => Ug_state_ext a b c ();
+init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
+
+tD_side_always_join_Interp_solve_c ::
+  forall a b c.
+    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
+      Warrowing c) => (a -> Strategy_tree a b c) ->
+                        a -> Maybe (Set a, Sum a b -> c);
+tD_side_always_join_Interp_solve_c t x =
+  bind (tD_side_always_join_Interp_solve_rec_c t
+         (I (x, (c_update
+                   (\ _ ->
+                     insert x
+                       (c (init_state :: State_ext a b c (State_exta a ()))))
+                   init_state,
+                  init_basic_ug_state))))
+    (\ (_, (state, _)) -> Just (stabl state, sigma state));
+
+tD_side_always_join_Interp_solve ::
+  forall a b c.
+    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
+      Warrowing c) => (a -> Strategy_tree a b c) -> a -> (Set a, Sum a b -> c);
+tD_side_always_join_Interp_solve t x =
+  (case tD_side_always_join_Interp_solve_c t x of {
+    Nothing ->
+      (error :: forall a. String -> (() -> a) -> a) "Input not in domain"
+        (\ _ -> tD_side_always_join_Interp_solve t x);
+    Just r -> r;
+  });
+
+combine_assign_resolved_q ::
+  forall a.
+    (Bot a) => (String -> Bool) ->
+                 Maybe String -> a -> Resolved_st_q a -> Resolved_st_q a;
+combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
+  Abs_resolved_st (combine_assign_resolved xc xb xa x);
+
+unit_combine_step_st_assign_for ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ Maybe String ->
+   Resolved_st_q a ->
+     Resolved_st_q a ->
+       (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
+unit_combine_step_st_assign_for gs dst de g merged =
+  let {
+    res = combine_assign_resolved_q gs dst
+            (lookup_resolved_st_q (sup_resolved_st_q de g)
+              (location_of gs ret_var))
+            (sup_resolved_st_q (fst merged) (snd merged));
+  } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
+
+unit_combine_step_st_env ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => Resolved_st_q a ->
+ Resolved_st_q a -> Resolved_st_q a -> (Resolved_st_q a, Resolved_st_q a);
+unit_combine_step_st_env dc de g =
+  let {
+    m = combine_resolved_st_q (sup_resolved_st_q dc g) (sup_resolved_st_q de g);
+  } in (restrict_global_resolved_q m, restrict_local_resolved_q m);
+
+unit_dg_spec_st_for ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
+ (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
+   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
+     Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
+unit_dg_spec_st_for gs tf_st enter_st =
+  Dg_spec_ext (unit_step_st (tf_st EA_Nop))
+    (\ x e -> unit_step_st (tf_st (EA_Assign x e)))
+    (\ x -> unit_step_st (tf_st (EA_Random x)))
+    (\ b -> unit_step_st (tf_st (EA_Assume b)))
+    (\ b -> unit_step_st (tf_st (EA_AssumeNot b)))
+    (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
+    (unit_combine_step_st_assign_for gs) ();
+
+analyse_sign_eqs_for ::
+  (String -> Bool) ->
+    Imp_prog_ext () ->
+      (Cfg_node, ()) ->
+        Strategy_tree (Cfg_node, ()) ()
+          (Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
+analyse_sign_eqs_for gs p =
+  dg_gen_of (unit_dg_spec_st_for gs (sign_tf_st_for gs) (sign_enter_st_for gs))
+    (prog_cfg prog_main_name p) bot_resolved_st_q cinit_sign_st cinit_sign_st;
+
+analyse_sign_for ::
+  (String -> Bool) ->
+    Imp_prog_ext () ->
+      (Set (Cfg_node, ()),
+        Sum (Cfg_node, ()) () ->
+          Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
+analyse_sign_for gs p =
+  tD_side_always_join_Interp_solve (analyse_sign_eqs_for gs p)
+    (cfg_exit (prog_cfg prog_main_name p), ());
+
 sign_classify_check :: Bexp -> (String -> Sign) -> Check_result;
 sign_classify_check c d =
   (if sign_check_true c d then Check_Proved
     else (if sign_check_false c d then Check_Refuted else Check_Unknown));
+
+analyse_sign_report_for ::
+  (String -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+analyse_sign_report_for gs p =
+  let {
+    sol = snd (analyse_sign_for gs p);
+  } in classify_checks (prog_cfg prog_main_name p)
+         (\ v ->
+           sup_fun (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+             (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+         sign_classify_check;
+
+analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+analyse_sign_report p = analyse_sign_report_for (declared_global p) p;
 
 modulo_nat :: Nat -> Nat -> Nat;
 modulo_nat m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));
@@ -3164,9 +3411,6 @@ ivl_exec_eqs gs pi ps mnm main =
   side_cfg_T_eff_st (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
     bot_resolved_st_q cinit_ivl_st ();
 
-init_basic_ug_state :: forall a b c. (Order_bot c) => Ug_state_ext a b c ();
-init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
-
 string_of_aexp :: Aexp -> [Char];
 string_of_aexp (N n) = string_of_int n;
 string_of_aexp (V x) = explode x;
@@ -3199,15 +3443,6 @@ string_of_bexp (Less a1 a2) =
 string_of_bexp (Eqb a1 a2) =
   string_of_aexp a1 ++ [char_0x3D, char_0x3D] ++ string_of_aexp a2;
 
-warrow :: forall a. (Warrowing a) => a -> a -> a;
-warrow a b = (if less_eq b a then narrow a b else widen a b);
-
-rho_update ::
-  forall a b c d.
-    ((a -> Fmap b c) -> a -> Fmap b c) ->
-      Ug_state_ext b a c d -> Ug_state_ext b a c d;
-rho_update rhoa (Ug_state_ext rho more) = Ug_state_ext (rhoa rho) more;
-
 update_global_warrowing_apinis ::
   forall a b c.
     (Eq a, Bounded_semilattice_sup_bot a, Warrowing a, Eq b,
@@ -3222,13 +3457,6 @@ update_global_warrowing_apinis da orig g d state =
                state;
            db = warrow da (sup_over_origins statea g);
          } in (Just db, statea));
-
-point_update ::
-  forall a b c d.
-    (Set a -> Set a) ->
-      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
-point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
-  State_ext c infl stabl sigma (State_exta (pointa point) more);
 
 tD_side_warrowing_apinis_Interp_solve_rec_c ::
   forall a b c.
@@ -3327,13 +3555,6 @@ tD_side_warrowing_apinis_Interp_solve_rec_c t s =
                });
            });
   });
-
-init_state ::
-  forall a b c.
-    (Bounded_semilattice_sup_bot c,
-      Warrowing c) => State_ext a b c (State_exta a ());
-init_state =
-  State_ext bot_set fmempty bot_set (\ _ -> bot) (State_exta bot_set ());
 
 tD_side_warrowing_apinis_Interp_solve_c ::
   forall a b c.
@@ -3435,227 +3656,6 @@ analyse_interval_td_report ::
   Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_interval_td_report p =
   interval_td_check_report (declared_global p) prog_main_name p;
-
-update_global_always_join ::
-  forall a b c.
-    (Eq a, Bounded_semilattice_sup_bot a, Eq b,
-      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
-                                     (Maybe a, Ug_state_ext b c a ());
-update_global_always_join da orig g d state =
-  let {
-    statea =
-      rho_update (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
-        state;
-    db = sup da d;
-  } in (if db == da then (Nothing, statea) else (Just db, statea));
-
-tD_side_always_join_Interp_solve_rec_c ::
-  forall a b c.
-    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
-      Warrowing c) => (a -> Strategy_tree a b c) ->
-                        Func_state a b c () ->
-                          Maybe (c, (State_ext a b c (State_exta a ()),
-                                      Ug_state_ext a b c ()));
-tD_side_always_join_Interp_solve_rec_c t s =
-  (case s of {
-    Q (y, (x, (state, ug_state))) ->
-      bind (if member x (c state)
-             then Just (sigma state (Inl x),
-                         (point_update (\ _ -> insert x (point state)) state,
-                           ug_state))
-             else tD_side_always_join_Interp_solve_rec_c t
-                    (I (x, (c_update (\ _ -> insert x (c state)) state,
-                             ug_state))))
-        (\ (xd, (statea, ug_statea)) ->
-          Just (xd, (infl_update (\ _ -> fminsert (infl statea) (Inl x) y)
-                       statea,
-                      ug_statea)));
-    I (x, (state, ug_state)) ->
-      (if not (member x (stabl state))
-        then bind (tD_side_always_join_Interp_solve_rec_c t
-                    (R (x, (state, ug_state))))
-               (\ (d_new, (state1, ug_state1)) ->
-                 let {
-                   d_newa =
-                     (if member x (point state)
-                       then warrow (sigma state1 (Inl x)) d_new else d_new);
-                 } in (if sigma state1 (Inl x) == d_newa
-                        then Just (d_newa,
-                                    (point_update
-                                       (\ _ -> remove x (point state1))
-                                       (c_update (\ _ -> remove x (c state1))
- state1),
-                                      ug_state1))
-                        else (case destab_opt (Inl x) (infl state1)
-                                     (stabl state1) (c state1)
-                               of {
-                               (infl1, stabl1) ->
-                                 tD_side_always_join_Interp_solve_rec_c t
-                                   (I (x,
-(sigma_update (\ _ -> fun_upd (sigma state1) (Inl x) d_newa)
-   (stabl_update (\ _ -> stabl1) (infl_update (\ _ -> infl1) state1)),
-  ug_state1)));
-                             })))
-        else Just (sigma state (Inl x),
-                    (point_update (\ _ -> remove x (point state))
-                       (c_update (\ _ -> remove x (c state)) state),
-                      ug_state)));
-    R (x, (state, ug_state)) ->
-      bind (tD_side_always_join_Interp_solve_rec_c t
-             (E (x, (t x, ((\ _ -> bot),
-                            (stabl_update (\ _ -> insert x (stabl state)) state,
-                              ug_state))))))
-        (\ (xd, (statea, ug_statea)) ->
-          (if member x (stabl statea) then Just (xd, (statea, ug_statea))
-            else tD_side_always_join_Interp_solve_rec_c t
-                   (R (x, (statea, ug_statea)))));
-    E (_, (Answer d, (_, (state, ug_state)))) -> Just (d, (state, ug_state));
-    E (x, (QueryL y g, (sides_a_c_c, (state, ug_state)))) ->
-      bind (tD_side_always_join_Interp_solve_rec_c t
-             (Q (x, (y, (state, ug_state)))))
-        (\ (yd, (statea, ug_statea)) ->
-          tD_side_always_join_Interp_solve_rec_c t
-            (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))));
-    E (x, (QueryG y g, (sides_a_c_c, (state, ug_state)))) ->
-      tD_side_always_join_Interp_solve_rec_c t
-        (E (x, (g (sigma state (Inr y)),
-                 (sides_a_c_c,
-                   (infl_update (\ _ -> fminsert (infl state) (Inr y) x) state,
-                     ug_state)))));
-    E (x, (Side y d ta, (sides_a_c_c, (state, ug_state)))) ->
-      let {
-        da = sup (sides_a_c_c y) d;
-        sides_a_c_ca = fun_upd sides_a_c_c y da;
-      } in (case update_global_always_join (sigma state (Inr y)) x y da ug_state
-             of {
-             (Nothing, ug_statea) ->
-               tD_side_always_join_Interp_solve_rec_c t
-                 (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))));
-             (Just db, ug_statea) ->
-               (case destab_opt (Inr y) (infl state) (stabl state) (c state) of
-                 {
-                 (infla, stabla) ->
-                   tD_side_always_join_Interp_solve_rec_c t
-                     (E (x, (ta, (sides_a_c_ca,
-                                   (sigma_update
-                                      (\ _ -> fun_upd (sigma state) (Inr y) db)
-                                      (stabl_update (\ _ -> stabla)
-(infl_update (\ _ -> infla) state)),
-                                     ug_statea)))));
-               });
-           });
-  });
-
-tD_side_always_join_Interp_solve_c ::
-  forall a b c.
-    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
-      Warrowing c) => (a -> Strategy_tree a b c) ->
-                        a -> Maybe (Set a, Sum a b -> c);
-tD_side_always_join_Interp_solve_c t x =
-  bind (tD_side_always_join_Interp_solve_rec_c t
-         (I (x, (c_update
-                   (\ _ ->
-                     insert x
-                       (c (init_state :: State_ext a b c (State_exta a ()))))
-                   init_state,
-                  init_basic_ug_state))))
-    (\ (_, (state, _)) -> Just (stabl state, sigma state));
-
-tD_side_always_join_Interp_solve ::
-  forall a b c.
-    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
-      Warrowing c) => (a -> Strategy_tree a b c) -> a -> (Set a, Sum a b -> c);
-tD_side_always_join_Interp_solve t x =
-  (case tD_side_always_join_Interp_solve_c t x of {
-    Nothing ->
-      (error :: forall a. String -> (() -> a) -> a) "Input not in domain"
-        (\ _ -> tD_side_always_join_Interp_solve t x);
-    Just r -> r;
-  });
-
-combine_assign_resolved_q ::
-  forall a.
-    (Bot a) => (String -> Bool) ->
-                 Maybe String -> a -> Resolved_st_q a -> Resolved_st_q a;
-combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
-  Abs_resolved_st (combine_assign_resolved xc xb xa x);
-
-unit_combine_step_st_assign_for ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
- Maybe String ->
-   Resolved_st_q a ->
-     Resolved_st_q a ->
-       (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
-unit_combine_step_st_assign_for gs dst de g merged =
-  let {
-    res = combine_assign_resolved_q gs dst
-            (lookup_resolved_st_q (sup_resolved_st_q de g)
-              (location_of gs ret_var))
-            (sup_resolved_st_q (fst merged) (snd merged));
-  } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
-
-unit_combine_step_st_env ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => Resolved_st_q a ->
- Resolved_st_q a -> Resolved_st_q a -> (Resolved_st_q a, Resolved_st_q a);
-unit_combine_step_st_env dc de g =
-  let {
-    m = combine_resolved_st_q (sup_resolved_st_q dc g) (sup_resolved_st_q de g);
-  } in (restrict_global_resolved_q m, restrict_local_resolved_q m);
-
-unit_dg_spec_st_for ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => (String -> Bool) ->
- (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
-   ([String] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
-     Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
-unit_dg_spec_st_for gs tf_st enter_st =
-  Dg_spec_ext (unit_step_st (tf_st EA_Nop))
-    (\ x e -> unit_step_st (tf_st (EA_Assign x e)))
-    (\ x -> unit_step_st (tf_st (EA_Random x)))
-    (\ b -> unit_step_st (tf_st (EA_Assume b)))
-    (\ b -> unit_step_st (tf_st (EA_AssumeNot b)))
-    (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
-    (unit_combine_step_st_assign_for gs) ();
-
-analyse_sign_eqs_for ::
-  (String -> Bool) ->
-    Imp_prog_ext () ->
-      (Cfg_node, ()) ->
-        Strategy_tree (Cfg_node, ()) ()
-          (Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign_eqs_for gs p =
-  dg_gen_of (unit_dg_spec_st_for gs (sign_tf_st_for gs) (sign_enter_st_for gs))
-    (prog_cfg prog_main_name p) bot_resolved_st_q cinit_sign_st cinit_sign_st;
-
-analyse_sign_for ::
-  (String -> Bool) ->
-    Imp_prog_ext () ->
-      (Set (Cfg_node, ()),
-        Sum (Cfg_node, ()) () ->
-          Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign_for gs p =
-  tD_side_always_join_Interp_solve (analyse_sign_eqs_for gs p)
-    (cfg_exit (prog_cfg prog_main_name p), ());
-
-fun_of_exec_dg_st_for ::
-  forall a. (Bot a) => (String -> Bool) -> Resolved_st_q a -> String -> a;
-fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
-
-analyse_sign_report_for ::
-  (String -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse_sign_report_for gs p =
-  let {
-    sol = snd (analyse_sign_for gs p);
-  } in classify_checks (prog_cfg prog_main_name p)
-         (\ v ->
-           sup_fun (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-             (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
-         sign_classify_check;
-
-analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse_sign_report p = analyse_sign_report_for (declared_global p) p;
 
 analyse ::
   Analysis_kind -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];

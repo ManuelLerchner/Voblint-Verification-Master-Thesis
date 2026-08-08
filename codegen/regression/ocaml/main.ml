@@ -6,7 +6,7 @@
    src/Examples/Mixed/Example_Analysis_Dispatch.thy's
    dispatch_demo_sign_unknown / dispatch_demo_interval_precise lemmas.
 
-   Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ocaml; regenerate
+   Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
    it with `make codegen` instead. *)
 
 open Voblint_Analyse_OCaml.Voblint_Analyse

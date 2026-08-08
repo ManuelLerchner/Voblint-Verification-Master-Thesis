@@ -73,10 +73,10 @@ codegen-check: codegen
 # Isabelle.
 regression:
 	cd codegen/regression/haskell && \
-	  ghc -i../../generated -o regression-hs Main.hs && \
+	  ghc -i../../generated/hs -o regression-hs Main.hs && \
 	  ./regression-hs
 	cd codegen/regression/ocaml && \
-	  cp ../../generated/Voblint_Analyse_OCaml.ocaml ./Voblint_Analyse_OCaml.ml && \
+	  cp ../../generated/ml/Voblint_Analyse_OCaml.ml ./Voblint_Analyse_OCaml.ml && \
 	  ocamlfind ocamlopt -package str,zarith -linkpkg Voblint_Analyse_OCaml.ml main.ml -o regression-ml && \
 	  ./regression-ml
 
