@@ -66,13 +66,15 @@ jobs:
             --env AFP_COMPONENT_BASE \
             makarius/isabelle:Isabelle2025-2 \
             -ec '
-              apt-get update -qq && apt-get install -y -qq git make > /dev/null
+              apt-get update -qq && apt-get install -y -qq git make curl > /dev/null
               ISABELLE=/home/isabelle/Isabelle/bin/isabelle
               make vendor
               make html AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
               make lint AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
               git config --global --add safe.directory "$GITHUB_WORKSPACE"
               make codegen-check AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              $ISABELLE ocaml_setup
+              make codegen-ocaml-check AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
             '
 
       - name: Upload GitHub Pages site

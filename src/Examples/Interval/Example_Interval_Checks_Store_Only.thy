@@ -5,14 +5,11 @@ theory Example_Interval_Checks_Store_Only
           "Voblint_Analysis.Sign_Checks" "Voblint_VIMP.VIMP_Notation"
 begin
 
-text \<open>Both \<open>Interval_Checks\<close> and \<open>Sign_Checks\<close> now carry their own
-  \<open>prog_cfg\<close> (each domain's \<open>*_Exec_Sound\<close> theory defines it locally). This
-  file compares Sign and Interval classification on the same program, so both
-  reach it; hiding Sign's leaves every bare \<open>prog_cfg\<close> below meaning
-  Interval's, matching every fact this file cites from
-  \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>.\<close>
-
-hide_const Sign_Exec_Sound.prog_cfg
+text \<open>This file compares Sign and Interval classification on the same
+  program, so both are in scope, but both now resolve \<open>prog_cfg\<close> to the same
+  shared \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>) --- no
+  hiding needed to disambiguate below, unlike when each domain's
+  \<open>*_Exec_Sound\<close> theory defined its own local copy.\<close>
 
 text \<open>
   The Interval analogue of \<open>Example_Checks_Store_Only\<close> (Sign): exercises

@@ -2,6 +2,7 @@ theory Interval_Exec_Sound
   imports Ivl_Exec Interval_Side_Soundness Voblint_Core.Solver_Side_RG
           "TD.TD_side_upd_rule"
           "Voblint_VIMP.VIMP_Notation"
+          "Voblint_CFG.Compile_Invariants"
           Analysis_GraphViz
 begin
 
@@ -160,15 +161,12 @@ text \<open>
   An @{type imp_prog} written with the \<open>\<lbrakk> \<dots> \<rbrakk>\<close> bracket already bundles the
   procedure table, procedure-name list, and main command. The wrappers below
   feed those three projections to the analyzer in one step, mirroring
-  \<open>Sign_Exec_Sound\<close>'s \<open>prog_cfg\<close>/\<open>sign_exec_prog_at\<close>
-  family. \<open>prog_cfg\<close> itself is domain-independent (plain compilation), so this
-  is a second definition of the same shape under a different theory, not a
-  reused one --- \<open>Sign_Exec_Sound\<close> does not export it for
-  other domains to import.
+  \<open>Sign_Exec_Sound\<close>'s \<open>sign_exec_prog_at\<close> family.
+  \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>) is the shared,
+  domain-independent instance of this same projection for the CFG itself, so
+  it is imported rather than redefined here --- Sign uses the exact same
+  constant, not an equivalent local copy.
 \<close>
-
-definition prog_cfg :: "pname \<Rightarrow> imp_prog \<Rightarrow> cfg" where
-  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition ivl_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
   "ivl_exec_prog_at gs mnm p v = ivl_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v"

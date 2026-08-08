@@ -2,6 +2,7 @@ theory Sign_Exec_Sound
   imports Sign_Exec Sign_Side_Soundness Voblint_Core.Solver_Side_RG
           "TD.TD_side_upd_rule"
           "Voblint_VIMP.VIMP_Notation"
+          "Voblint_CFG.Compile_Invariants"
           Analysis_GraphViz
 begin
 
@@ -171,10 +172,10 @@ text \<open>
   procedure table, procedure-name list, and main command.  The wrappers below
   feed those three projections to the analyzer in one step, so example
   statements name the program once instead of repeating the triple.
+  \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>) is the shared,
+  domain-independent instance of this same projection for the CFG itself, so
+  it is imported rather than redefined here.
 \<close>
-
-definition prog_cfg :: "pname \<Rightarrow> imp_prog \<Rightarrow> cfg" where
-  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition sign_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
   "sign_exec_prog_at gs mnm p v = sign_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v"

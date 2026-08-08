@@ -16,7 +16,7 @@ AC_DIR          := vendor/autocorrode
 LINTER_DIR      := /tmp/isabelle-linter
 LINTER_TAG      := Isabelle2025-2-v1.0.0
 
-.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch codegen codegen-check regression
+.PHONY: all vendor bootstrap build html lint jedit clean clean-vendor update-autocorrode refresh-td-patch codegen codegen-check regression codegen-ocaml-check
 
 all: build
 
@@ -79,6 +79,19 @@ regression:
 	  cp ../../generated/Voblint_Analyse_OCaml.ocaml ./Voblint_Analyse_OCaml.ml && \
 	  ocamlfind ocamlopt -package str,zarith -linkpkg Voblint_Analyse_OCaml.ml main.ml -o regression-ml && \
 	  ./regression-ml
+
+# Isabelle's own `checking OCaml` clause for the codegen export_code
+# declarations (src/CodegenCheck/Voblint_OCaml_Check.thy), kept out of the
+# default `build`/`codegen`/`codegen-check` targets: on Apple Silicon macOS,
+# Isabelle's bundled opam (2.0.7) is x86_64-only, so its managed OCaml
+# toolchain links against an x86_64 libgmp while the platform is arm64 --
+# not a defect in the generated OCaml itself (see that theory's header
+# comment). Run only in Linux CI, where this mismatch does not occur; run
+# `isabelle ocaml_setup` first to provision the managed OCaml/zarith
+# toolchain this depends on.
+codegen-ocaml-check: vendor
+	@test -d $(AFP) || { echo "ERROR: AFP not found at $(AFP). Set AFP=<path> or install AFP."; exit 1; }
+	$(ISABELLE) build -v -d $(AFP) -d $(TD_DIR) -D . -d src/CodegenCheck Voblint_OCaml_Check
 
 # HTML browser info for all session theories (see Isabelle System Manual, browser_info).
 # Output is copied to $(HTML_DIR)/ for a repo-local entry point; Isabelle also keeps a

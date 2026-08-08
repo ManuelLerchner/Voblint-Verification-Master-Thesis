@@ -2,6 +2,7 @@ theory Parity_Exec_Sound
   imports Parity_Exec Parity_Side_Soundness Voblint_Core.Solver_Side_RG
           "TD.TD_side_upd_rule"
           "Voblint_VIMP.VIMP_Notation"
+          "Voblint_CFG.Compile_Invariants"
 begin
 
 section \<open>Executable parity analysis: the computed result and its certified soundness\<close>
@@ -154,14 +155,12 @@ text \<open>
   An @{type imp_prog} written with the \<open>\<lbrakk> \<dots> \<rbrakk>\<close> bracket already bundles the
   procedure table, procedure-name list, and main command. The wrappers below
   feed those three projections to the analyzer in one step, mirroring
-  \<open>Sign_Exec_Sound\<close>/\<open>Interval_Exec_Sound\<close>'s \<open>prog_cfg\<close>/\<open>*_exec_prog_at\<close>
-  family. \<open>prog_cfg\<close> itself is domain-independent (plain compilation), so this
-  is a second definition of the same shape under a different theory, not a
-  reused one.
+  \<open>Sign_Exec_Sound\<close>/\<open>Interval_Exec_Sound\<close>'s \<open>*_exec_prog_at\<close> family.
+  \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>) is the shared,
+  domain-independent instance of this same projection for the CFG itself, so
+  it is imported rather than redefined here --- Sign and Interval use the
+  exact same constant, not equivalent local copies.
 \<close>
-
-definition prog_cfg :: "pname \<Rightarrow> imp_prog \<Rightarrow> cfg" where
-  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition parity_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> parity abs_state" where
   "parity_exec_prog_at gs mnm p v = parity_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v"

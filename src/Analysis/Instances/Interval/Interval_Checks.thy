@@ -104,6 +104,33 @@ definition interval_check_report ::
      classify_checks (prog_cfg mnm p) (ivl_exec_prog_at gs mnm p) interval_classify_check"
 
 text \<open>
+  The definitional equation above unfolds \<^const>\<open>ivl_exec_prog_at\<close> at every
+  check node, and that unfolding re-invokes \<^const>\<open>ivl_exec_raw\<close> (the
+  actual solver run) each time --- so naive code generation would re-run the
+  whole D/G solver once per check, for an \<open>N\<close>-check program, \<open>N\<close> solver
+  runs instead of one. The \<open>[code]\<close> equation below is provably equal (a
+  direct \<open>Let\<close>-unfold of the same definitions) but binds
+  \<^term>\<open>ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)\<close>
+  once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the
+  target language compiles that \<open>let\<close> to a single shared thunk, so the
+  generated Haskell/OCaml computes the solved system exactly once per
+  report, regardless of how many checks the program has. Mirrors the
+  \<open>analyse_sign_report_for_code\<close> fix for the Sign counterpart of this
+  report (\<open>Example_Sign_Codegen\<close>, downstream of this theory).
+\<close>
+
+declare interval_check_report_def [code del]
+
+lemma interval_check_report_code [code]:
+  "interval_check_report gs mnm p =
+     (let raw = ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+      in classify_checks (prog_cfg mnm p)
+           (\<lambda>v. side_env (fun_of_resolved_st_q_for gs \<circ> raw) v)
+           interval_classify_check)"
+  unfolding interval_check_report_def ivl_exec_prog_at_def[abs_def] ivl_exec_at_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and \<open>prog_main_name\<close>,
   matching \<^const>\<open>analyse_interval\<close>'s own fixed choices --- built on the
   exact same \<^const>\<open>ivl_exec_prog\<close> pipeline, not a parallel one.

@@ -2235,6 +2235,89 @@ stabl_update ::
 stabl_update stabla (State_ext c infl stabl sigma more) =
   State_ext c infl (stabla stabl) sigma more;
 
+ea_check_cond :: Edge_action -> Bexp;
+ea_check_cond (EA_Check x7) = x7;
+
+is_EA_Check :: Edge_action -> Bool;
+is_EA_Check EA_Nop = False;
+is_EA_Check (EA_Assign x21 x22) = False;
+is_EA_Check (EA_Random x3) = False;
+is_EA_Check (EA_Assume x4) = False;
+is_EA_Check (EA_AssumeNot x5) = False;
+is_EA_Check (EA_Ret x61 x62) = False;
+is_EA_Check (EA_Check x7) = True;
+
+falls_through :: Com -> Bool;
+falls_through SKIP = True;
+falls_through (Assign x a) = True;
+falls_through (Random x) = True;
+falls_through (Check c) = True;
+falls_through (Seq c1 c2) = falls_through c1 && falls_through c2;
+falls_through (If b c1 c2) = falls_through c1 || falls_through c2;
+falls_through (While b c) = True;
+falls_through (Call dst q actuals) = True;
+falls_through (Return e) = False;
+falls_through Restore = True;
+falls_through Unwind = True;
+
+compile_proc ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [Char] ->
+      Proc_decl_ext () ->
+        Nat ->
+          (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
+                  Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
+compile_proc pi p decl n =
+  let {
+    r = plus_nat n (csize (body decl));
+  } in (case compile pi p (body decl) (Statement r) n of {
+         (_, (ben, (e, k))) ->
+           (Suc r,
+             (insert (FunctionEntry p, (EA_Nop, ben))
+                (if falls_through (body decl)
+                  then insert
+                         (Statement r, (EA_Ret Nothing p, FunctionResult p)) e
+                  else e),
+               k));
+       });
+
+compile_procs ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [[Char]] ->
+      Nat ->
+        (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
+                Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
+compile_procs pi [] n = (n, (bot_set, bot_set));
+compile_procs pi (p : ps) n =
+  (case pi p of {
+    Nothing -> compile_procs pi ps n;
+    Just decl ->
+      (case compile_proc pi p decl n of {
+        (n1, (e, k)) -> (case compile_procs pi ps n1 of {
+                          (n2, (ea, ka)) -> (n2, (sup_set e ea, sup_set k ka));
+                        });
+      });
+  });
+
+compile_prog ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [[Char]] -> [Char] -> Com -> Cfg_ext ();
+compile_prog pi ps mnm main =
+  (case compile_procs pi ps Zero_nat of {
+    (n1, (eprocs, kprocs)) ->
+      (case compile_proc pi mnm (proc_decl_of [] main) n1 of {
+        (_, (emain, kmain)) ->
+          Cfg_ext (sup_set eprocs emain) (sup_set kprocs kmain)
+            (FunctionEntry mnm)
+            (image (\ (u, (a, _)) -> (u, ea_check_cond a))
+              (filtera (\ (_, (a, _)) -> is_EA_Check a) (sup_set eprocs emain)))
+            ();
+      });
+  });
+
+prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
+prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
+
 warrow :: forall a. (Warrowing a) => a -> a -> a;
 warrow a b = (if less_eq b a then narrow a b else widen a b);
 
@@ -2444,89 +2527,6 @@ tD_side_warrowing_apinis_Interp_solve t x =
 loop_ivl_td_sol :: (Set Cfg_node, Sum Cfg_node () -> Resolved_st_q Ivl);
 loop_ivl_td_sol =
   tD_side_warrowing_apinis_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg);
-
-ea_check_cond :: Edge_action -> Bexp;
-ea_check_cond (EA_Check x7) = x7;
-
-is_EA_Check :: Edge_action -> Bool;
-is_EA_Check EA_Nop = False;
-is_EA_Check (EA_Assign x21 x22) = False;
-is_EA_Check (EA_Random x3) = False;
-is_EA_Check (EA_Assume x4) = False;
-is_EA_Check (EA_AssumeNot x5) = False;
-is_EA_Check (EA_Ret x61 x62) = False;
-is_EA_Check (EA_Check x7) = True;
-
-falls_through :: Com -> Bool;
-falls_through SKIP = True;
-falls_through (Assign x a) = True;
-falls_through (Random x) = True;
-falls_through (Check c) = True;
-falls_through (Seq c1 c2) = falls_through c1 && falls_through c2;
-falls_through (If b c1 c2) = falls_through c1 || falls_through c2;
-falls_through (While b c) = True;
-falls_through (Call dst q actuals) = True;
-falls_through (Return e) = False;
-falls_through Restore = True;
-falls_through Unwind = True;
-
-compile_proc ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [Char] ->
-      Proc_decl_ext () ->
-        Nat ->
-          (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
-                  Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
-compile_proc pi p decl n =
-  let {
-    r = plus_nat n (csize (body decl));
-  } in (case compile pi p (body decl) (Statement r) n of {
-         (_, (ben, (e, k))) ->
-           (Suc r,
-             (insert (FunctionEntry p, (EA_Nop, ben))
-                (if falls_through (body decl)
-                  then insert
-                         (Statement r, (EA_Ret Nothing p, FunctionResult p)) e
-                  else e),
-               k));
-       });
-
-compile_procs ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [[Char]] ->
-      Nat ->
-        (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
-                Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
-compile_procs pi [] n = (n, (bot_set, bot_set));
-compile_procs pi (p : ps) n =
-  (case pi p of {
-    Nothing -> compile_procs pi ps n;
-    Just decl ->
-      (case compile_proc pi p decl n of {
-        (n1, (e, k)) -> (case compile_procs pi ps n1 of {
-                          (n2, (ea, ka)) -> (n2, (sup_set e ea, sup_set k ka));
-                        });
-      });
-  });
-
-compile_prog ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [[Char]] -> [Char] -> Com -> Cfg_ext ();
-compile_prog pi ps mnm main =
-  (case compile_procs pi ps Zero_nat of {
-    (n1, (eprocs, kprocs)) ->
-      (case compile_proc pi mnm (proc_decl_of [] main) n1 of {
-        (_, (emain, kmain)) ->
-          Cfg_ext (sup_set eprocs emain) (sup_set kprocs kmain)
-            (FunctionEntry mnm)
-            (image (\ (u, (a, _)) -> (u, ea_check_cond a))
-              (filtera (\ (_, (a, _)) -> is_EA_Check a) (sup_set eprocs emain)))
-            ();
-      });
-  });
-
-prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
-prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
 
 update_global_always_join ::
   forall a b c.

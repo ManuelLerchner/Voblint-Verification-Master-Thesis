@@ -2381,31 +2381,30 @@ let rec sign_tf_st_for
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
+let rec proc_rep
+  (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = proc_rep;;
+
+let rec prog_procs p = map fst (proc_rep p);;
+
 let rec prog_main
   (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = prog_main;;
 
-let rec ea_check_cond (EA_Check x7) = x7;;
+let char_0x6E : char = Chr (Z.of_int 110);;
 
-let rec is_EA_Check = function EA_Nop -> false
-                      | EA_Assign (x21, x22) -> false
-                      | EA_Random x3 -> false
-                      | EA_Assume x4 -> false
-                      | EA_AssumeNot x5 -> false
-                      | EA_Ret (x61, x62) -> false
-                      | EA_Check x7 -> true;;
+let char_0x6D : char = Chr (Z.of_int 109);;
 
-let rec falls_through
-  = function SKIP -> true
-    | Assign (x, a) -> true
-    | Random x -> true
-    | Check c -> true
-    | Seq (c1, c2) -> falls_through c1 && falls_through c2
-    | If (b, c1, c2) -> falls_through c1 || falls_through c2
-    | While (b, c) -> true
-    | Call (dst, q, actuals) -> true
-    | Return e -> false
-    | Restore -> true
-    | Unwind -> true;;
+let char_0x69 : char = Chr (Z.of_int 105);;
+
+let char_0x61 : char = Chr (Z.of_int 97);;
+
+let prog_main_name : char list = [char_0x6D; char_0x61; char_0x69; char_0x6E];;
+
+let rec prog_table
+  p = fun_upd (equal_list equal_char)
+        (map_of (equal_list equal_char) (proc_rep p)) prog_main_name
+        (Some (proc_decl_of [] (prog_main p)));;
+
+let rec body (Proc_decl_ext (formals, body, more)) = body;;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
 
@@ -2536,7 +2535,48 @@ let rec compile
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
 
-let rec body (Proc_decl_ext (formals, body, more)) = body;;
+let rec infl_update
+  infla (State_ext (c, infl, stabl, sigma, more)) =
+    State_ext (c, infla infl, stabl, sigma, more);;
+
+let rec etf_st_combine
+  (Effectful_st_transfer_ext
+    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
+      etf_st_enter, etf_st_combine, more))
+    = etf_st_combine;;
+
+let rec etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;;
+
+let zero_nat : nat = Nat Z.zero;;
+
+let rec stabl_update
+  stabla (State_ext (c, infl, stabl, sigma, more)) =
+    State_ext (c, infl, stabla stabl, sigma, more);;
+
+let rec nat_of_integer k = Nat (max ord_integer Z.zero k);;
+
+let rec ea_check_cond (EA_Check x7) = x7;;
+
+let rec is_EA_Check = function EA_Nop -> false
+                      | EA_Assign (x21, x22) -> false
+                      | EA_Random x3 -> false
+                      | EA_Assume x4 -> false
+                      | EA_AssumeNot x5 -> false
+                      | EA_Ret (x61, x62) -> false
+                      | EA_Check x7 -> true;;
+
+let rec falls_through
+  = function SKIP -> true
+    | Assign (x, a) -> true
+    | Random x -> true
+    | Check c -> true
+    | Seq (c1, c2) -> falls_through c1 && falls_through c2
+    | If (b, c1, c2) -> falls_through c1 || falls_through c2
+    | While (b, c) -> true
+    | Call (dst, q, actuals) -> true
+    | Return e -> false
+    | Restore -> true
+    | Unwind -> true;;
 
 let rec compile_proc
   pi p decl n =
@@ -2572,8 +2612,6 @@ let rec compile_procs
                            (equal_prod equal_cfg_node equal_cfg_node)))
                        k ka))));;
 
-let zero_nat : nat = Nat Z.zero;;
-
 let rec compile_prog
   pi ps mnm main =
     (let (n1, (eprocs, kprocs)) = compile_procs pi ps zero_nat in
@@ -2597,46 +2635,8 @@ let rec compile_prog
                 eprocs emain)),
           ()));;
 
-let rec proc_rep
-  (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = proc_rep;;
-
-let char_0x6E : char = Chr (Z.of_int 110);;
-
-let char_0x6D : char = Chr (Z.of_int 109);;
-
-let char_0x69 : char = Chr (Z.of_int 105);;
-
-let char_0x61 : char = Chr (Z.of_int 97);;
-
-let prog_main_name : char list = [char_0x6D; char_0x61; char_0x69; char_0x6E];;
-
-let rec prog_table
-  p = fun_upd (equal_list equal_char)
-        (map_of (equal_list equal_char) (proc_rep p)) prog_main_name
-        (Some (proc_decl_of [] (prog_main p)));;
-
-let rec prog_procs p = map fst (proc_rep p);;
-
 let rec prog_cfg
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
-
-let rec infl_update
-  infla (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infla infl, stabl, sigma, more);;
-
-let rec etf_st_combine
-  (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
-    = etf_st_combine;;
-
-let rec etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;;
-
-let rec stabl_update
-  stabla (State_ext (c, infl, stabl, sigma, more)) =
-    State_ext (c, infl, stabla stabl, sigma, more);;
-
-let rec nat_of_integer k = Nat (max ord_integer Z.zero k);;
 
 let rec unit_step_st _A
   f d g =
@@ -2703,9 +2703,6 @@ let rec fold_rhs_trees _A
 let rec make
   proc_rep prog_main declared_global_vars =
     Imp_prog_ext (proc_rep, prog_main, declared_global_vars, ());;
-
-let rec prog_cfga
-  mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
 let rec entry_seed_list
   g v = map (fun (c, CallEdge (_, fs, asa)) -> (c, (fs, asa)))
@@ -2811,6 +2808,17 @@ and destab_iter_opt _A _B
              else destab_opt _A _B (Inl y) i (remove _A y s) c)
            in
           destab_iter_opt _A _B ys ia sa c);;
+
+let rec sign_classify_check
+  c d = (if sign_check_true c d then Check_Proved
+          else (if sign_check_false c d then Check_Refuted
+                 else Check_Unknown));;
+
+let rec ivl_exec_eqs
+  gs pi ps mnm main =
+    side_cfg_T_eff_st bounded_semilattice_sup_bot_ivl
+      (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
+      (bot_resolved_st_qa bot_ivl) cinit_ivl_st ();;
 
 let rec rho_update
   rhoa (Ug_state_ext (rho, more)) = Ug_state_ext (rhoa rho, more);;
@@ -2968,12 +2976,6 @@ let rec tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3)
                 tD_side_always_join_Interp_solve _A _B (_C1, _C2, _C3) t x)
           | Some r -> r);;
 
-let rec ivl_exec_eqs
-  gs pi ps mnm main =
-    side_cfg_T_eff_st bounded_semilattice_sup_bot_ivl
-      (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
-      (bot_resolved_st_qa bot_ivl) cinit_ivl_st ();;
-
 let rec ivl_exec_raw
   gs pi ps mnm main =
     snd (tD_side_always_join_Interp_solve equal_cfg_node equal_unit
@@ -2985,18 +2987,6 @@ let rec ivl_exec_raw
             (warrowing_resolved_st_q bounded_warrowing_ivl))
           (ivl_exec_eqs gs pi ps mnm main)
           (cfg_exit (compile_prog pi ps mnm main)));;
-
-let rec ivl_exec_at
-  gs pi ps mnm main v =
-    side_env enum_unit bounded_semilattice_sup_bot_ivl
-      (comp (fun_of_resolved_st_q_for bot_ivl gs)
-        (ivl_exec_raw gs pi ps mnm main))
-      v;;
-
-let rec sign_classify_check
-  c d = (if sign_check_true c d then Check_Proved
-          else (if sign_check_false c d then Check_Refuted
-                 else Check_Unknown));;
 
 let rec combine_assign_resolved_q _A
   xc xb xa (Abs_resolved_st x) =
@@ -3076,18 +3066,15 @@ let rec analyse_sign_for
 
 let rec fun_of_exec_dg_st_for _A gs = fun_of_resolved_st_q_for _A gs;;
 
-let rec analyse_sign_env_for
-  gs p v =
-    sup_fun semilattice_sup_sign
-      (fun_of_exec_dg_st_for bot_sign gs
-        (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
-      (fun_of_exec_dg_st_for bot_sign gs
-        (globs (snd (analyse_sign_for gs p) (Inr ()))));;
-
 let rec analyse_sign_report_for
   gs p =
-    classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
-      sign_classify_check;;
+    (let sol = snd (analyse_sign_for gs p) in
+      classify_checks (prog_cfg prog_main_name p)
+        (fun v ->
+          sup_fun semilattice_sup_sign
+            (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
+            (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
+        sign_classify_check);;
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
@@ -3132,14 +3119,14 @@ let rec interval_classify_check
           else (if interval_check_false c d then Check_Refuted
                  else Check_Unknown));;
 
-let rec ivl_exec_prog_at
-  gs mnm p v =
-    ivl_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v;;
-
 let rec interval_check_report
   gs mnm p =
-    classify_checks (prog_cfga mnm p) (ivl_exec_prog_at gs mnm p)
-      interval_classify_check;;
+    (let raw = ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+       in
+      classify_checks (prog_cfg mnm p)
+        (side_env enum_unit bounded_semilattice_sup_bot_ivl
+          (comp (fun_of_resolved_st_q_for bot_ivl gs) raw))
+        interval_classify_check);;
 
 let rec analyse_interval_report
   p = interval_check_report (declared_global p) prog_main_name p;;

@@ -2239,9 +2239,6 @@ sign_tf_st_for source_global (EA_Ret (Just a) p) s =
     (aval_sign a (fun_of_resolved_st_q_for source_global s));
 sign_tf_st_for source_global (EA_Check cnd) s = s;
 
-prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
-prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
-
 location_is_global :: Location -> Bool;
 location_is_global (Local_Location x) = False;
 location_is_global (Global_Location x) = True;
@@ -2630,6 +2627,9 @@ dgEx_sol ::
       Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
 dgEx_sol = tD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ());
 
+prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
+prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
+
 sign_less_true_of_inv :: Sign -> Sign -> Bool;
 sign_less_true_of_inv a b =
   equal_sign (fst (inv_less_sign False a b)) bot_sign ||
@@ -2733,19 +2733,16 @@ fun_of_exec_dg_st_for ::
   forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
 fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
 
-analyse_sign_env_for ::
-  ([Char] -> Bool) -> Imp_prog_ext () -> Cfg_node -> [Char] -> Sign;
-analyse_sign_env_for gs p v =
-  sup_fun
-    (fun_of_exec_dg_st_for gs
-      (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
-    (fun_of_exec_dg_st_for gs (globs (snd (analyse_sign_for gs p) (Inr ()))));
-
 analyse_sign_report_for ::
   ([Char] -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report_for gs p =
-  classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
-    sign_classify_check;
+  let {
+    sol = snd (analyse_sign_for gs p);
+  } in classify_checks (prog_cfg prog_main_name p)
+         (\ v ->
+           sup_fun (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+             (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+         sign_classify_check;
 
 analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report p = analyse_sign_report_for (declared_global p) p;

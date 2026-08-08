@@ -2609,34 +2609,38 @@ sign_tf_st_for source_global (EA_Ret (Just a) p) s =
     (aval_sign a (fun_of_resolved_st_q_for source_global s));
 sign_tf_st_for source_global (EA_Check cnd) s = s;
 
+proc_rep :: forall a. Imp_prog_ext a -> [([Char], Proc_decl_ext ())];
+proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
+
+prog_procs :: Imp_prog_ext () -> [[Char]];
+prog_procs p = map fst (proc_rep p);
+
 prog_main :: forall a. Imp_prog_ext a -> Com;
 prog_main (Imp_prog_ext proc_rep prog_main declared_global_vars more) =
   prog_main;
 
-ea_check_cond :: Edge_action -> Bexp;
-ea_check_cond (EA_Check x7) = x7;
+char_0x6E :: Char;
+char_0x6E = Chr (110 :: Integer);
 
-is_EA_Check :: Edge_action -> Bool;
-is_EA_Check EA_Nop = False;
-is_EA_Check (EA_Assign x21 x22) = False;
-is_EA_Check (EA_Random x3) = False;
-is_EA_Check (EA_Assume x4) = False;
-is_EA_Check (EA_AssumeNot x5) = False;
-is_EA_Check (EA_Ret x61 x62) = False;
-is_EA_Check (EA_Check x7) = True;
+char_0x6D :: Char;
+char_0x6D = Chr (109 :: Integer);
 
-falls_through :: Com -> Bool;
-falls_through SKIP = True;
-falls_through (Assign x a) = True;
-falls_through (Random x) = True;
-falls_through (Check c) = True;
-falls_through (Seq c1 c2) = falls_through c1 && falls_through c2;
-falls_through (If b c1 c2) = falls_through c1 || falls_through c2;
-falls_through (While b c) = True;
-falls_through (Call dst q actuals) = True;
-falls_through (Return e) = False;
-falls_through Restore = True;
-falls_through Unwind = True;
+char_0x69 :: Char;
+char_0x69 = Chr (105 :: Integer);
+
+char_0x61 :: Char;
+char_0x61 = Chr (97 :: Integer);
+
+prog_main_name :: [Char];
+prog_main_name = [char_0x6D, char_0x61, char_0x69, char_0x6E];
+
+prog_table :: Imp_prog_ext () -> [Char] -> Maybe (Proc_decl_ext ());
+prog_table p =
+  fun_upd (map_of (proc_rep p)) prog_main_name
+    (Just (proc_decl_of [] (prog_main p)));
+
+body :: forall a. Proc_decl_ext a -> Com;
+body (Proc_decl_ext formals body more) = body;
 
 formals :: forall a. Proc_decl_ext a -> [[Char]];
 formals (Proc_decl_ext formals body more) = formals;
@@ -2715,8 +2719,63 @@ compile pi p Restore k n =
 compile pi p Unwind k n =
   (suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 
-body :: forall a. Proc_decl_ext a -> Com;
-body (Proc_decl_ext formals body more) = body;
+infl_update ::
+  forall a b c d.
+    (Fmap (Sum a b) [a] -> Fmap (Sum a b) [a]) ->
+      State_ext a b c d -> State_ext a b c d;
+infl_update infla (State_ext c infl stabl sigma more) =
+  State_ext c (infla infl) stabl sigma more;
+
+etf_st_combine ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c ->
+      Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_combine
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_combine;
+
+etf_combine_st ::
+  forall a b.
+    Effectful_st_transfer_ext a b () ->
+      Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;
+
+zero_nat :: Nat;
+zero_nat = Nat (0 :: Integer);
+
+stabl_update ::
+  forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
+stabl_update stabla (State_ext c infl stabl sigma more) =
+  State_ext c infl (stabla stabl) sigma more;
+
+nat_of_integer :: Integer -> Nat;
+nat_of_integer k = Nat (max (0 :: Integer) k);
+
+ea_check_cond :: Edge_action -> Bexp;
+ea_check_cond (EA_Check x7) = x7;
+
+is_EA_Check :: Edge_action -> Bool;
+is_EA_Check EA_Nop = False;
+is_EA_Check (EA_Assign x21 x22) = False;
+is_EA_Check (EA_Random x3) = False;
+is_EA_Check (EA_Assume x4) = False;
+is_EA_Check (EA_AssumeNot x5) = False;
+is_EA_Check (EA_Ret x61 x62) = False;
+is_EA_Check (EA_Check x7) = True;
+
+falls_through :: Com -> Bool;
+falls_through SKIP = True;
+falls_through (Assign x a) = True;
+falls_through (Random x) = True;
+falls_through (Check c) = True;
+falls_through (Seq c1 c2) = falls_through c1 && falls_through c2;
+falls_through (If b c1 c2) = falls_through c1 || falls_through c2;
+falls_through (While b c) = True;
+falls_through (Call dst q actuals) = True;
+falls_through (Return e) = False;
+falls_through Restore = True;
+falls_through Unwind = True;
 
 compile_proc ::
   ([Char] -> Maybe (Proc_decl_ext ())) ->
@@ -2757,9 +2816,6 @@ compile_procs pi (p : ps) n =
       });
   });
 
-zero_nat :: Nat;
-zero_nat = Nat (0 :: Integer);
-
 compile_prog ::
   ([Char] -> Maybe (Proc_decl_ext ())) ->
     [[Char]] -> [Char] -> Com -> Cfg_ext ();
@@ -2776,64 +2832,8 @@ compile_prog pi ps mnm main =
       });
   });
 
-proc_rep :: forall a. Imp_prog_ext a -> [([Char], Proc_decl_ext ())];
-proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
-
-char_0x6E :: Char;
-char_0x6E = Chr (110 :: Integer);
-
-char_0x6D :: Char;
-char_0x6D = Chr (109 :: Integer);
-
-char_0x69 :: Char;
-char_0x69 = Chr (105 :: Integer);
-
-char_0x61 :: Char;
-char_0x61 = Chr (97 :: Integer);
-
-prog_main_name :: [Char];
-prog_main_name = [char_0x6D, char_0x61, char_0x69, char_0x6E];
-
-prog_table :: Imp_prog_ext () -> [Char] -> Maybe (Proc_decl_ext ());
-prog_table p =
-  fun_upd (map_of (proc_rep p)) prog_main_name
-    (Just (proc_decl_of [] (prog_main p)));
-
-prog_procs :: Imp_prog_ext () -> [[Char]];
-prog_procs p = map fst (proc_rep p);
-
 prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
 prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
-
-infl_update ::
-  forall a b c d.
-    (Fmap (Sum a b) [a] -> Fmap (Sum a b) [a]) ->
-      State_ext a b c d -> State_ext a b c d;
-infl_update infla (State_ext c infl stabl sigma more) =
-  State_ext c (infla infl) stabl sigma more;
-
-etf_st_combine ::
-  forall a b c.
-    Effectful_st_transfer_ext a b c ->
-      Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
-etf_st_combine
-  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
-    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
-  = etf_st_combine;
-
-etf_combine_st ::
-  forall a b.
-    Effectful_st_transfer_ext a b () ->
-      Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
-etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;
-
-stabl_update ::
-  forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
-stabl_update stabla (State_ext c infl stabl sigma more) =
-  State_ext c infl (stabla stabl) sigma more;
-
-nat_of_integer :: Integer -> Nat;
-nat_of_integer k = Nat (max (0 :: Integer) k);
 
 unit_step_st ::
   forall a.
@@ -2908,9 +2908,6 @@ fold_rhs_trees acc (t : ts) =
 make :: [([Char], Proc_decl_ext ())] -> Com -> [[Char]] -> Imp_prog_ext ();
 make proc_rep prog_main declared_global_vars =
   Imp_prog_ext proc_rep prog_main declared_global_vars ();
-
-prog_cfga :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
-prog_cfga mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
 
 entry_seed_list :: Cfg_ext () -> Cfg_node -> [(Cfg_node, ([[Char]], [Aexp]))];
 entry_seed_list g v =
@@ -3069,6 +3066,21 @@ destab_iter_opt (y : ys) i s c =
     of {
     (ia, sa) -> destab_iter_opt ys ia sa c;
   });
+
+sign_classify_check :: Bexp -> ([Char] -> Sign) -> Check_result;
+sign_classify_check c d =
+  (if sign_check_true c d then Check_Proved
+    else (if sign_check_false c d then Check_Refuted else Check_Unknown));
+
+ivl_exec_eqs ::
+  ([Char] -> Bool) ->
+    ([Char] -> Maybe (Proc_decl_ext ())) ->
+      [[Char]] ->
+        [Char] ->
+          Com -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q Ivl);
+ivl_exec_eqs gs pi ps mnm main =
+  side_cfg_T_eff_st (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
+    bot_resolved_st_q cinit_ivl_st ();
 
 rho_update ::
   forall a b c d.
@@ -3233,16 +3245,6 @@ tD_side_always_join_Interp_solve t x =
     Just r -> r;
   });
 
-ivl_exec_eqs ::
-  ([Char] -> Bool) ->
-    ([Char] -> Maybe (Proc_decl_ext ())) ->
-      [[Char]] ->
-        [Char] ->
-          Com -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q Ivl);
-ivl_exec_eqs gs pi ps mnm main =
-  side_cfg_T_eff_st (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
-    bot_resolved_st_q cinit_ivl_st ();
-
 ivl_exec_raw ::
   ([Char] -> Bool) ->
     ([Char] -> Maybe (Proc_decl_ext ())) ->
@@ -3250,18 +3252,6 @@ ivl_exec_raw ::
 ivl_exec_raw gs pi ps mnm main =
   snd (tD_side_always_join_Interp_solve (ivl_exec_eqs gs pi ps mnm main)
         (cfg_exit (compile_prog pi ps mnm main)));
-
-ivl_exec_at ::
-  ([Char] -> Bool) ->
-    ([Char] -> Maybe (Proc_decl_ext ())) ->
-      [[Char]] -> [Char] -> Com -> Cfg_node -> [Char] -> Ivl;
-ivl_exec_at gs pi ps mnm main v =
-  side_env (fun_of_resolved_st_q_for gs . ivl_exec_raw gs pi ps mnm main) v;
-
-sign_classify_check :: Bexp -> ([Char] -> Sign) -> Check_result;
-sign_classify_check c d =
-  (if sign_check_true c d then Check_Proved
-    else (if sign_check_false c d then Check_Refuted else Check_Unknown));
 
 combine_assign_resolved_q ::
   forall a.
@@ -3333,19 +3323,16 @@ fun_of_exec_dg_st_for ::
   forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
 fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
 
-analyse_sign_env_for ::
-  ([Char] -> Bool) -> Imp_prog_ext () -> Cfg_node -> [Char] -> Sign;
-analyse_sign_env_for gs p v =
-  sup_fun
-    (fun_of_exec_dg_st_for gs
-      (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
-    (fun_of_exec_dg_st_for gs (globs (snd (analyse_sign_for gs p) (Inr ()))));
-
 analyse_sign_report_for ::
   ([Char] -> Bool) -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report_for gs p =
-  classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
-    sign_classify_check;
+  let {
+    sol = snd (analyse_sign_for gs p);
+  } in classify_checks (prog_cfg prog_main_name p)
+         (\ v ->
+           sup_fun (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+             (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+         sign_classify_check;
 
 analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report p = analyse_sign_report_for (declared_global p) p;
@@ -3401,17 +3388,14 @@ interval_classify_check c d =
   (if interval_check_true c d then Check_Proved
     else (if interval_check_false c d then Check_Refuted else Check_Unknown));
 
-ivl_exec_prog_at ::
-  ([Char] -> Bool) -> [Char] -> Imp_prog_ext () -> Cfg_node -> [Char] -> Ivl;
-ivl_exec_prog_at gs mnm p v =
-  ivl_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v;
-
 interval_check_report ::
   ([Char] -> Bool) ->
     [Char] -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 interval_check_report gs mnm p =
-  classify_checks (prog_cfga mnm p) (ivl_exec_prog_at gs mnm p)
-    interval_classify_check;
+  let {
+    raw = ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p);
+  } in classify_checks (prog_cfg mnm p)
+         (side_env (fun_of_resolved_st_q_for gs . raw)) interval_classify_check;
 
 analyse_interval_report ::
   Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];

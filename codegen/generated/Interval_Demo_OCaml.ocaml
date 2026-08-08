@@ -2078,6 +2078,89 @@ let rec stabl_update
   stabla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infl, stabla stabl, sigma, more);;
 
+let rec ea_check_cond (EA_Check x7) = x7;;
+
+let rec is_EA_Check = function EA_Nop -> false
+                      | EA_Assign (x21, x22) -> false
+                      | EA_Random x3 -> false
+                      | EA_Assume x4 -> false
+                      | EA_AssumeNot x5 -> false
+                      | EA_Ret (x61, x62) -> false
+                      | EA_Check x7 -> true;;
+
+let rec falls_through
+  = function SKIP -> true
+    | Assign (x, a) -> true
+    | Random x -> true
+    | Check c -> true
+    | Seq (c1, c2) -> falls_through c1 && falls_through c2
+    | If (b, c1, c2) -> falls_through c1 || falls_through c2
+    | While (b, c) -> true
+    | Call (dst, q, actuals) -> true
+    | Return e -> false
+    | Restore -> true
+    | Unwind -> true;;
+
+let rec compile_proc
+  pi p decl n =
+    (let r = plus_nat n (csize (body decl)) in
+     let (_, (ben, (e, k))) = compile pi p (body decl) (Statement r) n in
+      (Suc r,
+        (insert
+           (equal_prod equal_cfg_node
+             (equal_prod equal_edge_action equal_cfg_node))
+           (FunctionEntry p, (EA_Nop, ben))
+           (if falls_through (body decl)
+             then insert
+                    (equal_prod equal_cfg_node
+                      (equal_prod equal_edge_action equal_cfg_node))
+                    (Statement r, (EA_Ret (None, p), FunctionResult p)) e
+             else e),
+          k)));;
+
+let rec compile_procs
+  pi x1 n = match pi, x1, n with pi, [], n -> (n, (bot_set, bot_set))
+    | pi, p :: ps, n ->
+        (match pi p with None -> compile_procs pi ps n
+          | Some decl ->
+            (let (n1, (e, k)) = compile_proc pi p decl n in
+             let (n2, (ea, ka)) = compile_procs pi ps n1 in
+              (n2, (sup_set
+                      (equal_prod equal_cfg_node
+                        (equal_prod equal_edge_action equal_cfg_node))
+                      e ea,
+                     sup_set
+                       (equal_prod equal_cfg_node
+                         (equal_prod equal_call_action
+                           (equal_prod equal_cfg_node equal_cfg_node)))
+                       k ka))));;
+
+let rec compile_prog
+  pi ps mnm main =
+    (let (n1, (eprocs, kprocs)) = compile_procs pi ps Zero_nat in
+     let (_, (emain, kmain)) = compile_proc pi mnm (proc_decl_of [] main) n1 in
+      Cfg_ext
+        (sup_set
+           (equal_prod equal_cfg_node
+             (equal_prod equal_edge_action equal_cfg_node))
+           eprocs emain,
+          sup_set
+            (equal_prod equal_cfg_node
+              (equal_prod equal_call_action
+                (equal_prod equal_cfg_node equal_cfg_node)))
+            kprocs kmain,
+          FunctionEntry mnm,
+          image (fun (u, (a, _)) -> (u, ea_check_cond a))
+            (filter (fun (_, (a, _)) -> is_EA_Check a)
+              (sup_set
+                (equal_prod equal_cfg_node
+                  (equal_prod equal_edge_action equal_cfg_node))
+                eprocs emain)),
+          ()));;
+
+let rec prog_cfg
+  mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
+
 let rec warrow _A
   a b = (if less_eq
               _A.widening_warrowing.order_widening.preorder_order.ord_preorder b
@@ -2282,89 +2365,6 @@ let loop_ivl_td_sol : cfg_node set * ((cfg_node, unit) sum -> ivl resolved_st_q)
           bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing),
         (warrowing_resolved_st_q bounded_warrowing_ivl))
       loop_ivl_eqs (cfg_exit loop_cfg);;
-
-let rec ea_check_cond (EA_Check x7) = x7;;
-
-let rec is_EA_Check = function EA_Nop -> false
-                      | EA_Assign (x21, x22) -> false
-                      | EA_Random x3 -> false
-                      | EA_Assume x4 -> false
-                      | EA_AssumeNot x5 -> false
-                      | EA_Ret (x61, x62) -> false
-                      | EA_Check x7 -> true;;
-
-let rec falls_through
-  = function SKIP -> true
-    | Assign (x, a) -> true
-    | Random x -> true
-    | Check c -> true
-    | Seq (c1, c2) -> falls_through c1 && falls_through c2
-    | If (b, c1, c2) -> falls_through c1 || falls_through c2
-    | While (b, c) -> true
-    | Call (dst, q, actuals) -> true
-    | Return e -> false
-    | Restore -> true
-    | Unwind -> true;;
-
-let rec compile_proc
-  pi p decl n =
-    (let r = plus_nat n (csize (body decl)) in
-     let (_, (ben, (e, k))) = compile pi p (body decl) (Statement r) n in
-      (Suc r,
-        (insert
-           (equal_prod equal_cfg_node
-             (equal_prod equal_edge_action equal_cfg_node))
-           (FunctionEntry p, (EA_Nop, ben))
-           (if falls_through (body decl)
-             then insert
-                    (equal_prod equal_cfg_node
-                      (equal_prod equal_edge_action equal_cfg_node))
-                    (Statement r, (EA_Ret (None, p), FunctionResult p)) e
-             else e),
-          k)));;
-
-let rec compile_procs
-  pi x1 n = match pi, x1, n with pi, [], n -> (n, (bot_set, bot_set))
-    | pi, p :: ps, n ->
-        (match pi p with None -> compile_procs pi ps n
-          | Some decl ->
-            (let (n1, (e, k)) = compile_proc pi p decl n in
-             let (n2, (ea, ka)) = compile_procs pi ps n1 in
-              (n2, (sup_set
-                      (equal_prod equal_cfg_node
-                        (equal_prod equal_edge_action equal_cfg_node))
-                      e ea,
-                     sup_set
-                       (equal_prod equal_cfg_node
-                         (equal_prod equal_call_action
-                           (equal_prod equal_cfg_node equal_cfg_node)))
-                       k ka))));;
-
-let rec compile_prog
-  pi ps mnm main =
-    (let (n1, (eprocs, kprocs)) = compile_procs pi ps Zero_nat in
-     let (_, (emain, kmain)) = compile_proc pi mnm (proc_decl_of [] main) n1 in
-      Cfg_ext
-        (sup_set
-           (equal_prod equal_cfg_node
-             (equal_prod equal_edge_action equal_cfg_node))
-           eprocs emain,
-          sup_set
-            (equal_prod equal_cfg_node
-              (equal_prod equal_call_action
-                (equal_prod equal_cfg_node equal_cfg_node)))
-            kprocs kmain,
-          FunctionEntry mnm,
-          image (fun (u, (a, _)) -> (u, ea_check_cond a))
-            (filter (fun (_, (a, _)) -> is_EA_Check a)
-              (sup_set
-                (equal_prod equal_cfg_node
-                  (equal_prod equal_edge_action equal_cfg_node))
-                eprocs emain)),
-          ()));;
-
-let rec prog_cfg
-  mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
 let rec update_global_always_join (_A1, _A2) _B _C
   da orig g d state =

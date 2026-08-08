@@ -2166,9 +2166,6 @@ let rec sign_tf_st_for
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
-let rec prog_cfg
-  mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
-
 let rec location_is_global = function Local_Location x -> false
                              | Global_Location x -> true;;
 
@@ -2509,6 +2506,9 @@ let dgEx_sol :
           (bounded_warrowing_resolved_st_q bounded_warrowing_sign)))
       dgEx_eqs (cfg_exit gEx, ());;
 
+let rec prog_cfg
+  mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
+
 let rec sign_less_true_of_inv
   a b = equal_signa (fst (inv_less_sign false a b)) bot_signa ||
           equal_signa (snd (inv_less_sign false a b)) bot_signa;;
@@ -2600,18 +2600,15 @@ let rec analyse_sign p = analyse_sign_for (declared_global p) p;;
 
 let rec fun_of_exec_dg_st_for _A gs = fun_of_resolved_st_q_for _A gs;;
 
-let rec analyse_sign_env_for
-  gs p v =
-    sup_fun semilattice_sup_sign
-      (fun_of_exec_dg_st_for bot_sign gs
-        (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
-      (fun_of_exec_dg_st_for bot_sign gs
-        (globs (snd (analyse_sign_for gs p) (Inr ()))));;
-
 let rec analyse_sign_report_for
   gs p =
-    classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
-      sign_classify_check;;
+    (let sol = snd (analyse_sign_for gs p) in
+      classify_checks (prog_cfg prog_main_name p)
+        (fun v ->
+          sup_fun semilattice_sup_sign
+            (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
+            (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
+        sign_classify_check);;
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 

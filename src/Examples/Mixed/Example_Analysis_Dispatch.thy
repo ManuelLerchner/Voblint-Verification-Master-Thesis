@@ -107,7 +107,30 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
+  checking Haskell
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
+  Statement FunctionEntry FunctionResult
+  char_of_integer integer_of_char
   in Haskell module_name Voblint_Analyse file_prefix "Voblint_Analyse"
+
+export_code
+  analyse Sign_Analysis Interval_Analysis
+  imp_prog.make
+  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  N V Plus Minus Times
+  Bc bexp.Not And Or Less bexp.Eq
+  Check_Proved Check_Refuted Check_Unknown
+  int_of_integer nat_of_integer integer_of_int integer_of_nat
+  Statement FunctionEntry FunctionResult
+  char_of_integer integer_of_char
 
 export_code
   analyse Sign_Analysis Interval_Analysis

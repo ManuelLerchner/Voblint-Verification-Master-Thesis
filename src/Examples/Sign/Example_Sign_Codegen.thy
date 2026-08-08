@@ -209,6 +209,32 @@ definition analyse_sign_report_for :: "check_report_entry list" where
   "analyse_sign_report_for = classify_checks (prog_cfg prog_main_name p) analyse_sign_env_for sign_classify_check"
 
 text \<open>
+  The definitional equation above unfolds \<^const>\<open>analyse_sign_env_for\<close> at
+  every check node, and that unfolding mentions \<^const>\<open>analyse_sign_for\<close>
+  twice (once for \<open>locals\<close>, once for \<open>globs\<close>) --- so naive code generation
+  from it would re-run the whole D/G solver twice per check, for an
+  \<open>N\<close>-check program, \<open>2N\<close> solver runs instead of one. The \<open>[code]\<close>
+  equation below is provably equal (a direct \<open>Let\<close>-unfold of the same
+  definitions) but binds \<^term>\<open>snd analyse_sign_for\<close> once, outside the
+  per-check closure \<^const>\<open>classify_checks\<close> applies; the target language
+  compiles that \<open>let\<close> to a single shared thunk, so the generated
+  Haskell/OCaml computes the solved system exactly once per report,
+  regardless of how many checks the program has.
+\<close>
+
+declare analyse_sign_report_for_def [code del]
+
+lemma analyse_sign_report_for_code [code]:
+  "analyse_sign_report_for =
+     (let sol = snd analyse_sign_for
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ()))))
+                \<squnion> fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))
+           sign_classify_check)"
+  unfolding analyse_sign_report_for_def analyse_sign_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>
   Soundness reuses \<open>classify_checks_proved_sound\<close>/\<open>classify_checks_refuted_sound\<close>
   (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>, fully domain-generic already) with
   \<open>analyse_sign_collect_sound_for\<close> and \<open>analyse_sign_gamma_eq_env_for\<close>
