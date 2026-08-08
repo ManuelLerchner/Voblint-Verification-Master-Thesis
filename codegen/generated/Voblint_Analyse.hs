@@ -4,8 +4,9 @@ module
   Voblint_Analyse(Int(..), integer_of_int, Nat, integer_of_nat, Char,
                    integer_of_char, Cfg_node(..), Aexp(..), Bexp(..), Num,
                    Com(..), Check_result(..), Proc_decl_ext, Imp_prog_ext,
-                   Analysis_kind(..), char_of_integer, nat_of_integer, make,
-                   analyse)
+                   Analysis_kind(..), char_of_integer, nat_of_integer, api_var,
+                   make, api_call, api_proc, api_assign, api_random,
+                   api_program, analyse)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -16,6 +17,7 @@ import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
 import Data.Bits ((.&.), (.|.), (.^.));
 import qualified Prelude;
 import qualified Data.Bits;
+import qualified Str_Literal;
 
 newtype Int = Int_of_integer Integer;
 
@@ -1760,6 +1762,9 @@ char_of_integer k =
   Chr (if (0 :: Integer) <= k && k < (256 :: Integer) then k
         else modulo_integer k (256 :: Integer));
 
+explode :: String -> [Char];
+explode s = map char_of_integer (Str_Literal.asciisOfLiteral s);
+
 map_ltree ::
   forall a b c d. (a -> b) -> Strategy_tree a c d -> Strategy_tree b c d;
 map_ltree h (Answer d) = Answer d;
@@ -2345,6 +2350,10 @@ dg_gen_of s g bot0 s0d s0g =
   side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\ _ -> ())
     (\ _ _ _ _ -> ()) (dg_cmb_of s) (dg_extra_of s g) g s bot0 s0d s0g;
 
+map_option :: forall a b. (a -> b) -> Maybe a -> Maybe b;
+map_option f Nothing = Nothing;
+map_option f (Just x2) = Just (f x2);
+
 bot_set :: forall a. Set a;
 bot_set = Set [];
 
@@ -2835,6 +2844,9 @@ compile_prog pi ps mnm main =
 prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
 prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
 
+api_var :: String -> Aexp;
+api_var x = V (explode x);
+
 unit_step_st ::
   forall a.
     (Bounded_semilattice_sup_bot a) => (Resolved_st_q a -> Resolved_st_q a) ->
@@ -2908,6 +2920,12 @@ fold_rhs_trees acc (t : ts) =
 make :: [([Char], Proc_decl_ext ())] -> Com -> [[Char]] -> Imp_prog_ext ();
 make proc_rep prog_main declared_global_vars =
   Imp_prog_ext proc_rep prog_main declared_global_vars ();
+
+api_call :: Maybe String -> String -> [Aexp] -> Com;
+api_call dst p args = Call (map_option explode dst) (explode p) args;
+
+api_proc :: [String] -> Com -> Proc_decl_ext ();
+api_proc fs bd = proc_decl_of (map explode fs) bd;
 
 entry_seed_list :: Cfg_ext () -> Cfg_node -> [(Cfg_node, ([[Char]], [Aexp]))];
 entry_seed_list g v =
@@ -3026,6 +3044,12 @@ declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
 declared_global :: Imp_prog_ext () -> [Char] -> Bool;
 declared_global p x = membera (declared_global_vars p) x;
 
+api_assign :: String -> Aexp -> Com;
+api_assign x a = Assign (explode x) a;
+
+api_random :: String -> Com;
+api_random x = Random (explode x);
+
 classify_checks ::
   forall a.
     Cfg_ext () ->
@@ -3066,6 +3090,11 @@ destab_iter_opt (y : ys) i s c =
     of {
     (ia, sa) -> destab_iter_opt ys ia sa c;
   });
+
+api_program ::
+  [(String, Proc_decl_ext ())] -> Com -> [String] -> Imp_prog_ext ();
+api_program procs m globals =
+  make (map (\ (n, a) -> (explode n, a)) procs) m (map explode globals);
 
 sign_classify_check :: Bexp -> ([Char] -> Sign) -> Check_result;
 sign_classify_check c d =

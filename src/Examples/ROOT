@@ -67,6 +67,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo
     Example_Analysis_Dispatch
+    Example_Codegen_API
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo
@@ -79,3 +80,11 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Voblint
   document_files
     (in "../Analysis/document") "root.bib"
+  export_files (in "../../codegen/generated") [3]
+    "Voblint_Examples.Example_Sign_Codegen:code/*/*.hs"
+    "Voblint_Examples.Exec_Ivl_Run:code/*/*.hs"
+    "Voblint_Examples.Example_Codegen_API:code/*/*.hs"
+  export_files (in "../../codegen/generated") [2]
+    "Voblint_Examples.Example_Sign_Codegen:code/*.ocaml"
+    "Voblint_Examples.Exec_Ivl_Run:code/*.ocaml"
+    "Voblint_Examples.Example_Codegen_API:code/*.ocaml"

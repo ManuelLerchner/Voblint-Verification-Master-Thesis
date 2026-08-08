@@ -1,10 +1,10 @@
 theory Voblint_OCaml_Check
-  imports Voblint_Examples.Example_Analysis_Dispatch
+  imports Voblint_Examples.Example_Codegen_API
 begin
 
 text \<open>
   CI-only OCaml compilation check for the \<open>export_code\<close> declarations in
-  \<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>. Kept in a separate
+  \<^theory>\<open>Voblint_Examples.Example_Codegen_API\<close>. Kept in a separate
   session, built only by CI's Linux job (see \<open>.github/workflows/ci.yml\<close>),
   not by the default \<open>Voblint_Examples\<close> build.
 
@@ -29,6 +29,7 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
+  api_var api_assign api_random api_call api_proc api_program
   checking OCaml
 
 end

@@ -66,82 +66,11 @@ lemma dispatch_demo_interval_precise:
       (Statement 3, Less (N 0) (V ''y''), Check_Refuted)]"
   by eval
 
-subsection \<open>Executable code generation\<close>
-
 text \<open>
-  The unified dispatcher exports the same way its two branches already do:
-  \<open>analyse\<close> genuinely takes the domain choice and the program as runtime
-  arguments, not constants baked in at export time.
-
-  The AST constructors and \<open>imp_prog.make\<close> are exported alongside it so
-  external Haskell/OCaml code can build a fresh \<open>imp_prog\<close> and hand it to
-  \<open>analyse\<close>, rather than only being able to call \<open>analyse\<close> on values built
-  inside Isabelle --- this is what the regression drivers under
-  \<open>codegen/regression\<close> use.
-
-  \<^theory>\<open>HOL-Library.Code_Target_Numeral\<close> makes \<open>int\<close>/\<open>nat\<close> abstract types
-  backed by the target language's native arbitrary-precision integer
-  (Haskell's \<open>Integer\<close>, OCaml's target-numeral representation) instead of
-  Isabelle's own binary-numeral/Peano-successor encodings, so arithmetic and
-  comparisons inside the exported analyser run on native integers rather
-  than walking a \<open>Num\<close>/\<open>Nat\<close> term. \<open>int_of_integer\<close>/\<open>nat_of_integer\<close> and
-  their inverses \<open>integer_of_int\<close>/\<open>integer_of_nat\<close> are the resulting
-  bridge --- the only way external code can build or inspect an \<open>int\<close>/\<open>nat\<close>
-  once the representation is opaque.
-
-  \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close> ---
-  relevant because \<^typ>\<open>vname\<close> is \<^typ>\<open>char list\<close>, so every variable
-  name and every CFG/map lookup keyed on one compares characters. Locals,
-  globals, and procedure names all resolve to native-integer character
-  comparisons instead of an 8-bit-vector term walk. \<open>char_of_integer\<close> and
-  \<open>integer_of_char\<close> are the resulting bridge.
+  Executable code generation for \<open>analyse\<close> and the raw AST constructors
+  lives downstream, in \<open>Example_Codegen_API\<close>, alongside the
+  \<^typ>\<open>String.literal\<close> program-construction facade built on top of them --
+  one \<open>export_code\<close> surface rather than two.
 \<close>
-
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  imp_prog.make
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  checking Haskell
-
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  imp_prog.make
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  in Haskell module_name Voblint_Analyse file_prefix "Voblint_Analyse"
-
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  imp_prog.make
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  imp_prog.make
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
 
 end

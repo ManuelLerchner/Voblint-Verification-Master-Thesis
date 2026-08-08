@@ -1,3 +1,47 @@
+module Str_Literal : sig
+  val literal_of_asciis : Z.t list -> string
+  val asciis_of_literal: string -> Z.t list
+end = struct
+
+(* deliberate clones not relying on List._ module *)
+
+let rec length xs = match xs with
+    [] -> 0
+  | x :: xs -> 1 + length xs;;
+
+let rec nth xs n = match xs with
+  (x :: xs) -> if n <= 0 then x else nth xs (n - 1);;
+
+let rec map_range f n =
+  if n <= 0
+    then []
+    else
+      let m = n - 1
+    in map_range f m @ [f m];;
+
+let implode f xs =
+  String.init (length xs) (fun n -> f (nth xs n));;
+
+let explode f s =
+  map_range (fun n -> f (String.get s n)) (String.length s);;
+
+let z_128 = Z.of_int 128;;
+
+let check_ascii k =
+  if 0 <= k && k < 128
+  then k
+  else failwith "Non-ASCII character in literal";;
+
+let char_of_ascii k = Char.chr (Z.to_int (Z.rem k z_128));;
+
+let ascii_of_char c = Z.of_int (check_ascii (Char.code c));;
+
+let literal_of_asciis ks = implode char_of_ascii ks;;
+
+let asciis_of_literal s = explode ascii_of_char s;;
+
+end;;
+
 module Voblint_Analyse : sig
   type int = Int_of_integer of Z.t
   val integer_of_int : int -> Z.t
@@ -22,9 +66,17 @@ module Voblint_Analyse : sig
   type analysis_kind = Sign_Analysis | Interval_Analysis
   val char_of_integer : Z.t -> char
   val nat_of_integer : Z.t -> nat
+  val api_var : string -> aexp
   val make :
     (char list * unit proc_decl_ext) list ->
       com -> (char list) list -> unit imp_prog_ext
+  val api_call : string option -> string -> aexp list -> com
+  val api_proc : string list -> com -> unit proc_decl_ext
+  val api_assign : string -> aexp -> com
+  val api_random : string -> com
+  val api_program :
+    (string * unit proc_decl_ext) list ->
+      com -> string list -> unit imp_prog_ext
   val analyse :
     analysis_kind ->
       unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
@@ -1660,6 +1712,8 @@ let rec char_of_integer
   k = Chr (if Z.leq Z.zero k && Z.lt k (Z.of_int 256) then k
             else modulo_integer k (Z.of_int 256));;
 
+let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
+
 let rec map_ltree
   h x1 = match h, x1 with h, Answer d -> Answer d
     | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
@@ -2113,6 +2167,9 @@ let rec dg_gen_of _A _B
     side_cfg_T_eff_keyed_seed_dg _A _B intra_predecessor_list (fun _ -> ())
       (fun _ _ _ _ -> ()) (dg_cmb_of _A _B s) (dg_extra_of _A _B s g) g s bot0
       s0d s0g;;
+
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
 
 let bot_set : 'a set = Set [];;
 
@@ -2638,6 +2695,8 @@ let rec compile_prog
 let rec prog_cfg
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
+let rec api_var x = V (explode x);;
+
 let rec unit_step_st _A
   f d g =
     (let res = f (sup_resolved_st_qa _A d g) in
@@ -2703,6 +2762,10 @@ let rec fold_rhs_trees _A
 let rec make
   proc_rep prog_main declared_global_vars =
     Imp_prog_ext (proc_rep, prog_main, declared_global_vars, ());;
+
+let rec api_call dst p args = Call (map_option explode dst, explode p, args);;
+
+let rec api_proc fs bd = proc_decl_of (map explode fs) bd;;
 
 let rec entry_seed_list
   g v = map (fun (c, CallEdge (_, fs, asa)) -> (c, (fs, asa)))
@@ -2785,6 +2848,10 @@ let rec declared_global_vars
 let rec declared_global
   p x = membera (equal_list equal_char) (declared_global_vars p) x;;
 
+let rec api_assign x a = Assign (explode x, a);;
+
+let rec api_random x = Random (explode x);;
+
 let rec classify_checks
   g env classify =
     map_filter
@@ -2808,6 +2875,10 @@ and destab_iter_opt _A _B
              else destab_opt _A _B (Inl y) i (remove _A y s) c)
            in
           destab_iter_opt _A _B ys ia sa c);;
+
+let rec api_program
+  procs m globals =
+    make (map (fun (n, a) -> (explode n, a)) procs) m (map explode globals);;
 
 let rec sign_classify_check
   c d = (if sign_check_true c d then Check_Proved
