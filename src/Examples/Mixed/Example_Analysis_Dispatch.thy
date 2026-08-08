@@ -66,6 +66,17 @@ lemma dispatch_demo_interval_precise:
       (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
   by eval
 
+text \<open>
+  \<^const>\<open>string_of_bexp\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>, already an
+  ancestor) renders the \<open>bexp\<close> half of a \<open>check_report_entry\<close> as a native
+  string, so an external consumer of \<open>analyse\<close>'s report can print a check's
+  condition without decoding the \<open>bexp\<close> AST itself.
+\<close>
+
+lemma dispatch_demo_check_cond_rendered:
+  "string_of_bexp (Less (N 0) (V (STR ''y''))) = ''0<y''"
+  by eval
+
 subsection \<open>A program with a global, a procedure, and a call\<close>
 
 text \<open>
@@ -178,6 +189,11 @@ text \<open>
   wherever a \<open>char\<close> is inspected directly (e.g. \<^const>\<open>String.explode\<close>'s
   result) rather than through the opaque \<open>String.literal\<close> above.
   \<open>char_of_integer\<close>/\<open>integer_of_char\<close> are that bridge.
+
+  \<open>string_of_bexp\<close> is exported alongside the structured \<open>bexp\<close> already in
+  every \<open>check_report_entry\<close>: a consumer can pattern-match the AST directly,
+  or call \<open>string_of_bexp\<close> to render a check's condition as a native string
+  without decoding it --- both stay available, not a replacement report type.
 \<close>
 
 export_code
@@ -192,6 +208,7 @@ export_code
   char_of_integer integer_of_char
   prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  string_of_bexp
   checking Haskell
 
 export_code
@@ -206,6 +223,7 @@ export_code
   char_of_integer integer_of_char
   prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  string_of_bexp
   in Haskell module_name Voblint_Analyse file_prefix "Voblint_Analyse"
 
 export_code
@@ -220,6 +238,7 @@ export_code
   char_of_integer integer_of_char
   prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  string_of_bexp
 
 export_code
   analyse Sign_Analysis Interval_Analysis
@@ -233,6 +252,7 @@ export_code
   char_of_integer integer_of_char
   prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  string_of_bexp
   in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
 
 end

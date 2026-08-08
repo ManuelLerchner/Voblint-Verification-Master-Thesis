@@ -69,6 +69,7 @@ module Voblint_Analyse : sig
   type 'a proc_decl_ext
   type 'a imp_prog_ext
   type analysis_kind = Sign_Analysis | Interval_Analysis
+  val nat_of_integer : Z.t -> nat
   val cfg_entry : 'a cfg_ext -> cfg_node
   val char_of_integer : Z.t -> char
   val integer_of_char : char -> Z.t
@@ -78,11 +79,11 @@ module Voblint_Analyse : sig
   val cfg_intra_list :
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
   val prog_main_name : string
-  val nat_of_integer : Z.t -> nat
   val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
   val make :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
+  val string_of_bexp : bexp -> char list
   val analyse :
     analysis_kind ->
       unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
@@ -1315,13 +1316,19 @@ type ('a, 'b, 'c) effectful_st_transfer_ext =
 
 let rec id x = (fun xa -> xa) x;;
 
+let rec max _A a b = (if less_eq _A a b then b else a);;
+
+let rec nat_of_integer k = Nat (max ord_integer Z.zero k);;
+
+let rec comp f g = (fun x -> f (g x));;
+
+let rec nat x = comp nat_of_integer integer_of_int x;;
+
 let rec plus_nat m n = Nat (Z.add (integer_of_nat m) (integer_of_nat n));;
 
 let one_nat : nat = Nat (Z.of_int 1);;
 
 let rec suc n = plus_nat n one_nat;;
-
-let rec comp f g = (fun x -> f (g x));;
 
 let rec zip xs ys = match xs, ys with [], ys -> []
               | xs, [] -> []
@@ -1478,8 +1485,6 @@ let rec times_int
 let ivl_top : ivl = Ivl (MinInf, PlusInf);;
 
 let rec min _A a b = (if less_eq _A a b then a else b);;
-
-let rec max _A a b = (if less_eq _A a b then b else a);;
 
 let rec ivl_times_core
   uu uv = match uu, uv with
@@ -1698,6 +1703,8 @@ let rec char_of_integer
             else modulo_integer k (Z.of_int 256));;
 
 let rec integer_of_char (Chr x) = x;;
+
+let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
 let rec map_ltree
   h x1 = match h, x1 with h, Answer d -> Answer d
@@ -2583,7 +2590,7 @@ let rec stabl_update
   stabla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infl, stabla stabl, sigma, more);;
 
-let rec nat_of_integer k = Nat (max ord_integer Z.zero k);;
+let rec char_of_nat x = comp char_of_integer integer_of_nat x;;
 
 let rec ea_check_cond (EA_Check x7) = x7;;
 
@@ -2734,6 +2741,42 @@ let rec make
   proc_rep prog_main declared_global_vars =
     Imp_prog_ext (proc_rep, prog_main, declared_global_vars, ());;
 
+let char_0x21 : char = Chr (Z.of_int 33);;
+
+let char_0x26 : char = Chr (Z.of_int 38);;
+
+let char_0x28 : char = Chr (Z.of_int 40);;
+
+let char_0x29 : char = Chr (Z.of_int 41);;
+
+let char_0x2A : char = Chr (Z.of_int 42);;
+
+let char_0x2B : char = Chr (Z.of_int 43);;
+
+let char_0x2D : char = Chr (Z.of_int 45);;
+
+let char_0x3C : char = Chr (Z.of_int 60);;
+
+let char_0x3D : char = Chr (Z.of_int 61);;
+
+let char_0x61 : char = Chr (Z.of_int 97);;
+
+let char_0x65 : char = Chr (Z.of_int 101);;
+
+let char_0x66 : char = Chr (Z.of_int 102);;
+
+let char_0x6C : char = Chr (Z.of_int 108);;
+
+let char_0x72 : char = Chr (Z.of_int 114);;
+
+let char_0x73 : char = Chr (Z.of_int 115);;
+
+let char_0x74 : char = Chr (Z.of_int 116);;
+
+let char_0x75 : char = Chr (Z.of_int 117);;
+
+let char_0x7C : char = Chr (Z.of_int 124);;
+
 let rec entry_seed_list
   g v = map (fun (c, CallEdge (_, fs, asa)) -> (c, (fs, asa)))
           (entry_call_list g v);;
@@ -2814,6 +2857,8 @@ let rec declared_global_vars
 
 let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
+let rec uminus_int k = Int_of_integer (Z.neg (integer_of_int k));;
+
 let rec classify_checks
   g env classify =
     map_filter
@@ -2842,6 +2887,27 @@ let rec sign_classify_check
   c d = (if sign_check_true c d then Check_Proved
           else (if sign_check_false c d then Check_Refuted
                  else Check_Unknown));;
+
+let rec modulo_nat
+  m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));;
+
+let rec divide_integer k l = fst (divmod_integer k l);;
+
+let rec divide_nat
+  m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));;
+
+let rec string_of_nat
+  n = (if less_nat n (nat_of_integer (Z.of_int 10))
+        then [char_of_nat (plus_nat n (nat_of_integer (Z.of_int 48)))]
+        else string_of_nat (divide_nat n (nat_of_integer (Z.of_int 10))) @
+               [char_of_nat
+                  (plus_nat (modulo_nat n (nat_of_integer (Z.of_int 10)))
+                    (nat_of_integer (Z.of_int 48)))]);;
+
+let rec string_of_int
+  i = (if less_int i zero_int
+        then [char_0x2D] @ string_of_nat (nat (uminus_int i))
+        else string_of_nat (nat i));;
 
 let rec ivl_exec_eqs
   gs pi ps mnm main =
@@ -3016,6 +3082,35 @@ let rec ivl_exec_raw
             (warrowing_resolved_st_q bounded_warrowing_ivl))
           (ivl_exec_eqs gs pi ps mnm main)
           (cfg_exit (compile_prog pi ps mnm main)));;
+
+let rec string_of_aexp
+  = function N n -> string_of_int n
+    | V x -> explode x
+    | Plus (a, b) ->
+        [char_0x28] @
+          string_of_aexp a @ [char_0x2B] @ string_of_aexp b @ [char_0x29]
+    | Minus (a, b) ->
+        [char_0x28] @
+          string_of_aexp a @ [char_0x2D] @ string_of_aexp b @ [char_0x29]
+    | Times (a, b) ->
+        [char_0x28] @
+          string_of_aexp a @ [char_0x2A] @ string_of_aexp b @ [char_0x29];;
+
+let rec string_of_bexp
+  = function Bc true -> [char_0x74; char_0x72; char_0x75; char_0x65]
+    | Bc false -> [char_0x66; char_0x61; char_0x6C; char_0x73; char_0x65]
+    | Not b -> [char_0x21; char_0x28] @ string_of_bexp b @ [char_0x29]
+    | And (b1, b2) ->
+        [char_0x28] @
+          string_of_bexp b1 @
+            [char_0x26; char_0x26] @ string_of_bexp b2 @ [char_0x29]
+    | Or (b1, b2) ->
+        [char_0x28] @
+          string_of_bexp b1 @
+            [char_0x7C; char_0x7C] @ string_of_bexp b2 @ [char_0x29]
+    | Less (a1, a2) -> string_of_aexp a1 @ [char_0x3C] @ string_of_aexp a2
+    | Eqa (a1, a2) ->
+        string_of_aexp a1 @ [char_0x3D; char_0x3D] @ string_of_aexp a2;;
 
 let rec combine_assign_resolved_q _A
   xc xb xa (Abs_resolved_st x) =

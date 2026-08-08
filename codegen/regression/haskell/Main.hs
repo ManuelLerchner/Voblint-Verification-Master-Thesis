@@ -10,7 +10,7 @@
 -- `make codegen` instead.
 module Main (main) where
 
-import Prelude hiding (Int, Num)
+import Prelude hiding (Char, Int, Num)
 import qualified Prelude
 import System.Exit (exitFailure)
 import Voblint_Analyse
@@ -30,6 +30,9 @@ mkNat = nat_of_integer
 -- target language's native `String` (see Example_Analysis_Dispatch.thy), so
 -- variable/procedure names need no conversion at all.
 
+checkCond :: Bexp
+checkCond = Less (N (mkInt 0)) (V "y")
+
 -- y := 1; check(0 < y); y := 0 - 1; check(0 < y)
 -- Same program as dispatch_demo_prog in Example_Analysis_Dispatch.thy.
 demoProg :: Imp_prog_ext ()
@@ -44,8 +47,21 @@ demoProg =
         (Check checkCond)
     )
     []
-  where
-    checkCond = Less (N (mkInt 0)) (V "y")
+
+-- `string_of_bexp` renders a check's condition directly, as an alternative
+-- to pattern-matching the `Bexp` AST. Its Isabelle return type is `string`
+-- (`char list`), and `char` is still the opaque Code_Abstract_Char type here
+-- (only `vname`/`pname` moved to native `String.literal`), so the result
+-- needs the same `integer_of_char` bridge as everywhere else `char` is
+-- inspected directly.
+unChar :: Char -> Prelude.Char
+unChar = toEnum . fromInteger . integer_of_char
+
+unString :: [Char] -> Prelude.String
+unString = map unChar
+
+expectedCheckCondRendered :: Prelude.String
+expectedCheckCondRendered = "0<y"
 
 expectedSign :: [(Cfg_node, (Bexp, Check_result))]
 expectedSign =
@@ -236,6 +252,11 @@ main = do
   okProcDemoSign <- checkCase "Sign_Analysis proc_demo report" actualProcDemoSign expectedProcDemoSign
   okProcDemoIntra <- checkCase "proc_demo CFG intra edges" actualProcDemoIntra expectedProcDemoIntra
   okProcDemoCalls <- checkCase "proc_demo CFG calls edges" actualProcDemoCalls expectedProcDemoCalls
-  if okSign && okInterval && okProcDemoSign && okProcDemoIntra && okProcDemoCalls
+  okCheckCondRendered <-
+    checkCase
+      "string_of_bexp check condition"
+      (unString (string_of_bexp checkCond))
+      expectedCheckCondRendered
+  if okSign && okInterval && okProcDemoSign && okProcDemoIntra && okProcDemoCalls && okCheckCondRendered
     then putStrLn "All regression checks passed."
     else exitFailure

@@ -24,6 +24,16 @@ let mk_nat n = nat_of_integer (Z.of_int n)
    native `string` (see Example_Analysis_Dispatch.thy), so variable/procedure
    names need no conversion at all. *)
 
+(* `string_of_bexp` renders a check's condition directly, as an alternative
+   to pattern-matching the `bexp` AST. Its Isabelle return type is `string`
+   (`char list`), and `char` is still the opaque Code_Abstract_Char type
+   here (only `vname`/`pname` moved to native `String.literal`), so the
+   result needs the same `integer_of_char` bridge as everywhere else `char`
+   is inspected directly -- and OCaml's `string`/`char list` are distinct
+   types besides, unlike Haskell's `type String = [Char]` pun. *)
+let un_char c = Char.chr (Z.to_int (integer_of_char c))
+let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c)) cs)
+
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch.thy. *)
 let check_cond = Less (N (mk_int 0), V "y")
@@ -205,6 +215,11 @@ let () =
   let ok_proc_demo_calls =
     check_case_str "proc_demo CFG calls edges" actual_proc_demo_calls expected_proc_demo_calls
   in
-  if ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_intra && ok_proc_demo_calls then
-    print_endline "All regression checks passed."
+  let ok_check_cond_rendered =
+    check_case_str "string_of_bexp check condition" (un_string (string_of_bexp check_cond)) "0<y"
+  in
+  if
+    ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_intra && ok_proc_demo_calls
+    && ok_check_cond_rendered
+  then print_endline "All regression checks passed."
   else exit 1

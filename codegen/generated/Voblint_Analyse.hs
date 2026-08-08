@@ -4,10 +4,10 @@ module
   Voblint_Analyse(Int(..), integer_of_int, Nat, integer_of_nat, Cfg_node(..),
                    Aexp(..), Call_action(..), Bexp(..), Edge_action(..), Num,
                    Set, Char, Com(..), Cfg_ext, Check_result(..), Proc_decl_ext,
-                   Imp_prog_ext, Analysis_kind(..), cfg_entry, char_of_integer,
-                   integer_of_char, proc_decl_of, cfg_calls_list,
-                   cfg_intra_list, prog_main_name, nat_of_integer, prog_cfg,
-                   make, analyse)
+                   Imp_prog_ext, Analysis_kind(..), nat_of_integer, cfg_entry,
+                   char_of_integer, integer_of_char, proc_decl_of,
+                   cfg_calls_list, cfg_intra_list, prog_main_name, prog_cfg,
+                   make, string_of_bexp, analyse)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -1323,6 +1323,15 @@ data Effectful_st_transfer_ext a b c =
     ([String] -> [Aexp] -> Cfg_node -> Strategy_tree Cfg_node a b)
     (Maybe String -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b) c;
 
+max :: forall a. (Ord a) => a -> a -> a;
+max a b = (if less_eq a b then b else a);
+
+nat_of_integer :: Integer -> Nat;
+nat_of_integer k = Nat (max (0 :: Integer) k);
+
+nat :: Int -> Nat;
+nat = nat_of_integer . integer_of_int;
+
 plus_nat :: Nat -> Nat -> Nat;
 plus_nat m n = Nat (integer_of_nat m + integer_of_nat n);
 
@@ -1519,9 +1528,6 @@ ivl_top = Ivl MinInf PlusInf;
 
 min :: forall a. (Ord a) => a -> a -> a;
 min a b = (if less_eq a b then a else b);
-
-max :: forall a. (Ord a) => a -> a -> a;
-max a b = (if less_eq a b then b else a);
 
 ivl_times_core :: Ivl -> Ivl -> Ivl;
 ivl_times_core (Ivl (Fin l1) (Fin u1)) (Ivl (Fin l2) (Fin u2)) =
@@ -1734,6 +1740,9 @@ char_of_integer k =
 
 integer_of_char :: Char -> Integer;
 integer_of_char (Chr x) = x;
+
+explode :: String -> [Char];
+explode s = map char_of_integer (Str_Literal.asciisOfLiteral s);
 
 map_ltree ::
   forall a b c d. (a -> b) -> Strategy_tree a c d -> Strategy_tree b c d;
@@ -2712,8 +2721,8 @@ stabl_update ::
 stabl_update stabla (State_ext c infl stabl sigma more) =
   State_ext c infl (stabla stabl) sigma more;
 
-nat_of_integer :: Integer -> Nat;
-nat_of_integer k = Nat (max (0 :: Integer) k);
+char_of_nat :: Nat -> Char;
+char_of_nat = char_of_integer . integer_of_nat;
 
 ea_check_cond :: Edge_action -> Bexp;
 ea_check_cond (EA_Check x7) = x7;
@@ -2872,6 +2881,60 @@ make :: [(String, Proc_decl_ext ())] -> Com -> [String] -> Imp_prog_ext ();
 make proc_rep prog_main declared_global_vars =
   Imp_prog_ext proc_rep prog_main declared_global_vars ();
 
+char_0x21 :: Char;
+char_0x21 = Chr (33 :: Integer);
+
+char_0x26 :: Char;
+char_0x26 = Chr (38 :: Integer);
+
+char_0x28 :: Char;
+char_0x28 = Chr (40 :: Integer);
+
+char_0x29 :: Char;
+char_0x29 = Chr (41 :: Integer);
+
+char_0x2A :: Char;
+char_0x2A = Chr (42 :: Integer);
+
+char_0x2B :: Char;
+char_0x2B = Chr (43 :: Integer);
+
+char_0x2D :: Char;
+char_0x2D = Chr (45 :: Integer);
+
+char_0x3C :: Char;
+char_0x3C = Chr (60 :: Integer);
+
+char_0x3D :: Char;
+char_0x3D = Chr (61 :: Integer);
+
+char_0x61 :: Char;
+char_0x61 = Chr (97 :: Integer);
+
+char_0x65 :: Char;
+char_0x65 = Chr (101 :: Integer);
+
+char_0x66 :: Char;
+char_0x66 = Chr (102 :: Integer);
+
+char_0x6C :: Char;
+char_0x6C = Chr (108 :: Integer);
+
+char_0x72 :: Char;
+char_0x72 = Chr (114 :: Integer);
+
+char_0x73 :: Char;
+char_0x73 = Chr (115 :: Integer);
+
+char_0x74 :: Char;
+char_0x74 = Chr (116 :: Integer);
+
+char_0x75 :: Char;
+char_0x75 = Chr (117 :: Integer);
+
+char_0x7C :: Char;
+char_0x7C = Chr (124 :: Integer);
+
 entry_seed_list :: Cfg_ext () -> Cfg_node -> [(Cfg_node, ([String], [Aexp]))];
 entry_seed_list g v =
   map (\ (c, CallEdge _ fs asa) -> (c, (fs, asa))) (entry_call_list g v);
@@ -2989,6 +3052,9 @@ declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
 declared_global :: Imp_prog_ext () -> String -> Bool;
 declared_global p x = membera (declared_global_vars p) x;
 
+uminus_int :: Int -> Int;
+uminus_int k = Int_of_integer (negate (integer_of_int k));
+
 classify_checks ::
   forall a.
     Cfg_ext () ->
@@ -3034,6 +3100,29 @@ sign_classify_check :: Bexp -> (String -> Sign) -> Check_result;
 sign_classify_check c d =
   (if sign_check_true c d then Check_Proved
     else (if sign_check_false c d then Check_Refuted else Check_Unknown));
+
+modulo_nat :: Nat -> Nat -> Nat;
+modulo_nat m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));
+
+divide_integer :: Integer -> Integer -> Integer;
+divide_integer k l = fst (divmod_integer k l);
+
+divide_nat :: Nat -> Nat -> Nat;
+divide_nat m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));
+
+string_of_nat :: Nat -> [Char];
+string_of_nat n =
+  (if less_nat n (nat_of_integer (10 :: Integer))
+    then [char_of_nat (plus_nat n (nat_of_integer (48 :: Integer)))]
+    else string_of_nat (divide_nat n (nat_of_integer (10 :: Integer))) ++
+           [char_of_nat
+              (plus_nat (modulo_nat n (nat_of_integer (10 :: Integer)))
+                (nat_of_integer (48 :: Integer)))]);
+
+string_of_int :: Int -> [Char];
+string_of_int i =
+  (if less_int i zero_int then [char_0x2D] ++ string_of_nat (nat (uminus_int i))
+    else string_of_nat (nat i));
 
 ivl_exec_eqs ::
   (String -> Bool) ->
@@ -3215,6 +3304,38 @@ ivl_exec_raw ::
 ivl_exec_raw gs pi ps mnm main =
   snd (tD_side_always_join_Interp_solve (ivl_exec_eqs gs pi ps mnm main)
         (cfg_exit (compile_prog pi ps mnm main)));
+
+string_of_aexp :: Aexp -> [Char];
+string_of_aexp (N n) = string_of_int n;
+string_of_aexp (V x) = explode x;
+string_of_aexp (Plus a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Minus a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Times a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
+
+string_of_bexp :: Bexp -> [Char];
+string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];
+string_of_bexp (Bc False) =
+  [char_0x66, char_0x61, char_0x6C, char_0x73, char_0x65];
+string_of_bexp (Not b) =
+  [char_0x21, char_0x28] ++ string_of_bexp b ++ [char_0x29];
+string_of_bexp (And b1 b2) =
+  [char_0x28] ++
+    string_of_bexp b1 ++
+      [char_0x26, char_0x26] ++ string_of_bexp b2 ++ [char_0x29];
+string_of_bexp (Or b1 b2) =
+  [char_0x28] ++
+    string_of_bexp b1 ++
+      [char_0x7C, char_0x7C] ++ string_of_bexp b2 ++ [char_0x29];
+string_of_bexp (Less a1 a2) =
+  string_of_aexp a1 ++ [char_0x3C] ++ string_of_aexp a2;
+string_of_bexp (Eqb a1 a2) =
+  string_of_aexp a1 ++ [char_0x3D, char_0x3D] ++ string_of_aexp a2;
 
 combine_assign_resolved_q ::
   forall a.
