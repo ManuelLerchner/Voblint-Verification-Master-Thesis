@@ -1,6 +1,6 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module Sign(analyse_sign_report) where {
+module Sign(Sign, analyse_sign_report, analyse_sign_report_with_state) where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -645,5 +645,26 @@ analyse_sign_report_for gs p =
 analyse_sign_report ::
   Core.Imp_prog_ext () -> [(Core.Cfg_node, (Core.Bexp, Core.Check_result))];
 analyse_sign_report p = analyse_sign_report_for (Core.declared_global p) p;
+
+analyse_sign_report_for_with_state ::
+  (String -> Bool) ->
+    Core.Imp_prog_ext () ->
+      [(Core.Cfg_node, (Core.Bexp, (Core.Check_result, String -> Sign)))];
+analyse_sign_report_for_with_state gs p =
+  let {
+    sol = snd (analyse_sign_for gs p);
+  } in Core.classify_checks_with_state (Core.prog_cfg Core.prog_main_name p)
+         (\ v ->
+           Core.sup_fun
+             (Core.fun_of_exec_dg_st_for gs
+               (Core.locals (sol (Core.Inl (v, ())))))
+             (Core.fun_of_exec_dg_st_for gs (Core.globs (sol (Core.Inr ())))))
+         sign_classify_check;
+
+analyse_sign_report_with_state ::
+  Core.Imp_prog_ext () ->
+    [(Core.Cfg_node, (Core.Bexp, (Core.Check_result, String -> Sign)))];
+analyse_sign_report_with_state p =
+  analyse_sign_report_for_with_state (Core.declared_global p) p;
 
 }

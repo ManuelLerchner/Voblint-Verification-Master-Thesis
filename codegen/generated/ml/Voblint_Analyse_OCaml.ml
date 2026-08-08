@@ -64,12 +64,15 @@ module Core : sig
     FunctionResult of string
   type aexp = N of int | V of string | Plus of aexp * aexp |
     Minus of aexp * aexp | Times of aexp * aexp
+  type sign
   type call_action = CallEdge of string option * string list * aexp list
   type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp
     | Less of aexp * aexp | Eqa of aexp * aexp
   type edge_action = EA_Nop | EA_Assign of string * aexp | EA_Random of string |
     EA_Assume of bexp | EA_AssumeNot of bexp | EA_Ret of aexp option * string |
     EA_Check of bexp
+  type ivl
+  val map : ('a -> 'b) -> 'a list -> 'b list
   type num
   type 'a set
   type char
@@ -82,6 +85,7 @@ module Core : sig
   type 'a proc_decl_ext
   type 'a imp_prog_ext
   val nat_of_integer : Z.t -> nat
+  val comp : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
   val cfg_entry : 'a cfg_ext -> cfg_node
   val char_of_integer : Z.t -> char
   val integer_of_char : char -> Z.t
@@ -100,6 +104,12 @@ module Core : sig
   val string_of_bexp : bexp -> char list
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+  val analyse_sign_report_with_state :
+    unit imp_prog_ext ->
+      (cfg_node * (bexp * (check_result * (string -> sign)))) list
+  val analyse_interval_td_report_with_state :
+    unit imp_prog_ext ->
+      (cfg_node * (bexp * (check_result * (string -> ivl)))) list
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -3434,23 +3444,76 @@ let rec interval_td_check_report
           (comp (fun_of_resolved_st_q_for bot_ivl gs) raw))
         interval_classify_check);;
 
+let rec classify_checks_with_state
+  g env classify =
+    map (fun (u, (c, r)) -> (u, (c, (r, env u))))
+      (classify_checks g env classify);;
+
 let rec analyse_interval_td_report
   p = interval_td_check_report (declared_global p) prog_main_name p;;
+
+let rec analyse_sign_report_for_with_state
+  gs p =
+    (let sol = snd (analyse_sign_for gs p) in
+      classify_checks_with_state (prog_cfg prog_main_name p)
+        (fun v ->
+          sup_fun semilattice_sup_sign
+            (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
+            (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
+        sign_classify_check);;
+
+let rec analyse_sign_report_with_state
+  p = analyse_sign_report_for_with_state (declared_global p) p;;
+
+let rec interval_td_check_report_with_state
+  gs mnm p =
+    (let raw =
+       analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm
+         (prog_main p)
+       in
+      classify_checks_with_state (prog_cfg mnm p)
+        (side_env enum_unit bounded_semilattice_sup_bot_ivl
+          (comp (fun_of_resolved_st_q_for bot_ivl gs) raw))
+        interval_classify_check);;
+
+let rec analyse_interval_td_report_with_state
+  p = interval_td_check_report_with_state (declared_global p) prog_main_name p;;
 
 end;; (*struct Core*)
 
 module Analyse : sig
   type analysis_kind = Sign_Analysis | Interval_Analysis
+  type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl
   val analyse :
     analysis_kind ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node * (Core.bexp * Core.check_result)) list
+  val analyse_with_state :
+    analysis_kind ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node *
+          (Core.bexp * (Core.check_result * (string -> abstract_value)))) list
 end = struct
 
 type analysis_kind = Sign_Analysis | Interval_Analysis;;
 
+type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl;;
+
 let rec analyse
   x0 p = match x0, p with Sign_Analysis, p -> Core.analyse_sign_report p
     | Interval_Analysis, p -> Core.analyse_interval_td_report p;;
+
+let rec analyse_with_state
+  x0 p = match x0, p with
+    Sign_Analysis, p ->
+      Core.map
+        (fun (u, (c, (r, s))) ->
+          (u, (c, (r, Core.comp (fun a -> SignValue a) s))))
+        (Core.analyse_sign_report_with_state p)
+    | Interval_Analysis, p ->
+        Core.map
+          (fun (u, (c, (r, s))) ->
+            (u, (c, (r, Core.comp (fun a -> IntervalValue a) s))))
+          (Core.analyse_interval_td_report_with_state p);;
 
 end;; (*struct Analyse*)

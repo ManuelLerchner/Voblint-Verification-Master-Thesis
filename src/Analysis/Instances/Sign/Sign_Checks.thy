@@ -166,5 +166,41 @@ text \<open>
 definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report p = analyse_sign_report_for (declared_global p) p"
 
+subsection \<open>Whole-program check report with state\<close>
+
+text \<open>
+  State-carrying sibling of \<open>analyse_sign_report_for\<close>/\<open>analyse_sign_report\<close>,
+  via \<^const>\<open>classify_checks_with_state\<close>: same D/G pipeline, same environment,
+  with the per-check Sign environment attached to each report entry instead
+  of discarded. The \<open>[code]\<close> rewrite mirrors the one above for the same
+  reason: naive definitional unfolding would re-run the solver twice per
+  check.
+\<close>
+
+definition analyse_sign_report_for_with_state ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+  "analyse_sign_report_for_with_state gs p =
+     classify_checks_with_state (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
+       sign_classify_check"
+
+declare analyse_sign_report_for_with_state_def [code del]
+
+lemma analyse_sign_report_for_with_state_code [code]:
+  "analyse_sign_report_for_with_state gs p =
+     (let sol = snd (analyse_sign_for gs p)
+      in classify_checks_with_state (prog_cfg prog_main_name p)
+           (\<lambda>v. fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ()))))
+                \<squnion> fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))
+           sign_classify_check)"
+  unfolding analyse_sign_report_for_with_state_def analyse_sign_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_sign_report\<close>'s shape.\<close>
+
+definition analyse_sign_report_with_state ::
+    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+  "analyse_sign_report_with_state p = analyse_sign_report_for_with_state (declared_global p) p"
+
 end
 

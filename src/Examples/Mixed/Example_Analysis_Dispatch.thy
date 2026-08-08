@@ -37,6 +37,30 @@ fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
 
+subsection \<open>Domain-neutral state-carrying report\<close>
+
+text \<open>
+  \<open>abstract_value\<close> wraps each domain's own abstract state type once, so
+  \<open>analyse_with_state\<close> can share one report type across branches the same
+  way \<open>analyse\<close> already shares \<open>check_result\<close>. \<open>analyse\<close> itself stays
+  untouched: external callers (the CLI design, this theory's own
+  \<open>codegen/regression\<close> drivers) already pin its \<open>check_report_entry
+  list\<close> shape as a trust boundary, so this is an additional export, not a
+  replacement. Each branch reuses \<open>analyse_sign_report_with_state\<close>/
+  \<open>analyse_interval_td_report_with_state\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>,
+  \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) unchanged, just as \<open>analyse\<close> reuses
+  their state-free counterparts.
+\<close>
+
+datatype abstract_value = SignValue sign | IntervalValue ivl
+
+fun analyse_with_state ::
+    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> abstract_value abs_state) list" where
+  "analyse_with_state Sign_Analysis p =
+     map (\<lambda>(u, c, r, s). (u, c, r, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
+| "analyse_with_state Interval_Analysis p =
+     map (\<lambda>(u, c, r, s). (u, c, r, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
+
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 
 text \<open>
@@ -654,6 +678,7 @@ code_identifier
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -669,6 +694,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -684,6 +710,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -698,6 +725,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -733,6 +761,47 @@ definition no_call_global_self_ref_prog :: imp_prog where
 lemma no_call_global_self_ref_interval_terminates:
   "analyse Interval_Analysis no_call_global_self_ref_prog =
      [(Statement 2, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+  by eval
+
+text \<open>
+  Wiring regression for \<open>analyse_with_state\<close>: a single exact assignment, no
+  widening or narrowing in play, so the reported state at the check is
+  independently known. This exercises the node environment, the
+  global/local merge, and the domain constructor \<open>analyse_with_state\<close>
+  wraps its result in --- not merely that the function type-checks.
+\<close>
+
+definition state_wiring_ex_prog :: imp_prog where
+  "state_wiring_ex_prog =
+     program {
+       void main() {
+         x := 5;
+         __voblint_check(0 < x)
+       }
+     }"
+
+text \<open>
+  \<open>x\<close> is local (no \<open>global\<close> declaration), and this D/G instance's Sign
+  report always joins the local and global views of every name
+  (\<open>analyse_sign_report_for_code\<close>); the global view of a name outside its
+  own scope is \<open>STop\<close>, so the join collapses a purely local name's precise
+  \<open>SPos\<close> contribution back to \<open>STop\<close> --- the same \<open>Check_Unknown\<close>
+  \<^const>\<open>analyse\<close> itself already reports for this check. Pinning \<open>STop\<close>
+  here still exercises the real wiring (node environment, global/local
+  merge, domain constructor), it just documents current behavior rather
+  than best-case precision.
+\<close>
+
+lemma state_wiring_ex_sign_at_check:
+  "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
+                             (analyse_with_state Sign_Analysis state_wiring_ex_prog))
+    in f (STR ''x'')) = SignValue STop"
+  by eval
+
+lemma state_wiring_ex_interval_at_check:
+  "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
+                             (analyse_with_state Interval_Analysis state_wiring_ex_prog))
+    in f (STR ''x'')) = IntervalValue (Ivl (Fin 5) (Fin 5))"
   by eval
 
 end

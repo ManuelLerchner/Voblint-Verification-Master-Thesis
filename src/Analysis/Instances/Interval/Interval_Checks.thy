@@ -292,4 +292,37 @@ proof -
               interval_classify_check_refuted node_sound])
 qed
 
+subsection \<open>Whole-program check report with state: the widening/warrowing backend\<close>
+
+text \<open>
+  State-carrying sibling of \<open>interval_td_check_report\<close>/\<open>analyse_interval_td_report\<close>,
+  via \<^const>\<open>classify_checks_with_state\<close>: same warrowing D/G pipeline, with
+  the per-check Interval environment attached to each report entry instead of
+  discarded. The \<open>[code]\<close> rewrite mirrors \<open>interval_td_check_report_code\<close> for
+  the same single-solve-per-report reason.
+\<close>
+
+definition interval_td_check_report_with_state ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> ivl abs_state) list" where
+  "interval_td_check_report_with_state gs mnm p =
+     classify_checks_with_state (prog_cfg mnm p)
+       (analyse_interval_td_at gs (prog_table p) (prog_procs p) mnm (prog_main p))
+       interval_classify_check"
+
+declare interval_td_check_report_with_state_def [code del]
+
+lemma interval_td_check_report_with_state_code [code]:
+  "interval_td_check_report_with_state gs mnm p =
+     (let raw = analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+      in classify_checks_with_state (prog_cfg mnm p)
+           (\<lambda>v. side_env (fun_of_resolved_st_q_for gs \<circ> raw) v)
+           interval_classify_check)"
+  unfolding interval_td_check_report_with_state_def analyse_interval_td_at_def[abs_def] Let_def
+  by (rule refl)
+
+definition analyse_interval_td_report_with_state ::
+    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> ivl abs_state) list" where
+  "analyse_interval_td_report_with_state p =
+     interval_td_check_report_with_state (declared_global p) prog_main_name p"
+
 end
