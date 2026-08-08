@@ -82,6 +82,32 @@ lemma dispatch_demo_check_cond_rendered:
   "string_of_bexp (Less (N 0) (V (STR ''y''))) = ''0<y''"
   by eval
 
+subsection \<open>Sign: even trivial straight-line code stays Check_Unknown\<close>
+
+text \<open>
+  Not the precision win one might expect: \<open>x := 5\<close> is exactly \<open>SPos\<close> at the sign level, so a
+  hand-classification would settle \<open>0 < x\<close> outright, and yet \<open>analyse Sign_Analysis\<close> still
+  reports \<open>Check_Unknown\<close> here, on a program with \<open>no\<close> global at all. This is the same
+  always-join imprecision \<open>dgEx_inspect\<close> documents for \<open>dispatch_demo_prog\<close>, just shown to be
+  unconditional: the native D/G pipeline's \<open>analyse_sign_env_for\<close> joins the local answer with
+  the global side-effect slot at \<^emph>\<open>every\<close> node regardless of whether the program declares any
+  global, and an unconstrained global (\<open>STop\<close>) joined with a precise local answer is
+  \<open>STop\<close>/\<open>Check_Unknown\<close>. So \<open>analyse_sign_report\<close> cannot currently produce
+  \<open>Check_Proved\<close>/\<open>Check_Refuted\<close> for \<^emph>\<open>any\<close> program through this API --- a real, pre-existing
+  precision gap in the native D/G pipeline, not a proof gap and not touched by this work; flagged
+  here rather than silently worked around with a cherry-picked example.
+\<close>
+
+lemma sign_straight_line_const_still_unknown:
+  "analyse Sign_Analysis (program { void main() { x := 5; __voblint_check(0 < x) } }) =
+     [(Statement 1, Less (N 0) (V (STR ''x'')), Check_Unknown)]"
+  by eval
+
+lemma sign_straight_line_neg_const_still_unknown:
+  "analyse Sign_Analysis (program { void main() { x := 0 - 5; __voblint_check(0 < x) } }) =
+     [(Statement 1, Less (N 0) (V (STR ''x'')), Check_Unknown)]"
+  by eval
+
 subsection \<open>A program with a global, a procedure, and a call\<close>
 
 text \<open>
@@ -203,6 +229,14 @@ text \<open>
   would have given on programs it could actually finish.
 \<close>
 
+text \<open>
+  Acceptance regression B (interprocedural global self-feedback): a single call to a
+  procedure that reads and grows the same global \<open>total\<close> reads back through the same
+  flow-insensitive \<open>Inr ()\<close> summary as the zero-call case below --- so this checks the fix
+  also survives \<open>dgs_enter\<close>/\<open>dgs_combine\<close> (entry/return) handling, not just a straight-line
+  global write.
+\<close>
+
 definition one_call_prog :: imp_prog where
   "one_call_prog =
      program {
@@ -217,12 +251,14 @@ definition one_call_prog :: imp_prog where
        }
      }"
 
-ML_val \<open>
-val result =
-  Timeout.apply (Time.fromSeconds 15)
-    (fn () => @{code analyse} @{code Interval_Analysis} @{code one_call_prog}) ()
-  handle Timeout.TIMEOUT _ => (writeln "TIMED OUT after 15s (one_call_prog, touches global total)"; [])
-val () = writeln ("done, " ^ Int.toString (length result) ^ " entries")
+lemma one_call_interval_terminates:
+  "analyse Interval_Analysis one_call_prog =
+     [(Statement 4, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+  by eval
+
+text \<open>
+  A call that touches no global at all: contrasts with \<open>one_call_prog\<close> to show the call/return
+  machinery itself is not the hazard --- only a global read-and-grow is.
 \<close>
 
 definition no_global_call_prog :: imp_prog where
@@ -238,14 +274,35 @@ definition no_global_call_prog :: imp_prog where
        }
      }"
 
-ML_val \<open>
-val result2 =
-  Timeout.apply (Time.fromSeconds 15)
-    (fn () => @{code analyse} @{code Interval_Analysis} @{code no_global_call_prog}) ()
-  handle Timeout.TIMEOUT _ => (writeln "TIMED OUT after 15s (no_global_call_prog, touches no global)"; [])
-val () = writeln ("done2, " ^ Int.toString (length result2) ^ " entries")
+lemma no_global_call_interval_proved:
+  "analyse Interval_Analysis no_global_call_prog =
+     [(Statement 4, Less (N 0) (Plus (V (STR ''x'')) (N 1)), Check_Proved)]"
+  by eval
+
+text \<open>
+  A harmless global write --- a plain constant assignment, no self-reference through the
+  summary --- always terminated, under \<^emph>\<open>either\<close> backend: distinguishes "a program has a
+  global" from "a program has a self-dependent global side contribution" (the actual hazard
+  class, isolated below). The result is \<open>Check_Unknown\<close> here (this older \<open>side_cfg_T_eff_st\<close>
+  pipeline's local/global environment read loses precision on a global read back right after its
+  own write, independent of solver choice), not \<open>Check_Proved\<close> --- termination, not precision,
+  is the property this case demonstrates.
 \<close>
 
+definition harmless_global_prog :: imp_prog where
+  "harmless_global_prog =
+     program {
+       global g;
+       void main() {
+         g := 1;
+         __voblint_check(0 < g)
+       }
+     }"
+
+lemma harmless_global_interval_terminates:
+  "analyse Interval_Analysis harmless_global_prog =
+     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Unknown)]"
+  by eval
 
 subsection \<open>Executable code generation\<close>
 
@@ -343,11 +400,14 @@ export_code
   string_of_bexp
   in OCaml module_name Voblint_Analyse file_prefix "Voblint_Analyse_OCaml"
 
-text \<open>Scratch (task #39): no call at all -- one global write that reads its
-  own prior value through the flow-insensitive global summary, plus one
-  independent base-case write. Tests whether the ascending chain
-  [0,0], [0,3], [0,6], ... comes from the call/return summary specifically,
-  or from any self-referential global write.\<close>
+text \<open>
+  Acceptance regression A (no-call global self-feedback, task #39): no procedure, no call,
+  just one global write that reads its own prior value through the flow-insensitive global
+  summary, plus one independent base-case write. Isolates global-summary widening on its own,
+  without any interprocedural (\<open>dgs_enter\<close>/\<open>dgs_combine\<close>) machinery in play at all --- this is
+  the minimal case that first proved the call/return summary was never the actual hazard.
+\<close>
+
 definition no_call_global_self_ref_prog :: imp_prog where
   "no_call_global_self_ref_prog =
      program {
@@ -359,12 +419,9 @@ definition no_call_global_self_ref_prog :: imp_prog where
        }
      }"
 
-ML_val \<open>
-val result3 =
-  Timeout.apply (Time.fromSeconds 15)
-    (fn () => @{code analyse} @{code Interval_Analysis} @{code no_call_global_self_ref_prog}) ()
-  handle Timeout.TIMEOUT _ => (writeln "TIMED OUT after 15s (no_call_global_self_ref_prog)"; [])
-val () = writeln ("done3, " ^ Int.toString (length result3) ^ " entries")
-\<close>
+lemma no_call_global_self_ref_interval_terminates:
+  "analyse Interval_Analysis no_call_global_self_ref_prog =
+     [(Statement 2, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+  by eval
 
 end

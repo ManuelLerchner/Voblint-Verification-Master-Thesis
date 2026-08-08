@@ -86,6 +86,36 @@ let expected_proc_demo_interval =
   [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Unknown));
     (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
 
+(* Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
+   global write that reads its own prior value through the flow-insensitive global summary.
+   Same program as no_call_global_self_ref_prog in Example_Analysis_Dispatch.thy; checked
+   against no_call_global_self_ref_interval_terminates. Isolates that the call/return summary
+   was never the actual hazard -- a single self-referential global write reproduces it alone. *)
+let no_call_global_self_ref_prog =
+  make []
+    (Seq
+       (Seq (Assign ("total", N (mk_int 0)), Assign ("total", Plus (V "total", N (mk_int 3)))),
+        Check (Less (N (mk_int 0), V "total"))))
+    [ "total" ]
+
+let expected_no_call_global_self_ref_interval =
+  [ (Statement (mk_nat 2), (Less (N (mk_int 0), V "total"), Check_Unknown)) ]
+
+(* Acceptance regression B (interprocedural global self-feedback): a single call to a
+   procedure that reads and grows the same global. Same program as one_call_prog in
+   Example_Analysis_Dispatch.thy; checked against one_call_interval_terminates -- confirms the
+   fix also survives entry/combine (call/return) handling, not just a straight-line write. *)
+let one_call_prog =
+  make
+    [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
+    (Seq
+       (Seq (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
+        Check (Less (N (mk_int 0), V "total"))))
+    [ "total" ]
+
+let expected_one_call_interval =
+  [ (Statement (mk_nat 4), (Less (N (mk_int 0), V "total"), Check_Unknown)) ]
+
 let show_int i = Z.to_string (integer_of_int i)
 
 let rec show_aexp = function
@@ -211,6 +241,10 @@ let () =
   let proc_demo_cfg = prog_cfg prog_main_name proc_demo_prog in
   let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
   let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
+  let actual_no_call_global_self_ref_interval =
+    analyse Interval_Analysis no_call_global_self_ref_prog
+  in
+  let actual_one_call_interval = analyse Interval_Analysis one_call_prog in
   let ok_sign = check_case "Sign_Analysis demo report" actual_sign expected_sign in
   let ok_interval = check_case "Interval_Analysis demo report" actual_interval expected_interval in
   let ok_proc_demo_sign =
@@ -226,11 +260,20 @@ let () =
   let ok_proc_demo_calls =
     check_case_str "proc_demo CFG calls edges" actual_proc_demo_calls expected_proc_demo_calls
   in
+  let ok_no_call_global_self_ref_interval =
+    check_case "Interval_Analysis no-call global self-feedback (acceptance A)"
+      actual_no_call_global_self_ref_interval expected_no_call_global_self_ref_interval
+  in
+  let ok_one_call_interval =
+    check_case "Interval_Analysis interprocedural global self-feedback (acceptance B)"
+      actual_one_call_interval expected_one_call_interval
+  in
   let ok_check_cond_rendered =
     check_case_str "string_of_bexp check condition" (un_string (string_of_bexp check_cond)) "0<y"
   in
   if
     ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra
-    && ok_proc_demo_calls && ok_check_cond_rendered
+    && ok_proc_demo_calls && ok_no_call_global_self_ref_interval && ok_one_call_interval
+    && ok_check_cond_rendered
   then print_endline "All regression checks passed."
   else exit 1

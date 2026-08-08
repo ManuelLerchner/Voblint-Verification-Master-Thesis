@@ -115,6 +115,43 @@ expectedProcDemoInterval =
     (Statement (mkNat 6), (Less (V "total") (N (mkInt 100)), Check_Unknown))
   ]
 
+-- Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
+-- global write that reads its own prior value through the flow-insensitive global summary.
+-- Same program as no_call_global_self_ref_prog in Example_Analysis_Dispatch.thy; checked
+-- against no_call_global_self_ref_interval_terminates. Isolates that the call/return summary
+-- was never the actual hazard -- a single self-referential global write reproduces it alone.
+noCallGlobalSelfRefProg :: Imp_prog_ext ()
+noCallGlobalSelfRefProg =
+  make
+    []
+    ( Seq
+        (Seq (Assign "total" (N (mkInt 0))) (Assign "total" (Plus (V "total") (N (mkInt 3)))))
+        (Check (Less (N (mkInt 0)) (V "total")))
+    )
+    ["total"]
+
+expectedNoCallGlobalSelfRefInterval :: [(Cfg_node, (Bexp, Check_result))]
+expectedNoCallGlobalSelfRefInterval =
+  [(Statement (mkNat 2), (Less (N (mkInt 0)) (V "total"), Check_Unknown))]
+
+-- Acceptance regression B (interprocedural global self-feedback): a single call to a
+-- procedure that reads and grows the same global. Same program as one_call_prog in
+-- Example_Analysis_Dispatch.thy; checked against one_call_interval_terminates -- confirms
+-- the fix also survives entry/combine (call/return) handling, not just a straight-line write.
+oneCallProg :: Imp_prog_ext ()
+oneCallProg =
+  make
+    [("inc", proc_decl_of ["n"] (Assign "total" (Plus (V "total") (V "n"))))]
+    ( Seq
+        (Seq (Assign "total" (N (mkInt 0))) (Call Nothing "inc" [N (mkInt 3)]))
+        (Check (Less (N (mkInt 0)) (V "total")))
+    )
+    ["total"]
+
+expectedOneCallInterval :: [(Cfg_node, (Bexp, Check_result))]
+expectedOneCallInterval =
+  [(Statement (mkNat 4), (Less (N (mkInt 0)) (V "total"), Check_Unknown))]
+
 -- Compact renderers matching string_of_cfg_node/string_of_action/
 -- string_of_call_action in Analysis_GraphViz.thy exactly (no spaces around
 -- infix operators, "pp"/"entry_"/"result_" node prefixes) -- deliberately
@@ -257,6 +294,8 @@ main = do
       procDemoCfg = prog_cfg prog_main_name procDemoProg
       actualProcDemoIntra = showIntraList (cfg_intra_list procDemoCfg)
       actualProcDemoCalls = showCallsList (cfg_calls_list procDemoCfg)
+      actualNoCallGlobalSelfRefInterval = analyse Interval_Analysis noCallGlobalSelfRefProg
+      actualOneCallInterval = analyse Interval_Analysis oneCallProg
   okSign <- checkCase "Sign_Analysis demo report" actualSign expectedSign
   okInterval <- checkCase "Interval_Analysis demo report" actualInterval expectedInterval
   okProcDemoSign <- checkCase "Sign_Analysis proc_demo report" actualProcDemoSign expectedProcDemoSign
@@ -264,11 +303,18 @@ main = do
     checkCase "Interval_Analysis proc_demo report (warrowing, was hanging)" actualProcDemoInterval expectedProcDemoInterval
   okProcDemoIntra <- checkCase "proc_demo CFG intra edges" actualProcDemoIntra expectedProcDemoIntra
   okProcDemoCalls <- checkCase "proc_demo CFG calls edges" actualProcDemoCalls expectedProcDemoCalls
+  okNoCallGlobalSelfRefInterval <-
+    checkCase "Interval_Analysis no-call global self-feedback (acceptance A)"
+      actualNoCallGlobalSelfRefInterval expectedNoCallGlobalSelfRefInterval
+  okOneCallInterval <-
+    checkCase "Interval_Analysis interprocedural global self-feedback (acceptance B)"
+      actualOneCallInterval expectedOneCallInterval
   okCheckCondRendered <-
     checkCase
       "string_of_bexp check condition"
       (unString (string_of_bexp checkCond))
       expectedCheckCondRendered
-  if okSign && okInterval && okProcDemoSign && okProcDemoInterval && okProcDemoIntra && okProcDemoCalls && okCheckCondRendered
+  if okSign && okInterval && okProcDemoSign && okProcDemoInterval && okProcDemoIntra && okProcDemoCalls
+      && okNoCallGlobalSelfRefInterval && okOneCallInterval && okCheckCondRendered
     then putStrLn "All regression checks passed."
     else exitFailure
