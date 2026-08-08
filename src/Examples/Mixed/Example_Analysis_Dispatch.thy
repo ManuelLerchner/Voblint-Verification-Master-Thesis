@@ -10,7 +10,7 @@ section \<open>A unified, verified check-report API across domains\<close>
 
 text \<open>
   \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_Examples.Example_Sign_Codegen\<close>) and
-  \<open>interval_check_report\<close>/\<open>analyse_interval_report\<close>
+  \<open>interval_td_check_report\<close>/\<open>analyse_interval_td_report\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) already share one observable
   result type, \<open>check_report_entry list\<close>
   (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>), even though the two domains'
@@ -19,18 +19,23 @@ text \<open>
   each branch reuses the domain's own already-generic, already-sound report
   function unchanged.
 
-  Interval's warrowing variant (\<open>analyse_interval_td\<close>) is deliberately not a
-  branch here: it has no soundness theorem yet (see
-  \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>), so it stays outside this
-  verified frontend rather than silently reporting an unbacked
-  \<open>Check_Proved\<close>/\<open>Check_Refuted\<close>.
+  The \<open>Interval_Analysis\<close> branch dispatches to \<open>analyse_interval_td_report\<close>, the
+  widening/warrowing-backed report, not the always-join \<open>analyse_interval_report\<close>: the
+  always-join backend's flow-insensitive global-summary update has no widening, so it can fail
+  to terminate on a finite program whose global-writing transfer depends on the summary's own
+  current value (\<open>total := total + n\<close> is the minimal reproducer, isolated below to \<^emph>\<open>not\<close>
+  require a call). \<open>analyse_interval_td_report\<close> now carries its own soundness theorems
+  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>'s \<open>analyse_interval_td_report_sound_proved\<close>/
+  \<open>_refuted\<close>, built on \<open>Voblint_Core.Solver_Side_RG\<close>'s generic
+  \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close>), so this is a like-for-like swap, not a precision or
+  soundness downgrade.
 \<close>
 
 datatype analysis_kind = Sign_Analysis | Interval_Analysis
 
 fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse Sign_Analysis p = analyse_sign_report p"
-| "analyse Interval_Analysis p = analyse_interval_report p"
+| "analyse Interval_Analysis p = analyse_interval_td_report p"
 
 subsection \<open>A program that tells the two domains apart\<close>
 
@@ -144,42 +149,58 @@ lemma proc_demo_cfg_calls:
   by eval
 
 text \<open>
-  \<open>analyse Interval_Analysis proc_demo_prog\<close> (this program: a global, one
-  procedure with a formal, two calls, two checks) does not terminate within
-  several minutes and crashes the evaluating process outright --- reproduced
-  independently in a batch build (segfault after ~145s), an I/R REPL
-  (crashed the daemon), and an I/Q jEdit session (crashed the backend, though
-  \<^verbatim>\<open>Timeout.apply\<close>-guarded evaluation below survives cleanly). Confirmed
-  independent of the \<^typ>\<open>String.literal\<close> migration in this branch --- no
-  existing example anywhere in this project previously exercised
-  \<^const>\<open>analyse_interval_report\<close> end-to-end on a program containing an
-  actual \<^const>\<open>com.Call\<close> edge, so this is a pre-existing latent
-  non-termination, newly exposed here, not caused by this migration.
+  The originally-documented crash case (a global, one procedure, two calls, two checks) through
+  the exact runtime API \<open>analyse\<close> exposes: now terminates in a few seconds via the warrowing
+  backend \<open>analyse Interval_Analysis\<close> dispatches to, at \<open>Check_Unknown\<close> precision (widening's
+  cost, not a bug) rather than crashing.
+\<close>
 
-  Isolated (task #39, three \<^verbatim>\<open>Timeout.apply\<close>-guarded probes below): a call
-  to a procedure that reads/writes no global (\<open>no_global_call_prog\<close>)
-  terminates in under 4 seconds; a call to a procedure that touches one
-  global (\<open>one_call_prog\<close>) times out at 15 seconds; and, decisively,
+lemma proc_demo_interval_terminates:
+  "analyse Interval_Analysis proc_demo_prog =
+     [(Statement 5, Less (N 0) (V (STR ''total'')), Check_Unknown),
+      (Statement 6, Less (V (STR ''total'')) (N 100), Check_Unknown)]"
+  by eval
+
+text \<open>
+  \<open>analyse_interval_report proc_demo_prog\<close> (the always-join backend, no longer what
+  \<open>analyse Interval_Analysis\<close> dispatches to) does not terminate within several minutes and
+  crashes the evaluating process outright --- reproduced independently in a batch build
+  (segfault after ~145s), an I/R REPL (crashed the daemon), and an I/Q jEdit session (crashed the
+  backend). Confirmed independent of the \<^typ>\<open>String.literal\<close> migration in this branch --- no
+  existing example anywhere in this project previously exercised \<^const>\<open>analyse_interval_report\<close>
+  end-to-end on a program containing an actual \<^const>\<open>com.Call\<close> edge, so this was a pre-existing
+  latent non-termination, newly exposed at the time, not caused by that migration.
+
+  This is \<^emph>\<open>not\<close> fundamentally about calls, though calls were the original reproducer. Isolated
+  (task #39, three \<^verbatim>\<open>Timeout.apply\<close>-guarded probes below, all now completing well inside their
+  15s budget once routed through the warrowing backend): a call to a procedure that reads/writes
+  no global (\<open>no_global_call_prog\<close>) terminates in under 4 seconds; a call to a procedure that
+  touches one global (\<open>one_call_prog\<close>) terminates too; and, decisively,
   \<open>no_call_global_self_ref_prog\<close> --- no procedure, no call, just
-  \<open>total := 0; total := total + 3\<close> on a declared global --- also times out.
-  The call/return summary is not the cause: a single self-referential global
-  write reproduces it alone.
+  \<open>total := 0; total := total + 3\<close> on a declared global --- reproduces the same divergence
+  \<^emph>\<open>alone\<close>, under the always-join backend. The call/return summary was never the cause: a single
+  self-referential global write reproduces it by itself. Ordinary constant global writes
+  (\<open>g := 1\<close>) are unaffected either way --- the problematic class is specifically a global side
+  contribution that depends monotonically on the flow-insensitive summary's own current value.
 
-  The actual mechanism: globals are one flow-insensitive summary point
-  (\<open>Inr ()\<close>). Every transfer built through \<open>unit_edge_tree_st\<close> reads that
-  summary via \<open>QueryG\<close> and publishes its own contribution back to the same
-  summary via \<open>Side\<close>, so an assignment that both reads and grows a global
-  becomes a self-referential equation on \<open>Inr ()\<close>: \<open>total := total + 3\<close>
-  together with the independent base case \<open>total := 0\<close> solves as
-  \<open>G = [0,0] \<squnion> (G + [3,3])\<close>. Kleene iteration from \<open>bot\<close> produces the
-  ascending chain \<open>[0,0]\<close>, \<open>[0,3]\<close>, \<open>[0,6]\<close>, \<open>[0,9]\<close>, \<open>\<dots>\<close> --- the true least
-  fixpoint is \<open>[0,+\<infinity>]\<close>, and plain join
-  (\<^const>\<open>TD_side_always_join_Interp_solve\<close>'s global update is \<open>sup\<close>) never
-  reaches an infinite bound in finitely many steps. This is not an
-  arithmetic bug: it is exactly the flow-insensitive least fixpoint this
-  solve path computes, on a domain whose global-summary update has no
-  widening. \<^const>\<open>analyse_interval_td\<close> (the warrowing variant) does have
-  widening but no soundness proof, and was not tested here.
+  The actual mechanism: globals are one flow-insensitive summary point (\<open>Inr ()\<close>). Every transfer
+  built through \<open>unit_edge_tree_st\<close> reads that summary via \<open>QueryG\<close> and publishes its own
+  contribution back to the same summary via \<open>Side\<close>, so an assignment that both reads and grows a
+  global becomes a self-referential equation on \<open>Inr ()\<close>: \<open>total := total + 3\<close> together with the
+  independent base case \<open>total := 0\<close> solves as \<open>G = [0,0] \<squnion> (G + [3,3])\<close>. Kleene iteration from
+  \<open>bot\<close> produces the ascending chain \<open>[0,0]\<close>, \<open>[0,3]\<close>, \<open>[0,6]\<close>, \<open>[0,9]\<close>, \<open>\<dots>\<close> --- the true least
+  fixpoint is \<open>[0,+\<infinity>]\<close>, and plain join (\<^const>\<open>TD_side_always_join_Interp_solve\<close>'s global update
+  is \<open>sup\<close>) never reaches an infinite bound in finitely many steps. This was not an arithmetic
+  bug: it was exactly the flow-insensitive least fixpoint that solve path computes, on a domain
+  whose global-summary update has no widening. Sign and Parity never hit this because their
+  lattices are finite-height, so every join-only fixpoint on them is finite regardless.
+
+  \<^const>\<open>analyse_interval_td_report\<close> (the warrowing variant, now what \<open>analyse Interval_Analysis\<close>
+  dispatches to) has both the widening and a soundness theorem
+  (\<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>)
+  --- and empirically terminates on every case above, including \<open>proc_demo_prog\<close> itself
+  (\<open>proc_demo_interval_terminates\<close> below), at the cost of the precision the always-join backend
+  would have given on programs it could actually finish.
 \<close>
 
 definition one_call_prog :: imp_prog where

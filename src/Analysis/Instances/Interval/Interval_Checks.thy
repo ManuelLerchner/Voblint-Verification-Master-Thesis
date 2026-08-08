@@ -197,4 +197,99 @@ proof -
               interval_classify_check_refuted node_sound])
 qed
 
+subsection \<open>Whole-program check report: the widening/warrowing backend\<close>
+
+text \<open>
+  \<open>interval_td_check_report\<close>/\<open>analyse_interval_td_report\<close> mirror
+  \<open>interval_check_report\<close>/\<open>analyse_interval_report\<close> exactly, reading through
+  \<^const>\<open>analyse_interval_td_at\<close> (the warrowing pipeline) instead of \<^const>\<open>ivl_exec_prog_at\<close>
+  (the always-join one) --- the only reason to prefer this report over the always-join one is
+  that its backend terminates on programs whose flow-insensitive globals would make the
+  always-join solver diverge.
+\<close>
+
+definition interval_td_check_report ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "interval_td_check_report gs mnm p =
+     classify_checks (prog_cfg mnm p) (analyse_interval_td_at gs (prog_table p) (prog_procs p) mnm (prog_main p))
+       interval_classify_check"
+
+text \<open>
+  Same single-solve-per-report fix as \<open>interval_check_report_code\<close>: bind
+  \<^term>\<open>analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)\<close> once, outside
+  \<^const>\<open>classify_checks\<close>'s per-check closure.
+\<close>
+
+declare interval_td_check_report_def [code del]
+
+lemma interval_td_check_report_code [code]:
+  "interval_td_check_report gs mnm p =
+     (let raw = analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+      in classify_checks (prog_cfg mnm p)
+           (\<lambda>v. side_env (fun_of_resolved_st_q_for gs \<circ> raw) v)
+           interval_classify_check)"
+  unfolding interval_td_check_report_def analyse_interval_td_at_def[abs_def] Let_def
+  by (rule refl)
+
+definition analyse_interval_td_report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_td_report p = interval_td_check_report (declared_global p) prog_main_name p"
+
+text \<open>
+  Soundness mirrors \<open>analyse_interval_report_sound_proved\<close>/\<open>_refuted\<close> exactly, with
+  \<open>ivl_terminates_prog\<close>/\<open>ivl_exec_prog_sound_collecting_at\<close> swapped for
+  \<open>analyse_interval_td_terminates\<close>/\<open>analyse_interval_td_prog_sound_collecting_at\<close>.
+\<close>
+
+theorem analyse_interval_td_report_sound_proved:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes fin: "finite (intra (prog_cfg prog_main_name p))"
+      and terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
+                          prog_main_name (prog_main p)"
+      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+      and mem: "(v, c, Check_Proved) \<in> set (analyse_interval_td_report p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           bval c s"
+proof -
+  have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
+                       \<subseteq> \<lbrakk>analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
+                            prog_main_name (prog_main p) v\<rbrakk>"
+    by (rule analyse_interval_td_prog_sound_collecting_at[OF terminates reach_exit])
+  show ?thesis
+    by (rule classify_checks_proved_sound
+          [where g = "prog_cfg prog_main_name p"
+             and env = "analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
+                          prog_main_name (prog_main p)"
+             and classify = interval_classify_check
+             and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
+             and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
+           OF fin mem[unfolded analyse_interval_td_report_def interval_td_check_report_def]
+              interval_classify_check_proved node_sound])
+qed
+
+theorem analyse_interval_td_report_sound_refuted:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes fin: "finite (intra (prog_cfg prog_main_name p))"
+      and terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
+                          prog_main_name (prog_main p)"
+      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+      and mem: "(v, c, Check_Refuted) \<in> set (analyse_interval_td_report p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> bval c s"
+proof -
+  have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
+                       \<subseteq> \<lbrakk>analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
+                            prog_main_name (prog_main p) v\<rbrakk>"
+    by (rule analyse_interval_td_prog_sound_collecting_at[OF terminates reach_exit])
+  show ?thesis
+    by (rule classify_checks_refuted_sound
+          [where g = "prog_cfg prog_main_name p"
+             and env = "analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
+                          prog_main_name (prog_main p)"
+             and classify = interval_classify_check
+             and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
+             and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
+           OF fin mem[unfolded analyse_interval_td_report_def interval_td_check_report_def]
+              interval_classify_check_refuted node_sound])
+qed
+
 end

@@ -80,10 +80,11 @@ expectedInterval =
 -- together -- not just straight-line assignment/check.
 -- Same program as proc_demo_prog in Example_Analysis_Dispatch.thy; checked
 -- against proc_demo_sign_unknown / proc_demo_cfg_intra / proc_demo_cfg_calls.
--- (Interval is not exercised here: analyse Interval_Analysis on this
--- procedure/call program does not terminate -- a pre-existing bug in
--- Interval's call handling, unrelated to this driver's String-based
--- construction, tracked separately in Example_Analysis_Dispatch.thy.)
+-- Interval_Analysis on this program used to hang/segfault under the always-join
+-- backend (a flow-insensitive global read-and-grow has no widening there); the
+-- exported `analyse` dispatcher now routes Interval through the warrowing
+-- backend, which terminates (at Check_Unknown precision) -- see
+-- Example_Analysis_Dispatch.thy's proc_demo_interval_terminates.
 procDemoProg :: Imp_prog_ext ()
 procDemoProg =
   make
@@ -102,6 +103,14 @@ procDemoProg =
 
 expectedProcDemoSign :: [(Cfg_node, (Bexp, Check_result))]
 expectedProcDemoSign =
+  [ (Statement (mkNat 5), (Less (N (mkInt 0)) (V "total"), Check_Unknown)),
+    (Statement (mkNat 6), (Less (V "total") (N (mkInt 100)), Check_Unknown))
+  ]
+
+-- Same values as expectedProcDemoSign's shape, but this is the case that used to hang: a global
+-- read and grown across two calls, now solved via warrowing (Check_Unknown, not a crash).
+expectedProcDemoInterval :: [(Cfg_node, (Bexp, Check_result))]
+expectedProcDemoInterval =
   [ (Statement (mkNat 5), (Less (N (mkInt 0)) (V "total"), Check_Unknown)),
     (Statement (mkNat 6), (Less (V "total") (N (mkInt 100)), Check_Unknown))
   ]
@@ -244,12 +253,15 @@ main = do
   let actualSign = analyse Sign_Analysis demoProg
       actualInterval = analyse Interval_Analysis demoProg
       actualProcDemoSign = analyse Sign_Analysis procDemoProg
+      actualProcDemoInterval = analyse Interval_Analysis procDemoProg
       procDemoCfg = prog_cfg prog_main_name procDemoProg
       actualProcDemoIntra = showIntraList (cfg_intra_list procDemoCfg)
       actualProcDemoCalls = showCallsList (cfg_calls_list procDemoCfg)
   okSign <- checkCase "Sign_Analysis demo report" actualSign expectedSign
   okInterval <- checkCase "Interval_Analysis demo report" actualInterval expectedInterval
   okProcDemoSign <- checkCase "Sign_Analysis proc_demo report" actualProcDemoSign expectedProcDemoSign
+  okProcDemoInterval <-
+    checkCase "Interval_Analysis proc_demo report (warrowing, was hanging)" actualProcDemoInterval expectedProcDemoInterval
   okProcDemoIntra <- checkCase "proc_demo CFG intra edges" actualProcDemoIntra expectedProcDemoIntra
   okProcDemoCalls <- checkCase "proc_demo CFG calls edges" actualProcDemoCalls expectedProcDemoCalls
   okCheckCondRendered <-
@@ -257,6 +269,6 @@ main = do
       "string_of_bexp check condition"
       (unString (string_of_bexp checkCond))
       expectedCheckCondRendered
-  if okSign && okInterval && okProcDemoSign && okProcDemoIntra && okProcDemoCalls && okCheckCondRendered
+  if okSign && okInterval && okProcDemoSign && okProcDemoInterval && okProcDemoIntra && okProcDemoCalls && okCheckCondRendered
     then putStrLn "All regression checks passed."
     else exitFailure

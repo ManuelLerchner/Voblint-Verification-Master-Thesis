@@ -60,10 +60,10 @@ let expected_interval =
    together -- not just straight-line assignment/check.
    Same program as proc_demo_prog in Example_Analysis_Dispatch.thy; checked
    against proc_demo_sign_unknown / proc_demo_cfg_intra / proc_demo_cfg_calls.
-   (Interval is not exercised here: analyse Interval_Analysis on this
-   procedure/call program does not terminate -- a pre-existing bug in
-   Interval's call handling, unrelated to this driver's construction,
-   tracked separately in Example_Analysis_Dispatch.thy.) *)
+   Interval_Analysis on this program used to hang/segfault under the always-join backend (a
+   flow-insensitive global read-and-grow has no widening there); the exported `analyse`
+   dispatcher now routes Interval through the warrowing backend, which terminates (at
+   Check_Unknown precision) -- see Example_Analysis_Dispatch.thy's proc_demo_interval_terminates. *)
 let proc_demo_prog =
   make
     [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
@@ -77,6 +77,12 @@ let proc_demo_prog =
     [ "total" ]
 
 let expected_proc_demo_sign =
+  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Unknown));
+    (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
+
+(* Same shape as expected_proc_demo_sign, but this is the case that used to hang: a global read
+   and grown across two calls, now solved via warrowing (Check_Unknown, not a crash). *)
+let expected_proc_demo_interval =
   [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Unknown));
     (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
 
@@ -201,6 +207,7 @@ let () =
   let actual_sign = analyse Sign_Analysis demo_prog in
   let actual_interval = analyse Interval_Analysis demo_prog in
   let actual_proc_demo_sign = analyse Sign_Analysis proc_demo_prog in
+  let actual_proc_demo_interval = analyse Interval_Analysis proc_demo_prog in
   let proc_demo_cfg = prog_cfg prog_main_name proc_demo_prog in
   let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
   let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
@@ -208,6 +215,10 @@ let () =
   let ok_interval = check_case "Interval_Analysis demo report" actual_interval expected_interval in
   let ok_proc_demo_sign =
     check_case "Sign_Analysis proc_demo report" actual_proc_demo_sign expected_proc_demo_sign
+  in
+  let ok_proc_demo_interval =
+    check_case "Interval_Analysis proc_demo report (warrowing, was hanging)"
+      actual_proc_demo_interval expected_proc_demo_interval
   in
   let ok_proc_demo_intra =
     check_case_str "proc_demo CFG intra edges" actual_proc_demo_intra expected_proc_demo_intra
@@ -219,7 +230,7 @@ let () =
     check_case_str "string_of_bexp check condition" (un_string (string_of_bexp check_cond)) "0<y"
   in
   if
-    ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_intra && ok_proc_demo_calls
-    && ok_check_cond_rendered
+    ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra
+    && ok_proc_demo_calls && ok_check_cond_rendered
   then print_endline "All regression checks passed."
   else exit 1

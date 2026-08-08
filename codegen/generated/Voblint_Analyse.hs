@@ -1269,6 +1269,8 @@ data Num = One | Bit0 Num | Bit1 Num;
 
 data Set a = Set [a] | Coset [a];
 
+newtype Fset a = Abs_fset (Set a);
+
 newtype Char = Chr Integer;
 
 data Com = SKIP | Assign String Aexp | Random String | Check Bexp | Seq Com Com
@@ -1385,6 +1387,12 @@ update k v (p : ps) = (if fst p == k then (k, v) : ps else p : update k v ps);
 merge :: forall a b. (Eq a) => [(a, b)] -> [(a, b)] -> [(a, b)];
 merge qs ps = foldr (\ (a, b) -> update a b) ps qs;
 
+fset :: forall a. Fset a -> Set a;
+fset (Abs_fset x) = x;
+
+fimage :: forall b a. (b -> a) -> Fset b -> Fset a;
+fimage xb xc = Abs_fset (image xb (fset xc));
+
 fun_upd :: forall a b. (Eq a) => (a -> b) -> a -> b -> a -> b;
 fun_upd f a b = (\ x -> (if x == a then b else f x));
 
@@ -1408,6 +1416,12 @@ c (State_ext c infl stabl sigma more) = c;
 
 fmadd :: forall a b. (Eq a) => Fmap a b -> Fmap a b -> Fmap a b;
 fmadd (Fmap_of_list m) (Fmap_of_list n) = Fmap_of_list (merge m n);
+
+fset_of_list :: forall a. [a] -> Fset a;
+fset_of_list xa = Abs_fset (Set xa);
+
+fmdom :: forall a b. Fmap a b -> Fset a;
+fmdom (Fmap_of_list m) = fimage fst (fset_of_list m);
 
 fmupd :: forall a b. (Eq a) => a -> b -> Fmap a b -> Fmap a b;
 fmupd k v m = fmadd m (Fmap_of_list [(k, v)]);
@@ -1465,6 +1479,9 @@ fmlookup_default m d x = (case fmlookup m x of {
 fminsert :: forall a b. (Eq a) => Fmap a [b] -> a -> b -> Fmap a [b];
 fminsert infl x y = fmupd x (y : fmlookup_default infl [] x) infl;
 
+abort_empty_set :: forall a. (Set a -> a) -> a;
+abort_empty_set _ = error "List.abort_empty_set";
+
 sup_fun :: forall a b. (Semilattice_sup b) => (a -> b) -> (a -> b) -> a -> b;
 sup_fun f g x = sup (f x) (g x);
 
@@ -1491,6 +1508,13 @@ zero_int = Int_of_integer (0 :: Integer);
 cinit_ivl_st :: Resolved_st_q Ivl;
 cinit_ivl_st =
   Abs_resolved_st (Ivl MinInf PlusInf, (Ivl (Fin zero_int) (Fin zero_int), []));
+
+sup_fin :: forall a. (Semilattice_sup a) => Set a -> a;
+sup_fin (Set []) = abort_empty_set sup_fin;
+sup_fin (Set (x : xs)) = fold sup xs x;
+
+sup_fset :: forall a. (Semilattice_sup a) => Fset a -> a;
+sup_fset s = sup_fin (fset s);
 
 lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
 lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
@@ -3045,6 +3069,12 @@ sigma_update ::
 sigma_update sigmaa (State_ext c infl stabl sigma more) =
   State_ext c infl stabl (sigmaa sigma) more;
 
+sup_over_origins ::
+  forall a b c d.
+    (Eq a, Bounded_semilattice_sup_bot c) => Ug_state_ext a b c d -> b -> c;
+sup_over_origins state g =
+  sup_fset (fimage (fmlookup_default (rho state g) bot) (fmdom (rho state g)));
+
 declared_global_vars :: forall a. Imp_prog_ext a -> [String];
 declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
   = declared_global_vars;
@@ -3134,11 +3164,277 @@ ivl_exec_eqs gs pi ps mnm main =
   side_cfg_T_eff_st (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
     bot_resolved_st_q cinit_ivl_st ();
 
+init_basic_ug_state :: forall a b c. (Order_bot c) => Ug_state_ext a b c ();
+init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
+
+string_of_aexp :: Aexp -> [Char];
+string_of_aexp (N n) = string_of_int n;
+string_of_aexp (V x) = explode x;
+string_of_aexp (Plus a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Minus a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Times a b) =
+  [char_0x28] ++
+    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
+
+string_of_bexp :: Bexp -> [Char];
+string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];
+string_of_bexp (Bc False) =
+  [char_0x66, char_0x61, char_0x6C, char_0x73, char_0x65];
+string_of_bexp (Not b) =
+  [char_0x21, char_0x28] ++ string_of_bexp b ++ [char_0x29];
+string_of_bexp (And b1 b2) =
+  [char_0x28] ++
+    string_of_bexp b1 ++
+      [char_0x26, char_0x26] ++ string_of_bexp b2 ++ [char_0x29];
+string_of_bexp (Or b1 b2) =
+  [char_0x28] ++
+    string_of_bexp b1 ++
+      [char_0x7C, char_0x7C] ++ string_of_bexp b2 ++ [char_0x29];
+string_of_bexp (Less a1 a2) =
+  string_of_aexp a1 ++ [char_0x3C] ++ string_of_aexp a2;
+string_of_bexp (Eqb a1 a2) =
+  string_of_aexp a1 ++ [char_0x3D, char_0x3D] ++ string_of_aexp a2;
+
+warrow :: forall a. (Warrowing a) => a -> a -> a;
+warrow a b = (if less_eq b a then narrow a b else widen a b);
+
 rho_update ::
   forall a b c d.
     ((a -> Fmap b c) -> a -> Fmap b c) ->
       Ug_state_ext b a c d -> Ug_state_ext b a c d;
 rho_update rhoa (Ug_state_ext rho more) = Ug_state_ext (rhoa rho) more;
+
+update_global_warrowing_apinis ::
+  forall a b c.
+    (Eq a, Bounded_semilattice_sup_bot a, Warrowing a, Eq b,
+      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
+                                     (Maybe a, Ug_state_ext b c a ());
+update_global_warrowing_apinis da orig g d state =
+  (if fmlookup_default (rho state g) bot orig == d then (Nothing, state)
+    else let {
+           statea =
+             rho_update
+               (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
+               state;
+           db = warrow da (sup_over_origins statea g);
+         } in (Just db, statea));
+
+point_update ::
+  forall a b c d.
+    (Set a -> Set a) ->
+      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
+point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
+  State_ext c infl stabl sigma (State_exta (pointa point) more);
+
+tD_side_warrowing_apinis_Interp_solve_rec_c ::
+  forall a b c.
+    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
+      Warrowing c) => (a -> Strategy_tree a b c) ->
+                        Func_state a b c () ->
+                          Maybe (c, (State_ext a b c (State_exta a ()),
+                                      Ug_state_ext a b c ()));
+tD_side_warrowing_apinis_Interp_solve_rec_c t s =
+  (case s of {
+    Q (y, (x, (state, ug_state))) ->
+      bind (if member x (c state)
+             then Just (sigma state (Inl x),
+                         (point_update (\ _ -> insert x (point state)) state,
+                           ug_state))
+             else tD_side_warrowing_apinis_Interp_solve_rec_c t
+                    (I (x, (c_update (\ _ -> insert x (c state)) state,
+                             ug_state))))
+        (\ (xd, (statea, ug_statea)) ->
+          Just (xd, (infl_update (\ _ -> fminsert (infl statea) (Inl x) y)
+                       statea,
+                      ug_statea)));
+    I (x, (state, ug_state)) ->
+      (if not (member x (stabl state))
+        then bind (tD_side_warrowing_apinis_Interp_solve_rec_c t
+                    (R (x, (state, ug_state))))
+               (\ (d_new, (state1, ug_state1)) ->
+                 let {
+                   d_newa =
+                     (if member x (point state)
+                       then warrow (sigma state1 (Inl x)) d_new else d_new);
+                 } in (if sigma state1 (Inl x) == d_newa
+                        then Just (d_newa,
+                                    (point_update
+                                       (\ _ -> remove x (point state1))
+                                       (c_update (\ _ -> remove x (c state1))
+ state1),
+                                      ug_state1))
+                        else (case destab_opt (Inl x) (infl state1)
+                                     (stabl state1) (c state1)
+                               of {
+                               (infl1, stabl1) ->
+                                 tD_side_warrowing_apinis_Interp_solve_rec_c t
+                                   (I (x,
+(sigma_update (\ _ -> fun_upd (sigma state1) (Inl x) d_newa)
+   (stabl_update (\ _ -> stabl1) (infl_update (\ _ -> infl1) state1)),
+  ug_state1)));
+                             })))
+        else Just (sigma state (Inl x),
+                    (point_update (\ _ -> remove x (point state))
+                       (c_update (\ _ -> remove x (c state)) state),
+                      ug_state)));
+    R (x, (state, ug_state)) ->
+      bind (tD_side_warrowing_apinis_Interp_solve_rec_c t
+             (E (x, (t x, ((\ _ -> bot),
+                            (stabl_update (\ _ -> insert x (stabl state)) state,
+                              ug_state))))))
+        (\ (xd, (statea, ug_statea)) ->
+          (if member x (stabl statea) then Just (xd, (statea, ug_statea))
+            else tD_side_warrowing_apinis_Interp_solve_rec_c t
+                   (R (x, (statea, ug_statea)))));
+    E (_, (Answer d, (_, (state, ug_state)))) -> Just (d, (state, ug_state));
+    E (x, (QueryL y g, (sides_a_c_c, (state, ug_state)))) ->
+      bind (tD_side_warrowing_apinis_Interp_solve_rec_c t
+             (Q (x, (y, (state, ug_state)))))
+        (\ (yd, (statea, ug_statea)) ->
+          tD_side_warrowing_apinis_Interp_solve_rec_c t
+            (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))));
+    E (x, (QueryG y g, (sides_a_c_c, (state, ug_state)))) ->
+      tD_side_warrowing_apinis_Interp_solve_rec_c t
+        (E (x, (g (sigma state (Inr y)),
+                 (sides_a_c_c,
+                   (infl_update (\ _ -> fminsert (infl state) (Inr y) x) state,
+                     ug_state)))));
+    E (x, (Side y d ta, (sides_a_c_c, (state, ug_state)))) ->
+      let {
+        da = sup (sides_a_c_c y) d;
+        sides_a_c_ca = fun_upd sides_a_c_c y da;
+      } in (case update_global_warrowing_apinis (sigma state (Inr y)) x y da
+                   ug_state
+             of {
+             (Nothing, ug_statea) ->
+               tD_side_warrowing_apinis_Interp_solve_rec_c t
+                 (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))));
+             (Just db, ug_statea) ->
+               (case destab_opt (Inr y) (infl state) (stabl state) (c state) of
+                 {
+                 (infla, stabla) ->
+                   tD_side_warrowing_apinis_Interp_solve_rec_c t
+                     (E (x, (ta, (sides_a_c_ca,
+                                   (sigma_update
+                                      (\ _ -> fun_upd (sigma state) (Inr y) db)
+                                      (stabl_update (\ _ -> stabla)
+(infl_update (\ _ -> infla) state)),
+                                     ug_statea)))));
+               });
+           });
+  });
+
+init_state ::
+  forall a b c.
+    (Bounded_semilattice_sup_bot c,
+      Warrowing c) => State_ext a b c (State_exta a ());
+init_state =
+  State_ext bot_set fmempty bot_set (\ _ -> bot) (State_exta bot_set ());
+
+tD_side_warrowing_apinis_Interp_solve_c ::
+  forall a b c.
+    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
+      Warrowing c) => (a -> Strategy_tree a b c) ->
+                        a -> Maybe (Set a, Sum a b -> c);
+tD_side_warrowing_apinis_Interp_solve_c t x =
+  bind (tD_side_warrowing_apinis_Interp_solve_rec_c t
+         (I (x, (c_update
+                   (\ _ ->
+                     insert x
+                       (c (init_state :: State_ext a b c (State_exta a ()))))
+                   init_state,
+                  init_basic_ug_state))))
+    (\ (_, (state, _)) -> Just (stabl state, sigma state));
+
+tD_side_warrowing_apinis_Interp_solve ::
+  forall a b c.
+    (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
+      Warrowing c) => (a -> Strategy_tree a b c) -> a -> (Set a, Sum a b -> c);
+tD_side_warrowing_apinis_Interp_solve t x =
+  (case tD_side_warrowing_apinis_Interp_solve_c t x of {
+    Nothing ->
+      (error :: forall a. String -> (() -> a) -> a) "Input not in domain"
+        (\ _ -> tD_side_warrowing_apinis_Interp_solve t x);
+    Just r -> r;
+  });
+
+analyse_interval_td_raw ::
+  (String -> Bool) ->
+    (String -> Maybe (Proc_decl_ext ())) ->
+      [String] -> String -> Com -> Sum Cfg_node () -> Resolved_st_q Ivl;
+analyse_interval_td_raw gs pi ps mnm main =
+  snd (tD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs gs pi ps mnm main)
+        (cfg_exit (compile_prog pi ps mnm main)));
+
+less_eint :: Eint -> Eint -> Bool;
+less_eint a b = eint_le a b && not (eint_le b a);
+
+interval_less_false :: Ivl -> Ivl -> Bool;
+interval_less_false (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);
+
+interval_eq_false :: Ivl -> Ivl -> Bool;
+interval_eq_false (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) ||
+    (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));
+
+interval_less_true :: Ivl -> Ivl -> Bool;
+interval_less_true (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);
+
+interval_eq_true :: Ivl -> Ivl -> Bool;
+interval_eq_true (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) ||
+    (not (less_eq_eint l2 u2) ||
+      equal_eint l1 u1 && equal_eint l2 u2 && equal_eint l1 l2);
+
+interval_check_false :: Bexp -> (String -> Ivl) -> Bool;
+interval_check_false (Bc v) d = not v;
+interval_check_false (Not b) d = interval_check_true b d;
+interval_check_false (And b1 b2) d =
+  interval_check_false b1 d || interval_check_false b2 d;
+interval_check_false (Or b1 b2) d =
+  interval_check_false b1 d && interval_check_false b2 d;
+interval_check_false (Less a b) d =
+  interval_less_false (aval_ivl a d) (aval_ivl b d);
+interval_check_false (Eqb a b) d =
+  interval_eq_false (aval_ivl a d) (aval_ivl b d);
+
+interval_check_true :: Bexp -> (String -> Ivl) -> Bool;
+interval_check_true (Bc v) d = v;
+interval_check_true (Not b) d = interval_check_false b d;
+interval_check_true (And b1 b2) d =
+  interval_check_true b1 d && interval_check_true b2 d;
+interval_check_true (Or b1 b2) d =
+  interval_check_true b1 d || interval_check_true b2 d;
+interval_check_true (Less a b) d =
+  interval_less_true (aval_ivl a d) (aval_ivl b d);
+interval_check_true (Eqb a b) d =
+  interval_eq_true (aval_ivl a d) (aval_ivl b d);
+
+interval_classify_check :: Bexp -> (String -> Ivl) -> Check_result;
+interval_classify_check c d =
+  (if interval_check_true c d then Check_Proved
+    else (if interval_check_false c d then Check_Refuted else Check_Unknown));
+
+interval_td_check_report ::
+  (String -> Bool) ->
+    String -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+interval_td_check_report gs mnm p =
+  let {
+    raw = analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm
+            (prog_main p);
+  } in classify_checks (prog_cfg mnm p)
+         (side_env (fun_of_resolved_st_q_for gs . raw)) interval_classify_check;
+
+analyse_interval_td_report ::
+  Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+analyse_interval_td_report p =
+  interval_td_check_report (declared_global p) prog_main_name p;
 
 update_global_always_join ::
   forall a b c.
@@ -3152,16 +3448,6 @@ update_global_always_join da orig g d state =
         state;
     db = sup da d;
   } in (if db == da then (Nothing, statea) else (Just db, statea));
-
-warrow :: forall a. (Warrowing a) => a -> a -> a;
-warrow a b = (if less_eq b a then narrow a b else widen a b);
-
-point_update ::
-  forall a b c d.
-    (Set a -> Set a) ->
-      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
-point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
-  State_ext c infl stabl sigma (State_exta (pointa point) more);
 
 tD_side_always_join_Interp_solve_rec_c ::
   forall a b c.
@@ -3260,16 +3546,6 @@ tD_side_always_join_Interp_solve_rec_c t s =
            });
   });
 
-init_state ::
-  forall a b c.
-    (Bounded_semilattice_sup_bot c,
-      Warrowing c) => State_ext a b c (State_exta a ());
-init_state =
-  State_ext bot_set fmempty bot_set (\ _ -> bot) (State_exta bot_set ());
-
-init_basic_ug_state :: forall a b c. (Order_bot c) => Ug_state_ext a b c ();
-init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
-
 tD_side_always_join_Interp_solve_c ::
   forall a b c.
     (Eq a, Eq b, Eq c, Bounded_semilattice_sup_bot c,
@@ -3296,46 +3572,6 @@ tD_side_always_join_Interp_solve t x =
         (\ _ -> tD_side_always_join_Interp_solve t x);
     Just r -> r;
   });
-
-ivl_exec_raw ::
-  (String -> Bool) ->
-    (String -> Maybe (Proc_decl_ext ())) ->
-      [String] -> String -> Com -> Sum Cfg_node () -> Resolved_st_q Ivl;
-ivl_exec_raw gs pi ps mnm main =
-  snd (tD_side_always_join_Interp_solve (ivl_exec_eqs gs pi ps mnm main)
-        (cfg_exit (compile_prog pi ps mnm main)));
-
-string_of_aexp :: Aexp -> [Char];
-string_of_aexp (N n) = string_of_int n;
-string_of_aexp (V x) = explode x;
-string_of_aexp (Plus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
-string_of_aexp (Minus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
-string_of_aexp (Times a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
-
-string_of_bexp :: Bexp -> [Char];
-string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];
-string_of_bexp (Bc False) =
-  [char_0x66, char_0x61, char_0x6C, char_0x73, char_0x65];
-string_of_bexp (Not b) =
-  [char_0x21, char_0x28] ++ string_of_bexp b ++ [char_0x29];
-string_of_bexp (And b1 b2) =
-  [char_0x28] ++
-    string_of_bexp b1 ++
-      [char_0x26, char_0x26] ++ string_of_bexp b2 ++ [char_0x29];
-string_of_bexp (Or b1 b2) =
-  [char_0x28] ++
-    string_of_bexp b1 ++
-      [char_0x7C, char_0x7C] ++ string_of_bexp b2 ++ [char_0x29];
-string_of_bexp (Less a1 a2) =
-  string_of_aexp a1 ++ [char_0x3C] ++ string_of_aexp a2;
-string_of_bexp (Eqb a1 a2) =
-  string_of_aexp a1 ++ [char_0x3D, char_0x3D] ++ string_of_aexp a2;
 
 combine_assign_resolved_q ::
   forall a.
@@ -3421,74 +3657,9 @@ analyse_sign_report_for gs p =
 analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report p = analyse_sign_report_for (declared_global p) p;
 
-less_eint :: Eint -> Eint -> Bool;
-less_eint a b = eint_le a b && not (eint_le b a);
-
-interval_less_false :: Ivl -> Ivl -> Bool;
-interval_less_false (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);
-
-interval_eq_false :: Ivl -> Ivl -> Bool;
-interval_eq_false (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) ||
-    (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));
-
-interval_less_true :: Ivl -> Ivl -> Bool;
-interval_less_true (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);
-
-interval_eq_true :: Ivl -> Ivl -> Bool;
-interval_eq_true (Ivl l1 u1) (Ivl l2 u2) =
-  not (less_eq_eint l1 u1) ||
-    (not (less_eq_eint l2 u2) ||
-      equal_eint l1 u1 && equal_eint l2 u2 && equal_eint l1 l2);
-
-interval_check_false :: Bexp -> (String -> Ivl) -> Bool;
-interval_check_false (Bc v) d = not v;
-interval_check_false (Not b) d = interval_check_true b d;
-interval_check_false (And b1 b2) d =
-  interval_check_false b1 d || interval_check_false b2 d;
-interval_check_false (Or b1 b2) d =
-  interval_check_false b1 d && interval_check_false b2 d;
-interval_check_false (Less a b) d =
-  interval_less_false (aval_ivl a d) (aval_ivl b d);
-interval_check_false (Eqb a b) d =
-  interval_eq_false (aval_ivl a d) (aval_ivl b d);
-
-interval_check_true :: Bexp -> (String -> Ivl) -> Bool;
-interval_check_true (Bc v) d = v;
-interval_check_true (Not b) d = interval_check_false b d;
-interval_check_true (And b1 b2) d =
-  interval_check_true b1 d && interval_check_true b2 d;
-interval_check_true (Or b1 b2) d =
-  interval_check_true b1 d || interval_check_true b2 d;
-interval_check_true (Less a b) d =
-  interval_less_true (aval_ivl a d) (aval_ivl b d);
-interval_check_true (Eqb a b) d =
-  interval_eq_true (aval_ivl a d) (aval_ivl b d);
-
-interval_classify_check :: Bexp -> (String -> Ivl) -> Check_result;
-interval_classify_check c d =
-  (if interval_check_true c d then Check_Proved
-    else (if interval_check_false c d then Check_Refuted else Check_Unknown));
-
-interval_check_report ::
-  (String -> Bool) ->
-    String -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-interval_check_report gs mnm p =
-  let {
-    raw = ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p);
-  } in classify_checks (prog_cfg mnm p)
-         (side_env (fun_of_resolved_st_q_for gs . raw)) interval_classify_check;
-
-analyse_interval_report ::
-  Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
-analyse_interval_report p =
-  interval_check_report (declared_global p) prog_main_name p;
-
 analyse ::
   Analysis_kind -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse Sign_Analysis p = analyse_sign_report p;
-analyse Interval_Analysis p = analyse_interval_report p;
+analyse Interval_Analysis p = analyse_interval_td_report p;
 
 }
