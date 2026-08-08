@@ -75,6 +75,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Proc_GraphViz
     Example_Proc_GraphViz_Recursion
     Example_Mixed_Sign_Interval_GraphViz
+    Example_State_Report_GraphViz
 
     Voblint
   document_files
