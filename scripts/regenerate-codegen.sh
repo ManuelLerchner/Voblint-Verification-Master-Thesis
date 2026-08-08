@@ -1,8 +1,9 @@
 #!/bin/sh
 # Regenerates codegen/generated/ from the Isabelle export_code declarations in
-# src/Examples/Sign/Example_Sign_Codegen.thy and
-# src/Examples/Interval/Exec_Ivl_Run.thy. Do not hand-edit files under
-# codegen/generated/ -- rerun this script instead.
+# src/Examples/Sign/Example_Sign_Codegen.thy,
+# src/Examples/Interval/Exec_Ivl_Run.thy, and
+# src/Examples/Mixed/Example_Analysis_Dispatch.thy. Do not hand-edit files
+# under codegen/generated/ -- rerun this script instead.
 set -eu
 
 cd "$(dirname "$0")/.."
@@ -22,6 +23,7 @@ isabelle export \
   -O codegen/generated -p 3 \
   -x 'Voblint_Examples.Example_Sign_Codegen:code/*/*.hs' \
   -x 'Voblint_Examples.Exec_Ivl_Run:code/*/*.hs' \
+  -x 'Voblint_Examples.Example_Analysis_Dispatch:code/*/*.hs' \
   Voblint_Examples
 
 isabelle export \
@@ -29,6 +31,7 @@ isabelle export \
   -O codegen/generated -p 2 \
   -x 'Voblint_Examples.Example_Sign_Codegen:code/*.ocaml' \
   -x 'Voblint_Examples.Exec_Ivl_Run:code/*.ocaml' \
+  -x 'Voblint_Examples.Example_Analysis_Dispatch:code/*.ocaml' \
   Voblint_Examples
 
 echo "Regenerated codegen/generated/:"

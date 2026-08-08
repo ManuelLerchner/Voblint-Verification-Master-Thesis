@@ -63,6 +63,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo
+    Example_Analysis_Dispatch
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo

@@ -145,6 +145,64 @@ proof -
           finI finC sound0 s0mem run])
 qed
 
+text \<open>
+  The same executable-to-abstract transport as \<open>dg_exec_run_source_sound_for\<close>,
+  stopping at the collecting endpoint instead of continuing through a
+  concrete source run: no \<open>s0mem\<close>/\<open>run\<close> premise, and the conclusion holds at
+  every \<open>v\<close>, not just the one point a run happens to reach. Reusable by any
+  consumer (a check-report layer, for instance) that wants per-node collecting
+  soundness for a computed D/G post-solution without going through
+  \<open>csim\<close>/\<open>pstep\<close>.
+\<close>
+
+theorem dg_exec_collect_sound_for:
+  fixes Pi :: proc_table and mnm :: pname and v :: pp
+    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st, 'g1::bounded_semilattice_sup_bot exec_dg_st) dg_spec"
+    and S_abs :: "('d1 abs_state, 'g1 abs_state) dg_spec"
+    and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
+    and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
+    and gs :: "vname \<Rightarrow> bool"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+    and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
+                        = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
+                        = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+    and Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
+                        = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and pp_st: "part_post_solution
+                  (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
+    and cover_edge:
+      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (k, ()) \<in> vars"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v
+           \<subseteq> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st_for gs \<circ> sigma_st) v"
+proof -
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  have pp_abs: "part_post_solution
+      (dg_gen_of S_abs (compile_prog Pi ps mnm main)
+         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
+    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb pp_st])
+  have pp_gen: "part_post_solution
+      (sds.dg_gen (compile_prog Pi ps mnm main)
+         (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
+      x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
+    using pp_abs unfolding sds.dg_gen_of_eq_for .
+  show ?thesis
+    by (rule sds.dg_post_solution_collect_sound_ltr_for
+          [OF pp_gen cover_entry cover_edge cover_enter cover_combine finI finC sound0])
+qed
+
 section \<open>Registered executable D/G analyses\<close>
 
 subsection \<open>Executable-to-abstract transport for diagonal unit specifications\<close>
@@ -277,6 +335,45 @@ proof -
               cover_entry[unfolded eqs_def] cover_edge[unfolded eqs_def]
               cover_enter[unfolded eqs_def] cover_combine[unfolded eqs_def]
               finI finC sound0 s0mem run])
+qed
+
+text \<open>
+  The per-node collecting analogue of \<open>run_source_sound\<close>, dropping \<open>s0mem\<close>/
+  \<open>run\<close>: reusable by any consumer that wants collecting soundness at an
+  arbitrary program point for a computed D/G post-solution, without going
+  through a concrete source run --- a check-report layer, for instance.
+\<close>
+
+theorem collect_sound:
+  fixes Pi :: proc_table and ps mnm main and v :: pp and bot0 s0d s0g :: "'a exec_dg_st"
+  defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"
+  assumes SOLVE: "solve_c eqs x \<noteq> None"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
+    and cover_edge:
+      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
+    and cover_enter:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (solve eqs x)"
+    and cover_combine:
+      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
+         \<Longrightarrow> (k, ()) \<in> fst (solve eqs x)"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gamma_unit (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
+proof -
+  have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
+    by (rule solver_pps[OF SOLVE])
+  show ?thesis
+    unfolding gamma_def eqs_def
+    by (rule dg_exec_collect_sound_for
+          [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
+              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for
+              pp_st[unfolded eqs_def] wf
+              cover_entry[unfolded eqs_def] cover_edge[unfolded eqs_def]
+              cover_enter[unfolded eqs_def] cover_combine[unfolded eqs_def]
+              finI finC sound0])
 qed
 
 end

@@ -103,4 +103,71 @@ definition interval_check_report ::
   "interval_check_report gs mnm p =
      classify_checks (prog_cfg mnm p) (ivl_exec_prog_at gs mnm p) interval_classify_check"
 
+text \<open>
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and \<open>prog_main_name\<close>,
+  matching \<^const>\<open>analyse_interval\<close>'s own fixed choices --- built on the
+  exact same \<^const>\<open>ivl_exec_prog\<close> pipeline, not a parallel one.
+\<close>
+
+definition analyse_interval_report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report p = interval_check_report (declared_global p) prog_main_name p"
+
+text \<open>
+  Soundness reuses \<open>classify_checks_proved_sound\<close>/
+  \<open>classify_checks_refuted_sound\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>, fully
+  domain-generic already) with \<open>ivl_exec_prog_sound_collecting_at\<close>
+  supplying the one per-node fact each needs.  The
+  \<open>cfg_reaches ... (cfg_exit ...)\<close> hypothesis is real and unavoidable, not a
+  proof gap: it is the same structural fact \<open>Example_Checks_Store_Only\<close>
+  proves per concrete check node (\<open>checks_ex_statement1_reaches_exit\<close> etc.)
+  for its one hard-coded example, left here as a hypothesis for an arbitrary
+  \<open>p\<close> instead.
+\<close>
+
+theorem analyse_interval_report_sound_proved:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes fin: "finite (intra (prog_cfg prog_main_name p))"
+      and terminates: "ivl_terminates_prog (declared_global p) prog_main_name p"
+      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+      and mem: "(v, c, Check_Proved) \<in> set (analyse_interval_report p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           bval c s"
+proof -
+  have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
+                       \<subseteq> \<lbrakk>ivl_exec_prog_at (declared_global p) prog_main_name p v\<rbrakk>"
+    by (rule ivl_exec_prog_sound_collecting_at[OF terminates reach_exit])
+  show ?thesis
+    by (rule classify_checks_proved_sound
+          [where g = "prog_cfg prog_main_name p"
+             and env = "ivl_exec_prog_at (declared_global p) prog_main_name p"
+             and classify = interval_classify_check
+             and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
+             and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
+           OF fin mem[unfolded analyse_interval_report_def interval_check_report_def]
+              interval_classify_check_proved node_sound])
+qed
+
+theorem analyse_interval_report_sound_refuted:
+  fixes p :: imp_prog and v :: pp and c :: bexp
+  assumes fin: "finite (intra (prog_cfg prog_main_name p))"
+      and terminates: "ivl_terminates_prog (declared_global p) prog_main_name p"
+      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+      and mem: "(v, c, Check_Refuted) \<in> set (analyse_interval_report p)"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> bval c s"
+proof -
+  have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
+                       \<subseteq> \<lbrakk>ivl_exec_prog_at (declared_global p) prog_main_name p v\<rbrakk>"
+    by (rule ivl_exec_prog_sound_collecting_at[OF terminates reach_exit])
+  show ?thesis
+    by (rule classify_checks_refuted_sound
+          [where g = "prog_cfg prog_main_name p"
+             and env = "ivl_exec_prog_at (declared_global p) prog_main_name p"
+             and classify = interval_classify_check
+             and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
+             and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
+           OF fin mem[unfolded analyse_interval_report_def interval_check_report_def]
+              interval_classify_check_refuted node_sound])
+qed
+
 end

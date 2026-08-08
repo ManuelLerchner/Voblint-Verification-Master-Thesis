@@ -1,9 +1,8 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
 module
-  Sign_Demo(Char, Sum, Cfg_node, Sign, Bexp, Dg_state, Resolved_st_q, Set,
-             Cfg_ext, Strategy_tree, Check_result, Imp_prog_ext, dgEx_sol,
-             analyse_sign_for, analyse_sign, analyse_sign_report)
+  Voblint_Analyse(Cfg_node, Bexp, Check_result, Imp_prog_ext, Analysis_kind(..),
+                   analyse)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -363,6 +362,39 @@ instance (Order a, Order b) => Order (a, b) where {
 };
 
 instance (Linorder a, Linorder b) => Linorder (a, b) where {
+};
+
+enum_all_unit :: (() -> Bool) -> Bool;
+enum_all_unit p = p ();
+
+enum_ex_unit :: (() -> Bool) -> Bool;
+enum_ex_unit p = p ();
+
+enum_unit :: [()];
+enum_unit = [()];
+
+class Countable a where {
+};
+
+class (Countable a) => Finite a where {
+};
+
+class (Finite a) => Enum a where {
+  enum :: [a];
+  enum_all :: (a -> Bool) -> Bool;
+  enum_ex :: (a -> Bool) -> Bool;
+};
+
+instance Countable () where {
+};
+
+instance Finite () where {
+};
+
+instance Enum () where {
+  enum = enum_unit;
+  enum_all = enum_all_unit;
+  enum_ex = enum_ex_unit;
 };
 
 data Sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop;
@@ -942,6 +974,120 @@ instance Order Edge_action where {
 instance Linorder Edge_action where {
 };
 
+data Eint = MinInf | Fin Int | PlusInf;
+
+equal_eint :: Eint -> Eint -> Bool;
+equal_eint (Fin x2) PlusInf = False;
+equal_eint PlusInf (Fin x2) = False;
+equal_eint MinInf PlusInf = False;
+equal_eint PlusInf MinInf = False;
+equal_eint MinInf (Fin x2) = False;
+equal_eint (Fin x2) MinInf = False;
+equal_eint (Fin x2) (Fin y2) = equal_int x2 y2;
+equal_eint PlusInf PlusInf = True;
+equal_eint MinInf MinInf = True;
+
+data Ivl = Ivl Eint Eint;
+
+equal_ivl :: Ivl -> Ivl -> Bool;
+equal_ivl (Ivl x1 x2) (Ivl y1 y2) = equal_eint x1 y1 && equal_eint x2 y2;
+
+instance Eq Ivl where {
+  a == b = equal_ivl a b;
+};
+
+eint_le :: Eint -> Eint -> Bool;
+eint_le MinInf uu = True;
+eint_le (Fin v) PlusInf = True;
+eint_le PlusInf PlusInf = True;
+eint_le (Fin n) (Fin m) = less_eq_int n m;
+eint_le (Fin v) MinInf = False;
+eint_le PlusInf MinInf = False;
+eint_le PlusInf (Fin v) = False;
+
+less_eq_eint :: Eint -> Eint -> Bool;
+less_eq_eint = eint_le;
+
+join_ivl :: Ivl -> Ivl -> Ivl;
+join_ivl (Ivl l1 u1) (Ivl l2 u2) =
+  Ivl (if less_eq_eint l1 l2 then l1 else l2)
+    (if less_eq_eint u2 u1 then u1 else u2);
+
+sup_ivl :: Ivl -> Ivl -> Ivl;
+sup_ivl = join_ivl;
+
+instance Sup Ivl where {
+  sup = sup_ivl;
+};
+
+bot_ivl :: Ivl;
+bot_ivl = Ivl PlusInf MinInf;
+
+instance Bot Ivl where {
+  bot = bot_ivl;
+};
+
+less_eq_ivl :: Ivl -> Ivl -> Bool;
+less_eq_ivl a b =
+  (case (a, b) of {
+    (Ivl l1 u1, Ivl l2 u2) -> less_eq_eint l2 l1 && less_eq_eint u1 u2;
+  });
+
+less_ivl :: Ivl -> Ivl -> Bool;
+less_ivl a b = less_eq_ivl a b && not (less_eq_ivl b a);
+
+instance Ord Ivl where {
+  less_eq = less_eq_ivl;
+  less = less_ivl;
+};
+
+instance Preorder Ivl where {
+};
+
+instance Order Ivl where {
+};
+
+instance Order_bot Ivl where {
+};
+
+widen_ivl_core :: Ivl -> Ivl -> Ivl;
+widen_ivl_core (Ivl l1 u1) (Ivl l2 u2) =
+  Ivl (if less_eq_eint l1 l2 then l1 else MinInf)
+    (if less_eq_eint u2 u1 then u1 else PlusInf);
+
+widen_ivl :: Ivl -> Ivl -> Ivl;
+widen_ivl a b =
+  (if equal_ivl a bot_ivl then b
+    else (if equal_ivl b bot_ivl then a else widen_ivl_core a b));
+
+instance Widening Ivl where {
+  widen = widen_ivl;
+};
+
+narrow_ivl_td :: Ivl -> Ivl -> Ivl;
+narrow_ivl_td (Ivl l1 u1) (Ivl l2 u2) =
+  Ivl (if equal_eint l1 MinInf then l2 else l1)
+    (if equal_eint u1 PlusInf then u2 else u1);
+
+narrow_ivl :: Ivl -> Ivl -> Ivl;
+narrow_ivl a b = narrow_ivl_td a b;
+
+instance Narrowing Ivl where {
+  narrow = narrow_ivl;
+};
+
+instance Warrowing Ivl where {
+};
+
+instance Semilattice_sup Ivl where {
+};
+
+instance Bounded_semilattice_sup_bot Ivl where {
+};
+
+instance Bounded_warrowing Ivl where {
+};
+
 data Dg_state a b = DG a b;
 
 equal_dg_state ::
@@ -1243,6 +1389,8 @@ data Ug_state_ext a b c d = Ug_state_ext (b -> Fmap a c) d;
 
 data Imp_prog_ext a = Imp_prog_ext [([Char], Proc_decl_ext ())] Com [[Char]] a;
 
+data Analysis_kind = Sign_Analysis | Interval_Analysis;
+
 data Func_state a b c d =
   Q (a, (a, (State_ext a b c (State_exta a ()), Ug_state_ext a b c d)))
   | I (a, (State_ext a b c (State_exta a ()), Ug_state_ext a b c d))
@@ -1250,6 +1398,71 @@ data Func_state a b c d =
   | E (a, (Strategy_tree a b c,
             (b -> c,
               (State_ext a b c (State_exta a ()), Ug_state_ext a b c d))));
+
+data Effectful_st_transfer_ext a b c =
+  Effectful_st_transfer_ext (Cfg_node -> Strategy_tree Cfg_node a b)
+    ([Char] -> Aexp -> Cfg_node -> Strategy_tree Cfg_node a b)
+    ([Char] -> Cfg_node -> Strategy_tree Cfg_node a b)
+    (Bexp -> Cfg_node -> Strategy_tree Cfg_node a b)
+    (Bexp -> Cfg_node -> Strategy_tree Cfg_node a b)
+    ([[Char]] -> [Aexp] -> Cfg_node -> Strategy_tree Cfg_node a b)
+    (Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b) c;
+
+dup :: Int -> Int;
+dup Zero_int = Zero_int;
+dup (Pos n) = Pos (Bit0 n);
+dup (Neg n) = Neg (Bit0 n);
+
+uminus_int :: Int -> Int;
+uminus_int Zero_int = Zero_int;
+uminus_int (Pos m) = Neg m;
+uminus_int (Neg m) = Pos m;
+
+plus_num :: Num -> Num -> Num;
+plus_num One One = Bit0 One;
+plus_num One (Bit0 n) = Bit1 n;
+plus_num One (Bit1 n) = Bit0 (plus_num n One);
+plus_num (Bit0 m) One = Bit1 m;
+plus_num (Bit0 m) (Bit0 n) = Bit0 (plus_num m n);
+plus_num (Bit0 m) (Bit1 n) = Bit1 (plus_num m n);
+plus_num (Bit1 m) One = Bit0 (plus_num m One);
+plus_num (Bit1 m) (Bit0 n) = Bit1 (plus_num m n);
+plus_num (Bit1 m) (Bit1 n) = Bit0 (plus_num (plus_num m n) One);
+
+one_int :: Int;
+one_int = Pos One;
+
+bitM :: Num -> Num;
+bitM One = One;
+bitM (Bit0 n) = Bit1 (bitM n);
+bitM (Bit1 n) = Bit1 (Bit0 n);
+
+sub :: Num -> Num -> Int;
+sub One One = Zero_int;
+sub (Bit0 m) One = Pos (bitM m);
+sub (Bit1 m) One = Pos (Bit0 m);
+sub One (Bit0 n) = Neg (bitM n);
+sub One (Bit1 n) = Neg (Bit0 n);
+sub (Bit0 m) (Bit0 n) = dup (sub m n);
+sub (Bit1 m) (Bit1 n) = dup (sub m n);
+sub (Bit1 m) (Bit0 n) = plus_int (dup (sub m n)) one_int;
+sub (Bit0 m) (Bit1 n) = minus_int (dup (sub m n)) one_int;
+
+plus_int :: Int -> Int -> Int;
+plus_int k Zero_int = k;
+plus_int Zero_int l = l;
+plus_int (Pos m) (Pos n) = Pos (plus_num m n);
+plus_int (Pos m) (Neg n) = sub m n;
+plus_int (Neg m) (Pos n) = sub n m;
+plus_int (Neg m) (Neg n) = Neg (plus_num m n);
+
+minus_int :: Int -> Int -> Int;
+minus_int k Zero_int = k;
+minus_int Zero_int l = uminus_int l;
+minus_int (Pos m) (Pos n) = sub m n;
+minus_int (Pos m) (Neg n) = Pos (plus_num m n);
+minus_int (Neg m) (Pos n) = Neg (plus_num m n);
+minus_int (Neg m) (Neg n) = sub n m;
 
 fold :: forall a b. (a -> b -> b) -> [a] -> b -> b;
 fold f [] s = s;
@@ -1376,48 +1589,275 @@ fmlookup_default m d x = (case fmlookup m x of {
 fminsert :: forall a b. (Eq a) => Fmap a [b] -> a -> b -> Fmap a [b];
 fminsert infl x y = fmupd x (y : fmlookup_default infl [] x) infl;
 
-prog_main :: forall a. Imp_prog_ext a -> Com;
-prog_main (Imp_prog_ext proc_rep prog_main declared_global_vars more) =
-  prog_main;
+sup_fun :: forall a b. (Semilattice_sup b) => (a -> b) -> (a -> b) -> a -> b;
+sup_fun f g x = sup (f x) (g x);
 
-ea_check_cond :: Edge_action -> Bexp;
-ea_check_cond (EA_Check x7) = x7;
+bot_fun :: forall a b. (Bot b) => a -> b;
+bot_fun x = bot;
 
-is_EA_Check :: Edge_action -> Bool;
-is_EA_Check EA_Nop = False;
-is_EA_Check (EA_Assign x21 x22) = False;
-is_EA_Check (EA_Random x3) = False;
-is_EA_Check (EA_Assume x4) = False;
-is_EA_Check (EA_AssumeNot x5) = False;
-is_EA_Check (EA_Ret x61 x62) = False;
-is_EA_Check (EA_Check x7) = True;
+glob_env ::
+  forall a b.
+    (Enum a,
+      Bounded_semilattice_sup_bot b) => (Sum Cfg_node a -> [Char] -> b) ->
+  [Char] -> b;
+glob_env sigma = fold (sup_fun . (\ g -> sigma (Inr g))) enum bot_fun;
 
-falls_through :: Com -> Bool;
-falls_through SKIP = True;
-falls_through (Assign x a) = True;
-falls_through (Random x) = True;
-falls_through (Check c) = True;
-falls_through (Seq c1 c2) = falls_through c1 && falls_through c2;
-falls_through (If b c1 c2) = falls_through c1 || falls_through c2;
-falls_through (While b c) = True;
-falls_through (Call dst q actuals) = True;
-falls_through (Return e) = False;
-falls_through Restore = True;
-falls_through Unwind = True;
+side_env ::
+  forall a b.
+    (Enum a,
+      Bounded_semilattice_sup_bot b) => (Sum Cfg_node a -> [Char] -> b) ->
+  Cfg_node -> [Char] -> b;
+side_env sigma v = sup_fun (sigma (Inl v)) (glob_env sigma);
+
+cinit_ivl_st :: Resolved_st_q Ivl;
+cinit_ivl_st =
+  Abs_resolved_st (Ivl MinInf PlusInf, (Ivl (Fin Zero_int) (Fin Zero_int), []));
+
+lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
+lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
+
+fun_of_resolved_st_q_for ::
+  forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
+fun_of_resolved_st_q_for gs s x = lookup_resolved_st_q s (location_of gs x);
+
+inv_conservative :: forall a. a -> a -> a -> (a, a);
+inv_conservative r a1 a2 = (a1, a2);
+
+remove_resolved_key :: forall a. Location -> [(Location, a)] -> [(Location, a)];
+remove_resolved_key loc [] = [];
+remove_resolved_key loca ((loc, a) : ps) =
+  (if equal_location loca loc then remove_resolved_key loca ps
+    else (loc, a) : remove_resolved_key loca ps);
+
+update_resolved_st ::
+  forall a.
+    (Bot a) => (a, (a, [(Location, a)])) ->
+                 Location -> a -> (a, (a, [(Location, a)]));
+update_resolved_st (dl, (dg, ps)) loc a =
+  (dl, (dg, (loc, a) : remove_resolved_key loc ps));
+
+update_resolved_st_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Location -> a -> Resolved_st_q a;
+update_resolved_st_q (Abs_resolved_st xb) xa x =
+  Abs_resolved_st (update_resolved_st xb xa x);
+
+times_num :: Num -> Num -> Num;
+times_num m One = m;
+times_num One n = n;
+times_num (Bit0 m) (Bit0 n) = Bit0 (Bit0 (times_num m n));
+times_num (Bit0 m) (Bit1 n) = Bit0 (times_num m (Bit1 n));
+times_num (Bit1 m) (Bit0 n) = Bit0 (times_num (Bit1 m) n);
+times_num (Bit1 m) (Bit1 n) =
+  Bit1 (plus_num (plus_num m n) (Bit0 (times_num m n)));
+
+times_int :: Int -> Int -> Int;
+times_int k Zero_int = Zero_int;
+times_int Zero_int l = Zero_int;
+times_int (Pos m) (Pos n) = Pos (times_num m n);
+times_int (Pos m) (Neg n) = Neg (times_num m n);
+times_int (Neg m) (Pos n) = Neg (times_num m n);
+times_int (Neg m) (Neg n) = Pos (times_num m n);
+
+ivl_top :: Ivl;
+ivl_top = Ivl MinInf PlusInf;
+
+min :: forall a. (Ord a) => a -> a -> a;
+min a b = (if less_eq a b then a else b);
+
+max :: forall a. (Ord a) => a -> a -> a;
+max a b = (if less_eq a b then b else a);
+
+ivl_times_core :: Ivl -> Ivl -> Ivl;
+ivl_times_core (Ivl (Fin l1) (Fin u1)) (Ivl (Fin l2) (Fin u2)) =
+  Ivl (Fin (min (times_int l1 l2)
+             (min (times_int l1 u2) (min (times_int u1 l2) (times_int u1 u2)))))
+    (Fin (max (times_int l1 l2)
+           (max (times_int l1 u2) (max (times_int u1 l2) (times_int u1 u2)))));
+ivl_times_core (Ivl MinInf va) uv = ivl_top;
+ivl_times_core (Ivl PlusInf va) uv = ivl_top;
+ivl_times_core (Ivl v MinInf) uv = ivl_top;
+ivl_times_core (Ivl v PlusInf) uv = ivl_top;
+ivl_times_core uu (Ivl MinInf va) = ivl_top;
+ivl_times_core uu (Ivl PlusInf va) = ivl_top;
+ivl_times_core uu (Ivl v MinInf) = ivl_top;
+ivl_times_core uu (Ivl v PlusInf) = ivl_top;
+
+ivl_nonempty :: Ivl -> Bool;
+ivl_nonempty (Ivl l u) =
+  less_eq_eint l u && not (equal_eint l PlusInf) && not (equal_eint u MinInf);
+
+times_ivl :: Ivl -> Ivl -> Ivl;
+times_ivl a b =
+  (if ivl_nonempty a && ivl_nonempty b then ivl_times_core a b else bot_ivl);
+
+minus_eint :: Eint -> Eint -> Eint;
+minus_eint (Fin n) (Fin m) = Fin (minus_int n m);
+minus_eint (Fin uu) MinInf = PlusInf;
+minus_eint (Fin uv) PlusInf = MinInf;
+minus_eint MinInf MinInf = MinInf;
+minus_eint MinInf (Fin uw) = MinInf;
+minus_eint MinInf PlusInf = MinInf;
+minus_eint PlusInf MinInf = PlusInf;
+minus_eint PlusInf (Fin ux) = PlusInf;
+minus_eint PlusInf PlusInf = PlusInf;
+
+normalize_ivl :: Ivl -> Ivl;
+normalize_ivl v =
+  (case v of {
+    Ivl l u ->
+      (if less_eq_eint l u &&
+            not (equal_eint l PlusInf) && not (equal_eint u MinInf)
+        then v else bot_ivl);
+  });
+
+minus_ivl :: Ivl -> Ivl -> Ivl;
+minus_ivl (Ivl l1 u1) (Ivl l2 u2) =
+  (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of {
+    (Ivl a b, Ivl c d) -> normalize_ivl (Ivl (minus_eint a d) (minus_eint b c));
+  });
+
+plus_eint :: Eint -> Eint -> Eint;
+plus_eint (Fin n) (Fin m) = Fin (plus_int n m);
+plus_eint (Fin uu) MinInf = MinInf;
+plus_eint (Fin uv) PlusInf = PlusInf;
+plus_eint MinInf MinInf = MinInf;
+plus_eint MinInf (Fin uw) = MinInf;
+plus_eint MinInf PlusInf = MinInf;
+plus_eint PlusInf MinInf = PlusInf;
+plus_eint PlusInf (Fin ux) = PlusInf;
+plus_eint PlusInf PlusInf = PlusInf;
+
+plus_ivl :: Ivl -> Ivl -> Ivl;
+plus_ivl (Ivl l1 u1) (Ivl l2 u2) =
+  (case (normalize_ivl (Ivl l1 u1), normalize_ivl (Ivl l2 u2)) of {
+    (Ivl a b, Ivl c d) -> normalize_ivl (Ivl (plus_eint a c) (plus_eint b d));
+  });
+
+aval_ivl :: Aexp -> ([Char] -> Ivl) -> Ivl;
+aval_ivl (N n) sigma = Ivl (Fin n) (Fin n);
+aval_ivl (V x) sigma = sigma x;
+aval_ivl (Plus a b) sigma = plus_ivl (aval_ivl a sigma) (aval_ivl b sigma);
+aval_ivl (Minus a b) sigma = minus_ivl (aval_ivl a sigma) (aval_ivl b sigma);
+aval_ivl (Times a b) sigma = times_ivl (aval_ivl a sigma) (aval_ivl b sigma);
+
+meet_ivl :: Ivl -> Ivl -> Ivl;
+meet_ivl (Ivl l1 u1) (Ivl l2 u2) =
+  Ivl (if less_eq_eint l2 l1 then l1 else l2)
+    (if less_eq_eint u1 u2 then u1 else u2);
+
+afilter_ivl_st ::
+  ([Char] -> Bool) -> Aexp -> Ivl -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
+afilter_ivl_st gs (V x) a s =
+  update_resolved_st_q s (location_of gs x)
+    (meet_ivl a (fun_of_resolved_st_q_for gs s x));
+afilter_ivl_st gs (Plus e1 e2) a s =
+  (case inv_conservative a (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
+          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
+    of {
+    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
+  });
+afilter_ivl_st gs (Minus e1 e2) a s =
+  (case inv_conservative a (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
+          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
+    of {
+    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
+  });
+afilter_ivl_st gs (Times e1 e2) a s =
+  (case inv_conservative a (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
+          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
+    of {
+    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
+  });
+afilter_ivl_st gs (N v) a s = s;
+
+inf_ivl :: Ivl -> Ivl -> Ivl;
+inf_ivl = meet_ivl;
+
+inv_less_ivl :: Bool -> Ivl -> Ivl -> (Ivl, Ivl);
+inv_less_ivl True (Ivl l1 u1) (Ivl l2 u2) =
+  (inf_ivl (Ivl l1 u1) (Ivl MinInf (minus_eint u2 (Fin one_int))),
+    inf_ivl (Ivl l2 u2) (Ivl (plus_eint l1 (Fin one_int)) PlusInf));
+inv_less_ivl False (Ivl l1 u1) (Ivl l2 u2) =
+  (inf_ivl (Ivl l1 u1) (Ivl l2 PlusInf), inf_ivl (Ivl l2 u2) (Ivl MinInf u1));
+
+inv_eq_ivl :: Bool -> Ivl -> Ivl -> (Ivl, Ivl);
+inv_eq_ivl True a1 a2 = (meet_ivl a1 a2, meet_ivl a1 a2);
+inv_eq_ivl False a1 a2 = (a1, a2);
+
+bfilter_ivl_st ::
+  ([Char] -> Bool) -> Bexp -> Bool -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
+bfilter_ivl_st gs (Less e1 e2) res s =
+  (case inv_less_ivl res (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
+          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
+    of {
+    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
+  });
+bfilter_ivl_st gs (Not b) res s = bfilter_ivl_st gs b (not res) s;
+bfilter_ivl_st gs (And b1 b2) True s =
+  bfilter_ivl_st gs b1 True (bfilter_ivl_st gs b2 True s);
+bfilter_ivl_st gs (And b1 b2) False s =
+  sup_resolved_st_q (bfilter_ivl_st gs b1 False s)
+    (bfilter_ivl_st gs b2 False s);
+bfilter_ivl_st gs (Or b1 b2) True s =
+  sup_resolved_st_q (bfilter_ivl_st gs b1 True s) (bfilter_ivl_st gs b2 True s);
+bfilter_ivl_st gs (Or b1 b2) False s =
+  bfilter_ivl_st gs b1 False (bfilter_ivl_st gs b2 False s);
+bfilter_ivl_st gs (Eqb e1 e2) res s =
+  (case inv_eq_ivl res (aval_ivl e1 (fun_of_resolved_st_q_for gs s))
+          (aval_ivl e2 (fun_of_resolved_st_q_for gs s))
+    of {
+    (a1, a2) -> afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s);
+  });
+bfilter_ivl_st gs (Bc v) uv s = s;
+
+assume_not_ivl_st_for ::
+  ([Char] -> Bool) -> Bexp -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
+assume_not_ivl_st_for source_global b s =
+  bfilter_ivl_st source_global b False s;
+
+assume_ivl_st_for ::
+  ([Char] -> Bool) -> Bexp -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
+assume_ivl_st_for source_global b s = bfilter_ivl_st source_global b True s;
+
+ivl_tf_st_for ::
+  ([Char] -> Bool) -> Edge_action -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
+ivl_tf_st_for source_global EA_Nop s = s;
+ivl_tf_st_for source_global (EA_Assign x a) s =
+  update_resolved_st_q s (location_of source_global x)
+    (aval_ivl a (fun_of_resolved_st_q_for source_global s));
+ivl_tf_st_for source_global (EA_Random x) s =
+  update_resolved_st_q s (location_of source_global x) ivl_top;
+ivl_tf_st_for source_global (EA_Assume b) s =
+  assume_ivl_st_for source_global b s;
+ivl_tf_st_for source_global (EA_AssumeNot b) s =
+  assume_not_ivl_st_for source_global b s;
+ivl_tf_st_for source_global (EA_Ret Nothing p) s = s;
+ivl_tf_st_for source_global (EA_Ret (Just a) p) s =
+  update_resolved_st_q s (location_of source_global ret_var)
+    (aval_ivl a (fun_of_resolved_st_q_for source_global s));
+ivl_tf_st_for source_global (EA_Check cnd) s = s;
+
+map_ltree ::
+  forall a b c d. (a -> b) -> Strategy_tree a c d -> Strategy_tree b c d;
+map_ltree h (Answer d) = Answer d;
+map_ltree h (QueryL y f) = QueryL (h y) (\ d -> map_ltree h (f d));
+map_ltree h (QueryG y f) = QueryG y (\ d -> map_ltree h (f d));
+map_ltree h (Side y d t) = Side y d (map_ltree h t);
+
+sigma :: forall a b c d. State_ext a b c d -> Sum a b -> c;
+sigma (State_ext c infl stabl sigma more) = sigma;
+
+c_update ::
+  forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
+c_update ca (State_ext c infl stabl sigma more) =
+  State_ext (ca c) infl stabl sigma more;
+
+proc_decl_of :: [[Char]] -> Com -> Proc_decl_ext ();
+proc_decl_of xs bdy = Proc_decl_ext xs bdy ();
 
 plus_nat :: Nat -> Nat -> Nat;
 plus_nat Zero_nat n = n;
 plus_nat (Suc m) n = plus_nat m (Suc n);
-
-formals :: forall a. Proc_decl_ext a -> [[Char]];
-formals (Proc_decl_ext formals body more) = formals;
-
-sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
-sup_set (Set xs) a = fold insert xs a;
-sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
-
-bot_set :: forall a. Set a;
-bot_set = Set [];
 
 one_nat :: Nat;
 one_nat = Suc Zero_nat;
@@ -1435,195 +1875,171 @@ csize (Return e) = one_nat;
 csize Restore = one_nat;
 csize Unwind = one_nat;
 
-compile ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [Char] ->
-      Com ->
-        Cfg_node ->
-          Nat ->
-            (Nat, (Cfg_node,
-                    (Set (Cfg_node, (Edge_action, Cfg_node)),
-                      Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node))))));
-compile pi p SKIP k n =
-  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
-compile pi p (Assign x a) k n =
-  (Suc n,
-    (Statement n, (insert (Statement n, (EA_Assign x a, k)) bot_set, bot_set)));
-compile pi p (Random x) k n =
-  (Suc n,
-    (Statement n, (insert (Statement n, (EA_Random x, k)) bot_set, bot_set)));
-compile pi p (Check c) k n =
-  (Suc n,
-    (Statement n, (insert (Statement n, (EA_Check c, k)) bot_set, bot_set)));
-compile pi p (Seq c1 c2) k n =
-  (case compile pi p c1 (Statement (plus_nat n (csize c1))) n of {
-    (_, (en1, (e1, k1))) ->
-      (case compile pi p c2 k (plus_nat n (csize c1)) of {
-        (n2, (_, (e2, k2))) -> (n2, (en1, (sup_set e1 e2, sup_set k1 k2)));
-      });
+combine_assign_resolved ::
+  forall a.
+    (Bot a) => ([Char] -> Bool) ->
+                 Maybe [Char] ->
+                   a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+combine_assign_resolved gs dst v s =
+  (case dst of {
+    Nothing -> s;
+    Just x -> update_resolved_st s (location_of gs x) v;
   });
-compile pi p (If b c1 c2) k n =
-  (case compile pi p c1 k (Suc n) of {
-    (n1, (en1, (e1, k1))) ->
-      (case compile pi p c2 k n1 of {
-        (n2, (en2, (e2, k2))) ->
-          (n2, (Statement n,
-                 (sup_set
-                    (sup_set
-                      (insert (Statement n, (EA_Assume b, en1))
-                        (insert (Statement n, (EA_AssumeNot b, en2)) bot_set))
-                      e1)
-                    e2,
-                   sup_set k1 k2)));
-      });
-  });
-compile pi p (While b c) k n =
-  (case compile pi p c (Statement n) (Suc n) of {
-    (n1, (en1, (e1, k1))) ->
-      (n1, (Statement n,
-             (sup_set
-                (insert (Statement n, (EA_Assume b, en1))
-                  (insert (Statement n, (EA_AssumeNot b, k)) bot_set))
-                e1,
-               k1)));
-  });
-compile pi p (Call dst q actuals) k n =
-  (Suc n,
-    (Statement n,
-      (bot_set,
-        insert
-          (Statement n,
-            (CallEdge dst (case pi q of {
-                            Nothing -> [];
-                            Just a -> formals a;
-                          })
-               actuals,
-              (FunctionEntry q, k)))
-          bot_set)));
-compile pi p (Return e) k n =
-  (Suc n,
-    (Statement n,
-      (insert (Statement n, (EA_Ret e p, FunctionResult p)) bot_set, bot_set)));
-compile pi p Restore k n =
-  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
-compile pi p Unwind k n =
-  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 
-body :: forall a. Proc_decl_ext a -> Com;
-body (Proc_decl_ext formals body more) = body;
+location_is_global :: Location -> Bool;
+location_is_global (Local_Location x) = False;
+location_is_global (Global_Location x) = True;
 
-compile_proc ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [Char] ->
-      Proc_decl_ext () ->
-        Nat ->
-          (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
-                  Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
-compile_proc pi p decl n =
-  let {
-    r = plus_nat n (csize (body decl));
-  } in (case compile pi p (body decl) (Statement r) n of {
-         (_, (ben, (e, k))) ->
-           (Suc r,
-             (insert (FunctionEntry p, (EA_Nop, ben))
-                (if falls_through (body decl)
-                  then insert
-                         (Statement r, (EA_Ret Nothing p, FunctionResult p)) e
-                  else e),
-               k));
-       });
+location_is_local :: Location -> Bool;
+location_is_local (Local_Location x) = True;
+location_is_local (Global_Location x) = False;
 
-compile_procs ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [[Char]] ->
-      Nat ->
-        (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
-                Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
-compile_procs pi [] n = (n, (bot_set, bot_set));
-compile_procs pi (p : ps) n =
-  (case pi p of {
-    Nothing -> compile_procs pi ps n;
-    Just decl ->
-      (case compile_proc pi p decl n of {
-        (n1, (e, k)) -> (case compile_procs pi ps n1 of {
-                          (n2, (ea, ka)) -> (n2, (sup_set e ea, sup_set k ka));
-                        });
+combine_resolved_st ::
+  forall a.
+    (Bot a) => (a, (a, [(Location, a)])) ->
+                 (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+combine_resolved_st sc se =
+  (case sc of {
+    (dlc, (_, psc)) ->
+      (case se of {
+        (_, (dge, pse)) ->
+          (dlc, (dge, filter (\ p -> location_is_local (fst p)) psc ++
+                        filter (\ p -> location_is_global (fst p)) pse));
       });
   });
 
-proc_decl_of :: [[Char]] -> Com -> Proc_decl_ext ();
-proc_decl_of xs bdy = Proc_decl_ext xs bdy ();
+combine_collect_resolved_for ::
+  forall a.
+    (Bot a) => ([Char] -> Bool) ->
+                 Maybe [Char] ->
+                   (a, (a, [(Location, a)])) ->
+                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+combine_collect_resolved_for gs dst sc se =
+  combine_assign_resolved gs dst
+    (lookup_resolved_st se (location_of gs ret_var))
+    (combine_resolved_st sc se);
 
-compile_prog ::
-  ([Char] -> Maybe (Proc_decl_ext ())) ->
-    [[Char]] -> [Char] -> Com -> Cfg_ext ();
-compile_prog pi ps mnm main =
-  (case compile_procs pi ps Zero_nat of {
-    (n1, (eprocs, kprocs)) ->
-      (case compile_proc pi mnm (proc_decl_of [] main) n1 of {
-        (_, (emain, kmain)) ->
-          Cfg_ext (sup_set eprocs emain) (sup_set kprocs kmain)
-            (FunctionEntry mnm)
-            (image (\ (u, (a, _)) -> (u, ea_check_cond a))
-              (filtera (\ (_, (a, _)) -> is_EA_Check a) (sup_set eprocs emain)))
-            ();
-      });
+combine_collect_resolved_for_q ::
+  forall a.
+    (Bot a) => ([Char] -> Bool) ->
+                 Maybe [Char] ->
+                   Resolved_st_q a -> Resolved_st_q a -> Resolved_st_q a;
+combine_collect_resolved_for_q xc xb (Abs_resolved_st xa) (Abs_resolved_st x) =
+  Abs_resolved_st (combine_collect_resolved_for xc xb xa x);
+
+restrict_global_resolved ::
+  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+restrict_global_resolved s =
+  (case s of {
+    (_, (dg, ps)) -> (bot, (dg, filter (\ p -> location_is_global (fst p)) ps));
   });
 
-make :: [([Char], Proc_decl_ext ())] -> Com -> [[Char]] -> Imp_prog_ext ();
-make proc_rep prog_main declared_global_vars =
-  Imp_prog_ext proc_rep prog_main declared_global_vars ();
+restrict_global_resolved_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
+restrict_global_resolved_q (Abs_resolved_st x) =
+  Abs_resolved_st (restrict_global_resolved x);
 
-one_int :: Int;
-one_int = Pos One;
+restrict_local_resolved ::
+  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+restrict_local_resolved s =
+  (case s of {
+    (dl, (_, ps)) -> (dl, (bot, filter (\ p -> location_is_local (fst p)) ps));
+  });
 
-sign_ex_prog :: Imp_prog_ext ();
-sign_ex_prog =
-  make []
-    (Seq (Assign [Char False False False True True True True False] (N one_int))
-      (Assign [Char True False False True True True True False]
-        (V [Char False False False True True True True False])))
-    [];
+restrict_local_resolved_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
+restrict_local_resolved_q (Abs_resolved_st x) =
+  Abs_resolved_st (restrict_local_resolved x);
 
-prog_main_name :: [Char];
-prog_main_name =
-  [Char True False True True False True True False,
-    Char True False False False False True True False,
-    Char True False False True False True True False,
-    Char False True True True False True True False];
+unit_combine_tree_st ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
+ Maybe [Char] ->
+   Cfg_node -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q a);
+unit_combine_tree_st gs dst cc ex =
+  QueryL cc
+    (\ sc ->
+      QueryL ex
+        (\ se ->
+          QueryG ()
+            (\ g ->
+              let {
+                res = combine_collect_resolved_for_q gs dst
+                        (sup_resolved_st_q sc g) (sup_resolved_st_q se g);
+              } in Side () (restrict_global_resolved_q res)
+                     (Answer (restrict_local_resolved_q res)))));
 
-proc_rep :: forall a. Imp_prog_ext a -> [([Char], Proc_decl_ext ())];
-proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
+unit_edge_tree_st ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => (Resolved_st_q a -> Resolved_st_q a) ->
+ Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q a);
+unit_edge_tree_st f u =
+  QueryL u
+    (\ su ->
+      QueryG ()
+        (\ g ->
+          let {
+            res = f (sup_resolved_st_q su g);
+          } in Side () (restrict_global_resolved_q res)
+                 (Answer (restrict_local_resolved_q res))));
 
-prog_table :: Imp_prog_ext () -> [Char] -> Maybe (Proc_decl_ext ());
-prog_table p =
-  fun_upd (map_of (proc_rep p)) prog_main_name
-    (Just (proc_decl_of [] (prog_main p)));
+unit_etf_st_of_transfer ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
+ (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
+   ([[Char]] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
+     Effectful_st_transfer_ext () (Resolved_st_q a) ();
+unit_etf_st_of_transfer gs tf_st enter_st =
+  Effectful_st_transfer_ext (unit_edge_tree_st (tf_st EA_Nop))
+    (\ x e -> unit_edge_tree_st (tf_st (EA_Assign x e)))
+    (\ x -> unit_edge_tree_st (tf_st (EA_Random x)))
+    (\ b -> unit_edge_tree_st (tf_st (EA_Assume b)))
+    (\ b -> unit_edge_tree_st (tf_st (EA_AssumeNot b)))
+    (\ xs es -> unit_edge_tree_st (enter_st xs es)) (unit_combine_tree_st gs)
+    ();
 
-sign_ex_pi :: [Char] -> Maybe (Proc_decl_ext ());
-sign_ex_pi = prog_table sign_ex_prog;
+enter_frame_D_resolved ::
+  forall a.
+    (Bot a) => a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+enter_frame_D_resolved top_val s =
+  (case s of {
+    (_, (dg, ps)) ->
+      (top_val, (dg, filter (\ p -> location_is_global (fst p)) ps));
+  });
 
-prog_procs :: Imp_prog_ext () -> [[Char]];
-prog_procs p = map fst (proc_rep p);
+enter_frame_D_resolved_q ::
+  forall a. (Bot a) => a -> Resolved_st_q a -> Resolved_st_q a;
+enter_frame_D_resolved_q xa (Abs_resolved_st x) =
+  Abs_resolved_st (enter_frame_D_resolved xa x);
 
-gEx :: Cfg_ext ();
-gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name
-        (prog_main sign_ex_prog);
+bind_formals_resolved ::
+  forall a.
+    (Bot a) => ([Char] -> Bool) ->
+                 [[Char]] ->
+                   [a] ->
+                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
+bind_formals_resolved gs xs avs s =
+  fold (\ (x, a) t -> update_resolved_st t (location_of gs x) a) (zip xs avs) s;
 
-map_ltree ::
-  forall a b c d. (a -> b) -> Strategy_tree a c d -> Strategy_tree b c d;
-map_ltree h (Answer d) = Answer d;
-map_ltree h (QueryL y f) = QueryL (h y) (\ d -> map_ltree h (f d));
-map_ltree h (QueryG y f) = QueryG y (\ d -> map_ltree h (f d));
-map_ltree h (Side y d t) = Side y d (map_ltree h t);
+bind_formals_resolved_q ::
+  forall a.
+    (Bot a) => ([Char] -> Bool) ->
+                 [[Char]] -> [a] -> Resolved_st_q a -> Resolved_st_q a;
+bind_formals_resolved_q xc xb xa (Abs_resolved_st x) =
+  Abs_resolved_st (bind_formals_resolved xc xb xa x);
 
-sigma :: forall a b c d. State_ext a b c d -> Sum a b -> c;
-sigma (State_ext c infl stabl sigma more) = sigma;
+ivl_enter_st_for ::
+  ([Char] -> Bool) ->
+    [[Char]] -> [Aexp] -> Resolved_st_q Ivl -> Resolved_st_q Ivl;
+ivl_enter_st_for source_global xs es s =
+  bind_formals_resolved_q source_global xs
+    (map (\ e -> aval_ivl e (fun_of_resolved_st_q_for source_global s)) es)
+    (enter_frame_D_resolved_q ivl_top s);
 
-c_update ::
-  forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
-c_update ca (State_ext c infl stabl sigma more) =
-  State_ext (ca c) infl stabl sigma more;
+ivl_etf_st_for ::
+  ([Char] -> Bool) -> Effectful_st_transfer_ext () (Resolved_st_q Ivl) ();
+ivl_etf_st_for gs =
+  unit_etf_st_of_transfer gs (ivl_tf_st_for gs) (ivl_enter_st_for gs);
 
 meet_sign :: Sign -> Sign -> Sign;
 meet_sign SBot uu = SBot;
@@ -1690,6 +2106,65 @@ dgs_combine ::
   forall a b. Dg_spec_ext a b () -> Maybe [Char] -> a -> a -> b -> (b, a);
 dgs_combine s dst dc de g =
   dgs_combine_assign s dst de g (dgs_combine_env s dc de g);
+
+etf_st_assume_not ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c ->
+      Bexp -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_assume_not
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_assume_not;
+
+etf_st_random ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c ->
+      [Char] -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_random
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_random;
+
+etf_st_assume ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c ->
+      Bexp -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_assume
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_assume;
+
+etf_st_assign ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c ->
+      [Char] -> Aexp -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_assign
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_assign;
+
+etf_st_nop ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_nop
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_nop;
+
+apply_etf_st ::
+  forall a b.
+    Effectful_st_transfer_ext a b () ->
+      Edge_action -> Cfg_node -> Strategy_tree Cfg_node a b;
+apply_etf_st etf EA_Nop u = etf_st_nop etf u;
+apply_etf_st etf (EA_Assign x a) u = etf_st_assign etf x a u;
+apply_etf_st etf (EA_Random x) u = etf_st_random etf x u;
+apply_etf_st etf (EA_Assume b) u = etf_st_assume etf b u;
+apply_etf_st etf (EA_AssumeNot b) u = etf_st_assume_not etf b u;
+apply_etf_st etf (EA_Ret e p) u = (case e of {
+                                    Nothing -> etf_st_nop etf u;
+                                    Just a -> etf_st_assign etf ret_var a u;
+                                  });
+apply_etf_st etf (EA_Check cnd) u = etf_st_nop etf u;
 
 dg_combine_tree ::
   forall a b.
@@ -1954,33 +2429,12 @@ dg_gen_of s g bot0 s0d s0g =
   side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\ _ -> ())
     (\ _ _ _ _ -> ()) (dg_cmb_of s) (dg_extra_of s g) g s bot0 s0d s0g;
 
-lookup_resolved_st_q :: forall a. (Bot a) => Resolved_st_q a -> Location -> a;
-lookup_resolved_st_q (Abs_resolved_st x) = lookup_resolved_st x;
+bot_set :: forall a. Set a;
+bot_set = Set [];
 
-fun_of_resolved_st_q_for ::
-  forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
-fun_of_resolved_st_q_for gs s x = lookup_resolved_st_q s (location_of gs x);
-
-inv_conservative :: forall a. a -> a -> a -> (a, a);
-inv_conservative r a1 a2 = (a1, a2);
-
-remove_resolved_key :: forall a. Location -> [(Location, a)] -> [(Location, a)];
-remove_resolved_key loc [] = [];
-remove_resolved_key loca ((loc, a) : ps) =
-  (if equal_location loca loc then remove_resolved_key loca ps
-    else (loc, a) : remove_resolved_key loca ps);
-
-update_resolved_st ::
-  forall a.
-    (Bot a) => (a, (a, [(Location, a)])) ->
-                 Location -> a -> (a, (a, [(Location, a)]));
-update_resolved_st (dl, (dg, ps)) loc a =
-  (dl, (dg, (loc, a) : remove_resolved_key loc ps));
-
-update_resolved_st_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Location -> a -> Resolved_st_q a;
-update_resolved_st_q (Abs_resolved_st xb) xa x =
-  Abs_resolved_st (update_resolved_st xb xa x);
+sup_set :: forall a. (Eq a) => Set a -> Set a -> Set a;
+sup_set (Set xs) a = fold insert xs a;
+sup_set (Coset xs) a = Coset (filter (\ x -> not (member x a)) xs);
 
 times_sign :: Sign -> Sign -> Sign;
 times_sign SBot uu = SBot;
@@ -2239,101 +2693,217 @@ sign_tf_st_for source_global (EA_Ret (Just a) p) s =
     (aval_sign a (fun_of_resolved_st_q_for source_global s));
 sign_tf_st_for source_global (EA_Check cnd) s = s;
 
-prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
-prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
+prog_main :: forall a. Imp_prog_ext a -> Com;
+prog_main (Imp_prog_ext proc_rep prog_main declared_global_vars more) =
+  prog_main;
 
-location_is_global :: Location -> Bool;
-location_is_global (Local_Location x) = False;
-location_is_global (Global_Location x) = True;
+ea_check_cond :: Edge_action -> Bexp;
+ea_check_cond (EA_Check x7) = x7;
 
-restrict_global_resolved ::
-  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-restrict_global_resolved s =
-  (case s of {
-    (_, (dg, ps)) -> (bot, (dg, filter (\ p -> location_is_global (fst p)) ps));
+is_EA_Check :: Edge_action -> Bool;
+is_EA_Check EA_Nop = False;
+is_EA_Check (EA_Assign x21 x22) = False;
+is_EA_Check (EA_Random x3) = False;
+is_EA_Check (EA_Assume x4) = False;
+is_EA_Check (EA_AssumeNot x5) = False;
+is_EA_Check (EA_Ret x61 x62) = False;
+is_EA_Check (EA_Check x7) = True;
+
+falls_through :: Com -> Bool;
+falls_through SKIP = True;
+falls_through (Assign x a) = True;
+falls_through (Random x) = True;
+falls_through (Check c) = True;
+falls_through (Seq c1 c2) = falls_through c1 && falls_through c2;
+falls_through (If b c1 c2) = falls_through c1 || falls_through c2;
+falls_through (While b c) = True;
+falls_through (Call dst q actuals) = True;
+falls_through (Return e) = False;
+falls_through Restore = True;
+falls_through Unwind = True;
+
+formals :: forall a. Proc_decl_ext a -> [[Char]];
+formals (Proc_decl_ext formals body more) = formals;
+
+compile ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [Char] ->
+      Com ->
+        Cfg_node ->
+          Nat ->
+            (Nat, (Cfg_node,
+                    (Set (Cfg_node, (Edge_action, Cfg_node)),
+                      Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node))))));
+compile pi p SKIP k n =
+  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
+compile pi p (Assign x a) k n =
+  (Suc n,
+    (Statement n, (insert (Statement n, (EA_Assign x a, k)) bot_set, bot_set)));
+compile pi p (Random x) k n =
+  (Suc n,
+    (Statement n, (insert (Statement n, (EA_Random x, k)) bot_set, bot_set)));
+compile pi p (Check c) k n =
+  (Suc n,
+    (Statement n, (insert (Statement n, (EA_Check c, k)) bot_set, bot_set)));
+compile pi p (Seq c1 c2) k n =
+  (case compile pi p c1 (Statement (plus_nat n (csize c1))) n of {
+    (_, (en1, (e1, k1))) ->
+      (case compile pi p c2 k (plus_nat n (csize c1)) of {
+        (n2, (_, (e2, k2))) -> (n2, (en1, (sup_set e1 e2, sup_set k1 k2)));
+      });
   });
-
-restrict_global_resolved_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
-restrict_global_resolved_q (Abs_resolved_st x) =
-  Abs_resolved_st (restrict_global_resolved x);
-
-location_is_local :: Location -> Bool;
-location_is_local (Local_Location x) = True;
-location_is_local (Global_Location x) = False;
-
-restrict_local_resolved ::
-  forall a. (Bot a) => (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-restrict_local_resolved s =
-  (case s of {
-    (dl, (_, ps)) -> (dl, (bot, filter (\ p -> location_is_local (fst p)) ps));
+compile pi p (If b c1 c2) k n =
+  (case compile pi p c1 k (Suc n) of {
+    (n1, (en1, (e1, k1))) ->
+      (case compile pi p c2 k n1 of {
+        (n2, (en2, (e2, k2))) ->
+          (n2, (Statement n,
+                 (sup_set
+                    (sup_set
+                      (insert (Statement n, (EA_Assume b, en1))
+                        (insert (Statement n, (EA_AssumeNot b, en2)) bot_set))
+                      e1)
+                    e2,
+                   sup_set k1 k2)));
+      });
   });
-
-restrict_local_resolved_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a;
-restrict_local_resolved_q (Abs_resolved_st x) =
-  Abs_resolved_st (restrict_local_resolved x);
-
-combine_assign_resolved ::
-  forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 Maybe [Char] ->
-                   a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-combine_assign_resolved gs dst v s =
-  (case dst of {
-    Nothing -> s;
-    Just x -> update_resolved_st s (location_of gs x) v;
+compile pi p (While b c) k n =
+  (case compile pi p c (Statement n) (Suc n) of {
+    (n1, (en1, (e1, k1))) ->
+      (n1, (Statement n,
+             (sup_set
+                (insert (Statement n, (EA_Assume b, en1))
+                  (insert (Statement n, (EA_AssumeNot b, k)) bot_set))
+                e1,
+               k1)));
   });
+compile pi p (Call dst q actuals) k n =
+  (Suc n,
+    (Statement n,
+      (bot_set,
+        insert
+          (Statement n,
+            (CallEdge dst (case pi q of {
+                            Nothing -> [];
+                            Just a -> formals a;
+                          })
+               actuals,
+              (FunctionEntry q, k)))
+          bot_set)));
+compile pi p (Return e) k n =
+  (Suc n,
+    (Statement n,
+      (insert (Statement n, (EA_Ret e p, FunctionResult p)) bot_set, bot_set)));
+compile pi p Restore k n =
+  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
+compile pi p Unwind k n =
+  (Suc n, (Statement n, (insert (Statement n, (EA_Nop, k)) bot_set, bot_set)));
 
-combine_assign_resolved_q ::
-  forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 Maybe [Char] -> a -> Resolved_st_q a -> Resolved_st_q a;
-combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
-  Abs_resolved_st (combine_assign_resolved xc xb xa x);
+body :: forall a. Proc_decl_ext a -> Com;
+body (Proc_decl_ext formals body more) = body;
 
-unit_combine_step_st_assign_for ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
- Maybe [Char] ->
-   Resolved_st_q a ->
-     Resolved_st_q a ->
-       (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
-unit_combine_step_st_assign_for gs dst de g merged =
+compile_proc ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [Char] ->
+      Proc_decl_ext () ->
+        Nat ->
+          (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
+                  Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
+compile_proc pi p decl n =
   let {
-    res = combine_assign_resolved_q gs dst
-            (lookup_resolved_st_q (sup_resolved_st_q de g)
-              (location_of gs ret_var))
-            (sup_resolved_st_q (fst merged) (snd merged));
-  } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
+    r = plus_nat n (csize (body decl));
+  } in (case compile pi p (body decl) (Statement r) n of {
+         (_, (ben, (e, k))) ->
+           (Suc r,
+             (insert (FunctionEntry p, (EA_Nop, ben))
+                (if falls_through (body decl)
+                  then insert
+                         (Statement r, (EA_Ret Nothing p, FunctionResult p)) e
+                  else e),
+               k));
+       });
 
-combine_resolved_st ::
-  forall a.
-    (Bot a) => (a, (a, [(Location, a)])) ->
-                 (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-combine_resolved_st sc se =
-  (case sc of {
-    (dlc, (_, psc)) ->
-      (case se of {
-        (_, (dge, pse)) ->
-          (dlc, (dge, filter (\ p -> location_is_local (fst p)) psc ++
-                        filter (\ p -> location_is_global (fst p)) pse));
+compile_procs ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [[Char]] ->
+      Nat ->
+        (Nat, (Set (Cfg_node, (Edge_action, Cfg_node)),
+                Set (Cfg_node, (Call_action, (Cfg_node, Cfg_node)))));
+compile_procs pi [] n = (n, (bot_set, bot_set));
+compile_procs pi (p : ps) n =
+  (case pi p of {
+    Nothing -> compile_procs pi ps n;
+    Just decl ->
+      (case compile_proc pi p decl n of {
+        (n1, (e, k)) -> (case compile_procs pi ps n1 of {
+                          (n2, (ea, ka)) -> (n2, (sup_set e ea, sup_set k ka));
+                        });
       });
   });
 
-combine_resolved_st_q ::
-  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a -> Resolved_st_q a;
-combine_resolved_st_q (Abs_resolved_st xa) (Abs_resolved_st x) =
-  Abs_resolved_st (combine_resolved_st xa x);
+compile_prog ::
+  ([Char] -> Maybe (Proc_decl_ext ())) ->
+    [[Char]] -> [Char] -> Com -> Cfg_ext ();
+compile_prog pi ps mnm main =
+  (case compile_procs pi ps Zero_nat of {
+    (n1, (eprocs, kprocs)) ->
+      (case compile_proc pi mnm (proc_decl_of [] main) n1 of {
+        (_, (emain, kmain)) ->
+          Cfg_ext (sup_set eprocs emain) (sup_set kprocs kmain)
+            (FunctionEntry mnm)
+            (image (\ (u, (a, _)) -> (u, ea_check_cond a))
+              (filtera (\ (_, (a, _)) -> is_EA_Check a) (sup_set eprocs emain)))
+            ();
+      });
+  });
 
-unit_combine_step_st_env ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => Resolved_st_q a ->
- Resolved_st_q a -> Resolved_st_q a -> (Resolved_st_q a, Resolved_st_q a);
-unit_combine_step_st_env dc de g =
-  let {
-    m = combine_resolved_st_q (sup_resolved_st_q dc g) (sup_resolved_st_q de g);
-  } in (restrict_global_resolved_q m, restrict_local_resolved_q m);
+proc_rep :: forall a. Imp_prog_ext a -> [([Char], Proc_decl_ext ())];
+proc_rep (Imp_prog_ext proc_rep prog_main declared_global_vars more) = proc_rep;
+
+prog_main_name :: [Char];
+prog_main_name =
+  [Char True False True True False True True False,
+    Char True False False False False True True False,
+    Char True False False True False True True False,
+    Char False True True True False True True False];
+
+prog_table :: Imp_prog_ext () -> [Char] -> Maybe (Proc_decl_ext ());
+prog_table p =
+  fun_upd (map_of (proc_rep p)) prog_main_name
+    (Just (proc_decl_of [] (prog_main p)));
+
+prog_procs :: Imp_prog_ext () -> [[Char]];
+prog_procs p = map fst (proc_rep p);
+
+prog_cfg :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
+prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
+
+infl_update ::
+  forall a b c d.
+    (Fmap (Sum a b) [a] -> Fmap (Sum a b) [a]) ->
+      State_ext a b c d -> State_ext a b c d;
+infl_update infla (State_ext c infl stabl sigma more) =
+  State_ext c (infla infl) stabl sigma more;
+
+etf_st_combine ::
+  forall a b c.
+    Effectful_st_transfer_ext a b c ->
+      Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_combine
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_combine;
+
+etf_combine_st ::
+  forall a b.
+    Effectful_st_transfer_ext a b () ->
+      Maybe [Char] -> Cfg_node -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;
+
+stabl_update ::
+  forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
+stabl_update stabla (State_ext c infl stabl sigma more) =
+  State_ext c infl (stabla stabl) sigma more;
 
 unit_step_st ::
   forall a.
@@ -2344,57 +2914,50 @@ unit_step_st f d g =
     res = f (sup_resolved_st_q d g);
   } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
 
-unit_dg_spec_st_for ::
-  forall a.
-    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
- (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
-   ([[Char]] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
-     Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
-unit_dg_spec_st_for gs tf_st enter_st =
-  Dg_spec_ext (unit_step_st (tf_st EA_Nop))
-    (\ x e -> unit_step_st (tf_st (EA_Assign x e)))
-    (\ x -> unit_step_st (tf_st (EA_Random x)))
-    (\ b -> unit_step_st (tf_st (EA_Assume b)))
-    (\ b -> unit_step_st (tf_st (EA_AssumeNot b)))
-    (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
-    (unit_combine_step_st_assign_for gs) ();
+sign_less_true_of_inv :: Sign -> Sign -> Bool;
+sign_less_true_of_inv a b =
+  equal_sign (fst (inv_less_sign False a b)) bot_sign ||
+    equal_sign (snd (inv_less_sign False a b)) bot_sign;
 
-declared_global_vars :: forall a. Imp_prog_ext a -> [[Char]];
-declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
-  = declared_global_vars;
+sign_less_true :: Sign -> Sign -> Bool;
+sign_less_true = sign_less_true_of_inv;
 
-declared_global :: Imp_prog_ext () -> [Char] -> Bool;
-declared_global p x = membera (declared_global_vars p) x;
+sign_less_false_of_inv :: Sign -> Sign -> Bool;
+sign_less_false_of_inv a b =
+  equal_sign (fst (inv_less_sign True a b)) bot_sign ||
+    equal_sign (snd (inv_less_sign True a b)) bot_sign;
 
-enter_frame_D_resolved ::
-  forall a.
-    (Bot a) => a -> (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-enter_frame_D_resolved top_val s =
-  (case s of {
-    (_, (dg, ps)) ->
-      (top_val, (dg, filter (\ p -> location_is_global (fst p)) ps));
-  });
+sign_eq_true_of_less :: Sign -> Sign -> Bool;
+sign_eq_true_of_less a b =
+  sign_less_false_of_inv a b && sign_less_false_of_inv b a;
 
-enter_frame_D_resolved_q ::
-  forall a. (Bot a) => a -> Resolved_st_q a -> Resolved_st_q a;
-enter_frame_D_resolved_q xa (Abs_resolved_st x) =
-  Abs_resolved_st (enter_frame_D_resolved xa x);
+sign_eq_true :: Sign -> Sign -> Bool;
+sign_eq_true = sign_eq_true_of_less;
 
-bind_formals_resolved ::
-  forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 [[Char]] ->
-                   [a] ->
-                     (a, (a, [(Location, a)])) -> (a, (a, [(Location, a)]));
-bind_formals_resolved gs xs avs s =
-  fold (\ (x, a) t -> update_resolved_st t (location_of gs x) a) (zip xs avs) s;
+sign_less_false :: Sign -> Sign -> Bool;
+sign_less_false = sign_less_false_of_inv;
 
-bind_formals_resolved_q ::
-  forall a.
-    (Bot a) => ([Char] -> Bool) ->
-                 [[Char]] -> [a] -> Resolved_st_q a -> Resolved_st_q a;
-bind_formals_resolved_q xc xb xa (Abs_resolved_st x) =
-  Abs_resolved_st (bind_formals_resolved xc xb xa x);
+sign_eq_false_of_meet :: Sign -> Sign -> Bool;
+sign_eq_false_of_meet a b = equal_sign (meet_sign a b) bot_sign;
+
+sign_eq_false :: Sign -> Sign -> Bool;
+sign_eq_false = sign_eq_false_of_meet;
+
+sign_check_true :: Bexp -> ([Char] -> Sign) -> Bool;
+sign_check_true (Bc v) d = v;
+sign_check_true (Not b) d = sign_check_false b d;
+sign_check_true (And b1 b2) d = sign_check_true b1 d && sign_check_true b2 d;
+sign_check_true (Or b1 b2) d = sign_check_true b1 d || sign_check_true b2 d;
+sign_check_true (Less a b) d = sign_less_true (aval_sign a d) (aval_sign b d);
+sign_check_true (Eqb a b) d = sign_eq_true (aval_sign a d) (aval_sign b d);
+
+sign_check_false :: Bexp -> ([Char] -> Sign) -> Bool;
+sign_check_false (Bc v) d = not v;
+sign_check_false (Not b) d = sign_check_true b d;
+sign_check_false (And b1 b2) d = sign_check_false b1 d || sign_check_false b2 d;
+sign_check_false (Or b1 b2) d = sign_check_false b1 d && sign_check_false b2 d;
+sign_check_false (Less a b) d = sign_less_false (aval_sign a d) (aval_sign b d);
+sign_check_false (Eqb a b) d = sign_eq_false (aval_sign a d) (aval_sign b d);
 
 sign_enter_st_for ::
   ([Char] -> Bool) ->
@@ -2404,48 +2967,152 @@ sign_enter_st_for source_global xs es s =
     (map (\ e -> aval_sign e (fun_of_resolved_st_q_for source_global s)) es)
     (enter_frame_D_resolved_q STop s);
 
-dgEx_eqs ::
-  (Cfg_node, ()) ->
-    Strategy_tree (Cfg_node, ()) ()
-      (Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-dgEx_eqs =
-  dg_gen_of
-    (unit_dg_spec_st_for (declared_global sign_ex_prog)
-      (sign_tf_st_for (declared_global sign_ex_prog))
-      (sign_enter_st_for (declared_global sign_ex_prog)))
-    gEx bot_resolved_st_q cinit_sign_st cinit_sign_st;
+fold_rhs_trees ::
+  forall a b c.
+    (Bounded_semilattice_sup_bot a) => a ->
+ [Strategy_tree b c a] -> Strategy_tree b c a;
+fold_rhs_trees acc [] = Answer acc;
+fold_rhs_trees acc (t : ts) =
+  seqcomp_tree t (\ res -> fold_rhs_trees (sup acc res) ts);
 
-rho_update ::
-  forall a b c d.
-    ((a -> Fmap b c) -> a -> Fmap b c) ->
-      Ug_state_ext b a c d -> Ug_state_ext b a c d;
-rho_update rhoa (Ug_state_ext rho more) = Ug_state_ext (rhoa rho) more;
+prog_cfga :: [Char] -> Imp_prog_ext () -> Cfg_ext ();
+prog_cfga mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);
+
+entry_seed_list :: Cfg_ext () -> Cfg_node -> [(Cfg_node, ([[Char]], [Aexp]))];
+entry_seed_list g v =
+  map (\ (c, CallEdge _ fs asa) -> (c, (fs, asa))) (entry_call_list g v);
+
+point :: forall a b c d. State_ext a b c (State_exta a d) -> Set a;
+point (State_ext c infl stabl sigma (State_exta point more)) = point;
 
 rho :: forall a b c d. Ug_state_ext a b c d -> b -> Fmap a c;
 rho (Ug_state_ext rho more) = rho;
 
-update_global_always_join ::
+etf_st_enter ::
   forall a b c.
-    (Eq a, Bounded_semilattice_sup_bot a, Eq b,
-      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
-                                     (Maybe a, Ug_state_ext b c a ());
-update_global_always_join da orig g d state =
+    Effectful_st_transfer_ext a b c ->
+      [[Char]] -> [Aexp] -> Cfg_node -> Strategy_tree Cfg_node a b;
+etf_st_enter
+  (Effectful_st_transfer_ext etf_st_nop etf_st_assign etf_st_random
+    etf_st_assume etf_st_assume_not etf_st_enter etf_st_combine more)
+  = etf_st_enter;
+
+side_contribution_trees_st ::
+  forall a b.
+    (Bounded_semilattice_sup_bot b) => Effectful_st_transfer_ext a
+ (Resolved_st_q b) () ->
+ [(Cfg_node, Edge_action)] ->
+   [(Cfg_node, ([[Char]], [Aexp]))] ->
+     [(Cfg_node, (Maybe [Char], Cfg_node))] ->
+       [Strategy_tree Cfg_node a (Resolved_st_q b)];
+side_contribution_trees_st etf es ens cs =
+  map (\ (u, a) -> apply_etf_st etf a u) es ++
+    map (\ (cl, (fs, asa)) -> etf_st_enter etf fs asa cl) ens ++
+      map (\ (cc, (dst, a)) -> etf_combine_st etf dst cc a) cs;
+
+side_rhs_fold_eff_st ::
+  forall a b.
+    (Bounded_semilattice_sup_bot b) => Effectful_st_transfer_ext a
+ (Resolved_st_q b) () ->
+ Resolved_st_q b ->
+   [(Cfg_node, Edge_action)] ->
+     [(Cfg_node, ([[Char]], [Aexp]))] ->
+       [(Cfg_node, (Maybe [Char], Cfg_node))] ->
+         Strategy_tree Cfg_node a (Resolved_st_q b);
+side_rhs_fold_eff_st etf acc es ens cs =
+  fold_rhs_trees acc (side_contribution_trees_st etf es ens cs);
+
+return_call_list ::
+  Cfg_ext () -> Cfg_node -> [(Cfg_node, (Maybe [Char], Cfg_node))];
+return_call_list g v =
+  map_filter
+    (\ x ->
+      (if (case x of {
+            (_, (_, (ce, k))) ->
+              equal_cfg_node k v && (case ce of {
+                                      Statement _ -> False;
+                                      FunctionEntry _ -> True;
+                                      FunctionResult _ -> False;
+                                    });
+          })
+        then Just (case x of {
+                    (c, (ca, (ce, _))) ->
+                      (c, ((case ca of {
+                             CallEdge dst _ _ -> dst;
+                           }),
+                            (case ce of {
+                              Statement _ -> ce;
+                              FunctionEntry a -> FunctionResult a;
+                              FunctionResult _ -> ce;
+                            })));
+                  })
+        else Nothing))
+    (cfg_calls_list g);
+
+make_side_rhs_tree_eff_st ::
+  forall a b.
+    (Bounded_semilattice_sup_bot b) => Cfg_ext () ->
+ Effectful_st_transfer_ext a (Resolved_st_q b) () ->
+   Resolved_st_q b ->
+     Resolved_st_q b ->
+       a -> Cfg_node -> Strategy_tree Cfg_node a (Resolved_st_q b);
+make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed v =
   let {
-    statea =
-      rho_update (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
-        state;
-    db = sup da d;
-  } in (if db == da then (Nothing, statea) else (Just db, statea));
+    acc0 =
+      (if equal_cfg_node v (cfg_entry g)
+        then sup_resolved_st_q bot0_st (restrict_local_resolved_q s0_st)
+        else bot0_st);
+    t = side_rhs_fold_eff_st etf acc0 (intra_predecessor_list g v)
+          (entry_seed_list g v) (return_call_list g v);
+  } in (if equal_cfg_node v (cfg_entry g)
+         then Side gseed (restrict_global_resolved_q s0_st) t else t);
 
-warrow :: forall a. (Warrowing a) => a -> a -> a;
-warrow a b = (if less_eq b a then narrow a b else widen a b);
+side_cfg_T_eff_st ::
+  forall a b.
+    (Bounded_semilattice_sup_bot b) => Cfg_ext () ->
+ Effectful_st_transfer_ext a (Resolved_st_q b) () ->
+   Resolved_st_q b ->
+     Resolved_st_q b ->
+       a -> Cfg_node -> Strategy_tree Cfg_node a (Resolved_st_q b);
+side_cfg_T_eff_st g etf bot0_st s0_st gseed =
+  make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed;
 
-point_update ::
+combine_resolved_st_q ::
+  forall a. (Bot a) => Resolved_st_q a -> Resolved_st_q a -> Resolved_st_q a;
+combine_resolved_st_q (Abs_resolved_st xa) (Abs_resolved_st x) =
+  Abs_resolved_st (combine_resolved_st xa x);
+
+sigma_update ::
   forall a b c d.
-    (Set a -> Set a) ->
-      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
-point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
-  State_ext c infl stabl sigma (State_exta (pointa point) more);
+    ((Sum a b -> c) -> Sum a b -> c) -> State_ext a b c d -> State_ext a b c d;
+sigma_update sigmaa (State_ext c infl stabl sigma more) =
+  State_ext c infl stabl (sigmaa sigma) more;
+
+declared_global_vars :: forall a. Imp_prog_ext a -> [[Char]];
+declared_global_vars (Imp_prog_ext proc_rep prog_main declared_global_vars more)
+  = declared_global_vars;
+
+declared_global :: Imp_prog_ext () -> [Char] -> Bool;
+declared_global p x = membera (declared_global_vars p) x;
+
+classify_checks ::
+  forall a.
+    Cfg_ext () ->
+      (Cfg_node -> a) ->
+        (Bexp -> a -> Check_result) -> [(Cfg_node, (Bexp, Check_result))];
+classify_checks g env classify =
+  map_filter
+    (\ x ->
+      (if (case x of {
+            (_, (a, _)) -> is_EA_Check a;
+          })
+        then Just (case x of {
+                    (u, (a, _)) ->
+                      (u, (ea_check_cond a,
+                            classify (ea_check_cond a) (env u)));
+                  })
+        else Nothing))
+    (cfg_intra_list g);
 
 destab_opt ::
   forall a b.
@@ -2469,26 +3136,34 @@ destab_iter_opt (y : ys) i s c =
     (ia, sa) -> destab_iter_opt ys ia sa c;
   });
 
-sigma_update ::
+rho_update ::
   forall a b c d.
-    ((Sum a b -> c) -> Sum a b -> c) -> State_ext a b c d -> State_ext a b c d;
-sigma_update sigmaa (State_ext c infl stabl sigma more) =
-  State_ext c infl stabl (sigmaa sigma) more;
+    ((a -> Fmap b c) -> a -> Fmap b c) ->
+      Ug_state_ext b a c d -> Ug_state_ext b a c d;
+rho_update rhoa (Ug_state_ext rho more) = Ug_state_ext (rhoa rho) more;
 
-point :: forall a b c d. State_ext a b c (State_exta a d) -> Set a;
-point (State_ext c infl stabl sigma (State_exta point more)) = point;
+update_global_always_join ::
+  forall a b c.
+    (Eq a, Bounded_semilattice_sup_bot a, Eq b,
+      Eq c) => a -> b -> c -> a -> Ug_state_ext b c a () ->
+                                     (Maybe a, Ug_state_ext b c a ());
+update_global_always_join da orig g d state =
+  let {
+    statea =
+      rho_update (\ _ -> fun_upd (rho state) g (fmupd orig d (rho state g)))
+        state;
+    db = sup da d;
+  } in (if db == da then (Nothing, statea) else (Just db, statea));
 
-stabl_update ::
-  forall a b c d. (Set a -> Set a) -> State_ext a b c d -> State_ext a b c d;
-stabl_update stabla (State_ext c infl stabl sigma more) =
-  State_ext c infl (stabla stabl) sigma more;
+warrow :: forall a. (Warrowing a) => a -> a -> a;
+warrow a b = (if less_eq b a then narrow a b else widen a b);
 
-infl_update ::
+point_update ::
   forall a b c d.
-    (Fmap (Sum a b) [a] -> Fmap (Sum a b) [a]) ->
-      State_ext a b c d -> State_ext a b c d;
-infl_update infla (State_ext c infl stabl sigma more) =
-  State_ext c (infla infl) stabl sigma more;
+    (Set a -> Set a) ->
+      State_ext a b c (State_exta a d) -> State_ext a b c (State_exta a d);
+point_update pointa (State_ext c infl stabl sigma (State_exta point more)) =
+  State_ext c infl stabl sigma (State_exta (pointa point) more);
 
 tD_side_always_join_Interp_solve_rec_c ::
   forall a b c.
@@ -2624,83 +3299,81 @@ tD_side_always_join_Interp_solve t x =
     Just r -> r;
   });
 
-dgEx_sol ::
-  (Set (Cfg_node, ()),
-    Sum (Cfg_node, ()) () ->
-      Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-dgEx_sol = tD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ());
+ivl_exec_eqs ::
+  ([Char] -> Bool) ->
+    ([Char] -> Maybe (Proc_decl_ext ())) ->
+      [[Char]] ->
+        [Char] ->
+          Com -> Cfg_node -> Strategy_tree Cfg_node () (Resolved_st_q Ivl);
+ivl_exec_eqs gs pi ps mnm main =
+  side_cfg_T_eff_st (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
+    bot_resolved_st_q cinit_ivl_st ();
 
-sign_less_true_of_inv :: Sign -> Sign -> Bool;
-sign_less_true_of_inv a b =
-  equal_sign (fst (inv_less_sign False a b)) bot_sign ||
-    equal_sign (snd (inv_less_sign False a b)) bot_sign;
+ivl_exec_raw ::
+  ([Char] -> Bool) ->
+    ([Char] -> Maybe (Proc_decl_ext ())) ->
+      [[Char]] -> [Char] -> Com -> Sum Cfg_node () -> Resolved_st_q Ivl;
+ivl_exec_raw gs pi ps mnm main =
+  snd (tD_side_always_join_Interp_solve (ivl_exec_eqs gs pi ps mnm main)
+        (cfg_exit (compile_prog pi ps mnm main)));
 
-sign_less_true :: Sign -> Sign -> Bool;
-sign_less_true = sign_less_true_of_inv;
-
-sign_less_false_of_inv :: Sign -> Sign -> Bool;
-sign_less_false_of_inv a b =
-  equal_sign (fst (inv_less_sign True a b)) bot_sign ||
-    equal_sign (snd (inv_less_sign True a b)) bot_sign;
-
-sign_eq_true_of_less :: Sign -> Sign -> Bool;
-sign_eq_true_of_less a b =
-  sign_less_false_of_inv a b && sign_less_false_of_inv b a;
-
-sign_eq_true :: Sign -> Sign -> Bool;
-sign_eq_true = sign_eq_true_of_less;
-
-sign_less_false :: Sign -> Sign -> Bool;
-sign_less_false = sign_less_false_of_inv;
-
-sign_eq_false_of_meet :: Sign -> Sign -> Bool;
-sign_eq_false_of_meet a b = equal_sign (meet_sign a b) bot_sign;
-
-sign_eq_false :: Sign -> Sign -> Bool;
-sign_eq_false = sign_eq_false_of_meet;
-
-sign_check_true :: Bexp -> ([Char] -> Sign) -> Bool;
-sign_check_true (Bc v) d = v;
-sign_check_true (Not b) d = sign_check_false b d;
-sign_check_true (And b1 b2) d = sign_check_true b1 d && sign_check_true b2 d;
-sign_check_true (Or b1 b2) d = sign_check_true b1 d || sign_check_true b2 d;
-sign_check_true (Less a b) d = sign_less_true (aval_sign a d) (aval_sign b d);
-sign_check_true (Eqb a b) d = sign_eq_true (aval_sign a d) (aval_sign b d);
-
-sign_check_false :: Bexp -> ([Char] -> Sign) -> Bool;
-sign_check_false (Bc v) d = not v;
-sign_check_false (Not b) d = sign_check_true b d;
-sign_check_false (And b1 b2) d = sign_check_false b1 d || sign_check_false b2 d;
-sign_check_false (Or b1 b2) d = sign_check_false b1 d && sign_check_false b2 d;
-sign_check_false (Less a b) d = sign_less_false (aval_sign a d) (aval_sign b d);
-sign_check_false (Eqb a b) d = sign_eq_false (aval_sign a d) (aval_sign b d);
-
-sup_fun :: forall a b. (Semilattice_sup b) => (a -> b) -> (a -> b) -> a -> b;
-sup_fun f g x = sup (f x) (g x);
-
-classify_checks ::
-  forall a.
-    Cfg_ext () ->
-      (Cfg_node -> a) ->
-        (Bexp -> a -> Check_result) -> [(Cfg_node, (Bexp, Check_result))];
-classify_checks g env classify =
-  map_filter
-    (\ x ->
-      (if (case x of {
-            (_, (a, _)) -> is_EA_Check a;
-          })
-        then Just (case x of {
-                    (u, (a, _)) ->
-                      (u, (ea_check_cond a,
-                            classify (ea_check_cond a) (env u)));
-                  })
-        else Nothing))
-    (cfg_intra_list g);
+ivl_exec_at ::
+  ([Char] -> Bool) ->
+    ([Char] -> Maybe (Proc_decl_ext ())) ->
+      [[Char]] -> [Char] -> Com -> Cfg_node -> [Char] -> Ivl;
+ivl_exec_at gs pi ps mnm main v =
+  side_env (fun_of_resolved_st_q_for gs . ivl_exec_raw gs pi ps mnm main) v;
 
 sign_classify_check :: Bexp -> ([Char] -> Sign) -> Check_result;
 sign_classify_check c d =
   (if sign_check_true c d then Check_Proved
     else (if sign_check_false c d then Check_Refuted else Check_Unknown));
+
+combine_assign_resolved_q ::
+  forall a.
+    (Bot a) => ([Char] -> Bool) ->
+                 Maybe [Char] -> a -> Resolved_st_q a -> Resolved_st_q a;
+combine_assign_resolved_q xc xb xa (Abs_resolved_st x) =
+  Abs_resolved_st (combine_assign_resolved xc xb xa x);
+
+unit_combine_step_st_assign_for ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
+ Maybe [Char] ->
+   Resolved_st_q a ->
+     Resolved_st_q a ->
+       (Resolved_st_q a, Resolved_st_q a) -> (Resolved_st_q a, Resolved_st_q a);
+unit_combine_step_st_assign_for gs dst de g merged =
+  let {
+    res = combine_assign_resolved_q gs dst
+            (lookup_resolved_st_q (sup_resolved_st_q de g)
+              (location_of gs ret_var))
+            (sup_resolved_st_q (fst merged) (snd merged));
+  } in (restrict_global_resolved_q res, restrict_local_resolved_q res);
+
+unit_combine_step_st_env ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => Resolved_st_q a ->
+ Resolved_st_q a -> Resolved_st_q a -> (Resolved_st_q a, Resolved_st_q a);
+unit_combine_step_st_env dc de g =
+  let {
+    m = combine_resolved_st_q (sup_resolved_st_q dc g) (sup_resolved_st_q de g);
+  } in (restrict_global_resolved_q m, restrict_local_resolved_q m);
+
+unit_dg_spec_st_for ::
+  forall a.
+    (Bounded_semilattice_sup_bot a) => ([Char] -> Bool) ->
+ (Edge_action -> Resolved_st_q a -> Resolved_st_q a) ->
+   ([[Char]] -> [Aexp] -> Resolved_st_q a -> Resolved_st_q a) ->
+     Dg_spec_ext (Resolved_st_q a) (Resolved_st_q a) ();
+unit_dg_spec_st_for gs tf_st enter_st =
+  Dg_spec_ext (unit_step_st (tf_st EA_Nop))
+    (\ x e -> unit_step_st (tf_st (EA_Assign x e)))
+    (\ x -> unit_step_st (tf_st (EA_Random x)))
+    (\ b -> unit_step_st (tf_st (EA_Assume b)))
+    (\ b -> unit_step_st (tf_st (EA_AssumeNot b)))
+    (\ xs es -> unit_step_st (enter_st xs es)) unit_combine_step_st_env
+    (unit_combine_step_st_assign_for gs) ();
 
 analyse_sign_eqs_for ::
   ([Char] -> Bool) ->
@@ -2722,13 +3395,6 @@ analyse_sign_for gs p =
   tD_side_always_join_Interp_solve (analyse_sign_eqs_for gs p)
     (cfg_exit (prog_cfg prog_main_name p), ());
 
-analyse_sign ::
-  Imp_prog_ext () ->
-    (Set (Cfg_node, ()),
-      Sum (Cfg_node, ()) () ->
-        Dg_state (Resolved_st_q Sign) (Resolved_st_q Sign));
-analyse_sign p = analyse_sign_for (declared_global p) p;
-
 fun_of_exec_dg_st_for ::
   forall a. (Bot a) => ([Char] -> Bool) -> Resolved_st_q a -> [Char] -> a;
 fun_of_exec_dg_st_for gs = fun_of_resolved_st_q_for gs;
@@ -2749,5 +3415,78 @@ analyse_sign_report_for gs p =
 
 analyse_sign_report :: Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
 analyse_sign_report p = analyse_sign_report_for (declared_global p) p;
+
+less_eint :: Eint -> Eint -> Bool;
+less_eint a b = eint_le a b && not (eint_le b a);
+
+interval_less_false :: Ivl -> Ivl -> Bool;
+interval_less_false (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);
+
+interval_eq_false :: Ivl -> Ivl -> Bool;
+interval_eq_false (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) ||
+    (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));
+
+interval_less_true :: Ivl -> Ivl -> Bool;
+interval_less_true (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);
+
+interval_eq_true :: Ivl -> Ivl -> Bool;
+interval_eq_true (Ivl l1 u1) (Ivl l2 u2) =
+  not (less_eq_eint l1 u1) ||
+    (not (less_eq_eint l2 u2) ||
+      equal_eint l1 u1 && equal_eint l2 u2 && equal_eint l1 l2);
+
+interval_check_false :: Bexp -> ([Char] -> Ivl) -> Bool;
+interval_check_false (Bc v) d = not v;
+interval_check_false (Not b) d = interval_check_true b d;
+interval_check_false (And b1 b2) d =
+  interval_check_false b1 d || interval_check_false b2 d;
+interval_check_false (Or b1 b2) d =
+  interval_check_false b1 d && interval_check_false b2 d;
+interval_check_false (Less a b) d =
+  interval_less_false (aval_ivl a d) (aval_ivl b d);
+interval_check_false (Eqb a b) d =
+  interval_eq_false (aval_ivl a d) (aval_ivl b d);
+
+interval_check_true :: Bexp -> ([Char] -> Ivl) -> Bool;
+interval_check_true (Bc v) d = v;
+interval_check_true (Not b) d = interval_check_false b d;
+interval_check_true (And b1 b2) d =
+  interval_check_true b1 d && interval_check_true b2 d;
+interval_check_true (Or b1 b2) d =
+  interval_check_true b1 d || interval_check_true b2 d;
+interval_check_true (Less a b) d =
+  interval_less_true (aval_ivl a d) (aval_ivl b d);
+interval_check_true (Eqb a b) d =
+  interval_eq_true (aval_ivl a d) (aval_ivl b d);
+
+interval_classify_check :: Bexp -> ([Char] -> Ivl) -> Check_result;
+interval_classify_check c d =
+  (if interval_check_true c d then Check_Proved
+    else (if interval_check_false c d then Check_Refuted else Check_Unknown));
+
+ivl_exec_prog_at ::
+  ([Char] -> Bool) -> [Char] -> Imp_prog_ext () -> Cfg_node -> [Char] -> Ivl;
+ivl_exec_prog_at gs mnm p v =
+  ivl_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v;
+
+interval_check_report ::
+  ([Char] -> Bool) ->
+    [Char] -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+interval_check_report gs mnm p =
+  classify_checks (prog_cfga mnm p) (ivl_exec_prog_at gs mnm p)
+    interval_classify_check;
+
+analyse_interval_report ::
+  Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+analyse_interval_report p =
+  interval_check_report (declared_global p) prog_main_name p;
+
+analyse ::
+  Analysis_kind -> Imp_prog_ext () -> [(Cfg_node, (Bexp, Check_result))];
+analyse Sign_Analysis p = analyse_sign_report p;
+analyse Interval_Analysis p = analyse_interval_report p;
 
 }
