@@ -84,3 +84,5 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     "Voblint_Examples.Example_Analysis_Dispatch:code/*/*.hs"
   export_files (in "../../codegen/generated/ml") [2]
     "Voblint_Examples.Example_Analysis_Dispatch:code/*.ocaml"
+  export_files (in "../../codegen/generated/ml") [2]
+    "Voblint_Examples.Example_State_Report_GraphViz:code/*.ocaml"
