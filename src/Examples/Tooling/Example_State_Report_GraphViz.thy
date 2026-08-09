@@ -122,6 +122,19 @@ definition state_report_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Righ
       in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
+text \<open>
+  The canonical-snapshot sibling of \<open>state_report_dot_auto\<close>: same report,
+  same \<open>state_report_node_annotation\<close> hook, but rendered through
+  \<^const>\<open>raw_cfg_canonical_text_lit\<close> instead of \<^const>\<open>raw_cfg_dot_lit\<close> ---
+  a DOT-free regression representation of the same solved analysis.
+\<close>
+
+definition state_report_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "state_report_graph_snapshot_auto kind p =
+     (let report = analyse_with_state kind p
+      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (state_report_node_annotation (report_vars report) report))"
+
 definition state_report_demo_dot :: String.literal where
   "state_report_demo_dot =
      state_report_dot Interval_Analysis state_wiring_ex_prog [STR ''x'']"
@@ -157,7 +170,8 @@ code_identifier
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
-  state_report_dot_auto bexp_vnames_list string_of_abstract_value
+  state_report_dot_auto state_report_graph_snapshot_auto
+  bexp_vnames_list string_of_abstract_value
   is_bottom_abstract_value program_vars
   imp_prog.make proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check

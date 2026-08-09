@@ -35,6 +35,23 @@ A case with no verdict annotations at all is a parse-rejection case (see
 00-sanity/02-malformed.vimp) and is checked for a structured parse error
 instead of a report.
 
+A case may also carry a canonical CFG snapshot, checked independently of its
+verdicts:
+
+  // EXPECT-GRAPH-BEGIN / -END   delimits a `voblint --graph-snapshot`
+                                  capture, one output line per "// "-prefixed
+                                  source line (see Analysis_GraphViz.thy's
+                                  contextual_analysis_canonical_text -- a
+                                  DOT-independent, cluster/node/edge textual
+                                  rendering of the same solved CFG a --dot
+                                  case renders as GraphViz). No block: the
+                                  case's graph is not checked. Block present
+                                  but stale: FAIL with a diff-able mismatch.
+                                  --dot cases (see 08-tooling/01-dot_smoke
+                                  .vimp) are DOT renderer-styling regressions
+                                  and are exempt: they already assert their
+                                  own shape and don't also carry this block.
+
 Usage (mirrors Goblint's update_suite.rb selection modes):
   run.py                             run every case, in parallel
   run.py 02-control-flow             run only that group (dir basename, with
@@ -49,6 +66,11 @@ Usage (mirrors Goblint's update_suite.rb selection modes):
   run.py path/to/case.vimp           run a single case by path
   run.py -s ...                      sequential instead of parallel (for
                                       debugging flaky ordering)
+  run.py ... --update-graphs         (re)generate every selected case's
+                                      EXPECT-GRAPH block from a live
+                                      --graph-snapshot run instead of
+                                      checking it; creates the block if the
+                                      case doesn't have one yet
 
 Expected results are keyed by real source LINE NUMBER, the same way
 Goblint's own harness parses its analyzer's line-tagged warnings and
@@ -89,6 +111,13 @@ CHECK_LINE_RE = re.compile(r"__voblint_check")
 VERDICT_RE = re.compile(r"//\s*(reachable|NOWARN|[A-Z]+)")
 REPORT_LINE_RE = re.compile(r"^(\d+):\d+\s+\S+\s+\S+\s+(\S+)")
 
+GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
+GRAPH_END = "// EXPECT-GRAPH-END"
+
+# Set from main()'s --update-graphs before the (possibly threaded) case run;
+# read-only from then on, so concurrent check_case calls sharing it is safe.
+UPDATE_GRAPHS = False
+
 
 def param_args(path: Path) -> list[str]:
     first_line = path.read_text().splitlines()[0]
@@ -117,6 +146,61 @@ def actual_verdicts(stdout: str) -> dict[int, str]:
         if m:
             verdicts[int(m.group(1))] = m.group(2)
     return verdicts
+
+
+def find_graph_block(lines: list[str]) -> tuple[int, int] | None:
+    """Returns (begin, end) line indices of an existing EXPECT-GRAPH block,
+    or None if the fixture doesn't have one."""
+    begin = None
+    for i, line in enumerate(lines):
+        if line.rstrip() == GRAPH_BEGIN:
+            begin = i
+        elif line.rstrip() == GRAPH_END and begin is not None:
+            return begin, i
+    return None
+
+
+def strip_comment_prefix(line: str) -> str:
+    assert line.startswith("//"), f"EXPECT-GRAPH body line missing '//': {line!r}"
+    rest = line[2:]
+    return rest[1:] if rest.startswith(" ") else rest
+
+
+def add_comment_prefix(line: str) -> str:
+    return f"// {line}" if line else "//"
+
+
+def expected_graph(lines: list[str], block: tuple[int, int]) -> str:
+    begin, end = block
+    return "\n".join(strip_comment_prefix(l) for l in lines[begin + 1 : end])
+
+
+def graph_snapshot_args(args: list[str]) -> list[str]:
+    """--dot and --graph-snapshot both select voblint's output mode -- swap
+    rather than stack, keeping everything else (notably --analysis) as-is."""
+    out = [a for a in args if a != "--dot" and a != "--graph-snapshot"]
+    out.append("--graph-snapshot")
+    return out
+
+
+def run_graph_snapshot(args: list[str], path: Path) -> str:
+    return run_voblint(graph_snapshot_args(args), path).stdout
+
+
+def update_graph_block(path: Path, lines: list[str], block: tuple[int, int] | None, snapshot: str) -> None:
+    """Replaces an existing EXPECT-GRAPH block in place, or inserts a new one
+    right after the fixture's leading "//" header (PARAM line plus any
+    description comments), before the first line of actual VIMP source."""
+    new_block = [GRAPH_BEGIN, *(add_comment_prefix(l) for l in snapshot.splitlines()), GRAPH_END]
+    if block is not None:
+        begin, end = block
+        lines[begin : end + 1] = new_block
+    else:
+        insert_at = 0
+        while insert_at < len(lines) and lines[insert_at].startswith("//"):
+            insert_at += 1
+        lines[insert_at:insert_at] = [*new_block, ""]
+    path.write_text("\n".join(lines) + "\n")
 
 
 def run_voblint(args: list[str], path: Path) -> subprocess.CompletedProcess:
@@ -201,6 +285,22 @@ def check_case(path: Path) -> tuple[bool, list[str]]:
         )
         ok = False
 
+    fixture_lines = path.read_text().splitlines()
+    graph_block = find_graph_block(fixture_lines)
+    if UPDATE_GRAPHS:
+        update_graph_block(path, fixture_lines, graph_block, run_graph_snapshot(args, path))
+        lines.append(f"OK   {name}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
+    elif graph_block is not None:
+        snapshot = run_graph_snapshot(args, path).rstrip("\n")
+        expected_snapshot = expected_graph(fixture_lines, graph_block)
+        if snapshot == expected_snapshot:
+            lines.append(f"OK   {name}: graph snapshot matches")
+        else:
+            lines.append(f"FAIL {name}: graph snapshot mismatch (rerun with --update-graphs to refresh)")
+            lines.append(f"  expected: {expected_snapshot!r}")
+            lines.append(f"  actual:   {snapshot!r}")
+            ok = False
+
     if ok:
         lines.append(f"OK   {name} ({len(expected)} check(s), {' '.join(args)})")
     return ok, lines
@@ -222,7 +322,7 @@ def discover(selectors: list[str]) -> list[Path]:
     includes = [s for s in selectors if not s.endswith(".vimp") and not s.startswith("-")]
     excludes = [s[1:] for s in selectors if s.startswith("-") and not s.endswith(".vimp")]
 
-    if includes:
+    if includes or file_selectors:
         cases = [p for p in all_cases if any(matches_selector(p, sel) for sel in includes)]
     else:
         cases = list(all_cases)
@@ -249,7 +349,13 @@ def main() -> int:
 
     args = sys.argv[1:]
     sequential = "-s" in args
-    args = [a for a in args if a != "-s"]
+    global UPDATE_GRAPHS
+    UPDATE_GRAPHS = "--update-graphs" in args
+    args = [a for a in args if a not in ("-s", "--update-graphs")]
+    # Regenerating a stale snapshot is inherently sequential per file (each
+    # rewrites its own fixture on disk); nothing here prevents different
+    # fixtures running concurrently, but forcing -s keeps output order sane.
+    sequential = sequential or UPDATE_GRAPHS
 
     cases = discover(args)
     if not cases:

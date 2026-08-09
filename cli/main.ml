@@ -26,6 +26,10 @@ let usage =
   \                             --parse-only).\n\
   \  --dot                      Emit a GraphViz .dot rendering of the solved CFG\n\
   \                             instead of the textual check report.\n\
+  \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
+  \                             of the solved CFG (clusters/nodes/edges), for\n\
+  \                             embedding as a regression fixture's expected\n\
+  \                             output instead of a --dot rendering.\n\
   \  --parse-only               Parse and exit (0 on success, 2 with a\n\
   \                             file:line:col message on a parse error); runs\n\
   \                             no analysis, no --analysis needed. For syntax\n\
@@ -98,7 +102,7 @@ let render_text_report ~vars_to_probe (report :
     report check_positions;
   Buffer.contents buf
 
-type outcome = Ok_text of string | Ok_dot of string
+type outcome = Ok_text of string | Ok_dot of string | Ok_graph of string
 
 (* The analyzer is proved sound but not proved total (Interval especially,
    see docs/CLI_DESIGN.md's containment note) -- a killable subprocess bounds
@@ -117,7 +121,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
              let oc = open_out tmp in
              (match f () with
               | Ok_text s -> output_string oc "T\n"; output_string oc s
-              | Ok_dot s -> output_string oc "D\n"; output_string oc s);
+              | Ok_dot s -> output_string oc "D\n"; output_string oc s
+              | Ok_graph s -> output_string oc "G\n"; output_string oc s);
              close_out oc;
              0
            with e ->
@@ -152,6 +157,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                 (match tag with
                  | "T" -> Ok (Ok_text body)
                  | "D" -> Ok (Ok_dot body)
+                 | "G" -> Ok (Ok_graph body)
                  | _ -> Error body)
               | None -> Error "analysis subprocess produced no output")
            | _, Unix.WEXITED code -> Error (Printf.sprintf "analysis subprocess exited with code %d" code)
@@ -163,6 +169,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
 let () =
   let analysis = ref None in
   let dot = ref false in
+  let graph_snapshot = ref false in
   let parse_only = ref false in
   let timeout = ref 10.0 in
   let file = ref None in
@@ -176,6 +183,7 @@ let () =
        | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest
+    | "--graph-snapshot" :: rest -> graph_snapshot := true; parse_args rest
     | "--parse-only" :: rest -> parse_only := true; parse_args rest
     | "--timeout" :: v :: rest ->
       (try timeout := float_of_string v with _ -> prerr_endline "--timeout expects a number"; exit 1);
@@ -213,7 +221,9 @@ let () =
   let vars_to_probe = Voblint_CLI.Example_State_Report_GraphViz.program_vars prog in
   match
     run_contained ~timeout:!timeout (fun () ->
-      if !dot then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
+      if !graph_snapshot then
+        Ok_graph (Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
+      else if !dot then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
       else
         Ok_text
           (render_text_report ~vars_to_probe
@@ -222,4 +232,5 @@ let () =
   with
   | Ok (Ok_text s) -> print_string s
   | Ok (Ok_dot s) -> print_string s
+  | Ok (Ok_graph s) -> print_string s
   | Error msg -> Printf.eprintf "voblint: %s\n" msg; exit 3

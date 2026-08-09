@@ -4137,6 +4137,12 @@ module Analysis_GraphViz : sig
             (Core.cfg_node -> graphviz_node_annotation option) -> string
   val check_result_annotation :
     Core.check_result -> Core.bexp -> graphviz_node_annotation
+  val raw_cfg_canonical_text_lit :
+    (string -> unit Core.proc_decl_ext option) ->
+      string list ->
+        string ->
+          Core.com ->
+            (Core.cfg_node -> graphviz_node_annotation option) -> string
 end = struct
 
 type ('a, 'b) analysis_node = LocalNode of Core.cfg_node * 'a | GlobalNode of 'b
@@ -4424,27 +4430,39 @@ let rec graphviz_point_label
               Core.char_0x5F] @
               Core.explode owner);;
 
-let rec contextual_node_label
+let rec split_gv_nl_acc
+  acc x1 = match acc, x1 with acc, [] -> [Core.rev acc]
+    | acc, [ch] -> [Core.rev (ch :: acc)]
+    | acc, ch1 :: ch2 :: rest ->
+        (if Core.equal_chara ch1 Core.char_0x5C &&
+              Core.equal_chara ch2 Core.char_0x6E
+          then Core.rev acc :: split_gv_nl_acc [] rest
+          else split_gv_nl_acc (ch1 :: acc) (ch2 :: rest));;
+
+let rec split_gv_nl s = split_gv_nl_acc [] s;;
+
+let rec contextual_node_label_lines
   cfg g sol n =
     (match n
       with LocalNode (p, ctx) ->
-        join_gv_nl
-          (graphviz_point_label g p ::
-            show_local cfg p ctx (locals_for_pp cfg p)
-              (local_of cfg (sol (Core.Inl (p, ctx)))) @
-              (match return_slot_for_pp cfg p with None -> []
-                | Some ret ->
-                  format_return cfg p ctx ret
-                    (local_of cfg (sol (Core.Inl (p, ctx))))) @
-                (match node_annotation cfg p with None -> []
-                  | Some ann ->
-                    (if Core.null (annotation_label ann) then []
-                      else [annotation_label ann])))
+        graphviz_point_label g p ::
+          show_local cfg p ctx (locals_for_pp cfg p)
+            (local_of cfg (sol (Core.Inl (p, ctx)))) @
+            (match return_slot_for_pp cfg p with None -> []
+              | Some ret ->
+                format_return cfg p ctx ret
+                  (local_of cfg (sol (Core.Inl (p, ctx))))) @
+              (match node_annotation cfg p with None -> []
+                | Some ann ->
+                  (if Core.null (annotation_label ann) then []
+                    else split_gv_nl (annotation_label ann)))
       | GlobalNode k ->
-        join_gv_nl
-          (show_global_key cfg k ::
-            show_global cfg k (globals_to_show cfg) (sol (Core.Inr k)))
-      | SourceNode src -> src);;
+        show_global_key cfg k ::
+          show_global cfg k (globals_to_show cfg) (sol (Core.Inr k))
+      | SourceNode src -> [src]);;
+
+let rec contextual_node_label
+  cfg g sol n = join_gv_nl (contextual_node_label_lines cfg g sol n);;
 
 let rec graphviz_label_text
   = function [] -> []
@@ -5326,6 +5344,121 @@ let rec raw_cfg_dot
 let rec raw_cfg_dot_lit
   pi ps mnm main annotate = Core.implode (raw_cfg_dot pi ps mnm main annotate);;
 
+let rec canonical_node_block _A _B
+  cfg g sol ns n =
+    (match contextual_node_label_lines cfg g sol n
+      with [] ->
+        [Core.char_0x20; Core.char_0x20] @
+          analysis_node_id _A _B cfg ns n @ [Core.char_0x3A] @ nl
+      | first :: rest ->
+        [Core.char_0x20; Core.char_0x20] @
+          analysis_node_id _A _B cfg ns n @
+            [Core.char_0x3A; Core.char_0x20] @
+              first @
+                nl @ Core.maps
+                       (fun line ->
+                         [Core.char_0x20; Core.char_0x20; Core.char_0x20;
+                           Core.char_0x20; Core.char_0x20; Core.char_0x20] @
+                           line @ nl)
+                       rest);;
+
+let rec canonical_edge_kind_text
+  g kind =
+    (match kind with IntraEdge a -> source_action_label g a
+      | EnterEdge (callee, a) ->
+        [Core.char_0x65; Core.char_0x6E; Core.char_0x74; Core.char_0x65;
+          Core.char_0x72; Core.char_0x20] @
+          callee @
+            [Core.char_0x28] @
+              (let Core.CallEdge (_, _, es) = a in
+                Core.join_source [Core.char_0x2C; Core.char_0x20]
+                  (Core.map Core.string_of_aexp es)) @
+                [Core.char_0x29]
+      | CombineEdge (_, dst, ret) ->
+        [Core.char_0x63; Core.char_0x6F; Core.char_0x6D; Core.char_0x62;
+          Core.char_0x69; Core.char_0x6E; Core.char_0x65] @
+          (match (dst, ret) with (None, _) -> []
+            | (Some xa, None) -> [Core.char_0x20] @ Core.explode xa
+            | (Some xa, Some r) ->
+              [Core.char_0x20] @
+                Core.explode xa @
+                  [Core.char_0x20; Core.char_0x3A; Core.char_0x3D;
+                    Core.char_0x20] @
+                    Core.explode r)
+      | CallToReturnEdge callee ->
+        [Core.char_0x63; Core.char_0x61; Core.char_0x6C; Core.char_0x6C;
+          Core.char_0x2D; Core.char_0x74; Core.char_0x6F; Core.char_0x2D;
+          Core.char_0x72; Core.char_0x65; Core.char_0x74; Core.char_0x75;
+          Core.char_0x72; Core.char_0x6E; Core.char_0x20] @
+          Core.explode callee
+      | GlobalReadEdge ->
+        [Core.char_0x72; Core.char_0x65; Core.char_0x61; Core.char_0x64;
+          Core.char_0x20; Core.char_0x67; Core.char_0x6C; Core.char_0x6F;
+          Core.char_0x62; Core.char_0x61; Core.char_0x6C]
+      | GlobalWriteEdge ->
+        [Core.char_0x77; Core.char_0x72; Core.char_0x69; Core.char_0x74;
+          Core.char_0x65; Core.char_0x20; Core.char_0x67; Core.char_0x6C;
+          Core.char_0x6F; Core.char_0x62; Core.char_0x61; Core.char_0x6C]);;
+
+let rec analysis_graph_to_canonical_text _A _B
+  cfg g sol graph =
+    (let (clusters, (ns, es)) = graph in
+     let clustersa =
+       Core.filtera (fun c -> not (equal_analysis_clustera _A c SourceCluster))
+         clusters
+       in
+     let nsa =
+       Core.filtera
+         (fun a ->
+           (match a with LocalNode (_, _) -> true | GlobalNode _ -> true
+             | SourceNode _ -> false))
+         ns
+       in
+      [Core.char_0x63; Core.char_0x6C; Core.char_0x75; Core.char_0x73;
+        Core.char_0x74; Core.char_0x65; Core.char_0x72; Core.char_0x73;
+        Core.char_0x3A] @
+        nl @ Core.maps
+               (fun c ->
+                 [Core.char_0x20; Core.char_0x20] @
+                   analysis_cluster_id _A clusters c @
+                     [Core.char_0x3A] @
+                       nl @ Core.maps
+                              (fun n ->
+                                [Core.char_0x20; Core.char_0x20; Core.char_0x20;
+                                  Core.char_0x20] @
+                                  analysis_node_id _A _B cfg ns n @ nl)
+                              (analysis_nodes_in_cluster _A _B cfg c ns))
+               clustersa @
+               nl @ [Core.char_0x6E; Core.char_0x6F; Core.char_0x64;
+                      Core.char_0x65; Core.char_0x73; Core.char_0x3A] @
+                      nl @ Core.maps (canonical_node_block _A _B cfg g sol ns)
+                             nsa @
+                             nl @ [Core.char_0x65; Core.char_0x64;
+                                    Core.char_0x67; Core.char_0x65;
+                                    Core.char_0x73; Core.char_0x3A] @
+                                    nl @ Core.maps
+   (fun (src, (kind, dst)) ->
+     [Core.char_0x20; Core.char_0x20] @
+       analysis_node_id _A _B cfg ns src @
+         [Core.char_0x20; Core.char_0x2D; Core.char_0x3E; Core.char_0x20] @
+           analysis_node_id _A _B cfg ns dst @
+             [Core.char_0x3A; Core.char_0x20] @
+               canonical_edge_kind_text g kind @ nl)
+   es);;
+
+let rec contextual_analysis_canonical_text _A _B
+  cfg g domain sol =
+    analysis_graph_to_canonical_text _A _B cfg g sol
+      (build_analysis_graph _A _B cfg g domain sol);;
+
+let rec raw_cfg_canonical_text
+  pi ps mnm main annotate =
+    (let g = Core.compile_prog pi ps mnm main in
+     let cfg = raw_cfg_graph_config pi ps mnm main annotate in
+     let domain = contextual_graph_domain g (fun _ -> [()]) in
+      contextual_analysis_canonical_text Core.equal_unit Core.equal_unit cfg g
+        domain (fun _ -> ()));;
+
 let rec check_result_annotation
   res cnd =
     (match res
@@ -5389,6 +5522,10 @@ let rec check_result_annotation
               Core.char_0x3D; Core.char_0x67; Core.char_0x72; Core.char_0x61;
               Core.char_0x79; Core.char_0x37; Core.char_0x30]));;
 
+let rec raw_cfg_canonical_text_lit
+  pi ps mnm main annotate =
+    Core.implode (raw_cfg_canonical_text pi ps mnm main annotate);;
+
 end;; (*struct Analysis_GraphViz*)
 
 module Example_State_Report_GraphViz : sig
@@ -5398,6 +5535,8 @@ module Example_State_Report_GraphViz : sig
   val state_report_dot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
   val is_bottom_abstract_value : Analyse.abstract_value -> bool
+  val state_report_graph_snapshot_auto :
+    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
 end = struct
 
 let rec string_of_abstract_value
@@ -5446,5 +5585,12 @@ let rec state_report_dot_auto
 let rec is_bottom_abstract_value
   = function Analyse.SignValue s -> Core.is_bot_sign s
     | Analyse.IntervalValue i -> Core.is_bot_ivl i;;
+
+let rec state_report_graph_snapshot_auto
+  kind p =
+    (let report = Analyse.analyse_with_state kind p in
+      Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (state_report_node_annotation (report_vars report) report));;
 
 end;; (*struct Example_State_Report_GraphViz*)

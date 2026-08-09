@@ -1,0 +1,37 @@
+// PARAM: --analysis interval
+// Canonical CFG snapshot coverage: a single procedure, straight-line CFG,
+// one cluster. See 02-call_return.vimp in this same group for the
+// interprocedural (multi-cluster, call/combine/call-to-return edge) case.
+// These are the only two fixtures carrying an EXPECT-GRAPH block: it's a
+// regression lock on contextual_analysis_canonical_text's shape
+// (Analysis_GraphViz.thy), not a per-case property every corpus fixture
+// needs to also assert.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp0_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       check 0<x
+//       x=[5,5]
+//   main_pp2_ctx0: pp2
+//   main_result_main_ctx0: exit_main
+//   main_entry_main_ctx0: entry_main
+//   main_pp0_ctx0: pp0
+//
+// edges:
+//   main_pp1_ctx0 -> main_pp2_ctx0: check(0<x)
+//   main_pp2_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp0_ctx0: nop
+//   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+// EXPECT-GRAPH-END
+
+void main() {
+  x := 5;
+  __voblint_check(0 < x) // PROVED
+}
