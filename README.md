@@ -134,6 +134,46 @@ Examples
 * **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches
 * **`docs/`**: Proof overview, phase tracking, and agent workflow notes
 
+## VIMP Grammar Pipeline
+
+VIMP source syntax has a single source of truth: **`grammar/vimp.yaml`**.
+Two generators realize it for two independent parser targets:
+
+```text
+grammar/vimp.yaml
+       │
+       ├── scripts/gen_vimp_menhir.py   ──▶ cli/vimp_parser.mly, cli/vimp_lexer.mll
+       │
+       └── scripts/gen_vimp_isabelle.py ──▶ src/VIMP/VIMP_Grammar_Generated.thy
+
+```
+
+Two generators exist because the CLI frontend and the Isabelle frontend have
+fundamentally different parser infrastructures -- Menhir/ocamllex for the
+former, Isabelle mixfix syntax and `parse_translation` for the latter (the
+generated `VIMP_Grammar_Generated.thy`, imported by `VIMP_Notation.thy`).
+Neither can express the other's grammar format, so each generator is
+responsible for realizing the shared, neutral grammar into its own idiom
+(precedence declarations, numeral decoding, and similar target-specific
+mechanics). Both generated outputs are committed, the same convention
+`codegen/generated/` uses for Isabelle's own code export; do not hand-edit
+`cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or `VIMP_Grammar_Generated.thy`.
+
+**This pipeline sits outside the proved pipeline above and is untrusted
+code.** No soundness theorem in this repository covers lexing or parsing --
+the certified pipeline starts at an already-constructed VIMP AST
+(`imp_prog`), regardless of whether that AST came from the CLI frontend, a
+test driver, or by hand. Confidence in the generated parsers comes from
+engineering process rather than proof:
+
+* a single canonical grammar, with deterministic, drift-checked generation
+  (`git diff --exit-code` after regenerating);
+* the `.vimp` regression corpus (`tests/`);
+* AST round-trip and print-stability checks against an independently
+  constructed Isabelle AST (`tests/property/ast_driver.ml`);
+* Hypothesis-based property tests that fuzz both generated programs and
+  mutated source text (`tests/property/`, `pytest tests/property/`).
+
 ## Build Instructions
 
 ### Requirements
