@@ -38,9 +38,9 @@ echo "MCP streamable-http requires Accept: application/json, text/event-stream (
 echo "Quick probe: curl -sS -m 2 -H \"Authorization: Bearer isabelle-local\" -H \"Accept: application/json, text/event-stream\" http://127.0.0.1:9148/mcp"
 echo ""
 
-PYTHON="${REPO_ROOT}/.venv/bin/python3"
+PYTHON="${REPO_ROOT}/.pixi/envs/default/bin/python3"
 if [[ ! -x "$PYTHON" ]]; then
-  echo "ERROR: venv not found. Run ./scripts/setup.sh first."
+  echo "ERROR: pixi environment not found. Run ./scripts/setup.sh first (or 'pixi install')."
   exit 1
 fi
 

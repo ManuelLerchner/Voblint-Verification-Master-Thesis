@@ -90,7 +90,7 @@ definition mixed_graphviz_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''mixed Sign answers''),
-      source_text = Some (pretty_string_of_program (\<lambda>_. None) [] (prog_main mixed_graphviz_prog)),
+      source_text = Some (pretty_string_of_program (\<lambda>_. None) [] (prog_main mixed_graphviz_prog) []),
       node_annotation = (\<lambda>_. None)
     \<rparr>"
 

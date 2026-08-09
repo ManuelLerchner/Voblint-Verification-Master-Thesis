@@ -48,10 +48,29 @@ lemma join_state_comp_fun_idem:
 
 subsection \<open>Sound-domain type class\<close>
 
-class sound_domain = bounded_semilattice_sup_bot +
+class sound_domain = bounded_semilattice_sup_bot + order_top +
   fixes gamma :: "'a \<Rightarrow> int set"
+  fixes is_bot :: "'a \<Rightarrow> bool"
+  fixes is_top :: "'a \<Rightarrow> bool"
   assumes gamma_bot: "gamma bot = {}"
   assumes gamma_mono: "a \<le> b \<Longrightarrow> gamma a \<subseteq> gamma b"
+  assumes is_bot_correct: "is_bot a \<longleftrightarrow> gamma a = {}"
+  assumes is_top_correct: "is_top a \<longleftrightarrow> a = top"
+
+text \<open>
+  \<open>is_bot\<close> mirrors Goblint's own \<open>Lattice.Bot\<close> signature
+  (@{url "https://github.com/goblint/analyzer/blob/master/src/domain/lattice.ml"}):
+  \<open>val is_bot: t -> bool\<close> is a per-domain operation there too, not a
+  derived equality test against one canonical bottom value. The reason is
+  the same in both codebases: many domains have representations with more
+  than one bottom-denoting value (Interval's inverted bound pairs, e.g.
+  \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>, none of them favored over \<open>bot\<close> itself),
+  so \<open>a = bot\<close> would silently miss some of them. Fixing \<open>is_bot\<close> as its own
+  class operation, correct against \<^const>\<open>gamma\<close> rather than against
+  \<^const>\<open>bot\<close>, makes every \<^class>\<open>sound_domain\<close> instance responsible for
+  its own exact emptiness test, the same obligation every domain already
+  carries for \<^const>\<open>gamma\<close> itself.
+\<close>
 
 subsection \<open>Lifted concretization\<close>
 

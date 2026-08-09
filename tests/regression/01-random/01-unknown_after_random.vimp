@@ -1,0 +1,6 @@
+// PARAM: --analysis interval
+// Unconstrained value from random(): nothing bounds x before the check.
+void main() {
+  x := random();
+  __voblint_check(0 < x) // UNKNOWN
+}

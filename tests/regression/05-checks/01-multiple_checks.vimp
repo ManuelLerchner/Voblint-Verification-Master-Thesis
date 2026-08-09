@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// Several checks in one program with different expected verdicts.
+void main() {
+  x := 5;
+  __voblint_check(0 < x); // PROVED
+  x := 0 - 1;
+  __voblint_check(0 < x); // REFUTED
+  y := random();
+  __voblint_check(0 < y) // UNKNOWN
+}

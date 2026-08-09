@@ -259,16 +259,41 @@ theorem classify_checks_refuted_sound:
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
     and classify_refuted: "\<And>d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> bval c s"
-    and node_sound: "reach v \<le> gamma_state (env v)"
-  shows "\<forall>s \<in> reach v. \<not> bval c s"
+    and node_sound: "reach v <= gamma_state (env v)"
+  shows "ALL s : reach v. ~ bval c s"
 proof
-  fix s assume s: "s \<in> reach v"
+  fix s assume s: "s : reach v"
   have "classify c (env v) = Check_Refuted"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
-  moreover have "s \<in> gamma_state (env v)" using node_sound s by blast
-  ultimately show "\<not> bval c s" using classify_refuted by blast
+  moreover have "s : gamma_state (env v)" using node_sound s by blast
+  ultimately show "~ bval c s" using classify_refuted by blast
 qed
 
+text \<open>
+  State-carrying sibling of \<^const>\<open>classify_checks\<close>: the same traversal and
+  classification, with the node's own abstract state attached to each entry.
+  \<^const>\<open>classify_checks\<close> stays the soundness-critical primitive every domain
+  cites directly; the projection lemma below shows this report is exactly that
+  one with a fourth field added, so \<open>classify_checks_proved_sound\<close> and
+  \<open>classify_checks_refuted_sound\<close> reach it through the projection without
+  restatement.
+\<close>
+
+definition classify_checks_with_state ::
+    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (bexp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> 's) list" where
+  "classify_checks_with_state g env classify =
+     map (\<lambda>(u, c, r). (u, c, r, env u)) (classify_checks g env classify)"
+
+lemma classify_checks_with_state_proj [simp]:
+  "map (\<lambda>(u, c, r, s). (u, c, r)) (classify_checks_with_state g env classify)
+     = classify_checks g env classify"
+proof -
+  have "map (\<lambda>(u, c, r, s). (u, c, r)) (map (\<lambda>(u, c, r). (u, c, r, env u)) xs) = xs"
+    for xs :: "check_report_entry list"
+    by (induct xs) (auto split: prod.splits)
+  then show ?thesis
+    unfolding classify_checks_with_state_def by blast
+qed
 
 end
 

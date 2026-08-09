@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// Declared global mutated across two calls; exercises declared_global_vars
+// wiring and the flow-insensitive global summary.
+global total;
+void inc(n) {
+  total := total + n
+}
+void main() {
+  total := 0;
+  inc(3);
+  inc(4);
+  __voblint_check(0 < total) // UNKNOWN
+}

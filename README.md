@@ -21,6 +21,53 @@ Unlike most existing formalizations, Voblint proves properties of the analysis r
 * **Executable:** Analyses are not just specified; they run directly inside Isabelle/HOL.
 * **Visualizable:** Executable GraphViz output for certified analysis results.
 
+## Tutorial
+
+Voblint programs are written in VIMP, a small IMP-style language with
+`__voblint_check(cond)` assertions. Given a counted loop:
+
+```c
+void main() {
+    x := 0;
+    while (x < 10) {
+        x := x + 1
+    };
+    __voblint_check(0 < x)
+}
+```
+
+running the Interval analysis over it (see "Running the CLI" below) proves
+the check on the widened/narrowed fixpoint:
+
+```bash
+$ pixi run voblint --analysis interval tests/regression/02-control-flow/02-while_loop.vimp
+8:3  pp3        0<x                  PROVED   x=[10,10]
+```
+
+`--dot` renders the same solved, per-node abstract state as a GraphViz CFG:
+
+```bash
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/02-while_loop.vimp \
+  | dot -Tpng -o while_loop_cfg.png
+```
+
+![Solved CFG for the counted-loop example, showing the widened interval x=[10,10] at the check node](docs/images/while_loop_cfg.png)
+
+The same rendering on a branch/join program shows the interval domain merging
+both arms:
+
+```bash
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp \
+  | dot -Tpng -o if_else_cfg.png
+```
+
+![Solved CFG for the if/else example, showing the joined interval y=[1,2] at the check node](docs/images/if_else_cfg.png)
+
+Each rendering embeds the source alongside the CFG, splits nodes into
+per-activation clusters (context-sensitivity, see "Why Voblint?" above), and
+shades the checked node by its verdict. See "Running the CLI" below for
+`--graph-snapshot` (a DOT-free textual alternative) and `--parse-only`.
+
 ## Foundations
 
 Voblint is inspired by several complementary lines of work:
@@ -134,13 +181,88 @@ Examples
 * **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches
 * **`docs/`**: Proof overview, phase tracking, and agent workflow notes
 
+## VIMP Grammar Pipeline
+
+VIMP source syntax has a single source of truth: **`grammar/vimp.yaml`**.
+Two generators realize it for two independent parser targets:
+
+```text
+grammar/vimp.yaml
+       │
+       ├── scripts/gen_vimp_menhir.py   ──▶ cli/vimp_parser.mly, cli/vimp_lexer.mll
+       │
+       └── scripts/gen_vimp_isabelle.py ──▶ src/VIMP/VIMP_Grammar_Generated.thy
+
+```
+
+Two generators exist because the CLI frontend and the Isabelle frontend have
+fundamentally different parser infrastructures -- Menhir/ocamllex for the
+former, Isabelle mixfix syntax and `parse_translation` for the latter (the
+generated `VIMP_Grammar_Generated.thy`, imported by `VIMP_Notation.thy`).
+Neither can express the other's grammar format, so each generator is
+responsible for realizing the shared, neutral grammar into its own idiom
+(precedence declarations, numeral decoding, and similar target-specific
+mechanics). Both generated outputs are committed, the same convention
+`codegen/generated/` uses for Isabelle's own code export; do not hand-edit
+`cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or `VIMP_Grammar_Generated.thy`.
+
+**This pipeline sits outside the proved pipeline above and is untrusted
+code.** No soundness theorem in this repository covers lexing or parsing --
+the certified pipeline starts at an already-constructed VIMP AST
+(`imp_prog`), regardless of whether that AST came from the CLI frontend, a
+test driver, or by hand. Confidence in the generated parsers comes from
+engineering process rather than proof:
+
+* a single canonical grammar, with deterministic, drift-checked generation
+  (`git diff --exit-code` after regenerating);
+* the `.vimp` regression corpus (`tests/`);
+* AST round-trip and print-stability checks against an independently
+  constructed Isabelle AST (`tests/property/ast_driver.ml`);
+* Hypothesis-based property tests that fuzz both generated programs and
+  mutated source text (`tests/property/`, `pytest tests/property/`).
+
+A `lefthook` pre-commit hook (`.lefthook.yaml`, installed by `./scripts/setup.sh`
+or `pixi run lefthook-install`) regenerates both grammar artifacts on every
+commit that touches `grammar/vimp.yaml` or a generator script and fails the
+commit if that leaves the working tree dirty, so drift is caught locally
+before it reaches CI.
+
 ## Build Instructions
 
 ### Requirements
 
 * **[Isabelle](https://isabelle.in.tum.de/)  2025** (or newer)
 * **[AFP](https://www.isa-afp.org/)** (Archive of Formal Proofs) checkout containing `Root_Balanced_Tree` and `Dijkstra_Shortest_Path`.
-* `make`, `git`, and standard POSIX tools.
+* **[pixi](https://pixi.sh/)** -- the repository's task runner and Python-side dependency manager (I/R, the grammar generators, the property-test suite, `lefthook`). `pixi.toml` is the single command surface: `pixi run <task>`, `pixi task list` to see all of them.
+* `git`, `bash`, and standard POSIX tools.
+* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, and GHC, for the code-generation regression drivers -- see "Executable code generation" below. conda-forge's OCaml packages have no osx-arm64 build for `ocaml-findlib`/`ocaml-zarith`, so pixi does not manage this toolchain; opam/ghcup do.
+
+### Pixi task reference
+
+`pixi.toml` is the single command surface (`pixi run <task>`, `pixi task list`
+for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
+
+| Task | Requires | Description |
+| --- | --- | --- |
+| `vendor` | -- | Init/update the `td-verification` submodule and apply its Isabelle2025 patch |
+| `bootstrap` | Isabelle | One-shot session-root setup, depends on `vendor` |
+| `build` | Isabelle, `AFP` | Batch-build the main formalization session (the completion gate -- see "Status reporting" in `AGENTS.md`) |
+| `html` | Isabelle, `AFP` | Render the session's Isabelle HTML presentation |
+| `jedit` | Isabelle, `AFP` | Launch jEdit with session roots pre-loaded |
+| `isabelle-lint` | Isabelle | Run Isabelle's own linter over the session |
+| `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
+| `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
+| `codegen-ocaml-check` | Isabelle, `AFP`, opam | Compile-check the generated OCaml |
+| `regression` | opam, GHC | Run the Haskell/OCaml drivers under `codegen/regression/` against Isabelle-proved expected output |
+| `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
+| `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
+| `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
+| `gen-grammar-isabelle` / `gen-grammar-menhir` | -- | Regenerate one grammar target from `grammar/vimp.yaml` |
+| `grammar-check` | -- | Regenerate both targets and fail on any diff (drift check) |
+| `property` | -- | Run the Hypothesis property-test suite under `tests/property/`, depends on `property-build` |
+| `lefthook-install` | -- | Install the pre-commit hook (`.lefthook.yaml`) |
+| `lint` | -- | Run the pre-commit hook suite over all files |
+| `ci` | everything above | Everything CI runs, under one name |
 
 ### Building
 
@@ -148,13 +270,13 @@ Set `AFP` to your local AFP `thys/` directory (defaults to `~/afp/thys`):
 
 ```bash
 # 1. Initialize the TD solver submodule and apply compatibility patches
-make vendor
+pixi run vendor
 
 # 2. Build the main formalization session (sorry-free)
-make AFP=/path/to/afp/thys build
+AFP=/path/to/afp/thys pixi run build
 
 # 3. Launch jEdit with session roots pre-loaded
-make AFP=/path/to/afp/thys jedit
+AFP=/path/to/afp/thys pixi run jedit
 
 ```
 
@@ -209,24 +331,52 @@ doesn't expose across that boundary -- not fixable by regrouping, so `Core`/
 
 ```bash
 # Regenerate codegen/generated/ from the export_code declarations
-make AFP=/path/to/afp/thys codegen
+AFP=/path/to/afp/thys pixi run codegen
 
 # Fail if codegen/generated/ has drifted from those declarations
-make AFP=/path/to/afp/thys codegen-check
+AFP=/path/to/afp/thys pixi run codegen-check
 
 # Compile and run the hand-written Haskell/OCaml drivers under
 # codegen/regression/ against codegen/generated/, and check their output
 # against the values already proved by Example_Analysis_Dispatch.thy's
 # dispatch_demo_sign_unknown / dispatch_demo_interval_precise
-make regression
+pixi run regression
 ```
 
 Generated sources are tracked under `codegen/generated/`; do not hand-edit
 them. `codegen/regression/{haskell,ocaml}/` hold the hand-written drivers
 that exercise the generated code and compare it against the Isabelle-proved
 expected output -- so the generated Haskell/OCaml is checked against the same
-theorems as the Isabelle source, not merely assumed to match it. Both `make
-codegen-check` and `make regression` run in CI (`.github/workflows/ci.yml`).
+theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
+codegen-check` and `pixi run regression` run in CI (`.github/workflows/ci.yml`).
+
+### Running the analyzer (`voblint` CLI)
+
+`voblint` is a thin, unverified adapter (`cli/main.ml`) over the exact
+generated `analyse` entry point above -- see its trust-boundary note in
+`docs/CLI_DESIGN.md`. `pixi run voblint` rebuilds the binary from
+`codegen/generated/ml/Voblint_CLI.ml` via `cli-build` and then runs it, so any
+extra arguments after the task name go straight to `cli/voblint`, not to pixi:
+
+```bash
+# Check report: one line per __voblint_check, in source order
+pixi run voblint --analysis interval tests/regression/00-sanity/01-straight_line_proved.vimp
+
+# Same analysis, GraphViz rendering of the solved, context-split CFG instead
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp > cfg.dot
+dot -Tsvg cfg.dot -o cfg.svg   # requires graphviz's `dot` on PATH
+
+# Deterministic textual CFG snapshot (clusters/nodes/edges) with no GraphViz
+# dependency -- what the regression corpus embeds as expected --graph-snapshot output
+pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/01-if_else.vimp
+
+# Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
+pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp
+```
+
+Run `pixi run voblint --help` for the full flag list, including `--timeout`
+(the Interval backend is sound but not proved total, so the analysis itself
+runs in a killable subprocess -- see `docs/CLI_DESIGN.md`'s containment note).
 
 ### Vendoring the TD solver
 
@@ -236,8 +386,14 @@ Vendored as a submodule via the private fork
 (CI + local access). GitHub Actions cannot clone the fork with the default
 `GITHUB_TOKEN`; add a classic PAT with `repo` scope as repository secret
 `SUBMODULES_TOKEN`, or make the fork public. A small Isabelle2025 compatibility
-change lives in `vendor/td-verification.patch`; `make vendor` applies it
-(idempotent).
+change lives in `vendor/td-verification.patch`; `pixi run vendor` applies it
+(idempotent). To regenerate the patch after changing the submodule's working
+tree: `git -C vendor/td-verification --no-pager diff > vendor/td-verification.patch`.
+
+`vendor/autocorrode` (the I/Q/I/R MCP servers, see "Agent-assisted
+development" below) is a separate submodule. To fast-forward it to upstream
+main: `git submodule update --remote --merge vendor/autocorrode`, then review
+and commit the pointer update.
 
 ### Agent-assisted development
 
@@ -251,7 +407,7 @@ workflow of Kappelmann et al.,
 
 | Script | Role |
 | --- | --- |
-| `./scripts/setup.sh` | one-shot bootstrap: submodules, venv, I/Q plugin (`--no-iq` to skip) |
+| `./scripts/setup.sh` | one-shot bootstrap: submodules, pixi environment + lefthook install, I/Q plugin (`--no-iq` to skip) |
 | `./scripts/start-iq.sh` | Isabelle/jEdit + I/Q on port 8765 |
 | `./scripts/start-ir.sh` | headless Isabelle/R MCP on port 9148 |
 | `./scripts/start-both.sh` | I/R background + I/Q foreground; Ctrl+C tears down both |

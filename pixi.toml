@@ -1,0 +1,109 @@
+[workspace]
+name = "voblint"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+# Repository orchestration (pixi task list) plus the Python-side tooling
+# each task actually needs, split by real dependency boundary below -- not
+# by task grouping. The OCaml/Haskell toolchains stay on opam/ghcup:
+# conda-forge's ocaml-findlib and ocaml-zarith have no osx-arm64 build, so
+# pixi cannot be the sole toolchain manager for those on Apple Silicon.
+# Tasks that call into them (regression, cli-build, property-build, ...)
+# are plain shell/OCaml invocations that rely on those tools already being
+# on PATH, not on a pixi-managed OCaml environment.
+
+[dependencies]
+python = ">=3.10"
+
+# I/R: autocorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
+# lint/test/grammar concern -- its own dependency pair, needed by every
+# environment a contributor would actually install, so it stays composed
+# into default rather than requiring a separate opt-in.
+[feature.ir.dependencies]
+prompt_toolkit = ">=3.0"
+mcp = ">=1.0"
+
+# grammar/vimp.yaml -> scripts/gen_vimp_isabelle.py / gen_vimp_menhir.py
+# (see AGENTS.md's "VIMP grammar pipeline"). Only these two generators need
+# PyYAML; nothing else in the repo parses YAML.
+[feature.grammar.dependencies]
+pyyaml = "*"
+
+[feature.grammar.tasks]
+gen-grammar-isabelle = "python3 scripts/gen_vimp_isabelle.py"
+gen-grammar-menhir = "python3 scripts/gen_vimp_menhir.py"
+grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && git diff --exit-code -- src/VIMP/VIMP_Grammar_Generated.thy"
+grammar-check-menhir = "python3 scripts/gen_vimp_menhir.py && git diff --exit-code -- cli/vimp_parser.mly cli/vimp_lexer.mll"
+grammar-check = { depends-on = ["grammar-check-isabelle", "grammar-check-menhir"] }
+
+# Hypothesis property-test suite (tests/property/).
+[feature.test.dependencies]
+hypothesis = ">=6.100"
+pytest = ">=8.0"
+
+[feature.test.tasks]
+property-build = "bash scripts/mk/property-build.sh"
+property = { cmd = "python3 -m pytest tests/property", depends-on = ["property-build"] }
+
+# Git hooks (.lefthook.yaml).
+[feature.lint.dependencies]
+lefthook = "*"
+
+[feature.lint.tasks]
+lefthook-install = "lefthook install"
+lint = "lefthook run pre-commit --all-files"
+
+[environments]
+default = ["ir", "grammar", "test", "lint"]
+lint = ["lint"]
+test = ["test"]
+grammar = ["grammar"]
+
+# --------------------------------------------------------------------------
+# Repository task graph. Tasks here need only python3/bash/git (top-level
+# `dependencies`, present in every environment) plus Isabelle/OCaml/GHC
+# already on PATH -- no feature-specific package, so they stay common
+# rather than living under any one feature. Nontrivial shell (Isabelle
+# build invocations, the vendor patch logic, OCaml link steps) lives in
+# small versioned scripts under scripts/mk/ that these tasks call.
+# ISABELLE/AFP/SESSION honor the same env-var overrides the old Makefile's
+# `?=` defaults did, e.g. `AFP=/path/to/afp/thys pixi run build`.
+# --------------------------------------------------------------------------
+
+[tasks]
+# Vendoring. Rarer maintenance actions (bumping vendor/autocorrode to
+# upstream main, or regenerating vendor/td-verification.patch from the
+# submodule's working-tree diff) are plain git commands, not tasks -- see
+# "Vendoring the TD solver" in README.md.
+vendor = "bash scripts/mk/vendor.sh"
+
+# Isabelle build
+bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = ["vendor"] }
+build = { cmd = "bash scripts/mk/build.sh", depends-on = ["vendor"] }
+html = { cmd = "bash scripts/mk/html.sh", depends-on = ["vendor"] }
+isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = ["vendor"] }
+jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = ["vendor"] }
+
+# Codegen (Isabelle export_code -> codegen/generated/)
+codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = ["vendor"] }
+codegen-check = { cmd = "git diff --exit-code -- codegen/generated/", depends-on = ["codegen"] }
+codegen-ocaml-check = { cmd = "bash scripts/mk/codegen-ocaml-check.sh", depends-on = ["vendor"] }
+regression = "bash scripts/mk/regression.sh"
+
+# voblint CLI
+cli-build = "bash scripts/mk/cli-build.sh"
+cli-test = { cmd = "python3 tests/run.py", depends-on = ["cli-build"] }
+voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
+
+# Everything CI runs, under one name. Spans all four features (lint,
+# grammar, test, and build's plain isabelle/ocaml calls), so this only
+# resolves from an environment that composes all of them -- i.e. default.
+ci = { depends-on = [
+  "lint",
+  "grammar-check",
+  "build",
+  "codegen-check",
+  "cli-test",
+  "regression",
+  "property",
+] }

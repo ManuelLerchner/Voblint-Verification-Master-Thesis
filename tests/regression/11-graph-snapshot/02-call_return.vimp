@@ -1,0 +1,49 @@
+// PARAM: --analysis interval
+// Canonical CFG snapshot coverage: a procedure call with a formal and a used
+// return value, covering the interprocedural shape (two clusters, plus
+// EnterEdge/CombineEdge/CallToReturnEdge) -- see 01-straight_line.vimp in
+// this same group for the single-cluster case and why only these two
+// fixtures carry an EXPECT-GRAPH block.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp4_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//   cluster_ctx_1:
+//     inc_pp0_ctx1
+//     inc_entry_inc_ctx1
+//     inc_result_inc_ctx1
+//
+// nodes:
+//   main_pp4_ctx0: pp4
+//   main_result_main_ctx0: exit_main
+//   inc_pp0_ctx1: pp0
+//   main_entry_main_ctx0: entry_main
+//   main_pp2_ctx0: pp2
+//   inc_entry_inc_ctx1: entry_inc
+//   main_pp3_ctx0: pp3
+//       check 0<r
+//       r=[6,6]
+//   inc_result_inc_ctx1: exit_inc
+//
+// edges:
+//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
+//   inc_pp0_ctx1 -> inc_result_inc_ctx1: return n+1
+//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   inc_entry_inc_ctx1 -> inc_pp0_ctx1: nop
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(0<r)
+//   main_pp2_ctx0 -> inc_entry_inc_ctx1: enter inc(5)
+//   inc_result_inc_ctx1 -> main_pp3_ctx0: combine r
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return inc
+// EXPECT-GRAPH-END
+
+void inc(n) {
+  return n + 1
+}
+void main() {
+  r := inc(5);
+  __voblint_check(0 < r) // PROVED
+}

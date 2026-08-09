@@ -110,18 +110,18 @@ Run a batch build when:
 Use the repository interfaces so session arguments do not drift:
 
 ```bash
-rtk make build
+rtk pixi run build
 ```
 
 On a fresh clone without parent heaps:
 
 ```bash
-rtk make bootstrap
+rtk pixi run bootstrap
 ```
 
-`make build` streams a verbose, parallel build of `Voblint_Examples`, which
-extends `Voblint_Formalization`, so both sessions are checked. Changes
-confined to `src/Examples/**` are covered by the same `rtk make build` run.
+`pixi run build` streams a verbose, parallel build of `Voblint_Examples`,
+which extends `Voblint_Formalization`, so both sessions are checked. Changes
+confined to `src/Examples/**` are covered by the same `rtk pixi run build` run.
 
 ### Slow-build diagnosis
 

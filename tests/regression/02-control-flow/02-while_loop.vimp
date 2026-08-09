@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// Counted loop: exercises widening/narrowing on a bounded induction variable.
+void main() {
+  x := 0;
+  while (x < 10) {
+    x := x + 1
+  };
+  __voblint_check(0 < x) // PROVED
+}

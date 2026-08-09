@@ -52,8 +52,8 @@ stable gates for assessing a change.
 ```bash
 rg -n '^\s*(sorry|oops)\b' src/
 python3 scripts/check_isabelle_ascii.py
-make vendor
-make AFP=/path/to/afp/thys build
+pixi run vendor
+AFP=/path/to/afp/thys pixi run build
 ```
 
 Completion requires all affected sessions and the example session to pass the

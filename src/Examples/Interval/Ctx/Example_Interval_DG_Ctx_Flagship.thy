@@ -193,7 +193,7 @@ definition twice_ctx_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = bot then ''main / root context''
         else owner @ '' / context='' @ string_of_ivl ctx),
-      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main),
+      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
       node_annotation = (\<lambda>_. None)
     \<rparr>"
 

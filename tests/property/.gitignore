@@ -1,0 +1,14 @@
+*.cmi
+*.cmx
+*.o
+Voblint_CLI.ml
+vimp_parser.mly
+vimp_parser.ml
+vimp_parser.mli
+vimp_parser.automaton
+vimp_parser.conflicts
+vimp_lexer.mll
+vimp_lexer.ml
+vimp_frontend.ml
+ast_driver
+paren_roundtrip

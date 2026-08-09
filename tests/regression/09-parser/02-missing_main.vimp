@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Found by tests/property's
+// mutation fuzzer: with no "void main() { ... }" present, vimp_parser.ml's
+// program function called `fail` (needing a token position) after already
+// consuming the final EOF sentinel, crashing with an uncaught assertion
+// instead of a clean "missing 'void main()'" parse error.
+void ain() {
+  x := 0
+}

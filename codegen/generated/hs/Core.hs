@@ -18,7 +18,8 @@ module
         classify_checks, bind_formals_resolved_q, inv_conservative,
         enter_frame_D_resolved_q, fun_of_resolved_st_q_for, string_of_bexp,
         unit_dg_spec_st_for, unit_etf_st_of_transfer, fun_of_exec_dg_st_for,
-        tD_side_always_join_Interp_solve, tD_side_warrowing_apinis_Interp_solve)
+        classify_checks_with_state, tD_side_always_join_Interp_solve,
+        tD_side_warrowing_apinis_Interp_solve)
   where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
@@ -2278,15 +2279,11 @@ init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
 string_of_aexp :: Aexp -> [Char];
 string_of_aexp (N n) = string_of_int n;
 string_of_aexp (V x) = explode x;
-string_of_aexp (Plus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Plus a b) = string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b;
 string_of_aexp (Minus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
+  string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b;
 string_of_aexp (Times a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
+  string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b;
 
 string_of_bexp :: Bexp -> [Char];
 string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];
@@ -2400,6 +2397,14 @@ update_global_always_join da orig g d state =
         state;
     db = sup da d;
   } in (if db == da then (Nothing, statea) else (Just db, statea));
+
+classify_checks_with_state ::
+  forall a.
+    Cfg_ext () ->
+      (Cfg_node -> a) ->
+        (Bexp -> a -> Check_result) -> [(Cfg_node, (Bexp, (Check_result, a)))];
+classify_checks_with_state g env classify =
+  map (\ (u, (c, r)) -> (u, (c, (r, env u)))) (classify_checks g env classify);
 
 update_global_warrowing_apinis ::
   forall a b c.

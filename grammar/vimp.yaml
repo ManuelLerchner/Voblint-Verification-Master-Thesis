@@ -1,0 +1,220 @@
+# Canonical VIMP source grammar (M2 of the grammar-unification investigation).
+#
+# This is a *language* description, not a Menhir grammar: precedence and
+# associativity are declared once, generically, and each target (Menhir,
+# Isabelle syntax, the property-test generator, the printer) is responsible
+# for realizing that into its own idiom. In particular this file does not
+# introduce `term`/`atom` precedence-tier nonterminals -- those are a
+# parser-implementation technique (needed by hand-written recursive descent,
+# realizable in Menhir via %left/%right instead), not part of the language.
+#
+# `program { ... }` is not part of this grammar. A standalone source file is
+# EOF-delimited; wrapping VIMP inside a HOL term (e.g. an Isabelle
+# `vimp_program \<lbrakk> ... \<rbrakk>` quotation) is a target-specific
+# embedding concern, layered on top of `program` by the Isabelle generator
+# only.
+#
+# `main` is NOT a reserved keyword: both existing systems already agree on
+# this -- VIMP_Notation.thy's parse_translation (prog_tr) and
+# cli/vimp_parser.ml's `program` both parse every function uniformly as an
+# ordinary identifier and pick out "main" by string equality afterward
+# (`List.partition (fn (n,_,_,_) => n = "main")` / the OCaml equivalent), not
+# via a distinct lexical token. An earlier draft of this grammar introduced
+# `main: MAIN` and a structural `main_decl` production, which was a genuine
+# deviation from both existing parsers, not a simplification of them; fixed
+# to match.
+#
+# Locating `main` is nonetheless still done during parsing/lowering here
+# (`special: program_structure`), not deferred to a separate well-formedness
+# check, because today's `imp_prog` record has `prog_main :: com` as a
+# mandatory field -- constructing an imp_prog value at all requires deciding
+# what that field is. An audited alternative (fold `main` into `proc_rep`
+# as an ordinary entry, make its presence a `wf_program` condition instead
+# of a construction-time requirement) was investigated and set aside: the
+# CFG compiler and the entire Interval soundness stack
+# (compile_prog/prog_cfg/analyse_interval_td_*, ~150 occurrences across 31
+# files) depend on `prog_main`/`prog_procs`/`prog_table` as a fixed
+# four-argument shape, several behind currently-unconditional `[simp]`
+# lemmas (prog_main_make et al.) that many proofs rely on firing
+# automatically; a uniform representation would make those conditional,
+# a real risk to re-derive across that many call sites, not undertaken here.
+#
+# Old semantic validation that has no structural encoding (duplicate
+# procedure/global/formal names, global/formal collisions, main-formals,
+# main-return) is not preserved: it was never part of the grammar in the
+# first place, and this investigation's scope note says not to keep it.
+#
+# Every production's AST-construction is exactly one of three shapes:
+#
+#   lower: {ctor: Name, args: [...]}
+#     Structured constructor application. Each entry in `args` is one of:
+#       {rhs: N}         -- the parsed value at rhs position N
+#       {some: <arg>}    -- that arg wrapped in `Some`
+#       {none: true}     -- literal `None`
+#       {literal: true|false} -- a literal boolean
+#     `{tuple: [i, j, ...]}` builds an OCaml tuple from those rhs positions
+#     instead of applying a constructor (function_decl's (name, formals,
+#     body), not an algebraic-datatype constructor).
+#
+#   passthrough: N
+#     Transparent syntax: the parsed value at rhs position N, unchanged --
+#     grouping parens (aexp_paren, bexp_paren) and a `global ...;` line's
+#     own name list (globals_decl), where the production exists only to
+#     constrain what can appear around a value, not to build a new one.
+#
+#   special: name
+#     Genuinely non-generic lowering, hardcoded in the generator (keyed by
+#     `name`, not per-production) rather than forced through the structured
+#     template above:
+#   - integer_literal: converts the lexer's raw OCaml int into the exported
+#     Isabelle int representation (Int_of_integer (Z.of_int n)) -- a type
+#     conversion, not a constructor application; the only place this is
+#     needed, not worth a general conversion mechanism in `lower:` for one
+#     call site.
+#   - unary minus: folds into N(-n) for a numeral operand, Minus(N 0, x)
+#     otherwise. This is the canonical lowering rule (settled during M4):
+#     compositional, no algebraic simplification at parse time, so it
+#     deliberately does NOT special-case a nested uminus the way Isabelle's
+#     current parse_translation does (`_imp2_uminus (_imp2_uminus b) =>
+#     aexp_tr b`, cancelling `--x` to `x`) -- under this rule `--x` lowers
+#     to `Minus (N 0) (Minus (N 0) (V x))` instead, same integer semantics,
+#     just not re-simplified during parsing. When Isabelle generation lands
+#     (M6), that cancellation case should be deleted from parse_translation
+#     to match, not replicated here. Grammar and algebraic normalization
+#     are kept as separate concerns; if AST normalization is wanted later,
+#     it belongs in its own explicit pass, not hidden inside one frontend.
+#   - program: partitions the uniformly-parsed function_decl* list into
+#     "main" and everything else by string equality, matching both existing
+#     parsers (see below).
+
+terminals:
+  ident:
+    token: IDENT
+    lex: "[a-zA-Z_][a-zA-Z0-9_]*"
+    excludes_keywords: true
+  int_const:
+    token: INT
+    lex: "[0-9]+"
+
+keywords:
+  global: GLOBAL
+  void: VOID
+  skip: SKIP
+  random: RANDOM
+  return: RETURN
+  __voblint_check: CHECK
+  if: IF
+  else: ELSE
+  while: WHILE
+  "true": BOOL_TRUE
+  "false": BOOL_FALSE
+
+punctuation:
+  ":=": ASSIGN
+  "+": PLUS
+  "-": MINUS
+  "*": STAR
+  "<": LT
+  "==": EQEQ
+  "&&": AND
+  "||": OR
+  "!": NOT
+  "{": LBRACE
+  "}": RBRACE
+  "(": LPAREN
+  ")": RPAREN
+  ";": SEMI
+  ",": COMMA
+
+# Lowest to highest binding. Each entry becomes one Menhir %left/%right/
+# %nonassoc line, in this order (Menhir's convention: later = binds
+# tighter). `UMINUS` is a synthetic precedence level, not a token, used only
+# to give the unary-minus production's %prec annotation somewhere to point.
+precedence:
+  - {assoc: left,  tokens: ["OR"]}
+  - {assoc: left,  tokens: ["AND"]}
+  - {assoc: none,  tokens: ["LT", "EQEQ"]}
+  - {assoc: left,  tokens: ["PLUS", "MINUS"]}
+  - {assoc: left,  tokens: ["STAR"]}
+  - {assoc: right, tokens: ["NOT", "UMINUS"]}
+
+productions:
+  # -- aexp: flat, left-associative via precedence declarations, no term/atom split --
+  - {name: aexp_var,   result: aexp, rhs: [IDENT], lower: {ctor: V, args: [{rhs: 0}]}}
+  - {name: aexp_num,   result: aexp, rhs: [INT],   special: integer_literal}
+  - {name: aexp_uminus, result: aexp, rhs: [MINUS, aexp], special: unary_minus, precedence: UMINUS}
+  - {name: aexp_plus,  result: aexp, rhs: [aexp, PLUS, aexp],  precedence: PLUS,
+     lower: {ctor: Plus, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: aexp_minus, result: aexp, rhs: [aexp, MINUS, aexp], precedence: MINUS,
+     lower: {ctor: Minus, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: aexp_times, result: aexp, rhs: [aexp, STAR, aexp],  precedence: STAR,
+     lower: {ctor: Times, args: [{rhs: 0}, {rhs: 2}]}}
+  # Transparent grouping (no AST constructor -- same `passthrough` shape as
+  # bexp_paren below), added so the precedence table alone determines both
+  # what a printer must parenthesize and what the property-test generator
+  # may produce: any aexp tree is now source-expressible, not just
+  # left-associated ones. Isabelle's own aexp grammar (VIMP_Notation.thy)
+  # and the shipped cli/vimp_parser.ml still have no such production --
+  # extending those is a real language-cutover decision (M6+), not part of
+  # this prototype.
+  - {name: aexp_paren,  result: aexp, rhs: [LPAREN, aexp, RPAREN],   passthrough: 1}
+
+  # -- bexp: flat, with an explicit paren escape hatch (unlike aexp) --
+  - {name: bexp_true,  result: bexp, rhs: [BOOL_TRUE],  lower: {ctor: Bc, args: [{literal: true}]}}
+  - {name: bexp_false, result: bexp, rhs: [BOOL_FALSE], lower: {ctor: Bc, args: [{literal: false}]}}
+  - {name: bexp_less,  result: bexp, rhs: [aexp, LT, aexp],   lower: {ctor: Less, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: bexp_eq,    result: bexp, rhs: [aexp, EQEQ, aexp], lower: {ctor: Eqa,  args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: bexp_paren, result: bexp, rhs: [LPAREN, bexp, RPAREN],     passthrough: 1}
+  - {name: bexp_not,   result: bexp, rhs: [NOT, bexp], precedence: NOT,
+     lower: {ctor: Not, args: [{rhs: 1}]}}
+  - {name: bexp_and,   result: bexp, rhs: [bexp, AND, bexp], precedence: AND,
+     lower: {ctor: And, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: bexp_or,    result: bexp, rhs: [bexp, OR, bexp], precedence: OR,
+     lower: {ctor: Or, args: [{rhs: 0}, {rhs: 2}]}}
+
+  # -- stmt --
+  - {name: stmt_skip,     result: stmt, rhs: [SKIP], lower: {ctor: SKIP, args: []}}
+  - {name: stmt_assign,   result: stmt, rhs: [IDENT, ASSIGN, aexp],
+     lower: {ctor: Assign, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: stmt_random,   result: stmt, rhs: [IDENT, ASSIGN, RANDOM, LPAREN, RPAREN],
+     lower: {ctor: Random, args: [{rhs: 0}]}}
+  - {name: stmt_return,   result: stmt, rhs: [RETURN, aexp],
+     lower: {ctor: Return, args: [{some: {rhs: 1}}]}}
+  - {name: stmt_return0,  result: stmt, rhs: [RETURN],
+     lower: {ctor: Return, args: [{none: true}]}}
+  - {name: stmt_check,    result: stmt, rhs: [CHECK, LPAREN, bexp, RPAREN],
+     lower: {ctor: Check, args: [{rhs: 2}]}}
+  - {name: stmt_if,       result: stmt, rhs: [IF, LPAREN, bexp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, LBRACE, stmts_opt, RBRACE],
+     lower: {ctor: If, args: [{rhs: 2}, {rhs: 5}, {rhs: 9}]}}
+  - {name: stmt_while,    result: stmt, rhs: [WHILE, LPAREN, bexp, RPAREN, LBRACE, stmts_opt, RBRACE],
+     lower: {ctor: While, args: [{rhs: 2}, {rhs: 5}]}}
+  # No separate call0/callret0 (zero-arg) productions: unlike Isabelle's
+  # imp2_actuals (which has no empty derivation, forcing _imp2_call0 as a
+  # workaround), this grammar's `actuals` already allows `min: 0`, so
+  # `f()`/`x := f()` already parse via `stmt_call`/`stmt_callret` with an
+  # empty actuals list. A separate call0/callret0 would just be ambiguous
+  # with that (confirmed empirically: Menhir reported exactly this as a
+  # shift/reduce conflict on RPAREN when both were present).
+  - {name: stmt_call,     result: stmt, rhs: [IDENT, LPAREN, actuals, RPAREN],
+     lower: {ctor: Call, args: [{none: true}, {rhs: 0}, {rhs: 2}]}}
+  - {name: stmt_callret,  result: stmt, rhs: [IDENT, ASSIGN, IDENT, LPAREN, actuals, RPAREN],
+     lower: {ctor: Call, args: [{some: {rhs: 0}}, {rhs: 2}, {rhs: 4}]}}
+
+  # -- statement sequences, actuals, formals, ids: standard left-recursive lists --
+  - {name: stmts, result: stmts, list_of: stmt, separator: SEMI, constructor: Seq, min: 1}
+  - {name: stmts_opt, result: stmts_opt, optional_list_of: stmt, separator: SEMI, constructor: Seq, empty: SKIP}
+  - {name: actuals, result: actuals, list_of: aexp, separator: COMMA, min: 0}
+  - {name: formals, result: formals, list_of: IDENT, separator: COMMA, min: 0}
+  - {name: ids,      result: ids,     list_of: IDENT, separator: COMMA, min: 1}
+
+  # -- globals, functions, program --
+  - {name: globals_decl, result: globals, rhs: [GLOBAL, ids, SEMI], passthrough: 1}
+  - {name: function_decl, result: function, rhs: [VOID, IDENT, LPAREN, formals, RPAREN, LBRACE, stmts_opt, RBRACE],
+     lower: {tuple: [1, 3, 6]}}   # (name, formals, body) -- "main" is just an IDENT here, same as every other name
+
+  # Every function parses uniformly via function_decl*; "main" is picked out
+  # of the resulting list by string equality during lowering (matching both
+  # existing parsers -- see this file's header), not by a grammar-level
+  # main_decl production.
+  - {name: program, result: program, rhs: [globals_opt, function_decl_star, EOF],
+     special: program_structure}

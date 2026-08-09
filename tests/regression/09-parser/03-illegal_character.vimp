@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Found by tests/property's
+// mutation fuzzer: an out-of-grammar character makes Vimp_lexer.tokenize
+// raise Lex_error, which main.ml used to leave uncaught (only
+// Vimp_parser.Parse_error was handled), crashing instead of reporting a
+// clean parse error.
+void main() {
+  x := 1 @ 2
+}

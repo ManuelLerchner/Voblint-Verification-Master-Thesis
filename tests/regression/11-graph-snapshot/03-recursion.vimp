@@ -1,0 +1,71 @@
+// PARAM: --analysis interval
+// Canonical CFG snapshot coverage: a self-recursive procedure (factorial).
+// The context-sensitive keyed-context solver collapses every recursive
+// activation of fact into the same context (cluster_ctx_1), giving a small,
+// deterministic graph with a self-loop EnterEdge (fact_pp2_ctx1 back into
+// fact_entry_fact_ctx1) not exercised by 02-call_return.vimp's plain
+// caller/callee pair. Verdict is UNKNOWN, not PROVED: recursion is a known
+// precision limitation of the current context representation (see
+// docs/OPEN_PROBLEMS.md and docs/CALLSTRING_CONTEXT_DESIGN.md -- unbounded
+// call histories make a precise finite context key an open problem), but
+// the solver still terminates and gives a sound, decidable UNKNOWN here.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp7_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//   cluster_ctx_1:
+//     fact_pp1_ctx1
+//     fact_pp0_ctx1
+//     fact_pp2_ctx1
+//     fact_pp3_ctx1
+//     fact_entry_fact_ctx1
+//     fact_result_fact_ctx1
+//
+// nodes:
+//   fact_pp1_ctx1: pp1
+//   main_pp7_ctx0: pp7
+//   main_result_main_ctx0: exit_main
+//   fact_pp0_ctx1: pp0
+//   main_entry_main_ctx0: entry_main
+//   fact_pp2_ctx1: pp2
+//   fact_pp3_ctx1: pp3
+//   main_pp5_ctx0: pp5
+//   fact_entry_fact_ctx1: entry_fact
+//   main_pp6_ctx0: pp6
+//       check 0<r [unknown]
+//       r=[-inf,+inf]
+//   fact_result_fact_ctx1: exit_fact
+//
+// edges:
+//   fact_pp1_ctx1 -> fact_result_fact_ctx1: return 1
+//   main_pp7_ctx0 -> main_result_main_ctx0: terminate
+//   fact_pp0_ctx1 -> fact_pp1_ctx1: n<2
+//   fact_pp0_ctx1 -> fact_pp2_ctx1: not (n<2)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: nop
+//   fact_pp3_ctx1 -> fact_result_fact_ctx1: return n*tmp
+//   fact_entry_fact_ctx1 -> fact_pp0_ctx1: nop
+//   main_pp6_ctx0 -> main_pp7_ctx0: check(0<r)
+//   fact_pp2_ctx1 -> fact_entry_fact_ctx1: enter fact(n-1)
+//   main_pp5_ctx0 -> fact_entry_fact_ctx1: enter fact(3)
+//   fact_result_fact_ctx1 -> fact_pp3_ctx1: combine tmp
+//   fact_result_fact_ctx1 -> main_pp6_ctx0: combine r
+//   fact_pp2_ctx1 -> fact_pp3_ctx1: call-to-return fact
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
+// EXPECT-GRAPH-END
+
+void fact(n) {
+  if (n < 2) {
+    return 1
+  } else {
+    tmp := fact(n - 1);
+    return n * tmp
+  }
+}
+void main() {
+  r := fact(3);
+  __voblint_check(0 < r) // UNKNOWN
+}

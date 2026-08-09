@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// Call-mediated sibling of 01-global-self-feedback.vimp: the same
+// self-referential global-summary feedback (total's write depends on
+// total's own current value), but routed through a procedure call's
+// enter/combine handling rather than a direct assignment. Both fixtures
+// are permanent regressions for the certified Interval widening backend
+// fixed for issue #96 -- this one additionally exercises that the fix
+// holds across the interprocedural global-summary path, not only the
+// intraprocedural one.
+global total;
+void inc(n) {
+  total := total + n
+}
+void main() {
+  total := 0;
+  inc(3);
+  __voblint_check(0 < total) // UNKNOWN
+}

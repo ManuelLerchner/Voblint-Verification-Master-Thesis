@@ -58,6 +58,19 @@ end
 definition ivl_top :: ivl where
   "ivl_top = Ivl MinInf PlusInf"
 
+instantiation ivl :: top begin
+definition "top_ivl = ivl_top"
+instance ..
+end
+
+instantiation ivl :: order_top begin
+instance proof intro_classes
+  fix x :: ivl
+  show "x \<le> top"
+    unfolding top_ivl_def by (cases x) (simp add: less_eq_ivl_def ivl_top_def)
+qed
+end
+
 subsection \<open>Concretization\<close>
 
 fun gamma_ivl :: "ivl => int set" where
@@ -68,6 +81,50 @@ lemma gamma_ivl_bot: "gamma_ivl bot = {}"
 
 lemma gamma_ivl_top: "gamma_ivl ivl_top = UNIV"
   unfolding ivl_top_def by auto
+
+text \<open>
+  Unlike \<open>bot\<close>, \<open>top\<close> has no other representation: \<^term>\<open>gamma_ivl (Ivl l u)
+  = UNIV\<close> forces \<open>l \<le> Fin n\<close> and \<open>Fin n \<le> u\<close> for every \<open>n\<close>, which pins
+  \<open>l = MinInf\<close> and \<open>u = PlusInf\<close> exactly --- so a direct equality test
+  against \<^const>\<open>ivl_top\<close> is already exact, no bound comparison needed.
+\<close>
+
+definition is_top_ivl :: "ivl \<Rightarrow> bool" where
+  "is_top_ivl i = (i = ivl_top)"
+
+lemma is_top_ivl_correct: "is_top_ivl i \<longleftrightarrow> i = top"
+  unfolding is_top_ivl_def top_ivl_def ..
+
+text \<open>
+  \<open>bot\<close> is one fixed empty interval (\<^term>\<open>Ivl PlusInf MinInf\<close>), but the
+  \<open>\<le>\<close> instance's bound comparison makes \<open>x \<le> bot\<close> true only for that exact
+  representation: any other inverted bound pair (e.g. a guard refinement
+  narrowing a variable against its own infeasible range,
+  \<^term>\<open>Ivl (Fin 5) (Fin (-1))\<close>) is just as empty by @{const gamma_ivl},
+  yet not \<open>\<le> bot\<close> --- the instance never normalizes. \<open>is_bottom_ivl\<close> tests
+  emptiness directly against the bounds instead of against one particular
+  representative.
+
+  Bound comparison alone is not quite enough, though: \<^term>\<open>Ivl MinInf
+  MinInf\<close> has \<open>l \<le> u\<close> (reflexively), yet no integer is "at" \<open>MinInf\<close>
+  itself, so its @{const gamma_ivl} is still empty (symmetrically for
+  \<^term>\<open>Ivl PlusInf PlusInf\<close>). \<open>l = PlusInf\<close> and \<open>u = MinInf\<close> are exactly
+  the two cases where \<^const>\<open>eint_le\<close> can hold reflexively without any
+  integer ever satisfying it, so both are called out explicitly alongside
+  the general inverted-bounds case.
+\<close>
+
+definition is_bottom_ivl :: "ivl \<Rightarrow> bool" where
+  "is_bottom_ivl i =
+     (case i of Ivl l u \<Rightarrow> l = PlusInf \<or> u = MinInf \<or> \<not> l \<le> u)"
+
+lemma is_bottom_ivl_correct: "is_bottom_ivl i \<longleftrightarrow> gamma_ivl i = {}"
+proof (cases i)
+  case (Ivl l u)
+  show ?thesis
+    unfolding Ivl is_bottom_ivl_def
+    by (cases l; cases u) (auto simp: less_eq_eint_def eint_le.simps)
+qed
 
 lemma gamma_ivl_mono:
   "a \<le> b \<Longrightarrow> gamma_ivl a \<subseteq> gamma_ivl b"
@@ -202,6 +259,8 @@ subsection \<open>Abstract domain instantiation\<close>
 
 instantiation ivl :: sound_domain begin
 definition gamma_abs_ivl [simp]: "gamma (a :: ivl) = gamma_ivl a"
+definition is_bot_ivl [simp]: "is_bot (a :: ivl) = is_bottom_ivl a"
+definition is_top_ivl' [simp]: "is_top (a :: ivl) = is_top_ivl a"
 instance proof intro_classes
   show "gamma (bot :: ivl) = {}"
     by (simp add: gamma_ivl_bot)
@@ -213,6 +272,14 @@ next
     have "gamma_ivl a \<subseteq> gamma_ivl b" using H by (rule gamma_ivl_mono)
     then show ?thesis by simp
   qed
+next
+  fix a :: ivl
+  show "is_bot a \<longleftrightarrow> gamma a = {}"
+    by (simp add: is_bottom_ivl_correct)
+next
+  fix a :: ivl
+  show "is_top a \<longleftrightarrow> a = top"
+    by (simp add: is_top_ivl_correct)
 qed
 end
 

@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// pretty_string_of_program prints Return None as bare "return" (no
+// expression), but vimp_parser.ml's KW_RETURN case used to unconditionally
+// require an aexp afterward -- found by tests/property's round-trip
+// property (Hypothesis generated Return None, print/parse disagreed).
+void main() {
+  __voblint_check(1 < 2); // PROVED
+  return
+}

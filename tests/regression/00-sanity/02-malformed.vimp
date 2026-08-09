@@ -1,0 +1,8 @@
+// PARAM: --analysis interval
+// Deliberately malformed: missing ';' after the first assignment.
+// The parser must reject this with a structured file:line:col error rather
+// than crash or silently misparse.
+void main() {
+  x := 5
+  __voblint_check(0 < x)
+}

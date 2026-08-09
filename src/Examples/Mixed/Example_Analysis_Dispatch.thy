@@ -37,6 +37,30 @@ fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
 
+subsection \<open>Domain-neutral state-carrying report\<close>
+
+text \<open>
+  \<open>abstract_value\<close> wraps each domain's own abstract state type once, so
+  \<open>analyse_with_state\<close> can share one report type across branches the same
+  way \<open>analyse\<close> already shares \<open>check_result\<close>. \<open>analyse\<close> itself stays
+  untouched: external callers (the CLI design, this theory's own
+  \<open>codegen/regression\<close> drivers) already pin its \<open>check_report_entry
+  list\<close> shape as a trust boundary, so this is an additional export, not a
+  replacement. Each branch reuses \<open>analyse_sign_report_with_state\<close>/
+  \<open>analyse_interval_td_report_with_state\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>,
+  \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) unchanged, just as \<open>analyse\<close> reuses
+  their state-free counterparts.
+\<close>
+
+datatype abstract_value = SignValue sign | IntervalValue ivl
+
+fun analyse_with_state ::
+    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> abstract_value abs_state) list" where
+  "analyse_with_state Sign_Analysis p =
+     map (\<lambda>(u, c, r, s). (u, c, r, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
+| "analyse_with_state Interval_Analysis p =
+     map (\<lambda>(u, c, r, s). (u, c, r, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
+
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 
 text \<open>
@@ -339,9 +363,16 @@ lemma proc_demo_sign_unknown:
       (Statement 6, Less (V (STR ''total'')) (N 100), Check_Unknown)]"
   by eval
 
+text \<open>
+  \<open>total+n\<close>, not \<open>(total+n)\<close>: \<open>string_of_aexp\<close> no longer parenthesizes
+  \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close> (see \<open>VIMP_Source_Print.thy\<close> --- VIMP's source
+  grammar has no parenthesized \<open>aexp\<close> at all, so the old parenthesized
+  rendering was never actually valid VIMP source).
+\<close>
+
 lemma proc_demo_cfg_intra:
   "string_of_intra_list (cfg_intra_list (prog_cfg prog_main_name proc_demo_prog)) =
-     ''pp0 --[total := (total+n)]--> pp1; pp1 --[return]--> result_inc; ''
+     ''pp0 --[total := total+n]--> pp1; pp1 --[return]--> result_inc; ''
      @ ''pp2 --[total := 0]--> pp3; pp5 --[check(0<total)]--> pp6; ''
      @ ''pp6 --[check(total<100)]--> pp7; pp7 --[return]--> result_main; ''
      @ ''entry_inc --[nop]--> pp0; entry_main --[nop]--> pp2''"
@@ -654,6 +685,7 @@ code_identifier
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -669,6 +701,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -684,6 +717,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -698,6 +732,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_with_state SignValue IntervalValue
   imp_prog.make proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -733,6 +768,134 @@ definition no_call_global_self_ref_prog :: imp_prog where
 lemma no_call_global_self_ref_interval_terminates:
   "analyse Interval_Analysis no_call_global_self_ref_prog =
      [(Statement 2, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+  by eval
+
+text \<open>
+  Wiring regression for \<open>analyse_with_state\<close>: a single exact assignment, no
+  widening or narrowing in play, so the reported state at the check is
+  independently known. This exercises the node environment, the
+  global/local merge, and the domain constructor \<open>analyse_with_state\<close>
+  wraps its result in --- not merely that the function type-checks.
+\<close>
+
+definition state_wiring_ex_prog :: imp_prog where
+  "state_wiring_ex_prog =
+     program {
+       void main() {
+         x := 5;
+         __voblint_check(0 < x)
+       }
+     }"
+
+text \<open>
+  \<open>x\<close> is local (no \<open>global\<close> declaration). \<open>analyse_sign_report_for_code\<close>
+  builds the per-point environment as
+  \<open>fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))) \<squnion>
+     fun_of_exec_dg_st_for gs (globs (sol (Inr ())))\<close>
+  for every queried name, not only global ones. The local unknown's own
+  \<open>locals\<close> component is precise here (\<open>SPos\<close>, confirmed by evaluating it
+  directly), but the global/side unknown's \<open>globs\<close> component defaults to
+  \<open>STop\<close> for any name it does not itself track --- \<open>x\<close> among them --- so
+  the unconditional \<open>\<squnion>\<close> collapses \<open>SPos \<squnion> STop\<close> back to \<open>STop\<close> for
+  every local name, regardless of what the local unknown computed. This is
+  a precision gap in this D/G instance's report-assembly formula, not a
+  soundness issue (\<open>STop\<close> is a sound over-approximation) and not shared by
+  Interval's report pipeline, which reads a single unified resolved store
+  instead of joining two separately-defaulted components. Pinning \<open>STop\<close>
+  here documents current behavior: routing each name to the one component
+  that actually tracks it, instead of joining both unconditionally, would
+  change this value, so this regression makes that change visible rather
+  than silent.
+\<close>
+
+lemma state_wiring_ex_sign_at_check:
+  "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
+                             (analyse_with_state Sign_Analysis state_wiring_ex_prog))
+    in f (STR ''x'')) = SignValue STop"
+  by eval
+
+lemma state_wiring_ex_interval_at_check:
+  "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
+                             (analyse_with_state Interval_Analysis state_wiring_ex_prog))
+    in f (STR ''x'')) = IntervalValue (Ivl (Fin 5) (Fin 5))"
+  by eval
+
+text \<open>
+  Root-cause regression for the Sign native D/G pipeline's precision loss on
+  every untouched local, pinned at its actual source rather than at the
+  final report. \<open>unit_step_st\<close> (\<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>),
+  which \<open>unit_dg_spec_st_for\<close> uses for every ordinary transfer step (nop,
+  assign, random, assume, enter), computes \<open>f (d \<squnion> g)\<close> before splitting the
+  result back into local/global halves: the local and global exec states are
+  joined \<^emph>\<open>before\<close> every single step's transfer runs, not only at calls.
+  Since the global/side exec state's own default value for a name it does
+  not track is \<open>STop\<close> (structurally, independent of whether the program
+  declares any \<open>global\<close> at all), any local variable not itself the target
+  of that exact step's write is joined against that \<open>STop\<close> default and
+  loses its prior value. An assignment's own kill-semantics hides this for
+  the variable it writes (\<open>x := 5\<close> sets \<open>x\<close> outright, independent of the
+  polluted input), which is why \<open>state_wiring_ex_prog\<close> above stayed
+  \<open>SPos\<close>-precise for Interval and reached exactly \<open>STop\<close> for Sign; it does
+  not hide for any other variable merely carried through an intervening
+  step. \<open>y := 1\<close> here never reads or writes \<open>x\<close>, and there is no call, no
+  global, and no widening --- yet \<open>x\<close> is \<open>STop\<close> by the check, confirming the
+  loss happens inside the transfer/combine layer itself, not in
+  \<open>analyse_sign_report_for_code\<close>'s later readback join.
+\<close>
+
+definition no_call_two_step_prog :: imp_prog where
+  "no_call_two_step_prog =
+     program {
+       void main() {
+         x := 5;
+         y := 1;
+         __voblint_check(0 < x)
+       }
+     }"
+
+lemma no_call_two_step_prog_unknown:
+  "analyse Sign_Analysis no_call_two_step_prog =
+     [(Statement 2, Less (N 0) (V (STR ''x'')), Check_Unknown)]"
+  by eval
+
+lemma no_call_two_step_prog_locals_top:
+  "fun_of_exec_dg_st_for (declared_global no_call_two_step_prog)
+     (locals (snd (analyse_sign_for (declared_global no_call_two_step_prog)
+       no_call_two_step_prog) (Inl (Statement 2, ())))) (STR ''x'') = STop"
+  by eval
+
+text \<open>
+  The same loss reappears, unsurprisingly, across an actual call boundary:
+  \<open>foo\<close> neither reads nor writes the caller-local \<open>x\<close>, yet \<open>x\<close> is \<open>STop\<close> at
+  every check after the call, for exactly the same reason (the call's own
+  combine step, \<open>unit_combine_step_st_env\<close>, joins each side against \<open>g\<close>
+  before splitting again). Kept as a second, more realistic witness
+  alongside \<open>no_call_two_step_prog_locals_top\<close>, which isolates the same
+  mechanism without any interprocedural machinery at all.
+\<close>
+
+definition dg_probe_prog :: imp_prog where
+  "dg_probe_prog =
+     program {
+       global g;
+       void foo() {
+         g := 5;
+         return 2
+       }
+       void main() {
+         x := 1;
+         y := foo();
+         __voblint_check(0 < x);
+         __voblint_check(0 < g);
+         __voblint_check(0 < y)
+       }
+     }"
+
+lemma dg_probe_prog_all_unknown:
+  "analyse Sign_Analysis dg_probe_prog =
+     [(Statement 5, Less (N 0) (V (STR ''x'')), Check_Unknown),
+      (Statement 6, Less (N 0) (V (STR ''g'')), Check_Unknown),
+      (Statement 7, Less (N 0) (V (STR ''y'')), Check_Unknown)]"
   by eval
 
 end

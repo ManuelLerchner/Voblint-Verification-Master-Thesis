@@ -1,6 +1,9 @@
 {-# LANGUAGE EmptyDataDecls, RankNTypes, ScopedTypeVariables #-}
 
-module Interval(analyse_interval_td_report) where {
+module
+  Interval(Ivl, analyse_interval_td_report,
+            analyse_interval_td_report_with_state)
+  where {
 
 import Prelude ((==), (/=), (<), (<=), (>=), (>), (+), (-), (*), (/), (**),
   (>>=), (>>), (=<<), (&&), (||), (^), (^^), (.), ($), ($!), (++), (!!), Eq,
@@ -424,5 +427,25 @@ analyse_interval_td_report ::
   Core.Imp_prog_ext () -> [(Core.Cfg_node, (Core.Bexp, Core.Check_result))];
 analyse_interval_td_report p =
   interval_td_check_report (Core.declared_global p) Core.prog_main_name p;
+
+interval_td_check_report_with_state ::
+  (String -> Bool) ->
+    String ->
+      Core.Imp_prog_ext () ->
+        [(Core.Cfg_node, (Core.Bexp, (Core.Check_result, String -> Ivl)))];
+interval_td_check_report_with_state gs mnm p =
+  let {
+    raw = analyse_interval_td_raw gs (Core.prog_table p) (Core.prog_procs p) mnm
+            (Core.prog_main p);
+  } in Core.classify_checks_with_state (Core.prog_cfg mnm p)
+         (Core.side_env (Core.fun_of_resolved_st_q_for gs . raw))
+         interval_classify_check;
+
+analyse_interval_td_report_with_state ::
+  Core.Imp_prog_ext () ->
+    [(Core.Cfg_node, (Core.Bexp, (Core.Check_result, String -> Ivl)))];
+analyse_interval_td_report_with_state p =
+  interval_td_check_report_with_state (Core.declared_global p)
+    Core.prog_main_name p;
 
 }

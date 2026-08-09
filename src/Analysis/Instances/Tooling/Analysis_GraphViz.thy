@@ -65,13 +65,29 @@ fun graphviz_html_text :: "string \<Rightarrow> string" where
      else if ch = CHR 0x3E then ''&gt;''
      else [ch]) @ graphviz_html_text rest"
 
+text \<open>
+  A line not terminated by its own \<^term>\<open>CHR 0x0A\<close> never gets the
+  \<open><BR ALIGN="LEFT"/>\<close> \<^const>\<open>graphviz_html_text\<close> emits for embedded
+  newlines, and Graphviz then renders that final line centered instead of
+  inheriting the cell's own \<open>ALIGN="LEFT"\<close> --- a documented HTML-label
+  quirk, not a property of well-formed DOT. Appending exactly one trailing
+  newline when \<open>src\<close> lacks one, idempotent when it already has one, gives
+  every line including the last its own \<open>BR\<close> and so its own alignment.
+\<close>
+
+definition ensure_trailing_nl :: "string \<Rightarrow> string" where
+  "ensure_trailing_nl src =
+    (case rev src of
+       [] \<Rightarrow> nl
+     | (ch # _) \<Rightarrow> if ch = CHR 0x0A then src else src @ nl)"
+
 definition source_html_label :: "string \<Rightarrow> string" where
   "source_html_label src =
     ''<<TABLE BORDER='' @ dq @ ''1'' @ dq @ '' CELLBORDER='' @ dq @ ''0'' @ dq    @ '' CELLPADDING='' @ dq @ ''8'' @ dq
     @ ''><TR><TD ALIGN='' @ dq @ ''LEFT'' @ dq @ '' WIDTH='' @ dq @ ''260'' @ dq
     @ '' FIXEDSIZE='' @ dq @ ''FALSE'' @ dq
     @ ''><FONT FACE='' @ dq @ ''Menlo'' @ dq @ '' POINT-SIZE='' @ dq @ ''10'' @ dq
-    @ ''>'' @ graphviz_html_text src @ ''</FONT></TD></TR></TABLE>>''"
+    @ ''>'' @ graphviz_html_text (ensure_trailing_nl src) @ ''</FONT></TD></TR></TABLE>>''"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
   "proc_entry_pps_list g =
@@ -510,13 +526,53 @@ definition graphviz_point_label :: "cfg \<Rightarrow> pp \<Rightarrow> string" w
     | FunctionResult owner \<Rightarrow> ''exit_'' @ String.explode owner
     | Statement _ \<Rightarrow> string_of_cfg_node p)"
 
-definition contextual_node_label ::
+text \<open>
+  The inverse of \<^const>\<open>join_gv_nl\<close>: splits a string joined with the
+  literal \<open>\n\<close> separator back into its original lines. A caller with
+  multi-line content to attach as one \<^typ>\<open>graphviz_node_annotation\<close>
+  (a single flat \<^const>\<open>annotation_label\<close> string, by design, so the
+  renderer stays agnostic to what any particular annotation means) already
+  joins it with \<^const>\<open>join_gv_nl\<close> --- the same convention the per-node
+  label-line builder below uses. DOT rendering consumes that joined form
+  directly; the canonical snapshot needs the lines apart again, hence this
+  being used only there.
+\<close>
+
+text \<open>
+  Matches \<^const>\<open>graphviz_html_text\<close>'s idiom of comparing characters with
+  \<open>=\<close> rather than pattern-matching a literal \<open>CHR\<close> value on a \<open>fun\<close>
+  equation's left-hand side --- \<open>HOL-Library.Code_Abstract_Char\<close> (pulled
+  in for this session's OCaml/Haskell code generation) represents \<^typ>\<open>char\<close>
+  abstractly for the code generator, which then rejects a literal-\<open>CHR\<close>
+  pattern as "not a constructor". An equality test in the body has no such
+  restriction.
+\<close>
+
+fun split_gv_nl_acc :: "string \<Rightarrow> string \<Rightarrow> string list" where
+  "split_gv_nl_acc acc [] = [rev acc]"
+| "split_gv_nl_acc acc [ch] = [rev (ch # acc)]"
+| "split_gv_nl_acc acc (ch1 # ch2 # rest) =
+    (if ch1 = CHR 0x5C \<and> ch2 = CHR 0x6E
+     then rev acc # split_gv_nl_acc [] rest
+     else split_gv_nl_acc (ch1 # acc) (ch2 # rest))"
+
+definition split_gv_nl :: "string \<Rightarrow> string list" where
+  "split_gv_nl s = split_gv_nl_acc [] s"
+
+text \<open>
+  The per-node label as a line list, before \<^const>\<open>join_gv_nl\<close> escapes it
+  into one DOT-attribute string. Factored out so a non-DOT renderer (the
+  canonical regression snapshot, below) can walk the same lines without
+  re-deriving them from escaped DOT text.
+\<close>
+
+definition contextual_node_label_lines ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
-    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
-  "contextual_node_label cfg g sol n =
+    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string list" where
+  "contextual_node_label_lines cfg g sol n =
     (case n of
-      LocalNode p ctx \<Rightarrow> join_gv_nl
-        (graphviz_point_label g p #
+      LocalNode p ctx \<Rightarrow>
+        graphviz_point_label g p #
           show_local cfg p ctx (locals_for_pp cfg p)
             (local_of cfg (sol (Inl (p, ctx))))
           @ (case return_slot_for_pp cfg p of None \<Rightarrow> []
@@ -525,10 +581,15 @@ definition contextual_node_label ::
           @ (case node_annotation cfg p of
               None \<Rightarrow> []
             | Some ann \<Rightarrow>
-                if annotation_label ann = '''' then [] else [annotation_label ann]))
-    | GlobalNode k \<Rightarrow> join_gv_nl
-        (show_global_key cfg k # show_global cfg k (globals_to_show cfg) (sol (Inr k)))
-    | SourceNode src \<Rightarrow> src)"
+                if annotation_label ann = '''' then [] else split_gv_nl (annotation_label ann))
+    | GlobalNode k \<Rightarrow>
+        show_global_key cfg k # show_global cfg k (globals_to_show cfg) (sol (Inr k))
+    | SourceNode src \<Rightarrow> [src])"
+
+definition contextual_node_label ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
+    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
+  "contextual_node_label cfg g sol n = join_gv_nl (contextual_node_label_lines cfg g sol n)"
 
 definition analysis_node_attrs ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
@@ -580,6 +641,28 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
         @ ''resume-site'' @ dq
     | GlobalReadEdge \<Rightarrow> ''style=dotted,color=gray,label='' @ dq @ ''read global'' @ dq
     | GlobalWriteEdge \<Rightarrow> ''style=dotted,color=gray,label='' @ dq @ ''write global'' @ dq)"
+
+text \<open>
+  A DOT-independent counterpart to \<^const>\<open>analysis_edge_attrs\<close>: the same
+  semantic content (call arguments, combine-slot naming, edge role) without
+  DOT's own color/style/\<open>label=\<close> syntax, for the canonical regression
+  snapshot below.
+\<close>
+
+definition canonical_edge_kind_text :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> string" where
+  "canonical_edge_kind_text g kind =
+    (case kind of
+      IntraEdge a \<Rightarrow> source_action_label g a
+    | EnterEdge callee a \<Rightarrow> ''enter '' @ callee @ ''(''
+        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')''
+    | CombineEdge call dst ret \<Rightarrow> ''combine''
+        @ (case (dst, ret) of
+             (Some x, Some r) \<Rightarrow> '' '' @ String.explode x @ '' := '' @ String.explode r
+           | (Some x, None) \<Rightarrow> '' '' @ String.explode x
+           | (None, _) \<Rightarrow> '''')
+    | CallToReturnEdge callee \<Rightarrow> ''call-to-return '' @ String.explode callee
+    | GlobalReadEdge \<Rightarrow> ''read global''
+    | GlobalWriteEdge \<Rightarrow> ''write global'')"
 
 definition analysis_cluster_label ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'g) analysis_cluster \<Rightarrow> string" where
@@ -639,6 +722,65 @@ definition contextual_analysis_dot ::
   "contextual_analysis_dot cfg g domain sol =
     analysis_graph_to_dot cfg g sol (build_analysis_graph cfg g domain sol)"
 
+section \<open>Canonical, DOT-independent regression snapshot\<close>
+
+text \<open>
+  A deterministic textual snapshot of an \<^type>\<open>analysis_graph\<close>, for
+  regression fixtures: unlike \<^const>\<open>analysis_graph_to_dot\<close>, it carries no
+  GraphViz styling/color/shape syntax, so a fixture only regresses on the
+  graph's actual structure and content (clusters, node labels, check
+  verdicts, abstract states, edge roles) and not on presentation choices
+  that \<^const>\<open>analysis_graph_to_dot\<close>'s own DOT-specific tests already
+  cover. Node/cluster identifiers reuse \<^const>\<open>analysis_node_id\<close>/
+  \<^const>\<open>analysis_cluster_id\<close> rather than a second numbering scheme, so a
+  snapshot and its DOT rendering stay cross-referenceable. Ordering is the
+  same deterministic insertion order \<^const>\<open>build_analysis_graph\<close> already
+  establishes (list position, not a fresh sort) --- sorting here would
+  paper over a real ordering regression in graph construction rather than
+  catch it. The one omission is \<^const>\<open>SourceNode\<close>/\<^const>\<open>SourceCluster\<close>:
+  the embedded pretty-printed program text is presentation convenience
+  (the \<open>.vimp\<close> fixture already has that text), not graph structure.
+\<close>
+
+definition canonical_node_block ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
+    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_node list
+    \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
+  "canonical_node_block cfg g sol ns n =
+    (case contextual_node_label_lines cfg g sol n of
+       [] \<Rightarrow> ''  '' @ analysis_node_id cfg ns n @ '':'' @ nl
+     | (first # rest) \<Rightarrow>
+         ''  '' @ analysis_node_id cfg ns n @ '': '' @ first @ nl
+           @ concat (map (\<lambda>line. ''      '' @ line @ nl) rest))"
+
+definition analysis_graph_to_canonical_text ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
+    \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> ('ctx, 'g) analysis_graph \<Rightarrow> string" where
+  "analysis_graph_to_canonical_text cfg g sol graph =
+    (case graph of (clusters, ns, es) \<Rightarrow>
+      (let clusters' = filter (\<lambda>c. c \<noteq> SourceCluster) clusters;
+           ns' = filter (\<lambda>n. case n of SourceNode _ \<Rightarrow> False | _ \<Rightarrow> True) ns
+       in
+        ''clusters:'' @ nl
+        @ concat (map (\<lambda>c.
+            ''  '' @ analysis_cluster_id clusters c @ '':'' @ nl
+              @ concat (map (\<lambda>n. ''    '' @ analysis_node_id cfg ns n @ nl)
+                  (analysis_nodes_in_cluster cfg c ns))) clusters')
+        @ nl
+        @ ''nodes:'' @ nl
+        @ concat (map (canonical_node_block cfg g sol ns) ns')
+        @ nl
+        @ ''edges:'' @ nl
+        @ concat (map (\<lambda>(src, kind, dst).
+            ''  '' @ analysis_node_id cfg ns src @ '' -> '' @ analysis_node_id cfg ns dst
+              @ '': '' @ canonical_edge_kind_text g kind @ nl) es)))"
+
+definition contextual_analysis_canonical_text ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg
+    \<Rightarrow> ((pp \<times> 'ctx) + 'g) list \<Rightarrow> (pp \<times> 'ctx + 'g \<Rightarrow> 'a) \<Rightarrow> string" where
+  "contextual_analysis_canonical_text cfg g domain sol =
+    analysis_graph_to_canonical_text cfg g sol (build_analysis_graph cfg g domain sol)"
+
 definition raw_cfg_graph_config ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
@@ -657,7 +799,7 @@ definition raw_cfg_graph_config ::
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main),
+      source_text = Some (pretty_string_of_program \<Pi> ps main []),
       node_annotation = annotate
     \<rparr>"
 
@@ -674,6 +816,20 @@ definition raw_cfg_dot_lit ::
     \<Rightarrow> String.literal" where
   "raw_cfg_dot_lit \<Pi> ps mnm main annotate =
     String.implode (raw_cfg_dot \<Pi> ps mnm main annotate)"
+
+definition raw_cfg_canonical_text ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
+  "raw_cfg_canonical_text \<Pi> ps mnm main annotate =
+    (let g = compile_prog \<Pi> ps mnm main;
+         cfg = raw_cfg_graph_config \<Pi> ps mnm main annotate;
+         domain = contextual_graph_domain g (\<lambda>_. [()])
+     in contextual_analysis_canonical_text cfg g domain (\<lambda>_. ()))"
+
+definition raw_cfg_canonical_text_lit ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
+    \<Rightarrow> String.literal" where
+  "raw_cfg_canonical_text_lit \<Pi> ps mnm main annotate =
+    String.implode (raw_cfg_canonical_text \<Pi> ps mnm main annotate)"
 
 section \<open>Textual check report\<close>
 

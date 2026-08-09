@@ -81,6 +81,66 @@ relation and use `FunctionEntry` and `FunctionResult` nodes. Concrete transfer
 primitives live in `src/CFG/CFG_Transfer.thy`; activation-local semantics live
 under `src/CFG/Collecting/`.
 
+## VIMP grammar pipeline
+
+`grammar/vimp.yaml` is the sole source of truth for VIMP syntax. Two
+generators realize it for two unrelated parser targets:
+
+```text
+grammar/vimp.yaml
+       |
+       +-- scripts/gen_vimp_menhir.py   -> cli/vimp_parser.mly, cli/vimp_lexer.mll
+       +-- scripts/gen_vimp_isabelle.py -> src/VIMP/VIMP_Grammar_Generated.thy
+```
+
+Two generators exist because the two consumers have unrelated parser
+infrastructures -- Menhir/ocamllex for the CLI frontend, Isabelle mixfix
+syntax and `parse_translation` for `VIMP_Grammar_Generated.thy` (imported by
+`VIMP_Notation.thy`) -- and neither can express the other's grammar format.
+Each generator handles its own target-specific realization of the one
+canonical grammar: e.g. Isabelle numeral decoding, zero-argument call
+productions, and workarounds for `Num.num` having no `0`/`1` literal on the
+Isabelle side; `%left`/`%right` precedence declarations on the Menhir side.
+These realizations do not make `grammar/vimp.yaml` non-canonical, and none of
+them may introduce grammar shape (new productions, new precedence) that the
+other generator does not also realize.
+
+This whole pipeline sits **outside the proved pipeline** and is **untrusted
+code**: no soundness theorem covers lexing or parsing. The proved chain
+(Project contract, above) starts at an already-constructed VIMP AST
+(`imp_prog`); how that AST was produced -- CLI frontend, `ast_driver`, by
+hand -- is irrelevant to any soundness theorem. Confidence in the generated
+parsers instead comes from process, not proof: one canonical grammar,
+deterministic generation with a drift check, the `.vimp` regression corpus,
+AST round-trip and print-stability checks, and Hypothesis-based parser
+fuzzing under `tests/property/`. A `lefthook` pre-commit hook (`.lefthook.yaml`,
+installed by `./scripts/setup.sh` or `pixi run lefthook-install`) regenerates
+both grammar artifacts and blocks the commit if that leaves the working tree
+dirty, so the drift check runs locally, not only in CI.
+
+When changing VIMP syntax:
+
+1. Edit `grammar/vimp.yaml` only.
+2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
+   `src/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
+3. Regenerate: `pixi run gen-grammar-menhir` (Menhir/ocamllex) and
+   `pixi run gen-grammar-isabelle` (Isabelle); load the regenerated
+   `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
+   rules below, not a host editor. (The pre-commit hook does this
+   automatically; this step is for regenerating before that point.)
+4. Update or add fixtures in the `.vimp` regression corpus and, if the
+   change affects generation strategies, `tests/property/strategies.py`.
+5. Run the property-test suite (`pixi run property`).
+6. Run `pixi run grammar-check` (regenerates both frontends and fails on
+   any diff) and `AFP=/path/to/afp/thys pixi run codegen-check`.
+7. Run the Isabelle batch build (`AFP=/path/to/afp/thys pixi run build`) if
+   generated syntax changed.
+
+`prog_main`'s separate HOL representation (`imp_prog`'s dedicated
+`prog_main :: com` field, instead of folding `main` into `proc_rep` as an
+ordinary entry) is a settled representation choice documented inline in
+`grammar/vimp.yaml`'s comments, not part of this grammar migration.
+
 ## Theory-file boundary
 
 Never use host filesystem read or edit tools on tracked `.thy` files. Isabelle/

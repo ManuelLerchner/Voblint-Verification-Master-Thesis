@@ -12,11 +12,12 @@ docs/html/
 
 # IDEs / editors
 .cursor/
-.vscode/
 
 # Python
 __pycache__/
-.venv/
+
+# pixi
+.pixi/
 
 # Local OS files
 .DS_Store
