@@ -31,7 +31,7 @@ sound_domain   = fixes gamma + gamma_bot + gamma_mono
 A domain author must additionally supply, today:
 
 | # | Obligation | Where | On soundness path? |
-|---|------------|-------|--------------------|
+| --- | ------------ | ------- | -------------------- |
 | 1 | `bounded_semilattice_sup_bot` instances | `Sign_Domain.thy:200-235` | yes (the carrier) |
 | 2 | `gamma` + `gamma_bot`/`gamma_mono` (`sound_domain`) | `:241-246` | yes |
 | 3 | `widen` + `widen_ub1`/`widen_ub2` (`abstract_domain`) | `:239-254` | **no** |

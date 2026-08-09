@@ -872,7 +872,7 @@ this the same way they already do on `ivl st`/`sign st`.
 ### 4. Scope comparison
 
 | | Minimal executable (this design) | Goblint-compatible octagon | Apron-style octagon |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **DG-framework cost** (`sound_dg_spec` itself) | None — interpreted as-is | None — same locale, same four obligations | None — same locale, same four obligations |
 | **Abstract-domain math** | Small: no closure, `sup=max`, bounded case-split transfers, conservative combine | Large: real closure (Floyd-Warshall-style shortest-path over the doubled graph), Miné's full transfer-function case table for precision, closure soundness *and* completeness proofs — "no reusable Isabelle prior art... mechanization from scratch" (epic #25's own words) | Not internal — trust question instead: either reduces to the "Goblint-compatible" column's math (if reimplemented natively) or requires inventing a certifying-oracle trust architecture around the real C library (Verasco-style a-posteriori certificate checking) |
 | **Executable representation** | Small: one-default finite map, same recipe as `Exec_St.thy`, reused not reinvented | Moderate: the closure algorithm itself must be implemented and shown computable (efficiency still not required, but the algorithm is real work either way) | Either the "Goblint-compatible" column's cost, or FFI/external-library integration entirely outside Isabelle's code generator's normal scope — categorically different engineering, not "more of the same" |
@@ -1016,7 +1016,7 @@ precise *cases*, never change the soundness argument for the existing ones.
 ### 5. Expected proof obligations
 
 | Obligation | Count | Difficulty |
-|---|---|---|
+| --- | --- | --- |
 | `eint :: bounded_semilattice_sup_bot` instance | 1 instantiation, ~4 small lemmas | Easy — standard `linorder`-derived facts |
 | `gamma_entry` mono / `Fin`-case sup-soundness | ~3 lemmas | Easy — one arithmetic inequality each |
 | `gammaDG_oct` mono / bot / sup-ub (×2 for `'D`,`'G`) | ~4 lemmas | Easy — same `le_fun_def`/`sup_fun_def` unfold-and-`blast` pattern as `gamma_state_mono` |
@@ -1034,7 +1034,7 @@ no single obligation here is harder than what `Sign_Transfer.thy`/
 ### 6. Estimated implementation size
 
 | File (new) | Role | Rough size (comparable existing file) |
-|---|---|---|
+| --- | --- | --- |
 | `Rel_Octagon_Domain.thy` | `oct` type, lattice instance, `gamma`, `dgs_*`, `sound_dg_spec` interpretation | ~200-300 lines (cf. `Sign_Transfer.thy`) |
 | `Rel_Octagon_Exec.thy` | `oct_st`, `lift_definition`s, commute lemmas | ~150-250 lines (cf. `Ivl_Exec.thy`) |
 | `Example_Octagon_DG_Flagship.thy` | one worked end-to-end example | ~50-100 lines (cf. `Example_Interval_DG_Flagship.thy`) |

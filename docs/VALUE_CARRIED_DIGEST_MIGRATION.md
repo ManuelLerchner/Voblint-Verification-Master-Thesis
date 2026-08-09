@@ -30,19 +30,23 @@ supplied by hand.
 ## 1. Where `reader_digest` is fixed, passed, consumed  [verified]
 
 - **Fixed**: locale `digest_global_read` (`src/Analysis/Generic/Solver/Digest_Global_Read.thy:69`)
+
   ```isabelle
   locale digest_global_read =
     fixes reader_digest :: "pp ⇒ 'c ⇒ 'd"
       and compatible    :: "'d ⇒ 'g::finite ⇒ bool"
   begin
   ```
+
   **The locale has no `assumes`** — `reader_digest` is entirely unconstrained. [verified,
   `:69-72`]
 - **Consumed**: only inside `obs_digest` (`:83`):
+
   ```isabelle
   obs_digest σ p = σ (Inl p)
                  ⊔ glob_env_cmp (λ_ g. compatible (reader_digest (fst p) (snd p)) g) (snd p) σ
   ```
+
   Every downstream theorem (`combine_read_obs`, `post_fixpoint_sound_obs_digest`,
   `obs_digest_collect_ctx_sound`, and the RD wrappers in `Reaching_Defs.thy`) sees
   `reader_digest` **only** through `obs_digest`. [verified, grep of all `reader_digest`/
@@ -99,7 +103,7 @@ So the projection `π(σ(Inl(v,ctx)))` can only read a **local** coordinate of `
 global coordinate is `bot` there. This drives the extension choice:
 
 | Design | What carries the digest | Domain change | First-example fit |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **P — ghost local var** | a designated **local** name (e.g. `"mode"`) whose `'a`-value encodes the digest | **none** (rides existing `'a`) | mode ∈ {0,1} encodes as `SZero`/`SPos` in `sign` |
 | **Q — product value** | enrich `'a` to `'a × 'dig` (or unknown codomain to `'a abs_state × 'dig`) | domain typeclass + transfer + bridge + gamma | locksets, richer digests |
 
@@ -163,7 +167,7 @@ state-dependent write key + compatibility, with zero domain-type work.
 ## 6. Mapping to Goblint  [verified-source where marked]
 
 | Goblint (`goblint/analyzer`) | This plan | Status |
-|---|---|---|
+| --- | --- | --- |
 | `context : man → fundec → D.t → C.t` (projection of `D` at calls) | `reader_digest v ctx := π(σ(Inl(v,ctx)))` (projection of `D`) | analogy [verified-source: `analyses.ml` Spec] |
 | `sideg : 'v → 'g → unit` | `Side k d` with `k` from the queried state (switching combine) | [verified `sideg`; verified switching machinery `:961`] |
 | global var `V.t` (`SpecSysVar`), thread-id / lockset partitioned in `basePriv` | `Inr partition_key`, `'g::finite` | [verified-source: `V : SpecSysVar`; partition wiring in `basePriv` noted, not line-quoted] |
@@ -181,6 +185,7 @@ Each stage: **goal → changes → obligations → exit criterion**. Stages are 
 existing `side_env_cmp` and RD spines stay batch-green throughout.
 
 ### Stage 0 — projection-reader feasibility gate (no new theory)
+
 - **Goal.** Promote §2 from [conjectured] to [verified].
 - **Changes.** None committed. I/Q-only: apply `obs_digest_collect_ctx_sound` on
   `kgen_solution` with a projection reader; inspect the residual premises.
@@ -190,6 +195,7 @@ existing `side_env_cmp` and RD spines stay batch-green throughout.
   typecheck, the whole plan needs a kernel touch — stop and reassess.**
 
 ### Stage 1 — the digest interface for a value projection (additive)
+
 - **Goal.** A named `compatible` + `reader_digest` for the mode digest, plus the collapse
   witness (as for the ctx and RD readers).
 - **Changes.** New theory `Value_Digest_Read.thy` (sibling of the RD scaffold in
@@ -201,6 +207,7 @@ existing `side_env_cmp` and RD spines stay batch-green throughout.
 - **Exit.** `Value_Digest_Read` I/Q-clean; `mode_obs` collapses correctly.
 
 ### Stage 2 — projection-reader collecting soundness (the core)
+
 - **Goal.** The value analogue of `reaching_def_collect_sound_*`: collecting soundness
   with `reader_digest = π(σ)`.
 - **Changes.** In `Value_Digest_Read.thy`, a theorem
@@ -224,6 +231,7 @@ existing `side_env_cmp` and RD spines stay batch-green throughout.
 - **Exit.** `mode_collect_sound` batch-green.
 
 ### Stage 3 — state-dependent write key (switching combine instance)
+
 - **Goal.** An executable generator that side-effects each global write to its mode
   partition, keyed from the writing state.
 - **Changes.** A `mode_switching_combine_st` (sibling of `kgen_combine_st`,
@@ -237,6 +245,7 @@ existing `side_env_cmp` and RD spines stay batch-green throughout.
   a mode program (`by eval`, mirror `kgen_runs`).
 
 ### Stage 4 — executable, sound end-to-end example
+
 - **Goal.** Replace the faked mode in `Example_Config_Mode_Digest_Precision.thy` with the
   real projection reader on the solved environment.
 - **Changes.** New `Example_Mode_Projection_Digest.thy`: solve the mode program (Stage 3),
@@ -249,6 +258,7 @@ existing `side_env_cmp` and RD spines stay batch-green throughout.
   checked, with **no hand-supplied reader**.
 
 ### Stage 5 (later) — Design Q for set-valued digests
+
 - **Goal.** Locksets / richer digests that `'a` cannot encode.
 - **Changes.** Product unknown codomain `'a abs_state × 'dig`: new `sound_domain` product
   instance, product transfer (`effectful_domain_transfer`), `Exec_St` code-gen, product
@@ -262,7 +272,7 @@ existing `side_env_cmp` and RD spines stay batch-green throughout.
 ## 8. Proof-obligation catalog (per the user's four)
 
 | Obligation | Where it lands | Status |
-|---|---|---|
+| --- | --- | --- |
 | **Monotonicity** | `decode`/`π` monotone; product `sup` (Stage 5) | mechanical for P [conjectured]; real for Q |
 | **Post-fixpoint soundness** | reused verbatim — `post_fixpoint_sound_obs_digest` swallows any `renv`; the reader change is invisible to the backbone (`Digest_Global_Read.thy:196`, one-line instantiation) | [verified reusable] |
 | **Compatibility correctness** | Stage 2, the load-bearing new proof — writes affecting `(v,ctx)` land in compatible partitions | [conjectured] |

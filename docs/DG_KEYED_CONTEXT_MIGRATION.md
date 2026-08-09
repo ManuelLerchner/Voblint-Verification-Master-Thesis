@@ -103,6 +103,7 @@ SNonNeg`) is proved `by eval` in both — same underlying slots, same result. Th
 reads separate the two contexts (`contexts_separated`) identically.
 
 ### Friction encountered
+
 * `sign_dg.dg_route` unusable (interpretation predates the definition) → route through
   `dg_D_c`; the endpoint follows suit.
 * I/Q stale constant table: after deleting a `definition`, textual references still

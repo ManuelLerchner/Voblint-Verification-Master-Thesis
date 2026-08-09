@@ -82,7 +82,7 @@ type ('d,'g,'c,'v) man = {
 We implement **`EqConstrSys`** with:
 
 | `EqConstrSys` | Our encoding |
-|---|---|
+| --- | --- |
 | `v = \`L of LVar.t \| \`G of GVar.t` | `pp + unit` |
 | `\`L (node, ctx)` | `Inl v : pp` (no context) |
 | `\`G gvar` | `Inr () : unit` — **single** global |
@@ -176,7 +176,7 @@ where
 The solver maintains two separate global unknowns:
 
 | Unknown | Call sites that contribute | Fixed-point value |
-|---|---|---|
+| --- | --- | --- |
 | `Inr "Gdata_flagpos"` | only when `Gflag = SPos` | `SPos` |
 | `Inr "Gdata_flagneg"` | only when `Gflag = SZero` | `SNeg` |
 
@@ -189,6 +189,7 @@ After `write_data(-17)`: combine picks up `Gdata_flagneg = SNeg`.
 
 `restrict_global(apply_tf tf a σ)` always fires exactly one `Side () contrib` into
 `Inr ()`. There is no way to:
+
 - Read one named global (`Gflag`) to decide which other global to write
 - Conditionally *skip* contributing (emit no `Side`)
 - Route to different target unknowns based on analysis state
@@ -410,7 +411,7 @@ The shim `pure_edge_tree` uses `'g = unit` (backward compat). New domains use
 ## 4. What stays unchanged
 
 | Component | Status |
-|---|---|
+| --- | --- |
 | Vendored `TD.TD_side` | **unchanged** — already handles arbitrary trees |
 | `TD_Side_IP_Interface`, `TD_Side_IP_Bounds`, `TD_Side_IP_Soundness` | **unchanged** |
 | CFG infrastructure, `compile_prog`, collecting semantics | **unchanged** |
@@ -424,7 +425,7 @@ The shim `pure_edge_tree` uses `'g = unit` (backward compat). New domains use
 ## 5. File change summary
 
 | File | Change |
-|---|---|
+| --- | --- |
 | `Strategy_Tree_Monad.thy` | **new** — `seqcomp_tree` + 3 key lemmas |
 | `Constraint_System.thy` | replace `domain_transfer` with `effectful_domain_transfer`; add `pure_edge_tree` shim; restate `sound_effectful_transfer` |
 | `TD_Side_IP_Tree.thy` | rewrite `side_rhs_fold_ip` using `seqcomp_tree`; restate `side_acc_ip_eff` |
@@ -444,7 +445,7 @@ The shim `pure_edge_tree` uses `'g = unit` (backward compat). New domains use
 **Total estimate: 3–5 weeks.**
 
 | Task | Effort | Risk |
-|---|---|---|
+| --- | --- | --- |
 | `seqcomp_tree` + `traverse_seqcomp` | 3–4 days | Low — structural induction |
 | `dep_aux_seqcomp` / `static_deps` | 3–4 days | **Medium** — key interaction with solver preconditions |
 | `effectful_domain_transfer` record + `apply_etf` | 1 day | Low |
@@ -475,7 +476,7 @@ this by construction in each domain's `effectful_domain_transfer` instantiation.
 After this migration, the mapping to Goblint is direct:
 
 | Goblint | Our Isabelle |
-|---|---|
+| --- | --- |
 | `EqConstrSys.system v get side` | `side_cfg_T_ip_eff g etf bot s0 : pp -> eqsT` |
 | `v = \`L node \| \`G gvar` | `pp + 'g` |
 | `get (\`L v)` | `QueryL v (λd. ...)` |
@@ -502,7 +503,7 @@ What landed and verified (`isabelle build` green for `Voblint_Analysis` +
 `Voblint_Formalization`, no `sorry`):
 
 | Piece | Location | Status |
-|---|---|---|
+| --- | --- | --- |
 | `seqcomp_tree` + `traverse_seqcomp` + `dep_aux_seqcomp` | `Strategy_Tree_Monad.thy` | **done** |
 | `seqcomp_mono` (bind preserves monotonicity) | `Strategy_Tree_Monad.thy` | **done** |
 | `static_deps` + `static_deps_seqcomp` (Step 5 dep machinery) | `Strategy_Tree_Monad.thy` | **done** |
@@ -607,7 +608,7 @@ examples now flow through the standalone effectful pipeline, with no reference t
 green, no `sorry`.
 
 | Piece | Location | Status |
-|---|---|---|
+| --- | --- | --- |
 | Eff dependency cone (`dep_side_rhs_tree_ip_eff_edge` / `_combine`, `ip_reaches_imp_trans_dep_or_eq_side_eff`, `side_ip_cone_in_vars_eff`) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
 | Eff exit pruning + entry seeding (`side_collect_sound_ip_exit_pruned_eff`, `s0_le_side_env_entry_ip_eff`) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
 | Executable standalone soundness `side_analyse_ip_eff_collect_sound_exit_pruned_gen` (interface from the per-tree mono/static contract, no pure shim) | `TD_Side_IP_Eff_Soundness.thy` | **done** |
@@ -633,7 +634,7 @@ and `sign_exec_sound_collecting` now draws its collecting soundness from
 three whole pure files were deleted, `Voblint_Formalization` builds green, no `sorry`:
 
 | Deleted | Was |
-|---|---|
+| --- | --- |
 | `TD_Side_IP_Soundness.thy` | pure IP collecting soundness: `side_collect_sound_ip_at` / `_exit_pruned`, `ip_reaches_imp_trans_dep_or_eq_side`, `side_ip_cone_in_vars`, `side_analyse_ip_collect_sound_exit_pruned` |
 | `TD_Side_IP_Interface.thy` | pure solver interface: `td_cfg_side_ip_solver` locale, `side_analyse_ip`, `side_cfg_ip_solve_dom`, `side_nu_at` / `side_stabl_at` / `side_env_at` |
 | `TD_Side_IP_Bounds.thy` | pure post-solution bounds (`apply_tf_combined_le_ip`, `combine_combined_le_ip`, the pure dependency-cone membership and entry-seeding lemmas) |
@@ -700,7 +701,7 @@ fixes a finite set of global-unknown *kinds*). The shim keeps `'g = unit`
 ### 9.3 New primitives (replace the hardcoded `Inr ()`)
 
 | Primitive | Definition | Role |
-|---|---|---|
+| --- | --- | --- |
 | `all_sides t sigma` | tree-recursive total of every `Side` contribution (`Side y d t -> d ⊔ all_sides t`) | finite by tree structure; replaces `sides_of_rhs t sigma (Inr ())` in `etf_full` |
 | `etf_full t sigma` | `traverse_rhs t sigma ⊔ all_sides t sigma` | full-store post-state; coincides with the current def at `'g = unit` |
 | `glob_env sigma` | `Finite_Set.fold (λg a. a ⊔ sigma (Inr g)) bot UNIV` | join of all named-global unknowns (matches the project's locked join convention) |

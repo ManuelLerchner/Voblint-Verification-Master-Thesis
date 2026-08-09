@@ -82,8 +82,7 @@ than at a locals-zeroed store with `p = 0`.
 
 ## Canonical activation-local traces
 
-
-## Relationship to Schwarz et al.
+## Relationship to Schwarz et al
 
 This redesign follows the semantic philosophy of Schwarz et al.: analyses are defined over a
 concrete local-trace semantics rather than over reconstructed global executions.
@@ -128,7 +127,6 @@ becomes its projection, and the existing backbone theorem is reproved over it. O
 stack-faithful source bridge, DG flagship, and deletion gate are satisfied, the old activation
 witness is removed. It is scaffolding, never a competing final foundation.
 
-
 For compiled IMP2 CFGs, `valid_ltr` is the planned canonical concrete semantics. Its values
 represent one activation and its concrete ancestry:
 
@@ -146,9 +144,9 @@ datatype ltr =
 
   Distinguish two invariants of `Call`, so the creation rule is not misread as a shape
   constraint:
-  * *Creation invariant*: a newly created activation has path `[(fe, se)]`, the single bound
+  - *Creation invariant*: a newly created activation has path `[(fe, se)]`, the single bound
     entry step produced by the `call` rule (`se = edge_step (EA_Enter ...) ...`).
-  * *Representation invariant*: subsequent intra transitions extend that path, so a valid `Call`
+  - *Representation invariant*: subsequent intra transitions extend that path, so a valid `Call`
     has a **non-empty** path whose head is the bound entry store — not necessarily a singleton.
 
   The Stage-1 theorem is the representation invariant (`valid_ltr_Call_path_nonempty`); the
@@ -156,12 +154,12 @@ datatype ltr =
   `call` rule as "every valid `Call` is a singleton" is the misreading this note prevents.
 - `Resume caller callee path` represents the caller activation continued past a completed call.
   Its fields carry distinct, load-bearing roles:
-  * `caller` — the **frozen caller at its call node**, exactly the value that spawned `callee`
+  - `caller` — the **frozen caller at its call node**, exactly the value that spawned `callee`
     (the same `caller` the `ret` rule read via `caller_of callee`); it is *not* the
     already-continued caller, and it may itself be a `Call` or a nested `Resume`;
-  * `callee` — the completed callee subtree (retained so `key` can read `key callee` for a
+  - `callee` — the completed callee subtree (retained so `key` can read `key callee` for a
     general `combc`);
-  * `path` — the caller's **continued** path: `path caller @ [(return_node, return_store)]`.
+  - `path` — the caller's **continued** path: `path caller @ [(return_node, return_store)]`.
   So the "continuation" of the caller lives in the `path` field, while the `caller` field stays
   the frozen snapshot. This is what lets `caller_of` descend the `caller` field to find the
   activation that spawned *this* caller: `caller_of (Resume caller _ _) = caller_of caller`.
@@ -370,7 +368,6 @@ semantics, and context-indexed collecting semantics are projections of this comm
 The broader graph-based collecting semantics is retained only for generic CFG records that
 need not satisfy procedural stack discipline.
 
-
 ## Concrete definition proposed for the implementation
 
 The following is the intended Isabelle-level shape. It is a design specification, not
@@ -565,6 +562,7 @@ is legitimate; the green DAG confirms no formal dependency on the retired witnes
 not, and need not, prove semantic equivalence.
 
 **What changed.**
+
 - `cfg_collect_ctx_act` is now defined in `CFG_Local_Trace` as the sink/key projection of
   `valid_ltr` (the Stage-2/3 `ltr_ctx_collect`, renamed to the public name; `combc` dropped). Single
   public collecting API; `cfg_collect_ctx_act_le_collect` retained.
@@ -595,7 +593,6 @@ This is the authoritative architectural document.
   code, not the planned semantic endpoint.
 - `PROOF_OVERVIEW.md` distinguishes the current batch-green path from this planned
   refoundation.
-
 
 ## Fresh-agent handoff
 

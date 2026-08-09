@@ -250,6 +250,7 @@ copy-paste like A/B — but the **derivation order and the glue lemmas** are a
 recipe.
 
 **Mechanism.** Two sub-options, in increasing ambition:
+
 1. Extract the reusable glue lemmas that are genuinely domain-agnostic (e.g. the
    `..._eq [simp]` `show_val` shape, the `sound_domain`→`abstract_domain` step) so
    both domains cite them instead of restating.

@@ -17,4 +17,3 @@ pstep → cstep → valid_ltr → cfg_collect_ctx_act → analysis
 The source proof is a decomposition of the concrete runtime stack into nested local activation
 traces. It does not widen `trace_witness_act`, introduce a parallel set collecting semantics,
 or restore `twf/twfr`.
-

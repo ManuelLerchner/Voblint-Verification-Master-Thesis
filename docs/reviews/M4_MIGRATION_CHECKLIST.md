@@ -685,7 +685,7 @@ risked not landing cleanly within this task's remaining scope. Deferred as a
 follow-up, not attempted; the two rewired files do not depend on it. If
 revisited: the target lemma is roughly `dep_aux sigma (side_cfg_T_eff_keyed_seed_trees
 pred_sel gkey edge_tree combine_tree enter_tree g bot0 s0d s0g (v, ctx)) \<subseteq>
-(Inl ` (fst ` set (pred_sel g v) \<union> ...)) \<union> {Inr (gkey ctx)}`, proved by
+(Inl` (fst `set (pred_sel g v) \<union> ...)) \<union> {Inr (gkey ctx)}`, proved by
 induction over `hook_trees g v`'s list (mirroring
 `dep_aux_side_rhs_fold_dg_commute`'s induction shape) given per-leaf `dep_aux`
 bounds on `edge_tree`/`combine_tree`/`enter_tree` (already available

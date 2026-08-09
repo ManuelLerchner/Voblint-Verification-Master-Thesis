@@ -188,11 +188,11 @@ Approach A (`TRACE_BASED_FORK_MIGRATION.md`) and Approach B are **computationall
 equivalent** for k-call-string digests. The difference is packaging:
 
 | | Approach A | Approach B |
-|---|---|---|
+| --- | --- | --- |
 | Unknown type | `(pp × call_string_k) + global` | `pp + global` |
 | Value type at each local unknown | `'a abs_state` | `call_string_k => 'a abs_state` |
 | History lives in | *unknown index* | *abstract value* |
-| TD_side unknown count | `|pp| × |call_strings|` | `|pp|` |
+| TD_side unknown count | ` | pp | × | call_strings | ` | ` | pp | ` |
 | TD_side value complexity | simple | richer (function type) |
 
 The `envd :: pp => call_string => abs_state` from Approach A and the
@@ -269,9 +269,11 @@ truncation consistency is the known-hard part.
 For `k = 0`, every call string is the empty string `[]`; `call_string_k_of t = []`
 for all `t`. Show that the `k = 0` instance reproduces `alpha_last` projected to
 the flat `env pp`:
+
 ```isabelle
 gamma_trace_k0 f = {t. last t ∈ gamma_state (f [])} = alpha_last_sound_set (f [])
 ```
+
 This confirms the generalization is conservative. Gate on this before S3.
 
 **S3 — Trace-valued constraint system.**

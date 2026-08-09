@@ -199,7 +199,7 @@ A is larger than "add a Sign call-string example." Concretely:
   `unit_dg_spec_st ivl_tf_st ivl_enter_st`, the `ivl_Hstep`/`ivl_Henter`/
   `ivl_Hcomb` executable-vs-abstract commuting lemmas, `cinit_ivl_st`) has
   no Sign counterpart yet. Building one is new domain engineering (transfer
-  + enter functions for Sign in both executable and abstract form, plus
+  - enter functions for Sign in both executable and abstract form, plus
   their soundness/commuting proofs), comparable in size to what already
   exists for Interval — not a small addition.
 - **`routed_context`'s own interpretation obligations are substantial**:
@@ -285,6 +285,7 @@ defines `cfg_pkg_dg`, proves `cfg_pkg_dg_threefold_mono`, interprets
 `TD_side_mono cfg_pkg_dg`, and exposes `stabl_at`/`nu_at`/`part_post_at`/
 `least_part_post_at` exactly like the flat interface does. Two proof
 patterns worth knowing for anyone extending this file:
+
 - The type variables `'d`/`'h` in the locale's `fixes` must carry their
   `bounded_semilattice_sup_bot` sort constraint at their *first* textual
   occurrence in the `fixes` list (on `route`'s and `cmb`'s types

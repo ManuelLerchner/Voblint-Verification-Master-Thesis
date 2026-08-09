@@ -96,7 +96,7 @@ the trace worlds.
 ## 2. Semantic comparison: `trace_witness` vs `valid_ltr`
 
 | Aspect | `trace_witness` (`CFG_Collect_Trace.thy:86`) | `valid_ltr` (`CFG_Local_Trace.thy:73`) |
-|---|---|---|
+| --- | --- | --- |
 | Carrier | `trace = store list` (flat) | `ltr = Root p \| Call caller p \| Resume caller callee p` |
 | Constructors | `entry`, `proc_entry`, `edge`, `combine` | `start` (Root), `intra` (extend), `call` (Call), `ret` (Resume) |
 | Call/return info | **flattened**: combine splices `tau @ tl rho @ [r]` into one store list; caller/callee identities lost | **explicit**: `Call` keeps the caller subtree; `Resume` keeps both caller and callee subtrees |
@@ -159,7 +159,7 @@ Unification is about the two *trace* worlds above it.
 Counts are files under `src/` mentioning the name (grep `-l | wc -l`).
 
 | Object | Def site | Files | Principal consumers / spine |
-|---|---|---:|---|
+| --- | --- | ---: | --- |
 | `cfg_collect` | `CFG_Collect.thy:169` | 46 | domain soundness, eqsys, both trace bridges, examples — the universal target |
 | `cfg_collect_ctx` | `CFG_Collect_Trace.thy:502` | 11 | DG read spine: `Ctx_Collect_Backbone`, `Clean_RRead_Sound`, `Digest_Global_Read`, `Value_Digest_Reader`, `TD_Side_Eff_Cmp_*`, `DG_Route_Soundness`, `Trace_Analysis_Sound` |
 | `cfg_collect_trace` | `CFG_Collect_Trace.thy:102` | 14 | `Trace_Analysis_Sound`, `Mixed_Flow_Sound`, `Sign_Exec_Sound`, many trace/digest examples |
@@ -181,7 +181,7 @@ duplication a unification removes.
 **Convenience vs semantic dependency:** `cfg_collect_trace` in the `Example_*`
 files is largely *witness/precision demonstration* (convenience). The
 semantically load-bearing consumers of the flat world are `Ctx_Collect_Backbone`
-+ `Trace_Analysis_Sound` + `Mixed_Flow_Sound`. Migrating those three is the real
+- `Trace_Analysis_Sound` + `Mixed_Flow_Sound`. Migrating those three is the real
 cost; the examples follow mechanically.
 
 ---
@@ -289,7 +289,7 @@ Concrete, independently actionable:
 ## 8. Public API intent
 
 | Interface | Audience | Level | Public? | Fate under Option B |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `cfg_collect` | domain/eqsys authors | over-approx target | **public** | unchanged |
 | `cfg_collect_ctx_act` | context-sensitive clients, source bridge | activation collecting | **public** | becomes `dg = key` instance, kept as abbreviation |
 | `cfg_collect_ctx` (`dg`/`cmp`) | DG read-soundness authors | general digest collecting | **public** | generalized to `dg :: ltr ⇒ 'c`, kept |

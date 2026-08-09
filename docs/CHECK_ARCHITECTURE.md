@@ -118,7 +118,7 @@ already proves once.
 They differ only in **which four query functions they feed in**:
 
 | | Sign (`Sign_Checks.thy`) | Interval (`Interval_Checks.thy`) |
-|---|---|---|
+| --- | --- | --- |
 | `less_true`/`less_false` | derived from `inv_less_sign` | specialized, compares interval bounds directly |
 | `eq_true`/`eq_false` | derived from `sign_less_false` / `meet_sign` | specialized, compares interval bounds directly |
 | Source | `Sign_Numeric_Queries.thy` | `Interval_Numeric_Queries.thy` |

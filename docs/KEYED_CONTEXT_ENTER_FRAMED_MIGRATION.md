@@ -37,8 +37,8 @@ The obvious fix — drop `EA_Enter` from the predecessor fold — **breaks
 soundness on its own.** `side_cfg_T_eff_cmp_collect_sound` discharges
 `post_fixpoint_sound_at_eff` (`TD_Side_Eff_Sound.thy`), whose `step_le`
 obligation quantifies over **every** edge, enter included (the collecting
-semantics threads `EA_Enter` via `edge_collect EA_Enter S = enter_state ` S`).
-Remove enter from the fold and the per-edge bound `side_cfg_T_eff_cmp_edge_le`
+semantics threads `EA_Enter` via `edge_collect EA_Enter S = enter_state` S`).
+Remove enter from the fold and the per-edge bound`side_cfg_T_eff_cmp_edge_le`
 loses its only proof route (`memtree`: the edge tree is a member of the fold).
 Nothing bounds the callee-entry node.
 
@@ -78,11 +78,13 @@ Four coordinated changes.
 1. **New contract — `sound_effectful_transfer_framed`** (`Constraint_System.thy`).
    Extends `sound_effectful_transfer` with a `fresh_frame` parameter and the
    upper bound
+
    ```
    etf_enter_framed_le:
      inr_slot_locals_bot σ ⟶ inl_slot_globals_bot σ ⟶
        etf_full (etf_enter etf u) σ ≤ fresh_frame ⊔ glob_env σ
    ```
+
    Companion invariant `inl_slot_globals_bot` (dual of the existing
    `inr_slot_locals_bot`): local unknowns carry `⊥` in their global components —
    true of the generator's solutions because every edge tree ends in a
@@ -94,10 +96,12 @@ Four coordinated changes.
    `Exec_Cmp_Bridge.thy`). The intra fold now runs over
    `non_enter_predecessor_list` (`CFG_Def.thy`), and frame-entry nodes seed
    `fresh_frame` into `acc0`:
+
    ```
    acc0 = (if v = cfg_entry g then bot0 ⊔ restrict_local s0 else bot0)
           ⊔ (if is_frame_entry g v then fresh_frame else ⊥)
    ```
+
    Callee-entry inflow now comes only from the `combine` edge (globals) plus the
    fresh-frame seed (locals).
 
@@ -128,6 +132,7 @@ Four coordinated changes.
 - **Executable precision restored.** `Example_Finite_Sign_Context_Analysis.thy`
   now proves, by `eval`, the separated result the finite context type always
   deserved:
+
   | slot | before | after |
   | --- | --- | --- |
   | `Inr GZero` `GH` | `SNonNeg` | **`SZero`** |

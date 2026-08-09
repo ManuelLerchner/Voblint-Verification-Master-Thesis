@@ -90,6 +90,7 @@ may side-effect globals. There is no separate effectful-analysis type. This is t
 thesis of Goblint's side-effecting constraint systems.
 
 **5. Does `sound_dg_spec` faithfully model this?** **Yes.**
+
 - D/G separation with a joint `gammaDG d g` matches E1/E2.
 - Side-effects are built into the interface, not bolted on: `dg_edge_tree` emits
   `Side () (DG bot (fst (step l g)))` (a global contribution) alongside

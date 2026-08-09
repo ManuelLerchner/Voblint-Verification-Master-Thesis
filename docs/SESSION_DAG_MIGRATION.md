@@ -137,7 +137,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 **In `Voblint_CFG` theories** — qualify IMP2 imports:
 
 | File | Import to change |
-|------|-----------------|
+| ------ | ----------------- |
 | `CFG_Def.thy` | `VIMP_Syntax` → `"Voblint_VIMP.VIMP_Syntax"` |
 | `VIMP_Proc_to_CFG.thy` | `VIMP_Proc` → `"Voblint_VIMP.VIMP_Proc"` |
 | `CFG_Collect_Edges.thy` | `VIMP_Expr`, `VIMP_Globals` → qualified |
@@ -147,7 +147,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 **In `Voblint_Analysis` theories** — qualify CFG + IMP2 imports:
 
 | File | Imports to change |
-|------|------------------|
+| ------ | ------------------ |
 | `Sign_Domain.thy` | `VIMP_Expr`, `VIMP_Globals` → qualified (IMP2) |
 | `Constraint_System.thy` | `CFG_Def`, `VIMP_Globals`, `VIMP_Expr` → qualified |
 | `Constraint_System_Sound.thy` | `CFG_Collect_Core` → `"Voblint_CFG.CFG_Collect_Core"` |
@@ -160,7 +160,7 @@ Every bare-name import that crosses a session boundary must become a qualified i
 **In `Voblint_Formalization` theories** — qualify Analysis + CFG imports:
 
 | File | Imports to change |
-|------|------------------|
+| ------ | ------------------ |
 | `Trace_IP_Analysis_Sound.thy` | `Analysis_Sound`, `CFG_Collect_Trace_IP` → qualified |
 | `Example_Proc_GraphViz.thy` | `CFG_GraphViz`, `VIMP_Proc_to_CFG` → qualified |
 | `Example_Side_Proc_Global.thy` | `Sign_Side_IP_Soundness`, `CFG_Collect_IP_Adeq` → qualified |
@@ -232,7 +232,7 @@ session Voblint_VIMP in "src/VIMP" = "HOL-IMP" +
 ## Expected build-time impact
 
 | Change | Before | After (estimate) |
-|--------|--------|-----------------|
+| -------- | -------- | ----------------- |
 | Touch `src/Domains/Sign_Domain.thy` | Full rebuild (all ~35 theories) | `Voblint_Analysis` + `Voblint_Formalization` only (~15 theories) |
 | Touch `src/VIMP/VIMP_Proc.thy` | Full rebuild | All 4 sessions (full rebuild — IMP2 is the root) |
 | Touch `src/Examples/Example_Side_Proc_Global.thy` | Full rebuild | `Voblint_Formalization` only (~5 theories) |

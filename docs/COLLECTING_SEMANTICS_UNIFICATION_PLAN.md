@@ -42,7 +42,7 @@ What the current proofs genuinely consume, separated from representation
 accidents:
 
 | Needed by some proof | Where it shows up | Carried by |
-|---|---|---|
+| --- | --- | --- |
 | CFG node reached | every collector's `node_of` | `sink_node` |
 | store reached | every collector's `store_of` | `sink_store` |
 | intra edge transfer | `EDGE`/`intra` obligations | `extend` step |
@@ -115,7 +115,7 @@ where
 Context policy becomes a **parameter** (`ctx_of`), instantiated three ways:
 
 | View | `ctx_of` | Result |
-|---|---|---|
+| --- | --- | --- |
 | plain collecting | `(λ_. ())` (trivial context) | `= cfg_collect` (after the reverse-inclusion lemma, §4) |
 | digest-keyed | `λt. dg (flatten t)`, filtered by `cmp` | replaces `cfg_collect_ctx` with full `dg` generality |
 | activation-keyed | `key enterc seedc` | `= cfg_collect_ctx_act` (unchanged) |
@@ -175,7 +175,7 @@ requires an induction lifting a store-reaching witness to a full activation tree
 Today there are **two parallel inductions proving the same theorem**:
 
 | Current backbone | Trace type | Statement |
-|---|---|---|
+| --- | --- | --- |
 | `ctx_collect_backbone` (`Ctx_Collect_Backbone.thy:123`) | flat `trace_witness` | `cfg_collect_ctx dg cmp g S v c ⊆ M (v,c)` |
 | `valid_ltr_ctx_sound` (`Activation_Local_Sound.thy:151`) → `activation_collect_sound` (`Activation_Backbone.thy:40`) | `valid_ltr` | `cfg_collect_ctx_act enterc seedc g S v c ⊆ ⟦sg (Inl (v,c))⟧` |
 
@@ -250,7 +250,7 @@ one `collect_by`; one `collect_by_sound`; `cfg_collect` kept as derived plain
 projection.
 
 | Metric | Outcome |
-|---|---|
+| --- | --- |
 | Final semantic concepts | **2 witnesses → 1** (`valid_ltr`); plus `cfg_collect` as a projection endpoint |
 | Collectors | 3 → **1 generic** + 3 abbreviations |
 | Backbones | 2 → **1** |
@@ -268,7 +268,7 @@ Introduce a fresh event sequence (call/return events + stores) and derive both
 `trace_witness` and `valid_ltr` from it.
 
 | Metric | Outcome |
-|---|---|
+| --- | --- |
 | Final semantic concepts | **3** during migration (old two + new), target 1 |
 | Definitions removed | eventually the old two, but only after two adequacy proofs |
 | Hard obligation | **two** encodings (event→flat, event→ltr) + two adequacy proofs, plus re-proving `key` and `dg` over events |
@@ -300,7 +300,7 @@ rewrite.**
 ## 9. Theorem / definition correspondence
 
 | Current | Target |
-|---|---|
+| --- | --- |
 | `cfg_collect_ctx_act enterc seedc` | `collect_by (valid_ltr) sink_node sink_store (key enterc seedc)` (abbrev, name kept) |
 | `cfg_collect_ctx dg cmp` | `collect_by (valid_ltr) sink_node sink_store (dg ∘ flatten)` + `cmp` filter |
 | `cfg_collect_trace` | retired (use `valid_ltr` + `flatten`) |
@@ -343,7 +343,7 @@ next begins.
 ## 11. Risks and fallback points
 
 | Risk | Stage | Fallback |
-|---|---|---|
+| --- | --- | --- |
 | `step_ctx` for `dg ∘ flatten` does not close (flat incremental step genuinely needs the flat splice) | 3 | **Stop at Checkpoint 2.** Activation spine is unified; keep the flat digest world as-is and document the split as intentional (the review's Option A). Still a net win: one backbone covers activation + plain. |
 | `flatten` adequacy is fiddly (combine splice mismatch) | 1 | Weaken to the one direction actually needed (`valid_ltr ⟹ trace_witness`); the reverse is never used. |
 | Reverse `cfg_collect` inclusion is hard/false | 6 | Skip — `cfg_collect` stays primitive-presented with the existing `⊆` bridge; no client cares. |

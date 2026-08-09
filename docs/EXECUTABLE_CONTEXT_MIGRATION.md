@@ -129,7 +129,7 @@ The runnable witness must be a *sound over-approximation*, not just a printout.
 Mirror the monovariant `_st` bridge (`fun_of_st_eq_side_cfg_T_eff_st`,
 `Exec_Bridge.thy:667`): prove the `_st` context generator's denotation maps, under
 `fun_of_st`, onto the abstract `side_cfg_T_eff_ctx` the soundness chain
-(`post_fixpoint_sound_at_ctx_semantic`) already covers — with `cmb = `
+(`post_fixpoint_sound_at_ctx_semantic`) already covers — with `cmb =`
 `unit_combine_tree_ctx_st ec` matching the abstract `unit_combine_tree_ctx ec`.
 
 **Acceptance:** a lemma connecting an executable post-solution of
@@ -209,7 +209,7 @@ warrowing side solver. Same standing assumption as the whole pipeline today.
    the executable abstract-value `ec` (full machine-checked soundness on the
    runnable instance), or keep soundness on the entry-store instance and treat E2
    as runnability-only? Trade: full re-instantiation = more proof, a `value_ctx_dg`
-   + its `DG_*`/`ENTER_MONO` discharge; runnability-only = faster, but the executed
+   - its `DG_*`/`ENTER_MONO` discharge; runnability-only = faster, but the executed
    numbers are not formally tied to the soundness theorem.
 2. **`ec` shape.** `ec ctx sc = sc` (full caller state as context) is simplest and
    separates; a projection (e.g. only the parameter/observed variables) gives a

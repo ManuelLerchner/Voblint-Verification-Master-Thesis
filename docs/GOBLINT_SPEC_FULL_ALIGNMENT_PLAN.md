@@ -407,7 +407,7 @@ For a post-thesis extension:
 ## Relationship to existing plans
 
 | Plan | Closes |
-|---|---|
+| --- | --- |
 | `EFFECTFUL_TF_MIGRATION.md` | Gaps 1–2 |
 | `ARRAY_SYNTAX_EXTENSION.md` | Array-only part of the source-language boundary |
 | `NONDET_HAVOC_MIGRATION.md` | Nondeterministic source expressions needed by relational examples |

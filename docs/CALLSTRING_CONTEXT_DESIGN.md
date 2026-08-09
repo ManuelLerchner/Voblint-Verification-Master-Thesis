@@ -402,9 +402,9 @@ claims:
 | `k` | What it gives | Cost |
 | --- | --- | --- |
 | `k = 0` | monovariant (flat) analysis, no context split | baseline |
-| `k = 1` | call-site sensitivity — exactly the existing `Example_Interval_DG_CallString.thy` | `O(|cfg_node|)` contexts |
-| `k = 2` | context sensitivity distinguishing one level of calling history | `O(|cfg_node|^2)` contexts |
-| `k > 2` | supported by the identical mechanism, no new proof needed | potentially exponential (`O(|cfg_node|^k)`), computationally expensive — not the intended operating range for this formalization's examples |
+| `k = 1` | call-site sensitivity — exactly the existing `Example_Interval_DG_CallString.thy` | `O( | cfg_node | )` contexts |
+| `k = 2` | context sensitivity distinguishing one level of calling history | `O( | cfg_node | ^2)` contexts |
+| `k > 2` | supported by the identical mechanism, no new proof needed | potentially exponential (`O( | cfg_node | ^k)`), computationally expensive — not the intended operating range for this formalization's examples |
 
 ## 6. Implementation plan
 

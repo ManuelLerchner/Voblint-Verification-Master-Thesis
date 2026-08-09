@@ -165,10 +165,10 @@ generator bounds proven earlier in the same file:
 
 | Base obligation | Discharged by | `file:line` [verified] |
 | --- | --- | --- |
-| intra edge  `apply_etf ≤ side_env … w`     | `side_cfg_T_eff_cmp_edge_le`    | `:300` (used `:1177`) |
-| `EA_Enter`  edge                            | `side_cfg_T_eff_cmp_enter_le`   | `:782` (used `:1172`) |
-| entry seed  `s0 ≤ side_env … entry`         | `s0_le_side_env_cmp_entry`      | `:1003` (used `:1187`) |
-| combine edge                                | `switching_combine_sound`       | `:1071` |
+| intra edge  `apply_etf ≤ side_env … w` | `side_cfg_T_eff_cmp_edge_le` | `:300` (used `:1177`) |
+| `EA_Enter`  edge | `side_cfg_T_eff_cmp_enter_le` | `:782` (used `:1172`) |
+| entry seed  `s0 ≤ side_env … entry` | `s0_le_side_env_cmp_entry` | `:1003` (used `:1187`) |
+| combine edge | `switching_combine_sound` | `:1071` |
 
 **So `ENTRY`/`EDGE` for `side_env_cmp` are already theorems**, not premises. The plain
 thesis theorems `trace_analysis_sound` / `reaching_global_read_sound`

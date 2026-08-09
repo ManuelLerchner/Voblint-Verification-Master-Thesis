@@ -85,12 +85,14 @@ Both are answered by reading the vendor's `part_post_solution` definition and th
 ## Phases
 
 ### Phase A --- Audit the coupling (0.5 day)
+
 Read `Constraint_System_Sound.thy`, `Analysis_Sound.thy`, `TD_Side_Eff_Interface.thy` and the
 vendor `part_post_solution` / `update_global` definitions. Deliverable: a precise statement of
 (a) exactly which lemmas mention `always_join` vs the generic predicate, and (b) resolutions to
 U1 and U2. This decides B and C scope before any proof.
 
 ### Phase B --- Warrowing as a sound feature (1-2 days, highest value)
+
 - Bridge a warrowing `part_post_solution` to the `n \<dots> (\<squnion>) \<dots>` hypothesis (U1 lemma).
 - Surface `side_sign_analysis_sound_warrow` and the interval analogue.
 - **Payoff:** a proven-sound analysis that *terminates* on unbounded loops. The interval
@@ -98,12 +100,14 @@ U1 and U2. This decides B and C scope before any proof.
   soundness-backed. This is the single most useful gap-closer toward real programs.
 
 ### Phase C --- Per-origin as a sound feature (2-3 days)
+
 - Resolve U2: either the vendor predicate already collapses on read (direct), or add the
   per-origin -> merged-join reduction lemma.
 - Surface per-origin sound corollaries. Certifies `iv_digest_per_origin_precise` and
   `iv_digest_across_update_rules`.
 
 ### Phase D --- Make the analyser update-rule-parametric (1 day)
+
 - Add an update-rule selector at the top-level analysis entry (a locale parameter or a small
   sum type `Join | PerOrigin | Warrow`), each with a sound-analysis corollary.
 - Back each `solver_menu` entry with its soundness theorem, so `run_menu` is certified, not
@@ -111,6 +115,7 @@ U1 and U2. This decides B and C scope before any proof.
 - Update `Analysis_Sound` README, `docs/NON_GOALS.md`, and this plan's status.
 
 ### Phase E --- Close P11 (stretch)
+
 Chase the `warrowing_per_origin` code-gen `Interrupt_Breakdown` (likely a missing code equation
 or a non-terminating narrowing over the per-origin map). Then one executable solve delivers
 *both* loop termination and a precise digest --- the currently-open combination.
@@ -127,11 +132,13 @@ or a non-terminating narrowing over the per-origin map). Then one executable sol
   non-theorem observation --- do not conflate.
 
 ## First concrete step
+
 Phase A: read `Constraint_System_Sound.thy` + the vendor `part_post_solution` /
 `update_global_warrowing` / `update_global_per_origin` definitions, and write the U1/U2
 resolutions here. Everything downstream keys off that.
 
 ## See also
+
 - `docs/OPEN_PROBLEMS.md` P11 (per-origin widening code-gen).
 - `src/Analysis/Generic/Solver/Exec/Solver_Menu.thy` (the executable menu this plan certifies).
 - `Exec_Ivl_Mode_Compiled_Run.thy`, `Exec_Ivl_Run.thy` (the eval-only witnesses to upgrade).

@@ -314,4 +314,3 @@ Choose **D**. Retain context-indexed unknowns and context-neutral local transfer
 They already provide real separation and useful precision. Unify the concrete
 `ctx_of` policy and abstract routing obligations behind one explicit lifecycle
 interface before treating generic context projection as the common architecture.
-

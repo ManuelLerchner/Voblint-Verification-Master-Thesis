@@ -109,6 +109,7 @@ site and read through a reaching-definition digest**, with contexts kept call-on
 ```
 side_env_cmp gcmp σ (v, ctx) = σ(Inl(v,ctx)) ⊔ glob_env_cmp gcmp ctx σ
 ```
+
 (`Global_Cmp_Read.thy:70`). Two independent facts combine:
 
 1. **Writer side.** The generator tags every global contribution with `gkey ctx`
@@ -178,21 +179,26 @@ key type, the sole kernel assumption. `writer_key` is **not** a read-interface
 parameter — no read or soundness theorem mentions it (validated: `obs_digest`
 expands to `reader_digest`/`compatible` only); it lives on the *write*/generator side
 (§ B1), supplied per instance.
+
 ```isabelle
 locale digest_global_read =
   fixes reader_digest :: "pp ⇒ 'c ⇒ 'd"           -- the reader's digest at a program point
     and compatible    :: "'d ⇒ 'g::finite ⇒ bool"  -- reader accepts writer key?
 ```
+
 Generator side (per instance, not in the kernel locale):
+
 ```isabelle
 writer_key :: "pp ⇒ vname ⇒ 'g"   -- tag a global write at (pp, var) with a writer key
 ```
 
 **The generic read** (replaces `side_env_cmp`):
+
 ```isabelle
 obs_digest σ (v, ctx)
    = σ (Inl (v, ctx))  ⊔  ⨆ { σ (Inr g) | compatible (reader_digest v ctx) g }
 ```
+
 i.e. `σ(Inl(v,ctx)) ⊔ glob_env_cmp (λ_ g. compatible (reader_digest v ctx) g) ctx σ`.
 Only `glob_env_cmp`'s filter argument changes; `glob_env_cmp` is reused unchanged — its
 filter argument is already free (`Global_Cmp_Read.thy:19`) [proven]. `obs_digest`
@@ -225,6 +231,7 @@ The current context-only read is the instance `writer_key _ _ = ctx`, `reader_di
 ctx = ctx`, `compatible = gcmp` — so `obs_digest` strictly generalizes `side_env_cmp`.
 
 Interactions (instance-independent unless noted):
+
 - **`route_read_cmp`** (R_read) — the routing read becomes digest-indexed too, so the
   callee context is routed from the exact per-point global. Context still computed at
   the call (call-only) [conjectured].
@@ -247,6 +254,7 @@ main:  G := 0;   (d1)      f();   -- call node 4
 ```
 
 **Current (writers keyed by context).**
+
 ```
 Inr(GOther) = SZero ⊔ SPos = SNonNeg     -- both writes, one slot, joined at publication
 read at node 4:  ... ⊔ Inr(GOther) = SNonNeg
@@ -254,6 +262,7 @@ read at node 7:  ... ⊔ Inr(GOther) = SNonNeg
 ```
 
 **New (writers keyed by def-site, reader by RD).**
+
 ```
 Inr(d1) = SZero        Inr(d3) = SPos        -- separate slots, no join at write time
 δ(node 4) = RD(G, node 4) = {d1}     ⇒  read = Inr(d1) = SZero
@@ -280,6 +289,7 @@ possible definitions of the globals the callee writes. Naive *intra*-procedural 
 unsound.
 
 **Definitions.**
+
 - **gen(n)** — the definitions created at node `n` (an assignment `G := e` gens its own
   def-site).
 - **kill(n)** — for a must-overwrite `G := e`, all other defs of `G` (same variable) are
@@ -288,11 +298,13 @@ unsound.
   predecessors `p`. Standard flow-sensitive dataflow.
 
 **Procedure summaries.** For each procedure `f` and global `G`:
+
 - `may_write(f, G)` — some path through `f` (incl. its callees) writes `G`.
 - `must_write(f, G)` — every path through `f` writes `G`.
 - `exit_defs(f, G)` — the def-sites of `G` live at `f`'s exit.
 
 **Call gen/kill (interprocedural).** At a call `f()` at node `n`, for each global `G`:
+
 - `must_write(f, G)`  → **kill** the caller's incoming defs of `G`, **gen**
   `exit_defs(f, G)`.
 - `may_write(f, G)` (not must) → **gen** `exit_defs(f, G)` **without kill** (union —
@@ -303,10 +315,12 @@ unsound.
 call's return site, so caller reads after the call see the callee's writes.
 
 **Counterexample — why interprocedural is required.**
+
 ```
 main:  G := 0;   (d1)      f();      GH := G     -- read here
 f:     G := 1    (d2)
 ```
+
 - *Naive intra RD:* ignores `f`, so `RD(G, GH:=G) = {d1}` → reads `SZero`. **Unsound**:
   the concrete value is `1` because `f` overwrote `G` [validated:
   `A_naive_misses_callee_write`, `A_naive_CMP_SOUND_fails`].
@@ -441,8 +455,8 @@ global-slots-⊤-on-locals invariant. Tracked under B2/A5, not a separate obstac
      concretely as `reach_sem rd_of dg cmp g S v ctx = ⋃ (rd_of \` reaching_compat dg
      cmp ctx g S v)` — the union of per-trace live def-sites over the digest-compatible
      reaching traces, the tightest sound reader. `reach_sem_admits` is soundness by
-     construction; `reach_sem_return_incl` reduces the may-def inclusion to a
-     per-combine trace-extension (`NOKILL`) condition; `reaching_def_collect_sound_sem`
+     construction; `reach_sem_return_incl`reduces the may-def inclusion to a
+     per-combine trace-extension (`NOKILL`) condition;`reaching_def_collect_sound_sem`
      is the end-to-end collecting theorem with the reader *concretely defined* and only
      `NOKILL` + `CMP_SOUND` left. The per-trace def-site map `rd_of` stays abstract
      (its tagging to concrete CFG assignments is the next B2 slice).
@@ -612,7 +626,7 @@ global-slots-⊤-on-locals invariant. Tracked under B2/A5, not a separate obstac
      needs no monotone (kill-free) reader — it is the exit-to-return inclusion, which the
      re-gen satisfies even when the caller inclusion fails under kill. The concrete witness
      `rd_collect_sound_witness` now routes through this generic theorem: `INL_GLOB_BOT_inst`
-     + `CALLEE_INCL_inst` (`rd_reach 5 = {DS3} ⊆ {DS3} = rd_reach 6`, holding despite the
+     - `CALLEE_INCL_inst` (`rd_reach 5 = {DS3} ⊆ {DS3} = rd_reach 6`, holding despite the
      `4↦{DS1}` kill) discharge the two premises, and the hand `CMP_SOUND_inst` is retired
      from the soundness path (kept only as standalone read-collapse evidence).
    - **[DEF-SITE SWITCHING COMBINE + TRANSPORT DONE — `Exec_Cmp_Bridge.thy`, batch-green]**

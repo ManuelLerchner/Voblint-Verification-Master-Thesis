@@ -8,6 +8,7 @@ Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in
 > **STATUS (batch-sealed, `Voblint_Formalization` build exit 0, no `sorry` in `src/`):**
 > The headline contribution is **DONE** — sound semantic entry-state context-sensitivity
 > with a machine-checked strict-precision witness.
+>
 > - **S0** — sign warrowing back-end soundness end-to-end (`sign_exec_sound_collecting`
 >   / `_trace`, `Sign_Exec_Sound.thy`), mono-free via `partial_post_solution` + RG
 >   `inr_slot_locals_bot`. *Interval-apinis (real-widening) soundness is the lone S0

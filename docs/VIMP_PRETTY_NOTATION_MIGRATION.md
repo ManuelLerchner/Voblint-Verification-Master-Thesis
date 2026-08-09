@@ -231,7 +231,7 @@ If a future theory imports `HOL-IMP.Com` directly alongside `VIMP_Proc`, Isabell
 ## What Not to Change
 
 | Location | Reason |
-|----------|--------|
+| ---------- | -------- |
 | `fun to_imp2_com` equations (`IMP2_Bridge.thy`) | Pattern-match heads require constructors, not notation |
 | `inductive pstep` rule bodies (`VIMP_Proc.thy`) | Same |
 | CFG compilation in `VIMP_Proc_to_CFG.thy` | Pattern-matching throughout |

@@ -89,7 +89,7 @@ the polyvariant instance supplies a routing combine tree
 ### Instantiations (recover both analyses from the ONE generator)
 
 | hook | `unit` (monovariant) | polyvariant (entry-store ctx) |
-|---|---|---|
+| --- | --- | --- |
 | `pred_sel` | `predecessor_list` (enters merge as same-ctx predecessors) | `non_enter_predecessor_list` |
 | `enter_pub` | `\<lambda>_ _. []` (no publication) | routed `Side` to `seed_key` |
 | `seed_read` | `\<lambda>_ _. Answer bot` | `QueryG (seed_key v c)` |
@@ -388,21 +388,21 @@ its `unit` specialization.
 
 Delivered:
 
-* `dg_tree_st_commute sigma t_st t_abs` --- the reusable per-tree transport contract
+- `dg_tree_st_commute sigma t_st t_abs` --- the reusable per-tree transport contract
   (traverse + side-effect map + static dependencies commute through `fun_of_dg_st`).
   The opaque `cmb`/`extra` trees --- where a dynamic `Side` target computed inside a
   `QueryL`/`QueryG` continuation lives --- enter through this relation as bundled
   hypotheses; the bridge never assumes side targets are syntactically fixed.
-* Generalized wrapped-edge / wrapped-combine commutation helpers (`gk`/`lk` instead
+- Generalized wrapped-edge / wrapped-combine commutation helpers (`gk`/`lk` instead
   of `unit`): off-key sides collapse to `bot` via `sides_map_gtree_off`.
-* `seed_dg_list_commute`, `eq_seed_dg_commute`, `sides_seed_dg_commute`,
+- `seed_dg_list_commute`, `eq_seed_dg_commute`, `sides_seed_dg_commute`,
   `dep_seed_dg_eq` --- eq / side / dependency commutation for the generic generator,
   parameterized by `pred_sel`, `gkey`, context `'c`, `cmb`, `extra`.
-* `part_post_solution_seed_dg_st_to_abs` --- the generic post-solution transport:
+- `part_post_solution_seed_dg_st_to_abs` --- the generic post-solution transport:
   a partial post-solution of the executable context-indexed system maps to one of the
   abstract system over the same unknown set. `Hstep` covers the intra edges; `Hcmb` /
   `Hextra` carry the routed combine and enter-seed trees.
-* `part_post_solution_dg_st_to_abs` --- unchanged name/signature, now derived as the
+- `part_post_solution_dg_st_to_abs` --- unchanged name/signature, now derived as the
   `unit`-context corollary (`gkey = lambda _. ()`, `extra = lambda _ _. []`,
   `pred_sel = predecessor_list`, `Hcmb` discharged by `dg_tree_st_commute_dg_cmb_of`).
 
@@ -434,10 +434,10 @@ context-indexed post-solution.
 
 Single route-consistency core (not three independently unfolded routing expressions):
 
-* `entered_commute`: `fun_of_st (entered_ivl s a) = entered_abs (fun_of_st s) a` --- the
+- `entered_commute`: `fun_of_st (entered_ivl s a) = entered_abs (fun_of_st s) a` --- the
   post-enter callee state commutes with the refinement morphism (`ivl_Hstep` read on
   the returned local component).
-* `route_commute`: `route_abs (fun_of_st s) a = route_ivl s a` --- because both routes
+- `route_commute`: `route_abs (fun_of_st s) a = route_ivl s a` --- because both routes
   project the same variable and `fun_of_st = lookup_st`, the abstract and executable
   routes agree *as values*, so the `Side`/unknown keys they compute are literally
   equal. This is the one lemma that makes enter publication, the combine callee-exit
@@ -445,13 +445,13 @@ Single route-consistency core (not three independently unfolded routing expressi
 
 Discharged from that core:
 
-* `dg_tree_st_commute_frame_read`, `dg_tree_st_commute_enter_pub`,
+- `dg_tree_st_commute_frame_read`, `dg_tree_st_commute_enter_pub`,
   `dg_tree_st_commute_cmb` --- per-tree transport for the frame-entry seed read, the
   routed enter publication, and the destination-aware combine. Generic over program
   point, caller context, and enter action (no `twice` call sites named).
-* `hextra_commute` (list_all2 assembly) and `dg_tree_st_commute_cmb` are exactly the
+- `hextra_commute` (list_all2 assembly) and `dg_tree_st_commute_cmb` are exactly the
   bundled `Hextra` / `Hcmb` hypotheses of `part_post_solution_seed_dg_st_to_abs`.
-* `twice_ctx_pp_abs`: the abstract context-indexed post-solution
+- `twice_ctx_pp_abs`: the abstract context-indexed post-solution
   `fun_of_dg_st o snd twice_ctx_sol` over the same unknown set, via the generic bridge
   with `Hstep = ivl_Hstep`.
 
@@ -476,8 +476,8 @@ source lift.
 `Example_Interval_DG_Ctx_Collect.thy` (WIP, NOT in ROOT) instantiates the generic
 `activation_collect_sound` at the routed interval solution:
 
-* `sg = ivl_ctx_sg`: `locals(sigma(Inl(v,c))) ⊔ globs(sigma(Inr(GlobAt c)))`;
-* `enterc c s' = ivl_decode (s' ''p'')`, `combc = fst`, `seedc = bot`.
+- `sg = ivl_ctx_sg`: `locals(sigma(Inl(v,c))) ⊔ globs(sigma(Inr(GlobAt c)))`;
+- `enterc c s' = ivl_decode (s' ''p'')`, `combc = fst`, `seedc = bot`.
 
 Reusable elimination landed (single unfold of `part_post_solution`, shared by
 EDGE/SEED_G/COMB): `pp_eq_bound` (`eq ≤ sigma(Inl _)`) and `pp_sides_bound`
@@ -488,12 +488,12 @@ EDGE/SEED_G/COMB): `pp_eq_bound` (`eq ≤ sigma(Inl _)`) and `pp_sides_bound`
 **PROC_ENTRY_G is demonstrably false** for `twice_cfg` — concrete eval witnesses in the
 theory (`proc_entry_edge_fires`, `proc_entry_callee_bot_p`):
 
-* `cfg_entry twice_cfg = 4` is `main`'s entry, and `main`'s first statement is a call:
+- `cfg_entry twice_cfg = 4` is `main`'s entry, and `main`'s first statement is a call:
   `(4, EA_Enter [''p''] [N 3], 0) ∈ edges`. So the activation semantics' `proc_entry`
   rule fires, seeding the callee entry `0` at the **root** context `seedc = bot`.
-* The polyvariant solver routes node `0` to `[3,3]` / `[10,10]` and leaves `(0, bot)`
+- The polyvariant solver routes node `0` to `[3,3]` / `[10,10]` and leaves `(0, bot)`
   unpopulated: `locals(sigma(Inl(0,bot))) ''p'' = ⊥` (empty gamma).
-* A concrete entered store (`p := 3`) lies in `edge_collect (EA_Enter ...) cinit_stores`
+- A concrete entered store (`p := 3`) lies in `edge_collect (EA_Enter ...) cinit_stores`
   but not in the empty `gamma(ivl_ctx_sg(Inl(0,bot)))`. Obligation false.
 
 Root cause: `main`'s entry node coincides with the source of its first call edge. In the
@@ -521,14 +521,14 @@ endpoint (no CFG padding, `twice` unchanged):
 
 Determination — `proc_entry` **must be routed, then is redundant with ENTRY_G + SEED_G**:
 
-* The `proc_entry` *rule* (`CFG_Collect_Activation.thy`) is retained — it is the only
+- The `proc_entry` *rule* (`CFG_Collect_Activation.thy`) is retained — it is the only
   rule producing a **callee-relative** trace `[s]` (head = entered store), which the
   `combine` rule requires (`enter`-rule traces carry the caller prefix, head != entered
   store).
-* Its **context was a stale bug**: it seeded the callee at `seedc` when the routing
+- Its **context was a stale bug**: it seeded the callee at `seedc` when the routing
   discipline says `enterc seedc s`. Changed the rule's conclusion context
   `seedc` -> `enterc seedc s`, making it consistent with the `enter` rule.
-* With the context routed, the `proc_entry` induction case in `activation_trace_sound`
+- With the context routed, the `proc_entry` induction case in `activation_trace_sound`
   discharges from ENTRY_G + SEED_G (extract `s0 in S` with
   `edge_step (EA_Enter …) s0 = Some s`; ENTRY_G on `s0`; SEED_G to `enterc seedc s`).
   So **PROC_ENTRY_G was removed** as a separate obligation from `activation_trace_sound`,

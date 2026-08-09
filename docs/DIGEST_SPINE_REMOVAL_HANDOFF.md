@@ -326,4 +326,3 @@ The removal plan is the current architecture. The audit and ContextPolicy docume
 remain useful history explaining why relational contexts were considered and why the
 project pivoted. Do not silently rewrite historical claims; Stage 6 should add a
 short outcome record and update current-facing documentation.
-

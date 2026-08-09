@@ -464,7 +464,7 @@ locale, or a transport lemma stated with that assumption as a hypothesis.
 
 **Per-domain seam (the only sign-specific obligation — repeat per domain):**
 
-4. The **executable transfer mirror** `apply_tf_st tf_st a :: 'a st ⇒ 'a st`
+1. The **executable transfer mirror** `apply_tf_st tf_st a :: 'a st ⇒ 'a st`
    plus its commutation `fun_of_st (apply_tf_st tf_st a s) =
    apply_tf tf a (fun_of_st s)`, for the actions that occur (`EA_Assign`,
    `EA_Enter`, `EA_Nop`; `assume` for branches). This cannot be generic: the
