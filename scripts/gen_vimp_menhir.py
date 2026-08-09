@@ -10,8 +10,8 @@ menhir/ocamllex/ocamlfind, not Python, matching cli/Makefile's existing
 "does not require Isabelle" framing extended to "does not require
 regenerating the frontend either, unless grammar/vimp.yaml changed."
 
-Requires PyYAML to regenerate (`pip install pyyaml`, or the repo .venv
-already has it) -- not to build.
+Requires PyYAML to regenerate (`pip install pyyaml`, or `pixi install` from
+the repo root already has it) -- not to build.
 
 Usage: python3 scripts/gen_vimp_menhir.py [grammar/vimp.yaml] [out_dir]
 """

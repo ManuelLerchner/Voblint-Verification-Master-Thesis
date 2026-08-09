@@ -1,0 +1,32 @@
+[workspace]
+name = "voblint"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+
+# Python-side tooling only: I/R (autocorrode's REPL MCP server), the grammar
+# generators (scripts/gen_vimp_*.py), and the property-test suite
+# (tests/property/). The OCaml/Haskell toolchains stay on opam/ghcup --
+# conda-forge's ocaml-findlib and ocaml-zarith have no osx-arm64 build, so
+# pixi cannot be the sole toolchain manager for those on Apple Silicon.
+
+[dependencies]
+python = ">=3.10"
+pyyaml = "*"
+
+[feature.ir.dependencies]
+prompt_toolkit = ">=3.0"
+mcp = ">=1.0"
+
+[feature.property-test.dependencies]
+hypothesis = ">=6.100"
+pytest = ">=8.0"
+
+[feature.lint.dependencies]
+lefthook = "*"
+
+[feature.lint.tasks]
+lefthook-install = "lefthook install"
+lint = "lefthook run pre-commit --all-files"
+
+[environments]
+default = { features = ["ir", "property-test", "lint"] }

@@ -1,0 +1,32 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
+#
+# Install with `pixi run lefthook-install`. Guards two invariants documented
+# in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"),
+# and the two generated VIMP grammar frontends stay in sync with
+# grammar/vimp.yaml ("VIMP grammar pipeline"). The generator jobs are
+# allowed to rewrite their generated file in place -- fail_on_changes then
+# blocks the commit so a real drift gets reviewed and re-staged rather than
+# silently committed stale.
+output: [summary]
+pre-commit:
+  fail_on_changes: always
+  parallel: true
+  jobs:
+    - name: isabelle-ascii
+      glob: "*.thy"
+      run: pixi run python3 scripts/check_isabelle_ascii.py {staged_files}
+
+    - name: vimp-isabelle-grammar-drift
+      glob:
+        - "grammar/vimp.yaml"
+        - "scripts/gen_vimp_isabelle.py"
+        - "src/VIMP/VIMP_Grammar_Generated.thy"
+      run: pixi run python3 scripts/gen_vimp_isabelle.py
+
+    - name: vimp-menhir-grammar-drift
+      glob:
+        - "grammar/vimp.yaml"
+        - "scripts/gen_vimp_menhir.py"
+        - "cli/vimp_parser.mly"
+        - "cli/vimp_lexer.mll"
+      run: pixi run python3 scripts/gen_vimp_menhir.py

@@ -12,7 +12,7 @@
 all: voblint
 
 generate:
-	cd .. && .venv/bin/python3 scripts/gen_vimp_menhir.py
+	cd .. && .pixi/envs/default/bin/python3 scripts/gen_vimp_menhir.py
 
 test: voblint
 	python3 ../tests/run.py

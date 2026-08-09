@@ -174,13 +174,21 @@ engineering process rather than proof:
 * Hypothesis-based property tests that fuzz both generated programs and
   mutated source text (`tests/property/`, `pytest tests/property/`).
 
+A `lefthook` pre-commit hook (`.lefthook.yaml`, installed by `./scripts/setup.sh`
+or `pixi run lefthook-install`) regenerates both grammar artifacts on every
+commit that touches `grammar/vimp.yaml` or a generator script and fails the
+commit if that leaves the working tree dirty, so drift is caught locally
+before it reaches CI.
+
 ## Build Instructions
 
 ### Requirements
 
 * **[Isabelle](https://isabelle.in.tum.de/)  2025** (or newer)
 * **[AFP](https://www.isa-afp.org/)** (Archive of Formal Proofs) checkout containing `Root_Balanced_Tree` and `Dijkstra_Shortest_Path`.
+* **[pixi](https://pixi.sh/)** for Python-side tooling (I/R, the grammar generators, the property-test suite, `lefthook`).
 * `make`, `git`, and standard POSIX tools.
+* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, and GHC, for the code-generation regression drivers -- see "Executable code generation" below.
 
 ### Building
 
@@ -291,7 +299,7 @@ workflow of Kappelmann et al.,
 
 | Script | Role |
 | --- | --- |
-| `./scripts/setup.sh` | one-shot bootstrap: submodules, venv, I/Q plugin (`--no-iq` to skip) |
+| `./scripts/setup.sh` | one-shot bootstrap: submodules, pixi environment + lefthook install, I/Q plugin (`--no-iq` to skip) |
 | `./scripts/start-iq.sh` | Isabelle/jEdit + I/Q on port 8765 |
 | `./scripts/start-ir.sh` | headless Isabelle/R MCP on port 9148 |
 | `./scripts/start-both.sh` | I/R background + I/Q foreground; Ctrl+C tears down both |

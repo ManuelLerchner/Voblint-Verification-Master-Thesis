@@ -6,15 +6,15 @@
 #
 # `make test` runs the Hypothesis property suite (round-trip, mutation
 # fuzzing, non-expressible-shape regressions) against ast_driver and voblint
-# both; `python3 -m venv ../../.venv && ../../.venv/bin/pip install -r
-# requirements.txt` once beforehand to provide hypothesis/pytest.
+# both; `pixi install` from the repo root once beforehand provides
+# hypothesis/pytest (see pixi.toml's property-test feature).
 
 .PHONY: all test clean
 
 all: ast_driver paren_roundtrip
 
 test: ast_driver paren_roundtrip
-	../../.venv/bin/python3 -m pytest .
+	../../.pixi/envs/default/bin/python3 -m pytest .
 
 Voblint_CLI.ml: ../../codegen/generated/ml/Voblint_CLI.ml
 	cp $< $@

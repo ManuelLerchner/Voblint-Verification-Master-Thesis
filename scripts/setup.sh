@@ -3,7 +3,8 @@
 #   - init submodules (autocorrode, td-verification)
 #   - sparse-checkout autocorrode (ir/, iq/)
 #   - apply the td-verification patch
-#   - install Python venv for I/R
+#   - install the pixi environment (I/R's Python deps, grammar generators,
+#     property-test suite, lefthook) and the lefthook git hooks
 #   - build + install the I/Q jEdit plugin (skip with --no-iq)
 #
 # Re-run safe. To bump vendor/autocorrode to a newer upstream commit:
@@ -38,9 +39,8 @@ echo "Configuring sparse-checkout (ir/, iq/) ..."
 git -C "$AC_DIR" sparse-checkout init --cone
 git -C "$AC_DIR" sparse-checkout set ir iq
 
-echo "Installing Python requirements into venv ..."
-python3 -m venv "$REPO_ROOT/.venv"
-"$REPO_ROOT/.venv/bin/pip" install -r "$AC_DIR/ir/requirements.txt"
+echo "Installing pixi environment (see pixi.toml) ..."
+( cd "$REPO_ROOT" && pixi install && pixi run lefthook-install )
 
 if [[ "$WITH_IQ" == "1" ]]; then
   echo

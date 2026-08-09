@@ -111,9 +111,12 @@ code**: no soundness theorem covers lexing or parsing. The proved chain
 (`imp_prog`); how that AST was produced -- CLI frontend, `ast_driver`, by
 hand -- is irrelevant to any soundness theorem. Confidence in the generated
 parsers instead comes from process, not proof: one canonical grammar,
-deterministic generation with a CI drift check, the `.vimp` regression
-corpus, AST round-trip and print-stability checks, and Hypothesis-based
-parser fuzzing under `tests/property/`.
+deterministic generation with a drift check, the `.vimp` regression corpus,
+AST round-trip and print-stability checks, and Hypothesis-based parser
+fuzzing under `tests/property/`. A `lefthook` pre-commit hook (`.lefthook.yaml`,
+installed by `./scripts/setup.sh` or `pixi run lefthook-install`) regenerates
+both grammar artifacts and blocks the commit if that leaves the working tree
+dirty, so the drift check runs locally, not only in CI.
 
 When changing VIMP syntax:
 
@@ -121,15 +124,17 @@ When changing VIMP syntax:
 2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
    `src/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
 3. Regenerate: `cd cli && make generate` (Menhir/ocamllex) and
-   `python3 scripts/gen_vimp_isabelle.py` (Isabelle); load the regenerated
-   `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
-   rules below, not a host editor.
+   `pixi run python3 scripts/gen_vimp_isabelle.py` (Isabelle); load the
+   regenerated `VIMP_Grammar_Generated.thy` through I/Q per the theory-file
+   boundary rules below, not a host editor. (The pre-commit hook does this
+   automatically; this step is for regenerating before that point.)
 4. Update or add fixtures in the `.vimp` regression corpus and, if the
    change affects generation strategies, `tests/property/strategies.py`.
-5. Run the property-test suite (`cd tests/property && make && pytest`).
+5. Run the property-test suite (`cd tests/property && make && pixi run
+   pytest .`).
 6. Run `make codegen-check` and confirm the grammar drift check is clean
-   (`python3 scripts/gen_vimp_isabelle.py && git diff --exit-code --
-   src/VIMP/VIMP_Grammar_Generated.thy`).
+   (`pixi run python3 scripts/gen_vimp_isabelle.py && git diff --exit-code
+   -- src/VIMP/VIMP_Grammar_Generated.thy`).
 7. Run the Isabelle batch build if generated syntax changed.
 
 `prog_main`'s separate HOL representation (`imp_prog`'s dedicated

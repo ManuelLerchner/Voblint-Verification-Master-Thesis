@@ -15,7 +15,9 @@ docs/html/
 
 # Python
 __pycache__/
-.venv/
+
+# pixi
+.pixi/
 
 # Local OS files
 .DS_Store
