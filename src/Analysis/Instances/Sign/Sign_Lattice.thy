@@ -89,6 +89,26 @@ definition "bot_sign = SBot"
 instance ..
 end
 
+text \<open>
+  \<open>SBot\<close> is the only empty value a finite enumerated domain can have (every
+  other constructor denotes a nonempty set of integers), so a direct
+  equality test is already exact --- unlike Interval's analogous fact,
+  which cannot use equality against one representative because Interval's
+  bound-pair representation has many empty values besides its canonical
+  \<open>bot\<close>. Exposed here, at the domain's own theory, rather than inlined
+  where a caller happens to need it, so every consumer (not just one) gets
+  the same domain-owned fact.
+\<close>
+
+definition is_bottom_sign :: "sign \<Rightarrow> bool" where
+  "is_bottom_sign s = (s = SBot)"
+
+lemma is_bottom_sign_correct: "is_bottom_sign s \<longleftrightarrow> gamma_sign s = {}"
+  unfolding is_bottom_sign_def
+  by (cases s) (auto simp: gamma_sign.simps intro: exI[of _ "-1"] exI[of _ "0"] exI[of _ "1"])
+
+
+
 subsection \<open>Join (least upper bound)\<close>
 
 fun join_sign :: "sign => sign => sign" where
@@ -152,6 +172,27 @@ instance proof intro_classes
 qed
 end
 
+instantiation sign :: top begin
+definition "top_sign = STop"
+instance ..
+end
+
+instantiation sign :: order_top begin
+instance proof intro_classes
+  fix x :: sign
+  show "x \<le> top"
+    unfolding less_eq_sign_def top_sign_def by (cases x) simp_all
+qed
+end
+
+text \<open>\<open>STop\<close> is likewise the unique top of a finite enumeration.\<close>
+
+definition is_top_sign :: "sign \<Rightarrow> bool" where
+  "is_top_sign s = (s = STop)"
+
+lemma is_top_sign_correct: "is_top_sign s \<longleftrightarrow> s = top"
+  unfolding is_top_sign_def top_sign_def ..
+
 instantiation sign :: sup begin
 definition sup_sign :: "sign => sign => sign" where
   "sup_sign = join_sign"
@@ -198,6 +239,8 @@ subsection \<open>Abstract domain instantiation\<close>
 
 instantiation sign :: sound_domain begin
 definition gamma_abs_sign [simp]: "gamma (a :: sign) = gamma_sign a"
+definition is_bot_sign [simp]: "is_bot (a :: sign) = is_bottom_sign a"
+definition is_top_sign' [simp]: "is_top (a :: sign) = is_top_sign a"
 instance proof intro_classes
   show "gamma (bot :: sign) = {}"
     unfolding bot_sign_def by simp
@@ -210,6 +253,14 @@ next
       using H unfolding less_eq_sign_def by (rule gamma_sign_mono)
     then show ?thesis by simp
   qed
+next
+  fix a :: sign
+  show "is_bot a \<longleftrightarrow> gamma a = {}"
+    by (simp add: is_bottom_sign_correct)
+next
+  fix a :: sign
+  show "is_top a \<longleftrightarrow> a = top"
+    by (simp add: is_top_sign_correct)
 qed
 end
 

@@ -64,6 +64,19 @@ definition "bot_parity = PBot"
 instance ..
 end
 
+text \<open>
+  \<open>PBot\<close> is the only empty value a finite enumerated domain can have, the
+  same reasoning as Sign's \<open>is_bottom_sign\<close>, so a direct equality test is
+  exact here too.
+\<close>
+
+definition is_bottom_parity :: "parity \<Rightarrow> bool" where
+  "is_bottom_parity p = (p = PBot)"
+
+lemma is_bottom_parity_correct: "is_bottom_parity p \<longleftrightarrow> gamma_parity p = {}"
+  unfolding is_bottom_parity_def
+  by (cases p) (auto simp: gamma_parity.simps intro: exI[of _ "0"] exI[of _ "1"])
+
 subsection \<open>Join\<close>
 
 fun join_parity :: "parity => parity => parity" where
@@ -96,6 +109,27 @@ instance proof
   show "bot \<le> x" unfolding less_eq_parity_def bot_parity_def by simp
 qed
 end
+
+instantiation parity :: top begin
+definition "top_parity = PTop"
+instance ..
+end
+
+instantiation parity :: order_top begin
+instance proof intro_classes
+  fix x :: parity
+  show "x \<le> top"
+    unfolding less_eq_parity_def top_parity_def by (cases x) simp_all
+qed
+end
+
+text \<open>\<open>PTop\<close> is the unique top of a finite enumeration, the same reasoning as Sign's \<open>is_top_sign\<close>.\<close>
+
+definition is_top_parity :: "parity \<Rightarrow> bool" where
+  "is_top_parity p = (p = PTop)"
+
+lemma is_top_parity_correct: "is_top_parity p \<longleftrightarrow> p = top"
+  unfolding is_top_parity_def top_parity_def ..
 
 instantiation parity :: sup begin
 definition sup_parity :: "parity => parity => parity" where "sup_parity = join_parity"
@@ -221,6 +255,8 @@ subsection \<open>sound_domain instance\<close>
 
 instantiation parity :: sound_domain begin
 definition gamma_abs_parity [simp]: "gamma (a :: parity) = gamma_parity a"
+definition is_bot_parity [simp]: "is_bot (a :: parity) = is_bottom_parity a"
+definition is_top_parity' [simp]: "is_top (a :: parity) = is_top_parity a"
 instance proof
   show "gamma (bot :: parity) = {}" unfolding bot_parity_def by simp
 next
@@ -228,6 +264,14 @@ next
   assume H: "a \<le> b"
   have "gamma_parity a \<subseteq> gamma_parity b" using H unfolding less_eq_parity_def by (rule gamma_parity_mono)
   then show "gamma a \<subseteq> gamma b" by simp
+next
+  fix a :: parity
+  show "is_bot a \<longleftrightarrow> gamma a = {}"
+    by (simp add: is_bottom_parity_correct)
+next
+  fix a :: parity
+  show "is_top a \<longleftrightarrow> a = top"
+    by (simp add: is_top_parity_correct)
 qed
 end
 
