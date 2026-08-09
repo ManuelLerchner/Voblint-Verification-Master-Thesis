@@ -198,8 +198,12 @@ let () =
   in
   let prog, check_positions =
     try Vimp_parser.program path src
-    with Vimp_parser.Parse_error { file; line; col; msg } ->
+    with
+    | Vimp_parser.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
+      exit 2
+    | Vimp_lexer.Lex_error { line; col; msg } ->
+      Printf.eprintf "%s:%d:%d: parse error: %s\n" path line col msg;
       exit 2
   in
   if !parse_only then exit 0;

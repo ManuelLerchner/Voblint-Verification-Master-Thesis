@@ -133,7 +133,11 @@ let actuals st =
 let rec stmt st : Voblint_CLI.Core.com =
   match (cur st).tok with
   | KW_SKIP -> advance st; Voblint_CLI.Core.SKIP
-  | KW_RETURN -> advance st; Voblint_CLI.Core.Return (Some (aexp st))
+  | KW_RETURN ->
+    advance st;
+    (match (cur st).tok with
+     | SEMI | RBRACE -> Voblint_CLI.Core.Return None
+     | _ -> Voblint_CLI.Core.Return (Some (aexp st)))
   | KW_CHECK ->
     let pos = cur st in
     st.check_positions <- st.check_positions @ [ (pos.line, pos.col) ];
@@ -253,7 +257,10 @@ let program (file : string) (src : string) :
     funcs := func st :: !funcs
   done;
   expect st RBRACE "expected '}'";
-  expect st EOF "expected end of file";
+  (* Every check below that can call `fail` (hence `cur`, for the error's
+     position) must run before `expect st EOF` pops the final sentinel
+     token -- once toks is [], `cur` has nothing left to report a position
+     from. EOF is consumed last, once nothing here can fail anymore. *)
   let funcs = List.rev !funcs in
   check_distinct st "procedure" (List.map (fun (n, _, _) -> n) funcs);
   List.iter
@@ -272,6 +279,7 @@ let program (file : string) (src : string) :
     | [] -> fail st "missing 'void main() { ... }'"
     | _ -> fail st "more than one 'void main()'"
   in
+  expect st EOF "expected end of file";
   let proc_rep =
     List.map (fun (n, formals, body) -> (n, Voblint_CLI.Core.proc_decl_of formals body)) procs
   in
