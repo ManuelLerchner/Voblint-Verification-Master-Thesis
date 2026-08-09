@@ -18,11 +18,28 @@ CLI_DIR="$REPO_ROOT/cli"
 # script instead.
 cp "$REPO_ROOT/codegen/generated/ml/Voblint_CLI.ml" "$CLI_DIR/Voblint_CLI.ml"
 
-cd "$CLI_DIR"
-menhir vimp_parser.mly
-# ocamllex's automaton-stats banner goes to stdout by default, which would
-# otherwise land in front of `voblint`'s own stdout (e.g. `--dot` piped to
-# `dot`) whenever this build task runs as that task's dependency.
-ocamllex vimp_lexer.mll >/dev/null
-ocamlfind ocamlopt -package str,zarith,unix -linkpkg \
-  Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml main.ml -o voblint
+# `pixi run voblint` chains this build directly ahead of voblint's own
+# stdout in the same pipe (e.g. `pixi run voblint -- --dot ... | dot
+# -Tsvg`), so any build-tool banner on stdout here corrupts every piped
+# consumer downstream -- ocamllex's automaton-stats banner was one such
+# case. menhir/ocamlfind are silent on success; assert the whole build
+# stays silent (captured via a temp file, not `$()`, so a lone trailing
+# blank line can't slip past an empty-string check) so a future regression
+# here fails loudly at the source instead of corrupting output elsewhere.
+build_out="$(mktemp)"
+trap 'rm -f "$build_out"' EXIT
+(
+  cd "$CLI_DIR"
+  menhir vimp_parser.mly
+  # Its automaton-stats banner is routine, expected stdout on every
+  # successful run -- redirect it inline so only genuinely unexpected
+  # output from any step trips the silence assertion below.
+  ocamllex vimp_lexer.mll >/dev/null
+  ocamlfind ocamlopt -package str,zarith,unix -linkpkg \
+    Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml main.ml -o voblint
+) >"$build_out"
+if [ -s "$build_out" ]; then
+  echo "cli-build.sh wrote to stdout (would corrupt piped voblint output):" >&2
+  cat "$build_out" >&2
+  exit 1
+fi

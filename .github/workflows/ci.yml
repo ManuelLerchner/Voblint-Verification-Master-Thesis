@@ -125,8 +125,9 @@ jobs:
         with:
           ocaml-compiler: '5'
 
-      - name: Install zarith (Code_Target_Numeral backs int/nat by Z.t)
-        run: opam install -y zarith
+      - name: Install zarith + menhir (Code_Target_Numeral, and the voblint
+          CLI/property-test parser generator)
+        run: opam install -y zarith menhir
 
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
@@ -139,6 +140,12 @@ jobs:
         # one step earlier. `opam exec --` activates the switch environment for
         # this invocation.
         run: opam exec -- pixi run regression
+
+      - name: External .vimp regression corpus (source -> parser -> analyse -> checks)
+        run: opam exec -- pixi run cli-test
+
+      - name: Parser/printer property tests (round-trip + mutation fuzzing)
+        run: opam exec -- pixi run property
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
