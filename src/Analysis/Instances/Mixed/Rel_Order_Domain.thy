@@ -206,31 +206,16 @@ next
   case (RelC ps)
   note d_eq = RelC
   show ?thesis
-  proof (cases b)
-    case (Less a1 a2)
-    show ?thesis
-    proof (cases "\<exists>x y. a1 = V x \<and> a2 = V y")
-      case True
-      then obtain x y where xy: "a1 = V x" "a2 = V y" by blast
-      have "s x < s y" using assms(2) Less xy by simp
-      then show ?thesis
-        using assms(1) d_eq unfolding assume_step_def d_eq Less xy by auto
-    next
-      case False
-      then show ?thesis
-        using assms(1) d_eq Less unfolding assume_step_def
-        by (auto split: aexp.splits)
-    qed
+  proof (cases "\<exists>x y. b = Less (V x) (V y)")
+    case True
+    then obtain x y where xy: "b = Less (V x) (V y)" by blast
+    have "s x < s y" using assms(2) xy by simp
+    then show ?thesis using assms(1) d_eq unfolding assume_step_def d_eq xy by auto
   next
-    case (Bc bb) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
-  next
-    case (Not b') then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
-  next
-    case (And b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
-  next
-    case (Or b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
-  next
-    case (Eq a1 a2) then show ?thesis using assms(1) d_eq unfolding assume_step_def by simp
+    case False
+    then show ?thesis
+      using assms(1) d_eq unfolding assume_step_def d_eq
+      by (auto split: bexp.splits aexp.splits)
   qed
 qed
 
@@ -258,31 +243,16 @@ next
   case (RelC ps)
   note d_eq = RelC
   show ?thesis
-  proof (cases b)
-    case (Less a1 a2)
-    show ?thesis
-    proof (cases "\<exists>x y. a1 = V x \<and> a2 = V y")
-      case True
-      then obtain x y where xy: "a1 = V x" "a2 = V y" by blast
-      have "\<not> s x < s y" using assms(2) Less xy by simp
-      then show ?thesis
-        using assms(1) d_eq unfolding assume_not_step_def d_eq Less xy by auto
-    next
-      case False
-      then show ?thesis
-        using assms(1) d_eq Less unfolding assume_not_step_def
-        by (auto split: aexp.splits)
-    qed
+  proof (cases "\<exists>x y. b = Less (V x) (V y)")
+    case True
+    then obtain x y where xy: "b = Less (V x) (V y)" by blast
+    have "\<not> s x < s y" using assms(2) xy by simp
+    then show ?thesis using assms(1) d_eq unfolding assume_not_step_def d_eq xy by auto
   next
-    case (Bc bb) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
-  next
-    case (Not b') then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
-  next
-    case (And b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
-  next
-    case (Or b1 b2) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
-  next
-    case (Eq a1 a2) then show ?thesis using assms(1) d_eq unfolding assume_not_step_def by simp
+    case False
+    then show ?thesis
+      using assms(1) d_eq unfolding assume_not_step_def d_eq
+      by (auto split: bexp.splits aexp.splits)
   qed
 qed
 
