@@ -1663,6 +1663,14 @@ lemma gamma_unit_mono:
 lemma gamma_unitD [dest]: "s \<in> gamma_unit d g \<Longrightarrow> s \<in> \<lbrakk>d \<squnion> g\<rbrakk>"
   unfolding gamma_unit_def by simp
 
+text \<open>
+  The defining equation as a citable lemma: client theories that need the
+  full equality (not just the membership direction \<open>gamma_unitD\<close> gives) can
+  cite this instead of reaching for \<open>gamma_unit_def\<close> directly.
+\<close>
+lemma gamma_unit_eq: "gamma_unit d g = \<lbrakk>d \<squnion> g\<rbrakk>"
+  unfolding gamma_unit_def ..
+
 
 lemma gamma_unit_combine_sound_for:
   assumes sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"

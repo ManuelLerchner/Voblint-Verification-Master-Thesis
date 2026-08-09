@@ -135,7 +135,7 @@ next
     using scope by (rule global_location_in_scope_locations)
   have named: "x = (STR ''balance'') \<or> x = (STR ''request_count'')"
     using global
-    unfolding placement_prog_def declared_global_def
+    unfolding placement_prog_def
     by simp
   with Global_Location show ?thesis by simp
 qed
@@ -406,7 +406,7 @@ proof (rule ext)
     have loc: "location_of (declared_global placement_prog) x = Global_Location x"
       using True by (simp add: location_of_def)
     have named: "x = (STR ''balance'') \<or> x = (STR ''request_count'')"
-      using True unfolding placement_prog_def declared_global_def by simp
+      using True unfolding placement_prog_def by simp
     then show ?thesis
       unfolding project_abs_on_def project_component_def loc sup_fun_def
       by auto
@@ -488,10 +488,10 @@ proof -
             (dg_hook_D sigma source \<squnion> dg_hook_G sigma)))
       = \<lbrakk>apply_tf (ivl_tf_for (declared_global placement_prog)) action
           (dg_hook_D sigma source \<squnion> dg_hook_G sigma)\<rbrakk>"
-    unfolding gamma_unit_def by (simp add: placement_project_split_join)
+    unfolding gamma_unit_eq by (simp add: placement_project_split_join)
   have "edge_collect action (dg_hook_gamma gamma_unit sigma source) =
       edge_collect action \<lbrakk>dg_hook_D sigma source \<squnion> dg_hook_G sigma\<rbrakk>"
-    unfolding dg_hook_gamma_def gamma_unit_def by simp
+    unfolding dg_hook_gamma_def gamma_unit_eq by simp
   also have "... \<subseteq>
       \<lbrakk>apply_tf (ivl_tf_for (declared_global placement_prog)) action
         (dg_hook_D sigma source \<squnion> dg_hook_G sigma)\<rbrakk>"
@@ -558,9 +558,9 @@ proof -
             (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))
       = \<lbrakk>enter_ivl_for (declared_global placement_prog) fs args
           (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
-    unfolding gamma_unit_def by (simp add: placement_project_split_join)
+    unfolding gamma_unit_eq by (simp add: placement_project_split_join)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
-    using sin unfolding dg_hook_gamma_def gamma_unit_def by simp
+    using sin unfolding dg_hook_gamma_def gamma_unit_eq by simp
   have "call_enter (declared_global placement_prog) (CallEdge dst fs args) s =
       bind_formals fs (map (\<lambda>e. aval e s) args)
         (enter_state (declared_global placement_prog) s)"
@@ -622,11 +622,11 @@ proof -
         (project_abs_on (placement_node_owner continuation)
           (declared_global placement_prog) placement_publish_side result)
       = \<lbrakk>result\<rbrakk>"
-    unfolding gamma_unit_def by (simp add: placement_project_split_join)
+    unfolding gamma_unit_eq by (simp add: placement_project_split_join)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
-    using sin unfolding dg_hook_gamma_def gamma_unit_def by simp
+    using sin unfolding dg_hook_gamma_def gamma_unit_eq by simp
   have t_in: "t \<in> \<lbrakk>dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma\<rbrakk>"
-    using tin unfolding dg_hook_gamma_def gamma_unit_def by simp
+    using tin unfolding dg_hook_gamma_def gamma_unit_eq by simp
   have "combine_collect (declared_global placement_prog) dst s t \<in> \<lbrakk>result\<rbrakk>"
     unfolding result_def by (rule combine_collect_sound[OF s_in t_in])
   then show ?thesis
@@ -2971,7 +2971,7 @@ proof -
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st_for)
   have mono: "\<lbrakk>placement_s0d_abs\<rbrakk> \<subseteq> \<lbrakk>placement_s0d_abs \<squnion> placement_s0g_abs\<rbrakk>"
     by (rule gamma_state_mono) (simp add: sup_ge1)
-  show ?thesis unfolding gamma_unit_def using base mono by blast
+  show ?thesis unfolding gamma_unit_eq using base mono by blast
 qed
 
 text \<open>The trace-native collecting soundness endpoint: every stack-faithful
