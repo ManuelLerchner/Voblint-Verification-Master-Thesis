@@ -20,6 +20,9 @@ cp "$REPO_ROOT/codegen/generated/ml/Voblint_CLI.ml" "$CLI_DIR/Voblint_CLI.ml"
 
 cd "$CLI_DIR"
 menhir vimp_parser.mly
-ocamllex vimp_lexer.mll
+# ocamllex's automaton-stats banner goes to stdout by default, which would
+# otherwise land in front of `voblint`'s own stdout (e.g. `--dot` piped to
+# `dot`) whenever this build task runs as that task's dependency.
+ocamllex vimp_lexer.mll >/dev/null
 ocamlfind ocamlopt -package str,zarith,unix -linkpkg \
   Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml main.ml -o voblint

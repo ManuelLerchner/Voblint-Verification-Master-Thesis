@@ -21,6 +21,53 @@ Unlike most existing formalizations, Voblint proves properties of the analysis r
 * **Executable:** Analyses are not just specified; they run directly inside Isabelle/HOL.
 * **Visualizable:** Executable GraphViz output for certified analysis results.
 
+## Tutorial
+
+Voblint programs are written in VIMP, a small IMP-style language with
+`__voblint_check(cond)` assertions. Given a counted loop:
+
+```c
+void main() {
+    x := 0;
+    while (x < 10) {
+        x := x + 1
+    };
+    __voblint_check(0 < x)
+}
+```
+
+running the Interval analysis over it (see "Running the CLI" below) proves
+the check on the widened/narrowed fixpoint:
+
+```bash
+$ pixi run voblint --analysis interval tests/regression/02-control-flow/02-while_loop.vimp
+8:3  pp3        0<x                  PROVED   x=[10,10]
+```
+
+`--dot` renders the same solved, per-node abstract state as a GraphViz CFG:
+
+```bash
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/02-while_loop.vimp \
+  | dot -Tpng -o while_loop_cfg.png
+```
+
+![Solved CFG for the counted-loop example, showing the widened interval x=[10,10] at the check node](docs/images/while_loop_cfg.png)
+
+The same rendering on a branch/join program shows the interval domain merging
+both arms:
+
+```bash
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp \
+  | dot -Tpng -o if_else_cfg.png
+```
+
+![Solved CFG for the if/else example, showing the joined interval y=[1,2] at the check node](docs/images/if_else_cfg.png)
+
+Each rendering embeds the source alongside the CFG, splits nodes into
+per-activation clusters (context-sensitivity, see "Why Voblint?" above), and
+shades the checked node by its verdict. See "Running the CLI" below for
+`--graph-snapshot` (a DOT-free textual alternative) and `--parse-only`.
+
 ## Foundations
 
 Voblint is inspired by several complementary lines of work:
@@ -190,6 +237,33 @@ before it reaches CI.
 * `git`, `bash`, and standard POSIX tools.
 * OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, and GHC, for the code-generation regression drivers -- see "Executable code generation" below. conda-forge's OCaml packages have no osx-arm64 build for `ocaml-findlib`/`ocaml-zarith`, so pixi does not manage this toolchain; opam/ghcup do.
 
+### Pixi task reference
+
+`pixi.toml` is the single command surface (`pixi run <task>`, `pixi task list`
+for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
+
+| Task | Requires | Description |
+| --- | --- | --- |
+| `vendor` | -- | Init/update the `td-verification` submodule and apply its Isabelle2025 patch |
+| `bootstrap` | Isabelle | One-shot session-root setup, depends on `vendor` |
+| `build` | Isabelle, `AFP` | Batch-build the main formalization session (the completion gate -- see "Status reporting" in `AGENTS.md`) |
+| `html` | Isabelle, `AFP` | Render the session's Isabelle HTML presentation |
+| `jedit` | Isabelle, `AFP` | Launch jEdit with session roots pre-loaded |
+| `isabelle-lint` | Isabelle | Run Isabelle's own linter over the session |
+| `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
+| `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
+| `codegen-ocaml-check` | Isabelle, `AFP`, opam | Compile-check the generated OCaml |
+| `regression` | opam, GHC | Run the Haskell/OCaml drivers under `codegen/regression/` against Isabelle-proved expected output |
+| `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
+| `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
+| `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
+| `gen-grammar-isabelle` / `gen-grammar-menhir` | -- | Regenerate one grammar target from `grammar/vimp.yaml` |
+| `grammar-check` | -- | Regenerate both targets and fail on any diff (drift check) |
+| `property` | -- | Run the Hypothesis property-test suite under `tests/property/`, depends on `property-build` |
+| `lefthook-install` | -- | Install the pre-commit hook (`.lefthook.yaml`) |
+| `lint` | -- | Run the pre-commit hook suite over all files |
+| `ci` | everything above | Everything CI runs, under one name |
+
 ### Building
 
 Set `AFP` to your local AFP `thys/` directory (defaults to `~/afp/thys`):
@@ -275,6 +349,34 @@ that exercise the generated code and compare it against the Isabelle-proved
 expected output -- so the generated Haskell/OCaml is checked against the same
 theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
 codegen-check` and `pixi run regression` run in CI (`.github/workflows/ci.yml`).
+
+### Running the analyzer (`voblint` CLI)
+
+`voblint` is a thin, unverified adapter (`cli/main.ml`) over the exact
+generated `analyse` entry point above -- see its trust-boundary note in
+`docs/CLI_DESIGN.md`. `pixi run voblint` rebuilds the binary from
+`codegen/generated/ml/Voblint_CLI.ml` via `cli-build` and then runs it, so any
+extra arguments after the task name go straight to `cli/voblint`, not to pixi:
+
+```bash
+# Check report: one line per __voblint_check, in source order
+pixi run voblint --analysis interval tests/regression/00-sanity/01-straight_line_proved.vimp
+
+# Same analysis, GraphViz rendering of the solved, context-split CFG instead
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp > cfg.dot
+dot -Tsvg cfg.dot -o cfg.svg   # requires graphviz's `dot` on PATH
+
+# Deterministic textual CFG snapshot (clusters/nodes/edges) with no GraphViz
+# dependency -- what the regression corpus embeds as expected --graph-snapshot output
+pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/01-if_else.vimp
+
+# Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
+pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp
+```
+
+Run `pixi run voblint --help` for the full flag list, including `--timeout`
+(the Interval backend is sound but not proved total, so the analysis itself
+runs in a killable subprocess -- see `docs/CLI_DESIGN.md`'s containment note).
 
 ### Vendoring the TD solver
 

@@ -93,6 +93,7 @@ regression = "bash scripts/mk/regression.sh"
 # voblint CLI
 cli-build = "bash scripts/mk/cli-build.sh"
 cli-test = { cmd = "python3 tests/run.py", depends-on = ["cli-build"] }
+voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
 
 # Everything CI runs, under one name. Spans all four features (lint,
 # grammar, test, and build's plain isabelle/ocaml calls), so this only
