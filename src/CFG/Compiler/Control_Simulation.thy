@@ -179,7 +179,7 @@ lemma control_at_call_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Call dst q actuals \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j w. v = Statement j
-       \<and> (Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       \<and> (Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K
        \<and> control_at \<Pi> p c0 k n SKIP w"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
@@ -193,7 +193,7 @@ next
     by (rule compile_SeqE)
   from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j"
-        "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K2"
         "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
@@ -208,7 +208,7 @@ next
     by (rule compile_IfE)
   from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
     jw: "v = Statement j"
-        "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K1"
         "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
@@ -222,7 +222,7 @@ next
     by (rule compile_IfE)
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j"
-        "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
@@ -1017,7 +1017,7 @@ lemma control_at_seq_after_call_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = seq_after (Call dst q actuals) afters \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j w. v = Statement j
-       \<and> (Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       \<and> (Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K
        \<and> control_at \<Pi> p c0 k n (seq_after SKIP afters) w"
 proof (induction arbitrary: afters n' en E K rule: control_at.induct)
@@ -1033,7 +1033,7 @@ next
     by (rule compile_SeqE)
   from SeqLeft.IH[OF req c1c] obtain j w where
     jw: "v = Statement j"
-       "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
        "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 (seq_after SKIP xs) w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after SKIP afters) w"
@@ -1047,7 +1047,7 @@ next
     by (rule compile_SeqE)
   from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j"
-       "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
        "control_at \<Pi> p c2 k (n0 + csize c1) (seq_after SKIP afters) w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after SKIP afters) w"
@@ -1062,7 +1062,7 @@ next
     by (rule compile_IfE)
   from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
     jw: "v = Statement j"
-       "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
        "control_at \<Pi> p c1 k (Suc n0) (seq_after SKIP afters) w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 (seq_after SKIP afters) w"
@@ -1077,7 +1077,7 @@ next
     by (rule compile_IfE)
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j"
-       "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
        "control_at \<Pi> p c2 k (Suc n0 + csize c1) (seq_after SKIP afters) w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 (seq_after SKIP afters) w"
@@ -1094,7 +1094,7 @@ next
     by (rule compile_WhileE)
   from WhileBody.IH[OF req cc] obtain j w where
     jw: "v = Statement j"
-       "(Statement j, CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+       "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
        "control_at \<Pi> p c (Statement n0) (Suc n0) (seq_after SKIP xs) w" by blast
   have "control_at \<Pi> p (While b c) k n0 (seq_after SKIP afters) w"
@@ -1987,7 +1987,7 @@ proof -
       and Ksub: "K \<subseteq> calls g" by (auto simp: compiled_at_def)
   from control_at_seq_after_call_edge[OF loc refl comp] obtain j w where
     vk: "v = Statement j"
-    and edgeK: "(Statement j, CallEdge dst (case \<Pi> q of Some d \<Rightarrow> formals d | None \<Rightarrow> []) actuals,
+    and edgeK: "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
                  FunctionEntry q, w) \<in> K"
     and callerSKIP: "control_at \<Pi> p c0 kk n (seq_after SKIP afters) w" by blast
   have edge: "(Statement j, CallEdge dst (formals decl) actuals, FunctionEntry q, w)

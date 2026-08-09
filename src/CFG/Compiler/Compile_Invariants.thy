@@ -260,7 +260,7 @@ theorem inv13_multi_return_converge:
 text \<open>A self-call targets the procedure's own entry node; its call site is an ordinary
   statement node and its continuation is the caller's own next program point.\<close>
 theorem inv14_recursion_edge:
-  "(Statement n, CallEdge None (case \<Pi> p of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [],
+  "(Statement n, CallEdge None (call_formals \<Pi> p) [],
     FunctionEntry p, k)
      \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
   by simp
