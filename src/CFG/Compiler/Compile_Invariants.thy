@@ -26,6 +26,8 @@ definition wf_compile_input ::
      mnm \<notin> set ps \<and>
      wf_source_program gs \<Pi> mnm main"
 
+declare wf_compile_input_def [wf_compile_input_simps]
+
 
 definition wf_program_compile_input :: "imp_prog => bool" where
   "wf_program_compile_input p \<longleftrightarrow>
