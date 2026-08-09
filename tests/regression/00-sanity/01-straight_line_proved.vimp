@@ -3,9 +3,7 @@
 // See 07-sign-precision/01-straight_line_sign_limitation.vimp for the same
 // program under Sign, which is UNKNOWN there -- a known limitation (#99),
 // not asserted here as Interval's behavior.
-program {
-  void main() {
-    x := 5;
-    __voblint_check(0 < x) // PROVED
-  }
+void main() {
+  x := 5;
+  __voblint_check(0 < x) // PROVED
 }

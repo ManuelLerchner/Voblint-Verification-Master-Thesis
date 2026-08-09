@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// grammar/vimp.yaml's aexp_paren production (added during the grammar-
+// unification investigation) makes arithmetic parentheses actually change
+// precedence, not just parse harmlessly: (a+b)*c and a+b*c differ. Values
+// are exact, so both checks are decidable under Interval.
+void main() {
+  a := 1;
+  b := 2;
+  c := 3;
+  x := (a + b) * c;
+  __voblint_check(x == 9); // PROVED
+  y := a + b * c;
+  __voblint_check(y == 7) // PROVED
+}

@@ -6,11 +6,9 @@
 // exact reachability test for non-relational domains like Interval (see
 // Example_State_Report_GraphViz.thy) -- so it never reaches the report,
 // the same way Goblint emits no warning for code it proves unreachable.
-program {
-  void main() {
-    x := 5;
-    __voblint_check(0 < x); // PROVED
-    return x;
-    __voblint_check(0 < x) // NOWARN
-  }
+void main() {
+  x := 5;
+  __voblint_check(0 < x); // PROVED
+  return x;
+  __voblint_check(0 < x) // NOWARN
 }

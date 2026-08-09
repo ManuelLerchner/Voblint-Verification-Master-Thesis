@@ -4,8 +4,6 @@
 // program function called `fail` (needing a token position) after already
 // consuming the final EOF sentinel, crashing with an uncaught assertion
 // instead of a clean "missing 'void main()'" parse error.
-program {
-  void ain() {
-    x := 0
-  }
+void ain() {
+  x := 0
 }

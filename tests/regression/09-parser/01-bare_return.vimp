@@ -3,9 +3,7 @@
 // expression), but vimp_parser.ml's KW_RETURN case used to unconditionally
 // require an aexp afterward -- found by tests/property's round-trip
 // property (Hypothesis generated Return None, print/parse disagreed).
-program {
-  void main() {
-    __voblint_check(1 < 2); // PROVED
-    return
-  }
+void main() {
+  __voblint_check(1 < 2); // PROVED
+  return
 }

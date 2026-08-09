@@ -7,13 +7,11 @@
 // "<= bot": a "<= bot" test would miss this branch's emptiness entirely
 // (it only matches the one canonical representative), silently leaving a
 // dead check visible with a vacuous PROVED verdict.
-program {
-  void main() {
-    x := 5;
-    if (x < 0) {
-      __voblint_check(0 < x) // NOWARN
-    } else {
-      __voblint_check(0 < x) // PROVED
-    }
+void main() {
+  x := 5;
+  if (x < 0) {
+    __voblint_check(0 < x) // NOWARN
+  } else {
+    __voblint_check(0 < x) // PROVED
   }
 }

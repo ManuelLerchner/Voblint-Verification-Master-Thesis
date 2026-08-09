@@ -1,12 +1,18 @@
-# voblint CLI: a thin, unverified parser/adapter over the Isabelle-generated
+# voblint CLI: a thin, unverified adapter over the Isabelle-generated
 # Voblint_CLI OCaml module (src/Examples/Tooling/Example_State_Report_GraphViz.thy's
-# export_code block). Requires ocamlfind + the zarith package on PATH, same
-# as codegen/regression/ocaml; does not require Isabelle to build (only to
-# regenerate ../codegen/generated/ml/Voblint_CLI.ml via `make -C .. codegen`).
+# export_code block). The frontend (vimp_parser.mly, vimp_lexer.mll) is
+# generated from grammar/vimp.yaml by scripts/gen_vimp_menhir.py and
+# committed, the same convention codegen/generated/ uses for Isabelle output
+# -- `make` needs only ocamlfind + zarith + menhir + ocamllex on PATH, not
+# Python/PyYAML/Isabelle; regenerating the frontend (only needed if
+# grammar/vimp.yaml changed) is the separate `make generate`.
 
-.PHONY: all clean test
+.PHONY: all generate clean test
 
 all: voblint
+
+generate:
+	cd .. && .venv/bin/python3 scripts/gen_vimp_menhir.py
 
 test: voblint
 	python3 ../tests/run.py
@@ -18,9 +24,16 @@ test: voblint
 Voblint_CLI.ml: ../codegen/generated/ml/Voblint_CLI.ml
 	cp $< $@
 
-voblint: Voblint_CLI.ml vimp_lexer.ml vimp_parser.ml main.ml
+vimp_parser.ml vimp_parser.mli: vimp_parser.mly
+	menhir vimp_parser.mly
+
+vimp_lexer.ml: vimp_lexer.mll
+	ocamllex vimp_lexer.mll
+
+voblint: Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml main.ml
 	ocamlfind ocamlopt -package str,zarith,unix -linkpkg \
-	  Voblint_CLI.ml vimp_lexer.ml vimp_parser.ml main.ml -o voblint
+	  Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml main.ml -o voblint
 
 clean:
-	rm -f voblint Voblint_CLI.ml *.cmi *.cmx *.o
+	rm -f voblint Voblint_CLI.ml vimp_parser.ml vimp_parser.mli vimp_parser.automaton vimp_parser.conflicts \
+	  vimp_lexer.ml *.cmi *.cmx *.o

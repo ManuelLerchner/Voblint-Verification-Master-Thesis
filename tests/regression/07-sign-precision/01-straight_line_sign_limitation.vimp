@@ -5,9 +5,7 @@
 // every transfer against the global component's Top default, so Sign loses
 // even this minimal single local write. Interval routes through the
 // separate warrowing backend and is unaffected.
-program {
-  void main() {
-    x := 5;
-    __voblint_check(0 < x) // UNKNOWN
-  }
+void main() {
+  x := 5;
+  __voblint_check(0 < x) // UNKNOWN
 }

@@ -63,6 +63,7 @@ Adding a case is: drop a new .vimp file under an existing (or new)
 regression/<NN-topic>/ directory -- nothing else to wire up.
 """
 
+import os
 import re
 import subprocess
 import sys
@@ -73,7 +74,12 @@ TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
 CLI_DIR = REPO_ROOT / "cli"
 REGRESSION_DIR = TESTS_DIR / "regression"
-VOBLINT = CLI_DIR / "voblint"
+# VOBLINT_BIN lets an alternate binary (e.g. the generated-Menhir prototype's
+# voblint2, tests/menhir_prototype/voblint2) run against this corpus and its
+# verdict-matching logic without duplicating it -- see
+# tests/menhir_prototype/ for why: it has no --dot/--parse-only support, so
+# main()'s `make -C CLI_DIR` build step is skipped when this is set.
+VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CLI_DIR / "voblint"
 
 REACHABLE = "reachable"
 NOWARN = "NOWARN"
@@ -234,7 +240,8 @@ def discover(selectors: list[str]) -> list[Path]:
 
 
 def main() -> int:
-    subprocess.run(["make", "-C", str(CLI_DIR)], check=True, capture_output=True)
+    if "VOBLINT_BIN" not in os.environ:
+        subprocess.run(["make", "-C", str(CLI_DIR)], check=True, capture_output=True)
 
     args = sys.argv[1:]
     sequential = "-s" in args

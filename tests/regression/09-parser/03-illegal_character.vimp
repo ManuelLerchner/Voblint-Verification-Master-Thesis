@@ -4,8 +4,6 @@
 // raise Lex_error, which main.ml used to leave uncaught (only
 // Vimp_parser.Parse_error was handled), crashing instead of reporting a
 // clean parse error.
-program {
-  void main() {
-    x := 1 @ 2
-  }
+void main() {
+  x := 1 @ 2
 }

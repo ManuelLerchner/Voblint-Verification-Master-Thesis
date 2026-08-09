@@ -1,7 +1,9 @@
 (* voblint: a thin CLI over the Isabelle-generated, proved-sound analyzer.
 
    source text (unverified adapter)
-       -> Vimp_parser (this directory, hand-written, NOT verified)
+       -> Vimp_lexer/Vimp_parser (this directory, generated from
+          grammar/vimp.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
+          Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
        -> Voblint_CLI.Analyse.analyse_with_state (Isabelle-generated)
        -> proved analysis results, subject to the Isabelle theorem
@@ -75,9 +77,9 @@ let render_text_report ~vars_to_probe (report :
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
   (* report and check_positions are both in check-declaration order, one
-     entry per __voblint_check the parser saw -- see check_positions'
-     doc comment in vimp_parser.ml. A length mismatch would mean that
-     invariant broke, so let it raise rather than silently misalign. *)
+     entry per __voblint_check the parser saw -- see Vimp_frontend.program's
+     doc comment. A length mismatch would mean that invariant broke, so let
+     it raise rather than silently misalign. *)
   List.iter2
     (fun (node, (cond, (verdict, f))) (line, col) ->
        if not (is_unreachable vars_to_probe f) then begin
@@ -197,13 +199,9 @@ let () =
     with Sys_error msg -> prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg); exit 1
   in
   let prog, check_positions =
-    try Vimp_parser.program path src
-    with
-    | Vimp_parser.Parse_error { file; line; col; msg } ->
+    try Vimp_frontend.program path src
+    with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
-      exit 2
-    | Vimp_lexer.Lex_error { line; col; msg } ->
-      Printf.eprintf "%s:%d:%d: parse error: %s\n" path line col msg;
       exit 2
   in
   if !parse_only then exit 0;

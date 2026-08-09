@@ -8,14 +8,12 @@
 // neither if-branch is infeasible -- both stay genuinely reachable, unlike
 // an exact guard (see 03-infeasible_guard_nowarn.vimp, where a known-exact
 // x makes one branch provably dead).
-program {
-  void main() {
-    x := random();
-    __voblint_check(true); // reachable
-    if (x < 10) {
-      __voblint_check(true) // reachable
-    } else {
-      __voblint_check(true) // reachable
-    }
+void main() {
+  x := random();
+  __voblint_check(true); // reachable
+  if (x < 10) {
+    __voblint_check(true) // reachable
+  } else {
+    __voblint_check(true) // reachable
   }
 }
