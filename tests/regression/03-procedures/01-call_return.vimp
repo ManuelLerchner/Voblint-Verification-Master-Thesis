@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// Procedure call with a formal and a used return value.
+program {
+  void inc(n) {
+    return n + 1
+  }
+  void main() {
+    r := inc(5);
+    __voblint_check(0 < r) // PROVED
+  }
+}

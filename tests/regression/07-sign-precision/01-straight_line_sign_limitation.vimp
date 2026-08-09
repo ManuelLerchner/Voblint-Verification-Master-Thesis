@@ -1,0 +1,13 @@
+// PARAM: --analysis sign
+// Same program as 00-sanity/01-straight_line_proved.vimp, under Sign
+// instead of Interval. Expected UNKNOWN is a known limitation (#99), not
+// desirable semantics: the generic D/G unit bridge (unit_step_st) pre-joins
+// every transfer against the global component's Top default, so Sign loses
+// even this minimal single local write. Interval routes through the
+// separate warrowing backend and is unaffected.
+program {
+  void main() {
+    x := 5;
+    __voblint_check(0 < x) // UNKNOWN
+  }
+}

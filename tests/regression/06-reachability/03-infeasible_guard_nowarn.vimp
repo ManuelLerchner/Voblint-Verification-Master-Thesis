@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// A NOWARN case that is NOT return-based: x is narrowed to [5,5], so the
+// "if (x < 0)" branch is infeasible. bfilter correctly detects this and
+// narrows x to an empty (but non-canonical) interval there, e.g.
+// Ivl (Fin 5) (Fin (-1)) -- not the canonical Ivl PlusInf MinInf bot. This
+// case is why is_bottom_ivl compares bounds directly rather than testing
+// "<= bot": a "<= bot" test would miss this branch's emptiness entirely
+// (it only matches the one canonical representative), silently leaving a
+// dead check visible with a vacuous PROVED verdict.
+program {
+  void main() {
+    x := 5;
+    if (x < 0) {
+      __voblint_check(0 < x) // NOWARN
+    } else {
+      __voblint_check(0 < x) // PROVED
+    }
+  }
+}

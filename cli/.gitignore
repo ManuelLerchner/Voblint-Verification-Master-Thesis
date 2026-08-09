@@ -1,0 +1,7 @@
+# Build byproducts. `make` regenerates all of these from the tracked .ml
+# sources and ../codegen/generated/ml/Voblint_CLI.ml.
+*.cmi
+*.cmx
+*.o
+Voblint_CLI.ml
+voblint

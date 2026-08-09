@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Mirrors Goblint's "__goblint_check(1); // reachable": a trivially-true
+// condition isolates "does this location produce a report entry at all"
+// (a CFG-compilation completeness property) from "is the analysis precise
+// enough to prove this specific fact" -- 'true' is provable in every
+// abstract state, live or dead, so its presence is the only thing being
+// tested here. x is unconstrained (random()), not a known exact value, so
+// neither if-branch is infeasible -- both stay genuinely reachable, unlike
+// an exact guard (see 03-infeasible_guard_nowarn.vimp, where a known-exact
+// x makes one branch provably dead).
+program {
+  void main() {
+    x := random();
+    __voblint_check(true); // reachable
+    if (x < 10) {
+      __voblint_check(true) // reachable
+    } else {
+      __voblint_check(true) // reachable
+    }
+  }
+}
