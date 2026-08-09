@@ -92,6 +92,7 @@ regression = "bash scripts/mk/regression.sh"
 
 # voblint CLI
 cli-build = "bash scripts/mk/cli-build.sh"
+cli-build-quiet-check = "bash scripts/mk/cli-build-quiet-check.sh"
 cli-test = { cmd = "python3 tests/run.py", depends-on = ["cli-build"] }
 voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
 
@@ -103,6 +104,7 @@ ci = { depends-on = [
   "grammar-check",
   "build",
   "codegen-check",
+  "cli-build-quiet-check",
   "cli-test",
   "regression",
   "property",
