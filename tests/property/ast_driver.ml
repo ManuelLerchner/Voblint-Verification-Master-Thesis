@@ -137,31 +137,6 @@ let source_text_of_program original =
   in
   String.concat "" (List.map (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c)))) source_chars)
 
-(* pretty_string_of_program (VIMP_Source_Print.thy, untouched by the
-   grammar-unification cutover) still wraps output in "program { ... }" --
-   grammar/vimp.yaml's canonical grammar (hence the shipped Vimp_parser as
-   of M5) deliberately doesn't have that production, EOF-delimited programs
-   instead (see grammar/vimp.yaml's header comment). pretty_string_of_program's
-   layout is fixed: line 1 is exactly "program {", the last line is exactly
-   "}", everything between is indented by exactly 2 spaces as its own base
-   indent -- dropping the first/last line and that indent yields exactly
-   what the shipped parser now expects. Isabelle's printer catching up to
-   the new grammar (VIM_Source_Print.thy itself dropping program{}) is M6
-   scope, not this cutover. *)
-let strip_wrapper (wrapped : string) : string =
-  let lines = String.split_on_char '\n' wrapped in
-  match lines with
-  | first :: rest when first = "program {" ->
-    let rec drop_last = function
-      | [] | [ _ ] -> []
-      | x :: xs -> x :: drop_last xs
-    in
-    let dedent line =
-      if String.length line >= 2 && String.sub line 0 2 = "  " then String.sub line 2 (String.length line - 2)
-      else line
-    in
-    String.concat "\n" (List.map dedent (drop_last rest))
-  | _ -> failwith "strip_wrapper: expected leading \"program {\" line"
 
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
 
@@ -169,7 +144,7 @@ let () =
   let input = In_channel.input_all stdin in
   try
     let original = build_program (parse_sexp input) in
-    let source_text = strip_wrapper (source_text_of_program original) in
+    let source_text = source_text_of_program original in
     if mode = "--print-source" then (print_string source_text; exit 0);
     match Vimp_frontend.program "<generated>" source_text with
     | reparsed, _ when mode = "--print-reprinted" ->
@@ -179,7 +154,7 @@ let () =
          but checking it directly gives a source-text diff on failure instead
          of "the trees differ", and catches the (structural-equality
          assumption) breaking silently. *)
-      print_string (strip_wrapper (source_text_of_program reparsed));
+      print_string (source_text_of_program reparsed);
       exit 0
     | reparsed, _ ->
       if original = reparsed then print_endline "OK"
