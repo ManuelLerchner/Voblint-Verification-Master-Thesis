@@ -7,7 +7,7 @@
 -- src/Examples/Mixed/Example_Analysis_Dispatch.thy's
 -- dispatch_demo_sign_unknown / dispatch_demo_interval_precise lemmas.
 --
--- Do not hand-edit codegen/generated/hs/*.hs; regenerate with `make codegen`.
+-- Do not hand-edit codegen/generated/hs/*.hs; regenerate with `pixi run codegen`.
 module Main (main) where
 
 import Prelude hiding (Char, Int, Num)

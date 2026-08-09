@@ -1,5 +1,5 @@
 # GHC/OCaml build byproducts from compiling codegen/generated/ and the
-# regression drivers under codegen/regression/. `make codegen`/`isabelle
+# regression drivers under codegen/regression/. `pixi run codegen`/`isabelle
 # export` regenerate the tracked .hs/.ml sources from scratch, so these
 # are always safe to delete.
 *.hi

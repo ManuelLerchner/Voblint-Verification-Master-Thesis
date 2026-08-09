@@ -186,9 +186,9 @@ before it reaches CI.
 
 * **[Isabelle](https://isabelle.in.tum.de/)  2025** (or newer)
 * **[AFP](https://www.isa-afp.org/)** (Archive of Formal Proofs) checkout containing `Root_Balanced_Tree` and `Dijkstra_Shortest_Path`.
-* **[pixi](https://pixi.sh/)** for Python-side tooling (I/R, the grammar generators, the property-test suite, `lefthook`).
-* `make`, `git`, and standard POSIX tools.
-* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, and GHC, for the code-generation regression drivers -- see "Executable code generation" below.
+* **[pixi](https://pixi.sh/)** -- the repository's task runner and Python-side dependency manager (I/R, the grammar generators, the property-test suite, `lefthook`). `pixi.toml` is the single command surface: `pixi run <task>`, `pixi task list` to see all of them.
+* `git`, `bash`, and standard POSIX tools.
+* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, and GHC, for the code-generation regression drivers -- see "Executable code generation" below. conda-forge's OCaml packages have no osx-arm64 build for `ocaml-findlib`/`ocaml-zarith`, so pixi does not manage this toolchain; opam/ghcup do.
 
 ### Building
 
@@ -196,13 +196,13 @@ Set `AFP` to your local AFP `thys/` directory (defaults to `~/afp/thys`):
 
 ```bash
 # 1. Initialize the TD solver submodule and apply compatibility patches
-make vendor
+pixi run vendor
 
 # 2. Build the main formalization session (sorry-free)
-make AFP=/path/to/afp/thys build
+AFP=/path/to/afp/thys pixi run build
 
 # 3. Launch jEdit with session roots pre-loaded
-make AFP=/path/to/afp/thys jedit
+AFP=/path/to/afp/thys pixi run jedit
 
 ```
 
@@ -257,24 +257,24 @@ doesn't expose across that boundary -- not fixable by regrouping, so `Core`/
 
 ```bash
 # Regenerate codegen/generated/ from the export_code declarations
-make AFP=/path/to/afp/thys codegen
+AFP=/path/to/afp/thys pixi run codegen
 
 # Fail if codegen/generated/ has drifted from those declarations
-make AFP=/path/to/afp/thys codegen-check
+AFP=/path/to/afp/thys pixi run codegen-check
 
 # Compile and run the hand-written Haskell/OCaml drivers under
 # codegen/regression/ against codegen/generated/, and check their output
 # against the values already proved by Example_Analysis_Dispatch.thy's
 # dispatch_demo_sign_unknown / dispatch_demo_interval_precise
-make regression
+pixi run regression
 ```
 
 Generated sources are tracked under `codegen/generated/`; do not hand-edit
 them. `codegen/regression/{haskell,ocaml}/` hold the hand-written drivers
 that exercise the generated code and compare it against the Isabelle-proved
 expected output -- so the generated Haskell/OCaml is checked against the same
-theorems as the Isabelle source, not merely assumed to match it. Both `make
-codegen-check` and `make regression` run in CI (`.github/workflows/ci.yml`).
+theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
+codegen-check` and `pixi run regression` run in CI (`.github/workflows/ci.yml`).
 
 ### Vendoring the TD solver
 
@@ -284,8 +284,14 @@ Vendored as a submodule via the private fork
 (CI + local access). GitHub Actions cannot clone the fork with the default
 `GITHUB_TOKEN`; add a classic PAT with `repo` scope as repository secret
 `SUBMODULES_TOKEN`, or make the fork public. A small Isabelle2025 compatibility
-change lives in `vendor/td-verification.patch`; `make vendor` applies it
-(idempotent).
+change lives in `vendor/td-verification.patch`; `pixi run vendor` applies it
+(idempotent). To regenerate the patch after changing the submodule's working
+tree: `git -C vendor/td-verification --no-pager diff > vendor/td-verification.patch`.
+
+`vendor/autocorrode` (the I/Q/I/R MCP servers, see "Agent-assisted
+development" below) is a separate submodule. To fast-forward it to upstream
+main: `git submodule update --remote --merge vendor/autocorrode`, then review
+and commit the pointer update.
 
 ### Agent-assisted development
 

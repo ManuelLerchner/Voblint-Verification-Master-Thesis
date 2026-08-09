@@ -66,15 +66,18 @@ jobs:
             --env AFP_COMPONENT_BASE \
             makarius/isabelle:Isabelle2025-2 \
             -ec '
-              apt-get update -qq && apt-get install -y -qq git make curl > /dev/null
-              ISABELLE=/home/isabelle/Isabelle/bin/isabelle
-              make vendor
-              make html AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
-              make lint AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              apt-get update -qq && apt-get install -y -qq git curl > /dev/null
+              curl -fsSL https://pixi.sh/install.sh | bash
+              export PATH="$HOME/.pixi/bin:$PATH"
+              export ISABELLE=/home/isabelle/Isabelle/bin/isabelle
+              export AFP="$AFP_COMPONENT_BASE"
+              pixi run vendor
+              pixi run html
+              pixi run isabelle-lint
               git config --global --add safe.directory "$GITHUB_WORKSPACE"
-              make codegen-check AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              pixi run codegen-check
               $ISABELLE ocaml_setup
-              make codegen-ocaml-check AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              pixi run codegen-ocaml-check
             '
 
       - name: Upload GitHub Pages site
@@ -107,13 +110,17 @@ jobs:
       - name: Install zarith (Code_Target_Numeral backs int/nat by Z.t)
         run: opam install -y zarith
 
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
       - name: Compile and run codegen/regression drivers against codegen/generated/
         # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
         # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
-        # `make`'s /bin/sh sub-shell then can't find ocamlfind even though opam
-        # install (also just `opam`, not a switch binary) succeeded one step earlier.
-        # `opam exec --` activates the switch environment for this invocation.
-        run: opam exec -- make regression
+        # a plain `pixi run regression` sub-shell then can't find ocamlfind even
+        # though opam install (also just `opam`, not a switch binary) succeeded
+        # one step earlier. `opam exec --` activates the switch environment for
+        # this invocation.
+        run: opam exec -- pixi run regression
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

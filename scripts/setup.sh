@@ -8,7 +8,7 @@
 #   - build + install the I/Q jEdit plugin (skip with --no-iq)
 #
 # Re-run safe. To bump vendor/autocorrode to a newer upstream commit:
-#   make update-autocorrode
+#   pixi run update-autocorrode
 
 set -euo pipefail
 
@@ -32,8 +32,8 @@ AC_DIR="$REPO_ROOT/vendor/autocorrode"
 echo "Initializing submodules ..."
 git -C "$REPO_ROOT" submodule update --init vendor/autocorrode vendor/td-verification
 
-echo "Applying td-verification patch (via make vendor) ..."
-make -C "$REPO_ROOT" vendor
+echo "Applying td-verification patch (via pixi run vendor) ..."
+( cd "$REPO_ROOT" && pixi run vendor )
 
 echo "Configuring sparse-checkout (ir/, iq/) ..."
 git -C "$AC_DIR" sparse-checkout init --cone

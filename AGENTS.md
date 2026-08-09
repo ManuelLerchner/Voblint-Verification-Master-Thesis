@@ -123,19 +123,18 @@ When changing VIMP syntax:
 1. Edit `grammar/vimp.yaml` only.
 2. Never hand-edit `cli/vimp_parser.mly`, `cli/vimp_lexer.mll`, or
    `src/VIMP/VIMP_Grammar_Generated.thy` -- all three are generated.
-3. Regenerate: `cd cli && make generate` (Menhir/ocamllex) and
-   `pixi run python3 scripts/gen_vimp_isabelle.py` (Isabelle); load the
-   regenerated `VIMP_Grammar_Generated.thy` through I/Q per the theory-file
-   boundary rules below, not a host editor. (The pre-commit hook does this
+3. Regenerate: `pixi run gen-grammar-menhir` (Menhir/ocamllex) and
+   `pixi run gen-grammar-isabelle` (Isabelle); load the regenerated
+   `VIMP_Grammar_Generated.thy` through I/Q per the theory-file boundary
+   rules below, not a host editor. (The pre-commit hook does this
    automatically; this step is for regenerating before that point.)
 4. Update or add fixtures in the `.vimp` regression corpus and, if the
    change affects generation strategies, `tests/property/strategies.py`.
-5. Run the property-test suite (`cd tests/property && make && pixi run
-   pytest .`).
-6. Run `make codegen-check` and confirm the grammar drift check is clean
-   (`pixi run python3 scripts/gen_vimp_isabelle.py && git diff --exit-code
-   -- src/VIMP/VIMP_Grammar_Generated.thy`).
-7. Run the Isabelle batch build if generated syntax changed.
+5. Run the property-test suite (`pixi run property`).
+6. Run `pixi run grammar-check` (regenerates both frontends and fails on
+   any diff) and `AFP=/path/to/afp/thys pixi run codegen-check`.
+7. Run the Isabelle batch build (`AFP=/path/to/afp/thys pixi run build`) if
+   generated syntax changed.
 
 `prog_main`'s separate HOL representation (`imp_prog`'s dedicated
 `prog_main :: com` field, instead of folding `main` into `proc_rep` as an

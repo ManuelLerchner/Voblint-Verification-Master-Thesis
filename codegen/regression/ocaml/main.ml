@@ -7,7 +7,7 @@
    dispatch_demo_sign_unknown / dispatch_demo_interval_precise lemmas.
 
    Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
-   it with `make codegen` instead. *)
+   it with `pixi run codegen` instead. *)
 
 open Voblint_Analyse_OCaml.Core
 open Voblint_Analyse_OCaml.Analyse

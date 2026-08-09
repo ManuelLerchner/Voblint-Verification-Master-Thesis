@@ -5,9 +5,9 @@ real ocamllex lexer (vimp_lexer.mll) -- from the canonical grammar/vimp.yaml.
 This is the source of cli/vimp_parser.mly and cli/vimp_lexer.mll (M5 of the
 grammar-unification investigation: the production CLI cutover). The
 generated .mly/.mll are committed, the same convention codegen/generated/
-already uses for Isabelle-generated sources: `make voblint` needs only
-menhir/ocamllex/ocamlfind, not Python, matching cli/Makefile's existing
-"does not require Isabelle" framing extended to "does not require
+already uses for Isabelle-generated sources: `pixi run cli-build`
+(scripts/mk/cli-build.sh) needs only menhir/ocamllex/ocamlfind, not Python,
+extending its "does not require Isabelle" framing to "does not require
 regenerating the frontend either, unless grammar/vimp.yaml changed."
 
 Requires PyYAML to regenerate (`pip install pyyaml`, or `pixi install` from

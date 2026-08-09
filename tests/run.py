@@ -78,7 +78,7 @@ REGRESSION_DIR = TESTS_DIR / "regression"
 # voblint2, tests/menhir_prototype/voblint2) run against this corpus and its
 # verdict-matching logic without duplicating it -- see
 # tests/menhir_prototype/ for why: it has no --dot/--parse-only support, so
-# main()'s `make -C CLI_DIR` build step is skipped when this is set.
+# main()'s cli-build step is skipped when this is set.
 VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CLI_DIR / "voblint"
 
 REACHABLE = "reachable"
@@ -241,7 +241,11 @@ def discover(selectors: list[str]) -> list[Path]:
 
 def main() -> int:
     if "VOBLINT_BIN" not in os.environ:
-        subprocess.run(["make", "-C", str(CLI_DIR)], check=True, capture_output=True)
+        subprocess.run(
+            ["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")],
+            check=True,
+            capture_output=True,
+        )
 
     args = sys.argv[1:]
     sequential = "-s" in args
