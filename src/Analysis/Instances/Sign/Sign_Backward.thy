@@ -491,18 +491,18 @@ lemma inv_eq_sign_false_bot_consistent:
 subsection \<open>Executable end-to-end @{const bfilter_sign} tests\<close>
 
 definition test_env_nonneg_eq :: "sign abs_state" where
-  "test_env_nonneg_eq = (\<lambda>_. STop)(''x'' := SNonNeg)"
+  "test_env_nonneg_eq = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
 
 text \<open>@{text \<open>x = 0\<close>} known true meets \<open>x\<close>'s bound with @{term SZero}.\<close>
 lemma bfilter_sign_eq_true_narrows:
-  "bfilter_sign (Eq (V ''x'') (N 0)) True test_env_nonneg_eq ''x'' = SZero"
+  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) True test_env_nonneg_eq (STR ''x'') = SZero"
   unfolding test_env_nonneg_eq_def by eval
 
 text \<open>@{text \<open>x != 0\<close>} known true (i.e. the guard @{text \<open>x = 0\<close>} is false) on
   @{term SNonNeg} narrows to @{term SPos}: the disequality-narrowing gain
   \<open>bfilter\<close>'s old identity-only \<open>Eq\<close> \<open>False\<close> case could never produce.\<close>
 lemma bfilter_sign_eq_false_narrows_to_pos:
-  "bfilter_sign (Eq (V ''x'') (N 0)) False test_env_nonneg_eq ''x'' = SPos"
+  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) False test_env_nonneg_eq (STR ''x'') = SPos"
   unfolding test_env_nonneg_eq_def by eval
 
 end

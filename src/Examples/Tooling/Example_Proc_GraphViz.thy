@@ -5,7 +5,7 @@ theory Example_Proc_GraphViz
 begin
 
 definition dot_main_name :: pname where
-  "dot_main_name = ''main''"
+  "dot_main_name = (STR ''main'')"
 
 text \<open>
   Two @{const compile_prog} results are exported through @{const raw_cfg_dot_lit}.
@@ -22,13 +22,13 @@ definition proc_p_body :: com where
   "proc_p_body = imp \<lbrakk> Gx := Gx + 1 \<rbrakk>"
 
 definition proc_table_a :: proc_table where
-  "proc_table_a = ((\<lambda>_. None)(''p'' := Some (proc_decl_of [] proc_p_body)))"
+  "proc_table_a = ((\<lambda>_. None)((STR ''p'') := Some (proc_decl_of [] proc_p_body)))"
 
 definition prog_call_p :: com where
   "prog_call_p = imp \<lbrakk> p() \<rbrakk>"
 
 definition procs_a :: "pname list" where
-  "procs_a = [''p'']"
+  "procs_a = [(STR ''p'')]"
 
 subsection \<open>Conditional calls to two procedures\<close>
 
@@ -36,13 +36,13 @@ definition proc_q_body :: com where
   "proc_q_body = imp \<lbrakk> Gy := Gy + 1 \<rbrakk>"
 
 definition proc_table_b :: proc_table where
-  "proc_table_b = (proc_table_a(''q'' := Some (proc_decl_of [] proc_q_body)))"
+  "proc_table_b = (proc_table_a((STR ''q'') := Some (proc_decl_of [] proc_q_body)))"
 
 definition prog_if_calls :: com where
   "prog_if_calls = imp \<lbrakk> if (Gx < Gy) { p() } else { q() } \<rbrakk>"
 
 definition procs_b :: "pname list" where
-  "procs_b = [''p'', ''q'']"
+  "procs_b = [(STR ''p''), (STR ''q'')]"
 
 subsection \<open>DOT output\<close>
 

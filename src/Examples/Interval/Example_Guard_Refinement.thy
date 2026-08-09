@@ -16,7 +16,7 @@ text \<open>
 subsection \<open>Setup: loop-head abstract state and identity baseline\<close>
 
 definition sigma_x :: "ivl \<Rightarrow> ivl abs_state" where
-  "sigma_x iv = (\<lambda>_. Ivl MinInf PlusInf)(''x'' := iv)"
+  "sigma_x iv = (\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := iv)"
 
 abbreviation "sigma_loop_head \<equiv> sigma_x (Ivl (Fin 0) (Fin 20))"
 
@@ -27,12 +27,12 @@ definition assume_ivl_identity :: "bexp \<Rightarrow> ivl abs_state \<Rightarrow
 subsection \<open>One guard: @{text "x < 20"} narrows the upper bound\<close>
 
 lemma refine_x_lt_20:
-  "assume_ivl (Less (V ''x'') (N 20)) sigma_loop_head ''x'' = Ivl (Fin 0) (Fin 19)"
+  "assume_ivl (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   unfolding sigma_x_def
   by (simp add: assume_ivl_def)
 
 lemma identity_x_lt_20:
-  "assume_ivl_identity (Less (V ''x'') (N 20)) sigma_loop_head ''x'' =
+  "assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'') =
    Ivl (Fin 0) (Fin 20)"
   by (simp add: assume_ivl_identity_def sigma_x_def)
 
@@ -45,28 +45,28 @@ lemma refine_excludes_20:
   "20 \<notin> gamma_ivl (Ivl (Fin 0) (Fin 19))"
   by simp_all
 
-value "assume_ivl (Less (V ''x'') (N 20)) sigma_loop_head ''x''"
-value "assume_ivl_identity (Less (V ''x'') (N 20)) sigma_loop_head ''x''"
+value "assume_ivl (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'')"
+value "assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'')"
 
 subsection \<open>One body step: @{text "x := x + 1"} after the guard\<close>
 
 definition body_after_refined :: "ivl abs_state" where
   "body_after_refined =
-     assign_ivl ''x'' (Plus (V ''x'') (N 1))
-       (assume_ivl (Less (V ''x'') (N 20)) sigma_loop_head)"
+     assign_ivl (STR ''x'') (Plus (V (STR ''x'')) (N 1))
+       (assume_ivl (Less (V (STR ''x'')) (N 20)) sigma_loop_head)"
 
 definition body_after_identity :: "ivl abs_state" where
   "body_after_identity =
-     assign_ivl ''x'' (Plus (V ''x'') (N 1))
-       (assume_ivl_identity (Less (V ''x'') (N 20)) sigma_loop_head)"
+     assign_ivl (STR ''x'') (Plus (V (STR ''x'')) (N 1))
+       (assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head)"
 
 lemma body_step_refined:
-  "body_after_refined ''x'' = Ivl (Fin 1) (Fin 20)"
+  "body_after_refined (STR ''x'') = Ivl (Fin 1) (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
   by (simp add: assign_ivl_def assume_ivl_def normalize_ivl_def)
 
 lemma body_step_identity:
-  "body_after_identity ''x'' = Ivl (Fin 1) (Fin 21)"
+  "body_after_identity (STR ''x'') = Ivl (Fin 1) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
   by (simp add: assign_ivl_def normalize_ivl_def)
 
@@ -76,12 +76,12 @@ text \<open>
   assume drifts upward and never closes at @{text "[0,20]"} without widening.
 \<close>
 lemma loop_join_refined:
-  "sigma_x (Ivl (Fin 0) (Fin 0)) ''x'' \<squnion> body_after_refined ''x'' = Ivl (Fin 0) (Fin 20)"
+  "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_refined (STR ''x'') = Ivl (Fin 0) (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
   by (simp add: sup_ivl_def assign_ivl_def assume_ivl_def normalize_ivl_def)
 
 lemma loop_join_identity:
-  "sigma_x (Ivl (Fin 0) (Fin 0)) ''x'' \<squnion> body_after_identity ''x'' = Ivl (Fin 0) (Fin 21)"
+  "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'') = Ivl (Fin 0) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
   by (simp add: sup_ivl_def assign_ivl_def normalize_ivl_def)
 
@@ -90,7 +90,7 @@ lemma backward_analysis_strictly_tighter:
   "Ivl (Fin 0) (Fin 21) \<le> Ivl (Fin 0) (Fin 20) \<longleftrightarrow> False"
   by (simp_all add: less_eq_ivl_def)
 
-value "sigma_x (Ivl (Fin 0) (Fin 0)) ''x'' \<squnion> body_after_refined ''x''"
-value "sigma_x (Ivl (Fin 0) (Fin 0)) ''x'' \<squnion> body_after_identity ''x''"
+value "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_refined (STR ''x'')"
+value "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'')"
 
 end

@@ -41,6 +41,25 @@ lemma wf_program_compile_inputD:
 definition compile_program :: "imp_prog => cfg" where
   "compile_program p =
     compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+
+text \<open>
+  \<^const>\<open>compile_prog\<close> fixes the compiler input to \<^typ>\<open>proc_table\<close> /
+  \<^typ>\<open>pname list\<close> / \<^typ>\<open>com\<close> separately, so every domain that only has an
+  \<^typ>\<open>imp_prog\<close> in hand needs the same three-projection wrapper
+  \<^const>\<open>compile_program\<close> already provides at \<^const>\<open>prog_main_name\<close>. The
+  general form below (an arbitrary entry-procedure name, not just
+  \<^const>\<open>prog_main_name\<close>) is the constant every check-report/executable
+  layer (Sign, Interval, Parity) actually calls; every call site in this
+  project instantiates \<open>mnm\<close> at \<^const>\<open>prog_main_name\<close> in practice, but the
+  parameter still matches \<^const>\<open>compile_prog\<close>'s own shape rather than
+  hard-coding that choice into the compilation step itself.
+\<close>
+
+definition prog_cfg :: "pname => imp_prog => cfg" where
+  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+lemma compile_program_is_prog_cfg: "compile_program p = prog_cfg prog_main_name p"
+  by (simp add: compile_program_def prog_cfg_def)
 lemma wf_compile_input_source_program:
   "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> wf_source_program gs \<Pi> mnm main"
   by (simp add: wf_compile_input_def)

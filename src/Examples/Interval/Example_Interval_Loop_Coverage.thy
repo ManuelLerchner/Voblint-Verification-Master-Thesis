@@ -44,29 +44,29 @@ abbreviation "loop_cfg \<equiv>
 lemma loop_cfg_full:
   "loop_cfg =
      \<lparr> intra =
-         {(FunctionEntry ''main'', EA_Nop, Statement 0),
-          (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-          (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
-          (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
-          (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
-          (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')},
+         {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+          (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
+          (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
+          (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
+          (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
+          (Statement 3, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
        calls = {},
-       cfg_entry = FunctionEntry ''main'',
+       cfg_entry = FunctionEntry (STR ''main''),
        checks = {} \<rparr>"
   by eval
 
-lemma loop_cfg_entry: "cfg_entry loop_cfg = FunctionEntry ''main''"
+lemma loop_cfg_entry: "cfg_entry loop_cfg = FunctionEntry (STR ''main'')"
   by (simp add: loop_cfg_full)
 lemma loop_cfg_calls: "calls loop_cfg = {}"
   by (simp add: loop_cfg_full)
 lemma loop_cfg_intra:
   "intra loop_cfg =
-     {(FunctionEntry ''main'', EA_Nop, Statement 0),
-      (Statement 0, EA_Assign ''x'' (N 0), Statement 1),
-      (Statement 1, EA_Assume (Less (V ''x'') (N 20)), Statement 2),
-      (Statement 1, EA_AssumeNot (Less (V ''x'') (N 20)), Statement 3),
-      (Statement 2, EA_Assign ''x'' (Plus (V ''x'') (N 1)), Statement 1),
-      (Statement 3, EA_Ret None ''main'', FunctionResult ''main'')}"
+     {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
+      (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
+      (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
+      (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
+      (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
+      (Statement 3, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   by (simp add: loop_cfg_full)
 
 subsection \<open>An exhibited interval post-fixpoint\<close>
@@ -86,9 +86,9 @@ text \<open>
 \<close>
 definition loop_env :: "pp \<Rightarrow> ivl abs_state" where
   "loop_env v =
-     (if v = Statement 2 then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 0) (Fin 19))
+     (if v = Statement 2 then (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 19))
       else if v \<in> {Statement 1, Statement 3}
-        then (\<lambda>_. Ivl MinInf PlusInf)(''x'' := Ivl (Fin 0) (Fin 20))
+        then (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 20))
       else (\<lambda>_. Ivl MinInf PlusInf))"
 
 text \<open>The program is call-free, so both call-shaped sources of \<^const>\<open>rhs\<close> are empty and
@@ -144,13 +144,13 @@ text \<open>
 abbreviation "loop_body_entry \<equiv> Statement 2"
 
 lemma loop_body_x_from_assume:
-  "tf_assume (ivl_tf_for gs) (Less (V ''x'') (N 20)) (loop_env (Statement 1)) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "tf_assume (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   unfolding ivl_tf_for_def assume_ivl_def loop_env_def
   by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
         ivl_backward_domain.afilter.simps aval_ivl.simps meet_ivl.simps)
 
 lemma loop_body_entry_x:
-  "loop_env loop_body_entry ''x'' = Ivl (Fin 0) (Fin 19)"
+  "loop_env loop_body_entry (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   by (simp add: loop_env_def)
 
 subsection \<open>Soundness: @{text "0 \<le> x \<le> 20"} at the loop head\<close>
@@ -162,7 +162,7 @@ lemma loop_head_x_bounded:
   fixes gs :: "vname \<Rightarrow> bool"
   assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
   assumes s: "s \<in> ltr_collect gs loop_cfg S loop_head"
-  shows "0 \<le> s ''x'' \<and> s ''x'' \<le> 20"
+  shows "0 \<le> s (STR ''x'') \<and> s (STR ''x'') \<le> 20"
 proof -
   have fin_e: "finite (intra loop_cfg)" using compile_prog_finite by simp
   have fin_c: "finite (calls loop_cfg)" using compile_prog_finite by simp
@@ -171,7 +171,7 @@ proof -
           [OF ivl_is_sound_transfer_for fin_e fin_c loop_postfix S_sound]
     by blast
   from s le have "s \<in> \<lbrakk>loop_env loop_head\<rbrakk>" by blast
-  then have "s ''x'' \<in> gamma (loop_env loop_head ''x'')"
+  then have "s (STR ''x'') \<in> gamma (loop_env loop_head (STR ''x''))"
     unfolding gamma_state_def by blast
   then show ?thesis by (auto simp: loop_env_def)
 qed

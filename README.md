@@ -160,6 +160,73 @@ make AFP=/path/to/afp/thys jedit
 
 *Note: For details on agent-assisted development using Isabelle/Q and headless Isabelle/R, see `docs/ISABELLE_AGENT_NOTES.md` and the provided `./scripts/setup.sh`.*
 
+### Executable code generation
+
+Each domain exposes a runtime-program entry point -- `analyse_sign_report`
+(`Voblint_Examples.Example_Sign_Codegen`, the native D/G pipeline) and
+`analyse_interval_td_report` (`Voblint_Analysis.Interval_Checks`, the
+widening/warrowing-backed solver) -- reusing the exact functions the
+soundness theorems are proved about, not a parallel implementation. `analyse`
+(`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_kind`
+(`Sign_Analysis`/`Interval_Analysis`) to either domain's check report. All
+three, plus the VIMP AST constructors, are exported to Haskell and OCaml so
+external code can build a program and call `analyse` without touching
+Isabelle: `export_code` translates the same executable equations the kernel
+checked, so the generated function is not a hand-written stand-in for a
+proved one.
+
+`analyse_interval_proved_sound`/`analyse_interval_refuted_sound` and
+`analyse_sign_proved_sound`/`analyse_sign_refuted_sound`
+(`Example_Analysis_Dispatch.thy`) restate the domains' soundness theorems
+directly over `analyse`, so a runtime verdict connects to its soundness proof
+without unfolding the dispatcher by hand. These theorems are conditional: a
+`Check_Proved`/`Check_Refuted` entry `analyse` returns is not itself a
+discharged certificate. Applying its soundness theorem additionally requires,
+for that program, a solver-termination witness (no result in this
+formalization proves either solver terminates on every input -- termination
+is checked per program, typically `by eval`) and a proof that the checked
+node reaches `cfg_exit`. `dispatch_demo_first_check_certified` is one
+complete, hypothesis-free instance of this chain: a concrete `Check_Proved`
+verdict `analyse` actually returns, with both facts discharged and no
+assumption left open.
+
+`code_identifier` declarations (`Example_Analysis_Dispatch.thy`) group the
+~60 contributing Isabelle theories into a small number of named modules
+instead of one undifferentiated file. Haskell splits four ways -- `Core`
+(VIMP/CFG/executable state/generic analysis plumbing/the vendored solver;
+these cannot be split further -- real mutual code-level dependencies, e.g.
+the executable state is generically instantiated at the solver's own
+`widening`/`narrowing` type classes), `Sign`, `Interval`, and `Analyse` (the
+public facade: `analysis_kind`, `analyse` itself, ~30 lines). OCaml's
+serializer only ever emits one file regardless of `module_name`/
+`code_identifier`, so the same grouping instead organizes that one file into
+nested `module ... = struct ... end` blocks; there `Sign`/`Interval` fold
+into `Core` rather than staying separate, since splitting them out passes
+Isabelle's own `export_code` checks but `ocamlfind ocamlopt` then rejects an
+unbound type-class dictionary field the OCaml module-signature inference
+doesn't expose across that boundary -- not fixable by regrouping, so `Core`/
+`Analyse` is the finest split both Isabelle and the OCaml compiler accept.
+
+```bash
+# Regenerate codegen/generated/ from the export_code declarations
+make AFP=/path/to/afp/thys codegen
+
+# Fail if codegen/generated/ has drifted from those declarations
+make AFP=/path/to/afp/thys codegen-check
+
+# Compile and run the hand-written Haskell/OCaml drivers under
+# codegen/regression/ against codegen/generated/, and check their output
+# against the values already proved by Example_Analysis_Dispatch.thy's
+# dispatch_demo_sign_unknown / dispatch_demo_interval_precise
+make regression
+```
+
+Generated sources are tracked under `codegen/generated/`; do not hand-edit
+them. `codegen/regression/{haskell,ocaml}/` hold the hand-written drivers
+that exercise the generated code and compare it against the Isabelle-proved
+expected output -- so the generated Haskell/OCaml is checked against the same
+theorems as the Isabelle source, not merely assumed to match it. Both `make
+codegen-check` and `make regression` run in CI (`.github/workflows/ci.yml`).
 
 ### Vendoring the TD solver
 

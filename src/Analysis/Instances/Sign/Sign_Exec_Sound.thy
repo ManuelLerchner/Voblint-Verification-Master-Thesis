@@ -2,7 +2,9 @@ theory Sign_Exec_Sound
   imports Sign_Exec Sign_Side_Soundness Voblint_Core.Solver_Side_RG
           "TD.TD_side_upd_rule"
           "Voblint_VIMP.VIMP_Notation"
+          "Voblint_CFG.Compile_Invariants"
           Analysis_GraphViz
+          "Voblint_Analysis.Exec_DG_Bridge"
 begin
 
 section \<open>Executable sign analysis: the computed result and its certified soundness\<close>
@@ -171,10 +173,10 @@ text \<open>
   procedure table, procedure-name list, and main command.  The wrappers below
   feed those three projections to the analyzer in one step, so example
   statements name the program once instead of repeating the triple.
+  \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>) is the shared,
+  domain-independent instance of this same projection for the CFG itself, so
+  it is imported rather than redefined here.
 \<close>
-
-definition prog_cfg :: "pname \<Rightarrow> imp_prog \<Rightarrow> cfg" where
-  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition sign_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
   "sign_exec_prog_at gs mnm p v = sign_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v"
@@ -208,6 +210,61 @@ corollary sign_exec_prog_sound_collecting:
   unfolding sign_exec_prog_def
   by (rule sign_exec_prog_sound_collecting_at[OF assms cfg_reaches_refl])
 
+section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
+
+text \<open>
+  \<open>sign_exec_prog\<close> above is the older \<open>side_cfg_T_eff_st\<close> pipeline, mirroring
+  \<open>Interval_Exec_Sound\<close>'s \<open>ivl_exec_prog\<close> exactly. The exported runtime API \<open>analyse\<close>
+  (\<open>Example_Analysis_Dispatch\<close>, downstream in Examples) dispatches through a
+  different, newer pipeline instead: the native D/G equation system (\<open>dg_gen_of\<close>,
+  \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>), because that is what the \<open>Exec_Sign_DG_Run\<close> flagship
+  example (\<open>dgEx_sol\<close>, downstream in Examples) already used before this API existed. Only the
+  raw computation lives here --- \<open>analyse_sign_for\<close>'s soundness proof needs the
+  \<open>unit_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session), one session
+  later than Analysis in the locked six-session chain, so that half cannot live in this file; it
+  stays in \<open>Example_Sign_Codegen\<close> (downstream in Examples), which references these definitions
+  with \<open>gs\<close>/\<open>p\<close> applied explicitly.
+\<close>
+
+definition analyse_sign_eqs_for ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "analyse_sign_eqs_for gs p =
+     dg_gen_of
+       (unit_dg_spec_st_for gs (sign_tf_st_for gs) (sign_enter_st_for gs))
+       (prog_cfg prog_main_name p) bot cinit_sign_st cinit_sign_st"
+
+definition analyse_sign_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "analyse_sign_for gs p =
+     TD_side_always_join_Interp_solve (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ())"
+
+text \<open>
+  \<open>analyse_sign_env_for\<close> reads the exit-answer/side-effect split \<open>dg_state\<close> keeps (\<open>Inl (v, ())\<close>
+  for the local answer at \<open>v\<close>, \<open>Inr ()\<close> for the global side effect) the same way \<open>dgEx_inspect\<close>
+  in \<open>Exec_Sign_DG_Run\<close> (downstream in Examples) does by hand.
+\<close>
+
+definition analyse_sign_env_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
+  "analyse_sign_env_for gs p v =
+     fun_of_exec_dg_st_for gs (locals (snd (analyse_sign_for gs p) (Inl (v, ()))))
+     \<squnion> fun_of_exec_dg_st_for gs (globs (snd (analyse_sign_for gs p) (Inr ())))"
+
+text \<open>
+  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval\<close>'s shape.
+\<close>
+
+definition analyse_sign_eqs :: "imp_prog \<Rightarrow>
+    pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+  "analyse_sign_eqs p = analyse_sign_eqs_for (declared_global p) p"
+
+definition analyse_sign :: "imp_prog \<Rightarrow>
+    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "analyse_sign p = analyse_sign_for (declared_global p) p"
+
+definition analyse_sign_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
+  "analyse_sign_env p = analyse_sign_env_for (declared_global p) p"
+
 section \<open>Visualisation convenience\<close>
 
 text \<open>
@@ -238,15 +295,15 @@ definition sign_graph_config ::
           (compile_prog \<Pi> ps mnm main) p)),
       globals_to_show = compiled_global_vars gs (compile_prog \<Pi> ps mnm main),
       show_local = (\<lambda>_ _ vars s.
-        map (\<lambda>x. x @ ''='' @ show_val (s x)) vars),
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
       format_return = (\<lambda>_ _ ret s.
         if s ret = STop then [] else [''ret='' @ show_val (s ret)]),
       show_global = (\<lambda>_ vars s.
-        map (\<lambda>x. x @ ''='' @ show_val (s x)) vars),
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
       show_global_key = (\<lambda>_. ''Globals''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
-      owner_of = compiled_owner_of \<Pi> ps mnm main,
+      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
       source_text = Some (pretty_string_of_program \<Pi> ps main),
       node_annotation = (\<lambda>_. None)

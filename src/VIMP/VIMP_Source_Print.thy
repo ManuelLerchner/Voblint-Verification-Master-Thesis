@@ -16,7 +16,7 @@ definition string_of_int :: "int \<Rightarrow> string" where
 
 fun string_of_aexp :: "aexp \<Rightarrow> string" where
   "string_of_aexp (N n) = string_of_int n"
-| "string_of_aexp (V x) = x"
+| "string_of_aexp (V x) = String.explode x"
 | "string_of_aexp (Plus a b) =
     ''('' @ string_of_aexp a @ ''+'' @ string_of_aexp b @ '')''"
 | "string_of_aexp (Minus a b) =
@@ -46,8 +46,8 @@ fun join_source :: "string \<Rightarrow> string list \<Rightarrow> string" where
 
 fun string_of_com :: "com \<Rightarrow> string" where
   "string_of_com SKIP = ''skip''"
-| "string_of_com (Assign x e) = x @ '' := '' @ string_of_aexp e"
-| "string_of_com (Random x) = x @ '' := random()''"
+| "string_of_com (Assign x e) = String.explode x @ '' := '' @ string_of_aexp e"
+| "string_of_com (Random x) = String.explode x @ '' := random()''"
 | "string_of_com (VIMP_Proc.com.Check c) = ''__voblint_check('' @ string_of_bexp c @ '')''"
 | "string_of_com (Seq c1 c2) =
     string_of_com c1 @ '' ;'' @ source_nl @ string_of_com c2"
@@ -58,8 +58,8 @@ fun string_of_com :: "com \<Rightarrow> string" where
     ''while ('' @ string_of_bexp b @ '') do ('' @ string_of_com c @ '')''"
 | "string_of_com (Call dst p es) =
     (case dst of
-      None \<Rightarrow> p @ ''('' @ join_source '', '' (map string_of_aexp es) @ '')''
-    | Some x \<Rightarrow> x @ '' := '' @ p @ ''(''
+      None \<Rightarrow> String.explode p @ ''('' @ join_source '', '' (map string_of_aexp es) @ '')''
+    | Some x \<Rightarrow> String.explode x @ '' := '' @ String.explode p @ ''(''
         @ join_source '', '' (map string_of_aexp es) @ '')'')"
 | "string_of_com (Return (Some e)) = ''return '' @ string_of_aexp e"
 | "string_of_com (Return None) = ''return''"
@@ -75,9 +75,9 @@ fun source_indent :: "nat \<Rightarrow> string" where
 fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list" where
   "pretty_source_lines_com n SKIP = [source_indent n @ ''skip'']"
 | "pretty_source_lines_com n (Assign x e) =
-    [source_indent n @ x @ '' := '' @ string_of_aexp e]"
+    [source_indent n @ String.explode x @ '' := '' @ string_of_aexp e]"
 | "pretty_source_lines_com n (Random x) =
-    [source_indent n @ x @ '' := random()'']"
+    [source_indent n @ String.explode x @ '' := random()'']"
 | "pretty_source_lines_com n (VIMP_Proc.com.Check c) =
     [source_indent n @ ''__voblint_check('' @ string_of_bexp c @ '')'']"
 | "pretty_source_lines_com n (Seq c1 c2) =
@@ -99,7 +99,7 @@ fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list"
 
 definition pretty_source_lines_proc :: "pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
   "pretty_source_lines_proc p decl =
-    (''procedure '' @ p @ ''('' @ join_source '', '' (formals decl) @ ''):'')
+    (''procedure '' @ String.explode p @ ''('' @ join_source '', '' (map String.explode (formals decl)) @ ''):'')
     # pretty_source_lines_com 2 (body decl)"
 
 definition pretty_string_of_program ::
@@ -107,7 +107,7 @@ definition pretty_string_of_program ::
   "pretty_string_of_program \<Pi> ps main =
     join_source source_nl
       (concat (map (\<lambda>p. case \<Pi> p of
-        None \<Rightarrow> [''procedure '' @ p @ '' <missing>'']
+        None \<Rightarrow> [''procedure '' @ String.explode p @ '' <missing>'']
       | Some decl \<Rightarrow> pretty_source_lines_proc p decl) ps)
       @ [''main:''] @ pretty_source_lines_com 2 main)"
 

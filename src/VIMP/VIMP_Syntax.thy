@@ -10,7 +10,7 @@ text \<open>
   language.
 \<close>
 
-type_synonym vname = string
+type_synonym vname = String.literal
 type_synonym store = "vname => int"
 
 (* -- Arithmetic Expressions ---------------------------------------- *)
@@ -37,6 +37,11 @@ instance aexp :: countable
 
 instance bexp :: countable
   by countable_datatype
+
+text \<open>\<^typ>\<open>String.literal\<close> already carries a @{class linorder} instance
+  (\<^theory>\<open>HOL.String\<close>); registering it with @{class compare_order} makes it a usable
+  leaf for the derivation below, the same way @{type char} already is.\<close>
+derive (linorder) compare_order String.literal
 
 text \<open>The executable linear order gives @{const sorted_list_of_set} a deterministic
   representation of CFG edge sets. A @{typ bexp} order has no comparable consumer, and

@@ -5,18 +5,18 @@ begin
 section \<open>Examples: local-trace collecting semantics\<close>
 
 text \<open>These witnesses build hand-written CFGs rather than compiling a source program, so
-  there is no declared-globals table to read a classifier off; \<open>''Gx''\<close> is the only
+  there is no declared-globals table to read a classifier off; \<open>(STR ''Gx'')\<close> is the only
   store variable any witness below reads or writes, so it is fixed as the sole global.\<close>
 abbreviation demo_gs :: "vname \<Rightarrow> bool" where
-  "demo_gs \<equiv> (\<lambda>x. x = ''Gx'')"
+  "demo_gs \<equiv> (\<lambda>x. x = STR ''Gx'')"
 
 subsection \<open>Shared continuations and converging returns\<close>
 
 text \<open>Procedure \<open>dpf\<close> reaches one result from two nodes and is called from two sites
   that share a continuation.  Result nodes and continuations are join points.\<close>
 
-definition dmain :: pname where "dmain = ''main''"
-definition dpf :: pname where "dpf = ''f''"
+definition dmain :: pname where "dmain = (STR ''main'')"
+definition dpf :: pname where "dpf = (STR ''f'')"
 
 definition demo_cfg :: cfg where
   "demo_cfg =
@@ -55,9 +55,9 @@ text \<open>A two-level program \<open>main -> f -> g\<close> where \<open>g\<cl
   \<open>main\<close>.  It exercises every rule and shows \<open>g\<close>'s return resumes \<open>f\<close> (the nearest
   activation), while \<open>f\<close>'s return recovers \<open>main\<close> through the resumed \<open>f\<close>.\<close>
 
-definition mn :: pname where "mn = ''main''"
-definition pf :: pname where "pf = ''f''"
-definition pg :: pname where "pg = ''g''"
+definition mn :: pname where "mn = (STR ''main'')"
+definition pf :: pname where "pf = (STR ''f'')"
+definition pg :: pname where "pg = (STR ''g'')"
 
 definition nest_cfg :: cfg where
   "nest_cfg =
@@ -138,7 +138,7 @@ text \<open>Procedure \<open>pf\<close> reaches \<open>FunctionResult pf\<close>
   \<open>main\<close> calls it with continuation \<open>Statement 100\<close>.  Both branches resume through that same
   continuation.\<close>
 
-definition bpos :: bexp where "bpos = Less (N 0) (V ''Gx'')"
+definition bpos :: bexp where "bpos = Less (N 0) (V (STR ''Gx''))"
 
 definition mret_cfg :: cfg where
   "mret_cfg =
@@ -164,7 +164,7 @@ lemma multi_return_join:
     \<and> Resume c2 t2 (path c2 @ [(Statement 100, combine_collect demo_gs None (sink_store c2) (sink_store t2))])
         \<in> valid_ltr demo_gs mret_cfg UNIV"
 proof -
-  define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
+  define s0 :: store where "s0 = (\<lambda>_. 0)((STR ''Gx'') := 1)"
   define s1 :: store where "s1 = (\<lambda>_. 0)"
   define r0 where "r0 = Root [(cfg_entry mret_cfg, s0)]"
   define r1 where "r1 = Root [(cfg_entry mret_cfg, s1)]"
@@ -240,7 +240,7 @@ text \<open>A self-recursive procedure \<open>pr\<close>: at its entry it return
   (\<open>Gx > 0\<close>) at continuation \<open>Statement 200\<close>.  Two activations of \<open>pr\<close> are distinct and
   correctly nested via \<^const>\<open>caller_of\<close>.\<close>
 
-definition pr :: pname where "pr = ''r''"
+definition pr :: pname where "pr = (STR ''r'')"
 
 definition rec_cfg :: cfg where
   "rec_cfg =
@@ -264,7 +264,7 @@ lemma recursion_nesting:
     \<and> sink_node outer = Statement 1
     \<and> sink_node inner = FunctionEntry pr"
 proof -
-  define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
+  define s0 :: store where "s0 = (\<lambda>_. 0)((STR ''Gx'') := 1)"
   define root where "root = Root [(cfg_entry rec_cfg, s0)]"
   have R: "root \<in> valid_ltr demo_gs rec_cfg UNIV" unfolding root_def by (rule valid_ltr.init) simp
   have rt_sn: "sink_node root = FunctionEntry pr" by (simp add: root_def rec_defs)
@@ -329,7 +329,7 @@ lemma ltr_collect_recursion_distinct_ctx:
     \<and> outer \<noteq> inner
     \<and> key (\<lambda>_ c _. Suc c) 0 outer \<noteq> key (\<lambda>_ c _. Suc c) 0 inner"
 proof -
-  define s0 :: store where "s0 = (\<lambda>_. 0)(''Gx'' := 1)"
+  define s0 :: store where "s0 = (\<lambda>_. 0)((STR ''Gx'') := 1)"
   define root where "root = Root [(cfg_entry rec_cfg, s0)]"
   have R: "root \<in> valid_ltr demo_gs rec_cfg UNIV" unfolding root_def by (rule valid_ltr.init) simp
   have rt_sn: "sink_node root = FunctionEntry pr" by (simp add: root_def rec_defs)

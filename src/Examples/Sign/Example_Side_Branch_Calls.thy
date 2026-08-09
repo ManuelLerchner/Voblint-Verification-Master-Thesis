@@ -35,7 +35,7 @@ text \<open>
   \<open>branch_prog_glocal_not_global\<close> below).
 \<close>
 
-definition branch_prog_mnm :: pname where "branch_prog_mnm = ''main''"
+definition branch_prog_mnm :: pname where "branch_prog_mnm = (STR ''main'')"
 
 definition branch_prog :: imp_prog where
   "branch_prog = program {
@@ -62,13 +62,13 @@ abbreviation branch_prog_gs :: "vname \<Rightarrow> bool" where
   "branch_prog_gs \<equiv> declared_global branch_prog"
 
 lemma branch_prog_declared_global_vars [simp]:
-  "declared_global_vars branch_prog = [''input_val'', ''result_val'', ''out_val'']"
+  "declared_global_vars branch_prog = [(STR ''input_val''), (STR ''result_val''), (STR ''out_val'')]"
   by (simp add: branch_prog_def)
 
-lemma branch_prog_glocal_not_global [simp]: "\<not> branch_prog_gs ''Glocal''"
+lemma branch_prog_glocal_not_global [simp]: "\<not> branch_prog_gs (STR ''Glocal'')"
   by simp
 
-lemma branch_prog_result_val_global [simp]: "branch_prog_gs ''result_val''"
+lemma branch_prog_result_val_global [simp]: "branch_prog_gs (STR ''result_val'')"
   by simp
 
 text \<open>
@@ -80,18 +80,18 @@ text \<open>
   the result is \<open>SNonNeg\<close> (\<open>\<ge> 0\<close>), not \<open>STop\<close>.
 \<close>
 
-value "sign_exec_prog branch_prog_gs ''main'' branch_prog ''result_val''"
-value "sign_exec_prog branch_prog_gs ''main'' branch_prog ''out_val''"
+value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''result_val'')"
+value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''out_val'')"
 
 lemma ec_result_nonnneg:
-  "sign_exec_prog branch_prog_gs ''main'' branch_prog ''result_val'' = SNonNeg"
+  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''result_val'') = SNonNeg"
   by eval
 
 text \<open>Termination is proved, not assumed: the executable side solver returns a
   result, so by @{thm sign_terminates_prog_via_solve_c} the program is in the
   solver's domain.\<close>
 
-lemma ec_terminates: "sign_terminates_prog branch_prog_gs ''main'' branch_prog"
+lemma ec_terminates: "sign_terminates_prog branch_prog_gs (STR ''main'') branch_prog"
   by (rule sign_terminates_prog_via_solve_c) eval
 
 text \<open>
@@ -102,8 +102,8 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect branch_prog_gs (prog_cfg ''main'' branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg ''main'' branch_prog))
-   \<le> \<lbrakk>sign_exec_prog branch_prog_gs ''main'' branch_prog\<rbrakk>"
+  "ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
+   \<le> \<lbrakk>sign_exec_prog branch_prog_gs (STR ''main'') branch_prog\<rbrakk>"
   by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
 
 text \<open>
@@ -113,8 +113,8 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg ''main'' branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg ''main'' branch_prog))"
-  shows "s \<in> \<lbrakk>sign_exec_prog branch_prog_gs ''main'' branch_prog\<rbrakk>"
+  assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
+  shows "s \<in> \<lbrakk>sign_exec_prog branch_prog_gs (STR ''main'') branch_prog\<rbrakk>"
   using assms ec_certified_sound by blast
 
 text \<open>
@@ -123,7 +123,7 @@ text \<open>
   C-faithful initialisation seed (\<open>SZero\<close> for globals).
 \<close>
 
-value "sign_exec_prog branch_prog_gs ''main'' branch_prog ''input_val''"
+value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''input_val'')"
 
 text \<open>
   \<open>input_val\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
@@ -132,10 +132,10 @@ text \<open>
 \<close>
 
 lemma ec_ginput_top:
-  "sign_exec_prog branch_prog_gs ''main'' branch_prog ''input_val'' = STop"
+  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''input_val'') = STop"
   by eval
 
-value "sign_exec_prog branch_prog_gs ''main'' branch_prog ''out_val''"
+value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''out_val'')"
 
 text \<open>
   \<open>out_val\<close> is computed as \<open>100 * result_val\<close>.  With \<open>result_val = SNonNeg\<close>
@@ -144,13 +144,13 @@ text \<open>
 \<close>
 
 lemma ec_gout_nonnneg:
-  "sign_exec_prog branch_prog_gs ''main'' branch_prog ''out_val'' = SNonNeg"
+  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''out_val'') = SNonNeg"
   by eval
 
-value "sign_exec_prog branch_prog_gs ''main'' branch_prog ''r''"
+value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''r'')"
 
 lemma ec_r_pos:
-  "sign_exec_prog branch_prog_gs ''main'' branch_prog ''r'' = SPos"
+  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''r'') = SPos"
   by eval
 
 text \<open>

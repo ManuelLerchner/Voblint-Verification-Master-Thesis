@@ -50,7 +50,7 @@ text \<open>
   A value-less fall-through therefore leaves it at the initial value zero.
 \<close>
 definition ret_var :: vname where
-  "ret_var = ''#ret''"
+  "ret_var = STR ''#ret''"
 
 datatype source_location =
     LocalVar pname

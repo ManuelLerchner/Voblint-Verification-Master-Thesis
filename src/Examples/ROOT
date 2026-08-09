@@ -1,5 +1,7 @@
 session Voblint_Examples in "." = "Voblint_Formalization" +
   description "Executable witnesses, flagship demonstrations, and the project capstone index"
+  sessions
+    "HOL-Library"
   directories
     "Sign"
     "Sign/CallString"
@@ -10,6 +12,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     "Mixed"
     "CFG"
     "Tooling"
+    "Regression"
   theories
     (* CFG: cross-cutting compiler/collecting-semantics support and regressions *)
     Example_Inc_Proc
@@ -23,6 +26,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
+    Example_Sign_Codegen
     (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute
@@ -62,6 +66,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo
+    Example_Analysis_Dispatch
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo
@@ -74,3 +79,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Voblint
   document_files
     (in "../Analysis/document") "root.bib"
+  export_files (in "../../codegen/generated/hs") [3]
+    "Voblint_Examples.Example_Analysis_Dispatch:code/*/*.hs"
+  export_files (in "../../codegen/generated/ml") [2]
+    "Voblint_Examples.Example_Analysis_Dispatch:code/*.ocaml"

@@ -45,9 +45,9 @@ definition sign_nest_procs :: "pname list" where "sign_nest_procs = prog_procs s
 definition sign_nest_main :: "VIMP_Proc.com" where "sign_nest_main = prog_main sign_nest_program"
 
 definition sign_nest_cfg :: cfg where
-  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs ''main'' sign_nest_main"
+  "sign_nest_cfg = compile_prog sign_nest_pi sign_nest_procs (STR ''main'') sign_nest_main"
 
-lemma sign_nest_entry: "cfg_entry sign_nest_cfg = FunctionEntry ''main''" by eval
+lemma sign_nest_entry: "cfg_entry sign_nest_cfg = FunctionEntry (STR ''main'')" by eval
 
 lemma sign_nest_finE: "finite (intra sign_nest_cfg)"
   unfolding sign_nest_cfg_def using compile_prog_finite by simp
@@ -61,9 +61,9 @@ lemma sign_nest_calls_shape:
   "\<forall>(u, ca, ce, cont) \<in> calls sign_nest_cfg.
      case ca of CallEdge dst pars args \<Rightarrow>
        (case ce of FunctionEntry p \<Rightarrow>
-          (u = Statement 2 \<and> p = ''g'' \<and> cont = Statement 3) \<or>
-          (u = Statement 5 \<and> p = ''f'' \<and> cont = Statement 6) \<or>
-          (u = Statement 6 \<and> p = ''f'' \<and> cont = Statement 7)
+          (u = Statement 2 \<and> p = (STR ''g'') \<and> cont = Statement 3) \<or>
+          (u = Statement 5 \<and> p = (STR ''f'') \<and> cont = Statement 6) \<or>
+          (u = Statement 6 \<and> p = (STR ''f'') \<and> cont = Statement 7)
         | _ \<Rightarrow> True)"
   unfolding sign_nest_cfg_def by eval
 
@@ -139,11 +139,11 @@ lemma enter_callers_g_1:
      p = Statement 2 \<longrightarrow> ctx = [Statement 5] \<or> ctx = [Statement 6]"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
-lemma callee_covered_fpos_1: "(FunctionEntry ''f'', [Statement 5]) \<in> fst sign_nest_1_sol"
+lemma callee_covered_fpos_1: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-lemma callee_covered_fneg_1: "(FunctionEntry ''f'', [Statement 6]) \<in> fst sign_nest_1_sol"
+lemma callee_covered_fneg_1: "(FunctionEntry (STR ''f''), [Statement 6]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-lemma callee_covered_g_1: "(FunctionEntry ''g'', [Statement 2]) \<in> fst sign_nest_1_sol"
+lemma callee_covered_g_1: "(FunctionEntry (STR ''g''), [Statement 2]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 lemma covered_ret6_1: "(Statement 6, []) \<in> fst sign_nest_1_sol"
@@ -155,11 +155,11 @@ lemma covered_ret3_fpos_1: "(Statement 3, [Statement 5]) \<in> fst sign_nest_1_s
 lemma covered_ret3_fneg_1: "(Statement 3, [Statement 6]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
-lemma callee_exit_fpos_1: "(FunctionResult ''f'', [Statement 5]) \<in> fst sign_nest_1_sol"
+lemma callee_exit_fpos_1: "(FunctionResult (STR ''f''), [Statement 5]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-lemma callee_exit_fneg_1: "(FunctionResult ''f'', [Statement 6]) \<in> fst sign_nest_1_sol"
+lemma callee_exit_fneg_1: "(FunctionResult (STR ''f''), [Statement 6]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-lemma callee_exit_g_1: "(FunctionResult ''g'', [Statement 2]) \<in> fst sign_nest_1_sol"
+lemma callee_exit_g_1: "(FunctionResult (STR ''g''), [Statement 2]) \<in> fst sign_nest_1_sol"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 section \<open>Abstract transport of the routed solution\<close>
@@ -439,14 +439,14 @@ next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
   from ce sign_nest_calls_shape have
-    "(u = Statement 2 \<and> p = ''g'' \<and> cont = Statement 3) \<or>
-     (u = Statement 5 \<and> p = ''f'' \<and> cont = Statement 6) \<or>
-     (u = Statement 6 \<and> p = ''f'' \<and> cont = Statement 7)"
+    "(u = Statement 2 \<and> p = (STR ''g'') \<and> cont = Statement 3) \<or>
+     (u = Statement 5 \<and> p = (STR ''f'') \<and> cont = Statement 6) \<or>
+     (u = Statement 6 \<and> p = (STR ''f'') \<and> cont = Statement 7)"
     by fastforce
   then consider
-      (c1) "u = Statement 2" "p = ''g''"
-    | (c2) "u = Statement 5" "p = ''f''"
-    | (c3) "u = Statement 6" "p = ''f''"
+      (c1) "u = Statement 2" "p = (STR ''g'')"
+    | (c2) "u = Statement 5" "p = (STR ''f'')"
+    | (c3) "u = Statement 6" "p = (STR ''f'')"
     by blast
   thus ?case
   proof cases
@@ -544,9 +544,9 @@ text \<open>\<open>f\<close>'s two activations stay separated at their own entry
   is identical for both activations, so the 1-call-string context collapses them to one
   unknown, and their join lands at \<open>STop\<close> --- the merge a 2-call-string keeps separated.\<close>
 
-value "sign_nest_lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''g'', [Statement 2])))) ''p''"
-value "sign_nest_lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''f'', [Statement 5])))) ''p''"
-value "sign_nest_lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry ''f'', [Statement 6])))) ''p''"
+value "sign_nest_lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
+value "sign_nest_lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5])))) (STR ''p'')"
+value "sign_nest_lookup_exec_dg_st (locals (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6])))) (STR ''p'')"
 
 end
 

@@ -69,10 +69,10 @@ text \<open>The storage classifier: \<open>total\<close> is declared global desp
 abbreviation parity_gs :: "vname \<Rightarrow> bool" where
   "parity_gs \<equiv> declared_global parity_program"
 
-lemma parity_total_global [simp]: "parity_gs ''total''"
+lemma parity_total_global [simp]: "parity_gs (STR ''total'')"
   by (simp add: parity_program_def)
 
-lemma parity_gcount_not_global [simp]: "\<not> parity_gs ''Gcount''"
+lemma parity_gcount_not_global [simp]: "\<not> parity_gs (STR ''Gcount'')"
   by (simp add: parity_program_def)
 
 text \<open>Local shorthand for the executable state's lookup projection, fixed at this
@@ -91,7 +91,7 @@ text \<open>
 \<close>
 
 definition parity_cfg :: cfg where
-  "parity_cfg = compile_prog parity_pi [] ''main'' parity_prog"
+  "parity_cfg = compile_prog parity_pi [] (STR ''main'') parity_prog"
 
 lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls parity_cfg)"
   unfolding parity_cfg_def
@@ -129,7 +129,7 @@ definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + un
 text \<open>The computed parity of \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, parity_lookup (locals (snd sol (Inl (p, ())))) ''x''))
+   (\<lambda>sol. map (\<lambda>p. (p, parity_lookup (locals (snd sol (Inl (p, ())))) (STR ''x'')))
             (map Statement [0,1,2,3]))
    (TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()))"
 
@@ -138,7 +138,7 @@ subsection \<open>6. Soundness premises for the registered endpoint\<close>
 lemma parity_cover_all:
   "\<forall>v \<in> {Statement 0, Statement 1, Statement 2, Statement 3,
            Statement 4, Statement 5, Statement 6,
-           FunctionEntry ''main'', FunctionResult ''main''}.
+           FunctionEntry (STR ''main''), FunctionResult (STR ''main'')}.
      (v, ()) \<in> fst parity_sol"
   unfolding parity_sol_def parity_eqs_def by eval
 
@@ -174,11 +174,11 @@ qed
 subsection \<open>7. Inspecting the certified result\<close>
 
 lemma parity_head_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' = PEven"
+  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 lemma parity_exit_computed:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement 3, ())))) ''x'' = PEven"
+  "parity_lookup (locals (snd parity_sol (Inl (Statement 3, ())))) (STR ''x'') = PEven"
   unfolding parity_sol_def parity_eqs_def by eval
 
 subsection \<open>8. Source-level soundness through the registered analysis\<close>
@@ -191,7 +191,7 @@ text \<open>
   \<^const>\<open>part_post_solution\<close>, \<open>solve_dom\<close>, or \<open>fun_of_dg_st_for\<close> appears in this proof.
 \<close>
 
-lemma parity_wf: "wf_compile_input parity_gs parity_pi [] ''main'' parity_prog"
+lemma parity_wf: "wf_compile_input parity_gs parity_pi [] (STR ''main'') parity_prog"
   unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
     parity_pi_def parity_prog_def parity_program_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
@@ -255,11 +255,11 @@ text \<open>
 \<close>
 
 lemma parity_head_proper:
-  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'' \<noteq> PTop"
+  "parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') \<noteq> PTop"
   by (simp add: parity_head_computed)
 
 lemma parity_head_excludes_odd:
-  "n \<in> gamma_parity (parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) ''x'')
+  "n \<in> gamma_parity (parity_lookup (locals (snd parity_sol (Inl (Statement (Suc 0), ())))) (STR ''x''))
      \<Longrightarrow> even n"
   by (simp add: parity_head_computed)
 
@@ -279,19 +279,19 @@ definition parity_graph_config ::
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope parity_gs parity_pi [] ''main'' parity_prog
+        scope_locals (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
           parity_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope parity_gs parity_pi [] ''main'' parity_prog
+        scope_return_slot (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
           parity_cfg p)),
-      globals_to_show = [''total''],
+      globals_to_show = [(STR ''total'')],
       show_local = (\<lambda>_ _ vars d.
         map (\<lambda>x.
-          x @ ''='' @ string_of_parity (parity_lookup d x)) vars),
+          String.explode x @ ''='' @ string_of_parity (parity_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ d.
         map (\<lambda>g.
-          g @ ''='' @ string_of_parity (parity_lookup (globs d) g)) [''total'']),
+          String.explode g @ ''='' @ string_of_parity (parity_lookup (globs d) g)) [(STR ''total'')]),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = True,

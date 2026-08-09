@@ -36,7 +36,7 @@ text \<open>
 fun a1_node_owner :: "pp \<Rightarrow> pname" where
   "a1_node_owner (FunctionEntry p) = p"
 | "a1_node_owner (FunctionResult p) = p"
-| "a1_node_owner (Statement n) = (if n < 2 then ''p'' else prog_main_name)"
+| "a1_node_owner (Statement n) = (if n < 2 then (STR ''p'') else prog_main_name)"
 
 definition a1_locations_of :: "pp \<Rightarrow> location list" where
   "a1_locations_of node = scope_locations inc_program (a1_node_owner node)"
@@ -69,13 +69,13 @@ text \<open>The mixed-placement result, computed: the declared global \<open>cou
 
 lemma a1_counter_result:
   "fun_of_exec_dg_st_for (declared_global inc_program)
-     (dg_hook_D (snd a1_sol) (FunctionResult prog_main_name) \<squnion> dg_hook_G (snd a1_sol)) ''counter''
+     (dg_hook_D (snd a1_sol) (FunctionResult prog_main_name) \<squnion> dg_hook_G (snd a1_sol)) (STR ''counter'')
    = Ivl (Fin 0) PlusInf"
   by eval
 
 lemma a1_glocal_result:
   "fun_of_exec_dg_st_for (declared_global inc_program)
-     (dg_hook_D (snd a1_sol) (FunctionResult prog_main_name) \<squnion> dg_hook_G (snd a1_sol)) ''Glocal''
+     (dg_hook_D (snd a1_sol) (FunctionResult prog_main_name) \<squnion> dg_hook_G (snd a1_sol)) (STR ''Glocal'')
    = Ivl (Fin 1) (Fin 1)"
   by eval
 
@@ -114,13 +114,13 @@ definition a2_program :: imp_prog where
 abbreviation a2_gs :: "vname \<Rightarrow> bool" where
   "a2_gs \<equiv> declared_global a2_program"
 
-lemma a2_x_global [simp]: "a2_gs ''x''"
+lemma a2_x_global [simp]: "a2_gs (STR ''x'')"
   by (simp add: a2_program_def)
 
 definition a2_cfg :: cfg where
   "a2_cfg = compile_prog (prog_table a2_program) (prog_procs a2_program) prog_main_name (prog_main a2_program)"
 
-lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, bexp.Eq (V ''x'') (N 1))}"
+lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, bexp.Eq (V (STR ''x'')) (N 1))}"
   unfolding a2_cfg_def by eval
 
 fun a2_node_owner :: "pp \<Rightarrow> pname" where
@@ -182,13 +182,13 @@ text \<open>The computed environment at the check node (\<open>Statement 2\<clos
 
 lemma a2_classic_env:
   "fun_of_exec_dg_st_for a2_gs
-     (dg_hook_D (snd a2_sol_classic) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_classic)) ''x''
+     (dg_hook_D (snd a2_sol_classic) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_classic)) (STR ''x'')
    = Ivl (Fin 0) PlusInf"
   by eval
 
 lemma a2_flowsens_env:
   "fun_of_exec_dg_st_for a2_gs
-     (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)) ''x''
+     (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)) (STR ''x'')
    = Ivl (Fin 1) (Fin 1)"
   by eval
 
@@ -198,14 +198,14 @@ text \<open>The check itself, discharged through \<^const>\<open>interval_classi
   force flow insensitivity -- placement, not storage class, decides it.\<close>
 
 lemma a2_classic_check_unknown:
-  "interval_classify_check (bexp.Eq (V ''x'') (N 1))
+  "interval_classify_check (bexp.Eq (V (STR ''x'')) (N 1))
      (fun_of_exec_dg_st_for a2_gs
        (dg_hook_D (snd a2_sol_classic) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_classic)))
    = Check_Unknown"
   by eval
 
 lemma a2_flowsens_check_proved:
-  "interval_classify_check (bexp.Eq (V ''x'') (N 1))
+  "interval_classify_check (bexp.Eq (V (STR ''x'')) (N 1))
      (fun_of_exec_dg_st_for a2_gs
        (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)))
    = Check_Proved"
@@ -282,13 +282,13 @@ text \<open>Result comparison, all three policies, same program, same target
 
 lemma a3_classic_answer:
   "fun_of_exec_dg_st_for (declared_global placement_prog)
-     (dg_hook_D (snd a3_sol_classic) (Statement 6) \<squnion> dg_hook_G (snd a3_sol_classic)) ''answer''
+     (dg_hook_D (snd a3_sol_classic) (Statement 6) \<squnion> dg_hook_G (snd a3_sol_classic)) (STR ''answer'')
    = Ivl (Fin 0) PlusInf"
   by eval
 
 lemma a3_flowsens_answer:
   "fun_of_exec_dg_st_for (declared_global placement_prog)
-     (dg_hook_D (snd a3_sol_flowsens) (Statement 6) \<squnion> dg_hook_G (snd a3_sol_flowsens)) ''answer''
+     (dg_hook_D (snd a3_sol_flowsens) (Statement 6) \<squnion> dg_hook_G (snd a3_sol_flowsens)) (STR ''answer'')
    = Ivl (Fin 3) (Fin 3)"
   by eval
 
@@ -298,7 +298,7 @@ text \<open>The selective result is cited from \<open>Example_Interval_Placement
 
 lemma a3_selective_answer:
   "lookup_resolved_st_q (locals (snd placement_dg_td_sol (Inl (Statement 6, ()))))
-     (Local_Location ''answer'') = Ivl (Fin 3) (Fin 3)"
+     (Local_Location (STR ''answer'')) = Ivl (Fin 3) (Fin 3)"
   by (rule placement_dg_td_values)
 
 lemma a3_classic_equations: "card (fst a3_sol_classic) = 10" by eval

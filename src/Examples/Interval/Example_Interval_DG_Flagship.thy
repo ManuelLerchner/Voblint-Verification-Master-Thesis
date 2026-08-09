@@ -75,8 +75,8 @@ subsection \<open>CFG construction\<close>
 
 text \<open>
   The source compiles to an interprocedural CFG by \<open>compile_prog\<close>.  The whole program is
-  the body of \<open>main\<close>, so it runs between \<open>FunctionEntry ''main''\<close> and
-  \<open>FunctionResult ''main''\<close>; inside, \<open>x := 0\<close> falls directly into the loop head \<open>1\<close> (the
+  the body of \<open>main\<close>, so it runs between \<open>FunctionEntry (STR ''main'')\<close> and
+  \<open>FunctionResult (STR ''main'')\<close>; inside, \<open>x := 0\<close> falls directly into the loop head \<open>1\<close> (the
   continuation-passing compiler needs no separate join node), the guard \<open>x < 20\<close> branches
   to body \<open>2\<close> or exit \<open>3\<close>, and the increment at \<open>2\<close> jumps back to \<open>1\<close>.  \<open>flagship_cfg_eq\<close>
   proves the compilation equals the explicit graph; the annotated rendering is in section 10.
@@ -99,7 +99,7 @@ definition flagship_pi :: proc_table where
 definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
 
-lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry ''main''" by eval
+lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')" by eval
 lemma flagship_calls: "calls flagship_cfg = {}" by eval
 
 lemma flagship_finE: "finite (intra flagship_cfg)"
@@ -152,7 +152,7 @@ definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + 
 text \<open>The computed local interval for \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
 
 value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (flagship_lookup (locals (snd sol (Inl (p, ())))) ''x'')))
+   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (flagship_lookup (locals (snd sol (Inl (p, ())))) (STR ''x''))))
             (map Statement [0,1,2,3]))
    (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
 
@@ -201,15 +201,15 @@ text \<open>
 subsection \<open>Inspecting the certified result\<close>
 
 lemma flagship_head_computed:
-  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 1, ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 1, ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_body_computed:
-  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 2, ())))) ''x'' = Ivl (Fin 0) (Fin 19)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 2, ())))) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma flagship_exit_computed:
-  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 3, ())))) ''x'' = Ivl (Fin 20) (Fin 20)"
+  "flagship_lookup (locals (snd flagship_sol (Inl (Statement 3, ())))) (STR ''x'') = Ivl (Fin 20) (Fin 20)"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
@@ -287,17 +287,17 @@ text \<open>
   something --- it is not the trivial \<open>gamma top = UNIV\<close>.
 \<close>
 
-lemma glob_x_at_head: "flagship_lookup (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+lemma glob_x_at_head: "flagship_lookup (globs (snd flagship_sol (Inr ()))) (STR ''x'') = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
 lemma head_x_bound:
   "(locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ())))
-    \<squnion> globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) ''x'' = Ivl (Fin 0) (Fin 20)"
+    \<squnion> globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
 proof -
-  have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) ''x'' = Ivl (Fin 0) (Fin 20)"
+  have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
-  have G: "flagship_fun_of (globs (snd flagship_sol (Inr ()))) ''x'' = bot"
+  have G: "flagship_fun_of (globs (snd flagship_sol (Inr ()))) (STR ''x'') = bot"
     using glob_x_at_head
     by (simp add: fun_of_resolved_st_q_for_def)
   show ?thesis by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def sup_fun_def L G)
@@ -311,7 +311,7 @@ theorem flagship_head_bound_proper:
             sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
             sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
   apply (simp only: mem_Collect_eq not_all)
-  apply (rule exI[of _ "''x''"])
+  apply (rule exI[of _ "(STR ''x'')"])
   using head_x_bound apply (simp add: fun_of_dg_st_for_simps sup_fun_def)
   done
 
@@ -338,7 +338,7 @@ definition flagship_graph_config ::
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.
-        x @ ''='' @ string_of_ivl (flagship_lookup d x)) vars),
+        String.explode x @ ''='' @ string_of_ivl (flagship_lookup d x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ _ _. [''(none)'']),
       show_global_key = (\<lambda>_. ''Global''),

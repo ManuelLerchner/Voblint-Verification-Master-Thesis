@@ -66,11 +66,15 @@ jobs:
             --env AFP_COMPONENT_BASE \
             makarius/isabelle:Isabelle2025-2 \
             -ec '
-              apt-get update -qq && apt-get install -y -qq git make > /dev/null
+              apt-get update -qq && apt-get install -y -qq git make curl > /dev/null
               ISABELLE=/home/isabelle/Isabelle/bin/isabelle
               make vendor
               make html AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
               make lint AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              git config --global --add safe.directory "$GITHUB_WORKSPACE"
+              make codegen-check AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
+              $ISABELLE ocaml_setup
+              make codegen-ocaml-check AFP=$AFP_COMPONENT_BASE ISABELLE=$ISABELLE
             '
 
       - name: Upload GitHub Pages site
@@ -80,6 +84,36 @@ jobs:
           name: html-docs
           path: docs/html
           retention-days: 1
+
+  regression-drivers:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Setup GHC
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: '9.10'
+
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: '5'
+
+      - name: Install zarith (Code_Target_Numeral backs int/nat by Z.t)
+        run: opam install -y zarith
+
+      - name: Compile and run codegen/regression drivers against codegen/generated/
+        # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
+        # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
+        # `make`'s /bin/sh sub-shell then can't find ocamlfind even though opam
+        # install (also just `opam`, not a switch binary) succeeded one step earlier.
+        # `opam exec --` activates the switch environment for this invocation.
+        run: opam exec -- make regression
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

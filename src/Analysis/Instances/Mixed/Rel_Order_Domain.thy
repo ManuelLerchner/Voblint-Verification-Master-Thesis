@@ -142,8 +142,9 @@ text \<open>Pretty-printer, the \<open>relc\<close> analogue of Interval's \<ope
 
 fun string_of_pairs :: "(vname \<times> vname) list \<Rightarrow> string" where
   "string_of_pairs [] = ''''"
-| "string_of_pairs [(x, y)] = x @ ''<='' @ y"
-| "string_of_pairs ((x, y) # p # ps) = x @ ''<='' @ y @ '', '' @ string_of_pairs (p # ps)"
+| "string_of_pairs [(x, y)] = String.explode x @ ''<='' @ String.explode y"
+| "string_of_pairs ((x, y) # p # ps) =
+     String.explode x @ ''<='' @ String.explode y @ '', '' @ string_of_pairs (p # ps)"
 
 definition string_of_relc :: "relc \<Rightarrow> string" where
   "string_of_relc d =

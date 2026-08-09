@@ -16,13 +16,13 @@ text \<open>
   two outgoing edges to two different callees and two different continuations.
 \<close>
 
-definition mc_f1 :: pname where "mc_f1 = ''f1''"
-definition mc_f2 :: pname where "mc_f2 = ''f2''"
+definition mc_f1 :: pname where "mc_f1 = (STR ''f1'')"
+definition mc_f2 :: pname where "mc_f2 = (STR ''f2'')"
 
 definition mc_ca1 :: call_action where
-  "mc_ca1 = CallEdge (Some ''x'') [''p''] [VIMP_Syntax.N 3]"
+  "mc_ca1 = CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]"
 definition mc_ca2 :: call_action where
-  "mc_ca2 = CallEdge (Some ''y'') [''p''] [VIMP_Syntax.N 10]"
+  "mc_ca2 = CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]"
 
 definition multi_call_cfg :: cfg where
   "multi_call_cfg =

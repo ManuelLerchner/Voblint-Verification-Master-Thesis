@@ -29,14 +29,14 @@ text \<open>
 
   The merge is not a property of a node's own context fiber; it is a property of
   \<^emph>\<open>dependency reachability\<close> from a node whose fiber genuinely splits. \<open>Statement 0\<close>,
-  \<open>FunctionResult ''g''\<close>, and \<open>FunctionEntry ''g''\<close> have two-element k=2 fibers, because
+  \<open>FunctionResult (STR ''g'')\<close>, and \<open>FunctionEntry (STR ''g'')\<close> have two-element k=2 fibers, because
   \<open>g\<close> is entered from two distinct k=2 call strings that \<open>cs_route\<close> collapses to the same
   k=1 string \<open>[Statement 2]\<close>. Every other node in this witness keeps a singleton fiber
   (its own context never grows past k=1 regardless of \<open>k\<close>) -- but seven of those
   singleton-fiber nodes still transitively \<^emph>\<open>read\<close> a merged unknown, through an intra
-  edge or a \<open>routed_cmb\<close> combine: \<open>Statement 3\<close> and \<open>FunctionResult ''f''\<close> (both contexts,
+  edge or a \<open>routed_cmb\<close> combine: \<open>Statement 3\<close> and \<open>FunctionResult (STR ''f'')\<close> (both contexts,
   since \<open>f\<close>'s call to \<open>g\<close> is the read site), then \<open>Statement 6\<close>, \<open>Statement 7\<close>, and
-  \<open>FunctionResult ''main''\<close> (the chain of \<open>f\<close>-returns downstream of that). Those seven
+  \<open>FunctionResult (STR ''main'')\<close> (the chain of \<open>f\<close>-returns downstream of that). Those seven
   need the same widening even though their own fiber never splits, because the k=1
   equation they solve reads a merged dependency through \<^const>\<open>cs_route\<close>'s collapse, while
   a naive k=2 passthrough at their own (unsplit) context would only ever reflect one
@@ -47,8 +47,8 @@ text \<open>
   \<open>definition\<close> cannot recurse), the same construction \<^const>\<open>eq\<close> would perform at that
   node once its inputs are known. \<open>project_sigma_eq_statement3\<close> is the case that exposed
   this pattern, proved by unfolding both sides to the same term; the same treatment
-  closes \<open>FunctionResult ''f''\<close>, \<open>Statement 6\<close>, \<open>Statement 7\<close>, and
-  \<open>FunctionResult ''main''\<close>. The sixteen per-node cases assemble into the headline
+  closes \<open>FunctionResult (STR ''f'')\<close>, \<open>Statement 6\<close>, \<open>Statement 7\<close>, and
+  \<open>FunctionResult (STR ''main'')\<close>. The sixteen per-node cases assemble into the headline
   theorem, \<open>project_sigma_part_post_solution\<close>, which keeps \<open>project_sigma\<close> a
   \<^verbatim>\<open>part_post_solution\<close> of \<open>nest_1_eqs\<close>.
 \<close>
@@ -62,7 +62,7 @@ text \<open>
   Named closed forms for the downstream-cone values, so \<open>project_sigma\<close> plugs in one
   constant per node instead of re-inlining the same subterm at every site that reads it
   (\<open>merged_result_g\<close> alone would otherwise appear once in \<open>project_sigma\<close>'s own
-  \<open>FunctionResult ''g''\<close> case and again inside every downstream case that reads it).
+  \<open>FunctionResult (STR ''g'')\<close> case and again inside every downstream case that reads it).
   None of these may mention \<open>project_sigma\<close> itself -- a \<open>definition\<close> cannot recurse --
   so each is built directly from \<open>nest_2_sol\<close> and the constants already defined earlier
   in the chain, mirroring exactly what \<open>eq\<close> would compute at that node once its own inputs are
@@ -70,33 +70,33 @@ text \<open>
 \<close>
 
 definition merged_result_g :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
-  "merged_result_g = snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 5]))
-                        \<squnion> snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 6]))"
+  "merged_result_g = snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5]))
+                        \<squnion> snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6]))"
 
 definition statement3_val :: "cfg_node list \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state" where
-  "statement3_val ctx1 = DG (combine_local Spoly (Some ''t'')
+  "statement3_val ctx1 = DG (combine_local Spoly (Some (STR ''t''))
         (locals (snd nest_2_sol (Inl (Statement 2, ctx1))))
         (locals merged_result_g)
         (globs (snd nest_2_sol (Inr Global2)))) bot"
 
 definition result_f_val :: "cfg_node list \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state" where
-  "result_f_val ctx1 = DG (snd (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')
+  "result_f_val ctx1 = DG (snd (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f''))
         (locals (statement3_val ctx1)) (globs (snd nest_2_sol (Inr Global2))))) bot"
 
 definition statement6_val :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
-  "statement6_val = DG (combine_local Spoly (Some ''x'')
+  "statement6_val = DG (combine_local Spoly (Some (STR ''x''))
         (locals (snd nest_2_sol (Inl (Statement 5, []))))
         (locals (result_f_val [Statement 5]))
         (globs (snd nest_2_sol (Inr Global2)))) bot"
 
 definition statement7_val :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
-  "statement7_val = DG (combine_local Spoly (Some ''y'')
+  "statement7_val = DG (combine_local Spoly (Some (STR ''y''))
         (locals statement6_val)
         (locals (result_f_val [Statement 6]))
         (globs (snd nest_2_sol (Inr Global2)))) bot"
 
 definition result_main_val :: "(ivl exec_dg_st, ivl exec_dg_st) dg_state" where
-  "result_main_val = DG (snd (dg_spec_step Spoly (EA_Ret None ''main'')
+  "result_main_val = DG (snd (dg_spec_step Spoly (EA_Ret None (STR ''main''))
         (locals statement7_val) (globs (snd nest_2_sol (Inr Global2))))) bot"
 
 definition project_sigma :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state" where
@@ -106,60 +106,60 @@ definition project_sigma :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> (ivl
           (if (v, ctx1) = (Statement 0, [Statement 2]) then
              snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 5]))
                \<squnion> snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 6]))
-           else if (v, ctx1) = (FunctionResult ''g'', [Statement 2]) then merged_result_g
-           else if (v, ctx1) = (FunctionEntry ''g'', [Statement 2]) then
-             snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5]))
-               \<squnion> snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6]))
+           else if (v, ctx1) = (FunctionResult (STR ''g''), [Statement 2]) then merged_result_g
+           else if (v, ctx1) = (FunctionEntry (STR ''g''), [Statement 2]) then
+             snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))
+               \<squnion> snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))
            else if (v, ctx1) = (Statement 3, [Statement 5]) \<or> (v, ctx1) = (Statement 3, [Statement 6]) then
              statement3_val ctx1
-           else if (v, ctx1) = (FunctionResult ''f'', [Statement 5])
-                 \<or> (v, ctx1) = (FunctionResult ''f'', [Statement 6]) then
+           else if (v, ctx1) = (FunctionResult (STR ''f''), [Statement 5])
+                 \<or> (v, ctx1) = (FunctionResult (STR ''f''), [Statement 6]) then
              result_f_val ctx1
            else if (v, ctx1) = (Statement 6, []) then statement6_val
            else if (v, ctx1) = (Statement 7, []) then statement7_val
-           else if (v, ctx1) = (FunctionResult ''main'', []) then result_main_val
+           else if (v, ctx1) = (FunctionResult (STR ''main''), []) then result_main_val
            else snd nest_2_sol (Inl (v, ctx1)))
       | Inr Global1 \<Rightarrow> snd nest_2_sol (Inr Global2)
       | Inr (Seed1 v ctx1) \<Rightarrow>
-          (if (v, ctx1) = (FunctionEntry ''g'', [Statement 2]) then
+          (if (v, ctx1) = (FunctionEntry (STR ''g''), [Statement 2]) then
              snd nest_2_sol (Inr (Seed2 v [Statement 2, Statement 5]))
                \<squnion> snd nest_2_sol (Inr (Seed2 v [Statement 2, Statement 6]))
            else snd nest_2_sol (Inr (Seed2 v ctx1))))"
 
 subsection \<open>FunctionEntry g -- pure seed read, no intra, no comb\<close>
 
-lemma entry_g_no_intra: "intra_predecessor_list nest_cfg (FunctionEntry ''g'') = []"
+lemma entry_g_no_intra: "intra_predecessor_list nest_cfg (FunctionEntry (STR ''g'')) = []"
   by eval
 
-lemma entry_g_no_return: "return_call_action_list nest_cfg (FunctionEntry ''g'') = []"
+lemma entry_g_no_return: "return_call_action_list nest_cfg (FunctionEntry (STR ''g'')) = []"
   by eval
 
-lemma entry_g_no_calls: "call_successor_list nest_cfg (FunctionEntry ''g'') = []"
+lemma entry_g_no_calls: "call_successor_list nest_cfg (FunctionEntry (STR ''g'')) = []"
   by eval
 
 lemma nest_1_eqs_entry_g:
-  "nest_1_eqs (FunctionEntry ''g'', [Statement 2])
-     = QueryG (Seed1 (FunctionEntry ''g'') [Statement 2]) (\<lambda>d. answer_local (globs d))"
+  "nest_1_eqs (FunctionEntry (STR ''g''), [Statement 2])
+     = QueryG (Seed1 (FunctionEntry (STR ''g'')) [Statement 2]) (\<lambda>d. answer_local (globs d))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
   by (simp add: entry_g_no_intra entry_g_no_return entry_g_no_calls nest_entry
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
 
 lemma dep_L_entry_g:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry ''g'', [Statement 2]) = {}"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry (STR ''g''), [Statement 2]) = {}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_entry_g
   by simp
 
 lemma sides_of_rhs_entry_g:
-  "sides_of_rhs (nest_1_eqs (FunctionEntry ''g'', [Statement 2])) project_sigma = bot"
+  "sides_of_rhs (nest_1_eqs (FunctionEntry (STR ''g''), [Statement 2])) project_sigma = bot"
   unfolding nest_1_eqs_entry_g
   by (simp add: bot_fun_def)
 
 lemma project_sigma_dep_L_entry_g:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry ''g'', [Statement 2]) \<subseteq> fst nest_1_sol"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry (STR ''g''), [Statement 2]) \<subseteq> fst nest_1_sol"
   by (simp add: dep_L_entry_g)
 
 lemma project_sigma_sides_entry_g:
-  "sides_of_rhs (nest_1_eqs (FunctionEntry ''g'', [Statement 2])) project_sigma \<le> project_sigma"
+  "sides_of_rhs (nest_1_eqs (FunctionEntry (STR ''g''), [Statement 2])) project_sigma \<le> project_sigma"
   by (simp add: sides_of_rhs_entry_g)
 
 lemma part_post_eq_2:
@@ -169,8 +169,8 @@ lemma part_post_eq_2:
 
 lemma nest_2_eqs_entry_g:
   assumes "ctx = [Statement 2, Statement 5] \<or> ctx = [Statement 2, Statement 6]"
-  shows "nest_2_eqs (FunctionEntry ''g'', ctx)
-     = QueryG (Seed2 (FunctionEntry ''g'') ctx) (\<lambda>d. answer_local (globs d))"
+  shows "nest_2_eqs (FunctionEntry (STR ''g''), ctx)
+     = QueryG (Seed2 (FunctionEntry (STR ''g'')) ctx) (\<lambda>d. answer_local (globs d))"
   using assms
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
   by (auto simp: entry_g_no_intra entry_g_no_return entry_g_no_calls nest_entry
@@ -178,26 +178,26 @@ lemma nest_2_eqs_entry_g:
 
 lemma eq_entry_g_2:
   assumes "ctx = [Statement 2, Statement 5] \<or> ctx = [Statement 2, Statement 6]"
-  shows "eq nest_2_eqs (FunctionEntry ''g'', ctx) (snd nest_2_sol)
-       = DG (globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''g'') ctx)))) bot"
+  shows "eq nest_2_eqs (FunctionEntry (STR ''g''), ctx) (snd nest_2_sol)
+       = DG (globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''g'')) ctx)))) bot"
   unfolding nest_2_eqs_entry_g[OF assms]
   by simp
 
 lemma seed_le_entry_g_5:
-  "globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''g'') [Statement 2, Statement 5])))
-     \<le> locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))"
+  "globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''g'')) [Statement 2, Statement 5])))
+     \<le> locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))"
   using part_post_eq_2[OF callee_covered_g_f3_2] eq_entry_g_2[of "[Statement 2, Statement 5]"]
   by (simp add: less_eq_dg_state_def)
 
 lemma seed_le_entry_g_6:
-  "globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''g'') [Statement 2, Statement 6])))
-     \<le> locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))"
+  "globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''g'')) [Statement 2, Statement 6])))
+     \<le> locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))"
   using part_post_eq_2[OF callee_covered_g_f10_2] eq_entry_g_2[of "[Statement 2, Statement 6]"]
   by (simp add: less_eq_dg_state_def)
 
 lemma project_sigma_eq_entry_g:
-  "eq nest_1_eqs (FunctionEntry ''g'', [Statement 2]) project_sigma
-     \<le> project_sigma (Inl (FunctionEntry ''g'', [Statement 2]))"
+  "eq nest_1_eqs (FunctionEntry (STR ''g''), [Statement 2]) project_sigma
+     \<le> project_sigma (Inl (FunctionEntry (STR ''g''), [Statement 2]))"
   unfolding nest_1_eqs_entry_g
   by (auto simp: less_eq_dg_state_def project_sigma_def sup_dg_state_def
            intro: order_trans[OF seed_le_entry_g_5 sup_ge1]
@@ -205,31 +205,31 @@ lemma project_sigma_eq_entry_g:
 
 subsection \<open>FunctionResult g -- the return/combine path, per the CFG\<close>
 
-text \<open>\<open>FunctionResult ''g''\<close> is reached only by the intra return edge from \<open>Statement 0\<close>;
+text \<open>\<open>FunctionResult (STR ''g'')\<close> is reached only by the intra return edge from \<open>Statement 0\<close>;
   it is never a \<open>return_call_action_list\<close> continuation, so its equation
   carries no COMB fragment. The actual COMB nodes are the call continuations
   (\<open>Statement 3\<close>, \<open>Statement 6\<close>, \<open>Statement 7\<close>).\<close>
 
-lemma result_g_no_comb: "return_call_action_list nest_cfg (FunctionResult ''g'') = []"
+lemma result_g_no_comb: "return_call_action_list nest_cfg (FunctionResult (STR ''g'')) = []"
   by eval
 
-lemma result_g_no_calls: "call_successor_list nest_cfg (FunctionResult ''g'') = []"
+lemma result_g_no_calls: "call_successor_list nest_cfg (FunctionResult (STR ''g'')) = []"
   by eval
 
 lemma result_g_intra:
-  "intra_predecessor_list nest_cfg (FunctionResult ''g'')
-     = [(Statement 0, EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')]"
+  "intra_predecessor_list nest_cfg (FunctionResult (STR ''g''))
+     = [(Statement 0, EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))]"
   by eval
 
 lemma nest_1_eqs_result_g:
-  "nest_1_eqs (FunctionResult ''g'', [Statement 2])
+  "nest_1_eqs (FunctionResult (STR ''g''), [Statement 2])
      = QueryL (Statement 0, [Statement 2]) (\<lambda>d. QueryG Global1 (\<lambda>gv.
          Side Global1
            (DG bot (fst (dg_spec_step Spoly
-                 (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+                 (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
                  (locals d) (globs gv))))
            (Answer (DG (snd (dg_spec_step Spoly
-                 (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+                 (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
                  (locals d) (globs gv))) bot))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
             apply_dg_spec_def dg_edge_tree_def
@@ -237,7 +237,7 @@ lemma nest_1_eqs_result_g:
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
 
 lemma dep_L_result_g:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult ''g'', [Statement 2]) = {(Statement 0, [Statement 2])}"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult (STR ''g''), [Statement 2]) = {(Statement 0, [Statement 2])}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_result_g
   by simp
 
@@ -245,14 +245,14 @@ lemma statement_0_covered_1: "(Statement 0, [Statement 2]) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_result_g:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult ''g'', [Statement 2]) \<subseteq> fst nest_1_sol"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult (STR ''g''), [Statement 2]) \<subseteq> fst nest_1_sol"
   by (simp add: dep_L_result_g statement_0_covered_1)
 
 lemma sides_of_rhs_result_g:
-  "sides_of_rhs (nest_1_eqs (FunctionResult ''g'', [Statement 2])) project_sigma
+  "sides_of_rhs (nest_1_eqs (FunctionResult (STR ''g''), [Statement 2])) project_sigma
      = (\<lambda>_. bot)(Inr Global1 :=
          DG bot (fst (dg_spec_step Spoly
-               (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+               (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
                (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
                (globs (project_sigma (Inr Global1))))))"
   unfolding nest_1_eqs_result_g
@@ -279,8 +279,8 @@ lemma restrict_global_resolved_q_update_ret_var:
 
 
 lemma eq_result_g_concrete_bound:
-  "locals (eq nest_1_eqs (FunctionResult ''g'', [Statement 2]) project_sigma)
-     \<le> locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2])))"
+  "locals (eq nest_1_eqs (FunctionResult (STR ''g''), [Statement 2]) project_sigma)
+     \<le> locals (project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2])))"
   unfolding nest_1_eqs_entry_g project_sigma_def nest_1_eqs_result_g
   by eval
 
@@ -312,20 +312,20 @@ lemma fst_dg_spec_step_ret_none:
 subsection \<open>The same node, one level down in \<open>nest_2_eqs\<close>, at each child context\<close>
 
 lemma result_g_intra_2:
-  "intra_predecessor_list nest_cfg (FunctionResult ''g'')
-     = [(Statement 0, EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')]"
+  "intra_predecessor_list nest_cfg (FunctionResult (STR ''g''))
+     = [(Statement 0, EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))]"
   by eval
 
 lemma nest_2_eqs_result_g:
   assumes "ctx = [Statement 2, Statement 5] \<or> ctx = [Statement 2, Statement 6]"
-  shows "nest_2_eqs (FunctionResult ''g'', ctx)
+  shows "nest_2_eqs (FunctionResult (STR ''g''), ctx)
      = QueryL (Statement 0, ctx) (\<lambda>d. QueryG Global2 (\<lambda>gv.
          Side Global2
            (DG bot (fst (dg_spec_step Spoly
-                 (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+                 (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
                  (locals d) (globs gv))))
            (Answer (DG (snd (dg_spec_step Spoly
-                 (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+                 (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
                  (locals d) (globs gv))) bot))))"
   using assms
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
@@ -335,10 +335,10 @@ lemma nest_2_eqs_result_g:
 
 lemma sides_of_rhs_result_g_2:
   assumes "ctx = [Statement 2, Statement 5] \<or> ctx = [Statement 2, Statement 6]"
-  shows "sides_of_rhs (nest_2_eqs (FunctionResult ''g'', ctx)) (snd nest_2_sol)
+  shows "sides_of_rhs (nest_2_eqs (FunctionResult (STR ''g''), ctx)) (snd nest_2_sol)
      = (\<lambda>_. bot)(Inr Global2 :=
          DG bot (fst (dg_spec_step Spoly
-               (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+               (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
                (locals (snd nest_2_sol (Inl (Statement 0, ctx))))
                (globs (snd nest_2_sol (Inr Global2))))))"
   unfolding nest_2_eqs_result_g[OF assms]
@@ -349,14 +349,14 @@ lemma part_post_sides_2:
   shows "sides_of_rhs (nest_2_eqs u) (snd nest_2_sol) \<le> snd nest_2_sol"
   using nest_2_pp_st assms by blast
 
-lemma result_g_covered_2_A: "(FunctionResult ''g'', [Statement 2, Statement 5]) \<in> fst nest_2_sol"
+lemma result_g_covered_2_A: "(FunctionResult (STR ''g''), [Statement 2, Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
 
-lemma result_g_covered_2_B: "(FunctionResult ''g'', [Statement 2, Statement 6]) \<in> fst nest_2_sol"
+lemma result_g_covered_2_B: "(FunctionResult (STR ''g''), [Statement 2, Statement 6]) \<in> fst nest_2_sol"
   unfolding nest_2_sol_def nest_2_eqs_def by eval
 
 lemma project_sigma_sides_result_g:
-  "sides_of_rhs (nest_1_eqs (FunctionResult ''g'', [Statement 2])) project_sigma \<le> project_sigma"
+  "sides_of_rhs (nest_1_eqs (FunctionResult (STR ''g''), [Statement 2])) project_sigma \<le> project_sigma"
 proof -
   let ?dA = "snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 5]))"
   let ?dB = "snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 6]))"
@@ -377,12 +377,12 @@ proof -
        = restrict_global_resolved_q (locals ?dA) \<squnion> restrict_global_resolved_q (locals ?dB)"
     by (simp add: d0 restrict_global_resolved_q_sup_restrict_global_resolved_q[symmetric])
   have key_bound:
-    "fst (dg_spec_step Spoly (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+    "fst (dg_spec_step Spoly (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
            (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
            (globs (project_sigma (Inr Global1))))
        \<le> globs (project_sigma (Inr Global1))"
   proof -
-    have "fst (dg_spec_step Spoly (EA_Ret (Some (Plus (VIMP_Syntax.V ''p'') (VIMP_Syntax.V ''p''))) ''g'')
+    have "fst (dg_spec_step Spoly (EA_Ret (Some (Plus (VIMP_Syntax.V (STR ''p'')) (VIMP_Syntax.V (STR ''p'')))) (STR ''g''))
              (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
              (globs (project_sigma (Inr Global1))))
         = restrict_global_resolved_q (locals (project_sigma (Inl (Statement 0, [Statement 2]))))
@@ -403,7 +403,7 @@ qed
 
 subsection \<open>Statement 3 -- the real COMB node: continuation of the call to g\<close>
 
-text \<open>Unlike \<open>FunctionResult ''g''\<close>, \<open>Statement 3\<close> is a genuine \<open>return_call_action_list\<close>
+text \<open>Unlike \<open>FunctionResult (STR ''g'')\<close>, \<open>Statement 3\<close> is a genuine \<open>return_call_action_list\<close>
   continuation (the call at \<open>Statement 2\<close> returns here), so its equation is built from
   \<^const>\<open>routed_cmb\<close>, not \<^const>\<open>apply_dg_spec\<close>. It carries no intra fragment and makes
   no calls of its own. Its context is \<open>[Statement 5]\<close> or \<open>[Statement 6]\<close> (whichever
@@ -415,7 +415,7 @@ lemma statement3_no_intra: "intra_predecessor_list nest_cfg (Statement 3) = []"
 
 lemma statement3_comb:
   "return_call_action_list nest_cfg (Statement 3)
-     = [(Statement 2, CallEdge (Some ''t'') [''p''] [VIMP_Syntax.V ''p''], FunctionResult ''g'')]"
+     = [(Statement 2, CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')], FunctionResult (STR ''g''))]"
   by eval
 
 lemma statement3_no_calls: "call_successor_list nest_cfg (Statement 3) = []"
@@ -424,34 +424,34 @@ lemma statement3_no_calls: "call_successor_list nest_cfg (Statement 3) = []"
 lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx) (\<lambda>caller_state.
-         QueryL (FunctionResult ''g'',
+         QueryL (FunctionResult (STR ''g''),
                  cs_route 1 (Statement 2) ctx (locals caller_state)
-                   (CallEdge (Some ''t'') [''p''] [VIMP_Syntax.V ''p''])) (\<lambda>callee_state.
+                   (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
            QueryG Global1 (\<lambda>globals_state.
              Side Global1
-               (DG bot (combine_global Spoly (Some ''t'')
+               (DG bot (combine_global Spoly (Some (STR ''t''))
                      (locals caller_state) (locals callee_state) (globs globals_state)))
-               (Answer (DG (combine_local Spoly (Some ''t'')
+               (Answer (DG (combine_local Spoly (Some (STR ''t''))
                      (locals caller_state) (locals callee_state) (globs globals_state)) bot)))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def routed_cmb_def
   by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
 
 lemma result_g_local_no_global_5:
-  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 5])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5])))) = bot"
   by eval
 
 lemma result_g_local_no_global_6:
-  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionResult ''g'', [Statement 2, Statement 6])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6])))) = bot"
   by eval
 
 lemma project_sigma_result_g_local_no_global:
-  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2])))) = bot"
+  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2])))) = bot"
   by (simp add: project_sigma_def merged_result_g_def sup_dg_state_def
                 restrict_global_resolved_q_sup_restrict_global_resolved_q
                 result_g_local_no_global_5 result_g_local_no_global_6)
 
-lemma statement2_no_global: "\<not> nest_gs ''t''"
+lemma statement2_no_global: "\<not> nest_gs (STR ''t'')"
   by simp
 
 lemma restrict_global_resolved_q_update_var:
@@ -484,9 +484,9 @@ lemma combine_global_ret_var:
 lemma dep_L_statement3:
   "dep\<^sub>L nest_1_eqs project_sigma (Statement 3, ctx)
      = {(Statement 2, ctx),
-        (FunctionResult ''g'', cs_route 1 (Statement 2) ctx
+        (FunctionResult (STR ''g''), cs_route 1 (Statement 2) ctx
            (locals (project_sigma (Inl (Statement 2, ctx))))
-           (CallEdge (Some ''t'') [''p''] [VIMP_Syntax.V ''p'']))}"
+           (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_statement3
   by auto
 
@@ -495,9 +495,9 @@ lemma cs_route_k1: "cs_route 1 u ctx d (CallEdge dst ps as) = [u]"
 
 lemma eq_statement3_closed_form:
   "eq nest_1_eqs (Statement 3, ctx) project_sigma
-     = DG (combine_local Spoly (Some ''t'')
+     = DG (combine_local Spoly (Some (STR ''t''))
            (locals (project_sigma (Inl (Statement 2, ctx))))
-           (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
+           (locals (project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2]))))
            (globs (project_sigma (Inr Global1)))) bot"
   unfolding nest_1_eqs_statement3 cs_route_k1
   by simp
@@ -551,10 +551,10 @@ lemma combine_local_no_global:
   by (simp add: combine_local_ret_var restrict_global_resolved_q_update_var
                 restrict_global_resolved_q_restrict_local_resolved_q)
 
-lemma var_x_no_global: "\<not> nest_gs ''x''"
+lemma var_x_no_global: "\<not> nest_gs (STR ''x'')"
   by simp
 
-lemma var_y_no_global: "\<not> nest_gs ''y''"
+lemma var_y_no_global: "\<not> nest_gs (STR ''y'')"
   by simp
 
 
@@ -571,11 +571,11 @@ lemma project_sigma_dep_L_statement3:
 lemma sides_of_rhs_statement3:
   "sides_of_rhs (nest_1_eqs (Statement 3, ctx)) project_sigma
      = (\<lambda>_. bot)(Inr Global1 :=
-         DG bot (combine_global Spoly (Some ''t'')
+         DG bot (combine_global Spoly (Some (STR ''t''))
                (locals (project_sigma (Inl (Statement 2, ctx))))
-               (locals (project_sigma (Inl (FunctionResult ''g'',
+               (locals (project_sigma (Inl (FunctionResult (STR ''g''),
                  cs_route 1 (Statement 2) ctx (locals (project_sigma (Inl (Statement 2, ctx))))
-                   (CallEdge (Some ''t'') [''p''] [VIMP_Syntax.V ''p''])))))
+                   (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))))
                (globs (project_sigma (Inr Global1)))))"
   unfolding nest_1_eqs_statement3
   by (simp add: bot_fun_def)
@@ -583,17 +583,17 @@ lemma sides_of_rhs_statement3:
 lemma project_sigma_sides_statement3:
   "sides_of_rhs (nest_1_eqs (Statement 3, ctx)) project_sigma \<le> project_sigma"
 proof -
-  have key_bound: "combine_global Spoly (Some ''t'')
+  have key_bound: "combine_global Spoly (Some (STR ''t''))
         (locals (project_sigma (Inl (Statement 2, ctx))))
-        (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
+        (locals (project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2]))))
         (globs (project_sigma (Inr Global1)))
       \<le> globs (project_sigma (Inr Global1))"
   proof -
-    have "combine_global Spoly (Some ''t'')
+    have "combine_global Spoly (Some (STR ''t''))
             (locals (project_sigma (Inl (Statement 2, ctx))))
-            (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
+            (locals (project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2]))))
             (globs (project_sigma (Inr Global1)))
-        = restrict_global_resolved_q (locals (project_sigma (Inl (FunctionResult ''g'', [Statement 2]))))
+        = restrict_global_resolved_q (locals (project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2]))))
             \<squnion> restrict_global_resolved_q (globs (project_sigma (Inr Global1)))"
       by (simp add: combine_global_ret_var[OF statement2_no_global]
                     restrict_global_resolved_q_sup_restrict_global_resolved_q[symmetric])
@@ -609,31 +609,31 @@ qed
 
 subsection \<open>FunctionResult f -- intra return from Statement 3, both activations\<close>
 
-text \<open>Same shape as \<open>FunctionResult ''g''\<close>: reached only by the intra return edge from
+text \<open>Same shape as \<open>FunctionResult (STR ''g'')\<close>: reached only by the intra return edge from
   \<open>Statement 3\<close>, no COMB, no outgoing calls. Its context (\<open>[Statement 5]\<close>
   or \<open>[Statement 6]\<close>) never merges, but it reads \<open>Statement 3\<close> which does, through
   \<open>project_sigma\<close>'s widened case.\<close>
 
-lemma result_f_no_comb: "return_call_action_list nest_cfg (FunctionResult ''f'') = []"
+lemma result_f_no_comb: "return_call_action_list nest_cfg (FunctionResult (STR ''f'')) = []"
   by eval
 
-lemma result_f_no_calls: "call_successor_list nest_cfg (FunctionResult ''f'') = []"
+lemma result_f_no_calls: "call_successor_list nest_cfg (FunctionResult (STR ''f'')) = []"
   by eval
 
 lemma result_f_intra:
-  "intra_predecessor_list nest_cfg (FunctionResult ''f'')
-     = [(Statement 3, EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')]"
+  "intra_predecessor_list nest_cfg (FunctionResult (STR ''f''))
+     = [(Statement 3, EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f''))]"
   by eval
 
 lemma nest_1_eqs_result_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "nest_1_eqs (FunctionResult ''f'', ctx)
+  shows "nest_1_eqs (FunctionResult (STR ''f''), ctx)
      = QueryL (Statement 3, ctx) (\<lambda>d. QueryG Global1 (\<lambda>gv.
          Side Global1
            (DG bot (fst (dg_spec_step Spoly
-                 (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'') (locals d) (globs gv))))
+                 (EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f'')) (locals d) (globs gv))))
            (Answer (DG (snd (dg_spec_step Spoly
-                 (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'') (locals d) (globs gv))) bot))))"
+                 (EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f'')) (locals d) (globs gv))) bot))))"
   using assms
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
             apply_dg_spec_def dg_edge_tree_def
@@ -642,7 +642,7 @@ lemma nest_1_eqs_result_f:
 
 lemma dep_L_result_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult ''f'', ctx) = {(Statement 3, ctx)}"
+  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult (STR ''f''), ctx) = {(Statement 3, ctx)}"
   using assms unfolding dep\<^sub>L_def dep_def nest_1_eqs_result_f[OF assms]
   by simp
 
@@ -652,13 +652,13 @@ lemma statement3_covered_1:
 
 lemma project_sigma_dep_L_result_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult ''f'', ctx) \<subseteq> fst nest_1_sol"
+  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult (STR ''f''), ctx) \<subseteq> fst nest_1_sol"
   using assms by (auto simp: dep_L_result_f statement3_covered_1)
 
 lemma eq_result_f_concrete_bound:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "locals (eq nest_1_eqs (FunctionResult ''f'', ctx) project_sigma)
-     \<le> locals (project_sigma (Inl (FunctionResult ''f'', ctx)))"
+  shows "locals (eq nest_1_eqs (FunctionResult (STR ''f''), ctx) project_sigma)
+     \<le> locals (project_sigma (Inl (FunctionResult (STR ''f''), ctx)))"
   using assms
 proof
   assume c: "ctx = [Statement 5]"
@@ -670,10 +670,10 @@ qed
 
 lemma sides_of_rhs_result_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "sides_of_rhs (nest_1_eqs (FunctionResult ''f'', ctx)) project_sigma
+  shows "sides_of_rhs (nest_1_eqs (FunctionResult (STR ''f''), ctx)) project_sigma
      = (\<lambda>_. bot)(Inr Global1 :=
          DG bot (fst (dg_spec_step Spoly
-               (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')
+               (EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f''))
                (locals (project_sigma (Inl (Statement 3, ctx))))
                (globs (project_sigma (Inr Global1))))))"
   unfolding nest_1_eqs_result_f[OF assms]
@@ -685,14 +685,14 @@ lemma statement3_val_local_no_global:
 
 lemma project_sigma_sides_result_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "sides_of_rhs (nest_1_eqs (FunctionResult ''f'', ctx)) project_sigma \<le> project_sigma"
+  shows "sides_of_rhs (nest_1_eqs (FunctionResult (STR ''f''), ctx)) project_sigma \<le> project_sigma"
 proof -
-  have key_bound: "fst (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')
+  have key_bound: "fst (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f''))
         (locals (project_sigma (Inl (Statement 3, ctx))))
         (globs (project_sigma (Inr Global1))))
       \<le> globs (project_sigma (Inr Global1))"
   proof -
-    have "fst (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V ''t'')) ''f'')
+    have "fst (dg_spec_step Spoly (EA_Ret (Some (VIMP_Syntax.V (STR ''t''))) (STR ''f''))
              (locals (project_sigma (Inl (Statement 3, ctx))))
              (globs (project_sigma (Inr Global1))))
         = restrict_global_resolved_q (locals (project_sigma (Inl (Statement 3, ctx))))
@@ -712,7 +712,7 @@ subsection \<open>Statement 6 -- dual role: COMB continuation of f's first call,
 
 text \<open>\<open>Statement 6\<close> is both a \<open>return_call_action_list\<close> continuation (the call to \<open>f\<close> at
   \<open>Statement 5\<close> returns here) and itself a call source (\<open>call_successor_list\<close> to
-  \<open>FunctionEntry ''f''\<close>, continuation \<open>Statement 7\<close>). The \<open>calls\<close> fragment only ever
+  \<open>FunctionEntry (STR ''f'')\<close>, continuation \<open>Statement 7\<close>). The \<open>calls\<close> fragment only ever
   publishes \<open>Side\<close>-effects (the global slot via \<open>enter_global\<close>, the callee's seed via
   \<open>enter_local\<close>); its own local \<open>Answer\<close> comes solely from the \<open>comb\<close> fragment, exactly as
   for a COMB-only node -- confirmed via \<open>side_cfg_T_eff_keyed_seed_dg\<close>'s single accumulator
@@ -725,12 +725,12 @@ lemma statement6_no_intra: "intra_predecessor_list nest_cfg (Statement 6) = []"
 
 lemma statement6_comb:
   "return_call_action_list nest_cfg (Statement 6)
-     = [(Statement 5, CallEdge (Some ''x'') [''p''] [aexp.N 3], FunctionResult ''f'')]"
+     = [(Statement 5, CallEdge (Some (STR ''x'')) [(STR ''p'')] [aexp.N 3], FunctionResult (STR ''f''))]"
   by eval
 
 lemma statement6_calls:
   "call_successor_list nest_cfg (Statement 6)
-     = [(FunctionEntry ''f'', CallEdge (Some ''y'') [''p''] [aexp.N 10], Statement 7)]"
+     = [(FunctionEntry (STR ''f''), CallEdge (Some (STR ''y'')) [(STR ''p'')] [aexp.N 10], Statement 7)]"
   by eval
 
 schematic_goal nest_1_eqs_statement6_form:
@@ -745,9 +745,9 @@ lemmas nest_1_eqs_statement6 = nest_1_eqs_statement6_form
 
 lemma eq_statement6_closed_form:
   "eq nest_1_eqs (Statement 6, ctx) project_sigma
-     = DG (combine_local Spoly (Some ''x'')
+     = DG (combine_local Spoly (Some (STR ''x''))
            (locals (project_sigma (Inl (Statement 5, ctx))))
-           (locals (project_sigma (Inl (FunctionResult ''f'', [Statement 5]))))
+           (locals (project_sigma (Inl (FunctionResult (STR ''f''), [Statement 5]))))
            (globs (project_sigma (Inr Global1)))) bot"
   unfolding nest_1_eqs_statement6
   by (simp add: cs_route_def)
@@ -760,9 +760,9 @@ lemma project_sigma_eq_statement6:
 lemma dep_L_statement6:
   "dep\<^sub>L nest_1_eqs project_sigma (Statement 6, ctx)
      = {(Statement 5, ctx),
-        (FunctionResult ''f'', cs_route 1 (Statement 5) ctx
+        (FunctionResult (STR ''f''), cs_route 1 (Statement 5) ctx
            (locals (project_sigma (Inl (Statement 5, ctx))))
-           (CallEdge (Some ''x'') [''p''] [aexp.N 3])),
+           (CallEdge (Some (STR ''x'')) [(STR ''p'')] [aexp.N 3])),
         (Statement 6, ctx)}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_statement6
   by auto
@@ -773,7 +773,7 @@ lemma statement5_covered: "(Statement 5, []) \<in> fst nest_1_sol"
 lemma statement6_covered: "(Statement 6, []) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
-lemma result_f_covered_5: "(FunctionResult ''f'', [Statement 5]) \<in> fst nest_1_sol"
+lemma result_f_covered_5: "(FunctionResult (STR ''f''), [Statement 5]) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_statement6:
@@ -788,7 +788,7 @@ schematic_goal sides_of_rhs_statement6_form:
   done
 
 schematic_goal enter_local_n10_form:
-  "enter_local Spoly [''p''] [aexp.N 10] d g = ?rhs"
+  "enter_local Spoly [(STR ''p'')] [aexp.N 10] d g = ?rhs"
   unfolding Spoly_def snd_dgs_enter_for ivl_enter_st_for_def
   apply (simp add: Let_def)
   done
@@ -806,11 +806,11 @@ lemma restrict_local_resolved_q_enter_frame_D_st_indep:
   unfolding enter_ivl_st_def
   by (rule st_eqI_lookup) (simp split: location.splits)
 
-lemma var_p_no_global: "\<not> nest_gs ''p''"
+lemma var_p_no_global: "\<not> nest_gs (STR ''p'')"
   by simp
 
 lemma enter_local_n10_indep:
-  "enter_local Spoly [''p''] [aexp.N 10] d g = enter_local Spoly [''p''] [aexp.N 10] bot bot"
+  "enter_local Spoly [(STR ''p'')] [aexp.N 10] d g = enter_local Spoly [(STR ''p'')] [aexp.N 10] bot bot"
 proof -
   have h:
       "restrict_local_resolved_q (enter_frame_D_resolved_q ivl_top (d \<squnion> g)) =
@@ -844,7 +844,7 @@ lemma restrict_global_resolved_q_enter_frame_D_st:
   by (simp_all add: lookup_restrict_global_resolved_q enter_ivl_st_def)
 
 lemma enter_global_ret_var:
-  "enter_global Spoly [''p''] [a] d g = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
+  "enter_global Spoly [(STR ''p'')] [a] d g = restrict_global_resolved_q d \<squnion> restrict_global_resolved_q g"
   unfolding Spoly_def fst_dgs_enter_for ivl_enter_st_for_def
   by (simp add: Let_def bind_formals_abs_def
                 bind_formals_resolved_q_singleton
@@ -857,24 +857,24 @@ lemma statement6_val_local_no_global:
   by (simp add: statement6_val_def combine_local_no_global[OF var_x_no_global])
 
 lemma seed_f_6_bound_ground:
-  "enter_local Spoly [''p''] [aexp.N 10] bot bot
-     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''f'') [Statement 6])))"
+  "enter_local Spoly [(STR ''p'')] [aexp.N 10] bot bot
+     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''f'')) [Statement 6])))"
   by eval
 
 lemma project_sigma_sides_statement6:
   assumes "ctx = []"
   shows "sides_of_rhs (nest_1_eqs (Statement 6, ctx)) project_sigma \<le> project_sigma"
 proof -
-  have global1_bound: "enter_global Spoly [''p''] [aexp.N 10]
+  have global1_bound: "enter_global Spoly [(STR ''p'')] [aexp.N 10]
         (locals (project_sigma (Inl (Statement 6, ctx))))
         (globs (project_sigma (Inr Global1)))
-      \<squnion> combine_global Spoly (Some ''x'')
+      \<squnion> combine_global Spoly (Some (STR ''x''))
           (locals (project_sigma (Inl (Statement 5, ctx))))
-          (locals (project_sigma (Inl (FunctionResult ''f'', [Statement 5]))))
+          (locals (project_sigma (Inl (FunctionResult (STR ''f''), [Statement 5]))))
           (globs (project_sigma (Inr Global1)))
       \<le> globs (project_sigma (Inr Global1))"
   proof (rule sup_least)
-    show "enter_global Spoly [''p''] [aexp.N 10]
+    show "enter_global Spoly [(STR ''p'')] [aexp.N 10]
             (locals (project_sigma (Inl (Statement 6, ctx))))
             (globs (project_sigma (Inr Global1)))
           \<le> globs (project_sigma (Inr Global1))"
@@ -883,26 +883,26 @@ proof -
       by (auto simp: project_sigma_def statement6_val_local_no_global
                      restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   next
-    show "combine_global Spoly (Some ''x'')
+    show "combine_global Spoly (Some (STR ''x''))
             (locals (project_sigma (Inl (Statement 5, ctx))))
-            (locals (project_sigma (Inl (FunctionResult ''f'', [Statement 5]))))
+            (locals (project_sigma (Inl (FunctionResult (STR ''f''), [Statement 5]))))
             (globs (project_sigma (Inr Global1)))
           \<le> globs (project_sigma (Inr Global1))"
       unfolding combine_global_ret_var[OF var_x_no_global]
       by (simp add: project_sigma_def result_f_val_local_no_global
                     restrict_global_resolved_q_sup_restrict_global_resolved_q restrict_global_resolved_q_le)
   qed
-  have seed_bound: "enter_local Spoly [''p''] [aexp.N 10]
+  have seed_bound: "enter_local Spoly [(STR ''p'')] [aexp.N 10]
         (locals (project_sigma (Inl (Statement 6, ctx))))
         (globs (project_sigma (Inr Global1)))
-      \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry ''f'') [Statement 6])))"
+      \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry (STR ''f'')) [Statement 6])))"
   proof -
-    have "enter_local Spoly [''p''] [aexp.N 10]
+    have "enter_local Spoly [(STR ''p'')] [aexp.N 10]
             (locals (project_sigma (Inl (Statement 6, ctx))))
             (globs (project_sigma (Inr Global1)))
-        = enter_local Spoly [''p''] [aexp.N 10] bot bot"
+        = enter_local Spoly [(STR ''p'')] [aexp.N 10] bot bot"
       by (rule enter_local_n10_indep)
-    also have "\<dots> \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry ''f'') [Statement 6])))"
+    also have "\<dots> \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry (STR ''f'')) [Statement 6])))"
       by (simp add: project_sigma_def seed_f_6_bound_ground)
     finally show ?thesis .
   qed
@@ -923,7 +923,7 @@ lemma statement7_no_intra: "intra_predecessor_list nest_cfg (Statement 7) = []"
 
 lemma statement7_comb:
   "return_call_action_list nest_cfg (Statement 7)
-     = [(Statement 6, CallEdge (Some ''y'') [''p''] [aexp.N 10], FunctionResult ''f'')]"
+     = [(Statement 6, CallEdge (Some (STR ''y'')) [(STR ''p'')] [aexp.N 10], FunctionResult (STR ''f''))]"
   by eval
 
 lemma statement7_no_calls: "call_successor_list nest_cfg (Statement 7) = []"
@@ -932,14 +932,14 @@ lemma statement7_no_calls: "call_successor_list nest_cfg (Statement 7) = []"
 lemma nest_1_eqs_statement7:
   "nest_1_eqs (Statement 7, ctx)
      = QueryL (Statement 6, ctx) (\<lambda>caller_state.
-         QueryL (FunctionResult ''f'',
+         QueryL (FunctionResult (STR ''f''),
                  cs_route 1 (Statement 6) ctx (locals caller_state)
-                   (CallEdge (Some ''y'') [''p''] [aexp.N 10])) (\<lambda>callee_state.
+                   (CallEdge (Some (STR ''y'')) [(STR ''p'')] [aexp.N 10])) (\<lambda>callee_state.
            QueryG Global1 (\<lambda>globals_state.
              Side Global1
-               (DG bot (combine_global Spoly (Some ''y'')
+               (DG bot (combine_global Spoly (Some (STR ''y''))
                      (locals caller_state) (locals callee_state) (globs globals_state)))
-               (Answer (DG (combine_local Spoly (Some ''y'')
+               (Answer (DG (combine_local Spoly (Some (STR ''y''))
                      (locals caller_state) (locals callee_state) (globs globals_state)) bot)))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def routed_cmb_def
   by (simp add: statement7_no_intra statement7_comb statement7_no_calls nest_entry Let_def
@@ -947,9 +947,9 @@ lemma nest_1_eqs_statement7:
 
 lemma eq_statement7_closed_form:
   "eq nest_1_eqs (Statement 7, ctx) project_sigma
-     = DG (combine_local Spoly (Some ''y'')
+     = DG (combine_local Spoly (Some (STR ''y''))
            (locals (project_sigma (Inl (Statement 6, ctx))))
-           (locals (project_sigma (Inl (FunctionResult ''f'', [Statement 6]))))
+           (locals (project_sigma (Inl (FunctionResult (STR ''f''), [Statement 6]))))
            (globs (project_sigma (Inr Global1)))) bot"
   unfolding nest_1_eqs_statement7
   by (simp add: cs_route_def)
@@ -962,13 +962,13 @@ lemma project_sigma_eq_statement7:
 lemma dep_L_statement7:
   "dep\<^sub>L nest_1_eqs project_sigma (Statement 7, ctx)
      = {(Statement 6, ctx),
-        (FunctionResult ''f'', cs_route 1 (Statement 6) ctx
+        (FunctionResult (STR ''f''), cs_route 1 (Statement 6) ctx
            (locals (project_sigma (Inl (Statement 6, ctx))))
-           (CallEdge (Some ''y'') [''p''] [aexp.N 10]))}"
+           (CallEdge (Some (STR ''y'')) [(STR ''p'')] [aexp.N 10]))}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_statement7
   by auto
 
-lemma result_f_covered_6: "(FunctionResult ''f'', [Statement 6]) \<in> fst nest_1_sol"
+lemma result_f_covered_6: "(FunctionResult (STR ''f''), [Statement 6]) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_statement7:
@@ -979,11 +979,11 @@ lemma project_sigma_dep_L_statement7:
 lemma sides_of_rhs_statement7:
   "sides_of_rhs (nest_1_eqs (Statement 7, ctx)) project_sigma
      = (\<lambda>_. bot)(Inr Global1 :=
-         DG bot (combine_global Spoly (Some ''y'')
+         DG bot (combine_global Spoly (Some (STR ''y''))
                (locals (project_sigma (Inl (Statement 6, ctx))))
-               (locals (project_sigma (Inl (FunctionResult ''f'',
+               (locals (project_sigma (Inl (FunctionResult (STR ''f''),
                  cs_route 1 (Statement 6) ctx (locals (project_sigma (Inl (Statement 6, ctx))))
-                   (CallEdge (Some ''y'') [''p''] [aexp.N 10])))))
+                   (CallEdge (Some (STR ''y'')) [(STR ''p'')] [aexp.N 10])))))
                (globs (project_sigma (Inr Global1)))))"
   unfolding nest_1_eqs_statement7
   by (simp add: bot_fun_def)
@@ -995,9 +995,9 @@ lemma result_f_val_6_local_no_global:
 lemma project_sigma_sides_statement7:
   "sides_of_rhs (nest_1_eqs (Statement 7, ctx)) project_sigma \<le> project_sigma"
 proof -
-  have key_bound: "combine_global Spoly (Some ''y'')
+  have key_bound: "combine_global Spoly (Some (STR ''y''))
         (locals (project_sigma (Inl (Statement 6, ctx))))
-        (locals (project_sigma (Inl (FunctionResult ''f'', [Statement 6]))))
+        (locals (project_sigma (Inl (FunctionResult (STR ''f''), [Statement 6]))))
         (globs (project_sigma (Inr Global1)))
       \<le> globs (project_sigma (Inr Global1))"
     unfolding combine_global_ret_var[OF var_y_no_global]
@@ -1011,34 +1011,34 @@ qed
 
 subsection \<open>FunctionResult main -- intra return from Statement 7, the program's exit\<close>
 
-text \<open>Same shape as \<open>FunctionResult ''g''\<close>/\<open>FunctionResult ''f''\<close>: reached only by the
+text \<open>Same shape as \<open>FunctionResult (STR ''g'')\<close>/\<open>FunctionResult (STR ''f'')\<close>: reached only by the
   intra return edge from \<open>Statement 7\<close>. \<open>main\<close> returns nothing (\<open>EA_Ret None\<close>), so there
   is no assigned variable to reason about.\<close>
 
-lemma result_main_no_comb: "return_call_action_list nest_cfg (FunctionResult ''main'') = []"
+lemma result_main_no_comb: "return_call_action_list nest_cfg (FunctionResult (STR ''main'')) = []"
   by eval
 
-lemma result_main_no_calls: "call_successor_list nest_cfg (FunctionResult ''main'') = []"
+lemma result_main_no_calls: "call_successor_list nest_cfg (FunctionResult (STR ''main'')) = []"
   by eval
 
 lemma result_main_intra:
-  "intra_predecessor_list nest_cfg (FunctionResult ''main'')
-     = [(Statement 7, EA_Ret None ''main'')]"
+  "intra_predecessor_list nest_cfg (FunctionResult (STR ''main''))
+     = [(Statement 7, EA_Ret None (STR ''main''))]"
   by eval
 
 lemma nest_1_eqs_result_main:
-  "nest_1_eqs (FunctionResult ''main'', [])
+  "nest_1_eqs (FunctionResult (STR ''main''), [])
      = QueryL (Statement 7, []) (\<lambda>d. QueryG Global1 (\<lambda>gv.
          Side Global1
-           (DG bot (fst (dg_spec_step Spoly (EA_Ret None ''main'') (locals d) (globs gv))))
-           (Answer (DG (snd (dg_spec_step Spoly (EA_Ret None ''main'') (locals d) (globs gv))) bot))))"
+           (DG bot (fst (dg_spec_step Spoly (EA_Ret None (STR ''main'')) (locals d) (globs gv))))
+           (Answer (DG (snd (dg_spec_step Spoly (EA_Ret None (STR ''main'')) (locals d) (globs gv))) bot))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
             apply_dg_spec_def dg_edge_tree_def
   by (simp add: result_main_intra result_main_no_comb result_main_no_calls nest_entry
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
 
 lemma dep_L_result_main:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult ''main'', []) = {(Statement 7, [])}"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult (STR ''main''), []) = {(Statement 7, [])}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_result_main
   by simp
 
@@ -1046,19 +1046,19 @@ lemma statement7_covered: "(Statement 7, []) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_result_main:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult ''main'', []) \<subseteq> fst nest_1_sol"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionResult (STR ''main''), []) \<subseteq> fst nest_1_sol"
   by (simp add: dep_L_result_main statement7_covered)
 
 lemma eq_result_main_concrete_bound:
-  "locals (eq nest_1_eqs (FunctionResult ''main'', []) project_sigma)
-     \<le> locals (project_sigma (Inl (FunctionResult ''main'', [])))"
+  "locals (eq nest_1_eqs (FunctionResult (STR ''main''), []) project_sigma)
+     \<le> locals (project_sigma (Inl (FunctionResult (STR ''main''), [])))"
   unfolding nest_1_eqs_result_main project_sigma_def
   by eval
 
 lemma sides_of_rhs_result_main:
-  "sides_of_rhs (nest_1_eqs (FunctionResult ''main'', [])) project_sigma
+  "sides_of_rhs (nest_1_eqs (FunctionResult (STR ''main''), [])) project_sigma
      = (\<lambda>_. bot)(Inr Global1 :=
-         DG bot (fst (dg_spec_step Spoly (EA_Ret None ''main'')
+         DG bot (fst (dg_spec_step Spoly (EA_Ret None (STR ''main''))
                (locals (project_sigma (Inl (Statement 7, []))))
                (globs (project_sigma (Inr Global1))))))"
   unfolding nest_1_eqs_result_main
@@ -1069,9 +1069,9 @@ lemma statement7_val_local_no_global:
   by (simp add: statement7_val_def combine_local_no_global[OF var_y_no_global])
 
 lemma project_sigma_sides_result_main:
-  "sides_of_rhs (nest_1_eqs (FunctionResult ''main'', [])) project_sigma \<le> project_sigma"
+  "sides_of_rhs (nest_1_eqs (FunctionResult (STR ''main''), [])) project_sigma \<le> project_sigma"
 proof -
-  have key_bound: "fst (dg_spec_step Spoly (EA_Ret None ''main'')
+  have key_bound: "fst (dg_spec_step Spoly (EA_Ret None (STR ''main''))
         (locals (project_sigma (Inl (Statement 7, []))))
         (globs (project_sigma (Inr Global1))))
       \<le> globs (project_sigma (Inr Global1))"
@@ -1085,35 +1085,35 @@ qed
 
 lemma nest_1_vars_list:
   "fst nest_1_sol =
-     {(Statement 2,[Statement 6]), (Statement 3,[Statement 6]), (FunctionResult ''f'',[Statement 6]),
-      (Statement 0,[Statement 2]), (FunctionResult ''g'',[Statement 2]), (Statement 2,[Statement 5]),
-      (Statement 3,[Statement 5]), (FunctionResult ''f'',[Statement 5]), (Statement 5,[]),
-      (Statement 6,[]), (Statement 7,[]), (FunctionResult ''main'',[]), (FunctionEntry ''g'',[Statement 2]),
-      (FunctionEntry ''f'',[Statement 6]), (FunctionEntry ''f'',[Statement 5]), (FunctionEntry ''main'',[])}"
+     {(Statement 2,[Statement 6]), (Statement 3,[Statement 6]), (FunctionResult (STR ''f''),[Statement 6]),
+      (Statement 0,[Statement 2]), (FunctionResult (STR ''g''),[Statement 2]), (Statement 2,[Statement 5]),
+      (Statement 3,[Statement 5]), (FunctionResult (STR ''f''),[Statement 5]), (Statement 5,[]),
+      (Statement 6,[]), (Statement 7,[]), (FunctionResult (STR ''main''),[]), (FunctionEntry (STR ''g''),[Statement 2]),
+      (FunctionEntry (STR ''f''),[Statement 6]), (FunctionEntry (STR ''f''),[Statement 5]), (FunctionEntry (STR ''main''),[])}"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 declare [[goals_limit = 50]]
 
 subsection \<open>FunctionEntry f, FunctionEntry main -- pure seed reads, no widening\<close>
 
-text \<open>Same shape as \<open>FunctionEntry ''g''\<close>: no intra, no comb, no calls. Neither seed
+text \<open>Same shape as \<open>FunctionEntry (STR ''g'')\<close>: no intra, no comb, no calls. Neither seed
   context is a merge point (each activation of \<open>f\<close> keeps its own distinct k=1 context,
   and \<open>main\<close> is only ever entered once), so \<open>project_sigma\<close>'s \<open>Inr (Seed1 ...)\<close> case
   falls to its default passthrough for both.\<close>
 
-lemma entry_f_no_intra: "intra_predecessor_list nest_cfg (FunctionEntry ''f'') = []"
+lemma entry_f_no_intra: "intra_predecessor_list nest_cfg (FunctionEntry (STR ''f'')) = []"
   by eval
 
-lemma entry_f_no_return: "return_call_action_list nest_cfg (FunctionEntry ''f'') = []"
+lemma entry_f_no_return: "return_call_action_list nest_cfg (FunctionEntry (STR ''f'')) = []"
   by eval
 
-lemma entry_f_no_calls: "call_successor_list nest_cfg (FunctionEntry ''f'') = []"
+lemma entry_f_no_calls: "call_successor_list nest_cfg (FunctionEntry (STR ''f'')) = []"
   by eval
 
 lemma nest_1_eqs_entry_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "nest_1_eqs (FunctionEntry ''f'', ctx)
-     = QueryG (Seed1 (FunctionEntry ''f'') ctx) (\<lambda>d. answer_local (globs d))"
+  shows "nest_1_eqs (FunctionEntry (STR ''f''), ctx)
+     = QueryG (Seed1 (FunctionEntry (STR ''f'')) ctx) (\<lambda>d. answer_local (globs d))"
   using assms
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
   by (auto simp: entry_f_no_intra entry_f_no_return entry_f_no_calls nest_entry
@@ -1121,30 +1121,30 @@ lemma nest_1_eqs_entry_f:
 
 lemma dep_L_entry_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry ''f'', ctx) = {}"
+  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry (STR ''f''), ctx) = {}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_entry_f[OF assms]
   by simp
 
 lemma project_sigma_dep_L_entry_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry ''f'', ctx) \<subseteq> fst nest_1_sol"
+  shows "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry (STR ''f''), ctx) \<subseteq> fst nest_1_sol"
   by (simp add: dep_L_entry_f[OF assms])
 
 lemma sides_of_rhs_entry_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "sides_of_rhs (nest_1_eqs (FunctionEntry ''f'', ctx)) project_sigma = bot"
+  shows "sides_of_rhs (nest_1_eqs (FunctionEntry (STR ''f''), ctx)) project_sigma = bot"
   unfolding nest_1_eqs_entry_f[OF assms]
   by (simp add: bot_fun_def)
 
 lemma project_sigma_sides_entry_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "sides_of_rhs (nest_1_eqs (FunctionEntry ''f'', ctx)) project_sigma \<le> project_sigma"
+  shows "sides_of_rhs (nest_1_eqs (FunctionEntry (STR ''f''), ctx)) project_sigma \<le> project_sigma"
   by (simp add: sides_of_rhs_entry_f[OF assms])
 
 lemma eq_entry_f_concrete_bound:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "locals (eq nest_1_eqs (FunctionEntry ''f'', ctx) project_sigma)
-     \<le> locals (project_sigma (Inl (FunctionEntry ''f'', ctx)))"
+  shows "locals (eq nest_1_eqs (FunctionEntry (STR ''f''), ctx) project_sigma)
+     \<le> locals (project_sigma (Inl (FunctionEntry (STR ''f''), ctx)))"
   using assms
 proof
   assume c: "ctx = [Statement 5]"
@@ -1154,17 +1154,17 @@ next
   show ?thesis unfolding c nest_1_eqs_entry_f[OF assms] project_sigma_def by eval
 qed
 
-lemma entry_main_no_intra: "intra_predecessor_list nest_cfg (FunctionEntry ''main'') = []"
+lemma entry_main_no_intra: "intra_predecessor_list nest_cfg (FunctionEntry (STR ''main'')) = []"
   by eval
 
-lemma entry_main_no_return: "return_call_action_list nest_cfg (FunctionEntry ''main'') = []"
+lemma entry_main_no_return: "return_call_action_list nest_cfg (FunctionEntry (STR ''main'')) = []"
   by eval
 
-lemma entry_main_no_calls: "call_successor_list nest_cfg (FunctionEntry ''main'') = []"
+lemma entry_main_no_calls: "call_successor_list nest_cfg (FunctionEntry (STR ''main'')) = []"
   by eval
 
 schematic_goal nest_1_eqs_entry_main_form:
-  "nest_1_eqs (FunctionEntry ''main'', []) = ?rhs"
+  "nest_1_eqs (FunctionEntry (STR ''main''), []) = ?rhs"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def
   apply (simp add: entry_main_no_intra entry_main_no_return entry_main_no_calls nest_entry
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
@@ -1173,16 +1173,16 @@ schematic_goal nest_1_eqs_entry_main_form:
 lemmas nest_1_eqs_entry_main = nest_1_eqs_entry_main_form
 
 lemma dep_L_entry_main:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry ''main'', []) = {}"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry (STR ''main''), []) = {}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_entry_main
   by simp
 
 lemma project_sigma_dep_L_entry_main:
-  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry ''main'', []) \<subseteq> fst nest_1_sol"
+  "dep\<^sub>L nest_1_eqs project_sigma (FunctionEntry (STR ''main''), []) \<subseteq> fst nest_1_sol"
   by (simp add: dep_L_entry_main)
 
 lemma sides_of_rhs_entry_main:
-  "sides_of_rhs (nest_1_eqs (FunctionEntry ''main'', [])) project_sigma
+  "sides_of_rhs (nest_1_eqs (FunctionEntry (STR ''main''), [])) project_sigma
      = (\<lambda>_. bot)(Inr Global1 := DG bot (restrict_global_resolved_q cinit_ivl_st))"
   unfolding nest_1_eqs_entry_main
   by (simp add: bot_fun_def)
@@ -1193,14 +1193,14 @@ lemma cinit_ivl_st_global_bound:
   by eval
 
 lemma project_sigma_sides_entry_main:
-  "sides_of_rhs (nest_1_eqs (FunctionEntry ''main'', [])) project_sigma \<le> project_sigma"
+  "sides_of_rhs (nest_1_eqs (FunctionEntry (STR ''main''), [])) project_sigma \<le> project_sigma"
   unfolding sides_of_rhs_entry_main
   using cinit_ivl_st_global_bound
   by (auto simp: le_fun_def less_eq_dg_state_def bot_fun_def bot_dg_state_def)
 
 lemma eq_entry_main_concrete_bound:
-  "locals (eq nest_1_eqs (FunctionEntry ''main'', []) project_sigma)
-     \<le> locals (project_sigma (Inl (FunctionEntry ''main'', [])))"
+  "locals (eq nest_1_eqs (FunctionEntry (STR ''main''), []) project_sigma)
+     \<le> locals (project_sigma (Inl (FunctionEntry (STR ''main''), [])))"
   unfolding nest_1_eqs_entry_main project_sigma_def
   by eval
 
@@ -1216,12 +1216,12 @@ lemma statement2_no_comb: "return_call_action_list nest_cfg (Statement 2) = []"
   by eval
 
 lemma statement2_intra:
-  "intra_predecessor_list nest_cfg (Statement 2) = [(FunctionEntry ''f'', EA_Nop)]"
+  "intra_predecessor_list nest_cfg (Statement 2) = [(FunctionEntry (STR ''f''), EA_Nop)]"
   by eval
 
 lemma statement2_calls:
   "call_successor_list nest_cfg (Statement 2)
-     = [(FunctionEntry ''g'', CallEdge (Some ''t'') [''p''] [VIMP_Syntax.V ''p''], Statement 3)]"
+     = [(FunctionEntry (STR ''g''), CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')], Statement 3)]"
   by eval
 
 schematic_goal nest_1_eqs_statement2_form:
@@ -1237,7 +1237,7 @@ lemmas nest_1_eqs_statement2 = nest_1_eqs_statement2_form
 lemma eq_statement2_closed_form:
   "eq nest_1_eqs (Statement 2, ctx) project_sigma
      = DG (snd (dg_spec_step Spoly EA_Nop
-           (locals (project_sigma (Inl (FunctionEntry ''f'', ctx))))
+           (locals (project_sigma (Inl (FunctionEntry (STR ''f''), ctx))))
            (globs (project_sigma (Inr Global1))))) bot"
   unfolding nest_1_eqs_statement2
   by (simp add: cs_route_def)
@@ -1256,12 +1256,12 @@ qed
 
 lemma dep_L_statement2:
   "dep\<^sub>L nest_1_eqs project_sigma (Statement 2, ctx)
-     = {(FunctionEntry ''f'', ctx), (Statement 2, ctx)}"
+     = {(FunctionEntry (STR ''f''), ctx), (Statement 2, ctx)}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_statement2
   by auto
 
 lemma entry_f_covered:
-  "(FunctionEntry ''f'', [Statement 5]) \<in> fst nest_1_sol \<and> (FunctionEntry ''f'', [Statement 6]) \<in> fst nest_1_sol"
+  "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst nest_1_sol \<and> (FunctionEntry (STR ''f''), [Statement 6]) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_statement2:
@@ -1274,12 +1274,12 @@ lemma statement5_no_comb: "return_call_action_list nest_cfg (Statement 5) = []"
   by eval
 
 lemma statement5_intra:
-  "intra_predecessor_list nest_cfg (Statement 5) = [(FunctionEntry ''main'', EA_Nop)]"
+  "intra_predecessor_list nest_cfg (Statement 5) = [(FunctionEntry (STR ''main''), EA_Nop)]"
   by eval
 
 lemma statement5_calls:
   "call_successor_list nest_cfg (Statement 5)
-     = [(FunctionEntry ''f'', CallEdge (Some ''x'') [''p''] [aexp.N 3], Statement 6)]"
+     = [(FunctionEntry (STR ''f''), CallEdge (Some (STR ''x'')) [(STR ''p'')] [aexp.N 3], Statement 6)]"
   by eval
 
 schematic_goal nest_1_eqs_statement5_form:
@@ -1295,7 +1295,7 @@ lemmas nest_1_eqs_statement5 = nest_1_eqs_statement5_form
 lemma eq_statement5_closed_form:
   "eq nest_1_eqs (Statement 5, ctx) project_sigma
      = DG (snd (dg_spec_step Spoly EA_Nop
-           (locals (project_sigma (Inl (FunctionEntry ''main'', ctx))))
+           (locals (project_sigma (Inl (FunctionEntry (STR ''main''), ctx))))
            (globs (project_sigma (Inr Global1))))) bot"
   unfolding nest_1_eqs_statement5
   by (simp add: cs_route_def)
@@ -1307,11 +1307,11 @@ lemma project_sigma_eq_statement5:
 
 lemma dep_L_statement5:
   "dep\<^sub>L nest_1_eqs project_sigma (Statement 5, ctx)
-     = {(FunctionEntry ''main'', ctx), (Statement 5, ctx)}"
+     = {(FunctionEntry (STR ''main''), ctx), (Statement 5, ctx)}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_statement5
   by auto
 
-lemma entry_main_covered: "(FunctionEntry ''main'', []) \<in> fst nest_1_sol"
+lemma entry_main_covered: "(FunctionEntry (STR ''main''), []) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_statement5:
@@ -1319,10 +1319,10 @@ lemma project_sigma_dep_L_statement5:
   unfolding dep_L_statement5
   using statement5_covered entry_main_covered by auto
 
-text \<open>\<open>Statement 2\<close>'s calls fragment routes to \<open>Seed1 (FunctionEntry ''g'') [Statement 2]\<close>
+text \<open>\<open>Statement 2\<close>'s calls fragment routes to \<open>Seed1 (FunctionEntry (STR ''g'')) [Statement 2]\<close>
   -- one of the three genuinely-merged unknowns -- since \<open>cs_route 1\<close> always collapses to
   \<open>[Statement 2]\<close> regardless of which activation of \<open>f\<close> is calling. The sides bound is
-  therefore the same two-branch join pattern used for \<open>FunctionEntry ''g''\<close> itself
+  therefore the same two-branch join pattern used for \<open>FunctionEntry (STR ''g'')\<close> itself
   (\<open>seed_le_entry_g_5\<close>/\<open>seed_le_entry_g_6\<close>), reusing \<open>nest_2_sol\<close>'s own established bound
   at each activation separately.\<close>
 
@@ -1359,25 +1359,25 @@ lemma cs_route_2_statement2:
   by (simp add: cs_route_def)
 
 lemma seed_le_statement2_5:
-  "enter_local Spoly [''p''] [VIMP_Syntax.V ''p'']
+  "enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
        (locals (snd nest_2_sol (Inl (Statement 2, [Statement 5]))))
        (globs (snd nest_2_sol (Inr Global2)))
-     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''g'') [Statement 2, Statement 5])))"
+     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''g'')) [Statement 2, Statement 5])))"
   using part_post_sides_2[OF statement2_covered_2_A,
           unfolded sides_of_rhs_statement2_2[of "[Statement 5]", OF disjI1[OF refl]]
                    cs_route_2_statement2,
-          THEN le_funD, of "Inr (Seed2 (FunctionEntry ''g'') [Statement 2, Statement 5])"]
+          THEN le_funD, of "Inr (Seed2 (FunctionEntry (STR ''g'')) [Statement 2, Statement 5])"]
   by (simp add: less_eq_dg_state_def)
 
 lemma seed_le_statement2_6:
-  "enter_local Spoly [''p''] [VIMP_Syntax.V ''p'']
+  "enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
        (locals (snd nest_2_sol (Inl (Statement 2, [Statement 6]))))
        (globs (snd nest_2_sol (Inr Global2)))
-     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''g'') [Statement 2, Statement 6])))"
+     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''g'')) [Statement 2, Statement 6])))"
   using part_post_sides_2[OF statement2_covered_2_B,
           unfolded sides_of_rhs_statement2_2[of "[Statement 6]", OF disjI2[OF refl]]
                    cs_route_2_statement2,
-          THEN le_funD, of "Inr (Seed2 (FunctionEntry ''g'') [Statement 2, Statement 6])"]
+          THEN le_funD, of "Inr (Seed2 (FunctionEntry (STR ''g'')) [Statement 2, Statement 6])"]
   by (simp add: less_eq_dg_state_def)
 
 
@@ -1400,7 +1400,7 @@ qed
 
 lemma entry_f_val_local_no_global:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry ''f'', ctx)))) = bot"
+  shows "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry (STR ''f''), ctx)))) = bot"
   using assms
 proof
   assume c: "ctx = [Statement 5]"
@@ -1424,10 +1424,10 @@ lemma project_sigma_sides_statement2:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
   shows "sides_of_rhs (nest_1_eqs (Statement 2, ctx)) project_sigma \<le> project_sigma"
 proof -
-  have seed_bound: "enter_local Spoly [''p''] [VIMP_Syntax.V ''p'']
+  have seed_bound: "enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
         (locals (project_sigma (Inl (Statement 2, ctx))))
         (globs (project_sigma (Inr Global1)))
-      \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry ''g'') [Statement 2])))"
+      \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry (STR ''g'')) [Statement 2])))"
     using assms
   proof
     assume c: "ctx = [Statement 5]"
@@ -1440,10 +1440,10 @@ proof -
       unfolding c project_sigma_def
       by (auto simp: sup_dg_state_def order_trans[OF seed_le_statement2_6 sup_ge2])
   qed
-  have global1_bound: "enter_global Spoly [''p''] [VIMP_Syntax.V ''p'']
+  have global1_bound: "enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
         (locals (project_sigma (Inl (Statement 2, ctx))))
         (globs (project_sigma (Inr Global1)))
-      \<squnion> fst (dgs_nop Spoly (locals (project_sigma (Inl (FunctionEntry ''f'', ctx))))
+      \<squnion> fst (dgs_nop Spoly (locals (project_sigma (Inl (FunctionEntry (STR ''f''), ctx))))
              (globs (project_sigma (Inr Global1))))
       \<le> globs (project_sigma (Inr Global1))"
     unfolding enter_global_ret_var fst_dgs_nop
@@ -1456,9 +1456,9 @@ proof -
                    sup_dg_state_def project_sigma_def)
 qed
 
-text \<open>\<open>Statement 5\<close>'s calls fragment routes to \<open>Seed1 (FunctionEntry ''f'') [Statement 5]\<close>,
+text \<open>\<open>Statement 5\<close>'s calls fragment routes to \<open>Seed1 (FunctionEntry (STR ''f'')) [Statement 5]\<close>,
   which is \<^emph>\<open>not\<close> a merge point (\<open>f\<close>'s two activations come from distinct call sites, so
-  neither of \<open>FunctionEntry ''f''\<close>'s two seed contexts collapses). \<open>project_sigma\<close> passes
+  neither of \<open>FunctionEntry (STR ''f'')\<close>'s two seed contexts collapses). \<open>project_sigma\<close> passes
   this slot through unchanged, so the bound is a direct reuse of \<open>nest_2_sol\<close>'s own
   established bound at the identical key -- no join needed, unlike \<open>Statement 2\<close>.\<close>
 
@@ -1484,12 +1484,12 @@ schematic_goal sides_of_rhs_statement5_2_form:
 lemmas sides_of_rhs_statement5_2 = sides_of_rhs_statement5_2_form
 
 lemma seed_le_statement5:
-  "enter_local Spoly [''p''] [aexp.N 3]
+  "enter_local Spoly [(STR ''p'')] [aexp.N 3]
        (locals (snd nest_2_sol (Inl (Statement 5, []))))
        (globs (snd nest_2_sol (Inr Global2)))
-     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry ''f'') [Statement 5])))"
+     \<le> globs (snd nest_2_sol (Inr (Seed2 (FunctionEntry (STR ''f'')) [Statement 5])))"
   using part_post_sides_2[OF statement5_covered_2, unfolded sides_of_rhs_statement5_2,
-          THEN le_funD, of "Inr (Seed2 (FunctionEntry ''f'') [Statement 5])"]
+          THEN le_funD, of "Inr (Seed2 (FunctionEntry (STR ''f'')) [Statement 5])"]
   by (simp add: less_eq_dg_state_def)
 
 lemma statement5_val_local_no_global:
@@ -1498,7 +1498,7 @@ lemma statement5_val_local_no_global:
   by eval
 
 lemma entry_main_val_global_bound:
-  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry ''main'', []))))
+  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry (STR ''main''), []))))
      \<le> globs (project_sigma (Inr Global1))"
   unfolding project_sigma_def
   by eval
@@ -1514,16 +1514,16 @@ lemmas sides_of_rhs_statement5 = sides_of_rhs_statement5_form
 lemma project_sigma_sides_statement5:
   "sides_of_rhs (nest_1_eqs (Statement 5, [])) project_sigma \<le> project_sigma"
 proof -
-  have seed_bound: "enter_local Spoly [''p''] [aexp.N 3]
+  have seed_bound: "enter_local Spoly [(STR ''p'')] [aexp.N 3]
         (locals (project_sigma (Inl (Statement 5, []))))
         (globs (project_sigma (Inr Global1)))
-      \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry ''f'') [Statement 5])))"
+      \<le> globs (project_sigma (Inr (Seed1 (FunctionEntry (STR ''f'')) [Statement 5])))"
     unfolding project_sigma_def
     by (simp add: seed_le_statement5)
-  have global1_bound: "enter_global Spoly [''p''] [aexp.N 3]
+  have global1_bound: "enter_global Spoly [(STR ''p'')] [aexp.N 3]
         (locals (project_sigma (Inl (Statement 5, []))))
         (globs (project_sigma (Inr Global1)))
-      \<squnion> fst (dgs_nop Spoly (locals (project_sigma (Inl (FunctionEntry ''main'', []))))
+      \<squnion> fst (dgs_nop Spoly (locals (project_sigma (Inl (FunctionEntry (STR ''main''), []))))
              (globs (project_sigma (Inr Global1))))
       \<le> globs (project_sigma (Inr Global1))"
     unfolding enter_global_ret_var fst_dgs_nop
@@ -1538,7 +1538,7 @@ qed
 
 subsection \<open>Statement 0 -- the last missing node: intra from FunctionEntry g, a merge point\<close>
 
-text \<open>\<open>Statement 0\<close> is reached only by the intra \<open>EA_Nop\<close> edge from \<open>FunctionEntry ''g''\<close>.
+text \<open>\<open>Statement 0\<close> is reached only by the intra \<open>EA_Nop\<close> edge from \<open>FunctionEntry (STR ''g'')\<close>.
   Its own context \<open>[Statement 2]\<close> is one of the three genuinely-merged unknowns (a two-branch
   join, already given by \<open>project_sigma\<close>'s first case). Unlike the downstream-cone nodes, its
   value is not a recomputation with a widened input substituted in -- it is literally the
@@ -1553,7 +1553,7 @@ lemma statement0_no_calls: "call_successor_list nest_cfg (Statement 0) = []"
   by eval
 
 lemma statement0_intra:
-  "intra_predecessor_list nest_cfg (Statement 0) = [(FunctionEntry ''g'', EA_Nop)]"
+  "intra_predecessor_list nest_cfg (Statement 0) = [(FunctionEntry (STR ''g''), EA_Nop)]"
   by eval
 
 schematic_goal nest_1_eqs_statement0_form:
@@ -1567,11 +1567,11 @@ schematic_goal nest_1_eqs_statement0_form:
 lemmas nest_1_eqs_statement0 = nest_1_eqs_statement0_form
 
 lemma dep_L_statement0:
-  "dep\<^sub>L nest_1_eqs project_sigma (Statement 0, [Statement 2]) = {(FunctionEntry ''g'', [Statement 2])}"
+  "dep\<^sub>L nest_1_eqs project_sigma (Statement 0, [Statement 2]) = {(FunctionEntry (STR ''g''), [Statement 2])}"
   unfolding dep\<^sub>L_def dep_def nest_1_eqs_statement0
   by simp
 
-lemma entry_g_covered_1: "(FunctionEntry ''g'', [Statement 2]) \<in> fst nest_1_sol"
+lemma entry_g_covered_1: "(FunctionEntry (STR ''g''), [Statement 2]) \<in> fst nest_1_sol"
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma project_sigma_dep_L_statement0:
@@ -1610,7 +1610,7 @@ lemma eq_le_statement0_6:
 
 
 lemma eq_le_statement0_5':
-  "restrict_local_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))
+  "restrict_local_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))
         \<squnion> globs (snd nest_2_sol (Inr Global2)))
      \<le> locals (snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 5])))"
   using eq_le_statement0_5
@@ -1618,7 +1618,7 @@ lemma eq_le_statement0_5':
                 Spoly_def snd_dgs_nop_for)
 
 lemma eq_le_statement0_6':
-  "restrict_local_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))
+  "restrict_local_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))
         \<squnion> globs (snd nest_2_sol (Inr Global2)))
      \<le> locals (snd nest_2_sol (Inl (Statement 0, [Statement 2, Statement 6])))"
   using eq_le_statement0_6
@@ -1629,9 +1629,9 @@ lemma project_sigma_eq_statement0:
   "eq nest_1_eqs (Statement 0, [Statement 2]) project_sigma
      \<le> project_sigma (Inl (Statement 0, [Statement 2]))"
 proof -
-  let ?dA = "snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5]))"
-  let ?dB = "snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6]))"
-  have entry_g_split: "locals (project_sigma (Inl (FunctionEntry ''g'', [Statement 2])))
+  let ?dA = "snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))"
+  let ?dB = "snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))"
+  have entry_g_split: "locals (project_sigma (Inl (FunctionEntry (STR ''g''), [Statement 2])))
        = locals ?dA \<squnion> locals ?dB"
     by (simp add: project_sigma_def sup_dg_state_def)
   have global1_eq: "globs (project_sigma (Inr Global1)) = globs (snd nest_2_sol (Inr Global2))"
@@ -1664,21 +1664,21 @@ lemma sides_of_rhs_statement0:
   "sides_of_rhs (nest_1_eqs (Statement 0, [Statement 2])) project_sigma
      = (\<lambda>_. bot)(Inr Global1 :=
          DG bot (fst (dgs_nop Spoly
-               (locals (project_sigma (Inl (FunctionEntry ''g'', [Statement 2]))))
+               (locals (project_sigma (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
                (globs (project_sigma (Inr Global1))))))"
   unfolding nest_1_eqs_statement0
   by (simp add: bot_fun_def)
 
 lemma entry_g_local_no_global_5:
-  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 5])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) = bot"
   by eval
 
 lemma entry_g_local_no_global_6:
-  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry ''g'', [Statement 2, Statement 6])))) = bot"
+  "restrict_global_resolved_q (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) = bot"
   by eval
 
 lemma entry_g_val_local_no_global:
-  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry ''g'', [Statement 2])))) = bot"
+  "restrict_global_resolved_q (locals (project_sigma (Inl (FunctionEntry (STR ''g''), [Statement 2])))) = bot"
   by (simp add: project_sigma_def sup_dg_state_def
                 restrict_global_resolved_q_sup_restrict_global_resolved_q
                 entry_g_local_no_global_5 entry_g_local_no_global_6)
@@ -1687,7 +1687,7 @@ lemma project_sigma_sides_statement0:
   "sides_of_rhs (nest_1_eqs (Statement 0, [Statement 2])) project_sigma \<le> project_sigma"
 proof -
   have key_bound: "fst (dgs_nop Spoly
-        (locals (project_sigma (Inl (FunctionEntry ''g'', [Statement 2]))))
+        (locals (project_sigma (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
         (globs (project_sigma (Inr Global1))))
       \<le> globs (project_sigma (Inr Global1))"
     unfolding fst_dgs_nop
@@ -1711,55 +1711,55 @@ lemma project_sigma_dep_L_all:
                      project_sigma_dep_L_entry_f project_sigma_dep_L_entry_main)
 
 lemma eq_result_g_globs_bot:
-  "globs (eq nest_1_eqs (FunctionResult ''g'', [Statement 2]) project_sigma) = bot"
+  "globs (eq nest_1_eqs (FunctionResult (STR ''g''), [Statement 2]) project_sigma) = bot"
   unfolding nest_1_eqs_result_g by simp
 
 lemma eq_result_f_globs_bot:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "globs (eq nest_1_eqs (FunctionResult ''f'', ctx) project_sigma) = bot"
+  shows "globs (eq nest_1_eqs (FunctionResult (STR ''f''), ctx) project_sigma) = bot"
   unfolding nest_1_eqs_result_f[OF assms] by simp
 
 lemma eq_result_main_globs_bot:
-  "globs (eq nest_1_eqs (FunctionResult ''main'', []) project_sigma) = bot"
+  "globs (eq nest_1_eqs (FunctionResult (STR ''main''), []) project_sigma) = bot"
   unfolding nest_1_eqs_result_main by simp
 
 lemma eq_entry_f_globs_bot:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "globs (eq nest_1_eqs (FunctionEntry ''f'', ctx) project_sigma) = bot"
+  shows "globs (eq nest_1_eqs (FunctionEntry (STR ''f''), ctx) project_sigma) = bot"
   unfolding nest_1_eqs_entry_f[OF assms] by simp
 
 lemma eq_entry_main_globs_bot:
-  "globs (eq nest_1_eqs (FunctionEntry ''main'', []) project_sigma) = bot"
+  "globs (eq nest_1_eqs (FunctionEntry (STR ''main''), []) project_sigma) = bot"
   unfolding nest_1_eqs_entry_main by simp
 
 lemma project_sigma_eq_result_g:
-  "eq nest_1_eqs (FunctionResult ''g'', [Statement 2]) project_sigma
-     \<le> project_sigma (Inl (FunctionResult ''g'', [Statement 2]))"
+  "eq nest_1_eqs (FunctionResult (STR ''g''), [Statement 2]) project_sigma
+     \<le> project_sigma (Inl (FunctionResult (STR ''g''), [Statement 2]))"
   using eq_result_g_concrete_bound eq_result_g_globs_bot by (simp add: less_eq_dg_state_def)
 
 lemma project_sigma_eq_result_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "eq nest_1_eqs (FunctionResult ''f'', ctx) project_sigma
-     \<le> project_sigma (Inl (FunctionResult ''f'', ctx))"
+  shows "eq nest_1_eqs (FunctionResult (STR ''f''), ctx) project_sigma
+     \<le> project_sigma (Inl (FunctionResult (STR ''f''), ctx))"
   using eq_result_f_concrete_bound[OF assms] eq_result_f_globs_bot[OF assms]
   by (simp add: less_eq_dg_state_def)
 
 lemma project_sigma_eq_result_main:
-  "eq nest_1_eqs (FunctionResult ''main'', []) project_sigma
-     \<le> project_sigma (Inl (FunctionResult ''main'', []))"
+  "eq nest_1_eqs (FunctionResult (STR ''main''), []) project_sigma
+     \<le> project_sigma (Inl (FunctionResult (STR ''main''), []))"
   using eq_result_main_concrete_bound eq_result_main_globs_bot
   by (simp add: less_eq_dg_state_def)
 
 lemma project_sigma_eq_entry_f:
   assumes "ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  shows "eq nest_1_eqs (FunctionEntry ''f'', ctx) project_sigma
-     \<le> project_sigma (Inl (FunctionEntry ''f'', ctx))"
+  shows "eq nest_1_eqs (FunctionEntry (STR ''f''), ctx) project_sigma
+     \<le> project_sigma (Inl (FunctionEntry (STR ''f''), ctx))"
   using eq_entry_f_concrete_bound[OF assms] eq_entry_f_globs_bot[OF assms]
   by (simp add: less_eq_dg_state_def)
 
 lemma project_sigma_eq_entry_main:
-  "eq nest_1_eqs (FunctionEntry ''main'', []) project_sigma
-     \<le> project_sigma (Inl (FunctionEntry ''main'', []))"
+  "eq nest_1_eqs (FunctionEntry (STR ''main''), []) project_sigma
+     \<le> project_sigma (Inl (FunctionEntry (STR ''main''), []))"
   using eq_entry_main_concrete_bound eq_entry_main_globs_bot
   by (simp add: less_eq_dg_state_def)
 

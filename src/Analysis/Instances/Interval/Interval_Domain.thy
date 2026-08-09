@@ -29,8 +29,8 @@ value "string_of_eint MinInf"
 value "string_of_eint PlusInf"
 value "string_of_ivl (Ivl (Fin (-3)) PlusInf)"
 
-value "aval_ivl (Minus (V ''x'') (N 1)) ((\<lambda>_. ivl_top)(''x'' := Ivl (Fin 5) (Fin 10)))"
-value "(assume_ivl (Less (V ''x'') (N 5)) ((\<lambda>_. ivl_top)(''x'' := Ivl (Fin 0) (Fin 10)))) ''x''"
+value "aval_ivl (Minus (V (STR ''x'')) (N 1)) ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 5) (Fin 10)))"
+value "(assume_ivl (Less (V (STR ''x'')) (N 5)) ((\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 0) (Fin 10)))) (STR ''x'')"
 
 end
 

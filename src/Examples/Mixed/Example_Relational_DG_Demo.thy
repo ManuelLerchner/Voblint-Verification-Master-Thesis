@@ -116,11 +116,11 @@ text \<open>Interval's bound for \<open>x\<close> (and, symmetrically, \<open>y\
   neither operand had a finite bound for the other to narrow against.\<close>
 
 lemma demo_ivl_x_at_branch:
-  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'' = Ivl MinInf PlusInf"
+  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''x'') = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 lemma demo_ivl_y_at_branch:
-  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'' = Ivl MinInf PlusInf"
+  "demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''y'') = Ivl MinInf PlusInf"
   unfolding demo_ivl_sol_def demo_ivl_eqs_def by eval
 
 text \<open>\<open>relc\<close>, at the very same point, has recorded the pair directly.
@@ -130,19 +130,19 @@ text \<open>\<open>relc\<close>, at the very same point, has recorded the pair d
   it was on the true one.\<close>
 
 lemma demo_rel_learns_xy:
-  "relc_has ''x'' ''y'' (locals (snd demo_rel_sol (Inl (Statement 1, ()))))"
+  "relc_has (STR ''x'') (STR ''y'') (locals (snd demo_rel_sol (Inl (Statement 1, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 lemma demo_rel_learns_yx:
-  "relc_has ''y'' ''x'' (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
+  "relc_has (STR ''y'') (STR ''x'') (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
 text \<open>Side by side, evaluated in one call: Interval's two bounds stay
   \<open>[-inf,+inf]\<close>; \<open>relc\<close> answers \<open>True\<close> for the pair \<open>(x,y)\<close>.\<close>
 
-value "(demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''x'',
-        demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) ''y'',
-        relc_has ''x'' ''y'' (locals (snd demo_rel_sol (Inl (Statement 1, ())))))"
+value "(demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''x''),
+        demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''y''),
+        relc_has (STR ''x'') (STR ''y'') (locals (snd demo_rel_sol (Inl (Statement 1, ())))))"
 
 subsection \<open>Rendering the CFG\<close>
 

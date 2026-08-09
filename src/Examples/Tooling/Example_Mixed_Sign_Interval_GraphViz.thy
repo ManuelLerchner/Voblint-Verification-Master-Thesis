@@ -9,7 +9,7 @@ begin
 
 text \<open>
   The program compiles through the ordinary VIMP-to-CFG pipeline.  The variable
-  @{text "''x''"} is local: this program declares no \<open>global\<close> variables, so
+  @{text "(STR ''x'')"} is local: this program declares no \<open>global\<close> variables, so
   its classifier is trivially false everywhere.  Per-point answer unknowns
   carry Sign stores, while the single side unknown carries an Interval
   store chosen by this analysis.  The side slot is called @{const globs} by the
@@ -37,7 +37,7 @@ definition mixed_graphviz_cfg :: cfg where
 
 definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
   "mixed_graphviz_local_value p =
-     (\<lambda>v. if v = ''x''
+     (\<lambda>v. if v = (STR ''x'')
        then (case p of
          FunctionEntry _ \<Rightarrow> SZero
        | Statement n \<Rightarrow>
@@ -47,7 +47,7 @@ definition mixed_graphviz_local_value :: "pp \<Rightarrow> sign abs_state" where
 
 definition mixed_graphviz_global_value :: "unit \<Rightarrow> ivl abs_state" where
   "mixed_graphviz_global_value _ =
-     (\<lambda>v. if v = ''x'' then Ivl (Fin (-1)) (Fin 2) else Ivl MinInf PlusInf)"
+     (\<lambda>v. if v = (STR ''x'') then Ivl (Fin (-1)) (Fin 2) else Ivl MinInf PlusInf)"
 
 definition mixed_graphviz_solution ::
   "pp \<times> unit + unit \<Rightarrow> (sign abs_state, ivl abs_state) dg_state"
@@ -55,11 +55,11 @@ where
   "mixed_graphviz_solution z =
      (case z of
         Inl (p, ()) \<Rightarrow> DG (mixed_graphviz_local_value p) (mixed_graphviz_global_value ())
-      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (FunctionResult ''main''))
+      | Inr () \<Rightarrow> DG (mixed_graphviz_local_value (FunctionResult (STR ''main'')))
                     (mixed_graphviz_global_value ()))"
 
 lemma mixed_graphviz_x_is_local:
-  "\<not> mixed_graphviz_gs ''x''"
+  "\<not> mixed_graphviz_gs (STR ''x'')"
   by simp
 
 
@@ -80,11 +80,11 @@ definition mixed_graphviz_graph_config ::
         scope_locals (compiled_procedure_scope mixed_graphviz_gs (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
           mixed_graphviz_cfg (cfg_entry mixed_graphviz_cfg)),
       show_local = (\<lambda>_ _ vars st.
-        map (\<lambda>x. x @ ''='' @ show_val (st x)) vars),
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (st x)) vars),
       format_return = (\<lambda>_ _ _ _. []),
       show_global = (\<lambda>_ vars s.
         ''flow-insensitive Interval invariant'' #
-          map (\<lambda>x. x @ ''='' @ show_val (globs s x)) vars),
+          map (\<lambda>x. String.explode x @ ''='' @ show_val (globs s x)) vars),
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,

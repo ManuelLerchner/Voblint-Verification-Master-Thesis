@@ -109,7 +109,7 @@ text \<open>
 \<close>
 
 definition prog_main_name :: pname where
-  "prog_main_name = ''main''"
+  "prog_main_name = STR ''main''"
 
 text \<open>
   \<open>prog_table\<close> is the \<^emph>\<open>complete\<close> declaration environment: the declared procedures
@@ -351,7 +351,7 @@ parse_translation \<open>
     fun aexp_tr t =
       (case Term.strip_comb t of
          (Const ("_imp2_var", _), [Free (x, _)]) =>
-           K c_V $ HOLogic.mk_string x
+           K c_V $ HOLogic.mk_literal x
        | (Const ("_imp2_zero", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 0
        | (Const ("_imp2_one", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 1
        | (Const ("_imp2_num", _), [n]) =>
@@ -399,21 +399,21 @@ parse_translation \<open>
 
     and stmt_tr (Const ("_imp2_skip",   _)) = K c_SKIP
       | stmt_tr (Const ("_imp2_assign", _) $ Free (x, _) $ a) =
-          K c_Assign $ HOLogic.mk_string x $ aexp_tr a
-      | stmt_tr (Const ("_imp2_random", _) $ Free (x, _)) = K c_Random $ HOLogic.mk_string x
+          K c_Assign $ HOLogic.mk_literal x $ aexp_tr a
+      | stmt_tr (Const ("_imp2_random", _) $ Free (x, _)) = K c_Random $ HOLogic.mk_literal x
       | stmt_tr (Const ("_imp2_return", _) $ e) = K c_Return $ (K c_Some $ aexp_tr e)
       | stmt_tr (Const ("_imp2_check", _) $ b) = K c_Check $ bexp_tr b
       | stmt_tr (Const ("_imp2_if",     _) $ b $ s1 $ s2) =
           K c_If $ bexp_tr b $ stmts_tr s1 $ stmts_tr s2
       | stmt_tr (Const ("_imp2_while",  _) $ b $ s) = K c_While $ bexp_tr b $ stmts_tr s
       | stmt_tr (Const ("_imp2_call0",   _) $ Free (p, _)) =
-          K c_Call $ K c_None $ HOLogic.mk_string p $ K c_Nil
+          K c_Call $ K c_None $ HOLogic.mk_literal p $ K c_Nil
       | stmt_tr (Const ("_imp2_call",   _) $ Free (p, _) $ actuals) =
-          K c_Call $ K c_None $ HOLogic.mk_string p $ actuals_tr actuals
+          K c_Call $ K c_None $ HOLogic.mk_literal p $ actuals_tr actuals
       | stmt_tr (Const ("_imp2_callret0", _) $ Free (x, _) $ Free (p, _)) =
-          K c_Call $ (K c_Some $ HOLogic.mk_string x) $ HOLogic.mk_string p $ K c_Nil
+          K c_Call $ (K c_Some $ HOLogic.mk_literal x) $ HOLogic.mk_literal p $ K c_Nil
       | stmt_tr (Const ("_imp2_callret", _) $ Free (x, _) $ Free (p, _) $ actuals) =
-          K c_Call $ (K c_Some $ HOLogic.mk_string x) $ HOLogic.mk_string p $ actuals_tr actuals
+          K c_Call $ (K c_Some $ HOLogic.mk_literal x) $ HOLogic.mk_literal p $ actuals_tr actuals
       | stmt_tr t = raise TERM ("VIMP_Notation: stmt_tr", [t])
 
     and com_tr (Const ("_imp2_com_wrap", _) $ s) = stmt_tr s
@@ -487,7 +487,7 @@ parse_translation \<open>
     val empty_table = Abs ("_", dummyT, K c_None)
 
     fun mk_names [] = K c_Nil
-      | mk_names (n :: ns) = K c_Cons $ HOLogic.mk_string n $ mk_names ns
+      | mk_names (n :: ns) = K c_Cons $ HOLogic.mk_literal n $ mk_names ns
 
     (* A trailing "return e" becomes an explicit Return command appended to the body;
        the procedure declaration carries no separate result field. *)
@@ -500,7 +500,7 @@ parse_translation \<open>
     fun mk_proc_rep [] = K c_Nil
       | mk_proc_rep ((p, formals, body, result) :: rest) =
           K c_Cons
-            $ (K c_Pair $ HOLogic.mk_string p
+            $ (K c_Pair $ HOLogic.mk_literal p
                 $ ((K c_proc_decl_of $ mk_names formals) $ mk_body_ret body result))
             $ mk_proc_rep rest
 
@@ -560,12 +560,12 @@ text \<open>
 
 lemma declared_global_vars_ping_example [simp]:
   "declared_global_vars (program { global Gx; void ping() { Gx := Gx + 1 } void main() { ping() } })
-     = [''Gx'']"
+     = [STR ''Gx'']"
   by simp
 
 lemma declared_global_vars_two_names [simp]:
   "declared_global_vars (program { global total, x; void main() { total := x } })
-     = [''total'', ''x'']"
+     = [STR ''total'', STR ''x'']"
   by simp
 
 text \<open>   \<open>declared_global \<close> checkpoint: a declared non- \<open>G \<close> name reads as global, an
@@ -575,10 +575,10 @@ text \<open>   \<open>declared_global \<close> checkpoint: a declared non- \<ope
 \<close>
 
 lemma declared_global_two_names_examples:
-  "declared_global (program { global total, x; void main() { total := x } }) ''total''"
-  "declared_global (program { global total, x; void main() { total := x } }) ''x''"
-  "\<not> declared_global (program { global total, x; void main() { total := x } }) ''y''"
-  "\<not> declared_global (program { global total, x; void main() { total := x } }) ''Gy''"
+  "declared_global (program { global total, x; void main() { total := x } }) (STR ''total'')"
+  "declared_global (program { global total, x; void main() { total := x } }) (STR ''x'')"
+  "\<not> declared_global (program { global total, x; void main() { total := x } }) (STR ''y'')"
+  "\<not> declared_global (program { global total, x; void main() { total := x } }) (STR ''Gy'')"
   by simp_all
 
 value "declared_global_vars (program { void main() { skip } } :: imp_prog)"
@@ -595,7 +595,7 @@ value "(program { void add(a, b) { skip; return a + b } void main() { r := add(1
 value "(program { void get() { return 42 } void main() { r := get() } } :: imp_prog)"
 
 (* proc-table entry: formals + result wired through *)
-value "the (prog_table (program { void inc(x) { return x + 1 } void main() { r := inc(5) } }) ''inc'')"
+value "the (prog_table (program { void inc(x) { return x + 1 } void main() { r := inc(5) } }) (STR ''inc''))"
 
 (* boolean negation*)
 value "imp \<lbrakk> __voblint_check(!(x == 0)) \<rbrakk>"
