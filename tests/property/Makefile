@@ -2,10 +2,18 @@
 # shipped voblint CLI. Copies the same Voblint_CLI.ml / vimp_lexer.ml /
 # vimp_parser.ml sources ../../cli (the main CLI) builds from, so ocamlopt's
 # .cmi/.cmx build byproducts land here rather than polluting ../../cli.
+#
+# `make test` runs the Hypothesis property suite (round-trip, mutation
+# fuzzing, non-expressible-shape regressions) against ast_driver and voblint
+# both; `python3 -m venv ../../.venv && ../../.venv/bin/pip install -r
+# requirements.txt` once beforehand to provide hypothesis/pytest.
 
-.PHONY: all clean
+.PHONY: all test clean
 
 all: ast_driver
+
+test: ast_driver
+	../../.venv/bin/python3 -m pytest .
 
 Voblint_CLI.ml: ../../codegen/generated/ml/Voblint_CLI.ml
 	cp $< $@

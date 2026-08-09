@@ -8,8 +8,13 @@
    at the value level regardless of the signature hiding constructors) to
    the original.
 
-   Prints "OK" or "FAIL <reason>" to stdout. Never used by the main voblint
-   binary; test-only, kept out of the shipped CLI. *)
+   Default mode prints "OK" or "FAIL <reason>" to stdout. `--print-source`
+   instead prints just the generated VIMP source for the AST on stdin, with
+   no round-trip check -- used by the mutation-fuzzing property, which needs
+   valid source text to mutate rather than a verdict.
+
+   Never used by the main voblint binary; test-only, kept out of the shipped
+   CLI. *)
 
 (* -- Minimal S-expression reader (no external dependency) --------------- *)
 
@@ -125,24 +130,40 @@ let build_program = function
 
 (* -- Driver --------------------------------------------------------------- *)
 
+let source_text_of_program original =
+  let source_chars =
+    pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
+      (declared_global_vars original)
+  in
+  String.concat "" (List.map (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c)))) source_chars)
+
+let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
+
 let () =
   let input = In_channel.input_all stdin in
   try
     let original = build_program (parse_sexp input) in
-    let source_chars =
-      pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
-        (declared_global_vars original)
-    in
-    let source_text =
-      String.concat "" (List.map (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c)))) source_chars)
-    in
+    let source_text = source_text_of_program original in
+    if mode = "--print-source" then (print_string source_text; exit 0);
     match Vimp_parser.program "<generated>" source_text with
+    | reparsed, _ when mode = "--print-reprinted" ->
+      (* Prints pretty(parse(pretty(original))) -- the print/parse/print
+         invariant is implied by original = reparsed (pretty_string_of_program
+         is a pure function, so structurally equal ASTs print identically),
+         but checking it directly gives a source-text diff on failure instead
+         of "the trees differ", and catches the (structural-equality
+         assumption) breaking silently. *)
+      print_string (source_text_of_program reparsed);
+      exit 0
     | reparsed, _ ->
       if original = reparsed then print_endline "OK"
       else begin
         Printf.printf "FAIL round-trip mismatch\n--- generated source ---\n%s\n--- end ---\n" source_text;
         exit 1
       end
+    | exception Vimp_parser.Parse_error { line; col; msg; _ } when mode = "--print-reprinted" ->
+      Printf.printf "FAIL re-parse error at %d:%d: %s\n" line col msg;
+      exit 1
     | exception Vimp_parser.Parse_error { line; col; msg; _ } ->
       Printf.printf "FAIL re-parse error at %d:%d: %s\n--- generated source ---\n%s\n--- end ---\n"
         line col msg source_text;

@@ -142,6 +142,7 @@ module Core : sig
   val nat_of_integer : Z.t -> nat
   val comp : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
   val suc : nat -> nat
+  val rev : 'a list -> 'a list
   val find : ('a -> bool) -> 'a list -> 'a option
   val maps : ('a -> 'b list) -> 'a list -> 'b list
   val null : 'a list -> bool
@@ -1536,15 +1537,17 @@ let one_nat : nat = Nat (Z.of_int 1);;
 
 let rec suc n = plus_nat n one_nat;;
 
+let rec fold f x1 s = match f, x1, s with f, [], s -> s
+               | f, x :: xs, s -> fold f xs (f x s);;
+
+let rec rev xs = fold (fun a b -> a :: b) xs [];;
+
 let rec zip xs ys = match xs, ys with [], ys -> []
               | xs, [] -> []
               | x :: xs, y :: ys -> (x, y) :: zip xs ys;;
 
 let rec find uu x1 = match uu, x1 with uu, [] -> None
                | p, x :: xs -> (if p x then Some x else find p xs);;
-
-let rec fold f x1 s = match f, x1, s with f, [], s -> s
-               | f, x :: xs, s -> fold f xs (f x s);;
 
 let rec maps f x1 = match f, x1 with f, [] -> []
                | f, x :: xs -> f x @ maps f xs;;
@@ -4660,6 +4663,11 @@ let rec graphviz_html_text
                                       else [ch]))))) @
           graphviz_html_text rest;;
 
+let rec ensure_trailing_nl
+  src = (match Core.rev src with [] -> nl
+          | ch :: _ ->
+            (if Core.equal_chara ch Core.char_0x0A then src else src @ nl));;
+
 let rec source_html_label
   src = [Core.char_0x3C; Core.char_0x3C; Core.char_0x54; Core.char_0x41;
           Core.char_0x42; Core.char_0x4C; Core.char_0x45; Core.char_0x20;
@@ -4708,7 +4716,8 @@ let rec source_html_label
                          Core.char_0x5A; Core.char_0x45; Core.char_0x3D] @
                          dq @ [Core.char_0x31; Core.char_0x30] @
                                 dq @ [Core.char_0x3E] @
-                                       graphviz_html_text src @
+                                       graphviz_html_text
+ (ensure_trailing_nl src) @
  [Core.char_0x3C; Core.char_0x2F; Core.char_0x46; Core.char_0x4F;
    Core.char_0x4E; Core.char_0x54; Core.char_0x3E; Core.char_0x3C;
    Core.char_0x2F; Core.char_0x54; Core.char_0x44; Core.char_0x3E;
