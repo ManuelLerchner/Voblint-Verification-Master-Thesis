@@ -29,13 +29,31 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    # Runs the whole job inside the Isabelle image (replaces the previous
+    # nested `docker run -ec '...'` single-step wrapper, which existed
+    # because setup-isabelle-action's `isabelle getenv` calls only work
+    # inside this image but the job wasn't actually scoped to it). Every
+    # step below now runs natively in the same container, so later steps
+    # keep the warm heaps `html` builds instead of needing to re-fetch a
+    # toolchain per step.
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
 
     steps:
+      # The image has no git; actions/checkout and the submodule step below
+      # both need it. The one unavoidable apt-get in this job.
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
           submodules: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       # GITHUB_TOKEN cannot clone other private repos (the td-verification fork).
       # Add a classic PAT with "repo" scope as secret SUBMODULES_TOKEN.
@@ -54,30 +72,31 @@ jobs:
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action
 
-      - name: Build Goblint Formalization and HTML docs
-        env:
-          AFP_COMPONENT_BASE: ${{ env.AFP_COMPONENT_BASE }}
-        run: |
-          docker run --rm --user root \
-            --entrypoint /bin/bash \
-            --volume "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
-            --workdir "$GITHUB_WORKSPACE" \
-            --env AFP_COMPONENT_BASE \
-            makarius/isabelle:Isabelle2025-2 \
-            -ec '
-              apt-get update -qq && apt-get install -y -qq git curl > /dev/null
-              curl -fsSL https://pixi.sh/install.sh | bash
-              export PATH="$HOME/.pixi/bin:$PATH"
-              export ISABELLE=/home/isabelle/Isabelle/bin/isabelle
-              export AFP="$AFP_COMPONENT_BASE"
-              pixi run vendor
-              pixi run html
-              pixi run isabelle-lint
-              git config --global --add safe.directory "$GITHUB_WORKSPACE"
-              pixi run codegen-check
-              $ISABELLE ocaml_setup
-              pixi run codegen-ocaml-check
-            '
+      # scripts/mk/require-afp.sh (sourced by every pixi task below) reads
+      # $AFP, not $AFP_COMPONENT_BASE; bridge once instead of per-step.
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Build HTML docs (clean build of every session)
+        run: pixi run html
+
+      - name: Isabelle community linter
+        run: pixi run isabelle-lint
+
+      - name: Codegen drift check
+        run: pixi run codegen-check
+
+      - name: Provision managed OCaml/zarith for Isabelle's own export check
+        run: $ISABELLE ocaml_setup
+
+      - name: Isabelle-native OCaml export_code check
+        run: pixi run codegen-ocaml-check
 
       - name: Upload GitHub Pages site
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
