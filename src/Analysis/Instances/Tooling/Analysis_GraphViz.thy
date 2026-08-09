@@ -65,13 +65,29 @@ fun graphviz_html_text :: "string \<Rightarrow> string" where
      else if ch = CHR 0x3E then ''&gt;''
      else [ch]) @ graphviz_html_text rest"
 
+text \<open>
+  A line not terminated by its own \<^term>\<open>CHR 0x0A\<close> never gets the
+  \<open><BR ALIGN="LEFT"/>\<close> \<^const>\<open>graphviz_html_text\<close> emits for embedded
+  newlines, and Graphviz then renders that final line centered instead of
+  inheriting the cell's own \<open>ALIGN="LEFT"\<close> --- a documented HTML-label
+  quirk, not a property of well-formed DOT. Appending exactly one trailing
+  newline when \<open>src\<close> lacks one, idempotent when it already has one, gives
+  every line including the last its own \<open>BR\<close> and so its own alignment.
+\<close>
+
+definition ensure_trailing_nl :: "string \<Rightarrow> string" where
+  "ensure_trailing_nl src =
+    (case rev src of
+       [] \<Rightarrow> nl
+     | (ch # _) \<Rightarrow> if ch = CHR 0x0A then src else src @ nl)"
+
 definition source_html_label :: "string \<Rightarrow> string" where
   "source_html_label src =
     ''<<TABLE BORDER='' @ dq @ ''1'' @ dq @ '' CELLBORDER='' @ dq @ ''0'' @ dq    @ '' CELLPADDING='' @ dq @ ''8'' @ dq
     @ ''><TR><TD ALIGN='' @ dq @ ''LEFT'' @ dq @ '' WIDTH='' @ dq @ ''260'' @ dq
     @ '' FIXEDSIZE='' @ dq @ ''FALSE'' @ dq
     @ ''><FONT FACE='' @ dq @ ''Menlo'' @ dq @ '' POINT-SIZE='' @ dq @ ''10'' @ dq
-    @ ''>'' @ graphviz_html_text src @ ''</FONT></TD></TR></TABLE>>''"
+    @ ''>'' @ graphviz_html_text (ensure_trailing_nl src) @ ''</FONT></TD></TR></TABLE>>''"
 
 definition proc_entry_pps_list :: "cfg \<Rightarrow> pp list" where
   "proc_entry_pps_list g =
@@ -657,7 +673,7 @@ definition raw_cfg_graph_config ::
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main),
+      source_text = Some (pretty_string_of_program \<Pi> ps main []),
       node_annotation = annotate
     \<rparr>"
 

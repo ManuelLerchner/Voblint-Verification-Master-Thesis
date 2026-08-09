@@ -3211,15 +3211,9 @@ let rec ivl_exec_eqs
 let rec string_of_aexp
   = function N n -> string_of_int n
     | V x -> explode x
-    | Plus (a, b) ->
-        [char_0x28] @
-          string_of_aexp a @ [char_0x2B] @ string_of_aexp b @ [char_0x29]
-    | Minus (a, b) ->
-        [char_0x28] @
-          string_of_aexp a @ [char_0x2D] @ string_of_aexp b @ [char_0x29]
-    | Times (a, b) ->
-        [char_0x28] @
-          string_of_aexp a @ [char_0x2A] @ string_of_aexp b @ [char_0x29];;
+    | Plus (a, b) -> string_of_aexp a @ [char_0x2B] @ string_of_aexp b
+    | Minus (a, b) -> string_of_aexp a @ [char_0x2D] @ string_of_aexp b
+    | Times (a, b) -> string_of_aexp a @ [char_0x2A] @ string_of_aexp b;;
 
 let rec string_of_bexp
   = function Bc true -> [char_0x74; char_0x72; char_0x75; char_0x65]

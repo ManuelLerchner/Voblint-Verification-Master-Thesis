@@ -186,7 +186,7 @@ definition demo_rel_graph_config ::
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / relational''),
       source_text = Some (pretty_string_of_program demo_pi (prog_procs demo_program)
-        (prog_main demo_program)),
+        (prog_main demo_program) []),
       node_annotation = (\<lambda>_. None)
     \<rparr>"
 

@@ -363,9 +363,16 @@ lemma proc_demo_sign_unknown:
       (Statement 6, Less (V (STR ''total'')) (N 100), Check_Unknown)]"
   by eval
 
+text \<open>
+  \<open>total+n\<close>, not \<open>(total+n)\<close>: \<open>string_of_aexp\<close> no longer parenthesizes
+  \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close> (see \<open>VIMP_Source_Print.thy\<close> --- VIMP's source
+  grammar has no parenthesized \<open>aexp\<close> at all, so the old parenthesized
+  rendering was never actually valid VIMP source).
+\<close>
+
 lemma proc_demo_cfg_intra:
   "string_of_intra_list (cfg_intra_list (prog_cfg prog_main_name proc_demo_prog)) =
-     ''pp0 --[total := (total+n)]--> pp1; pp1 --[return]--> result_inc; ''
+     ''pp0 --[total := total+n]--> pp1; pp1 --[return]--> result_inc; ''
      @ ''pp2 --[total := 0]--> pp3; pp5 --[check(0<total)]--> pp6; ''
      @ ''pp6 --[check(total<100)]--> pp7; pp7 --[return]--> result_main; ''
      @ ''entry_inc --[nop]--> pp0; entry_main --[nop]--> pp2''"

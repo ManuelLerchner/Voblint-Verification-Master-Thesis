@@ -347,7 +347,7 @@ definition twice_graph_config ::
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
-      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main),
+      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
       node_annotation = (\<lambda>_. None)
     \<rparr>"
 

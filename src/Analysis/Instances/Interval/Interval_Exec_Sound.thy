@@ -427,7 +427,7 @@ definition ivl_graph_config ::
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main),
+      source_text = Some (pretty_string_of_program \<Pi> ps main []),
       node_annotation = (\<lambda>_. None)
     \<rparr>"
 

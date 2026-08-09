@@ -2279,15 +2279,11 @@ init_basic_ug_state = Ug_state_ext (\ _ -> fmempty) ();
 string_of_aexp :: Aexp -> [Char];
 string_of_aexp (N n) = string_of_int n;
 string_of_aexp (V x) = explode x;
-string_of_aexp (Plus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b ++ [char_0x29];
+string_of_aexp (Plus a b) = string_of_aexp a ++ [char_0x2B] ++ string_of_aexp b;
 string_of_aexp (Minus a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b ++ [char_0x29];
+  string_of_aexp a ++ [char_0x2D] ++ string_of_aexp b;
 string_of_aexp (Times a b) =
-  [char_0x28] ++
-    string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b ++ [char_0x29];
+  string_of_aexp a ++ [char_0x2A] ++ string_of_aexp b;
 
 string_of_bexp :: Bexp -> [Char];
 string_of_bexp (Bc True) = [char_0x74, char_0x72, char_0x75, char_0x65];

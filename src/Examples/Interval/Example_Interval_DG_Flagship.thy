@@ -346,7 +346,7 @@ definition flagship_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog)),
+      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog) []),
       node_annotation = (\<lambda>_. None)
     \<rparr>"
 
