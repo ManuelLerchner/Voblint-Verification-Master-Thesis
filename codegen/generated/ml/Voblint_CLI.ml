@@ -3997,36 +3997,27 @@ let rec pretty_source_lines_proc
 let rec pretty_string_of_program
   pi ps main globals =
     join_source source_nl
-      ([[char_0x70; char_0x72; char_0x6F; char_0x67; char_0x72; char_0x61;
-          char_0x6D; char_0x20; char_0x7B]] @
-        (if null globals then []
-          else [source_indent (nat_of_integer (Z.of_int 2)) @
-                  [char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
-                    char_0x6C; char_0x20] @
-                    join_source [char_0x2C; char_0x20] (map explode globals) @
-                      [char_0x3B]]) @
-          maps (fun p ->
-                 (match pi p
-                   with None ->
-                     [source_indent (nat_of_integer (Z.of_int 2)) @
-                        [char_0x70; char_0x72; char_0x6F; char_0x63; char_0x65;
-                          char_0x64; char_0x75; char_0x72; char_0x65;
-                          char_0x20] @
-                          explode p @
-                            [char_0x20; char_0x3C; char_0x6D; char_0x69;
-                              char_0x73; char_0x73; char_0x69; char_0x6E;
-                              char_0x67; char_0x3E]]
-                   | Some a ->
-                     pretty_source_lines_proc (nat_of_integer (Z.of_int 2)) p
-                       a))
-            ps @
-            [source_indent (nat_of_integer (Z.of_int 2)) @
-               [char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20;
-                 char_0x6D; char_0x61; char_0x69; char_0x6E; char_0x28;
-                 char_0x29; char_0x20; char_0x7B]] @
-              pretty_source_lines_com (nat_of_integer (Z.of_int 4)) main @
-                [source_indent (nat_of_integer (Z.of_int 2)) @ [char_0x7D]] @
-                  [[char_0x7D]]);;
+      ((if null globals then []
+         else [[char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
+                 char_0x6C; char_0x20] @
+                 join_source [char_0x2C; char_0x20] (map explode globals) @
+                   [char_0x3B]]) @
+        maps (fun p ->
+               (match pi p
+                 with None ->
+                   [[char_0x70; char_0x72; char_0x6F; char_0x63; char_0x65;
+                      char_0x64; char_0x75; char_0x72; char_0x65; char_0x20] @
+                      explode p @
+                        [char_0x20; char_0x3C; char_0x6D; char_0x69; char_0x73;
+                          char_0x73; char_0x69; char_0x6E; char_0x67;
+                          char_0x3E]]
+                 | Some a -> pretty_source_lines_proc zero_nat p a))
+          ps @
+          [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
+             char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
+             char_0x7B]] @
+            pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
+              [[char_0x7D]]);;
 
 let rec is_bot_sign a = is_bottom_sign a;;
 

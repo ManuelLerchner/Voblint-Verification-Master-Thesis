@@ -130,28 +130,23 @@ definition pretty_source_lines_proc :: "nat \<Rightarrow> pname \<Rightarrow> pr
     @ [source_indent n @ ''}'']"
 
 text \<open>
-  Wraps in \<open>program { ... }\<close> and renders procedures as \<open>void NAME(args) {
-  ... }\<close>, matching the concrete syntax \<open>VIMP_Notation.thy\<close> and the CLI
-  parser (\<open>cli/vimp_parser.ml\<close>) both actually accept -- this printer's
-  previous \<open>procedure NAME(args):\<close>/\<open>main:\<close> colon-and-indent format was
-  never valid VIMP source in either, only ever readable by a human.
-  \<open>globals\<close> was not previously a parameter at all, so no caller could ever
-  have gotten a \<open>global ...;\<close> declaration out of this function; every
-  existing call site (all display/debug metadata, none proof-critical)
-  passes \<open>[]\<close> for it unless it separately tracks declared globals.
+  Matches VIMP's canonical concrete syntax exactly: no \<open>program { ... }\<close>
+  wrapper (a standalone source file is delimited by its own end, not by an
+  enclosing keyword -- see grammar/vimp.yaml), procedures rendered as
+  \<open>void NAME(args) { ... }\<close>. \<open>globals\<close> is the program's declared-global
+  list; passing \<open>[]\<close> omits the \<open>global ...;\<close> line entirely, matching how
+  an unwrapped program with no globals reads.
 \<close>
 
 definition pretty_string_of_program ::
   "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> vname list \<Rightarrow> string" where
   "pretty_string_of_program \<Pi> ps main globals =
     join_source source_nl
-      ([''program {'']
-      @ (if globals = [] then []
-         else [source_indent 2 @ ''global '' @ join_source '', '' (map String.explode globals) @ '';''])
+      ((if globals = [] then []
+        else [''global '' @ join_source '', '' (map String.explode globals) @ '';''])
       @ concat (map (\<lambda>p. case \<Pi> p of
-          None \<Rightarrow> [source_indent 2 @ ''procedure '' @ String.explode p @ '' <missing>'']
-        | Some decl \<Rightarrow> pretty_source_lines_proc 2 p decl) ps)
-      @ [source_indent 2 @ ''void main() {''] @ pretty_source_lines_com 4 main @ [source_indent 2 @ ''}'']
-      @ [''}''])"
+          None \<Rightarrow> [''procedure '' @ String.explode p @ '' <missing>'']
+        | Some decl \<Rightarrow> pretty_source_lines_proc 0 p decl) ps)
+      @ [''void main() {''] @ pretty_source_lines_com 2 main @ [''}''])"
 
 end
