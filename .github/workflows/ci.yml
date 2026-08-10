@@ -159,8 +159,15 @@ jobs:
       - name: Apply td-verification compatibility patch
         run: pixi run vendor
 
-      - name: Build HTML docs (clean build of every session)
-        run: pixi run html
+      # Plain incremental build (no -c): the actual cache writer and the
+      # thing that validates/warms the heap cache. html.sh's -c flag
+      # forces a clean rebuild of every session regardless of cache state
+      # (needed so -o browser_info presents every session, not just
+      # changed ones) -- using it here would defeat the cache on every
+      # single run. html generation is its own downstream consumer job
+      # below, which pays that -c cost only when actually needed.
+      - name: Build (incremental, populates the heap cache)
+        run: pixi run build
 
       - name: Report heap store size
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
@@ -171,6 +178,60 @@ jobs:
           name: isabelle-heaps
           path: ${{ env.ISABELLE_HOME_USER }}/heaps/
           retention-days: 1
+
+  html-split:
+    needs: build-isabelle
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Download exact heap state from build-isabelle
+        uses: actions/download-artifact@v4
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+
+      # Still a clean build (-c) internally, for browser_info's own
+      # every-session-presented requirement -- consuming build-isabelle's
+      # heaps here doesn't avoid that, it just keeps that cost isolated
+      # to this job instead of gating the fast validation jobs on it.
+      - name: Build HTML docs (clean build of every session)
+        run: pixi run html
 
       - name: Upload GitHub Pages site
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
