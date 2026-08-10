@@ -93,6 +93,21 @@ subdirectory within it are both one word):
                                       --graph-snapshot run instead of
                                       checking it; creates the block if the
                                       case doesn't have one yet
+  run.py --lint [selectors]          static checks over fixture source, no
+                                      CLI build or voblint invocation: every
+                                      check has a recognized verdict, every
+                                      known-imprecision/ case has a header
+                                      comment and an UNKNOWN/NOWARN verdict,
+                                      EXPECT-GRAPH blocks are balanced,
+                                      filenames follow the NN-name.vimp shape
+  run.py --list / --dry-run [sel...] print the reproduction command for
+                                      every selected case, run nothing
+  run.py ... --slowest N             after running, print the N slowest
+                                      cases by wall-clock duration
+
+Each case runs under a DEFAULT_TIMEOUT-second ceiling (subprocess.run's
+timeout); a hang -- solver divergence, not slowness -- is reported as
+TIMEOUT rather than hanging the whole suite.
 
 Expected results are keyed by real source LINE NUMBER, the same way
 Goblint's own harness parses its analyzer's line-tagged warnings and
@@ -116,8 +131,35 @@ import os
 import re
 import subprocess
 import sys
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+# Colorize only when stdout is a real terminal and the user hasn't opted out
+# (NO_COLOR, https://no-color.org) -- piped/redirected output (CI logs, a
+# diff-review tool) stays plain ANSI-free text either way.
+COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+
+def _sgr(code: str, text: str) -> str:
+    return f"\033[{code}m{text}\033[0m" if COLOR else text
+
+
+def green(text: str) -> str:
+    return _sgr("32", text)
+
+
+def red(text: str) -> str:
+    return _sgr("31", text)
+
+
+def dim(text: str) -> str:
+    return _sgr("2", text)
+
+
+def bold(text: str) -> str:
+    return _sgr("1", text)
+
 
 TESTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_DIR.parent
@@ -132,6 +174,13 @@ VOBLINT = Path(os.environ["VOBLINT_BIN"]) if "VOBLINT_BIN" in os.environ else CL
 
 REACHABLE = "reachable"
 NOWARN = "NOWARN"
+KNOWN_VERDICTS = {"PROVED", "REFUTED", "UNKNOWN", NOWARN, REACHABLE}
+
+# A generous ceiling, not a performance budget: this exists to turn a solver
+# divergence (the exact failure mode 12-widening/ documents a past instance
+# of) into a reported TIMEOUT instead of a hung suite, not to catch slow
+# cases -- see --slowest for that.
+DEFAULT_TIMEOUT = 30
 
 PARAM_RE = re.compile(r"^// PARAM: (.*)$")
 CHECK_LINE_RE = re.compile(r"__voblint_check")
@@ -235,26 +284,59 @@ def run_voblint(args: list[str], path: Path) -> subprocess.CompletedProcess:
         [str(VOBLINT), *args, str(path)],
         capture_output=True,
         text=True,
+        timeout=DEFAULT_TIMEOUT,
     )
 
 
-def check_case(path: Path) -> tuple[bool, list[str]]:
-    """Runs one case and returns (passed, message_lines). Returns lines
-    rather than printing directly: check_case runs concurrently across
-    threads (see main()), and sys.stdout is process-global -- there is no
-    thread-safe way to redirect it per-call, so the caller is responsible
-    for printing each case's lines together, in discovery order."""
-    lines: list[str] = []
-    name = str(path.relative_to(REGRESSION_DIR))
+def voblint_cmd(args: list[str], path: Path) -> str:
+    """The `pixi run voblint ...` invocation that reproduces one check --
+    used as the case label in every report line so a failure (or any case
+    of interest) can be copy-pasted straight into a shell, repo-root-
+    relative path and all, instead of hand-assembling it from a bare
+    fixture name."""
+    rel = path.relative_to(REPO_ROOT)
+    return f"pixi run voblint {' '.join(args)} {rel}".strip()
+
+
+def render_line(line: str) -> str:
+    """Colorizes one of check_case's output lines for a terminal: the
+    OK/FAIL verdict word, and detail lines (the indented "  expected: ...",
+    "  stderr: ..." that follow a FAIL) dimmed so the verdict itself stays
+    the eye's first stop."""
+    if line.startswith("OK   "):
+        return f"{green('OK')}   {line[5:]}"
+    if line.startswith("FAIL "):
+        return f"{red('FAIL')} {line[5:]}"
+    return dim(line)
+
+
+def check_case(path: Path) -> tuple[bool, list[str], float]:
+    """Runs one case and returns (passed, message_lines, duration_seconds).
+    Returns lines rather than printing directly: check_case runs
+    concurrently across threads (see main()), and sys.stdout is
+    process-global -- there is no thread-safe way to redirect it per-call,
+    so the caller is responsible for printing each case's lines together,
+    in discovery order."""
     args = param_args(path)
+    cmd = voblint_cmd(args, path)
+    start = time.monotonic()
+    try:
+        ok, lines = _check_case_body(path, args, cmd)
+    except subprocess.TimeoutExpired:
+        ok, lines = False, [f"TIMEOUT {cmd} after {DEFAULT_TIMEOUT}s"]
+    return ok, lines, time.monotonic() - start
+
+
+def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[str]]:
+    lines: list[str] = []
     expected = expected_verdicts(path)
 
     if "--dot" in args:
         result = run_voblint(args, path)
         if result.returncode == 0 and result.stdout.startswith("digraph AnalysisCFG"):
-            lines.append(f"OK   {name} (DOT smoke test)")
+            lines.append(f"OK   {cmd} (DOT smoke test)")
             return True, lines
-        lines.append(f"FAIL {name}: expected DOT output starting with 'digraph AnalysisCFG'")
+        lines.append(f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'")
         lines.append(f"  stdout: {result.stdout[:200]!r}")
         lines.append(f"  stderr: {result.stderr.strip()}")
         return False, lines
@@ -263,18 +345,18 @@ def check_case(path: Path) -> tuple[bool, list[str]]:
         # No inline verdicts: this case documents a rejection, not a report.
         result = run_voblint(args, path)
         if result.returncode == 0:
-            lines.append(f"FAIL {name}: expected a non-zero exit (no verdict annotations present)")
+            lines.append(f"FAIL {cmd}: expected a non-zero exit (no verdict annotations present)")
             return False, lines
         if "parse error" in result.stderr:
-            lines.append(f"OK   {name} (rejected: {result.stderr.strip()})")
+            lines.append(f"OK   {cmd} (rejected: {result.stderr.strip()})")
             return True, lines
-        lines.append(f"FAIL {name}: rejected, but not with a parse error")
+        lines.append(f"FAIL {cmd}: rejected, but not with a parse error")
         lines.append(f"  stderr: {result.stderr.strip()}")
         return False, lines
 
     result = run_voblint(args, path)
     if result.returncode != 0:
-        lines.append(f"FAIL {name}: voblint exited non-zero unexpectedly")
+        lines.append(f"FAIL {cmd}: voblint exited non-zero unexpectedly")
         lines.append(f"  stderr: {result.stderr.strip()}")
         return False, lines
 
@@ -285,48 +367,107 @@ def check_case(path: Path) -> tuple[bool, list[str]]:
         if exp == NOWARN:
             if line_no in actual:
                 lines.append(
-                    f"FAIL {name}: line {line_no} expected NOWARN (suppressed), "
+                    f"FAIL {cmd}: line {line_no} expected NOWARN (suppressed), "
                     f"but got {actual[line_no]}"
                 )
                 ok = False
             continue
         if line_no not in actual:
-            lines.append(f"FAIL {name}: line {line_no} expected {exp}, but missing from the report")
+            lines.append(f"FAIL {cmd}: line {line_no} expected {exp}, but missing from the report")
             ok = False
             continue
         # "reachable" only asserts presence (already true, since the line
         # is in the report); any verdict there satisfies it.
         if exp != REACHABLE and exp != actual[line_no]:
-            lines.append(f"FAIL {name}: line {line_no} expected {exp}, got {actual[line_no]}")
+            lines.append(f"FAIL {cmd}: line {line_no} expected {exp}, got {actual[line_no]}")
             ok = False
 
     extra = set(actual) - set(expected)
     if extra:
         lines.append(
-            f"FAIL {name}: unexpected report line(s) with no annotation: "
+            f"FAIL {cmd}: unexpected report line(s) with no annotation: "
             f"{', '.join(str(n) for n in sorted(extra))}"
         )
         ok = False
 
     fixture_lines = path.read_text().splitlines()
     graph_block = find_graph_block(fixture_lines)
+    graph_cmd = voblint_cmd(graph_snapshot_args(args), path)
     if UPDATE_GRAPHS:
         update_graph_block(path, fixture_lines, graph_block, run_graph_snapshot(args, path))
-        lines.append(f"OK   {name}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
+        lines.append(f"OK   {graph_cmd}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
     elif graph_block is not None:
         snapshot = run_graph_snapshot(args, path).rstrip("\n")
         expected_snapshot = expected_graph(fixture_lines, graph_block)
         if snapshot == expected_snapshot:
-            lines.append(f"OK   {name}: graph snapshot matches")
+            lines.append(f"OK   {graph_cmd}: graph snapshot matches")
         else:
-            lines.append(f"FAIL {name}: graph snapshot mismatch (rerun with --update-graphs to refresh)")
+            lines.append(f"FAIL {graph_cmd}: graph snapshot mismatch (rerun with --update-graphs to refresh)")
             lines.append(f"  expected: {expected_snapshot!r}")
             lines.append(f"  actual:   {snapshot!r}")
             ok = False
 
     if ok:
-        lines.append(f"OK   {name} ({len(expected)} check(s), {' '.join(args)})")
+        lines.append(f"OK   {cmd} ({len(expected)} check(s))")
     return ok, lines
+
+
+def lint_case(path: Path) -> list[str]:
+    """Static checks over one fixture's source text -- no voblint
+    invocation, so --lint runs without a CLI build. Mechanically enforces
+    the conventions this module's docstring and AGENTS.md's "Regression
+    discipline" section otherwise only state in prose: every check carries
+    a recognized verdict, every known-imprecision/ case documents why, and
+    EXPECT-GRAPH blocks are balanced."""
+    problems: list[str] = []
+    src_lines = path.read_text().splitlines()
+    args = param_args(path)
+    expected = expected_verdicts(path)
+
+    if not src_lines or not PARAM_RE.match(src_lines[0]):
+        problems.append("missing or malformed '// PARAM: ...' header on line 1")
+
+    if not re.match(r"^\d\d-[a-z0-9_]+$", path.stem):
+        problems.append(f"filename '{path.name}' doesn't follow the NN-name.vimp convention")
+
+    # A case with no verdicts at all is a parse-rejection fixture (checked
+    # for a structured error, not a report -- see check_case), and a --dot
+    # case checks DOT shape, not verdicts: neither kind's __voblint_check
+    # lines are meant to carry one.
+    if expected and "--dot" not in args:
+        for line_no, line in enumerate(src_lines, start=1):
+            if not CHECK_LINE_RE.search(line):
+                continue
+            m = VERDICT_RE.search(line)
+            if m is None:
+                problems.append(f"line {line_no}: __voblint_check with no verdict annotation")
+            elif m.group(1) not in KNOWN_VERDICTS:
+                problems.append(f"line {line_no}: unrecognized verdict '{m.group(1)}'")
+
+    parts = path.relative_to(REGRESSION_DIR).parts[:-1]
+    if "known-imprecision" in parts:
+        header = []
+        for line in src_lines[1:]:
+            if not line.startswith("//"):
+                break
+            header.append(line)
+        if len(header) < 1:
+            problems.append(
+                "known-imprecision case has no header comment explaining "
+                "why the result is imprecise"
+            )
+        if not (set(expected.values()) & {"UNKNOWN", NOWARN}):
+            problems.append(
+                "known-imprecision case asserts no UNKNOWN/NOWARN -- "
+                "does it belong in precision/ instead?"
+            )
+
+    begins = sum(1 for line in src_lines if line.rstrip() == GRAPH_BEGIN)
+    ends = sum(1 for line in src_lines if line.rstrip() == GRAPH_END)
+    if begins != ends:
+        problems.append(f"EXPECT-GRAPH block imbalance: {begins} BEGIN vs {ends} END")
+
+    return problems
 
 
 def matches_selector(path: Path, sel: str) -> bool:
@@ -364,6 +505,34 @@ def discover(selectors: list[str]) -> list[Path]:
 
 
 def main() -> int:
+    args = sys.argv[1:]
+
+    if "--lint" in args:
+        selectors = [a for a in args if a != "--lint"]
+        cases = discover(selectors)
+        if not cases:
+            print(f"no matching .vimp cases found under {REGRESSION_DIR} for {selectors}")
+            return 1
+        any_problems = False
+        for path in cases:
+            problems = lint_case(path)
+            if problems:
+                any_problems = True
+                print(bold(red(str(path.relative_to(REGRESSION_DIR)))))
+                for problem in problems:
+                    print(f"  {problem}")
+        if any_problems:
+            return 1
+        print(bold(green(f"{len(cases)} fixture(s), no lint issues")))
+        return 0
+
+    if "--list" in args or "--dry-run" in args:
+        selectors = [a for a in args if a not in ("--list", "--dry-run")]
+        cases = discover(selectors)
+        for path in cases:
+            print(voblint_cmd(param_args(path), path))
+        return 0
+
     if "VOBLINT_BIN" not in os.environ:
         subprocess.run(
             ["bash", str(REPO_ROOT / "scripts" / "mk" / "cli-build.sh")],
@@ -371,10 +540,14 @@ def main() -> int:
             capture_output=True,
         )
 
-    args = sys.argv[1:]
     sequential = "-s" in args
     global UPDATE_GRAPHS
     UPDATE_GRAPHS = "--update-graphs" in args
+    slowest_n = 0
+    if "--slowest" in args:
+        i = args.index("--slowest")
+        slowest_n = int(args[i + 1])
+        args = args[:i] + args[i + 2 :]
     args = [a for a in args if a not in ("-s", "--update-graphs")]
     # Regenerating a stale snapshot is inherently sequential per file (each
     # rewrites its own fixture on disk); nothing here prevents different
@@ -386,6 +559,7 @@ def main() -> int:
         print(f"no matching .vimp cases found under {REGRESSION_DIR} for {args}")
         return 1
 
+    start = time.monotonic()
     # Each case is an independent voblint subprocess (like Goblint's own
     # Parallel.map over test projects); check_case returns lines rather than
     # printing (sys.stdout is process-global, unsafe to redirect per-thread),
@@ -396,18 +570,45 @@ def main() -> int:
     else:
         with ThreadPoolExecutor(max_workers=min(8, len(cases))) as pool:
             outcomes = list(pool.map(check_case, cases))
+    elapsed = time.monotonic() - start
 
     results = []
-    for ok, lines in outcomes:
-        for line in lines:
-            print(line)
+    group = None
+    for path, (ok, lines, duration) in zip(cases, outcomes):
+        # cases is path-sorted, so its NN-group (the first path component
+        # under REGRESSION_DIR) only changes at a group boundary -- a cheap
+        # way to print one header per group without a second grouping pass.
+        case_group = path.relative_to(REGRESSION_DIR).parts[0]
+        if case_group != group:
+            if group is not None:
+                print()
+            print(bold(f"── {case_group} ──"))
+            group = case_group
+        # Duration goes on the case's last line (its summary line, e.g.
+        # "OK ... (N check(s))" or the terminal FAIL) -- earlier lines from
+        # the same case are intermediate detail (a graph-snapshot result,
+        # a DOT check), not separate wall-clock measurements.
+        for line in lines[:-1]:
+            print(render_line(line))
+        if lines:
+            print(render_line(lines[-1]) + dim(f"  {duration:.2f}s"))
         results.append(ok)
 
-    if all(results):
-        print("All CLI regression checks passed.")
-        return 0
-    print("Some CLI regression checks failed.")
-    return 1
+    passed = sum(results)
+    failed = len(results) - passed
+    summary = f"{passed} passed" + (f", {failed} failed" if failed else "")
+    summary += f" in {elapsed:.2f}s"
+
+    if slowest_n:
+        print()
+        print(bold(f"slowest {min(slowest_n, len(outcomes))}:"))
+        by_duration = sorted(zip(cases, outcomes), key=lambda co: co[1][2], reverse=True)
+        for path, (_, _, duration) in by_duration[:slowest_n]:
+            print(f"  {duration:6.2f}s  {path.relative_to(REGRESSION_DIR)}")
+
+    print()
+    print(bold(green(summary)) if not failed else bold(red(summary)))
+    return 0 if not failed else 1
 
 
 if __name__ == "__main__":
