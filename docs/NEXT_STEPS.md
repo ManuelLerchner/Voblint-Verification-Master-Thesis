@@ -110,20 +110,76 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    seedc t) c`), and `activation_collect_sound` a `MONO` obligation
    (`ctx_rep c1 c2 ==> sg-slot c1 <= sg-slot c2`) -- both now superseded by
    `admiss`/`ctx_key` and removed from the codebase.
-3. **G3 -- executable context-sensitive Interval endpoint,** analogous to
-   `analyse_interval_td_raw` but keyed on `(pp x ctx)`, same `solve_dom`/
-   `solve_c` convention, `export_code`'d.
-4. **G4 -- context-aware checks/reporting,** aggregating conservatively
-   across reachable contexts (all Proved -> PROVED, all Refuted -> REFUTED,
-   otherwise UNKNOWN) without joining abstract states first.
-5. **G5 -- CLI exposure + precision witness.** `--context none` (current,
-   default) / `--context entry-state`; regression: two calls at distinct
-   exact argument values, `--context none` -> `UNKNOWN`, `--context
-   entry-state` -> `PROVED`; a `random()`-argument call, `--context none`
-   -> `UNKNOWN`, `--context entry-state` -> still sound (one wide context,
-   per G2's acceptance case), not a false `PROVED`. G2's `admiss`/`ctx_key`
-   soundness is unconditional, so G3-G5 no longer wait on anything -- they
-   can build directly on it.
+3. **G3 -- executable context-sensitive Interval endpoint. Done, batch-green
+   (2026-08-11).** `entry_state_sol`/`entry_state_terminates`
+   (`Interval_Exec_Ctx_Sound.thy`, `src/Formalization/Pipeline/`)
+   generalize the acceptance example's fixed program to an arbitrary
+   `imp_prog`, keyed on `pp x ivl list` exactly as sketched below, same
+   `solve_dom`/`solve_c` convention as `analyse_interval_td_raw`. The
+   soundness chain reuses G2's generic `admiss_exact`/`ctx_key` theorems
+   directly: `entry_state_enterc` recovers the routed value from the
+   caller's own solved state via a new compiler invariant,
+   `compile_prog_calls_source_unique` (`VIMP_Proc_to_CFG.thy`) -- no CFG
+   node produced by `compile_prog` has two distinct outgoing call edges --
+   which lets `call_action_at_call_site`/`call_action_at_call_site_eq`
+   (`Routed_Context.thy`) resolve the one call at a node unconditionally,
+   for any program, not just the acceptance example's one call site.
+   Keystone: `entry_state_activation_collect_sound`.
+4. **G4 -- context-aware checks/reporting. Done, batch-green (2026-08-11).**
+   Not a bespoke combinator: `check_result` is a real `semilattice_sup`
+   instance (`Abstract_Checks.thy`) -- `Check_Unknown` top, `Proved`/
+   `Refuted` incomparable -- so aggregation across every context a node's
+   solver output covers is `Finite_Set.fold1`/`Sup_fin` over that lattice,
+   proved associative/commutative/idempotent by the typeclass laws, not a
+   hand-rolled "all Proved -> PROVED, all Refuted -> REFUTED" reduction.
+   `entry_state_classify_at`/`entry_state_check_report`
+   (`Interval_Exec_Ctx_Sound.thy`) enumerate covered contexts via
+   `Set.filter` over the solver's own already-finite solution set, never a
+   raw comprehension (`ivl list` has no `enum` instance -- its only order
+   is the non-total abstract-domain lattice). A node with no covered
+   context falls back to the flat report's own dead-code `bot`
+   classification, not a fabricated new case.
+5. **G5 -- CLI exposure + precision witness. Done, batch-green
+   (2026-08-11).** `--analysis interval --context entry-state` (default
+   `--context none`, byte-identical to prior behavior --
+   `analyse_ctx_none_eq_analyse` pins the equivalence); `--analysis sign
+   --context entry-state` is a checked, explicit unsupported-combination
+   error (exit 1), not a silent fallback. Regressions:
+   `tests/regression/03-procedures/precision/04-two_call_sites_entry_state
+   .vimp` is the precision witness (two calls at distinct exact argument
+   values, `--context none` -> UNKNOWN per the known-imprecision sibling,
+   `--context entry-state` -> PROVED);
+   `tests/regression/03-procedures/soundness/01-entry_state_random_arg.vimp`
+   is the random()-argument acceptance case (one wide context, terminates,
+   UNKNOWN is the sound verdict, not a false PROVED). `context_mode`/
+   `analyse_ctx` export through the same Haskell/OCaml `export_code`
+   pipeline as `analyse` (`Example_Analysis_Dispatch.thy`,
+   `Example_State_Report_GraphViz.thy`), including the CI-only OCaml
+   compile check (`Voblint_OCaml_Check.thy`). `--dot`/`--dot-full`/
+   `--graph-snapshot` also support `--context entry-state`
+   (`entry_state_report_dot_auto`/`entry_state_full_state_dot_auto` and
+   their `_graph_snapshot_auto` siblings, `Example_State_Report_GraphViz
+   .thy`): a rendered node can only carry one state, so a node reachable
+   under several contexts renders the `Sup_fin` join of each context's
+   reading through `ivl`'s own `semilattice_sup` -- the same aggregation
+   principle as G4's check verdicts, this time over the domain lattice
+   instead of `check_result`. This is a documented projection, not a
+   per-context breakdown: genuinely duplicated clusters (one `square`
+   cluster per context, mirroring the call-string K1/K2 examples' own
+   hand-written context lists) would need an executable enumeration of
+   the solver's own covered-context set, which isn't available for `ivl
+   list` today -- `sorted_list_of_set` needs a `linorder` `ivl` doesn't
+   and shouldn't have, `Finite_Set.fold (#) []` needs `ivl list ::
+   finite`, which it structurally isn't (confirmed by a direct spike, not
+   just reasoned about). Tracked as its own follow-up (#112), not worked
+   around with an artificial order on `ivl`; the check/report layer is
+   unaffected (it already preserves per-context precision internally).
+   Regression: `tests/regression/13-full-state-dot
+   /02-entry_state_context_join.vimp` shows the join directly (`n=[3,4]`
+   inside the shared callee, joining `[3,3]`/`[4,4]` from the two call
+   sites, while the caller's own checks stay context-separated and
+   PROVED); `tests/regression/11-graph-snapshot
+   /03-two_call_sites_entry_state.vimp` is the DOT-free sibling.
 
 Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
 #66's M4 / `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`

@@ -1,0 +1,22 @@
+// PARAM: --analysis interval --context entry-state
+// Same program as known-imprecision/01-two_call_sites_same_procedure.vimp,
+// under entry-state context sensitivity instead of the default flat
+// analysis. There, both calls to square share ONE flow-insensitive
+// activation, so square's summary is the join over every call site --
+// combine reads back join([9,9], [16,16]) = [9,16] at both checks, and
+// neither can be proved. Here, each call is keyed by its own entered
+// argument value ([9,9] vs [16,16] respectively), so square is analyzed
+// once per distinct entry-state context instead of joined into one shared
+// summary -- an observable precision benefit of #108's context analysis
+// over the flat default, not a different claim about the concrete program
+// (both checks are true for the same reason in both files: 3*3=9,
+// 4*4=16).
+void square(n) {
+  return n * n
+}
+void main() {
+  a := square(3);
+  b := square(4);
+  __voblint_check(a == 9); // PROVED
+  __voblint_check(b == 16) // PROVED
+}

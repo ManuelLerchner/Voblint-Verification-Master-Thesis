@@ -1,0 +1,103 @@
+// PARAM: --analysis interval --context entry-state --dot-full
+// Same program as 03-procedures/precision/04-two_call_sites_entry_state.vimp.
+// full_state_dot_auto's entry-state sibling (entry_state_full_state_dot_auto,
+// #108) queries every node, but a rendered node can only carry one state:
+// square's own CFG region is a single physical node shared by both calls, so
+// its formal n renders as the JOIN of every context that reaches it --
+// [3,3] (square(3)) sup [4,4] (square(4)) = [3,4], through ivl's own
+// semilattice_sup, not [3,3] or [4,4] alone. The solver still kept the two
+// calls in separate, un-joined contexts internally -- that's what lets
+// main's own checks (a==9, b==16) come back PROVED rather than UNKNOWN --
+// only the graph *rendering* has to collapse them, for the same reason a
+// CFG node cannot be drawn twice.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//   cluster_ctx_1:
+//     square_pp0_ctx1
+//     square_entry_square_ctx1
+//     square_result_square_ctx1
+//
+// nodes:
+//   main_pp5_ctx0: pp5
+//       a=[9,9]
+//       b=[16,16]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_pp6_ctx0: pp6
+//       a=[9,9]
+//       b=[16,16]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_result_main_ctx0: exit_main
+//       a=[9,9]
+//       b=[16,16]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   square_pp0_ctx1: pp0
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[3,4]
+//   main_pp2_ctx0: pp2
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_pp3_ctx0: pp3
+//       a=[9,9]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   square_entry_square_ctx1: entry_square
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[3,4]
+//   main_pp4_ctx0: pp4
+//       a=[9,9]
+//       b=[16,16]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   square_result_square_ctx1: exit_square
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[9,16]
+//       n=[3,4]
+//
+// edges:
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(b==16)
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   square_pp0_ctx1 -> square_result_square_ctx1: return n*n
+//   square_entry_square_ctx1 -> square_pp0_ctx1: nop
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(a==9)
+//   main_pp2_ctx0 -> square_entry_square_ctx1: enter square(3)
+//   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)
+//   square_result_square_ctx1 -> main_pp3_ctx0: combine a
+//   square_result_square_ctx1 -> main_pp4_ctx0: combine b
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
+// EXPECT-GRAPH-END
+
+void square(n) {
+  return n * n
+}
+void main() {
+  a := square(3);
+  b := square(4);
+  __voblint_check(a == 9); // PROVED
+  __voblint_check(b == 16) // PROVED
+}

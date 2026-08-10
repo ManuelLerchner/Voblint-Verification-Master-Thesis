@@ -19,11 +19,22 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval [--dot] [--timeout SECONDS] FILE.vimp\n\
+  "voblint --analysis sign|interval [--context none|entry-state] [--dot] \
+   [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval   Abstract domain to run (required, unless\n\
   \                             --parse-only).\n\
+  \  --context none|entry-state Context sensitivity (default: none, today's\n\
+  \                             flow-insensitive, call-site-insensitive\n\
+  \                             behaviour). entry-state re-analyzes each\n\
+  \                             callee per distinct entered-argument context,\n\
+  \                             including under --dot/--dot-full/\n\
+  \                             --graph-snapshot (a node covered by several\n\
+  \                             contexts renders their joined state); only\n\
+  \                             --analysis interval supports it -- any other\n\
+  \                             combination is a clear configuration error,\n\
+  \                             not a silent fallback to --context none.\n\
   \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
   \                             annotated at check nodes only, instead of the\n\
   \                             textual check report.\n\
@@ -105,7 +116,25 @@ let render_text_report ~vars_to_probe (report :
     report check_positions;
   Buffer.contents buf
 
-type outcome = Ok_text of string | Ok_dot of string | Ok_graph of string
+(* analyse_ctx's check_report_entry list carries no per-variable state
+   projection (unlike analyse_with_state's report), so there is no
+   is_unreachable dead-code filter or per-variable state column here --
+   only the check verdict itself. *)
+let render_flat_report
+    (report :
+      (Voblint_CLI.Core.cfg_node * (Voblint_CLI.Core.bexp * Voblint_CLI.Core.check_result)) list)
+    (check_positions : (int * int) list) =
+  let buf = Buffer.create 256 in
+  List.iter2
+    (fun (node, (cond, verdict)) (line, col) ->
+       Buffer.add_string buf
+         (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
+            (un_string (Voblint_CLI.Core.string_of_bexp cond))
+            (verdict_label verdict)))
+    report check_positions;
+  Buffer.contents buf
+
+type outcome = Ok_text of string | Ok_dot of string | Ok_graph of string | Unsupported_combo of string
 
 (* The analyzer is proved sound but not proved total (Interval especially,
    see docs/CLI_DESIGN.md's containment note) -- a killable subprocess bounds
@@ -125,7 +154,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
              (match f () with
               | Ok_text s -> output_string oc "T\n"; output_string oc s
               | Ok_dot s -> output_string oc "D\n"; output_string oc s
-              | Ok_graph s -> output_string oc "G\n"; output_string oc s);
+              | Ok_graph s -> output_string oc "G\n"; output_string oc s
+              | Unsupported_combo s -> output_string oc "U\n"; output_string oc s);
              close_out oc;
              0
            with e ->
@@ -161,6 +191,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                  | "T" -> Ok (Ok_text body)
                  | "D" -> Ok (Ok_dot body)
                  | "G" -> Ok (Ok_graph body)
+                 | "U" -> Ok (Unsupported_combo body)
                  | _ -> Error body)
               | None -> Error "analysis subprocess produced no output")
            | _, Unix.WEXITED code -> Error (Printf.sprintf "analysis subprocess exited with code %d" code)
@@ -171,6 +202,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
 
 let () =
   let analysis = ref None in
+  let context = ref Voblint_CLI.Analyse.Ctx_None in
   let dot = ref false in
   let dot_full = ref false in
   let graph_snapshot = ref false in
@@ -185,6 +217,12 @@ let () =
        | "sign" -> analysis := Some Voblint_CLI.Analyse.Sign_Analysis
        | "interval" -> analysis := Some Voblint_CLI.Analyse.Interval_Analysis
        | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
+      parse_args rest
+    | "--context" :: v :: rest ->
+      (match v with
+       | "none" -> context := Voblint_CLI.Analyse.Ctx_None
+       | "entry-state" -> context := Voblint_CLI.Analyse.Ctx_EntryState
+       | _ -> prerr_endline ("unknown --context value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest
     | "--dot-full" :: rest -> dot_full := true; parse_args rest
@@ -223,15 +261,44 @@ let () =
     | Some k -> k
     | None -> prerr_endline "missing --analysis sign|interval"; prerr_endline usage; exit 1
   in
+  (* entry_state_{full_state,report}_{dot,graph_snapshot}_auto take no
+     analysis_kind: they are Interval-only by construction, the same
+     restriction analyse_ctx encodes for the text-report path (Ctx_EntryState
+     has no Sign branch). Checked once, up front, for every mode -- not just
+     the text path -- so an unsupported combination is a clear, static error
+     before the timeout-guarded analysis runs, never a silent Interval
+     substitution for a requested Sign report. *)
+  if !context <> Voblint_CLI.Analyse.Ctx_None && kind <> Voblint_CLI.Analyse.Interval_Analysis then begin
+    prerr_endline "voblint: unsupported --analysis/--context combination";
+    exit 1
+  end;
   let vars_to_probe = Voblint_CLI.Example_State_Report_GraphViz.program_vars prog in
   match
     run_contained ~timeout:!timeout (fun () ->
       if !graph_snapshot && !dot_full then
-        Ok_graph (Voblint_CLI.Example_State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
+        Ok_graph
+          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
+           else Voblint_CLI.Example_State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
       else if !graph_snapshot then
-        Ok_graph (Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
-      else if !dot_full then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
-      else if !dot then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
+        Ok_graph
+          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
+           else Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
+      else if !dot_full then
+        Ok_dot
+          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_dot_auto prog
+           else Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
+      else if !dot then
+        Ok_dot
+          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_dot_auto prog
+           else Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
+      else if !context <> Voblint_CLI.Analyse.Ctx_None then
+        (match Voblint_CLI.Analyse.analyse_ctx kind !context prog with
+         | Some report -> Ok_text (render_flat_report report check_positions)
+         | None -> Unsupported_combo "unsupported --analysis/--context combination")
       else
         Ok_text
           (render_text_report ~vars_to_probe
@@ -241,4 +308,5 @@ let () =
   | Ok (Ok_text s) -> print_string s
   | Ok (Ok_dot s) -> print_string s
   | Ok (Ok_graph s) -> print_string s
+  | Ok (Unsupported_combo msg) -> prerr_endline ("voblint: " ^ msg); exit 1
   | Error msg -> Printf.eprintf "voblint: %s\n" msg; exit 3

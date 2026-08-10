@@ -424,4 +424,58 @@ definition formals_enterc ::
 where
   "formals_enterc g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
 
+text \<open>
+  The whole matched \<^type>\<open>call_action\<close> at a node, not only its formals: an
+  \<open>enterc\<close> built purely from the caller's own solved abstract state (rather than
+  by decoding the concrete entered store, as \<^const>\<open>formals_enterc\<close> does) needs
+  the callee's actuals too, to recompute the same \<^const>\<open>dgs_enter\<close> the route
+  itself already ran. Same convention as \<^const>\<open>formals_at_call_site\<close>: the head
+  of the filtered call list, \<open>CallEdge None [] []\<close> if \<open>u\<close> has no outgoing call.
+\<close>
+
+definition call_action_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> call_action" where
+  "call_action_at_call_site g u =
+     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
+        (_, ca, _, _) # _ \<Rightarrow> ca
+      | _ \<Rightarrow> CallEdge None [] [])"
+
+text \<open>
+  Not a locale theorem, same as \<open>route_enterc_agree\<close> itself: whether a node has at
+  most one outgoing call is a per-instance fact about \<open>g\<close>, true for
+  \<^const>\<open>compile_prog\<close> output (\<^theory>\<open>Voblint_CFG.VIMP_Proc_to_CFG\<close>'s
+  \<open>compile_prog_calls_source_unique\<close>) but not for an arbitrary hand-built CFG.
+\<close>
+
+lemma call_action_at_call_site_eq:
+  assumes fin: "finite (calls g)"
+    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
+                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
+                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+    and ce: "(u, ca, cf, af) \<in> calls g"
+  shows "call_action_at_call_site g u = ca"
+proof -
+  let ?P = "\<lambda>(c, ca, ce, k). c = u"
+  let ?L = "cfg_calls_list g"
+  have mem: "(u, ca, cf, af) \<in> set ?L" using ce fin by simp
+  have distinctL: "distinct ?L" unfolding cfg_calls_list_code by (rule distinct_sorted_list_of_set)
+  have "set (filter ?P ?L) = {(u, ca, cf, af)}"
+  proof (rule set_eqI, rule iffI)
+    fix x assume hx: "x \<in> set (filter ?P ?L)"
+    then have memx: "x \<in> set ?L" and px: "?P x" by (auto simp: set_filter)
+    obtain c ca' ce' af' where x: "x = (c, ca', ce', af')" by (cases x) auto
+    from px x have cU: "c = u" by simp
+    from memx x cU fin have "(u, ca', ce', af') \<in> calls g" by simp
+    with uniq[OF ce] have "ca' = ca" "ce' = cf" "af' = af" by auto
+    thus "x \<in> {(u, ca, cf, af)}" using x cU by simp
+  next
+    fix x assume "x \<in> {(u, ca, cf, af)}"
+    thus "x \<in> set (filter ?P ?L)" using mem by simp
+  qed
+  moreover have "distinct (filter ?P ?L)" using distinctL by (rule distinct_filter)
+  ultimately have "filter ?P ?L = [(u, ca, cf, af)]"
+    apply (cases "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g)")
+    using singleton_iff subset_singletonD by(fastforce)+
+  thus ?thesis unfolding call_action_at_call_site_def by simp
+qed
+
 end

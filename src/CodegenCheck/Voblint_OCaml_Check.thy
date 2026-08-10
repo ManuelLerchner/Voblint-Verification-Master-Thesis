@@ -20,6 +20,7 @@ text \<open>
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times

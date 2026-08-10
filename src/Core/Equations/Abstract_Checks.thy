@@ -4,6 +4,48 @@ begin
 
 datatype check_result = Check_Proved | Check_Refuted | Check_Unknown
 
+text \<open>
+  \<open>check_result\<close> as a flat join-semilattice: \<open>Check_Unknown\<close> is the top element,
+  \<open>Check_Proved\<close>/\<open>Check_Refuted\<close> are incomparable, and their join is
+  \<open>Check_Unknown\<close>. The canonical use is aggregating a check's verdict across
+  several independently-sound sources of evidence (e.g. one abstract state per
+  reachable calling context) without joining the underlying abstract states
+  first: two sources agreeing stay that verdict, any disagreement collapses to
+  \<open>Check_Unknown\<close> rather than asserting a verdict neither source alone
+  established.
+\<close>
+
+instantiation check_result :: semilattice_sup
+begin
+
+definition less_eq_check_result :: "check_result \<Rightarrow> check_result \<Rightarrow> bool" where
+  "less_eq_check_result x y \<longleftrightarrow> x = y \<or> y = Check_Unknown"
+
+definition less_check_result :: "check_result \<Rightarrow> check_result \<Rightarrow> bool" where
+  "less_check_result x y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x"
+
+definition sup_check_result :: "check_result \<Rightarrow> check_result \<Rightarrow> check_result" where
+  "sup_check_result x y = (if x = y then x else Check_Unknown)"
+
+instance
+proof
+  fix x y z :: check_result
+  show "x < y \<longleftrightarrow> x \<le> y \<and> \<not> y \<le> x" by (rule less_check_result_def)
+  show "x \<le> x" by (simp add: less_eq_check_result_def)
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" unfolding less_eq_check_result_def by auto
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" unfolding less_eq_check_result_def by auto
+  show "x \<le> x \<squnion> y" unfolding less_eq_check_result_def sup_check_result_def by auto
+  show "y \<le> x \<squnion> y" unfolding less_eq_check_result_def sup_check_result_def by auto
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x" unfolding less_eq_check_result_def sup_check_result_def by auto
+qed
+
+end
+
+lemma sup_check_result_idem [simp]: "(x::check_result) \<squnion> x = x"
+  by (simp add: sup_check_result_def)
+
+lemma SPIKE_sup_fin_eval: "Sup_fin {Check_Proved, Check_Proved} = Check_Proved" by eval
+
 section \<open>Expression abstraction over a state, given numeric queries\<close>
 
 text \<open>
