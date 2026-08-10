@@ -2,6 +2,16 @@
 # NOTE: Needs to be run under the makarius/isabelle:Isabelle2025-2 container
 name: Setup Isabelle
 description: 'Setup Isabelle: checkout the AFP, set environment variables, cache heap images'
+inputs:
+  use-cache:
+    description: >-
+      Restore/save the cross-run heap cache. Set to 'false' for split jobs
+      that instead receive an exact heap state via a same-run workflow
+      artifact (see build-isabelle in ci.yml) -- only one job per workflow
+      run should write the cross-run cache, to avoid multiple writers
+      racing to save the same key.
+    required: false
+    default: 'true'
 runs:
   using: "composite"
   steps:
@@ -51,6 +61,7 @@ runs:
     # restoring a stale or even irrelevant heap only changes how much of
     # that rebuild is needed, never whether it happens.
     - name: Restore/save Isabelle heap cache
+      if: inputs.use-cache == 'true'
       uses: actions/cache@v4
       with:
         path: ${{ env.ISABELLE_HOME_USER }}/heaps/
