@@ -423,10 +423,10 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at
   step / combine soundness, route consistency, and the \<open>ivl_ctx_sg_seed\<close> enter seed.\<close>
 
 theorem twice_activation_collect_sound:
-  "activation_collect twice_gs ivl_enterc [] (=) twice_cfg (cinit_stores twice_gs) v ctx
+  "activation_collect twice_gs (admiss_exact ivl_enterc) [] twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_enterc
-        and seedc = "[]" and ctx_rep = "(=)"
+proof (rule activation_collect_sound[where sg = ivl_ctx_sg and admiss = "admiss_exact ivl_enterc"
+        and seedc = "[]"
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
@@ -456,29 +456,30 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
     by (rule twice_dg.dg_ctx_act_edge)
 next
+  \<comment> \<open>ADMISS_TOTAL --- \<open>admiss_exact\<close> is total since \<open>ivl_enterc\<close> is a function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact ivl_enterc u c s c'"
+    by (simp add: admiss_exact_def)
+next
   \<comment> \<open>CALL --- enter routed to \<open>ivl_decode\<close> of the entered formal: \<open>ivl_ctx_sg_seed\<close>
      (route consistency + seed publication).\<close>
-  show "\<And>u dst pars args p cont c s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter twice_gs (CallEdge dst pars args) s
-             \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                    ivl_enterc u c (call_enter twice_gs (CallEdge dst pars args) s)))\<rbrakk>"
-    by (rule ivl_ctx_sg_seed)
+  fix u dst pars args p cont c s c'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
+    and sm: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk>"
+    and adm: "admiss_exact ivl_enterc u c (call_enter twice_gs (CallEdge dst pars args) s) c'"
+  show "call_enter twice_gs (CallEdge dst pars args) s
+          \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p, c'))\<rbrakk>"
+    using adm ivl_ctx_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
   \<comment> \<open>COMB --- return combine at the caller context \<open>c1\<close>: the resumed activation keeps its
      context, so \<open>ivl_ctx_sg_comb\<close> already lands at \<open>c1\<close>.\<close>
-  show "\<And>cl dst pars args p cont c1 s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store twice_gs twice_cfg cl s es
-        \<Longrightarrow> combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
-    by (rule ivl_ctx_sg_comb)
-next
-  \<comment> \<open>MONO --- trivial at exact match.\<close>
-  show "\<And>c1 c2. c1 = c2 \<Longrightarrow> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, c2))\<rbrakk>"
-    by simp
+  fix cl dst pars args p cont c1 c2 s t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
+    and sm: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
+    and adm: "admiss_exact ivl_enterc cl c1 es c2"
+    and tm: "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, c2))\<rbrakk>"
+    and ces: "call_enter_store twice_gs twice_cfg cl s es"
+  show "combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
+    using adm tm ivl_ctx_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
 end

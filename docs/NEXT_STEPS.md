@@ -59,58 +59,57 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    `'c`: `vars`/`seed_key` already pair `'c` with `pp`, which disambiguates
    by callee. Proved at exact call sites (matching the flagship); the
    exactness precondition above is not lifted -- that's G2.
-2. **G2 -- abstract context coverage semantics (research item), split into
-   G2a (done) and G2b (open).**
-   **G2a -- generalize `activation_collect` in place. Done, batch-green
-   (2026-08-10).** `activation_collect` (`CFG_Local_Trace.thy`) now takes
-   a coverage relation `ctx_rep :: 'c => 'c => bool` as an explicit
-   parameter -- membership is `ctx_rep (key enterc seedc t) c`, not literal
-   equality -- with no algebraic assumption baked into the definition
-   itself (reflexivity, transitivity, etc. are added only at the call site
-   that actually needs them). `activation_collect_sound`
-   (`Activation_Backbone.thy`) gained one new `MONO` obligation
-   (`ctx_rep c1 c2 ==> sg-slot c1 <= sg-slot c2`) to bridge a trace's exact
-   key to a covering query; CALL/COMB and the trace-level engine
-   (`valid_ltr_ctx_sound`, `ltr_gamma`) are untouched, since they reason
-   about a trace's own exact key, which `ctx_rep`-coverage never revisits.
-   `ctx_rep = (=)` is the literal old behavior (`MONO` closes by `simp`).
-   Threaded generically (not hardcoded) through the reusable bridge layers
-   -- `LTR_Collect.thy`, `Located_LTR.thy`,
-   `Formalization/Pipeline/Source_Activation_Sound.thy`, each carrying
-   `ctx_rep` as a genuine parameter with only a local `ctx_rep_refl`
-   assumption where an exact-key membership is derived -- and instantiated
-   at `ctx_rep = (=)` only at the true leaf sites: `LTR_Abstract.thy`'s
-   `activation_collect_subset_acc` (no cross-context monotonicity on `acc`
-   exists yet, so this stays exact), `Call_String_Collecting_Refinement
-   .thy`, all four CallString examples (Interval K1/K2/flat, Sign K1/K2),
-   and both G1 Ctx examples (`Example_Interval_DG_Ctx_Collect.thy`,
-   `Example_Interval_Source_Ctx.thy`). Eleven files total; batch build
-   confirmed green (`Finished Voblint_Examples`, exit 0, no `FAILED`).
-   **G2b -- the actual coverage capability (`ctx_rep != (=)`), still open.**
-   G2a's relaxation lives only in the wrapper between `activation_collect`
-   and `sg`; CALL's own obligation (`Activation_Backbone.thy`,
-   `LTR_Abstract.thy`'s `ltr_gamma` locale) still demands the callee land
-   in the *exact* `enterc`-computed slot for every concrete `s` a caller's
-   abstract state represents, because `ltr_gamma`'s `bnd` is defined as
-   membership at the trace's own exact key and COMB reads the callee back
-   at that same exact key via `callee_entry_invariant`. Getting a real
-   covering witness (e.g. Interval's `route` producing `Top` at a call
-   site) needs `bnd` itself redefined under `ctx_rep`
-   (`bnd u == EX c. ctx_rep (key ... u) c & sink_store u : acc (node u) c`),
-   `call_closed`/`return_closed`/`gamma_chain` re-derived against that
-   weaker `bnd`, a new cross-key monotonicity obligation on
-   `dg_ctx_activation` itself (`DG_Ctx_Activation.thy`'s `vars` is a flat
-   unordered `(pp x 'c)` set today with no relation between different
-   context keys at the same node), and `route_enterc_agree`
-   (`Routed_Context.thy`) relaxed to
-   `ctx_rep (enterc u ctx (call_enter gs ca s)) (route u ctx d ca)`. This
-   is genuinely Core-locale redesign, not a mechanical swap -- confirmed by
-   two independent derivation passes. Likely converges with #77's "Context
-   Widening". Acceptance case: `x := random(); p(x);` analyzable under
-   `--context entry-state` (`ctx_rep = (<=)` on `ivl`) without a statically
-   proven singleton argument. Only after this does `--context entry-state`
-   become a claim about arbitrary programs rather than exact-argument call
-   sites.
+2. **G2 -- abstract context coverage semantics. Done, batch-green
+   (2026-08-10).** G2a's `ctx_rep`-over-exact-`key` design (below, kept for
+   the historical record) turned out not to compose through COMB: a
+   trace's admitted context and the callee's admitted context were
+   rediscovered independently, so nothing tied them together at the
+   return. The fix was architectural, not a patch -- replace the
+   deterministic `enterc :: cfg_node => 'c => store => 'c` with a
+   relational `admiss :: cfg_node => 'c => store => 'c => bool`, and key
+   traces through it via a new inductive `ctx_key` (mirroring `key`'s own
+   recursion, `CFG_Local_Trace.thy`) instead of the old deterministic
+   `key`. This is the paper's own soundness argument (Erhard, Schinabeck,
+   Schwarz, Seidl, "Context Gas and friends," IJSTTT 2025, Section 10's
+   description function `beta`, rules D1-D3, Theorem 1/Theorem 2), not an
+   ad hoc analogy: the callee's admitted context is now *derived from* the
+   caller's own admiss-witnessed context (`ctx_key_entry_invariant_iff`),
+   never rediscovered, which is exactly what makes COMB provable.
+
+   `ltr_gamma` (`LTR_Abstract.thy`) is restated over `admiss`/`seedc` with
+   a new `ADMISS_TOTAL` assumption and `admiss`-relaxed CALL/COMB;
+   `activation_collect` (`CFG_Local_Trace.thy`) is redefined directly via
+   `ctx_key`, dropping G2a's `ctx_rep`/`MONO` machinery entirely (`ctx_key`
+   itself now does what `MONO` patched around). `admiss_exact enterc`
+   (`admiss_exact_def`: `c' = enterc u c s`) is the functional special case
+   recovering the old deterministic behavior exactly, proved via
+   `ctx_key_exact_iff`: `ctx_key (admiss_exact enterc) seedc t c <->
+   key enterc seedc t = c`. Every existing exact-context client --
+   `Call_String_Collecting_Refinement.thy`, all four CallString examples
+   (Interval K1/K2/flat, Sign K1/K2), both G1 Ctx examples
+   (`Example_Interval_DG_Ctx_Collect.thy`, `Example_Interval_Source_Ctx
+   .thy`) -- reduces to its previous behavior through that lemma, with no
+   change to `Routed_Context.thy`'s locale itself: `route_enterc_agree`
+   stays a plain equation, since an `admiss` instance that ignores its
+   `store` argument (using only the caller's already-solved abstract
+   state) is *already* `admiss_exact`-shaped.
+
+   The acceptance case is proved: `Example_Interval_DG_EntryState_{Base,
+   Ctx,Sound,Collect}.thy` compile `void p(a) { return a }` / `void main()
+   { x := random(); y := p(x) }`, route the call through the caller's
+   solved (necessarily `Top`) interval for `x`, and the executable solver
+   confirms `ctx_call = [ivl_top]` (`ctx_call_val`, `by eval`) -- one
+   context, not a family indexed by which concrete value `random()`
+   produced. `entry_state_coverage` (`Example_Interval_DG_EntryState_Collect
+   .thy`) is the crux corollary: for every concrete store reaching the
+   call site, the callee entry lands at the same fixed `ctx_call`, with no
+   `s`-dependence anywhere in the conclusion.
+
+   G2a's design, for reference: `activation_collect` took a coverage
+   relation `ctx_rep :: 'c => 'c => bool` (membership `ctx_rep (key enterc
+   seedc t) c`), and `activation_collect_sound` a `MONO` obligation
+   (`ctx_rep c1 c2 ==> sg-slot c1 <= sg-slot c2`) -- both now superseded by
+   `admiss`/`ctx_key` and removed from the codebase.
 3. **G3 -- executable context-sensitive Interval endpoint,** analogous to
    `analyse_interval_td_raw` but keyed on `(pp x ctx)`, same `solve_dom`/
    `solve_c` convention, `export_code`'d.
@@ -120,9 +119,11 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
 5. **G5 -- CLI exposure + precision witness.** `--context none` (current,
    default) / `--context entry-state`; regression: two calls at distinct
    exact argument values, `--context none` -> `UNKNOWN`, `--context
-   entry-state` -> `PROVED`. Open question: whether G3-G5 ship on G1's
-   exact-entry contract with a runtime-checked exactness precondition
-   (the same idiom `solve_dom` uses for termination), or wait for G2.
+   entry-state` -> `PROVED`; a `random()`-argument call, `--context none`
+   -> `UNKNOWN`, `--context entry-state` -> still sound (one wide context,
+   per G2's acceptance case), not a false `PROVED`. G2's `admiss`/`ctx_key`
+   soundness is unconditional, so G3-G5 no longer wait on anything -- they
+   can build directly on it.
 
 Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
 #66's M4 / `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`

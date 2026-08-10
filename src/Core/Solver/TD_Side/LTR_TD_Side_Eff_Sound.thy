@@ -71,8 +71,8 @@ theorem ltr_post_fixpoint_sound_at_eff:
   assumes entry_le: "s0 \<le> side_env \<sigma> (cfg_entry g)"
   shows "ltr_collect gs g S v0 \<subseteq> \<lbrakk>side_env \<sigma> v0\<rbrakk>"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v _. \<lbrakk>side_env \<sigma> v\<rbrakk>" "\<lambda>_ _ _. ()" "()" gs
-  proof (standard, goal_cases ROOT EDGE CALL COMB)
+  interpret G: ltr_gamma g S "\<lambda>v _. \<lbrakk>side_env \<sigma> v\<rbrakk>" "admiss_exact (\<lambda>_ _ _. ())" "()" gs
+  proof (standard, goal_cases ROOT EDGE ADMISS_TOTAL CALL COMB)
     case (ROOT s)
     then show ?case using S_sound gamma_state_mono[OF entry_le] by blast
   next
@@ -80,13 +80,16 @@ proof -
     show ?case
       by (rule edge_step_sound_eff[OF inr step_le[OF EDGE(1)] EDGE(2) EDGE(3)])
   next
-    case (CALL u dst pars args p cont c s)
+    case ADMISS_TOTAL
+    show ?case by (simp add: admiss_exact_def)
+  next
+    case (CALL u dst pars args p cont c s c')
     show ?case
       by (rule call_enter_sound_eff[OF inr enter_le[OF CALL(1)] CALL(2)])
   next
-    case (COMB cl dst pars args p cont c1 s t es)
+    case (COMB cl dst pars args p cont c1 c2 s t es)
     have "combine_collect gs dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>\<rbrakk>"
-      using etf_sound_combine inr COMB(2) COMB(3) unfolding side_env_def by auto
+      using etf_sound_combine inr COMB(2) COMB(4) unfolding side_env_def by auto
     then show ?case
       using gamma_state_mono[OF combine_le[OF COMB(1)]] by blast
   qed
@@ -95,8 +98,10 @@ proof -
     fix x assume "x \<in> ltr_collect gs g S v0"
     then obtain u where u: "u \<in> valid_ltr gs g S" "sink_node u = v0" "sink_store u = x"
       unfolding ltr_collect_def by blast
-    have "u \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr u(1) by blast
-    then have "sink_store u \<in> \<lbrakk>side_env \<sigma> (sink_node u)\<rbrakk>" by (simp add: G.gamma_ltr_def)
+    have gt: "G.bnd u" using G.valid_ltr_subset_gamma_ltr u(1) by (auto simp: G.gamma_ltr_def)
+    have ck: "ctx_key (admiss_exact (\<lambda>_ _ _. ())) () u ()"
+      by (simp add: ctx_key_exact_iff)
+    have "sink_store u \<in> \<lbrakk>side_env \<sigma> (sink_node u)\<rbrakk>" using gt ck by blast
     then show "x \<in> \<lbrakk>side_env \<sigma> v0\<rbrakk>" using u(2,3) by simp
   qed
 qed

@@ -387,18 +387,31 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs enterc seedc ctx_rep g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect gs admiss seedc g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
-  has a key, so ranging over all keys recovers the unfiltered collecting, PROVIDED \<open>ctx_rep\<close>
-  at least covers a key by itself (\<open>ctx_rep_refl\<close>); a covering relation that never matches a
-  trace's own key could leave it out of every slot. Exact match (\<open>ctx_rep = (=)\<close>) is the
-  instance where \<open>ctx_rep_refl\<close> is \<open>refl\<close>. No finiteness assumption.\<close>
+  has SOME admissible context, PROVIDED \<open>admiss\<close> can always continue (\<open>ADMISS_TOTAL\<close>,
+  \<open>ctx_key_exists\<close>); an \<open>admiss\<close> that never continues at some point could leave a trace out
+  of every slot. No finiteness assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
-  assumes ctx_rep_refl: "\<And>c. ctx_rep c c"
-  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc seedc ctx_rep g S v c)"
-  using ctx_rep_refl unfolding activation_collect_def ltr_collect_def by blast
+  assumes tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
+  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs admiss seedc g S v c)"
+proof
+  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs admiss seedc g S v c)"
+  proof
+    fix x assume "x \<in> ltr_collect gs g S v"
+    then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
+      by (rule ltr_collect_E)
+    obtain c where "ctx_key admiss seedc t c"
+      using ctx_key_exists[where admiss = admiss, OF tot] by blast
+    with t show "x \<in> (\<Union>c. activation_collect gs admiss seedc g S v c)"
+      unfolding activation_collect_def by blast
+  qed
+next
+  show "(\<Union>c. activation_collect gs admiss seedc g S v c) \<subseteq> ltr_collect gs g S v"
+    unfolding activation_collect_def ltr_collect_def by blast
+qed
 
 subsection \<open>Matched returns\<close>
 

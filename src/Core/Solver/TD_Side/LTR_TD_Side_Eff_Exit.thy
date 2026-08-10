@@ -41,8 +41,8 @@ theorem ltr_post_fixpoint_sound_at_eff_cone:
 proof -
   interpret se: sound_effectful_transfer gs etf by (rule se)
   interpret G: ltr_gamma g S "\<lambda>v _. if cfg_reaches g v v0 then \<lbrakk>side_env \<sigma> v\<rbrakk> else UNIV"
-      "\<lambda>_ _ _. ()" "()" gs
-  proof (standard, goal_cases ROOT EDGE CALL COMB)
+      "admiss_exact (\<lambda>_ _ _. ())" "()" gs
+  proof (standard, goal_cases ROOT EDGE ADMISS_TOTAL CALL COMB)
     case (ROOT s)
     show ?case
     proof (cases "cfg_reaches g (cfg_entry g) v0")
@@ -64,7 +64,10 @@ proof -
       case False then show ?thesis by simp
     qed
   next
-    case (CALL u dst pars args p cont c s)
+    case ADMISS_TOTAL
+    show ?case by (simp add: admiss_exact_def)
+  next
+    case (CALL u dst pars args p cont c s c')
     show ?case
     proof (cases "cfg_reaches g (FunctionEntry p) v0")
       case True
@@ -77,7 +80,7 @@ proof -
       case False then show ?thesis by simp
     qed
   next
-    case (COMB cl dst pars args p cont c1 s t es)
+    case (COMB cl dst pars args p cont c1 c2 s t es)
     show ?case
     proof (cases "cfg_reaches g cont v0")
       case True
@@ -85,7 +88,7 @@ proof -
       have rex: "cfg_reaches g (FunctionResult p) v0"
         using cfg_reaches_comb_result_src[OF COMB(1) True] .
       have s_in: "s \<in> \<lbrakk>side_env \<sigma> cl\<rbrakk>" using COMB(2) rcl by simp
-      have t_in: "t \<in> \<lbrakk>side_env \<sigma> (FunctionResult p)\<rbrakk>" using COMB(3) rex by simp
+      have t_in: "t \<in> \<lbrakk>side_env \<sigma> (FunctionResult p)\<rbrakk>" using COMB(4) rex by simp
       have "combine_collect gs dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>\<rbrakk>"
         using se.etf_sound_combine inr s_in t_in unfolding side_env_def by auto
       then have "combine_collect gs dst s t \<in> \<lbrakk>side_env \<sigma> cont\<rbrakk>"
@@ -100,10 +103,12 @@ proof -
     fix x assume "x \<in> ltr_collect gs g S v0"
     then obtain u where u: "u \<in> valid_ltr gs g S" "sink_node u = v0" "sink_store u = x"
       unfolding ltr_collect_def by blast
-    have "u \<in> G.gamma_ltr" using G.valid_ltr_subset_gamma_ltr u(1) by blast
-    then have "sink_store u
+    have gt: "G.bnd u" using G.valid_ltr_subset_gamma_ltr u(1) by (auto simp: G.gamma_ltr_def)
+    have ck: "ctx_key (admiss_exact (\<lambda>_ _ _. ())) () u ()"
+      by (simp add: ctx_key_exact_iff)
+    have "sink_store u
         \<in> (if cfg_reaches g (sink_node u) v0 then \<lbrakk>side_env \<sigma> (sink_node u)\<rbrakk> else UNIV)"
-      by (simp add: G.gamma_ltr_def)
+      using gt ck by blast
     then have "sink_store u \<in> \<lbrakk>side_env \<sigma> v0\<rbrakk>" using u(2) by (simp add: cfg_reaches_refl)
     then show "x \<in> \<lbrakk>side_env \<sigma> v0\<rbrakk>" using u(3) by simp
   qed

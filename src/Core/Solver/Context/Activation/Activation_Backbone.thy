@@ -12,50 +12,43 @@ text \<open>The activation key is fixed when a call creates an activation and re
 
 subsection \<open>The domain-independent backbone\<close>
 
-text \<open>Four local obligations connect the abstract solution to the trace rules.
-  The root seed covers initial stores; ordinary edges preserve the activation key; calls
-  cover the entered store at the routed callee key; and return combination writes to the
-  original caller key. The theorem is parameterized by the solution reader, entry routing,
-  and root key. No return-key function is needed because the caller key is stable.
-
-  \<open>MONO\<close> is the one obligation the trace-level engine (\<open>valid_ltr_ctx_sound\<close>) does not
-  itself need: it delivers soundness at a trace's own EXACT key, and \<open>MONO\<close> is what lets
-  that exact-key fact answer a query at any \<open>ctx\<close> the exact key is \<open>ctx_rep\<close>-covered by.
-  At \<open>ctx_rep = (=)\<close>, \<open>MONO\<close> is the trivial \<open>subset_refl\<close> instance and every reader that
-  never varies the queried context across a covering relation reduces to today's exact
-  match.\<close>
+text \<open>Local obligations connect the abstract solution to the trace rules. The root seed
+  covers initial stores; ordinary edges preserve the activation context; \<open>ADMISS_TOTAL\<close>
+  guarantees a call can always continue into some admissible context; calls cover the
+  entered store at every context \<open>admiss\<close> admits; and return combination writes to the
+  original caller context, reading the callee back at whichever context \<open>admiss\<close> related to
+  that SAME caller context (\<open>COMB\<close>'s \<open>c2\<close> is not rediscovered independently --- it is the
+  witness \<open>CALL\<close>'s own \<open>admiss\<close> fact supplies). The theorem is parameterized by the solution
+  reader, admissibility relation, and root context.\<close>
 
 theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
-    and ctx_rep :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and seedc :: 'c
     and gs :: "vname \<Rightarrow> bool"
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
-    and CALL: "\<And>u dst pars args p cont c s.
+    and ADMISS_TOTAL: "\<And>u c s. \<exists>c'. admiss u c s c'"
+    and CALL: "\<And>u dst pars args p cont c s c'.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s
-             \<in> \<lbrakk>sg (Inl (FunctionEntry p,
-                          enterc u c (call_enter gs (CallEdge dst pars args) s)))\<rbrakk>"
-    and COMB: "\<And>cl dst pars args p cont c1 s t es.
+        \<Longrightarrow> admiss u c (call_enter gs (CallEdge dst pars args) s) c'
+        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
+    and COMB: "\<And>cl dst pars args p cont c1 c2 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c2))\<rbrakk>
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-    and MONO: "\<And>c1 c2. ctx_rep c1 c2 \<Longrightarrow> \<lbrakk>sg (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>sg (Inl (v, c2))\<rbrakk>"
-  shows "activation_collect gs enterc seedc ctx_rep g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+  shows "activation_collect gs admiss seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs enterc seedc ctx_rep g S v ctx"
+  fix st assume "st \<in> activation_collect gs admiss seedc g S v ctx"
   then obtain t where t: "t \<in> valid_ltr gs g S"
-    and sn: "sink_node t = v" and kc: "ctx_rep (key enterc seedc t) ctx" and st: "sink_store t = st"
+    and sn: "sink_node t = v" and kc: "ctx_key admiss seedc t ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
-  have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"
-    using ENTRY_G EDGE CALL COMB t by (rule valid_ltr_ctx_sound)
-  then have "st \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>" using sn st by simp
-  then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using kc MONO by blast
+  have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, ctx))\<rbrakk>"
+    using ENTRY_G EDGE ADMISS_TOTAL CALL COMB t kc by (rule valid_ltr_ctx_sound)
+  then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn st by simp
 qed
 
 end

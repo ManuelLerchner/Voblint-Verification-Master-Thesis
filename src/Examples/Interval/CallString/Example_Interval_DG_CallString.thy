@@ -461,10 +461,10 @@ lemma cinit_le_cinit_ivl_st: "cinit_stores twice_gs \<subseteq> \<lbrakk>fun_of_
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 
 theorem twice_cs_activation_collect_sound:
-  "activation_collect twice_gs enterc_cs (cfg_entry twice_cfg) (=) twice_cfg (cinit_stores twice_gs) v ctx
+  "activation_collect twice_gs (admiss_exact enterc_cs) (cfg_entry twice_cfg) twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and enterc = enterc_cs
-        and seedc = "cfg_entry twice_cfg" and ctx_rep = "(=)"
+proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and admiss = "admiss_exact enterc_cs"
+        and seedc = "cfg_entry twice_cfg"
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
@@ -495,27 +495,26 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c))\<rbrakk>"
     by (rule twice_cs_dg.dg_ctx_act_edge)
 next
+  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>enterc_cs\<close> is a total function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact enterc_cs u c s c'" by (simp add: admiss_exact_def)
+next
   \<comment> \<open>CALL --- enter routed to the call site itself: \<open>ivl_ctx_sg_cs_seed\<close>.\<close>
-  show "\<And>u dst pars args p cont c s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter twice_gs (CallEdge dst pars args) s
-             \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionEntry p,
-                    enterc_cs u c (call_enter twice_gs (CallEdge dst pars args) s)))\<rbrakk>"
-    by (rule ivl_ctx_sg_cs_seed)
+  fix u dst pars args p cont c s c'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
+    and sm: "s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (u, c))\<rbrakk>"
+    and adm: "admiss_exact enterc_cs u c (call_enter twice_gs (CallEdge dst pars args) s) c'"
+  show "call_enter twice_gs (CallEdge dst pars args) s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionEntry p, c'))\<rbrakk>"
+    using adm ivl_ctx_sg_cs_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
   \<comment> \<open>COMB --- return combine at the caller's own call-site context.\<close>
-  show "\<And>cl dst pars args p cont c1 s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionResult p, enterc_cs cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store twice_gs twice_cfg cl s es
-        \<Longrightarrow> combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cont, c1))\<rbrakk>"
-    by (rule ivl_ctx_sg_cs_comb)
-next
-  \<comment> \<open>MONO --- trivial at exact match.\<close>
-  show "\<And>c1 c2. c1 = c2 \<Longrightarrow> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c2))\<rbrakk>"
-    by simp
+  fix cl dst pars args p cont c1 c2 s t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
+    and sm: "s \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cl, c1))\<rbrakk>"
+    and adm: "admiss_exact enterc_cs cl c1 es c2"
+    and tm: "t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (FunctionResult p, c2))\<rbrakk>"
+    and ces: "call_enter_store twice_gs twice_cfg cl s es"
+  show "combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cont, c1))\<rbrakk>"
+    using adm tm ivl_ctx_sg_cs_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
 section \<open>Call-site-context-expanded analysis graph\<close>
