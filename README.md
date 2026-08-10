@@ -234,7 +234,7 @@ before it reaches CI.
 * **[AFP](https://www.isa-afp.org/)** (Archive of Formal Proofs) checkout containing `Root_Balanced_Tree` and `Dijkstra_Shortest_Path`.
 * **[pixi](https://pixi.sh/)** -- the repository's task runner and Python-side dependency manager (I/R, the grammar generators, the property-test suite, `lefthook`). `pixi.toml` is the single command surface: `pixi run <task>`, `pixi task list` to see all of them.
 * `git`, `bash`, and standard POSIX tools.
-* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, and GHC, for the code-generation regression drivers -- see "Executable code generation" below. conda-forge's OCaml packages have no osx-arm64 build for `ocaml-findlib`/`ocaml-zarith`, so pixi does not manage this toolchain; opam/ghcup do.
+* OCaml (`ocamlfind`, `menhir`, `ocamllex`, `zarith`) via opam, for the code-generation regression driver -- see "Executable code generation" below. conda-forge's OCaml packages have no osx-arm64 build for `ocaml-findlib`/`ocaml-zarith`, so pixi does not manage this toolchain; opam does.
 
 ### Pixi task reference
 
@@ -252,7 +252,7 @@ for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
 | `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
 | `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
 | `codegen-ocaml-check` | Isabelle, `AFP`, opam | Compile-check the generated OCaml |
-| `regression` | opam, GHC | Run the Haskell/OCaml drivers under `codegen/regression/` against Isabelle-proved expected output |
+| `regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
 | `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
 | `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
 | `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
@@ -290,7 +290,7 @@ widening/warrowing-backed solver) -- reusing the exact functions the
 soundness theorems are proved about, not a parallel implementation. `analyse`
 (`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_kind`
 (`Sign_Analysis`/`Interval_Analysis`) to either domain's check report. All
-three, plus the VIMP AST constructors, are exported to Haskell and OCaml so
+three, plus the VIMP AST constructors, are exported to OCaml so
 external code can build a program and call `analyse` without touching
 Isabelle: `export_code` translates the same executable equations the kernel
 checked, so the generated function is not a hand-written stand-in for a
@@ -312,21 +312,21 @@ verdict `analyse` actually returns, with both facts discharged and no
 assumption left open.
 
 `code_identifier` declarations (`Example_Analysis_Dispatch.thy`) group the
-~60 contributing Isabelle theories into a small number of named modules
-instead of one undifferentiated file. Haskell splits four ways -- `Core`
-(VIMP/CFG/executable state/generic analysis plumbing/the vendored solver;
-these cannot be split further -- real mutual code-level dependencies, e.g.
-the executable state is generically instantiated at the solver's own
-`widening`/`narrowing` type classes), `Sign`, `Interval`, and `Analyse` (the
-public facade: `analysis_kind`, `analyse` itself, ~30 lines). OCaml's
-serializer only ever emits one file regardless of `module_name`/
-`code_identifier`, so the same grouping instead organizes that one file into
-nested `module ... = struct ... end` blocks; there `Sign`/`Interval` fold
-into `Core` rather than staying separate, since splitting them out passes
-Isabelle's own `export_code` checks but `ocamlfind ocamlopt` then rejects an
-unbound type-class dictionary field the OCaml module-signature inference
-doesn't expose across that boundary -- not fixable by regrouping, so `Core`/
-`Analyse` is the finest split both Isabelle and the OCaml compiler accept.
+~60 contributing Isabelle theories into two named OCaml modules instead of
+one undifferentiated file: `Core` (VIMP/CFG/executable state/generic
+analysis plumbing/the vendored solver/both domains' lattices and transfer
+functions; these cannot be split further -- real mutual code-level
+dependencies, e.g. the executable state is generically instantiated at the
+solver's own `widening`/`narrowing` type classes) and `Analyse` (the public
+facade: `analysis_kind`, `analyse` itself, ~30 lines). OCaml's serializer
+only ever emits one file regardless of `module_name`/`code_identifier`, so
+the grouping instead organizes that one file into nested
+`module ... = struct ... end` blocks. Splitting `Sign`/`Interval` out of
+`Core` passes Isabelle's own `export_code` checks but `ocamlfind ocamlopt`
+then rejects an unbound type-class dictionary field the OCaml
+module-signature inference doesn't expose across that boundary -- not
+fixable by regrouping, so `Core`/`Analyse` is the finest split the OCaml
+compiler accepts.
 
 ```bash
 # Regenerate codegen/generated/ from the export_code declarations
@@ -335,17 +335,17 @@ AFP=/path/to/afp/thys pixi run codegen
 # Fail if codegen/generated/ has drifted from those declarations
 AFP=/path/to/afp/thys pixi run codegen-check
 
-# Compile and run the hand-written Haskell/OCaml drivers under
-# codegen/regression/ against codegen/generated/, and check their output
+# Compile and run the hand-written OCaml driver under
+# codegen/regression/ against codegen/generated/, and check its output
 # against the values already proved by Example_Analysis_Dispatch.thy's
 # dispatch_demo_sign_unknown / dispatch_demo_interval_precise
 pixi run regression
 ```
 
 Generated sources are tracked under `codegen/generated/`; do not hand-edit
-them. `codegen/regression/{haskell,ocaml}/` hold the hand-written drivers
-that exercise the generated code and compare it against the Isabelle-proved
-expected output -- so the generated Haskell/OCaml is checked against the same
+them. `codegen/regression/ocaml/` holds the hand-written driver that
+exercises the generated code and compares it against the Isabelle-proved
+expected output -- so the generated OCaml is checked against the same
 theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
 codegen-check` and `pixi run regression` run in CI (`.github/workflows/ci.yml`).
 

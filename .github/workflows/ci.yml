@@ -21,50 +21,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Check Isabelle ASCII-only sources
         run: |
           find src -name '*.thy' -print0 | xargs -0 python3 scripts/check_isabelle_ascii.py
 
-  build:
+  # build-isabelle is the sole cross-run heap-cache writer (see #103): a
+  # plain incremental build (no -c) that both validates and warms the
+  # cache, then hands its exact heap state to the jobs below as a
+  # same-run workflow artifact (use-cache: false on all of them, so only
+  # one job ever writes the cross-run cache). Every consumer still runs
+  # its real `isabelle build`/`isabelle lint` command -- the artifact
+  # only changes how much of that is incremental, never whether it runs,
+  # so a stale or restored-from-a-different-commit heap can never make a
+  # broken source tree look green.
+  build-isabelle:
     runs-on: ubuntu-latest
-    # Runs the whole job inside the Isabelle image (replaces the previous
-    # nested `docker run -ec '...'` single-step wrapper, which existed
-    # because setup-isabelle-action's `isabelle getenv` calls only work
-    # inside this image but the job wasn't actually scoped to it). Every
-    # step below now runs natively in the same container, so later steps
-    # keep the warm heaps `html` builds instead of needing to re-fetch a
-    # toolchain per step.
     container:
       image: makarius/isabelle:Isabelle2025-2
       options: --user root
-
     steps:
-      # The image has no git; actions/checkout and the submodule step below
-      # both need it. The one unavoidable apt-get in this job.
       - name: Install git
         run: apt-get update -qq && apt-get install -y -qq git > /dev/null
 
       - name: Checkout Goblint Formalization
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           submodules: false
+          persist-credentials: false
 
       - name: Trust the checked-out workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      # GITHUB_TOKEN cannot clone other private repos (the td-verification fork).
-      # Add a classic PAT with "repo" scope as secret SUBMODULES_TOKEN.
       - name: Initialize td-verification submodule
         env:
           SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
         run: |
-          if [ -z "$SUBMODULES_TOKEN" ]; then
-            echo "::error title=Missing SUBMODULES_TOKEN::Create a classic PAT (repo scope) and add it as repository secret SUBMODULES_TOKEN so CI can clone the private td-verification fork."
-            exit 1
-          fi
           git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
           git submodule sync vendor/td-verification
           git submodule update --init --depth 1 vendor/td-verification
@@ -72,8 +68,6 @@ jobs:
       - name: Setup Isabelle
         uses: ./.github/actions/setup-isabelle-action
 
-      # scripts/mk/require-afp.sh (sourced by every pixi task below) reads
-      # $AFP, not $AFP_COMPONENT_BASE; bridge once instead of per-step.
       - name: Bridge AFP_COMPONENT_BASE to AFP
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
@@ -83,21 +77,241 @@ jobs:
       - name: Apply td-verification compatibility patch
         run: pixi run vendor
 
-      # Voblint_Examples.Example_Analysis_Dispatch's `checking Haskell`
-      # export_code clause runs inside this build and needs ISABELLE_GHC set;
-      # `ghc_setup` provisions Isabelle's managed GHC via Stack (the Haskell
-      # counterpart of the `ocaml_setup` step further below).
-      - name: Provision managed GHC for Isabelle's Haskell export check
-        run: $ISABELLE ghc_setup
+      # Plain incremental build (no -c): the actual cache writer and the
+      # thing that validates/warms the heap cache. html.sh's -c flag
+      # forces a clean rebuild of every session regardless of cache state
+      # (needed so -o browser_info presents every session, not just
+      # changed ones) -- using it here would defeat the cache on every
+      # single run. html generation is its own downstream consumer job
+      # below, which pays that -c cost only when actually needed.
+      - name: Build (incremental, populates the heap cache)
+        run: pixi run build
 
+      - name: Report heap store size
+        run: du -sh "$ISABELLE_HOME_USER/heaps/"
+
+      - name: Upload heap state for same-run consumers
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+          retention-days: 1
+
+  html:
+    needs: build-isabelle
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Download exact heap state from build-isabelle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+
+      # Still a clean build (-c) internally, for browser_info's own
+      # every-session-presented requirement -- consuming build-isabelle's
+      # heaps here doesn't avoid that, it just keeps that cost isolated
+      # to this job instead of gating the fast validation jobs on it.
       - name: Build HTML docs (clean build of every session)
         run: pixi run html
+
+      - name: Upload GitHub Pages site
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: html-docs
+          path: docs/html
+          retention-days: 1
+
+  isabelle-lint:
+    needs: build-isabelle
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Download exact heap state from build-isabelle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
 
       - name: Isabelle community linter
         run: pixi run isabelle-lint
 
+  codegen-check:
+    needs: build-isabelle
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Download exact heap state from build-isabelle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+
       - name: Codegen drift check
         run: pixi run codegen-check
+
+  codegen-ocaml-check:
+    needs: build-isabelle
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      # libgmp-dev/pkg-config: opam's conf-gmp check needs GMP's dev headers
+      # (pkg-config --exists gmp), not just a runtime lib -- same GMP
+      # requirement the GHC toolchain needed, this time for the OCaml side.
+      - name: Install git, unzip, build-essential, m4, libgmp-dev, pkg-config
+        run: apt-get update -qq && apt-get install -y -qq git unzip build-essential m4 libgmp-dev pkg-config > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+        with:
+          use-cache: 'false'
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Download exact heap state from build-isabelle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: isabelle-heaps
+          path: ${{ env.ISABELLE_HOME_USER }}/heaps/
 
       - name: Provision managed OCaml/zarith for Isabelle's own export check
         run: $ISABELLE ocaml_setup
@@ -105,30 +319,18 @@ jobs:
       - name: Isabelle-native OCaml export_code check
         run: pixi run codegen-ocaml-check
 
-      - name: Upload GitHub Pages site
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: html-docs
-          path: docs/html
-          retention-days: 1
-
   regression-drivers:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Goblint Formalization
-        uses: actions/checkout@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 1
           submodules: false
-
-      - name: Setup GHC
-        uses: haskell-actions/setup@v2
-        with:
-          ghc-version: '9.10'
+          persist-credentials: false
 
       - name: Setup OCaml
-        uses: ocaml/setup-ocaml@v3
+        uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
         with:
           ocaml-compiler: '5'
 
@@ -156,7 +358,7 @@ jobs:
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
+    needs: html
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -166,19 +368,19 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Download site artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: html-docs
           path: docs/html
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: docs/html
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0

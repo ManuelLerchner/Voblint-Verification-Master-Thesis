@@ -162,6 +162,9 @@ module Core : sig
   val char_of_integer : Z.t -> char
   val explode : string -> char list
   val proc_decl_of : string list -> com -> unit proc_decl_ext
+  val prog_main_name : string
+  val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
+  val prog_main : unit imp_prog_ext -> com
   val char_0x2D : char
   val show_int : int -> char list
   val sort_key : 'b linorder -> ('a -> 'b) -> 'a list -> 'a list
@@ -170,10 +173,10 @@ module Core : sig
     unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val cfg_intra_list :
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
+  val mk_program :
+    (string * unit proc_decl_ext) list ->
+      com -> string list -> unit imp_prog_ext
   val prog_procs : unit imp_prog_ext -> string list
-  val prog_main : 'a imp_prog_ext -> com
-  val prog_main_name : string
-  val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
   val zero_nat : nat
   val declared_global_vars : 'a imp_prog_ext -> string list
   val compile_proc :
@@ -186,9 +189,6 @@ module Core : sig
   val compile_prog :
     (string -> unit proc_decl_ext option) ->
       string list -> string -> com -> unit cfg_ext
-  val make :
-    (string * unit proc_decl_ext) list ->
-      com -> string list -> unit imp_prog_ext
   val char_0x0A : char
   val char_0x20 : char
   val char_0x21 : char
@@ -1494,7 +1494,7 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
 
 type 'a imp_prog_ext =
-  Imp_prog_ext of (string * unit proc_decl_ext) list * com * string list * 'a;;
+  Imp_prog_ext of (string * unit proc_decl_ext) list * string list * 'a;;
 
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
@@ -1640,6 +1640,8 @@ let rec fmfilter
   p (Fmap_of_list m) = Fmap_of_list (filtera (fun (k, _) -> p k) m);;
 
 let rec fmdrop _A a = fmfilter (fun aa -> not (HOL.eq _A aa a));;
+
+let rec the (Some x2) = x2;;
 
 let ret_var : string = "#ret";;
 
@@ -2178,6 +2180,17 @@ let rec meet_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | SPos, SZero -> SBot;;
 
 let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
+
+let prog_main_name : string = "main";;
+
+let rec body (Proc_decl_ext (formals, body, more)) = body;;
+
+let rec proc_rep
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
+
+let rec prog_table p = map_of equal_literal (proc_rep p);;
+
+let rec prog_main p = body (the (prog_table p prog_main_name));;
 
 let rec uminus_int k = Int_of_integer (Z.neg (integer_of_int k));;
 
@@ -2730,23 +2743,20 @@ let rec sign_tf_st_for
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
-let rec proc_rep
-  (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = proc_rep;;
+let rec make
+  proc_rep declared_global_vars =
+    Imp_prog_ext (proc_rep, declared_global_vars, ());;
 
-let rec prog_procs p = map fst (proc_rep p);;
+let rec mk_program
+  ps m gv = make ((prog_main_name, proc_decl_of [] m) :: ps) gv;;
 
-let rec prog_main
-  (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) = prog_main;;
-
-let prog_main_name : string = "main";;
-
-let rec prog_table
-  p = fun_upd equal_literal (map_of equal_literal (proc_rep p)) prog_main_name
-        (Some (proc_decl_of [] (prog_main p)));;
-
-let rec body (Proc_decl_ext (formals, body, more)) = body;;
+let rec prog_procs
+  p = filtera (fun n -> not ((n : string) = prog_main_name))
+        (map fst (proc_rep p));;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
+
+let rec call_formals pi q = (match pi q with None -> [] | Some a -> formals a);;
 
 let rec compile
   pi p x2 k n = match pi, p, x2, k, n with
@@ -2845,9 +2855,7 @@ let rec compile
                   (equal_prod equal_call_action
                     (equal_prod equal_cfg_node equal_cfg_node)))
                 (Statement n,
-                  (CallEdge
-                     (dst, (match pi q with None -> [] | Some a -> formals a),
-                       actuals),
+                  (CallEdge (dst, call_formals pi q, actuals),
                     (FunctionEntry q, k)))
                 bot_set)))
     | pi, p, Return e, k, n ->
@@ -2894,8 +2902,7 @@ let rec stabl_update
     State_ext (c, infl, stabla stabl, sigma, more);;
 
 let rec declared_global_vars
-  (Imp_prog_ext (proc_rep, prog_main, declared_global_vars, more)) =
-    declared_global_vars;;
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
 
 let rec scope_vnames
   p owner =
@@ -3052,10 +3059,6 @@ let rec fold_rhs_trees _A
               (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                 acc res)
               ts);;
-
-let rec make
-  proc_rep prog_main declared_global_vars =
-    Imp_prog_ext (proc_rep, prog_main, declared_global_vars, ());;
 
 let char_0x0A : char = Chr (Z.of_int 10);;
 

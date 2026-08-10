@@ -5,7 +5,7 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 # Repository orchestration (pixi task list) plus the Python-side tooling
 # each task actually needs, split by real dependency boundary below -- not
-# by task grouping. The OCaml/Haskell toolchains stay on opam/ghcup:
+# by task grouping. The OCaml toolchain stays on opam:
 # conda-forge's ocaml-findlib and ocaml-zarith have no osx-arm64 build, so
 # pixi cannot be the sole toolchain manager for those on Apple Silicon.
 # Tasks that call into them (regression, cli-build, property-build, ...)
@@ -61,7 +61,7 @@ grammar = ["grammar"]
 
 # --------------------------------------------------------------------------
 # Repository task graph. Tasks here need only python3/bash/git (top-level
-# `dependencies`, present in every environment) plus Isabelle/OCaml/GHC
+# `dependencies`, present in every environment) plus Isabelle/OCaml
 # already on PATH -- no feature-specific package, so they stay common
 # rather than living under any one feature. Nontrivial shell (Isabelle
 # build invocations, the vendor patch logic, OCaml link steps) lives in

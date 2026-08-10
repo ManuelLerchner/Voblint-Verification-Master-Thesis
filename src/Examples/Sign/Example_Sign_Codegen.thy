@@ -2,7 +2,7 @@ theory Example_Sign_Codegen
   imports Exec_Sign_DG_Run Voblint_Analysis.Sign_Checks
 begin
 
-section \<open>Sign codegen API: an arbitrary VIMP program, and its Haskell/OCaml export\<close>
+section \<open>Sign codegen API: an arbitrary VIMP program, and its OCaml export\<close>
 
 subsection \<open>Whole-program entry point: an arbitrary VIMP program\<close>
 
@@ -407,7 +407,7 @@ text \<open>
   codegen-closure milestone), but a caller reaches the same generic, already-sound
   \<^const>\<open>analyse_sign_report\<close> through the unified dispatcher \<open>analyse\<close>
   (\<open>Example_Analysis_Dispatch\<close>, downstream), which is the one thing actually exported to
-  Haskell/OCaml --- a second, domain-specific export module here would just be a parallel,
+  OCaml --- a second, domain-specific export module here would just be a parallel,
   redundant API surface for the same computation.
 \<close>
 

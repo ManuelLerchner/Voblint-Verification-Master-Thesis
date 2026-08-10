@@ -12,11 +12,10 @@ text \<open>
   binary, so its managed OCaml toolchain links against an x86_64
   \<open>libgmp\<close> while the platform (and Homebrew's own \<open>libgmp\<close>) is arm64 ---
   an environment/toolchain mismatch, not evidence that the generated OCaml
-  itself is broken. GHC (via \<open>isabelle_stack\<close>) builds arm64-native
-  correctly, which is why Haskell checking stays in the main session (see
-  \<open>Example_Analysis_Dispatch.thy\<close>'s own \<open>checking Haskell\<close> clause) while
-  OCaml checking is isolated here, built only on Linux CI where this
-  architecture mismatch does not occur.
+  itself is broken. Isolating this check in its own session keeps the
+  default \<open>Voblint_Examples\<close> build free of it; CI only builds this session
+  on Linux, where the architecture mismatch does not occur.
+
 \<close>
 
 export_code

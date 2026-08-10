@@ -113,7 +113,7 @@ text \<open>
   \<^term>\<open>ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)\<close>
   once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the
   target language compiles that \<open>let\<close> to a single shared thunk, so the
-  generated Haskell/OCaml computes the solved system exactly once per
+  generated OCaml computes the solved system exactly once per
   report, regardless of how many checks the program has. Mirrors the
   \<open>analyse_sign_report_for_code\<close> fix for the Sign counterpart of this
   report (\<open>Example_Sign_Codegen\<close>, downstream of this theory).

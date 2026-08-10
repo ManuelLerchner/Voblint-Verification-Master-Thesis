@@ -519,19 +519,19 @@ text \<open>
   \<open>analyse\<close> genuinely takes the domain choice and the program as runtime
   arguments, not constants baked in at export time. The raw AST constructors,
   \<open>imp_prog.make\<close>, and \<open>proc_decl_of\<close> are exported alongside it so external
-  Haskell/OCaml code can build a fresh \<open>imp_prog\<close> and hand it to \<open>analyse\<close>.
+  OCaml code can build a fresh \<open>imp_prog\<close> and hand it to \<open>analyse\<close>.
 
   \<^typ>\<open>vname\<close>/\<^typ>\<open>pname\<close> are \<^typ>\<open>String.literal\<close>
   (\<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>/\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>), already
-  the target language's native string (\<^verbatim>\<open>String\<close> in Haskell,
-  \<^verbatim>\<open>string\<close> in OCaml --- \<^theory>\<open>HOL.String\<close> ships that mapping
+  the target language's native string (\<^verbatim>\<open>string\<close> in OCaml
+  --- \<^theory>\<open>HOL.String\<close> ships that mapping
   unconditionally), so \<open>V\<close>/\<open>Assign\<close>/\<open>Random\<close>/\<open>com.Call\<close>/\<open>FunctionEntry\<close>/
   \<open>FunctionResult\<close>/\<open>proc_decl_of\<close>/\<open>imp_prog.make\<close> below already take and
   return native strings directly --- no separate construction facade needed.
 
   \<^theory>\<open>HOL-Library.Code_Target_Numeral\<close> makes \<open>int\<close>/\<open>nat\<close> abstract types
   backed by the target language's native arbitrary-precision integer
-  (Haskell's \<open>Integer\<close>, OCaml's target-numeral representation) instead of
+  (OCaml's target-numeral representation) instead of
   Isabelle's own binary-numeral/Peano-successor encodings, so arithmetic and
   comparisons inside the exported analyser run on native integers rather
   than walking a \<open>Num\<close>/\<open>Nat\<close> term. \<open>int_of_integer\<close>/\<open>nat_of_integer\<close> and
@@ -556,164 +556,123 @@ text \<open>
   named after internal proof-repo theories (\<open>TD_side\<close>, \<open>Interval_Warrowing\<close>,
   \<open>DG_Framework\<close>, ...) meaningless to an external reader and irrelevant to
   \<open>analyse\<close>'s public surface. \<open>code_identifier\<close> remaps every contributing
-  theory onto a small number of named modules, so a Haskell/OCaml reader is
-  not left staring at either one undifferentiated file or dozens of
+  theory onto two named OCaml modules instead, so an external reader is not
+  left staring at either one undifferentiated file or dozens of
   internal-theory names.
 
-  \<^bold>\<open>Haskell\<close> (one real \<open>.hs\<close> file per module; \<open>file_prefix\<close> becomes a
-  directory) splits four ways:
+  OCaml's serializer emits one file per \<open>export_code\<close> call regardless of
+  \<open>module_name\<close>/\<open>code_identifier\<close>, so the remapping instead organizes that
+  one file into nested \<open>module ... = struct ... end\<close> blocks: \<open>Analyse\<close> for
+  this theory's public facade (\<open>analysis_kind\<close>, \<open>analyse\<close> itself), and
+  \<open>Core\<close> for everything it is built from --- VIMP source AST and printing,
+  CFG representation and compiler, the executable state substrate
+  (\<open>Exec_St\<close>/\<open>Exec_Bridge\<close>, the generic domain interface), the generic
+  D/G/effectful analysis plumbing (equation systems, the D/G spec framework,
+  generic check classification), the vendored TD/TD_side solver, both
+  domains' lattices, transfer functions, and check classification
+  (\<open>Sign\<close>, \<open>Interval\<close>), and the underlying HOL-library data structures
+  (finite maps and sets, orderings, sum types, target numerals/strings).
 
-    \<^item> \<open>Core\<close> --- everything below the domain layer: VIMP source AST and
-      printing, CFG representation and compiler, the executable state
-      substrate (\<open>Exec_St\<close>/\<open>Exec_Bridge\<close>, the generic domain interface), the
-      generic D/G/effectful analysis plumbing (equation systems, the D/G spec
-      framework, generic check classification), the vendored TD/TD_side
-      solver, and the underlying HOL-library data structures (finite maps and
-      sets, orderings, sum types, target numerals/strings) all of the above is
-      built from. These layers cannot be split further: \<open>Exec_St\<close>'s
-      executable state is generically instantiated at the solver's own
-      \<open>widening\<close>/\<open>narrowing\<close> type classes, and the CFG-specific solver
-      instantiation needs \<open>cfg_node\<close> back --- real, mutual code-level
-      dependencies (confirmed by \<^verbatim>\<open>module dependency cycle\<close> errors from both
-      the OCaml serializer and GHC's own module-graph check when these stayed
-      split), not an arbitrary grouping choice.
-    \<^item> \<open>Sign\<close> / \<open>Interval\<close> --- each domain's lattice, transfer functions, and
-      check classification: independent of one another and only ever
-      depended on by \<open>Analyse\<close>, so both split out cleanly.
-    \<^item> \<open>Analyse\<close> --- this theory: the public facade (\<open>analysis_kind\<close>,
-      \<open>analyse\<close> itself) external code actually calls.
-
-  \<^bold>\<open>OCaml\<close>'s serializer only ever emits one file per \<open>export_code\<close> call
-  regardless of \<open>module_name\<close>/\<open>code_identifier\<close>, so the remapping instead
-  organizes that one file into nested \<open>module ... = struct ... end\<close> blocks.
-  \<open>Sign\<close>/\<open>Interval\<close> fold into \<open>Core\<close> there rather than staying separate as
-  in Haskell: splitting them out compiles \<^emph>\<open>and\<close> passes Isabelle's own
-  \<open>export_code\<close> checks, but \<^verbatim>\<open>ocamlfind ocamlopt\<close> then rejects the result
-  with an unbound type-class dictionary record field (\<open>Core.ord_preorder\<close>)
-  --- Isabelle's OCaml module-signature inference does not expose every field
-  a differently-grouped sibling module needs once \<open>code_identifier\<close>
+  \<open>Core\<close> cannot be split further: \<open>Exec_St\<close>'s executable state is
+  generically instantiated at the solver's own \<open>widening\<close>/\<open>narrowing\<close> type
+  classes, and the CFG-specific solver instantiation needs \<open>cfg_node\<close> back
+  --- real, mutual code-level dependencies, confirmed by a \<^verbatim>\<open>module dependency cycle\<close>
+  error from the OCaml serializer when these stayed split, not an arbitrary
+  grouping choice. Splitting \<open>Sign\<close>/\<open>Interval\<close> out from \<open>Core\<close> instead
+  compiles \<^emph>\<open>and\<close> passes Isabelle's own \<open>export_code\<close> checks, but
+  \<^verbatim>\<open>ocamlfind ocamlopt\<close> then rejects the result with an unbound
+  type-class dictionary record field (\<open>Core.ord_preorder\<close>) --- Isabelle's
+  OCaml module-signature inference does not expose every field a
+  differently-grouped sibling module needs once \<open>code_identifier\<close>
   introduces module boundaries the unsplit default did not have. Not a cycle
   this time, and not fixable by regrouping; the two-way split (\<open>Core\<close>,
-  \<open>Analyse\<close>) is the finest division that both Isabelle and the OCaml
-  compiler accept.
+  \<open>Analyse\<close>) is the finest division the OCaml compiler accepts.
+
 \<close>
 
 
 
 
 code_identifier
-  code_module VIMP_Notation \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module VIMP_Proc \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module VIMP_Source_Print \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module VIMP_Syntax \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module CFG_Def \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module CFG_Enumeration \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module CFG_Prune \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Compile_Invariants \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module VIMP_Proc_to_CFG \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Abstract_Domain \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Exec_St \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Exec_Bridge \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module AList \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Nat \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Int \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Code_Numeral \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Num \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Groups \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Rings \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Fields \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Power \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Parity \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Euclidean_Rings \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Semiring_Normalization \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Code_Target_Int \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Code_Target_Nat \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Pure \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module String \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Char_ord \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Code_Abstract_Char \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Comparator \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Compare_Instances \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Countable \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Enum \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module FSet \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Finite_Map \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Finite_Set \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Fun \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Lattices \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Lattices_Big \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module List \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Map \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Option \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Orderings \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Product_Lexorder \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Product_Type \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Set \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Sum_Type \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Basics_side \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Destabilization_side \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module TD_side \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module TD_side_upd_rule \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Update_rules \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Strategy_Tree_Monad \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module TD_Side_CFG \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module TD_Side_Eff_Keyed_Gen \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module TD_Side_Tree \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Constraint_System \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module DG_Framework \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Abstract_Checks \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Exec_DG_Bridge \<rightharpoonup> (Haskell) Core and (OCaml) Core
-| code_module Sign_Arithmetic \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Sign_Backward \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Sign_Checks \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Sign_Exec \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Sign_Exec_Sound \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Sign_Lattice \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Sign_Numeric_Queries \<rightharpoonup> (Haskell) Sign and (OCaml) Core
-| code_module Interval_Arithmetic \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Backward \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Bounds \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Checks \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Exec_Sound \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Lattice \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Numeric_Queries \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Interval_Warrowing \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Ivl_Exec \<rightharpoonup> (Haskell) Interval and (OCaml) Core
-| code_module Example_Analysis_Dispatch \<rightharpoonup> (Haskell) Analyse and (OCaml) Analyse
+  code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Source_Print \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Syntax \<rightharpoonup> (OCaml) Core
+| code_module CFG_Def \<rightharpoonup> (OCaml) Core
+| code_module CFG_Enumeration \<rightharpoonup> (OCaml) Core
+| code_module CFG_Prune \<rightharpoonup> (OCaml) Core
+| code_module Compile_Invariants \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Proc_to_CFG \<rightharpoonup> (OCaml) Core
+| code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
+| code_module Exec_St \<rightharpoonup> (OCaml) Core
+| code_module Exec_Bridge \<rightharpoonup> (OCaml) Core
+| code_module AList \<rightharpoonup> (OCaml) Core
+| code_module Nat \<rightharpoonup> (OCaml) Core
+| code_module Int \<rightharpoonup> (OCaml) Core
+| code_module Code_Numeral \<rightharpoonup> (OCaml) Core
+| code_module Num \<rightharpoonup> (OCaml) Core
+| code_module Groups \<rightharpoonup> (OCaml) Core
+| code_module Rings \<rightharpoonup> (OCaml) Core
+| code_module Fields \<rightharpoonup> (OCaml) Core
+| code_module Power \<rightharpoonup> (OCaml) Core
+| code_module Parity \<rightharpoonup> (OCaml) Core
+| code_module Euclidean_Rings \<rightharpoonup> (OCaml) Core
+| code_module Semiring_Normalization \<rightharpoonup> (OCaml) Core
+| code_module Code_Target_Int \<rightharpoonup> (OCaml) Core
+| code_module Code_Target_Nat \<rightharpoonup> (OCaml) Core
+| code_module Pure \<rightharpoonup> (OCaml) Core
+| code_module String \<rightharpoonup> (OCaml) Core
+| code_module Char_ord \<rightharpoonup> (OCaml) Core
+| code_module Code_Abstract_Char \<rightharpoonup> (OCaml) Core
+| code_module Comparator \<rightharpoonup> (OCaml) Core
+| code_module Compare_Instances \<rightharpoonup> (OCaml) Core
+| code_module Countable \<rightharpoonup> (OCaml) Core
+| code_module Enum \<rightharpoonup> (OCaml) Core
+| code_module FSet \<rightharpoonup> (OCaml) Core
+| code_module Finite_Map \<rightharpoonup> (OCaml) Core
+| code_module Finite_Set \<rightharpoonup> (OCaml) Core
+| code_module Fun \<rightharpoonup> (OCaml) Core
+| code_module Lattices \<rightharpoonup> (OCaml) Core
+| code_module Lattices_Big \<rightharpoonup> (OCaml) Core
+| code_module List \<rightharpoonup> (OCaml) Core
+| code_module Map \<rightharpoonup> (OCaml) Core
+| code_module Option \<rightharpoonup> (OCaml) Core
+| code_module Orderings \<rightharpoonup> (OCaml) Core
+| code_module Product_Lexorder \<rightharpoonup> (OCaml) Core
+| code_module Product_Type \<rightharpoonup> (OCaml) Core
+| code_module Set \<rightharpoonup> (OCaml) Core
+| code_module Sum_Type \<rightharpoonup> (OCaml) Core
+| code_module Basics_side \<rightharpoonup> (OCaml) Core
+| code_module Destabilization_side \<rightharpoonup> (OCaml) Core
+| code_module TD_side \<rightharpoonup> (OCaml) Core
+| code_module TD_side_upd_rule \<rightharpoonup> (OCaml) Core
+| code_module Update_rules \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Monad \<rightharpoonup> (OCaml) Core
+| code_module TD_Side_CFG \<rightharpoonup> (OCaml) Core
+| code_module TD_Side_Eff_Keyed_Gen \<rightharpoonup> (OCaml) Core
+| code_module TD_Side_Tree \<rightharpoonup> (OCaml) Core
+| code_module Constraint_System \<rightharpoonup> (OCaml) Core
+| code_module DG_Framework \<rightharpoonup> (OCaml) Core
+| code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
+| code_module Exec_DG_Bridge \<rightharpoonup> (OCaml) Core
+| code_module Sign_Arithmetic \<rightharpoonup> (OCaml) Core
+| code_module Sign_Backward \<rightharpoonup> (OCaml) Core
+| code_module Sign_Checks \<rightharpoonup> (OCaml) Core
+| code_module Sign_Exec \<rightharpoonup> (OCaml) Core
+| code_module Sign_Exec_Sound \<rightharpoonup> (OCaml) Core
+| code_module Sign_Lattice \<rightharpoonup> (OCaml) Core
+| code_module Sign_Numeric_Queries \<rightharpoonup> (OCaml) Core
+| code_module Interval_Arithmetic \<rightharpoonup> (OCaml) Core
+| code_module Interval_Backward \<rightharpoonup> (OCaml) Core
+| code_module Interval_Bounds \<rightharpoonup> (OCaml) Core
+| code_module Interval_Checks \<rightharpoonup> (OCaml) Core
+| code_module Interval_Exec_Sound \<rightharpoonup> (OCaml) Core
+| code_module Interval_Lattice \<rightharpoonup> (OCaml) Core
+| code_module Interval_Numeric_Queries \<rightharpoonup> (OCaml) Core
+| code_module Interval_Warrowing \<rightharpoonup> (OCaml) Core
+| code_module Ivl_Exec \<rightharpoonup> (OCaml) Core
+| code_module Example_Analysis_Dispatch \<rightharpoonup> (OCaml) Analyse
 
-
-
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  analyse_with_state SignValue IntervalValue
-  mk_program proc_decl_of
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
-  string_of_bexp
-  checking Haskell
-
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  analyse_with_state SignValue IntervalValue
-  mk_program proc_decl_of
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  prog_cfg prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
-  string_of_bexp
-  in Haskell file_prefix "Voblint_Analyse"
 
 export_code
   analyse Sign_Analysis Interval_Analysis

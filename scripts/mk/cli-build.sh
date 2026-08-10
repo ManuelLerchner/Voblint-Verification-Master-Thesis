@@ -35,7 +35,10 @@ trap 'rm -f "$build_out"' EXIT
   # successful run -- redirect it inline so only genuinely unexpected
   # output from any step trips the silence assertion below.
   ocamllex vimp_lexer.mll >/dev/null
-  ocamlfind ocamlopt -package str,zarith,unix -linkpkg \
+  # -8/-11/-20: routine artifacts of Isabelle's OCaml serializer (see
+  # codegen/regression's regression.sh for the same suppression), not
+  # signs of a real problem in the generated Voblint_CLI.ml.
+  ocamlfind ocamlopt -w -8-11-20 -package str,zarith,unix -linkpkg \
     Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml main.ml -o voblint
 ) >"$build_out"
 if [ -s "$build_out" ]; then
