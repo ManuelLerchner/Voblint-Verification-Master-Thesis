@@ -13,6 +13,22 @@ text \<open>
   call binds a formal, introduces the implicit local \<open>tmp\<close>, and returns into the
   caller-local \<open>answer\<close>.  Neither global name relies on the historical \<open>G\<close>
   prefix convention.
+
+  \<open>balance\<close> and \<open>request_count\<close> are placed as a static analogue of Goblint's own
+  protected/unprotected privatization split (\<open>VojdaniPriv\<close> in \<open>basePriv.ml\<close>):
+  \<open>balance\<close> is \<open>keep_local\<close>-only, never \<open>publish_side\<close> -- the protected case, whose
+  write updates the local \<open>CPA\<close> but skips \<open>sideg\<close>.  \<open>request_count\<close> is
+  \<open>publish_side\<close>-only, never \<open>keep_local\<close> -- the unprotected case, whose write goes
+  straight to the shared side.  This is a static per-variable policy, fixed for the
+  whole program; it does not model the dynamic transition a real lock/unlock would
+  drive (a protected global's write becoming visible to \<open>G\<close> only once the critical
+  section it was written under is released). Modelling that transition needs an
+  action-specific publish hook at the unlock edge, which \<open>unit_dg_spec_placed\<close>'s
+  generic per-edge transfer does not have; it is a framework extension, not an
+  example, and is out of scope here.  Even this static split already needs
+  \<open>gamma_join\<close>, not \<open>gamma_unit\<close>: \<open>balance\<close>'s and \<open>request_count\<close>'s live values
+  sit on different sides regardless of the declared-global classifier, so no
+  single-bit ownership routing can recover both.
 \<close>
 
 definition placement_prog :: imp_prog where
@@ -38,6 +54,8 @@ value "calls placement_cfg"
 definition placement_owner :: pname where
   "placement_owner = (STR ''add'')"
 
+text \<open>\<open>balance\<close>: protected, kept only in the flow-sensitive local answer.
+  \<open>request_count\<close>: unprotected, published only to the flow-insensitive side.\<close>
 fun placement_keep_local :: "scoped_location => bool" where
   "placement_keep_local (owner, Local_Location x) = True"
 | "placement_keep_local (owner, Global_Location x) = (x = (STR ''balance''))"
