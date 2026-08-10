@@ -9,6 +9,49 @@ Define finite executable context domains with a proved abstraction relation to
 concrete activations. Evaluate recursive and widening-heavy examples separately
 from repeated-call examples.
 
+Tracked in detail in #108 (references #66, #77); summary below, keep the
+two in sync if either changes.
+
+Post-#66, `routed_context` (`Routed_Context.thy`) is real Core-level
+infrastructure, not example-level: it discharges the CALL/COMB obligations
+once, generically in a `route`/`enterc` pair and context type `'c`. Four
+interpretations already exist, including `Example_Interval_DG_Ctx_Flagship
+.thy`'s `route_ivl`/`ivl_enterc` -- a genuinely value-derived context
+(`'c = ivl`, not call-site history), with `contexts_distinct` proved `by
+eval` for two calls with different argument values landing in separate,
+un-joined contexts. So the CALL/COMB soundness machinery this feature needs
+already exists and is reusable. What's still missing:
+
+1. **Context key.** All formals, or their abstract values; whether locals
+   beyond formals ever belong in the key; whether the procedure name is
+   necessarily part of it.
+2. **Generic entry abstraction.** `route_ivl`/`ivl_enterc` are hardcoded to
+   one formal name (`"p"`), built for that one flagship program. Replace
+   with `context(p, entry_state) = ` a projection of `entry_state` onto
+   `formals(p)`, working for any procedure.
+3. **Finite termination -- the central risk.** No finiteness guarantee for
+   a value-derived `'c` beyond the ambient `'c::finite` + solver
+   `solve_dom` hypothesis discharged per-instantiation (a call-string
+   truncated to length `k` is finite by construction; a raw interval
+   context is not). Same gap #77 ("Context-bounding lifters") tracks
+   generally -- reuse whatever lands there rather than inventing a
+   one-off bounding policy here.
+4. **Executable/export API.** (2), instantiated through `routed_context`,
+   `export_code`'d.
+5. **CLI exposure.** `--context none` (current, default) /
+   `--context entry-state`, plus report semantics.
+6. **Acceptance regression.** A program with two calls to the same procedure
+   at distinct argument values: `--context none` -> `UNKNOWN`,
+   `--context entry-state` -> `PROVED`.
+
+Do not start by generalizing `"p"` to a list of variable names in isolation
+-- that resolves the syntactic hardcoding (item 2) while leaving item 3
+(unbounded context creation) untouched, the actual blocker to this being a
+general feature rather than a second bespoke example. Arbitrary `gs`/
+`--flow-insensitive` is explicitly out of scope here -- see #66's M4 /
+`docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p` stays
+invariant across whatever this lands as.
+
 ## D/G communication
 
 Improve analysis-defined shared-state reads and publications where a concrete
