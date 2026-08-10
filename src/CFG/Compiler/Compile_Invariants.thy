@@ -28,6 +28,10 @@ definition wf_compile_input ::
 
 declare wf_compile_input_def [wf_compile_input_simps]
 
+lemma wf_compile_input_reserved_ret_var [dest]:
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> reserved_ret_var gs"
+  unfolding wf_compile_input_simps by simp
+
 
 definition wf_program_compile_input :: "imp_prog => bool" where
   "wf_program_compile_input p \<longleftrightarrow>

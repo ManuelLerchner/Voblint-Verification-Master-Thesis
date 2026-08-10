@@ -24,6 +24,7 @@ text \<open>
 context
   fixes gs :: "vname \<Rightarrow> bool"
     and p :: imp_prog
+  assumes reserved: "reserved_ret_var gs"
 begin
 
 interpretation p_reg:
@@ -37,7 +38,8 @@ proof -
           (sign_tf_st_for gs) (sign_enter_st_for gs)
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
-       (rule p_transfer.tf_sound_assign_for p_transfer.tf_sound_random_for
+       (rule reserved
+             p_transfer.tf_sound_assign_for p_transfer.tf_sound_random_for
              p_transfer.tf_sound_assume_for p_transfer.tf_sound_assume_not_for
              p_transfer.tf_sound_enter_for p_transfer.tf_sound_combine_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
@@ -99,10 +101,10 @@ theorem analyse_sign_sound_for:
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
-       \<lbrakk>fun_of_exec_dg_st_for gs cinit_sign_st \<squnion>
-        fun_of_exec_dg_st_for gs cinit_sign_st\<rbrakk>"
+       \<lbrakk>combine_abs gs (fun_of_exec_dg_st_for gs cinit_sign_st)
+          (fun_of_exec_dg_st_for gs cinit_sign_st)\<rbrakk>"
     by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def
-                  gamma_state_def sup.idem)
+                  gamma_state_def combine_abs_def)
   show ?thesis
     unfolding analyse_sign_gamma_for_def analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def
     by (rule p_reg.run_source_sound
@@ -143,10 +145,10 @@ theorem analyse_sign_collect_sound_for:
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
-       \<lbrakk>fun_of_exec_dg_st_for gs cinit_sign_st \<squnion>
-        fun_of_exec_dg_st_for gs cinit_sign_st\<rbrakk>"
+       \<lbrakk>combine_abs gs (fun_of_exec_dg_st_for gs cinit_sign_st)
+          (fun_of_exec_dg_st_for gs cinit_sign_st)\<rbrakk>"
     by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def
-                  gamma_state_def sup.idem)
+                  gamma_state_def combine_abs_def)
   show ?thesis
     unfolding analyse_sign_gamma_for_def analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def
     by (rule p_reg.collect_sound
@@ -289,7 +291,8 @@ corollary analyse_sign_sound:
                  \<and> t \<in> analyse_sign_gamma_for (declared_global p) (snd (analyse_sign p)) v"
   unfolding analyse_sign_def analyse_sign_eqs_def
   by (rule analyse_sign_sound_for
-        [OF solve[unfolded analyse_sign_def analyse_sign_eqs_def]
+        [OF wf[THEN wf_compile_input_reserved_ret_var]
+            solve[unfolded analyse_sign_def analyse_sign_eqs_def]
             wf
             cover_entry[unfolded analyse_sign_def]
             cover_edge[unfolded analyse_sign_def]
@@ -323,7 +326,8 @@ corollary analyse_sign_report_sound_proved:
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. bval c s"
   unfolding analyse_sign_def analyse_sign_eqs_def
   by (rule analyse_sign_report_sound_proved_for
-        [OF solve[unfolded analyse_sign_def analyse_sign_eqs_def]
+        [OF wf[THEN wf_compile_input_reserved_ret_var]
+            solve[unfolded analyse_sign_def analyse_sign_eqs_def]
             wf
             cover_entry[unfolded analyse_sign_def]
             cover_edge[unfolded analyse_sign_def]
@@ -350,7 +354,8 @@ corollary analyse_sign_report_sound_refuted:
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> bval c s"
   unfolding analyse_sign_def analyse_sign_eqs_def
   by (rule analyse_sign_report_sound_refuted_for
-        [OF solve[unfolded analyse_sign_def analyse_sign_eqs_def]
+        [OF wf[THEN wf_compile_input_reserved_ret_var]
+            solve[unfolded analyse_sign_def analyse_sign_eqs_def]
             wf
             cover_entry[unfolded analyse_sign_def]
             cover_edge[unfolded analyse_sign_def]
@@ -386,11 +391,11 @@ definition analyse_sign_demo2_prog :: imp_prog where
   "analyse_sign_demo2_prog = program { void main() { a := 1; b := a; c := b } }"
 
 text \<open>
-  Same always-join imprecision as \<open>dgEx_inspect\<close> in \<open>Exec_Sign_DG_Run\<close>
-  (every edge joins local answers with global side effects): the computed
-  exit value is \<open>STop\<close>, not a hand-picked precise witness.  What matters
-  here is that \<open>analyse_sign\<close> computes at all on a program it was never
-  specialized to, not the resulting precision.
+  Precise, not a coincidence: \<open>a := 1\<close> is exactly \<open>SPos\<close>, and each name is
+  routed to the exec state that owns it at every edge, so the value carries
+  through \<open>b := a; c := b\<close> untouched to the exit. What matters here is that
+  \<open>analyse_sign\<close> computes at all on a program it was never specialized to,
+  and does so precisely.
 \<close>
 
 lemma analyse_sign_demo2_result:
@@ -398,7 +403,7 @@ lemma analyse_sign_demo2_result:
                         (locals (snd sol (Inl (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ()))))
                         (location_of (declared_global analyse_sign_demo2_prog) (STR ''c'')))
      (TD_side_always_join_Interp_solve_c (analyse_sign_eqs analyse_sign_demo2_prog)
-        (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ())) = Some STop"
+        (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ())) = Some SPos"
   by eval
 
 text \<open>

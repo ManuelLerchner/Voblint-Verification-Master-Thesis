@@ -47,15 +47,18 @@ text \<open>The storage-derived split: every global published-only, every local
   kept-only. Sound because \<^const>\<open>classic_split_keep_local\<close>/
   \<^const>\<open>classic_split_publish_side\<close> cover every location.\<close>
 
+lemma m48_reserved_ret_var [simp]: "reserved_ret_var m48_gs"
+  unfolding reserved_ret_var_def by (simp add: m48_program_def ret_var_def)
+
 lemma m48_sound_classic:
-  "sound_dg_spec (unit_dg_spec_for m48_gs (sign_tf_for m48_gs)) gamma_unit m48_gs"
-  by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for])
+  "sound_dg_spec (unit_dg_spec_for m48_gs (sign_tf_for m48_gs)) (gamma_unit m48_gs) m48_gs"
+  by (rule sound_dg_spec_unit_for[OF sign_is_sound_transfer_for m48_reserved_ret_var])
 
 lemma m48_classic_placement_sound:
   "sound_dg_spec
      (unit_dg_spec_placed m48_gs (classic_split_keep_local m48_gs)
         (classic_split_publish_side m48_gs) (sign_tf_for m48_gs))
-     gamma_unit m48_gs"
+     gamma_join m48_gs"
   by (rule sound_dg_spec_unit_placed[OF sign_is_sound_transfer_for classic_split_cover])
 
 subsection \<open>5. Conjunctive \<open>keep_local\<close> \<open>\<and>\<close> \<open>publish_side\<close> placement\<close>
@@ -75,7 +78,7 @@ lemma m48_keep_all_cover: "\<forall>x. m48_gs x \<or> m48_keep_all x"
 lemma m48_conjunctive_placement_sound:
   "sound_dg_spec
      (unit_dg_spec_placed m48_gs m48_keep_all m48_gs (sign_tf_for m48_gs))
-     gamma_unit m48_gs"
+     gamma_join m48_gs"
   by (rule sound_dg_spec_unit_placed[OF sign_is_sound_transfer_for m48_keep_all_cover])
 
 subsection \<open>6. Storage-independent placement behavior\<close>
@@ -99,7 +102,7 @@ lemma m48_swapped_cover: "\<forall>x. m48_publish_swapped x \<or> m48_keep_swapp
 lemma m48_swapped_placement_sound:
   "sound_dg_spec
      (unit_dg_spec_placed m48_gs m48_keep_swapped m48_publish_swapped (sign_tf_for m48_gs))
-     gamma_unit m48_gs"
+     gamma_join m48_gs"
   by (rule sound_dg_spec_unit_placed[OF sign_is_sound_transfer_for m48_swapped_cover])
 
 end

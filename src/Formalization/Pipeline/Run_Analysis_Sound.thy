@@ -243,6 +243,8 @@ locale unit_dg_exec_analysis =
                          ('a exec_dg_st, 'a exec_dg_st) dg_state)) option"
   assumes tf_sound:
       "sound_transfer_for gs tf"
+    and reserved:
+      "reserved_ret_var gs"
     and tf_commute[simp]:
       "\<And>a s.
         fun_of_exec_dg_st_for gs (tf_st a s) =
@@ -269,11 +271,11 @@ text \<open>
   caller.
 \<close>
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
-  where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_unit (fun_of_dg_st_for gs \<circ> sigma_st) v"
+  where "gamma sigma_st v = sound_dg_spec.dg_gamma (gamma_unit gs) (fun_of_dg_st_for gs \<circ> sigma_st) v"
 
-lemma sds: "sound_dg_spec_ltr_for (unit_dg_spec_for gs tf) gamma_unit gs"
+lemma sds: "sound_dg_spec_ltr_for (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
   unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF tf_sound])
+  by (rule sound_dg_spec_unit_for[OF tf_sound reserved])
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a exec_dg_st"
@@ -282,7 +284,7 @@ theorem run_source_sound:
     and cover: "vars_cover (compile_prog Pi ps mnm main) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
-    and sound0: "S0 \<subseteq> gamma_unit (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+    and sound0: "S0 \<subseteq> gamma_unit gs (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
     and s0mem: "s0 \<in> S0"
     and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
   shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
@@ -314,7 +316,7 @@ theorem collect_sound:
     and cover: "vars_cover (compile_prog Pi ps mnm main) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
-    and sound0: "S0 \<subseteq> gamma_unit (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
+    and sound0: "S0 \<subseteq> gamma_unit gs (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
   shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"

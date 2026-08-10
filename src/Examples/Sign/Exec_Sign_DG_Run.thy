@@ -118,9 +118,16 @@ lemma dgEx_cover_combine:
   "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
      \<Longrightarrow> (k, ()) \<in> fst dgEx_sol"
   by (simp add: gEx_calls)
+lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
+  unfolding wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+      reserved_ret_var_def split: if_splits)
+
 lemma dgEx_sound0:
-  "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st \<squnion> fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st\<rbrakk>"
-  by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def sup.idem)
+  "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>combine_abs sign_ex_gs
+     (fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st) (fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st)\<rbrakk>"
+  by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def
+      combine_abs_def)
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
@@ -141,7 +148,8 @@ proof -
           (sign_enter_st_for sign_ex_gs)
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
-       (rule sign_ex_transfer.tf_sound_assign_for sign_ex_transfer.tf_sound_random_for
+       (rule dgEx_reserved
+             sign_ex_transfer.tf_sound_assign_for sign_ex_transfer.tf_sound_random_for
              sign_ex_transfer.tf_sound_assume_for sign_ex_transfer.tf_sound_assume_not_for
              sign_ex_transfer.tf_sound_enter_for sign_ex_transfer.tf_sound_combine_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
@@ -175,13 +183,16 @@ qed
 
 subsection \<open>Inspecting the computed result\<close>
 
-text \<open>The diagonal Sign instance joins local answers and global side effects at
-  each edge. The executable result is therefore sound but imprecise at the exit.\<close>
+text \<open>The diagonal Sign instance routes each name to the exec state that owns it
+  at every edge: the local answer stays exactly \<open>SPos\<close> at the exit, while the
+  global/side unknown's own value for \<open>x\<close> (a name no \<open>global\<close> declaration ever
+  makes it track) keeps its unrelated \<open>STop\<close> default -- expected, since nothing
+  ever queries that slot for a purely local name.\<close>
 
 lemma dgEx_inspect:
   "map_option (\<lambda>sol. (sign_ex_lookup (locals (snd sol (Inl (Statement 2, ())))) (STR ''x''),
                        sign_ex_lookup (globs (snd sol (Inr ()))) (STR ''x'')))
-     (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (STop, STop)"
+     (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (SPos, STop)"
   by eval
 
 end

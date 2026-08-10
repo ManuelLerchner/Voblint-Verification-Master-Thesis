@@ -103,10 +103,17 @@ lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
 text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>, generic in the
   storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
   accessors and the \<open>dg_post_solution_collect_sound_ltr_for\<close> endpoint below.\<close>
+lemma twice_reserved: "reserved_ret_var twice_gs"
+  unfolding wf_compile_input_simps
+    twice_pi_def twice_procs_def twice_main_def twice_program_def
+  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
+      value_providing_def source_aexp_def ret_var_def
+      split: if_splits option.splits)
+
 interpretation twice_sds:
-  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)" gamma_unit twice_gs
+  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)" "gamma_unit twice_gs" twice_gs
   unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for twice_reserved])
 
 subsection \<open>Equation generation\<close>
 
@@ -200,12 +207,14 @@ lemma twice_cover_combine:
 
 lemma twice_sound0:
   "cinit_stores twice_gs \<subseteq>
-     \<lbrakk>fun_of_exec_dg_st_for twice_gs cinit_ivl_st \<squnion> fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)\<rbrakk>"
+     \<lbrakk>combine_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+        (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "fun_of_exec_dg_st_for twice_gs cinit_ivl_st \<squnion>
-          fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)
+  have "combine_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+          (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
-    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_for_def declared_global_def sup_fun_def fun_eq_iff)
+    by (simp add: combine_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
+                  restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 qed
@@ -262,7 +271,8 @@ proof -
           (ivl_enter_st_for twice_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
-       (rule twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_random_for
+       (rule twice_reserved
+             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_random_for
              twice_transfer.tf_sound_assume_for twice_transfer.tf_sound_assume_not_for
              twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]

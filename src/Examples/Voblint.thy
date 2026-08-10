@@ -393,12 +393,11 @@ text \<open>
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type
       (@{theory Voblint_Core.Abstract_Checks}), so the dispatcher adds no new
-      proof. \<^verbatim>\<open>dispatch_demo_sign_unknown\<close>/\<^verbatim>\<open>dispatch_demo_interval_precise\<close>
+      proof. \<^verbatim>\<open>dispatch_demo_sign_precise\<close>/\<^verbatim>\<open>dispatch_demo_interval_precise\<close>
       compute (\<^verbatim>\<open>by eval\<close>) the same program under both domains and show
-      Interval settling both checks precisely where Sign's always-join
-      pipeline reports \<^verbatim>\<open>Check_Unknown\<close> for both --- the same imprecision
-      \<open>Exec_Sign_DG_Run\<close>'s \<^verbatim>\<open>dgEx_inspect\<close> already documents, not a new
-      limitation. \<^verbatim>\<open>Interval_Analysis_TD\<close> (warrowing) is deliberately not a
+      both settling both checks precisely, Interval at numeric-bound
+      granularity and Sign at sign granularity. \<^verbatim>\<open>Interval_Analysis_TD\<close>
+      (warrowing) is deliberately not a
       branch here: it has no soundness theorem yet
       (@{theory Voblint_Analysis.Interval_Exec_Sound}).
 
@@ -411,7 +410,7 @@ text \<open>
       driver under \<^verbatim>\<open>codegen/regression/\<close> (\<^verbatim>\<open>pixi run regression\<close>) constructs
       that same program purely through the exported constructors, calls
       \<^verbatim>\<open>analyse\<close>, and checks the result against the values
-      \<^verbatim>\<open>dispatch_demo_sign_unknown\<close> and \<^verbatim>\<open>dispatch_demo_interval_precise\<close>
+      \<^verbatim>\<open>dispatch_demo_sign_precise\<close> and \<^verbatim>\<open>dispatch_demo_interval_precise\<close>
       already proved --- so the generated OCaml is checked against the same
       theorems as the Isabelle source, not merely assumed to match it.
 

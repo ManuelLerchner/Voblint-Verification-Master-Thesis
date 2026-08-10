@@ -15,7 +15,7 @@ text \<open>
   not reconstruct activation pairing.
 \<close>
 
-locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
+locale dg_ctx_activation = sound_dg_spec S "\<lambda>d g. gamma_unit gs d g" gs
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname \<Rightarrow> bool" +
   fixes g :: cfg and gk0 :: 'k
@@ -34,7 +34,7 @@ locale dg_ctx_activation = sound_dg_spec S gamma_unit gs
                   route cmb extra g S bot0 s0d s0g) x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> sg (Inl (v, c)) =
-          locals (sigma (Inl (v, c))) \<squnion> globs (sigma (Inr gk0))"
+          combine_abs gs (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
     and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
         \<Longrightarrow> \<lbrakk>sg (Inl (v, c))\<rbrakk> = {}"
     and fwd[intro]: "\<And>u a v c. (u, c) \<in> vars
@@ -68,6 +68,23 @@ lemma pp_sides_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> sides_of_rhs (Gen (v, ctx)) sigma \<le> sigma"
   using se_constraint_holds_sides[OF part_post_solution_imp_se_constraint_holds[OF pp]]
   by blast
+
+text \<open>The generator publishes \<open>s0g\<close> as a \<open>Side gk0\<close> at \<open>cfg_entry g\<close> unconditionally
+  (\<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>'s definition), so it lower-bounds the fold's
+  side output at \<open>gk0\<close> regardless of coverage; combined with \<open>pp_sides_bound\<close>
+  at the (covered) entry, the seed is bounded by the solved global slot.\<close>
+lemma pp_entry_s0g_bound:
+  assumes cov: "(cfg_entry g, ctx) \<in> vars"
+  shows "s0g \<le> globs (sigma (Inr gk0))"
+proof -
+  have "s0g \<le> globs (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr gk0))"
+    unfolding side_cfg_T_eff_keyed_seed_dg_def Let_def
+    by (simp add: Let_def sup_dg_state_def)
+  also have "\<dots> \<le> globs (sigma (Inr gk0))"
+    using pp_sides_bound[OF cov, THEN le_funD, of "Inr gk0"]
+    by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
 
 subsection \<open>The guarded reader\<close>
 
@@ -182,15 +199,15 @@ next
   hence cov_v: "(v, ctx) \<in> vars" using e by (rule fwd)
   let ?d = "locals (sigma (Inl (u, ctx)))"
   let ?g = "globs (sigma (Inr gk0))"
-  have sin': "s \<in> gamma_unit ?d ?g"
+  have sin': "s \<in> gamma_unit gs ?d ?g"
     using sin True by (simp add: sg_cov gamma_unit_def)
-  have "{s} \<subseteq> gamma_unit ?d ?g" using sin' by simp
-  hence "edge_collect a {s} \<subseteq> edge_collect a (gamma_unit ?d ?g)" by (rule edge_collect_mono)
+  have "{s} \<subseteq> gamma_unit gs ?d ?g" using sin' by simp
+  hence "edge_collect a {s} \<subseteq> edge_collect a (gamma_unit gs ?d ?g)" by (rule edge_collect_mono)
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
-  ultimately have "s' \<in> edge_collect a (gamma_unit ?d ?g)" by blast
-  hence "s' \<in> gamma_unit (snd (dg_spec_step S a ?d ?g)) (fst (dg_spec_step S a ?d ?g))"
+  ultimately have "s' \<in> edge_collect a (gamma_unit gs ?d ?g)" by blast
+  hence "s' \<in> gamma_unit gs (snd (dg_spec_step S a ?d ?g)) (fst (dg_spec_step S a ?d ?g))"
     using step_sound_fs by blast
-  also have "\<dots> \<subseteq> gamma_unit (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
+  also have "\<dots> \<subseteq> gamma_unit gs (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
     by (rule gamma_unit_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
   also have "\<dots> = \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     using cov_v by (simp add: sg_cov gamma_unit_def)
@@ -213,26 +230,27 @@ lemma dg_ctx_act_comb_covered:
     and s: "s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>"
     and t: "t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>"
     and bound:
-      "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
-              (globs (sigma (Inr gk0))))
-       \<squnion> fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
-              (globs (sigma (Inr gk0))))
-       \<le> locals (sigma (Inl (v, cv))) \<squnion> globs (sigma (Inr gk0))"
+      "combine_abs gs
+         (snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
+                 (globs (sigma (Inr gk0)))))
+         (fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
+                 (globs (sigma (Inr gk0)))))
+       \<le> combine_abs gs (locals (sigma (Inl (v, cv)))) (globs (sigma (Inr gk0)))"
   shows "combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (v, cv))\<rbrakk>"
 proof -
   let ?Dc = "locals (sigma (Inl (cl, c1)))"
   let ?De = "locals (sigma (Inl (ex, c2)))"
   let ?G = "globs (sigma (Inr gk0))"
-  have sin: "s \<in> gamma_unit ?Dc ?G"
+  have sin: "s \<in> gamma_unit gs ?Dc ?G"
     using s covCl by (simp add: sg_cov gamma_unit_def)
-  have tin: "t \<in> gamma_unit ?De ?G"
+  have tin: "t \<in> gamma_unit gs ?De ?G"
     using t covEx by (simp add: sg_cov gamma_unit_def)
   have "combine_collect gs dst s t
-        \<in> gamma_unit (snd (dgs_combine S dst ?Dc ?De ?G)) (fst (dgs_combine S dst ?Dc ?De ?G))"
+        \<in> gamma_unit gs (snd (dgs_combine S dst ?Dc ?De ?G)) (fst (dgs_combine S dst ?Dc ?De ?G))"
     using combine_sound_fs[OF sin tin] .
-  also have "\<dots> \<subseteq> gamma_unit (locals (sigma (Inl (v, cv)))) ?G"
+  also have "\<dots> \<subseteq> gamma_unit gs (locals (sigma (Inl (v, cv)))) ?G"
     unfolding gamma_unit_def
-    by (rule gamma_state_mono) (rule bound[unfolded gamma_unit_def])
+    by (rule gamma_state_mono) (rule bound)
   also have "\<dots> = \<lbrakk>sg (Inl (v, cv))\<rbrakk>"
     using covV by (simp add: sg_cov gamma_unit_def)
   finally show ?thesis .

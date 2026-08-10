@@ -449,8 +449,8 @@ where
 lemma placement_edge_hook_sound:
   fixes sigma :: "pp \<times> unit + unit => (ivl abs_state, ivl abs_state) dg_state"
   shows
-    "edge_collect action (dg_hook_gamma gamma_unit sigma source) \<subseteq>
-      gamma_unit
+    "edge_collect action (dg_hook_gamma gamma_join sigma source) \<subseteq>
+      gamma_join
         (locals (traverse_rhs
           (placement_abs_edge_tree source action destination) sigma))
         (globs (sides_of_rhs
@@ -477,7 +477,7 @@ proof -
       sides_placed_abs_dg_edge_tree_Inr dg_hook_D_def dg_hook_G_def
       sum.map_comp o_def)
   have recombine:
-    "gamma_unit
+    "gamma_join
         (project_abs_on (placement_node_owner destination)
           (declared_global placement_prog) placement_keep_local
           (apply_tf (ivl_tf_for (declared_global placement_prog)) action
@@ -488,17 +488,17 @@ proof -
             (dg_hook_D sigma source \<squnion> dg_hook_G sigma)))
       = \<lbrakk>apply_tf (ivl_tf_for (declared_global placement_prog)) action
           (dg_hook_D sigma source \<squnion> dg_hook_G sigma)\<rbrakk>"
-    unfolding gamma_unit_eq by (simp add: placement_project_split_join)
-  have "edge_collect action (dg_hook_gamma gamma_unit sigma source) =
+    unfolding gamma_join_def by (simp add: placement_project_split_join)
+  have "edge_collect action (dg_hook_gamma gamma_join sigma source) =
       edge_collect action \<lbrakk>dg_hook_D sigma source \<squnion> dg_hook_G sigma\<rbrakk>"
-    unfolding dg_hook_gamma_def gamma_unit_eq by simp
+    unfolding dg_hook_gamma_def gamma_join_def by simp
   also have "... \<subseteq>
       \<lbrakk>apply_tf (ivl_tf_for (declared_global placement_prog)) action
         (dg_hook_D sigma source \<squnion> dg_hook_G sigma)\<rbrakk>"
     by (rule sound_transfer_for.edge_collect_apply_tf_sound_for
       [OF ivl_is_sound_transfer_for])
   also have "... =
-      gamma_unit
+      gamma_join
         (locals (traverse_rhs
           (placement_abs_edge_tree source action destination) sigma))
         (globs (sides_of_rhs
@@ -509,10 +509,10 @@ qed
 
 lemma placement_enter_hook_sound:
   fixes sigma :: "pp \<times> unit + unit => (ivl abs_state, ivl abs_state) dg_state"
-  assumes sin: "s \<in> dg_hook_gamma gamma_unit sigma caller"
+  assumes sin: "s \<in> dg_hook_gamma gamma_join sigma caller"
   shows
     "call_enter (declared_global placement_prog) (CallEdge dst fs args) s \<in>
-      gamma_unit
+      gamma_join
         (locals (traverse_rhs
           (placement_abs_enter_tree caller (CallEdge dst fs args)
             (FunctionEntry callee)) sigma))
@@ -547,7 +547,7 @@ proof -
       sides_placed_abs_dg_edge_tree_Inr dg_hook_D_def dg_hook_G_def
       sum.map_comp o_def ivl_tf_for_def)
   have recombine:
-    "gamma_unit
+    "gamma_join
         (project_abs_on callee
           (declared_global placement_prog) placement_keep_local
           (enter_ivl_for (declared_global placement_prog) fs args
@@ -558,9 +558,9 @@ proof -
             (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)))
       = \<lbrakk>enter_ivl_for (declared_global placement_prog) fs args
           (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
-    unfolding gamma_unit_eq by (simp add: placement_project_split_join)
+    unfolding gamma_join_def by (simp add: placement_project_split_join)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
-    using sin unfolding dg_hook_gamma_def gamma_unit_eq by simp
+    using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "call_enter (declared_global placement_prog) (CallEdge dst fs args) s =
       bind_formals fs (map (\<lambda>e. aval e s) args)
         (enter_state (declared_global placement_prog) s)"
@@ -577,11 +577,11 @@ qed
 
 lemma placement_combine_hook_sound:
   fixes sigma :: "pp \<times> unit + unit => (ivl abs_state, ivl abs_state) dg_state"
-  assumes sin: "s \<in> dg_hook_gamma gamma_unit sigma caller"
-    and tin: "t \<in> dg_hook_gamma gamma_unit sigma (FunctionResult callee)"
+  assumes sin: "s \<in> dg_hook_gamma gamma_join sigma caller"
+    and tin: "t \<in> dg_hook_gamma gamma_join sigma (FunctionResult callee)"
   shows
     "combine_collect (declared_global placement_prog) dst s t \<in>
-      gamma_unit
+      gamma_join
         (locals (traverse_rhs
           (placement_abs_combine_tree caller (CallEdge dst fs args)
             (FunctionResult callee) continuation) sigma))
@@ -616,17 +616,17 @@ proof -
       sides_placed_abs_dg_combine_tree_Inr dg_hook_D_def dg_hook_G_def
       sum.map_comp o_def)
   have recombine:
-    "gamma_unit
+    "gamma_join
         (project_abs_on (placement_node_owner continuation)
           (declared_global placement_prog) placement_keep_local result)
         (project_abs_on (placement_node_owner continuation)
           (declared_global placement_prog) placement_publish_side result)
       = \<lbrakk>result\<rbrakk>"
-    unfolding gamma_unit_eq by (simp add: placement_project_split_join)
+    unfolding gamma_join_def by (simp add: placement_project_split_join)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
-    using sin unfolding dg_hook_gamma_def gamma_unit_eq by simp
+    using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have t_in: "t \<in> \<lbrakk>dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma\<rbrakk>"
-    using tin unfolding dg_hook_gamma_def gamma_unit_eq by simp
+    using tin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "combine_collect (declared_global placement_prog) dst s t \<in> \<lbrakk>result\<rbrakk>"
     unfolding result_def by (rule combine_collect_sound[OF s_in t_in])
   then show ?thesis
@@ -635,13 +635,13 @@ qed
 
 interpretation placement_sound_dg_hooks:
   sound_dg_hooks
-    gamma_unit
+    gamma_join
     "declared_global placement_prog"
     placement_abs_edge_tree
     placement_abs_combine_tree
     placement_abs_enter_tree
   apply unfold_locales
-  subgoal by (rule gamma_unit_mono)
+  subgoal by (rule gamma_join_mono)
   subgoal by (rule placement_edge_hook_sound)
   subgoal by (rule placement_enter_hook_sound)
   subgoal by (rule placement_combine_hook_sound)
@@ -2922,7 +2922,7 @@ text \<open>\<open>sound_dg_hooks_ltr\<close> re-packages \<open>sound_dg_hooks\
 
 interpretation placement_sound_dg_hooks_ltr:
   sound_dg_hooks_ltr
-    gamma_unit
+    gamma_join
     "declared_global placement_prog"
     placement_abs_edge_tree
     placement_abs_combine_tree
@@ -2964,14 +2964,14 @@ lemma placement_cover_combine:
 
 lemma placement_sound0:
   "cinit_stores (declared_global placement_prog) \<subseteq>
-    gamma_unit placement_s0d_abs placement_s0g_abs"
+    gamma_join placement_s0d_abs placement_s0g_abs"
 proof -
   have base: "cinit_stores (declared_global placement_prog) \<subseteq> \<lbrakk>placement_s0d_abs\<rbrakk>"
     unfolding placement_s0d_abs_def
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_ivl_st_for)
   have mono: "\<lbrakk>placement_s0d_abs\<rbrakk> \<subseteq> \<lbrakk>placement_s0d_abs \<squnion> placement_s0g_abs\<rbrakk>"
     by (rule gamma_state_mono) (simp add: sup_ge1)
-  show ?thesis unfolding gamma_unit_eq using base mono by blast
+  show ?thesis unfolding gamma_join_def using base mono by blast
 qed
 
 text \<open>The trace-native collecting soundness endpoint: every stack-faithful
@@ -2981,7 +2981,7 @@ text \<open>The trace-native collecting soundness endpoint: every stack-faithful
 theorem placement_dg_td_collect_sound:
   "ltr_collect (declared_global placement_prog) placement_cfg
     (cinit_stores (declared_global placement_prog)) v \<subseteq>
-    dg_hook_gamma gamma_unit placement_sigma_abs v"
+    dg_hook_gamma gamma_join placement_sigma_abs v"
   by (rule placement_sound_dg_hooks_ltr.hook_post_solution_collect_sound_ltr[OF
         placement_dg_td_abs_post_solution placement_cover_entry placement_cover_edge
         placement_cover_enter placement_cover_combine placement_finI placement_finC

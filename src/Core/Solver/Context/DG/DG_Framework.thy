@@ -21,7 +21,7 @@ definition unit_step_for ::
    => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_step_for gs f d g =
-     (let res = f (d \<squnion> g) in
+     (let res = f (combine_abs gs d g) in
       (restrict_global_for gs res, restrict_local_for gs res))"
 
 definition unit_step_placed ::
@@ -33,60 +33,7 @@ where
      (let res = f (d \<squnion> g) in
       (project_component publish_side res, project_component keep_local res))"
 
-lemma unit_step_for_classic:
-  "unit_step_for storage f d g =
-    unit_step_placed (classic_split_keep_local storage) (classic_split_publish_side storage) f d g"
-  unfolding unit_step_for_def unit_step_placed_def project_component_def
-    classic_split_keep_local_def classic_split_publish_side_def restrict_global_for_def
-    restrict_local_for_def Let_def
-  by (simp add: fun_eq_iff)
 
-definition unit_step_resolved_for ::
-  "(vname => bool) =>
-   ('a::bounded_semilattice_sup_bot abs_state => 'a resolved_st) =>
-   'a resolved_st => 'a resolved_st =>
-   'a resolved_st \<times> 'a resolved_st"
-where
-  "unit_step_resolved_for gs f d g =
-     (let res = f (fun_of_resolved_st_for gs d \<squnion>
-                         fun_of_resolved_st_for gs g)
-      in (restrict_global_resolved res, restrict_local_resolved res))"
-
-lemma unit_step_resolved_for_commute:
-  fixes gs :: "vname => bool"
-    and f :: "'a::bounded_semilattice_sup_bot abs_state => 'a resolved_st"
-    and f_abs :: "'a abs_state => 'a abs_state"
-    and d g :: "'a resolved_st"
-  assumes commute:
-    "\<And>s. fun_of_resolved_st_for gs (f s) = f_abs s"
-  shows
-    "map_prod (fun_of_resolved_st_for gs) (fun_of_resolved_st_for gs)
-       (unit_step_resolved_for gs f d g) =
-     unit_step_for gs f_abs
-       (fun_of_resolved_st_for gs d) (fun_of_resolved_st_for gs g)"
-proof -
-  have global:
-    "fun_of_resolved_st_for gs
-        (restrict_global_resolved
-          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g))) =
-       restrict_global_for gs
-        (fun_of_resolved_st_for gs
-          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g)))"
-    unfolding restrict_global_for_def
-    by (rule ext) (simp add: fun_of_resolved_st_for_restrict_global)
-  have local:
-    "fun_of_resolved_st_for gs
-        (restrict_local_resolved
-          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g))) =
-       restrict_local_for gs
-        (fun_of_resolved_st_for gs
-          (f (fun_of_resolved_st_for gs d \<squnion> fun_of_resolved_st_for gs g)))"
-    unfolding restrict_local_for_def
-    by (rule ext) (simp add: fun_of_resolved_st_for_restrict_local)
-  show ?thesis
-    unfolding unit_step_resolved_for_def unit_step_for_def
-    by (simp only: Let_def map_prod_simp global local commute)
-qed
 
 subsection \<open>A lattice copy type for D-times-G unknown values\<close>
 
@@ -464,7 +411,7 @@ definition unit_combine_step_assign_for ::
    => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_assign_for gs dst de g merged =
-     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var)
+     (let res = combine_assign_abs dst (de ret_var)
          (fst merged \<squnion> snd merged)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 
@@ -474,7 +421,7 @@ definition unit_combine_step_env_for ::
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state
    => 'a abs_state => 'a abs_state \<times> 'a abs_state" where
   "unit_combine_step_env_for gs dc de g =
-     (let m = combine_abs gs (dc \<squnion> g) (de \<squnion> g)
+     (let m = combine_abs gs dc g
       in (restrict_global_for gs m, restrict_local_for gs m))"
 
 definition unit_combine_step_env_placed ::
@@ -486,14 +433,6 @@ where
      (let res = combine_abs source_global (dc \<squnion> g) (de \<squnion> g) in
       (project_component publish_side res, project_component keep_local res))"
 
-lemma unit_combine_step_env_for_classic:
-  "unit_combine_step_env_for storage dc de g =
-    unit_combine_step_env_placed storage (classic_split_keep_local storage)
-      (classic_split_publish_side storage) dc de g"
-  unfolding unit_combine_step_env_for_def unit_combine_step_env_placed_def
-    project_component_def classic_split_keep_local_def classic_split_publish_side_def
-    restrict_global_for_def restrict_local_for_def Let_def
-  by (simp add: fun_eq_iff)
 
 definition unit_combine_step_assign_placed ::
   "(vname => bool) => (vname => bool) => vname option =>
@@ -505,14 +444,7 @@ where
          (fst merged \<squnion> snd merged)
       in (project_component publish_side res, project_component keep_local res))"
 
-lemma unit_combine_step_assign_for_classic:
-  "unit_combine_step_assign_for storage dst de g merged =
-    unit_combine_step_assign_placed (classic_split_keep_local storage)
-      (classic_split_publish_side storage) dst de g merged"
-  unfolding unit_combine_step_assign_for_def unit_combine_step_assign_placed_def
-    project_component_def classic_split_keep_local_def classic_split_publish_side_def
-    restrict_global_for_def restrict_local_for_def Let_def
-  by (simp add: fun_eq_iff)
+
 definition unit_dg_spec_placed ::
   "(vname => bool) => (vname => bool) => (vname => bool) =>
    'a::sound_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
@@ -564,29 +496,29 @@ where
     dgs_combine_env    = unit_combine_step_env_for gs,
     dgs_combine_assign = unit_combine_step_assign_for gs
   \<rparr>"
-lemma unit_dg_spec_for_classic:
-  "unit_dg_spec_for storage tf =
-    unit_dg_spec_placed storage (classic_split_keep_local storage)
-      (classic_split_publish_side storage) tf"
-  unfolding unit_dg_spec_for_def unit_dg_spec_placed_def
-  by (simp add: unit_step_for_classic unit_combine_step_env_for_classic
-    unit_combine_step_assign_for_classic fun_eq_iff)
 
+text \<open>Unlike the plain collecting semantics' \<^const>\<open>combine_collect_abs\<close>, the
+  D/G-split combine cannot read the return value and the global effects from the
+  same argument: the return slot is a local name owned by the callee's exit
+  state \<open>de\<close>, while every global name is owned by the freshly-queried \<open>g\<close>, not
+  by \<open>de\<close>'s own (locally-restricted) copy of it. \<^const>\<open>combine_abs\<close> still
+  supplies the ownership routing for the non-return names; \<open>de ret_var\<close> is
+  read directly instead of routing it through that same combine.\<close>
 lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
-     (let res = combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)
+     (let res = combine_assign_abs dst (de ret_var) (combine_abs gs dc g)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 proof -
-  have env_join:
+  have env:
     "fst (unit_combine_step_env_for gs dc de g) \<squnion>
        snd (unit_combine_step_env_for gs dc de g) =
-     combine_abs gs (dc \<squnion> g) (de \<squnion> g)"
+     combine_abs gs dc g"
     unfolding unit_combine_step_env_for_def
     by (simp add: Let_def restrict_global_for_local_join)
   show ?thesis
     unfolding dgs_combine_def unit_dg_spec_for_def
-      unit_combine_step_assign_for_def combine_collect_abs_def Let_def
-    by (simp add: env_join)
+      unit_combine_step_assign_for_def Let_def
+    by (simp add: env)
 qed
 
 lemma dg_spec_step_unit_for:

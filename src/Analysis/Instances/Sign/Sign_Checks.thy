@@ -153,8 +153,9 @@ lemma analyse_sign_report_for_code [code]:
   "analyse_sign_report_for gs p =
      (let sol = snd (analyse_sign_for gs p)
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ()))))
-                \<squnion> fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))
+           (\<lambda>v. combine_abs gs
+                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
            sign_classify_check)"
   unfolding analyse_sign_report_for_def analyse_sign_env_for_def[abs_def] Let_def
   by (rule refl)
@@ -189,8 +190,9 @@ lemma analyse_sign_report_for_with_state_code [code]:
   "analyse_sign_report_for_with_state gs p =
      (let sol = snd (analyse_sign_for gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ()))))
-                \<squnion> fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))
+           (\<lambda>v. combine_abs gs
+                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
            sign_classify_check)"
   unfolding analyse_sign_report_for_with_state_def analyse_sign_env_for_def[abs_def] Let_def
   by (rule refl)
