@@ -356,10 +356,11 @@ lemma cinit_le_cinit_ivl_st_2: "cinit_stores nest_gs \<subseteq> \<lbrakk>fun_of
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 
 theorem nest_2_activation_collect_sound:
-  "activation_collect nest_gs (cs_enterc 2) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect nest_gs (cs_enterc 2) [] (=) nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_2 (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_2 and enterc = "cs_enterc 2"
-        and seedc = "[]" and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
+        and seedc = "[]" and ctx_rep = "(=)"
+        and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
     projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
@@ -405,6 +406,10 @@ next
         \<Longrightarrow> call_enter_store nest_gs nest_cfg cl s es
         \<Longrightarrow> combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_2 (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_2_comb)
+next
+  \<comment> \<open>MONO --- trivial at exact match.\<close>
+  show "\<And>c1 c2. c1 = c2 \<Longrightarrow> \<lbrakk>ivl_ctx_sg_2 (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>ivl_ctx_sg_2 (Inl (v, c2))\<rbrakk>"
+    by simp
 qed
 
 section \<open>Call-string-context-expanded analysis graph\<close>

@@ -16,11 +16,19 @@ text \<open>Four local obligations connect the abstract solution to the trace ru
   The root seed covers initial stores; ordinary edges preserve the activation key; calls
   cover the entered store at the routed callee key; and return combination writes to the
   original caller key. The theorem is parameterized by the solution reader, entry routing,
-  and root key. No return-key function is needed because the caller key is stable.\<close>
+  and root key. No return-key function is needed because the caller key is stable.
+
+  \<open>MONO\<close> is the one obligation the trace-level engine (\<open>valid_ltr_ctx_sound\<close>) does not
+  itself need: it delivers soundness at a trace's own EXACT key, and \<open>MONO\<close> is what lets
+  that exact-key fact answer a query at any \<open>ctx\<close> the exact key is \<open>ctx_rep\<close>-covered by.
+  At \<open>ctx_rep = (=)\<close>, \<open>MONO\<close> is the trivial \<open>subset_refl\<close> instance and every reader that
+  never varies the queried context across a covering relation reduces to today's exact
+  match.\<close>
 
 theorem activation_collect_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c" and seedc :: 'c
+    and ctx_rep :: "'c \<Rightarrow> 'c \<Rightarrow> bool"
     and gs :: "vname \<Rightarrow> bool"
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
@@ -37,15 +45,17 @@ theorem activation_collect_sound:
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, enterc cl c1 es))\<rbrakk>
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-  shows "activation_collect gs enterc seedc g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+    and MONO: "\<And>c1 c2. ctx_rep c1 c2 \<Longrightarrow> \<lbrakk>sg (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>sg (Inl (v, c2))\<rbrakk>"
+  shows "activation_collect gs enterc seedc ctx_rep g S v ctx \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
 proof (rule subsetI)
-  fix st assume "st \<in> activation_collect gs enterc seedc g S v ctx"
+  fix st assume "st \<in> activation_collect gs enterc seedc ctx_rep g S v ctx"
   then obtain t where t: "t \<in> valid_ltr gs g S"
-    and sn: "sink_node t = v" and kc: "key enterc seedc t = ctx" and st: "sink_store t = st"
+    and sn: "sink_node t = v" and kc: "ctx_rep (key enterc seedc t) ctx" and st: "sink_store t = st"
     by (rule activation_collect_E)
   have "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, key enterc seedc t))\<rbrakk>"
     using ENTRY_G EDGE CALL COMB t by (rule valid_ltr_ctx_sound)
-  then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn kc st by simp
+  then have "st \<in> \<lbrakk>sg (Inl (v, key enterc seedc t))\<rbrakk>" using sn st by simp
+  then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using kc MONO by blast
 qed
 
 end

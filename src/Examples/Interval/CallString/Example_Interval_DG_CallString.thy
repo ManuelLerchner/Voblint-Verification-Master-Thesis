@@ -461,10 +461,11 @@ lemma cinit_le_cinit_ivl_st: "cinit_stores twice_gs \<subseteq> \<lbrakk>fun_of_
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 
 theorem twice_cs_activation_collect_sound:
-  "activation_collect twice_gs enterc_cs (cfg_entry twice_cfg) twice_cfg (cinit_stores twice_gs) v ctx
+  "activation_collect twice_gs enterc_cs (cfg_entry twice_cfg) (=) twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and enterc = enterc_cs
-        and seedc = "cfg_entry twice_cfg" and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
+        and seedc = "cfg_entry twice_cfg" and ctx_rep = "(=)"
+        and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
     projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
@@ -511,6 +512,10 @@ next
         \<Longrightarrow> call_enter_store twice_gs twice_cfg cl s es
         \<Longrightarrow> combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_cs (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_cs_comb)
+next
+  \<comment> \<open>MONO --- trivial at exact match.\<close>
+  show "\<And>c1 c2. c1 = c2 \<Longrightarrow> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, c2))\<rbrakk>"
+    by simp
 qed
 
 section \<open>Call-site-context-expanded analysis graph\<close>

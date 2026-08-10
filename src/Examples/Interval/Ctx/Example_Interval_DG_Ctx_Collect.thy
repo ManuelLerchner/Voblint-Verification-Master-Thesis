@@ -423,10 +423,11 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at
   step / combine soundness, route consistency, and the \<open>ivl_ctx_sg_seed\<close> enter seed.\<close>
 
 theorem twice_activation_collect_sound:
-  "activation_collect twice_gs ivl_enterc [] twice_cfg (cinit_stores twice_gs) v ctx
+  "activation_collect twice_gs ivl_enterc [] (=) twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_enterc
-        and seedc = "[]" and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
+        and seedc = "[]" and ctx_rep = "(=)"
+        and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
     projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
@@ -474,6 +475,10 @@ next
         \<Longrightarrow> call_enter_store twice_gs twice_cfg cl s es
         \<Longrightarrow> combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"
     by (rule ivl_ctx_sg_comb)
+next
+  \<comment> \<open>MONO --- trivial at exact match.\<close>
+  show "\<And>c1 c2. c1 = c2 \<Longrightarrow> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk> \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, c2))\<rbrakk>"
+    by simp
 qed
 
 end

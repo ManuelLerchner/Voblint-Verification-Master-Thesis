@@ -757,22 +757,29 @@ lemma callee_entry_invariant_call_enterD:
 subsection \<open>The activation-indexed context collecting\<close>
 
 text \<open>The activation-sensitive collecting is the sink stores of valid traces reaching \<open>v\<close>
-  whose activation context is \<open>c\<close>.\<close>
+  whose activation context is COVERED by the queried \<open>c\<close>, under an arbitrary relation
+  \<open>ctx_rep\<close>. Exact activation matching --- one query context per trace --- is the
+  \<open>ctx_rep = (=)\<close> instance; a wider \<open>ctx_rep\<close> lets one queried context (for instance, an
+  abstract routing result that is not itself an exact point) stand for every trace whose
+  concrete key it covers.\<close>
 
 definition activation_collect ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
-  "activation_collect gs enterc seedc g S v c =
-     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('c \<Rightarrow> 'c \<Rightarrow> bool)
+     \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
+  "activation_collect gs enterc seedc ctx_rep g S v c =
+     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> ctx_rep (key enterc seedc t) c}"
 
 lemma activation_collect_I:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> key enterc seedc t = c
-   \<Longrightarrow> sink_store t \<in> activation_collect gs enterc seedc g S v c"
+  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> ctx_rep (key enterc seedc t) c
+   \<Longrightarrow> sink_store t \<in> activation_collect gs enterc seedc ctx_rep g S v c"
   unfolding activation_collect_def by blast
 
-text \<open>Every collected state has a valid trace witness at the given activation key.\<close>
+text \<open>Every collected state has a valid trace witness whose activation key is covered by
+  the queried \<open>c\<close>.\<close>
 lemma activation_collect_E:
-  assumes "s \<in> activation_collect gs enterc seedc g S v c"
-  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "key enterc seedc t = c" "sink_store t = s"
+  assumes "s \<in> activation_collect gs enterc seedc ctx_rep g S v c"
+  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "ctx_rep (key enterc seedc t) c"
+    "sink_store t = s"
   using assms unfolding activation_collect_def by blast
 
 

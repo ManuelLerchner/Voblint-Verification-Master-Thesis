@@ -288,8 +288,9 @@ theorem source_store_in_activation_collect:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, frs)"
+    and ctx_rep_refl: "\<And>c. ctx_rep c c"
   shows "\<exists>v stk t. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> s \<in> activation_collect source_global enterc seedc (compile_prog \<Pi> ps mnm main) S v
+                   \<and> s \<in> activation_collect source_global enterc seedc ctx_rep (compile_prog \<Pi> ps mnm main) S v
                           (key enterc seedc t)"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
@@ -298,8 +299,9 @@ proof -
       and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
   from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  have "s \<in> activation_collect source_global enterc seedc ?g S v (key enterc seedc t)"
-    using activation_collect_I[OF tv sn refl] ss by simp
+  have keyed: "ctx_rep (key enterc seedc t) (key enterc seedc t)" using ctx_rep_refl by blast
+  have "s \<in> activation_collect source_global enterc seedc ctx_rep ?g S v (key enterc seedc t)"
+    using activation_collect_I[where ctx_rep = ctx_rep, OF tv sn keyed] ss by simp
   then show ?thesis using sim by blast
 qed
 
@@ -310,8 +312,9 @@ theorem source_toplevel_in_activation_collect:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, [])"
+    and ctx_rep_refl: "\<And>c. ctx_rep c c"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect source_global enterc seedc (compile_prog \<Pi> ps mnm main) S v seedc"
+             \<and> s \<in> activation_collect source_global enterc seedc ctx_rep (compile_prog \<Pi> ps mnm main) S v seedc"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -322,8 +325,10 @@ proof -
     and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
   have "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   then have key: "key enterc seedc t = seedc" by (rule key_caller_of_None)
-  have "s \<in> activation_collect source_global enterc seedc ?g S v seedc"
-    using activation_collect_I[OF tv sn key] ss by simp
+  have seedc_refl: "ctx_rep seedc seedc" using ctx_rep_refl by blast
+  have covered: "ctx_rep (key enterc seedc t) seedc" using key seedc_refl by simp
+  have "s \<in> activation_collect source_global enterc seedc ctx_rep ?g S v seedc"
+    using activation_collect_I[where ctx_rep = ctx_rep, OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed
 

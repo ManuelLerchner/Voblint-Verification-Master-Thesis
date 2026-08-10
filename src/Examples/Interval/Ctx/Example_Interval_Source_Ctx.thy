@@ -35,12 +35,12 @@ theorem twice_source_ctx_run_sound:
              (residual, s, frs) (v, s, stk)
            \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, key ivl_enterc [] t))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect twice_gs ivl_enterc []
+  have cap: "\<And>v ctx. activation_collect twice_gs ivl_enterc [] (=)
                       (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
                     \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
-    by (rule source_sound_from_collecting_cap[OF twice_wf_gs init run cap])
+    by (rule source_sound_from_collecting_cap[where ctx_rep = "(=)", OF twice_wf_gs init run refl cap])
 qed
 
 text \<open>The witness-free specialisation: a \<open>twice\<close> store reached at the top level (empty source frame
@@ -54,13 +54,13 @@ theorem twice_source_toplevel_at_bot:
                (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, []))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect twice_gs ivl_enterc []
+  have cap: "\<And>v ctx. activation_collect twice_gs ivl_enterc [] (=)
                       (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
                     \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
     by (rule source_sound_toplevel_from_collecting_cap
-              [OF twice_wf_gs init run cap])
+              [where ctx_rep = "(=)", OF twice_wf_gs init run refl cap])
 qed
 
 end

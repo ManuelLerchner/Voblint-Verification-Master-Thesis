@@ -59,22 +59,58 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    `'c`: `vars`/`seed_key` already pair `'c` with `pp`, which disambiguates
    by callee. Proved at exact call sites (matching the flagship); the
    exactness precondition above is not lifted -- that's G2.
-2. **G2 -- abstract context coverage semantics (research item).** Traced
-   deeper than `routed_context`: `activation_collect`'s own membership
-   condition (`CFG_Local_Trace.thy`'s `key`, consumed by
-   `activation_collect_sound` in `Activation_Backbone.thy`) partitions
-   concrete traces by *exact* match on the computed context, not coverage.
-   A relation `ctx_rep :: 'c_concrete => 'c_abstract => bool` (with
-   `ctx_rep c a == c <= a` the natural instance on a shared ordered
-   carrier -- today's exact match is the `ctx_rep = (=)` special case)
-   needs `activation_collect` redefined against it and
-   `valid_ltr_ctx_sound`'s `CALL` case re-derived -- `CFG_Local_Trace.thy`
-   + `Activation_Local_Sound.thy` + `Activation_Backbone.thy`, not just
-   `Routed_Context.thy`. Likely converges with #77's "Context Widening".
-   Acceptance case: `x := random(); p(x);` analyzable under `--context
-   entry-state` without a statically proven singleton argument. Only after
-   this does `--context entry-state` become a claim about arbitrary
-   programs rather than exact-argument call sites.
+2. **G2 -- abstract context coverage semantics (research item), split into
+   G2a (done) and G2b (open).**
+   **G2a -- generalize `activation_collect` in place. Done, batch-green
+   (2026-08-10).** `activation_collect` (`CFG_Local_Trace.thy`) now takes
+   a coverage relation `ctx_rep :: 'c => 'c => bool` as an explicit
+   parameter -- membership is `ctx_rep (key enterc seedc t) c`, not literal
+   equality -- with no algebraic assumption baked into the definition
+   itself (reflexivity, transitivity, etc. are added only at the call site
+   that actually needs them). `activation_collect_sound`
+   (`Activation_Backbone.thy`) gained one new `MONO` obligation
+   (`ctx_rep c1 c2 ==> sg-slot c1 <= sg-slot c2`) to bridge a trace's exact
+   key to a covering query; CALL/COMB and the trace-level engine
+   (`valid_ltr_ctx_sound`, `ltr_gamma`) are untouched, since they reason
+   about a trace's own exact key, which `ctx_rep`-coverage never revisits.
+   `ctx_rep = (=)` is the literal old behavior (`MONO` closes by `simp`).
+   Threaded generically (not hardcoded) through the reusable bridge layers
+   -- `LTR_Collect.thy`, `Located_LTR.thy`,
+   `Formalization/Pipeline/Source_Activation_Sound.thy`, each carrying
+   `ctx_rep` as a genuine parameter with only a local `ctx_rep_refl`
+   assumption where an exact-key membership is derived -- and instantiated
+   at `ctx_rep = (=)` only at the true leaf sites: `LTR_Abstract.thy`'s
+   `activation_collect_subset_acc` (no cross-context monotonicity on `acc`
+   exists yet, so this stays exact), `Call_String_Collecting_Refinement
+   .thy`, all four CallString examples (Interval K1/K2/flat, Sign K1/K2),
+   and both G1 Ctx examples (`Example_Interval_DG_Ctx_Collect.thy`,
+   `Example_Interval_Source_Ctx.thy`). Eleven files total; batch build
+   confirmed green (`Finished Voblint_Examples`, exit 0, no `FAILED`).
+   **G2b -- the actual coverage capability (`ctx_rep != (=)`), still open.**
+   G2a's relaxation lives only in the wrapper between `activation_collect`
+   and `sg`; CALL's own obligation (`Activation_Backbone.thy`,
+   `LTR_Abstract.thy`'s `ltr_gamma` locale) still demands the callee land
+   in the *exact* `enterc`-computed slot for every concrete `s` a caller's
+   abstract state represents, because `ltr_gamma`'s `bnd` is defined as
+   membership at the trace's own exact key and COMB reads the callee back
+   at that same exact key via `callee_entry_invariant`. Getting a real
+   covering witness (e.g. Interval's `route` producing `Top` at a call
+   site) needs `bnd` itself redefined under `ctx_rep`
+   (`bnd u == EX c. ctx_rep (key ... u) c & sink_store u : acc (node u) c`),
+   `call_closed`/`return_closed`/`gamma_chain` re-derived against that
+   weaker `bnd`, a new cross-key monotonicity obligation on
+   `dg_ctx_activation` itself (`DG_Ctx_Activation.thy`'s `vars` is a flat
+   unordered `(pp x 'c)` set today with no relation between different
+   context keys at the same node), and `route_enterc_agree`
+   (`Routed_Context.thy`) relaxed to
+   `ctx_rep (enterc u ctx (call_enter gs ca s)) (route u ctx d ca)`. This
+   is genuinely Core-locale redesign, not a mechanical swap -- confirmed by
+   two independent derivation passes. Likely converges with #77's "Context
+   Widening". Acceptance case: `x := random(); p(x);` analyzable under
+   `--context entry-state` (`ctx_rep = (<=)` on `ivl`) without a statically
+   proven singleton argument. Only after this does `--context entry-state`
+   become a claim about arbitrary programs rather than exact-argument call
+   sites.
 3. **G3 -- executable context-sensitive Interval endpoint,** analogous to
    `analyse_interval_td_raw` but keyed on `(pp x ctx)`, same `solve_dom`/
    `solve_c` convention, `export_code`'d.

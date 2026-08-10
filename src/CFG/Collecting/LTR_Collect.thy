@@ -387,15 +387,18 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs enterc seedc g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect gs enterc seedc ctx_rep g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
-  has a key, so ranging over all keys recovers the unfiltered collecting.  No finiteness
-  assumption.\<close>
+  has a key, so ranging over all keys recovers the unfiltered collecting, PROVIDED \<open>ctx_rep\<close>
+  at least covers a key by itself (\<open>ctx_rep_refl\<close>); a covering relation that never matches a
+  trace's own key could leave it out of every slot. Exact match (\<open>ctx_rep = (=)\<close>) is the
+  instance where \<open>ctx_rep_refl\<close> is \<open>refl\<close>. No finiteness assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
-  "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc seedc g S v c)"
-  unfolding activation_collect_def ltr_collect_def by blast
+  assumes ctx_rep_refl: "\<And>c. ctx_rep c c"
+  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs enterc seedc ctx_rep g S v c)"
+  using ctx_rep_refl unfolding activation_collect_def ltr_collect_def by blast
 
 subsection \<open>Matched returns\<close>
 

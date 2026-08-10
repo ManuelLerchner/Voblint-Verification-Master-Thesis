@@ -184,11 +184,14 @@ proof (rule subsetI)
 qed
 
 text \<open>Context projection: the context-indexed concrete collection is covered by the abstract
-  slot at that exact context.\<close>
+  slot at that exact context. \<open>acc\<close> carries no cross-context monotonicity here, so this is
+  stated at the exact match \<open>ctx_rep = (=)\<close>; a covering query would need \<open>acc\<close> itself
+  monotone in the covering relation, which is a further obligation on this locale, not a
+  restatement of this fact.\<close>
 theorem activation_collect_subset_acc:
-  "activation_collect gs enterc seedc g S v c \<subseteq> acc v c"
+  "activation_collect gs enterc seedc (=) g S v c \<subseteq> acc v c"
 proof (rule subsetI)
-  fix x assume "x \<in> activation_collect gs enterc seedc g S v c"
+  fix x assume "x \<in> activation_collect gs enterc seedc (=) g S v c"
   then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "key enterc seedc t = c"
     "sink_store t = x"
     by (rule activation_collect_E)
