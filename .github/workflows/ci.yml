@@ -36,8 +36,8 @@ jobs:
       image: makarius/isabelle:Isabelle2025-2
       options: --user root
     steps:
-      - name: Install git
-        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+      - name: Install git, xz, make
+        run: apt-get update -qq && apt-get install -y -qq git xz-utils make > /dev/null
 
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
@@ -62,18 +62,11 @@ jobs:
       - name: Bridge AFP_COMPONENT_BASE to AFP
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
-      - name: Reproduce and test fix for ghc_setup Stack ownership flake
-        run: |
-          echo "--- ownership before chown ---"
-          ls -ld "$HOME"
-          id
-          echo "--- ghc_setup before fix (expected to fail) ---"
-          "$ISABELLE" ghc_setup || echo "FAILED as expected: exit $?"
-          echo "--- chown $HOME to current uid/gid ---"
-          chown -R "$(id -u):$(id -g)" "$HOME"
-          ls -ld "$HOME"
-          echo "--- ghc_setup after fix ---"
-          "$ISABELLE" ghc_setup
+      - name: Fix container HOME ownership (job runs --user root; image's $HOME is owned by the isabelle user, which trips Stack's ownership check)
+        run: chown -R "$(id -u):$(id -g)" "$HOME"
+
+      - name: Test ghc_setup after fixes
+        run: $ISABELLE ghc_setup
 
       - name: Dump Isabelle heap-related env (pre-build)
         run: |
