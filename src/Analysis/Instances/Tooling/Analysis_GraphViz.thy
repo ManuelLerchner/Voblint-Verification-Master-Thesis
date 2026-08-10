@@ -276,6 +276,43 @@ definition compiled_procedure_scope ::
            (owner_assigned_vars g (compiled_owner_of \<Pi> ps mnm main) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
 
+text \<open>
+  The classic abs-state route: any \<^class>\<open>sound_domain\<close> with a \<^class>\<open>show_val\<close>
+  instance renders its compiled program the same way -- the domain enters only through
+  \<^const>\<open>is_top\<close> (skip an untouched return slot) and \<^const>\<open>show_val\<close> (format a
+  value); everything else reads the compiler's own scope/owner/global bookkeeping.
+  A per-domain config is the identity specialization of this at its abstract type.
+\<close>
+definition compiled_domain_graph_config ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow>
+    (unit, unit, 'a::{sound_domain, show_val} abs_state, 'a abs_state) analysis_graph_config"
+where
+  "compiled_domain_graph_config gs \<Pi> ps mnm main =
+    \<lparr> local_of = id,
+      route = (\<lambda>_ _ _ _. ()),
+      show_context = (\<lambda>_. ''''),
+      locals_for_pp = (\<lambda>p.
+        let sc = compiled_procedure_scope gs \<Pi> ps mnm main (compile_prog \<Pi> ps mnm main) p
+        in scope_formals sc @ scope_locals sc),
+      return_slot_for_pp = (\<lambda>p.
+        scope_return_slot (compiled_procedure_scope gs \<Pi> ps mnm main
+          (compile_prog \<Pi> ps mnm main) p)),
+      globals_to_show = compiled_global_vars gs (compile_prog \<Pi> ps mnm main),
+      show_local = (\<lambda>_ _ vars s.
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
+      format_return = (\<lambda>_ _ ret s.
+        if is_top (s ret) then [] else [''ret='' @ show_val (s ret)]),
+      show_global = (\<lambda>_ vars s.
+        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
+      show_global_key = (\<lambda>_. ''Globals''),
+      is_shared_global = (\<lambda>_. True),
+      show_internal_globals = False,
+      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
+      cluster_label = (\<lambda>owner _. owner),
+      source_text = Some (pretty_string_of_program \<Pi> ps main []),
+      node_annotation = (\<lambda>_. None)
+    \<rparr>"
+
 
 definition visible_global ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> 'g \<Rightarrow> bool" where

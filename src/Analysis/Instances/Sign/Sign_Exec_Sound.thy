@@ -283,31 +283,7 @@ text \<open>
 definition sign_graph_config ::
   "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow>
     (unit, unit, sign abs_state, sign abs_state) analysis_graph_config" where
-  "sign_graph_config gs \<Pi> ps mnm main =
-    \<lparr> local_of = id,
-      route = (\<lambda>_ _ _ _. ()),
-      show_context = (\<lambda>_. ''''),
-      locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope gs \<Pi> ps mnm main (compile_prog \<Pi> ps mnm main) p
-        in scope_formals sc @ scope_locals sc),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope gs \<Pi> ps mnm main
-          (compile_prog \<Pi> ps mnm main) p)),
-      globals_to_show = compiled_global_vars gs (compile_prog \<Pi> ps mnm main),
-      show_local = (\<lambda>_ _ vars s.
-        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
-      format_return = (\<lambda>_ _ ret s.
-        if s ret = STop then [] else [''ret='' @ show_val (s ret)]),
-      show_global = (\<lambda>_ vars s.
-        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
-      show_global_key = (\<lambda>_. ''Globals''),
-      is_shared_global = (\<lambda>_. True),
-      show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
-      cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main []),
-      node_annotation = (\<lambda>_. None)
-    \<rparr>"
+  "sign_graph_config = compiled_domain_graph_config"
 
 definition sign_graph_solution ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp + unit \<Rightarrow> sign resolved_st_q) \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> sign abs_state)" where
