@@ -42,9 +42,10 @@ jobs:
 
     steps:
       # The image has no git; actions/checkout and the submodule step below
-      # both need it. The one unavoidable apt-get in this job.
-      - name: Install git
-        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+      # need it. unzip is opam's own hard dependency, needed by ocaml_setup
+      # further down (Isabelle's own OCaml export_code check).
+      - name: Install git, unzip
+        run: apt-get update -qq && apt-get install -y -qq git unzip > /dev/null
 
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
@@ -286,8 +287,8 @@ jobs:
       image: makarius/isabelle:Isabelle2025-2
       options: --user root
     steps:
-      - name: Install git
-        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+      - name: Install git, unzip
+        run: apt-get update -qq && apt-get install -y -qq git unzip > /dev/null
 
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
