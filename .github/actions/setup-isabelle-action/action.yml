@@ -61,9 +61,15 @@ runs:
     - name: Resolve Isabelle version identifier for the cache key
       shell: bash
       run: |
+        # Capture into a variable first: command substitution strips all
+        # trailing newlines, so the later `tr -c` (which treats a newline
+        # as "not in the allowed set" and would otherwise turn it into a
+        # literal `-`) can't eat the line terminator the GITHUB_ENV
+        # heredoc format requires before its closing delimiter.
+        slug=$("$ISABELLE" version | tr -c 'A-Za-z0-9._-' '-')
         {
           echo "ISABELLE_VERSION_SLUG<<ISABELLE_VERSION_SLUG_EOF"
-          "$ISABELLE" version | tr -c 'A-Za-z0-9._-' '-'
+          echo "$slug"
           echo "ISABELLE_VERSION_SLUG_EOF"
         } >> "$GITHUB_ENV"
 
