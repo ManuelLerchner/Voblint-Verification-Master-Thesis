@@ -94,6 +94,10 @@ codegen-regression = "bash scripts/mk/codegen-regression.sh"
 cli-build = "bash scripts/mk/cli-build.sh"
 cli-test = { cmd = "python3 tests/run.py", depends-on = ["cli-build"] }
 voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
+# Static checks over tests/regression/ fixture source -- no CLI build, no
+# OCaml, so this fails fast before cli-test's build cost. See tests/run.py's
+# lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
+regression-lint = "python3 tests/run.py --lint"
 
 # Everything CI runs, under one name. Spans all four features (lint,
 # grammar, test, and build's plain isabelle/ocaml calls), so this only
@@ -103,6 +107,7 @@ ci = { depends-on = [
   "grammar-check",
   "build",
   "codegen-check",
+  "regression-lint",
   "cli-test",
   "codegen-regression",
   "property",
