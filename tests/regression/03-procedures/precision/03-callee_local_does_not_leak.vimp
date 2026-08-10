@@ -1,0 +1,17 @@
+// PARAM: --analysis interval
+// bump's local x (its formal's shadow) and main's local x are distinct
+// activation-local bindings that happen to share a name. If combine ever
+// let a callee's local leak back into the caller's own binding of the same
+// name, main's x would come back as 105 instead of surviving at 1 -- this
+// is the same activation-local boundary #99's D/G combine fix protects,
+// exercised through a name COLLISION rather than an unrelated call.
+void bump(x) {
+  x := x + 100;
+  return x
+}
+void main() {
+  x := 1;
+  r := bump(5);
+  __voblint_check(x == 1); // PROVED
+  __voblint_check(r == 105) // PROVED
+}

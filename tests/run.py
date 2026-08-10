@@ -12,16 +12,24 @@ sits under one of two subdirectories that answer "what kind of guarantee":
                                    PROVED/REFUTED are the expected outcomes;
                                    UNKNOWN here generally means a regression,
                                    not a feature.
-  <NN-group>/known-imprecision/   UNKNOWN (or a weaker-than-true result) is
-                                   intentional. Every case's header comment
-                                   must name the concrete mechanism -- which
-                                   component loses the information and why
-                                   -- not just assert that a limitation
-                                   exists. A golden-output UNKNOWN with no
-                                   mechanism explained is how a real
-                                   precision bug (see git history around
-                                   issue #99) gets silently locked in as
-                                   "expected".
+  <NN-group>/soundness/           the concrete program's result is genuinely
+                                   undetermined (e.g. an unconstrained
+                                   random() feeds the checked condition):
+                                   both a satisfying and a violating
+                                   execution exist, so UNKNOWN is the only
+                                   sound answer -- not a limitation to name,
+                                   since there is no mechanism losing
+                                   information here.
+  <NN-group>/known-imprecision/   the concrete result IS fixed, but the
+                                   abstraction can't establish it. Every
+                                   case's header comment must name the
+                                   concrete mechanism -- which component
+                                   loses the information and why -- not just
+                                   assert that a limitation exists. A
+                                   golden-output UNKNOWN with no mechanism
+                                   explained is how a real precision bug
+                                   (see git history around issue #99) gets
+                                   silently locked in as "expected".
 
 A group with no precision claim at all (09-parser, 08-tooling) keeps its
 cases directly under <NN-group>/, no subdirectory.
@@ -119,12 +127,16 @@ report's row order. Robust to inserting/removing an unrelated check
 earlier in the file, unlike order-based matching.
 
 Adding a case is: drop a new .vimp file under an existing (or new)
-regression/<NN-group>/ directory, in a precision/ or known-imprecision/
-subdirectory if it makes a precision claim -- discovery is recursive,
-nothing else to wire up. Pick the subdirectory honestly: precision/ only if
-PROVED/REFUTED is actually what the analysis should produce there; if the
-true result is unreachable given what the domain can express, it belongs in
-known-imprecision/ with a comment naming why.
+regression/<NN-group>/ directory, in a precision/, soundness/, or
+known-imprecision/ subdirectory if it makes a precision claim -- discovery
+is recursive, nothing else to wire up. Pick the subdirectory by what the
+CONCRETE program does, not by what the analyzer currently reports:
+precision/ only if the concrete result is fixed and PROVED/REFUTED is
+actually what the analysis should produce; soundness/ if the concrete
+result is genuinely undetermined (unconstrained input reaches the checked
+condition), where UNKNOWN is the only sound answer and not a limitation;
+known-imprecision/ if the concrete result IS fixed but the domain can't
+express it, with a comment naming why.
 """
 
 import os
@@ -437,8 +449,9 @@ def lint_case(path: Path) -> list[str]:
     invocation, so --lint runs without a CLI build. Mechanically enforces
     the conventions this module's docstring and AGENTS.md's "Regression
     discipline" section otherwise only state in prose: every check carries
-    a recognized verdict, every known-imprecision/ case documents why, and
-    EXPECT-GRAPH blocks are balanced."""
+    a recognized verdict, every known-imprecision/ case documents why, every
+    soundness/ case asserts only UNKNOWN, and EXPECT-GRAPH blocks are
+    balanced."""
     problems: list[str] = []
     src_lines = path.read_text().splitlines()
     args = param_args(path)
@@ -465,12 +478,13 @@ def lint_case(path: Path) -> list[str]:
                 problems.append(f"line {line_no}: unrecognized verdict '{m.group(1)}'")
 
     parts = path.relative_to(REGRESSION_DIR).parts[:-1]
+    header = []
+    for line in src_lines[1:]:
+        if not line.startswith("//"):
+            break
+        header.append(line)
+
     if "known-imprecision" in parts:
-        header = []
-        for line in src_lines[1:]:
-            if not line.startswith("//"):
-                break
-            header.append(line)
         if len(header) < 1:
             problems.append(
                 "known-imprecision case has no header comment explaining "
@@ -480,6 +494,19 @@ def lint_case(path: Path) -> list[str]:
             problems.append(
                 "known-imprecision case asserts no UNKNOWN/NOWARN -- "
                 "does it belong in precision/ instead?"
+            )
+
+    if "soundness" in parts:
+        if len(header) < 1:
+            problems.append(
+                "soundness case has no header comment naming what's "
+                "unconstrained (e.g. an unbounded random())"
+            )
+        if set(expected.values()) - {"UNKNOWN"}:
+            problems.append(
+                "soundness case asserts a verdict other than UNKNOWN -- "
+                "if the concrete result is actually fixed, this belongs in "
+                "precision/ or known-imprecision/ instead"
             )
 
     begins = sum(1 for line in src_lines if line.rstrip() == GRAPH_BEGIN)

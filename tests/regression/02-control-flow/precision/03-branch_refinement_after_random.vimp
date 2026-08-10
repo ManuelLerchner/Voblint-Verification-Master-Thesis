@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// random() gives x no bound at all (Top), but the guard on each branch
+// narrows it before the check runs: the true arm's assume tightens x to
+// [1,+inf), the false arm's to (-inf,0]. Both checks read back their own
+// arm's narrowed range, not the pre-branch Top -- a guard/assume-narrowing
+// regression, not a join regression (unlike 01-if_else.vimp, the check is
+// inside each arm, before any post-if join). The false arm's !(0<x) is a
+// permanent regression witness for interval_less_false's boundary fix
+// (Interval_Numeric_Queries.thy): it used to report UNKNOWN here because
+// interval_less_false required a STRICT upper<lower separation (u2 < l1)
+// to refute "0<x", missing the touching-boundary case x=[-inf,0] where
+// u2=l1=0 -- sound but needlessly conservative, now u2<=l1.
+void main() {
+  x := random();
+  if (0 < x) {
+    __voblint_check(0 < x) // PROVED
+  } else {
+    __voblint_check(!(0 < x)) // PROVED
+  }
+}

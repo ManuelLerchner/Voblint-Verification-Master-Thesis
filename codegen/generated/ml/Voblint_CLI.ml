@@ -3731,7 +3731,8 @@ let rec interval_eq_true
 
 let rec interval_less_false
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u2 l1);;
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
 
 let rec interval_eq_false
   (Ivl (l1, u1)) (Ivl (l2, u2)) =

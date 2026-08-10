@@ -183,13 +183,29 @@ should assert, update the assertion and its surrounding comment in the same
 change -- do not leave a fixture's comment describing behavior as a "known
 limitation" once the limitation is fixed.
 
-Within a `tests/regression/<NN-group>/` directory, a case that asserts a
-precise result belongs in a `precision/` subdirectory (PROVED/REFUTED are
-the contract; UNKNOWN there generally means a regression) or a
-`known-imprecision/` one (UNKNOWN is intentional, and the case's header
-comment must name the concrete mechanism -- which component loses the
-information and why -- not just assert that a limitation exists). See
-`tests/run.py`'s module docstring for the full convention.
+Within a `tests/regression/<NN-group>/` directory, a case sits in one of
+three subdirectories, chosen by what the *concrete* program actually does,
+not by what the analyzer currently reports:
+
+- `precision/` -- the concrete result is fixed and decidable from the
+  source alone. PROVED/REFUTED are the contract; UNKNOWN there generally
+  means a regression.
+- `soundness/` -- the concrete result is genuinely not fixed (e.g. an
+  unconstrained `random()` feeds the checked condition): both a satisfying
+  and a violating execution exist. UNKNOWN is the only sound answer here,
+  not a limitation to explain -- asserting PROVED or REFUTED would itself
+  be unsound.
+- `known-imprecision/` -- the concrete result is fixed, but the abstraction
+  can't establish it. The case's header comment must name the concrete
+  mechanism -- which component loses the information and why -- not just
+  assert that a limitation exists.
+
+Picking `known-imprecision/` for a case that actually belongs in
+`soundness/` is a real miscategorization, not a style choice: it invites a
+"mechanism" comment for a case that has none (the concrete semantics is
+just underdetermined), and it makes precision improvements look like they
+"fixed" a case that was never wrong. See `tests/run.py`'s module docstring
+for the full convention.
 
 ## Proof development
 
