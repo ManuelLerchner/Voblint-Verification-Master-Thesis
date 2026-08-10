@@ -3,8 +3,8 @@
 // The context-sensitive keyed-context solver collapses every recursive
 // activation of fact into the same context (cluster_ctx_1), giving a small,
 // deterministic graph with a self-loop EnterEdge (fact_pp2_ctx1 back into
-// fact_entry_fact_ctx1) not exercised by 02-call_return.vimp's plain
-// caller/callee pair. Verdict is UNKNOWN, not PROVED: recursion is a known
+// fact_entry_fact_ctx1) not exercised by 11-graph-snapshot/02-call_return.vimp's
+// plain caller/callee pair. Verdict is UNKNOWN, not PROVED: recursion is a known
 // precision limitation of the current context representation (see
 // docs/OPEN_PROBLEMS.md and docs/CALLSTRING_CONTEXT_DESIGN.md -- unbounded
 // call histories make a precise finite context key an open problem), but

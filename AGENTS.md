@@ -183,6 +183,14 @@ should assert, update the assertion and its surrounding comment in the same
 change -- do not leave a fixture's comment describing behavior as a "known
 limitation" once the limitation is fixed.
 
+Within a `tests/regression/<NN-group>/` directory, a case that asserts a
+precise result belongs in a `precision/` subdirectory (PROVED/REFUTED are
+the contract; UNKNOWN there generally means a regression) or a
+`known-imprecision/` one (UNKNOWN is intentional, and the case's header
+comment must name the concrete mechanism -- which component loses the
+information and why -- not just assert that a limitation exists). See
+`tests/run.py`'s module docstring for the full convention.
+
 ## Proof development
 
 Before each proof, decide whether it is short and simple.

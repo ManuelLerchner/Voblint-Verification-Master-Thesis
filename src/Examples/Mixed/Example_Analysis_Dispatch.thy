@@ -832,4 +832,40 @@ lemma dg_probe_prog_locals_proved_global_unknown:
       (Statement 7, Less (N 0) (V (STR ''y'')), Check_Proved)]"
   by eval
 
+text \<open>
+  \<open>dg_probe_prog\<close>'s \<open>g\<close> above is \<open>Check_Unknown\<close> not because any D/G routing
+  loses precision, but because \<^const>\<open>cinit_sign_st\<close> seeds every declared
+  global at \<open>SZero\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec\<close>), and the
+  flow-insensitive global summary (\<^const>\<open>TD_side_always_join_Interp_solve\<close>,
+  the \<open>join\<close> discipline) folds that seed in as a real contribution alongside
+  every \<open>Side\<close> a write publishes --- it cannot tell "before this write" from
+  "after" apart, so soundness requires covering both. \<open>join_sign SZero SPos =
+  SNonNeg\<close>, and \<open>0 < g\<close> is genuinely undecided at \<open>SNonNeg\<close>: this is the
+  flow-insensitive model working as designed, not a residual gap in the same
+  fix as \<open>no_call_two_step_prog\<close>/\<open>dg_probe_prog\<close> above. The witness below pins
+  the actual semantic reason (the joined summary value itself), not merely
+  the report's \<open>Check_Unknown\<close>, which follows from it.
+\<close>
+
+definition global_initial_value_remains_in_summary_prog :: imp_prog where
+  "global_initial_value_remains_in_summary_prog =
+     program {
+       global g;
+       void main() {
+         g := 5;
+         __voblint_check(0 < g)
+       }
+     }"
+
+lemma global_initial_value_remains_in_summary_prog_summary_nonneg:
+  "fun_of_exec_dg_st_for (declared_global global_initial_value_remains_in_summary_prog)
+     (globs (snd (analyse_sign_for (declared_global global_initial_value_remains_in_summary_prog)
+       global_initial_value_remains_in_summary_prog) (Inr ()))) (STR ''g'') = SNonNeg"
+  by eval
+
+lemma global_initial_value_remains_in_summary_prog_check_unknown:
+  "analyse Sign_Analysis global_initial_value_remains_in_summary_prog =
+     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Unknown)]"
+  by eval
+
 end

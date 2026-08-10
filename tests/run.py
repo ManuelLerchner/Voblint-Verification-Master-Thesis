@@ -1,9 +1,30 @@
 #!/usr/bin/env python3
-"""Regression corpus runner for the voblint CLI, Goblint-style.
+"""Regression corpus runner for the voblint CLI.
 
-Cases live under tests/regression/<NN-topic>/<NN-name>.vimp, mirroring
+Cases live under tests/regression/<NN-group>/<name>.vimp, mirroring
 https://github.com/goblint/analyzer's tests/regression/<NN-group>/ layout
-(their "00-sanity" convention has a direct match here).
+(their "00-sanity" convention has a direct match here). <NN-group> answers
+"what part of the analyzer does this exercise" (globals, widening, the
+parser, ...); a case whose result carries a precision guarantee additionally
+sits under one of two subdirectories that answer "what kind of guarantee":
+
+  <NN-group>/precision/           exact result is part of the contract.
+                                   PROVED/REFUTED are the expected outcomes;
+                                   UNKNOWN here generally means a regression,
+                                   not a feature.
+  <NN-group>/known-imprecision/   UNKNOWN (or a weaker-than-true result) is
+                                   intentional. Every case's header comment
+                                   must name the concrete mechanism -- which
+                                   component loses the information and why
+                                   -- not just assert that a limitation
+                                   exists. A golden-output UNKNOWN with no
+                                   mechanism explained is how a real
+                                   precision bug (see git history around
+                                   issue #99) gets silently locked in as
+                                   "expected".
+
+A group with no precision claim at all (09-parser, 08-tooling) keeps its
+cases directly under <NN-group>/, no subdirectory.
 
 Each case carries its own invocation flags on line 1
 ("// PARAM: <voblint args>", mirroring Goblint's "// SKIP PARAM: --set ...")
@@ -48,22 +69,23 @@ verdicts:
                                   case's graph is not checked. Block present
                                   but stale: FAIL with a diff-able mismatch.
                                   --dot cases (see 08-tooling/01-dot_smoke
-                                  .vimp) are DOT renderer-styling regressions
-                                  and are exempt: they already assert their
-                                  own shape and don't also carry this block.
+                                  .vimp) are DOT renderer-styling
+                                  regressions and are exempt: they already
+                                  assert their own shape and don't also
+                                  carry this block.
 
-Usage (mirrors Goblint's update_suite.rb selection modes):
-  run.py                             run every case, in parallel
-  run.py 02-control-flow             run only that group (dir basename, with
-                                      or without its NN- prefix)
-  run.py -02-control-flow            run everything EXCEPT that group
-  run.py if_else                     run by (sub)name, like Goblint's
-                                      "update_suite.rb simple_rc" -- matches
-                                      a case's stem or its group/stem path
-  run.py group 02-control-flow       same, "group" keyword accepted and
-                                      ignored for readers used to Goblint's
-                                      own phrasing
-  run.py path/to/case.vimp           run a single case by path
+Usage (selectors match any path component -- group, precision/
+known-imprecision, or file stem -- so a whole group and one precision
+subdirectory within it are both one word):
+  run.py                              run every case, in parallel
+  run.py 02-control-flow              run only that group
+  run.py 12-widening/known-imprecision  run only that group's imprecision cases
+  run.py known-imprecision            run every known-imprecision case,
+                                       across every group
+  run.py -known-imprecision           run everything EXCEPT those
+  run.py if_else                      run by (sub)name -- matches a case's
+                                       stem or any path component
+  run.py path/to/case.vimp            run a single case by path
   run.py -s ...                      sequential instead of parallel (for
                                       debugging flaky ordering)
   run.py ... --update-graphs         (re)generate every selected case's
@@ -82,7 +104,12 @@ report's row order. Robust to inserting/removing an unrelated check
 earlier in the file, unlike order-based matching.
 
 Adding a case is: drop a new .vimp file under an existing (or new)
-regression/<NN-topic>/ directory -- nothing else to wire up.
+regression/<NN-group>/ directory, in a precision/ or known-imprecision/
+subdirectory if it makes a precision claim -- discovery is recursive,
+nothing else to wire up. Pick the subdirectory honestly: precision/ only if
+PROVED/REFUTED is actually what the analysis should produce there; if the
+true result is unreachable given what the domain can express, it belongs in
+known-imprecision/ with a comment naming why.
 """
 
 import os
@@ -211,10 +238,6 @@ def run_voblint(args: list[str], path: Path) -> subprocess.CompletedProcess:
     )
 
 
-def group_of(path: Path) -> str:
-    return path.parent.name
-
-
 def check_case(path: Path) -> tuple[bool, list[str]]:
     """Runs one case and returns (passed, message_lines). Returns lines
     rather than printing directly: check_case runs concurrently across
@@ -222,7 +245,7 @@ def check_case(path: Path) -> tuple[bool, list[str]]:
     thread-safe way to redirect it per-call, so the caller is responsible
     for printing each case's lines together, in discovery order."""
     lines: list[str] = []
-    name = f"{group_of(path)}/{path.name}"
+    name = str(path.relative_to(REGRESSION_DIR))
     args = param_args(path)
     expected = expected_verdicts(path)
 
@@ -307,17 +330,18 @@ def check_case(path: Path) -> tuple[bool, list[str]]:
 
 
 def matches_selector(path: Path, sel: str) -> bool:
-    g = group_of(path)
-    g_topic = g.split("-", 1)[-1]
-    return sel in (g, g_topic, path.stem, f"{g}/{path.name}") or sel in str(
-        path.relative_to(REGRESSION_DIR)
-    )
+    """A selector matches a case by its stem, by any path component (the
+    NN-group, or a precision/known-imprecision subdirectory), or as a
+    substring of its group/subdirectory/name path -- so "02-control-flow",
+    "known-imprecision", "12-widening/known-imprecision", and "if_else" are
+    all one-word selections without needing a fixed nesting depth."""
+    rel = path.relative_to(REGRESSION_DIR)
+    return sel == path.stem or sel in rel.parts[:-1] or sel in str(rel)
 
 
 def discover(selectors: list[str]) -> list[Path]:
-    all_cases = sorted(REGRESSION_DIR.glob("*/*.vimp"))
+    all_cases = sorted(REGRESSION_DIR.rglob("*.vimp"))
 
-    selectors = [s for s in selectors if s != "group"]
     file_selectors = [s for s in selectors if s.endswith(".vimp") and Path(s).exists()]
     includes = [s for s in selectors if not s.endswith(".vimp") and not s.startswith("-")]
     excludes = [s[1:] for s in selectors if s.startswith("-") and not s.endswith(".vimp")]

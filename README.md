@@ -39,14 +39,14 @@ running the Interval analysis over it (see "Running the CLI" below) proves
 the check on the widened/narrowed fixpoint:
 
 ```bash
-$ pixi run voblint --analysis interval tests/regression/02-control-flow/02-while_loop.vimp
+$ pixi run voblint --analysis interval tests/regression/02-control-flow/precision/02-while_loop.vimp
 8:3  pp3        0<x                  PROVED   x=[10,10]
 ```
 
 `--dot` renders the same solved, per-node abstract state as a GraphViz CFG:
 
 ```bash
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/02-while_loop.vimp \
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/02-while_loop.vimp \
   | dot -Tpng -o while_loop_cfg.png
 ```
 
@@ -56,7 +56,7 @@ The same rendering on a branch/join program shows the interval domain merging
 both arms:
 
 ```bash
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp \
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp \
   | dot -Tpng -o if_else_cfg.png
 ```
 
@@ -360,15 +360,15 @@ extra arguments after the task name go straight to `cli/voblint`, not to pixi:
 
 ```bash
 # Check report: one line per __voblint_check, in source order
-pixi run voblint --analysis interval tests/regression/00-sanity/01-straight_line_proved.vimp
+pixi run voblint --analysis interval tests/regression/00-sanity/precision/01-straight_line_proved.vimp
 
 # Same analysis, GraphViz rendering of the solved, context-split CFG instead
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp > cfg.dot
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp > cfg.dot
 dot -Tsvg cfg.dot -o cfg.svg   # requires graphviz's `dot` on PATH
 
 # Deterministic textual CFG snapshot (clusters/nodes/edges) with no GraphViz
 # dependency -- what the regression corpus embeds as expected --graph-snapshot output
-pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/01-if_else.vimp
+pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/precision/01-if_else.vimp
 
 # Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
 pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp

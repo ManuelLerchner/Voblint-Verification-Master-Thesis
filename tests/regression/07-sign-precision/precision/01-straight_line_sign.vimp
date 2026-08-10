@@ -1,5 +1,5 @@
 // PARAM: --analysis sign
-// Same program as 00-sanity/01-straight_line_proved.vimp, under Sign
+// Same program as 00-sanity/precision/01-straight_line_proved.vimp, under Sign
 // instead of Interval. Locks in the fix for #99: the generic D/G unit
 // bridge (unit_step_st/unit_step_for) now reconstructs state through
 // combine_abs, routing each name to the component that owns it, instead of

@@ -1,7 +1,7 @@
 // PARAM: --analysis interval
 // Straight-line arithmetic, one exact write, one check.
-// See 07-sign-precision/01-straight_line_sign.vimp for the same program
-// under Sign, also PROVED since the #99 fix.
+// See 07-sign-precision/precision/01-straight_line_sign.vimp for the same
+// program under Sign, also PROVED since the #99 fix.
 void main() {
   x := 5;
   __voblint_check(0 < x) // PROVED
