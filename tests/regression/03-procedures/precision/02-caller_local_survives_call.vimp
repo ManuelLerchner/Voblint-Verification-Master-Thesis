@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// A call with no relation to x (not passed as an actual, no shared global)
+// must leave the caller's own binding of x untouched across the call --
+// the D/G combine step at the call-to-return edge restores the caller's
+// locals rather than merging in anything from the callee's activation.
+void noop() {
+  return 0
+}
+void main() {
+  x := 5;
+  noop();
+  __voblint_check(x == 5) // PROVED
+}

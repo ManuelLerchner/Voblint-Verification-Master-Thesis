@@ -356,6 +356,9 @@ jobs:
       - name: External .vimp regression corpus (source -> parser -> analyse -> checks)
         run: opam exec -- pixi run cli-test
 
+      - name: CLI plumbing smoke tests (exit codes, --help, argument errors)
+        run: opam exec -- pixi run cli-smoke
+
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: opam exec -- pixi run property
 

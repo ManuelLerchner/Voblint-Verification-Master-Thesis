@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// Two call sites to the same procedure share ONE activation context
+// (--graph-snapshot shows both "enter square(...)" edges landing on the
+// same cluster_ctx_1): square's summary is the join over every call site,
+// not resolved per call site. So each combine reads back join([9,9],
+// [16,16]) = [9,16], not its own call's exact argument -- a is really 9 and
+// b is really 16, but both checks see the same widened [9,16] range. This
+// is call-site (in)sensitivity, the same flow-insensitive-summary
+// discipline the D/G global path uses (see 04-globals/known-imprecision/
+// 01-global_var.vimp), applied here to procedure activations instead of
+// globals.
+void square(n) {
+  return n * n
+}
+void main() {
+  a := square(3);
+  b := square(4);
+  __voblint_check(a == 9); // UNKNOWN
+  __voblint_check(b == 16) // UNKNOWN
+}
