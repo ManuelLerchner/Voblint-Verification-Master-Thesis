@@ -54,15 +54,7 @@ theorem dg_run_source_sound_abs_for:
   fixes Pi :: proc_table and mnm :: pname and s0 t :: store
   assumes wf: "wf_compile_input gs Pi ps mnm main"
     and pp: "part_post_solution (dg_gen (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma vars"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) vars"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
@@ -75,8 +67,7 @@ proof -
   obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)"
     and coll: "t \<in> ltr_collect gs (compile_prog Pi ps mnm main) S0 v" by blast
   have "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
-    by (rule dg_post_solution_collect_sound_ltr_for
-          [OF pp cover_entry cover_edge cover_enter cover_combine finI finC sound0])
+    by (rule dg_post_solution_collect_sound_ltr_for[OF pp cover finI finC sound0])
   then show ?thesis using m coll by blast
 qed
 
@@ -111,15 +102,7 @@ theorem dg_exec_run_source_sound_for:
     and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input gs Pi ps mnm main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) vars"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
@@ -140,9 +123,7 @@ proof -
       x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
     using pp_abs unfolding sds.dg_gen_of_eq_for .
   show ?thesis
-    by (rule sds.dg_run_source_sound_abs_for
-          [OF wf pp_gen cover_entry cover_edge cover_enter cover_combine
-          finI finC sound0 s0mem run])
+    by (rule sds.dg_run_source_sound_abs_for[OF wf pp_gen cover finI finC sound0 s0mem run])
 qed
 
 text \<open>
@@ -172,15 +153,7 @@ theorem dg_exec_collect_sound_for:
     and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input gs Pi ps mnm main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) vars"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
@@ -199,8 +172,7 @@ proof -
       x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
     using pp_abs unfolding sds.dg_gen_of_eq_for .
   show ?thesis
-    by (rule sds.dg_post_solution_collect_sound_ltr_for
-          [OF pp_gen cover_entry cover_edge cover_enter cover_combine finI finC sound0])
+    by (rule sds.dg_post_solution_collect_sound_ltr_for[OF pp_gen cover finI finC sound0])
 qed
 
 section \<open>Registered executable D/G analyses\<close>
@@ -307,15 +279,7 @@ theorem run_source_sound:
   fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a exec_dg_st"
   defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"  assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps mnm main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (solve eqs x)"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> fst (solve eqs x)"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_unit (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
@@ -331,9 +295,7 @@ proof -
     by (rule dg_exec_run_source_sound_for
           [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
               unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for
-              pp_st[unfolded eqs_def] wf
-              cover_entry[unfolded eqs_def] cover_edge[unfolded eqs_def]
-              cover_enter[unfolded eqs_def] cover_combine[unfolded eqs_def]
+              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0 s0mem run])
 qed
 
@@ -349,15 +311,7 @@ theorem collect_sound:
   defines "eqs \<equiv> dg_gen_of (unit_dg_spec_st_for gs tf_st enter_st) (compile_prog Pi ps mnm main) bot0 s0d s0g"
   assumes SOLVE: "solve_c eqs x \<noteq> None"
     and wf: "wf_compile_input gs Pi ps mnm main"
-    and cover_entry: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (solve eqs x)"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra (compile_prog Pi ps mnm main) \<Longrightarrow> (w, ()) \<in> fst (solve eqs x)"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (solve eqs x)"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls (compile_prog Pi ps mnm main)
-         \<Longrightarrow> (k, ()) \<in> fst (solve eqs x)"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) (fst (solve eqs x))"
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_unit (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
@@ -370,9 +324,7 @@ proof -
     by (rule dg_exec_collect_sound_for
           [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
               unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for
-              pp_st[unfolded eqs_def] wf
-              cover_entry[unfolded eqs_def] cover_edge[unfolded eqs_def]
-              cover_enter[unfolded eqs_def] cover_combine[unfolded eqs_def]
+              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0])
 qed
 

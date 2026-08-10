@@ -163,10 +163,10 @@ proof -
     by (rule sign_ex_reg.run_source_sound
           [OF dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def]
               dgEx_wf
-              dgEx_cover_entry[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-              dgEx_cover_edge[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-              dgEx_cover_enter[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-              dgEx_cover_combine[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+              vars_coverI[OF dgEx_cover_entry[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+                             dgEx_cover_edge[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+                             dgEx_cover_enter[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
+                             dgEx_cover_combine[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]]
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
               dgEx_sound0[folded gamma_unit_def]

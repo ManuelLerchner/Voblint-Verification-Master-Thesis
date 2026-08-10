@@ -277,17 +277,24 @@ definition compiled_procedure_scope ::
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
 
 text \<open>
-  The classic abs-state route: any \<^class>\<open>sound_domain\<close> with a \<^class>\<open>show_val\<close>
-  instance renders its compiled program the same way -- the domain enters only through
-  \<^const>\<open>is_top\<close> (skip an untouched return slot) and \<^const>\<open>show_val\<close> (format a
-  value); everything else reads the compiler's own scope/owner/global bookkeeping.
-  A per-domain config is the identity specialization of this at its abstract type.
+  The classic abs-state route: any \<^class>\<open>show_val\<close> instance renders its compiled
+  program the same way -- the domain enters only through \<open>is_top_val\<close> (skip an
+  untouched return slot) and \<^const>\<open>show_val\<close> (format a value); everything else reads
+  the compiler's own scope/owner/global bookkeeping. A per-domain config is this
+  specialized at its abstract type, with its own concrete top test.
+
+  \<open>is_top_val\<close> is an explicit parameter, not \<^const>\<open>is_top\<close> from \<^class>\<open>sound_domain\<close>:
+  code generation for one class operation materializes that class's whole dictionary,
+  and \<^class>\<open>sound_domain\<close>'s \<^const>\<open>gamma\<close> has no executable code equation for every
+  instance (an interval domain's, for instance, is a set comprehension over \<^typ>\<open>int\<close>,
+  which is not of sort \<open>enum\<close>). Taking the top test as a plain function keeps this
+  definition's code generation independent of \<^class>\<open>sound_domain\<close> entirely.
 \<close>
 definition compiled_domain_graph_config ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow>
-    (unit, unit, 'a::{sound_domain, show_val} abs_state, 'a abs_state) analysis_graph_config"
+  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> ('a::show_val \<Rightarrow> bool) \<Rightarrow>
+    (unit, unit, 'a abs_state, 'a abs_state) analysis_graph_config"
 where
-  "compiled_domain_graph_config gs \<Pi> ps mnm main =
+  "compiled_domain_graph_config gs \<Pi> ps mnm main is_top_val =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. ()),
       show_context = (\<lambda>_. ''''),
@@ -301,7 +308,7 @@ where
       show_local = (\<lambda>_ _ vars s.
         map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
       format_return = (\<lambda>_ _ ret s.
-        if is_top (s ret) then [] else [''ret='' @ show_val (s ret)]),
+        if is_top_val (s ret) then [] else [''ret='' @ show_val (s ret)]),
       show_global = (\<lambda>_ vars s.
         map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
       show_global_key = (\<lambda>_. ''Globals''),

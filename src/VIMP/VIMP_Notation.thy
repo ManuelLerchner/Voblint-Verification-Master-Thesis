@@ -34,10 +34,10 @@ text \<open>
 \<close>
 
 text \<open>
-  Whole-program form.  \<^verbatim>\<open>program { void f(..) { .. } void main() { .. } }\<close>
-  bundles the procedure-name list, the procedure table, and the main command
-  into one \<^verbatim>\<open>imp_prog\<close> record, ready for
-  \<^verbatim>\<open>compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)\<close>.
+  Whole-program form.  \<open>program { void f(..) { .. } void main() { .. } }\<close>
+  bundles every procedure -- including the distinguished entry \<open>main\<close> -- into
+  one \<open>imp_prog\<close> record, ready for
+  \<open>compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)\<close>.
 \<close>
 
 text \<open>   \<open>declared_global_vars \<close> is the program's declared-global list,
@@ -53,7 +53,6 @@ text \<open>   \<open>declared_global_vars \<close> is the program's declared-gl
 
 record imp_prog =
   proc_rep :: "(pname * proc_decl) list"
-  prog_main :: com
   declared_global_vars :: "vname list"
 
 lemma declared_global_vars_finite [simp]:
@@ -100,11 +99,8 @@ lemma storage_of_local_iff [simp]:
 
 
 
-definition prog_procs :: "imp_prog => pname list" where
-  "prog_procs p = map fst (proc_rep p)"
-
 text \<open>
-  \<open>prog_main_name\<close> is the entry procedure's name.  The \<^verbatim>\<open>program\<close> parser identifies the
+  \<open>prog_main_name\<close> is the entry procedure's name.  The \<open>program\<close> parser identifies the
   entry by exactly this name and rejects formals on it, so it is fixed by construction.
 \<close>
 
@@ -112,19 +108,43 @@ definition prog_main_name :: pname where
   "prog_main_name = STR ''main''"
 
 text \<open>
-  \<open>prog_table\<close> is the \<^emph>\<open>complete\<close> declaration environment: the declared procedures
-  plus the entry procedure itself.  \<^const>\<open>prog_procs\<close> stays the non-entry names, so the
-  pair is exactly what \<open>wf_compile_input\<close> asks for --- the entry is declared, and the name
-  list is its complement.
+  \<open>prog_procs\<close> is the non-entry declared names: every \<open>proc_rep\<close> key except the
+  distinguished entry.  This is exactly the complement \<open>wf_compile_input\<close> asks for --
+  the entry is declared in \<open>prog_table\<close>, and this list is everything else.
+\<close>
+
+definition prog_procs :: "imp_prog => pname list" where
+  "prog_procs p = filter (%n. n ~= prog_main_name) (map fst (proc_rep p))"
+
+text \<open>
+  \<open>prog_table\<close> is the declaration environment read directly off \<open>proc_rep\<close>: \<open>main\<close> is
+  an ordinary entry now, not a field folded in separately, so a program whose \<open>proc_rep\<close>
+  omits \<open>prog_main_name\<close> is a legal (if not well-formed) \<^typ>\<open>imp_prog\<close> value.
 \<close>
 
 definition prog_table :: "imp_prog => proc_table" where
-  "prog_table p =
-     (map_of (proc_rep p))(prog_main_name \<mapsto> proc_decl_of [] (prog_main p))"
+  "prog_table p = map_of (proc_rep p)"
 
-lemma prog_table_main [simp]:
-  "prog_table p prog_main_name = Some (proc_decl_of [] (prog_main p))"
-  by (simp add: prog_table_def)
+text \<open>
+  \<open>prog_main\<close> reads the entry's body back out of \<open>proc_rep\<close>.  It stays total by
+  \<open>the\<close>'s convention on an absent entry; \<open>wf_source_program\<close>'s
+  \<open>\<Pi> mnm = Some (proc_decl_of [] main)\<close> conjunct is what makes that lookup meaningful,
+  not the record's shape.
+\<close>
+
+definition prog_main :: "imp_prog => com" where
+  "prog_main p = body (the (prog_table p prog_main_name))"
+
+text \<open>
+  \<open>mk_program\<close> is the constructor every caller actually wants: procedure list, entry
+  body, declared globals -- the same three arguments \<open>imp_prog\<close> took before \<open>main\<close>
+  moved into \<open>proc_rep\<close>.  It conses the entry onto \<open>proc_rep\<close> so a program built
+  through it satisfies \<open>wf_source_program\<close>'s entry conjunct unconditionally, matching
+  \<open>program\<close> syntax's own contract that \<open>ps\<close> excludes \<open>main\<close> by construction.
+\<close>
+
+definition mk_program :: "(pname * proc_decl) list => com => vname list => imp_prog" where
+  "mk_program ps m gv = imp_prog.make ((prog_main_name, proc_decl_of [] m) # ps) gv"
 
 text \<open>
   The finite variable scope of an activation contains every declared global, the
@@ -188,18 +208,19 @@ definition prog_restrict_global :: "imp_prog => store => store" where
   "prog_restrict_global p s =
     (%x. if storage_global p prog_main_name x then s x else 0)"
 
-lemma prog_procs_make [simp]: "prog_procs (imp_prog.make ps m gv) = map fst ps"
-  by (simp add: prog_procs_def imp_prog.make_def)
+lemma prog_procs_make [simp]:
+  "prog_main_name ~: set (map fst ps) ==> prog_procs (mk_program ps m gv) = map fst ps"
+  by (force simp: prog_procs_def mk_program_def imp_prog.make_def filter_id_conv)
 
 lemma prog_table_make [simp]:
-  "prog_table (imp_prog.make ps m gv) = (map_of ps)(prog_main_name \<mapsto> proc_decl_of [] m)"
-  by (simp add: prog_table_def imp_prog.make_def)
+  "prog_table (mk_program ps m gv) = (map_of ps)(prog_main_name |-> proc_decl_of [] m)"
+  by (simp add: prog_table_def mk_program_def imp_prog.make_def)
 
-lemma prog_main_make [simp]: "prog_main (imp_prog.make ps m gv) = m"
-  by (simp add: imp_prog.make_def)
+lemma prog_main_make [simp]: "prog_main (mk_program ps m gv) = m"
+  by (simp add: prog_main_def proc_decl_of_def)
 
-lemma declared_global_vars_make [simp]: "declared_global_vars (imp_prog.make ps m gv) = gv"
-  by (simp add: imp_prog.make_def)
+lemma declared_global_vars_make [simp]: "declared_global_vars (mk_program ps m gv) = gv"
+  by (simp add: mk_program_def imp_prog.make_def)
 
 text \<open>
   Whole-program syntax (\<open>program { ... }\<close>) and its \<open>imp_prog\<close>-specific
@@ -224,7 +245,7 @@ syntax
 parse_translation \<open>
   let
     val c_proc_decl_of = "VIMP_Proc.proc_decl_of"
-    val c_imp_prog = "VIMP_Notation.imp_prog.make"
+    val c_imp_prog = "VIMP_Notation.mk_program"
     val c_Pair    = "Product_Type.Pair"
 
     val K = Vimp_Grammar_Tr.K

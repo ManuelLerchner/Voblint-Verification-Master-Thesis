@@ -283,7 +283,16 @@ text \<open>
 definition sign_graph_config ::
   "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow>
     (unit, unit, sign abs_state, sign abs_state) analysis_graph_config" where
-  "sign_graph_config = compiled_domain_graph_config"
+  "sign_graph_config gs \<Pi> ps mnm main = compiled_domain_graph_config gs \<Pi> ps mnm main (\<lambda>v. v = STop)"
+
+text \<open>
+  Proof-side only: confirms the executable top test \<^const>\<open>sign_graph_config\<close> is built
+  from agrees with the semantic \<^const>\<open>is_top\<close> from \<^class>\<open>sound_domain\<close>. Not used in
+  any exported definition, so it never reintroduces \<^class>\<open>sound_domain\<close>'s code
+  dependency into \<^const>\<open>compiled_domain_graph_config\<close>.
+\<close>
+lemma sign_top_test_eq_is_top: "(\<lambda>v. v = STop) = (is_top :: sign \<Rightarrow> bool)"
+  by (rule ext) (simp add: is_top_sign_correct top_sign_def)
 
 definition sign_graph_solution ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp + unit \<Rightarrow> sign resolved_st_q) \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> sign abs_state)" where

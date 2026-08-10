@@ -130,6 +130,54 @@ lemma gamma_dgD2 [dest]: "s \<in> gamma_dg d g \<Longrightarrow> s \<in> \<lbrak
 
 
 
+text \<open>
+  \<open>vars_cover g vars\<close> bundles the one recurring obligation every
+  post-solution soundness theorem in this development needs: \<open>vars\<close> contains
+  the CFG entry, every \<open>intra\<close> edge's target, and every call's callee entry
+  and continuation. The four components are one semantic fact -- ``\<open>vars\<close> is
+  a cover of \<open>g\<close>'s reachable nodes'' -- not four independent assumptions, so
+  callers state and discharge it as a single premise instead of four
+  positional ones. Global (not locale-local): every analysis instance and
+  the executable pipeline cite it under the same name.
+\<close>
+definition vars_cover :: "cfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
+  "vars_cover g vars \<longleftrightarrow>
+     (cfg_entry g, ()) \<in> vars
+   \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (v, ()) \<in> vars)
+   \<and> (\<forall>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+        \<longrightarrow> (FunctionEntry q, ()) \<in> vars)
+   \<and> (\<forall>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+        \<longrightarrow> (k, ()) \<in> vars)"
+
+lemma vars_coverI [intro]:
+  assumes "(cfg_entry g, ()) \<in> vars"
+    and "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
+    and "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> vars"
+    and "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+           \<Longrightarrow> (k, ()) \<in> vars"
+  shows "vars_cover g vars"
+  unfolding vars_cover_def using assms by blast
+
+lemma vars_cover_entryD [dest]: "vars_cover g vars \<Longrightarrow> (cfg_entry g, ()) \<in> vars"
+  unfolding vars_cover_def by blast
+
+lemma vars_cover_edgeD:
+  "vars_cover g vars \<Longrightarrow> (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
+  unfolding vars_cover_def by blast
+
+lemma vars_cover_enterD:
+  assumes cover: "vars_cover g vars"
+  shows "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+     \<Longrightarrow> (FunctionEntry q, ()) \<in> vars"
+  using cover unfolding vars_cover_def by blast
+
+lemma vars_cover_combineD:
+  assumes cover: "vars_cover g vars"
+  shows "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g
+     \<Longrightarrow> (k, ()) \<in> vars"
+  using cover unfolding vars_cover_def by blast
+
 subsection \<open>Analysis-parametric heterogeneous soundness\<close>
 
 locale sound_dg_spec =
@@ -425,19 +473,15 @@ theorem dg_post_solution_postfix:
   assumes pp:
       "part_post_solution (dg_gen g bot0 s0d s0g)
         x sigma vars"
-    and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover g vars"
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
   shows "dg_postfix g s0d s0g sigma"
 proof -
+  note cover_entry = vars_cover_entryD[OF cover]
+    and cover_edge = vars_cover_edgeD[OF cover]
+    and cover_enter = vars_cover_enterD[OF cover]
+    and cover_combine = vars_cover_combineD[OF cover]
   have eq_le:
     "\<And>v. (v, ()) \<in> vars \<Longrightarrow>
       eq (dg_gen g bot0 s0d s0g) (v, ()) sigma

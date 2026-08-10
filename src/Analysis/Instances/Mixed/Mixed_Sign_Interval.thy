@@ -172,20 +172,11 @@ theorem mixed_si_post_solution_postfix:
   assumes pp:
       "part_post_solution (mixed_si_generator gs g bot0 s0d s0g)
         x sigma vars"
-    and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a v. (u, a, v) \<in> intra g \<Longrightarrow> (v, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover g vars"
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
   shows "mixed_si_postfix gs g s0d s0g sigma"
-  by (rule dg_post_solution_postfix
-        [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
+  by (rule dg_post_solution_postfix[OF pp cover finI finC])
 
 theorem mixed_si_postfix_collect_sound:
   assumes pf: "mixed_si_postfix gs g s0d s0g sigma"
@@ -199,22 +190,13 @@ corollary mixed_si_post_solution_collect_sound:
   assumes pp:
       "part_post_solution (mixed_si_generator gs g bot0 s0d s0g)
         x sigma vars"
-    and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover g vars"
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
     and soundD: "S \<subseteq> \<lbrakk>s0d\<rbrakk>"
     and soundG: "S \<subseteq> \<lbrakk>s0g\<rbrakk>"
   shows "ltr_collect gs g S v \<subseteq> mixed_si_gamma sigma v"
-  apply (rule dg_post_solution_collect_sound_ltr_for
-        [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
+  apply (rule dg_post_solution_collect_sound_ltr_for[OF pp cover finI finC])
   using soundD soundG unfolding gamma_dg_def by auto
 
 end

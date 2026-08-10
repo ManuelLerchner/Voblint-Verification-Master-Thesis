@@ -220,7 +220,7 @@ theorem twice_collect_sound:
      \<subseteq> twice_sds.dg_gamma (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) v"
   by (rule twice_sds.dg_post_solution_collect_sound_ltr_for
         [OF twice_pp_abs
-            twice_cover_entry twice_cover_edge twice_cover_enter twice_cover_combine
+            vars_coverI[OF twice_cover_entry twice_cover_edge twice_cover_enter twice_cover_combine]
             twice_finE twice_finC twice_sound0[folded gamma_unit_def]])
 
 subsection \<open>Inspecting the certified result\<close>
@@ -293,20 +293,17 @@ proof -
     "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
        \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
     unfolding twice_cfg_def twice_sol_def twice_eqs_def
-    apply (rule twice_ex_reg.run_source_sound
-      [where Pi=twice_pi and ps=twice_procs and mnm="(STR ''main'')" and main=twice_main])
-    apply (rule twice_terminates_c[unfolded twice_eqs_def twice_cfg_def])
-    apply (rule twice_wf)
-    apply (rule twice_cover_entry[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
-    apply (erule twice_cover_edge[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
-    apply (erule twice_cover_enter[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
-    apply (erule twice_cover_combine[unfolded twice_sol_def twice_eqs_def twice_cfg_def])
-    apply (rule twice_finE[unfolded twice_cfg_def])
-    apply (rule twice_finC[unfolded twice_cfg_def])
-    apply (rule twice_sound0[folded gamma_unit_def])
-    apply (rule init)
-    apply (rule run[unfolded src'])
-    done
+    by (rule twice_ex_reg.run_source_sound
+          [OF twice_terminates_c[unfolded twice_eqs_def twice_cfg_def]
+              twice_wf
+              vars_coverI[OF twice_cover_entry[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
+                             twice_cover_edge[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
+                             twice_cover_enter[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
+                             twice_cover_combine[unfolded twice_sol_def twice_eqs_def twice_cfg_def]]
+              twice_finE[unfolded twice_cfg_def]
+              twice_finC[unfolded twice_cfg_def]
+              twice_sound0[folded gamma_unit_def]
+              init run[unfolded src']])
   show ?thesis using cert src' by blast
 qed
 

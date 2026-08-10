@@ -405,7 +405,16 @@ text \<open>
 definition ivl_graph_config ::
   "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow>
     (unit, unit, ivl abs_state, ivl abs_state) analysis_graph_config" where
-  "ivl_graph_config = compiled_domain_graph_config"
+  "ivl_graph_config gs \<Pi> ps mnm main = compiled_domain_graph_config gs \<Pi> ps mnm main (\<lambda>v. v = ivl_top)"
+
+text \<open>
+  Proof-side only: confirms the executable top test \<^const>\<open>ivl_graph_config\<close> is built
+  from agrees with the semantic \<^const>\<open>is_top\<close> from \<^class>\<open>sound_domain\<close>. Not used in
+  any exported definition, so it never reintroduces \<^class>\<open>sound_domain\<close>'s code
+  dependency into \<^const>\<open>compiled_domain_graph_config\<close>.
+\<close>
+lemma ivl_top_test_eq_is_top: "(\<lambda>v. v = ivl_top) = (is_top :: ivl \<Rightarrow> bool)"
+  by (rule ext) (simp add: is_top_ivl_correct top_ivl_def)
 
 definition ivl_graph_solution ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q) \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> ivl abs_state)" where

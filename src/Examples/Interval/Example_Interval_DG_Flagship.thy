@@ -268,10 +268,10 @@ proof -
     by (rule flagship_ex_reg.run_source_sound
           [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
               flagship_wf
-              flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+              vars_coverI[OF flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+                             flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+                             flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+                             flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]]
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]

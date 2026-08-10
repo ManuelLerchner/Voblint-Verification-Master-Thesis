@@ -25,19 +25,14 @@
 # to match.
 #
 # Locating `main` is nonetheless still done during parsing/lowering here
-# (`special: program_structure`), not deferred to a separate well-formedness
-# check, because today's `imp_prog` record has `prog_main :: com` as a
-# mandatory field -- constructing an imp_prog value at all requires deciding
-# what that field is. An audited alternative (fold `main` into `proc_rep`
-# as an ordinary entry, make its presence a `wf_program` condition instead
-# of a construction-time requirement) was investigated and set aside: the
-# CFG compiler and the entire Interval soundness stack
-# (compile_prog/prog_cfg/analyse_interval_td_*, ~150 occurrences across 31
-# files) depend on `prog_main`/`prog_procs`/`prog_table` as a fixed
-# four-argument shape, several behind currently-unconditional `[simp]`
-# lemmas (prog_main_make et al.) that many proofs rely on firing
-# automatically; a uniform representation would make those conditional,
-# a real risk to re-derive across that many call sites, not undertaken here.
+# (`special: program_structure`), for early, precise parse-time diagnostics
+# (missing/duplicate `main`, wrong arity) rather than a deferred
+# well-formedness failure. `imp_prog`'s `proc_rep` carries `main` as an
+# ordinary entry -- nothing structural forces a `program { ... }`
+# construction to include one -- so `wf_program_source`'s own
+# `Pi mnm = Some (proc_decl_of [] main)` conjunct is what makes "main
+# present, with no formals" a proof obligation on a given `imp_prog` value;
+# the parser's checks are a UX convenience on top, not what discharges it.
 #
 # Old semantic validation that has no structural encoding (duplicate
 # procedure/global/formal names, global/formal collisions, main-formals,

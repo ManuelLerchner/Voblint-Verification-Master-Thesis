@@ -167,7 +167,7 @@ program:
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
-        Voblint_CLI.Core.make
+        Voblint_CLI.Core.mk_program
           (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Core.proc_decl_of formals b)) procs)
           main_body g }
 

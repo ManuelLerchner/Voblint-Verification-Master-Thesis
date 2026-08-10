@@ -236,10 +236,10 @@ proof -
     by (rule parity_ex_reg.run_source_sound
           [OF parity_terminates_c[unfolded parity_eqs_def parity_cfg_def]
               parity_wf
-              parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_cover_enter[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_cover_combine[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+              vars_coverI[OF parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+                             parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+                             parity_cover_enter[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+                             parity_cover_combine[unfolded parity_sol_def parity_eqs_def parity_cfg_def]]
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
               parity_sound0[folded gamma_unit_def]
