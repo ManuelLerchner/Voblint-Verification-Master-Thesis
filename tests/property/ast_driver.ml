@@ -125,7 +125,7 @@ let build_proc = function
 
 let build_program = function
   | Slist [ Slist procs; main_body; globals ] ->
-    make (List.map build_proc procs) (build_com main_body) (build_names globals)
+    mk_program (List.map build_proc procs) (build_com main_body) (build_names globals)
   | s -> failwith ("ast_driver: bad program sexp: " ^ show_sexp s)
 
 (* -- Driver --------------------------------------------------------------- *)
