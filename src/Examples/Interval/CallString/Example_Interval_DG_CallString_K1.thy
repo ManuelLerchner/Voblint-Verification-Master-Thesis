@@ -504,10 +504,11 @@ lemma cinit_le_cinit_ivl_st_1: "cinit_stores nest_gs \<subseteq> \<lbrakk>fun_of
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect nest_gs (cs_enterc 1) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect nest_gs (admiss_exact (cs_enterc 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_1 (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and enterc = "cs_enterc 1"
-        and seedc = "[]" and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
+proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and admiss = "admiss_exact (cs_enterc 1)"
+        and seedc = "[]"
+        and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
     projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
@@ -536,23 +537,26 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (v, c))\<rbrakk>"
     by (rule nest_1_dg.dg_ctx_act_edge)
 next
+  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_enterc 1\<close> is a total function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact (cs_enterc 1) u c s c'" by (simp add: admiss_exact_def)
+next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
-  show "\<And>u dst pars args p cont c s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter nest_gs (CallEdge dst pars args) s
-             \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionEntry p,
-                    cs_enterc 1 u c (call_enter nest_gs (CallEdge dst pars args) s)))\<rbrakk>"
-    by (rule ivl_ctx_sg_1_seed)
+  fix u dst pars args p cont c s c'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
+    and sm: "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, c))\<rbrakk>"
+    and adm: "admiss_exact (cs_enterc 1) u c (call_enter nest_gs (CallEdge dst pars args) s) c'"
+  show "call_enter nest_gs (CallEdge dst pars args) s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionEntry p, c'))\<rbrakk>"
+    using adm ivl_ctx_sg_1_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
   \<comment> \<open>COMB --- return combine at the caller's own truncated context.\<close>
-  show "\<And>cl dst pars args p cont c1 s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, cs_enterc 1 cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store nest_gs nest_cfg cl s es
-        \<Longrightarrow> combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"
-    by (rule ivl_ctx_sg_1_comb)
+  fix cl dst pars args p cont c1 c2 s t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
+    and sm: "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cl, c1))\<rbrakk>"
+    and adm: "admiss_exact (cs_enterc 1) cl c1 es c2"
+    and tm: "t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, c2))\<rbrakk>"
+    and ces: "call_enter_store nest_gs nest_cfg cl s es"
+  show "combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"
+    using adm tm ivl_ctx_sg_1_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
 section \<open>Call-string-context-expanded analysis graph\<close>

@@ -202,6 +202,70 @@ definition full_state_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_pr
        (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
 
 text \<open>
+  Entry-state siblings of \<open>state_report_dot_auto\<close>/\<open>full_state_dot_auto\<close>
+  (\<open>#108\<close>), Interval-only (\<^const>\<open>analyse_ctx\<close> has no Sign entry-state
+  branch, so there is no \<open>analysis_kind\<close> parameter here). A \<^typ>\<open>pp\<close> may be
+  covered by several entry-state contexts at once; \<open>entry_state_env_at\<close>
+  joins every covered context's reading of a variable through \<^typ>\<open>ivl\<close>'s
+  own \<^class>\<open>semilattice_sup\<close> (\<^const>\<open>Sup_fin\<close> over \<^const>\<open>Set.filter\<close> on the
+  solver's own already-finite solution set, the same non-comprehension
+  idiom \<open>entry_state_classify_at\<close> uses and for the same reason -- \<^typ>\<open>ivl
+  list\<close> has no \<^class>\<open>enum\<close> instance). An uncovered point falls back to the
+  seeded default context, mirroring \<open>entry_state_classify_at\<close>'s own
+  uncovered case.
+\<close>
+
+definition entry_state_env_at ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> abstract_value abs_state" where
+  "entry_state_env_at gs Pi ps mnm main v x =
+     (let sol = entry_state_sol gs Pi ps mnm main;
+          sg = entry_state_sg_exec gs Pi ps mnm main;
+          ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (fst sol)
+      in IntervalValue
+           (if ctxs = {} then sg (Inl (v, [])) x
+            else Sup_fin ((\<lambda>ctx. sg (Inl (v, ctx)) x) ` ctxs)))"
+
+definition entry_state_full_state_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
+  "entry_state_full_state_dot_auto p =
+     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (full_state_node_annotation (program_vars p)
+          (entry_state_env_at (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
+
+definition entry_state_full_state_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
+  "entry_state_full_state_graph_snapshot_auto p =
+     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (full_state_node_annotation (program_vars p)
+          (entry_state_env_at (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
+
+text \<open>
+  \<open>entry_state_report_for_annotation\<close> is \<open>entry_state_check_report_prog\<close>
+  (already the context-aggregated verdict, \<^const>\<open>entry_state_classify_at\<close>)
+  paired with \<open>entry_state_env_at\<close>'s own, separately joined, per-variable
+  state reading, giving \<^const>\<open>state_report_node_annotation\<close> the same
+  \<open>(pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list\<close> shape
+  \<open>analyse_with_state\<close>'s report already has.
+\<close>
+
+definition entry_state_report_for_annotation ::
+    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list" where
+  "entry_state_report_for_annotation p =
+     map (\<lambda>(v, cnd, res). (v, cnd, res,
+            entry_state_env_at (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p) v))
+       (entry_state_check_report_prog prog_main_name p)"
+
+definition entry_state_report_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
+  "entry_state_report_dot_auto p =
+     (let report = entry_state_report_for_annotation p
+      in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (state_report_node_annotation (report_vars report) report))"
+
+definition entry_state_report_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
+  "entry_state_report_graph_snapshot_auto p =
+     (let report = entry_state_report_for_annotation p
+      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (state_report_node_annotation (report_vars report) report))"
+
+text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,
   already mapped to \<open>Core\<close> below) into the same export as \<open>Complete_Lattices\<close>'s
   \<^class>\<open>complete_lattice\<close> set instance for the first time. Left unmapped,
@@ -217,9 +281,12 @@ code_identifier
 
 export_code
   analyse Sign_Analysis Interval_Analysis
+  analyse_ctx Ctx_None Ctx_EntryState
   analyse_with_state SignValue IntervalValue
   state_report_dot_auto state_report_graph_snapshot_auto
   full_state_dot_auto full_state_graph_snapshot_auto
+  entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
+  entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
   bexp_vnames_list string_of_abstract_value
   is_bottom_abstract_value program_vars
   mk_program proc_decl_of declared_global_vars pretty_string_of_program

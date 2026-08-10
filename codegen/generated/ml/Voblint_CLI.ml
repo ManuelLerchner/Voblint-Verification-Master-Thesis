@@ -114,6 +114,8 @@ module Core : sig
   val equal_prod : 'a HOL.equal -> 'b HOL.equal -> ('a * 'b) HOL.equal
   val equal_unit : unit HOL.equal
   type sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop
+  type 'a sup
+  type 'a semilattice_sup
   val equal_option : 'a HOL.equal -> 'a option -> 'a option -> bool
   type call_action = CallEdge of string option * string list * aexp list
   val equal_call_actiona : call_action -> call_action -> bool
@@ -125,11 +127,15 @@ module Core : sig
   val equal_edge_actiona : edge_action -> edge_action -> bool
   type eint = MinInf | Fin of int | PlusInf
   type ivl = Ivl of eint * eint
+  val equal_ivl : ivl HOL.equal
+  val semilattice_sup_ivl : ivl semilattice_sup
   type ('a, 'b) dg_state
   val fst : 'a * 'b -> 'a
   val list_all : ('a -> bool) -> 'a list -> bool
   val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
+  type gk
+  type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type num
   type 'a set = Set of 'a list | Coset of 'a list
   type com = SKIP | Assign of string * aexp | Random of string | Check of bexp |
@@ -137,7 +143,7 @@ module Core : sig
     Call of string option * string * aexp list | Return of aexp option | Restore
     | Unwind
   type 'a cfg_ext
-  type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type ('a, 'b, 'c) strategy_tree
   type 'a proc_decl_ext
   type 'a imp_prog_ext
   val id : 'a -> 'a
@@ -150,6 +156,7 @@ module Core : sig
   val null : 'a list -> bool
   val image : ('a -> 'b) -> 'a set -> 'b set
   val filtera : ('a -> bool) -> 'a list -> 'a list
+  val filter : ('a -> bool) -> 'a set -> 'a set
   val membera : 'a HOL.equal -> 'a list -> 'a -> bool
   val list_ex : ('a -> bool) -> 'a list -> bool
   val remdups : 'a HOL.equal -> 'a list -> 'a list
@@ -158,9 +165,11 @@ module Core : sig
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val ret_var : string
   val cfg_entry : 'a cfg_ext -> cfg_node
+  val bot_set : 'a set
   val sup_seta : 'a HOL.equal -> 'a set set -> 'a set
   val bexp_vnames : bexp -> string set
   val snd : 'a * 'b -> 'b
+  val sup_fin : 'a semilattice_sup -> 'a set -> 'a
   val char_of_integer : Z.t -> char
   val explode : string -> char list
   val proc_decl_of : string list -> com -> unit proc_decl_ext
@@ -267,6 +276,7 @@ module Core : sig
   val char_0x7A : char
   val char_0x7B : char
   val char_0x7D : char
+  val equal_set : 'a HOL.equal -> 'a set -> 'a set -> bool
   val declared_global : unit imp_prog_ext -> string -> bool
   val join_source : char list -> (char list) list -> char list
   val analyse_sign_report :
@@ -277,6 +287,15 @@ module Core : sig
   val string_of_bexp : bexp -> char list
   val analyse_sign_env_for :
     (string -> bool) -> unit imp_prog_ext -> cfg_node -> string -> sign
+  val entry_state_sol :
+    (string -> bool) ->
+      (string -> unit proc_decl_ext option) ->
+        string list ->
+          string ->
+            com ->
+              (cfg_node * ivl list) set *
+                (((cfg_node * ivl list), gk) sum ->
+                  (ivl resolved_st_q, ivl resolved_st_q) dg_state)
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
   val analyse_interval_td_at :
@@ -289,8 +308,17 @@ module Core : sig
   val pretty_string_of_program :
     (string -> unit proc_decl_ext option) ->
       string list -> com -> string list -> char list
+  val entry_state_sg_exec :
+    (string -> bool) ->
+      (string -> unit proc_decl_ext option) ->
+        string list ->
+          string -> com -> ((cfg_node * ivl list), gk) sum -> string -> ivl
   val is_bot_sign : sign -> bool
   val is_bot_ivl : ivl -> bool
+  val entry_state_check_report_prog :
+    string -> unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+  val analyse_interval_entry_state :
+    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
       (cfg_node * (bexp * (check_result * (string -> ivl)))) list
@@ -1455,6 +1483,56 @@ let rec bounded_warrowing_resolved_st_q _A =
      warrowing_bounded_warrowing = (warrowing_resolved_st_q _A)}
     : 'a resolved_st_q bounded_warrowing);;
 
+type gk = Global | Seed of cfg_node * ivl list;;
+
+let rec equal_gka
+  x0 x1 = match x0, x1 with Global, Seed (x21, x22) -> false
+    | Seed (x21, x22), Global -> false
+    | Seed (x21, x22), Seed (y21, y22) ->
+        equal_cfg_nodea x21 y21 && equal_lista equal_ivl x22 y22
+    | Global, Global -> true;;
+
+let equal_gk = ({HOL.equal = equal_gka} : gk HOL.equal);;
+
+type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
+
+let rec equal_check_result
+  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
+    | Check_Unknown, Check_Refuted -> false
+    | Check_Proved, Check_Unknown -> false
+    | Check_Unknown, Check_Proved -> false
+    | Check_Proved, Check_Refuted -> false
+    | Check_Refuted, Check_Proved -> false
+    | Check_Unknown, Check_Unknown -> true
+    | Check_Refuted, Check_Refuted -> true
+    | Check_Proved, Check_Proved -> true;;
+
+let rec sup_check_resulta
+  x y = (if equal_check_result x y then x else Check_Unknown);;
+
+let sup_check_result = ({sup = sup_check_resulta} : check_result sup);;
+
+let rec less_eq_check_result
+  x y = equal_check_result x y || equal_check_result y Check_Unknown;;
+
+let rec less_check_result
+  x y = less_eq_check_result x y && not (less_eq_check_result y x);;
+
+let ord_check_result =
+  ({less_eq = less_eq_check_result; less = less_check_result} :
+    check_result ord);;
+
+let preorder_check_result =
+  ({ord_preorder = ord_check_result} : check_result preorder);;
+
+let order_check_result =
+  ({preorder_order = preorder_check_result} : check_result order);;
+
+let semilattice_sup_check_result =
+  ({sup_semilattice_sup = sup_check_result;
+     order_semilattice_sup = order_check_result}
+    : check_result semilattice_sup);;
+
 type num = One | Bit0 of num | Bit1 of num;;
 
 type 'a set = Set of 'a list | Coset of 'a list;;
@@ -1483,8 +1561,6 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryL of 'a * ('c -> ('a, 'b, 'c) strategy_tree) |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
   Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
-
-type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
 
 type ('a, 'b, 'c) dg_spec_ext =
   Dg_spec_ext of
@@ -2892,6 +2968,32 @@ let rec compile
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
 
+let rec routed_cmb _A
+  s gk0 route ctx ca cc ex =
+    (let CallEdge (dst, _, _) = ca in
+      seqcomp_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
+        (fun caller_state ->
+          (let ctxa = route cc ctx (locals caller_state) ca in
+            seqcomp_tree (QueryL ((ex, ctxa), (fun a -> Answer a)))
+              (fun callee_state ->
+                seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
+                  (fun globals_state ->
+                    (let caller = locals caller_state in
+                     let callee = locals callee_state in
+                     let globals = globs globals_state in
+                      seqcomp_tree
+                        (Side (gk0, DG (bot
+  _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+ fst (dgs_combine s dst caller callee globals)),
+                                Answer
+                                  (DG (bot
+ _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
+                        (fun _ ->
+                          Answer
+                            (DG (snd (dgs_combine s dst caller callee globals),
+                                  bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))))));;
+
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
@@ -3019,6 +3121,56 @@ let rec unit_step_st _A
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res,
         restrict_local_resolved_q
           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res));;
+
+let rec call_successor_list
+  g v = map_filter
+          (fun x ->
+            (if (let (c, (_, (_, _))) = x in equal_cfg_nodea c v)
+              then Some (let (_, (ca, (ce, k))) = x in (ce, (ca, k)))
+              else None))
+          (cfg_calls_list g);;
+
+let rec routed_extra _A
+  g s seed_key gk0 route ctx v =
+    (match v with Statement _ -> []
+      | FunctionEntry _ ->
+        [seqcomp_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
+           (fun seed_state ->
+             Answer
+               (DG (globs seed_state,
+                     bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
+      | FunctionResult _ -> []) @
+      map (fun (w, (ca, _)) ->
+            (let CallEdge (_, fs, asa) = ca in
+              seqcomp_tree (QueryL ((v, ctx), (fun a -> Answer a)))
+                (fun entry_state ->
+                  seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
+                    (fun globals_state ->
+                      (let entry = locals entry_state in
+                       let globals = globs globals_state in
+                        seqcomp_tree
+                          (Side (gk0, DG
+(bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+  fst (dgs_enter s fs asa entry globals)),
+                                  Answer
+                                    (DG (bot
+   _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+  bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
+                          (fun _ ->
+                            seqcomp_tree
+                              (Side (seed_key w (route v ctx entry ca),
+                                      DG
+(bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+  snd (dgs_enter s fs asa entry globals)),
+                                      Answer
+(DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+      bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
+                              (fun _ ->
+                                Answer
+                                  (DG (bot
+ _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))))))
+        (call_successor_list g v);;
 
 let rec sign_less_true_of_inv
   a b = equal_signa (fst (inv_less_sign false a b)) bot_signa ||
@@ -3238,6 +3390,13 @@ let rec minus_nat
   m n = Nat (max ord_integer Z.zero
               (Z.sub (integer_of_nat m) (integer_of_nat n)));;
 
+let rec less_eq_set _A
+  a b = match a, b with Set xs, b -> list_all (fun x -> member _A x b) xs
+    | a, Coset ys -> list_all (fun y -> not (member _A y a)) ys
+    | Coset [], Set [] -> false;;
+
+let rec equal_set _A a b = less_eq_set _A a b && less_eq_set _A b a;;
+
 let rec entry_seed_list
   g v = map (fun (c, CallEdge (_, fs, asa)) -> (c, (fs, asa)))
           (entry_call_list g v);;
@@ -3335,6 +3494,8 @@ let rec is_bottom_ivl
         equal_eint l PlusInf ||
           (equal_eint u MinInf || not (less_eq_eint l u)));;
 
+let rec formals_context pars d = map d pars;;
+
 let rec classify_checks
   g env classify =
     map_filter
@@ -3360,6 +3521,11 @@ and destab_iter_opt _A _B
           destab_iter_opt _A _B ys ia sa c);;
 
 let rec fun_of_exec_dg_st_for _A gs = fun_of_resolved_st_q_for _A gs;;
+
+let rec fun_of_dg_st_for _A _B
+  gs d =
+    DG (fun_of_exec_dg_st_for _A gs (locals d),
+         fun_of_exec_dg_st_for _B gs (globs d));;
 
 let rec rho_update
   rhoa (Ug_state_ext (rho, more)) = Ug_state_ext (rhoa rho, more);;
@@ -3717,6 +3883,10 @@ let rec ivl_exec_eqs
       (compile_prog pi ps mnm main) (ivl_etf_st_for gs)
       (bot_resolved_st_qa bot_ivl) cinit_ivl_st ();;
 
+let rec ectx_spec
+  gs = unit_dg_spec_st_for bounded_semilattice_sup_bot_ivl gs (ivl_tf_st_for gs)
+         (ivl_enter_st_for gs);;
+
 let rec less_eint a b = eint_le a b && not (eint_le b a);;
 
 let rec interval_less_true
@@ -3766,6 +3936,41 @@ let rec interval_classify_check
   c d = (if interval_check_true c d then Check_Proved
           else (if interval_check_false c d then Check_Refuted
                  else Check_Unknown));;
+
+let rec entry_state_entered
+  gs d ca =
+    (let CallEdge (_, fs, asa) = ca in
+      snd (dgs_enter (ectx_spec gs) fs asa d (bot_resolved_st_qa bot_ivl)));;
+
+let rec entry_state_route
+  gs d ca =
+    (let CallEdge (_, pars, _) = ca in
+      formals_context pars
+        (fun x ->
+          lookup_resolved_st_q bot_ivl (entry_state_entered gs d ca)
+            (location_of gs x)));;
+
+let rec entry_state_route_gen gs u ctx d ca = entry_state_route gs d ca;;
+
+let rec entry_state_eqs
+  gs pi ps mnm main =
+    side_cfg_T_eff_keyed_seed_dg
+      (bounded_semilattice_sup_bot_resolved_st_q
+        bounded_semilattice_sup_bot_ivl)
+      (bounded_semilattice_sup_bot_resolved_st_q
+        bounded_semilattice_sup_bot_ivl)
+      intra_predecessor_list (fun _ -> Global) (entry_state_route_gen gs)
+      (routed_cmb
+        (bounded_semilattice_sup_bot_resolved_st_q
+          bounded_semilattice_sup_bot_ivl)
+        (ectx_spec gs) Global)
+      (routed_extra
+        (bounded_semilattice_sup_bot_resolved_st_q
+          bounded_semilattice_sup_bot_ivl)
+        (compile_prog pi ps mnm main) (ectx_spec gs) (fun a b -> Seed (a, b))
+        Global)
+      (compile_prog pi ps mnm main) (ectx_spec gs) (bot_resolved_st_qa bot_ivl)
+      cinit_ivl_st (restrict_global_resolved_q bot_ivl cinit_ivl_st);;
 
 let rec update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
   da orig g d state =
@@ -3910,6 +4115,28 @@ let rec tD_side_warrowing_apinis_Interp_solve _A _B (_C1, _C2, _C3)
                 tD_side_warrowing_apinis_Interp_solve _A _B (_C1, _C2, _C3) t x)
           | Some r -> r);;
 
+let rec entry_state_sol
+  gs pi ps mnm main =
+    tD_side_warrowing_apinis_Interp_solve
+      (equal_prod equal_cfg_node (equal_list equal_ivl)) equal_gk
+      ((equal_dg_state
+         (equal_resolved_st_q
+           (equal_ivl,
+             bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot))
+         (equal_resolved_st_q
+           (equal_ivl,
+             bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot))),
+        (bounded_semilattice_sup_bot_dg_state
+          (bounded_warrowing_resolved_st_q
+            bounded_warrowing_ivl).bounded_semilattice_sup_bot_bounded_warrowing
+          (bounded_warrowing_resolved_st_q
+            bounded_warrowing_ivl).bounded_semilattice_sup_bot_bounded_warrowing),
+        (warrowing_dg_state
+          (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)
+          (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))
+      (entry_state_eqs gs pi ps mnm main)
+      (cfg_exit (compile_prog pi ps mnm main), []);;
+
 let rec analyse_interval_td_raw
   gs pi ps mnm main =
     snd (tD_side_warrowing_apinis_Interp_solve equal_cfg_node equal_unit
@@ -4051,7 +4278,51 @@ let rec pretty_string_of_program
             pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
               [[char_0x7D]]);;
 
+let rec entry_state_sigma_abs_exec
+  gs pi ps mnm main =
+    comp (fun_of_dg_st_for bot_ivl bot_ivl gs)
+      (snd (entry_state_sol gs pi ps mnm main));;
+
+let rec entry_state_sg_exec
+  gs pi ps mnm main k =
+    (match k
+      with Inl (v, ctx) ->
+        (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
+              (fst (entry_state_sol gs pi ps mnm main))
+          then combine_abs gs
+                 (locals
+                   (entry_state_sigma_abs_exec gs pi ps mnm main
+                     (Inl (v, ctx))))
+                 (globs
+                   (entry_state_sigma_abs_exec gs pi ps mnm main (Inr Global)))
+          else bot_fun bot_ivl)
+      | Inr _ -> bot_fun bot_ivl);;
+
+let rec entry_state_classify_at
+  v cnd vars sg =
+    (let ctxs = image snd (filter (fun (va, _) -> equal_cfg_nodea va v) vars) in
+      (if equal_set (equal_list equal_ivl) ctxs bot_set
+        then interval_classify_check cnd (sg (Inl (v, [])))
+        else sup_fin semilattice_sup_check_result
+               (image
+                 (fun ctx -> interval_classify_check cnd (sg (Inl (v, ctx))))
+                 ctxs)));;
+
 let rec is_bot_sign a = is_bottom_sign a;;
+
+let rec entry_state_check_report
+  gs pi ps mnm main =
+    (let sol = entry_state_sol gs pi ps mnm main in
+     let sg = entry_state_sg_exec gs pi ps mnm main in
+      map_filter
+        (fun x ->
+          (if (let (_, (a, _)) = x in is_EA_Check a)
+            then Some (let (u, (a, _)) = x in
+                        (u, (ea_check_cond a,
+                              entry_state_classify_at u (ea_check_cond a)
+                                (fst sol) sg)))
+            else None))
+        (cfg_intra_list (compile_prog pi ps mnm main)));;
 
 let rec is_bot_ivl a = is_bottom_ivl a;;
 
@@ -4066,24 +4337,40 @@ let rec interval_td_check_report_with_state
           (comp (fun_of_resolved_st_q_for bot_ivl gs) raw))
         interval_classify_check);;
 
+let rec entry_state_check_report_prog
+  mnm p =
+    entry_state_check_report (declared_global p) (prog_table p) (prog_procs p)
+      mnm (prog_main p);;
+
+let rec analyse_interval_entry_state
+  p = entry_state_check_report_prog prog_main_name p;;
+
 let rec analyse_interval_td_report_with_state
   p = interval_td_check_report_with_state (declared_global p) prog_main_name p;;
 
 end;; (*struct Core*)
 
 module Analyse : sig
+  type context_mode = Ctx_None | Ctx_EntryState
   type analysis_kind = Sign_Analysis | Interval_Analysis
   type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl
   val analyse :
     analysis_kind ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node * (Core.bexp * Core.check_result)) list
+  val analyse_ctx :
+    analysis_kind ->
+      context_mode ->
+        unit Core.imp_prog_ext ->
+          ((Core.cfg_node * (Core.bexp * Core.check_result)) list) option
   val analyse_with_state :
     analysis_kind ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node *
           (Core.bexp * (Core.check_result * (string -> abstract_value)))) list
 end = struct
+
+type context_mode = Ctx_None | Ctx_EntryState;;
 
 type analysis_kind = Sign_Analysis | Interval_Analysis;;
 
@@ -4092,6 +4379,14 @@ type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl;;
 let rec analyse
   x0 p = match x0, p with Sign_Analysis, p -> Core.analyse_sign_report p
     | Interval_Analysis, p -> Core.analyse_interval_td_report p;;
+
+let rec analyse_ctx
+  x0 x1 p = match x0, x1, p with
+    Sign_Analysis, Ctx_None, p -> Some (Core.analyse_sign_report p)
+    | Interval_Analysis, Ctx_None, p -> Some (Core.analyse_interval_td_report p)
+    | Interval_Analysis, Ctx_EntryState, p ->
+        Some (Core.analyse_interval_entry_state p)
+    | Sign_Analysis, Ctx_EntryState, p -> None;;
 
 let rec analyse_with_state
   x0 p = match x0, p with
@@ -5569,10 +5864,15 @@ module Example_State_Report_GraphViz : sig
   val state_report_dot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
   val is_bottom_abstract_value : Analyse.abstract_value -> bool
+  val entry_state_report_dot_auto : unit Core.imp_prog_ext -> string
   val full_state_graph_snapshot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
+  val entry_state_full_state_dot_auto : unit Core.imp_prog_ext -> string
   val state_report_graph_snapshot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
+  val entry_state_report_graph_snapshot_auto : unit Core.imp_prog_ext -> string
+  val entry_state_full_state_graph_snapshot_auto :
+    unit Core.imp_prog_ext -> string
 end = struct
 
 let rec string_of_abstract_value
@@ -5608,6 +5908,20 @@ let rec analyse_env_for
 let rec bexp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.bexp_vnames b);;
+
+let rec entry_state_env_at
+  gs pi ps mnm main v x =
+    (let sol = Core.entry_state_sol gs pi ps mnm main in
+     let sg = Core.entry_state_sg_exec gs pi ps mnm main in
+     let ctxs =
+       Core.image Core.snd
+         (Core.filter (fun (va, _) -> Core.equal_cfg_nodea va v) (Core.fst sol))
+       in
+      Analyse.IntervalValue
+        (if Core.equal_set (Core.equal_list Core.equal_ivl) ctxs Core.bot_set
+          then sg (Core.Inl (v, [])) x
+          else Core.sup_fin Core.semilattice_sup_ivl
+                 (Core.image (fun ctx -> sg (Core.Inl (v, ctx)) x) ctxs)));;
 
 let rec full_state_node_annotation
   vars env v =
@@ -5655,11 +5969,32 @@ let rec is_bottom_abstract_value
   = function Analyse.SignValue s -> Core.is_bot_sign s
     | Analyse.IntervalValue i -> Core.is_bot_ivl i;;
 
+let rec entry_state_report_for_annotation
+  p = Core.map
+        (fun (v, (cnd, res)) ->
+          (v, (cnd, (res, entry_state_env_at (Core.declared_global p)
+                            (Core.prog_table p) (Core.prog_procs p)
+                            Core.prog_main_name (Core.prog_main p) v))))
+        (Core.entry_state_check_report_prog Core.prog_main_name p);;
+
+let rec entry_state_report_dot_auto
+  p = (let report = entry_state_report_for_annotation p in
+        Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p)
+          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+          (state_report_node_annotation (report_vars report) report));;
+
 let rec full_state_graph_snapshot_auto
   kind p =
     Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
       (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
       (full_state_node_annotation (program_vars p) (analyse_env_for kind p));;
+
+let rec entry_state_full_state_dot_auto
+  p = Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
+        (full_state_node_annotation (program_vars p)
+          (entry_state_env_at (Core.declared_global p) (Core.prog_table p)
+            (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)));;
 
 let rec state_report_graph_snapshot_auto
   kind p =
@@ -5667,5 +6002,18 @@ let rec state_report_graph_snapshot_auto
       Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
         (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
+
+let rec entry_state_report_graph_snapshot_auto
+  p = (let report = entry_state_report_for_annotation p in
+        Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+          (state_report_node_annotation (report_vars report) report));;
+
+let rec entry_state_full_state_graph_snapshot_auto
+  p = Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (full_state_node_annotation (program_vars p)
+          (entry_state_env_at (Core.declared_global p) (Core.prog_table p)
+            (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)));;
 
 end;; (*struct Example_State_Report_GraphViz*)

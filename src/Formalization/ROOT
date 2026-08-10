@@ -6,3 +6,4 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
     Mixed_Flow_Sound
     Source_Activation_Sound
     Run_Analysis_Sound
+    Interval_Exec_Ctx_Sound

@@ -85,6 +85,70 @@ fun key :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<R
      enterc (sink_node parent) (key enterc seedc parent) (snd (hd p))"
 | "key enterc seedc (Resume current callee _) = key enterc seedc current"
 
+subsection \<open>Admissible context selection\<close>
+
+text \<open>
+  \<open>key\<close> fixes one context per trace by decoding the entered store exactly. \<open>ctx_key\<close>
+  generalizes this: the context an activation is analyzed under is any \<open>admiss\<close>-admissible
+  choice, threaded through the same recursive shape \<open>key\<close> has --- a \<^const>\<open>Call\<close> activation's
+  context is admissible relative to its caller's OWN selected context, not re-derived from
+  the concrete store independently at each node. This is what keeps a chosen context stable
+  across a CALL/RETURN pair: the callee's context in \<^const>\<open>Resume\<close> resumes through
+  \<open>current\<close>, so a completed call cannot repartition the caller, exactly as for \<open>key\<close>.
+
+  \<open>admiss_exact enterc\<close> recovers \<open>key\<close> exactly (\<open>ctx_key_exact_iff\<close>): the deterministic
+  decode is the special case where exactly one context is admissible per call.
+\<close>
+
+inductive ctx_key :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> 'c \<Rightarrow> ltr \<Rightarrow> 'c \<Rightarrow> bool"
+  for admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and seedc :: 'c
+where
+  ctx_key_Root: "ctx_key admiss seedc (Root p) seedc"
+| ctx_key_Call: "ctx_key admiss seedc parent c
+    \<Longrightarrow> admiss (sink_node parent) c (snd (hd p)) c'
+    \<Longrightarrow> ctx_key admiss seedc (Call parent p) c'"
+| ctx_key_Resume: "ctx_key admiss seedc current c
+    \<Longrightarrow> ctx_key admiss seedc (Resume current callee p) c"
+
+inductive_cases ctx_key_RootE: "ctx_key admiss seedc (Root p) c"
+inductive_cases ctx_key_CallE: "ctx_key admiss seedc (Call parent p) c"
+inductive_cases ctx_key_ResumeE: "ctx_key admiss seedc (Resume current callee p) c"
+
+definition admiss_exact :: "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" where
+  "admiss_exact enterc u c s c' \<longleftrightarrow> c' = enterc u c s"
+
+text \<open>The migration bridge: \<open>ctx_key\<close> at \<open>admiss_exact enterc\<close> is exactly \<open>key\<close>. This is the
+  hard gate for the whole generalization --- every downstream exact instance must reduce to
+  \<open>key\<close> through this lemma, not through a bespoke re-proof.\<close>
+lemma ctx_key_exact_iff:
+  "ctx_key (admiss_exact enterc) seedc t c \<longleftrightarrow> key enterc seedc t = c"
+proof (induction t arbitrary: c)
+  case (Root p)
+  show ?case by (auto simp: admiss_exact_def elim: ctx_key_RootE intro: ctx_key_Root)
+next
+  case (Call parent p)
+  show ?case
+  proof
+    assume "ctx_key (admiss_exact enterc) seedc (Call parent p) c"
+    then obtain c0 where c0: "ctx_key (admiss_exact enterc) seedc parent c0"
+      and c: "c = enterc (sink_node parent) c0 (snd (hd p))"
+      by (auto simp: admiss_exact_def elim: ctx_key_CallE)
+    from c0 have "key enterc seedc parent = c0" by (simp add: Call.IH)
+    with c show "key enterc seedc (Call parent p) = c" by simp
+  next
+    assume "key enterc seedc (Call parent p) = c"
+    hence c: "c = enterc (sink_node parent) (key enterc seedc parent) (snd (hd p))" by simp
+    have "ctx_key (admiss_exact enterc) seedc parent (key enterc seedc parent)"
+      by (simp add: Call.IH)
+    thus "ctx_key (admiss_exact enterc) seedc (Call parent p) c"
+      using c by (auto simp: admiss_exact_def intro: ctx_key_Call)
+  qed
+next
+  case (Resume current callee p)
+  show ?case
+    by (auto simp: Resume.IH[symmetric] elim: ctx_key_ResumeE intro: ctx_key_Resume)
+qed
+
 subsection \<open>The closure relation\<close>
 
 text \<open>
@@ -754,25 +818,191 @@ lemma callee_entry_invariant_call_enterD:
   using callee_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
   by (rule conjunct2)
 
+subsection \<open>Admissible context entry invariant\<close>
+
+text \<open>The \<open>ctx_key\<close> analogue of \<open>callee_entry_invariant\<close>: not an equation, since \<open>admiss\<close> may
+  relate several child contexts to a caller context, but a bidirectional characterization ---
+  \<open>u\<close>'s admissible contexts are exactly those \<open>admiss\<close> reaches from some admissible context of
+  its creator \<open>c\<close>, applied to \<open>u\<close>'s own callee-entry store. This is what lets a COMB argument
+  construct the callee's context directly from the caller's chosen one, rather than
+  rediscovering it after the fact.\<close>
+lemma ctx_key_extend_nonempty:
+  "path t \<noteq> [] \<Longrightarrow> ctx_key admiss seedc (extend t x) c \<longleftrightarrow> ctx_key admiss seedc t c"
+proof (cases t)
+  case (Root p)
+  then show ?thesis by (auto elim: ctx_key_RootE intro: ctx_key_Root)
+next
+  case (Call caller p)
+  assume "path t \<noteq> []"
+  with Call show ?thesis
+    by (auto simp: hd_append elim!: ctx_key_CallE intro: ctx_key_Call)
+next
+  case (Resume current callee p)
+  then show ?thesis by (auto elim: ctx_key_ResumeE intro: ctx_key_Resume)
+qed
+
+lemma ctx_key_entry_invariant:
+  "callee \<in> valid_ltr gs g S \<Longrightarrow>
+     \<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c \<longrightarrow>
+       (\<forall>c2. ctx_key admiss seedc u c2 \<longleftrightarrow>
+             (\<exists>c1. ctx_key admiss seedc c c1 \<and> admiss (sink_node c) c1 (entry_store u) c2))
+       \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
+proof (induction rule: valid_ltr.induct)
+  case (init s)
+  then show ?case by (simp add: callers_Root)
+next
+  case (intra t a v s')
+  show ?case
+  proof (intro ballI allI impI)
+    fix u c assume uin: "u \<in> callers (extend t (v, s'))" and cof: "caller_of u = Some c"
+    from uin have "u = extend t (v, s') \<or> u \<in> callers t"
+      using callers_extend_subset by blast
+    then show "(\<forall>c2. ctx_key admiss seedc u c2 \<longleftrightarrow>
+                 (\<exists>c1. ctx_key admiss seedc c c1 \<and> admiss (sink_node c) c1 (entry_store u) c2))
+               \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
+    proof (rule disjE)
+      assume u: "u = extend t (v, s')"
+      have pt: "path t \<noteq> []" using intra.hyps(1) valid_ltr_path_nonempty by blast
+      have "caller_of t = Some c" using cof u by simp
+      then have IH: "(\<forall>c2. ctx_key admiss seedc t c2 \<longleftrightarrow>
+                       (\<exists>c1. ctx_key admiss seedc c c1 \<and> admiss (sink_node c) c1 (entry_store t) c2))
+                     \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store t)"
+        using intra.IH callers_refl by blast
+      then show ?thesis using u pt by (simp add: ctx_key_extend_nonempty entry_store_extend_valid intra.hyps(1))
+    next
+      assume "u \<in> callers t"
+      then show ?thesis using intra.IH cof by blast
+    qed
+  qed
+next
+  case (call caller dst pars args p cont)
+  show ?case
+  proof (intro ballI allI impI)
+    fix u c assume uin: "u \<in> callers (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+      and cof: "caller_of u = Some c"
+    from uin have "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
+                    \<or> u \<in> callers caller"
+      by (simp add: callers_Call)
+    then show "(\<forall>c2. ctx_key admiss seedc u c2 \<longleftrightarrow>
+                 (\<exists>c1. ctx_key admiss seedc c c1 \<and> admiss (sink_node c) c1 (entry_store u) c2))
+               \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
+    proof (rule disjE)
+      assume u: "u = Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]"
+      have c_eq: "c = caller" using cof u by simp
+      have ces: "call_enter_store gs g (sink_node caller) (sink_store caller)
+                   (call_enter gs (CallEdge dst pars args) (sink_store caller))"
+        unfolding call_enter_store_def using call.hyps(2) by blast
+      have iff: "\<forall>c2. ctx_key admiss seedc u c2 \<longleftrightarrow>
+                   (\<exists>c1. ctx_key admiss seedc caller c1 \<and> admiss (sink_node caller) c1 (entry_store u) c2)"
+        using u by (auto simp: entry_store_def elim!: ctx_key_CallE intro: ctx_key_Call)
+      show ?thesis using u c_eq ces iff by (simp add: entry_store_def)
+    next
+      assume "u \<in> callers caller"
+      then show ?thesis using call.IH cof by blast
+    qed
+  qed
+next
+  case (ret callee caller p dst pars args cont)
+  show ?case
+  proof (intro ballI allI impI)
+    fix u c assume uin: "u \<in> callers (Resume caller callee
+        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+      and cof: "caller_of u = Some c"
+    have cvalid: "caller \<in> valid_ltr gs g S"
+      using ret.hyps(1) ret.hyps(2) valid_ltr_caller_valid by blast
+    have pcaller: "path caller \<noteq> []" using cvalid valid_ltr_path_nonempty by blast
+    from uin have "u = Resume caller callee
+        (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
+                    \<or> u \<in> callers callee"
+      using callers_Resume_subset[OF ret.hyps(2)] by blast
+    then show "(\<forall>c2. ctx_key admiss seedc u c2 \<longleftrightarrow>
+                 (\<exists>c1. ctx_key admiss seedc c c1 \<and> admiss (sink_node c) c1 (entry_store u) c2))
+               \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store u)"
+    proof (rule disjE)
+      assume u: "u = Resume caller callee
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])"
+      have cof': "caller_of caller = Some c" using cof u by simp
+      have caller_in: "caller \<in> callers callee"
+        using ret.hyps(2) callers_caller_subset callers_refl by blast
+      have IHc: "(\<forall>c2. ctx_key admiss seedc caller c2 \<longleftrightarrow>
+                   (\<exists>c1. ctx_key admiss seedc c c1 \<and> admiss (sink_node c) c1 (entry_store caller) c2))
+                 \<and> call_enter_store gs g (sink_node c) (sink_store c) (entry_store caller)"
+        using ret.IH caller_in cof' by blast
+      have kres: "\<And>c2. ctx_key admiss seedc u c2 \<longleftrightarrow> ctx_key admiss seedc caller c2"
+        using u by (auto elim!: ctx_key_ResumeE intro: ctx_key_Resume)
+      have esres: "entry_store u = entry_store caller"
+        using u pcaller by (simp add: entry_store_Resume_caller)
+      show ?thesis using IHc kres esres by simp
+    next
+      assume "u \<in> callers callee"
+      then show ?thesis using ret.IH cof by blast
+    qed
+  qed
+qed
+
+text \<open>Every trace has at least one admissible context, provided \<open>admiss\<close> can always continue
+  --- the analysis-side analogue of \<open>route\<close> always producing some context. Needed to recover
+  a callee's admissible context from its caller's, rather than merely knowing one exists in
+  isolation.\<close>
+lemma ctx_key_exists:
+  assumes tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
+  shows "\<exists>c. ctx_key admiss seedc t c"
+proof (induction t)
+  case (Root p)
+  then show ?case by (auto intro: ctx_key_Root)
+next
+  case (Call parent p)
+  then obtain c where c: "ctx_key admiss seedc parent c" by blast
+  from tot obtain c' where "admiss (sink_node parent) c (snd (hd p)) c'" by blast
+  with c show ?case by (auto intro: ctx_key_Call)
+next
+  case (Resume current callee p)
+  then obtain c where "ctx_key admiss seedc current c" by blast
+  then show ?case by (auto intro: ctx_key_Resume)
+qed
+
+lemma ctx_key_entry_invariant_iff:
+  assumes callee_val: "callee \<in> valid_ltr gs g S"
+    and cof: "caller_of callee = Some caller"
+  shows "ctx_key admiss seedc callee c2 \<longleftrightarrow>
+         (\<exists>c1. ctx_key admiss seedc caller c1 \<and> admiss (sink_node caller) c1 (entry_store callee) c2)"
+  using ctx_key_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof,
+      THEN conjunct1]
+  by metis
+
+lemma ctx_key_entry_invariant_call_enterD:
+  assumes callee_val: "callee \<in> valid_ltr gs g S"
+    and cof: "caller_of callee = Some caller"
+  shows "call_enter_store gs g (sink_node caller) (sink_store caller) (entry_store callee)"
+  using ctx_key_entry_invariant[OF callee_val, THEN bspec, OF callers_refl, rule_format, OF cof]
+  by (rule conjunct2)
+
 subsection \<open>The activation-indexed context collecting\<close>
 
 text \<open>The activation-sensitive collecting is the sink stores of valid traces reaching \<open>v\<close>
-  whose activation context is \<open>c\<close>.\<close>
+  admissibly assigned the queried context \<open>c\<close>, via \<^const>\<open>ctx_key\<close>. Exact activation
+  matching --- one context per trace, computed by decoding the concrete entered store --- is
+  the \<open>admiss = admiss_exact enterc\<close> instance; an \<open>admiss\<close> that ignores its concrete-store
+  argument (for instance, one derived from an abstract routing result) instead lets one
+  admissible context stand for every concrete execution the abstract analysis represents by
+  it, without needing \<open>admiss\<close> itself to be multi-valued.\<close>
 
 definition activation_collect ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
-  "activation_collect gs enterc seedc g S v c =
-     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> key enterc seedc t = c}"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool) \<Rightarrow> 'c
+     \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set" where
+  "activation_collect gs admiss seedc g S v c =
+     {sink_store t | t. t \<in> valid_ltr gs g S \<and> sink_node t = v \<and> ctx_key admiss seedc t c}"
 
 lemma activation_collect_I:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> key enterc seedc t = c
-   \<Longrightarrow> sink_store t \<in> activation_collect gs enterc seedc g S v c"
+  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t = v \<Longrightarrow> ctx_key admiss seedc t c
+   \<Longrightarrow> sink_store t \<in> activation_collect gs admiss seedc g S v c"
   unfolding activation_collect_def by blast
 
-text \<open>Every collected state has a valid trace witness at the given activation key.\<close>
+text \<open>Every collected state has a valid trace witness admissibly assigned the queried \<open>c\<close>.\<close>
 lemma activation_collect_E:
-  assumes "s \<in> activation_collect gs enterc seedc g S v c"
-  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "key enterc seedc t = c" "sink_store t = s"
+  assumes "s \<in> activation_collect gs admiss seedc g S v c"
+  obtains t where "t \<in> valid_ltr gs g S" "sink_node t = v" "ctx_key admiss seedc t c"
+    "sink_store t = s"
   using assms unfolding activation_collect_def by blast
 
 

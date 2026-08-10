@@ -373,4 +373,109 @@ qed
 
 end
 
+subsection \<open>Formal-entry contexts: routing on the callee's declared formals\<close>
+
+text \<open>
+  A context type derived from the callee's declared formals rather than call-site
+  history: \<open>'a list\<close>, one abstract value per formal, in the order \<^const>\<open>CallEdge\<close>
+  already carries them --- populated at compile time from the callee's own
+  declaration, so no separate procedure-table lookup is needed here.
+  \<open>formals_context\<close> is the plain per-variable projection (\<^typ>\<open>'a abs_state\<close> is
+  \<^typ>\<open>vname \<Rightarrow> 'a\<close>, so this is just \<^const>\<open>map\<close>); \<open>formals_route\<close> applies it to
+  the entered local state via \<^const>\<open>enter_local\<close>, the same enter transfer every
+  other CALL obligation uses; \<open>formals_enterc\<close> is its trace-semantic counterpart,
+  decoding the concrete entered store's formals the same way, given the point
+  abstraction \<open>decode\<close> a domain provides for a concrete value and the CFG needed
+  to look up a call site's own formal list. Neither definition mentions a
+  domain-specific accessor beyond \<open>decode\<close> itself, so any domain reusing
+  \<^locale>\<open>routed_context\<close> instantiates this pair once instead of hand-writing a
+  per-formal projection, as \<open>route_ivl\<close>/\<open>ivl_enterc\<close> previously did.
+\<close>
+
+definition formals_context :: "vname list \<Rightarrow> 'a abs_state \<Rightarrow> 'a list" where
+  "formals_context pars d = map d pars"
+
+definition formals_route ::
+  "('a::sound_domain abs_state, 'a abs_state) dg_spec \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'a list"
+where
+  "formals_route S d ca =
+     (case ca of CallEdge dst pars args \<Rightarrow> formals_context pars (enter_local S pars args d bot))"
+
+text \<open>The routing hook's exact calling convention (\<^locale>\<open>dg_ctx_activation\<close>'s
+  \<open>route\<close>): generic over call site and caller context, using only the entered
+  store, as \<open>route_ivl_gen\<close> already was.\<close>
+definition formals_route_gen ::
+  "('a::sound_domain abs_state, 'a abs_state) dg_spec
+     \<Rightarrow> pp \<Rightarrow> 'a list \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'a list"
+where
+  "formals_route_gen S u ctx d ca = formals_route S d ca"
+
+text \<open>The formals of the call originating at \<open>u\<close>: at most one, by the compiler's
+  own invariant (\<^theory>\<open>Voblint_CFG.VIMP_Proc_to_CFG\<close> emits a single \<^const>\<open>CallEdge\<close>
+  per \<^const>\<open>Call\<close>); \<open>[]\<close> if \<open>u\<close> has none.\<close>
+definition formals_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> vname list" where
+  "formals_at_call_site g u =
+     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
+        (_, CallEdge _ pars _, _, _) # _ \<Rightarrow> pars
+      | _ \<Rightarrow> [])"
+
+definition formals_enterc ::
+  "cfg \<Rightarrow> (int \<Rightarrow> 'a) \<Rightarrow> cfg_node \<Rightarrow> 'a list \<Rightarrow> store \<Rightarrow> 'a list"
+where
+  "formals_enterc g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
+
+text \<open>
+  The whole matched \<^type>\<open>call_action\<close> at a node, not only its formals: an
+  \<open>enterc\<close> built purely from the caller's own solved abstract state (rather than
+  by decoding the concrete entered store, as \<^const>\<open>formals_enterc\<close> does) needs
+  the callee's actuals too, to recompute the same \<^const>\<open>dgs_enter\<close> the route
+  itself already ran. Same convention as \<^const>\<open>formals_at_call_site\<close>: the head
+  of the filtered call list, \<open>CallEdge None [] []\<close> if \<open>u\<close> has no outgoing call.
+\<close>
+
+definition call_action_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> call_action" where
+  "call_action_at_call_site g u =
+     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
+        (_, ca, _, _) # _ \<Rightarrow> ca
+      | _ \<Rightarrow> CallEdge None [] [])"
+
+text \<open>
+  Not a locale theorem, same as \<open>route_enterc_agree\<close> itself: whether a node has at
+  most one outgoing call is a per-instance fact about \<open>g\<close>, true for
+  \<^const>\<open>compile_prog\<close> output (\<^theory>\<open>Voblint_CFG.VIMP_Proc_to_CFG\<close>'s
+  \<open>compile_prog_calls_source_unique\<close>) but not for an arbitrary hand-built CFG.
+\<close>
+
+lemma call_action_at_call_site_eq:
+  assumes fin: "finite (calls g)"
+    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
+                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
+                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+    and ce: "(u, ca, cf, af) \<in> calls g"
+  shows "call_action_at_call_site g u = ca"
+proof -
+  let ?P = "\<lambda>(c, ca, ce, k). c = u"
+  let ?L = "cfg_calls_list g"
+  have mem: "(u, ca, cf, af) \<in> set ?L" using ce fin by simp
+  have distinctL: "distinct ?L" unfolding cfg_calls_list_code by (rule distinct_sorted_list_of_set)
+  have "set (filter ?P ?L) = {(u, ca, cf, af)}"
+  proof (rule set_eqI, rule iffI)
+    fix x assume hx: "x \<in> set (filter ?P ?L)"
+    then have memx: "x \<in> set ?L" and px: "?P x" by (auto simp: set_filter)
+    obtain c ca' ce' af' where x: "x = (c, ca', ce', af')" by (cases x) auto
+    from px x have cU: "c = u" by simp
+    from memx x cU fin have "(u, ca', ce', af') \<in> calls g" by simp
+    with uniq[OF ce] have "ca' = ca" "ce' = cf" "af' = af" by auto
+    thus "x \<in> {(u, ca, cf, af)}" using x cU by simp
+  next
+    fix x assume "x \<in> {(u, ca, cf, af)}"
+    thus "x \<in> set (filter ?P ?L)" using mem by simp
+  qed
+  moreover have "distinct (filter ?P ?L)" using distinctL by (rule distinct_filter)
+  ultimately have "filter ?P ?L = [(u, ca, cf, af)]"
+    apply (cases "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g)")
+    using singleton_iff subset_singletonD by(fastforce)+
+  thus ?thesis unfolding call_action_at_call_site_def by simp
+qed
+
 end

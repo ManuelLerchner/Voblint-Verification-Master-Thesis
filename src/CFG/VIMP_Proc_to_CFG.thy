@@ -362,6 +362,329 @@ proof -
   with c1 e1 show ?thesis by (auto intro: that)
 qed
 
+subsection \<open>Call-source uniqueness\<close>
+
+text \<open>
+  Each compiled fragment allocates its \<open>Call\<close> leaves at distinct, freshly claimed
+  \<open>Statement\<close> indices, so a compiled \<open>calls\<close> set never has two different edges out of
+  the same source node.  This is a structural fact about the compiler, not about
+  \<^const>\<open>wf_cfg\<close> (which is deliberately compiler-agnostic) or about any particular
+  program: a hand-built CFG whose source node has two distinct outgoing call edges can
+  still violate it, but no \<^const>\<open>compile_prog\<close> output can, and it is what lets a
+  context-routing hook resolve the one call at a node from the source node alone.
+\<close>
+
+lemma compile_calls_source_range:
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
+   \<Longrightarrow> \<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
+proof (induction c arbitrary: k n n' en E K rule: com.induct)
+  case (Seq c1 c2)
+  from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    and n': "n' = n2" and K: "K = K1 \<union> K2"
+    by (auto simp: Let_def split: prod.splits)
+  have i1: "n1 = n + csize c1" using compile_next_id[OF c1] .
+  have i2: "n2 = n + csize c1 + csize c2" using compile_next_id[OF c2] by simp
+  from Seq.prems(2) K consider (L) "(u, act, ce, af) \<in> K1" | (R) "(u, act, ce, af) \<in> K2" by auto
+  then show ?case
+  proof cases
+    case L with Seq.IH(1)[OF c1 L] i1 i2 show ?thesis unfolding n' by auto
+  next
+    case R with Seq.IH(2)[OF c2 R] i1 i2 show ?thesis unfolding n' by auto
+  qed
+next
+  case (If b c1 c2)
+  from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    and n': "n' = n2" and K: "K = K1 \<union> K2"
+    by (auto split: prod.splits)
+  have i1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] by simp
+  have i2: "n2 = n1 + csize c2" using compile_next_id[OF c2] .
+  from If.prems(2) K consider (L) "(u, act, ce, af) \<in> K1" | (R) "(u, act, ce, af) \<in> K2" by auto
+  then show ?case
+  proof cases
+    case L with If.IH(1)[OF c1 L] i1 i2 show ?thesis unfolding n' by auto
+  next
+    case R with If.IH(2)[OF c2 R] i1 i2 show ?thesis unfolding n' by auto
+  qed
+next
+  case (While b c)
+  from While.prems(1) obtain n1 en1 E1 K1 where
+      c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    and n': "n' = n1" and K: "K = K1"
+    by (auto split: prod.splits)
+  from While.prems(2) K have "(u, act, ce, af) \<in> K1" by simp
+  with While.IH[OF c1] show ?case unfolding n' by auto
+qed (auto split: prod.splits option.splits)
+
+lemma compile_calls_source_unique:
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
+   \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+proof (induction c arbitrary: k n n' en E K rule: com.induct)
+  case (Seq c1 c2)
+  from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      cc1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and cc2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    and K: "K = K1 \<union> K2"
+    by (auto simp: Let_def split: prod.splits)
+  have i1: "n1 = n + csize c1" using compile_next_id[OF cc1] .
+  have low: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K1 \<Longrightarrow> \<exists>j. u' = Statement j \<and> j < n1"
+    using compile_calls_source_range[OF cc1] i1 by blast
+  have high: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K2 \<Longrightarrow> \<exists>j. u' = Statement j \<and> n1 \<le> j"
+    using compile_calls_source_range[OF cc2]
+    using i1 by blast
+  have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
+      (u', act1', ce1', af1') \<in> K1 \<Longrightarrow> (u', act2', ce2', af2') \<in> K2 \<Longrightarrow> False"
+    using low high by fastforce
+  from Seq.prems(2) K have m1: "(u, ca1, ce1, af1) \<in> K1 \<or> (u, ca1, ce1, af1) \<in> K2" by auto
+  from Seq.prems(3) K have m2: "(u, ca2, ce2, af2) \<in> K1 \<or> (u, ca2, ce2, af2) \<in> K2" by auto
+  consider (LL) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K1"
+         | (RR) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K2"
+         | (LR) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K2"
+         | (RL) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K1"
+    using m1 m2 by blast
+  then show ?case
+  proof cases
+    case LL then show ?thesis using Seq.IH(1)[OF cc1] by blast
+  next
+    case RR then show ?thesis using Seq.IH(2)[OF cc2] by blast
+  next
+    case LR then show ?thesis using not_both by blast
+  next
+    case RL then show ?thesis using not_both by blast
+  qed
+next
+  case (If b c1 c2)
+  from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      cc1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and cc2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    and K: "K = K1 \<union> K2"
+    by (auto split: prod.splits)
+  have low: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K1 \<Longrightarrow> \<exists>j. u' = Statement j \<and> j < n1"
+    using compile_calls_source_range[OF cc1] by fastforce
+  have high: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K2 \<Longrightarrow> \<exists>j. u' = Statement j \<and> n1 \<le> j"
+    using compile_calls_source_range[OF cc2] by fastforce
+  have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
+      (u', act1', ce1', af1') \<in> K1 \<Longrightarrow> (u', act2', ce2', af2') \<in> K2 \<Longrightarrow> False"
+    using low high by fastforce
+  from If.prems(2) K have m1: "(u, ca1, ce1, af1) \<in> K1 \<or> (u, ca1, ce1, af1) \<in> K2" by auto
+  from If.prems(3) K have m2: "(u, ca2, ce2, af2) \<in> K1 \<or> (u, ca2, ce2, af2) \<in> K2" by auto
+  consider (LL) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K1"
+         | (RR) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K2"
+         | (LR) "(u, ca1, ce1, af1) \<in> K1" "(u, ca2, ce2, af2) \<in> K2"
+         | (RL) "(u, ca1, ce1, af1) \<in> K2" "(u, ca2, ce2, af2) \<in> K1"
+    using m1 m2 by blast
+  then show ?case
+  proof cases
+    case LL then show ?thesis using If.IH(1)[OF cc1] by blast
+  next
+    case RR then show ?thesis using If.IH(2)[OF cc2] by blast
+  next
+    case LR then show ?thesis using not_both by blast
+  next
+    case RL then show ?thesis using not_both by blast
+  qed
+next
+  case (While b c)
+  from While.prems(1) obtain n1 en1 E1 K1 where
+      cc1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    and K: "K = K1"
+    by (auto split: prod.splits)
+  from While.prems(2) K have "(u, ca1, ce1, af1) \<in> K1" by simp
+  moreover from While.prems(3) K have "(u, ca2, ce2, af2) \<in> K1" by simp
+  ultimately show ?case using While.IH[OF cc1] by blast
+qed (auto split: prod.splits option.splits)
+
+text \<open>Destructured directly against \<^const>\<open>compile_proc\<close>'s definition, the same way
+  \<open>compile_procE\<close>'s own proof does, rather than via that elimination rule: it is
+  introduced later in this theory, after the well-formedness development, and this
+  fact belongs with the other allocation-arithmetic lemmas instead.\<close>
+
+lemma compile_proc_counter_mono:
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> n \<le> n'"
+proof -
+  assume h: "compile_proc \<Pi> p decl n = (n', E, K)"
+  define r where "r = n + csize (body decl)"
+  obtain m ben Eb Kb where
+    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+  have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
+  from h cb i have "n' = Suc r" unfolding compile_proc_def r_def by (auto simp: Let_def)
+  then show ?thesis by (simp add: r_def)
+qed
+
+lemma compile_proc_calls_source_range:
+  assumes "compile_proc \<Pi> p decl n = (n', E, K)" and "(u, act, ce, af) \<in> K"
+  shows "\<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
+proof -
+  define r where "r = n + csize (body decl)"
+  obtain m ben Eb Kb where
+    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+  have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
+  from assms(1) cb i have K_eq: "K = Kb" and n'_eq: "n' = Suc r"
+    unfolding compile_proc_def r_def by (auto simp: Let_def)
+  from cb i have cb': "compile \<Pi> p (body decl) (Statement r) n = (r, ben, Eb, K)"
+    unfolding K_eq by simp
+  obtain j where "u = Statement j" "n \<le> j" "j < r"
+    using compile_calls_source_range[OF cb'] assms(2) by blast
+  then show ?thesis unfolding n'_eq by auto
+qed
+
+lemma compile_proc_calls_source_unique:
+  assumes "compile_proc \<Pi> p decl n = (n', E, K)"
+    and "(u, ca1, ce1, af1) \<in> K" and "(u, ca2, ce2, af2) \<in> K"
+  shows "ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+proof -
+  define r where "r = n + csize (body decl)"
+  obtain m ben Eb Kb where
+    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+  have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
+  from assms(1) cb i have K_eq: "K = Kb"
+    unfolding compile_proc_def r_def by (auto simp: Let_def)
+  from cb i have cb': "compile \<Pi> p (body decl) (Statement r) n = (r, ben, Eb, K)"
+    unfolding K_eq by simp
+  show ?thesis using compile_calls_source_unique[OF cb'] assms(2,3) K_eq by simp
+qed
+
+lemma compile_procs_counter_mono:
+  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
+proof (induction ps arbitrary: n n' E K)
+  case Nil then show ?case by simp
+next
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None with Cons show ?thesis by simp
+  next
+    case (Some decl)
+    with Cons.prems obtain n1 E0 K0 n2 E' K' where
+        cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
+      by (auto split: prod.splits)
+    from compile_proc_counter_mono[OF cp] Cons.IH[OF rest] n' show ?thesis by simp
+  qed
+qed
+
+lemma compile_procs_calls_source_range:
+  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
+   \<Longrightarrow> \<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
+proof (induction ps arbitrary: n n' E K)
+  case Nil then show ?case by simp
+next
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None with Cons show ?thesis by simp
+  next
+    case (Some decl)
+    with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
+        cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+      and n': "n' = n2" and K: "K = K0 \<union> K'"
+      by (auto split: prod.splits)
+    from Cons.prems(2) K consider (L) "(u, act, ce, af) \<in> K0" | (R) "(u, act, ce, af) \<in> K'" by auto
+    then show ?thesis
+    proof cases
+      case L
+      obtain j where j: "u = Statement j" "n \<le> j" "j < n1"
+        using compile_proc_calls_source_range[OF cp L] by blast
+      have "n1 \<le> n2" using compile_procs_counter_mono[OF rest] .
+      with j n' show ?thesis by auto
+    next
+      case R
+      obtain j where j: "u = Statement j" "n1 \<le> j" "j < n2"
+        using Cons.IH[OF rest R] by blast
+      have "n \<le> n1" using compile_proc_counter_mono[OF cp] .
+      with j n' show ?thesis by auto
+    qed
+  qed
+qed
+
+lemma compile_procs_calls_source_unique:
+  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
+   \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+proof (induction ps arbitrary: n n' E K)
+  case Nil then show ?case by simp
+next
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None with Cons show ?thesis by simp
+  next
+    case (Some decl)
+    with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
+        cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
+      by (auto split: prod.splits)
+    have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
+        (u', act1', ce1', af1') \<in> K0 \<Longrightarrow> (u', act2', ce2', af2') \<in> K' \<Longrightarrow> False"
+      using compile_proc_calls_source_range[OF cp]
+            compile_procs_calls_source_range[OF rest]
+      by fastforce
+    from Cons.prems(2) K have m1: "(u, ca1, ce1, af1) \<in> K0 \<or> (u, ca1, ce1, af1) \<in> K'" by auto
+    from Cons.prems(3) K have m2: "(u, ca2, ce2, af2) \<in> K0 \<or> (u, ca2, ce2, af2) \<in> K'" by auto
+    consider (LL) "(u, ca1, ce1, af1) \<in> K0" "(u, ca2, ce2, af2) \<in> K0"
+           | (RR) "(u, ca1, ce1, af1) \<in> K'" "(u, ca2, ce2, af2) \<in> K'"
+           | (LR) "(u, ca1, ce1, af1) \<in> K0" "(u, ca2, ce2, af2) \<in> K'"
+           | (RL) "(u, ca1, ce1, af1) \<in> K'" "(u, ca2, ce2, af2) \<in> K0"
+      using m1 m2 by blast
+    then show ?thesis
+    proof cases
+      case LL then show ?thesis using compile_proc_calls_source_unique[OF cp] by blast
+    next
+      case RR then show ?thesis using Cons.IH[OF rest] by blast
+    next
+      case LR then show ?thesis using not_both by blast
+    next
+      case RL then show ?thesis using not_both by blast
+    qed
+  qed
+qed
+
+text \<open>Whole-program call-source uniqueness: the fact a routed-context analysis needs
+  to resolve the formals of the one call at a node without ambiguity, for any
+  \<^const>\<open>compile_prog\<close> output. Combines the declared-procedures pass and the \<open>main\<close>
+  pass the same way the well-formedness theorem combines its own two passes.\<close>
+
+theorem compile_prog_calls_source_unique:
+  assumes "(u, ca1, ce1, af1) \<in> calls (compile_prog \<Pi> ps mnm main)"
+    and "(u, ca2, ce2, af2) \<in> calls (compile_prog \<Pi> ps mnm main)"
+  shows "ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+proof -
+  obtain n1 Eprocs Kprocs where
+    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
+  obtain n2 Emain Kmain where
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    by (metis prod_cases3)
+  have g: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+    unfolding compile_prog_def by (simp add: procs mainc Let_def)
+  have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
+      (u', act1', ce1', af1') \<in> Kprocs \<Longrightarrow> (u', act2', ce2', af2') \<in> Kmain \<Longrightarrow> False"
+    using compile_procs_calls_source_range[OF procs] compile_proc_calls_source_range[OF mainc]
+    by fastforce
+  from assms(1) g have m1: "(u, ca1, ce1, af1) \<in> Kprocs \<or> (u, ca1, ce1, af1) \<in> Kmain" by auto
+  from assms(2) g have m2: "(u, ca2, ce2, af2) \<in> Kprocs \<or> (u, ca2, ce2, af2) \<in> Kmain" by auto
+  consider (LL) "(u, ca1, ce1, af1) \<in> Kprocs" "(u, ca2, ce2, af2) \<in> Kprocs"
+         | (RR) "(u, ca1, ce1, af1) \<in> Kmain" "(u, ca2, ce2, af2) \<in> Kmain"
+         | (LR) "(u, ca1, ce1, af1) \<in> Kprocs" "(u, ca2, ce2, af2) \<in> Kmain"
+         | (RL) "(u, ca1, ce1, af1) \<in> Kmain" "(u, ca2, ce2, af2) \<in> Kprocs"
+    using m1 m2 by blast
+  then show ?thesis
+  proof cases
+    case LL then show ?thesis using compile_procs_calls_source_unique[OF procs] by blast
+  next
+    case RR then show ?thesis using compile_proc_calls_source_unique[OF mainc] by blast
+  next
+    case LR then show ?thesis using not_both by blast
+  next
+    case RL then show ?thesis using not_both by blast
+  qed
+qed
+
 subsection \<open>Check-obligation soundness\<close>
 
 text \<open>Now immediate: \<open>checks\<close> is \<^emph>\<open>defined\<close> (\<^const>\<open>compile_prog\<close>) as the projection of

@@ -2,9 +2,12 @@ theory Example_Analysis_Dispatch
   imports
     Example_Sign_Codegen
     Voblint_Analysis.Interval_Checks
+    Voblint_Formalization.Interval_Exec_Ctx_Sound
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
+
+hide_const phase.N
 
 section \<open>A unified, verified check-report API across domains\<close>
 
@@ -36,6 +39,38 @@ datatype analysis_kind = Sign_Analysis | Interval_Analysis
 fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
+
+subsection \<open>Context-sensitivity dimension\<close>
+
+text \<open>
+  \<open>Ctx_None\<close> is today's flow-insensitive, call-site-insensitive behaviour;
+  \<open>Ctx_EntryState\<close> selects the value-derived entry-state context analysis
+  (\<^theory>\<open>Voblint_Formalization.Interval_Exec_Ctx_Sound\<close>, #108). Deliberately not
+  a wider \<open>analyse\<close>: \<open>analyse\<close>/\<open>analyse_with_state\<close> stay untouched (the CLI's
+  no-\<open>--context\<close> path, the GraphViz report, and every existing
+  \<open>codegen/regression\<close> consumer already pin their exact two-argument shape as a
+  trust boundary), and Sign has no context-sensitive branch to route to yet, so
+  widening \<open>analyse\<close> itself would force a fabricated Sign case. \<open>analyse_ctx\<close>
+  is the additional export for this one new dimension, reusing \<open>analyse\<close>'s own
+  branches unchanged at \<open>Ctx_None\<close> rather than duplicating their logic.
+  \<open>None\<close> is a real, checkable unsupported-combination result -- todays's only
+  unsupported pairing is \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close> -- not a silent
+  fallback to context-insensitive behaviour.
+\<close>
+
+datatype context_mode = Ctx_None | Ctx_EntryState
+
+fun analyse_ctx :: "analysis_kind \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
+  "analyse_ctx Sign_Analysis Ctx_None p = Some (analyse_sign_report p)"
+| "analyse_ctx Interval_Analysis Ctx_None p = Some (analyse_interval_td_report p)"
+| "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
+| "analyse_ctx Sign_Analysis Ctx_EntryState p = None"
+
+text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for both domains: the new dispatcher
+  cannot silently drift from the one CLI/regression already exercises.\<close>
+
+lemma analyse_ctx_none_eq_analyse: "analyse_ctx k Ctx_None p = Some (analyse k p)"
+  by (cases k) simp_all
 
 subsection \<open>Domain-neutral state-carrying report\<close>
 
@@ -664,12 +699,15 @@ code_identifier
 | code_module Interval_Numeric_Queries \<rightharpoonup> (OCaml) Core
 | code_module Interval_Warrowing \<rightharpoonup> (OCaml) Core
 | code_module Ivl_Exec \<rightharpoonup> (OCaml) Core
+| code_module Routed_Context \<rightharpoonup> (OCaml) Core
+| code_module Interval_Exec_Ctx_Sound \<rightharpoonup> (OCaml) Core
 | code_module Example_Analysis_Dispatch \<rightharpoonup> (OCaml) Analyse
 
 
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
+  analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -685,6 +723,7 @@ export_code
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
+  analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times

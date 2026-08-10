@@ -1,0 +1,19 @@
+// PARAM: --analysis interval --context entry-state
+// Acceptance case for #108's entry-state context analysis: an unconstrained
+// argument (random()) must collapse to ONE wide entry-state context at p's
+// call site -- the entered value's own abstract state, not a context keyed
+// per concrete value -- so the analysis terminates instead of diverging
+// over every value random() could produce. The checked condition inside p
+// is itself unconstrained by that wide context, so UNKNOWN is the only
+// sound verdict here; the acceptance claim is that entry-state context
+// sensitivity runs and reports soundly for an unbounded argument, not that
+// it proves anything about this particular check (see
+// precision/04-two_call_sites_entry_state.vimp for the precision benefit
+// entry-state context sensitivity actually buys on a bounded argument).
+void p(a) {
+  __voblint_check(0 < a) // UNKNOWN
+}
+void main() {
+  x := random();
+  y := p(x)
+}

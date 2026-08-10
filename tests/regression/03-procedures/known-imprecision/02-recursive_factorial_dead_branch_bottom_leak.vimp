@@ -1,0 +1,44 @@
+// PARAM: --analysis interval --context entry-state
+// Recursive factorial under entry-state context sensitivity. Solver-key
+// inspection (not just this CLI report) confirms context separation itself
+// is exact: factorial's entry is covered by four distinct, precise
+// contexts (n=[1,1], [2,2], [3,3], [4,4]), each with an exact n -- so this
+// is NOT a #108/context-sensitivity imprecision, and NOT recursive
+// contexts collapsing or widening at the key level.
+//
+// The actual mechanism: at each n>=2 context, the "return 1" base-case
+// edge (guarded by n<2) is correctly proved unreachable there (is_bot on
+// that branch's own witness variable, n, is true) -- but the edge's own
+// #ret := 1 assignment transfer does not itself check that its source
+// state is already witness-bottom before computing, so it still produces
+// a non-bottom #ret=[1,1] from a provably-dead predecessor. FunctionResult
+// then legitimately joins that spurious [1,1] with the live branch's exact
+// result, widening every factorial(n>=2) result to [1,n!] instead of
+// [n!,n!]. Reproduces identically under plain --analysis interval with no
+// --context at all (minimal case: `void f(n) { if (n<2) { return 1 } else
+// { return n*100 } }`, f(5) -> [1,500] instead of [500,500]) -- a
+// pre-existing, general non-relational-domain transfer-strictness gap
+// (abstract transfers don't preserve "predecessor state is bottom" through
+// an assignment), not specific to recursion, calls, or context
+// sensitivity. Tracked as #113, independent of this group; once fixed,
+// the two UNKNOWN checks below should become PROVED and this fixture
+// should move out of known-imprecision/.
+void factorial(n) {
+  __voblint_check(0 < n); // PROVED
+
+  if (n < 2) {
+    return 1
+  } else {
+    r := factorial(n - 1);
+    __voblint_check(0 < r); // PROVED
+    return n * r
+  }
+}
+
+void main() {
+  a := factorial(3);
+  b := factorial(4);
+
+  __voblint_check(a == 6);   // UNKNOWN
+  __voblint_check(b == 24)   // UNKNOWN
+}

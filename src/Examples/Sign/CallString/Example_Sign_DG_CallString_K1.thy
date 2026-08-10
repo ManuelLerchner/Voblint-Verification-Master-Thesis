@@ -503,10 +503,11 @@ lemma cinit_le_cinit_sign_st_1: "cinit_stores sign_nest_gs \<subseteq> \<lbrakk>
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for)
 
 theorem sign_nest_1_activation_collect_sound:
-  "activation_collect sign_nest_gs (cs_enterc 1) [] sign_nest_cfg (cinit_stores sign_nest_gs) v ctx
+  "activation_collect sign_nest_gs (admiss_exact (cs_enterc 1)) [] sign_nest_cfg (cinit_stores sign_nest_gs) v ctx
      \<subseteq> \<lbrakk>sign_ctx_sg_1 (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = sign_ctx_sg_1 and enterc = "cs_enterc 1"
-        and seedc = "[]" and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
+proof (rule activation_collect_sound[where sg = sign_ctx_sg_1 and admiss = "admiss_exact (cs_enterc 1)"
+        and seedc = "[]"
+        and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment>\<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_sign_st\<close>'s own
     projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
@@ -535,23 +536,28 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>sign_ctx_sg_1 (Inl (v, c))\<rbrakk>"
     by (rule sign_nest_1_dg.dg_ctx_act_edge)
 next
+  \<comment>\<open>ADMISS_TOTAL --- \<open>admiss_exact\<close> is total since \<open>cs_enterc 1\<close> is a function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact (cs_enterc 1) u c s c'"
+    by (simp add: admiss_exact_def)
+next
   \<comment>\<open>CALL --- enter routed to the truncated call string.\<close>
-  show "\<And>u dst pars args p cont c s.
-        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>sign_ctx_sg_1 (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> call_enter sign_nest_gs (CallEdge dst pars args) s
-             \<in> \<lbrakk>sign_ctx_sg_1 (Inl (FunctionEntry p,
-                    cs_enterc 1 u c (call_enter sign_nest_gs (CallEdge dst pars args) s)))\<rbrakk>"
-    by (rule sign_ctx_sg_1_seed)
+  fix u dst pars args p cont c s c'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
+    and sm: "s \<in> \<lbrakk>sign_ctx_sg_1 (Inl (u, c))\<rbrakk>"
+    and adm: "admiss_exact (cs_enterc 1) u c (call_enter sign_nest_gs (CallEdge dst pars args) s) c'"
+  show "call_enter sign_nest_gs (CallEdge dst pars args) s
+          \<in> \<lbrakk>sign_ctx_sg_1 (Inl (FunctionEntry p, c'))\<rbrakk>"
+    using adm sign_ctx_sg_1_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
   \<comment>\<open>COMB --- return combine at the caller's own truncated context.\<close>
-  show "\<And>cl dst pars args p cont c1 s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg
-        \<Longrightarrow> s \<in> \<lbrakk>sign_ctx_sg_1 (Inl (cl, c1))\<rbrakk>
-        \<Longrightarrow> t \<in> \<lbrakk>sign_ctx_sg_1 (Inl (FunctionResult p, cs_enterc 1 cl c1 es))\<rbrakk>
-        \<Longrightarrow> call_enter_store sign_nest_gs sign_nest_cfg cl s es
-        \<Longrightarrow> combine_collect sign_nest_gs dst s t \<in> \<lbrakk>sign_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"
-    by (rule sign_ctx_sg_1_comb)
+  fix cl dst pars args p cont c1 c2 s t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
+    and sm: "s \<in> \<lbrakk>sign_ctx_sg_1 (Inl (cl, c1))\<rbrakk>"
+    and adm: "admiss_exact (cs_enterc 1) cl c1 es c2"
+    and tm: "t \<in> \<lbrakk>sign_ctx_sg_1 (Inl (FunctionResult p, c2))\<rbrakk>"
+    and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
+  show "combine_collect sign_nest_gs dst s t \<in> \<lbrakk>sign_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"
+    using adm tm sign_ctx_sg_1_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
 section \<open>Executable check: the 1-call-string merge at \<open>g\<close>'s entry\<close>
