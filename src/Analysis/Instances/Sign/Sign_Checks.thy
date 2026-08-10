@@ -143,7 +143,7 @@ text \<open>
   \<open>N\<close>-check program, \<open>2N\<close> solver runs instead of one. The \<open>[code]\<close> equation below is provably
   equal (a direct \<open>Let\<close>-unfold of the same definitions) but binds \<^term>\<open>snd (analyse_sign_for gs
   p)\<close> once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the target language
-  compiles that \<open>let\<close> to a single shared thunk, so the generated Haskell/OCaml computes the
+  compiles that \<open>let\<close> to a single shared thunk, so the generated OCaml computes the
   solved system exactly once per report, regardless of how many checks the program has.
 \<close>
 

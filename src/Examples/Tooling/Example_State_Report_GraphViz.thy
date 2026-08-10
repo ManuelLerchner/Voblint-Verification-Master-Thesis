@@ -165,7 +165,7 @@ text \<open>
 \<close>
 
 code_identifier
-  code_module Complete_Lattices \<rightharpoonup> (Haskell) Core and (OCaml) Core
+  code_module Complete_Lattices \<rightharpoonup> (OCaml) Core
 
 export_code
   analyse Sign_Analysis Interval_Analysis

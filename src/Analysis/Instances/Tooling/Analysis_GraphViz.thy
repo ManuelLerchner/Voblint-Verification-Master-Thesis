@@ -586,7 +586,7 @@ text \<open>
   Matches \<^const>\<open>graphviz_html_text\<close>'s idiom of comparing characters with
   \<open>=\<close> rather than pattern-matching a literal \<open>CHR\<close> value on a \<open>fun\<close>
   equation's left-hand side --- \<open>HOL-Library.Code_Abstract_Char\<close> (pulled
-  in for this session's OCaml/Haskell code generation) represents \<^typ>\<open>char\<close>
+  in for this session's OCaml code generation) represents \<^typ>\<open>char\<close>
   abstractly for the code generator, which then rejects a literal-\<open>CHR\<close>
   pattern as "not a constructor". An equality test in the body has no such
   restriction.
