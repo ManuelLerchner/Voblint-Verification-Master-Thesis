@@ -792,6 +792,45 @@ proof -
   then show ?thesis using compile_procs_frag_range[OF cp] by blast
 qed
 
+text \<open>
+  The four lemmas below (\<open>compile_procs_tail_intra_not_head_pfn\<close>,
+  \<open>compile_proc_head_intra_not_tail_pfn\<close>, \<open>compile_procs_head_intra_not_tail_pfn\<close>,
+  \<open>compile_proc_tail_intra_not_head_pfn\<close>) all discharge the same shape of
+  obligation: an edge produced by compiling one fragment (either a single
+  procedure via \<^const>\<open>compile_proc\<close> or a list via \<^const>\<open>compile_procs\<close>)
+  cannot land in a node claimed by a range-disjoint fragment. The three
+  \<^term>\<open>cfg_node\<close> constructors drive genuinely different sub-arguments (an
+  entry-ownership clash, an impossible result source, or a counter-range
+  clash), so this is not a mechanical per-constructor dispatch to collapse --
+  but the four call sites instantiate that same three-way argument with only
+  the ownership predicate (\<open>r = q\<close> vs. \<open>r \<in> set ps\<close>) and the
+  disjointness direction varying, so that shared argument is factored out
+  once here.
+\<close>
+lemma compile_frag_no_edge_into_other_pfn:
+  assumes own_entry: "\<And>r a v. (FunctionEntry r, a, v) \<in> E \<Longrightarrow> P r"
+    and own_no_result: "\<And>r a v. (FunctionResult r, a, v) \<in> E \<Longrightarrow> False"
+    and own_range: "\<And>k a v. (Statement k, a, v) \<in> E \<Longrightarrow> k \<in> {n..<n'}"
+    and not_own: "\<not> P r0"
+    and disjoint: "n' \<le> m \<or> m' \<le> n"
+    and e: "(u, a, v) \<in> E"
+    and uin: "u \<in> pfn r0 m m'"
+  shows False
+proof (cases u)
+  case (FunctionEntry q)
+  have "P q" using own_entry e FunctionEntry by simp
+  moreover have "q = r0" using uin FunctionEntry by (auto simp: pfn_def)
+  ultimately show False using not_own by simp
+next
+  case (FunctionResult q)
+  show False using own_no_result e FunctionResult by simp
+next
+  case (Statement k)
+  have kh: "k \<in> {n..<n'}" using own_range e Statement by simp
+  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
+  show False using kh kt disjoint by auto
+qed
+
 lemma compile_procs_tail_intra_not_head_pfn:
   assumes cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
     and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
@@ -799,22 +838,11 @@ lemma compile_procs_tail_intra_not_head_pfn:
     and e: "(u, a, v) \<in> E'"
     and uin: "u \<in> pfn p n n1"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have eq: "p = q" using uin FunctionEntry by (auto simp: pfn_def)
-  have e': "(FunctionEntry q, a, v) \<in> E'" using e FunctionEntry by simp
-  have "q \<in> set ps" using compile_procs_entry_mem[OF rest e'] .
-  then show False using eq distinct by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, a, v) \<in> E'" using e FunctionResult by simp
-  show False using compile_procs_no_result_source[OF rest e'] .
-next
-  case (Statement k)
-  have e': "(Statement k, a, v) \<in> E'" using e Statement by simp
-  have kr: "k \<in> {n1..<n2}" using compile_procs_intra_source_range[OF rest e'] .
-  have kh: "k \<in> {n..<n1}" using uin Statement by (auto simp: pfn_def)
-  show False using kr kh by auto
+proof (rule compile_frag_no_edge_into_other_pfn
+    [OF compile_procs_entry_mem[OF rest] compile_procs_no_result_source[OF rest]
+        compile_procs_intra_source_range[OF rest] _ _ e uin])
+  show "p \<notin> set ps" using distinct by simp
+  show "n2 \<le> n \<or> n1 \<le> n1" by simp
 qed
 
 lemma compile_procs_tail_calls_not_head_pfn:
@@ -839,22 +867,11 @@ lemma compile_proc_head_intra_not_tail_pfn:
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, a, v) \<in> E0" using e FunctionEntry by simp
-  have "q = p" using compile_proc_entry_mem[OF cp e'] .
-  moreover have "q = r" using uin FunctionEntry by (auto simp: pfn_def)
-  ultimately show False using neq by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, a, v) \<in> E0" using e FunctionResult by simp
-  show False using compile_proc_no_result_source[OF cp e'] .
-next
-  case (Statement k)
-  have e': "(Statement k, a, v) \<in> E0" using e Statement by simp
-  have kh: "k \<in> {n..<n1}" using compile_proc_intra_source_range[OF cp e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
-  show False using kh kt lower by auto
+proof (rule compile_frag_no_edge_into_other_pfn
+    [OF compile_proc_entry_mem[OF cp] compile_proc_no_result_source[OF cp]
+        compile_proc_intra_source_range[OF cp] _ _ e uin])
+  show "r \<noteq> p" using neq by simp
+  show "n1 \<le> m \<or> m' \<le> n" using lower by simp
 qed
 
 lemma compile_proc_head_calls_not_tail_pfn:
@@ -1048,22 +1065,11 @@ lemma compile_procs_head_intra_not_tail_pfn:
     and lower: "n1 \<le> m"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, a, v) \<in> E0" using e FunctionEntry by simp
-  have "q \<in> set ps" using compile_procs_entry_mem[OF procs e'] .
-  moreover have "q = r" using uin FunctionEntry by (auto simp: pfn_def)
-  ultimately show False using absent by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, a, v) \<in> E0" using e FunctionResult by simp
-  show False using compile_procs_no_result_source[OF procs e'] .
-next
-  case (Statement k)
-  have e': "(Statement k, a, v) \<in> E0" using e Statement by simp
-  have kh: "k \<in> {n..<n1}" using compile_procs_intra_source_range[OF procs e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
-  show False using kh kt lower by auto
+proof (rule compile_frag_no_edge_into_other_pfn
+    [OF compile_procs_entry_mem[OF procs] compile_procs_no_result_source[OF procs]
+        compile_procs_intra_source_range[OF procs] _ _ e uin])
+  show "r \<notin> set ps" using absent .
+  show "n1 \<le> m \<or> m' \<le> n" using lower by simp
 qed
 
 lemma compile_proc_tail_intra_not_head_pfn:
@@ -1073,22 +1079,11 @@ lemma compile_proc_tail_intra_not_head_pfn:
     and upper: "m' \<le> n1"
     and uin: "u \<in> pfn r m m'"
   shows False
-proof (cases u)
-  case (FunctionEntry q)
-  have e': "(FunctionEntry q, a, v) \<in> E0" using e FunctionEntry by simp
-  have "q = mnm" using compile_proc_entry_mem[OF cp e'] .
-  moreover have "q = r" using uin FunctionEntry by (auto simp: pfn_def)
-  ultimately show False using neq by simp
-next
-  case (FunctionResult q)
-  have e': "(FunctionResult q, a, v) \<in> E0" using e FunctionResult by simp
-  show False using compile_proc_no_result_source[OF cp e'] .
-next
-  case (Statement k)
-  have e': "(Statement k, a, v) \<in> E0" using e Statement by simp
-  have kh: "k \<in> {n1..<n2}" using compile_proc_intra_source_range[OF cp e'] .
-  have kt: "k \<in> {m..<m'}" using uin Statement by (auto simp: pfn_def)
-  show False using kh kt upper by auto
+proof (rule compile_frag_no_edge_into_other_pfn
+    [OF compile_proc_entry_mem[OF cp] compile_proc_no_result_source[OF cp]
+        compile_proc_intra_source_range[OF cp] _ _ e uin])
+  show "r \<noteq> mnm" using neq by simp
+  show "n2 \<le> m \<or> m' \<le> n1" using upper by simp
 qed
 
 lemma compile_procs_head_calls_not_tail_pfn:

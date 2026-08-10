@@ -19,7 +19,7 @@ text \<open>\<open>twice_program\<close> declares no globals, so \<^const>\<open
   \<^const>\<open>twice_gs\<close> directly, so the source-level run relation and the \<open>twice_gs\<close>-indexed
   collecting semantics share one classifier end to end.\<close>
 lemma twice_wf_gs: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') twice_main"
-  unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
+  unfolding wf_compile_input_simps
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
       value_providing_def source_aexp_def ret_var_def

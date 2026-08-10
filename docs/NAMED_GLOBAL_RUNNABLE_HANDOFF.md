@@ -129,7 +129,7 @@ Generalise `(unit, 'a) effectful_domain_transfer` → `('g::finite, 'a) ...` and
 `gseed :: 'g`. Current `(unit,_)` / `Inr ()` counts in parentheses.
 
 | File | Change | Notes |
-|---|---|---|
+| --- | --- | --- |
 | `TD_Side_IP_Tree.thy` (4 `Inr ()`; defs at L145/159/170/179) | `make_side_rhs_tree_ip_eff` + `side_cfg_T_ip_eff` take `gseed`; entry `Side gseed (restrict_global s0)`. `side_rhs_fold_ip_eff` is already structurally `'g`-agnostic (it folds `apply_etf`/`etf_combine`) — only the type signature widens. | The denotation lemmas (`traverse_side_rhs_fold_ip_eff`, `sides_…`, `dep_aux_…`) should carry; `Side gseed d` behaves like `Side () d` for `traverse_rhs`/`dep_aux` and adds to slot `Inr gseed` in `sides_of_rhs`. |
 | `TD_Side_IP_Eff_Bounds.thy` (25 `Inr ()`; ~24 etf fixes) | Widen all `etf` fixes to `'g`. The per-edge/combine closure bounds (`etf_combined_le_ip_eff`, `etf_combine_combined_le_ip_eff`) currently bound via `σ(Inr ())`; restate via the per-name bound `sides_of_rhs (T x) σ (Inr g) ≤ σ(Inr g)` for every `g`, then `all_sides ≤ glob_env σ` (`all_sides_le_glob_env_sides` + `glob_env_mono`) gives the global half of `etf_full ≤ side_env`. | This is the mechanically largest file but the math is the split already used at unit; the `glob_env` bridge lemma exists. |
 | `TD_Side_IP_Eff_Interface.thy` (0 `Inr ()`; 3 pins) | Widen `side_cfg_ip_solve_dom_eff`, the `td_cfg_side_ip_solver_eff` locale, `nu_at`, `side_analyse_ip_eff` to `'g`; thread `gseed`. `nu_at :: pp ⇒ pp + 'g ⇒ …`. | The vendored `TD_side_mono` interpretation is `'g`-generic already (Basics_side is `'x,'g,'d`). Mostly type-signature widening. |
@@ -228,7 +228,7 @@ to surface most of the breakage.
 - **Scope creep into Exec_Bridge** — if you find yourself touching `Exec_Bridge`, stop:
   you've drifted into Level B. The core deliverable does not need it.
 
-## 10. Done = 
+## 10. Done =
 
 `Voblint_Formalization` batch-green, no `sorry`, with a `flag_ip_analysis_sound`-style
 theorem: the named-global `flag_etf` analysis over-approximates `cfg_collect_ip` at the

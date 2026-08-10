@@ -71,6 +71,7 @@ compromise: the readers need not stay a *separate foundation* — they become DG
 corollaries.
 
 **Full migration plan (follow-up, not this probe):**
+
 1. Hoist `clean_edge_ctx_of_bound` to a domain-level theory (sever `Local_DG` ->
    `Clean_RRead_Sound`).
 2. Redirect `clean_ctx_collect_rread` (+ `_bound`/`_head`/`_head_bound`) to

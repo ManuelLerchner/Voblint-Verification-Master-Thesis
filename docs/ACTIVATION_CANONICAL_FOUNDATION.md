@@ -49,7 +49,7 @@ The old context soundness path threads a **whole-trace digest** and needs its
 propagation laws:
 
 | Old (`Clean_RRead_Sound.clean_ctx_trace_rread`, `post_fixpoint_sound_at_ctx_semantic`) | New (`activation_trace_sound`) |
-|---|---|
+| --- | --- |
 | `dg :: store list => 'c` (whole-trace digest) | — (context is structural) |
 | `cmp :: 'c => 'c => bool` (compat filter) | — |
 | `entdg :: store => 'c` | — |

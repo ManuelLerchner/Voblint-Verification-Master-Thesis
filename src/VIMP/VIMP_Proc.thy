@@ -734,6 +734,19 @@ definition wf_source_program :: "(vname => bool) => proc_table => pname => com =
      wf_source_com \<Pi> main \<and> no_return main \<and>
      (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl)"
 
+text \<open>
+  Compiler-input well-formedness, defined downstream in the CFG session, unfolds
+  through this pair before reaching \<^const>\<open>wf_source_com\<close> and
+  \<^const>\<open>valid_formal\<close>. Call sites that discharge that obligation share this
+  unfold skeleton verbatim, so it is collected here rather than repeated per site;
+  the downstream definition adds itself to the same collection.
+\<close>
+named_theorems wf_compile_input_simps
+
+declare
+  wf_proc_decl_def [wf_compile_input_simps]
+  wf_source_program_def [wf_compile_input_simps]
+
 lemma wf_source_com_source_com:
   "wf_source_com \<Pi> c \<Longrightarrow> source_com c"
   by (induction c) (auto split: option.splits)

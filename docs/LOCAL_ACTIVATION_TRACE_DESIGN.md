@@ -17,4 +17,3 @@ valid_ltr → cfg_collect_ctx_act → Activation_Backbone → DG_Ctx_Activation
 A concrete `Resume caller callee path` constructor retains enough return evidence for general
 `combc`. See
 [`ACTIVATION_LOCAL_TRACE_CONVERGENCE.md`](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md).
-

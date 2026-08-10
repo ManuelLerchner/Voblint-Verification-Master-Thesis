@@ -422,4 +422,3 @@ routing, global observation, and caller-context restoration must instantiate the
 same interface as exact activation keys. Success removes the hidden seam between
 concrete context observation and abstract routing. Failure identifies a missing
 lifecycle relation and keeps this document a design proposal.
-

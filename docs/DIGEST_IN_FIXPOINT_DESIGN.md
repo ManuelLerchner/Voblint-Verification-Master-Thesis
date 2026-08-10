@@ -140,7 +140,7 @@ papers (Seidl FM 2026; Schwarz et al. SAS 2021, *Improving Thread-Modular*; arXi
 ### Mapping to this framework
 
 | Goblint (source) | This framework | Status |
-|---|---|---|
+| --- | --- | --- |
 | `context : D.t → C.t` at calls | `context_domain.route`, `ctx_sel ∘ prep` | [proven] present |
 | `sideg v g` | `Side k d` strategy-tree node | [proven] present |
 | global var `V.t` (`SpecSysVar`), partitioned | `Inr g`, `'g::finite` key | [proven] present |
@@ -256,7 +256,7 @@ untouched and the hand `rd_reach` disappears.
 theorems. "Bridge" = `Exec_Cmp_Bridge` executable transport.
 
 | Concern | A | B | C | D | D′ |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | Generic kernel (`digest_global_read`) | — | — | — [conj.] | — | — [conj.] |
 | Collecting soundness theorems | — | — | — | — | — |
 | `digest_global_read` locale signature | — | — | — [conj.] | — | — |
@@ -340,7 +340,7 @@ Rough, relative; assumes the kernel and executable value solve stay as-is (**[pr
 today).
 
 | Option | Effort | Shape |
-|---|---|---|
+| --- | --- | --- |
 | A | 0 | keep hand `rd_reach` |
 | B / D′ | **S–M** | executable must-write/reach summary (`eval`-decidable) + prove it feeds `reaching_def_collect_sound_paths_mustwrite`; discharge `REAL` once per context encoding |
 | C | **M–L** | product domain `abs_state × 'g set` + transfer + `Exec_Cmp_Bridge` reshape + reprove obligations as product invariants; validate the kernel-free conjecture first |

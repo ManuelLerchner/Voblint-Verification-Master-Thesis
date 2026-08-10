@@ -232,9 +232,8 @@ def gen_program_rule() -> str:
     # Every function parses uniformly via function_decl*; "main" is picked
     # out by string equality in this action, matching both existing parsers
     # (VIMP_Notation.thy's prog_tr, cli/vimp_parser.ml's `program`) -- see
-    # grammar/vimp.yaml's header comment on why the record's mandatory
-    # prog_main field still makes this a parse-time requirement, not a
-    # deferred well-formedness check, under today's imp_prog shape.
+    # grammar/vimp.yaml's header comment on why this stays a parse-time
+    # diagnostic rather than a deferred well-formedness check.
     return """program:
   | g = globals_opt fs = function_decl_star EOF
       { let mains, procs = List.partition (fun (n, _, _) -> n = "main") fs in
@@ -245,7 +244,7 @@ def gen_program_rule() -> str:
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
-        Voblint_CLI.Core.make
+        Voblint_CLI.Core.mk_program
           (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Core.proc_decl_of formals b)) procs)
           main_body g }
 

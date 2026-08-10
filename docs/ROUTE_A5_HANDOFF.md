@@ -201,6 +201,7 @@ rerouted to `callee_ctx` while the `cc`-read stays at `ctx`. That is not a `pull
 of a single context anymore — it is a *two-context* read.
 
 What this touches (all in `TD_Side_Eff_Cmp_Gen.thy`):
+
 - `side_cfg_T_eff_cmp_combine_le` (`:382`) and its `loc`/`glob` sub-bounds.
 - Possibly `side_cfg_T_eff_cmp_edge_le` (`:227`) / `_enter_le` if the read shape changes.
 - The `pull_gk` abstraction (`:117`) — it currently hard-codes one context.

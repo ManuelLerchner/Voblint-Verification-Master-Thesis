@@ -252,7 +252,7 @@ text \<open>
 
 lemma flagship_wf:
   "wf_compile_input flagship_gs flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
-  unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
+  unfolding wf_compile_input_simps
     flagship_pi_def flagship_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       split: if_splits)
@@ -268,10 +268,10 @@ proof -
     by (rule flagship_ex_reg.run_source_sound
           [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
               flagship_wf
-              flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-              flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+              vars_coverI[OF flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+                             flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+                             flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
+                             flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]]
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]

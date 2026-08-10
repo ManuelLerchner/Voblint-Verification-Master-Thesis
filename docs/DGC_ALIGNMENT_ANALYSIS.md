@@ -185,7 +185,7 @@ reads `G = SNonNeg`, and `sign_zero_pos_join`: `SZero ⊔ SPos = SNonNeg`.
 
 ---
 
-## 5. Root cause — is it `ctx_sel(local ⊔ global)`? No: it is more subtle.
+## 5. Root cause — is it `ctx_sel(local ⊔ global)`? No: it is more subtle
 
 The naive framing "kernel computes `ctx_sel(local ⊔ global)` where Goblint computes
 `ctx_sel(local D)`" is **only half true**, and fixing just that half does nothing.

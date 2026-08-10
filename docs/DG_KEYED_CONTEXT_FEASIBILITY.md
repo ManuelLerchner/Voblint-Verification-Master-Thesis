@@ -65,6 +65,7 @@ context-keyed slots. **No new locale assumption is required for the diagonal rea
 Against the implemented slice, classifying the homogeneous kernel:
 
 ### Direct port / already generalised (within-context)
+
 The whole edge + within-context-combine argument. The homogeneous
 `step_local_le_ctx`, `side_post_solution_le_global_ctx`, `etf_combined_le_ctx`,
 `post_fixpoint_sound_at_ctx_pull/conservative/semantic` collapse to
@@ -72,12 +73,14 @@ The whole edge + within-context-combine argument. The homogeneous
 slice proves it once, context-agnostically, in ~50 lines.
 
 ### Carrier-agnostic (port needs no `gammaDG` work)
+
 The digest laws over `store list`: `head_digest_DG_INTRA/RETURN/CALLEE`,
 `prefix_compat_return`, `callee_entry_compat`, `entry_store_dg_*`,
 `trace_context_compatibility`. These constrain the context function `dg`/`entdg`/`cmp`
 on concrete traces; they do not mention `⟦·⟧` and transfer verbatim.
 
 ### Requires two-gamma reformulation (the real remaining work)
+
 Context **selection** at call/return: `route_read_cmp`, `combine_read_cmp`,
 `combine_read_cmp_le`, `combine_case_cmp_sound`, `collect_ctx_sound_route`,
 `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`. Here the combine reads the **caller**
@@ -87,11 +90,13 @@ the D-slot and G-slot of two contexts are read independently (they are, under
 own-slot). Estimated ~300–400 lines.
 
 ### Requires a `gcmp` join generalisation (only if a non-diagonal analysis appears)
+
 `glob_env_cmp` / `side_env_cmp` with nontrivial `gcmp`, `own_slot_le_read`. **Not
 needed** for any maintained example (all use `gcmp = (=)`). Defer until a consumer
 exists; classifying it as *beyond current need*, not a blocker.
 
 ### Obsolete under DG
+
 `pull_ctx` / `pull_ctx_Inl` / `pull_ctx_Inr` / `side_env_ctx_pull` — the homogeneous
 solution-projection plumbing. Under DG the keyed accessors `dg_D_c`/`dg_G_c` read
 slots directly; no projection layer is needed.

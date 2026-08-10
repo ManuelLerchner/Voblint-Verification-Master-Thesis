@@ -76,7 +76,7 @@ and
 | local unknown `(node, context)` | `Inl (pp, ctx)` | done |
 | `sidel (FunctionEntry f, fc) callee_state` | seed slot `Inr (Seed callee_entry ctx)`, published by the routed enter `Side` | done, batch-green (interval example) |
 | `getl (Function f, fc)` | routed callee-exit read `Inl (ex, route ...)` in the combine | done, batch-green |
-| `combine_env` then `combine_assign` | `combine_collect dst s t = combine_assign dst (t ret_var) (combine_states s t)` (`combine_states <s|t>` = env: caller locals + callee globals; `combine_assign dst` = destination write) | done |
+| `combine_env` then `combine_assign` | `combine_collect dst s t = combine_assign dst (t ret_var) (combine_states s t)` (`combine_states <s | t>` = env: caller locals + callee globals; `combine_assign dst` = destination write) | done |
 
 The load-bearing correction this session: **context is now selected from the
 callee-entry abstract state after parameter binding** (`enterc c s'`), matching

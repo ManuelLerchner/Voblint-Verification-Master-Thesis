@@ -266,7 +266,7 @@ next
   case (Call dst q actuals)
   have en: "en = Statement n"
     and mem: "(Statement n,
-                CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+                CallEdge dst (call_formals \<Pi> q) actuals,
                 FunctionEntry q, k) \<in> calls g"
     using Call.prems by (auto split: prod.splits)
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_comb_caller)
@@ -375,7 +375,7 @@ next
   case (Call dst q actuals)
   have en: "en = Statement n"
     and mem: "(Statement n,
-                CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+                CallEdge dst (call_formals \<Pi> q) actuals,
                 FunctionEntry q, k) \<in> calls g"
     using Call.prems by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_comb_caller)

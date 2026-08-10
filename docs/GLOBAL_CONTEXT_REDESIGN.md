@@ -95,9 +95,11 @@ seed must cover it. Split by variable class:
   ```
 
 So the seed is
+
 ```
 ent ctx = combine_abs (SZero-on-locals) (g_of ctx)
 ```
+
 locals from the concrete reset, globals from the context. (`combine_abs sc se`
 takes globals from `se`, locals from `sc`, so `g_of ctx` populates the global
 half.) `g_of` is identity for the value context; the digest-to-abstract
@@ -130,10 +132,10 @@ state) becomes `ec ctx s = alpha_glob s` (digest the caller's globals), mirrorin
 This is the crux and must be resolved before any precision claim.
 
 `side_env σ v = σ(Inl v) ⊔ glob_env σ` and
-`glob_env σ = abs_join_set (⊔) ⊥ ((λg. σ(Inr g)) ` UNIV)` join **all** global
+`glob_env σ = abs_join_set (⊔) ⊥ ((λg. σ(Inr g))` UNIV)`join **all** global
 slots on **every** read (Constraint_System.thy:525, TD_Side_CFG.thy:93). The
-entire context-soundness chain (`side_env_ctx`, `post_fixpoint_sound_at_ctx_*`)
-reads through `glob_env`.
+entire context-soundness chain (`side_env_ctx`,`post_fixpoint_sound_at_ctx_*`)
+reads through`glob_env`.
 
 Consequence: even if the context seeds per-context globals, the callee body
 reads `σ(Inl(v,ctx)) ⊔ glob_env σ`, and `glob_env` re-merges the global value
@@ -390,4 +392,5 @@ This is a foundational change to the global-slot soundness chain, and it
 entry seed (globals from context) becomes meaningful; without it, no seed
 survives the read. Implementation should therefore start from the read, not the
 seed.
+
 ```

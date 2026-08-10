@@ -39,7 +39,7 @@ both enter strategies, not the query-based enter strategy.
 ### RETAIN — shared substrate (non-empty cone)
 
 | Theory / definition | Required by |
-|---|---|
+| --- | --- |
 | `TD_Side_Eff_Ctx_Sound` | `TD_Side_Eff_Cmp_Sound` (CMP spine → `Analysis_Sound`) |
 | `Exec_Ctx_Bridge` (shared helpers) | `Exec_Cmp_Bridge` (`unit_combine_tree_ctx_st`, `st_of_abs`, `side_rhs_fold_ctx_st`) |
 | `Seeded_Clean_Ctx_Collect` | `Seeded_Activation_Sound` |
@@ -50,7 +50,7 @@ both enter strategies, not the query-based enter strategy.
 ### DELETE — empty cone (query-executable demo surface)
 
 | Item | Kind | Cone before deletion |
-|---|---|---|
+| --- | --- | --- |
 | `Canonical_Generator.thy` | broken prototype | never in any ROOT |
 | `Analysis_Configuration.thy` | premature locale | only Canonical_Generator |
 | `Exec_Sign_Ctx_Run` | example | leaf |

@@ -78,7 +78,7 @@ state must be identical" invariant stated during the pilot, caught in the
 act of being violated.
 
 It stayed invisible because `twice_program` (`void twice(p) { return p + p }
-void main() { x := twice(3); y := twice(10) } `) declares no globals — every
+void main() { x := twice(3); y := twice(10) }`) declares no globals — every
 variable `is_global` and `twice_gs` (`declared_global twice_program`) both
 classify as local, so write and read land on the same tag by coincidence.
 On a program with one real global the mismatch would silently read the

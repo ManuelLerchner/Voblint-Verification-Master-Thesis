@@ -49,4 +49,3 @@ contexts out of the foundational semantics. `valid_ltr` absorbs the useful prope
 
 The old `trace_witness_act` remains migration evidence only and is deleted after the
 canonical local-trace backbone and source bridge are proved.
-

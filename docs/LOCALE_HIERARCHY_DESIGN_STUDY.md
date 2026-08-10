@@ -146,6 +146,7 @@ end
 ```
 
 Then:
+
 - `interpretation goblint_seq_clean: context_soundness … route_read_cmp route_read_cmp …`
   → the seeded-clean R_read spine; inherits `collect_sound`.
 - `interpretation retain_obs: context_soundness … side_env_cmp …` → the shipped

@@ -83,6 +83,13 @@ jobs:
       - name: Apply td-verification compatibility patch
         run: pixi run vendor
 
+      # Voblint_Examples.Example_Analysis_Dispatch's `checking Haskell`
+      # export_code clause runs inside this build and needs ISABELLE_GHC set;
+      # `ghc_setup` provisions Isabelle's managed GHC via Stack (the Haskell
+      # counterpart of the `ocaml_setup` step further below).
+      - name: Provision managed GHC for Isabelle's Haskell export check
+        run: $ISABELLE ghc_setup
+
       - name: Build HTML docs (clean build of every session)
         run: pixi run html
 

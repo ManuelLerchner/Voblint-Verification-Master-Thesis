@@ -213,7 +213,7 @@ Recorded for the day this becomes worth doing.
 ## Files touched (Approach 2)
 
 | File | Change | Net LOC |
-|---|---|---|
+| --- | --- | --- |
 | `src/VIMP/VIMP_Syntax.thy` | + `HOL-IMP.AExp` / `BExp` imports; comment block rewrite | +~15 |
 | `src/VIMP/VIMP_Expr.thy` | + `to_hol_imp_aexp`/`bexp` + agreement lemmas | +~30 |
 | `src/VIMP/README.md` | New — naming-collision callout | +~20 |
@@ -235,7 +235,7 @@ Recorded for the day this becomes worth doing.
 ## Risk register
 
 | Risk | Likelihood | Mitigation |
-|---|---|---|
+| --- | --- | --- |
 | `HOL-IMP` not in session deps | Low | Add to `ROOT` `Voblint_Formalization` session. |
 | Name clash with `HOL_IMP.N` / `HOL_IMP.V` / etc. via import | Medium | Use qualified names `HOL_IMP.N`; check `VIMP_Syntax.thy` constructors are not accidentally shadowed. |
 | `aval_agrees_on_hol_imp` ends up vacuous (no caller cares) | Medium | Documented as provenance check; not load-bearing. The point is the formal correspondence record. |

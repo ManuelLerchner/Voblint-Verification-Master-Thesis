@@ -408,7 +408,7 @@ seeded run) unchanged — no new solver runs.
 ## 5. Impact summary
 
 | Component | Impact |
-|-----------|--------|
+| ----------- | -------- |
 | `trace_witness`, `cfg_collect_trace`, `cfg_collect_ctx`, `context_transfer` | **none** (additive) |
 | `CFG_Collect_Runs`, `alpha_last_*`, `trace_witness_d` | **none** |
 | retain spine (`post_fixpoint_sound_at_ctx_semantic`, `semantic_entry_store_ctx_analysis_sound`) | **none** |
@@ -436,7 +436,7 @@ or CFG interfaces") is satisfied — it can.
    four closed reductions + `SEED_G`/`ROUTE`. Add to `src/Analysis/ROOT`. Build
    `Voblint_Analysis`. *(Medium risk — the induction assembly.)*
 3. `feat(dgc): sign seeded activation-collecting soundness` — Sign `SEED_G` witness
-   + `⊆ γ` corollary. Build `Voblint_Formalization`.
+   * `⊆ γ` corollary. Build `Voblint_Formalization`.
 4. `feat(dgc): interval recursion activation-collecting soundness` — interval
    `SEED_G` witness + `rdiv` return-node `⊆ γ`, retiring `rdiv_rehyd_rhs_dominated`
    as the stopping point.

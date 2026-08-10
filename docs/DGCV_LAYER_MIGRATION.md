@@ -203,12 +203,12 @@ mirror of the CMP kernel).
 
 Coherence check, per axis:
 
-- **D/G:** done (Stages 1D + 2). Lifting R1 is a declaration change.
-- **C:** `context_domain` already has the right field shapes; only the state
+* **D/G:** done (Stages 1D + 2). Lifting R1 is a declaration change.
+* **C:** `context_domain` already has the right field shapes; only the state
   type parameter moves from `'a abs_state` to an opaque `'D`.
-- **V:** `global_routing_spec` is value-type-agnostic already; only its
+* **V:** `global_routing_spec` is value-type-agnostic already; only its
   consumers (keyed read, kernel) need `G`-typed versions.
-- **Soundness:** the homogeneous kernel
+* **Soundness:** the homogeneous kernel
   (`side_cfg_T_eff_cmp_collect_ctx_sound_semantic` and the
   `collect_ctx_sound_route` re-export) is stated over ten premises that already
   separate concerns (`GOBLINT_SPEC_LOCAL_GLOBAL_SEPARATION_AUDIT.md` §6.1). Each
@@ -241,16 +241,16 @@ locale dg_analysis_spec =
 
 Differences from today's pieces:
 
-- `sound_dg_spec`'s three semantic assumptions survive unchanged, over
+* `sound_dg_spec`'s three semantic assumptions survive unchanged, over
   generalized carriers.
-- `ctx_sel` consumes `'D` (Goblint `context`), not `'a abs_state`. The current
+* `ctx_sel` consumes `'D` (Goblint `context`), not `'a abs_state`. The current
   `context_domain` instances are recovered by `'D = 'a abs_state`.
-- `entry_seed :: 'c => 'D` is the generator's existing `frame_seed` parameter
+* `entry_seed :: 'c => 'D` is the generator's existing `frame_seed` parameter
   (`Call_Spec`'s `entry_seed`, re-typed).
-- `prep` folds into `ctx_sel` (or stays as a separate field; decide at
+* `prep` folds into `ctx_sel` (or stays as a separate field; decide at
   implementation — Goblint's `enter` split suggests keeping it once `enter`
   grows beyond a seed).
-- The digest side (`trace_context_compatibility`: `dg`, `cmp`, `entdg`) is
+* The digest side (`trace_context_compatibility`: `dg`, `cmp`, `entdg`) is
   already typed over `store list` / `'c` only — it composes unchanged.
 
 The solver boundary keeps `dg_state` packing: unknowns
@@ -292,10 +292,10 @@ builds both green; zero new `sorry`.
 
 Deliverables:
 
-- `sound_dg_spec` over opaque carriers; `gamma_dg` / `gamma_unit` / `indep` /
+* `sound_dg_spec` over opaque carriers; `gamma_dg` / `gamma_unit` / `indep` /
   the Mixed `mixed_si_*` endpoints unchanged (they fix the carriers back to
   `abs_state`s). *Delivered — all recompile against the generalized locale.*
-- **Retain natively sound:** `sound_dg_spec_retain` interprets the generalized
+* **Retain natively sound:** `sound_dg_spec_retain` interprets the generalized
   locale directly at `D = ('a abs_state, 'a abs_state) dg_state`,
   `G = 'a abs_state`, with joint concretization
   `gamma_retain d g = [[merge_dg d ⊔ g]]` (retain merges its two local slots
@@ -341,18 +341,18 @@ read for `ctx_sel` (joined `G`-read vs pre-loss `D`) — resolve it the M2 way:
 
 ### Stage N3 — migrate instances
 
-- **Sign, Interval:** diagonal interpretations (`unit_dg_spec` /
+* **Sign, Interval:** diagonal interpretations (`unit_dg_spec` /
   `indep_dg_spec` pattern, `DG_Soundness.thy:607`) with their existing keyed
   `gkey`/`gcmp` and `entry_seed`. Existing endpoints
   (`sign_spec_post_fixpoint_sound`, `side_*_analysis_sound`) become one-line
   corollaries of the N2 theorem; keep old names as aliases until consumers move.
-- **Retain:** N1 interpretation + N2 for its keyed/context runs.
-- **Clean / seeded-clean / activation:** Clean is an ordinary `D`/`G` analysis
+* **Retain:** N1 interpretation + N2 for its keyed/context runs.
+* **Clean / seeded-clean / activation:** Clean is an ordinary `D`/`G` analysis
   (Retain-style product `D` holding the cleaned snapshot); the
   context-dependent `entry_seed` is native in N2's generator, so the
   activation-witness plumbing shrinks to discharging `ENTER_MONO` (or the
   `point_digest` checkable condition).
-- **Mixed flagship:** one analysis exercising *both* axes — mixed lattices
+* **Mixed flagship:** one analysis exercising *both* axes — mixed lattices
   (`D` = Sign locals, `G` = Interval or a may-write set) *and*
   context-sensitive routing with a precision witness the homogeneous design
   cannot state. This is the thesis-level validation.
@@ -456,22 +456,22 @@ paper's `η′`.
 
 ### 8.1 What the migration realizes (validated)
 
-- **The D/G split is the paper's core model.** §2: flow-sensitive local unknowns
+* **The D/G split is the paper's core model.** §2: flow-sensitive local unknowns
   `L`, flow-insensitive global unknowns `G`, per-unknown domains, constraints
   producing one local result plus finitely many global side effects. That is
   exactly `Answer : D` / `Side : G` over opaque, analysis-defined carriers.
-- **N1 is validated verbatim.** Fig. 5 types `module D : Lattice`,
+* **N1 is validated verbatim.** Fig. 5 types `module D : Lattice`,
   `module G : Lattice`, assembled "from existing building blocks — products,
   lifters, map domains" (p. 460). Retain's `D = locals × snapshot` is the named
   "product" case: a retained snapshot belongs *inside* the analysis-defined local
   domain `D`, not in framework-specific retain semantics. N1 is the correct first
   step under any paper-faithful version.
-- **Unified `enter`/`combine` are paper-faithful.** Against *this tutorial's*
+* **Unified `enter`/`combine` are paper-faithful.** Against *this tutorial's*
   `SimplifiedSpec` (Fig. 5) — not the richer `analyses.ml` — there is one `enter`
   and one `combine`. Multi-result `enter` and split `combine_env`/`combine_assign`
   are **beyond** the paper's simplified interface, not missing requirements for
   paper fidelity. Our single `dgs_enter` / `dgs_combine` match Fig. 5.
-- **Digest routing follows the same refinement principle.** §4 refines both local
+* **Digest routing follows the same refinement principle.** §4 refines both local
   and global information by digests and lets global reads select compatible digest
   components. Our `gkey` / `gcmp` compatibility read is a concrete representation
   of that principle.
@@ -482,11 +482,13 @@ paper's `η′`.
    ceiling.** The paper's transfer inspects a valuation over many unknowns and
    emits finitely many contributions, potentially to *multiple differently typed*
    globals. The long-term paper-aligned shape is
+
    ```text
    reads  : V → G          (read any global key)
    writes : finite map V G (finitely many keyed contributions)
    result : D
    ```
+
    i.e. the strategy-tree form `QueryG V` / `Side V G` / `Answer D`. The single-`G`
    `step` is the degenerate one-key case, sufficient for the current framework
    instance. Phase 4 below generalizes it if the DG interface cannot already
@@ -533,12 +535,12 @@ form: the `EA_Enter` edge's `dgs_enter` sees the predecessor (caller) `D`.
 Formal-model fidelity (§2–§4) deliberately excludes the §6 OCaml surface where the
 language cannot support it or where it is a separate large effort:
 
-- multi-analysis product locals `∏_A D_{L,A}` / sum globals `∑_A D_{G,A}`;
-- inter-analysis `man.ask` / `query`;
-- threads (`threadenter`, interferences) — no concurrency model in IMP2;
-- return-value handling (`combine_assign`, `lval option`) — IMP2 has no
+* multi-analysis product locals `∏_A D_{L,A}` / sum globals `∑_A D_{G,A}`;
+* inter-analysis `man.ask` / `query`;
+* threads (`threadenter`, interferences) — no concurrency model in IMP2;
+* return-value handling (`combine_assign`, `lval option`) — IMP2 has no
   first-class return;
-- quasi-join partial orders (§2) — we require `bounded_semilattice_sup_bot`, which
+* quasi-join partial orders (§2) — we require `bounded_semilattice_sup_bot`, which
   the vendored TD solver assumes; relaxing is upstream solver work.
 
 ### 8.5 Revised roadmap (supersedes §4's stage sketch downstream of N1)
@@ -546,10 +548,12 @@ language cannot support it or where it is a separate large effort:
 1. Finish opaque-carrier / native heterogeneous soundness (**N1**, this document).
 2. Replace context-only `entry_seed` with caller-`D`-dependent `enter`.
 3. Generate call constraints in the paper's order:
+
    ```text
    caller D → enter → compute context → contribute callee-entry D
             → query callee-return D → combine → successor D
    ```
+
 4. Generalize global access to keyed reads `V → G` and finite keyed side effects
    if the current DG interface cannot already express that.
 5. Document static call resolution as the reason callee entry stays a local
@@ -580,37 +584,37 @@ plumbing where the current tree still says the same thing in several files.
 
 Start with the DG collecting spine:
 
-- factor the repeated post-solution-to-collecting soundness pattern around
+* factor the repeated post-solution-to-collecting soundness pattern around
   `dg_gamma_c` / `dg_gamma` into one reusable helper;
-- keep `DG_Context_Soundness.collect_sound_reader` as the base reader lemma and
+* keep `DG_Context_Soundness.collect_sound_reader` as the base reader lemma and
   make the per-context theorem a thin instantiation of it;
-- collapse identical `dg_D_c` / `dg_G_c` / `dg_gamma_c` accessor setup where the
+* collapse identical `dg_D_c` / `dg_G_c` / `dg_gamma_c` accessor setup where the
   same diagonal context-keying pattern is repeated.
 
 Then move to the instance files:
 
-- keep `Sign_DG.thy` and `Interval_DG.thy` as one-line interpretation wrappers
+* keep `Sign_DG.thy` and `Interval_DG.thy` as one-line interpretation wrappers
   plus their named endpoints;
-- keep `Retain_Analysis.thy` as the only place that needs the product-carrier
+* keep `Retain_Analysis.thy` as the only place that needs the product-carrier
   retain-specific proof shape;
-- leave `Sign_Named_Global_Eff.thy` separate unless its `sideg_tree` witness can
+* leave `Sign_Named_Global_Eff.thy` separate unless its `sideg_tree` witness can
   share a generic named-global reader lemma with `Global_Cmp_Read.thy`.
 
 ### 9.3 What not to do
 
-- Do not change the DG semantics.
-- Do not turn N5 into a new D/G/C/V interface design.
-- Do not pull feature work into the cleanup pass.
-- Do not touch the already-delivered `_st` retirement unless a live consumer
+* Do not change the DG semantics.
+* Do not turn N5 into a new D/G/C/V interface design.
+* Do not pull feature work into the cleanup pass.
+* Do not touch the already-delivered `_st` retirement unless a live consumer
   appears.
 
 ### 9.4 Exit criteria
 
-- repeated proof skeletons are factored into shared lemmas;
-- instance theories are thin wrappers;
-- docs and roadmap name N5 as consolidation only;
-- `Voblint_Analysis` and `Voblint_Formalization` still build green;
-- no new `sorry`.
+* repeated proof skeletons are factored into shared lemmas;
+* instance theories are thin wrappers;
+* docs and roadmap name N5 as consolidation only;
+* `Voblint_Analysis` and `Voblint_Formalization` still build green;
+* no new `sorry`.
 
 ### 8.6 Thesis claim
 

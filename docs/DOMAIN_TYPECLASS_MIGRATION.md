@@ -18,7 +18,7 @@ Backward-analysis infrastructure is **not** converted (see Scope below).
 ### In scope — convert
 
 | File | What changes |
-|---|---|
+| --- | --- |
 | `src/Analysis/Domains/Abstract_Domain.thy` | `locale sound_domain` → `class sound_domain`; `locale abstract_domain` → `class abstract_domain`; `gamma_state` / `widen_state` become global definitions; `context sound_domain` blocks become standalone class lemmas |
 | `src/Analysis/Domains/Sign_Domain.thy` | `interpretation sign_domain: abstract_domain` → `instantiation sign :: abstract_domain`; drop local notation |
 | `src/Analysis/Domains/Interval_Domain.thy` | `interpretation ivl_domain: abstract_domain` → `instantiation ivl :: abstract_domain`; drop local notation |
@@ -178,6 +178,7 @@ Fix any breakage in those files (references to `sign_domain.gamma_state`
 and `ivl_domain.gamma_state` should become bare `gamma_state`).
 
 Delete the now-redundant bridging lemmas:
+
 * `sign_gamma_state_conv` (Sign_Domain.thy)
 * `ivl_gamma_state_conv` (Interval_Domain.thy)
 
@@ -206,6 +207,7 @@ In `Constraint_System.thy`:
    `combine_states_sound`) with a standalone lemma.
 
 In `TD_Side_CFG.thy`:
+
 * Update `interpret st: sound_transfer γ tf` — drop the `γ` argument.
 * Replace `st.gamma_state` with `gamma_state` throughout.
 
@@ -215,6 +217,7 @@ Build check: `get_diagnostics` on `Constraint_System.thy` and
 ### Step 5 — restructure `backward_domain`
 
 In `Abstract_Domain.thy`:
+
 * Drop `= sound_domain γ for γ :: ...` from `locale backward_domain`.
 * Add `'a::sound_domain` constraint to `meet` (first `fixes` parameter);
   the constraint propagates to the full locale.
@@ -228,6 +231,7 @@ Build check: `get_diagnostics` on `Abstract_Domain.thy`.
 ### Step 6 — convert Sign domain
 
 In `Sign_Domain.thy`:
+
 * Replace `interpretation sign_domain: abstract_domain gamma_sign widen_sign`
   with `instantiation sign :: abstract_domain begin ... end`.
 * Instance proof discharges `gamma_bot`, `gamma_mono`, `widen_ub1`, `widen_ub2`
@@ -245,6 +249,7 @@ becomes `instantiation ivl :: abstract_domain`.
 ### Step 8 — update Solver files
 
 In `TD_Side_Eff_Soundness.thy` and `TD_Side_Eff_Pipeline.thy`:
+
 * Replace `sound_domain.gamma_state γ (...)` with `gamma_state (...)`.
   The explicit `γ` argument is gone; the class resolves it from the type.
 
@@ -253,6 +258,7 @@ These are mechanical substitutions; no proof logic changes.
 ### Step 9 — remove locale `sound_domain`
 
 Prerequisites before deleting:
+
 * Steps 1–8 complete and `get_diagnostics` clean on every touched file.
 * No `context sound_domain` blocks remain anywhere in `src/`.
 * No `= sound_domain` locale inheritance remains in `Constraint_System.thy`.
@@ -282,7 +288,7 @@ Show green output before declaring done.
 ## Risk register
 
 | Risk | Mitigation |
-|---|---|
+| --- | --- |
 | `sound_transfer` / `sound_effectful_transfer` break when `sound_domain` locale is deleted | Step 4 must precede Step 9; confirm no `= sound_domain` remaining before deletion |
 | `sound_domain.gamma_state γ` call sites in Solver survive to Step 9 | Grep `sound_domain.gamma_state` before Step 9; zero hits required |
 | `backward_domain` proof bodies use `γ` after rename | Step 5 `get_diagnostics` is the gate; do not proceed to Step 6 with errors there |

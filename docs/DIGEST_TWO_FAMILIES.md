@@ -85,7 +85,7 @@ The whole difference between the two families is the choice of `'g`, `'d`,
 ## 2. Side by side
 
 | | **RD — reaching definitions** | **mode — value-carried** |
-|---|---|---|
+| --- | --- | --- |
 | where the digest is computed | a **separate** dataflow (interprocedural gen/kill), external to the value solution | a **projection of the same value solution** — no second computation |
 | Goblint analogue | def-site / mod-count digest on `getg`/`sideg` | `context : D.t -> C.t`, `sideg (G, Digest.compute d)` |
 | key type `'g` | `def_site` (finite datatype) | `mode` (finite datatype) |
@@ -214,7 +214,7 @@ domain and are out of scope (Design Q / Stage 5).
 ## 7. Pointers
 
 | | RD | mode |
-|---|---|---|
+| --- | --- | --- |
 | kernel | `Digest_Global_Read.thy` | `Digest_Global_Read.thy` |
 | reader/instance | `Reaching_Defs.thy`, `Digest_Global_Read.thy` (RD section) | `Value_Digest_Read.thy` |
 | writer | reader-only in-tree — the RD run's equation system is hand-built (`Exec_Sign_RD_Keyed_Run.thy`); no generic solver-emitted writer | `Digest_Keyed_Writer.thy` + `Digest_Keyed_Writer_Sound.thy` |

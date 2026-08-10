@@ -173,7 +173,7 @@ export_code
   state_report_dot_auto state_report_graph_snapshot_auto
   bexp_vnames_list string_of_abstract_value
   is_bottom_abstract_value program_vars
-  imp_prog.make proc_decl_of declared_global_vars pretty_string_of_program
+  mk_program proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq

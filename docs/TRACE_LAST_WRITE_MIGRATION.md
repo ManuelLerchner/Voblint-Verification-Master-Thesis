@@ -194,4 +194,3 @@ about history. This migration would make the write history itself first-class.
 4. The read layer can consume the observable through the existing digest/context
    contract.
 5. No solver spine rewrite is required.
-

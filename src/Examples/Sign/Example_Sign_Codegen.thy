@@ -108,10 +108,10 @@ proof -
     by (rule p_reg.run_source_sound
           [OF solve[unfolded analyse_sign_eqs_for_def prog_cfg_def]
               wf
-              cover_entry[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
-              cover_edge[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
-              cover_enter[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
-              cover_combine[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+              vars_coverI[OF cover_entry[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+                             cover_edge[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+                             cover_enter[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+                             cover_combine[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]]
               finI[unfolded prog_cfg_def] finC[unfolded prog_cfg_def]
               sound0[folded gamma_unit_def] init run])
 qed
@@ -152,10 +152,10 @@ proof -
     by (rule p_reg.collect_sound
           [OF solve[unfolded analyse_sign_eqs_for_def prog_cfg_def]
               wf
-              cover_entry[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
-              cover_edge[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
-              cover_enter[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
-              cover_combine[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+              vars_coverI[OF cover_entry[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+                             cover_edge[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+                             cover_enter[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]
+                             cover_combine[unfolded analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def]]
               finI[unfolded prog_cfg_def] finC[unfolded prog_cfg_def]
               sound0[folded gamma_unit_def]])
 qed

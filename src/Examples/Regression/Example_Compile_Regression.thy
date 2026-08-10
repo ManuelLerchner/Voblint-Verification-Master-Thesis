@@ -25,10 +25,10 @@ lemma ex_fallthrough:
   using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
 
 lemma ex_nested_calls:
-  "(Statement n, CallEdge (Some r1) (case \<Pi> p1 of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p1, Statement (Suc n))
+  "(Statement n, CallEdge (Some r1) (call_formals \<Pi> p1) [], FunctionEntry p1, Statement (Suc n))
       \<in> snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
-   \<and> (Statement (Suc n), CallEdge (Some r2) (case \<Pi> p2 of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
+   \<and> (Statement (Suc n), CallEdge (Some r2) (call_formals \<Pi> p2) [], FunctionEntry p2, Statement (Suc (Suc (Suc n))))
       \<in> snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"

@@ -26,6 +26,7 @@ single combined gamma.
 ## 1. Exact places where local and global are forced to share `'a`
 
 ### 1.1 The state type itself
+
 - `src/VIMP/VIMP_Syntax.thy:26` — `type_synonym store = "vname => int"`. One concrete store;
   locals and globals are the same map.
 - `src/VIMP/VIMP_Globals.thy:24` — `is_global :: vname => bool`. The *only* discriminator.
@@ -35,6 +36,7 @@ single combined gamma.
   `{s. ∀x. s x ∈ gamma (σ x)}`: a single `gamma` applied uniformly to all `vname`s.
 
 ### 1.2 The partition operators (share one `'a abs_state` in and out)
+
 - `src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy:25,29` — `restrict_local`, `restrict_global`
   `:: 'a abs_state => 'a abs_state`, bodies `if is_global x then bot else σ x` / vice versa.
 - `src/Analysis/Generic/Equations/Constraint_System.thy:273` — `combine_abs sc se =
@@ -44,6 +46,7 @@ single combined gamma.
   single `'a st`.
 
 ### 1.3 The transfer interface
+
 - `src/Analysis/Generic/Equations/Constraint_System.thy:435` — `record ('g,'d) effectful_domain_transfer`.
   `'d` is the single value type; `etf_enter`, `etf_combine`, every `etf_*` produce a
   `'d abs_state`-valued `strategy_tree`. `'g` is the global **key**.
@@ -51,12 +54,14 @@ single combined gamma.
   `pp => pp => (pp, 'g, 'd abs_state) strategy_tree`: caller and callee combine inputs share `'d`.
 
 ### 1.4 The strategy tree (routing key vs. value)
+
 - `src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy` (datatype `('x,'g,'d) strategy_tree`,
   constructors `Answer 'd | QueryL 'x (…'d) | QueryG 'g (…'d) | Side 'g 'd …`). A **global read**
   `QueryG :: 'g => ('d => tree)` returns the same `'d`, a **global write** `Side :: 'g => 'd => tree`
   writes the same `'d`. There is no separate global value type — only the key `'g`.
 
 ### 1.5 The soundness contract
+
 - `src/Analysis/Generic/Equations/Constraint_System.thy:748` — `locale sound_effectful_transfer`
   fixes `etf :: ('g::finite, 'a::sound_domain) effectful_domain_transfer`. Every premise is stated
   over `\<lbrakk>σ (Inl u) ⊔ glob_env σ\<rbrakk>` — one gamma over the merged local+global abstract state.
@@ -72,6 +77,7 @@ split propagated through all of them.
 ## 2. Where combine logic is hard-coded vs. analysis-provided
 
 ### 2.1 Hard-coded (fixed by IMP2's calling convention)
+
 - **Concrete combine** `combine_states` / `<s|t>` and its abstract image `combine_abs`
   (`Constraint_System.thy:273`): "globals from callee-exit, locals from caller" — fixed by
   `is_global`, not a parameter.
@@ -82,6 +88,7 @@ split propagated through all of them.
 These *define* what a sound combine must approximate; the analysis cannot change them.
 
 ### 2.2 Analysis-provided (but as low-level plumbing, not a contract)
+
 - The generator takes a combine-tree **builder** `cmb :: 'c => pp => pp =>
   (pp × 'c, 'g, 'a abs_state) strategy_tree` as a parameter
   (`TD_Side_Eff_Cmp_Gen.thy:53`, `side_cfg_T_eff_cmp`).
@@ -255,7 +262,7 @@ The ten premises of `side_cfg_T_eff_cmp_collect_ctx_sound_semantic`
 one concern; the composed soundness theorem consumes all four.
 
 | Premise | Owning locale | Why |
-|---|---|---|
+| --- | --- | --- |
 | `ENTRY`, `EDGE` | `sound_effectful_transfer` (transfer) | per-edge transfer soundness |
 | `PROC_ENTRY` | `call_spec` (`enter_seed`) + framed transfer | context-keyed callee-entry frame bound |
 | `LOCAL_POST` | generator post-solution | local slot monotone through combine — structural |
@@ -336,7 +343,7 @@ return write-back has no referent in this language yet.
 ### 6.3 Field-by-field mapping
 
 | Field | Locale | Current source | Semantic law | Proof step requiring it | Category |
-|---|---|---|---|---|---|
+| --- | --- | --- | --- | --- | --- |
 | `start_context`, `ctx_sel`, `cmp`, `prep`, `entdg` | `context_domain` (`Context_Domain.thy:32-37`) | existing | `route` collapse (`route_def`) | interpret step, premises 4/8 | call semantics |
 | `enter_seed :: 'c => 'a abs_state` | `call_spec` | `frame_seed` (`Exec_Cmp_Bridge.thy:55,83`); const `fresh_frame_sign` (`Sign_Side_Soundness.thy:103`) is the unit-context case | `enter_framed` | `PROC_ENTRY`; `etf_enter_framed_le` (`Constraint_System.thy:~785`) | call semantics (frame); `etf_enter` edge stays **transfer semantics** |
 | `combine :: state => state => state` | `call_spec` | `combine_abs` (`Constraint_System.thy:273`) — merge is *fixed*, only routing varies | `combine_sound` (= `combine_states_sound`) | `CMP_SOUND` via `combine_read_cmp_le`/`combine_case_cmp_sound` (`TD_Side_Eff_Cmp_Sound.thy:63-72`) | call semantics; builder `cmb` is **generator config**; `etf_combine` is **transfer semantics** |
@@ -556,7 +563,7 @@ so the formalization does not overstate what it captures.
 ### 7.1 Source mapping
 
 | Goblint `Spec` (analyses.ml) | Role | Stage-0 formalization | Status |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `module D : Lattice.S` | local domain | `'a abs_state` (locals half, by `is_global`) | present, **shared with G** |
 | `module G : Lattice.S` | global domain | `'a abs_state` (globals half, by `is_global`) | present, **shared with D** → Stage 1 |
 | `module C : Printable.S` | context | `'c` (`context_domain`) | present |
@@ -668,7 +675,7 @@ discharges the premises *internally* from a fixed-frame-generator post-fixpoint;
 slice is below the flat set (`cfg_collect_ctx_le`, `CFG_Collect_Trace.thy:501`).
 
 | Premise | Source on the post-fixpoint route | Classification |
-|---|---|---|
+| --- | --- | --- |
 | `ENTRY` | `s0_le_side_env_cmp_entry` inside `_collect_sound_gen` | already solved (internal) |
 | `PROC_ENTRY` | `side_cfg_T_eff_cmp_enter_le` — needs `sound_effectful_transfer_framed` | already solved (internal; framed transfer is the analysis's input) |
 | `EDGE` | `side_cfg_T_eff_cmp_edge_le` | already solved (internal) |
@@ -681,7 +688,7 @@ Missing bridges found: exactly one new lemma plus assembly wrappers.
 ### 8.2 Delivered artifacts
 
 | Artifact | Location | Content |
-|---|---|---|
+| --- | --- | --- |
 | `side_cfg_T_eff_cmp_seed_const` | `Exec_Cmp_Bridge.thy` | the one new lemma: a constant frame seed collapses `side_cfg_T_eff_cmp_seed` to `side_cfg_T_eff_cmp` (definitional, `by simp`) |
 | `spec_post_fixpoint_flat_sound` | `Call_Spec_Sound.thy`, in `goblint_analysis_spec` | post-fixpoint of `spec_generator` ⟹ `cfg_collect g S v0 ≤ ⟦side_env_cmp gcmp σ (v0, ctx)⟧` |
 | `spec_post_fixpoint_collecting_sound` | `Call_Spec_Sound.thy`, in `context_collecting_soundness` | **the canonical Stage-0.5 entry point**: same premises ⟹ `cfg_collect_ctx dg cmp g S v0 ctx ≤ …` |
@@ -736,7 +743,7 @@ spec_post_fixpoint_collecting_sound            (Call_Spec_Sound, context_collect
 ### 9.2 Classification
 
 | Assumption | Enters at | Why it was needed | Class | Status |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `single` (`{k. gcmp ctx k} = {gkey ctx}`) | final collapse step of `_collect_sound_gen(_le)`: `side_env_pull_gk_eq_cmp` | the proof rewrote the pulled monovariant read into the keyed read by *equality* | **proof artifact** | **removed.** Reading extra slots only enlarges the keyed read: `side_env_pull_gk_le_cmp` (`≤` under `gcmp ctx (gkey ctx)`) + `gamma_state_mono` replace the equality. Generator theorems now take `reads`; the spec endpoints take *no* routing premise — `reads_own_slot` (the locale law) suffices end-to-end. Verified: `Voblint_Analysis` batch green; the one external caller (`Exec_Sign_Cmp_Keyed_Gen_Run`, retain spine) migrated and file-clean in I/Q. |
 | `seed_const` (`entry_seed = (λ_. fr)`) | `gen_eq` in `spec_post_fixpoint_flat_sound`, collapsing the seeded generator to the fixed-frame one that `_collect_sound_gen` is stated over | `_collect_sound_gen`'s internal lemmas (`enter_le`, `edge_le`, `switching_combine_sound`) are all stated for `side_cfg_T_eff_cmp` with one frame | **proof artifact** | removable, deferred (migration plan §9.3; no current consumer — all shipped seeds are constant) |
 | flat collapse (`cfg_collect_ctx_le`) | `spec_post_fixpoint_collecting_sound` | avoids `ENTER_MONO`, which is candidate-solution-dependent and provably not always dischargeable (§6.10 pt. 2) | **fundamental** for a premise-free endpoint — and currently **lossless** (§9.4) | keep |
@@ -823,7 +830,7 @@ proof work before Stage 1 is **none** (the `seed_const` plan is optional and def
 ## Appendix — audited symbols and locations
 
 | Symbol | Location |
-|---|---|
+| --- | --- |
 | `store`, `is_global` | `VIMP_Syntax.thy:26`, `VIMP_Globals.thy:24` |
 | `'a abs_state`, `gamma_state` | `Abstract_Domain.thy:23`, `Abstract_Domain.thy` |
 | `sound_domain`, `abstract_domain` | `Abstract_Domain.thy:46`, `:148` |

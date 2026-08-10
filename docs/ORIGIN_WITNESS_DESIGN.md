@@ -15,4 +15,3 @@ There, concrete `Call` and `Resume` ancestry supplies frame identity and return 
 
 The old `twf/twfr` relations remain deleted. Their useful frame-origin insight is absorbed by
 `valid_ltr`; their parameter-binding loss is not reintroduced.
-

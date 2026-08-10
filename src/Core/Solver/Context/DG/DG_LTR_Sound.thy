@@ -49,23 +49,14 @@ qed
 corollary dg_post_solution_collect_sound_ltr_for:
   assumes pp:
       "part_post_solution (dg_gen g bot0 s0d s0g) x sigma vars"
-    and cover_entry: "(cfg_entry g, ()) \<in> vars"
-    and cover_edge:
-      "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> (w, ()) \<in> vars"
-    and cover_enter:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (FunctionEntry p, ()) \<in> vars"
-    and cover_combine:
-      "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g
-         \<Longrightarrow> (k, ()) \<in> vars"
+    and cover: "vars_cover g vars"
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
   shows "ltr_collect gs g S0 v \<subseteq> dg_gamma sigma v"
 proof -
   have pf: "dg_postfix g s0d s0g sigma"
-    by (rule dg_post_solution_postfix
-          [OF pp cover_entry cover_edge cover_enter cover_combine finI finC])
+    by (rule dg_post_solution_postfix[OF pp cover finI finC])
   show ?thesis by (rule dg_postfix_collect_sound_ltr_for[OF pf sound0])
 qed
 

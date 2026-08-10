@@ -32,7 +32,7 @@ lemma inc_program_parts:
            [(STR ''p'') \<mapsto> proc_decl_of [] (imp \<lbrakk> counter := counter + 1 \<rbrakk>),
             prog_main_name \<mapsto> proc_decl_of [] (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)]"
     and "prog_main inc_program = imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>"
-  by (simp_all add: inc_program_def)
+  by (simp_all add: inc_program_def prog_main_name_def)
 
 text \<open>\<open>declared_global_vars\<close> for the concrete program: the entry point where the
   declaration-driven classifier meets a real declared list. \<open>Glocal\<close> is

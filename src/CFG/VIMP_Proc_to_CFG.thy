@@ -105,6 +105,19 @@ text \<open>\<open>compile \<Pi> p c k n\<close> returns \<open>(n', entry, intr
   same node meant before the continuation became an input.  Making them dead ends instead would
   cost the unconditional form of \<open>compile_prog_entry_cfg_reaches_exit\<close> for no gain, since no
   source program reaches these clauses.\<close>
+
+text \<open>
+  A call edge into an undeclared procedure carries no formals: \<^const>\<open>Call\<close> compiles
+  against whatever \<^term>\<open>\<Pi> q\<close> says at compile time, declared or not, so its formal
+  list is this classifier rather than a lookup that could fail. Naming it lets lemma
+  statements about compiled call edges cite \<open>call_formals\<close> instead of restating the
+  case split; the \<open>[simp]\<close> tag keeps it transparent to existing automation.
+\<close>
+definition call_formals :: "proc_table \<Rightarrow> pname \<Rightarrow> vname list" where
+  "call_formals \<Pi> q = (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> [])"
+
+declare call_formals_def [simp]
+
 fun compile ::
   "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node
@@ -138,7 +151,7 @@ where
 | "compile \<Pi> p (Call dst q actuals) k n =
      (Suc n, Statement n, {},
       {(Statement n,
-        CallEdge dst (case \<Pi> q of Some decl \<Rightarrow> formals decl | None \<Rightarrow> []) actuals,
+        CallEdge dst (call_formals \<Pi> q) actuals,
         FunctionEntry q, k)})"
 | "compile \<Pi> p (Return e) k n =
      (Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})"

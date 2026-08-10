@@ -310,7 +310,7 @@ theorem seeded_activation_collecting_sound:
 Induction on `trace_witness_act`, one obligation per rule:
 
 | rule | discharged by |
-|---|---|
+| --- | --- |
 | entry/proc_entry | `seeded_clean_seed_bound` + start coverage + `gamma_state_mono` |
 | intra (`a ≠ EA_Enter`) | `seeded_clean_edge_bound` + `STF` + `gamma_state_mono` |
 | **enter** | `SEED_G` (entering store covered by `frame_seed (enterc c s)`) + `seeded_clean_seed_bound` at `(v, enterc c s)` + `ROUTE`/`enter_mono_kernel` |
@@ -324,7 +324,7 @@ bound — the entire purpose of splitting the rule.
 ### 5.4 Faithfulness to Goblint, made precise
 
 | Goblint | `trace_witness_act` |
-|---|---|
+| --- | --- |
 | `enter : D → (caller_D, callee_entry_D)` | the `enter` rule; `enter_state (last tau)` is `callee_entry_D` |
 | `context f callee_entry_D` (call-only) | `enterc c (last tau)`; context unchanged on `intra` |
 | solve callee at `(node, callee_C)` | callee sub-derivation under `enterc c (last tau)` |

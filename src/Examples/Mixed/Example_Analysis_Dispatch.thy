@@ -686,7 +686,7 @@ code_identifier
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
-  imp_prog.make proc_decl_of
+  mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
@@ -702,7 +702,7 @@ export_code
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
-  imp_prog.make proc_decl_of
+  mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
@@ -718,7 +718,7 @@ export_code
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
-  imp_prog.make proc_decl_of
+  mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
@@ -733,7 +733,7 @@ export_code
 export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
-  imp_prog.make proc_decl_of
+  mk_program proc_decl_of
   SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq

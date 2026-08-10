@@ -192,7 +192,7 @@ text \<open>
 \<close>
 
 lemma parity_wf: "wf_compile_input parity_gs parity_pi [] (STR ''main'') parity_prog"
-  unfolding wf_compile_input_def wf_source_program_def wf_proc_decl_def
+  unfolding wf_compile_input_simps
     parity_pi_def parity_prog_def parity_program_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       prog_main_name_def split: if_splits)
@@ -236,10 +236,10 @@ proof -
     by (rule parity_ex_reg.run_source_sound
           [OF parity_terminates_c[unfolded parity_eqs_def parity_cfg_def]
               parity_wf
-              parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_cover_enter[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-              parity_cover_combine[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+              vars_coverI[OF parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+                             parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+                             parity_cover_enter[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
+                             parity_cover_combine[unfolded parity_sol_def parity_eqs_def parity_cfg_def]]
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
               parity_sound0[folded gamma_unit_def]

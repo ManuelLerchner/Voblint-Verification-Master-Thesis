@@ -20,6 +20,7 @@ program the two writes `G:=0`/`G:=1` separate into partitions `Inr MZero`/`Inr M
 (`SZero`/`SPos`) where the context/site generators merge them to `SNonNeg`.
 
 Three things came together:
+
 - the one architectural constraint that disqualified `kgen_solution` (globals keyed by
   non-`finite` `sign st`) is dissolved by keying on a **finite `mode`**;
 - the read side (`mode_obs`) and the certified context read are fused by one algebraic
@@ -43,7 +44,7 @@ All in `src/Analysis/Instances/Sign/Value_Digest_Read.thy` (kernel
 `Digest_Global_Read.thy` untouched). File [I/Q-clean], 116/116 commands, 0 errors.
 
 | Item | Statement | Status |
-|---|---|---|
+| --- | --- | --- |
 | `mode`, `instance mode :: finite` | 2-point finite partition key | [I/Q-clean] |
 | `mode_decode`, `mode_compatible`, `mode_reader`, `mode_obs` | projection reader + digest read, instantiating `digest_global_read.obs_digest` | [I/Q-clean] |
 | `mode_obs_reduce` | `mode_obs σ (v,ctx) = σ(Inl(v,ctx)) ⊔ σ(Inr(mode_decode(σ(Inl(v,ctx)) ''mode'')))` | [I/Q-clean] |
@@ -59,7 +60,7 @@ Executable demonstration in `src/Analysis/Instances/Sign/Exec_Sign_Mode_Value_Ru
 (batch-green, no `sorry`; mirrors the RD solve template):
 
 | Item | Statement | Status |
-|---|---|---|
+| --- | --- | --- |
 | `mode :: enum` | enum instance so `glob_env_cmp`/`mode_obs` code-generate | [batch-green] |
 | `mode_eqs`, `mode_solution` | mode-keyed side-effecting eqs, run through the vendored `TD_side_always_join_Interp_solve` | [batch-green] |
 | `slot_MZero` / `slot_MOne` | `by eval`: partition `Inr MZero` holds `G=SZero`, `Inr MOne` holds `G=SPos` | [batch-green] |
@@ -145,7 +146,7 @@ real but spurious for the value. This exposed the architectural gap concretely:
 `src/Analysis/Generic/Solver/Digest_Keyed_Writer.thy`:
 
 | Item | What | Status |
-|---|---|---|
+| --- | --- | --- |
 | `side_cfg_T_eff_digest_st` | generator: each intra edge does `QueryL (u,c) (λs. map_gtree (λ_. dg s) …)` — write key `dg s` is a projection of the write-point state (Goblint's `sideg (G, Digest.compute d)`) | [batch-green] |
 | `side_rg_side_cfg_T_eff_digest_st_unit` | right-goingness (solver accepts it) | [batch-green] |
 | `switching_combine_digest_st` | digest-consistent combine: reads/republishes the caller global through `QueryG (dg sc)`, callee context `dg caller` | [batch-green] |
@@ -155,7 +156,7 @@ Instantiated for `mode` (`mode_dg s = mode_decode (lookup_st s ''mode'')`) on th
 compiled program:
 
 | Item | `by eval` result | Status |
-|---|---|---|
+| --- | --- | --- |
 | `digest_slot_MZero` | `Inr MZero` holds `G = SZero` | [batch-green] |
 | `digest_slot_MOne` | `Inr MOne` holds `G = SPos` | [batch-green] |
 | `digest_slot_join` | join-all merges to `SNonNeg` | [batch-green] |
@@ -203,7 +204,7 @@ the frame that sets the mode and rides the context elsewhere (frame-locality). S
 ## 6. Risk assessment
 
 | Risk | Severity | Mitigation |
-|---|---|---|
+| --- | --- | --- |
 | ~~Solver/code-gen must accept a `mode`-typed context.~~ | **resolved** | Confirmed `by eval`: `mode_runs`, `ctxs_at_0`, all `digest_slot_*`. The `_st` solver runs with a finite `mode` context. |
 | ~~Digest-writer soundness (§5.1) is unproven.~~ | **resolved** | `part_post_solution_digest_st_to_abs_eff` transports the write side; `mode_INR_BOT`/`mode_LOCAL_POST` discharge the solver invariants (`Digest_Keyed_Writer_Sound.thy`, batch-green). |
 | **`MODE_AGREE` false at callee interiors** — the value-derived read is unsound where the reset ghost disagrees with the routed context. | **by design, not a blocker** | Machine-checked (`mode_agree_probe_*`, `by eval`). Precise in the mode-setting frame; the callee frame rides the context (frame-locality). `mode_collect_sound_witness` carries it as an honest premise. |

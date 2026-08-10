@@ -13,6 +13,7 @@ Guide proof search, automation, and concept search in the Isabelle proof assista
 ## When To Use Me
 
 Whenever you need to:
+
 - Think about automation and theorem tagging.
 - Close a goal that you could not one-shot.
 - Decide which automation to use (`simp` vs `auto` vs `blast` vs `sledgehammer` vs ...).
@@ -21,13 +22,14 @@ Whenever you need to:
 ## Quick Reference
 
 - Use automation tags (`simp`, `intro`, `elim`, etc.) on theorems, but be wise about them.
-- When a goal doesn't close with an obvious guess, **your default move is to use `try0`**. When `try0` fails, **use `sledgehammer`** (poll its output!). 
+- When a goal doesn't close with an obvious guess, **your default move is to use `try0`**. When `try0` fails, **use `sledgehammer`** (poll its output!).
 - When automation is brittle or explodes (non-determination): switch to structured Isar proofs and add intermediate steps.
 - When unsure whether a lemma exists or what lemmas exist in general, **use `find_theorems`** to search in all transitively imported theories.  
 - When unsure whether a constant exists or what constants exist in general, **use `find_consts`** to search in all transitively imported theories.  
 - When searching for concepts in other theories, import the theory if it is from the base session or it is a small dependency; otherwise use grep (since it avoids building the dependency).
 
 IMPORTANT:
+
 - **`try0`, `find_theorems`, and `find_consts` are very cheap and can be used frequently.**
 - **`sledgehammer` should be used whenever `try0` failed. It is almost always cheaper than guessing a proof in several attempts.**
   Don't guess proofs and proof method invocations (particularly using `metis`) that you could not one-shot: `sledgehammer` typically finds these in seconds.
@@ -50,24 +52,27 @@ IMPORTANT:
 ## Default Proof Search Order and Timeouts
 
 **Order for closing a goal that you couldn't prove in one-shot/immediately:**
+
 1. `try0`: runs cheap built-in methods (`simp`, `auto`, `blast`, `force`, ...). Usually finishes in **<5 seconds**. This is your first move.
-2. `sledgehammer`: uses fact selection, built-in methods, and external provers. Usually finishes in **<30 seconds**. 
+2. `sledgehammer`: uses fact selection, built-in methods, and external provers. Usually finishes in **<30 seconds**.
    Use after `try0` failed and always before trying to generate a proof that you could not one-shot.
 
 ## `try0`
 
 You have to pass facts explicitly to `try0`:
+
 ```isabelle
 using <some theorems> try0 simp: <some simp theorems> intro: <some intro rules> ...
 ```
+
 Poll until you hit the maximum timeout mentioned in this file and pick the fastest returned proof.
 
 ## `sledgehammer`
 
 - Poll sledgehammer after 5 seconds. Then again after 10 seconds. Repeat until you hit the maximum timeout mentioned in this file.
-- Pick the **fastest reconstruction with the simplest method**: prefer `auto`, `fastforce`, etc. over `metis` and `metis` over `smt`. 
+- Pick the **fastest reconstruction with the simplest method**: prefer `auto`, `fastforce`, etc. over `metis` and `metis` over `smt`.
 - **Don't use too many parallel sledgehammers**. Instead, insert just a few (<=5) and iterate.
-- `sledgehammer` has built-in fact selection: it often finds the right lemmas. 
+- `sledgehammer` has built-in fact selection: it often finds the right lemmas.
 - **Only transitively imported theorems can be queried by sledgehammer.** If you suspect some currently non-imported theory contains useful material, you first have to import it.
   It is much quicker to let sledgehammer find the right lemmas than to search for them on your own.
 
@@ -121,4 +126,3 @@ find_consts name: list "_ ⇒ nat"     (* combined criteria *)
 
 **Only transitively imported theories can be queried by these commands.**
 When searching for concepts in other theories, import the theory if it is from the base session or it is a small dependency; otherwise, use `grep` (since it avoids building the dependency).
-

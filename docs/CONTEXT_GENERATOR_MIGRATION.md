@@ -46,7 +46,7 @@ surface is the **executable** enter-query generators and their examples.
 **DELETE (empty cone — genuinely query-executable demo surface):**
 
 | Theory | Reason |
-|--------|--------|
+| -------- | -------- |
 | `Canonical_Generator.thy` | Broken prototype; never in any ROOT. |
 | `Analysis_Configuration.thy` | Premature locale with no consumer; CMP generators already take `gkey`/`cmb`/`frame_seed` as explicit arguments. Locale-parameterizing them is out-of-scope re-proof. |
 | `Exec_Sign_Ctx_Run` | eval-only precision regression on the enter-query scaffold; CMP Keyed/SeededClean demos cover it. |
@@ -59,7 +59,7 @@ surface is the **executable** enter-query generators and their examples.
 **RETAIN (shared substrate — non-empty cone):**
 
 | Theory / definition | Depended on by |
-|---------------------|----------------|
+| --------------------- | ---------------- |
 | `TD_Side_Eff_Ctx_Sound` | `TD_Side_Eff_Cmp_Sound` (CMP spine) |
 | `Exec_Ctx_Bridge` | `Exec_Cmp_Bridge` (CMP spine) |
 | `Seeded_Clean_Ctx_Collect` | `Seeded_Activation_Sound` (activation spine) |
@@ -94,6 +94,7 @@ The formalization currently contains two distinct call-entry strategies:
 2. **Context-Based (CMP path):** Static frame-seed injection; context pre-computed to encode caller state
 
 While both strategies are mathematically sound, maintaining both creates:
+
 - 8+ generator variant definitions (code duplication)
 - Repeated soundness theorems per variant
 - Architectural confusion (which strategy is canonical?)
@@ -132,18 +133,21 @@ This thesis formalizes an analysis framework aligned with **Goblint's architectu
 ### Generator Landscape
 
 **Query-Based Path (CTX — To Be Migrated/Deleted):**
+
 - `side_cfg_T_eff_ctx`, `side_cfg_T_eff_ctx_seeded` (abstract, TD_Side_Tree.thy)
 - `side_cfg_T_eff_ctx_st`, `side_cfg_T_eff_ctx_seeded_st` (executable, Exec_Ctx_Bridge.thy)
 - Soundness: `TD_Side_Eff_Ctx_Sound`
 - Examples: `Exec_Sign_Ctx_*`, `Exec_Ivl_Ctx_*`, `Example_Global_Ctx_Read_Precision`
 
 **Context-Based Path (CMP — To Be Canonical):**
+
 - `side_cfg_T_eff_cmp`, `side_cfg_T_eff_cmp_seed` (abstract, TD_Side_Eff_Cmp_Gen.thy)
 - `side_cfg_T_eff_cmp_st`, `side_cfg_T_eff_cmp_seed_st` (executable, Exec_Cmp_Bridge.thy)
 - Soundness: `TD_Side_Eff_Cmp_Sound`, `TD_Side_Eff_Cmp_Pull`
 - Examples: `Exec_Sign_Cmp_*`, `Exec_Ivl_Cmp_*`
 
 **Shared Infrastructure:**
+
 - `abstract_domain` (type class for lattice domains)
 - `context_domain` (context policy: start_context, ctx_sel, entdg, cmp, prep)
 - Combine tree builders (`unit_combine_tree_ctx`, `switching_combine`, `kgen_combine_rread`, etc.)
@@ -153,7 +157,7 @@ This thesis formalizes an analysis framework aligned with **Goblint's architectu
 ### Duplication Inventory
 
 | Category | CTX | CMP | Total | After Migration |
-|----------|-----|-----|-------|-----------------|
+| ---------- | ----- | ----- | ------- | ----------------- |
 | Generator definitions | 4 | 4 | 8 | 1 canonical + interpretations |
 | Soundness theorems | 1 main | 1 main | 2 | 1 parameterized |
 | Executable variants | 2 | 2 | 4 | 1 + reusable wrappers |
@@ -234,6 +238,7 @@ definition side_cfg_T_eff_cmp_seed ::
 **Single definition** covering all CMP variants (seeded and non-seeded via `frame_seed = λ_. ⊥`).
 
 Existing CMP generators recover as interpretations:
+
 - `side_cfg_T_eff_cmp` = instantiation with constant `frame_seed`
 - `side_cfg_T_eff_cmp_seed` = instantiation with context-dependent `frame_seed`
 
@@ -296,7 +301,7 @@ These three theories are CTX-only; no code depends on them except examples.
 Seven theories must be ported from CTX to CMP:
 
 | Theory | Location | Action |
-|--------|----------|--------|
+| -------- | ---------- | -------- |
 | `Exec_Sign_Ctx_Gen_Run` | Sign/Context | Port to `Exec_Sign_Cmp_Seed_*` |
 | `Exec_Sign_Ctx_Run` | Sign/Context | Port to CMP or verify redundant with seeded |
 | `Exec_Sign_Ctx_Seeded_Run` | Sign/Context | Port to CMP (likely already exists) |
@@ -312,7 +317,7 @@ Seven theories must be ported from CTX to CMP:
 These remain unchanged and are used by both paths (during migration) and CMP (after):
 
 | Infrastructure | Location | Used By | Action |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `context_domain` | Context_Domain.thy | Soundness, config | Keep; refine docs |
 | `TD_Side_Tree` | Core/TD_Side_Tree.thy | Both generators | Keep; extract shared layer |
 | CFG enter/non-enter predicates | CFG_Def.thy | Both paths | Keep; essential |
@@ -348,6 +353,7 @@ The migration strategy treats CTX as scaffolding for understanding the formaliza
 > `docs/architecture/history/`.
 
 **Deliverables:**
+
 - Complete dependency cone audit (`docs/architecture/history/CTX_DEPENDENCY_AUDIT.md`)
 - Classification: DELETE (prototype + 5 query examples + orphan scaffold + dead defs), RETAIN (context-indexed soundness substrate + 2 precision witnesses)
 - This corrected migration document
@@ -359,12 +365,14 @@ The migration strategy treats CTX as scaffolding for understanding the formaliza
 **Objective:** Identify and clarify reusable components independent of enter strategy.
 
 **Scope:**
+
 - Document the shared layer: combine builders, global routing, trace framework, context policy
 - Create/refine `generator_configuration` locale (cmb, gkey, frame_seed)
 - Verify CMP generators can reference shared infrastructure directly
 - No deletion of CTX yet; shared layer is used by both during transition
 
 **New files:**
+
 - Update `src/Analysis/Generic/Solver/Context/Analysis_Configuration.thy` (if exists) or create it
 - Add documentation of shared layer
 
@@ -375,6 +383,7 @@ The migration strategy treats CTX as scaffolding for understanding the formaliza
 **Objective:** Port all required proofs and examples from CTX to CMP equivalents.
 
 **Scope:**
+
 1. **Port Sign examples:**
    - `Exec_Sign_Ctx_Gen_Run` → update to use `side_cfg_T_eff_cmp_seed_st`
    - `Exec_Sign_Ctx_Seeded_Run` → merge with CMP or verify redundancy
@@ -389,6 +398,7 @@ The migration strategy treats CTX as scaffolding for understanding the formaliza
    - `Example_Entry_Store_Context_Precision` → evaluate and migrate
 
 **Success criteria:**
+
 - All thesis-relevant results reproducible via CMP
 - Precision metrics maintained or improved
 - Zero `sorry` statements
@@ -400,6 +410,7 @@ The migration strategy treats CTX as scaffolding for understanding the formaliza
 **Objective:** Establish CMP as canonical; clean up CMP soundness hierarchy.
 
 **Scope:**
+
 - Ensure `side_cfg_T_eff_cmp_seed` is the primary generator
 - Verify `side_cfg_T_eff_cmp` recovers as `side_cfg_T_eff_cmp_seed` with `frame_seed = λ_. ⊥`
 - Consolidate soundness under one parameterized theorem
@@ -414,6 +425,7 @@ The migration strategy treats CTX as scaffolding for understanding the formaliza
 **Objective:** Remove CTX-specific theories; clean up imports.
 
 **Scope:**
+
 1. Delete:
    - `TD_Side_Eff_Ctx_Sound`
    - `Exec_Ctx_Bridge`
@@ -447,6 +459,7 @@ This migration explicitly does **not** aim to:
 **Objective:** Streamline codebase; document architectural decisions.
 
 **Scope:**
+
 - Archive old generator inventory in `docs/CONTEXT_GENERATOR_MIGRATION_ARCHIVED.md`
 - Update README and architecture docs to reflect CMP-only design
 - Add architectural rationale: "Why seed-based context?"
@@ -489,6 +502,7 @@ This migration explicitly does **not** aim to:
 **Issue:** CTX examples demonstrate precision or behavior CMP cannot replicate.
 
 **Mitigation:**
+
 - Understand why CTX is more precise (likely enter query strategy)
 - Evaluate if insight is thesis-critical
 - If yes: document, keep as CTX-only result, do not delete
@@ -528,6 +542,7 @@ This migration explicitly does **not** aim to:
 ## Success Criteria: CMP-Canonical Architecture
 
 ### Phase 1: Audit & Planning
+
 - [x] CTX dependency cone fully mapped
 - [x] 3 theories classified for deletion
 - [x] 7 examples classified for migration
@@ -535,6 +550,7 @@ This migration explicitly does **not** aim to:
 - [x] Migration sequence determined
 
 ### Phase 2: Shared Infrastructure
+
 - [ ] `generator_configuration` locale clearly separates reusable parameters (cmb, gkey, frame_seed)
 - [ ] `context_domain` documented as orthogonal to generator choice
 - [ ] Combine tree builders identified as generic (not strategy-specific)
@@ -542,6 +558,7 @@ This migration explicitly does **not** aim to:
 - [ ] No circular dependencies; shared layer can stand alone
 
 ### Phase 3: Example Migration
+
 - [ ] `Exec_Sign_Ctx_Gen_Run` ported to CMP or verified as redundant
 - [ ] `Exec_Sign_Ctx_Seeded_Run` ported to CMP
 - [ ] `Exec_Ivl_Ctx_Gen_Run` ported to CMP
@@ -551,6 +568,7 @@ This migration explicitly does **not** aim to:
 - [ ] Zero regressions; all examples execute
 
 ### Phase 4: CMP Consolidation
+
 - [ ] CMP soundness (`TD_Side_Eff_Cmp_Sound`) is the sole soundness spine
 - [ ] `side_cfg_T_eff_cmp_seed` is the primary generator
 - [ ] `side_cfg_T_eff_cmp` recovers as interpretation with `frame_seed = λ_. ⊥`
@@ -558,6 +576,7 @@ This migration explicitly does **not** aim to:
 - [ ] No competing generator strategies mentioned in new docs
 
 ### Phase 5: CTX Deletion
+
 - [ ] `TD_Side_Eff_Ctx_Sound` deleted; no imports remain
 - [ ] `Exec_Ctx_Bridge` deleted; no imports remain
 - [ ] `Seeded_Clean_Ctx_Collect` deleted
@@ -566,6 +585,7 @@ This migration explicitly does **not** aim to:
 - [ ] Build clean without deprecation warnings
 
 ### Phase 6: Final Cleanup
+
 - [ ] Repository has one supported context-sensitive generator family (CMP/seed-based)
 - [ ] One soundness theorem (parameterized by analysis_configuration)
 - [ ] Shared infrastructure retained and documented
@@ -616,6 +636,7 @@ theorem Interval_cmp_seed_sound := (Interval_analysis_configuration.context_gene
 CTX deletion does not require reproof of CMP. CMP soundness already exists and is independent.
 
 **Example:**
+
 - `TD_Side_Eff_Cmp_Sound` is already complete
 - Delete CTX theories without touching CMP soundness
 - CMP examples remain sound throughout migration
@@ -627,22 +648,26 @@ CTX deletion does not require reproof of CMP. CMP soundness already exists and i
 ### What to Delete
 
 **CTX-specific theories:**
+
 1. `TD_Side_Eff_Ctx_Sound` — CTX soundness backbone (unused after CMP consolidation)
 2. `Exec_Ctx_Bridge` — CTX executable variants (replaced by CMP)
 3. `Seeded_Clean_Ctx_Collect` — CTX collecting semantics (orphaned)
 4. `Canonical_Generator.thy` — Prototype (incomplete, incorrect)
 
 **CTX examples (after migration to CMP):**
+
 - Old `Exec_Sign_Ctx_*` files (if replaced by CMP equivalents)
 - Old `Exec_Ivl_Ctx_*` files (if replaced by CMP equivalents)
 
 **Documentation:**
+
 - Archive old generator inventory in `docs/CONTEXT_GENERATOR_MIGRATION_ARCHIVED.md`
 - Deprecate old generator-selection guidance
 
 ### What to Retain
 
 **Core infrastructure:**
+
 - `abstract_domain` class
 - `context_domain` locale (context policy)
 - `generator_configuration` locale (reusable generator parameters)
@@ -650,22 +675,26 @@ CTX deletion does not require reproof of CMP. CMP soundness already exists and i
 - Global routing infrastructure
 
 **CMP path:**
+
 - `side_cfg_T_eff_cmp`, `side_cfg_T_eff_cmp_seed` (canonical generators)
 - `side_cfg_T_eff_cmp_st`, `side_cfg_T_eff_cmp_seed_st` (executable variants)
 - `TD_Side_Eff_Cmp_Sound` (soundness)
 - All CMP examples
 
 **Domain instances:**
+
 - Sign, Interval, etc. (using CMP exclusively)
 
 ### Documentation Updates
 
 **Add to repository:**
+
 - Architecture rationale: "Why seed-based context?"
 - Goblint alignment notes: "How formalization mirrors Goblint"
 - Migration log: what was deleted and why
 
 **Archive (docs/architecture/history/):**
+
 - This migration plan (`MIGRATION_TO_GOBLINT_ALIGNED_ARCHITECTURE.md`)
 - Structural audit documents (`CTX_DEPENDENCY_AUDIT.md`, `STRUCTURAL_AUDIT.md`, `ENTER_DIVERGENCE_TRACE.md`)
 - Old generator inventory (`GENERATOR_INVENTORY_BEFORE_MIGRATION.md`)
@@ -674,6 +703,7 @@ CTX deletion does not require reproof of CMP. CMP soundness already exists and i
 These documents explain the *why* behind the refactoring and serve as historical evidence for future developers wondering about the design choices.
 
 **Clarify:**
+
 - Generator selection: "Use CMP/seed-based for all new work"
 - Interface stability: "analysis_configuration will be extended for richer Goblint-style contexts"
 
@@ -682,7 +712,7 @@ These documents explain the *why* behind the refactoring and serve as historical
 ## Success Metrics: Consolidation and Alignment
 
 | Aspect | Current | Target | Notes |
-|--------|---------|--------|-------|
+| -------- | --------- | -------- | ------- |
 | **Generators** | 8+ variants | 1 CMP + interpretations | Eliminate duplication |
 | **Soundness theorems** | 2+ branches (CTX, CMP) | 1 parameterized | One proof per analysis |
 | **Supported strategies** | 2 (query-based, seed-based) | 1 (seed-based) | Goblint-aligned |
@@ -698,11 +728,13 @@ These documents explain the *why* behind the refactoring and serve as historical
 ## Execution Checklist
 
 **Before starting migration:**
+
 - [ ] This document approved
 - [ ] `CTX_DEPENDENCY_AUDIT.md` reviewed
 - [ ] Team agrees on CMP-canonical direction
 
 **During migration:**
+
 - [ ] Phase 2: Shared infrastructure documented
 - [ ] Phase 3: All examples successfully ported to CMP
 - [ ] Phase 4: CMP consolidation complete
@@ -710,6 +742,7 @@ These documents explain the *why* behind the refactoring and serve as historical
 - [ ] Phase 6: Documentation updated; archive created
 
 **After completion:**
+
 - [ ] Build clean with CMP only
 - [ ] Tests pass; no regressions
 - [ ] All thesis results reproducible via CMP
