@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
 
 AFP="${AFP:-$HOME/afp/thys}"
 TD_DIR="vendor/td-verification"
+ISABELLE="${ISABELLE:-isabelle}"
 
 rm -rf codegen/generated
 mkdir -p codegen/generated
@@ -16,7 +17,7 @@ mkdir -p codegen/generated
 # -e materializes the session's export_files declarations (ROOT) onto the
 # file system; -N builds a fresh log per session; the session itself is
 # rebuilt (or reused, if already up to date) as part of the same invocation.
-isabelle build -v -j12 -o threads=12 -N -e -d "$AFP" -d "$TD_DIR" -D . Voblint_Examples
+"$ISABELLE" build -v -j12 -o threads=12 -N -e -d "$AFP" -d "$TD_DIR" -D . Voblint_Examples
 
 # Isabelle's OCaml backend always names its export blob with a ".ocaml"
 # extension (fixed by the code generator, not by file_prefix), which is why
