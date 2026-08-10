@@ -310,6 +310,36 @@ def render_line(line: str) -> str:
     return dim(line)
 
 
+def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
+    """Checks (or, under --update-graphs, regenerates) path's EXPECT-GRAPH
+    block, if it has one, against a live --graph-snapshot run under args.
+    Shared by both check_case's report-based cases and its --dot/--dot-full
+    smoke cases: graph_snapshot_args preserves --dot-full unchanged (it only
+    strips --dot/--graph-snapshot), so a --dot-full fixture's block is
+    checked against full_state_graph_snapshot_auto and a plain fixture's
+    against state_report_graph_snapshot_auto -- entirely decided by args,
+    with no separate marker convention needed."""
+    lines: list[str] = []
+    fixture_lines = path.read_text().splitlines()
+    graph_block = find_graph_block(fixture_lines)
+    graph_cmd = voblint_cmd(graph_snapshot_args(args), path)
+    if UPDATE_GRAPHS:
+        update_graph_block(path, fixture_lines, graph_block, run_graph_snapshot(args, path))
+        lines.append(f"OK   {graph_cmd}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
+        return True, lines
+    if graph_block is None:
+        return True, lines
+    snapshot = run_graph_snapshot(args, path).rstrip("\n")
+    expected_snapshot = expected_graph(fixture_lines, graph_block)
+    if snapshot == expected_snapshot:
+        lines.append(f"OK   {graph_cmd}: graph snapshot matches")
+        return True, lines
+    lines.append(f"FAIL {graph_cmd}: graph snapshot mismatch (rerun with --update-graphs to refresh)")
+    lines.append(f"  expected: {expected_snapshot!r}")
+    lines.append(f"  actual:   {snapshot!r}")
+    return False, lines
+
+
 def check_case(path: Path) -> tuple[bool, list[str], float]:
     """Runs one case and returns (passed, message_lines, duration_seconds).
     Returns lines rather than printing directly: check_case runs
@@ -333,13 +363,16 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
 
     if "--dot" in args or "--dot-full" in args:
         result = run_voblint(args, path)
-        if result.returncode == 0 and result.stdout.startswith("digraph AnalysisCFG"):
+        if result.returncode != 0 or not result.stdout.startswith("digraph AnalysisCFG"):
+            lines.append(f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'")
+            lines.append(f"  stdout: {result.stdout[:200]!r}")
+            lines.append(f"  stderr: {result.stderr.strip()}")
+            return False, lines
+        graph_ok, graph_lines = check_graph_block(path, args)
+        lines.extend(graph_lines)
+        if graph_ok:
             lines.append(f"OK   {cmd} (DOT smoke test)")
-            return True, lines
-        lines.append(f"FAIL {cmd}: expected DOT output starting with 'digraph AnalysisCFG'")
-        lines.append(f"  stdout: {result.stdout[:200]!r}")
-        lines.append(f"  stderr: {result.stderr.strip()}")
-        return False, lines
+        return graph_ok, lines
 
     if not expected:
         # No inline verdicts: this case documents a rejection, not a report.
@@ -390,22 +423,9 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
         )
         ok = False
 
-    fixture_lines = path.read_text().splitlines()
-    graph_block = find_graph_block(fixture_lines)
-    graph_cmd = voblint_cmd(graph_snapshot_args(args), path)
-    if UPDATE_GRAPHS:
-        update_graph_block(path, fixture_lines, graph_block, run_graph_snapshot(args, path))
-        lines.append(f"OK   {graph_cmd}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
-    elif graph_block is not None:
-        snapshot = run_graph_snapshot(args, path).rstrip("\n")
-        expected_snapshot = expected_graph(fixture_lines, graph_block)
-        if snapshot == expected_snapshot:
-            lines.append(f"OK   {graph_cmd}: graph snapshot matches")
-        else:
-            lines.append(f"FAIL {graph_cmd}: graph snapshot mismatch (rerun with --update-graphs to refresh)")
-            lines.append(f"  expected: {expected_snapshot!r}")
-            lines.append(f"  actual:   {snapshot!r}")
-            ok = False
+    graph_ok, graph_lines = check_graph_block(path, args)
+    lines.extend(graph_lines)
+    ok = ok and graph_ok
 
     if ok:
         lines.append(f"OK   {cmd} ({len(expected)} check(s))")

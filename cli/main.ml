@@ -226,7 +226,9 @@ let () =
   let vars_to_probe = Voblint_CLI.Example_State_Report_GraphViz.program_vars prog in
   match
     run_contained ~timeout:!timeout (fun () ->
-      if !graph_snapshot then
+      if !graph_snapshot && !dot_full then
+        Ok_graph (Voblint_CLI.Example_State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
+      else if !graph_snapshot then
         Ok_graph (Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
       else if !dot_full then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
