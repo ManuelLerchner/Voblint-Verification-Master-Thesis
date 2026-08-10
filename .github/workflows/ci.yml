@@ -81,6 +81,7 @@ jobs:
         run: pixi run vendor
 
       - name: Build a single cheap session (Voblint_VIMP) to produce real heaps
+        shell: bash
         run: |
           source scripts/mk/require-afp.sh
           "$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" Voblint_VIMP
