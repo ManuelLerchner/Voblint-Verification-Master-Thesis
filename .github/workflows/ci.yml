@@ -62,6 +62,19 @@ jobs:
       - name: Bridge AFP_COMPONENT_BASE to AFP
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
+      - name: Reproduce and test fix for ghc_setup Stack ownership flake
+        run: |
+          echo "--- ownership before chown ---"
+          ls -ld "$HOME"
+          id
+          echo "--- ghc_setup before fix (expected to fail) ---"
+          "$ISABELLE" ghc_setup || echo "FAILED as expected: exit $?"
+          echo "--- chown $HOME to current uid/gid ---"
+          chown -R "$(id -u):$(id -g)" "$HOME"
+          ls -ld "$HOME"
+          echo "--- ghc_setup after fix ---"
+          "$ISABELLE" ghc_setup
+
       - name: Dump Isabelle heap-related env (pre-build)
         run: |
           echo "HOME=$HOME"
