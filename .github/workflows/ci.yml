@@ -269,8 +269,11 @@ jobs:
       image: makarius/isabelle:Isabelle2025-2
       options: --user root
     steps:
-      - name: Install git, unzip, build-essential, m4
-        run: apt-get update -qq && apt-get install -y -qq git unzip build-essential m4 > /dev/null
+      # libgmp-dev/pkg-config: opam's conf-gmp check needs GMP's dev headers
+      # (pkg-config --exists gmp), not just a runtime lib -- same GMP
+      # requirement the GHC toolchain needed, this time for the OCaml side.
+      - name: Install git, unzip, build-essential, m4, libgmp-dev, pkg-config
+        run: apt-get update -qq && apt-get install -y -qq git unzip build-essential m4 libgmp-dev pkg-config > /dev/null
 
       - name: Checkout Goblint Formalization
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
