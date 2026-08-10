@@ -373,4 +373,55 @@ qed
 
 end
 
+subsection \<open>Formal-entry contexts: routing on the callee's declared formals\<close>
+
+text \<open>
+  A context type derived from the callee's declared formals rather than call-site
+  history: \<open>'a list\<close>, one abstract value per formal, in the order \<^const>\<open>CallEdge\<close>
+  already carries them --- populated at compile time from the callee's own
+  declaration, so no separate procedure-table lookup is needed here.
+  \<open>formals_context\<close> is the plain per-variable projection (\<^typ>\<open>'a abs_state\<close> is
+  \<^typ>\<open>vname \<Rightarrow> 'a\<close>, so this is just \<^const>\<open>map\<close>); \<open>formals_route\<close> applies it to
+  the entered local state via \<^const>\<open>enter_local\<close>, the same enter transfer every
+  other CALL obligation uses; \<open>formals_enterc\<close> is its trace-semantic counterpart,
+  decoding the concrete entered store's formals the same way, given the point
+  abstraction \<open>decode\<close> a domain provides for a concrete value and the CFG needed
+  to look up a call site's own formal list. Neither definition mentions a
+  domain-specific accessor beyond \<open>decode\<close> itself, so any domain reusing
+  \<^locale>\<open>routed_context\<close> instantiates this pair once instead of hand-writing a
+  per-formal projection, as \<open>route_ivl\<close>/\<open>ivl_enterc\<close> previously did.
+\<close>
+
+definition formals_context :: "vname list \<Rightarrow> 'a abs_state \<Rightarrow> 'a list" where
+  "formals_context pars d = map d pars"
+
+definition formals_route ::
+  "('a::sound_domain abs_state, 'a abs_state) dg_spec \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'a list"
+where
+  "formals_route S d ca =
+     (case ca of CallEdge dst pars args \<Rightarrow> formals_context pars (enter_local S pars args d bot))"
+
+text \<open>The routing hook's exact calling convention (\<^locale>\<open>dg_ctx_activation\<close>'s
+  \<open>route\<close>): generic over call site and caller context, using only the entered
+  store, as \<open>route_ivl_gen\<close> already was.\<close>
+definition formals_route_gen ::
+  "('a::sound_domain abs_state, 'a abs_state) dg_spec
+     \<Rightarrow> pp \<Rightarrow> 'a list \<Rightarrow> 'a abs_state \<Rightarrow> call_action \<Rightarrow> 'a list"
+where
+  "formals_route_gen S u ctx d ca = formals_route S d ca"
+
+text \<open>The formals of the call originating at \<open>u\<close>: at most one, by the compiler's
+  own invariant (\<^theory>\<open>Voblint_CFG.VIMP_Proc_to_CFG\<close> emits a single \<^const>\<open>CallEdge\<close>
+  per \<^const>\<open>Call\<close>); \<open>[]\<close> if \<open>u\<close> has none.\<close>
+definition formals_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> vname list" where
+  "formals_at_call_site g u =
+     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
+        (_, CallEdge _ pars _, _, _) # _ \<Rightarrow> pars
+      | _ \<Rightarrow> [])"
+
+definition formals_enterc ::
+  "cfg \<Rightarrow> (int \<Rightarrow> 'a) \<Rightarrow> cfg_node \<Rightarrow> 'a list \<Rightarrow> store \<Rightarrow> 'a list"
+where
+  "formals_enterc g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
+
 end

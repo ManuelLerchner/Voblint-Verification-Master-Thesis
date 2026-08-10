@@ -22,35 +22,75 @@ eval` for two calls with different argument values landing in separate,
 un-joined contexts. So the CALL/COMB soundness machinery this feature needs
 already exists and is reusable. What's still missing:
 
-1. **Context key.** All formals, or their abstract values; whether locals
-   beyond formals ever belong in the key; whether the procedure name is
-   necessarily part of it.
-2. **Generic entry abstraction.** `route_ivl`/`ivl_enterc` are hardcoded to
-   one formal name (`"p"`), built for that one flagship program. Replace
-   with `context(p, entry_state) = ` a projection of `entry_state` onto
-   `formals(p)`, working for any procedure.
-3. **Finite termination -- the central risk.** No finiteness guarantee for
-   a value-derived `'c` beyond the ambient `'c::finite` + solver
-   `solve_dom` hypothesis discharged per-instantiation (a call-string
-   truncated to length `k` is finite by construction; a raw interval
-   context is not). Same gap #77 ("Context-bounding lifters") tracks
-   generally -- reuse whatever lands there rather than inventing a
-   one-off bounding policy here.
-4. **Executable/export API.** (2), instantiated through `routed_context`,
-   `export_code`'d.
-5. **CLI exposure.** `--context none` (current, default) /
-   `--context entry-state`, plus report semantics.
-6. **Acceptance regression.** A program with two calls to the same procedure
-   at distinct argument values: `--context none` -> `UNKNOWN`,
-   `--context entry-state` -> `PROVED`.
+**Finiteness dependency resolved (2026-08-10).** `'c` carries no
+`::finite` sort constraint anywhere in `routed_context`/`dg_ctx_activation`/
+the TD solver -- `solve_dom` is a per-run computational-domain predicate,
+not a type-class constraint, and `Interval_Exec_Sound.thy`'s
+`ivl_exec_terminates_via_solve_c` already discharges it empirically for the
+flat analysis, with soundness proved unconditionally from there. So #77
+("Context-bounding lifters") is not a termination blocker for G1: unbounded
+entry-state contexts can ship on the same "if the solver returns, the
+result is sound" contract the flat analysis already relies on.
 
-Do not start by generalizing `"p"` to a list of variable names in isolation
--- that resolves the syntactic hardcoding (item 2) while leaving item 3
-(unbounded context creation) untouched, the actual blocker to this being a
-general feature rather than a second bespoke example. Arbitrary `gs`/
-`--flow-insensitive` is explicitly out of scope here -- see #66's M4 /
-`docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p` stays
-invariant across whatever this lands as.
+**Exactness boundary found while grounding G1 (2026-08-10).**
+`route_enterc_agree` (`Routed_Context.thy:101-107`) is a literal equality
+required across every concretization of the caller's entered abstract
+state. Since `enterc` decodes a concrete value to an exact point, the
+equality only holds when the caller's abstract value at each
+context-forming formal is itself exact -- true of the flagship's
+literal-constant calls, not guaranteed generally. #77 resurfaces here for a
+different reason than termination: making the equality hold for non-exact
+callers needs `'c` to carry an order with the solver monotone in it --
+structurally #77's "Context Widening", reached from the routing-soundness
+side rather than the termination side. #108's G1-G5 plan (in the issue):
+
+1. **G1 -- generic exact-entry context construction (infrastructure, not
+   yet a general CLI feature). Done, batch-green (2026-08-10).**
+   `route_ivl`/`ivl_enterc` were hardcoded to one formal name (`"p"`), built
+   for that one flagship program. Replaced with `formals_context`/
+   `formals_route`/`formals_route_gen`/`formals_at_call_site`/
+   `formals_enterc` (`Routed_Context.thy`, domain-generic, no `Ivl`
+   reference), reusing `CallEdge`'s own `pars` field -- no separate
+   `formals(Pi(q))` lookup needed -- and discharged via a `routed_context`
+   interpretation across `Example_Interval_DG_Ctx_Flagship.thy`,
+   `_Ctx_Sound.thy`, `_Ctx_Collect.thy`, and `Example_Interval_Source_Ctx.thy`
+   (the last caught only by the batch build, not interactive I/Q, since it
+   was never opened during development). No procedure identity folded into
+   `'c`: `vars`/`seed_key` already pair `'c` with `pp`, which disambiguates
+   by callee. Proved at exact call sites (matching the flagship); the
+   exactness precondition above is not lifted -- that's G2.
+2. **G2 -- abstract context coverage semantics (research item).** Traced
+   deeper than `routed_context`: `activation_collect`'s own membership
+   condition (`CFG_Local_Trace.thy`'s `key`, consumed by
+   `activation_collect_sound` in `Activation_Backbone.thy`) partitions
+   concrete traces by *exact* match on the computed context, not coverage.
+   A relation `ctx_rep :: 'c_concrete => 'c_abstract => bool` (with
+   `ctx_rep c a == c <= a` the natural instance on a shared ordered
+   carrier -- today's exact match is the `ctx_rep = (=)` special case)
+   needs `activation_collect` redefined against it and
+   `valid_ltr_ctx_sound`'s `CALL` case re-derived -- `CFG_Local_Trace.thy`
+   + `Activation_Local_Sound.thy` + `Activation_Backbone.thy`, not just
+   `Routed_Context.thy`. Likely converges with #77's "Context Widening".
+   Acceptance case: `x := random(); p(x);` analyzable under `--context
+   entry-state` without a statically proven singleton argument. Only after
+   this does `--context entry-state` become a claim about arbitrary
+   programs rather than exact-argument call sites.
+3. **G3 -- executable context-sensitive Interval endpoint,** analogous to
+   `analyse_interval_td_raw` but keyed on `(pp x ctx)`, same `solve_dom`/
+   `solve_c` convention, `export_code`'d.
+4. **G4 -- context-aware checks/reporting,** aggregating conservatively
+   across reachable contexts (all Proved -> PROVED, all Refuted -> REFUTED,
+   otherwise UNKNOWN) without joining abstract states first.
+5. **G5 -- CLI exposure + precision witness.** `--context none` (current,
+   default) / `--context entry-state`; regression: two calls at distinct
+   exact argument values, `--context none` -> `UNKNOWN`, `--context
+   entry-state` -> `PROVED`. Open question: whether G3-G5 ship on G1's
+   exact-entry contract with a runtime-checked exactness precondition
+   (the same idiom `solve_dom` uses for termination), or wait for G2.
+
+Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
+#66's M4 / `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
+stays invariant across whatever this lands as.
 
 ## D/G communication
 

@@ -36,11 +36,12 @@ definition entered_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow>
   "entered_abs d ca =
      (case ca of CallEdge dst fs as \<Rightarrow> snd (dgs_enter Sabs fs as d bot))"
 
-definition route_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
-  "route_abs d ca = entered_abs d ca (STR ''p'')"
+definition route_abs :: "ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl list" where
+  "route_abs d ca =
+     (case ca of CallEdge dst pars args \<Rightarrow> formals_context pars (entered_abs d ca))"
 
 text \<open>The generic 4-argument routing hook, mirroring \<^const>\<open>route_ivl_gen\<close>.\<close>
-definition route_abs_gen :: "pp \<Rightarrow> ivl \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl" where
+definition route_abs_gen :: "pp \<Rightarrow> ivl list \<Rightarrow> ivl abs_state \<Rightarrow> call_action \<Rightarrow> ivl list" where
   "route_abs_gen u ctx d ca = route_abs d ca"
 
 subsection \<open>The route-consistency core\<close>
@@ -77,13 +78,16 @@ text \<open>The route-consistency corollary: the abstract route on a pushed-forw
 
 lemma route_commute:
   "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = route_ivl s ca"
-proof -
-  have "route_abs (fun_of_exec_dg_st_for twice_gs s) ca = entered_abs (fun_of_exec_dg_st_for twice_gs s) ca (STR ''p'')"
-    by (simp add: route_abs_def)
-  also have "\<dots> = fun_of_exec_dg_st_for twice_gs (entered_ivl s ca) (STR ''p'')"
+proof (cases ca)
+  case (CallEdge dst pars args)
+  have "route_abs (fun_of_exec_dg_st_for twice_gs s) ca
+      = formals_context pars (entered_abs (fun_of_exec_dg_st_for twice_gs s) ca)"
+    using CallEdge by (simp add: route_abs_def)
+  also have "\<dots> = formals_context pars (fun_of_exec_dg_st_for twice_gs (entered_ivl s ca))"
     by (simp add: entered_commute)
   also have "\<dots> = route_ivl s ca"
-    by (simp add: route_ivl_def fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+    using CallEdge
+    by (simp add: route_ivl_def formals_context_def fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
   finally show ?thesis .
 qed
 
@@ -231,14 +235,14 @@ subsection \<open>The certified executable post-solution\<close>
 
 lemma twice_ctx_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(gk) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
-     twice_ctx_eqs (cfg_exit twice_cfg, bot)"
+     twice_ctx_eqs (cfg_exit twice_cfg, [])"
   using twice_ctx_terminates
   unfolding TD_side_warrowing_apinis_Interp.term_equivalence
             TD_side_warrowing_apinis_Interp.solve_c_dom_def
   by simp
 
 lemma twice_ctx_pp_st:
-  "part_post_solution twice_ctx_eqs (cfg_exit twice_cfg, bot) (snd twice_ctx_sol) (fst twice_ctx_sol)"
+  "part_post_solution twice_ctx_eqs (cfg_exit twice_cfg, []) (snd twice_ctx_sol) (fst twice_ctx_sol)"
   using TD_side_warrowing_apinis_Interp.partial_post_solution
           [OF twice_ctx_solve_dom, of "fst twice_ctx_sol" "snd twice_ctx_sol"]
   unfolding twice_ctx_sol_def by simp
@@ -257,13 +261,13 @@ theorem twice_ctx_pp_abs:
         (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
         (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
-     (cfg_exit twice_cfg, bot) (fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"
+     (cfg_exit twice_cfg, []) (fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
           (routed_cmb Spoly Global) (routed_extra twice_cfg Spoly Seed Global) twice_cfg Spoly
           bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st))
-       (cfg_exit twice_cfg, bot) (snd twice_ctx_sol) (fst twice_ctx_sol)"
+       (cfg_exit twice_cfg, []) (snd twice_ctx_sol) (fst twice_ctx_sol)"
     using twice_ctx_pp_st unfolding twice_ctx_eqs_def by simp
   text \<open>\<open>ivl_Hstep_for\<close> is stated for the generic \<open>unit_dg_spec_st_for gs ivl_tf_st_for ?enter_st\<close>
     shape; \<open>Spoly\<close> hides that shape behind a \<open>definition\<close>, so plain rule resolution
