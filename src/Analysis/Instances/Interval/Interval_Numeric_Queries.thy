@@ -34,6 +34,19 @@ lemma ivl_upper_lower_not_less:
   using ivl_upper_lower_less[OF assms]
   by auto
 
+lemma ivl_upper_lower_less_eq:
+  assumes "Fin i \<le> u" and "u \<le> l" and "l \<le> Fin j"
+  shows "i \<le> j"
+  using assms
+  unfolding less_eq_eint_def
+  by (metis eint_le.simps(4) less_eq_eint_def order_trans)
+
+lemma ivl_upper_lower_not_less_eq:
+  assumes "Fin j \<le> u" and "u \<le> l" and "l \<le> Fin i"
+  shows "\<not> i < j"
+  using ivl_upper_lower_less_eq[OF assms]
+  by auto
+
 
 lemma ivl_separated_not_equal:
   assumes "Fin i \<le> u1"
@@ -84,7 +97,7 @@ qed
 
 fun interval_less_false :: "ivl \<Rightarrow> ivl \<Rightarrow> bool" where
   "interval_less_false (Ivl l1 u1) (Ivl l2 u2) =
-     (\<not> l1 \<le> u1 \<or> \<not> l2 \<le> u2 \<or> u2 < l1)"
+     (\<not> l1 \<le> u1 \<or> \<not> l2 \<le> u2 \<or> u2 \<le> l1)"
 
 lemma interval_less_false_sound:
   assumes query: "interval_less_false a b"
@@ -111,14 +124,29 @@ proof -
     "l1 \<le> u1" "l2 \<le> u2"
     by order+
 
-  with query have separated: "u2 < l1"
+  with query have separated: "u2 \<le> l1"
     unfolding a_def b_def
     by simp
 
   show ?thesis
     using j_bounds(2) separated i_bounds(1)
-    by (rule ivl_upper_lower_not_less)
+    by (rule ivl_upper_lower_not_less_eq)
 qed
+
+text \<open>
+  Permanent regression witnesses for the touching-boundary case: before this
+  file's \<open>u2 < l1\<close> was weakened to \<open>u2 \<le> l1\<close>, \<open>interval_less_false\<close> could not
+  refute \<open>0 < x\<close> for \<open>x = [-inf,0]\<close> (a range entirely \<open>\<le> 0\<close>) because the
+  witnessing bound touches rather than strictly separates.
+\<close>
+
+lemma interval_less_false_witness_touching_boundary:
+  "interval_less_false (Ivl (Fin 0) (Fin 0)) (Ivl MinInf (Fin 0))"
+  by simp
+
+lemma interval_less_false_witness_touching_boundary_finite:
+  "interval_less_false (Ivl (Fin 1) (Fin 1)) (Ivl MinInf (Fin 1))"
+  by simp
 
 fun interval_eq_true :: "ivl \<Rightarrow> ivl \<Rightarrow> bool" where
   "interval_eq_true (Ivl l1 u1) (Ivl l2 u2) =

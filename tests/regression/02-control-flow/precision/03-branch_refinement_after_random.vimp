@@ -4,17 +4,17 @@
 // [1,+inf), the false arm's to (-inf,0]. Both checks read back their own
 // arm's narrowed range, not the pre-branch Top -- a guard/assume-narrowing
 // regression, not a join regression (unlike 01-if_else.vimp, the check is
-// inside each arm, before any post-if join). The false arm is phrased as
-// x<1 rather than !(0<x): the latter is PROVED-able too in principle (same
-// narrowed range decides it), but the check evaluator currently reports
-// UNKNOWN for a NEGATED comparison against an unbounded-below range even
-// where the direct comparison decides -- a separate, unconfirmed precision
-// gap, not what this fixture is testing.
+// inside each arm, before any post-if join). The false arm's !(0<x) is a
+// permanent regression witness for interval_less_false's boundary fix
+// (Interval_Numeric_Queries.thy): it used to report UNKNOWN here because
+// interval_less_false required a STRICT upper<lower separation (u2 < l1)
+// to refute "0<x", missing the touching-boundary case x=[-inf,0] where
+// u2=l1=0 -- sound but needlessly conservative, now u2<=l1.
 void main() {
   x := random();
   if (0 < x) {
     __voblint_check(0 < x) // PROVED
   } else {
-    __voblint_check(x < 1) // PROVED
+    __voblint_check(!(0 < x)) // PROVED
   }
 }
