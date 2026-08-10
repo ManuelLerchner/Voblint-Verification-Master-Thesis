@@ -257,7 +257,7 @@ lemma dispatch_demo_intra_eval:
 
 lemma dispatch_demo_exit_eval:
   "cfg_exit (prog_cfg prog_main_name dispatch_demo_prog) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (simp add: cfg_exit_compile_prog prog_main_name_def)
 
 text \<open>Structural reachability of the first check node to the exit --- a fact about the CFG's
   shape, following the same \<open>cfg_reaches_intra\<close>/\<open>cfg_reaches_trans\<close> chaining as
