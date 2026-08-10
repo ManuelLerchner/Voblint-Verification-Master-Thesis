@@ -636,7 +636,7 @@ theorem entry_state_activation_collect_sound:
   "activation_collect gs (admiss_exact entry_state_enterc) [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
      \<subseteq> \<lbrakk>entry_state_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = entry_state_sg and admiss = "admiss_exact entry_state_enterc"
-        and seedc = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+        and startc = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> \<lbrakk>fun_of_exec_dg_st_for gs cinit_ivl_st\<rbrakk>" using entry_state_cinit_le_cinit_ivl_st by blast

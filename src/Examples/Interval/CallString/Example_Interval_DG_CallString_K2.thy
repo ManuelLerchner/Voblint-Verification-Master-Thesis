@@ -359,7 +359,7 @@ theorem nest_2_activation_collect_sound:
   "activation_collect nest_gs (admiss_exact (cs_enterc 2)) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_2 (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_2 and admiss = "admiss_exact (cs_enterc 2)"
-        and seedc = "[]"
+        and startc = "[]"
         and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own

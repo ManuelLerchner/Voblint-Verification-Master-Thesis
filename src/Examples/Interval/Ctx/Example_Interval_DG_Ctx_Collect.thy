@@ -120,8 +120,8 @@ text \<open>
   \<open>[3,3]\<close> / \<open>[10,10]\<close> and leaves it unpopulated at \<open>bot\<close> --- \<open>p\<close> there is the bottom
   interval.  The activation-local semantics (\<^theory>\<open>Voblint_CFG.CFG_Local_Trace\<close>) creates a
   callee only through the \<open>call\<close> rule, whose entry store is \<^const>\<open>call_enter\<close> of the
-  \<^const>\<open>CallEdge\<close> at the routed context \<open>enterc seedc s'\<close> (\<open>= [3,3]\<close>), \<^emph>\<open>not\<close>
-  \<open>seedc = bot\<close>, so no obligation forces the callee under the root context.  These witnesses
+  \<^const>\<open>CallEdge\<close> at the routed context \<open>enterc startc s'\<close> (\<open>= [3,3]\<close>), \<^emph>\<open>not\<close>
+  \<open>startc = bot\<close>, so no obligation forces the callee under the root context.  These witnesses
   keep that invariant honest.\<close>
 
 lemma callee_entry_bot_unpopulated:
@@ -426,7 +426,7 @@ theorem twice_activation_collect_sound:
   "activation_collect twice_gs (admiss_exact ivl_enterc) [] twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg and admiss = "admiss_exact ivl_enterc"
-        and seedc = "[]"
+        and startc = "[]"
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own

@@ -464,7 +464,7 @@ theorem twice_cs_activation_collect_sound:
   "activation_collect twice_gs (admiss_exact enterc_cs) (cfg_entry twice_cfg) twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and admiss = "admiss_exact enterc_cs"
-        and seedc = "cfg_entry twice_cfg"
+        and startc = "cfg_entry twice_cfg"
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own

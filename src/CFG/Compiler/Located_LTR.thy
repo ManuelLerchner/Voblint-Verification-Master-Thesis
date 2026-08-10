@@ -244,14 +244,14 @@ lemma stack_repr_Nil_iff:
 text \<open>The context \<^const>\<open>key\<close> of a callerless activation is the seed --- descending the
   \<^const>\<open>caller_of\<close> chain (a \<^const>\<open>Resume\<close> of \<^const>\<open>Root\<close> is still callerless).\<close>
 lemma key_caller_of_None:
-  "caller_of t = None \<Longrightarrow> key enterc seedc t = seedc"
+  "caller_of t = None \<Longrightarrow> key enterc startc t = startc"
   by (induction t) auto
 
 text \<open>The \<^const>\<open>ctx_key\<close> analogue: a callerless activation's only admissible context is
   the seed, regardless of \<open>admiss\<close> --- the \<open>ctx_key_Root\<close> case never consults \<open>admiss\<close>, and
   \<open>ctx_key_Resume\<close> only forwards to the same callerless ancestor.\<close>
 lemma ctx_key_caller_of_None:
-  "caller_of t = None \<Longrightarrow> ctx_key admiss seedc t c \<longleftrightarrow> c = seedc"
+  "caller_of t = None \<Longrightarrow> ctx_key admiss startc t c \<longleftrightarrow> c = startc"
 proof (induction t)
   case (Root p)
   then show ?case by (auto elim: ctx_key_RootE intro: ctx_key_Root)
@@ -306,8 +306,8 @@ theorem source_store_in_activation_collect:
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, frs)"
     and tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
   shows "\<exists>v stk t c. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> ctx_key admiss seedc t c
-                   \<and> s \<in> activation_collect source_global admiss seedc (compile_prog \<Pi> ps mnm main) S v c"
+                   \<and> ctx_key admiss startc t c
+                   \<and> s \<in> activation_collect source_global admiss startc (compile_prog \<Pi> ps mnm main) S v c"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -315,9 +315,9 @@ proof -
       and rep: "ltr_repr source_global ?g S (v, s, stk) t" by blast
   from rep have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     by (auto simp: ltr_repr_def)
-  obtain c where ck: "ctx_key admiss seedc t c"
+  obtain c where ck: "ctx_key admiss startc t c"
     using ctx_key_exists[where admiss = admiss, OF tot] by blast
-  have "s \<in> activation_collect source_global admiss seedc ?g S v c"
+  have "s \<in> activation_collect source_global admiss startc ?g S v c"
     using activation_collect_I[OF tv sn ck] ss by simp
   then show ?thesis using sim ck by blast
 qed
@@ -330,7 +330,7 @@ theorem source_toplevel_in_activation_collect:
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global \<Pi>) (main, s0, []) (residual, s, [])"
   shows "\<exists>v. csim \<Pi> (compile_prog \<Pi> ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> activation_collect source_global admiss seedc (compile_prog \<Pi> ps mnm main) S v seedc"
+             \<and> s \<in> activation_collect source_global admiss startc (compile_prog \<Pi> ps mnm main) S v startc"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
   from source_run_has_ltr[OF wf s0 run] obtain v stk t
@@ -340,9 +340,9 @@ proof -
   from rep stk0 have tv: "t \<in> valid_ltr source_global ?g S" and sn: "sink_node t = v" and ss: "sink_store t = s"
     and sr: "stack_repr ?g [] t" by (auto simp: ltr_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "ctx_key admiss seedc t seedc"
+  have covered: "ctx_key admiss startc t startc"
     using ctx_key_caller_of_None[where admiss = admiss, OF cof] by simp
-  have "s \<in> activation_collect source_global admiss seedc ?g S v seedc"
+  have "s \<in> activation_collect source_global admiss startc ?g S v startc"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed

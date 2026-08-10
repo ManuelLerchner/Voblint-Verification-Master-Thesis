@@ -226,7 +226,7 @@ theorem rc_activation_collect_sound:
   "activation_collect rc_gs (admiss_exact rc_enterc) [] rc_cfg (cinit_stores rc_gs) v ctx
      \<subseteq> \<lbrakk>rc_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = rc_ctx_sg and admiss = "admiss_exact rc_enterc"
-        and seedc = "[]"
+        and startc = "[]"
         and S = "cinit_stores rc_gs" and g = rc_cfg and gs = rc_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores rc_gs"
