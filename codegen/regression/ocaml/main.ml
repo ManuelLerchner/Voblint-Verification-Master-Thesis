@@ -4,7 +4,7 @@
    dispatcher for both domains, and checks the result against the values
    already proved inside Isabelle by
    src/Examples/Mixed/Example_Analysis_Dispatch.thy's
-   dispatch_demo_sign_unknown / dispatch_demo_interval_precise lemmas.
+   dispatch_demo_sign_precise / dispatch_demo_interval_precise lemmas.
 
    Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
    it with `pixi run codegen` instead. *)
@@ -40,7 +40,7 @@ let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c
 let check_cond = Less (N (mk_int 0), V "y")
 
 let demo_prog =
-  make []
+  mk_program []
     (Seq
        (Seq
           (Seq (Assign ("y", N (mk_int 1)), Check check_cond),
@@ -49,15 +49,15 @@ let demo_prog =
     []
 
 let expected_sign =
-  [ (Statement (mk_nat 1), (check_cond, Check_Unknown));
-    (Statement (mk_nat 3), (check_cond, Check_Unknown)) ]
+  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
+    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
 
 let expected_interval =
   [ (Statement (mk_nat 1), (check_cond, Check_Proved));
     (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
 
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
-   Exercises `make`'s procedure list, `proc_decl_of`'s formals, and `Call`
+   Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
    together -- not just straight-line assignment/check.
    Same program as proc_demo_prog in Example_Analysis_Dispatch.thy; checked
    against proc_demo_sign_unknown / proc_demo_cfg_intra / proc_demo_cfg_calls.
@@ -66,7 +66,7 @@ let expected_interval =
    dispatcher now routes Interval through the warrowing backend, which terminates (at
    Check_Unknown precision) -- see Example_Analysis_Dispatch.thy's proc_demo_interval_terminates. *)
 let proc_demo_prog =
-  make
+  mk_program
     [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
     (Seq
        (Seq
@@ -93,7 +93,7 @@ let expected_proc_demo_interval =
    against no_call_global_self_ref_interval_terminates. Isolates that the call/return summary
    was never the actual hazard -- a single self-referential global write reproduces it alone. *)
 let no_call_global_self_ref_prog =
-  make []
+  mk_program []
     (Seq
        (Seq (Assign ("total", N (mk_int 0)), Assign ("total", Plus (V "total", N (mk_int 3)))),
         Check (Less (N (mk_int 0), V "total"))))
@@ -107,7 +107,7 @@ let expected_no_call_global_self_ref_interval =
    Example_Analysis_Dispatch.thy; checked against one_call_interval_terminates -- confirms the
    fix also survives entry/combine (call/return) handling, not just a straight-line write. *)
 let one_call_prog =
-  make
+  mk_program
     [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
     (Seq
        (Seq (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
