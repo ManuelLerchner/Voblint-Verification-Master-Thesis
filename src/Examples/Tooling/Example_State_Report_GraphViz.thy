@@ -154,6 +154,54 @@ text \<open>
 \<close>
 
 text \<open>
+  \<open>state_report_dot_auto\<close> anchors every node label to a report entry
+  (\<^const>\<open>state_report_node_annotation\<close> looks a point up in
+  \<^const>\<open>analyse_with_state\<close>'s report, which \<^const>\<open>classify_checks_with_state\<close>
+  only ever populates at check nodes), so every non-check node renders with no
+  state at all. \<open>full_state_dot_auto\<close> instead queries the solved environment
+  directly at \<^emph>\<open>every\<close> \<^typ>\<open>pp\<close> via \<^const>\<open>analyse_sign_env_for\<close> /
+  \<^const>\<open>analyse_interval_td_at\<close> -- the same per-point lookup
+  \<open>analyse_sign_report_for_code\<close>/\<open>interval_td_check_report_code\<close> already use
+  to build a check's own state -- so the annotation exists independently of
+  whether that point happens to carry a check.
+\<close>
+
+fun analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
+  "analyse_env_for Sign_Analysis p v =
+     SignValue \<circ> analyse_sign_env_for (declared_global p) p v"
+| "analyse_env_for Interval_Analysis p v =
+     IntervalValue \<circ>
+       analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
+         prog_main_name (prog_main p) v"
+
+text \<open>
+  Unlike \<^const>\<open>state_report_node_annotation\<close>, every \<^typ>\<open>pp\<close> gets an
+  annotation here (never \<open>None\<close>), so \<^const>\<open>raw_cfg_dot\<close>'s own default
+  styling never applies; the style string below is that same default
+  (\<open>lightgreen\<close>, unfilled by any check verdict) so a full-state rendering
+  looks like an ordinary node with extra lines, not a flagged one.
+\<close>
+
+definition full_state_node_annotation ::
+    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state) \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+  "full_state_node_annotation vars env v =
+     Some (Node_Annotation (join_gv_nl (map (state_line (env v)) vars))
+             ''shape=box,style=filled,fillcolor=lightgreen'')"
+
+definition full_state_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "full_state_dot_auto kind p =
+     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
+
+text \<open>Canonical-text sibling, the same DOT-free relationship
+  \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
+
+definition full_state_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "full_state_graph_snapshot_auto kind p =
+     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
+
+text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,
   already mapped to \<open>Core\<close> below) into the same export as \<open>Complete_Lattices\<close>'s
   \<^class>\<open>complete_lattice\<close> set instance for the first time. Left unmapped,
@@ -171,6 +219,7 @@ export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_with_state SignValue IntervalValue
   state_report_dot_auto state_report_graph_snapshot_auto
+  full_state_dot_auto full_state_graph_snapshot_auto
   bexp_vnames_list string_of_abstract_value
   is_bottom_abstract_value program_vars
   mk_program proc_decl_of declared_global_vars pretty_string_of_program

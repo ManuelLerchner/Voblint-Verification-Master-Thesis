@@ -43,7 +43,8 @@ $ pixi run voblint --analysis interval tests/regression/02-control-flow/precisio
 8:3  pp3        0<x                  PROVED   x=[10,10]
 ```
 
-`--dot` renders the same solved, per-node abstract state as a GraphViz CFG:
+`--dot` renders the solved CFG as GraphViz, with the computed abstract state
+shown at each check node:
 
 ```bash
 pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/02-while_loop.vimp \
@@ -64,8 +65,11 @@ pixi run voblint --analysis interval --dot tests/regression/02-control-flow/prec
 
 Each rendering embeds the source alongside the CFG, splits nodes into
 per-activation clusters (context-sensitivity, see "Why Voblint?" above), and
-shades the checked node by its verdict. See "Running the CLI" below for
-`--graph-snapshot` (a DOT-free textual alternative) and `--parse-only`.
+shades the checked node by its verdict. `--dot-full` renders every node with
+its own computed abstract state instead of only check nodes -- useful for
+inspecting the fixpoint at a program point with no check at all, e.g. mid-loop.
+See "Running the CLI" below for `--graph-snapshot` (a DOT-free textual
+alternative) and `--parse-only`.
 
 ## Foundations
 
@@ -363,8 +367,13 @@ extra arguments after the task name go straight to `cli/voblint`, not to pixi:
 pixi run voblint --analysis interval tests/regression/00-sanity/precision/01-straight_line_proved.vimp
 
 # Same analysis, GraphViz rendering of the solved, context-split CFG instead
+# (state shown at check nodes only)
 pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp > cfg.dot
 dot -Tsvg cfg.dot -o cfg.svg   # requires graphviz's `dot` on PATH
+
+# Same rendering, but every node carries its own computed abstract state,
+# not just check nodes -- useful with no check nearby, e.g. mid-loop
+pixi run voblint --analysis interval --dot-full tests/regression/02-control-flow/precision/02-while_loop.vimp > cfg.dot
 
 # Deterministic textual CFG snapshot (clusters/nodes/edges) with no GraphViz
 # dependency -- what the regression corpus embeds as expected --graph-snapshot output

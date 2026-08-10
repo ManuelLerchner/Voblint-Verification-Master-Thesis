@@ -1,0 +1,16 @@
+// PARAM: --analysis interval --dot-full
+// Every CFG node carries its own computed abstract state here, not just
+// check nodes -- full_state_dot_auto queries analyse_interval_td_at at
+// every pp directly (Example_State_Report_GraphViz.thy), unlike
+// state_report_dot_auto (08-tooling/01-dot_smoke.vimp's --dot), which only
+// annotates nodes state_report_node_annotation finds in the check report.
+// Same program as 02-control-flow/precision/02-while_loop.vimp so the loop
+// head's widened/narrowed interval is visible mid-loop, not only at the
+// one check near the end.
+void main() {
+  x := 0;
+  while (x < 10) {
+    x := x + 1
+  };
+  __voblint_check(0 < x)
+}

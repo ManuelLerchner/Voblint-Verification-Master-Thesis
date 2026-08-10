@@ -331,7 +331,7 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
     lines: list[str] = []
     expected = expected_verdicts(path)
 
-    if "--dot" in args:
+    if "--dot" in args or "--dot-full" in args:
         result = run_voblint(args, path)
         if result.returncode == 0 and result.stdout.startswith("digraph AnalysisCFG"):
             lines.append(f"OK   {cmd} (DOT smoke test)")
@@ -431,10 +431,10 @@ def lint_case(path: Path) -> list[str]:
         problems.append(f"filename '{path.name}' doesn't follow the NN-name.vimp convention")
 
     # A case with no verdicts at all is a parse-rejection fixture (checked
-    # for a structured error, not a report -- see check_case), and a --dot
-    # case checks DOT shape, not verdicts: neither kind's __voblint_check
-    # lines are meant to carry one.
-    if expected and "--dot" not in args:
+    # for a structured error, not a report -- see check_case), and a --dot/
+    # --dot-full case checks DOT shape, not verdicts: neither kind's
+    # __voblint_check lines are meant to carry one.
+    if expected and "--dot" not in args and "--dot-full" not in args:
         for line_no, line in enumerate(src_lines, start=1):
             if not CHECK_LINE_RE.search(line):
                 continue

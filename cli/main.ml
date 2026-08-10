@@ -24,8 +24,11 @@ let usage =
    Options:\n\
   \  --analysis sign|interval   Abstract domain to run (required, unless\n\
   \                             --parse-only).\n\
-  \  --dot                      Emit a GraphViz .dot rendering of the solved CFG\n\
-  \                             instead of the textual check report.\n\
+  \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
+  \                             annotated at check nodes only, instead of the\n\
+  \                             textual check report.\n\
+  \  --dot-full                 Like --dot, but every node is annotated with its\n\
+  \                             own computed abstract state, not just check nodes.\n\
   \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
   \                             of the solved CFG (clusters/nodes/edges), for\n\
   \                             embedding as a regression fixture's expected\n\
@@ -169,6 +172,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
 let () =
   let analysis = ref None in
   let dot = ref false in
+  let dot_full = ref false in
   let graph_snapshot = ref false in
   let parse_only = ref false in
   let timeout = ref 10.0 in
@@ -183,6 +187,7 @@ let () =
        | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest
+    | "--dot-full" :: rest -> dot_full := true; parse_args rest
     | "--graph-snapshot" :: rest -> graph_snapshot := true; parse_args rest
     | "--parse-only" :: rest -> parse_only := true; parse_args rest
     | "--timeout" :: v :: rest ->
@@ -223,6 +228,7 @@ let () =
     run_contained ~timeout:!timeout (fun () ->
       if !graph_snapshot then
         Ok_graph (Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
+      else if !dot_full then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then Ok_dot (Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
       else
         Ok_text
