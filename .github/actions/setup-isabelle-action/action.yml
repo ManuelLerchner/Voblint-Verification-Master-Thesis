@@ -6,7 +6,7 @@ runs:
   using: "composite"
   steps:
     - name: Checkout AFP
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         repository: isabelle-prover/mirror-afp-2025-1
         path: afp
@@ -31,8 +31,29 @@ runs:
       run: |
         echo "ISABELLE=$ISABELLE_HOME/bin/isabelle" >> $GITHUB_ENV
 
-    - name: Cache heap images
-      uses: actions/cache@v3
+    # A slug of `isabelle version` (e.g. "Isabelle2025-2:cbc7bdb4bb4b"), not a
+    # hardcoded literal, so bumping the container image tag in ci.yml
+    # automatically invalidates old heap caches instead of silently
+    # restoring heaps built by a different Isabelle build.
+    - name: Resolve Isabelle version identifier for the cache key
+      shell: bash
+      run: |
+        echo "ISABELLE_VERSION_SLUG=$("$ISABELLE" version | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_ENV"
+
+    # Cache key spans the hard binary/build compatibility boundaries (OS,
+    # arch, Isabelle version, AFP mirror branch), not every source file --
+    # the point is to let a *different* commit's heap state restore so
+    # `isabelle build`'s own staleness check has something to work
+    # incrementally from. A cache hit here is never treated as evidence the
+    # source tree is valid: every downstream `pixi run <task>` still runs
+    # its own `isabelle build`/`isabelle lint` command, which recomputes
+    # session digests from content and rebuilds whatever changed --
+    # restoring a stale or even irrelevant heap only changes how much of
+    # that rebuild is needed, never whether it happens.
+    - name: Restore/save Isabelle heap cache
+      uses: actions/cache@v4
       with:
         path: ${{ env.ISABELLE_HOME_USER }}/heaps/
-        key: heap-images-${{ github.ref_name }}
+        key: isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-1-${{ github.sha }}
+        restore-keys: |
+          isabelle-heaps-${{ runner.os }}-${{ runner.arch }}-${{ env.ISABELLE_VERSION_SLUG }}-afp-mirror-2025-1-
