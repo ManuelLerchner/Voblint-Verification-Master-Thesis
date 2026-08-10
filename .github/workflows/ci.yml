@@ -36,8 +36,8 @@ jobs:
       image: makarius/isabelle:Isabelle2025-2
       options: --user root
     steps:
-      - name: Install git, xz, build-essential (GHC's Stack bindist needs a C toolchain)
-        run: apt-get update -qq && apt-get install -y -qq git xz-utils build-essential > /dev/null
+      - name: Install git, xz, build-essential, libgmp-dev (GHC's Stack bindist needs a C toolchain and GMP)
+        run: apt-get update -qq && apt-get install -y -qq git xz-utils build-essential libgmp-dev > /dev/null
 
       - name: Checkout Goblint Formalization
         uses: actions/checkout@v4
