@@ -125,9 +125,11 @@ module Core : sig
   val equal_edge_actiona : edge_action -> edge_action -> bool
   type eint = MinInf | Fin of int | PlusInf
   type ivl = Ivl of eint * eint
+  type ('a, 'b) dg_state
   val fst : 'a * 'b -> 'a
   val list_all : ('a -> bool) -> 'a list -> bool
   val map : ('a -> 'b) -> 'a list -> 'b list
+  type 'a resolved_st_q
   type num
   type 'a set = Set of 'a list | Coset of 'a list
   type com = SKIP | Assign of string * aexp | Random of string | Check of bexp |
@@ -265,6 +267,7 @@ module Core : sig
   val char_0x7A : char
   val char_0x7B : char
   val char_0x7D : char
+  val declared_global : unit imp_prog_ext -> string -> bool
   val join_source : char list -> (char list) list -> char list
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
@@ -272,8 +275,14 @@ module Core : sig
   val string_of_nat : nat -> char list
   val string_of_aexp : aexp -> char list
   val string_of_bexp : bexp -> char list
+  val analyse_sign_env_for :
+    (string -> bool) -> unit imp_prog_ext -> cfg_node -> string -> sign
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+  val analyse_interval_td_at :
+    (string -> bool) ->
+      (string -> unit proc_decl_ext option) ->
+        string list -> string -> com -> cfg_node -> string -> ivl
   val analyse_sign_report_with_state :
     unit imp_prog_ext ->
       (cfg_node * (bexp * (check_result * (string -> sign)))) list
@@ -2996,9 +3005,16 @@ let rec compile_prog
 let rec prog_cfg
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
+let rec combine_resolved_st_q _A
+  (Abs_resolved_st xa) (Abs_resolved_st x) =
+    Abs_resolved_st (combine_resolved_st _A xa x);;
+
 let rec unit_step_st _A
   f d g =
-    (let res = f (sup_resolved_st_qa _A d g) in
+    (let res =
+       f (combine_resolved_st_q
+           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot d g)
+       in
       (restrict_global_resolved_q
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res,
         restrict_local_resolved_q
@@ -3231,6 +3247,8 @@ let rec point
 
 let rec rho (Ug_state_ext (rho, more)) = rho;;
 
+let rec combine_abs gs sc se = (fun x -> (if gs x then se x else sc x));;
+
 let rec etf_st_enter
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
@@ -3287,10 +3305,6 @@ let rec make_side_rhs_tree_eff_st _B
 let rec side_cfg_T_eff_st _B
   g etf bot0_st s0_st gseed =
     make_side_rhs_tree_eff_st _B g etf bot0_st s0_st gseed;;
-
-let rec combine_resolved_st_q _A
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (combine_resolved_st _A xa x);;
 
 let rec sigma_update
   sigmaa (State_ext (c, infl, stabl, sigma, more)) =
@@ -3513,8 +3527,8 @@ let rec unit_combine_step_st_assign_for _A
        combine_assign_resolved_q
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs dst
          (lookup_resolved_st_q
-           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-           (sup_resolved_st_qa _A de g) (location_of gs ret_var))
+           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de
+           (location_of gs ret_var))
          (sup_resolved_st_qa _A (fst merged) (snd merged))
        in
       (restrict_global_resolved_q
@@ -3526,8 +3540,7 @@ let rec unit_combine_step_st_env _A
   dc de g =
     (let m =
        combine_resolved_st_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-         (sup_resolved_st_qa _A dc g) (sup_resolved_st_qa _A de g)
+         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot dc g
        in
       (restrict_global_resolved_q
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot m,
@@ -3589,7 +3602,7 @@ let rec analyse_sign_report_for
     (let sol = snd (analyse_sign_for gs p) in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          sup_fun semilattice_sup_sign
+          combine_abs gs
             (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
             (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
         sign_classify_check);;
@@ -3739,6 +3752,14 @@ and interval_check_false
     | Or (b1, b2), d -> interval_check_false b1 d && interval_check_false b2 d
     | Less (a, b), d -> interval_less_false (aval_ivl a d) (aval_ivl b d)
     | Eqa (a, b), d -> interval_eq_false (aval_ivl a d) (aval_ivl b d);;
+
+let rec analyse_sign_env_for
+  gs p v =
+    combine_abs gs
+      (fun_of_exec_dg_st_for bot_sign gs
+        (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
+      (fun_of_exec_dg_st_for bot_sign gs
+        (globs (snd (analyse_sign_for gs p) (Inr ()))));;
 
 let rec interval_classify_check
   c d = (if interval_check_true c d then Check_Proved
@@ -3972,12 +3993,19 @@ let rec classify_checks_with_state
 let rec analyse_interval_td_report
   p = interval_td_check_report (declared_global p) prog_main_name p;;
 
+let rec analyse_interval_td_at
+  gs pi ps mnm main v =
+    side_env enum_unit bounded_semilattice_sup_bot_ivl
+      (comp (fun_of_resolved_st_q_for bot_ivl gs)
+        (analyse_interval_td_raw gs pi ps mnm main))
+      v;;
+
 let rec analyse_sign_report_for_with_state
   gs p =
     (let sol = snd (analyse_sign_for gs p) in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          sup_fun semilattice_sup_sign
+          combine_abs gs
             (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
             (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
         sign_classify_check);;
@@ -5535,9 +5563,13 @@ module Example_State_Report_GraphViz : sig
   val string_of_abstract_value : Analyse.abstract_value -> Core.char list
   val program_vars : unit Core.imp_prog_ext -> string list
   val bexp_vnames_list : Core.bexp -> string list
+  val full_state_dot_auto :
+    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
   val state_report_dot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
   val is_bottom_abstract_value : Analyse.abstract_value -> bool
+  val full_state_graph_snapshot_auto :
+    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
   val state_report_graph_snapshot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
 end = struct
@@ -5561,9 +5593,42 @@ let rec program_vars
         (Core.maps (Core.scope_vnames_list p)
           (Core.prog_main_name :: Core.prog_procs p));;
 
+let rec analyse_env_for
+  x0 p v = match x0, p, v with
+    Analyse.Sign_Analysis, p, v ->
+      Core.comp (fun a -> Analyse.SignValue a)
+        (Core.analyse_sign_env_for (Core.declared_global p) p v)
+    | Analyse.Interval_Analysis, p, v ->
+        Core.comp (fun a -> Analyse.IntervalValue a)
+          (Core.analyse_interval_td_at (Core.declared_global p)
+            (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+            (Core.prog_main p) v);;
+
 let rec bexp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.bexp_vnames b);;
+
+let rec full_state_node_annotation
+  vars env v =
+    Some (Analysis_GraphViz.Node_Annotation
+           (Analysis_GraphViz.join_gv_nl (Core.map (state_line (env v)) vars),
+             [Core.char_0x73; Core.char_0x68; Core.char_0x61; Core.char_0x70;
+               Core.char_0x65; Core.char_0x3D; Core.char_0x62; Core.char_0x6F;
+               Core.char_0x78; Core.char_0x2C; Core.char_0x73; Core.char_0x74;
+               Core.char_0x79; Core.char_0x6C; Core.char_0x65; Core.char_0x3D;
+               Core.char_0x66; Core.char_0x69; Core.char_0x6C; Core.char_0x6C;
+               Core.char_0x65; Core.char_0x64; Core.char_0x2C; Core.char_0x66;
+               Core.char_0x69; Core.char_0x6C; Core.char_0x6C; Core.char_0x63;
+               Core.char_0x6F; Core.char_0x6C; Core.char_0x6F; Core.char_0x72;
+               Core.char_0x3D; Core.char_0x6C; Core.char_0x69; Core.char_0x67;
+               Core.char_0x68; Core.char_0x74; Core.char_0x67; Core.char_0x72;
+               Core.char_0x65; Core.char_0x65; Core.char_0x6E]));;
+
+let rec full_state_dot_auto
+  kind p =
+    Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
+      Core.prog_main_name (Core.prog_main p)
+      (full_state_node_annotation (program_vars p) (analyse_env_for kind p));;
 
 let rec state_report_node_annotation
   vars report v =
@@ -5588,6 +5653,12 @@ let rec state_report_dot_auto
 let rec is_bottom_abstract_value
   = function Analyse.SignValue s -> Core.is_bot_sign s
     | Analyse.IntervalValue i -> Core.is_bot_ivl i;;
+
+let rec full_state_graph_snapshot_auto
+  kind p =
+    Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      (full_state_node_annotation (program_vars p) (analyse_env_for kind p));;
 
 let rec state_report_graph_snapshot_auto
   kind p =

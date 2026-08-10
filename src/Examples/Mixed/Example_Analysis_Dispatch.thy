@@ -176,11 +176,9 @@ subsection \<open>A program that tells the two domains apart\<close>
 
 text \<open>
   \<open>y := 1\<close> then check \<open>0 < y\<close> (should hold), then \<open>y := 0 - 1\<close> and check
-  \<open>0 < y\<close> again (should now fail): a case where Interval's numeric bounds
-  settle both checks precisely, while Sign's native D/G pipeline reports
-  \<open>Check_Unknown\<close> for both --- the same always-join imprecision
-  \<open>dgEx_inspect\<close> (\<^theory>\<open>Voblint_Examples.Exec_Sign_DG_Run\<close>) already
-  documents for that pipeline, not a new limitation introduced here.
+  \<open>0 < y\<close> again (should now fail): Interval's numeric bounds settle both
+  checks precisely, and so does Sign, at the coarser sign-only granularity
+  --- \<open>SPos\<close> proves the first check, \<open>SNeg\<close> refutes the second.
 \<close>
 
 definition dispatch_demo_prog :: imp_prog where
@@ -194,10 +192,10 @@ definition dispatch_demo_prog :: imp_prog where
        }
      }"
 
-lemma dispatch_demo_sign_unknown:
+lemma dispatch_demo_sign_precise:
   "analyse Sign_Analysis dispatch_demo_prog =
-     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Unknown),
-      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Unknown)]"
+     [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
+      (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted)]"
   by eval
 
 lemma dispatch_demo_interval_precise:
@@ -284,30 +282,25 @@ lemma dispatch_demo_check_cond_rendered:
   "string_of_bexp (Less (N 0) (V (STR ''y''))) = ''0<y''"
   by eval
 
-subsection \<open>Sign: even trivial straight-line code stays Check_Unknown\<close>
+subsection \<open>Sign: trivial straight-line code is precise\<close>
 
 text \<open>
-  Not the precision win one might expect: \<open>x := 5\<close> is exactly \<open>SPos\<close> at the sign level, so a
-  hand-classification would settle \<open>0 < x\<close> outright, and yet \<open>analyse Sign_Analysis\<close> still
-  reports \<open>Check_Unknown\<close> here, on a program with \<open>no\<close> global at all. This is the same
-  always-join imprecision \<open>dgEx_inspect\<close> documents for \<open>dispatch_demo_prog\<close>, just shown to be
-  unconditional: the native D/G pipeline's \<open>analyse_sign_env_for\<close> joins the local answer with
-  the global side-effect slot at \<^emph>\<open>every\<close> node regardless of whether the program declares any
-  global, and an unconstrained global (\<open>STop\<close>) joined with a precise local answer is
-  \<open>STop\<close>/\<open>Check_Unknown\<close>. So \<open>analyse_sign_report\<close> cannot currently produce
-  \<open>Check_Proved\<close>/\<open>Check_Refuted\<close> for \<^emph>\<open>any\<close> program through this API --- a real, pre-existing
-  precision gap in the native D/G pipeline, not a proof gap and not touched by this work; flagged
-  here rather than silently worked around with a cherry-picked example.
+  \<open>x := 5\<close> is exactly \<open>SPos\<close> at the sign level, and \<open>analyse Sign_Analysis\<close> now settles \<open>0 < x\<close>
+  outright from it, on a program with no global at all. The native D/G pipeline's
+  \<open>analyse_sign_env_for\<close> routes each name to the one component that owns it
+  (\<^const>\<open>combine_abs\<close>) instead of unconditionally joining the local answer with the global
+  side-effect slot, so an untouched local's precision is no longer destroyed by the global
+  slot's unrelated \<^term>\<open>STop\<close> default.
 \<close>
 
-lemma sign_straight_line_const_still_unknown:
+lemma sign_straight_line_const_proved:
   "analyse Sign_Analysis (program { void main() { x := 5; __voblint_check(0 < x) } }) =
-     [(Statement 1, Less (N 0) (V (STR ''x'')), Check_Unknown)]"
+     [(Statement 1, Less (N 0) (V (STR ''x'')), Check_Proved)]"
   by eval
 
-lemma sign_straight_line_neg_const_still_unknown:
+lemma sign_straight_line_neg_const_refuted:
   "analyse Sign_Analysis (program { void main() { x := 0 - 5; __voblint_check(0 < x) } }) =
-     [(Statement 1, Less (N 0) (V (STR ''x'')), Check_Unknown)]"
+     [(Statement 1, Less (N 0) (V (STR ''x'')), Check_Refuted)]"
   by eval
 
 subsection \<open>A program with a global, a procedure, and a call\<close>
@@ -749,28 +742,19 @@ definition state_wiring_ex_prog :: imp_prog where
 text \<open>
   \<open>x\<close> is local (no \<open>global\<close> declaration). \<open>analyse_sign_report_for_code\<close>
   builds the per-point environment as
-  \<open>fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))) \<squnion>
-     fun_of_exec_dg_st_for gs (globs (sol (Inr ())))\<close>
-  for every queried name, not only global ones. The local unknown's own
-  \<open>locals\<close> component is precise here (\<open>SPos\<close>, confirmed by evaluating it
-  directly), but the global/side unknown's \<open>globs\<close> component defaults to
-  \<open>STop\<close> for any name it does not itself track --- \<open>x\<close> among them --- so
-  the unconditional \<open>\<squnion>\<close> collapses \<open>SPos \<squnion> STop\<close> back to \<open>STop\<close> for
-  every local name, regardless of what the local unknown computed. This is
-  a precision gap in this D/G instance's report-assembly formula, not a
-  soundness issue (\<open>STop\<close> is a sound over-approximation) and not shared by
-  Interval's report pipeline, which reads a single unified resolved store
-  instead of joining two separately-defaulted components. Pinning \<open>STop\<close>
-  here documents current behavior: routing each name to the one component
-  that actually tracks it, instead of joining both unconditionally, would
-  change this value, so this regression makes that change visible rather
-  than silent.
+  \<open>combine_abs gs (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+     (fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))\<close>,
+  routing every name to the one component that actually owns it: local
+  names read the local unknown, global names read the global/side unknown.
+  \<open>x\<close> is local, so it reads \<open>locals\<close>' own precise \<open>SPos\<close> directly, never
+  touching the global/side unknown's unrelated \<open>STop\<close> default for a name
+  it never tracks.
 \<close>
 
 lemma state_wiring_ex_sign_at_check:
   "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
                              (analyse_with_state Sign_Analysis state_wiring_ex_prog))
-    in f (STR ''x'')) = SignValue STop"
+    in f (STR ''x'')) = SignValue SPos"
   by eval
 
 lemma state_wiring_ex_interval_at_check:
@@ -780,26 +764,17 @@ lemma state_wiring_ex_interval_at_check:
   by eval
 
 text \<open>
-  Root-cause regression for the Sign native D/G pipeline's precision loss on
-  every untouched local, pinned at its actual source rather than at the
-  final report. \<open>unit_step_st\<close> (\<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>),
-  which \<open>unit_dg_spec_st_for\<close> uses for every ordinary transfer step (nop,
-  assign, random, assume, enter), computes \<open>f (d \<squnion> g)\<close> before splitting the
-  result back into local/global halves: the local and global exec states are
-  joined \<^emph>\<open>before\<close> every single step's transfer runs, not only at calls.
-  Since the global/side exec state's own default value for a name it does
-  not track is \<open>STop\<close> (structurally, independent of whether the program
-  declares any \<open>global\<close> at all), any local variable not itself the target
-  of that exact step's write is joined against that \<open>STop\<close> default and
-  loses its prior value. An assignment's own kill-semantics hides this for
-  the variable it writes (\<open>x := 5\<close> sets \<open>x\<close> outright, independent of the
-  polluted input), which is why \<open>state_wiring_ex_prog\<close> above stayed
-  \<open>SPos\<close>-precise for Interval and reached exactly \<open>STop\<close> for Sign; it does
-  not hide for any other variable merely carried through an intervening
-  step. \<open>y := 1\<close> here never reads or writes \<open>x\<close>, and there is no call, no
-  global, and no widening --- yet \<open>x\<close> is \<open>STop\<close> by the check, confirming the
-  loss happens inside the transfer/combine layer itself, not in
-  \<open>analyse_sign_report_for_code\<close>'s later readback join.
+  Root-cause fix witness for the Sign native D/G pipeline, pinned at its
+  actual source rather than at the final report. \<open>unit_step_st\<close>
+  (\<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>), which \<open>unit_dg_spec_st_for\<close>
+  uses for every ordinary transfer step (nop, assign, random, assume,
+  enter), computes \<open>f (combine_resolved_st_q d g)\<close> before splitting the
+  result back into local/global halves: each name is routed to the exec
+  state that owns it, never joined against the other's unrelated default.
+  \<open>y := 1\<close> here never reads or writes \<open>x\<close>, and there is no call, no global,
+  and no widening --- \<open>x\<close> now stays exactly \<open>SPos\<close> by the check, confirming
+  the fix reaches the transfer/combine layer itself, not merely
+  \<open>analyse_sign_report_for_code\<close>'s readback.
 \<close>
 
 definition no_call_two_step_prog :: imp_prog where
@@ -812,25 +787,25 @@ definition no_call_two_step_prog :: imp_prog where
        }
      }"
 
-lemma no_call_two_step_prog_unknown:
+lemma no_call_two_step_prog_proved:
   "analyse Sign_Analysis no_call_two_step_prog =
-     [(Statement 2, Less (N 0) (V (STR ''x'')), Check_Unknown)]"
+     [(Statement 2, Less (N 0) (V (STR ''x'')), Check_Proved)]"
   by eval
 
-lemma no_call_two_step_prog_locals_top:
+lemma no_call_two_step_prog_locals_precise:
   "fun_of_exec_dg_st_for (declared_global no_call_two_step_prog)
      (locals (snd (analyse_sign_for (declared_global no_call_two_step_prog)
-       no_call_two_step_prog) (Inl (Statement 2, ())))) (STR ''x'') = STop"
+       no_call_two_step_prog) (Inl (Statement 2, ())))) (STR ''x'') = SPos"
   by eval
 
 text \<open>
-  The same loss reappears, unsurprisingly, across an actual call boundary:
-  \<open>foo\<close> neither reads nor writes the caller-local \<open>x\<close>, yet \<open>x\<close> is \<open>STop\<close> at
-  every check after the call, for exactly the same reason (the call's own
-  combine step, \<open>unit_combine_step_st_env\<close>, joins each side against \<open>g\<close>
-  before splitting again). Kept as a second, more realistic witness
-  alongside \<open>no_call_two_step_prog_locals_top\<close>, which isolates the same
-  mechanism without any interprocedural machinery at all.
+  The same fix carries across an actual call boundary: \<open>foo\<close> neither reads
+  nor writes the caller-local \<open>x\<close>, and \<open>x\<close> now stays precise at the check
+  after the call, for exactly the same reason (the call's own combine step,
+  \<open>unit_combine_step_st_env\<close>, routes the caller's locals from \<open>dc\<close> directly
+  instead of joining them against \<open>g\<close>). Kept as a second, more realistic
+  witness alongside \<open>no_call_two_step_prog_locals_precise\<close>, which isolates
+  the same mechanism without any interprocedural machinery at all.
 \<close>
 
 definition dg_probe_prog :: imp_prog where
@@ -850,11 +825,47 @@ definition dg_probe_prog :: imp_prog where
        }
      }"
 
-lemma dg_probe_prog_all_unknown:
+lemma dg_probe_prog_locals_proved_global_unknown:
   "analyse Sign_Analysis dg_probe_prog =
-     [(Statement 5, Less (N 0) (V (STR ''x'')), Check_Unknown),
+     [(Statement 5, Less (N 0) (V (STR ''x'')), Check_Proved),
       (Statement 6, Less (N 0) (V (STR ''g'')), Check_Unknown),
-      (Statement 7, Less (N 0) (V (STR ''y'')), Check_Unknown)]"
+      (Statement 7, Less (N 0) (V (STR ''y'')), Check_Proved)]"
+  by eval
+
+text \<open>
+  \<open>dg_probe_prog\<close>'s \<open>g\<close> above is \<open>Check_Unknown\<close> not because any D/G routing
+  loses precision, but because \<^const>\<open>cinit_sign_st\<close> seeds every declared
+  global at \<open>SZero\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec\<close>), and the
+  flow-insensitive global summary (\<^const>\<open>TD_side_always_join_Interp_solve\<close>,
+  the \<open>join\<close> discipline) folds that seed in as a real contribution alongside
+  every \<open>Side\<close> a write publishes --- it cannot tell "before this write" from
+  "after" apart, so soundness requires covering both. \<open>join_sign SZero SPos =
+  SNonNeg\<close>, and \<open>0 < g\<close> is genuinely undecided at \<open>SNonNeg\<close>: this is the
+  flow-insensitive model working as designed, not a residual gap in the same
+  fix as \<open>no_call_two_step_prog\<close>/\<open>dg_probe_prog\<close> above. The witness below pins
+  the actual semantic reason (the joined summary value itself), not merely
+  the report's \<open>Check_Unknown\<close>, which follows from it.
+\<close>
+
+definition global_initial_value_remains_in_summary_prog :: imp_prog where
+  "global_initial_value_remains_in_summary_prog =
+     program {
+       global g;
+       void main() {
+         g := 5;
+         __voblint_check(0 < g)
+       }
+     }"
+
+lemma global_initial_value_remains_in_summary_prog_summary_nonneg:
+  "fun_of_exec_dg_st_for (declared_global global_initial_value_remains_in_summary_prog)
+     (globs (snd (analyse_sign_for (declared_global global_initial_value_remains_in_summary_prog)
+       global_initial_value_remains_in_summary_prog) (Inr ()))) (STR ''g'') = SNonNeg"
+  by eval
+
+lemma global_initial_value_remains_in_summary_prog_check_unknown:
+  "analyse Sign_Analysis global_initial_value_remains_in_summary_prog =
+     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Unknown)]"
   by eval
 
 end

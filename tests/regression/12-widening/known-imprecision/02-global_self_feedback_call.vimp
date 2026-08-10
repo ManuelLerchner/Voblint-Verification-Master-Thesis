@@ -1,5 +1,5 @@
 // PARAM: --analysis interval
-// Call-mediated sibling of 01-global-self-feedback.vimp: the same
+// Call-mediated sibling of 01-global_self_feedback.vimp: the same
 // self-referential global-summary feedback (total's write depends on
 // total's own current value), but routed through a procedure call's
 // enter/combine handling rather than a direct assignment. Both fixtures

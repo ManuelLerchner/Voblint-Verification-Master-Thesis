@@ -2722,9 +2722,16 @@ let rec compile_prog
 let rec prog_cfg
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
+let rec combine_resolved_st_q _A
+  (Abs_resolved_st xa) (Abs_resolved_st x) =
+    Abs_resolved_st (combine_resolved_st _A xa x);;
+
 let rec unit_step_st _A
   f d g =
-    (let res = f (sup_resolved_st_qa _A d g) in
+    (let res =
+       f (combine_resolved_st_q
+           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot d g)
+       in
       (restrict_global_resolved_q
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res,
         restrict_local_resolved_q
@@ -2829,6 +2836,8 @@ let rec point
 
 let rec rho (Ug_state_ext (rho, more)) = rho;;
 
+let rec combine_abs gs sc se = (fun x -> (if gs x then se x else sc x));;
+
 let rec etf_st_enter
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
@@ -2885,10 +2894,6 @@ let rec make_side_rhs_tree_eff_st _B
 let rec side_cfg_T_eff_st _B
   g etf bot0_st s0_st gseed =
     make_side_rhs_tree_eff_st _B g etf bot0_st s0_st gseed;;
-
-let rec combine_resolved_st_q _A
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (combine_resolved_st _A xa x);;
 
 let rec sigma_update
   sigmaa (State_ext (c, infl, stabl, sigma, more)) =
@@ -3101,8 +3106,8 @@ let rec unit_combine_step_st_assign_for _A
        combine_assign_resolved_q
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs dst
          (lookup_resolved_st_q
-           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-           (sup_resolved_st_qa _A de g) (location_of gs ret_var))
+           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de
+           (location_of gs ret_var))
          (sup_resolved_st_qa _A (fst merged) (snd merged))
        in
       (restrict_global_resolved_q
@@ -3114,8 +3119,7 @@ let rec unit_combine_step_st_env _A
   dc de g =
     (let m =
        combine_resolved_st_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-         (sup_resolved_st_qa _A dc g) (sup_resolved_st_qa _A de g)
+         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot dc g
        in
       (restrict_global_resolved_q
          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot m,
@@ -3177,7 +3181,7 @@ let rec analyse_sign_report_for
     (let sol = snd (analyse_sign_for gs p) in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          sup_fun semilattice_sup_sign
+          combine_abs gs
             (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
             (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
         sign_classify_check);;
@@ -3454,7 +3458,7 @@ let rec analyse_sign_report_for_with_state
     (let sol = snd (analyse_sign_for gs p) in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          sup_fun semilattice_sup_sign
+          combine_abs gs
             (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
             (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
         sign_classify_check);;

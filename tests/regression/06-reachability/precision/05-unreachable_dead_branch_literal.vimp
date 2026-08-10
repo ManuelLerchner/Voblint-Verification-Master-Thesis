@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// Same literal check(false)/check(true) idiom as
+// 04-unreachable_after_return_literal.vimp, but the dead code is an
+// infeasible branch (exact guard) instead of code after return -- the
+// other NOWARN mechanism 03-infeasible_guard_nowarn.vimp exercises with a
+// real condition instead of the literal sentinel.
+void main() {
+  x := 5;
+  if (x < 0) {
+    __voblint_check(false) // NOWARN (unreachable)
+  } else {
+    __voblint_check(true) // PROVED
+  }
+}

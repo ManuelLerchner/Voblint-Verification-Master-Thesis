@@ -1,0 +1,10 @@
+// PARAM: --analysis sign
+// A declared global's value before any write is its documented
+// Goblint-style zero-initialized default (cinit_sign_st), read back
+// exactly -- contrast known-imprecision/01-global_var.vimp, where the
+// same default becomes an unavoidable extra join contribution the moment
+// the global is actually written.
+global g;
+void main() {
+  __voblint_check(g == 0) // PROVED
+}

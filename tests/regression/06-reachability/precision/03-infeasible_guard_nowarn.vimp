@@ -10,8 +10,8 @@
 void main() {
   x := 5;
   if (x < 0) {
-    __voblint_check(0 < x) // NOWARN
+    __voblint_check(false) // NOWARN
   } else {
-    __voblint_check(0 < x) // PROVED
+    __voblint_check(true) // PROVED
   }
 }

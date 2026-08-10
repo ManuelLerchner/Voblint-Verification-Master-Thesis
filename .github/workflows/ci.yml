@@ -329,6 +329,12 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Regression fixture conventions (no build needed -- fail fast)
+        run: pixi run regression-lint
+
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
         with:
@@ -338,17 +344,14 @@ jobs:
           CLI/property-test parser generator)
         run: opam install -y zarith menhir
 
-      - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
-
       - name: Compile and run codegen/regression drivers against codegen/generated/
         # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
         # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
-        # a plain `pixi run regression` sub-shell then can't find ocamlfind even
-        # though opam install (also just `opam`, not a switch binary) succeeded
+        # a plain `pixi run codegen-regression` sub-shell then can't find ocamlfind
+        # even though opam install (also just `opam`, not a switch binary) succeeded
         # one step earlier. `opam exec --` activates the switch environment for
         # this invocation.
-        run: opam exec -- pixi run regression
+        run: opam exec -- pixi run codegen-regression
 
       - name: External .vimp regression corpus (source -> parser -> analyse -> checks)
         run: opam exec -- pixi run cli-test

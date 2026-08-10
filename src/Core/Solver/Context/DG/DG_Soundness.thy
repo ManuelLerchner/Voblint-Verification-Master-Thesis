@@ -1693,18 +1693,25 @@ subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
 
 subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
 
+text \<open>
+  \<open>gamma_unit gs d g\<close> is the meaning \<^const>\<open>unit_step_for\<close> actually assumes of a
+  point's \<open>D\<close>/\<open>G\<close> pair: \<^const>\<open>combine_abs\<close> routes each name to the one component
+  that owns it (\<open>D\<close> for locals, \<open>G\<close> for globals), never the raw lattice join, so an
+  untouched name's precision in its owning component is not destroyed by the other
+  component's unrelated default.
+\<close>
 definition gamma_unit ::
-  "'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
-  "gamma_unit d g = \<lbrakk>d \<squnion> g\<rbrakk>"
+  "gamma_unit gs d g = \<lbrakk>combine_abs gs d g\<rbrakk>"
 
 lemma gamma_unit_mono:
   assumes "d \<le> d'" and "g \<le> g'"
-  shows "gamma_unit d g \<subseteq> gamma_unit d' g'"
+  shows "gamma_unit gs d g \<subseteq> gamma_unit gs d' g'"
   unfolding gamma_unit_def
-  by (rule gamma_state_mono) (rule sup_mono[OF assms])
+  by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_abs_def le_fun_def\<close>)
 
-lemma gamma_unitD [dest]: "s \<in> gamma_unit d g \<Longrightarrow> s \<in> \<lbrakk>d \<squnion> g\<rbrakk>"
+lemma gamma_unitD [dest]: "s \<in> gamma_unit gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_abs gs d g\<rbrakk>"
   unfolding gamma_unit_def by simp
 
 text \<open>
@@ -1712,33 +1719,59 @@ text \<open>
   full equality (not just the membership direction \<open>gamma_unitD\<close> gives) can
   cite this instead of reaching for \<open>gamma_unit_def\<close> directly.
 \<close>
-lemma gamma_unit_eq: "gamma_unit d g = \<lbrakk>d \<squnion> g\<rbrakk>"
+lemma gamma_unit_eq: "gamma_unit gs d g = \<lbrakk>combine_abs gs d g\<rbrakk>"
   unfolding gamma_unit_def ..
 
 
+text \<open>
+  Every call site owns \<open>ret_var\<close> as its own compiler-internal name, never a
+  user-declared global (\<^const>\<open>reserved_ret_var\<close>); that is what lets the
+  combine step read the return value straight out of \<open>de\<close> instead of routing
+  it through \<^const>\<open>combine_abs\<close> a second time.
+\<close>
+lemma combine_abs_combine_abs_left [simp]:
+  "combine_abs gs (combine_abs gs dc g) (combine_abs gs de g) = combine_abs gs dc g"
+  by (auto simp: combine_abs_def)
+
+lemma combine_abs_local_eq [simp]:
+  "\<not> gs x \<Longrightarrow> combine_abs gs sc se x = sc x"
+  by (simp add: combine_abs_def)
+
+text \<open>The \<^const>\<open>combine_abs\<close> analogue of \<open>restrict_local_for_global_join\<close>:
+  splitting a state into its local/global halves and routing them back through
+  \<^const>\<open>combine_abs\<close> recovers the original state exactly, since each half is
+  already zero outside the location it owns.\<close>
+lemma combine_abs_restrict_id [simp]:
+  "combine_abs gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
+  by (simp add: combine_abs_for_eq_restrict restrict_local_for_global_join)
+
 lemma gamma_unit_combine_sound_for:
-  assumes sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
+  assumes reserved: "reserved_ret_var gs"
+    and sc: "s \<in> gamma_unit gs dc g" and tc: "t \<in> gamma_unit gs de g"
   shows "combine_collect gs dst s t \<in>
-           (case dgs_combine (unit_dg_spec_for gs tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
+           (case dgs_combine (unit_dg_spec_for gs tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
-  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
-  have "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+  have sc': "s \<in> \<lbrakk>combine_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
+  have tc': "t \<in> \<lbrakk>combine_abs gs de g\<rbrakk>" using gamma_unitD[OF tc] .
+  have "combine_collect gs dst s t \<in>
+          \<lbrakk>combine_collect_abs gs dst (combine_abs gs dc g) (combine_abs gs de g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
-    unfolding dgs_combine_unit_dg_spec_for gamma_unit_def
-    by (simp add: Let_def restrict_local_for_global_join combine_abs_for_eq_restrict)
+    using reserved
+    unfolding dgs_combine_unit_dg_spec_for gamma_unit_def combine_collect_abs_def
+      reserved_ret_var_def
+    by (simp add: Let_def)
 qed
 
 lemma gamma_unit_enter_sound_for:
   assumes sound: "sound_transfer_for gs tf"
-    and sc: "s \<in> gamma_unit dc g"
+    and sc: "s \<in> gamma_unit gs dc g"
   shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (unit_dg_spec_for gs tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit d' g')"
+           (case dgs_enter (unit_dg_spec_for gs tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have sc': "s \<in> \<lbrakk>combine_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
   have "call_enter gs (CallEdge dst pars args) s \<in>
-      \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
+      \<lbrakk>tf_enter tf pars args (combine_abs gs dc g)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
@@ -1748,7 +1781,8 @@ qed
 
 lemma sound_dg_spec_unit_for:
   assumes sound: "sound_transfer_for gs tf"
-  shows "sound_dg_spec (unit_dg_spec_for gs tf) gamma_unit gs"
+    and reserved: "reserved_ret_var gs"
+  shows "sound_dg_spec (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
   apply unfold_locales
   subgoal for d d' g g'
     by (rule gamma_unit_mono)
@@ -1757,7 +1791,7 @@ lemma sound_dg_spec_unit_for:
     using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
     by (simp add: Let_def restrict_local_for_global_join)
   subgoal premises prems
-    by (rule gamma_unit_combine_sound_for[OF prems])
+    by (rule gamma_unit_combine_sound_for[OF reserved prems])
   subgoal premises prems
     by (rule gamma_unit_enter_sound_for[OF sound prems])
   done
@@ -1765,20 +1799,51 @@ lemma sound_dg_spec_unit_for:
 subsection \<open>The homogeneous analysis under an independent placement policy\<close>
 
 text \<open>
-  \<open>unit_dg_spec_for\<close> packages every D/G step through \<^const>\<open>restrict_local_for\<close>/
-  \<^const>\<open>restrict_global_for\<close>, so a location's storage class (\<open>gs\<close>) alone decides
-  whether its freshly written value survives for the next local read (kept in D)
-  or is dissolved back into the joined side value (kept only in G). \<open>gamma_unit\<close>
-  never inspects that split -- \<open>gamma_unit d g = \<lbrakk>d \<squnion> g\<rbrakk>\<close> only cares about the
-  join -- so any split whose two projections join back to the pre-split value is
-  just as sound as the storage-derived one. \<^const>\<open>unit_dg_spec_placed\<close> already
+  \<open>unit_dg_spec_placed\<close> packages every D/G step through the raw lattice join
+  (\<open>d \<squnion> g\<close>) rather than \<^const>\<open>combine_abs\<close>'s ownership routing: with a
+  non-exclusive covering, a name can legitimately be tracked by both
+  \<open>keep_local\<close> and \<open>publish_side\<close>, so there is no single owning component to
+  route to, and the join is the only combinator that stays sound for every
+  covering. \<open>gamma_join\<close> is that join-based target: \<open>gamma_join d g = \<lbrakk>d \<squnion>
+  g\<rbrakk>\<close> never inspects the split, so any split whose two projections join back
+  to the pre-split value is just as sound as any other. \<^const>\<open>unit_dg_spec_placed\<close>
   exposes that split as two independent predicates, \<open>keep_local\<close>/\<open>publish_side\<close>;
   the only requirement is that every location is covered by at least one of them.
   Unlike \<^const>\<open>wf_split\<close>, covering does not demand exclusivity: a location may
   sit in both, which is exactly the shape a privatized global needs (kept
   precisely in D for the current activation and also published to G for other
-  activations).
+  activations). This is a genuinely different target from \<open>gamma_unit\<close>: the
+  exclusive, storage-derived split that \<^const>\<open>unit_dg_spec_for\<close> uses can route
+  by ownership because it never has an overlapping name to arbitrate.
 \<close>
+
+definition gamma_join ::
+  "'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
+where
+  "gamma_join d g = \<lbrakk>d \<squnion> g\<rbrakk>"
+
+lemma gamma_join_mono:
+  assumes "d \<le> d'" and "g \<le> g'"
+  shows "gamma_join d g \<subseteq> gamma_join d' g'"
+  unfolding gamma_join_def
+  by (rule gamma_state_mono) (rule sup_mono[OF assms])
+
+lemma gamma_joinD [dest]: "s \<in> gamma_join d g \<Longrightarrow> s \<in> \<lbrakk>d \<squnion> g\<rbrakk>"
+  unfolding gamma_join_def by simp
+
+text \<open>\<open>gamma_unit\<close> refines \<open>gamma_join\<close>: routing to the owning component is always
+  at most as permissive as joining both, since the routed value is one of the two
+  join operands. The two targets are genuinely different (an untouched name still
+  loses precision under \<open>gamma_join\<close> the way the issue this file's \<open>unit_dg_spec_for\<close>
+  chain fixes described), so this is a one-way refinement, not an equivalence --
+  \<open>gamma_join\<close> stays the sound target for \<^const>\<open>unit_dg_spec_placed\<close>'s non-exclusive
+  covering, where no single component owns every name.\<close>
+lemma combine_abs_le_sup: "combine_abs gs sc se \<le> sc \<squnion> se"
+  by (auto simp: combine_abs_def le_fun_def)
+
+lemma gamma_unit_subset_gamma_join: "gamma_unit gs d g \<subseteq> gamma_join d g"
+  unfolding gamma_unit_def gamma_join_def
+  by (rule gamma_state_mono[OF combine_abs_le_sup])
 
 lemma project_component_cover_sup:
   fixes sigma :: "'a::bounded_semilattice_sup_bot abs_state"
@@ -1810,69 +1875,58 @@ proof -
     by (simp add: env_join project_component_cover_sup[OF cover])
 qed
 
-lemma gamma_unit_combine_sound_placed:
+lemma gamma_join_combine_sound_placed:
   assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
-    and sc: "s \<in> gamma_unit dc g" and tc: "t \<in> gamma_unit de g"
+    and sc: "s \<in> gamma_join dc g" and tc: "t \<in> gamma_join de g"
   shows "combine_collect source_global dst s t \<in>
-           (case dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit d' g')"
+           (case dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g of (g', d') \<Rightarrow> gamma_join d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
-  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_unitD[OF tc] .
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
+  have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_joinD[OF tc] .
   have "combine_collect source_global dst s t \<in> \<lbrakk>combine_collect_abs source_global dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
-    unfolding dgs_combine_unit_dg_spec_placed[OF cover] gamma_unit_def
+    unfolding dgs_combine_unit_dg_spec_placed[OF cover] gamma_join_def
     by (simp add: Let_def project_component_cover_sup2[OF cover])
 qed
 
-lemma gamma_unit_enter_sound_placed:
+lemma gamma_join_enter_sound_placed:
   assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
     and sound: "sound_transfer_for gs tf"
-    and sc: "s \<in> gamma_unit dc g"
+    and sc: "s \<in> gamma_join dc g"
   shows "call_enter gs (CallEdge dst pars args) s \<in>
-           (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit d' g')"
+           (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) pars args dc g of (g', d') \<Rightarrow> gamma_join d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_unitD[OF sc] .
+  have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
   have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
-    unfolding dgs_enter_unit_dg_spec_placed unit_step_placed_def gamma_unit_def
+    unfolding dgs_enter_unit_dg_spec_placed unit_step_placed_def gamma_join_def
     by (simp add: Let_def project_component_cover_sup2[OF cover])
 qed
 
-text \<open>The placed generalization of \<open>sound_dg_spec_unit_for\<close>: covering
-  is the only condition \<open>keep_local\<close>/\<open>publish_side\<close> must satisfy, so a
-  non-exclusive (conjunctive) placement is sound whenever an exclusive one
-  would be.\<close>
+text \<open>The placed generalization for an arbitrary covering placement: covering
+  is the only condition \<open>keep_local\<close>/\<open>publish_side\<close> must satisfy.\<close>
 theorem sound_dg_spec_unit_placed:
   assumes sound: "sound_transfer_for gs tf"
     and cover: "\<forall>x. publish_side x \<or> keep_local x"
-  shows "sound_dg_spec (unit_dg_spec_placed gs keep_local publish_side tf) gamma_unit gs"
+  shows "sound_dg_spec (unit_dg_spec_placed gs keep_local publish_side tf) gamma_join gs"
   apply unfold_locales
   subgoal for d d' g g'
-    by (rule gamma_unit_mono)
+    by (rule gamma_join_mono)
   subgoal for a d g
-    unfolding gamma_unit_def dg_spec_step_unit_placed unit_step_placed_def
+    unfolding gamma_join_def dg_spec_step_unit_placed unit_step_placed_def
     using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
     by (simp add: Let_def project_component_cover_sup2[OF cover])
   subgoal premises prems
-    by (rule gamma_unit_combine_sound_placed[OF cover prems])
+    by (rule gamma_join_combine_sound_placed[OF cover prems])
   subgoal premises prems
-    by (rule gamma_unit_enter_sound_placed[OF cover sound prems])
+    by (rule gamma_join_enter_sound_placed[OF cover sound prems])
   done
 
 lemma classic_split_cover:
   "\<forall>x. classic_split_publish_side storage x \<or> classic_split_keep_local storage x"
   unfolding classic_split_publish_side_def classic_split_keep_local_def by simp
-
-text \<open>The exclusive, storage-derived split (\<open>sound_dg_spec_unit_for\<close>) is the
-  classic instance of \<open>sound_dg_spec_unit_placed\<close>: no separate proof is
-  needed for it, and none is needed for any other covering placement either.\<close>
-corollary sound_dg_spec_unit_for_from_placed:
-  assumes "sound_transfer_for gs tf"
-  shows "sound_dg_spec (unit_dg_spec_for gs tf) gamma_unit gs"
-  unfolding unit_dg_spec_for_classic
-  by (rule sound_dg_spec_unit_placed[OF assms classic_split_cover])
 
 end

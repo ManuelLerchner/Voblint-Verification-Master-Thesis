@@ -39,14 +39,15 @@ running the Interval analysis over it (see "Running the CLI" below) proves
 the check on the widened/narrowed fixpoint:
 
 ```bash
-$ pixi run voblint --analysis interval tests/regression/02-control-flow/02-while_loop.vimp
+$ pixi run voblint --analysis interval tests/regression/02-control-flow/precision/02-while_loop.vimp
 8:3  pp3        0<x                  PROVED   x=[10,10]
 ```
 
-`--dot` renders the same solved, per-node abstract state as a GraphViz CFG:
+`--dot` renders the solved CFG as GraphViz, with the computed abstract state
+shown at each check node:
 
 ```bash
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/02-while_loop.vimp \
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/02-while_loop.vimp \
   | dot -Tpng -o while_loop_cfg.png
 ```
 
@@ -56,7 +57,7 @@ The same rendering on a branch/join program shows the interval domain merging
 both arms:
 
 ```bash
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp \
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp \
   | dot -Tpng -o if_else_cfg.png
 ```
 
@@ -64,8 +65,11 @@ pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-i
 
 Each rendering embeds the source alongside the CFG, splits nodes into
 per-activation clusters (context-sensitivity, see "Why Voblint?" above), and
-shades the checked node by its verdict. See "Running the CLI" below for
-`--graph-snapshot` (a DOT-free textual alternative) and `--parse-only`.
+shades the checked node by its verdict. `--dot-full` renders every node with
+its own computed abstract state instead of only check nodes -- useful for
+inspecting the fixpoint at a program point with no check at all, e.g. mid-loop.
+See "Running the CLI" below for `--graph-snapshot` (a DOT-free textual
+alternative) and `--parse-only`.
 
 ## Foundations
 
@@ -252,7 +256,7 @@ for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
 | `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
 | `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
 | `codegen-ocaml-check` | Isabelle, `AFP`, opam | Compile-check the generated OCaml |
-| `regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
+| `codegen-regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
 | `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
 | `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
 | `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
@@ -339,7 +343,7 @@ AFP=/path/to/afp/thys pixi run codegen-check
 # codegen/regression/ against codegen/generated/, and check its output
 # against the values already proved by Example_Analysis_Dispatch.thy's
 # dispatch_demo_sign_unknown / dispatch_demo_interval_precise
-pixi run regression
+pixi run codegen-regression
 ```
 
 Generated sources are tracked under `codegen/generated/`; do not hand-edit
@@ -347,7 +351,8 @@ them. `codegen/regression/ocaml/` holds the hand-written driver that
 exercises the generated code and compares it against the Isabelle-proved
 expected output -- so the generated OCaml is checked against the same
 theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
-codegen-check` and `pixi run regression` run in CI (`.github/workflows/ci.yml`).
+codegen-check` and `pixi run codegen-regression` run in CI
+(`.github/workflows/ci.yml`).
 
 ### Running the analyzer (`voblint` CLI)
 
@@ -359,15 +364,20 @@ extra arguments after the task name go straight to `cli/voblint`, not to pixi:
 
 ```bash
 # Check report: one line per __voblint_check, in source order
-pixi run voblint --analysis interval tests/regression/00-sanity/01-straight_line_proved.vimp
+pixi run voblint --analysis interval tests/regression/00-sanity/precision/01-straight_line_proved.vimp
 
 # Same analysis, GraphViz rendering of the solved, context-split CFG instead
-pixi run voblint --analysis interval --dot tests/regression/02-control-flow/01-if_else.vimp > cfg.dot
+# (state shown at check nodes only)
+pixi run voblint --analysis interval --dot tests/regression/02-control-flow/precision/01-if_else.vimp > cfg.dot
 dot -Tsvg cfg.dot -o cfg.svg   # requires graphviz's `dot` on PATH
+
+# Same rendering, but every node carries its own computed abstract state,
+# not just check nodes -- useful with no check nearby, e.g. mid-loop
+pixi run voblint --analysis interval --dot-full tests/regression/02-control-flow/precision/02-while_loop.vimp > cfg.dot
 
 # Deterministic textual CFG snapshot (clusters/nodes/edges) with no GraphViz
 # dependency -- what the regression corpus embeds as expected --graph-snapshot output
-pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/01-if_else.vimp
+pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/precision/01-if_else.vimp
 
 # Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
 pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp

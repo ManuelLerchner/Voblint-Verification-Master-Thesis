@@ -14,20 +14,22 @@ text \<open>
 
 context
   fixes gs :: "vname \<Rightarrow> bool"
+  assumes reserved: "reserved_ret_var gs"
 begin
 
-interpretation ivl_dg: sound_dg_spec "unit_dg_spec_for gs (ivl_tf_for gs)" gamma_unit gs
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
+interpretation ivl_dg: sound_dg_spec "unit_dg_spec_for gs (ivl_tf_for gs)" "gamma_unit gs" gs
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for reserved])
 
 end
 
 subsection \<open>Native endpoint\<close>
 
 definition ivl_dg_gamma ::
-  "(pp \<times> unit + unit \<Rightarrow> (ivl abs_state, ivl abs_state) dg_state)
+  "(vname \<Rightarrow> bool)
+   \<Rightarrow> (pp \<times> unit + unit \<Rightarrow> (ivl abs_state, ivl abs_state) dg_state)
    \<Rightarrow> pp \<Rightarrow> store set"
 where
-  "ivl_dg_gamma \<equiv> sound_dg_spec.dg_gamma gamma_unit"
+  "ivl_dg_gamma gs \<equiv> sound_dg_spec.dg_gamma (gamma_unit gs)"
 
 definition ivl_dg_generator ::
   "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state
@@ -43,12 +45,13 @@ text \<open>
 \<close>
 locale ivl_dg_api =
   fixes gs :: "vname \<Rightarrow> bool"
+  assumes reserved: "reserved_ret_var gs"
 
-sublocale ivl_dg_api \<subseteq> sound_dg_spec_ltr_for "unit_dg_spec_for gs (ivl_tf_for gs)" gamma_unit gs
-  rewrites "sound_dg_spec.dg_gamma gamma_unit = ivl_dg_gamma"
+sublocale ivl_dg_api \<subseteq> sound_dg_spec_ltr_for "unit_dg_spec_for gs (ivl_tf_for gs)" "gamma_unit gs" gs
+  rewrites "sound_dg_spec.dg_gamma (gamma_unit gs) = ivl_dg_gamma gs"
        and "sound_dg_spec.dg_gen (unit_dg_spec_for gs (ivl_tf_for gs)) = ivl_dg_generator gs"
   apply (unfold sound_dg_spec_ltr_for_def)
-   apply (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
+   apply (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for reserved])
   apply (simp add: ivl_dg_gamma_def)
   apply (simp add: ivl_dg_generator_def)
   done
@@ -65,8 +68,8 @@ theorem ivl_dg_post_solution_collect_sound:
     and cover: "vars_cover g vars"
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
-    and sound0: "S0 \<subseteq> \<lbrakk>s0d \<squnion> s0g\<rbrakk>"
-  shows "ltr_collect gs g S0 v \<subseteq> ivl_dg_gamma sigma v"
+    and sound0: "S0 \<subseteq> \<lbrakk>combine_abs gs s0d s0g\<rbrakk>"
+  shows "ltr_collect gs g S0 v \<subseteq> ivl_dg_gamma gs sigma v"
   by (rule dg_post_solution_collect_sound_ltr_for
         [OF pp cover finI finC sound0[folded gamma_unit_def]])
 

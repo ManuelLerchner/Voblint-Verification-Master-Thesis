@@ -8,7 +8,7 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 # by task grouping. The OCaml toolchain stays on opam:
 # conda-forge's ocaml-findlib and ocaml-zarith have no osx-arm64 build, so
 # pixi cannot be the sole toolchain manager for those on Apple Silicon.
-# Tasks that call into them (regression, cli-build, property-build, ...)
+# Tasks that call into them (codegen-regression, cli-build, property-build, ...)
 # are plain shell/OCaml invocations that rely on those tools already being
 # on PATH, not on a pixi-managed OCaml environment.
 
@@ -88,12 +88,16 @@ jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = ["vendor"] }
 codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = ["vendor"] }
 codegen-check = { cmd = "git diff --exit-code -- codegen/generated/", depends-on = ["codegen"] }
 codegen-ocaml-check = { cmd = "bash scripts/mk/codegen-ocaml-check.sh", depends-on = ["vendor"] }
-regression = "bash scripts/mk/regression.sh"
+codegen-regression = "bash scripts/mk/codegen-regression.sh"
 
 # voblint CLI
 cli-build = "bash scripts/mk/cli-build.sh"
 cli-test = { cmd = "python3 tests/run.py", depends-on = ["cli-build"] }
 voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
+# Static checks over tests/regression/ fixture source -- no CLI build, no
+# OCaml, so this fails fast before cli-test's build cost. See tests/run.py's
+# lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
+regression-lint = "python3 tests/run.py --lint"
 
 # Everything CI runs, under one name. Spans all four features (lint,
 # grammar, test, and build's plain isabelle/ocaml calls), so this only
@@ -103,7 +107,8 @@ ci = { depends-on = [
   "grammar-check",
   "build",
   "codegen-check",
+  "regression-lint",
   "cli-test",
-  "regression",
+  "codegen-regression",
   "property",
 ] }

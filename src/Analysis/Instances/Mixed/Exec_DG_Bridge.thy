@@ -581,7 +581,7 @@ text \<open>
 definition unit_step_st ::
   "(('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st) \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
 where
-  "unit_step_st f d g = (let res = f (d \<squnion> g) in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
+  "unit_step_st f d g = (let res = f (combine_resolved_st_q d g) in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
 
 text \<open>Executable mirror of the abstract-side \<^const>\<open>unit_combine_step_env_for\<close>/
   \<^const>\<open>unit_combine_step_assign_for\<close> split.\<close>
@@ -589,7 +589,7 @@ definition unit_combine_step_st_env ::
   "('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
 where
   "unit_combine_step_st_env dc de g =
-     (let m = combine_resolved_st_q (dc \<squnion> g) (de \<squnion> g)
+     (let m = combine_resolved_st_q dc g
       in (restrict_global_resolved_q m, restrict_local_resolved_q m))"
 
 lemma unit_step_st_commute_for:
@@ -612,7 +612,7 @@ definition unit_combine_step_st_assign_for ::
 where
   "unit_combine_step_st_assign_for gs dst de g merged =
      (let res = combine_assign_resolved_q gs dst
-                  (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var))
+                  (lookup_resolved_st_q de (location_of gs ret_var))
                   (fst merged \<squnion> snd merged)
       in (restrict_global_resolved_q res, restrict_local_resolved_q res))"
 
@@ -646,63 +646,63 @@ text \<open>
   record/\<open>Let\<close> unfold at each site.\<close>
 
 lemma fst_unit_step_st [simp]:
-  "fst (unit_step_st f d g) = restrict_global_resolved_q (f (d \<squnion> g))"
+  "fst (unit_step_st f d g) = restrict_global_resolved_q (f (combine_resolved_st_q d g))"
   unfolding unit_step_st_def Let_def by simp
 
 lemma snd_unit_step_st [simp]:
-  "snd (unit_step_st f d g) = restrict_local_resolved_q (f (d \<squnion> g))"
+  "snd (unit_step_st f d g) = restrict_local_resolved_q (f (combine_resolved_st_q d g))"
   unfolding unit_step_st_def Let_def by simp
 
 lemma fst_dgs_nop_for:
   "fst (dgs_nop (unit_dg_spec_st_for gs tf_st enter_st) d g)
-     = restrict_global_resolved_q (tf_st EA_Nop (d \<squnion> g))"
+     = restrict_global_resolved_q (tf_st EA_Nop (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma snd_dgs_nop_for:
   "snd (dgs_nop (unit_dg_spec_st_for gs tf_st enter_st) d g)
-     = restrict_local_resolved_q (tf_st EA_Nop (d \<squnion> g))"
+     = restrict_local_resolved_q (tf_st EA_Nop (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma fst_dgs_assign_for:
   "fst (dgs_assign (unit_dg_spec_st_for gs tf_st enter_st) x e d g)
-     = restrict_global_resolved_q (tf_st (EA_Assign x e) (d \<squnion> g))"
+     = restrict_global_resolved_q (tf_st (EA_Assign x e) (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma snd_dgs_assign_for:
   "snd (dgs_assign (unit_dg_spec_st_for gs tf_st enter_st) x e d g)
-     = restrict_local_resolved_q (tf_st (EA_Assign x e) (d \<squnion> g))"
+     = restrict_local_resolved_q (tf_st (EA_Assign x e) (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma fst_dgs_enter_for:
   "fst (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
-     = restrict_global_resolved_q (enter_st xs es (d \<squnion> g))"
+     = restrict_global_resolved_q (enter_st xs es (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma snd_dgs_enter_for:
   "snd (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
-     = restrict_local_resolved_q (enter_st xs es (d \<squnion> g))"
+     = restrict_local_resolved_q (enter_st xs es (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
 lemma fst_dgs_combine_env_for:
   "fst (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) dc de g)
-     = restrict_global_resolved_q (combine_resolved_st_q (dc \<squnion> g) (de \<squnion> g))"
+     = restrict_global_resolved_q (combine_resolved_st_q dc g)"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_env_def Let_def by simp
 
 lemma snd_dgs_combine_env_for:
   "snd (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) dc de g)
-     = restrict_local_resolved_q (combine_resolved_st_q (dc \<squnion> g) (de \<squnion> g))"
+     = restrict_local_resolved_q (combine_resolved_st_q dc g)"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_env_def Let_def by simp
 
 lemma fst_dgs_combine_assign_for:
   "fst (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) dst de g merged)
      = restrict_global_resolved_q (combine_assign_resolved_q gs dst
-         (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
+         (lookup_resolved_st_q de (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_assign_for_def Let_def by simp
 
 lemma snd_dgs_combine_assign_for:
   "snd (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) dst de g merged)
      = restrict_local_resolved_q (combine_assign_resolved_q gs dst
-         (lookup_resolved_st_q (de \<squnion> g) (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
+         (lookup_resolved_st_q de (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_assign_for_def Let_def by simp
 
 text \<open>Not \<open>[simp]\<close>: the whole-function shape competes with the pointwise
@@ -1833,60 +1833,6 @@ proof -
         and target = target, OF relevant covered])
 qed
 
-lemma lookup_placed_dg_edge_tree_classic_local:
-  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st =>
-    'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes relevant:
-    "target \<in> set (locations_of write_node @
-      effective_support
-        (rep_resolved_st
-          (transfer
-            (locals (sigma (Inl read_node)) \<squnion>
-             globs (sigma (Inr ()))))))"
-  shows
-    "lookup_resolved_st_q
-      (locals
-        (traverse_rhs
-          (placed_dg_edge_tree owner_of locations_of
-            Exec_Placement.classic_keep_local
-            Exec_Placement.classic_publish_side
-            transfer read_node write_node) sigma)) target =
-     lookup_resolved_st_q
-      (locals
-        (traverse_rhs
-          (dg_edge_tree (unit_step_st transfer) read_node) sigma)) target"
-  unfolding traverse_placed_dg_edge_tree traverse_dg_edge_tree unit_step_st_def
-  by (simp add: Let_def
-    lookup_project_resolved_on_classic_local[OF relevant])
-
-lemma lookup_placed_dg_edge_tree_classic_side:
-  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st =>
-    'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes relevant:
-    "target \<in> set (locations_of write_node @
-      effective_support
-        (rep_resolved_st
-          (transfer
-            (locals (sigma (Inl read_node)) \<squnion>
-             globs (sigma (Inr ()))))))"
-  shows
-    "lookup_resolved_st_q
-      (globs
-        (sides_of_rhs
-          (placed_dg_edge_tree owner_of locations_of
-            Exec_Placement.classic_keep_local
-            Exec_Placement.classic_publish_side
-            transfer read_node write_node) sigma (Inr ()))) target =
-     lookup_resolved_st_q
-      (globs
-        (sides_of_rhs
-          (dg_edge_tree (unit_step_st transfer) read_node) sigma (Inr ()))) target"
-  unfolding sides_placed_dg_edge_tree_Inr sides_dg_edge_tree_Inr
-    unit_step_st_def
-  by (simp add: Let_def
-    lookup_project_resolved_on_classic_side[OF relevant])
 
 definition placed_dg_edge_of ::
   "(pp => pname) => (pp => location list) =>
@@ -2251,60 +2197,6 @@ where
 
 
 
-lemma lookup_placed_dg_enter_tree_classic_local:
-  fixes enter :: "vname list => aexp list =>
-    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes relevant:
-    "target \<in> set (locations_of callee @
-      effective_support
-        (rep_resolved_st
-          (enter parameters arguments
-            (locals (sigma (Inl caller)) \<squnion>
-             globs (sigma (Inr ()))))))"
-  shows
-    "lookup_resolved_st_q
-      (locals (traverse_rhs
-        (placed_dg_enter_tree owner_of locations_of
-          Exec_Placement.classic_keep_local
-          Exec_Placement.classic_publish_side
-          enter parameters arguments caller callee) sigma)) target =
-     lookup_resolved_st_q
-      (locals (traverse_rhs
-        (dg_edge_tree (unit_step_st (enter parameters arguments)) caller) sigma)) target"
-  unfolding placed_dg_enter_tree_def
-  by (rule lookup_placed_dg_edge_tree_classic_local[
-    where transfer = "enter parameters arguments" and read_node = caller
-      and write_node = callee and sigma = sigma and target = target
-      and owner_of = owner_of and locations_of = locations_of, OF relevant])
-
-lemma lookup_placed_dg_enter_tree_classic_side:
-  fixes enter :: "vname list => aexp list =>
-    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes relevant:
-    "target \<in> set (locations_of callee @
-      effective_support
-        (rep_resolved_st
-          (enter parameters arguments
-            (locals (sigma (Inl caller)) \<squnion>
-             globs (sigma (Inr ()))))))"
-  shows
-    "lookup_resolved_st_q
-      (globs (sides_of_rhs
-        (placed_dg_enter_tree owner_of locations_of
-          Exec_Placement.classic_keep_local
-          Exec_Placement.classic_publish_side
-          enter parameters arguments caller callee) sigma (Inr ()))) target =
-     lookup_resolved_st_q
-      (globs (sides_of_rhs
-        (dg_edge_tree (unit_step_st (enter parameters arguments)) caller) sigma
-          (Inr ()))) target"
-  unfolding placed_dg_enter_tree_def
-  by (rule lookup_placed_dg_edge_tree_classic_side[
-    where transfer = "enter parameters arguments" and read_node = caller
-      and write_node = callee and sigma = sigma and target = target
-      and owner_of = owner_of and locations_of = locations_of, OF relevant])
 
 subsection \<open>Per-tree traversal commutation\<close>
 

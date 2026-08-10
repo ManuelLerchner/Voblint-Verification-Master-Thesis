@@ -23,8 +23,11 @@ text \<open>Unlike a fixed name-based classifier, \<open>twice_gs\<close> has no
   every downstream \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close>
   discharges its inherited step/combine/enter obligations automatically.\<close>
 
-interpretation ivl_dg_for: sound_dg_spec Sabs gamma_unit twice_gs
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
+lemma twice_gs_reserved: "reserved_ret_var twice_gs"
+  unfolding reserved_ret_var_def by eval
+
+interpretation ivl_dg_for: sound_dg_spec Sabs "gamma_unit twice_gs" twice_gs
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for twice_gs_reserved])
 
 text \<open>The post-enter callee state and its context projection, abstractly.  These
   mirror \<^const>\<open>entered_ivl\<close> / \<^const>\<open>route_ivl\<close> on \<^typ>\<open>ivl abs_state\<close>.\<close>

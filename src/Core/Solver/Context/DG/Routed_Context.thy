@@ -102,7 +102,7 @@ locale routed_context =
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> s \<in> gamma_unit (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
+       \<Longrightarrow>       s \<in> gamma_unit gs (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
        \<Longrightarrow> route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
             = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     and call_fwd:
@@ -149,16 +149,18 @@ proof -
   finally show ?thesis .
 qed
 
-lemma routed_seed_publish_bound:
+text \<open>Split into the two componentwise bounds \<open>gamma_unit_mono\<close>/\<open>combine_abs\<close> routing
+  needs, instead of one bound against the raw join: the local answer's own bound never
+  mentions \<open>gk0\<close>, and the global publication's own bound never mentions the routed seed
+  key at all, so each is proved (and usable) independently of the other.\<close>
+lemma routed_seed_publish_bound_local:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and covU: "(u, ctx) \<in> vars"
     and covV: "(FunctionEntry p,
                  route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)) \<in> vars"
   shows "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-           \<squnion> fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
          \<le> locals (sigma (Inl (FunctionEntry p,
-               route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))))
-             \<squnion> globs (sigma (Inr gk0))"
+               route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))))"
 proof -
   let ?ctx' = "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)"
   let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
@@ -187,35 +189,38 @@ proof -
       by (rule le_dg_state_globsD)
     finally show ?thesis .
   qed
-  have fst_bound:
-    "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-       \<le> globs (sigma (Inr gk0))"
-  proof -
-    have "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-        = globs (sides_of_rhs ?t sigma (Inr gk0))"
-      by (simp add: seed_key_ne_gk0 seed_key_ne_gk0[symmetric])
-    also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 u) (trees u ctx)) sigma (Inr gk0))"
-      by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
-    also have "\<dots> \<le> globs (sides_of_rhs (Gen (u, ctx)) sigma (Inr gk0))"
-      by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
-    also have "\<dots> \<le> globs (sigma (Inr gk0))"
-      using pp_sides_bound[OF covU, THEN le_funD, of "Inr gk0"]
-      by (rule le_dg_state_globsD)
-    finally show ?thesis .
-  qed
   have seed_le: "globs (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))
       \<le> locals (sigma (Inl (FunctionEntry p, ?ctx')))"
     by (rule routed_seed_read_bound[OF covV])
-  show ?thesis
-  proof (rule sup_least)
-    show "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-            \<le> locals (sigma (Inl (FunctionEntry p, ?ctx'))) \<squnion> globs (sigma (Inr gk0))"
-      using order_trans[OF snd_bound seed_le] by (rule order_trans[OF _ sup_ge1])
-  next
-    show "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-            \<le> locals (sigma (Inl (FunctionEntry p, ?ctx'))) \<squnion> globs (sigma (Inr gk0))"
-      using fst_bound by (rule order_trans[OF _ sup_ge2])
-  qed
+  show ?thesis using order_trans[OF snd_bound seed_le] .
+qed
+
+lemma routed_seed_publish_bound_global:
+  assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covU: "(u, ctx) \<in> vars"
+  shows "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+           \<le> globs (sigma (Inr gk0))"
+proof -
+  let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
+              Side gk0 (DG bot (fst (dgs_enter S pars args (locals d) (globs gv))))
+                (Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+                  (DG bot (snd (dgs_enter S pars args (locals d) (globs gv))))
+                  (Answer (DG bot bot)))))"
+  have succ: "(FunctionEntry p, CallEdge dst pars args, cont) \<in> set (call_successor_list g u)"
+    using ce by (simp add: set_call_successor_list[OF finC] call_successors_iff)
+  have mem: "?t \<in> set (trees u ctx)"
+    unfolding routed_extra_def Let_def using succ by (force intro: rev_image_eqI)
+  have "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+      = globs (sides_of_rhs ?t sigma (Inr gk0))"
+    by (simp add: seed_key_ne_gk0 seed_key_ne_gk0[symmetric])
+  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 u) (trees u ctx)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
+  also have "\<dots> \<le> globs (sides_of_rhs (Gen (u, ctx)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
+  also have "\<dots> \<le> globs (sigma (Inr gk0))"
+    using pp_sides_bound[OF covU, THEN le_funD, of "Inr gk0"]
+    by (rule le_dg_state_globsD)
+  finally show ?thesis .
 qed
 
 theorem routed_context_call:
@@ -235,34 +240,35 @@ next
   let ?ctx' = "route u ctx ?d (CallEdge dst pars args)"
   have covV: "(FunctionEntry p, ?ctx') \<in> vars"
     using call_fwd[OF True ce] .
-  have sin': "s \<in> gamma_unit ?d ?g"
+  have sin': "s \<in> gamma_unit gs ?d ?g"
     using sin True by (simp add: sg_cov gamma_unit_def)
   have route_agree: "?ctx' = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     using route_enterc_agree[OF True ce sin'] .
   have "call_enter gs (CallEdge dst pars args) s
-      \<in> \<lbrakk>snd (dgs_enter S pars args ?d ?g) \<squnion> fst (dgs_enter S pars args ?d ?g)\<rbrakk>"
-    using enter_sound_fs[OF sin'] by (simp add: gamma_unit_def)
-  also have "\<dots> \<subseteq> \<lbrakk>locals (sigma (Inl (FunctionEntry p, ?ctx'))) \<squnion> ?g\<rbrakk>"
-    by (rule gamma_state_mono[OF routed_seed_publish_bound[OF ce True covV]])
+      \<in> gamma_unit gs (snd (dgs_enter S pars args ?d ?g)) (fst (dgs_enter S pars args ?d ?g))"
+    using enter_sound_fs[OF sin'] .
+  also have "\<dots> \<subseteq> gamma_unit gs (locals (sigma (Inl (FunctionEntry p, ?ctx')))) ?g"
+    by (rule gamma_unit_mono[OF routed_seed_publish_bound_local[OF ce True covV]
+          routed_seed_publish_bound_global[OF ce True]])
   also have "\<dots> = \<lbrakk>sg (Inl (FunctionEntry p, ?ctx'))\<rbrakk>"
     using covV by (simp add: sg_cov gamma_unit_def)
   finally show ?thesis using route_agree by simp
+
 qed
 
 subsection \<open>COMB: the routed return combine\<close>
 
-lemma routed_comb_bound:
+text \<open>Split as \<open>routed_seed_publish_bound_local\<close>/\<open>_global\<close> was: each componentwise
+  bound stands on its own, matching what \<open>gamma_unit_mono\<close> needs for the routed
+  combine's \<open>combine_abs\<close>-shaped target.\<close>
+lemma routed_comb_bound_local:
   assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and covV_cont: "(cont, c1) \<in> vars"
   shows "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1))))
                (locals (sigma (Inl (FunctionResult p,
                  route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
                (globs (sigma (Inr gk0))))
-           \<squnion> fst (dgs_combine S dst (locals (sigma (Inl (cl, c1))))
-               (locals (sigma (Inl (FunctionResult p,
-                 route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
-               (globs (sigma (Inr gk0))))
-         \<le> locals (sigma (Inl (cont, c1))) \<squnion> globs (sigma (Inr gk0))"
+         \<le> locals (sigma (Inl (cont, c1)))"
 proof -
   let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
   let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
@@ -273,53 +279,49 @@ proof -
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont c1)"
     unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
-  have snd_bound:
-    "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
+  have "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
            (globs (sigma (Inr gk0))))
-       \<le> locals (sigma (Inl (cont, c1)))"
-  proof -
-    have "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
-             (globs (sigma (Inr gk0))))
-        = locals (traverse_rhs ?t sigma)"
-      by simp
-    also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (trees cont c1)"
-      using locals_traverse_le_side_acc_dg[OF mem] .
-    also have "\<dots> = locals (eq Gen (cont, c1) sigma)"
-      by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
-    also have "\<dots> \<le> locals (sigma (Inl (cont, c1)))"
-      using pp_eq_bound[OF covV_cont] by (simp add: less_eq_dg_state_def)
-    finally show ?thesis .
-  qed
-  have fst_bound:
-    "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
+      = locals (traverse_rhs ?t sigma)"
+    by simp
+  also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (trees cont c1)"
+    using locals_traverse_le_side_acc_dg[OF mem] .
+  also have "\<dots> = locals (eq Gen (cont, c1) sigma)"
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+  also have "\<dots> \<le> locals (sigma (Inl (cont, c1)))"
+    using pp_eq_bound[OF covV_cont] by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+lemma routed_comb_bound_global:
+  assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covV_cont: "(cont, c1) \<in> vars"
+  shows "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1))))
+               (locals (sigma (Inl (FunctionResult p,
+                 route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
+               (globs (sigma (Inr gk0))))
+         \<le> globs (sigma (Inr gk0))"
+proof -
+  let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
+  let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+              (\<lambda>dex. QueryG gk0 (\<lambda>gv.
+                Side gk0 (DG bot (fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv))))
+                  (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv))) bot)))))"
+  have ret: "(cl, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
+    using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
+  have mem: "?t \<in> set (trees cont c1)"
+    unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
+  have "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
            (globs (sigma (Inr gk0))))
-       \<le> globs (sigma (Inr gk0))"
-  proof -
-    have "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
-             (globs (sigma (Inr gk0))))
-        = globs (sides_of_rhs ?t sigma (Inr gk0))"
-      by simp
-    also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 cont) (trees cont c1)) sigma (Inr gk0))"
-      by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
-    also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, c1)) sigma (Inr gk0))"
-      by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
-    also have "\<dots> \<le> globs (sigma (Inr gk0))"
-      using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr gk0"]
-      by (rule le_dg_state_globsD)
-    finally show ?thesis .
-  qed
-  show ?thesis
-  proof (rule sup_least)
-    show "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
-             (globs (sigma (Inr gk0))))
-            \<le> locals (sigma (Inl (cont, c1))) \<squnion> globs (sigma (Inr gk0))"
-      using snd_bound by (rule order_trans[OF _ sup_ge1])
-  next
-    show "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
-             (globs (sigma (Inr gk0))))
-            \<le> locals (sigma (Inl (cont, c1))) \<squnion> globs (sigma (Inr gk0))"
-      using fst_bound by (rule order_trans[OF _ sup_ge2])
-  qed
+      = globs (sides_of_rhs ?t sigma (Inr gk0))"
+    by simp
+  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 cont) (trees cont c1)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
+  also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, c1)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
+  also have "\<dots> \<le> globs (sigma (Inr gk0))"
+    using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr gk0"]
+    by (rule le_dg_state_globsD)
+  finally show ?thesis .
 qed
 
 theorem routed_context_comb:
@@ -337,7 +339,7 @@ next
   let ?d = "locals (sigma (Inl (cl, c1)))"
   let ?g = "globs (sigma (Inr gk0))"
   let ?ex_ctx = "route cl c1 ?d (CallEdge dst pars args)"
-  have sin: "s \<in> gamma_unit ?d ?g"
+  have sin: "s \<in> gamma_unit gs ?d ?g"
     using s True by (simp add: sg_cov gamma_unit_def)
   have es_eq: "es = call_enter gs (CallEdge dst pars args) s"
     using call_enter_store_agree ces ce by blast
@@ -353,19 +355,21 @@ next
     case True
     have covV_cont: "(cont, c1) \<in> vars"
       using comb_fwd[OF \<open>(cl, c1) \<in> vars\<close> ce] .
-    have tin: "t \<in> gamma_unit (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g"
+    have tin: "t \<in> gamma_unit gs (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g"
       using t route_agree True by (simp add: sg_cov gamma_unit_def)
     have "combine_collect gs dst s t
-        \<in> \<lbrakk>snd (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g)
-             \<squnion> fst (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g)\<rbrakk>"
-      using combine_sound_fs[OF sin tin] by (simp add: gamma_unit_def)
-    also have "\<dots> \<subseteq> \<lbrakk>locals (sigma (Inl (cont, c1))) \<squnion> ?g\<rbrakk>"
-      by (rule gamma_state_mono[OF routed_comb_bound[OF ce covV_cont]])
+        \<in> gamma_unit gs (snd (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g))
+             (fst (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g))"
+      using combine_sound_fs[OF sin tin] .
+    also have "\<dots> \<subseteq> gamma_unit gs (locals (sigma (Inl (cont, c1)))) ?g"
+      by (rule gamma_unit_mono[OF routed_comb_bound_local[OF ce covV_cont]
+            routed_comb_bound_global[OF ce covV_cont]])
     also have "\<dots> = \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
       using covV_cont by (simp add: sg_cov gamma_unit_def)
     finally show ?thesis .
   qed
 qed
+
 
 end
 

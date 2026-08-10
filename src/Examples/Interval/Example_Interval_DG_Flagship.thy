@@ -182,12 +182,14 @@ lemma flagship_cover_combine:
 
 lemma flagship_sound0:
   "cinit_stores flagship_gs \<subseteq>
-     \<lbrakk>fun_of_exec_dg_st_for flagship_gs cinit_ivl_st \<squnion> fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st)\<rbrakk>"
+     \<lbrakk>combine_abs flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
+        (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "fun_of_exec_dg_st_for flagship_gs cinit_ivl_st \<squnion>
-          fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st)
+  have "combine_abs flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
+          (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for flagship_gs cinit_ivl_st"
-    by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for restrict_global_for_def declared_global_def sup_fun_def fun_eq_iff)
+    by (simp add: combine_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
+                  restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 qed
@@ -220,6 +222,12 @@ text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here a
   obligations once, so \<open>flagship_source_run_sound\<close> below only supplies the
   compiled-input and solver facts.\<close>
 
+lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
+  unfolding wf_compile_input_simps
+    flagship_pi_def flagship_prog_def
+  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
+      split: if_splits)
+
 interpretation flagship_ex_reg:
   unit_dg_exec_analysis flagship_gs
     "ivl_tf_for flagship_gs" "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
@@ -231,7 +239,8 @@ proof -
           (ivl_enter_st_for flagship_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
-       (rule flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_random_for
+       (rule flagship_wf_reserved
+             flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_random_for
              flagship_ex_transfer.tf_sound_assume_for flagship_ex_transfer.tf_sound_assume_not_for
              flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
@@ -281,38 +290,50 @@ qed
 
 
 text \<open>
-  \<^bold>\<open>The bound is proper.\<close>  The global slot carries no local information
-  (\<open>glob_x_at_head\<close>), so the loop-head concretization constrains \<open>x\<close> to exactly
-  \<open>[0,20]\<close> and rejects, e.g., a store with \<open>x = 100\<close>.  The guarantee therefore says
-  something --- it is not the trivial \<open>gamma top = UNIV\<close>.
+  \<^bold>\<open>The bound is proper.\<close>  \<open>x\<close> is a local name (\<open>flagship_x_not_global\<close>), so
+  \<^const>\<open>combine_abs\<close> routes it to the local answer directly, never through
+  the global/side slot; the loop-head concretization therefore constrains
+  \<open>x\<close> to exactly \<open>[0,20]\<close> and rejects, e.g., a store with \<open>x = 100\<close>.  The
+  guarantee therefore says something --- it is not the trivial
+  \<open>gamma top = UNIV\<close>. (\<open>glob_x_at_head\<close> records, independently, that the
+  global slot has no information for \<open>x\<close> either --- unsurprising for a
+  purely local name, and not needed by the bound's own proof.)
 \<close>
 
 lemma glob_x_at_head: "flagship_lookup (globs (snd flagship_sol (Inr ()))) (STR ''x'') = bot"
   unfolding flagship_sol_def flagship_eqs_def by eval
 
+lemma flagship_x_not_global: "\<not> flagship_gs (STR ''x'')"
+  unfolding flagship_pi_def flagship_prog_def by (simp add: declared_global_def)
+
 lemma head_x_bound:
-  "(locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ())))
-    \<squnion> globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
+  "combine_abs flagship_gs
+     (locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ()))))
+     (globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
 proof -
   have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
-  have G: "flagship_fun_of (globs (snd flagship_sol (Inr ()))) (STR ''x'') = bot"
-    using glob_x_at_head
-    by (simp add: fun_of_resolved_st_q_for_def)
-  show ?thesis by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def sup_fun_def L G)
+  have C: "combine_abs flagship_gs
+             (flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))))
+             (flagship_fun_of (globs (snd flagship_sol (Inr ())))) (STR ''x'')
+           = flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'')"
+    by (rule combine_abs_local_eq[where gs = flagship_gs and x = "STR ''x''",
+          OF flagship_x_not_global])
+  show ?thesis
+    by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def C L)
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> ivl_dg_gamma (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
+  "(\<lambda>_. 100) \<notin> ivl_dg_gamma flagship_gs (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
   unfolding ivl_dg_gamma_def
-            sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
+            sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
             gamma_unit_def gamma_state_def
-            sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
-            sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for]]
+            sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+            sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
-  using head_x_bound apply (simp add: fun_of_dg_st_for_simps sup_fun_def)
+  using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_abs_def)
   done
 
 subsection \<open>Annotated GraphViz of the computed result\<close>

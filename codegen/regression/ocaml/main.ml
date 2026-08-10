@@ -214,22 +214,31 @@ let expected_proc_demo_intra =
 let expected_proc_demo_calls =
   "pp3 --[call(3)]--> entry_inc ~cont~> pp4; pp4 --[call(4)]--> entry_inc ~cont~> pp5"
 
-let check_case label actual expected =
+(* [~line] is always [__LINE__] at the call site -- an OCaml builtin
+   expanded there, not here, so a FAIL points at the specific
+   check_case[_str] call that produced it, not this shared helper.
+   [__LOC__] embeds only the filename ocamlopt was invoked with
+   ("main.ml", relative to codegen/regression/ocaml/), not clickable once
+   back at the repo root this driver is normally run from -- building the
+   repo-relative path explicitly instead keeps it clickable there. *)
+let driver_path = "codegen/regression/ocaml/main.ml"
+
+let check_case ~line label actual expected =
   if actual = expected then (
     print_endline ("OK   " ^ label);
     true)
   else (
-    print_endline ("FAIL " ^ label);
+    print_endline (Printf.sprintf "FAIL %s (%s:%d)" label driver_path line);
     print_endline ("  expected: " ^ String.concat "; " (List.map show_entry expected));
     print_endline ("  actual:   " ^ String.concat "; " (List.map show_entry actual));
     false)
 
-let check_case_str label actual expected =
+let check_case_str ~line label actual expected =
   if actual = expected then (
     print_endline ("OK   " ^ label);
     true)
   else (
-    print_endline ("FAIL " ^ label);
+    print_endline (Printf.sprintf "FAIL %s (%s:%d)" label driver_path line);
     print_endline ("  expected: " ^ expected);
     print_endline ("  actual:   " ^ actual);
     false)
@@ -246,31 +255,37 @@ let () =
     analyse Interval_Analysis no_call_global_self_ref_prog
   in
   let actual_one_call_interval = analyse Interval_Analysis one_call_prog in
-  let ok_sign = check_case "Sign_Analysis demo report" actual_sign expected_sign in
-  let ok_interval = check_case "Interval_Analysis demo report" actual_interval expected_interval in
+  let ok_sign = check_case ~line:__LINE__ "Sign_Analysis demo report" actual_sign expected_sign in
+  let ok_interval =
+    check_case ~line:__LINE__ "Interval_Analysis demo report" actual_interval expected_interval
+  in
   let ok_proc_demo_sign =
-    check_case "Sign_Analysis proc_demo report" actual_proc_demo_sign expected_proc_demo_sign
+    check_case ~line:__LINE__ "Sign_Analysis proc_demo report" actual_proc_demo_sign
+      expected_proc_demo_sign
   in
   let ok_proc_demo_interval =
-    check_case "Interval_Analysis proc_demo report (warrowing, was hanging)"
+    check_case ~line:__LINE__ "Interval_Analysis proc_demo report (warrowing, was hanging)"
       actual_proc_demo_interval expected_proc_demo_interval
   in
   let ok_proc_demo_intra =
-    check_case_str "proc_demo CFG intra edges" actual_proc_demo_intra expected_proc_demo_intra
+    check_case_str ~line:__LINE__ "proc_demo CFG intra edges" actual_proc_demo_intra
+      expected_proc_demo_intra
   in
   let ok_proc_demo_calls =
-    check_case_str "proc_demo CFG calls edges" actual_proc_demo_calls expected_proc_demo_calls
+    check_case_str ~line:__LINE__ "proc_demo CFG calls edges" actual_proc_demo_calls
+      expected_proc_demo_calls
   in
   let ok_no_call_global_self_ref_interval =
-    check_case "Interval_Analysis no-call global self-feedback (acceptance A)"
+    check_case ~line:__LINE__ "Interval_Analysis no-call global self-feedback (acceptance A)"
       actual_no_call_global_self_ref_interval expected_no_call_global_self_ref_interval
   in
   let ok_one_call_interval =
-    check_case "Interval_Analysis interprocedural global self-feedback (acceptance B)"
+    check_case ~line:__LINE__ "Interval_Analysis interprocedural global self-feedback (acceptance B)"
       actual_one_call_interval expected_one_call_interval
   in
   let ok_check_cond_rendered =
-    check_case_str "string_of_bexp check condition" (un_string (string_of_bexp check_cond)) "0<y"
+    check_case_str ~line:__LINE__ "string_of_bexp check condition"
+      (un_string (string_of_bexp check_cond)) "0<y"
   in
   if
     ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra

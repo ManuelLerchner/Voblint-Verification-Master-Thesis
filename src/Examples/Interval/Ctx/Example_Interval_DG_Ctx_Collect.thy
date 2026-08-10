@@ -40,8 +40,9 @@ definition ivl_ctx_sg :: "pp \<times> ivl + gk \<Rightarrow> ivl abs_state" wher
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst twice_ctx_sol
-           then locals ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inl (v, ctx)))
-                \<squnion> globs ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inr Global))
+           then combine_abs twice_gs
+                  (locals ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inl (v, ctx))))
+                  (globs ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
@@ -74,7 +75,7 @@ text \<open>The two faces of the guarded reader: on the solved domain it is the 
 lemma ivl_ctx_sg_covered:
   "(v, ctx) \<in> fst twice_ctx_sol
    \<Longrightarrow> ivl_ctx_sg (Inl (v, ctx))
-       = locals (sigma_abs (Inl (v, ctx))) \<squnion> globs (sigma_abs (Inr Global))"
+       = combine_abs twice_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
   by (simp add: ivl_ctx_sg_def)
 
 lemma ivl_ctx_sg_uncovered_empty:
@@ -182,7 +183,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst twice_ctx_sol"
   thus "ivl_ctx_sg (Inl (v, ctx))
-          = locals (sigma_abs (Inl (v, ctx))) \<squnion> globs (sigma_abs (Inr Global))"
+          = combine_abs twice_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
     by (rule ivl_ctx_sg_covered)
 next
   fix v ctx
@@ -218,7 +219,7 @@ proof -
   thus ?thesis
     unfolding ivl_ctx_sg_def
     by (simp add: callee_covered_call1 callee_covered_call2
-      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def)
+      fun_of_exec_dg_st_for_def fun_of_resolved_st_q_for_def combine_abs_def)
 qed
 
 subsection \<open>SEED_G: the routed callee entry (enter edges)\<close>
@@ -411,12 +412,25 @@ theorem twice_activation_collect_sound:
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg and enterc = ivl_enterc
         and seedc = bot and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
+  text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
+    projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
+    \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
+    the caller's local bound (\<open>entry_locals_ge_s0d\<close>) and the entry's global-seed
+    bound (\<open>twice_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>
   fix s assume "s \<in> cinit_stores twice_gs"
   hence "s \<in> \<lbrakk>fun_of_exec_dg_st_for twice_gs cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st by blast
-  also have "\<lbrakk>fun_of_exec_dg_st_for twice_gs cinit_ivl_st\<rbrakk> \<subseteq> \<lbrakk>locals (sigma_abs (Inl (cfg_entry twice_cfg, bot)))\<rbrakk>"
-    by (rule gamma_state_mono[OF entry_locals_ge_s0d[OF entry_covered]])
-  also have "\<dots> \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (cfg_entry twice_cfg, bot))\<rbrakk>"
-    unfolding ivl_ctx_sg_covered[OF entry_covered] by (rule gamma_state_sup_ub1)
+  also have "\<lbrakk>fun_of_exec_dg_st_for twice_gs cinit_ivl_st\<rbrakk>
+        = gamma_unit twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+            (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))"
+    unfolding gamma_unit_def fun_of_exec_dg_st_for_def
+    by (rule arg_cong[where f = gamma_state], rule ext)
+       (simp add: combine_abs_def restrict_global_for_def)
+  also have "\<dots> \<subseteq> gamma_unit twice_gs (locals (sigma_abs (Inl (cfg_entry twice_cfg, bot))))
+                   (globs (sigma_abs (Inr Global)))"
+    by (rule gamma_unit_mono[OF entry_locals_ge_s0d[OF entry_covered]
+          twice_dg.pp_entry_s0g_bound[OF entry_covered]])
+  also have "\<dots> = \<lbrakk>ivl_ctx_sg (Inl (cfg_entry twice_cfg, bot))\<rbrakk>"
+    unfolding ivl_ctx_sg_covered[OF entry_covered] gamma_unit_def by (rule refl)
   finally show "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cfg_entry twice_cfg, bot))\<rbrakk>" .
 next
   \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation\<close>.\<close>

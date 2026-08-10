@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// Literal Goblint idiom (https://goblint.readthedocs.io/en/latest/developer-guide/testing/):
+// "__goblint_check(0); // NOWARN (unreachable)" -- a constant-false check as
+// a dead-code sentinel, rather than a real condition that happens to be
+// dead (see 02-unreachable_nowarn.vimp for that variant). VIMP has no
+// integer truthiness, so the literal constant is the bexp "false" itself.
+void main() {
+  x := 5;
+  __voblint_check(true); // PROVED
+  return x;
+  __voblint_check(false) // NOWARN (unreachable)
+}

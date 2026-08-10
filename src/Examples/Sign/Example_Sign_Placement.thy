@@ -99,8 +99,8 @@ text \<open>Every hook-soundness proof below cites the generic hook-wrapper
 lemma sign_placement_edge_hook_sound:
   fixes sigma :: "pp \<times> unit + unit => (sign abs_state, sign abs_state) dg_state"
   shows
-    "edge_collect action (dg_hook_gamma gamma_unit sigma source) \<subseteq>
-      gamma_unit
+    "edge_collect action (dg_hook_gamma gamma_join sigma source) \<subseteq>
+      gamma_join
         (locals (traverse_rhs
           (sign_placement_abs_edge_tree source action destination) sigma))
         (globs (sides_of_rhs
@@ -120,30 +120,30 @@ proof -
     by (simp add: sides_of_rhs_placed_abs_dg_edge_of dg_hook_D_def dg_hook_G_def
       project_abs_on_def project_component_def sign_placement_publish_side.simps
       bot_fun_def)
-  have "edge_collect action (dg_hook_gamma gamma_unit sigma source) =
+  have "edge_collect action (dg_hook_gamma gamma_join sigma source) =
       edge_collect action \<lbrakk>dg_hook_D sigma source \<squnion> dg_hook_G sigma\<rbrakk>"
-    unfolding dg_hook_gamma_def gamma_unit_def by simp
+    unfolding dg_hook_gamma_def gamma_join_def by simp
   also have "... \<subseteq>
       \<lbrakk>apply_tf (sign_tf_for (declared_global sign_placement_prog)) action
         (dg_hook_D sigma source \<squnion> dg_hook_G sigma)\<rbrakk>"
     by (rule sound_transfer_for.edge_collect_apply_tf_sound_for
       [OF sign_is_sound_transfer_for])
   also have "... =
-      gamma_unit
+      gamma_join
         (locals (traverse_rhs
           (sign_placement_abs_edge_tree source action destination) sigma))
         (globs (sides_of_rhs
           (sign_placement_abs_edge_tree source action destination) sigma (Inr ())))"
-    by (simp add: traverse sides gamma_unit_def)
+    by (simp add: traverse sides gamma_join_def)
   finally show ?thesis .
 qed
 
 lemma sign_placement_enter_hook_sound:
   fixes sigma :: "pp \<times> unit + unit => (sign abs_state, sign abs_state) dg_state"
-  assumes sin: "s \<in> dg_hook_gamma gamma_unit sigma caller"
+  assumes sin: "s \<in> dg_hook_gamma gamma_join sigma caller"
   shows
     "call_enter (declared_global sign_placement_prog) (CallEdge dst fs args) s \<in>
-      gamma_unit
+      gamma_join
         (locals (traverse_rhs
           (sign_placement_abs_enter_tree caller (CallEdge dst fs args)
             (FunctionEntry callee)) sigma))
@@ -174,7 +174,7 @@ proof -
       sum.map_comp o_def project_abs_on_def project_component_def
       sign_placement_publish_side.simps bot_fun_def)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
-    using sin unfolding dg_hook_gamma_def gamma_unit_def by simp
+    using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "call_enter (declared_global sign_placement_prog) (CallEdge dst fs args) s =
       bind_formals fs (map (\<lambda>e. aval e s) args)
         (enter_state (declared_global sign_placement_prog) s)"
@@ -186,16 +186,16 @@ proof -
       [OF sign_is_sound_transfer_for s_in]
     by simp
   finally show ?thesis
-    by (simp add: traverse sides gamma_unit_def)
+    by (simp add: traverse sides gamma_join_def)
 qed
 
 lemma sign_placement_combine_hook_sound:
   fixes sigma :: "pp \<times> unit + unit => (sign abs_state, sign abs_state) dg_state"
-  assumes sin: "s \<in> dg_hook_gamma gamma_unit sigma caller"
-    and tin: "t \<in> dg_hook_gamma gamma_unit sigma (FunctionResult callee)"
+  assumes sin: "s \<in> dg_hook_gamma gamma_join sigma caller"
+    and tin: "t \<in> dg_hook_gamma gamma_join sigma (FunctionResult callee)"
   shows
     "combine_collect (declared_global sign_placement_prog) dst s t \<in>
-      gamma_unit
+      gamma_join
         (locals (traverse_rhs
           (sign_placement_abs_combine_tree caller (CallEdge dst fs args)
             (FunctionResult callee) continuation) sigma))
@@ -228,24 +228,24 @@ proof -
       sum.map_comp o_def project_abs_on_def project_component_def
       sign_placement_publish_side.simps bot_fun_def)
   have s_in: "s \<in> \<lbrakk>dg_hook_D sigma caller \<squnion> dg_hook_G sigma\<rbrakk>"
-    using sin unfolding dg_hook_gamma_def gamma_unit_def by simp
+    using sin unfolding dg_hook_gamma_def gamma_join_def by simp
   have t_in: "t \<in> \<lbrakk>dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma\<rbrakk>"
-    using tin unfolding dg_hook_gamma_def gamma_unit_def by simp
+    using tin unfolding dg_hook_gamma_def gamma_join_def by simp
   have "combine_collect (declared_global sign_placement_prog) dst s t \<in> \<lbrakk>result\<rbrakk>"
     unfolding result_def by (rule combine_collect_sound[OF s_in t_in])
   then show ?thesis
-    by (simp add: traverse sides gamma_unit_def)
+    by (simp add: traverse sides gamma_join_def)
 qed
 
 interpretation sign_placement_sound_dg_hooks:
   sound_dg_hooks
-    gamma_unit
+    gamma_join
     "declared_global sign_placement_prog"
     sign_placement_abs_edge_tree
     sign_placement_abs_combine_tree
     sign_placement_abs_enter_tree
   apply unfold_locales
-  subgoal by (rule gamma_unit_mono)
+  subgoal by (rule gamma_join_mono)
   subgoal by (rule sign_placement_edge_hook_sound)
   subgoal by (rule sign_placement_enter_hook_sound)
   subgoal by (rule sign_placement_combine_hook_sound)
@@ -886,7 +886,7 @@ subsection \<open>Trace-native collecting soundness\<close>
 
 interpretation sign_placement_sound_dg_hooks_ltr:
   sound_dg_hooks_ltr
-    gamma_unit
+    gamma_join
     "declared_global sign_placement_prog"
     sign_placement_abs_edge_tree
     sign_placement_abs_combine_tree
@@ -924,14 +924,14 @@ lemma sign_placement_cover_combine:
 
 lemma sign_placement_sound0:
   "cinit_stores (declared_global sign_placement_prog) \<subseteq>
-    gamma_unit sign_placement_s0d_abs sign_placement_s0g_abs"
+    gamma_join sign_placement_s0d_abs sign_placement_s0g_abs"
 proof -
   have base: "cinit_stores (declared_global sign_placement_prog) \<subseteq> \<lbrakk>sign_placement_s0d_abs\<rbrakk>"
     unfolding sign_placement_s0d_abs_def
     by (auto simp: cinit_stores_def gamma_state_def fun_of_st_cinit_sign_st_for)
   have mono: "\<lbrakk>sign_placement_s0d_abs\<rbrakk> \<subseteq> \<lbrakk>sign_placement_s0d_abs \<squnion> sign_placement_s0g_abs\<rbrakk>"
     by (rule gamma_state_mono) (simp add: sup_ge1)
-  show ?thesis unfolding gamma_unit_def using base mono by blast
+  show ?thesis unfolding gamma_join_def using base mono by blast
 qed
 
 text \<open>The final end-to-end soundness theorem: every stack-faithful local
@@ -943,7 +943,7 @@ text \<open>The final end-to-end soundness theorem: every stack-faithful local
 theorem sign_placement_dg_td_collect_sound:
   "ltr_collect (declared_global sign_placement_prog) sign_placement_cfg
     (cinit_stores (declared_global sign_placement_prog)) v \<subseteq>
-    dg_hook_gamma gamma_unit sign_placement_sigma_abs v"
+    dg_hook_gamma gamma_join sign_placement_sigma_abs v"
   by (rule sign_placement_sound_dg_hooks_ltr.hook_post_solution_collect_sound_ltr[OF
         sign_placement_dg_td_abs_post_solution sign_placement_cover_entry sign_placement_cover_edge
         sign_placement_cover_enter sign_placement_cover_combine sign_placement_finI

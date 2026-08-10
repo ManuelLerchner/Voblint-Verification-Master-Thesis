@@ -353,13 +353,14 @@ definition ivl_ctx_sg_1 :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> ivl a
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst nest_1_sol
-           then locals (sigma_1 (Inl (v, ctx))) \<squnion> globs (sigma_1 (Inr Global1))
+           then combine_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma ivl_ctx_sg_1_covered:
   "(v, ctx) \<in> fst nest_1_sol
-   \<Longrightarrow> ivl_ctx_sg_1 (Inl (v, ctx)) = locals (sigma_1 (Inl (v, ctx))) \<squnion> globs (sigma_1 (Inr Global1))"
+   \<Longrightarrow> ivl_ctx_sg_1 (Inl (v, ctx))
+       = combine_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
   by (simp add: ivl_ctx_sg_1_def)
 
 lemma ivl_ctx_sg_1_uncovered_empty:
@@ -385,8 +386,11 @@ text \<open>\<open>nest_program\<close> declares no globals, so \<^const>\<open>
   \<open>dg_ctx_activation\<close>/\<open>routed_context\<close> interpretation on \<open>Sabs\<close> discharges its
   inherited step/combine/enter obligations automatically.\<close>
 
-interpretation ivl_dg_for: sound_dg_spec Sabs gamma_unit nest_gs
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for])
+lemma nest_reserved: "reserved_ret_var nest_gs"
+  unfolding reserved_ret_var_def by eval
+
+interpretation ivl_dg_for: sound_dg_spec Sabs "gamma_unit nest_gs" nest_gs
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for nest_reserved])
 
 interpretation nest_1_dg: dg_ctx_activation Sabs nest_gs nest_cfg Global1 "cs_route 1"
     "routed_cmb Sabs Global1" "routed_extra nest_cfg Sabs Seed1 Global1"
@@ -405,7 +409,8 @@ next
 next
   fix v ctx
   assume "(v, ctx) \<in> fst nest_1_sol"
-  thus "ivl_ctx_sg_1 (Inl (v, ctx)) = locals (sigma_1 (Inl (v, ctx))) \<squnion> globs (sigma_1 (Inr Global1))"
+  thus "ivl_ctx_sg_1 (Inl (v, ctx))
+          = combine_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
     by (rule ivl_ctx_sg_1_covered)
 next
   fix v ctx
@@ -504,13 +509,25 @@ theorem nest_1_activation_collect_sound:
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and enterc = "cs_enterc 1"
         and seedc = "[]" and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
+  text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
+    projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
+    \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
+    the caller's local bound (\<open>entry_locals_ge_s0d_1\<close>) and the entry's global-seed
+    bound (\<open>nest_1_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>
   fix s assume "s \<in> cinit_stores nest_gs"
   hence "s \<in> \<lbrakk>fun_of_exec_dg_st_for nest_gs cinit_ivl_st\<rbrakk>" using cinit_le_cinit_ivl_st_1 by blast
   also have "\<lbrakk>fun_of_exec_dg_st_for nest_gs cinit_ivl_st\<rbrakk>
-        \<subseteq> \<lbrakk>locals (sigma_1 (Inl (cfg_entry nest_cfg, [])))\<rbrakk>"
-    by (rule gamma_state_mono[OF entry_locals_ge_s0d_1[OF entry_covered_1]])
-  also have "\<dots> \<subseteq> \<lbrakk>ivl_ctx_sg_1 (Inl (cfg_entry nest_cfg, []))\<rbrakk>"
-    unfolding ivl_ctx_sg_1_covered[OF entry_covered_1] by (rule gamma_state_sup_ub1)
+        = gamma_unit nest_gs (fun_of_exec_dg_st_for nest_gs cinit_ivl_st)
+            (fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st))"
+    unfolding gamma_unit_def fun_of_exec_dg_st_for_def
+    by (rule arg_cong[where f = gamma_state], rule ext)
+       (simp add: combine_abs_def restrict_global_for_def)
+  also have "\<dots> \<subseteq> gamma_unit nest_gs (locals (sigma_1 (Inl (cfg_entry nest_cfg, []))))
+                   (globs (sigma_1 (Inr Global1)))"
+    by (rule gamma_unit_mono[OF entry_locals_ge_s0d_1[OF entry_covered_1]
+          nest_1_dg.pp_entry_s0g_bound[OF entry_covered_1]])
+  also have "\<dots> = \<lbrakk>ivl_ctx_sg_1 (Inl (cfg_entry nest_cfg, []))\<rbrakk>"
+    unfolding ivl_ctx_sg_1_covered[OF entry_covered_1] gamma_unit_def by (rule refl)
   finally show "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cfg_entry nest_cfg, []))\<rbrakk>" .
 next
   \<comment> \<open>EDGE --- discharged generically off the post-solution by \<open>dg_ctx_activation\<close>.\<close>

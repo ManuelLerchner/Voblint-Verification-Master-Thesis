@@ -64,6 +64,23 @@ proof (rule resolved_st_q_eq_iff[THEN iffD2])
   qed
 qed
 
+text \<open>The converse recombination: a local projection joined with a disjoint global
+  projection is exactly the routed combine. Left bare (not \<open>[simp]\<close>) since it would
+  compete with \<open>restrict_local_resolved_q_split\<close>/\<open>restrict_global_resolved_q_split\<close>
+  on the same \<open>restrict_local _ \<squnion> restrict_global _\<close> redex.\<close>
+lemma combine_resolved_st_q_eq_restrict_sup:
+  "combine_resolved_st_q A B = restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (combine_resolved_st_q A B) =
+      lookup_resolved_st_q (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (combine_resolved_st_q A B) loc =
+        lookup_resolved_st_q (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B) loc"
+      by (cases loc; simp)
+  qed
+qed
+
 text \<open>Effectful executable trees use these projection identities to split combined states.\<close>
 lemma restrict_local_resolved_q_split [simp]:
   "restrict_local_resolved_q (restrict_local_resolved_q A \<squnion>
