@@ -27,7 +27,81 @@ jobs:
         run: |
           find src -name '*.thy' -print0 | xargs -0 python3 scripts/check_isabelle_ascii.py
 
+  # TEMPORARY diagnostic job for issue #103 (heap-cache investigation).
+  # Not part of the proposed CI structure -- removed once the real heap
+  # location and post-build layout are known.
+  diag-isabelle-heaps:
+    runs-on: ubuntu-latest
+    container:
+      image: makarius/isabelle:Isabelle2025-2
+      options: --user root
+    steps:
+      - name: Install git
+        run: apt-get update -qq && apt-get install -y -qq git > /dev/null
+
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      - name: Setup Isabelle
+        uses: ./.github/actions/setup-isabelle-action
+
+      - name: Bridge AFP_COMPONENT_BASE to AFP
+        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
+
+      - name: Dump Isabelle heap-related env (pre-build)
+        run: |
+          echo "HOME=$HOME"
+          echo "ISABELLE_HOME=$ISABELLE_HOME"
+          echo "ISABELLE_HOME_USER=$ISABELLE_HOME_USER"
+          echo "--- isabelle getenv -a | grep -i heap ---"
+          "$ISABELLE" getenv -a | grep -i -E 'heap|home_user' || true
+          echo "--- find candidate heap dirs (pre-build) ---"
+          find / -xdev -maxdepth 8 \( -iname 'heaps' -o -iname 'polyml*' \) 2>/dev/null || true
+          echo "--- ls ISABELLE_HOME_USER (pre-build) ---"
+          ls -la "$ISABELLE_HOME_USER" 2>/dev/null || echo "(does not exist)"
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+
+      - name: Apply td-verification compatibility patch
+        run: pixi run vendor
+
+      - name: Build a single cheap session (Voblint_VIMP) to produce real heaps
+        run: |
+          source scripts/mk/require-afp.sh
+          "$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" Voblint_VIMP
+
+      - name: Dump Isabelle heap-related env (post-build)
+        run: |
+          echo "--- find candidate heap dirs (post-build) ---"
+          find / -xdev -maxdepth 10 -iname 'heaps' -type d 2>/dev/null | while read -r d; do
+            echo "== $d =="
+            find "$d" -maxdepth 3
+            du -sh "$d"
+          done
+          echo "--- ISABELLE_HOME_USER tree (post-build) ---"
+          find "$ISABELLE_HOME_USER" -maxdepth 4 2>/dev/null || echo "(does not exist)"
+          echo "--- isabelle getenv -a | grep -i heap (post-build) ---"
+          "$ISABELLE" getenv -a | grep -i -E 'heap|home_user' || true
+
   build:
+    # TEMPORARY: disabled while diag-isabelle-heaps runs alone (issue #103
+    # heap-path investigation) to avoid paying for a full cold build.
+    if: false
     runs-on: ubuntu-latest
     # Runs the whole job inside the Isabelle image (replaces the previous
     # nested `docker run -ec '...'` single-step wrapper, which existed
@@ -114,6 +188,8 @@ jobs:
           retention-days: 1
 
   regression-drivers:
+    # TEMPORARY: disabled alongside build (see diag-isabelle-heaps above).
+    if: false
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Goblint Formalization
