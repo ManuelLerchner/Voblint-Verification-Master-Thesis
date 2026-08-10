@@ -27,101 +27,15 @@ jobs:
         run: |
           find src -name '*.thy' -print0 | xargs -0 python3 scripts/check_isabelle_ascii.py
 
-  build:
-    runs-on: ubuntu-latest
-    # Runs the whole job inside the Isabelle image (replaces the previous
-    # nested `docker run -ec '...'` single-step wrapper, which existed
-    # because setup-isabelle-action's `isabelle getenv` calls only work
-    # inside this image but the job wasn't actually scoped to it). Every
-    # step below now runs natively in the same container, so later steps
-    # keep the warm heaps `html` builds instead of needing to re-fetch a
-    # toolchain per step.
-    container:
-      image: makarius/isabelle:Isabelle2025-2
-      options: --user root
-
-    steps:
-      # The image has no git; actions/checkout and the submodule step below
-      # need it. unzip is opam's own hard dependency; build-essential/m4 are
-      # needed to compile ocaml-base-compiler from source -- both for
-      # ocaml_setup further down (Isabelle's own OCaml export_code check).
-      - name: Install git, unzip, build-essential, m4
-        run: apt-get update -qq && apt-get install -y -qq git unzip build-essential m4 > /dev/null
-
-      - name: Checkout Goblint Formalization
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          submodules: false
-
-      - name: Trust the checked-out workspace
-        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      # GITHUB_TOKEN cannot clone other private repos (the td-verification fork).
-      # Add a classic PAT with "repo" scope as secret SUBMODULES_TOKEN.
-      - name: Initialize td-verification submodule
-        env:
-          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
-        run: |
-          if [ -z "$SUBMODULES_TOKEN" ]; then
-            echo "::error title=Missing SUBMODULES_TOKEN::Create a classic PAT (repo scope) and add it as repository secret SUBMODULES_TOKEN so CI can clone the private td-verification fork."
-            exit 1
-          fi
-          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
-          git submodule sync vendor/td-verification
-          git submodule update --init --depth 1 vendor/td-verification
-
-      - name: Setup Isabelle
-        uses: ./.github/actions/setup-isabelle-action
-
-      # scripts/mk/require-afp.sh (sourced by every pixi task below) reads
-      # $AFP, not $AFP_COMPONENT_BASE; bridge once instead of per-step.
-      - name: Bridge AFP_COMPONENT_BASE to AFP
-        run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
-
-      - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
-
-      - name: Apply td-verification compatibility patch
-        run: pixi run vendor
-
-      - name: Build HTML docs (clean build of every session)
-        run: pixi run html
-
-      - name: Isabelle community linter
-        run: pixi run isabelle-lint
-
-      - name: Codegen drift check
-        run: pixi run codegen-check
-
-      - name: Provision managed OCaml/zarith for Isabelle's own export check
-        run: $ISABELLE ocaml_setup
-
-      - name: Isabelle-native OCaml export_code check
-        run: pixi run codegen-ocaml-check
-
-      - name: Upload GitHub Pages site
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: html-docs
-          path: docs/html
-          retention-days: 1
-
-  # --------------------------------------------------------------------
-  # EXPERIMENTAL split-job prototype for issue #103, run alongside `build`
-  # (not yet replacing it) so one workflow trigger gives a direct,
-  # same-run comparison: `build`'s cold wall-clock vs. this split's
-  # wall-clock + same-run artifact transfer overhead. build-isabelle is
-  # the sole cross-run cache writer (use-cache: false everywhere else,
-  # matching the composite action's own multi-writer-race rationale);
-  # the three consumers download its exact heap state as a workflow
-  # artifact instead, so their own `pixi run <task>` incremental rebuild
-  # is against provably-fresh heaps, not a possibly-stale cross-run
-  # cache. Every consumer still runs its real `isabelle build`/`isabelle
-  # lint` command -- the artifact only changes how much of that is
-  # incremental, never whether it happens.
-  # --------------------------------------------------------------------
+  # build-isabelle is the sole cross-run heap-cache writer (see #103): a
+  # plain incremental build (no -c) that both validates and warms the
+  # cache, then hands its exact heap state to the jobs below as a
+  # same-run workflow artifact (use-cache: false on all of them, so only
+  # one job ever writes the cross-run cache). Every consumer still runs
+  # its real `isabelle build`/`isabelle lint` command -- the artifact
+  # only changes how much of that is incremental, never whether it runs,
+  # so a stale or restored-from-a-different-commit heap can never make a
+  # broken source tree look green.
   build-isabelle:
     runs-on: ubuntu-latest
     container:
@@ -173,14 +87,14 @@ jobs:
       - name: Report heap store size
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
 
-      - name: Upload heap state for same-run split consumers
+      - name: Upload heap state for same-run consumers
         uses: actions/upload-artifact@v4
         with:
           name: isabelle-heaps
           path: ${{ env.ISABELLE_HOME_USER }}/heaps/
           retention-days: 1
 
-  html-split:
+  html:
     needs: build-isabelle
     runs-on: ubuntu-latest
     container:
@@ -238,11 +152,11 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: html-docs-split
+          name: html-docs
           path: docs/html
           retention-days: 1
 
-  isabelle-lint-split:
+  isabelle-lint:
     needs: build-isabelle
     runs-on: ubuntu-latest
     container:
@@ -292,7 +206,7 @@ jobs:
       - name: Isabelle community linter
         run: pixi run isabelle-lint
 
-  codegen-check-split:
+  codegen-check:
     needs: build-isabelle
     runs-on: ubuntu-latest
     container:
@@ -342,7 +256,7 @@ jobs:
       - name: Codegen drift check
         run: pixi run codegen-check
 
-  codegen-ocaml-check-split:
+  codegen-ocaml-check:
     needs: build-isabelle
     runs-on: ubuntu-latest
     container:
@@ -433,7 +347,7 @@ jobs:
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
+    needs: html
     runs-on: ubuntu-latest
     permissions:
       pages: write
