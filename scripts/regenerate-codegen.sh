@@ -31,5 +31,10 @@ for f in codegen/generated/ml/*.ocaml; do
   mv "$f" "${f%.ocaml}.ml"
 done
 
+# Stamp what source state produced this output -- cli-build.sh compares
+# against it so a .thy fix that never got regenerated fails loudly instead
+# of silently compile-testing stale generated code (see codegen-hash.sh).
+"$(dirname "$0")/mk/codegen-hash.sh" >codegen/generated/.source-hash
+
 echo "Regenerated codegen/generated/:"
 find codegen/generated -type f
