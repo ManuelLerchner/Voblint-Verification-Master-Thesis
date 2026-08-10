@@ -344,11 +344,11 @@ jobs:
       - name: Compile and run codegen/regression drivers against codegen/generated/
         # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
         # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
-        # a plain `pixi run regression` sub-shell then can't find ocamlfind even
-        # though opam install (also just `opam`, not a switch binary) succeeded
+        # a plain `pixi run codegen-regression` sub-shell then can't find ocamlfind
+        # even though opam install (also just `opam`, not a switch binary) succeeded
         # one step earlier. `opam exec --` activates the switch environment for
         # this invocation.
-        run: opam exec -- pixi run regression
+        run: opam exec -- pixi run codegen-regression
 
       - name: External .vimp regression corpus (source -> parser -> analyse -> checks)
         run: opam exec -- pixi run cli-test

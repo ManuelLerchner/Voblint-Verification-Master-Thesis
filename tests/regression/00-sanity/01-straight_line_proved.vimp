@@ -1,8 +1,7 @@
 // PARAM: --analysis interval
 // Straight-line arithmetic, one exact write, one check.
-// See 07-sign-precision/01-straight_line_sign_limitation.vimp for the same
-// program under Sign, which is UNKNOWN there -- a known limitation (#99),
-// not asserted here as Interval's behavior.
+// See 07-sign-precision/01-straight_line_sign.vimp for the same program
+// under Sign, also PROVED since the #99 fix.
 void main() {
   x := 5;
   __voblint_check(0 < x) // PROVED

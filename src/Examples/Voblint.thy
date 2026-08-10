@@ -407,7 +407,8 @@ text \<open>
       generated source is tracked under \<^verbatim>\<open>codegen/generated/\<close> (regenerated
       by \<^verbatim>\<open>pixi run codegen\<close>; \<^verbatim>\<open>pixi run codegen-check\<close> fails if it has
       drifted from the \<^verbatim>\<open>export_code\<close> declaration). A hand-written OCaml
-      driver under \<^verbatim>\<open>codegen/regression/\<close> (\<^verbatim>\<open>pixi run regression\<close>) constructs
+      driver under \<^verbatim>\<open>codegen/regression/\<close>
+      (\<^verbatim>\<open>pixi run codegen-regression\<close>) constructs
       that same program purely through the exported constructors, calls
       \<^verbatim>\<open>analyse\<close>, and checks the result against the values
       \<^verbatim>\<open>dispatch_demo_sign_precise\<close> and \<^verbatim>\<open>dispatch_demo_interval_precise\<close>

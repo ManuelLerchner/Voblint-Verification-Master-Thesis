@@ -252,7 +252,7 @@ for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
 | `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
 | `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
 | `codegen-ocaml-check` | Isabelle, `AFP`, opam | Compile-check the generated OCaml |
-| `regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
+| `codegen-regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
 | `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
 | `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
 | `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
@@ -339,7 +339,7 @@ AFP=/path/to/afp/thys pixi run codegen-check
 # codegen/regression/ against codegen/generated/, and check its output
 # against the values already proved by Example_Analysis_Dispatch.thy's
 # dispatch_demo_sign_unknown / dispatch_demo_interval_precise
-pixi run regression
+pixi run codegen-regression
 ```
 
 Generated sources are tracked under `codegen/generated/`; do not hand-edit
@@ -347,7 +347,8 @@ them. `codegen/regression/ocaml/` holds the hand-written driver that
 exercises the generated code and compares it against the Isabelle-proved
 expected output -- so the generated OCaml is checked against the same
 theorems as the Isabelle source, not merely assumed to match it. Both `pixi run
-codegen-check` and `pixi run regression` run in CI (`.github/workflows/ci.yml`).
+codegen-check` and `pixi run codegen-regression` run in CI
+(`.github/workflows/ci.yml`).
 
 ### Running the analyzer (`voblint` CLI)
 

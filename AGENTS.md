@@ -164,6 +164,25 @@ If an actual I/Q or I/R call fails, report it and request
 `rtk ./scripts/start-both.sh` or `rtk ./scripts/start-ir.sh`. Do not substitute
 a batch build for contextual proof development.
 
+## Regression discipline
+
+Whenever a change fixes a bug, changes semantics, or introduces a feature,
+add or update a regression test that locks in the new behavior -- an
+executable witness whose assertion pins the corrected/intended result, not
+the one it replaces. Use whichever regression layer the change actually
+touches: a `by eval` lemma in `Example_Analysis_Dispatch.thy` (or the nearest
+sibling `Example_*.thy`) for solver/domain behavior, a `tests/regression/`
+`.vimp` fixture for CLI-observable behavior, or both when a fix is
+code-generated from Isabelle into `codegen/generated/` and therefore visible
+at the CLI too.
+
+A test asserting a value that is itself the bug is worse than no test: it
+converts the bug into a locked-in regression and the batch build stays green
+straight through a broken fix. When a fix changes what a lemma or fixture
+should assert, update the assertion and its surrounding comment in the same
+change -- do not leave a fixture's comment describing behavior as a "known
+limitation" once the limitation is fixed.
+
 ## Proof development
 
 Before each proof, decide whether it is short and simple.
