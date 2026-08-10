@@ -1,12 +1,13 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
 #
-# Install with `pixi run lefthook-install`. Guards two invariants documented
-# in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"),
-# and the two generated VIMP grammar frontends stay in sync with
-# grammar/vimp.yaml ("VIMP grammar pipeline"). The generator jobs are
-# allowed to rewrite their generated file in place -- fail_on_changes then
-# blocks the commit so a real drift gets reviewed and re-staged rather than
-# silently committed stale.
+# Install with `pixi run lefthook-install`. Guards three invariants
+# documented in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy
+# sources"), the two generated VIMP grammar frontends stay in sync with
+# grammar/vimp.yaml ("VIMP grammar pipeline"), and codegen/generated/ stays
+# in sync with the export_code declarations it's generated from. The
+# generator jobs are allowed to rewrite their generated file in place --
+# fail_on_changes then blocks the commit so a real drift gets reviewed and
+# re-staged rather than silently committed stale.
 output: [summary]
 pre-commit:
   fail_on_changes: always
@@ -30,3 +31,16 @@ pre-commit:
         - "cli/vimp_parser.mly"
         - "cli/vimp_lexer.mll"
       run: pixi run python3 scripts/gen_vimp_menhir.py
+
+    # Voblint_Examples' export_code declarations pull in the whole session
+    # graph, so any .thy anywhere under src/ can change generated output --
+    # not just the Examples session's own theories. Needs a local
+    # Isabelle+AFP setup (same as every other Isabelle-facing pixi task);
+    # unlike the grammar hooks above this isn't pure-Python-fast, but an
+    # incremental isabelle build against warm local heaps is normally a
+    # few seconds, not a cold rebuild.
+    - name: codegen-drift
+      glob:
+        - "src/**/*.thy"
+        - "codegen/generated/**"
+      run: pixi run codegen
