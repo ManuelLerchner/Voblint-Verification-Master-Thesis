@@ -21,12 +21,13 @@ else
   HASH() { shasum -a 256; }
 fi
 
+# Relative paths only: an absolute checkout path (this machine's vs. CI's
+# /__w/...) must never leak into the hash, or the same source tree hashes
+# differently on every machine that checks it out.
+cd "$REPO_ROOT"
 {
-  find "$REPO_ROOT/src" \( -name '*.thy' -o -name 'ROOT' \) -type f
-  printf '%s\n' \
-    "$REPO_ROOT/ROOTS" \
-    "$REPO_ROOT/scripts/regenerate-codegen.sh" \
-    "$REPO_ROOT/scripts/mk/codegen.sh"
+  find src \( -name '*.thy' -o -name 'ROOT' \) -type f
+  printf '%s\n' ROOTS scripts/regenerate-codegen.sh scripts/mk/codegen.sh
 } | LC_ALL=C sort | while IFS= read -r f; do
   HASH <"$f" | awk -v f="$f" '{print $1, f}'
 done | HASH | awk '{print $1}'
