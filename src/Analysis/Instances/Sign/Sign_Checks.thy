@@ -153,7 +153,7 @@ lemma analyse_sign_report_for_code [code]:
   "analyse_sign_report_for gs p =
      (let sol = snd (analyse_sign_for gs p)
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_abs gs
+           (\<lambda>v. combine_env\<^sup># gs
                   (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
                   (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
            sign_classify_check)"
@@ -190,7 +190,7 @@ lemma analyse_sign_report_for_with_state_code [code]:
   "analyse_sign_report_for_with_state gs p =
      (let sol = snd (analyse_sign_for gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_abs gs
+           (\<lambda>v. combine_env\<^sup># gs
                   (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
                   (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
            sign_classify_check)"

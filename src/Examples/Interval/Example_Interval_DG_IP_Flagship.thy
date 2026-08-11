@@ -207,13 +207,13 @@ lemma twice_cover_combine:
 
 lemma twice_sound0:
   "cinit_stores twice_gs \<subseteq>
-     \<lbrakk>combine_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+     \<lbrakk>combine_env\<^sup># twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "combine_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+  have "combine_env\<^sup># twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
           (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
-    by (simp add: combine_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
+    by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
                   restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)

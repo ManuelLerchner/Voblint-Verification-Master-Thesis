@@ -13,7 +13,7 @@ text \<open>
   from the sound_effectful_transfer contract instead of sound_transfer.
 
   The combine and entry arguments are unchanged: they rest on sound_domain facts
-  (combine_states_sound, gamma_state_mono), which sound_effectful_transfer
+  (combine_env_sound, gamma_state_mono), which sound_effectful_transfer
   inherits.  Only the per-edge step differs, isolated in edge_collect_etf_sound.
 \<close>
 

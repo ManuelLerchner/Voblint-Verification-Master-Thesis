@@ -151,9 +151,9 @@ text \<open>Return-value rehydration at the caller: write the callee's \<open>re
   call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
 
 definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_states gs s t)"
+  "combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)"
 
-lemma combine_collect_None: "combine_collect gs None s t = combine_states gs s t"
+lemma combine_collect_None: "combine_collect gs None s t = combine_env gs s t"
   by (simp add: combine_collect_def)
 
 subsection \<open>Call-entry transfer\<close>

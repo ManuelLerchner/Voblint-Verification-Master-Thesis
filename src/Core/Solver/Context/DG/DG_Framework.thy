@@ -21,7 +21,7 @@ definition unit_step_for ::
    => 'a abs_state => 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_step_for gs f d g =
-     (let res = f (combine_abs gs d g) in
+     (let res = f (combine_env\<^sup># gs d g) in
       (restrict_global_for gs res, restrict_local_for gs res))"
 
 definition unit_step_placed ::
@@ -344,7 +344,7 @@ text \<open>
   destination, and packages the two-typed \<open>('dg, 'dl)\<close> answer).  \<open>'dl\<close>/\<open>'dg\<close>
   stay fully opaque -- the framework does not assume either field can share
   a generic assign the way the flat layer's \<open>abs_state\<close>-typed
-  \<open>combine_assign_abs\<close> can, so both halves are analysis-supplied.\<close>
+  \<open>combine_assign\<^sup>#\<close> can, so both halves are analysis-supplied.\<close>
 
 record ('dl, 'dg) dg_spec =
   dgs_nop        :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -411,7 +411,7 @@ definition unit_combine_step_assign_for ::
    => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_assign_for gs dst de g merged =
-     (let res = combine_assign_abs dst (de ret_var)
+     (let res = combine_assign\<^sup># dst (de ret_var)
          (fst merged \<squnion> snd merged)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 
@@ -421,7 +421,7 @@ definition unit_combine_step_env_for ::
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state
    => 'a abs_state => 'a abs_state \<times> 'a abs_state" where
   "unit_combine_step_env_for gs dc de g =
-     (let m = combine_abs gs dc g
+     (let m = combine_env\<^sup># gs dc g
       in (restrict_global_for gs m, restrict_local_for gs m))"
 
 definition unit_combine_step_env_placed ::
@@ -430,7 +430,7 @@ definition unit_combine_step_env_placed ::
    'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_env_placed source_global keep_local publish_side dc de g =
-     (let res = combine_abs source_global (dc \<squnion> g) (de \<squnion> g) in
+     (let res = combine_env\<^sup># source_global (dc \<squnion> g) (de \<squnion> g) in
       (project_component publish_side res, project_component keep_local res))"
 
 
@@ -440,7 +440,7 @@ definition unit_combine_step_assign_placed ::
    'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_assign_placed keep_local publish_side dst de g merged =
-     (let res = combine_assign_abs dst ((de \<squnion> g) ret_var)
+     (let res = combine_assign\<^sup># dst ((de \<squnion> g) ret_var)
          (fst merged \<squnion> snd merged)
       in (project_component publish_side res, project_component keep_local res))"
 
@@ -501,18 +501,18 @@ text \<open>Unlike the plain collecting semantics' \<^const>\<open>combine_colle
   D/G-split combine cannot read the return value and the global effects from the
   same argument: the return slot is a local name owned by the callee's exit
   state \<open>de\<close>, while every global name is owned by the freshly-queried \<open>g\<close>, not
-  by \<open>de\<close>'s own (locally-restricted) copy of it. \<^const>\<open>combine_abs\<close> still
+  by \<open>de\<close>'s own (locally-restricted) copy of it. \<^const>\<open>combine_env_abs\<close> still
   supplies the ownership routing for the non-return names; \<open>de ret_var\<close> is
   read directly instead of routing it through that same combine.\<close>
 lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
-     (let res = combine_assign_abs dst (de ret_var) (combine_abs gs dc g)
+     (let res = combine_assign\<^sup># dst (de ret_var) (combine_env\<^sup># gs dc g)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 proof -
   have env:
     "fst (unit_combine_step_env_for gs dc de g) \<squnion>
        snd (unit_combine_step_env_for gs dc de g) =
-     combine_abs gs dc g"
+     combine_env\<^sup># gs dc g"
     unfolding unit_combine_step_env_for_def
     by (simp add: Let_def restrict_global_for_local_join)
   show ?thesis

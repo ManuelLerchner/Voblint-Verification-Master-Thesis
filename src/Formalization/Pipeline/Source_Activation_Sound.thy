@@ -13,24 +13,24 @@ text \<open>
 
 theorem source_sound_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startc :: 'c and mnm :: pname
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c and mnm :: pname
   assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
     and tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
-    and cap: "\<And>v ctx. activation_collect source_global admiss startc (compile_prog Pi ps mnm main) S v ctx
+    and cap: "\<And>v ctx. activation_collect source_global admiss startcontext (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v stk t c. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> ctx_key admiss startc t c
+                   \<and> ctx_key admiss startcontext t c
                    \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_store_in_activation_collect
-         [where mnm=mnm and admiss=admiss and startc=startc,
+         [where mnm=mnm and admiss=admiss and startcontext=startcontext,
           OF wf s0 run tot]
   obtain v stk t c where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
-    and ck: "ctx_key admiss startc t c"
-    and mem: "s \<in> activation_collect source_global admiss startc ?g S v c"
+    and ck: "ctx_key admiss startcontext t c"
+    and mem: "s \<in> activation_collect source_global admiss startcontext ?g S v c"
     by blast
   have "s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     using cap[of v c] mem by blast
@@ -41,21 +41,21 @@ text \<open>The witness-free specialisation of the composition at top-level prog
   source frame stack lands at the fixed seed context, no \<^typ>\<open>ltr\<close> witness exposed.\<close>
 theorem source_sound_toplevel_from_collecting_cap:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startc :: 'c and mnm :: pname
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c and mnm :: pname
   assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, [])"
-    and cap: "\<And>v ctx. activation_collect source_global admiss startc (compile_prog Pi ps mnm main) S v ctx
+    and cap: "\<And>v ctx. activation_collect source_global admiss startcontext (compile_prog Pi ps mnm main) S v ctx
                        \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> \<lbrakk>sg (Inl (v, startc))\<rbrakk>"
+             \<and> s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_toplevel_in_activation_collect
-         [where mnm=mnm and admiss=admiss and startc=startc, OF wf s0 run]
+         [where mnm=mnm and admiss=admiss and startcontext=startcontext, OF wf s0 run]
   obtain v where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])"
-    and mem: "s \<in> activation_collect source_global admiss startc ?g S v startc" by blast
-  have "s \<in> \<lbrakk>sg (Inl (v, startc))\<rbrakk>" using cap[of v startc] mem by blast
+    and mem: "s \<in> activation_collect source_global admiss startcontext ?g S v startcontext" by blast
+  have "s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>" using cap[of v startcontext] mem by blast
   then show ?thesis using m by blast
 qed
 
@@ -63,11 +63,11 @@ subsection \<open>Backbone corollaries: discharge the four obligations to build 
 
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startc :: 'c and mnm :: pname
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c and mnm :: pname
   assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), startc))\<rbrakk>"
+    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), startcontext))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -83,10 +83,10 @@ theorem source_activation_sound:
         \<Longrightarrow> call_enter_store source_global (compile_prog Pi ps mnm main) cl x es
         \<Longrightarrow> combine_collect source_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v stk t c. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
-                   \<and> ctx_key admiss startc t c
+                   \<and> ctx_key admiss startcontext t c
                    \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect source_global admiss startc (compile_prog Pi ps mnm main) S v ctx
+  have cap: "\<And>v ctx. activation_collect source_global admiss startcontext (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE ADMISS_TOTAL CALL COMB])
   show ?thesis
@@ -98,11 +98,11 @@ text \<open>The witness-free specialisation at top-level program points: a store
   context existential exposed.\<close>
 theorem source_activation_sound_toplevel:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startc :: 'c and mnm :: pname
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c and mnm :: pname
   assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, [])"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), startc))\<rbrakk>"
+    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps mnm main), startcontext))\<rbrakk>"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
         \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -118,9 +118,9 @@ theorem source_activation_sound_toplevel:
         \<Longrightarrow> call_enter_store source_global (compile_prog Pi ps mnm main) cl x es
         \<Longrightarrow> combine_collect source_global dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> \<lbrakk>sg (Inl (v, startc))\<rbrakk>"
+             \<and> s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect source_global admiss startc (compile_prog Pi ps mnm main) S v ctx
+  have cap: "\<And>v ctx. activation_collect source_global admiss startcontext (compile_prog Pi ps mnm main) S v ctx
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE ADMISS_TOTAL CALL COMB])
   show ?thesis
@@ -145,7 +145,7 @@ proof -
   let ?g = "compile_prog Pi ps mnm main"
   have tot: "\<And>u c s. \<exists>c'. admiss_exact (\<lambda>_ _ _. ()) u c s c'" by (simp add: admiss_exact_def)
   from source_store_in_activation_collect
-         [where mnm=mnm and admiss = "admiss_exact (\<lambda>_ _ _. ())" and startc = "()",
+         [where mnm=mnm and admiss = "admiss_exact (\<lambda>_ _ _. ())" and startcontext = "()",
           OF wf s0 run tot]
   obtain v stk t c where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)"
     and mem: "s \<in> activation_collect source_global (admiss_exact (\<lambda>_ _ _. ())) () ?g S v c" by blast

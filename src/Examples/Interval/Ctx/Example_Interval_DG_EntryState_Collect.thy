@@ -29,7 +29,7 @@ definition rc_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl abs_state" 
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst rc_ctx_sol
-           then combine_abs rc_gs
+           then combine_env\<^sup># rc_gs
                   (locals ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inl (v, ctx))))
                   (globs ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inr Global)))
            else bot)
@@ -66,7 +66,7 @@ lemma pp_eq_bound:
 lemma rc_ctx_sg_covered:
   "(v, ctx) \<in> fst rc_ctx_sol
    \<Longrightarrow> rc_ctx_sg (Inl (v, ctx))
-       = combine_abs rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+       = combine_env\<^sup># rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
   by (simp add: rc_ctx_sg_def)
 
 lemma rc_ctx_sg_uncovered_empty:
@@ -125,7 +125,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst rc_ctx_sol"
   thus "rc_ctx_sg (Inl (v, ctx))
-          = combine_abs rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+          = combine_env\<^sup># rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
     by (rule rc_ctx_sg_covered)
 next
   fix v ctx
@@ -226,7 +226,7 @@ theorem rc_activation_collect_sound:
   "activation_collect rc_gs (admiss_exact rc_enterc) [] rc_cfg (cinit_stores rc_gs) v ctx
      \<subseteq> \<lbrakk>rc_ctx_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = rc_ctx_sg and admiss = "admiss_exact rc_enterc"
-        and startc = "[]"
+        and startcontext = "[]"
         and S = "cinit_stores rc_gs" and g = rc_cfg and gs = rc_gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores rc_gs"
@@ -236,7 +236,7 @@ proof (rule activation_collect_sound[where sg = rc_ctx_sg and admiss = "admiss_e
             (fun_of_exec_dg_st_for rc_gs (restrict_global_resolved_q cinit_ivl_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit rc_gs (locals (sigma_abs (Inl (cfg_entry rc_cfg, []))))
                    (globs (sigma_abs (Inr Global)))"
     by (rule gamma_unit_mono[OF entry_locals_ge_s0d[OF entry_covered]

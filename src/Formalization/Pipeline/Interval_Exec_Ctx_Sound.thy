@@ -452,7 +452,7 @@ definition entry_state_sg_exec ::
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst (entry_state_sol gs Pi ps mnm main)
-           then combine_abs gs (locals (entry_state_sigma_abs_exec gs Pi ps mnm main (Inl (v, ctx))))
+           then combine_env\<^sup># gs (locals (entry_state_sigma_abs_exec gs Pi ps mnm main (Inl (v, ctx))))
                   (globs (entry_state_sigma_abs_exec gs Pi ps mnm main (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
@@ -517,7 +517,7 @@ interpretation entry_state_dg_base: sound_dg_spec "ectx_abs_spec gs" "gamma_unit
 lemma entry_state_sg_covered:
   "(v, ctx) \<in> fst (entry_state_sol gs Pi ps mnm main)
    \<Longrightarrow> entry_state_sg (Inl (v, ctx))
-       = combine_abs gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
+       = combine_env\<^sup># gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
   by (simp add: entry_state_sg_def entry_state_sg_exec_def entry_state_sigma_abs_def entry_state_sigma_abs_exec_def)
 
 lemma entry_state_sg_uncovered_empty:
@@ -550,7 +550,7 @@ next
 next
   fix v ctx assume "(v, ctx) \<in> fst (entry_state_sol gs Pi ps mnm main)"
   thus "entry_state_sg (Inl (v, ctx))
-          = combine_abs gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
+          = combine_env\<^sup># gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
     by (rule entry_state_sg_covered)
 next
   fix v ctx assume "(v, ctx) \<notin> fst (entry_state_sol gs Pi ps mnm main)"
@@ -636,7 +636,7 @@ theorem entry_state_activation_collect_sound:
   "activation_collect gs (admiss_exact entry_state_enterc) [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
      \<subseteq> \<lbrakk>entry_state_sg (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = entry_state_sg and admiss = "admiss_exact entry_state_enterc"
-        and startc = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+        and startcontext = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> \<lbrakk>fun_of_exec_dg_st_for gs cinit_ivl_st\<rbrakk>" using entry_state_cinit_le_cinit_ivl_st by blast
@@ -645,7 +645,7 @@ proof (rule activation_collect_sound[where sg = entry_state_sg and admiss = "adm
             (fun_of_exec_dg_st_for gs (restrict_global_resolved_q cinit_ivl_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit gs (locals (entry_state_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), []))))
                    (globs (entry_state_sigma_abs (Inr Global)))"
     by (rule gamma_unit_mono[OF entry_state_locals_ge_s0d entry_state_dg.pp_entry_s0g_bound[OF entry_cov]])

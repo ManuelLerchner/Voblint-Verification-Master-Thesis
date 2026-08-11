@@ -1932,7 +1932,7 @@ text \<open>The combine node's raw agreement, in the same \<open>cases location\
   the enter node: a global location is imported unchanged from the callee
   exit; a non-\<open>answer\<close> local is carried over unchanged from the caller; the
   \<open>answer\<close> local is overwritten by the callee's \<open>ret_var\<close> value.  Both
-  \<open>combine_resolved_st_q\<close> and \<open>combine_abs\<close> already split local/global the
+  \<open>combine_resolved_st_q\<close> and \<open>combine_env\<^sup>#\<close> already split local/global the
   same way, so only the two value-agreement facts (callee's \<open>ret_var\<close>,
   caller's own locations) are new content.\<close>
 
@@ -1984,7 +1984,7 @@ proof (cases location)
     by (rule placement_val_agree[OF memy])
   show ?thesis
     unfolding placement_combine_collect_resolved_for_q_eq combine_collect_abs_def
-      combine_abs_def
+      combine_env_abs_def
     using not_dst agree yneqanswer vg
     by (simp add: Global_Location fun_of_resolved_st_q_for_def loy
       dg_hook_D_def dg_hook_G_def)
@@ -2044,7 +2044,7 @@ next
       by (rule placement_val_agree[OF mem5'])
     show ?thesis
       unfolding placement_combine_collect_resolved_for_q_eq combine_collect_abs_def
-        combine_abs_def
+        combine_env_abs_def
       using Local_Location not_dst not_g agree False loc_y
       by (simp add: fun_of_resolved_st_q_for_def dg_hook_D_def dg_hook_G_def)
   qed

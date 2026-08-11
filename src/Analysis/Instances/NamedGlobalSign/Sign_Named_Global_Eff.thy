@@ -232,9 +232,9 @@ next
   show ?thesis by (simp add: False sides_route_combine_const local_bot_on_locals_def)
 qed
 
-lemma combine_abs_mono:
-  "sc1 \<le> sc2 \<Longrightarrow> se1 \<le> se2 \<Longrightarrow> combine_abs gs sc1 se1 \<le> combine_abs gs sc2 se2"
-  by (auto simp: combine_abs_def le_fun_def)
+lemma combine_env_abs_mono:
+  "sc1 \<le> sc2 \<Longrightarrow> se1 \<le> se2 \<Longrightarrow> combine_env\<^sup># gs sc1 se1 \<le> combine_env\<^sup># gs sc2 se2"
+  by (auto simp: combine_env_abs_def le_fun_def)
 
 subsection \<open>A monotone named-global witness for the TD_side solver\<close>
 

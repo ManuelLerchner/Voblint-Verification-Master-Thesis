@@ -21,7 +21,7 @@ layer without embedding line numbers that drift.
 | `source_location` | Resolved source storage location: `GlobalVar` or an implicitly procedure-local `LocalVar`. | `src/VIMP/VIMP_Proc.thy` |
 | `storage_of` | Program declaration-driven source-location resolver. A non-declared identifier is implicitly local to the supplied procedure. | `src/VIMP/VIMP_Notation.thy` |
 | `enter_state` | Callee store with caller globals and fresh local variables. | `src/VIMP/VIMP_Globals.thy` |
-| `combine_states` | Restored caller locals combined with callee globals. | `src/VIMP/VIMP_Globals.thy` |
+| `combine_env` | Restored caller locals combined with callee globals; Goblint's `combine_env`, split from the separate destination write (`combine_assign`). | `src/VIMP/VIMP_Globals.thy` |
 
 ## Procedure-aware CFG
 

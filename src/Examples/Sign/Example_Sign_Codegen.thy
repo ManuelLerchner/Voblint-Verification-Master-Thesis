@@ -101,10 +101,10 @@ theorem analyse_sign_sound_for:
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
-       \<lbrakk>combine_abs gs (fun_of_exec_dg_st_for gs cinit_sign_st)
+       \<lbrakk>combine_env\<^sup># gs (fun_of_exec_dg_st_for gs cinit_sign_st)
           (fun_of_exec_dg_st_for gs cinit_sign_st)\<rbrakk>"
     by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def
-                  gamma_state_def combine_abs_def)
+                  gamma_state_def combine_env_abs_def)
   show ?thesis
     unfolding analyse_sign_gamma_for_def analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def
     by (rule p_reg.run_source_sound
@@ -145,10 +145,10 @@ theorem analyse_sign_collect_sound_for:
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
-       \<lbrakk>combine_abs gs (fun_of_exec_dg_st_for gs cinit_sign_st)
+       \<lbrakk>combine_env\<^sup># gs (fun_of_exec_dg_st_for gs cinit_sign_st)
           (fun_of_exec_dg_st_for gs cinit_sign_st)\<rbrakk>"
     by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def
-                  gamma_state_def combine_abs_def)
+                  gamma_state_def combine_env_abs_def)
   show ?thesis
     unfolding analyse_sign_gamma_for_def analyse_sign_for_def analyse_sign_eqs_for_def prog_cfg_def
     by (rule p_reg.collect_sound

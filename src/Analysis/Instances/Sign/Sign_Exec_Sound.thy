@@ -247,7 +247,7 @@ text \<open>
 
 definition analyse_sign_env_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
   "analyse_sign_env_for gs p v =
-     combine_abs gs
+     combine_env\<^sup># gs
        (fun_of_exec_dg_st_for gs (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
        (fun_of_exec_dg_st_for gs (globs (snd (analyse_sign_for gs p) (Inr ()))))"
 

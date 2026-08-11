@@ -323,7 +323,7 @@ text \<open>
   \<open>x := 5\<close> is exactly \<open>SPos\<close> at the sign level, and \<open>analyse Sign_Analysis\<close> now settles \<open>0 < x\<close>
   outright from it, on a program with no global at all. The native D/G pipeline's
   \<open>analyse_sign_env_for\<close> routes each name to the one component that owns it
-  (\<^const>\<open>combine_abs\<close>) instead of unconditionally joining the local answer with the global
+  (\<^const>\<open>combine_env_abs\<close>) instead of unconditionally joining the local answer with the global
   side-effect slot, so an untouched local's precision is no longer destroyed by the global
   slot's unrelated \<^term>\<open>STop\<close> default.
 \<close>
@@ -781,7 +781,7 @@ definition state_wiring_ex_prog :: imp_prog where
 text \<open>
   \<open>x\<close> is local (no \<open>global\<close> declaration). \<open>analyse_sign_report_for_code\<close>
   builds the per-point environment as
-  \<open>combine_abs gs (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+  \<open>combine_env\<^sup># gs (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
      (fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))\<close>,
   routing every name to the one component that actually owns it: local
   names read the local unknown, global names read the global/side unknown.

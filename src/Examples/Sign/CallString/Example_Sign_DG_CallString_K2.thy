@@ -206,14 +206,14 @@ definition sign_ctx_sg_2 :: "pp \<times> cfg_node list + gk_2 \<Rightarrow> sign
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst sign_nest_2_sol
-           then combine_abs sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))
+           then combine_env\<^sup># sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma sign_ctx_sg_2_covered:
   "(v, ctx) \<in> fst sign_nest_2_sol
    \<Longrightarrow> sign_ctx_sg_2 (Inl (v, ctx))
-       = combine_abs sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
+       = combine_env\<^sup># sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
   by (simp add: sign_ctx_sg_2_def)
 
 lemma sign_ctx_sg_2_uncovered_empty:
@@ -251,7 +251,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst sign_nest_2_sol"
   thus "sign_ctx_sg_2 (Inl (v, ctx))
-          = combine_abs sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
+          = combine_env\<^sup># sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
     by (rule sign_ctx_sg_2_covered)
 next
   fix v ctx
@@ -355,11 +355,11 @@ theorem sign_nest_2_activation_collect_sound:
   "activation_collect sign_nest_gs (admiss_exact (cs_enterc 2)) [] sign_nest_cfg (cinit_stores sign_nest_gs) v ctx
      \<subseteq> \<lbrakk>sign_ctx_sg_2 (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and admiss = "admiss_exact (cs_enterc 2)"
-        and startc = "[]"
+        and startcontext = "[]"
         and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_sign_st\<close>'s own
-    projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
     \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
     the caller's local bound (\<open>entry_locals_ge_s0d_2\<close>) and the entry's global-seed
     bound (\<open>sign_nest_2_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>
@@ -370,7 +370,7 @@ proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and admiss = "admi
             (fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit sign_nest_gs (locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, []))))
                    (globs (sigma_2 (Inr Global2)))"
     by (rule gamma_unit_mono[OF entry_locals_ge_s0d_2[OF entry_covered_2]

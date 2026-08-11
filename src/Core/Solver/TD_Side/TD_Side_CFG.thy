@@ -120,14 +120,14 @@ lemma join_abs_state_right_mono:
    annihilate each other; together these make the algebra confluent, so a
    split-state combine such as restrict_local (restrict_local A \<squnion> restrict_global B)
    = restrict_local A closes by plain simp without a dedicated lemma. *)
-(* combine_abs's primitive definition is a single if-then-else lambda; this
+(* combine_env\<^sup>#'s primitive definition is a single if-then-else lambda; this
    reduces it to the confluent restrict_local_for/restrict_global_for algebra so
-   proofs never need to unfold combine_abs_def and re-derive the split by
+   proofs never need to unfold combine_env_abs_def and re-derive the split by
    hand. *)
-lemma combine_abs_for_eq_restrict:
-  "combine_abs gs sc se =
+lemma combine_env_abs_for_eq_restrict:
+  "combine_env\<^sup># gs sc se =
      restrict_local_for gs sc \<squnion> restrict_global_for gs se"
-  unfolding combine_abs_def restrict_local_for_def restrict_global_for_def
+  unfolding combine_env_abs_def restrict_local_for_def restrict_global_for_def
     sup_fun_def
   by (rule ext) simp
 
@@ -213,7 +213,7 @@ where
 
 (* Procedure-return combine: query the caller local cc, the callee-exit local
    ex, and the global; reassemble locals-from-caller + globals-from-callee
-   (= combine_abs) and split into a local Answer and a global Side. *)
+   (= combine_env\<^sup>#) and split into a local Answer and a global Side. *)
 definition unit_combine_tree ::
   "(vname => bool) => vname option => pp => pp
    => (pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"

@@ -43,9 +43,9 @@ locale ltr_gamma =
   fixes g :: cfg and S :: "store set"
     and acc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
-    and startc :: 'c
+    and startcontext :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ROOT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) startc"
+  assumes ROOT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) startcontext"
     and EDGE[intro]: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> acc u c \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> acc v c"
     and ADMISS_TOTAL: "\<And>u c s. \<exists>c'. admiss u c s c'"
@@ -63,7 +63,7 @@ begin
 text \<open>\<open>bnd u\<close>: the sink store of \<open>u\<close> is admitted at \<open>u\<close>'s own node under every context
   \<open>admiss\<close>/\<open>ctx_key\<close> admissibly assigns to \<open>u\<close>. Vacuously true at any non-admissible \<open>c\<close>.\<close>
 abbreviation bnd :: "ltr \<Rightarrow> bool" where
-  "bnd u \<equiv> \<forall>c. ctx_key admiss startc u c \<longrightarrow> sink_store u \<in> acc (sink_node u) c"
+  "bnd u \<equiv> \<forall>c. ctx_key admiss startcontext u c \<longrightarrow> sink_store u \<in> acc (sink_node u) c"
 
 definition gamma_ltr :: "ltr set" where
   "gamma_ltr = {t. bnd t}"
@@ -71,7 +71,7 @@ definition gamma_ltr :: "ltr set" where
 subsection \<open>Closure under the four ltr_F clauses\<close>
 
 text \<open>\<open>root_closed\<close>: the main activation's seed store is admitted at every context admissibly
-  reachable from the entry seed --- only \<open>startc\<close> itself, per \<open>ctx_key_Root\<close>.\<close>
+  reachable from the entry seed --- only \<open>startcontext\<close> itself, per \<open>ctx_key_Root\<close>.\<close>
 lemma root_closed: "s \<in> S \<Longrightarrow> bnd (Root [(cfg_entry g, s)])"
   using ROOT by (auto simp: sink_node_def sink_store_def elim: ctx_key_RootE)
 
@@ -83,8 +83,8 @@ lemma intra_closed:
     and st: "s' \<in> edge_step a (sink_store t)" and pne: "path t \<noteq> []" and iht: "bnd t"
   shows "bnd (extend t (v, s'))"
 proof (intro allI impI)
-  fix c assume "ctx_key admiss startc (extend t (v, s')) c"
-  hence ck: "ctx_key admiss startc t c" using pne by (simp add: ctx_key_extend_nonempty)
+  fix c assume "ctx_key admiss startcontext (extend t (v, s')) c"
+  hence ck: "ctx_key admiss startcontext t c" using pne by (simp add: ctx_key_extend_nonempty)
   have mem: "sink_store t \<in> acc (sink_node t) c" using iht ck by blast
   have "s' \<in> acc v c" by (rule EDGE[OF e mem st])
   then show "sink_store (extend t (v, s')) \<in> acc (sink_node (extend t (v, s'))) c"
@@ -99,9 +99,9 @@ lemma call_closed:
     and ihc: "bnd caller"
   shows "bnd (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
 proof (intro allI impI)
-  fix c' assume "ctx_key admiss startc
+  fix c' assume "ctx_key admiss startcontext
       (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]) c'"
-  then obtain c where c: "ctx_key admiss startc caller c"
+  then obtain c where c: "ctx_key admiss startcontext caller c"
     and adm: "admiss (sink_node caller) c (call_enter gs (CallEdge dst pars args) (sink_store caller)) c'"
     by (auto elim: ctx_key_CallE)
   have mem: "sink_store caller \<in> acc (sink_node caller) c" using ihc c by blast
@@ -126,13 +126,13 @@ lemma return_closed:
   shows "bnd (Resume caller callee
                (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
 proof (intro allI impI)
-  fix c1 assume "ctx_key admiss startc (Resume caller callee
+  fix c1 assume "ctx_key admiss startcontext (Resume caller callee
       (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])) c1"
-  hence ck1: "ctx_key admiss startc caller c1" by (auto elim: ctx_key_ResumeE)
+  hence ck1: "ctx_key admiss startcontext caller c1" by (auto elim: ctx_key_ResumeE)
   have s1: "sink_store caller \<in> acc (sink_node caller) c1" using ih_caller ck1 by blast
   obtain c2 where adm: "admiss (sink_node caller) c1 (entry_store callee) c2"
     using ADMISS_TOTAL by blast
-  have ck2: "ctx_key admiss startc callee c2"
+  have ck2: "ctx_key admiss startcontext callee c2"
     using ctx_key_entry_invariant_iff[OF callee_val cof] ck1 adm by fastforce
   have call_enter: "call_enter_store gs g (sink_node caller) (sink_store caller) (entry_store callee)"
     using ctx_key_entry_invariant_call_enterD[OF callee_val cof] .
@@ -210,7 +210,7 @@ proof (rule subsetI)
   then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
     by (rule ltr_collect_E)
   have bt: "bnd t" using valid_ltr_subset_gamma_ltr t(1) by (auto simp: gamma_ltr_def)
-  obtain c where "ctx_key admiss startc t c"
+  obtain c where "ctx_key admiss startcontext t c"
     using ctx_key_exists[where admiss = admiss, OF ADMISS_TOTAL] by blast
   with bt have "x \<in> acc v c" using t(2,3) by blast
   then show "x \<in> (\<Union>c. acc v c)" by blast
@@ -231,7 +231,7 @@ text \<open>The interface is satisfiable for every graph, seed set, admissibilit
   remaining four obligations.\<close>
 lemma ltr_gamma_UNIV:
   assumes "\<And>u c s. \<exists>c'. admiss u c s c'"
-  shows "ltr_gamma g S (\<lambda>_ _. UNIV) admiss startc gs"
+  shows "ltr_gamma g S (\<lambda>_ _. UNIV) admiss startcontext gs"
   using assms by unfold_locales auto
 
 subsection \<open>Monovariant semantic post-fixpoint\<close>

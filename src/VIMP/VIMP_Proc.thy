@@ -102,7 +102,7 @@ where
                   Frame s dst # frs)"
 | RestoreStep:
     "pstep gs \<Pi> (Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign dst (s ret_var) (combine_states gs fr s), frs)"
+       (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)"
 | ReturnSome:
     "pstep gs \<Pi> (Return (Some e), s, frs)
        (Unwind, s(ret_var := aval e s), frs)"
@@ -113,7 +113,7 @@ where
      \<Longrightarrow> pstep gs \<Pi> (Seq Unwind c2, s, frs) (Unwind, s, frs)"
 | UnwindAct:
     "pstep gs \<Pi> (Seq Unwind Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign dst (s ret_var) (combine_states gs fr s), frs)"
+       (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)"
 
 abbreviation
   psteps :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
@@ -281,7 +281,7 @@ lemma psteps_frame_mono:
 lemma psteps_Seq_Restore_body:
   assumes "psteps gs \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
   shows "psteps gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
-           (SKIP, combine_assign dst (t' ret_var) (combine_states gs fr t'), [])"
+           (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
 proof -
   have body_seq:
     "psteps gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
@@ -293,17 +293,17 @@ proof -
     by (rule Seq1)
   have step_restore:
     "pstep gs \<Pi> (Restore, t', [Frame fr dst])
-       (SKIP, combine_assign dst (t' ret_var) (combine_states gs fr t'), [])"
+       (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
     by (rule RestoreStep)
   have tail:
     "psteps gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
-       (SKIP, combine_assign dst (t' ret_var) (combine_states gs fr t'), [])"
+       (SKIP, combine_assign dst (t' ret_var) (combine_env gs fr t'), [])"
     using step_seq1 step_restore by (meson star.refl star.step)
   show ?thesis using body_seq tail by (rule star_trans)
 qed
 
-lemma combine_states_ret_var_irrelevant [simp]:
-  "\<not> gs ret_var \<Longrightarrow> combine_states gs fr (t(ret_var := v)) = combine_states gs fr t"
+lemma combine_env_ret_var_irrelevant [simp]:
+  "\<not> gs ret_var \<Longrightarrow> combine_env gs fr (t(ret_var := v)) = combine_env gs fr t"
   by (rule ext) simp
 
 
@@ -320,7 +320,7 @@ lemma pcompletes_Call:
                    (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
                      (enter_state gs s)) t'"
   shows "pcompletes gs \<Pi> (Call dst p actuals) s
-           (combine_assign dst (t' ret_var) (combine_states gs s t'))"
+           (combine_assign dst (t' ret_var) (combine_env gs s t'))"
   unfolding pcompletes_def
 proof (rule star.step)
   let ?vals = "map (\<lambda>e. aval e s) actuals"
@@ -333,7 +333,7 @@ proof (rule star.step)
     "psteps gs \<Pi> (body decl, ?callee, [Frame s dst]) (SKIP, t', [Frame s dst])"
     using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s dst]"] by simp
   show "psteps gs \<Pi> (Seq (body decl) Restore, ?callee, [Frame s dst])
-          (SKIP, combine_assign dst (t' ret_var) (combine_states gs s t'), [])"
+          (SKIP, combine_assign dst (t' ret_var) (combine_env gs s t'), [])"
     using psteps_Seq_Restore_body[OF framed] by simp
 qed
 
@@ -348,16 +348,16 @@ lemma pcompletes_Call_dst_fallthrough_zero:
                    (bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
                      (enter_state gs s)) t'"
       and fallthrough: "t' ret_var = 0"
-  shows "pcompletes gs \<Pi> (Call (Some x) p actuals) s ((combine_states gs s t')(x := 0))"
+  shows "pcompletes gs \<Pi> (Call (Some x) p actuals) s ((combine_env gs s t')(x := 0))"
   using pcompletes_Call[OF p arity distinct_formals body, where dst = "Some x"] fallthrough by simp
 
 lemma pcompletes_Call_parameterless:
   assumes p: "\<Pi> p = Some (proc_decl_of [] c)"
       and body: "pcompletes gs \<Pi> c (enter_state gs s) t'"
-  shows "pcompletes gs \<Pi> (Call None p []) s (combine_states gs s t')"
+  shows "pcompletes gs \<Pi> (Call None p []) s (combine_env gs s t')"
 proof -
   have "pcompletes gs \<Pi> (Call None p []) s
-          (combine_assign None (t' ret_var) (combine_states gs s t'))"
+          (combine_assign None (t' ret_var) (combine_env gs s t'))"
   proof (rule pcompletes_Call)
     show "\<Pi> p = Some (proc_decl_of [] c)" by (rule p)
     show "length [] = length (formals (proc_decl_of [] c))"
@@ -383,7 +383,7 @@ lemma call_return_completes:
   assumes q: "\<Pi> p = Some (proc_decl_of [] (Return (Some e)))"
   shows "psteps gs \<Pi> (Call (Some x) p [], s, frs)
            (SKIP,
-            (combine_states gs s
+            (combine_env gs s
               ((enter_state gs s)(ret_var := aval e (enter_state gs s))))
               (x := aval e (enter_state gs s)),
             frs)"
@@ -405,10 +405,10 @@ proof -
               (Seq Unwind Restore, ?s', ?F # frs)"
     by (intro pstep.Seq2 pstep.ReturnSome)
   have c4: "pstep gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-              (SKIP, (combine_states gs s ?s')(x := aval e ?se), frs)"
+              (SKIP, (combine_env gs s ?s')(x := aval e ?se), frs)"
   proof -
     have "pstep gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-            (SKIP, combine_assign (Some x) (?s' ret_var) (combine_states gs s ?s'), frs)"
+            (SKIP, combine_assign (Some x) (?s' ret_var) (combine_env gs s ?s'), frs)"
       by (rule UnwindAct)
     thus ?thesis by simp
   qed
@@ -423,7 +423,7 @@ text \<open>
 lemma call_return_none_completes:
   assumes q: "\<Pi> p = Some (proc_decl_of [] (Return None))"
   shows "psteps gs \<Pi> (Call None p [], s, frs)
-           (SKIP, combine_states gs s (enter_state gs s), frs)"
+           (SKIP, combine_env gs s (enter_state gs s), frs)"
 proof -
   let ?se = "enter_state gs s"
   let ?F = "Frame s None"
@@ -439,10 +439,10 @@ proof -
   have c2: "pstep gs \<Pi> (Seq (Return None) Restore, ?se, ?F # frs) (Seq Unwind Restore, ?se, ?F # frs)"
     by (intro pstep.Seq2 pstep.ReturnNone)
   have c3: "pstep gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-              (SKIP, combine_states gs s ?se, frs)"
+              (SKIP, combine_env gs s ?se, frs)"
   proof -
     have "pstep gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-            (SKIP, combine_assign None (?se ret_var) (combine_states gs s ?se), frs)"
+            (SKIP, combine_assign None (?se ret_var) (combine_env gs s ?se), frs)"
       by (rule UnwindAct)
     thus ?thesis by simp
   qed
@@ -463,7 +463,7 @@ theorem nested_call_return_trace:
                    (Seq (Call (Some rin) pin []) after))"
   shows "psteps gs \<Pi> (Call (Some rout) pout [], s0, [])
            (Seq after Restore,
-            (combine_states gs (enter_state gs s0)
+            (combine_env gs (enter_state gs s0)
               ((enter_state gs (enter_state gs s0))
                 (ret_var := aval e (enter_state gs (enter_state gs s0)))))
                 (rin := aval e (enter_state gs (enter_state gs s0))),
@@ -471,7 +471,7 @@ theorem nested_call_return_trace:
 proof -
   let ?s1 = "enter_state gs s0"
   let ?Fout = "Frame s0 (Some rout)"
-  let ?inner = "(combine_states gs ?s1
+  let ?inner = "(combine_env gs ?s1
                     ((enter_state gs ?s1)(ret_var := aval e (enter_state gs ?s1))))
                   (rin := aval e (enter_state gs ?s1))"
   \<comment> \<open>outer call pushes the outer\<close>

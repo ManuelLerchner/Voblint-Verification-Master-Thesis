@@ -162,13 +162,13 @@ lemma parity_cover_combine:
 
 lemma parity_sound0:
   "cinit_stores parity_gs \<subseteq>
-     \<lbrakk>combine_abs parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
+     \<lbrakk>combine_env\<^sup># parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
         (fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st))\<rbrakk>"
 proof -
-  have "combine_abs parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
+  have "combine_env\<^sup># parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
           (fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st))
         = fun_of_exec_dg_st_for parity_gs cinit_parity_st"
-    by (simp add: combine_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for
+    by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for
                   restrict_global_for_def declared_global_def fun_eq_iff)
   thus ?thesis
     by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for)

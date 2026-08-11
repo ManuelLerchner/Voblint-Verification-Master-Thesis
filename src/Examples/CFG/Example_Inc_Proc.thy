@@ -68,9 +68,9 @@ lemma aval_plus_counter_on_enter_declared:
 
 lemma combine_after_enter_global_assign_declared:
   assumes "declared_global inc_program x"
-  shows "combine_states (declared_global inc_program) s
+  shows "combine_env (declared_global inc_program) s
            ((enter_state (declared_global inc_program) s)(x := v)) = s(x := v)"
-  using assms by (auto simp: combine_states_def enter_state_def)
+  using assms by (auto simp: combine_env_def enter_state_def)
 
 text \<open>
   The call completion fact for \<^const>\<open>inc_program\<close>, restated with the declaration-driven
@@ -88,7 +88,7 @@ proof -
   let ?body = "imp \<lbrakk> counter := counter + 1 \<rbrakk>"
   have g: "declared_global inc_program (STR ''counter'')" by simp
   have run: "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
-                (combine_states (declared_global inc_program) s
+                (combine_env (declared_global inc_program) s
                   ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
     show "inc_pi (STR ''p'') = Some (proc_decl_of [] ?body)"
@@ -106,7 +106,7 @@ proof -
     qed
   qed
   moreover have
-    "combine_states (declared_global inc_program) s
+    "combine_env (declared_global inc_program) s
        ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1))
        = s((STR ''counter'') := s (STR ''counter'') + 1)"
     using combine_after_enter_global_assign_declared[OF g] by simp

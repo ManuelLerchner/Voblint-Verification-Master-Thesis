@@ -1601,10 +1601,10 @@ where
                                apply_tf tfD (EA_AssumeNot b) d)),
     dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
                                    tf_enter tfD xs es d)),
-    dgs_combine_env    = (\<lambda>dc de g. (combine_abs gs g g, combine_abs gs dc de)),
+    dgs_combine_env    = (\<lambda>dc de g. (combine_env\<^sup># gs g g, combine_env\<^sup># gs dc de)),
     dgs_combine_assign = (\<lambda>dst de g merged.
-      (combine_assign_abs dst (g ret_var) (fst merged),
-       combine_assign_abs dst (de ret_var) (snd merged)))
+      (combine_assign\<^sup># dst (g ret_var) (fst merged),
+       combine_assign\<^sup># dst (de ret_var) (snd merged)))
   \<rparr>"
 
 lemma dg_spec_step_indep [simp]:
@@ -1695,7 +1695,7 @@ subsection \<open>The homogeneous analysis as a diagonal interpretation\<close>
 
 text \<open>
   \<open>gamma_unit gs d g\<close> is the meaning \<^const>\<open>unit_step_for\<close> actually assumes of a
-  point's \<open>D\<close>/\<open>G\<close> pair: \<^const>\<open>combine_abs\<close> routes each name to the one component
+  point's \<open>D\<close>/\<open>G\<close> pair: \<^const>\<open>combine_env_abs\<close> routes each name to the one component
   that owns it (\<open>D\<close> for locals, \<open>G\<close> for globals), never the raw lattice join, so an
   untouched name's precision in its owning component is not destroyed by the other
   component's unrelated default.
@@ -1703,15 +1703,15 @@ text \<open>
 definition gamma_unit ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
-  "gamma_unit gs d g = \<lbrakk>combine_abs gs d g\<rbrakk>"
+  "gamma_unit gs d g = \<lbrakk>combine_env\<^sup># gs d g\<rbrakk>"
 
 lemma gamma_unit_mono:
   assumes "d \<le> d'" and "g \<le> g'"
   shows "gamma_unit gs d g \<subseteq> gamma_unit gs d' g'"
   unfolding gamma_unit_def
-  by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_abs_def le_fun_def\<close>)
+  by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_env_abs_def le_fun_def\<close>)
 
-lemma gamma_unitD [dest]: "s \<in> gamma_unit gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_abs gs d g\<rbrakk>"
+lemma gamma_unitD [dest]: "s \<in> gamma_unit gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_env\<^sup># gs d g\<rbrakk>"
   unfolding gamma_unit_def by simp
 
 text \<open>
@@ -1719,7 +1719,7 @@ text \<open>
   full equality (not just the membership direction \<open>gamma_unitD\<close> gives) can
   cite this instead of reaching for \<open>gamma_unit_def\<close> directly.
 \<close>
-lemma gamma_unit_eq: "gamma_unit gs d g = \<lbrakk>combine_abs gs d g\<rbrakk>"
+lemma gamma_unit_eq: "gamma_unit gs d g = \<lbrakk>combine_env\<^sup># gs d g\<rbrakk>"
   unfolding gamma_unit_def ..
 
 
@@ -1727,23 +1727,23 @@ text \<open>
   Every call site owns \<open>ret_var\<close> as its own compiler-internal name, never a
   user-declared global (\<^const>\<open>reserved_ret_var\<close>); that is what lets the
   combine step read the return value straight out of \<open>de\<close> instead of routing
-  it through \<^const>\<open>combine_abs\<close> a second time.
+  it through \<^const>\<open>combine_env_abs\<close> a second time.
 \<close>
-lemma combine_abs_combine_abs_left [simp]:
-  "combine_abs gs (combine_abs gs dc g) (combine_abs gs de g) = combine_abs gs dc g"
-  by (auto simp: combine_abs_def)
+lemma combine_env_abs_combine_env_abs_left [simp]:
+  "combine_env\<^sup># gs (combine_env\<^sup># gs dc g) (combine_env\<^sup># gs de g) = combine_env\<^sup># gs dc g"
+  by (auto simp: combine_env_abs_def)
 
-lemma combine_abs_local_eq [simp]:
-  "\<not> gs x \<Longrightarrow> combine_abs gs sc se x = sc x"
-  by (simp add: combine_abs_def)
+lemma combine_env_abs_local_eq [simp]:
+  "\<not> gs x \<Longrightarrow> combine_env\<^sup># gs sc se x = sc x"
+  by (simp add: combine_env_abs_def)
 
-text \<open>The \<^const>\<open>combine_abs\<close> analogue of \<open>restrict_local_for_global_join\<close>:
+text \<open>The \<^const>\<open>combine_env_abs\<close> analogue of \<open>restrict_local_for_global_join\<close>:
   splitting a state into its local/global halves and routing them back through
-  \<^const>\<open>combine_abs\<close> recovers the original state exactly, since each half is
+  \<^const>\<open>combine_env_abs\<close> recovers the original state exactly, since each half is
   already zero outside the location it owns.\<close>
-lemma combine_abs_restrict_id [simp]:
-  "combine_abs gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
-  by (simp add: combine_abs_for_eq_restrict restrict_local_for_global_join)
+lemma combine_env_abs_restrict_id [simp]:
+  "combine_env\<^sup># gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
+  by (simp add: combine_env_abs_for_eq_restrict restrict_local_for_global_join)
 
 lemma gamma_unit_combine_sound_for:
   assumes reserved: "reserved_ret_var gs"
@@ -1751,10 +1751,10 @@ lemma gamma_unit_combine_sound_for:
   shows "combine_collect gs dst s t \<in>
            (case dgs_combine (unit_dg_spec_for gs tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>combine_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
-  have tc': "t \<in> \<lbrakk>combine_abs gs de g\<rbrakk>" using gamma_unitD[OF tc] .
+  have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
+  have tc': "t \<in> \<lbrakk>combine_env\<^sup># gs de g\<rbrakk>" using gamma_unitD[OF tc] .
   have "combine_collect gs dst s t \<in>
-          \<lbrakk>combine_collect_abs gs dst (combine_abs gs dc g) (combine_abs gs de g)\<rbrakk>"
+          \<lbrakk>combine_collect_abs gs dst (combine_env\<^sup># gs dc g) (combine_env\<^sup># gs de g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     using reserved
@@ -1769,9 +1769,9 @@ lemma gamma_unit_enter_sound_for:
   shows "call_enter gs (CallEdge dst pars args) s \<in>
            (case dgs_enter (unit_dg_spec_for gs tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>combine_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
+  have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
   have "call_enter gs (CallEdge dst pars args) s \<in>
-      \<lbrakk>tf_enter tf pars args (combine_abs gs dc g)\<rbrakk>"
+      \<lbrakk>tf_enter tf pars args (combine_env\<^sup># gs dc g)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
@@ -1800,7 +1800,7 @@ subsection \<open>The homogeneous analysis under an independent placement policy
 
 text \<open>
   \<open>unit_dg_spec_placed\<close> packages every D/G step through the raw lattice join
-  (\<open>d \<squnion> g\<close>) rather than \<^const>\<open>combine_abs\<close>'s ownership routing: with a
+  (\<open>d \<squnion> g\<close>) rather than \<^const>\<open>combine_env_abs\<close>'s ownership routing: with a
   non-exclusive covering, a name can legitimately be tracked by both
   \<open>keep_local\<close> and \<open>publish_side\<close>, so there is no single owning component to
   route to, and the join is the only combinator that stays sound for every
@@ -1838,12 +1838,12 @@ text \<open>\<open>gamma_unit\<close> refines \<open>gamma_join\<close>: routing
   chain fixes described), so this is a one-way refinement, not an equivalence --
   \<open>gamma_join\<close> stays the sound target for \<^const>\<open>unit_dg_spec_placed\<close>'s non-exclusive
   covering, where no single component owns every name.\<close>
-lemma combine_abs_le_sup: "combine_abs gs sc se \<le> sc \<squnion> se"
-  by (auto simp: combine_abs_def le_fun_def)
+lemma combine_env_abs_le_sup: "combine_env\<^sup># gs sc se \<le> sc \<squnion> se"
+  by (auto simp: combine_env_abs_def le_fun_def)
 
 lemma gamma_unit_subset_gamma_join: "gamma_unit gs d g \<subseteq> gamma_join d g"
   unfolding gamma_unit_def gamma_join_def
-  by (rule gamma_state_mono[OF combine_abs_le_sup])
+  by (rule gamma_state_mono[OF combine_env_abs_le_sup])
 
 lemma project_component_cover_sup:
   fixes sigma :: "'a::bounded_semilattice_sup_bot abs_state"
@@ -1866,7 +1866,7 @@ proof -
   have env_join:
     "fst (unit_combine_step_env_placed source_global keep_local publish_side dc de g) \<squnion>
        snd (unit_combine_step_env_placed source_global keep_local publish_side dc de g) =
-     combine_abs source_global (dc \<squnion> g) (de \<squnion> g)"
+     combine_env\<^sup># source_global (dc \<squnion> g) (de \<squnion> g)"
     unfolding unit_combine_step_env_placed_def
     by (simp add: Let_def project_component_cover_sup[OF cover])
   show ?thesis

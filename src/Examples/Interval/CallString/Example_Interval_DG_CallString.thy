@@ -276,14 +276,14 @@ definition ivl_ctx_sg_cs :: "pp \<times> cfg_node + gk_cs \<Rightarrow> ivl abs_
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst twice_cs_sol
-           then combine_abs twice_gs (locals (sigma_cs (Inl (v, ctx)))) (globs (sigma_cs (Inr GlobalCS)))
+           then combine_env\<^sup># twice_gs (locals (sigma_cs (Inl (v, ctx)))) (globs (sigma_cs (Inr GlobalCS)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma ivl_ctx_sg_cs_covered:
   "(v, ctx) \<in> fst twice_cs_sol
    \<Longrightarrow> ivl_ctx_sg_cs (Inl (v, ctx))
-       = combine_abs twice_gs (locals (sigma_cs (Inl (v, ctx)))) (globs (sigma_cs (Inr GlobalCS)))"
+       = combine_env\<^sup># twice_gs (locals (sigma_cs (Inl (v, ctx)))) (globs (sigma_cs (Inr GlobalCS)))"
   by (simp add: ivl_ctx_sg_cs_def)
 
 lemma ivl_ctx_sg_cs_uncovered_empty:
@@ -339,7 +339,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst twice_cs_sol"
   thus "ivl_ctx_sg_cs (Inl (v, ctx))
-          = combine_abs twice_gs (locals (sigma_cs (Inl (v, ctx)))) (globs (sigma_cs (Inr GlobalCS)))"
+          = combine_env\<^sup># twice_gs (locals (sigma_cs (Inl (v, ctx)))) (globs (sigma_cs (Inr GlobalCS)))"
     by (rule ivl_ctx_sg_cs_covered)
 next
   fix v ctx
@@ -464,11 +464,11 @@ theorem twice_cs_activation_collect_sound:
   "activation_collect twice_gs (admiss_exact enterc_cs) (cfg_entry twice_cfg) twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_cs (Inl (v, ctx))\<rbrakk>"
 proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and admiss = "admiss_exact enterc_cs"
-        and startc = "cfg_entry twice_cfg"
+        and startcontext = "cfg_entry twice_cfg"
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
-    projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
     \<open>s0d\<close> (its global entries agree with \<open>s0g\<close> by construction): the membership below
     transports through \<open>gamma_unit_mono\<close> componentwise, needing the caller's
     local bound (\<open>entry_locals_ge_s0d_cs\<close>) and the entry's global-seed bound
@@ -480,7 +480,7 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg_cs and admiss = "admi
             (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit twice_gs (locals (sigma_cs (Inl (cfg_entry twice_cfg, cfg_entry twice_cfg))))
                    (globs (sigma_cs (Inr GlobalCS)))"
     by (rule gamma_unit_mono[OF entry_locals_ge_s0d_cs[OF entry_covered_cs]

@@ -103,7 +103,7 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
                        tf_assume     = assume_ivl,
                        tf_assume_not = assume_not_ivl,
                        tf_enter      = enter_ivl_for gs,
-                       tf_combine    = combine_abs gs |)"
+                       tf_combine    = combine_env\<^sup># gs |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
@@ -113,7 +113,7 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   subgoal by (simp add: assume_ivl_sound)
   subgoal by (simp add: assume_not_ivl_sound)
   subgoal by (simp add: enter_ivl_for_sound)
-  subgoal by (simp add: combine_states_sound)
+  subgoal by (simp add: combine_env_sound)
   done
 
 lemma assume_ivl_mono:
@@ -160,7 +160,7 @@ text \<open>
   @{thm [source] assume_not_ivl_def}, @{thm [source] ivl_backward_domain.bfilter.simps};
   examples with procedure calls also need @{thm [source] enter_ivl_for_def},
   @{thm [source] enter_frame_ivl_for_def}, @{thm [source] bind_formals_abs_def},
-  @{thm [source] combine_abs_def}.
+  @{thm [source] combine_env_abs_def}.
 \<close>
 lemmas ivl_eval_simps =
   ivl_tf_for_def assign_ivl_def
