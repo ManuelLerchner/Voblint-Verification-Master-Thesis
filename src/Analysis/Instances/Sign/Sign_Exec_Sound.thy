@@ -54,20 +54,18 @@ text \<open>
   Discharging termination by execution.  When the vendored side solver's
   executable @{const TD_side_always_join_Interp_solve_c} returns a result on a
   concrete program, that program lies in the solver's domain, so
-  @{const sign_exec_terminates} holds.  The bridge is the solver's
-  @{thm TD_side_always_join_Interp.term_equivalence}
-  (\<open>solve_dom x \<longleftrightarrow> solve_c_dom x\<close>): the option-valued @{const TD_side_always_join_Interp_solve_c}
-  code-generates, so examples discharge the premise by @{method eval}, turning
-  the soundness assumption into a proved fact.
+  @{const sign_exec_terminates} holds --- the generic bridge is
+  @{thm TD_side_always_join_Interp.solve_dom_of_solve_c}. The option-valued
+  @{const TD_side_always_join_Interp_solve_c} code-generates, so examples discharge the
+  premise by @{method eval}, turning the soundness assumption into a proved fact.
 \<close>
 
 lemma sign_exec_terminates_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c (sign_exec_eqs gs \<Pi> ps mnm main)
              (cfg_exit (compile_prog \<Pi> ps mnm main)) \<noteq> None"
   shows "sign_exec_terminates gs \<Pi> ps mnm main"
-  unfolding sign_exec_terminates_def TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding sign_exec_terminates_def
+  using assms by (rule TD_side_always_join_Interp.solve_dom_of_solve_c)
 
 text \<open>
   Soundness at the state level: starting from any C-faithful initial store

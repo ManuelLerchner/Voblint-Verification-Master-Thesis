@@ -2,6 +2,21 @@ theory Solver_Side_RG
   imports Exec_Bridge "TD.TD_side_upd_rule"
 begin
 
+section \<open>Generic: an executable termination check yields solver-domain membership\<close>
+
+text \<open>Every domain instance restates the same three-line bridge --- unfold its own
+  \<open>_terminates_def\<close>, then \<open>term_equivalence\<close> and \<open>solve_c_dom_def\<close> turn the executable
+  \<open>solve_c x \<noteq> None\<close> check into \<open>solve_dom x\<close> --- once per update rule (join, warrowing, ...)
+  and once per domain (Sign, Interval, Parity). Stating it generically \<^emph>\<open>inside\<close> the vendored
+  \<^locale>\<open>TD_side_upd_rule\<close> makes it available on every concrete interpretation as
+  \<open>TD_side_<rule>_Interp.solve_dom_of_solve_c\<close>, so a domain's \<open>_terminates_via_solve_c\<close> lemma
+  reduces to unfolding its own definition and citing this fact.\<close>
+
+lemma (in TD_side_upd_rule) solve_dom_of_solve_c:
+  assumes "solve_c x \<noteq> None"
+  shows "solve_dom x"
+  unfolding term_equivalence solve_c_dom_def using assms by (cases "solve_c x") auto
+
 section \<open>Side-effecting solver keeps \<open>Inr\<close> slots globally restricted\<close>
 
 text \<open>If every reachable side contribution is fixed by
