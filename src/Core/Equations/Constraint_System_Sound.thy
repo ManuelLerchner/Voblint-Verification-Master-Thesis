@@ -84,11 +84,11 @@ lemma tf_enter_le_rhs:
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes finI: "finite (intra g)" and finC: "finite (calls g)"
     and uce: "(c, CallEdge dst fs as, v, k) \<in> calls g"
-  shows "tf_enter tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env v"
+  shows "enter\<^sup># tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env v"
 proof (rule le_rhs_of_mem[OF finI finC])
-  have "tf_enter tf fs as (env c) \<in> rhs_entry_sources g tf env v"
+  have "enter\<^sup># tf fs as (env c) \<in> rhs_entry_sources g tf env v"
     by (rule rhs_entry_sourcesI[OF uce])
-  thus "tf_enter tf fs as (env c) \<in> rhs_sources g tf env v"
+  thus "enter\<^sup># tf fs as (env c) \<in> rhs_sources g tf env v"
     unfolding rhs_sources_def by blast
 qed
 
@@ -152,11 +152,11 @@ text \<open>Call-entry companion of \<open>edge_of_bound\<close>, generic in the
   abstract enter transfer over \<open>A\<close> is dominated by \<open>B\<close>, the concrete callee-entry
   store built from a caller store in \<open>[[A]]\<close> lies in \<open>[[B]]\<close>.\<close>
 lemma call_enter_of_bound_for:
-  assumes bound: "tf_enter tf pars args A \<le> B"
+  assumes bound: "enter\<^sup># tf pars args A \<le> B"
     and s: "s \<in> \<lbrakk>A\<rbrakk>"
   shows "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
 proof -
-  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args A\<rbrakk>"
+  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args A\<rbrakk>"
     using tf_sound_enter_forD[OF s] by (simp add: call_enter_CallEdge)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
@@ -177,7 +177,7 @@ proof -
       by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
     case (Some x)
-    have base: "combine_states gs s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
+    have base: "combine_env gs s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
       using tf_sound_combine_forD[OF s t] .
     have ret: "t ret_var \<in> gamma (B ret_var)"
       using t unfolding gamma_state_def by auto

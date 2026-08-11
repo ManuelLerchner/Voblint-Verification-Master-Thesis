@@ -28,11 +28,11 @@ lemma sign_etf_combine_tree:
   unfolding sign_etf_def etf_combine_mixed_of_transfer by simp
 
 lemma sign_etf_enter_tree:
-  "etf_enter (sign_etf gs) fs as cl = unit_edge_tree gs (tf_enter (sign_tf_for gs) fs as) cl"
+  "etf_enter (sign_etf gs) fs as cl = unit_edge_tree gs (enter\<^sup># (sign_tf_for gs) fs as) cl"
   unfolding sign_etf_def mixed_etf_of_transfer_def by simp
 
 lemma sign_tf_for_enter_mono:
-  "s1 \<le> s2 \<Longrightarrow> tf_enter (sign_tf_for gs) fs as s1 \<le> tf_enter (sign_tf_for gs) fs as s2"
+  "s1 \<le> s2 \<Longrightarrow> enter\<^sup># (sign_tf_for gs) fs as s1 \<le> enter\<^sup># (sign_tf_for gs) fs as s2"
   by (simp add: sign_tf_for_def enter_sign_for_mono)
 
 lemma sign_sound_etf:
@@ -71,7 +71,7 @@ lemma sign_etf_unit_combine_tree:
   unfolding sign_etf_unit_def etf_combine_unit_of_transfer by simp
 
 lemma sign_etf_unit_enter_tree_tf:
-  "etf_enter (sign_etf_unit gs) fs as cl = unit_edge_tree gs (tf_enter (sign_tf_for gs) fs as) cl"
+  "etf_enter (sign_etf_unit gs) fs as cl = unit_edge_tree gs (enter\<^sup># (sign_tf_for gs) fs as) cl"
   unfolding sign_etf_unit_def unit_etf_of_transfer_def by simp
 
 lemma sign_etf_unit_enter_tree:

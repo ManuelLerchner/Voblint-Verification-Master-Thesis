@@ -124,10 +124,10 @@ lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
       reserved_ret_var_def split: if_splits)
 
 lemma dgEx_sound0:
-  "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>combine_abs sign_ex_gs
+  "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>combine_env\<^sup># sign_ex_gs
      (fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st) (fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st)\<rbrakk>"
   by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def
-      combine_abs_def)
+      combine_env_abs_def)
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 

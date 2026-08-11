@@ -335,21 +335,21 @@ qed
 text \<open>(6) Context preservation under intra: an intra extension does not change the
   activation key.\<close>
 lemma ltr_collect_ctx_intra_pres:
-  "path t \<noteq> [] \<Longrightarrow> key enterc seedc (extend t (v, s')) = key enterc seedc t"
+  "path t \<noteq> [] \<Longrightarrow> key enterc startcontext (extend t (v, s')) = key enterc startcontext t"
   by (rule key_extend_nonempty)
 
 text \<open>(7) Context transition under call: the child activation receives exactly the context
   produced by the configured enter function.\<close>
 lemma ltr_collect_ctx_call:
-  "key enterc seedc (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])
-     = enterc (sink_node caller) (key enterc seedc caller)
+  "key enterc startcontext (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])
+     = enterc (sink_node caller) (key enterc startcontext caller)
          (call_enter gs (CallEdge dst pars args) (sink_store caller))"
   by simp
 
 text \<open>(8) Context restoration under resume: a resumed trace has the caller's activation
   context, not the callee's.\<close>
 lemma ltr_collect_ctx_resume:
-  "key enterc seedc (Resume caller callee p) = key enterc seedc caller"
+  "key enterc startcontext (Resume caller callee p) = key enterc startcontext caller"
   by simp
 
 text \<open>(9) Flat reduction: for \<open>calls g = {}\<close>, no call-derived activation exists, so
@@ -387,7 +387,7 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): context-sensitive collection is included in context-insensitive
   collection.\<close>
 theorem activation_collect_le_ltr_collect:
-  "activation_collect gs admiss seedc g S v c \<subseteq> ltr_collect gs g S v"
+  "activation_collect gs admiss startcontext g S v c \<subseteq> ltr_collect gs g S v"
   unfolding activation_collect_def ltr_collect_def by blast
 
 text \<open>Bridge (2): context-insensitive collection is the union over contexts --- every trace
@@ -396,20 +396,20 @@ text \<open>Bridge (2): context-insensitive collection is the union over context
   of every slot. No finiteness assumption.\<close>
 theorem ltr_collect_eq_Union_activation:
   assumes tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
-  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs admiss seedc g S v c)"
+  shows "ltr_collect gs g S v = (\<Union>c. activation_collect gs admiss startcontext g S v c)"
 proof
-  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs admiss seedc g S v c)"
+  show "ltr_collect gs g S v \<subseteq> (\<Union>c. activation_collect gs admiss startcontext g S v c)"
   proof
     fix x assume "x \<in> ltr_collect gs g S v"
     then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
       by (rule ltr_collect_E)
-    obtain c where "ctx_key admiss seedc t c"
+    obtain c where "ctx_key admiss startcontext t c"
       using ctx_key_exists[where admiss = admiss, OF tot] by blast
-    with t show "x \<in> (\<Union>c. activation_collect gs admiss seedc g S v c)"
+    with t show "x \<in> (\<Union>c. activation_collect gs admiss startcontext g S v c)"
       unfolding activation_collect_def by blast
   qed
 next
-  show "(\<Union>c. activation_collect gs admiss seedc g S v c) \<subseteq> ltr_collect gs g S v"
+  show "(\<Union>c. activation_collect gs admiss startcontext g S v c) \<subseteq> ltr_collect gs g S v"
     unfolding activation_collect_def ltr_collect_def by blast
 qed
 

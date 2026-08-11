@@ -1646,7 +1646,7 @@ text \<open>One \<^const>\<open>pstep\<close> of a \<^const>\<open>pop_ready\<cl
   unwind, staying \<^const>\<open>pop_ready\<close> with store and frame unchanged.\<close>
 lemma pstep_pop_ready_head:
   assumes "pop_ready w" and "pstep source_global \<Pi> (w, s, Frame fr dst # frs) x"
-  shows "x = (SKIP, combine_assign dst (s ret_var) (combine_states source_global fr s), frs)
+  shows "x = (SKIP, combine_assign dst (s ret_var) (combine_env source_global fr s), frs)
        \<or> (\<exists>w'. x = (w', s, Frame fr dst # frs) \<and> pop_ready w')"
   using assms
 proof (cases w rule: pop_ready.cases)
@@ -1723,7 +1723,7 @@ proof -
   from pstep_pop_ready_head[OF pr hstep] show ?thesis
   proof (rule disjE)
     assume "(h', s', frs') =
-              (SKIP, combine_assign dst (callee ret_var) (combine_states source_global caller callee), [])"
+              (SKIP, combine_assign dst (callee ret_var) (combine_env source_global caller callee), [])"
     hence h': "h' = SKIP" "s' = ?rs" "frs' = []" by (auto simp: combine_collect_def)
     have "cstep source_global g (FunctionResult p, callee, [(cont, dst, caller)]) (cont, ?rs, [])"
       by (rule cstep.Return)

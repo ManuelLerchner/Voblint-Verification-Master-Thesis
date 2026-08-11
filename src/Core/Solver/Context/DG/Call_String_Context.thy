@@ -9,7 +9,7 @@ text \<open>
   \<^emph>\<open>data\<close> and the one closed-term equality that makes \<open>routed_context\<close>'s
   \<open>route_enterc_agree\<close> obligation trivial for any bound \<open>k\<close> --- it deliberately does not
   import \<open>Routed_Context.thy\<close> or \<open>DG_Ctx_Activation.thy\<close>, and fixes no domain, no solver, and
-  no CFG. \<open>cs_route\<close>/\<open>cs_enterc\<close> (defined below) plug into \<open>routed_context\<close>'s
+  no CFG. \<open>cs_route\<close>/\<open>cs_context\<close> (defined below) plug into \<open>routed_context\<close>'s
   \<open>route\<close>/\<open>enterc\<close> parameters at whatever concrete instantiation a caller chooses; nothing
   here decides what that instantiation is.
 \<close>
@@ -17,7 +17,7 @@ text \<open>
 subsection \<open>The call-string type and its two projections\<close>
 
 text \<open>Most recent call site first, unbounded as a type --- \<open>k\<close> only bounds the \<^emph>\<open>values\<close>
-  \<open>cs_route\<close>/\<open>cs_enterc\<close> produce, not the type itself. This mirrors Goblint's
+  \<open>cs_route\<close>/\<open>cs_context\<close> produce, not the type itself. This mirrors Goblint's
   \<open>C.t\<close> being a value-level choice under a type-level bound only because OCaml forces the
   bound to be a type; here \<open>k\<close> is ordinary \<^typ>\<open>nat\<close> data.\<close>
 
@@ -34,16 +34,16 @@ text \<open>The trace-semantic context function \<open>routed_context\<close>'s 
   (\<open>CFG_Local_Trace.thy\<close>'s \<open>key\<close>): same closed term as \<^const>\<open>cs_route\<close>, over the concrete
   \<^typ>\<open>store\<close> \<open>key\<close> supplies instead of an abstract/executable \<open>'d\<close>.\<close>
 
-definition cs_enterc :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> store \<Rightarrow> call_string" where
-  "cs_enterc k u ctx s = take k (u # ctx)"
+definition cs_context :: "nat \<Rightarrow> cfg_node \<Rightarrow> call_string \<Rightarrow> store \<Rightarrow> call_string" where
+  "cs_context k u ctx s = take k (u # ctx)"
 
 subsection \<open>The two facts every instance needs\<close>
 
 text \<open>\<open>route_enterc_agree\<close>, generically: since neither side reads \<open>d\<close>/\<open>s\<close>, this holds for
   \<^emph>\<open>any\<close> \<open>k\<close>, \<open>u\<close>, \<open>ctx\<close>, \<open>d\<close>, \<open>ca\<close>, \<open>s\<close> with zero case analysis.\<close>
 
-lemma cs_route_enterc_agree: "cs_route k u ctx d ca = cs_enterc k u ctx s"
-  by (simp add: cs_route_def cs_enterc_def)
+lemma cs_route_context_agree: "cs_route k u ctx d ca = cs_context k u ctx s"
+  by (simp add: cs_route_def cs_context_def)
 
 text \<open>Representation independence: \<^const>\<open>cs_route\<close> agrees with itself under \<^emph>\<open>any\<close>
   substitution for its data argument, since \<open>d\<close> never appears on the right-hand side. A
@@ -60,8 +60,8 @@ subsection \<open>Bounded length\<close>
 lemma cs_route_length: "length (cs_route k u ctx d ca) \<le> k"
   by (simp add: cs_route_def)
 
-lemma cs_enterc_length: "length (cs_enterc k u ctx s) \<le> k"
-  by (simp add: cs_enterc_def)
+lemma cs_context_length: "length (cs_context k u ctx s) \<le> k"
+  by (simp add: cs_context_def)
 
 subsection \<open>Truncation behaviour\<close>
 
@@ -74,10 +74,10 @@ lemma cs_route_no_truncation:
   shows "cs_route k u ctx d ca = u # ctx"
   using assms by (simp add: cs_route_def)
 
-lemma cs_enterc_no_truncation:
+lemma cs_context_no_truncation:
   assumes "length ctx < k"
-  shows "cs_enterc k u ctx s = u # ctx"
-  using assms by (simp add: cs_enterc_def)
+  shows "cs_context k u ctx s = u # ctx"
+  using assms by (simp add: cs_context_def)
 
 text \<open>The central algebraic property of a bounded call string: projecting a longer bound's
   context down to a shorter one agrees with routing at the shorter bound directly. This is
@@ -89,9 +89,9 @@ lemma cs_route_k_mono:
   shows "take k1 (cs_route k2 u ctx d ca) = cs_route k1 u ctx d ca"
   using assms by (simp add: cs_route_def)
 
-lemma cs_enterc_k_mono:
+lemma cs_context_k_mono:
   assumes "k1 \<le> k2"
-  shows "take k1 (cs_enterc k2 u ctx s) = cs_enterc k1 u ctx s"
-  using assms by (simp add: cs_enterc_def)
+  shows "take k1 (cs_context k2 u ctx s) = cs_context k1 u ctx s"
+  using assms by (simp add: cs_context_def)
 
 end

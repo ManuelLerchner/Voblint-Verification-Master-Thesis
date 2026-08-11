@@ -389,7 +389,7 @@ qed
 
 lemma ivl_enter_st_for_commute:
   "fun_of_resolved_st_q_for gs (ivl_enter_st_for gs xs es s) =
-   tf_enter (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
+   enter\<^sup># (ivl_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: enter_D_def enter_ivl_for_def ivl_enter_st_for_def
       ivl_tf_for_def)
 

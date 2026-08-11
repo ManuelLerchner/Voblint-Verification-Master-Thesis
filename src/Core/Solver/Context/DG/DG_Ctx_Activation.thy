@@ -34,7 +34,7 @@ locale dg_ctx_activation = sound_dg_spec S "\<lambda>d g. gamma_unit gs d g" gs
                   route cmb extra g S bot0 s0d s0g) x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> sg (Inl (v, c)) =
-          combine_abs gs (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
+          combine_env\<^sup># gs (locals (sigma (Inl (v, c)))) (globs (sigma (Inr gk0)))"
     and sg_uncov[simp]: "\<And>v c. (v, c) \<notin> vars
         \<Longrightarrow> \<lbrakk>sg (Inl (v, c))\<rbrakk> = {}"
     and fwd[intro]: "\<And>u a v c. (u, c) \<in> vars
@@ -230,12 +230,12 @@ lemma dg_ctx_act_comb_covered:
     and s: "s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>"
     and t: "t \<in> \<lbrakk>sg (Inl (ex, c2))\<rbrakk>"
     and bound:
-      "combine_abs gs
+      "combine_env\<^sup># gs
          (snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
                  (globs (sigma (Inr gk0)))))
          (fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
                  (globs (sigma (Inr gk0)))))
-       \<le> combine_abs gs (locals (sigma (Inl (v, cv)))) (globs (sigma (Inr gk0)))"
+       \<le> combine_env\<^sup># gs (locals (sigma (Inl (v, cv)))) (globs (sigma (Inr gk0)))"
   shows "combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (v, cv))\<rbrakk>"
 proof -
   let ?Dc = "locals (sigma (Inl (cl, c1)))"

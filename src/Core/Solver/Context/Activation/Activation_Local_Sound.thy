@@ -36,9 +36,9 @@ text \<open>
 
 theorem valid_ltr_ctx_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
-    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and seedc :: 'c
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c
     and gs :: "vname \<Rightarrow> bool"
-  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, seedc))\<rbrakk>"
+  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, startcontext))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
@@ -54,10 +54,10 @@ theorem valid_ltr_ctx_sound:
         \<Longrightarrow> call_enter_store gs g cl s es
         \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
     and t: "t \<in> valid_ltr gs g S"
-    and ck: "ctx_key admiss seedc t c"
+    and ck: "ctx_key admiss startcontext t c"
   shows "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, c))\<rbrakk>"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" admiss seedc gs
+  interpret G: ltr_gamma g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" admiss startcontext gs
     apply unfold_locales
     apply (blast intro: ENTRY_G)
     apply (blast intro: EDGE)

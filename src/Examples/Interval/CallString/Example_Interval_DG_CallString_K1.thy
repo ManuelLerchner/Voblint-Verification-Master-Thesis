@@ -17,7 +17,7 @@ begin
 section \<open>A computed 1-call-string context, routed by truncated call history\<close>
 
 text \<open>
-  A \<open>cs_route\<close>/\<open>cs_enterc\<close> instance at \<open>k = 1\<close>. Unlike the flat \<open>twice\<close> program used
+  A \<open>cs_route\<close>/\<open>cs_context\<close> instance at \<open>k = 1\<close>. Unlike the flat \<open>twice\<close> program used
   elsewhere, \<open>nest\<close> chains two procedures: \<open>main\<close> calls \<open>f\<close> from two distinct sites, and
   \<open>f\<close> calls \<open>g\<close> from one site inside its own body. \<open>g\<close>'s immediate call site is therefore
   identical for both activations, so a 1-call-string context cannot separate them --- only a
@@ -353,14 +353,14 @@ definition ivl_ctx_sg_1 :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> ivl a
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst nest_1_sol
-           then combine_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))
+           then combine_env\<^sup># nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma ivl_ctx_sg_1_covered:
   "(v, ctx) \<in> fst nest_1_sol
    \<Longrightarrow> ivl_ctx_sg_1 (Inl (v, ctx))
-       = combine_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
+       = combine_env\<^sup># nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
   by (simp add: ivl_ctx_sg_1_def)
 
 lemma ivl_ctx_sg_1_uncovered_empty:
@@ -410,7 +410,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst nest_1_sol"
   thus "ivl_ctx_sg_1 (Inl (v, ctx))
-          = combine_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
+          = combine_env\<^sup># nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
     by (rule ivl_ctx_sg_1_covered)
 next
   fix v ctx
@@ -423,7 +423,7 @@ next
   thus "(v, ctx) \<in> fst nest_1_sol" by (rule nest_fwd_closed_1)
 qed
 
-text \<open>\<open>cs_route 1\<close> and \<open>cs_enterc 1\<close> are the identical closed term \<open>take 1 (u # ctx)\<close>, so
+text \<open>\<open>cs_route 1\<close> and \<open>cs_context 1\<close> are the identical closed term \<open>take 1 (u # ctx)\<close>, so
   \<open>route_enterc_agree\<close> is bare reflexivity. \<open>g\<close>'s single call site is reached at either of
   \<open>f\<close>'s two activation contexts (\<open>enter_callers_g_1\<close>), but \<open>take 1\<close> erases that distinction
   before it reaches the goal, so \<open>CallFwd\<close> does not need to case-split on which one.\<close>
@@ -431,7 +431,7 @@ text \<open>\<open>cs_route 1\<close> and \<open>cs_enterc 1\<close> are the ide
 interpretation nest_1_routed: routed_context Sabs nest_gs nest_cfg Global1 "cs_route 1"
     "fun_of_exec_dg_st_for nest_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for nest_gs cinit_ivl_st" "fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st)"
     sigma_1 "fst nest_1_sol" "(cfg_exit nest_cfg, [])" ivl_ctx_sg_1
-    Seed1 "cs_enterc 1"
+    Seed1 "cs_context 1"
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC
   show ?case by (rule nest_finC)
@@ -440,7 +440,7 @@ next
   show ?case by simp
 next
   case (RouteAgree u ctx dst pars args p cont s)
-  show ?case by (rule cs_route_enterc_agree)
+  show ?case by (rule cs_route_context_agree)
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
@@ -487,13 +487,13 @@ lemma ivl_ctx_sg_1_seed:
     and "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, ctx))\<rbrakk>"
   shows "call_enter nest_gs (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionEntry p,
-                 cs_enterc 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s)))\<rbrakk>"
+                 cs_context 1 u ctx (call_enter nest_gs (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule nest_1_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_1_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls nest_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cl, c1))\<rbrakk>"
-    and "t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, cs_enterc 1 cl c1 es))\<rbrakk>"
+    and "t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, cs_context 1 cl c1 es))\<rbrakk>"
     and "call_enter_store nest_gs nest_cfg cl s es"
   shows "combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (v, c1))\<rbrakk>"
   by (rule nest_1_routed.routed_context_comb[OF assms])
@@ -504,14 +504,14 @@ lemma cinit_le_cinit_ivl_st_1: "cinit_stores nest_gs \<subseteq> \<lbrakk>fun_of
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for)
 
 theorem nest_1_activation_collect_sound:
-  "activation_collect nest_gs (admiss_exact (cs_enterc 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect nest_gs (admiss_exact (cs_context 1)) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg_1 (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and admiss = "admiss_exact (cs_enterc 1)"
-        and seedc = "[]"
+proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and admiss = "admiss_exact (cs_context 1)"
+        and startcontext = "[]"
         and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
-    projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
     \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
     the caller's local bound (\<open>entry_locals_ge_s0d_1\<close>) and the entry's global-seed
     bound (\<open>nest_1_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>
@@ -522,7 +522,7 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and admiss = "admis
             (fun_of_exec_dg_st_for nest_gs (restrict_global_resolved_q cinit_ivl_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit nest_gs (locals (sigma_1 (Inl (cfg_entry nest_cfg, []))))
                    (globs (sigma_1 (Inr Global1)))"
     by (rule gamma_unit_mono[OF entry_locals_ge_s0d_1[OF entry_covered_1]
@@ -537,14 +537,14 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (v, c))\<rbrakk>"
     by (rule nest_1_dg.dg_ctx_act_edge)
 next
-  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_enterc 1\<close> is a total function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact (cs_enterc 1) u c s c'" by (simp add: admiss_exact_def)
+  \<comment> \<open>ADMISS_TOTAL --- trivial, \<open>cs_context 1\<close> is a total function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact (cs_context 1) u c s c'" by (simp add: admiss_exact_def)
 next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
   fix u dst pars args p cont c s c'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
     and sm: "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (u, c))\<rbrakk>"
-    and adm: "admiss_exact (cs_enterc 1) u c (call_enter nest_gs (CallEdge dst pars args) s) c'"
+    and adm: "admiss_exact (cs_context 1) u c (call_enter nest_gs (CallEdge dst pars args) s) c'"
   show "call_enter nest_gs (CallEdge dst pars args) s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionEntry p, c'))\<rbrakk>"
     using adm ivl_ctx_sg_1_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
@@ -552,7 +552,7 @@ next
   fix cl dst pars args p cont c1 c2 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls nest_cfg"
     and sm: "s \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cl, c1))\<rbrakk>"
-    and adm: "admiss_exact (cs_enterc 1) cl c1 es c2"
+    and adm: "admiss_exact (cs_context 1) cl c1 es c2"
     and tm: "t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (FunctionResult p, c2))\<rbrakk>"
     and ces: "call_enter_store nest_gs nest_cfg cl s es"
   show "combine_collect nest_gs dst s t \<in> \<lbrakk>ivl_ctx_sg_1 (Inl (cont, c1))\<rbrakk>"

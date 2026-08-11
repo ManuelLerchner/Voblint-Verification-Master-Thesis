@@ -26,7 +26,7 @@ lemma ltr_post_fixpoint_sound_at_for:
     "\<And>u a w. (u, a, w) \<in> intra g \<Longrightarrow> apply_tf tf a (env u) \<le> env w"
   assumes call_le:
     "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
-       tf_enter tf fs as (env c) \<le> env (FunctionEntry p)"
+       enter\<^sup># tf fs as (env c) \<le> env (FunctionEntry p)"
   assumes combine_le:
     "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
        tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont"
@@ -70,13 +70,13 @@ proof -
     finally show "apply_tf tf a (env u) \<le> env w" .
   qed
   have call_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
-       tf_enter tf fs as (env c) \<le> env (FunctionEntry p)"
+       enter\<^sup># tf fs as (env c) \<le> env (FunctionEntry p)"
   proof -
     fix c dst fs as p cont assume e: "(c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g"
-    have "tf_enter tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env (FunctionEntry p)"
+    have "enter\<^sup># tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env (FunctionEntry p)"
       by (rule tf_enter_le_rhs[OF finI finC e])
     also have "\<dots> \<le> env (FunctionEntry p)" using is_post_fixpointD[OF post_fp] .
-    finally show "tf_enter tf fs as (env c) \<le> env (FunctionEntry p)" .
+    finally show "enter\<^sup># tf fs as (env c) \<le> env (FunctionEntry p)" .
   qed
   have combine_le: "\<And>c dst fs as p cont. (c, CallEdge dst fs as, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
        tf_combine_collect_abs tf dst (env c) (env (FunctionResult p)) \<le> env cont"

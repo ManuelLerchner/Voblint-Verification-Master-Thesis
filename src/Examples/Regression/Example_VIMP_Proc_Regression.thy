@@ -39,12 +39,12 @@ proof -
     thus ?thesis by simp
   qed
   have call: "pcompletes vpr_gs \<Pi> (Call None pf []) ?s1
-                (combine_states vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9)))"
+                (combine_env vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9)))"
     by (rule pcompletes_Call_parameterless[OF p body])
   have seq: "pcompletes vpr_gs \<Pi> (Seq (imp \<lbrakk> x := 5 \<rbrakk>) (Call None pf [])) s0
-               (combine_states vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9)))"
+               (combine_env vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9)))"
     using pcompletes_Seq[OF a call] .
-  have "(combine_states vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9))) (STR ''x'') = 5"
+  have "(combine_env vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9))) (STR ''x'') = 5"
     by simp
   with seq show ?thesis by blast
 qed
@@ -62,9 +62,9 @@ proof -
     thus ?thesis by simp
   qed
   have call: "pcompletes vpr_gs \<Pi> (Call None pf []) s0
-                (combine_states vpr_gs s0 ((enter_state vpr_gs s0)((STR ''Gg'') := 9)))"
+                (combine_env vpr_gs s0 ((enter_state vpr_gs s0)((STR ''Gg'') := 9)))"
     by (rule pcompletes_Call_parameterless[OF p body])
-  have "(combine_states vpr_gs s0 ((enter_state vpr_gs s0)((STR ''Gg'') := 9))) (STR ''Gg'') = 9"
+  have "(combine_env vpr_gs s0 ((enter_state vpr_gs s0)((STR ''Gg'') := 9))) (STR ''Gg'') = 9"
     by simp
   with call show ?thesis by blast
 qed
@@ -74,7 +74,7 @@ theorem return_value_propagated:
   shows "\<exists>t. pcompletes vpr_gs \<Pi> (Call (Some (STR ''x'')) pf []) s0 t \<and> t (STR ''x'') = 7"
 proof -
   let ?e = "N 7"
-  let ?t = "(combine_states vpr_gs s0
+  let ?t = "(combine_env vpr_gs s0
               ((enter_state vpr_gs s0)(ret_var := aval ?e (enter_state vpr_gs s0))))
               ((STR ''x'') := aval ?e (enter_state vpr_gs s0))"
   have call: "psteps vpr_gs \<Pi> (Call (Some (STR ''x'')) pf [], s0, []) (imp \<lbrakk> skip \<rbrakk>, ?t, [])"
@@ -109,7 +109,7 @@ proof -
     by (simp add: enter_state_def)
   have inner_body: "pcompletes vpr_gs \<Pi> rec_body ?ei ?ei"
     unfolding rec_body_def by (rule pcompletes_IfFalse[OF inner_guard pcompletes_skip])
-  have inner_call: "pcompletes vpr_gs \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (combine_states vpr_gs ?e1 ?ei)"
+  have inner_call: "pcompletes vpr_gs \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (combine_env vpr_gs ?e1 ?ei)"
     by (rule pcompletes_Call_parameterless[OF p inner_body])
   have outer_guard: "bval (Less (N 0) (V (STR ''Gx''))) ?e0"
     by (simp add: enter_state_def)
@@ -120,13 +120,13 @@ proof -
       by (rule pcompletes_assign)
     thus ?thesis by (simp add: enter_state_def)
   qed
-  have outer_body: "pcompletes vpr_gs \<Pi> rec_body ?e0 (combine_states vpr_gs ?e1 ?ei)"
+  have outer_body: "pcompletes vpr_gs \<Pi> rec_body ?e0 (combine_env vpr_gs ?e1 ?ei)"
     unfolding rec_body_def
     by (rule pcompletes_IfTrue[OF outer_guard pcompletes_Seq[OF dec inner_call]])
   have outer_call: "pcompletes vpr_gs \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?s0
-                       (combine_states vpr_gs ?s0 (combine_states vpr_gs ?e1 ?ei))"
+                       (combine_env vpr_gs ?s0 (combine_env vpr_gs ?e1 ?ei))"
     by (rule pcompletes_Call_parameterless[OF p outer_body])
-  have "(combine_states vpr_gs ?s0 (combine_states vpr_gs ?e1 ?ei)) (STR ''Gx'') = 0"
+  have "(combine_env vpr_gs ?s0 (combine_env vpr_gs ?e1 ?ei)) (STR ''Gx'') = 0"
     by (simp add: enter_state_def)
   with outer_call show ?thesis by blast
 qed

@@ -9,6 +9,30 @@
 > (`Voblint_Examples`), tracked in issue #66; it now interprets
 > `routed_context` rather than hand-copying `cmb`/`extra`.
 >
+> **Open architectural gap (2026-08-11):** section 3's "removed by
+> construction" for the entry/return route agreement means *provably equal*,
+> not *computed once* -- `routed_extra` and `routed_cmb` are independent
+> solver hooks that each still call `route` separately. See the refinement
+> under section 3, point 1, for why closing that gap needs a solver/unknown-
+> space change, not a `route` signature change, and is not part of the
+> current #110 interface-alignment pass.
+>
+> **#110 signature cutover attempted and aborted (2026-08-11, issue #114):**
+> tried anyway, on the theory that dropping `call_action` from `route` (so
+> callers pass an already-entered state) was purely local to
+> `Routed_Context.thy`. It is not: the old 4-argument shape is hard-coded
+> three layers deep -- `routed_context`, its parent locale
+> `dg_ctx_activation` (`DG_Ctx_Activation.thy`), and
+> `side_cfg_T_eff_keyed_seed_dg`, the **generic D/G equation-generator
+> combinator** used by every keyed/seeded D/G instance, routed or not. Each
+> layer fixed in turn reproduced the same clash one layer further down, with
+> no bottom confirmed after three hits. Reverted both touched files; no
+> partial state landed. If reattempted, the real unit of work is deciding
+> whether `side_cfg_T_eff_keyed_seed_dg`'s generic shape should change --
+> a foundational Voblint_Core solver-interface question, not a
+> `routed_context`-local one -- and that deserves its own scoped decision
+> before any signature edit.
+>
 > **M4.1/M4.2 progress:** `declared_global_vars` and `declared_global`
 > (`VIMP_Notation.thy`) now feed classifier-based source well-formedness,
 > context-aware store operations, split-state helpers, and D/G routing
@@ -247,6 +271,39 @@ eliminate them - they can only be hoisted into named assumptions.
 
 1. **Entry route vs return route.** Removed by construction once both are
    generated from one parameter. This is the whole content of G2.
+
+   **Refinement (2026-08-11, during the #110 interface-alignment pass).**
+   "Removed by construction" means *provably equal*, not *computed once*.
+   `routed_extra` (the call-site/seed hook) and `routed_cmb` (the
+   return-combine hook) are independent equation right-hand sides, evaluated
+   separately by the generic solver and sharing no state except the solved
+   fixpoint `sigma`. Each still calls `route` on its own, so the context is
+   computed twice per call activation -- G2/G3 guarantee the two computations
+   *agree* (via `route_enterc_agree` and the shared `route` parameter), they
+   do not make the solver compute it once and reuse the value.
+
+   Goblint's own `enter -> context -> combine` sequence (see
+   `docs/GOBLINT_ALIGNMENT_REGISTER.md`'s "Call flow and context selection")
+   avoids this by construction: `fc` (Goblint's selected context) is an
+   ordinary OCaml local variable inside *one* synchronous per-call-site
+   constraint-generation function, referenced by both `sidel (FunctionEntry
+   f, fc)` (the seed) and `getl (Function f, fc)` (the combine read) via
+   plain lexical scope. Voblint's generic solver interface requires every
+   unknown's right-hand side to be an independent, memoryless closure of
+   `sigma` -- there is no equivalent shared scope for `routed_extra` and
+   `routed_cmb` to close over. Preserving one call-time context value across
+   both hooks (rather than recomputing and relying on a proved agreement)
+   would require changing that equation-system factoring: e.g. threading the
+   selected context into the dependency structure itself, so the combine
+   hook's unknown is indexed by (or otherwise recovers) the exact context its
+   matching call hook already established, instead of independently deriving
+   it. That is a solver/unknown-space change, not a `route` signature change,
+   and is out of scope for the #110 terminology/interface-alignment pass
+   (which only removes the *redundant* internal `enter_local` recomputation
+   inside each hook and gives `route`/`context#` an already-entered abstract
+   state instead of re-deriving one from `call_action`). Tracked here rather
+   than under #66 (closed) or #77 (a different, context-*bounding* concern);
+   revisit when scoping any future call/return solver-factoring work.
 2. **Equation route vs semantic `enterc`.** Currently two separately written
    functions:
    `route_ivl d ca = lookup_st (entered_ivl d ca) ''p''` (Flagship.thy:58) and

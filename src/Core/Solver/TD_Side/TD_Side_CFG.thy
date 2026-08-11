@@ -120,14 +120,14 @@ lemma join_abs_state_right_mono:
    annihilate each other; together these make the algebra confluent, so a
    split-state combine such as restrict_local (restrict_local A \<squnion> restrict_global B)
    = restrict_local A closes by plain simp without a dedicated lemma. *)
-(* combine_abs's primitive definition is a single if-then-else lambda; this
+(* combine_env\<^sup>#'s primitive definition is a single if-then-else lambda; this
    reduces it to the confluent restrict_local_for/restrict_global_for algebra so
-   proofs never need to unfold combine_abs_def and re-derive the split by
+   proofs never need to unfold combine_env_abs_def and re-derive the split by
    hand. *)
-lemma combine_abs_for_eq_restrict:
-  "combine_abs gs sc se =
+lemma combine_env_abs_for_eq_restrict:
+  "combine_env\<^sup># gs sc se =
      restrict_local_for gs sc \<squnion> restrict_global_for gs se"
-  unfolding combine_abs_def restrict_local_for_def restrict_global_for_def
+  unfolding combine_env_abs_def restrict_local_for_def restrict_global_for_def
     sup_fun_def
   by (rule ext) simp
 
@@ -213,14 +213,14 @@ where
 
 (* Procedure-return combine: query the caller local cc, the callee-exit local
    ex, and the global; reassemble locals-from-caller + globals-from-callee
-   (= combine_abs) and split into a local Answer and a global Side. *)
+   (= combine_env\<^sup>#) and split into a local Answer and a global Side. *)
 definition unit_combine_tree ::
   "(vname => bool) => vname option => pp => pp
    => (pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
 where
   "unit_combine_tree gs dst cc ex =
      QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
-       let res = combine_collect_abs gs dst (sc \<squnion> g) (se \<squnion> g) in
+       let res = combine\<^sup># gs dst (sc \<squnion> g) (se \<squnion> g) in
        Side () (restrict_global_for gs res)
          (Answer (restrict_local_for gs res)))))"
 
@@ -248,24 +248,24 @@ lemma etf_full_unit_edge_tree:
    a plain combine_env these include the destination when the call assigns one. *)
 lemma traverse_unit_combine_tree:
   "traverse_rhs (unit_combine_tree gs dst cc ex) \<sigma>
-     = restrict_local_for gs (combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+     = restrict_local_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                                               (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
   unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree contributes the combined globals to the global slot. *)
 lemma sides_unit_combine_tree_Inr:
   "sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr ()) =
-   restrict_global_for gs (combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+   restrict_global_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                                             (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
   unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_unit_combine_tree:
   "etf_full (unit_combine_tree gs dst cc ex) \<sigma>
-   = combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+   = combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
        (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
 proof -
-  let ?res = "combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+  let ?res = "combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                 (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
   have "etf_full (unit_combine_tree gs dst cc ex) \<sigma>
           = restrict_local_for gs ?res \<squnion> restrict_global_for gs ?res"
@@ -592,7 +592,7 @@ where
     etf_random     = (\<lambda>x u. unit_edge_tree gs (apply_tf tf (EA_Random x)) u),
     etf_assume     = (\<lambda>b u. unit_edge_tree gs (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. unit_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (tf_enter tf xs es) u),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
@@ -612,7 +612,7 @@ where
     etf_random     = (\<lambda>x. mixed_etf_edge_tree gs tf (EA_Random x)),
     etf_assume     = (\<lambda>b. mixed_etf_edge_tree gs tf (EA_Assume b)),
     etf_assume_not = (\<lambda>b. mixed_etf_edge_tree gs tf (EA_AssumeNot b)),
-    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (tf_enter tf xs es) u),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
@@ -710,7 +710,7 @@ lemma in_gamma_unit_edge_tree_enter:
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (tf_enter tf xs es) u) \<sigma>\<rbrakk>"
+           (unit_edge_tree gs (enter\<^sup># tf xs es) u) \<sigma>\<rbrakk>"
   using tf_sound_enter_forD[OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 

@@ -729,7 +729,7 @@ lemma unit_combine_step_st_commute_for:
   by (simp add: Let_def combine_collect_abs_def fun_of_resolved_st_q_for_def
                 fun_of_resolved_st_q_for_sup fun_of_resolved_st_q_for_restrict_local
                 fun_of_resolved_st_q_for_restrict_global fun_of_resolved_st_q_for_combine
-                fun_of_resolved_st_q_for_combine_assign combine_abs_for_eq_restrict
+                fun_of_resolved_st_q_for_combine_assign combine_env_abs_for_eq_restrict
                 fun_of_resolved_st_q_for_restrict_local_for
                 fun_of_resolved_st_q_for_restrict_global_for ac_simps)
 
@@ -2075,7 +2075,7 @@ where
         (placed_abs_dg_combine_tree source_global owner_of
           keep_local publish_side
           (\<lambda>destination caller_state callee_state side_state.
-            combine_collect_abs source_global destination
+            combine\<^sup># source_global destination
               (caller_state \<squnion> side_state)
               (callee_state \<squnion> side_state))
           destination caller callee continuation)))"
@@ -2155,7 +2155,7 @@ lemma traverse_rhs_placed_abs_dg_combine_of:
     (placed_abs_dg_combine_of source_global owner_of keep_local publish_side
       ctx caller (CallEdge destination parameters arguments) callee continuation) sigma =
     DG (project_abs_on (owner_of continuation) source_global keep_local
-          (combine_collect_abs source_global destination
+          (combine\<^sup># source_global destination
             (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
             (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ()))))) bot"
   unfolding placed_abs_dg_combine_of_def
@@ -2167,7 +2167,7 @@ lemma sides_of_rhs_placed_abs_dg_combine_of:
     (placed_abs_dg_combine_of source_global owner_of keep_local publish_side
       ctx caller (CallEdge destination parameters arguments) callee continuation) sigma (Inr ()) =
     DG bot (project_abs_on (owner_of continuation) source_global publish_side
-          (combine_collect_abs source_global destination
+          (combine\<^sup># source_global destination
             (locals (sigma (Inl (caller, ctx))) \<squnion> globs (sigma (Inr ())))
             (locals (sigma (Inl (callee, ctx))) \<squnion> globs (sigma (Inr ())))))"
   unfolding placed_abs_dg_combine_of_def

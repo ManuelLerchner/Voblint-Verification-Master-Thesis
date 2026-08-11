@@ -888,14 +888,14 @@ instance resolved_st_q :: (bounded_warrowing) bounded_warrowing ..
 
 lemma fun_of_resolved_st_for_combine_resolved [simp]:
   "fun_of_resolved_st_for gs (combine_resolved_st sc se) =
-   combine_abs gs (fun_of_resolved_st_for gs sc)
+   combine_env\<^sup># gs (fun_of_resolved_st_for gs sc)
      (fun_of_resolved_st_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_for gs (combine_resolved_st sc se) x =
-      combine_abs gs (fun_of_resolved_st_for gs sc)
+      combine_env\<^sup># gs (fun_of_resolved_st_for gs sc)
         (fun_of_resolved_st_for gs se) x"
-    unfolding fun_of_resolved_st_for_def combine_abs_def location_of_def
+    unfolding fun_of_resolved_st_for_def combine_env_abs_def location_of_def
     by (cases "gs x") simp_all
 qed
 
@@ -988,7 +988,7 @@ qed
 lemma fun_of_resolved_st_for_combine_assign [simp]:
   "fun_of_resolved_st_for gs
       (combine_assign_resolved gs dst v s) =
-   combine_assign_abs dst v (fun_of_resolved_st_for gs s)"
+   combine_assign\<^sup># dst v (fun_of_resolved_st_for gs s)"
 by (cases dst)
    (simp_all add: combine_assign_resolved_def)
 
@@ -1017,7 +1017,7 @@ by simp
 lemma fun_of_resolved_st_for_combine_collect [simp]:
   "fun_of_resolved_st_for gs
       (combine_collect_resolved_for gs dst sc se) =
-   combine_collect_abs gs dst
+   combine\<^sup># gs dst
       (fun_of_resolved_st_for gs sc) (fun_of_resolved_st_for gs se)"
 unfolding combine_collect_resolved_for_def combine_collect_abs_def
 by (simp add: fun_of_resolved_st_for_def)
@@ -1168,7 +1168,7 @@ lemma refines_combine:
   assumes sc: "resolved_st_refines_for gs sc sigma_c"
     and se: "resolved_st_refines_for gs se sigma_e"
   shows "resolved_st_refines_for gs (combine_resolved_st sc se)
-      (combine_abs gs sigma_c sigma_e)"
+      (combine_env\<^sup># gs sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_refines_for_def
   by simp
@@ -1187,7 +1187,7 @@ lemma refines_combine_collect:
     and se: "resolved_st_refines_for gs se sigma_e"
   shows "resolved_st_refines_for gs
       (combine_collect_resolved_for gs dst sc se)
-      (combine_collect_abs gs dst sigma_c sigma_e)"
+      (combine\<^sup># gs dst sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_refines_for_def
   by simp
@@ -1239,7 +1239,7 @@ where
 lemma fun_of_resolved_st_q_for_combine_assign [simp]:
   "fun_of_resolved_st_q_for gs
       (combine_assign_resolved_q gs dst v s) =
-   combine_assign_abs dst v (fun_of_resolved_st_q_for gs s)"
+   combine_assign\<^sup># dst v (fun_of_resolved_st_q_for gs s)"
   unfolding fun_of_resolved_st_q_for_def
   apply transfer
   by (metis (no_types, lifting) ext fun_of_resolved_st_for_def
@@ -1273,14 +1273,14 @@ lemma fun_of_resolved_st_q_for_restrict_global [simp]:
 
 lemma fun_of_resolved_st_q_for_combine [simp]:
   "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) =
-   combine_abs gs (fun_of_resolved_st_q_for gs sc)
+   combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
      (fun_of_resolved_st_q_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) x =
-      combine_abs gs (fun_of_resolved_st_q_for gs sc)
+      combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
         (fun_of_resolved_st_q_for gs se) x"
-    unfolding fun_of_resolved_st_q_for_def combine_abs_def location_of_def
+    unfolding fun_of_resolved_st_q_for_def combine_env_abs_def location_of_def
     by (cases "gs x") simp_all
 qed
 
@@ -1304,7 +1304,7 @@ lemma fun_of_resolved_st_q_for_enter [simp]:
 lemma fun_of_resolved_st_q_for_combine_collect [simp]:
   "fun_of_resolved_st_q_for gs
       (combine_collect_resolved_for_q gs dst sc se) =
-   combine_collect_abs gs dst
+   combine\<^sup># gs dst
       (fun_of_resolved_st_q_for gs sc)
       (fun_of_resolved_st_q_for gs se)"
   unfolding fun_of_resolved_st_q_for_def
@@ -1344,7 +1344,7 @@ lemma refines_combine_q:
   assumes sc: "resolved_st_q_refines_for gs sc sigma_c"
     and se: "resolved_st_q_refines_for gs se sigma_e"
   shows "resolved_st_q_refines_for gs (combine_resolved_st_q sc se)
-      (combine_abs gs sigma_c sigma_e)"
+      (combine_env\<^sup># gs sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_q_refines_for_def
   by simp
@@ -1363,7 +1363,7 @@ lemma refines_combine_collect_q:
     and se: "resolved_st_q_refines_for gs se sigma_e"
   shows "resolved_st_q_refines_for gs
       (combine_collect_resolved_for_q gs dst sc se)
-      (combine_collect_abs gs dst sigma_c sigma_e)"
+      (combine\<^sup># gs dst sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_q_refines_for_def
   by simp

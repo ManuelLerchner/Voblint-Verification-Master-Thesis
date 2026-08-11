@@ -41,6 +41,6 @@ the call-string bound `k`.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_Interval_DG_CallString.thy` | canonical spine | a computed 1-call-string context, routed by call site (Seidl et al. 2026, Example 7) |
-| `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_enterc` instance at `k = 1` |
-| `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_enterc` instance at `k = 2` |
+| `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` |
+| `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
 | `Call_String_Solver_Refinement.thy` | regression | dependency-closure witness: a k=2 fiber split at one node forces the same widening on every node that transitively reads the merge, even where that node's own fiber never splits |

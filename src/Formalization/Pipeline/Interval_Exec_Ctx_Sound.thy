@@ -408,7 +408,7 @@ section \<open>Activation-indexed collecting soundness, generic per compiled pro
 text \<open>
   Mirrors \<open>Example_Interval_DG_EntryState_Collect\<close>, generalized the same way
   \<open>Example_Interval_DG_EntryState_Sound\<close> was: the trace-semantic context function
-  \<open>entry_state_enterc\<close> ignores its concrete-store argument and instead
+  \<open>entry_state_context\<close> ignores its concrete-store argument and instead
   recomputes the routed value the executable solver already produced, using
   \<^const>\<open>call_action_at_call_site\<close> to resolve the one call at a node --
   \<open>compile_prog_calls_source_unique\<close> is what makes that resolution unambiguous
@@ -452,7 +452,7 @@ definition entry_state_sg_exec ::
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst (entry_state_sol gs Pi ps mnm main)
-           then combine_abs gs (locals (entry_state_sigma_abs_exec gs Pi ps mnm main (Inl (v, ctx))))
+           then combine_env\<^sup># gs (locals (entry_state_sigma_abs_exec gs Pi ps mnm main (Inl (v, ctx))))
                   (globs (entry_state_sigma_abs_exec gs Pi ps mnm main (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
@@ -494,11 +494,11 @@ text \<open>
   \<^const>\<open>call_action_at_call_site\<close> for the one call at \<open>u\<close>.  This is
   \<open>admiss_exact\<close>'s functional shape, specialized so coverage of infinitely many
   concrete stores comes from the caller's own value being imprecise, not from
-  \<open>entry_state_enterc\<close> being multi-valued.
+  \<open>entry_state_context\<close> being multi-valued.
 \<close>
 
-definition entry_state_enterc :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
-  "entry_state_enterc u ctx s =
+definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
+  "entry_state_context u ctx s =
      entry_state_route_abs_gen gs u ctx (locals (entry_state_sigma_abs (Inl (u, ctx))))
        (call_action_at_call_site (compile_prog Pi ps mnm main) u)"
 
@@ -517,7 +517,7 @@ interpretation entry_state_dg_base: sound_dg_spec "ectx_abs_spec gs" "gamma_unit
 lemma entry_state_sg_covered:
   "(v, ctx) \<in> fst (entry_state_sol gs Pi ps mnm main)
    \<Longrightarrow> entry_state_sg (Inl (v, ctx))
-       = combine_abs gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
+       = combine_env\<^sup># gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
   by (simp add: entry_state_sg_def entry_state_sg_exec_def entry_state_sigma_abs_def entry_state_sigma_abs_exec_def)
 
 lemma entry_state_sg_uncovered_empty:
@@ -550,7 +550,7 @@ next
 next
   fix v ctx assume "(v, ctx) \<in> fst (entry_state_sol gs Pi ps mnm main)"
   thus "entry_state_sg (Inl (v, ctx))
-          = combine_abs gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
+          = combine_env\<^sup># gs (locals (entry_state_sigma_abs (Inl (v, ctx)))) (globs (entry_state_sigma_abs (Inr Global)))"
     by (rule entry_state_sg_covered)
 next
   fix v ctx assume "(v, ctx) \<notin> fst (entry_state_sol gs Pi ps mnm main)"
@@ -569,7 +569,7 @@ interpretation entry_state_routed: routed_context "ectx_abs_spec gs" gs "compile
     "fun_of_exec_dg_st_for gs (restrict_global_resolved_q cinit_ivl_st)"
     entry_state_sigma_abs "fst (entry_state_sol gs Pi ps mnm main)"
     "(cfg_exit (compile_prog Pi ps mnm main), [])" entry_state_sg
-    Seed entry_state_enterc
+    Seed entry_state_context
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC show ?case by (rule entry_state_finC)
 next
@@ -579,7 +579,7 @@ next
   note ce = RouteAgree(2)
   have "call_action_at_call_site (compile_prog Pi ps mnm main) u = CallEdge dst pars args"
     by (rule call_action_at_call_site_eq[OF entry_state_finC compile_prog_calls_source_unique ce])
-  thus ?case unfolding entry_state_enterc_def by simp
+  thus ?case unfolding entry_state_context_def by simp
 next
   case (CallFwd u ctx dst pars args p cont)
   show ?case using CallFwd(1,2) call_fwd_ok
@@ -603,13 +603,13 @@ lemma entry_state_sg_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and "s \<in> \<lbrakk>entry_state_sg (Inl (u, ctx))\<rbrakk>"
   shows "call_enter gs (CallEdge dst xs es) s
-           \<in> \<lbrakk>entry_state_sg (Inl (FunctionEntry p, entry_state_enterc u ctx (call_enter gs (CallEdge dst xs es) s)))\<rbrakk>"
+           \<in> \<lbrakk>entry_state_sg (Inl (FunctionEntry p, entry_state_context u ctx (call_enter gs (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule entry_state_routed.routed_context_call[OF assms])
 
 lemma entry_state_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps mnm main)"
     and "s \<in> \<lbrakk>entry_state_sg (Inl (cl, c1))\<rbrakk>"
-    and "t \<in> \<lbrakk>entry_state_sg (Inl (FunctionResult p, entry_state_enterc cl c1 es))\<rbrakk>"
+    and "t \<in> \<lbrakk>entry_state_sg (Inl (FunctionResult p, entry_state_context cl c1 es))\<rbrakk>"
     and "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
   shows "combine_collect gs dst s t \<in> \<lbrakk>entry_state_sg (Inl (v, c1))\<rbrakk>"
   by (rule entry_state_routed.routed_context_comb[OF assms])
@@ -633,10 +633,10 @@ proof -
 qed
 
 theorem entry_state_activation_collect_sound:
-  "activation_collect gs (admiss_exact entry_state_enterc) [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
+  "activation_collect gs (admiss_exact entry_state_context) [] (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
      \<subseteq> \<lbrakk>entry_state_sg (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = entry_state_sg and admiss = "admiss_exact entry_state_enterc"
-        and seedc = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+proof (rule activation_collect_sound[where sg = entry_state_sg and admiss = "admiss_exact entry_state_context"
+        and startcontext = "[]" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
   \<comment> \<open>ENTRY_G\<close>
   fix s assume "s \<in> cinit_stores gs"
   hence "s \<in> \<lbrakk>fun_of_exec_dg_st_for gs cinit_ivl_st\<rbrakk>" using entry_state_cinit_le_cinit_ivl_st by blast
@@ -645,7 +645,7 @@ proof (rule activation_collect_sound[where sg = entry_state_sg and admiss = "adm
             (fun_of_exec_dg_st_for gs (restrict_global_resolved_q cinit_ivl_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit gs (locals (entry_state_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), []))))
                    (globs (entry_state_sigma_abs (Inr Global)))"
     by (rule gamma_unit_mono[OF entry_state_locals_ge_s0d entry_state_dg.pp_entry_s0g_bound[OF entry_cov]])
@@ -660,14 +660,14 @@ next
     by (rule entry_state_dg.dg_ctx_act_edge)
 next
   \<comment> \<open>ADMISS_TOTAL\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact entry_state_enterc u c s c'"
+  show "\<And>u c s. \<exists>c'. admiss_exact entry_state_context u c s c'"
     by (simp add: admiss_exact_def)
 next
   \<comment> \<open>CALL\<close>
   fix u dst pars args p cont c s c'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> \<lbrakk>entry_state_sg (Inl (u, c))\<rbrakk>"
-    and adm: "admiss_exact entry_state_enterc u c (call_enter gs (CallEdge dst pars args) s) c'"
+    and adm: "admiss_exact entry_state_context u c (call_enter gs (CallEdge dst pars args) s) c'"
   show "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>entry_state_sg (Inl (FunctionEntry p, c'))\<rbrakk>"
     using adm entry_state_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
@@ -675,7 +675,7 @@ next
   fix cl dst pars args p cont c1 c2 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
     and sm: "s \<in> \<lbrakk>entry_state_sg (Inl (cl, c1))\<rbrakk>"
-    and adm: "admiss_exact entry_state_enterc cl c1 es c2"
+    and adm: "admiss_exact entry_state_context cl c1 es c2"
     and tm: "t \<in> \<lbrakk>entry_state_sg (Inl (FunctionResult p, c2))\<rbrakk>"
     and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
   show "combine_collect gs dst s t \<in> \<lbrakk>entry_state_sg (Inl (cont, c1))\<rbrakk>"

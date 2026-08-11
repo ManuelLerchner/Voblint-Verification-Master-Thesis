@@ -206,14 +206,14 @@ definition sign_ctx_sg_2 :: "pp \<times> cfg_node list + gk_2 \<Rightarrow> sign
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst sign_nest_2_sol
-           then combine_abs sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))
+           then combine_env\<^sup># sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma sign_ctx_sg_2_covered:
   "(v, ctx) \<in> fst sign_nest_2_sol
    \<Longrightarrow> sign_ctx_sg_2 (Inl (v, ctx))
-       = combine_abs sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
+       = combine_env\<^sup># sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
   by (simp add: sign_ctx_sg_2_def)
 
 lemma sign_ctx_sg_2_uncovered_empty:
@@ -251,7 +251,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst sign_nest_2_sol"
   thus "sign_ctx_sg_2 (Inl (v, ctx))
-          = combine_abs sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
+          = combine_env\<^sup># sign_nest_gs (locals (sigma_2 (Inl (v, ctx)))) (globs (sigma_2 (Inr Global2)))"
     by (rule sign_ctx_sg_2_covered)
 next
   fix v ctx
@@ -271,7 +271,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>CallFwd\<close>'s \<open>Stateme
 interpretation sign_nest_2_routed: routed_context Sabs sign_nest_gs sign_nest_cfg Global2 "cs_route 2"
     "fun_of_exec_dg_st_for sign_nest_gs (bot::sign exec_dg_st)" "fun_of_exec_dg_st_for sign_nest_gs cinit_sign_st" "fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st)"
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
-    Seed2 "cs_enterc 2"
+    Seed2 "cs_context 2"
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC
   show ?case by (rule sign_nest_finC)
@@ -280,7 +280,7 @@ next
   show ?case by simp
 next
   case (RouteAgree u ctx dst pars args p cont s)
-  show ?case by (rule cs_route_enterc_agree)
+  show ?case by (rule cs_route_context_agree)
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
@@ -335,13 +335,13 @@ lemma sign_ctx_sg_2_seed:
     and "s \<in> \<lbrakk>sign_ctx_sg_2 (Inl (u, ctx))\<rbrakk>"
   shows "call_enter sign_nest_gs (CallEdge dst xs es) s
            \<in> \<lbrakk>sign_ctx_sg_2 (Inl (FunctionEntry p,
-                 cs_enterc 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))\<rbrakk>"
+                 cs_context 2 u ctx (call_enter sign_nest_gs (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule sign_nest_2_routed.routed_context_call[OF assms])
 
 lemma sign_ctx_sg_2_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
     and "s \<in> \<lbrakk>sign_ctx_sg_2 (Inl (cl, c1))\<rbrakk>"
-    and "t \<in> \<lbrakk>sign_ctx_sg_2 (Inl (FunctionResult p, cs_enterc 2 cl c1 es))\<rbrakk>"
+    and "t \<in> \<lbrakk>sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es))\<rbrakk>"
     and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
   shows "combine_collect sign_nest_gs dst s t \<in> \<lbrakk>sign_ctx_sg_2 (Inl (v, c1))\<rbrakk>"
   by (rule sign_nest_2_routed.routed_context_comb[OF assms])
@@ -352,14 +352,14 @@ lemma cinit_le_cinit_sign_st_2: "cinit_stores sign_nest_gs \<subseteq> \<lbrakk>
   by (auto simp: cinit_stores_def gamma_state_def fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for)
 
 theorem sign_nest_2_activation_collect_sound:
-  "activation_collect sign_nest_gs (admiss_exact (cs_enterc 2)) [] sign_nest_cfg (cinit_stores sign_nest_gs) v ctx
+  "activation_collect sign_nest_gs (admiss_exact (cs_context 2)) [] sign_nest_cfg (cinit_stores sign_nest_gs) v ctx
      \<subseteq> \<lbrakk>sign_ctx_sg_2 (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and admiss = "admiss_exact (cs_enterc 2)"
-        and seedc = "[]"
+proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and admiss = "admiss_exact (cs_context 2)"
+        and startcontext = "[]"
         and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_sign_st\<close>'s own
-    projections, so routing them back together through \<open>combine_abs\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
     \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
     the caller's local bound (\<open>entry_locals_ge_s0d_2\<close>) and the entry's global-seed
     bound (\<open>sign_nest_2_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>
@@ -370,7 +370,7 @@ proof (rule activation_collect_sound[where sg = sign_ctx_sg_2 and admiss = "admi
             (fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st))"
     unfolding gamma_unit_def fun_of_exec_dg_st_for_def
     by (rule arg_cong[where f = gamma_state], rule ext)
-       (simp add: combine_abs_def restrict_global_for_def)
+       (simp add: combine_env_abs_def restrict_global_for_def)
   also have "\<dots> \<subseteq> gamma_unit sign_nest_gs (locals (sigma_2 (Inl (cfg_entry sign_nest_cfg, []))))
                    (globs (sigma_2 (Inr Global2)))"
     by (rule gamma_unit_mono[OF entry_locals_ge_s0d_2[OF entry_covered_2]
@@ -385,15 +385,15 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>sign_ctx_sg_2 (Inl (v, c))\<rbrakk>"
     by (rule sign_nest_2_dg.dg_ctx_act_edge)
 next
-  \<comment> \<open>ADMISS_TOTAL --- \<open>admiss_exact\<close> is total since \<open>cs_enterc 2\<close> is a function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact (cs_enterc 2) u c s c'"
+  \<comment> \<open>ADMISS_TOTAL --- \<open>admiss_exact\<close> is total since \<open>cs_context 2\<close> is a function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact (cs_context 2) u c s c'"
     by (simp add: admiss_exact_def)
 next
   \<comment> \<open>CALL --- enter routed to the truncated call string.\<close>
   fix u dst pars args p cont c s c'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
     and sm: "s \<in> \<lbrakk>sign_ctx_sg_2 (Inl (u, c))\<rbrakk>"
-    and adm: "admiss_exact (cs_enterc 2) u c (call_enter sign_nest_gs (CallEdge dst pars args) s) c'"
+    and adm: "admiss_exact (cs_context 2) u c (call_enter sign_nest_gs (CallEdge dst pars args) s) c'"
   show "call_enter sign_nest_gs (CallEdge dst pars args) s
           \<in> \<lbrakk>sign_ctx_sg_2 (Inl (FunctionEntry p, c'))\<rbrakk>"
     using adm sign_ctx_sg_2_seed[OF ce sm] by (simp add: admiss_exact_def)
@@ -402,7 +402,7 @@ next
   fix cl dst pars args p cont c1 c2 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls sign_nest_cfg"
     and sm: "s \<in> \<lbrakk>sign_ctx_sg_2 (Inl (cl, c1))\<rbrakk>"
-    and adm: "admiss_exact (cs_enterc 2) cl c1 es c2"
+    and adm: "admiss_exact (cs_context 2) cl c1 es c2"
     and tm: "t \<in> \<lbrakk>sign_ctx_sg_2 (Inl (FunctionResult p, c2))\<rbrakk>"
     and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
   show "combine_collect sign_nest_gs dst s t \<in> \<lbrakk>sign_ctx_sg_2 (Inl (cont, c1))\<rbrakk>"

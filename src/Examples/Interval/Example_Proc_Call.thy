@@ -52,14 +52,14 @@ subsection \<open>Concrete run\<close>
 
 text \<open>
   Each call leaves the global incremented or squared; the caller's locals
-  are restored by @{const combine_states}.
+  are restored by @{const combine_env}.
 \<close>
 
 lemma call_inc_result:
   "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') + 1))"
 proof -
   have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
-                (VIMP_Globals.combine_states proc_call_gs s
+                (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)))"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi (STR ''inc'') = Some (proc_decl_of [] inc_body)"
@@ -78,7 +78,7 @@ proof -
     qed
   qed
   moreover have
-    "VIMP_Globals.combine_states proc_call_gs s ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))
+    "VIMP_Globals.combine_env proc_call_gs s ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))
        = s((STR ''Gx'') := s (STR ''Gx'') + 1)"
     by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
@@ -88,7 +88,7 @@ lemma call_sqr_result:
   "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
 proof -
   have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
-                (VIMP_Globals.combine_states proc_call_gs s
+                (VIMP_Globals.combine_env proc_call_gs s
                   ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))))"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi (STR ''sqr'') = Some (proc_decl_of [] sqr_body)"
@@ -108,7 +108,7 @@ proof -
     qed
   qed
   moreover have
-    "VIMP_Globals.combine_states proc_call_gs s
+    "VIMP_Globals.combine_env proc_call_gs s
        ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))) = s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))"
     by (rule ext) (simp add: enter_state_def proc_call_gs_def)
   ultimately show ?thesis by simp
@@ -236,7 +236,7 @@ lemma main_prog_postfix:
 proof (rule allI)
   fix v
   let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)) ` intra_predecessors main_cfg v"
-  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter (ivl_tf_for proc_call_gs) fs as (main_prog_env c))
+  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> enter\<^sup># (ivl_tf_for proc_call_gs) fs as (main_prog_env c))
               ` entry_calls main_cfg v"
   let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs (ivl_tf_for proc_call_gs) dst (main_prog_env c) (main_prog_env ex))
               ` return_calls main_cfg v"
@@ -267,7 +267,7 @@ proof (rule allI)
   have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: return_calls_def main_cfg_calls main_prog_env_def
-                   tf_combine_collect_abs_def ivl_tf_for_def combine_abs_def normalize_ivl_def
+                   tf_combine_collect_abs_def ivl_tf_for_def combine_env_abs_def normalize_ivl_def
                    less_eq_ivl_def le_fun_def proc_call_gs_def)
   have le: "\<And>t. t \<in> ?I \<union> ?E \<union> ?R \<Longrightarrow> t \<le> main_prog_env v"
     using leI leE leR by blast

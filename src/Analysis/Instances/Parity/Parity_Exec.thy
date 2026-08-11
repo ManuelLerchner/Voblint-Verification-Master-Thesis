@@ -113,7 +113,7 @@ lemma enter_frame_parity_st_for_commute:
 
 lemma parity_enter_st_for_commute:
   "fun_of_resolved_st_q_for gs (parity_enter_st_for gs xs es s) =
-   tf_enter (parity_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
+   enter\<^sup># (parity_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: parity_enter_st_for_def parity_tf_for_def enter_parity_for_def enter_D_def
                 enter_frame_parity_for_def enter_frame_parity_st_for_commute)
 

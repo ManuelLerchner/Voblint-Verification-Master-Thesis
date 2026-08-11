@@ -87,10 +87,10 @@ lemma parity_ex_intra_eval:
   unfolding prog_cfg_def by eval
 
 lemma parity_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') parity_ex_program) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (simp add: cfg_exit_compile_prog)
 
 lemma parity_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') parity_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (simp add: inv16_entry_is_main)
 
 text \<open>Structural reachability to the exit, for each check node --- the
   premise \<open>parity_exec_prog_sound_collecting_at\<close> needs to bound

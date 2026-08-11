@@ -36,11 +36,11 @@ text \<open>
 \<close>
 
 record 'a domain_transfer =
-  tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)"
+  tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
   tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
-  tf_enter     :: "vname list => aexp list => ('a abs_state) => ('a abs_state)"
+  tf_enter     :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_combine   :: "('a abs_state) => ('a abs_state) => ('a abs_state)"
 
 subsection \<open>Apply transfer function to one edge\<close>
@@ -50,12 +50,12 @@ fun apply_tf :: "'a domain_transfer
                  => ('a abs_state)
                  => ('a abs_state)" where
     "apply_tf tf EA_Nop              \<sigma> = \<sigma>"
-  | "apply_tf tf (EA_Assign x a)     \<sigma> = tf_assign tf x a \<sigma>"
+  | "apply_tf tf (EA_Assign x a)     \<sigma> = assign\<^sup># tf x a \<sigma>"
   | "apply_tf tf (EA_Random x)       \<sigma> = tf_random tf x \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
   | "apply_tf tf (EA_Ret e p)        \<sigma> =
-       (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> tf_assign tf ret_var a \<sigma>)"
+       (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign\<^sup># tf ret_var a \<sigma>)"
   | "apply_tf tf (EA_Check c)        \<sigma> = \<sigma>"
 
 text \<open>\<^const>\<open>EA_Ret\<close> reuses the ordinary transfer of the assignment it publishes: a void return
@@ -358,25 +358,28 @@ qed
 
 subsection \<open>Right-hand side of the equation system\<close>
 
-definition combine_abs :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "combine_abs gs sc se = (\<lambda>x. if gs x then se x else sc x)"
+definition combine_env_abs ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  ("combine'_env\<^sup>#")
+where
+  "combine_env_abs gs sc se = (\<lambda>x. if gs x then se x else sc x)"
 
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
-  a callee-exit store (sound for se) yields a store sound for combine_abs gs sc se.
+  a callee-exit store (sound for se) yields a store sound for \<open>combine_env\<^sup># gs sc se\<close>.
   A pure sound_domain fact -- independent of any transfer function -- reused by
   both the interprocedural constraint-system soundness and the effectful pipeline.
 \<close>
-lemma combine_states_sound:
+lemma combine_env_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_states gs s t \<in> \<lbrakk>combine_abs gs \<sigma>c \<sigma>e\<rbrakk>"
+  shows "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># gs \<sigma>c \<sigma>e\<rbrakk>"
 proof -
   from sc have Vc: "\<forall>z. s z \<in> gamma (\<sigma>c z)"
     unfolding gamma_state_def by auto
   from se have Ve: "\<forall>z. t z \<in> gamma (\<sigma>e z)"
     unfolding gamma_state_def by auto
-  show ?thesis unfolding gamma_state_def combine_abs_def combine_states_def
+  show ?thesis unfolding gamma_state_def combine_env_abs_def combine_env_def
     using Vc Ve by auto
 qed
 
@@ -534,7 +537,8 @@ text \<open>
   discards its result.
 \<close>
 fun combine_assign_abs ::
-    "vname option \<Rightarrow> 'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+    "vname option \<Rightarrow> 'a \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    ("combine'_assign\<^sup>#") where
     "combine_assign_abs None _ \<sigma> = \<sigma>"
   | "combine_assign_abs (Some x) v \<sigma> = \<sigma>(x := v)"
 
@@ -544,21 +548,22 @@ text \<open>
   state update publishes the result without domain-specific return machinery.
 \<close>
 definition combine_collect_abs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "combine_collect_abs gs dst \<sigma>c \<sigma>e = combine_assign_abs dst (\<sigma>e ret_var) (combine_abs gs \<sigma>c \<sigma>e)"
+    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    ("combine\<^sup>#") where
+  "combine_collect_abs gs dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (combine_env\<^sup># gs \<sigma>c \<sigma>e)"
 
 lemma combine_collect_abs_mono:
   fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
   assumes c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
-  shows "combine_collect_abs gs dst \<sigma>c1 \<sigma>e1 \<le> combine_collect_abs gs dst \<sigma>c2 \<sigma>e2"
+  shows "combine\<^sup># gs dst \<sigma>c1 \<sigma>e1 \<le> combine\<^sup># gs dst \<sigma>c2 \<sigma>e2"
 proof (cases dst)
   case None
   then show ?thesis
-    using c e by (simp add: combine_collect_abs_def combine_abs_def le_fun_def)
+    using c e by (simp add: combine_collect_abs_def combine_env_abs_def le_fun_def)
 next
   case (Some x)
   then show ?thesis
-    using c e by (simp add: combine_collect_abs_def combine_abs_def le_fun_def)
+    using c e by (simp add: combine_collect_abs_def combine_env_abs_def le_fun_def)
 qed
 
 text \<open>
@@ -566,49 +571,49 @@ text \<open>
   return-threaded combine: with no destination the return slot is not written.
 \<close>
 lemma combine_collect_abs_None:
-  "combine_collect_abs gs None a b = combine_abs gs a b"
+  "combine\<^sup># gs None a b = combine_env\<^sup># gs a b"
   by (simp add: combine_collect_abs_def)
 
 text \<open>
   Per-analysis return combine.  \<^const>\<open>combine_collect_abs\<close> fixes the environment
-  merge to \<^const>\<open>combine_abs\<close>; \<open>tf_combine_collect_abs\<close> instead reads the merge
+  merge to \<^const>\<open>combine_env_abs\<close>; \<open>tf_combine_collect_abs\<close> instead reads the merge
   from the \<^typ>\<open>'a domain_transfer\<close> in scope, so each analysis may supply its own
-  sound over-approximation of \<^const>\<open>combine_states\<close> instead of the structural
+  sound over-approximation of \<^const>\<open>combine_env\<close> instead of the structural
   local/global split.  The return-value write stays \<^const>\<open>combine_assign_abs\<close>: it is
   already domain-agnostic under the function-based \<^typ>\<open>'a abs_state\<close> representation,
   so only the merge step is a per-analysis choice.
 \<close>
 definition tf_combine_collect_abs ::
     "'a domain_transfer \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign_abs dst (\<sigma>e ret_var) (tf_combine tf \<sigma>c \<sigma>e)"
+  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (tf_combine tf \<sigma>c \<sigma>e)"
 
 text \<open>The fixed structural merge is the special case where \<open>tf_combine\<close> is
-  \<^const>\<open>combine_abs\<close>: the general definition specializes to the old one by
+  \<^const>\<open>combine_env_abs\<close>: the general definition specializes to the old one by
   instantiation, rather than duplicating it.\<close>
-lemma tf_combine_collect_abs_combine_abs:
-  assumes "tf_combine tf = combine_abs gs"
-  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_collect_abs gs dst \<sigma>c \<sigma>e"
+lemma tf_combine_collect_abs_combine_env_abs:
+  assumes "tf_combine tf = combine_env\<^sup># gs"
+  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine\<^sup># gs dst \<sigma>c \<sigma>e"
   using assms unfolding tf_combine_collect_abs_def combine_collect_abs_def by simp
 
 text \<open>
   Soundness of the abstract combine including result publication.  A pure
   @{class sound_domain} fact: the destination slot is sound because the callee's
   @{const ret_var} slot is, and every other slot is handled by
-  @{thm combine_states_sound}.
+  @{thm combine_env_sound}.
 \<close>
 lemma combine_collect_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst \<sigma>c \<sigma>e\<rbrakk>"
+  shows "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst \<sigma>c \<sigma>e\<rbrakk>"
 proof (cases dst)
   case None
   then show ?thesis
-    using combine_states_sound[OF sc se]
+    using combine_env_sound[OF sc se]
     by (simp add: combine_collect_def combine_collect_abs_def)
 next
   case (Some x)
-  have base: "combine_states gs s t \<in> \<lbrakk>combine_abs gs \<sigma>c \<sigma>e\<rbrakk>"
-    by (rule combine_states_sound[OF sc se])
+  have base: "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># gs \<sigma>c \<sigma>e\<rbrakk>"
+    by (rule combine_env_sound[OF sc se])
   have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
     using se unfolding gamma_state_def by auto
   show ?thesis
@@ -619,19 +624,19 @@ qed
 
 text \<open>
   Discharge the concrete return combine from an abstract bound: given
-  \<open>combine_collect_abs dst sc se \<le> sr\<close>, any concrete return assembled from a
+  \<open>combine\<^sup># dst sc se \<le> sr\<close>, any concrete return assembled from a
   caller store sound for \<open>sc\<close> and a callee-exit store sound for \<open>se\<close> lies in
   \<open>\<lbrakk>sr\<rbrakk>\<close>.  @{thm combine_collect_sound} carried to the bound by
   @{thm gamma_state_mono}.  The order-theoretic \<open>combine_bound\<close> shape is
   checkable against a post-solution, so no raw \<open><s|t>\<close> obligation reaches callers.
 \<close>
-lemma combine_abs_bound_sound:
+lemma combine_env_abs_bound_sound:
   fixes sc se sr :: "'a::sound_domain abs_state"
-  assumes bound: "combine_collect_abs gs dst sc se \<le> sr"
+  assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
   shows "combine_collect gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
 proof -
-  have "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst sc se\<rbrakk>"
+  have "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst sc se\<rbrakk>"
     using sc se by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
@@ -805,7 +810,7 @@ locale sound_transfer_for =
     and tf :: "'a::sound_domain domain_transfer"
   assumes tf_sound_assign_for[intro]:
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_random_for[intro]:
     "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
   assumes tf_sound_assume_for[intro]:
@@ -820,13 +825,13 @@ locale sound_transfer_for =
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_combine_for[intro]:
     "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-       combine_states gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+       combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
 
 context sound_transfer_for
 begin
 
 lemma tf_sound_assign_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign_for by blast
 
 lemma tf_sound_random_forD[intro]:
@@ -849,7 +854,7 @@ lemma tf_sound_enter_forD[intro]:
 
 lemma tf_sound_combine_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-     combine_states gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+     combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
   using tf_sound_combine_for by blast
 
 end
@@ -859,7 +864,7 @@ lemma sound_transferI_for:
     and tf :: "'a::sound_domain domain_transfer"
   assumes assign[intro]:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     and random[intro]:
     "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
@@ -874,11 +879,11 @@ lemma sound_transferI_for:
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     and combine[intro]:
-    "tf_combine tf = combine_abs gs"
+    "tf_combine tf = combine_env\<^sup># gs"
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+      s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     using assign by blast
   show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v.
       s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
@@ -894,8 +899,8 @@ proof unfold_locales
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
   show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-      combine_states gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-    unfolding combine using combine_states_sound by blast
+      combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+    unfolding combine using combine_env_sound by blast
 qed
 
 

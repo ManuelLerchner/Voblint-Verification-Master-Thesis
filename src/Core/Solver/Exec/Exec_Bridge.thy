@@ -22,16 +22,16 @@ lemma fun_of_resolved_st_q_for_restrict_global_abs [simp]:
   unfolding restrict_global_for_def
   by (rule ext) simp
 
-lemma fun_of_resolved_st_q_for_combine_abs [simp]:
+lemma fun_of_resolved_st_q_for_combine_env_abs [simp]:
   "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) =
-     combine_abs gs (fun_of_resolved_st_q_for gs sc)
+     combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
        (fun_of_resolved_st_q_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) x =
-      combine_abs gs (fun_of_resolved_st_q_for gs sc)
+      combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
         (fun_of_resolved_st_q_for gs se) x"
-    by (cases "gs x"; simp add: combine_abs_def)
+    by (cases "gs x"; simp add: combine_env_abs_def)
 qed
 
 subsection \<open>Executable projection identities\<close>
@@ -379,7 +379,7 @@ proof -
        (use relevant covered in auto)
 qed
 
-lemma project_recombine_abstract:
+lemma project_recombine_env_abstract:
   fixes state :: "('a::bounded_semilattice_sup_bot) resolved_st_q"
   assumes relevant:
     "location_of source_global x \<in> set (locations_of node)"
@@ -404,7 +404,7 @@ proof -
     "fun_of_resolved_st_q_for source_global
       (project_local node state \<squnion> project_side node state) x =
      fun_of_resolved_st_q_for source_global state x"
-    by (rule project_recombine_abstract[OF relevant])
+    by (rule project_recombine_env_abstract[OF relevant])
   have refined:
     "fun_of_resolved_st_q_for source_global state x = full x"
     using refines unfolding resolved_st_q_refines_for_def by simp

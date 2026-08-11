@@ -3406,8 +3406,6 @@ let rec point
 
 let rec rho (Ug_state_ext (rho, more)) = rho;;
 
-let rec combine_abs gs sc se = (fun x -> (if gs x then se x else sc x));;
-
 let rec etf_st_enter
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
@@ -3526,6 +3524,8 @@ let rec fun_of_dg_st_for _A _B
   gs d =
     DG (fun_of_exec_dg_st_for _A gs (locals d),
          fun_of_exec_dg_st_for _B gs (globs d));;
+
+let rec combine_env_abs gs sc se = (fun x -> (if gs x then se x else sc x));;
 
 let rec rho_update
   rhoa (Ug_state_ext (rho, more)) = Ug_state_ext (rhoa rho, more);;
@@ -3768,7 +3768,7 @@ let rec analyse_sign_report_for
     (let sol = snd (analyse_sign_for gs p) in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          combine_abs gs
+          combine_env_abs gs
             (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
             (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
         sign_classify_check);;
@@ -3926,7 +3926,7 @@ and interval_check_false
 
 let rec analyse_sign_env_for
   gs p v =
-    combine_abs gs
+    combine_env_abs gs
       (fun_of_exec_dg_st_for bot_sign gs
         (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
       (fun_of_exec_dg_st_for bot_sign gs
@@ -4233,7 +4233,7 @@ let rec analyse_sign_report_for_with_state
     (let sol = snd (analyse_sign_for gs p) in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          combine_abs gs
+          combine_env_abs gs
             (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
             (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
         sign_classify_check);;
@@ -4289,7 +4289,7 @@ let rec entry_state_sg_exec
       with Inl (v, ctx) ->
         (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
               (fst (entry_state_sol gs pi ps mnm main))
-          then combine_abs gs
+          then combine_env_abs gs
                  (locals
                    (entry_state_sigma_abs_exec gs pi ps mnm main
                      (Inl (v, ctx))))

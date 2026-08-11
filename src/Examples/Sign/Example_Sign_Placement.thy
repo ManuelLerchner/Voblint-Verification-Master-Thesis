@@ -80,7 +80,7 @@ where
   "sign_placement_abs_enter_tree =
     placed_abs_dg_enter_of (declared_global sign_placement_prog)
       sign_placement_node_owner sign_placement_keep_local sign_placement_publish_side
-      (tf_enter (sign_tf_for (declared_global sign_placement_prog))) ()"
+      (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog))) ()"
 
 definition sign_placement_abs_combine_tree ::
   "pp => call_action => pp => pp =>
@@ -155,7 +155,7 @@ proof -
     "traverse_rhs
         (sign_placement_abs_enter_tree caller (CallEdge dst fs args)
           (FunctionEntry callee)) sigma =
-      DG (tf_enter (sign_tf_for (declared_global sign_placement_prog)) fs args
+      DG (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
             (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)) bot"
     unfolding sign_placement_abs_enter_tree_def placed_abs_dg_enter_of_def
       placed_abs_dg_enter_tree_def
@@ -180,7 +180,7 @@ proof -
         (enter_state (declared_global sign_placement_prog) s)"
     by (rule call_enter_CallEdge)
   also have "... \<in>
-      \<lbrakk>tf_enter (sign_tf_for (declared_global sign_placement_prog)) fs args
+      \<lbrakk>enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
         (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD
       [OF sign_is_sound_transfer_for s_in]
@@ -204,7 +204,7 @@ lemma sign_placement_combine_hook_sound:
             (FunctionResult callee) continuation) sigma (Inr ())))"
 proof -
   define result where
-    "result = combine_collect_abs (declared_global sign_placement_prog) dst
+    "result = combine\<^sup># (declared_global sign_placement_prog) dst
       (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)
       (dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma)"
   have traverse:
@@ -262,7 +262,7 @@ lemma sign_placement_hook_gen_eq_placed_abs_dg_gen_of:
     placed_abs_dg_gen_of (declared_global sign_placement_prog) sign_placement_node_owner
       sign_placement_keep_local sign_placement_publish_side
       (apply_tf (sign_tf_for (declared_global sign_placement_prog)))
-      (tf_enter (sign_tf_for (declared_global sign_placement_prog)))
+      (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))
       sign_placement_cfg bot0 s0d s0g"
 proof -
   have e1: "(\<lambda>_::unit. sign_placement_abs_edge_tree) =
@@ -277,7 +277,7 @@ proof -
   have e3: "(\<lambda>_::unit. sign_placement_abs_enter_tree) =
       placed_abs_dg_enter_of (declared_global sign_placement_prog) sign_placement_node_owner
         sign_placement_keep_local sign_placement_publish_side
-        (tf_enter (sign_tf_for (declared_global sign_placement_prog)))"
+        (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))"
     unfolding sign_placement_abs_enter_tree_def by (rule ext) simp
   show ?thesis
     unfolding sign_placement_sound_dg_hooks.hook_gen_def placed_abs_dg_gen_of_def e1 e2 e3
@@ -478,7 +478,7 @@ proof -
       (placed_abs_dg_gen_of (declared_global sign_placement_prog) sign_placement_node_owner
         sign_placement_keep_local sign_placement_publish_side
         (apply_tf (sign_tf_for (declared_global sign_placement_prog)))
-        (tf_enter (sign_tf_for (declared_global sign_placement_prog)))
+        (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))
         sign_placement_cfg bot sign_placement_s0d_abs sign_placement_s0g_abs (v, ()))
       (completed_sigma_abs (declared_global sign_placement_prog) sign_placement_locations_of STop
         (snd sign_placement_dg_td_sol)) (v, ())"
@@ -550,6 +550,16 @@ definition sign_placement_s0d_abs :: "sign abs_state" where
 definition sign_placement_s0g_abs :: "sign abs_state" where
   "sign_placement_s0g_abs = bot"
 
+subsection \<open>Node coverage\<close>
+
+definition sign_placement_nodes :: "(pp \<times> unit) set" where
+  "sign_placement_nodes =
+    {(FunctionEntry prog_main_name, ()), (FunctionResult prog_main_name, ())}
+    \<union> (\<lambda>n. (Statement n, ())) ` {0, 1, 2}"
+
+lemma sign_placement_nodes_eq: "fst sign_placement_dg_td_sol = sign_placement_nodes"
+  unfolding sign_placement_nodes_def by eval
+
 subsection \<open>Per-node instantiation\<close>
 
 lemma sign_placement_se_statement0:
@@ -563,7 +573,8 @@ proof (rule sign_placement_se_edge[where v = "Statement 0" and u = "FunctionEntr
     by (rule sign_placement_no_combine_edge_nodes)
   show "entry_call_list sign_placement_cfg (Statement 0) = []"
     by (rule sign_placement_no_combine_edge_nodes)
-  show "(Statement 0, ()) \<in> fst sign_placement_dg_td_sol" by eval
+  show "(Statement 0, ()) \<in> fst sign_placement_dg_td_sol"
+    by (simp add: sign_placement_nodes_eq sign_placement_nodes_def)
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (Statement 0))"
   show "lookup_resolved_st_q
@@ -592,7 +603,8 @@ proof (rule sign_placement_se_edge[where v = "Statement 1" and u = "Statement 0"
     by (rule sign_placement_no_combine_edge_nodes)
   show "entry_call_list sign_placement_cfg (Statement 1) = []"
     by (rule sign_placement_no_combine_edge_nodes)
-  show "(Statement 1, ()) \<in> fst sign_placement_dg_td_sol" by eval
+  show "(Statement 1, ()) \<in> fst sign_placement_dg_td_sol"
+    by (simp add: sign_placement_nodes_eq sign_placement_nodes_def)
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (Statement 1))"
   have val_agree:
@@ -627,7 +639,8 @@ proof (rule sign_placement_se_edge[where v = "Statement 2" and u = "Statement 1"
     by (rule sign_placement_no_combine_edge_nodes)
   show "entry_call_list sign_placement_cfg (Statement 2) = []"
     by (rule sign_placement_no_combine_edge_nodes)
-  show "(Statement 2, ()) \<in> fst sign_placement_dg_td_sol" by eval
+  show "(Statement 2, ()) \<in> fst sign_placement_dg_td_sol"
+    by (simp add: sign_placement_nodes_eq sign_placement_nodes_def)
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (Statement 2))"
   have mem: "location_of (declared_global sign_placement_prog) (STR ''x'') \<in>
@@ -669,7 +682,8 @@ proof (rule sign_placement_se_edge[where v = "FunctionResult prog_main_name" and
     by (rule sign_placement_no_combine_edge_nodes)
   show "entry_call_list sign_placement_cfg (FunctionResult prog_main_name) = []"
     by (rule sign_placement_no_combine_edge_nodes)
-  show "(FunctionResult prog_main_name, ()) \<in> fst sign_placement_dg_td_sol" by eval
+  show "(FunctionResult prog_main_name, ()) \<in> fst sign_placement_dg_td_sol"
+    by (simp add: sign_placement_nodes_eq sign_placement_nodes_def)
 next
   fix loc assume loc: "loc \<in> set (sign_placement_locations_of (FunctionResult prog_main_name))"
   show "lookup_resolved_st_q
@@ -702,7 +716,7 @@ proof -
       (placed_abs_dg_gen_of (declared_global sign_placement_prog) sign_placement_node_owner
         sign_placement_keep_local sign_placement_publish_side
         (apply_tf (sign_tf_for (declared_global sign_placement_prog)))
-        (tf_enter (sign_tf_for (declared_global sign_placement_prog)))
+        (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))
         sign_placement_cfg bot sign_placement_s0d_abs sign_placement_s0g_abs (cfg_entry sign_placement_cfg, ()))
       (completed_sigma_abs (declared_global sign_placement_prog) sign_placement_locations_of STop
         (snd sign_placement_dg_td_sol)) (cfg_entry sign_placement_cfg, ())"
@@ -732,7 +746,8 @@ proof -
         (snd sign_placement_dg_td_sol) (cfg_entry sign_placement_cfg, ())"
       unfolding sign_placement_dg_eqs_def[symmetric]
     proof (rule part_post_solution_imp_se_constraint_holds[OF sign_placement_dg_td_post_solution])
-      show "(cfg_entry sign_placement_cfg, ()) \<in> fst sign_placement_dg_td_sol" by eval
+      show "(cfg_entry sign_placement_cfg, ()) \<in> fst sign_placement_dg_td_sol"
+        by (simp add: sign_placement_nodes_eq sign_placement_nodes_def sign_placement_cfg_entry)
     qed
   next
     fix location assume loc: "location \<in> set (sign_placement_locations_of (cfg_entry sign_placement_cfg))"
@@ -759,14 +774,6 @@ qed
 
 
 subsection \<open>Node coverage and dependency closure\<close>
-
-definition sign_placement_nodes :: "(pp \<times> unit) set" where
-  "sign_placement_nodes =
-    {(FunctionEntry prog_main_name, ()), (FunctionResult prog_main_name, ())}
-    \<union> (\<lambda>n. (Statement n, ())) ` {0, 1, 2}"
-
-lemma sign_placement_nodes_eq: "fst sign_placement_dg_td_sol = sign_placement_nodes"
-  unfolding sign_placement_nodes_def by eval
 
 lemma sign_placement_hook_gen_single_edge_dep:
   fixes bot0 :: "sign abs_state"

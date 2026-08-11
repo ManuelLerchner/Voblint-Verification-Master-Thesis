@@ -186,9 +186,9 @@ text \<open>Program-context concrete operations classify each variable through t
 definition prog_enter_state :: "imp_prog => store => store" where
   "prog_enter_state p s = enter_state (storage_global p prog_main_name) s"
 
-definition prog_combine_states :: "imp_prog => store => store => store" where
-  "prog_combine_states p s t =
-    combine_states (storage_global p prog_main_name) s t"
+definition prog_combine_env :: "imp_prog => store => store => store" where
+  "prog_combine_env p s t =
+    combine_env (storage_global p prog_main_name) s t"
 
 definition prog_pstep ::
     "imp_prog => (com \<times> store \<times> frame list) =>
