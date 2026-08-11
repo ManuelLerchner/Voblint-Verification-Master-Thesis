@@ -381,15 +381,24 @@ lemma statement3_no_calls: "call_successor_list nest_cfg (Statement 3) = []"
 lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx) (\<lambda>caller_state.
-         QueryL (FunctionResult (STR ''g''),
-                 cs_route 1 (Statement 2) ctx (locals caller_state)
-                   (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
-           QueryG Global1 (\<lambda>globals_state.
-             Side Global1
-               (DG bot (combine_global Spoly (Some (STR ''t''))
-                     (locals caller_state) (locals callee_state) (globs globals_state)))
-               (Answer (DG (combine_local Spoly (Some (STR ''t''))
-                     (locals caller_state) (locals callee_state) (globs globals_state)) bot)))))"
+         QueryG Global1 (\<lambda>globals_state1.
+           Side Global1
+             (DG bot (enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                   (locals caller_state) (globs globals_state1)))
+             (Side (Seed1 (FunctionEntry (STR ''g''))
+                     (cs_route 1 (Statement 2) ctx (locals caller_state)
+                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
+               (DG bot (enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                     (locals caller_state) (globs globals_state1)))
+               (QueryL (FunctionResult (STR ''g''),
+                       cs_route 1 (Statement 2) ctx (locals caller_state)
+                         (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
+                 QueryG Global1 (\<lambda>globals_state2.
+                   Side Global1
+                     (DG bot (combine_global Spoly (Some (STR ''t''))
+                           (locals caller_state) (locals callee_state) (globs globals_state2)))
+                     (Answer (DG (combine_local Spoly (Some (STR ''t''))
+                           (locals caller_state) (locals callee_state) (globs globals_state2)) bot))))))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def routed_cmb_def
   by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def
                 side_rhs_fold_dg.simps seqcomp_tree.simps)
@@ -533,13 +542,23 @@ lemma project_sigma_dep_L_statement3:
 
 lemma sides_of_rhs_statement3:
   "sides_of_rhs (nest_1_eqs (Statement 3, ctx)) project_sigma
-     = (\<lambda>_. bot)(Inr Global1 :=
-         DG bot (combine_global Spoly (Some (STR ''t''))
-               (locals (project_sigma (Inl (Statement 2, ctx))))
-               (locals (project_sigma (Inl (FunctionResult (STR ''g''),
-                 cs_route 1 (Statement 2) ctx (locals (project_sigma (Inl (Statement 2, ctx))))
-                   (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))))
-               (globs (project_sigma (Inr Global1)))))"
+     = (\<lambda>_. bot)
+         (Inr (Seed1 (FunctionEntry (STR ''g''))
+                 (cs_route 1 (Statement 2) ctx (locals (project_sigma (Inl (Statement 2, ctx))))
+                   (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))) :=
+             DG bot (enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                   (locals (project_sigma (Inl (Statement 2, ctx))))
+                   (globs (project_sigma (Inr Global1)))),
+          Inr Global1 :=
+             DG bot (combine_global Spoly (Some (STR ''t''))
+                   (locals (project_sigma (Inl (Statement 2, ctx))))
+                   (locals (project_sigma (Inl (FunctionResult (STR ''g''),
+                     cs_route 1 (Statement 2) ctx (locals (project_sigma (Inl (Statement 2, ctx))))
+                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))))
+                   (globs (project_sigma (Inr Global1))))
+             \<squnion> DG bot (enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                   (locals (project_sigma (Inl (Statement 2, ctx))))
+                   (globs (project_sigma (Inr Global1)))))"
   unfolding nest_1_eqs_statement3
   by (simp add: bot_fun_def)
 
