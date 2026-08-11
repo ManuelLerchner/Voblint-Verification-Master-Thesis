@@ -36,7 +36,7 @@ text \<open>
 \<close>
 
 record 'a domain_transfer =
-  tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)"
+  tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
   tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
@@ -50,12 +50,12 @@ fun apply_tf :: "'a domain_transfer
                  => ('a abs_state)
                  => ('a abs_state)" where
     "apply_tf tf EA_Nop              \<sigma> = \<sigma>"
-  | "apply_tf tf (EA_Assign x a)     \<sigma> = tf_assign tf x a \<sigma>"
+  | "apply_tf tf (EA_Assign x a)     \<sigma> = assign\<^sup># tf x a \<sigma>"
   | "apply_tf tf (EA_Random x)       \<sigma> = tf_random tf x \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
   | "apply_tf tf (EA_Ret e p)        \<sigma> =
-       (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> tf_assign tf ret_var a \<sigma>)"
+       (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign\<^sup># tf ret_var a \<sigma>)"
   | "apply_tf tf (EA_Check c)        \<sigma> = \<sigma>"
 
 text \<open>\<^const>\<open>EA_Ret\<close> reuses the ordinary transfer of the assignment it publishes: a void return
@@ -810,7 +810,7 @@ locale sound_transfer_for =
     and tf :: "'a::sound_domain domain_transfer"
   assumes tf_sound_assign_for[intro]:
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_random_for[intro]:
     "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
   assumes tf_sound_assume_for[intro]:
@@ -831,7 +831,7 @@ context sound_transfer_for
 begin
 
 lemma tf_sound_assign_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign_for by blast
 
 lemma tf_sound_random_forD[intro]:
@@ -864,7 +864,7 @@ lemma sound_transferI_for:
     and tf :: "'a::sound_domain domain_transfer"
   assumes assign[intro]:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     and random[intro]:
     "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
@@ -883,7 +883,7 @@ lemma sound_transferI_for:
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(x := aval a s) \<in> \<lbrakk>tf_assign tf x a \<sigma>\<rbrakk>"
+      s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     using assign by blast
   show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v.
       s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"

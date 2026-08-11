@@ -120,6 +120,36 @@ under `src/Examples/` and `src/Formalization/Pipeline/`, not generic
 framework operations -- notation is reserved for the latter. No further
 candidates found.
 
+**Remaining `domain_transfer` fields (2026-08-11):** `tf_enter` (`enter#`)
+and `combine`-related fields already carry notation. Audited the rest of
+the record against Goblint's `Spec` interface, checked at the pinned commit
+(`docs/GOBLINT_ALIGNMENT_REGISTER.md`'s baseline):
+
+- **`tf_assign` -> notated `assign#`.** Clean 1:1 match to `Spec.assign`
+  (`analyses.ml`), same shape modulo the manager argument. No competing
+  identifier already holds the token.
+- **`tf_assume`/`tf_assume_not` -> not notated, tracked as issue #116.**
+  Goblint has one `Spec.branch man exp bool` operation, not two -- "take the
+  true/false outcome of `exp`" is one operation parametrized by a boolean.
+  Unifying `tf_assume`/`tf_assume_not` into one `tf_branch` would be a real
+  alignment improvement, but the split is duplicated at three layers
+  (`domain_transfer`, `effectful_domain_transfer`, `dg_spec`), the same
+  multi-layer blast-radius shape that made the `route#` cutover under this
+  issue worth aborting rather than compromising halfway (see #114). Filed
+  rather than started inline; needs an explicit go per the same discipline.
+- **`tf_random` -> not notated, tracked as issue #117.** No Goblint `Spec`
+  method corresponds to it at all. Worse: checked against
+  `src/util/library/libraryFunctions.ml` and `base.ml` at the pinned commit,
+  Goblint's `rand`/`random`/`rand_r` are classified `Rand` and produce a
+  **nonnegative** abstract integer, while VIMP's `random()` is unconstrained
+  (`edge_step (EA_Random x) s = {s(x := v) |v. True}`) -- semantically
+  Goblint's separate `unknown`/`__VERIFIER_nondet_int` path, not `Rand`. The
+  name doesn't just fail to align with Goblint, it points at the wrong one
+  of two distinct Goblint concepts. Filed as a naming/design decision
+  (`Havoc` vs. a generic `special#` builtin mechanism), not a mechanical
+  rename -- a surface-keyword change would also cross into the governed
+  VIMP grammar pipeline (`AGENTS.md`).
+
 ## Deferred: canonical abstract-operation layer
 
 A larger proposal surfaced during this pass: introduce one canonical abstract

@@ -106,7 +106,7 @@ lemma route_family_etf_sound:
   fixes E :: "(gname, sign) effectful_domain_transfer"
   assumes nop: "\<And>u \<sigma>. etf_full (etf_nop E u) \<sigma> = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
     and assign: "\<And>x a u \<sigma>. etf_full (etf_assign E x a u) \<sigma>
-                   = tf_assign (sign_tf_for gs) x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+                   = assign\<^sup># (sign_tf_for gs) x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and random: "\<And>x u \<sigma>. etf_full (etf_random E x u) \<sigma>
                    = tf_random (sign_tf_for gs) x (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and assm: "\<And>b u \<sigma>. etf_full (etf_assume E b u) \<sigma>
@@ -290,7 +290,7 @@ lemma named_etf_full_nop:
 
 lemma named_etf_full_assign:
   "etf_full (etf_assign (named_etf gs) x a u) \<sigma>
-   = tf_assign (sign_tf_for gs) x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+   = assign\<^sup># (sign_tf_for gs) x a (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
 lemma named_etf_full_random:
@@ -526,7 +526,7 @@ theorem sideg_assign_sound:
          \<in> \<lbrakk>etf_full (sideg_tree gs gread gwrite
                        (apply_tf (sign_tf_for gs) (EA_Assign x a)) u) \<sigma>\<rbrakk>"
 proof -
-  have "s(x := aval a s) \<in> \<lbrakk>tf_assign (sign_tf_for gs) x a (side_env_g \<sigma> gread u)\<rbrakk>"
+  have "s(x := aval a s) \<in> \<lbrakk>assign\<^sup># (sign_tf_for gs) x a (side_env_g \<sigma> gread u)\<rbrakk>"
     using assign_sign_sound[OF assms] by (simp add: sign_tf_for_def)
   thus ?thesis by (simp add: etf_full_sideg_tree)
 qed
