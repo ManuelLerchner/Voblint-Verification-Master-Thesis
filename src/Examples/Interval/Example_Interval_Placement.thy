@@ -608,7 +608,7 @@ lemma placement_combine_hook_sound:
             (FunctionResult callee) continuation) sigma (Inr ())))"
 proof -
   define result where
-    "result = combine_collect_abs (declared_global placement_prog) dst
+    "result = combine\<^sup># (declared_global placement_prog) dst
       (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)
       (dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma)"
   have traverse:
@@ -1267,7 +1267,7 @@ qed
 
 text \<open>The combine-node counterpart: same recipe, destructuring the single
   call action's assigned-variable option into \<open>combine_collect_resolved_for_q\<close>
-  / \<open>combine_collect_abs\<close> directly, matching \<open>placement_combine_hook_sound\<close>'s
+  / \<open>combine\<^sup>#\<close> directly, matching \<open>placement_combine_hook_sound\<close>'s
   own \<open>result\<close> abbreviation.\<close>
 
 lemma placement_dg_eqs_single_combine:
@@ -1308,14 +1308,14 @@ lemma placement_hook_gen_single_combine_reduced:
     "eq (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g) (v, ()) sigma =
        DG (project_abs_on (placement_node_owner v) (declared_global placement_prog)
              placement_keep_local
-             (combine_collect_abs (declared_global placement_prog) destination
+             (combine\<^sup># (declared_global placement_prog) destination
                (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)
                (dg_hook_D sigma callee_exit \<squnion> dg_hook_G sigma))) bot"
     "sides_of_rhs
        (placement_sound_dg_hooks.hook_gen placement_cfg bot0 s0d s0g (v, ())) sigma (Inr ()) =
        DG bot (project_abs_on (placement_node_owner v) (declared_global placement_prog)
              placement_publish_side
-             (combine_collect_abs (declared_global placement_prog) destination
+             (combine\<^sup># (declared_global placement_prog) destination
                (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)
                (dg_hook_D sigma callee_exit \<squnion> dg_hook_G sigma)))"
   unfolding placement_sound_dg_hooks.hook_gen_def
@@ -1339,7 +1339,7 @@ lemma placement_dg_refines_combine:
         (combine_collect_resolved_for_q (declared_global placement_prog) destination
           (dg_hook_D sigma_exec caller \<squnion> dg_hook_G sigma_exec)
           (dg_hook_D sigma_exec callee_exit \<squnion> dg_hook_G sigma_exec)) location =
-      combine_collect_abs (declared_global placement_prog) destination
+      combine\<^sup># (declared_global placement_prog) destination
         (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs)
         (dg_hook_D sigma_abs callee_exit \<squnion> dg_hook_G sigma_abs)
         (location_vname location)"
@@ -1368,12 +1368,12 @@ proof -
               (dg_hook_D sigma_exec callee_exit \<squnion> dg_hook_G sigma_exec))))
       (DG (project_abs_on (placement_node_owner v) (declared_global placement_prog)
             placement_keep_local
-            (combine_collect_abs (declared_global placement_prog) destination
+            (combine\<^sup># (declared_global placement_prog) destination
               (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs)
               (dg_hook_D sigma_abs callee_exit \<squnion> dg_hook_G sigma_abs)))
           (project_abs_on (placement_node_owner v) (declared_global placement_prog)
             placement_publish_side
-            (combine_collect_abs (declared_global placement_prog) destination
+            (combine\<^sup># (declared_global placement_prog) destination
               (dg_hook_D sigma_abs caller \<squnion> dg_hook_G sigma_abs)
               (dg_hook_D sigma_abs callee_exit \<squnion> dg_hook_G sigma_abs))))"
     by (rule dg_refines_on_project_strict[OF raw resolved])
@@ -1951,7 +1951,7 @@ lemma placement_combine_raw:
            dg_hook_G (snd placement_dg_td_sol))
           (dg_hook_D (snd placement_dg_td_sol) (FunctionResult (STR ''add'')) \<squnion>
            dg_hook_G (snd placement_dg_td_sol))) location =
-      combine_collect_abs (declared_global placement_prog) (Some (STR ''answer''))
+      combine\<^sup># (declared_global placement_prog) (Some (STR ''answer''))
         (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
         (dg_hook_D placement_sigma_abs (FunctionResult (STR ''add'')) \<squnion> dg_hook_G placement_sigma_abs)
         (location_vname location)"
@@ -2079,7 +2079,7 @@ next
          dg_hook_G (snd placement_dg_td_sol))
         (dg_hook_D (snd placement_dg_td_sol) (FunctionResult (STR ''add'')) \<squnion>
          dg_hook_G (snd placement_dg_td_sol))) location =
-    combine_collect_abs (declared_global placement_prog) (Some (STR ''answer''))
+    combine\<^sup># (declared_global placement_prog) (Some (STR ''answer''))
       (dg_hook_D placement_sigma_abs (Statement 5) \<squnion> dg_hook_G placement_sigma_abs)
       (dg_hook_D placement_sigma_abs (FunctionResult (STR ''add'')) \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
@@ -2697,7 +2697,7 @@ proof -
     show "globs (sides_of_rhs (placement_sound_dg_hooks.hook_gen placement_cfg bot
         placement_s0d_abs placement_s0g_abs (v, ())) placement_sigma_abs (Inr ())) x \<le> bot"
       using placement_side_outside_bot[where node = v and
-          result = "combine_collect_abs (declared_global placement_prog) destination
+          result = "combine\<^sup># (declared_global placement_prog) destination
             (dg_hook_D placement_sigma_abs caller \<squnion> dg_hook_G placement_sigma_abs)
             (dg_hook_D placement_sigma_abs callee_exit \<squnion> dg_hook_G placement_sigma_abs)", OF out]
       by (simp add: reduced)

@@ -204,7 +204,7 @@ lemma sign_placement_combine_hook_sound:
             (FunctionResult callee) continuation) sigma (Inr ())))"
 proof -
   define result where
-    "result = combine_collect_abs (declared_global sign_placement_prog) dst
+    "result = combine\<^sup># (declared_global sign_placement_prog) dst
       (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)
       (dg_hook_D sigma (FunctionResult callee) \<squnion> dg_hook_G sigma)"
   have traverse:

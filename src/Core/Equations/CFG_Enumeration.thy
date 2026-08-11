@@ -78,7 +78,7 @@ text \<open>The call tuples whose continuation is the queried node \<open>v\<clo
   caller destination and the callee's \<^term>\<open>FunctionResult p\<close> exit node --- recovered from
   the callee entry \<^term>\<open>FunctionEntry p\<close>, so no separate combine relation is needed.  The
   return contribution is the caller state and the callee-exit state assembled by
-  \<open>combine_collect_abs\<close>.  The final component is returned directly so clients need not
+  \<open>combine\<^sup>#\<close>.  The final component is returned directly so clients need not
   rebuild the result node.\<close>
 
 definition return_calls ::
@@ -176,7 +176,7 @@ subsection \<open>Return enumeration with the triggering call action\<close>
 
 text \<open>\<^const>\<open>return_call_list\<close> keeps only the caller destination projected from the
   triggering \<^typ>\<open>call_action\<close>, which is all the flat/context-insensitive combine
-  (\<open>combine_collect_abs\<close>, via \<open>Constraint_System.rhs_combine_sources\<close>) needs.
+  (\<open>combine\<^sup>#\<close>, via \<open>Constraint_System.rhs_combine_sources\<close>) needs.
   The context-sensitive DG generator needs more: it must route both the callee-entry seed
   publication and the return-side context read from the \<^emph>\<open>same\<close> call action, and
   \<^const>\<open>entry_call_list\<close> already keeps \<open>ca\<close> whole on the entry side.  This is the return-side

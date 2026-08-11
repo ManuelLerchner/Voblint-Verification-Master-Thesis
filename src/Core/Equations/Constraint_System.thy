@@ -548,13 +548,14 @@ text \<open>
   state update publishes the result without domain-specific return machinery.
 \<close>
 definition combine_collect_abs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    ("combine\<^sup>#") where
   "combine_collect_abs gs dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (combine_env\<^sup># gs \<sigma>c \<sigma>e)"
 
 lemma combine_collect_abs_mono:
   fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
   assumes c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
-  shows "combine_collect_abs gs dst \<sigma>c1 \<sigma>e1 \<le> combine_collect_abs gs dst \<sigma>c2 \<sigma>e2"
+  shows "combine\<^sup># gs dst \<sigma>c1 \<sigma>e1 \<le> combine\<^sup># gs dst \<sigma>c2 \<sigma>e2"
 proof (cases dst)
   case None
   then show ?thesis
@@ -570,7 +571,7 @@ text \<open>
   return-threaded combine: with no destination the return slot is not written.
 \<close>
 lemma combine_collect_abs_None:
-  "combine_collect_abs gs None a b = combine_env\<^sup># gs a b"
+  "combine\<^sup># gs None a b = combine_env\<^sup># gs a b"
   by (simp add: combine_collect_abs_def)
 
 text \<open>
@@ -591,7 +592,7 @@ text \<open>The fixed structural merge is the special case where \<open>tf_combi
   instantiation, rather than duplicating it.\<close>
 lemma tf_combine_collect_abs_combine_env_abs:
   assumes "tf_combine tf = combine_env\<^sup># gs"
-  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_collect_abs gs dst \<sigma>c \<sigma>e"
+  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine\<^sup># gs dst \<sigma>c \<sigma>e"
   using assms unfolding tf_combine_collect_abs_def combine_collect_abs_def by simp
 
 text \<open>
@@ -603,7 +604,7 @@ text \<open>
 lemma combine_collect_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst \<sigma>c \<sigma>e\<rbrakk>"
+  shows "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst \<sigma>c \<sigma>e\<rbrakk>"
 proof (cases dst)
   case None
   then show ?thesis
@@ -623,7 +624,7 @@ qed
 
 text \<open>
   Discharge the concrete return combine from an abstract bound: given
-  \<open>combine_collect_abs dst sc se \<le> sr\<close>, any concrete return assembled from a
+  \<open>combine\<^sup># dst sc se \<le> sr\<close>, any concrete return assembled from a
   caller store sound for \<open>sc\<close> and a callee-exit store sound for \<open>se\<close> lies in
   \<open>\<lbrakk>sr\<rbrakk>\<close>.  @{thm combine_collect_sound} carried to the bound by
   @{thm gamma_state_mono}.  The order-theoretic \<open>combine_bound\<close> shape is
@@ -631,11 +632,11 @@ text \<open>
 \<close>
 lemma combine_env_abs_bound_sound:
   fixes sc se sr :: "'a::sound_domain abs_state"
-  assumes bound: "combine_collect_abs gs dst sc se \<le> sr"
+  assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
   shows "combine_collect gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
 proof -
-  have "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst sc se\<rbrakk>"
+  have "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst sc se\<rbrakk>"
     using sc se by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed

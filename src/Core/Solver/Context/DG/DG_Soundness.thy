@@ -1615,7 +1615,7 @@ lemma dg_spec_step_indep [simp]:
 
 lemma dgs_combine_indep [simp]:
   "dgs_combine (indep_dg_spec gs tfD tfG) dst dc de g
-   = (combine_collect_abs gs dst g g, combine_collect_abs gs dst dc de)"
+   = (combine\<^sup># gs dst g g, combine\<^sup># gs dst dc de)"
   unfolding dgs_combine_def indep_dg_spec_def combine_collect_abs_def by simp
 
 text \<open>The combine obligation of @{locale sound_dg_spec} for the independent
@@ -1630,9 +1630,9 @@ proof -
   have tc': "t \<in> \<lbrakk>de\<rbrakk>" using gamma_dgD1[OF tc] .
   have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
   have tg: "t \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF tc] .
-  have d_sound: "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst dc de\<rbrakk>"
+  have d_sound: "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst dc de\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
-  have g_sound: "combine_collect gs dst s t \<in> \<lbrakk>combine_collect_abs gs dst g g\<rbrakk>"
+  have g_sound: "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst g g\<rbrakk>"
     by (rule combine_collect_sound[OF sg tg])
   show ?thesis
     using d_sound g_sound unfolding gamma_dg_def by simp
@@ -1754,7 +1754,7 @@ proof -
   have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
   have tc': "t \<in> \<lbrakk>combine_env\<^sup># gs de g\<rbrakk>" using gamma_unitD[OF tc] .
   have "combine_collect gs dst s t \<in>
-          \<lbrakk>combine_collect_abs gs dst (combine_env\<^sup># gs dc g) (combine_env\<^sup># gs de g)\<rbrakk>"
+          \<lbrakk>combine\<^sup># gs dst (combine_env\<^sup># gs dc g) (combine_env\<^sup># gs de g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     using reserved
@@ -1860,7 +1860,7 @@ lemma project_component_cover_sup2:
 lemma dgs_combine_unit_dg_spec_placed:
   assumes cover: "\<forall>x. publish_side x \<or> keep_local x"
   shows "dgs_combine (unit_dg_spec_placed source_global keep_local publish_side tf) dst dc de g =
-     (let res = combine_collect_abs source_global dst (dc \<squnion> g) (de \<squnion> g)
+     (let res = combine\<^sup># source_global dst (dc \<squnion> g) (de \<squnion> g)
       in (project_component publish_side res, project_component keep_local res))"
 proof -
   have env_join:
@@ -1883,7 +1883,7 @@ lemma gamma_join_combine_sound_placed:
 proof -
   have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
   have tc': "t \<in> \<lbrakk>de \<squnion> g\<rbrakk>" using gamma_joinD[OF tc] .
-  have "combine_collect source_global dst s t \<in> \<lbrakk>combine_collect_abs source_global dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
+  have "combine_collect source_global dst s t \<in> \<lbrakk>combine\<^sup># source_global dst (dc \<squnion> g) (de \<squnion> g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     unfolding dgs_combine_unit_dg_spec_placed[OF cover] gamma_join_def

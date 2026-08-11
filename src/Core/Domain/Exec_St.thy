@@ -1017,7 +1017,7 @@ by simp
 lemma fun_of_resolved_st_for_combine_collect [simp]:
   "fun_of_resolved_st_for gs
       (combine_collect_resolved_for gs dst sc se) =
-   combine_collect_abs gs dst
+   combine\<^sup># gs dst
       (fun_of_resolved_st_for gs sc) (fun_of_resolved_st_for gs se)"
 unfolding combine_collect_resolved_for_def combine_collect_abs_def
 by (simp add: fun_of_resolved_st_for_def)
@@ -1187,7 +1187,7 @@ lemma refines_combine_collect:
     and se: "resolved_st_refines_for gs se sigma_e"
   shows "resolved_st_refines_for gs
       (combine_collect_resolved_for gs dst sc se)
-      (combine_collect_abs gs dst sigma_c sigma_e)"
+      (combine\<^sup># gs dst sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_refines_for_def
   by simp
@@ -1304,7 +1304,7 @@ lemma fun_of_resolved_st_q_for_enter [simp]:
 lemma fun_of_resolved_st_q_for_combine_collect [simp]:
   "fun_of_resolved_st_q_for gs
       (combine_collect_resolved_for_q gs dst sc se) =
-   combine_collect_abs gs dst
+   combine\<^sup># gs dst
       (fun_of_resolved_st_q_for gs sc)
       (fun_of_resolved_st_q_for gs se)"
   unfolding fun_of_resolved_st_q_for_def
@@ -1363,7 +1363,7 @@ lemma refines_combine_collect_q:
     and se: "resolved_st_q_refines_for gs se sigma_e"
   shows "resolved_st_q_refines_for gs
       (combine_collect_resolved_for_q gs dst sc se)
-      (combine_collect_abs gs dst sigma_c sigma_e)"
+      (combine\<^sup># gs dst sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_q_refines_for_def
   by simp

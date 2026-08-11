@@ -220,7 +220,7 @@ definition unit_combine_tree ::
 where
   "unit_combine_tree gs dst cc ex =
      QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
-       let res = combine_collect_abs gs dst (sc \<squnion> g) (se \<squnion> g) in
+       let res = combine\<^sup># gs dst (sc \<squnion> g) (se \<squnion> g) in
        Side () (restrict_global_for gs res)
          (Answer (restrict_local_for gs res)))))"
 
@@ -248,24 +248,24 @@ lemma etf_full_unit_edge_tree:
    a plain combine_env these include the destination when the call assigns one. *)
 lemma traverse_unit_combine_tree:
   "traverse_rhs (unit_combine_tree gs dst cc ex) \<sigma>
-     = restrict_local_for gs (combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+     = restrict_local_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                                               (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
   unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree contributes the combined globals to the global slot. *)
 lemma sides_unit_combine_tree_Inr:
   "sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr ()) =
-   restrict_global_for gs (combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+   restrict_global_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                                             (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
   unfolding unit_combine_tree_def by (simp add: Let_def)
 
 (* The unit-global combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_unit_combine_tree:
   "etf_full (unit_combine_tree gs dst cc ex) \<sigma>
-   = combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+   = combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
        (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
 proof -
-  let ?res = "combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
+  let ?res = "combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
                 (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
   have "etf_full (unit_combine_tree gs dst cc ex) \<sigma>
           = restrict_local_for gs ?res \<squnion> restrict_global_for gs ?res"

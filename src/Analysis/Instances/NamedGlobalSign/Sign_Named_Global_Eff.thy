@@ -85,12 +85,12 @@ where
   "route_combine gs route dst cc ex =
      read_local_cont cc (\<lambda>sc. read_local_cont ex (\<lambda>se. read_global_cont Gpos (\<lambda>gp. read_global_cont Gneg (\<lambda>gn.
        let envc = sc \<squnion> gp \<squnion> gn; enve = se \<squnion> gp \<squnion> gn;
-           res = combine_collect_abs gs dst envc enve
+           res = combine\<^sup># gs dst envc enve
        in depend_on (route envc) (restrict_global_for gs res) (answer (restrict_local_for gs res))))))"
 
 lemma route_combine_etf_full:
   "etf_full (route_combine gs route dst cc ex) \<sigma>
-   = combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
+   = combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   unfolding etf_full_def route_combine_def
   by (simp add: Let_def restrict_local_for_global_join glob_env_gname sup_assoc)
 
@@ -116,7 +116,7 @@ lemma route_family_etf_sound:
     and enter: "\<And>xs es u \<sigma>. etf_full (etf_enter E xs es u) \<sigma>
                    = enter\<^sup># (sign_tf_for gs) xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and combine: "\<And>dst cc ex \<sigma>. etf_full (etf_combine E dst cc ex) \<sigma>
-                   = combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
+                   = combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   shows "sound_effectful_transfer gs E"
 proof (unfold_locales)
   show "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
@@ -191,14 +191,14 @@ lemma dep_aux_route_tree:
 
 lemma traverse_route_combine:
   "traverse_rhs (route_combine gs route dst cc ex) \<sigma>
-   = restrict_local_for gs (combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>))"
+   = restrict_local_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>))"
   unfolding route_combine_def
   by (simp add: Let_def glob_env_gname sup_assoc)
 
 lemma sides_route_combine_const:
   "sides_of_rhs (route_combine gs (\<lambda>_. gg) dst cc ex) \<sigma>
    = (\<lambda>_. \<bottom>)(Inr gg
-       := restrict_global_for gs (combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)))"
+       := restrict_global_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)))"
   unfolding route_combine_def
   by (simp add: Let_def glob_env_gname sup_assoc)
 
@@ -225,7 +225,7 @@ lemma sides_inr_local_bot_route_combine_const:
 proof (cases "g = gg")
   case True
   show ?thesis
-    using local_bot_on_locals_restrict_global[where \<sigma>="combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"]
+    using local_bot_on_locals_restrict_global[where \<sigma>="combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"]
     by (simp add: True sides_route_combine_const)
 next
   case False
@@ -315,7 +315,7 @@ lemma named_etf_full_enter:
 
 lemma named_etf_full_combine:
   "etf_full (etf_combine (named_etf gs) dst cc ex) \<sigma>
-   = combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
+   = combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   unfolding named_etf_def by (simp add: route_combine_etf_full)
 
 theorem named_etf_sound:
@@ -362,8 +362,8 @@ lemma named_comb_sides_mono:
   shows "sides_of_rhs (etf_combine (named_etf gs) dst cc ex) s1
          \<le> sides_of_rhs (etf_combine (named_etf gs) dst cc ex) s2"
 proof -
-  have d: "restrict_global_for gs (combine_collect_abs gs dst (s1 (Inl cc) \<squnion> glob_env s1) (s1 (Inl ex) \<squnion> glob_env s1))
-           \<le> restrict_global_for gs (combine_collect_abs gs dst (s2 (Inl cc) \<squnion> glob_env s2) (s2 (Inl ex) \<squnion> glob_env s2))"
+  have d: "restrict_global_for gs (combine\<^sup># gs dst (s1 (Inl cc) \<squnion> glob_env s1) (s1 (Inl ex) \<squnion> glob_env s1))
+           \<le> restrict_global_for gs (combine\<^sup># gs dst (s2 (Inl cc) \<squnion> glob_env s2) (s2 (Inl ex) \<squnion> glob_env s2))"
     by (rule restrict_global_for_mono[OF combine_collect_abs_mono[OF
           sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]
           sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]]])
