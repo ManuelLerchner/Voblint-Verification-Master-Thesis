@@ -41,5 +41,5 @@ return. Calls without a destination may ignore either kind of completion.
 `declared_global_vars` determines which variables have global storage. Every
 other identifier is implicitly local to the active procedure. `storage_of`
 resolves this source location; its result is independent of abstract D/G
-placement. `enter_state` keeps globals and clears locals. `combine_states
+placement. `enter_state` keeps globals and clears locals. `combine_env
 caller callee` restores caller locals and keeps callee globals.

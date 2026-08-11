@@ -439,7 +439,7 @@ next
   show ?case by simp
 next
   case (RouteAgree u ctx dst pars args p cont s)
-  show ?case by (rule cs_route_enterc_agree)
+  show ?case by (rule cs_route_context_agree)
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)

@@ -42,7 +42,7 @@ subsection \<open>The two facts every instance needs\<close>
 text \<open>\<open>route_enterc_agree\<close>, generically: since neither side reads \<open>d\<close>/\<open>s\<close>, this holds for
   \<^emph>\<open>any\<close> \<open>k\<close>, \<open>u\<close>, \<open>ctx\<close>, \<open>d\<close>, \<open>ca\<close>, \<open>s\<close> with zero case analysis.\<close>
 
-lemma cs_route_enterc_agree: "cs_route k u ctx d ca = cs_context k u ctx s"
+lemma cs_route_context_agree: "cs_route k u ctx d ca = cs_context k u ctx s"
   by (simp add: cs_route_def cs_context_def)
 
 text \<open>Representation independence: \<^const>\<open>cs_route\<close> agrees with itself under \<^emph>\<open>any\<close>

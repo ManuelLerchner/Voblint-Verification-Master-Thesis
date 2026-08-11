@@ -12,6 +12,16 @@ from repeated-call examples.
 Tracked in detail in #108 (references #66, #77); summary below, keep the
 two in sync if either changes.
 
+**Naming note (2026-08-11, issue #110):** the dated milestones below narrate
+each identifier as it was named at the time. Issue #110's terminology pass
+renamed the semantic context function per instance from `*_enterc` to
+`*_context` and gave the generic locale parameter `route` inline notation
+`context#`: `ivl_enterc` -> `ivl_context`, `entry_state_enterc` ->
+`entry_state_context`, `formals_enterc` -> `formals_context_sem`. `route`,
+`route_ivl`, `route_enterc_agree`, and `enterc` itself (the generic locale
+parameter these are all named relative to) are unchanged. Grep the current
+name if a mention below doesn't turn up a hit.
+
 Post-#66, `routed_context` (`Routed_Context.thy`) is real Core-level
 infrastructure, not example-level: it discharges the CALL/COMB obligations
 once, generically in a `route`/`enterc` pair and context type `'c`. Four
