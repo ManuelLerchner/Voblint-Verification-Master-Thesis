@@ -592,7 +592,7 @@ where
     etf_random     = (\<lambda>x u. unit_edge_tree gs (apply_tf tf (EA_Random x)) u),
     etf_assume     = (\<lambda>b u. unit_edge_tree gs (apply_tf tf (EA_Assume b)) u),
     etf_assume_not = (\<lambda>b u. unit_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u),
-    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (tf_enter tf xs es) u),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
@@ -612,7 +612,7 @@ where
     etf_random     = (\<lambda>x. mixed_etf_edge_tree gs tf (EA_Random x)),
     etf_assume     = (\<lambda>b. mixed_etf_edge_tree gs tf (EA_Assume b)),
     etf_assume_not = (\<lambda>b. mixed_etf_edge_tree gs tf (EA_AssumeNot b)),
-    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (tf_enter tf xs es) u),
+    etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
@@ -710,7 +710,7 @@ lemma in_gamma_unit_edge_tree_enter:
   assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (tf_enter tf xs es) u) \<sigma>\<rbrakk>"
+           (unit_edge_tree gs (enter\<^sup># tf xs es) u) \<sigma>\<rbrakk>"
   using tf_sound_enter_forD[OF s]
   by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
 

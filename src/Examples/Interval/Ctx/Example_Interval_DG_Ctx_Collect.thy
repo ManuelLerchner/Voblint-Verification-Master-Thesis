@@ -25,8 +25,8 @@ text \<open>A call selects the point abstraction of the callee formal in the ent
   \<open>ivl_ctx_sg\<close> joins the routed local slot with the shared global slot expected by
   @{thm activation_collect_sound}.\<close>
 
-definition ivl_enterc :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
-  "ivl_enterc = formals_enterc twice_cfg ivl_decode"
+definition ivl_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
+  "ivl_context = formals_context_sem twice_cfg ivl_decode"
 
 text \<open>The reader is guarded by the \<^emph>\<open>solved domain\<close> \<open>fst twice_ctx_sol\<close>: the solver
   returns a partial solution, so an unknown outside \<open>vars\<close> is an artefact of the total
@@ -243,30 +243,30 @@ lemma twice_formals_at_call_site3: "formals_at_call_site twice_cfg (Statement 3)
 text \<open>\<^bold>\<open>enter_route_exact.\<close>  The context a call routes into is the point abstraction of the
   entered formal \<open>p\<close>: for the two constant-argument calls the entered value is \<open>3\<close> / \<open>10\<close>,
   so the routed context is exactly \<open>ctx_call1\<close> / \<open>ctx_call2\<close> --- the executable route agrees
-  with the activation route \<^const>\<open>ivl_enterc\<close>. Unlike the hardcoded predecessor, \<open>ivl_enterc\<close>
+  with the activation route \<^const>\<open>ivl_context\<close>. Unlike the hardcoded predecessor, \<open>ivl_context\<close>
   now looks its formals up from \<open>u\<close> via \<^const>\<open>formals_at_call_site\<close>, so agreement needs \<open>u\<close>
   pinned to the actual call site.\<close>
 lemma enter_route_exact_call1:
   assumes "u = Statement 2"
     and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 3]) s"
-  shows "ivl_enterc u ctx s' = ctx_call1"
+  shows "ivl_context u ctx s' = ctx_call1"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 3)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis
-    unfolding assms(1) ivl_enterc_def formals_enterc_def
+    unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site2 formals_context_def ivl_decode_def ctx_call1_val)
 qed
 
 lemma enter_route_exact_call2:
   assumes "u = Statement 3"
     and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] [VIMP_Syntax.N 10]) s"
-  shows "ivl_enterc u ctx s' = ctx_call2"
+  shows "ivl_context u ctx s' = ctx_call2"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 10)"
     by (simp add: call_enter_CallEdge bind_formals_def)
   thus ?thesis
-    unfolding assms(1) ivl_enterc_def formals_enterc_def
+    unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site3 formals_context_def ivl_decode_def ctx_call2_val)
 qed
 
@@ -291,7 +291,7 @@ text \<open>\<^bold>\<open>enter_route_exact for combine.\<close>  The callee co
   \<open>enter_route_exact\<close>. As there, agreement needs \<open>u\<close> pinned to the actual call site.\<close>
 lemma comb_route_call1:
   assumes "u = Statement 2" and "call_enter_store twice_gs twice_cfg (Statement 2) s es"
-  shows "ivl_enterc u c1 es = ctx_call1"
+  shows "ivl_context u c1 es = ctx_call1"
 proof -
   have "es = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
     using assms(2) twice_calls_shape unfolding call_enter_store_def by fastforce
@@ -300,7 +300,7 @@ qed
 
 lemma comb_route_call2:
   assumes "u = Statement 3" and "call_enter_store twice_gs twice_cfg (Statement 3) s es"
-  shows "ivl_enterc u c1 es = ctx_call2"
+  shows "ivl_context u c1 es = ctx_call2"
 proof -
   have "es = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
     using assms(2) twice_calls_shape unfolding call_enter_store_def by fastforce
@@ -321,7 +321,7 @@ text \<open>The routed interval solution also interprets \<^locale>\<open>routed
 interpretation twice_routed: routed_context Sabs twice_gs twice_cfg Global route_abs_gen
     "fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
     "fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)"
-    sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, [])" ivl_ctx_sg Seed ivl_enterc
+    sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, [])" ivl_ctx_sg Seed ivl_context
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC
   show ?case by (rule twice_finC)
@@ -404,13 +404,13 @@ lemma ivl_ctx_sg_seed:
     and "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, ctx))\<rbrakk>"
   shows "call_enter twice_gs (CallEdge dst xs es) s
            \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p,
-                 ivl_enterc u ctx (call_enter twice_gs (CallEdge dst xs es) s)))\<rbrakk>"
+                 ivl_context u ctx (call_enter twice_gs (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule twice_routed.routed_context_call[OF assms])
 
 lemma ivl_ctx_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls twice_cfg"
     and "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
-    and "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_enterc cl c1 es))\<rbrakk>"
+    and "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, ivl_context cl c1 es))\<rbrakk>"
     and "call_enter_store twice_gs twice_cfg cl s es"
   shows "combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c1))\<rbrakk>"
   by (rule twice_routed.routed_context_comb[OF assms])
@@ -423,9 +423,9 @@ text \<open>Instantiating the generic \<open>activation_collect_sound\<close> at
   step / combine soundness, route consistency, and the \<open>ivl_ctx_sg_seed\<close> enter seed.\<close>
 
 theorem twice_activation_collect_sound:
-  "activation_collect twice_gs (admiss_exact ivl_enterc) [] twice_cfg (cinit_stores twice_gs) v ctx
+  "activation_collect twice_gs (admiss_exact ivl_context) [] twice_cfg (cinit_stores twice_gs) v ctx
      \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = ivl_ctx_sg and admiss = "admiss_exact ivl_enterc"
+proof (rule activation_collect_sound[where sg = ivl_ctx_sg and admiss = "admiss_exact ivl_context"
         and startcontext = "[]"
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
@@ -456,8 +456,8 @@ next
         \<Longrightarrow> s' \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
     by (rule twice_dg.dg_ctx_act_edge)
 next
-  \<comment> \<open>ADMISS_TOTAL --- \<open>admiss_exact\<close> is total since \<open>ivl_enterc\<close> is a function.\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact ivl_enterc u c s c'"
+  \<comment> \<open>ADMISS_TOTAL --- \<open>admiss_exact\<close> is total since \<open>ivl_context\<close> is a function.\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact ivl_context u c s c'"
     by (simp add: admiss_exact_def)
 next
   \<comment> \<open>CALL --- enter routed to \<open>ivl_decode\<close> of the entered formal: \<open>ivl_ctx_sg_seed\<close>
@@ -465,7 +465,7 @@ next
   fix u dst pars args p cont c s c'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
     and sm: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (u, c))\<rbrakk>"
-    and adm: "admiss_exact ivl_enterc u c (call_enter twice_gs (CallEdge dst pars args) s) c'"
+    and adm: "admiss_exact ivl_context u c (call_enter twice_gs (CallEdge dst pars args) s) c'"
   show "call_enter twice_gs (CallEdge dst pars args) s
           \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionEntry p, c'))\<rbrakk>"
     using adm ivl_ctx_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
@@ -475,7 +475,7 @@ next
   fix cl dst pars args p cont c1 c2 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
     and sm: "s \<in> \<lbrakk>ivl_ctx_sg (Inl (cl, c1))\<rbrakk>"
-    and adm: "admiss_exact ivl_enterc cl c1 es c2"
+    and adm: "admiss_exact ivl_context cl c1 es c2"
     and tm: "t \<in> \<lbrakk>ivl_ctx_sg (Inl (FunctionResult p, c2))\<rbrakk>"
     and ces: "call_enter_store twice_gs twice_cfg cl s es"
   show "combine_collect twice_gs dst s t \<in> \<lbrakk>ivl_ctx_sg (Inl (cont, c1))\<rbrakk>"

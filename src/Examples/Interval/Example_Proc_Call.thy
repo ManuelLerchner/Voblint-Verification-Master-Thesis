@@ -236,7 +236,7 @@ lemma main_prog_postfix:
 proof (rule allI)
   fix v
   let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)) ` intra_predecessors main_cfg v"
-  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter (ivl_tf_for proc_call_gs) fs as (main_prog_env c))
+  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> enter\<^sup># (ivl_tf_for proc_call_gs) fs as (main_prog_env c))
               ` entry_calls main_cfg v"
   let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs (ivl_tf_for proc_call_gs) dst (main_prog_env c) (main_prog_env ex))
               ` return_calls main_cfg v"

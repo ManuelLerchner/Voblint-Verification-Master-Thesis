@@ -201,7 +201,7 @@ lemma unit_dg_Hstep_for:
                 unit_step_st_commute_for commute)
 
 lemma unit_dg_Henter_for:
-  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = tf_enter tf xs es (fun_of_exec_dg_st_for gs s)"
+  assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
              (dgs_enter (unit_dg_spec_st_for gs tf_st enter_st) xs es d g)
            = dgs_enter (unit_dg_spec_for gs tf) xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
@@ -252,7 +252,7 @@ locale unit_dg_exec_analysis =
     and enter_commute[simp]:
       "\<And>xs es s.
         fun_of_exec_dg_st_for gs (enter_st xs es s) =
-        tf_enter tf xs es (fun_of_exec_dg_st_for gs s)"
+        enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
     and reduces:
       "action_reduces tf_st"
     and solver_pps:

@@ -19,11 +19,11 @@ lemma parity_etf_edge_tree:
   unfolding parity_etf_def apply_etf_unit_of_transfer by simp
 
 lemma parity_etf_enter_tree:
-  "etf_enter (parity_etf gs) fs as cl = unit_edge_tree gs (tf_enter (parity_tf_for gs) fs as) cl"
+  "etf_enter (parity_etf gs) fs as cl = unit_edge_tree gs (enter\<^sup># (parity_tf_for gs) fs as) cl"
   unfolding parity_etf_def unit_etf_of_transfer_def by simp
 
 lemma parity_tf_for_enter_mono:
-  "s1 \<le> s2 \<Longrightarrow> tf_enter (parity_tf_for gs) fs as s1 \<le> tf_enter (parity_tf_for gs) fs as s2"
+  "s1 \<le> s2 \<Longrightarrow> enter\<^sup># (parity_tf_for gs) fs as s1 \<le> enter\<^sup># (parity_tf_for gs) fs as s2"
   by (simp add: parity_tf_for_def enter_parity_for_mono)
 
 lemma parity_etf_combine_tree:

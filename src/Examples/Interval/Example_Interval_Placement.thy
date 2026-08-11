@@ -454,7 +454,7 @@ where
   "placement_abs_enter_tree =
     placed_abs_dg_enter_of (declared_global placement_prog)
       placement_node_owner placement_keep_local placement_publish_side
-      (tf_enter (ivl_tf_for (declared_global placement_prog))) ()"
+      (enter\<^sup># (ivl_tf_for (declared_global placement_prog))) ()"
 
 definition placement_abs_combine_tree ::
   "pp => call_action => pp => pp =>

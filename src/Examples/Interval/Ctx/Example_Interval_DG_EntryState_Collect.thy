@@ -13,12 +13,12 @@ text \<open>
   semantic activation-indexed collecting semantics, instantiating the generic
   \<open>activation_collect_sound\<close> exactly as
   a companion "twice" example does for a program with literal call arguments.  The
-  difference is \<open>rc_enterc\<close>: instead of decoding the concrete entered store (as
-  \<open>ivl_enterc\<close> does for \<open>twice\<close>'s literal-argument calls), \<open>rc_enterc\<close> ignores its
+  difference is \<open>rc_context\<close>: instead of decoding the concrete entered store (as
+  \<open>ivl_context\<close> does for \<open>twice\<close>'s literal-argument calls), \<open>rc_context\<close> ignores its
   store argument and always returns the caller's already-solved routed value.  That
   single design choice is what turns the per-value exact-context story into the
   one-context coverage story: every concrete \<open>random()\<close> outcome enters under the
-  very same admissible context \<open>ctx_call\<close>, because \<open>rc_enterc\<close> never looks at which
+  very same admissible context \<open>ctx_call\<close>, because \<open>rc_context\<close> never looks at which
   outcome it was.
 \<close>
 
@@ -47,15 +47,15 @@ abbreviation gen_abs :: "(pp \<times> ivl list, gk, (ivl abs_state, ivl abs_stat
 subsection \<open>The entry-state context route: ignores the concrete store\<close>
 
 text \<open>The trace-semantic context function for the one call in \<open>rc_program\<close>.  Unlike
-  \<open>formals_enterc\<close> (which decodes the concrete store \<open>s\<close> through a domain's point
-  abstraction), \<open>rc_enterc\<close> discards \<open>s\<close> entirely and recomputes the routed value
+  \<open>formals_context\<close> (which decodes the concrete store \<open>s\<close> through a domain's point
+  abstraction), \<open>rc_context\<close> discards \<open>s\<close> entirely and recomputes the routed value
   from the caller's own solved abstract state --- the same value \<open>route_abs_gen\<close>
   already selected when the executable solver ran.  This is \<open>admiss_exact\<close>'s
   functional shape, specialized so that coverage of infinitely many concrete stores
-  comes from the caller's own value being \<open>Top\<close>, not from \<open>rc_enterc\<close> being
+  comes from the caller's own value being \<open>Top\<close>, not from \<open>rc_context\<close> being
   genuinely multi-valued.\<close>
-definition rc_enterc :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
-  "rc_enterc u ctx s =
+definition rc_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
+  "rc_context u ctx s =
      route_abs (locals (sigma_abs (Inl (u, ctx))))
        (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])"
 
@@ -155,7 +155,7 @@ subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close
 text \<open>The routed interval solution also interprets \<^locale>\<open>routed_context\<close>.
   \<open>route_enterc_agree\<close> is trivial here --- unlike \<open>twice\<close>'s, which needs
   \<open>enter_route_exact\<close> read back through \<open>route_commute\<close> at each literal argument
-  --- because \<open>rc_enterc\<close> is \<^emph>\<open>defined\<close> to recompute exactly the routed value
+  --- because \<open>rc_context\<close> is \<^emph>\<open>defined\<close> to recompute exactly the routed value
   \<open>route_abs_gen\<close> already produces, so both sides of the agreement are the same
   term up to \<open>route_commute_gen\<close> and the single call site's shape, closing by
   \<open>simp\<close> without touching the concrete store \<open>s\<close> at all.\<close>
@@ -165,7 +165,7 @@ interpretation rc_routed: routed_context Sabs rc_gs rc_cfg Global route_abs_gen
     "fun_of_exec_dg_st_for rc_gs cinit_ivl_st"
     "fun_of_exec_dg_st_for rc_gs (restrict_global_resolved_q cinit_ivl_st)"
     sigma_abs "fst rc_ctx_sol" "(cfg_exit rc_cfg, [])" rc_ctx_sg
-    Seed rc_enterc
+    Seed rc_context
 proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
   case FinC
   show ?case by (rule rc_finC)
@@ -179,7 +179,7 @@ next
     "u = Statement 3" "dst = Some (STR ''y'')" "pars = [(STR ''a'')]" "args = [V (STR ''x'')]"
     "p = (STR ''p'')"
     by fastforce+
-  show ?case unfolding shape rc_enterc_def route_abs_gen_def by simp
+  show ?case unfolding shape rc_context_def route_abs_gen_def by simp
 next
   case (CallFwd u ctx dst pars args p cont)
   note covU = CallFwd(1) and ce = CallFwd(2)
@@ -209,13 +209,13 @@ lemma rc_ctx_sg_seed:
     and "s \<in> \<lbrakk>rc_ctx_sg (Inl (u, ctx))\<rbrakk>"
   shows "call_enter rc_gs (CallEdge dst xs es) s
            \<in> \<lbrakk>rc_ctx_sg (Inl (FunctionEntry p,
-                 rc_enterc u ctx (call_enter rc_gs (CallEdge dst xs es) s)))\<rbrakk>"
+                 rc_context u ctx (call_enter rc_gs (CallEdge dst xs es) s)))\<rbrakk>"
   by (rule rc_routed.routed_context_call[OF assms])
 
 lemma rc_ctx_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls rc_cfg"
     and "s \<in> \<lbrakk>rc_ctx_sg (Inl (cl, c1))\<rbrakk>"
-    and "t \<in> \<lbrakk>rc_ctx_sg (Inl (FunctionResult p, rc_enterc cl c1 es))\<rbrakk>"
+    and "t \<in> \<lbrakk>rc_ctx_sg (Inl (FunctionResult p, rc_context cl c1 es))\<rbrakk>"
     and "call_enter_store rc_gs rc_cfg cl s es"
   shows "combine_collect rc_gs dst s t \<in> \<lbrakk>rc_ctx_sg (Inl (v, c1))\<rbrakk>"
   by (rule rc_routed.routed_context_comb[OF assms])
@@ -223,9 +223,9 @@ lemma rc_ctx_sg_comb:
 subsection \<open>Activation-indexed collecting soundness\<close>
 
 theorem rc_activation_collect_sound:
-  "activation_collect rc_gs (admiss_exact rc_enterc) [] rc_cfg (cinit_stores rc_gs) v ctx
+  "activation_collect rc_gs (admiss_exact rc_context) [] rc_cfg (cinit_stores rc_gs) v ctx
      \<subseteq> \<lbrakk>rc_ctx_sg (Inl (v, ctx))\<rbrakk>"
-proof (rule activation_collect_sound[where sg = rc_ctx_sg and admiss = "admiss_exact rc_enterc"
+proof (rule activation_collect_sound[where sg = rc_ctx_sg and admiss = "admiss_exact rc_context"
         and startcontext = "[]"
         and S = "cinit_stores rc_gs" and g = rc_cfg and gs = rc_gs])
   \<comment> \<open>ENTRY_G\<close>
@@ -252,14 +252,14 @@ next
     by (rule rc_dg.dg_ctx_act_edge)
 next
   \<comment> \<open>ADMISS_TOTAL\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact rc_enterc u c s c'"
+  show "\<And>u c s. \<exists>c'. admiss_exact rc_context u c s c'"
     by (simp add: admiss_exact_def)
 next
   \<comment> \<open>CALL\<close>
   fix u dst pars args p cont c s c'
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls rc_cfg"
     and sm: "s \<in> \<lbrakk>rc_ctx_sg (Inl (u, c))\<rbrakk>"
-    and adm: "admiss_exact rc_enterc u c (call_enter rc_gs (CallEdge dst pars args) s) c'"
+    and adm: "admiss_exact rc_context u c (call_enter rc_gs (CallEdge dst pars args) s) c'"
   show "call_enter rc_gs (CallEdge dst pars args) s \<in> \<lbrakk>rc_ctx_sg (Inl (FunctionEntry p, c'))\<rbrakk>"
     using adm rc_ctx_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
 next
@@ -267,7 +267,7 @@ next
   fix cl dst pars args p cont c1 c2 s t es
   assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls rc_cfg"
     and sm: "s \<in> \<lbrakk>rc_ctx_sg (Inl (cl, c1))\<rbrakk>"
-    and adm: "admiss_exact rc_enterc cl c1 es c2"
+    and adm: "admiss_exact rc_context cl c1 es c2"
     and tm: "t \<in> \<lbrakk>rc_ctx_sg (Inl (FunctionResult p, c2))\<rbrakk>"
     and ces: "call_enter_store rc_gs rc_cfg cl s es"
   show "combine_collect rc_gs dst s t \<in> \<lbrakk>rc_ctx_sg (Inl (cont, c1))\<rbrakk>"
@@ -291,9 +291,9 @@ proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
               FunctionEntry (STR ''p''), Statement 4) \<in> calls rc_cfg"
     unfolding rc_cfg_def by eval
-  have "rc_enterc (Statement 3) [] (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
+  have "rc_context (Statement 3) [] (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
           = ctx_call"
-    unfolding rc_enterc_def ctx_call_def by (simp add: fun_of_dg_st_for_simps route_commute)
+    unfolding rc_context_def ctx_call_def by (simp add: fun_of_dg_st_for_simps route_commute)
   thus ?thesis using rc_ctx_sg_seed[OF ce sm] by simp
 qed
 
@@ -304,10 +304,10 @@ text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<open>ctx_c
   varying with the trace.  \<open>rc_activation_collect_sound\<close> then bounds this whole set,
   every context alike, in \<open>\<lbrakk>rc_ctx_sg (Inl (FunctionEntry (STR ''p''), ctx_call))\<rbrakk>\<close>.\<close>
 corollary entry_state_activation_ctx_key:
-  "activation_collect rc_gs (admiss_exact rc_enterc) [] rc_cfg (cinit_stores rc_gs)
+  "activation_collect rc_gs (admiss_exact rc_context) [] rc_cfg (cinit_stores rc_gs)
      (FunctionEntry (STR ''p'')) ctx_call
    = {sink_store t | t. t \<in> valid_ltr rc_gs rc_cfg (cinit_stores rc_gs)
-        \<and> sink_node t = FunctionEntry (STR ''p'') \<and> ctx_key (admiss_exact rc_enterc) [] t ctx_call}"
+        \<and> sink_node t = FunctionEntry (STR ''p'') \<and> ctx_key (admiss_exact rc_context) [] t ctx_call}"
   unfolding activation_collect_def by (rule refl)
 
 end

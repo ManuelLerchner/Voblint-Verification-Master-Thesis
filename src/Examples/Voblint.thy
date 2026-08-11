@@ -136,7 +136,7 @@ text \<open>
   certified against the same activation-indexed semantics.
 
   \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect}\<close> --- context routed by
-    \<open>ivl_enterc\<close>: the entered formal's point abstraction (partial tabulation,
+    \<open>ivl_context\<close>: the entered formal's point abstraction (partial tabulation,
     \<^cite>\<open>SeidlEtAl2026\<close> Example 8). \<^verbatim>\<open>twice_activation_collect_sound\<close> bounds
     \<^const>\<open>activation_collect\<close> at every \<open>(node, context)\<close>.
   \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString}\<close> --- context routed by

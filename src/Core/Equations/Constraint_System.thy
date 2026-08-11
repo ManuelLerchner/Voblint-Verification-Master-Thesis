@@ -40,7 +40,7 @@ record 'a domain_transfer =
   tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
   tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
   tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
-  tf_enter     :: "vname list => aexp list => ('a abs_state) => ('a abs_state)"
+  tf_enter     :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_combine   :: "('a abs_state) => ('a abs_state) => ('a abs_state)"
 
 subsection \<open>Apply transfer function to one edge\<close>

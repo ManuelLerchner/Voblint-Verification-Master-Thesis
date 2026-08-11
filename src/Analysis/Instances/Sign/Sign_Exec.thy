@@ -190,7 +190,7 @@ lemma enter_frame_sign_st_for_commute:
 
 lemma sign_enter_st_for_commute:
   "fun_of_resolved_st_q_for gs (sign_enter_st_for gs xs es s) =
-   tf_enter (sign_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
+   enter\<^sup># (sign_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: sign_enter_st_for_def sign_tf_for_def enter_sign_for_def enter_D_def
                 enter_frame_sign_for_def enter_frame_sign_st_for_commute)
 

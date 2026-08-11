@@ -1599,8 +1599,8 @@ where
                                apply_tf tfD (EA_Assume b) d)),
     dgs_assume_not = (\<lambda>b d g. (apply_tf tfG (EA_AssumeNot b) g,
                                apply_tf tfD (EA_AssumeNot b) d)),
-    dgs_enter      = (\<lambda>xs es d g. (tf_enter tfG xs es g,
-                                   tf_enter tfD xs es d)),
+    dgs_enter      = (\<lambda>xs es d g. (enter\<^sup># tfG xs es g,
+                                   enter\<^sup># tfD xs es d)),
     dgs_combine_env    = (\<lambda>dc de g. (combine_env\<^sup># gs g g, combine_env\<^sup># gs dc de)),
     dgs_combine_assign = (\<lambda>dst de g merged.
       (combine_assign\<^sup># dst (g ret_var) (fst merged),
@@ -1639,7 +1639,7 @@ proof -
 qed
 
 text \<open>The enter obligation of @{locale sound_dg_spec} for the independent product:
-  each slot's callee-entry store lands in its own @{const tf_enter} image.\<close>
+  each slot's callee-entry store lands in its own \<^const>\<open>tf_enter\<close> image.\<close>
 lemma gamma_dg_enter_sound:
   assumes soundD: "sound_transfer_for gs tfD" and soundG: "sound_transfer_for gs tfG"
     and sc: "s \<in> gamma_dg dc g"
@@ -1648,10 +1648,10 @@ lemma gamma_dg_enter_sound:
 proof -
   have sc': "s \<in> \<lbrakk>dc\<rbrakk>" using gamma_dgD1[OF sc] .
   have sg: "s \<in> \<lbrakk>g\<rbrakk>" using gamma_dgD2[OF sc] .
-  have d_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfD pars args dc\<rbrakk>"
+  have d_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tfD pars args dc\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF soundD sc']
     by (simp add: call_enter_CallEdge)
-  have g_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tfG pars args g\<rbrakk>"
+  have g_sound: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tfG pars args g\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF soundG sg]
     by (simp add: call_enter_CallEdge)
   show ?thesis
@@ -1771,7 +1771,7 @@ lemma gamma_unit_enter_sound_for:
 proof -
   have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
   have "call_enter gs (CallEdge dst pars args) s \<in>
-      \<lbrakk>tf_enter tf pars args (combine_env\<^sup># gs dc g)\<rbrakk>"
+      \<lbrakk>enter\<^sup># tf pars args (combine_env\<^sup># gs dc g)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
@@ -1898,7 +1898,7 @@ lemma gamma_join_enter_sound_placed:
            (case dgs_enter (unit_dg_spec_placed gs keep_local publish_side tf) pars args dc g of (g', d') \<Rightarrow> gamma_join d' g')"
 proof -
   have sc': "s \<in> \<lbrakk>dc \<squnion> g\<rbrakk>" using gamma_joinD[OF sc] .
-  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>tf_enter tf pars args (dc \<squnion> g)\<rbrakk>"
+  have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args (dc \<squnion> g)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis

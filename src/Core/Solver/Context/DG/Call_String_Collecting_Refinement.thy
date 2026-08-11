@@ -7,7 +7,7 @@ section \<open>Bounded call-string collecting refinement\<close>
 text \<open>
   A coarser call-string bound never sees more activations than a finer one: every trace's
   \<^const>\<open>key\<close> at bound \<open>k1\<close> is the \<open>k1\<close>-prefix of its \<^const>\<open>key\<close> at bound \<open>k2\<close>, whenever
-  \<open>k1 \<le> k2\<close>. This is a pure fact about \<^const>\<open>cs_enterc\<close> and \<^const>\<open>key\<close>'s recursion over
+  \<open>k1 \<le> k2\<close>. This is a pure fact about \<^const>\<open>cs_context\<close> and \<^const>\<open>key\<close>'s recursion over
   \<^typ>\<open>ltr\<close> --- it needs no domain, no solver, and no \<^const>\<open>valid_ltr\<close> membership at the key
   level; trace validity only enters once, when the result is lifted to
   \<^const>\<open>activation_collect\<close>.
@@ -23,32 +23,32 @@ text \<open>
   \<^theory>\<open>Voblint_Core.Call_String_Context\<close>, which is frozen.
 \<close>
 
-lemma cs_enterc_take_stable: "cs_enterc k u (take k ctx) s = cs_enterc k u ctx s"
+lemma cs_context_take_stable: "cs_context k u (take k ctx) s = cs_context k u ctx s"
 proof (cases k)
   case 0
-  then show ?thesis by (simp add: cs_enterc_def)
+  then show ?thesis by (simp add: cs_context_def)
 next
   case (Suc n)
-  then show ?thesis by (simp add: cs_enterc_def take_take min.absorb1)
+  then show ?thesis by (simp add: cs_context_def take_take min.absorb1)
 qed
 
 subsection \<open>Context projection at the key level\<close>
 
-lemma key_cs_enterc_k_mono:
+lemma key_cs_context_k_mono:
   assumes le: "k1 \<le> k2"
-  shows "take k1 (key (cs_enterc k2) seed t) = key (cs_enterc k1) (take k1 seed) t"
+  shows "take k1 (key (cs_context k2) seed t) = key (cs_context k1) (take k1 seed) t"
 proof (induction t)
   case (Root p)
   then show ?case by simp
 next
   case (Call parent p)
-  have "take k1 (key (cs_enterc k2) seed (Call parent p))
-          = cs_enterc k1 (sink_node parent) (key (cs_enterc k2) seed parent) (snd (hd p))"
-    using cs_enterc_k_mono[OF le] by simp
-  also have "... = cs_enterc k1 (sink_node parent)
-                      (key (cs_enterc k1) (take k1 seed) parent) (snd (hd p))"
-    using cs_enterc_take_stable Call.IH by metis
-  also have "... = key (cs_enterc k1) (take k1 seed) (Call parent p)" by simp
+  have "take k1 (key (cs_context k2) seed (Call parent p))
+          = cs_context k1 (sink_node parent) (key (cs_context k2) seed parent) (snd (hd p))"
+    using cs_context_k_mono[OF le] by simp
+  also have "... = cs_context k1 (sink_node parent)
+                      (key (cs_context k1) (take k1 seed) parent) (snd (hd p))"
+    using cs_context_take_stable Call.IH by metis
+  also have "... = key (cs_context k1) (take k1 seed) (Call parent p)" by simp
   finally show ?case .
 next
   case (Resume current callee p)
@@ -67,19 +67,19 @@ text \<open>
 
 lemma call_string_collecting_mono:
   assumes le: "k1 \<le> k2"
-  shows "activation_collect gs (admiss_exact (cs_enterc k2)) seed g S v c2
-           \<subseteq> activation_collect gs (admiss_exact (cs_enterc k1)) (take k1 seed) g S v (take k1 c2)"
+  shows "activation_collect gs (admiss_exact (cs_context k2)) seed g S v c2
+           \<subseteq> activation_collect gs (admiss_exact (cs_context k1)) (take k1 seed) g S v (take k1 c2)"
 proof
-  fix s assume "s \<in> activation_collect gs (admiss_exact (cs_enterc k2)) seed g S v c2"
+  fix s assume "s \<in> activation_collect gs (admiss_exact (cs_context k2)) seed g S v c2"
   then obtain t where t1: "t \<in> valid_ltr gs g S" and t2: "sink_node t = v"
-    and t3: "ctx_key (admiss_exact (cs_enterc k2)) seed t c2" and t4: "sink_store t = s"
+    and t3: "ctx_key (admiss_exact (cs_context k2)) seed t c2" and t4: "sink_store t = s"
     by (rule activation_collect_E)
-  from t3 have t3': "key (cs_enterc k2) seed t = c2" by (simp add: ctx_key_exact_iff)
-  from key_cs_enterc_k_mono[OF le, of seed t] t3'
-  have key1: "key (cs_enterc k1) (take k1 seed) t = take k1 c2" by simp
-  have ck1: "ctx_key (admiss_exact (cs_enterc k1)) (take k1 seed) t (take k1 c2)"
+  from t3 have t3': "key (cs_context k2) seed t = c2" by (simp add: ctx_key_exact_iff)
+  from key_cs_context_k_mono[OF le, of seed t] t3'
+  have key1: "key (cs_context k1) (take k1 seed) t = take k1 c2" by simp
+  have ck1: "ctx_key (admiss_exact (cs_context k1)) (take k1 seed) t (take k1 c2)"
     using key1 by (simp add: ctx_key_exact_iff)
-  show "s \<in> activation_collect gs (admiss_exact (cs_enterc k1)) (take k1 seed) g S v (take k1 c2)"
+  show "s \<in> activation_collect gs (admiss_exact (cs_context k1)) (take k1 seed) g S v (take k1 c2)"
     using activation_collect_I[OF t1 t2 ck1] t4 by simp
 qed
 

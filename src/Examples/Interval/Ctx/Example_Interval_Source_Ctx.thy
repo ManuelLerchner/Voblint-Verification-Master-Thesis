@@ -33,17 +33,17 @@ theorem twice_source_ctx_run_sound:
   shows "\<exists>v stk t c.
            csim twice_pi (compile_prog twice_pi twice_procs (STR ''main'') twice_main)
              (residual, s, frs) (v, s, stk)
-           \<and> ctx_key (admiss_exact ivl_enterc) [] t c
+           \<and> ctx_key (admiss_exact ivl_context) [] t c
            \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
 proof -
-  have tot: "\<And>u c s. \<exists>c'. admiss_exact ivl_enterc u c s c'"
+  have tot: "\<And>u c s. \<exists>c'. admiss_exact ivl_context u c s c'"
     by (simp add: admiss_exact_def)
-  have cap: "\<And>v ctx. activation_collect twice_gs (admiss_exact ivl_enterc) []
+  have cap: "\<And>v ctx. activation_collect twice_gs (admiss_exact ivl_context) []
                       (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
                     \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
-    by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact ivl_enterc",
+    by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact ivl_context",
           OF twice_wf_gs init run tot cap])
 qed
 
@@ -58,13 +58,13 @@ theorem twice_source_toplevel_at_bot:
                (residual, s, []) (v, s, [])
              \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, []))\<rbrakk>"
 proof -
-  have cap: "\<And>v ctx. activation_collect twice_gs (admiss_exact ivl_enterc) []
+  have cap: "\<And>v ctx. activation_collect twice_gs (admiss_exact ivl_context) []
                       (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
                     \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
     unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
     by (rule source_sound_toplevel_from_collecting_cap
-              [where admiss = "admiss_exact ivl_enterc", OF twice_wf_gs init run cap])
+              [where admiss = "admiss_exact ivl_context", OF twice_wf_gs init run cap])
 qed
 
 end

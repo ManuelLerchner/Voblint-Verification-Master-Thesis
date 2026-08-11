@@ -80,7 +80,7 @@ where
   "sign_placement_abs_enter_tree =
     placed_abs_dg_enter_of (declared_global sign_placement_prog)
       sign_placement_node_owner sign_placement_keep_local sign_placement_publish_side
-      (tf_enter (sign_tf_for (declared_global sign_placement_prog))) ()"
+      (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog))) ()"
 
 definition sign_placement_abs_combine_tree ::
   "pp => call_action => pp => pp =>
@@ -155,7 +155,7 @@ proof -
     "traverse_rhs
         (sign_placement_abs_enter_tree caller (CallEdge dst fs args)
           (FunctionEntry callee)) sigma =
-      DG (tf_enter (sign_tf_for (declared_global sign_placement_prog)) fs args
+      DG (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
             (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)) bot"
     unfolding sign_placement_abs_enter_tree_def placed_abs_dg_enter_of_def
       placed_abs_dg_enter_tree_def
@@ -180,7 +180,7 @@ proof -
         (enter_state (declared_global sign_placement_prog) s)"
     by (rule call_enter_CallEdge)
   also have "... \<in>
-      \<lbrakk>tf_enter (sign_tf_for (declared_global sign_placement_prog)) fs args
+      \<lbrakk>enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)) fs args
         (dg_hook_D sigma caller \<squnion> dg_hook_G sigma)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD
       [OF sign_is_sound_transfer_for s_in]
@@ -262,7 +262,7 @@ lemma sign_placement_hook_gen_eq_placed_abs_dg_gen_of:
     placed_abs_dg_gen_of (declared_global sign_placement_prog) sign_placement_node_owner
       sign_placement_keep_local sign_placement_publish_side
       (apply_tf (sign_tf_for (declared_global sign_placement_prog)))
-      (tf_enter (sign_tf_for (declared_global sign_placement_prog)))
+      (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))
       sign_placement_cfg bot0 s0d s0g"
 proof -
   have e1: "(\<lambda>_::unit. sign_placement_abs_edge_tree) =
@@ -277,7 +277,7 @@ proof -
   have e3: "(\<lambda>_::unit. sign_placement_abs_enter_tree) =
       placed_abs_dg_enter_of (declared_global sign_placement_prog) sign_placement_node_owner
         sign_placement_keep_local sign_placement_publish_side
-        (tf_enter (sign_tf_for (declared_global sign_placement_prog)))"
+        (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))"
     unfolding sign_placement_abs_enter_tree_def by (rule ext) simp
   show ?thesis
     unfolding sign_placement_sound_dg_hooks.hook_gen_def placed_abs_dg_gen_of_def e1 e2 e3
@@ -478,7 +478,7 @@ proof -
       (placed_abs_dg_gen_of (declared_global sign_placement_prog) sign_placement_node_owner
         sign_placement_keep_local sign_placement_publish_side
         (apply_tf (sign_tf_for (declared_global sign_placement_prog)))
-        (tf_enter (sign_tf_for (declared_global sign_placement_prog)))
+        (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))
         sign_placement_cfg bot sign_placement_s0d_abs sign_placement_s0g_abs (v, ()))
       (completed_sigma_abs (declared_global sign_placement_prog) sign_placement_locations_of STop
         (snd sign_placement_dg_td_sol)) (v, ())"
@@ -716,7 +716,7 @@ proof -
       (placed_abs_dg_gen_of (declared_global sign_placement_prog) sign_placement_node_owner
         sign_placement_keep_local sign_placement_publish_side
         (apply_tf (sign_tf_for (declared_global sign_placement_prog)))
-        (tf_enter (sign_tf_for (declared_global sign_placement_prog)))
+        (enter\<^sup># (sign_tf_for (declared_global sign_placement_prog)))
         sign_placement_cfg bot sign_placement_s0d_abs sign_placement_s0g_abs (cfg_entry sign_placement_cfg, ()))
       (completed_sigma_abs (declared_global sign_placement_prog) sign_placement_locations_of STop
         (snd sign_placement_dg_td_sol)) (cfg_entry sign_placement_cfg, ())"

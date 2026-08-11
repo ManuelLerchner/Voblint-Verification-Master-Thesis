@@ -460,7 +460,7 @@ where
     dgs_assume_not = (\<lambda>b. unit_step_placed keep_local publish_side
       (apply_tf tf (EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
-      (tf_enter tf xs es)),
+      (enter\<^sup># tf xs es)),
     dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
     dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
   \<rparr>"
@@ -474,7 +474,7 @@ lemma dg_spec_step_unit_placed:
 
 lemma dgs_enter_unit_dg_spec_placed:
   "dgs_enter (unit_dg_spec_placed source_global keep_local publish_side tf) fs as =
-    unit_step_placed keep_local publish_side (tf_enter tf fs as)"
+    unit_step_placed keep_local publish_side (enter\<^sup># tf fs as)"
   unfolding unit_dg_spec_placed_def
   by simp
 
@@ -492,7 +492,7 @@ where
     dgs_random     = (\<lambda>x. unit_step_for gs (apply_tf tf (EA_Random x))),
     dgs_assume     = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_Assume b))),
     dgs_assume_not = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
-    dgs_enter      = (\<lambda>xs es. unit_step_for gs (tf_enter tf xs es)),
+    dgs_enter      = (\<lambda>xs es. unit_step_for gs (enter\<^sup># tf xs es)),
     dgs_combine_env    = unit_combine_step_env_for gs,
     dgs_combine_assign = unit_combine_step_assign_for gs
   \<rparr>"
@@ -531,7 +531,7 @@ lemma dg_spec_step_unit_for:
 
 lemma dgs_enter_unit_dg_spec_for:
   "dgs_enter (unit_dg_spec_for gs tf) fs as =
-     unit_step_for gs (tf_enter tf fs as)"
+     unit_step_for gs (enter\<^sup># tf fs as)"
   unfolding unit_dg_spec_for_def
   by simp
 

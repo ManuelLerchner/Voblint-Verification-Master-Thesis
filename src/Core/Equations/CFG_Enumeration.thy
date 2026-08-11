@@ -53,7 +53,7 @@ subsection \<open>Call-entry enumeration\<close>
 text \<open>The call tuples whose callee entry is the queried node \<open>v\<close> (a \<^term>\<open>FunctionEntry p\<close>).
   The continuation does not affect the callee-entry state, so it is projected away; the
   entry contribution is the caller state routed through the call action's parameter
-  binding (\<open>tf_enter\<close>).\<close>
+  binding (\<open>enter\<^sup>#\<close>).\<close>
 
 definition entry_calls :: "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) set" where
   "entry_calls g v = {(c, ca). \<exists>k. (c, ca, v, k) \<in> calls g}"

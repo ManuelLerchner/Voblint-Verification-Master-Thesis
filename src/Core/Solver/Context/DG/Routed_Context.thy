@@ -93,7 +93,9 @@ locale routed_context =
     bot0 s0d s0g sigma vars x0 sg
   for S :: "('a::sound_domain abs_state, 'a abs_state) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
-    and g gk0 route bot0 s0d s0g sigma vars x0 sg
+    and g gk0
+    and route ("context\<^sup>#")
+    and bot0 s0d s0g sigma vars x0 sg
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k" +
   fixes enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
   assumes finC[intro,simp]: "finite (calls g)"
@@ -383,13 +385,13 @@ text \<open>
   \<open>formals_context\<close> is the plain per-variable projection (\<^typ>\<open>'a abs_state\<close> is
   \<^typ>\<open>vname \<Rightarrow> 'a\<close>, so this is just \<^const>\<open>map\<close>); \<open>formals_route\<close> applies it to
   the entered local state via \<^const>\<open>enter_local\<close>, the same enter transfer every
-  other CALL obligation uses; \<open>formals_enterc\<close> is its trace-semantic counterpart,
+  other CALL obligation uses; \<open>formals_context_sem\<close> is its trace-semantic counterpart,
   decoding the concrete entered store's formals the same way, given the point
   abstraction \<open>decode\<close> a domain provides for a concrete value and the CFG needed
   to look up a call site's own formal list. Neither definition mentions a
   domain-specific accessor beyond \<open>decode\<close> itself, so any domain reusing
   \<^locale>\<open>routed_context\<close> instantiates this pair once instead of hand-writing a
-  per-formal projection, as \<open>route_ivl\<close>/\<open>ivl_enterc\<close> previously did.
+  per-formal projection, as \<open>route_ivl\<close>/\<open>ivl_context\<close> previously did.
 \<close>
 
 definition formals_context :: "vname list \<Rightarrow> 'a abs_state \<Rightarrow> 'a list" where
@@ -419,15 +421,15 @@ definition formals_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> vname lis
         (_, CallEdge _ pars _, _, _) # _ \<Rightarrow> pars
       | _ \<Rightarrow> [])"
 
-definition formals_enterc ::
+definition formals_context_sem ::
   "cfg \<Rightarrow> (int \<Rightarrow> 'a) \<Rightarrow> cfg_node \<Rightarrow> 'a list \<Rightarrow> store \<Rightarrow> 'a list"
 where
-  "formals_enterc g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
+  "formals_context_sem g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
 
 text \<open>
   The whole matched \<^type>\<open>call_action\<close> at a node, not only its formals: an
   \<open>enterc\<close> built purely from the caller's own solved abstract state (rather than
-  by decoding the concrete entered store, as \<^const>\<open>formals_enterc\<close> does) needs
+  by decoding the concrete entered store, as \<^const>\<open>formals_context_sem\<close> does) needs
   the callee's actuals too, to recompute the same \<^const>\<open>dgs_enter\<close> the route
   itself already ran. Same convention as \<^const>\<open>formals_at_call_site\<close>: the head
   of the filtered call list, \<open>CallEdge None [] []\<close> if \<open>u\<close> has no outgoing call.

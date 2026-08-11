@@ -14,7 +14,7 @@ text \<open>
   both the calling context and the entered value.
 
   \<open>Example_Interval_DG_Ctx_Collect\<close> routes \<open>twice\<close>'s two calls by \<^emph>\<open>decoding\<close> the entered
-  formal (\<open>ivl_enterc\<close>, partial tabulation, the paper's Example 8).  This theory
+  formal (\<open>ivl_context\<close>, partial tabulation, the paper's Example 8).  This theory
   routes the same program by call site instead: the context type is \<^typ>\<open>cfg_node\<close>, and
   \<open>route_cs u ctx d ca = u\<close> is exactly the paper's Example 7.  Before \<open>enterc\<close> carried the
   call site (\<open>CFG_Local_Trace.key\<close>, widened for issue \<open>#66\<close>/G1), a call-site-keyed context
@@ -125,7 +125,7 @@ lemma seed_call2_cs:
   unfolding ctx_call2_cs_def by eval
 
 text \<open>The callee entry is materialized once per call-site context and never under the root
-  context: the two calls are analyzed separately, exactly as under \<open>ivl_enterc\<close>, but
+  context: the two calls are analyzed separately, exactly as under \<open>ivl_context\<close>, but
   the routing key is now the call site instead of a decoded value.\<close>
 lemma callee_covered_call1_cs: "(FunctionEntry (STR ''twice''), ctx_call1_cs) \<in> fst twice_cs_sol"
   unfolding ctx_call1_cs_def by eval

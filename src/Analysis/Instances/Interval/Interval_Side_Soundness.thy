@@ -19,11 +19,11 @@ lemma ivl_etf_edge_tree:
   unfolding ivl_etf_def apply_etf_unit_of_transfer by simp
 
 lemma ivl_etf_enter_tree:
-  "etf_enter (ivl_etf gs) fs as cl = unit_edge_tree gs (tf_enter (ivl_tf_for gs) fs as) cl"
+  "etf_enter (ivl_etf gs) fs as cl = unit_edge_tree gs (enter\<^sup># (ivl_tf_for gs) fs as) cl"
   unfolding ivl_etf_def unit_etf_of_transfer_def by simp
 
 lemma ivl_tf_for_enter_mono:
-  "s1 \<le> s2 \<Longrightarrow> tf_enter (ivl_tf_for gs) fs as s1 \<le> tf_enter (ivl_tf_for gs) fs as s2"
+  "s1 \<le> s2 \<Longrightarrow> enter\<^sup># (ivl_tf_for gs) fs as s1 \<le> enter\<^sup># (ivl_tf_for gs) fs as s2"
   by (simp add: ivl_tf_for_def enter_ivl_for_mono)
 
 lemma ivl_etf_combine_tree:

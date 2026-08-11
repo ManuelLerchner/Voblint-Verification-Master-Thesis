@@ -114,7 +114,7 @@ lemma route_family_etf_sound:
     and assm_not: "\<And>b u \<sigma>. etf_full (etf_assume_not E b u) \<sigma>
                    = tf_assume_not (sign_tf_for gs) b (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and enter: "\<And>xs es u \<sigma>. etf_full (etf_enter E xs es u) \<sigma>
-                   = tf_enter (sign_tf_for gs) xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+                   = enter\<^sup># (sign_tf_for gs) xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
     and combine: "\<And>dst cc ex \<sigma>. etf_full (etf_combine E dst cc ex) \<sigma>
                    = combine_collect_abs gs dst (\<sigma> (Inl cc) \<squnion> glob_env \<sigma>) (\<sigma> (Inl ex) \<squnion> glob_env \<sigma>)"
   shows "sound_effectful_transfer gs E"
@@ -255,7 +255,7 @@ definition named_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (gname, sign) 
        etf_random     = \<lambda>x. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Random x)),
        etf_assume     = \<lambda>b. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Assume b)),
        etf_assume_not = \<lambda>b. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_AssumeNot b)),
-       etf_enter      = (\<lambda>xs es. route_tree gs (\<lambda>_. Gpos) (tf_enter (sign_tf_for gs) xs es)),
+       etf_enter      = (\<lambda>xs es. route_tree gs (\<lambda>_. Gpos) (enter\<^sup># (sign_tf_for gs) xs es)),
        etf_combine    = route_combine gs (\<lambda>_. Gneg) \<rparr>"
 
 lemma apply_etf_named:
@@ -269,11 +269,11 @@ lemma etf_combine_named:
   by (simp add: named_etf_def)
 
 lemma etf_enter_named:
-  "etf_enter (named_etf gs) fs as cl = route_tree gs (\<lambda>_. Gpos) (tf_enter (sign_tf_for gs) fs as) cl"
+  "etf_enter (named_etf gs) fs as cl = route_tree gs (\<lambda>_. Gpos) (enter\<^sup># (sign_tf_for gs) fs as) cl"
   by (simp add: named_etf_def)
 
 lemma named_enter_mono:
-  "s1 \<le> s2 \<Longrightarrow> tf_enter (sign_tf_for gs) fs as s1 \<le> tf_enter (sign_tf_for gs) fs as s2"
+  "s1 \<le> s2 \<Longrightarrow> enter\<^sup># (sign_tf_for gs) fs as s1 \<le> enter\<^sup># (sign_tf_for gs) fs as s2"
   by (simp add: sign_tf_for_def enter_sign_for_mono)
 
 lemma named_edge_inr_local_bot:
@@ -310,7 +310,7 @@ lemma named_etf_full_assume_not:
 
 lemma named_etf_full_enter:
   "etf_full (etf_enter (named_etf gs) xs es u) \<sigma>
-   = tf_enter (sign_tf_for gs) xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
+   = enter\<^sup># (sign_tf_for gs) xs es (\<sigma> (Inl u) \<squnion> glob_env \<sigma>)"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
 lemma named_etf_full_combine:
@@ -400,8 +400,8 @@ lemma named_enter_sides_mono:
   shows "sides_of_rhs (etf_enter (named_etf gs) fs as cl) s1
          \<le> sides_of_rhs (etf_enter (named_etf gs) fs as cl) s2"
 proof -
-  have d: "restrict_global_for gs (tf_enter (sign_tf_for gs) fs as (s1 (Inl cl) \<squnion> glob_env s1))
-           \<le> restrict_global_for gs (tf_enter (sign_tf_for gs) fs as (s2 (Inl cl) \<squnion> glob_env s2))"
+  have d: "restrict_global_for gs (enter\<^sup># (sign_tf_for gs) fs as (s1 (Inl cl) \<squnion> glob_env s1))
+           \<le> restrict_global_for gs (enter\<^sup># (sign_tf_for gs) fs as (s2 (Inl cl) \<squnion> glob_env s2))"
     by (rule restrict_global_for_mono[OF named_enter_mono[OF
           sup_mono[OF le_funD[OF assms] glob_env_mono[OF assms]]]])
   show ?thesis
