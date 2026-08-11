@@ -35,6 +35,29 @@
 > ordering reasoning available; `least_partial_post_solution` and a
 > `TD_side` precision theorem still have to be built on top before a
 > k=2-vs-k=1 claim exists.
+>
+> **Resolution (2026-08-11).** This design's goal is done, by a different
+> route than the T2/`fiber_join`/`least_partial_post_solution` path sketched
+> above: rather than proving `project_sigma` (or a generic replacement)
+> satisfies `part_post_solution` directly, the finite projection is now
+> *seeded into* the k=1 equation system (`seed_rhs`, already landed in Stage
+> 1) and the ordinary, unmodified TD solver is re-run on the seeded system.
+> `post_solution_of_seeded`'s already-derived transfer step then gives the
+> k=1 post-solution and both domination facts for free, with no
+> `TD_side_mono`/`least_partial_post_solution` machinery needed. The generic
+> projection/closure theorem lives in
+> `src/Examples/Interval/CallString/Call_String_Solver_Projection.thy`
+> (`call_string_projection_refinement`), fully generic in `k1`, the fine
+> variable list, and the fine solution -- no concrete program, `k1`/`k2`
+> value, or per-hook reasoning appears in its statements or proofs.
+> `Call_String_Solver_Refinement.thy` (the file this design is written
+> against) has been deleted; its concrete instantiation is now the ~80-line
+> `Call_String_Solver_Refinement_Seeded.thy`, and its only lemmas with
+> independent regression value moved to `Call_String_Solver_Regression.thy`.
+> Sections below describe the original file and are no longer current; kept
+> for the historical argument in sections 0-2 (why `project_sigma` was a
+> fiber-join-then-recompute construction) and as the record of the design
+> path not taken.
 
 Everything below is checked against the repository. Where a claim is not
 checked, it says so.

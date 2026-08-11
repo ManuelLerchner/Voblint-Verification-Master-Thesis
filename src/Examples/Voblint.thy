@@ -54,7 +54,7 @@ theory Voblint
     Example_Interval_DG_CallString_K2
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
-    Call_String_Solver_Refinement
+    Call_String_Solver_Refinement_Seeded
     Example_Interval_Source_Ctx
     Example_Inc_Proc
     Example_Side_Execute
@@ -345,16 +345,21 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Sign_DG_CallString_K2} --- the 2-call-string sibling
       (\<^verbatim>\<open>sign_nest_2_activation_collect_sound\<close>), which keeps \<open>g\<close>'s two activations separate
       at \<open>SPos\<close> and \<open>SNeg\<close>. Because Sign is a finite lattice with an exact computed solution,
-      this pair supports a genuine strict-precision witness that \<open>Call_String_Solver_Refinement\<close>'s
-      projection argument does not state: \<^verbatim>\<open>sign_k2_strictly_more_precise_than_k1_at_g\<close> proves
+      this pair supports a genuine strict-precision witness that
+      \<open>Call_String_Solver_Refinement_Seeded\<close>'s refinement argument does not state:
+      \<^verbatim>\<open>sign_k2_strictly_more_precise_than_k1_at_g\<close> proves
       the 2-call-string value at \<open>g\<close>'s entry is strictly below the 1-call-string \<open>STop\<close> merge in
       the Sign order, for both activations, \<^emph>\<open>computed and compared\<close> rather than argued
       abstractly.
-    \<^item> @{theory Voblint_Examples.Call_String_Solver_Refinement} --- a solver-level refinement
-      witness, not a source-level soundness theorem: projects the computed 2-call-string
-      solution onto the 1-call-string dependency cone (\<^verbatim>\<open>project_sigma\<close>) and proves the
-      projection is itself a \<^verbatim>\<open>part_post_solution\<close> of the 1-call-string equations
-      (\<^verbatim>\<open>project_sigma_part_post_solution\<close>).
+    \<^item> @{theory Voblint_Examples.Call_String_Solver_Refinement_Seeded} --- a solver-level
+      refinement witness, not a source-level soundness theorem: truncates and joins the
+      computed 2-call-string solution down to a finite 1-call-string lower bound
+      (\<^verbatim>\<open>proj_P\<close>), seeds the 1-call-string equations with it (\<^verbatim>\<open>seed_rhs\<close>), and runs the
+      same unmodified verified solver. The generic seeded-solve theorem
+      (\<^verbatim>\<open>post_solution_of_seeded\<close>) then gives, with no per-node case analysis, both that the
+      seeded solution is a \<^verbatim>\<open>part_post_solution\<close> of the plain 1-call-string equations and
+      that it dominates the projected 2-call-string information on every local and
+      global/seed key (\<^verbatim>\<open>nest_1_seeded_refinement\<close>).
     \<^item> @{theory Voblint_Examples.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
     \<^item> @{theory Voblint_Examples.Example_Relational_DG_Demo} --- an execution
       witness, not a soundness-certified result: a compiled full-program

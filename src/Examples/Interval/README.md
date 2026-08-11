@@ -43,4 +43,6 @@ the call-string bound `k`.
 | `Example_Interval_DG_CallString.thy` | canonical spine | a computed 1-call-string context, routed by call site (Seidl et al. 2026, Example 7) |
 | `Example_Interval_DG_CallString_K1.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 1` |
 | `Example_Interval_DG_CallString_K2.thy` | canonical spine | `cs_route`/`cs_context` instance at `k = 2` |
-| `Call_String_Solver_Refinement.thy` | regression | dependency-closure witness: a k=2 fiber split at one node forces the same widening on every node that transitively reads the merge, even where that node's own fiber never splits |
+| `Call_String_Solver_Projection.thy` | reusable | fully generic k1<=k2 CallString projection: a finite fine-to-coarse quotient (`proj_P`) plus the packaged `seed_rhs`-based closure theorem (`call_string_projection_refinement`); no concrete program, no `k1`/`k2` value, and no per-hook reasoning appears in its statements or proofs |
+| `Call_String_Solver_Refinement_Seeded.thy` | canonical spine | the k=2 to k=1 refinement witness for `nest`, now a thin instantiation of `Call_String_Solver_Projection.thy` at k1=1: a two-line context-merge fact plus solver soundness gives the whole closure, replacing the former hand-unrolled dependency-cone chain |
+| `Call_String_Solver_Regression.thy` | regression | exact-tree snapshots (`nest_1_eqs_statement3`, `nest_2_eqs_statement3`) locking in that `routed_cmb`/`side_cfg_T_eff_keyed_seed_dg` still generate the expected equation shape at a genuine call continuation |
