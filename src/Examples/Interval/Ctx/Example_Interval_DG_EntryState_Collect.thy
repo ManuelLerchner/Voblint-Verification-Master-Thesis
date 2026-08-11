@@ -40,7 +40,7 @@ abbreviation sigma_abs :: "pp \<times> ivl list + gk \<Rightarrow> (ivl abs_stat
 
 abbreviation gen_abs :: "(pp \<times> ivl list, gk, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
   "gen_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
-       (routed_cmb Sabs Global) (routed_extra rc_cfg Sabs Seed Global) rc_cfg Sabs
+       (routed_cmb Sabs Global Seed) (routed_extra Seed Global) rc_cfg Sabs
        (fun_of_exec_dg_st_for rc_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for rc_gs cinit_ivl_st)
        (fun_of_exec_dg_st_for rc_gs (restrict_global_resolved_q cinit_ivl_st))"
 
@@ -107,7 +107,7 @@ lemma rc_fwd_closed:
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
 interpretation rc_dg: dg_ctx_activation Sabs rc_gs rc_cfg Global route_abs_gen
-    "routed_cmb Sabs Global" "routed_extra rc_cfg Sabs Seed Global"
+    "routed_cmb Sabs Global Seed" "routed_extra Seed Global"
     "fun_of_exec_dg_st_for rc_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for rc_gs cinit_ivl_st"
     "fun_of_exec_dg_st_for rc_gs (restrict_global_resolved_q cinit_ivl_st)"
     sigma_abs "fst rc_ctx_sol" "(cfg_exit rc_cfg, [])" rc_ctx_sg
@@ -116,7 +116,7 @@ proof unfold_locales
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
-             (routed_cmb Sabs Global) (routed_extra rc_cfg Sabs Seed Global) rc_cfg Sabs
+             (routed_cmb Sabs Global Seed) (routed_extra Seed Global) rc_cfg Sabs
              (fun_of_exec_dg_st_for rc_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for rc_gs cinit_ivl_st)
              (fun_of_exec_dg_st_for rc_gs (restrict_global_resolved_q cinit_ivl_st)))
           (cfg_exit rc_cfg, []) sigma_abs (fst rc_ctx_sol)"

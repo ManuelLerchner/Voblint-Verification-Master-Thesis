@@ -73,8 +73,8 @@ definition entry_state_eqs ::
   "entry_state_eqs gs Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
        (entry_state_route_gen gs)
-       (routed_cmb (ectx_spec gs) Global)
-       (routed_extra (compile_prog Pi ps mnm main) (ectx_spec gs) Seed Global)
+      (routed_cmb (ectx_spec gs) Global Seed)
+      (routed_extra Seed Global)
        (compile_prog Pi ps mnm main) (ectx_spec gs) bot cinit_ivl_st
        (restrict_global_resolved_q cinit_ivl_st)"
 
@@ -300,47 +300,21 @@ qed
 
 lemma dg_tree_st_commute_routed_cmb:
   "dg_tree_st_commute_for gs env
-     (routed_cmb (ectx_spec gs) Global (entry_state_route_gen gs) ctx ca cc ex)
-     (routed_cmb (ectx_abs_spec gs) Global (entry_state_route_abs_gen gs) ctx ca cc ex)"
+     (routed_cmb (ectx_spec gs) Global Seed (entry_state_route_gen gs) ctx ca cc ex)
+     (routed_cmb (ectx_abs_spec gs) Global Seed (entry_state_route_abs_gen gs) ctx ca cc ex)"
   unfolding routed_cmb_def entry_state_route_gen_def entry_state_route_abs_gen_def Let_def
   by (cases ca)
      (simp_all add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                     entry_state_route_commute dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
+                    dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen fun_of_dg_st_for_sup
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
-
-lemma dg_tree_st_commute_routed_enter_pub:
-  "dg_tree_st_commute_for gs env
-     (with_call a (\<lambda>dst fs as. do {
-        entry_state \<leftarrow> read_local (v, ctx);
-        globals_state \<leftarrow> read_global Global;
-        publish_global Global (enter_global (ectx_spec gs) fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed w (entry_state_route_gen gs v ctx (locals entry_state) a))
-          (enter_local (ectx_spec gs) fs as (locals entry_state) (globs globals_state));
-        answer_local bot
-      }))
-     (with_call a (\<lambda>dst fs as. do {
-        entry_state \<leftarrow> read_local (v, ctx);
-        globals_state \<leftarrow> read_global Global;
-        publish_global Global (enter_global (ectx_abs_spec gs) fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed w (entry_state_route_abs_gen gs v ctx (locals entry_state) a))
-          (enter_local (ectx_abs_spec gs) fs as (locals entry_state) (globs globals_state));
-        answer_local bot
-      }))"
-  unfolding entry_state_route_gen_def entry_state_route_abs_gen_def
-  by (cases a)
-     (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
-                entry_state_route_commute dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
-                dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma hextra_commute_routed:
   "list_all2 (dg_tree_st_commute_for gs env)
-     (routed_extra (compile_prog Pi ps mnm main) (ectx_spec gs) Seed Global (entry_state_route_gen gs) ctx w)
-     (routed_extra (compile_prog Pi ps mnm main) (ectx_abs_spec gs) Seed Global
-        (entry_state_route_abs_gen gs) ctx w)"
+     (routed_extra Seed Global (entry_state_route_gen gs) ctx w)
+     (routed_extra Seed Global (entry_state_route_abs_gen gs) ctx w)"
   unfolding routed_extra_def Let_def
-  by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
-                 dg_tree_st_commute_frame_read dg_tree_st_commute_routed_enter_pub
-           split: cfg_node.split)
+  by (auto simp: dg_tree_st_commute_frame_read split: cfg_node.split)
 
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
@@ -368,8 +342,8 @@ lemma entry_state_pp_st:
 theorem entry_state_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
-        (routed_cmb (ectx_abs_spec gs) Global)
-        (routed_extra (compile_prog Pi ps mnm main) (ectx_abs_spec gs) Seed Global)
+        (routed_cmb (ectx_abs_spec gs) Global Seed)
+        (routed_extra Seed Global)
         (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
         (fun_of_exec_dg_st_for gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for gs cinit_ivl_st)
         (fun_of_exec_dg_st_for gs (restrict_global_resolved_q cinit_ivl_st)))
@@ -378,8 +352,8 @@ theorem entry_state_pp_abs:
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_gen gs)
-          (routed_cmb (ectx_spec gs) Global)
-          (routed_extra (compile_prog Pi ps mnm main) (ectx_spec gs) Seed Global)
+          (routed_cmb (ectx_spec gs) Global Seed)
+          (routed_extra Seed Global)
           (compile_prog Pi ps mnm main) (ectx_spec gs) bot cinit_ivl_st
           (restrict_global_resolved_q cinit_ivl_st))
        (cfg_exit (compile_prog Pi ps mnm main), [])
@@ -393,9 +367,9 @@ proof -
     by (rule part_post_solution_seed_dg_st_to_abs_for
           [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
              and route_st = "entry_state_route_gen gs" and route_abs = "entry_state_route_abs_gen gs"
-             and cmb_st = "routed_cmb (ectx_spec gs) Global" and cmb_abs = "routed_cmb (ectx_abs_spec gs) Global"
-             and extra_st = "routed_extra (compile_prog Pi ps mnm main) (ectx_spec gs) Seed Global"
-             and extra_abs = "routed_extra (compile_prog Pi ps mnm main) (ectx_abs_spec gs) Seed Global"
+             and cmb_st = "routed_cmb (ectx_spec gs) Global Seed" and cmb_abs = "routed_cmb (ectx_abs_spec gs) Global Seed"
+             and extra_st = "routed_extra Seed Global"
+             and extra_abs = "routed_extra Seed Global"
              and g = "compile_prog Pi ps mnm main" and S_st = "ectx_spec gs" and S_abs = "ectx_abs_spec gs",
            OF ivl_Hstep_ctx entry_state_route_commute_gen dg_tree_st_commute_routed_cmb
               hextra_commute_routed pp'])
@@ -527,8 +501,8 @@ lemma entry_state_sg_uncovered_empty:
 subsection \<open>Instantiating the generic DG-native activation discharge\<close>
 
 interpretation entry_state_dg: dg_ctx_activation "ectx_abs_spec gs" gs "compile_prog Pi ps mnm main" Global
-    "entry_state_route_abs_gen gs" "routed_cmb (ectx_abs_spec gs) Global"
-    "routed_extra (compile_prog Pi ps mnm main) (ectx_abs_spec gs) Seed Global"
+    "entry_state_route_abs_gen gs" "routed_cmb (ectx_abs_spec gs) Global Seed"
+    "routed_extra Seed Global"
     "fun_of_exec_dg_st_for gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for gs cinit_ivl_st"
     "fun_of_exec_dg_st_for gs (restrict_global_resolved_q cinit_ivl_st)"
     entry_state_sigma_abs "fst (entry_state_sol gs Pi ps mnm main)"
@@ -538,8 +512,8 @@ proof unfold_locales
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
-             (routed_cmb (ectx_abs_spec gs) Global)
-             (routed_extra (compile_prog Pi ps mnm main) (ectx_abs_spec gs) Seed Global)
+             (routed_cmb (ectx_abs_spec gs) Global Seed)
+             (routed_extra Seed Global)
              (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
              (fun_of_exec_dg_st_for gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for gs cinit_ivl_st)
              (fun_of_exec_dg_st_for gs (restrict_global_resolved_q cinit_ivl_st)))

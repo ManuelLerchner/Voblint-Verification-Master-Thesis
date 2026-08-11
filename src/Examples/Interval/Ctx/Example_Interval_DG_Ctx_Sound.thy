@@ -184,52 +184,31 @@ text \<open>The routed combine tree, reading the shared global through a query i
   applied to \<^term>\<open>env (Inr gk0)\<close> is exactly what the abstract side reads at that
   key.\<close>
 
+text \<open>Restated for the expanded \<open>routed_cmb\<close> (2026-08-11, issue #114): the routed enter
+  publication -- reading the shared global through a query and additionally publishing
+  the enter transfer's own global side-effect to \<open>gk0\<close>, on top of the routed local seed --
+  now lives inside this same tree rather than in a standalone lemma, since the call
+  lifecycle it used to sit in (\<open>routed_extra\<close>'s call-site publish) moved here too. The
+  proof merges what were previously two separate lemmas' simp sets: the enter transfer's
+  own commute facts alongside the combine's.\<close>
 lemma dg_tree_st_commute_routed_cmb:
-  "dg_tree_st_commute_for twice_gs env (routed_cmb Spoly gk0 route_ivl_gen ctx ca cc ex)
-                          (routed_cmb Sabs gk0 route_abs_gen ctx ca cc ex)"
+  "dg_tree_st_commute_for twice_gs env (routed_cmb Spoly gk0 Seed route_ivl_gen ctx ca cc ex)
+                          (routed_cmb Sabs gk0 Seed route_abs_gen ctx ca cc ex)"
   unfolding routed_cmb_def route_ivl_gen_def route_abs_gen_def Let_def
   by (cases ca)
      (simp_all add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                     route_commute dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
+                    dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen fun_of_dg_st_for_sup
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
-text \<open>The routed enter publication --- reading the shared global through a query
-  and additionally publishing the enter transfer's own global side-effect to
-  \<open>gk0\<close>, on top of the routed local seed --- transports the same way once both
-  projections of the enter transfer commute.\<close>
-
-lemma dg_tree_st_commute_routed_enter_pub:
-  "dg_tree_st_commute_for twice_gs env
-     (with_call a (\<lambda>dst fs as. do {
-        entry_state \<leftarrow> read_local (v, ctx);
-        globals_state \<leftarrow> read_global Global;
-        publish_global Global (enter_global Spoly fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed w (route_ivl_gen v ctx (locals entry_state) a))
-          (enter_local Spoly fs as (locals entry_state) (globs globals_state));
-        answer_local bot
-      }))
-     (with_call a (\<lambda>dst fs as. do {
-        entry_state \<leftarrow> read_local (v, ctx);
-        globals_state \<leftarrow> read_global Global;
-        publish_global Global (enter_global Sabs fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed w (route_abs_gen v ctx (locals entry_state) a))
-          (enter_local Sabs fs as (locals entry_state) (globs globals_state));
-        answer_local bot
-      }))"
-  unfolding route_ivl_gen_def route_abs_gen_def
-  by (cases a)
-     (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
-                route_commute dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
-                dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
-
+text \<open>\<open>routed_extra\<close> no longer publishes the call-site seed (\<open>routed_cmb\<close> above does), so
+  its own-seed-read case for \<open>FunctionEntry\<close> is now its only contribution.\<close>
 lemma hextra_commute_routed:
   "list_all2 (dg_tree_st_commute_for twice_gs env)
-     (routed_extra twice_cfg Spoly Seed Global route_ivl_gen ctx w)
-     (routed_extra twice_cfg Sabs Seed Global route_abs_gen ctx w)"
+     (routed_extra Seed Global route_ivl_gen ctx w)
+     (routed_extra Seed Global route_abs_gen ctx w)"
   unfolding routed_extra_def Let_def
-  by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
-                 dg_tree_st_commute_frame_read dg_tree_st_commute_routed_enter_pub
-           split: cfg_node.split)
+  by (auto simp: dg_tree_st_commute_frame_read split: cfg_node.split)
 
 subsection \<open>The certified executable post-solution\<close>
 
@@ -258,14 +237,14 @@ text \<open>The generic bridge \<open>part_post_solution_seed_dg_st_to_abs\<clos
 theorem twice_ctx_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
-        (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
+        (routed_cmb Sabs Global Seed) (routed_extra Seed Global) twice_cfg Sabs
         (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
      (cfg_exit twice_cfg, []) (fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (fst twice_ctx_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
-          (routed_cmb Spoly Global) (routed_extra twice_cfg Spoly Seed Global) twice_cfg Spoly
+          (routed_cmb Spoly Global Seed) (routed_extra Seed Global) twice_cfg Spoly
           bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st))
        (cfg_exit twice_cfg, []) (snd twice_ctx_sol) (fst twice_ctx_sol)"
     using twice_ctx_pp_st unfolding twice_ctx_eqs_def by simp
@@ -280,9 +259,9 @@ proof -
     by (rule part_post_solution_seed_dg_st_to_abs_for
           [where gs = twice_gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
              and route_st = route_ivl_gen and route_abs = route_abs_gen
-             and cmb_st = "routed_cmb Spoly Global" and cmb_abs = "routed_cmb Sabs Global"
-             and extra_st = "routed_extra twice_cfg Spoly Seed Global"
-             and extra_abs = "routed_extra twice_cfg Sabs Seed Global"
+             and cmb_st = "routed_cmb Spoly Global Seed" and cmb_abs = "routed_cmb Sabs Global Seed"
+             and extra_st = "routed_extra Seed Global"
+             and extra_abs = "routed_extra Seed Global"
              and g = twice_cfg and S_st = Spoly and S_abs = Sabs,
            OF ivl_Hstep_ctx route_commute_gen dg_tree_st_commute_routed_cmb hextra_commute_routed pp'])
 qed

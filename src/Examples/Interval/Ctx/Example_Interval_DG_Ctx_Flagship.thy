@@ -86,7 +86,7 @@ definition twice_ctx_eqs ::
   "(pp \<times> ivl list, gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) eqsT" where
   "twice_ctx_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
-       (routed_cmb Spoly Global) (routed_extra twice_cfg Spoly Seed Global)
+       (routed_cmb Spoly Global Seed) (routed_extra Seed Global)
        twice_cfg Spoly bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>

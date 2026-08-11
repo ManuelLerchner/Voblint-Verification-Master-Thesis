@@ -22,7 +22,7 @@ subsection \<open>The routed equation system and its computed solution\<close>
 definition sign_nest_2_eqs :: "(pp \<times> cfg_node list, gk_2, (sign exec_dg_st, sign exec_dg_st) dg_state) eqsT" where
   "sign_nest_2_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
-       (routed_cmb Spoly Global2) (routed_extra sign_nest_cfg Spoly Seed2 Global2)
+       (routed_cmb Spoly Global2 Seed2) (routed_extra Seed2 Global2)
        sign_nest_cfg Spoly bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
 
 definition sign_nest_2_sol ::
@@ -102,45 +102,21 @@ lemma dg_tree_st_commute_frame_read_2:
                 dep_aux_def bot_fun_def)
 
 lemma dg_tree_st_commute_routed_cmb_2:
-  "dg_tree_st_commute_for sign_nest_gs env (routed_cmb Spoly Global2 (cs_route 2) ctx ca cc ex)
-                          (routed_cmb Sabs Global2 (cs_route 2) ctx ca cc ex)"
+  "dg_tree_st_commute_for sign_nest_gs env (routed_cmb Spoly Global2 Seed2 (cs_route 2) ctx ca cc ex)
+                          (routed_cmb Sabs Global2 Seed2 (cs_route 2) ctx ca cc ex)"
   unfolding routed_cmb_def Let_def
   by (cases ca)
      (simp_all add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
                     cs_route_def dgs_combine_fst_commute_gen dgs_combine_snd_commute_gen
+                    dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen fun_of_dg_st_for_sup
                     dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
-
-lemma dg_tree_st_commute_routed_enter_pub_2:
-  "dg_tree_st_commute_for sign_nest_gs env
-     (with_call a (\<lambda>dst fs as. do {
-        entry_state \<leftarrow> read_local (v, ctx);
-        globals_state \<leftarrow> read_global Global2;
-        publish_global Global2 (enter_global Spoly fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed2 w (cs_route 2 v ctx (locals entry_state) a))
-          (enter_local Spoly fs as (locals entry_state) (globs globals_state));
-        answer_local bot
-      }))
-     (with_call a (\<lambda>dst fs as. do {
-        entry_state \<leftarrow> read_local (v, ctx);
-        globals_state \<leftarrow> read_global Global2;
-        publish_global Global2 (enter_global Sabs fs as (locals entry_state) (globs globals_state));
-        publish_seed (Seed2 w (cs_route 2 v ctx (locals entry_state) a))
-          (enter_local Sabs fs as (locals entry_state) (globs globals_state));
-        answer_local bot
-      }))"
-  by (cases a)
-     (simp add: dg_tree_st_commute_for_def fun_of_dg_st_for_simps fun_of_exec_dg_st_for_bot o_def
-                cs_route_def dgs_enter_fst_commute_gen dgs_enter_snd_commute_gen
-                dep_aux_def bot_fun_def fun_upd_apply fun_eq_iff)
 
 lemma hextra_commute_routed_2:
   "list_all2 (dg_tree_st_commute_for sign_nest_gs env)
-     (routed_extra sign_nest_cfg Spoly Seed2 Global2 (cs_route 2) ctx w)
-     (routed_extra sign_nest_cfg Sabs Seed2 Global2 (cs_route 2) ctx w)"
+     (routed_extra Seed2 Global2 (cs_route 2) ctx w)
+     (routed_extra Seed2 Global2 (cs_route 2) ctx w)"
   unfolding routed_extra_def Let_def
-  by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl split_beta
-                 dg_tree_st_commute_frame_read_2 dg_tree_st_commute_routed_enter_pub_2
-           split: cfg_node.split)
+  by (auto simp: dg_tree_st_commute_frame_read_2 split: cfg_node.split)
 
 lemma sign_nest_2_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(gk_2) TYPE((sign exec_dg_st, sign exec_dg_st) dg_state)
@@ -160,13 +136,13 @@ lemma sign_nest_2_pp_st:
 theorem sign_nest_2_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
-        (routed_cmb Sabs Global2) (routed_extra sign_nest_cfg Sabs Seed2 Global2) sign_nest_cfg Sabs
+        (routed_cmb Sabs Global2 Seed2) (routed_extra Seed2 Global2) sign_nest_cfg Sabs
         (fun_of_exec_dg_st_for sign_nest_gs (bot::sign exec_dg_st)) (fun_of_exec_dg_st_for sign_nest_gs cinit_sign_st) (fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st)))
      (cfg_exit sign_nest_cfg, []) (fun_of_dg_st_for sign_nest_gs \<circ> snd sign_nest_2_sol) (fst sign_nest_2_sol)"
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
-          (routed_cmb Spoly Global2) (routed_extra sign_nest_cfg Spoly Seed2 Global2) sign_nest_cfg Spoly
+          (routed_cmb Spoly Global2 Seed2) (routed_extra Seed2 Global2) sign_nest_cfg Spoly
           bot cinit_sign_st (restrict_global_resolved_q cinit_sign_st))
        (cfg_exit sign_nest_cfg, []) (snd sign_nest_2_sol) (fst sign_nest_2_sol)"
     using sign_nest_2_pp_st unfolding sign_nest_2_eqs_def by simp
@@ -178,9 +154,9 @@ proof -
     by (rule part_post_solution_seed_dg_st_to_abs_for
           [where gs = sign_nest_gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global2"
              and route_st = "cs_route 2" and route_abs = "cs_route 2"
-             and cmb_st = "routed_cmb Spoly Global2" and cmb_abs = "routed_cmb Sabs Global2"
-             and extra_st = "routed_extra sign_nest_cfg Spoly Seed2 Global2"
-             and extra_abs = "routed_extra sign_nest_cfg Sabs Seed2 Global2"
+             and cmb_st = "routed_cmb Spoly Global2 Seed2" and cmb_abs = "routed_cmb Sabs Global2 Seed2"
+             and extra_st = "routed_extra Seed2 Global2"
+             and extra_abs = "routed_extra Seed2 Global2"
              and g = sign_nest_cfg and S_st = Spoly and S_abs = Sabs,
            OF sign_Hstep_2 cs_route_indep_of_data dg_tree_st_commute_routed_cmb_2
               hextra_commute_routed_2 pp'])
@@ -193,7 +169,7 @@ abbreviation sigma_2 :: "pp \<times> cfg_node list + gk_2 \<Rightarrow> (sign ab
 
 abbreviation gen_2_abs :: "(pp \<times> cfg_node list, gk_2, (sign abs_state, sign abs_state) dg_state) eqsT" where
   "gen_2_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
-       (routed_cmb Sabs Global2) (routed_extra sign_nest_cfg Sabs Seed2 Global2) sign_nest_cfg Sabs
+       (routed_cmb Sabs Global2 Seed2) (routed_extra Seed2 Global2) sign_nest_cfg Sabs
        (fun_of_exec_dg_st_for sign_nest_gs (bot::sign exec_dg_st)) (fun_of_exec_dg_st_for sign_nest_gs cinit_sign_st) (fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st))"
 
 lemma pp_eq_bound_2:
@@ -234,7 +210,7 @@ proof -
 qed
 
 interpretation sign_nest_2_dg: dg_ctx_activation Sabs sign_nest_gs sign_nest_cfg Global2 "cs_route 2"
-    "routed_cmb Sabs Global2" "routed_extra sign_nest_cfg Sabs Seed2 Global2"
+    "routed_cmb Sabs Global2 Seed2" "routed_extra Seed2 Global2"
     "fun_of_exec_dg_st_for sign_nest_gs (bot::sign exec_dg_st)" "fun_of_exec_dg_st_for sign_nest_gs cinit_sign_st" "fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st)"
     sigma_2 "fst sign_nest_2_sol" "(cfg_exit sign_nest_cfg, [])" sign_ctx_sg_2
 proof unfold_locales
@@ -242,7 +218,7 @@ proof unfold_locales
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global2) (cs_route 2)
-             (routed_cmb Sabs Global2) (routed_extra sign_nest_cfg Sabs Seed2 Global2) sign_nest_cfg Sabs
+             (routed_cmb Sabs Global2 Seed2) (routed_extra Seed2 Global2) sign_nest_cfg Sabs
              (fun_of_exec_dg_st_for sign_nest_gs (bot::sign exec_dg_st)) (fun_of_exec_dg_st_for sign_nest_gs cinit_sign_st)
              (fun_of_exec_dg_st_for sign_nest_gs (restrict_global_resolved_q cinit_sign_st)))
           (cfg_exit sign_nest_cfg, []) sigma_2 (fst sign_nest_2_sol)"
