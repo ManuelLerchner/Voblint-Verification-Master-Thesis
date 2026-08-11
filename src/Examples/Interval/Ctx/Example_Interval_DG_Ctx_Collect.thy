@@ -60,7 +60,7 @@ abbreviation sigma_abs :: "pp \<times> ivl list + gk \<Rightarrow> (ivl abs_stat
 
 abbreviation gen_abs :: "(pp \<times> ivl list, gk, (ivl abs_state, ivl abs_state) dg_state) eqsT" where
   "gen_abs \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
-       (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
+       (routed_cmb Sabs Global Seed) (routed_extra Seed Global) twice_cfg Sabs
        (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
        (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))"
 
@@ -165,7 +165,7 @@ text \<open>\<open>ivl_dg_for\<close> (\<open>Example_Interval_DG_Ctx_Sound\<clo
   \<open>dg_ctx_activation\<close> inherits from it discharge automatically below.\<close>
 
 interpretation twice_dg: dg_ctx_activation Sabs twice_gs twice_cfg Global route_abs_gen
-    "routed_cmb Sabs Global" "routed_extra twice_cfg Sabs Seed Global"
+    "routed_cmb Sabs Global Seed" "routed_extra Seed Global"
     "fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)" "fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
     "fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)"
     sigma_abs "fst twice_ctx_sol" "(cfg_exit twice_cfg, [])" ivl_ctx_sg
@@ -174,7 +174,7 @@ proof unfold_locales
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_abs_gen
-             (routed_cmb Sabs Global) (routed_extra twice_cfg Sabs Seed Global) twice_cfg Sabs
+             (routed_cmb Sabs Global Seed) (routed_extra Seed Global) twice_cfg Sabs
              (fun_of_exec_dg_st_for twice_gs (bot::ivl exec_dg_st)) (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
              (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
           (cfg_exit twice_cfg, []) sigma_abs (fst twice_ctx_sol)"

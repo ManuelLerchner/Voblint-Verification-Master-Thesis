@@ -2671,31 +2671,51 @@ let rec compile
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
 
+let rec result_proc (FunctionResult x3) = x3;;
+
 let rec routed_cmb _A
-  s gk0 route ctx ca cc ex =
-    (let CallEdge (dst, _, _) = ca in
+  s gk0 seed_key route ctx ca cc ex =
+    (let CallEdge (dst, fs, asa) = ca in
       seqcomp_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
         (fun caller_state ->
-          (let ctxa = route cc ctx (locals caller_state) ca in
-            seqcomp_tree (QueryL ((ex, ctxa), (fun a -> Answer a)))
-              (fun callee_state ->
-                seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
-                  (fun globals_state ->
-                    (let caller = locals caller_state in
-                     let callee = locals callee_state in
-                     let globals = globs globals_state in
-                      seqcomp_tree
-                        (Side (gk0, DG (bot
-  _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
- fst (dgs_combine s dst caller callee globals)),
-                                Answer
-                                  (DG (bot
- _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
-                        (fun _ ->
+          seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
+            (fun globals_state1 ->
+              (let caller = locals caller_state in
+               let globals1 = globs globals_state1 in
+               let ctxa = route cc ctx caller ca in
+                seqcomp_tree
+                  (Side (gk0, DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                                   fst (dgs_enter s fs asa caller globals1)),
                           Answer
-                            (DG (snd (dgs_combine s dst caller callee globals),
-                                  bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))))));;
+                            (DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                                  bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
+                  (fun _ ->
+                    seqcomp_tree
+                      (Side (seed_key (FunctionEntry (result_proc ex)) ctxa,
+                              DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                                   snd (dgs_enter s fs asa caller globals1)),
+                              Answer
+                                (DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                                      bot
+_A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
+                      (fun _ ->
+                        seqcomp_tree (QueryL ((ex, ctxa), (fun a -> Answer a)))
+                          (fun callee_state ->
+                            seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
+                              (fun globals_state2 ->
+                                (let callee = locals callee_state in
+                                 let globals2 = globs globals_state2 in
+                                  seqcomp_tree
+                                    (Side (gk0,
+    DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+         fst (dgs_combine s dst caller callee globals2)),
+    Answer
+      (DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+            bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
+                                    (fun _ ->
+                                      Answer
+(DG (snd (dgs_combine s dst caller callee globals2),
+      bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))))))))));;
 
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
@@ -2815,55 +2835,16 @@ let rec unit_step_st _A
         restrict_local_resolved_q
           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res));;
 
-let rec call_successor_list
-  g v = map_filter
-          (fun x ->
-            (if (let (c, (_, (_, _))) = x in equal_cfg_nodea c v)
-              then Some (let (_, (ca, (ce, k))) = x in (ce, (ca, k)))
-              else None))
-          (cfg_calls_list g);;
-
-let rec routed_extra _A
-  g s seed_key gk0 route ctx v =
+let rec routed_extra _C
+  seed_key gk0 route ctx v =
     (match v with Statement _ -> []
       | FunctionEntry _ ->
         [seqcomp_tree (QueryG (seed_key v ctx, (fun a -> Answer a)))
            (fun seed_state ->
              Answer
                (DG (globs seed_state,
-                     bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
-      | FunctionResult _ -> []) @
-      map (fun (w, (ca, _)) ->
-            (let CallEdge (_, fs, asa) = ca in
-              seqcomp_tree (QueryL ((v, ctx), (fun a -> Answer a)))
-                (fun entry_state ->
-                  seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
-                    (fun globals_state ->
-                      (let entry = locals entry_state in
-                       let globals = globs globals_state in
-                        seqcomp_tree
-                          (Side (gk0, DG
-(bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-  fst (dgs_enter s fs asa entry globals)),
-                                  Answer
-                                    (DG (bot
-   _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-  bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
-                          (fun _ ->
-                            seqcomp_tree
-                              (Side (seed_key w (route v ctx entry ca),
-                                      DG
-(bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-  snd (dgs_enter s fs asa entry globals)),
-                                      Answer
-(DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-      bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))
-                              (fun _ ->
-                                Answer
-                                  (DG (bot
- _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))))))
-        (call_successor_list g v);;
+                     bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
+      | FunctionResult _ -> []);;
 
 let rec sign_less_true_of_inv
   a b = equal_signa (fst (inv_less_sign false a b)) bot_signa ||
@@ -3452,12 +3433,11 @@ let rec entry_state_eqs
       (routed_cmb
         (bounded_semilattice_sup_bot_resolved_st_q
           bounded_semilattice_sup_bot_ivl)
-        (ectx_spec gs) Global)
+        (ectx_spec gs) Global (fun a b -> Seed (a, b)))
       (routed_extra
         (bounded_semilattice_sup_bot_resolved_st_q
           bounded_semilattice_sup_bot_ivl)
-        (compile_prog pi ps mnm main) (ectx_spec gs) (fun a b -> Seed (a, b))
-        Global)
+        (fun a b -> Seed (a, b)) Global)
       (compile_prog pi ps mnm main) (ectx_spec gs) (bot_resolved_st_qa bot_ivl)
       cinit_ivl_st (restrict_global_resolved_q bot_ivl cinit_ivl_st);;
 

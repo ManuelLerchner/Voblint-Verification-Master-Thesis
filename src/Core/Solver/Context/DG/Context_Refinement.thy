@@ -57,6 +57,32 @@ lemma sides_of_rhs_seed_sides:
      = foldr (\<lambda>g m. m(Inr g := m (Inr g) \<squnion> s (Inr g))) gs (sides_of_rhs t sigma)"
   by (induction gs) (simp_all add: Let_def)
 
+text \<open>Every key on the seed list is dominated by the published side map, regardless of
+  which other keys precede or follow it in the list.\<close>
+lemma sides_of_rhs_seed_sides_mem:
+  fixes t :: "('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree"
+  assumes "g \<in> set gs"
+  shows "s (Inr g) \<le> sides_of_rhs (seed_sides gs s t) sigma (Inr g)"
+  using assms
+proof (induction gs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons g' gs)
+  show ?case
+  proof (cases "g' = g")
+    case True
+    then show ?thesis by (simp add: Let_def)
+  next
+    case False
+    with Cons.prems have mem: "g \<in> set gs" by simp
+    have le: "sides_of_rhs (seed_sides gs s t) sigma (Inr g)
+                \<le> sides_of_rhs (seed_sides (g' # gs) s t) sigma (Inr g)"
+      by (simp add: Let_def fun_upd_def)
+    from order_trans[OF Cons.IH[OF mem] le] show ?thesis .
+  qed
+qed
+
 definition seed_rhs ::
   "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'g list \<Rightarrow> 'x
    \<Rightarrow> ('x, 'g, 'd) eqsT"
@@ -99,13 +125,21 @@ text \<open>
   solve's own stable set for domination to hold beyond \<open>vars\<close>.
 \<close>
 
+text \<open>The third conclusion needs only @{term x0}'s own membership (always true of
+  @{const part_post_solution}'s start unknown) and @{thm [source] sides_of_rhs_seed_sides_mem}:
+  the seed list is published exactly once, at @{term x0}'s own equation, so every key on it is
+  dominated there regardless of whether @{term x0} is itself a genuine merge point for any
+  particular key.\<close>
 theorem post_solution_of_seeded:
   fixes T :: "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT"
     and vars :: "'x set"
   assumes pp: "part_post_solution (seed_rhs T s gseeds x0) x0 sigma vars"
   shows "part_post_solution T x0 sigma vars"
     and "\<forall>u \<in> vars. s (Inl u) \<le> sigma (Inl u)"
+    and "\<forall>g \<in> set gseeds. s (Inr g) \<le> sigma (Inr g)"
 proof -
+  have x0_vars: "x0 \<in> vars"
+    using pp unfolding part_post_solution_iff_se_constraint_holds by blast
   have closed: "\<forall>u \<in> vars. dep\<^sub>L T sigma u \<subseteq> vars"
     using pp unfolding dep\<^sub>L_def by (simp add: dep_seed_rhs)
   have seed_and_rhs: "\<forall>u \<in> vars. eq T u sigma \<le> sigma (Inl u) \<and> s (Inl u) \<le> sigma (Inl u)"
@@ -118,10 +152,32 @@ proof -
     with sides_of_rhs_seed_rhs_ge[of T u sigma s gseeds x0] show
       "sides_of_rhs (T u) sigma \<le> sigma" by (rule order_trans)
   qed
+  have x0_side_le: "sides_of_rhs (seed_rhs T s gseeds x0 x0) sigma \<le> sigma"
+    using pp x0_vars by simp
+  have global_le: "\<forall>g \<in> set gseeds. s (Inr g) \<le> sigma (Inr g)"
+  proof
+    fix g assume mem: "g \<in> set gseeds"
+    have eq_form: "sides_of_rhs (seed_rhs T s gseeds x0 x0) sigma (Inr g)
+          = sides_of_rhs (T x0) sigma (Inr g)
+            \<squnion> sides_of_rhs (seed_sides gseeds s (Answer (traverse_rhs (T x0) sigma \<squnion> s (Inl x0))))
+                sigma (Inr g)"
+      unfolding seed_rhs_def by simp
+    have mem_le: "s (Inr g)
+          \<le> sides_of_rhs (seed_sides gseeds s (Answer (traverse_rhs (T x0) sigma \<squnion> s (Inl x0))))
+              sigma (Inr g)"
+      by (rule sides_of_rhs_seed_sides_mem[OF mem])
+    have "s (Inr g) \<le> sides_of_rhs (seed_rhs T s gseeds x0 x0) sigma (Inr g)"
+      unfolding eq_form by (rule order_trans[OF mem_le sup_ge2])
+    also have "\<dots> \<le> sigma (Inr g)"
+      using x0_side_le by (simp add: le_fun_def)
+    finally show "s (Inr g) \<le> sigma (Inr g)" .
+  qed
   show "part_post_solution T x0 sigma vars"
     using pp closed seed_and_rhs side_le by auto
   show "\<forall>u \<in> vars. s (Inl u) \<le> sigma (Inl u)"
     using seed_and_rhs by auto
+  show "\<forall>g \<in> set gseeds. s (Inr g) \<le> sigma (Inr g)"
+    using global_le by auto
 qed
 
 end
