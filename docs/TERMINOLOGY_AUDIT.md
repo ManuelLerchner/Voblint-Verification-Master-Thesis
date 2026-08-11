@@ -28,11 +28,11 @@ conceivable, only that no rename earns its churn today.
 | Combined unknown space | `V` (paper's total unknown space) | not literal (`FromSpec` splits local/global internally) | unnamed `pp * 'c + 'g` sum, written out at each use site | No rename; a `type_synonym` for the sum would aid readability but is an addition, not a correction -- left for a future pass. Do **not** call this synonym `V`: see the `Spec.V` row below, a different thing entirely |
 | Analysis-defined global constraint-variable namespace | -- | `Spec.V` (global constraint-variable identifiers, wrapped into `GVar` alongside framework bookkeeping) | **Already modeled, previously undocumented as such**: the per-instance global-key datatype (`gk`/`gk_1`/`gk_2`/`gk_cs`, e.g. `datatype gk = Global \| Seed (seed_pp: pp) (seed_ivl: "ivl list")` in `Interval_Exec_Ctx_Sound.thy`) instantiates the `'k` type parameter fixed at `DG_Ctx_Activation.thy:21` (`fixes g :: cfg and gk0 :: 'k`) and used throughout that locale as `pp * 'c + 'k` -- `'k` is the key namespace, kept syntactically distinct from `'a`/`'g` (the value domain the keys index into) | Document only -- add this row so `Spec.V` (a global constraint-variable namespace) is never confused with the paper's `V` (the total unknown space) above; they are different things that happen to share one letter in two different sources |
 | Initial context | `c0` | `startcontext` | was `seedc`, then `startc`; **renamed to `startcontext`** this pass | Done -- exact Goblint name, now that a second pass established the policy of using Goblint's literal identifier whenever the semantics coincide exactly (`startc` was a correct interim step, not a wrong one; renaming twice in one day is the cost of setting the policy mid-audit, not of either rename being mistaken). 15 files |
-| Context derivation (part of `enter#`) | context-producing part of `enter#`; Goblint's `context: D.t -> C.t` consumes an **abstract** state | `Spec.context man f callee_state`, called on the **post-enter callee state** | `route :: pp => 'c => 'a abs_state => call_action => 'c` (locale-fixed parameter of `routed_context`, `Routed_Context.thy`, generic over the abstract value type) is the structural match -- same abstract-state-consuming shape as Goblint's `context`. `enterc :: pp => 'c => store => 'c` consumes a **concrete** `store`; it is the proof-side semantic ground truth every `route` instance is proved to agree with on real call edges (`route_enterc_agree`, a locale assumption/per-instance obligation, not a blanket theorem) -- the same concrete/abstract split as `call_enter`/`tf_enter` below | Done -- gave `route` inline mixfix notation `context#` on its `fixes` declaration (`Routed_Context.thy`); locale-scoped, so it renders in the `routed_context` locale and its interpretations, not globally. Left `enterc` unnotated (concrete, matches `call_enter` staying unnotated). **Correction to an earlier version of this row**: initially notated `enterc` as `context#` on the reasoning that it's "the fixed semantic ground truth"; re-checked against Goblint's actual `context: D.t -> C.t` signature and reversed -- ground truth for a soundness proof and structural match to Goblint's abstract-state-consuming operation are two different criteria, and the second is what `#` should track, consistent with `enter#` below |
+| Context derivation (part of `enter#`) | context-producing part of `enter#`; Goblint's `context: D.t -> C.t` consumes an **abstract** state | `Spec.context man f callee_state`, called on the **post-enter callee state** | `route :: pp => 'c => 'a abs_state => call_action => 'c` (locale-fixed parameter of `routed_context`, `Routed_Context.thy`, generic over the abstract value type) is the structural match -- same abstract-state-consuming shape as Goblint's `context`. `enterc :: pp => 'c => store => 'c` consumes a **concrete** `store`; it is the proof-side semantic ground truth every `route` instance is proved to agree with on real call edges (`route_enterc_agree`, a locale assumption/per-instance obligation, not a blanket theorem) -- the same concrete/abstract split as `call_enter`/`tf_enter` below | Done, but qualified (see below) -- gave `route` inline mixfix notation `context#` on its `fixes` declaration (`Routed_Context.thy`); locale-scoped, so it renders in the `routed_context` locale and its interpretations, not globally. Left `enterc` unnotated (concrete, matches `call_enter` staying unnotated). **Correction to an earlier version of this row**: initially notated `enterc` as `context#` on the reasoning that it's "the fixed semantic ground truth"; re-checked against Goblint's actual `context: D.t -> C.t` signature and reversed -- ground truth for a soundness proof and structural match to Goblint's abstract-state-consuming operation are two different criteria, and the second is what `#` should track, consistent with `enter#` below. **Further qualification (2026-08-11, issue #114):** an attempted follow-up cutover to make `route` drop `call_action` and consume an already-entered state (closer still to Goblint's `context: entered D -> C`) found that shape is hard-coded three layers into the generic D/G equation-generator protocol (`side_cfg_T_eff_keyed_seed_dg`), not local to this locale -- see `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md` and issue #114 for the abort and the follow-on generator-design questions (G4-G9). So: `context#` is notation for Voblint's *generator-level* realization of context selection, whose signature is currently stronger than Goblint's `Spec.context` because the generic generator interface requires it to reconstruct the entered state itself rather than receive one. The interface correspondence to Goblint is not yet exact, only the mathematical result; do not read this row as claiming full interface alignment |
 | Callee entry | `enter#` | `enter` | `EA_Enter`, `edge_step` (`bind_formals` over `enter_state`) -- concrete; `tf_enter` (`domain_transfer` record field, `Constraint_System.thy`) -- abstract, proved sound via `tf_sound_enter_for`/`tf_sound_enter_forD`; `call_enter` (`CFG_Def.thy`) -- concrete ground truth every soundness statement anchors to; `dgs_enter` (`dg_spec` record field, `DG_Framework.thy`) -- D/G-layer field that does **not** universally reduce to `tf_enter` (`dgs_enter_rel` for relational domains is a real counterexample, not naming drift) | Done -- gave `tf_enter` inline mixfix notation `enter#` on its record-field declaration; migrated non-defining, non-antiquotation use sites (~20 files). Did not notate `call_enter` (concrete) or `dgs_enter` (same reasoning that already kept `dgs_combine_env`/`dgs_combine_assign` unnotated: a D/G-layer field is not provably equal to the flat layer's op for every instance) |
 | Return combination | `combine#` | `combine_env` then `combine_assign` | Five layers, each a legitimate specialization, not duplication: concrete `combine_env`/`combine_assign` (CFG layer, `store`) compose into `combine_collect`; abstract `combine_env_abs`/`combine_assign_abs` compose into `combine_collect_abs` (the fixed/default whole-combine, `Constraint_System.thy:550`, soundness-paired directly with `combine_collect` via `combine_collect_sound`); `tf_combine_collect_abs` further generalizes `combine_collect_abs` to an arbitrary domain-supplied `tf_combine`, proved to specialize back to it (`tf_combine_collect_abs_combine_env_abs`); D/G-layer `dgs_combine_env`/`dgs_combine_assign` compose into `dgs_combine`, wrapped as a strategy-tree by `dg_spec_combine_tree`; the routed/context-sensitive equation-generator layer has its own `routed_cmb`, additionally threaded through `route` | Done -- renamed `combine_states`/`combine_abs` to `combine_env`/`combine_env_abs`; both plus `combine_assign_abs` carry mixfix notation (`combine_env#`/`combine_assign#`). **Extended this pass**: `combine_collect_abs` -- the actual single operation matching the paper's composed `combine#`, not `combine_collect`/`dgs_combine`/`routed_cmb`, all three of which stay unnotated for the same reasons `call_enter`/`dgs_enter` did (concrete, D/G-specific-with-no-universal-reduction, and generator-layer-implementation respectively) -- now carries notation `combine#` too, with non-defining use sites migrated (~10 files). `tf_combine_collect_abs`, `dgs_combine`, `dg_spec_combine_tree`, and `routed_cmb` were audited and kept as-is: each is a distinct, correctly-scoped specialization at its own layer, not stale duplication or a naming collision (checked against source, not assumed from the names alone) |
 | Concrete-to-abstract unknown description | `beta` | implicit in framework routing (no named constant) | `ctx_key` (inductive relation: `cfg_node => 'c => store => 'c => bool` (`admiss`) lifted over a trace to `ctx_key admiss startc t c`) | Keep, with a correction to the issue's framing: `ctx_key` is the *relational* generalization of the paper's describing function `beta`, not `beta` itself -- `beta` is a function, `ctx_key`/`admiss` allow multiple admissible target contexts per trace position (needed so an instance can pick a context nondeterministically and let the proof quantify over "some admissible choice"). The exact functional case is `key` (`CFG_Local_Trace.thy`), which is what actually plays `beta`'s role one-for-one. Document this split in the glossary rather than renaming either |
-| Abstract solution (fixpoint reader) | `eta#` / `sigma` | solver solution | `sigma` (`TD_Side_Tree.thy`, raw `dg_state` reader) and `sg` (`Activation_Backbone.thy`, `Activation_Local_Sound.thy`, `DG_Ctx_Activation.thy`; concretization-facing reader satisfying `ENTRY_G`/`EDGE`/`CALL`/`COMB`) | Keep, both -- **checked for collision, not a naming duplicate**: `DG_Ctx_Activation.thy:28,30` fixes *both* `sigma` and `sg` in the same locale (`sg_cov` derives `sg` from `sigma` via `combine_abs`/`gamma_unit`). They are genuinely different objects at different abstraction layers; unifying the names would make them indistinguishable where the proof needs both. An earlier scan of this audit proposed merging them -- checked against source and rejected |
+| Abstract solution (fixpoint reader) | `eta#` / `sigma` | solver solution | `sigma` (`TD_Side_Tree.thy`, raw `dg_state` reader) and `sg` (`Activation_Backbone.thy`, `Activation_Local_Sound.thy`, `DG_Ctx_Activation.thy`; concretization-facing reader satisfying `ENTRY_G`/`EDGE`/`CALL`/`COMB`) | Keep, both -- **checked for collision, not a naming duplicate**: `DG_Ctx_Activation.thy:28,30` fixes *both* `sigma` and `sg` in the same locale (`sg_cov` derives `sg` from `sigma` via `combine_env_abs`). They are genuinely different objects at different abstraction layers; unifying the names would make them indistinguishable where the proof needs both. An earlier scan of this audit proposed merging them -- checked against source and rejected |
 | Concretization | `gamma` | domain-specific | `gamma_state`, `gamma_unit`, `gamma_join`, `ltr_gamma`, `acc` | Keep -- source-checked "done"; `gamma_unit`/`gamma_join` are the two proved D/G reconstruction targets, closed 2026-08-10 per the register |
 | Context projection | `pi` | analysis-specific filtering inside `context` | No standalone constant -- the old `context_domain` locale's `ctx_sel`/`prep` two-stage split (`route = ctx_sel . prep`) was removed with `Context_Domain.thy` (AD-44); `route` now does the whole job in one step per instance | No action -- nothing to rename, the projection is inlined per-instance rather than factored out generically. Worth a note for a future generic-`route` factoring, not a terminology fix |
 | Call strings | call strings, `k`-bounded | context lifter (framework-level, analysis-agnostic) | Per-instance `CallString` examples (`Example_*_DG_CallString*`), `route_cs`, `enterc_cs` | Keep -- these are example instances of the context mechanism above, not a separate abstraction requiring its own vocabulary yet |
@@ -107,6 +107,19 @@ rest of the session's dependents still parse.
   `context` where the "Deferred" section below explains why no single target
   exists yet to attach notation to.
 
+**Exhaustive `_abs`-suffix sweep (2026-08-11):** grepped every top-level
+`definition`/`fun _abs` in `src/` for further `#`-notation candidates beyond
+the five already notated. Found: `bind_formals_abs`
+(`Constraint_System.thy`) and `tf_combine_collect_abs` are implementation
+detail one layer below a named `Spec`/paper operation (Goblint's `enter` has
+no separately-named "bind formals" step; `tf_combine_collect_abs` already
+audited above as a distinct specialization) -- neither gets notation. The
+remaining `_abs` hits (`entered_abs`, `route_abs`, `*_sigma_abs`,
+`*_s0d_abs`, `*_s0g_abs`) are per-example instantiation-local constants
+under `src/Examples/` and `src/Formalization/Pipeline/`, not generic
+framework operations -- notation is reserved for the latter. No further
+candidates found.
+
 ## Deferred: canonical abstract-operation layer
 
 A larger proposal surfaced during this pass: introduce one canonical abstract
@@ -131,24 +144,40 @@ Not attempted this pass, and not a rename in the first place:
   constructs `Inl (pp, c)` / `Inr g` -- an order of magnitude larger and
   riskier than any rename in this pass, and not a text substitution: it
   changes a type, so every affected proof needs re-checking, not just
-  re-spelling.
+  re-spelling. `DG_Ctx_Activation.thy`'s `fixes` clause -- where any such
+  synonym would have to land -- is also the exact locale-parameter-ordering
+  trap the aborted `route#` cutover hit (issue #114): an explicit type
+  annotation there reorders positional `interpretation` arguments unless the
+  parameter's original bare-mixfix position is preserved. A future attempt
+  should budget for that hazard specifically, not just the type change.
 
 This belongs as its own scoped decision (restate goal, compare with keeping
 the sum type, get an explicit go) rather than folding it into a terminology
 audit. Flagging it here so it isn't lost, not implementing it.
 
+**Superseded by issue #114 (2026-08-11).** The generator-level half of this
+proposal (one canonical `context`/`enter` operation) is now #114's precise
+scope (subproblems A/B, breakdown G4-G9), designed on paper before any code
+changes. This section stays as the terminology-audit record of where the
+idea originated; #114 is where it gets decided and, if accepted, implemented.
+
 ## Open follow-ups (not applied this pass)
 
 - The canonical abstract-operation layer above, if the project decides it's
   worth the risk.
-- A `type_synonym` for the combined unknown space `pp * 'c + 'g` (Goblint's
-  implicit `V`) would let call sites stop re-writing the sum type, but this
-  is a readability addition, not a rename -- deferred to keep this pass to
-  terminology corrections only.
-- `ctx_key` vs. `key` vs. `beta`: worth one `docs/GLOSSARY.md` entry
-  clarifying the relation/function split once a maintainer confirms the
-  characterization above; not added here to keep this document the audit
-  record rather than a second copy of the glossary.
+- **Correction (2026-08-11):** the combined unknown space `pp * 'c + 'g` is
+  *not* Goblint's `V` -- re-checked against `M1_CALLSTRING_CONTEXT_MIGRATION.md`'s
+  source-checked `GVar = GVarF (S.V)` citation, `V` is only the global *key*
+  half (`'g` here, deliberately renamed `'k` at the `dg_ctx_activation` locale
+  boundary so it doesn't collide with `DG_Framework.thy`'s `dg_state`, whose
+  own `'g` names the global *value* type). A `type_synonym` for the combined
+  space would still be a readability win and remains deferred as a rename
+  (not attempted this pass), but any future version must document it as
+  Goblint's `LVar.t + GVar.t`, built from `C` and `V`, not as `V` itself. See
+  `docs/GLOSSARY.md`'s "Correspondence to Goblint's `Spec` interface".
+- `ctx_key` vs. `key` vs. `beta`: added to `docs/GLOSSARY.md`
+  ("Activation-local semantics") -- the relation/function split characterized
+  above is now the glossary's canonical statement, not just this audit's.
 - The full repo-wide extension issue #110 asks for (locale/lemma names,
   CLI-facing terminology, code-generation API, comments) is unaudited by
   this pass.

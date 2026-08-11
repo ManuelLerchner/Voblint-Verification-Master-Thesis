@@ -47,6 +47,8 @@ layer without embedding line numbers that drift.
 | `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/CFG/Collecting/LTR_Collect.thy` |
 | `activation_collect` | Reachable sink stores indexed by activation context (the key-grouped view of `ltr_collect`). | `src/CFG/Collecting/CFG_Local_Trace.thy` |
 | `ltr_gamma` | Concretization interface relating abstract states to local-trace collecting semantics. | `src/CFG/Collecting/LTR_Abstract.thy` |
+| `key` | Functional describing-function reading a trace's admissible context, one context per position -- the paper's `beta` one-for-one. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
+| `admiss` / `ctx_key` | `admiss` is a locale-fixed relation admitting possibly several target contexts per step; `ctx_key` lifts it over a trace. The *relational* generalization of `beta`, not `beta` itself -- needed where an instance may pick a context nondeterministically. `admiss_exact` is the functional (single-admissible-target) instance. | `src/CFG/Collecting/CFG_Local_Trace.thy` |
 
 ## Abstract interpretation
 
@@ -70,6 +72,72 @@ layer without embedding line numbers that drift.
 | `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
 | `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy` |
 | `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
+
+### Correspondence to Goblint's `Spec` interface
+
+Goblint's `Spec` module signature (`analyses.ml`) fixes four type components:
+`D` (local abstract value), `G` (global abstract value), `C` (context), and
+`V` (the analysis's own global-variable-name type, indexing `G`). The table
+below states the current Voblint type or locale parameter realizing each,
+and where the correspondence is inexact.
+
+| `Spec` component | Voblint realization | Note |
+| --- | --- | --- |
+| `D` | `'a abs_state` (`dg_state.locals`) | Flat `vname => 'a` today; Goblint's `D.t` can be any lattice. |
+| `G` | `'a abs_state` (`dg_state.globs`) | Same flat type as `D` in every current instance -- Goblint's `G.t` is a separate, analysis-chosen lattice. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
+| `C` | `'c` (locale parameter of `dg_ctx_activation`/`routed_context`, `DG_Ctx_Activation.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
+| `V` | `'k` (locale parameter of `dg_ctx_activation`, `DG_Ctx_Activation.thy`) | The type of global-variable identities, matching Goblint's `S.V` (see `M1_CALLSTRING_CONTEXT_MIGRATION.md`'s `GVar = GVarF (S.V)` citation). Not the combined unknown space -- see below. |
+
+**The combined unknown space is not `V`.** The vendored solver's equation type
+(`vendor/td-verification/Basics_side.thy`) is generic over `'x` (local key)
+and `'g` (global key): `('x, 'g, 'd) eqsT = 'x => ('x, 'g, 'd) strategy_tree`,
+with unknowns typed `'x + 'g`. `DG_Ctx_Activation.thy` instantiates
+`'x = pp \<times> 'c` and, deliberately, `'g = 'k` rather than reusing the bare
+letter `'g` -- `DG_Framework.thy`'s `dg_state` datatype already fixes `'g` as
+the global *value* type (the `globs` field, i.e. Goblint's `G.t`), one layer
+up. Reusing `'g` for the global *key* at the activation layer would silently
+overload one letter for two different `Spec` components (`G` and `V`) across
+two adjacent files. `'k` names the vendor solver's global-key slot without
+that collision; the unknown space `pp \<times> 'c + 'k` corresponds to Goblint's
+combined local/global unknown (`LVar.t + GVar.t` in `constraints.ml`'s
+terms), built from `C` and `V` respectively, not to `V` alone.
+
+### `#`-notated abstract operations
+
+Inline mixfix notation naming the abstract-operation-layer counterpart of a
+paper/Goblint concept, applied to the stable Isabelle identifier that already
+carries the soundness proof -- notation does not rename the identifier.
+
+| Notation | Identifier | Layer |
+| --- | --- | --- |
+| `enter#` | `tf_enter` (`domain_transfer` field) | Flat/abstract, `Constraint_System.thy` |
+| `context#` | `route` (locale parameter of `routed_context`) | Generator, `Routed_Context.thy` |
+| `combine_env#` | `combine_env_abs` | Flat/abstract, `Constraint_System.thy` |
+| `combine_assign#` | `combine_assign_abs` | Flat/abstract, `Constraint_System.thy` |
+| `combine#` | `combine_collect_abs` (`combine_env#` then `combine_assign#`) | Flat/abstract, `Constraint_System.thy` |
+
+`route`'s semantic ground truth is `enterc` (`Routed_Context.thy`), which
+consumes a **concrete** `store` rather than an abstract state and is left
+unnotated, matching `call_enter`/`dgs_enter` staying unnotated below
+`enter#`. `route_enterc_agree` is the per-instance locale obligation proving
+the two agree on real call edges, not a blanket theorem. `context#`'s
+signature is currently stronger than Goblint's `Spec.context` -- see
+`docs/GOBLINT_ALIGNMENT_REGISTER.md` and issue #114.
+
+### `sigma` / `sg`
+
+Both fixed in `dg_ctx_activation` (`DG_Ctx_Activation.thy`) and genuinely
+different objects, not naming duplication:
+
+| Term | Meaning |
+| --- | --- |
+| `sigma` | Raw `dg_state` reader over the unknown space `pp \<times> 'c + 'k` -- the vendored solver's own solution shape (`sigma :: pp \<times> 'c + 'k => (D, G) dg_state`). |
+| `sg` | Concretization-facing reader over the same unknowns, one flat `'a abs_state` per point (`sg :: pp \<times> 'c + 'k => 'a abs_state`), satisfying `ENTRY_G`/`EDGE`/`CALL`/`COMB`. |
+
+`sg_cov` derives `sg` from `sigma` via `combine_env_abs` (`sg` at a covered
+point is `sigma`'s locals and globals combined through the local/global
+classifier `gs`); unifying the two names would make a proof step that needs
+both indistinguishable.
 
 ## Strategy-tree equation combinators
 
