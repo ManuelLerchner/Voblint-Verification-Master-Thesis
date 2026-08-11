@@ -112,8 +112,25 @@ lemma sign_nest_1_terminates:
 
 subsection \<open>Coverage\<close>
 
+text \<open>The full solved node set, computed once; every membership fact below is a
+  \<open>simp\<close> lookup into this literal set instead of a separate \<open>eval\<close> re-derivation.\<close>
+
+definition sign_nest_1_nodes :: "(pp \<times> cfg_node list) set" where
+  "sign_nest_1_nodes = {
+     (FunctionEntry (STR ''main''), []), (Statement 5, []),
+     (FunctionEntry (STR ''f''), [Statement 5]), (Statement 2, [Statement 5]),
+     (FunctionEntry (STR ''g''), [Statement 2]), (Statement 0, [Statement 2]),
+     (FunctionResult (STR ''g''), [Statement 2]), (Statement 3, [Statement 5]),
+     (FunctionResult (STR ''f''), [Statement 5]), (Statement 6, []),
+     (FunctionEntry (STR ''f''), [Statement 6]), (Statement 2, [Statement 6]),
+     (Statement 3, [Statement 6]), (FunctionResult (STR ''f''), [Statement 6]),
+     (Statement 7, []), (FunctionResult (STR ''main''), [])}"
+
+lemma sign_nest_1_nodes_eq: "fst sign_nest_1_sol = sign_nest_1_nodes"
+  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def sign_nest_1_nodes_def by eval
+
 lemma entry_covered_1: "(cfg_entry sign_nest_cfg, []) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def sign_nest_entry by eval
+  unfolding sign_nest_entry sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 
 lemma sign_nest_fwd_closed_all_1:
   "\<forall>(u, c)\<in>fst sign_nest_1_sol. \<forall>(u', a, v)\<in>intra sign_nest_cfg.
@@ -140,27 +157,20 @@ lemma enter_callers_g_1:
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 lemma callee_covered_fpos_1: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 lemma callee_covered_fneg_1: "(FunctionEntry (STR ''f''), [Statement 6]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 lemma callee_covered_g_1: "(FunctionEntry (STR ''g''), [Statement 2]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 
 lemma covered_ret6_1: "(Statement 6, []) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 lemma covered_ret7_1: "(Statement 7, []) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 lemma covered_ret3_fpos_1: "(Statement 3, [Statement 5]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 lemma covered_ret3_fneg_1: "(Statement 3, [Statement 6]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-
-lemma callee_exit_fpos_1: "(FunctionResult (STR ''f''), [Statement 5]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-lemma callee_exit_fneg_1: "(FunctionResult (STR ''f''), [Statement 6]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
-lemma callee_exit_g_1: "(FunctionResult (STR ''g''), [Statement 2]) \<in> fst sign_nest_1_sol"
-  unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
+  unfolding sign_nest_1_nodes_eq sign_nest_1_nodes_def by simp
 
 section \<open>Abstract transport of the routed solution\<close>
 
