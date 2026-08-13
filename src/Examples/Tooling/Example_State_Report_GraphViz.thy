@@ -218,26 +218,29 @@ text \<open>
 \<close>
 
 definition entry_state_env_at ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> abstract_value abs_state" where
-  "entry_state_env_at gs Pi ps mnm main v x =
-     (let sol = entry_state_sol gs Pi ps mnm main;
-          sg = entry_state_sg_exec gs Pi ps mnm main;
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> cfg_node \<Rightarrow> abstract_value abs_state" where
+  "entry_state_env_at gs is_bot_pred Pi ps mnm main v x =
+     (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main;
+          sg = entry_state_sg_exec gs is_bot_pred Pi ps mnm main;
           ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (fst sol)
       in IntervalValue
-           (if ctxs = {} then sg (Inl (v, [])) x
-            else Sup_fin ((\<lambda>ctx. sg (Inl (v, ctx)) x) ` ctxs)))"
+           (if ctxs = {} then case_lifted bot id (sg (Inl (v, []))) x
+            else Sup_fin ((\<lambda>ctx. case_lifted bot id (sg (Inl (v, ctx))) x) ` ctxs)))"
 
 definition entry_state_full_state_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_dot_auto p =
      raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (full_state_node_annotation (program_vars p)
-          (entry_state_env_at (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
+          (entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
+             (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
 
 definition entry_state_full_state_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_graph_snapshot_auto p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (full_state_node_annotation (program_vars p)
-          (entry_state_env_at (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
+          (entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
+             (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
 
 text \<open>
   \<open>entry_state_report_for_annotation\<close> is \<open>entry_state_check_report_prog\<close>
@@ -252,7 +255,8 @@ definition entry_state_report_for_annotation ::
     "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list" where
   "entry_state_report_for_annotation p =
      map (\<lambda>(v, cnd, res). (v, cnd, res,
-            entry_state_env_at (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p) v))
+            entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
+              (prog_table p) (prog_procs p) prog_main_name (prog_main p) v))
        (entry_state_check_report_prog prog_main_name p)"
 
 definition entry_state_report_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
