@@ -68,15 +68,82 @@ NONTERMINAL = {
 
 # IDENT/INT map to Isabelle's own built-in nonterminals, not a generated
 # terminal (see module docstring).
-BUILTIN_TERMINAL = {"IDENT": "id", "INT": "num_const"}
+BUILTIN_TERMINAL = {"INT": "num_const"}
+
+
+def ident_role(rhs: list, i: int) -> str:
+    """'callee' for an IDENT immediately followed by LPAREN (a call's
+    callee name -- VIMP has no other IDENT-typed procedure-name occurrence
+    in a generated production; function_decl's own name lives in
+    VIMP_Notation.thy's hand-written territory), 'variable' for every other
+    IDENT occurrence (an expression use, an assignment/random/callret
+    target, or a formals/ids declaration list item). Same signal
+    stmt_id_arg_priority already uses for a different purpose (argument
+    priority); kept as one shared classifier so the two can't drift apart.
+    Every IDENT position gets `id_position` regardless of role (see
+    isabelle_type) -- this classifier now decides only which markup
+    category, if any, dest_id_position reports at that position (see
+    IDENT_MARKUP), not which Isabelle nonterminal it parses as. Keeping
+    position-carrying provenance uniform across both roles means a later
+    phase can start reporting procedure/entity markup for callee
+    occurrences without another grammar migration -- provenance and
+    markup classification are separate concerns; only the latter is
+    role-dependent."""
+    followed_by = rhs[i + 1] if i + 1 < len(rhs) else None
+    return "callee" if followed_by == "LPAREN" else "variable"
+
+
+# PRESENTATION POLICY, not a semantic classification: ident_role -> the
+# Markup.T option expression dest_id_position reports at that position.
+# Markup.free/Markup.bound/Markup.skolem are real Isabelle markup
+# categories with their own established meaning in Isabelle's own term
+# presentation (a genuine free variable, a quantifier-bound variable, a
+# Skolem constant); VIMP repurposes them here purely for their distinct,
+# already-styled colors in jEdit/browser_info, not because a VIMP
+# procedure name IS a Skolem constant or a declared global IS a bound
+# variable. Treat this table as freely swappable -- e.g. for real
+# procedure entity definition/reference markup once a name registry
+# exists -- not as a claim about what these categories mean.
+#
+# 'variable' occurrences report Markup.free.
+# 'callee' occurrences report Markup.skolem -- a stopgap, not a considered
+# semantic classification: a bare Markup.entity report (tried first) turned
+# out to render as plain text, since jEdit/browser_info only style the
+# entity_def/entity_ref markup that Name_Space.markup's serial-linked
+# registration produces, not a bare kind+name tag. Markup.skolem is the
+# same kind of simple, registry-free constant as Markup.free, just with its
+# own distinct color, chosen only to make callee occurrences visibly
+# different from variable occurrences until a real procedure-name registry
+# funds proper entity definition/reference markup (navigation, not just
+# color) -- both roles already parse via id_position, so that upgrade needs
+# no further grammar change, only a different report here.
+#
+# 'global' is a fourth, narrower category: the `ids` list production
+# (globals_decl's `global x, y;`) is a variable-declaration list just like
+# `formals`, but reported separately (Markup.bound, also a stopgap color
+# choice) so a declared-global name reads differently from an ordinary
+# local/formal occurrence at its declaration site. This does NOT extend to
+# every later USE of that name (`x := x + 1` still reports Markup.free
+# regardless of whether `x` was declared global) -- that would need each
+# variable occurrence resolved against the program's declared-global list,
+# i.e. actual name resolution across productions, not a per-production
+# markup choice; out of scope here, matching the same boundary that keeps
+# procedure def/ref out of scope above.
+IDENT_MARKUP = {"variable": "SOME Markup.free", "callee": "SOME Markup.skolem", "global": "SOME Markup.bound"}
 
 
 def isabelle_type(sym: str) -> str:
+    if sym == "IDENT":
+        return "id_position"
     if sym in BUILTIN_TERMINAL:
         return BUILTIN_TERMINAL[sym]
     if sym in NONTERMINAL:
         return NONTERMINAL[sym]
     raise ValueError(f"no Isabelle nonterminal/terminal mapping for {sym!r}")
+
+
+def is_arg_symbol(sym: str) -> bool:
+    return sym == "IDENT" or sym in BUILTIN_TERMINAL or sym in NONTERMINAL
 
 
 def literal_text(g: dict, token: str) -> str:
@@ -90,7 +157,7 @@ def literal_text(g: dict, token: str) -> str:
 def mixfix_template(g: dict, rhs: list) -> str:
     parts = []
     for sym in rhs:
-        if sym in BUILTIN_TERMINAL or sym in NONTERMINAL:
+        if is_arg_symbol(sym):
             parts.append("_")
         else:
             text = literal_text(g, sym)
@@ -126,7 +193,11 @@ TEMPLATE_OVERRIDE = {
 
 
 def arg_types(g: dict, rhs: list) -> list:
-    return [isabelle_type(sym) for sym in rhs if sym in BUILTIN_TERMINAL or sym in NONTERMINAL]
+    return [
+        isabelle_type(sym)
+        for i, sym in enumerate(rhs)
+        if is_arg_symbol(sym)
+    ]
 
 
 # -- Priority assignment -----------------------------------------------
@@ -186,10 +257,7 @@ STMT_CALLEE_ID_PRIORITY = ATOM_PRIORITY
 
 
 def stmt_id_arg_priority(rhs: list, i: int) -> int:
-    followed_by = rhs[i + 1] if i + 1 < len(rhs) else None
-    if followed_by == "LPAREN":
-        return STMT_CALLEE_ID_PRIORITY
-    return STMT_TARGET_ID_PRIORITY
+    return STMT_CALLEE_ID_PRIORITY if ident_role(rhs, i) == "callee" else STMT_TARGET_ID_PRIORITY
 
 
 def render_syntax_line(g: dict, prod: dict) -> str:
@@ -199,7 +267,7 @@ def render_syntax_line(g: dict, prod: dict) -> str:
     rhs = prod["rhs"]
     args = arg_types(g, rhs)
     template = TEMPLATE_OVERRIDE.get(prod["name"]) or mixfix_template(g, rhs)
-    arg_positions = [i for i, s in enumerate(rhs) if s in BUILTIN_TERMINAL or s in NONTERMINAL]
+    arg_positions = [i for i, s in enumerate(rhs) if is_arg_symbol(s)]
 
     # A production's own `precedence:` field (e.g. aexp_uminus's UMINUS)
     # overrides scanning its rhs tokens against the table -- required
@@ -272,7 +340,10 @@ def gen_list_syntax(prod: dict) -> list:
     proved the syntax block parses, not that it matches the existing
     argument order)."""
     result = NONTERMINAL[prod["result"]]
-    item = NONTERMINAL.get(prod.get("list_of") or prod.get("optional_list_of"), "id")
+    # Every current IDENT-item list (formals, ids) is a variable-declaration
+    # list, so the IDENT fallback is id_position, not plain id -- same
+    # variable-role treatment as any other declaration/use occurrence.
+    item = NONTERMINAL.get(prod.get("list_of") or prod.get("optional_list_of"), "id_position")
     sep = {"SEMI": ";", "COMMA": ","}[prod.get("separator", "COMMA")]
     if "optional_list_of" in prod:
         base = NONTERMINAL[prod["result"].removesuffix("_opt")]
@@ -320,8 +391,12 @@ def gen_isabelle_extra_syntax() -> list:
     return [
         '  "_aexp_zero" :: imp2_aexp ("0" 1000)',
         '  "_aexp_one" :: imp2_aexp ("1" 1000)',
-        "  \"_stmt_call0\" :: \"id => imp2_stmt\" (\"_'(')\" [1000] 61)",
-        "  \"_stmt_callret0\" :: \"id => id => imp2_stmt\" (\"_ := _'(')\" [900, 1000] 61)",
+        # Both ids are id_position now (see isabelle_type/ident_role):
+        # first is the zero-arg callret's return TARGET (variable role),
+        # second the callee (callee role) -- both carry position, only
+        # dest_id_position's markup argument differs per role.
+        "  \"_stmt_call0\" :: \"id_position => imp2_stmt\" (\"_'(')\" [1000] 61)",
+        "  \"_stmt_callret0\" :: \"id_position => id_position => imp2_stmt\" (\"_ := _'(')\" [900, 1000] 61)",
     ]
 
 
@@ -332,8 +407,8 @@ def gen_isabelle_extra_actions() -> dict:
             '(Const ("_aexp_one", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 1',
         ],
         "stmt": [
-            '(Const ("_stmt_call0", _), [Free (x0, _)]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal x0) $ K c_Nil',
-            '(Const ("_stmt_callret0", _), [Free (x0, _), Free (x2, _)]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal x0))) $ (HOLogic.mk_literal x2) $ K c_Nil',
+            f'(Const ("_stmt_call0", _), [x0]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal (dest_id_position ({IDENT_MARKUP["callee"]}) ctxt x0)) $ K c_Nil',
+            f'(Const ("_stmt_callret0", _), [x0, x2]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal (dest_id_position ({IDENT_MARKUP["variable"]}) ctxt x0)))) $ (HOLogic.mk_literal (dest_id_position ({IDENT_MARKUP["callee"]}) ctxt x2)) $ K c_Nil',
         ],
     }
 
@@ -432,16 +507,19 @@ TR_FN = {
 
 def render_pattern_and_binds(prod: dict):
     """SML pattern for one production's Const-application, plus a position
-    -> SML variable-name map for render_action_isabelle to consume. An
-    IDENT-typed position binds as a raw `Free (x, _)` (Isabelle's `id`
-    nonterminal parses to a bound Free, not a further-recursible subterm);
-    a nonterminal-typed position binds as a fresh variable meant to be
-    passed through that nonterminal's own _tr function."""
+    -> SML variable-name map for render_action_isabelle to consume. Every
+    IDENT position -- variable or callee role alike -- now parses via
+    id_position (see isabelle_type) and so binds the WHOLE raw subterm
+    unmatched (Pure wraps it in `_constrain $ Free $ <markup>`); the role
+    only decides, at the use site in render_lower_arg_isabelle, which
+    markup category dest_id_position reports there, not how this pattern
+    binds it. A nonterminal-typed position binds as a fresh variable meant
+    to be passed through that nonterminal's own _tr function."""
     binds, pats = {}, []
     for i, sym in enumerate(prod["rhs"]):
         if sym == "IDENT":
             v = f"x{i}"
-            pats.append(f"Free ({v}, _)")
+            pats.append(v)
             binds[i] = v
         elif sym in NONTERMINAL:
             v = f"a{i}"
@@ -459,13 +537,19 @@ def render_lower_arg_isabelle(prod: dict, arg: dict, binds: dict, raw_idents: bo
     (`{tuple: [...]}`'s sole use, function_decl -- its one caller is
     `special: program_structure`, hand-written code that partitions by name
     equality and needs a raw string, matching how gen_vimp_menhir.py's own
-    tuple renderer leaves OCaml identifiers unconverted too)."""
+    tuple renderer leaves OCaml identifiers unconverted too). Every IDENT
+    slot's bound name is the raw id_position subterm, not yet a string --
+    dest_id_position extracts the name and reports the role-appropriate
+    markup category (IDENT_MARKUP) at its position, or none at all for a
+    callee occurrence today, before either path uses the extracted name."""
     if "rhs" in arg:
         i = arg["rhs"]
         sym = prod["rhs"][i]
         if sym == "IDENT":
-            return binds[i] if raw_idents else f"HOLogic.mk_literal {binds[i]}"
-        return f"{TR_FN[sym]} {binds[i]}"
+            markup = IDENT_MARKUP[ident_role(prod["rhs"], i)]
+            name_expr = f"dest_id_position ({markup}) ctxt {binds[i]}"
+            return name_expr if raw_idents else f"HOLogic.mk_literal ({name_expr})"
+        return f"{TR_FN[sym]} ctxt {binds[i]}"
     if "some" in arg:
         return f"(K c_Some $ ({render_lower_arg_isabelle(prod, arg['some'], binds, raw_idents)}))"
     if "none" in arg:
@@ -483,12 +567,11 @@ def render_action_isabelle(prod: dict) -> str:
         return None
     pattern, binds = render_pattern_and_binds(prod)
     if "passthrough" in prod:
-        rhs = TR_FN[prod["result"]] and binds[prod["passthrough"]]
         # A passthrough arg is always a recursive same-type subterm (grouping
         # parens): recurse through this nonterminal's own _tr, don't just
         # rebind -- the parsed value is still a raw parse-tree Const, not a
         # HOL term, until translated.
-        rhs = f"{TR_FN[prod['result']]} {binds[prod['passthrough']]}"
+        rhs = f"{TR_FN[prod['result']]} ctxt {binds[prod['passthrough']]}"
         return f"{pattern} => {rhs}"
     lower = prod["lower"]
     if "tuple" in lower:
@@ -514,7 +597,10 @@ def gen_tr_function(g: dict, result_nt: str, extra_clauses: list = None) -> str:
     caller-supplied hand-written clauses (for that nonterminal's `special:`
     productions) spliced in first so they take priority the same way the
     hand-written original orders _imp2_uminus's nested-cancellation case
-    before the generic recursive case."""
+    before the generic recursive case. Every _tr function takes a
+    Proof.context first: dest_id_position (called by variable-role IDENT
+    slots, transitively reachable from any of these) needs one to report
+    Markup.free at the identifier's source position."""
     fn = TR_FN[result_nt]
     clauses = list(extra_clauses or [])
     for prod in g["productions"]:
@@ -525,7 +611,7 @@ def gen_tr_function(g: dict, result_nt: str, extra_clauses: list = None) -> str:
             clauses.append(arm)
     body = "\n       | ".join(clauses)
     return (
-        f"{fn} t =\n"
+        f"{fn} ctxt t =\n"
         f"      (case Term.strip_comb t of\n"
         f"         {body}\n"
         f'       | _ => raise TERM ("Vimp_Grammar_Tr: {fn}", [t]))'
@@ -553,30 +639,38 @@ def gen_list_tr(prod: dict, fn_name: str = None) -> str:
         base = prod["result"].removesuffix("_opt")
         empty_ctor = CTOR_VAL[prod["empty"]]
         return (
-            f'{fn} (Const ("_{name}_none", _)) = K {empty_ctor}\n'
-            f'  | {fn} (Const ("_{name}_some", _) $ s) = {TR_FN[base]} s\n'
-            f'  | {fn} t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
+            f'{fn} ctxt (Const ("_{name}_none", _)) = K {empty_ctor}\n'
+            f'  | {fn} ctxt (Const ("_{name}_some", _) $ s) = {TR_FN[base]} ctxt s\n'
+            f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
         )
     sep_one = f'(Const ("_{name}_one", _) $ x)'
     if "constructor" in prod:
         ctor = CTOR_VAL[prod["constructor"]]
         seq = f'(Const ("_{name}_seq", _) $ xs $ x)'
         return (
-            f"{fn} {sep_one} = {TR_FN[item]} x\n"
-            f'  | {fn} {seq} = K {ctor} $ ({fn} xs) $ ({TR_FN[item]} x)\n'
-            f'  | {fn} t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
+            f"{fn} ctxt {sep_one} = {TR_FN[item]} ctxt x\n"
+            f'  | {fn} ctxt {seq} = K {ctor} $ ({fn} ctxt xs) $ ({TR_FN[item]} ctxt x)\n'
+            f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
         )
     cons = f'(Const ("_{name}_cons", _) $ x $ rest)'
     if item == "IDENT":
+        # Item bound raw (not `Free (x, _)`): id_position wraps it in
+        # `_constrain $ Free $ <markup>`, and dest_id_position -- not this
+        # pattern -- is what extracts the name and reports its position.
+        # Both current IDENT-item lists (formals, ids/globals) are variable
+        # declarations, but `ids` reports the narrower 'global' category
+        # (see IDENT_MARKUP) so a `global x, y;` declaration reads
+        # differently from an ordinary formal parameter.
+        markup = IDENT_MARKUP["global"] if name == "ids" else IDENT_MARKUP["variable"]
         return (
-            f"{fn} (Const (\"_{name}_one\", _) $ Free (x, _)) = [x]\n"
-            f'  | {fn} (Const ("_{name}_cons", _) $ Free (x, _) $ rest) = x :: {fn} rest\n'
-            f'  | {fn} t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
+            f'{fn} ctxt (Const ("_{name}_one", _) $ x) = [dest_id_position ({markup}) ctxt x]\n'
+            f'  | {fn} ctxt (Const ("_{name}_cons", _) $ x $ rest) = dest_id_position ({markup}) ctxt x :: {fn} ctxt rest\n'
+            f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
         )
     return (
-        f"{fn} {sep_one} = K c_Cons $ ({TR_FN[item]} x) $ K c_Nil\n"
-        f'  | {fn} {cons} = K c_Cons $ ({TR_FN[item]} x) $ ({fn} rest)\n'
-        f'  | {fn} t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
+        f"{fn} ctxt {sep_one} = K c_Cons $ ({TR_FN[item]} ctxt x) $ K c_Nil\n"
+        f'  | {fn} ctxt {cons} = K c_Cons $ ({TR_FN[item]} ctxt x) $ ({fn} ctxt rest)\n'
+        f'  | {fn} _ t = raise TERM ("Vimp_Grammar_Tr: {fn}", [t])'
     )
 
 
@@ -654,6 +748,29 @@ fun read_num_const (Const ("_constify", _) $ t) = read_num_const t
 
 fun neg_num n = K c_N $ HOLogic.mk_number HOLogic.intT (~ n)"""
 
+# Every IDENT (see isabelle_type) parses via id_position, not plain id --
+# Pure wraps it as `_constrain $ Free (name, _) $ <markup>`, where
+# <markup>'s type encodes the token's source position (the same convention
+# HOL's own numeral parsing already produces, consumed above by
+# read_num_const's `_constrain` case -- but read_num_const only strips that
+# wrapper, since a numeral's own PIDE markup comes from lexer token
+# classification, not from this parse_translation). Keeping id_position
+# uniform across every IDENT -- not just variable occurrences -- means
+# every VIMP identifier's source position is available for markup, even
+# though `report_markup` (IDENT_MARKUP, chosen per ident_role at each call
+# site) currently leaves callee occurrences unreported (NONE): provenance
+# and markup classification are separate concerns, and a later phase can
+# start reporting entity/procedure-reference markup for callee occurrences
+# without another grammar migration.
+DEST_ID_POSITION = """\
+fun dest_id_position report_markup ctxt (Const ("_constrain", _) $ Free (s, _) $ m) =
+      (case (report_markup, Term_Position.decode_position m) of
+         (SOME markup, SOME (ps, _)) =>
+           (List.app (fn p => Context_Position.report ctxt (#pos p) markup) ps; s)
+       | _ => s)
+  | dest_id_position _ _ (Free (s, _)) = s
+  | dest_id_position _ _ t = raise TERM ("Vimp_Grammar_Tr: dest_id_position", [t])"""
+
 AEXP_SPECIALS = [
     '(Const ("_aexp_num", _), [n]) =>\n'
     '           K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)',
@@ -664,7 +781,7 @@ AEXP_SPECIALS = [
     '                K c_N $ HOLogic.mk_number HOLogic.intT 0\n'
     '            | (Const ("_aexp_one", _), []) => neg_num 1\n'
     '            | _ =>\n'
-    '                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr a)',
+    '                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr ctxt a)',
 ]
 
 
@@ -696,6 +813,7 @@ def gen_grammar_tr_structure(g: dict) -> str:
     return "\n\n".join([
         VAL_DECLS,
         DEST_NUM,
+        DEST_ID_POSITION,
         f"fun {aexp_body}",
         f"fun {bexp_body}",
         f"fun {actuals_body}",

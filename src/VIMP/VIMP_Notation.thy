@@ -239,8 +239,8 @@ syntax
   "_PROGKW0"    :: "imp2_funcs \<Rightarrow> imp_prog"                ("program { _ }")
   "_PROGKW"     :: "imp2_ids \<Rightarrow> imp2_funcs \<Rightarrow> imp_prog"      ("program { global _ ; _ }")
   "_funcs_nil"   :: imp2_funcs                                    ("")
-  "_funcs_cons0" :: "id \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _")
-  "_funcs_cons"  :: "id \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _")
+  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _")
+  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _")
 
 parse_translation \<open>
   let
@@ -265,12 +265,16 @@ parse_translation \<open>
        until program validation (has_return, which walks this raw tree
        directly) has inspected them: mk_body_ret translates via
        Vimp_Grammar_Tr.stmts_opt_tr only once that's done. *)
-    fun funcs_tr (Const ("_funcs_nil", _)) = []
-      | funcs_tr (Const ("_funcs_cons0", _) $ Free (f, _) $ pbody $ rest) =
-          (f, [], SOME pbody, NONE) :: funcs_tr rest
-      | funcs_tr (Const ("_funcs_cons", _) $ Free (f, _) $ formals $ pbody $ rest) =
-          (f, Vimp_Grammar_Tr.formals_of formals, SOME pbody, NONE) :: funcs_tr rest
-      | funcs_tr t = raise TERM ("VIMP_Notation: funcs_tr", [t])
+    (* The procedure name reports Markup.skolem, matching the callee color
+       a call site to this same name reports (Vimp_Grammar_Tr.stmt_tr) --
+       a declaration and its call sites read as the same category, not
+       Markup.free's variable color. *)
+    fun funcs_tr ctxt (Const ("_funcs_nil", _)) = []
+      | funcs_tr ctxt (Const ("_funcs_cons0", _) $ f $ pbody $ rest) =
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, [], SOME pbody, NONE) :: funcs_tr ctxt rest
+      | funcs_tr ctxt (Const ("_funcs_cons", _) $ f $ formals $ pbody $ rest) =
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, Vimp_Grammar_Tr.formals_of ctxt formals, SOME pbody, NONE) :: funcs_tr ctxt rest
+      | funcs_tr _ t = raise TERM ("VIMP_Notation: funcs_tr", [t])
 
     (* Explicit _stmt_return0 case: a bare Const with no argument matches
        neither the specific _stmt_return case (needs "$ _") nor the generic
@@ -304,23 +308,23 @@ parse_translation \<open>
 
     (* A trailing "return e" becomes an explicit Return command appended to the body;
        the procedure declaration carries no separate result field. *)
-    fun mk_body_ret NONE NONE = K c_SKIP
-      | mk_body_ret (SOME c) NONE = Vimp_Grammar_Tr.stmts_opt_tr c
-      | mk_body_ret NONE (SOME e) = K c_Return $ (K c_Some $ Vimp_Grammar_Tr.aexp_tr e)
-      | mk_body_ret (SOME c) (SOME e) =
-          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr c $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.aexp_tr e))
+    fun mk_body_ret ctxt NONE NONE = K c_SKIP
+      | mk_body_ret ctxt (SOME c) NONE = Vimp_Grammar_Tr.stmts_opt_tr ctxt c
+      | mk_body_ret ctxt NONE (SOME e) = K c_Return $ (K c_Some $ Vimp_Grammar_Tr.aexp_tr ctxt e)
+      | mk_body_ret ctxt (SOME c) (SOME e) =
+          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr ctxt c $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.aexp_tr ctxt e))
 
-    fun mk_proc_rep [] = K c_Nil
-      | mk_proc_rep ((p, formals, body, result) :: rest) =
+    fun mk_proc_rep ctxt [] = K c_Nil
+      | mk_proc_rep ctxt ((p, formals, body, result) :: rest) =
           K c_Cons
             $ (K c_Pair $ HOLogic.mk_literal p
-                $ ((K c_proc_decl_of $ mk_names formals) $ mk_body_ret body result))
-            $ mk_proc_rep rest
+                $ ((K c_proc_decl_of $ mk_names formals) $ mk_body_ret ctxt body result))
+            $ mk_proc_rep ctxt rest
 
     (* dummyT constructors only; type inference runs after the translation. *)
-    fun prog_tr decls funcs_t =
+    fun prog_tr ctxt decls funcs_t =
       let
-        val funcs = funcs_tr funcs_t
+        val funcs = funcs_tr ctxt funcs_t
         val _ = check_distinct "procedure" (map (fn (n, _, _, _) => n) funcs)
         val _ = check_distinct "declared global" decls
         val _ = List.app (fn (n, formals, _, _) =>
@@ -336,14 +340,14 @@ parse_translation \<open>
            | [("main", _, _, NONE)] => error "VIMP program: main must have no formals"
            | [] => error "VIMP program: missing 'void main() { ... }'"
            | _  => error "VIMP program: more than one 'void main()'")
-        val proc_rep = mk_proc_rep procs
-        val main = mk_body_ret main_ast NONE
+        val proc_rep = mk_proc_rep ctxt procs
+        val main = mk_body_ret ctxt main_ast NONE
         val decl_globals = mk_names decls
       in K c_imp_prog $ proc_rep $ main $ decl_globals end
   in
-    [("_IMP2", fn _ => fn [t] => Vimp_Grammar_Tr.stmts_opt_tr t | _ => raise Match),
-     ("_PROGKW0", fn _ => fn [fs] => prog_tr [] fs | _ => raise Match),
-     ("_PROGKW", fn _ => fn [g, fs] => prog_tr (Vimp_Grammar_Tr.names_of g) fs | _ => raise Match)]
+    [("_IMP2", fn ctxt => fn [t] => Vimp_Grammar_Tr.stmts_opt_tr ctxt t | _ => raise Match),
+     ("_PROGKW0", fn ctxt => fn [fs] => prog_tr ctxt [] fs | _ => raise Match),
+     ("_PROGKW", fn ctxt => fn [g, fs] => prog_tr ctxt (Vimp_Grammar_Tr.names_of ctxt g) fs | _ => raise Match)]
   end
 \<close>
 

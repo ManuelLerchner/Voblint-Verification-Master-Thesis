@@ -335,6 +335,9 @@ jobs:
       - name: Regression fixture conventions (no build needed -- fail fast)
         run: pixi run regression-lint
 
+      - name: VIMP identifier id_position/markup shape (no build needed -- fail fast)
+        run: pixi run id-position-check
+
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
         with:
