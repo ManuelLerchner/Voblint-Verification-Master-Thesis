@@ -125,8 +125,9 @@ text \<open>
 
 corollary analyse_interval_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: bexp
-  assumes terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
-                          prog_main_name (prog_main p)"
+  assumes terminates: "analyse_interval_td_terminates
+                          (resolved_st_q_is_bot_for (declared_global_vars p))
+                          (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
@@ -141,8 +142,9 @@ qed
 
 corollary analyse_interval_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: bexp
-  assumes terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
-                          prog_main_name (prog_main p)"
+  assumes terminates: "analyse_interval_td_terminates
+                          (resolved_st_q_is_bot_for (declared_global_vars p))
+                          (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
@@ -296,7 +298,9 @@ theorem dispatch_demo_first_check_certified:
            (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
      bval (Less (N 0) (V (STR ''y''))) s"
 proof (rule analyse_interval_proved_sound)
-  show "analyse_interval_td_terminates (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
+  show "analyse_interval_td_terminates
+          (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
+          (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
           (prog_procs dispatch_demo_prog) prog_main_name (prog_main dispatch_demo_prog)"
     by (rule analyse_interval_td_terminates_via_solve_c) eval
   show "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 1)

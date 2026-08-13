@@ -44,7 +44,12 @@ build_out="$(mktemp)"
 trap 'rm -f "$build_out"' EXIT
 (
   cd "$CLI_DIR"
-  menhir vimp_parser.mly
+  # --unused-precedence-levels: LT/EQEQ's %nonassoc level is real (the
+  # Isabelle mixfix generator and the property-test printer both key off
+  # grammar/vimp.yaml's precedence table for it) but VIMP comparisons don't
+  # chain, so no shift/reduce conflict in Menhir's automaton ever consults
+  # it -- an expected, not a signal-carrying, warning.
+  menhir --unused-precedence-levels vimp_parser.mly
   # Its automaton-stats banner is routine, expected stdout on every
   # successful run -- redirect it inline so only genuinely unexpected
   # output from any step trips the silence assertion below.

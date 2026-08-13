@@ -35,9 +35,9 @@ corollary sign_mixed_flow_sound_and_optimal:
   shows
     "ltr_collect gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) S
        (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))
-     \<le> \<lbrakk>side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs)
+     \<le> gamma_state_lift (side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs)
           bot sign_init_s0 ()
-          (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
+          (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
     and
     "least_part_post_solution
        (side_cfg_T_eff gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))
@@ -57,9 +57,9 @@ proof -
         dom S_sound]
   show "ltr_collect gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) S
           (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))
-        \<le> \<lbrakk>side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs)
+        \<le> gamma_state_lift (side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs)
              bot sign_init_s0 ()
-             (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
+             (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
     using result(1) .
   show "least_part_post_solution
          (side_cfg_T_eff gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))
@@ -81,18 +81,18 @@ text \<open>
 \<close>
 
 corollary sign_mixed_flow_sound_from_pp:
-  fixes \<sigma> :: "pp + unit \<Rightarrow> sign abs_state" and S :: "store set" and gs :: "vname \<Rightarrow> bool"
+  fixes \<sigma> :: "pp + unit \<Rightarrow> sign abs_state lifted" and S :: "store set" and gs :: "vname \<Rightarrow> bool"
   assumes pp:
     "part_post_solution
        (side_cfg_T_eff gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))
           (sign_etf gs) bot sign_init_s0 ()) (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))) \<sigma> vars"
   assumes entry:
-    "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
+    "S \<le> gamma_state_lift (side_env_lift \<sigma> (cfg_entry (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
   assumes inr: "inr_slot_locals_bot gs \<sigma>"
   shows
     "ltr_collect gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) S
        (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))
-     \<le> \<lbrakk>side_env \<sigma> (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
+     \<le> gamma_state_lift (side_env_lift \<sigma> (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
   by (rule mixed_flow_analysis_sound
         [OF sign_sound_etf pp entry sign_etf_cone_compatible
             compile_prog_finite[THEN conjunct1]

@@ -44,7 +44,7 @@ nonterminal imp2_formals
 nonterminal imp2_ids
 
 syntax
-  "_aexp_var" :: "id => imp2_aexp" ("_" 1000)
+  "_aexp_var" :: "id_position => imp2_aexp" ("_" 1000)
   "_aexp_num" :: "num_const => imp2_aexp" ("_" 1000)
   "_aexp_uminus" :: "imp2_aexp => imp2_aexp" ("- _" [80] 80)
   "_aexp_plus" :: "imp2_aexp => imp2_aexp => imp2_aexp" ("_ + _" [60, 61] 60)
@@ -60,29 +60,29 @@ syntax
   "_bexp_and" :: "imp2_bexp => imp2_bexp => imp2_bexp" ("_ && _" [40, 41] 40)
   "_bexp_or" :: "imp2_bexp => imp2_bexp => imp2_bexp" ("_ || _" [30, 31] 30)
   "_stmt_skip" :: imp2_stmt ("skip" 61)
-  "_stmt_assign" :: "id => imp2_aexp => imp2_stmt" ("_ := _" [900, 0] 61)
-  "_stmt_random" :: "id => imp2_stmt" ("_ := random'(')" [900] 61)
+  "_stmt_assign" :: "id_position => imp2_aexp => imp2_stmt" ("_ := _" [900, 0] 61)
+  "_stmt_random" :: "id_position => imp2_stmt" ("_ := random'(')" [900] 61)
   "_stmt_return" :: "imp2_aexp => imp2_stmt" ("return _" [0] 61)
   "_stmt_return0" :: imp2_stmt ("return" 61)
   "_stmt_check" :: "imp2_bexp => imp2_stmt" ("'_'_voblint'_check '( _ ')" [0] 61)
   "_stmt_if" :: "imp2_bexp => imp2_stmts_opt => imp2_stmts_opt => imp2_stmt" ("if '( _ ') { _ } else { _ }" [0, 0, 0] 61)
   "_stmt_while" :: "imp2_bexp => imp2_stmts_opt => imp2_stmt" ("while '( _ ') { _ }" [0, 0] 61)
-  "_stmt_call" :: "id => imp2_actuals => imp2_stmt" ("_'( _ ')" [1000, 0] 61)
-  "_stmt_callret" :: "id => id => imp2_actuals => imp2_stmt" ("_ := _'( _ ')" [900, 1000, 0] 61)
+  "_stmt_call" :: "id_position => imp2_actuals => imp2_stmt" ("_'( _ ')" [1000, 0] 61)
+  "_stmt_callret" :: "id_position => id_position => imp2_actuals => imp2_stmt" ("_ := _'( _ ')" [900, 1000, 0] 61)
   "_stmts_one" :: "imp2_stmt => imp2_stmts" ("_" 61)
   "_stmts_seq" :: "imp2_stmts => imp2_stmt => imp2_stmts" ("_; _" [61, 61] 61)
   "_stmts_opt_none" :: imp2_stmts_opt ("")
   "_stmts_opt_some" :: "imp2_stmts => imp2_stmts_opt" ("_")
   "_actuals_one" :: "imp2_aexp => imp2_actuals" ("_")
   "_actuals_cons" :: "imp2_aexp => imp2_actuals => imp2_actuals" ("_, _")
-  "_formals_one" :: "id => imp2_formals" ("_")
-  "_formals_cons" :: "id => imp2_formals => imp2_formals" ("_, _")
-  "_ids_one" :: "id => imp2_ids" ("_")
-  "_ids_cons" :: "id => imp2_ids => imp2_ids" ("_, _")
+  "_formals_one" :: "id_position => imp2_formals" ("_")
+  "_formals_cons" :: "id_position => imp2_formals => imp2_formals" ("_, _")
+  "_ids_one" :: "id_position => imp2_ids" ("_")
+  "_ids_cons" :: "id_position => imp2_ids => imp2_ids" ("_, _")
   "_aexp_zero" :: imp2_aexp ("0" 1000)
   "_aexp_one" :: imp2_aexp ("1" 1000)
-  "_stmt_call0" :: "id => imp2_stmt" ("_'(')" [1000] 61)
-  "_stmt_callret0" :: "id => id => imp2_stmt" ("_ := _'(')" [900, 1000] 61)
+  "_stmt_call0" :: "id_position => imp2_stmt" ("_'(')" [1000] 61)
+  "_stmt_callret0" :: "id_position => id_position => imp2_stmt" ("_ := _'(')" [900, 1000] 61)
 
 ML \<open>
 structure Vimp_Grammar_Tr =
@@ -151,7 +151,15 @@ struct
 
   fun neg_num n = K c_N $ HOLogic.mk_number HOLogic.intT (~ n)
 
-  fun aexp_tr t =
+  fun dest_id_position report_markup ctxt (Const ("_constrain", _) $ Free (s, _) $ m) =
+        (case (report_markup, Term_Position.decode_position m) of
+           (SOME markup, SOME (ps, _)) =>
+             (List.app (fn p => Context_Position.report ctxt (#pos p) markup) ps; s)
+         | _ => s)
+    | dest_id_position _ _ (Free (s, _)) = s
+    | dest_id_position _ _ t = raise TERM ("Vimp_Grammar_Tr: dest_id_position", [t])
+
+  fun aexp_tr ctxt t =
         (case Term.strip_comb t of
            (Const ("_aexp_num", _), [n]) =>
              K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)
@@ -162,61 +170,61 @@ struct
                   K c_N $ HOLogic.mk_number HOLogic.intT 0
               | (Const ("_aexp_one", _), []) => neg_num 1
               | _ =>
-                  K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr a)
+                  K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr ctxt a)
          | (Const ("_aexp_zero", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 0
          | (Const ("_aexp_one", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 1
-         | (Const ("_aexp_var", _), [Free (x0, _)]) => K c_V $ (HOLogic.mk_literal x0)
-         | (Const ("_aexp_plus", _), [a0, a2]) => K c_Plus $ (aexp_tr a0) $ (aexp_tr a2)
-         | (Const ("_aexp_minus", _), [a0, a2]) => K c_Minus $ (aexp_tr a0) $ (aexp_tr a2)
-         | (Const ("_aexp_times", _), [a0, a2]) => K c_Times $ (aexp_tr a0) $ (aexp_tr a2)
-         | (Const ("_aexp_paren", _), [a1]) => aexp_tr a1
+         | (Const ("_aexp_var", _), [x0]) => K c_V $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0))
+         | (Const ("_aexp_plus", _), [a0, a2]) => K c_Plus $ (aexp_tr ctxt a0) $ (aexp_tr ctxt a2)
+         | (Const ("_aexp_minus", _), [a0, a2]) => K c_Minus $ (aexp_tr ctxt a0) $ (aexp_tr ctxt a2)
+         | (Const ("_aexp_times", _), [a0, a2]) => K c_Times $ (aexp_tr ctxt a0) $ (aexp_tr ctxt a2)
+         | (Const ("_aexp_paren", _), [a1]) => aexp_tr ctxt a1
          | _ => raise TERM ("Vimp_Grammar_Tr: aexp_tr", [t]))
 
-  fun bexp_tr t =
+  fun bexp_tr ctxt t =
         (case Term.strip_comb t of
            (Const ("_bexp_true", _), []) => K c_Bc $ (@{term True})
          | (Const ("_bexp_false", _), []) => K c_Bc $ (@{term False})
-         | (Const ("_bexp_less", _), [a0, a2]) => K c_Less $ (aexp_tr a0) $ (aexp_tr a2)
-         | (Const ("_bexp_eq", _), [a0, a2]) => K c_Eq $ (aexp_tr a0) $ (aexp_tr a2)
-         | (Const ("_bexp_paren", _), [a1]) => bexp_tr a1
-         | (Const ("_bexp_not", _), [a1]) => K c_Not $ (bexp_tr a1)
-         | (Const ("_bexp_and", _), [a0, a2]) => K c_And $ (bexp_tr a0) $ (bexp_tr a2)
-         | (Const ("_bexp_or", _), [a0, a2]) => K c_Or $ (bexp_tr a0) $ (bexp_tr a2)
+         | (Const ("_bexp_less", _), [a0, a2]) => K c_Less $ (aexp_tr ctxt a0) $ (aexp_tr ctxt a2)
+         | (Const ("_bexp_eq", _), [a0, a2]) => K c_Eq $ (aexp_tr ctxt a0) $ (aexp_tr ctxt a2)
+         | (Const ("_bexp_paren", _), [a1]) => bexp_tr ctxt a1
+         | (Const ("_bexp_not", _), [a1]) => K c_Not $ (bexp_tr ctxt a1)
+         | (Const ("_bexp_and", _), [a0, a2]) => K c_And $ (bexp_tr ctxt a0) $ (bexp_tr ctxt a2)
+         | (Const ("_bexp_or", _), [a0, a2]) => K c_Or $ (bexp_tr ctxt a0) $ (bexp_tr ctxt a2)
          | _ => raise TERM ("Vimp_Grammar_Tr: bexp_tr", [t]))
 
-  fun actuals_tr (Const ("_actuals_one", _) $ x) = K c_Cons $ (aexp_tr x) $ K c_Nil
-    | actuals_tr (Const ("_actuals_cons", _) $ x $ rest) = K c_Cons $ (aexp_tr x) $ (actuals_tr rest)
-    | actuals_tr t = raise TERM ("Vimp_Grammar_Tr: actuals_tr", [t])
+  fun actuals_tr ctxt (Const ("_actuals_one", _) $ x) = K c_Cons $ (aexp_tr ctxt x) $ K c_Nil
+    | actuals_tr ctxt (Const ("_actuals_cons", _) $ x $ rest) = K c_Cons $ (aexp_tr ctxt x) $ (actuals_tr ctxt rest)
+    | actuals_tr _ t = raise TERM ("Vimp_Grammar_Tr: actuals_tr", [t])
 
-  fun stmts_tr (Const ("_stmts_one", _) $ x) = stmt_tr x
-    | stmts_tr (Const ("_stmts_seq", _) $ xs $ x) = K c_Seq $ (stmts_tr xs) $ (stmt_tr x)
-    | stmts_tr t = raise TERM ("Vimp_Grammar_Tr: stmts_tr", [t])
-  and stmts_opt_tr (Const ("_stmts_opt_none", _)) = K c_SKIP
-    | stmts_opt_tr (Const ("_stmts_opt_some", _) $ s) = stmts_tr s
-    | stmts_opt_tr t = raise TERM ("Vimp_Grammar_Tr: stmts_opt_tr", [t])
-  and stmt_tr t =
+  fun stmts_tr ctxt (Const ("_stmts_one", _) $ x) = stmt_tr ctxt x
+    | stmts_tr ctxt (Const ("_stmts_seq", _) $ xs $ x) = K c_Seq $ (stmts_tr ctxt xs) $ (stmt_tr ctxt x)
+    | stmts_tr _ t = raise TERM ("Vimp_Grammar_Tr: stmts_tr", [t])
+  and stmts_opt_tr ctxt (Const ("_stmts_opt_none", _)) = K c_SKIP
+    | stmts_opt_tr ctxt (Const ("_stmts_opt_some", _) $ s) = stmts_tr ctxt s
+    | stmts_opt_tr _ t = raise TERM ("Vimp_Grammar_Tr: stmts_opt_tr", [t])
+  and stmt_tr ctxt t =
         (case Term.strip_comb t of
-           (Const ("_stmt_call0", _), [Free (x0, _)]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal x0) $ K c_Nil
-         | (Const ("_stmt_callret0", _), [Free (x0, _), Free (x2, _)]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal x0))) $ (HOLogic.mk_literal x2) $ K c_Nil
+           (Const ("_stmt_call0", _), [x0]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x0)) $ K c_Nil
+         | (Const ("_stmt_callret0", _), [x0, x2]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)))) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x2)) $ K c_Nil
          | (Const ("_stmt_skip", _), []) => K c_SKIP
-         | (Const ("_stmt_assign", _), [Free (x0, _), a2]) => K c_Assign $ (HOLogic.mk_literal x0) $ (aexp_tr a2)
-         | (Const ("_stmt_random", _), [Free (x0, _)]) => K c_Random $ (HOLogic.mk_literal x0)
-         | (Const ("_stmt_return", _), [a1]) => K c_Return $ ((K c_Some $ (aexp_tr a1)))
+         | (Const ("_stmt_assign", _), [x0, a2]) => K c_Assign $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)) $ (aexp_tr ctxt a2)
+         | (Const ("_stmt_random", _), [x0]) => K c_Random $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0))
+         | (Const ("_stmt_return", _), [a1]) => K c_Return $ ((K c_Some $ (aexp_tr ctxt a1)))
          | (Const ("_stmt_return0", _), []) => K c_Return $ (K c_None)
-         | (Const ("_stmt_check", _), [a2]) => K c_Check $ (bexp_tr a2)
-         | (Const ("_stmt_if", _), [a2, a5, a9]) => K c_If $ (bexp_tr a2) $ (stmts_opt_tr a5) $ (stmts_opt_tr a9)
-         | (Const ("_stmt_while", _), [a2, a5]) => K c_While $ (bexp_tr a2) $ (stmts_opt_tr a5)
-         | (Const ("_stmt_call", _), [Free (x0, _), a2]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal x0) $ (actuals_tr a2)
-         | (Const ("_stmt_callret", _), [Free (x0, _), Free (x2, _), a4]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal x0))) $ (HOLogic.mk_literal x2) $ (actuals_tr a4)
+         | (Const ("_stmt_check", _), [a2]) => K c_Check $ (bexp_tr ctxt a2)
+         | (Const ("_stmt_if", _), [a2, a5, a9]) => K c_If $ (bexp_tr ctxt a2) $ (stmts_opt_tr ctxt a5) $ (stmts_opt_tr ctxt a9)
+         | (Const ("_stmt_while", _), [a2, a5]) => K c_While $ (bexp_tr ctxt a2) $ (stmts_opt_tr ctxt a5)
+         | (Const ("_stmt_call", _), [x0, a2]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x0)) $ (actuals_tr ctxt a2)
+         | (Const ("_stmt_callret", _), [x0, x2, a4]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)))) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x2)) $ (actuals_tr ctxt a4)
          | _ => raise TERM ("Vimp_Grammar_Tr: stmt_tr", [t]))
 
-  fun formals_of (Const ("_formals_one", _) $ Free (x, _)) = [x]
-    | formals_of (Const ("_formals_cons", _) $ Free (x, _) $ rest) = x :: formals_of rest
-    | formals_of t = raise TERM ("Vimp_Grammar_Tr: formals_of", [t])
+  fun formals_of ctxt (Const ("_formals_one", _) $ x) = [dest_id_position (SOME Markup.free) ctxt x]
+    | formals_of ctxt (Const ("_formals_cons", _) $ x $ rest) = dest_id_position (SOME Markup.free) ctxt x :: formals_of ctxt rest
+    | formals_of _ t = raise TERM ("Vimp_Grammar_Tr: formals_of", [t])
 
-  fun names_of (Const ("_ids_one", _) $ Free (x, _)) = [x]
-    | names_of (Const ("_ids_cons", _) $ Free (x, _) $ rest) = x :: names_of rest
-    | names_of t = raise TERM ("Vimp_Grammar_Tr: names_of", [t])
+  fun names_of ctxt (Const ("_ids_one", _) $ x) = [dest_id_position (SOME Markup.bound) ctxt x]
+    | names_of ctxt (Const ("_ids_cons", _) $ x $ rest) = dest_id_position (SOME Markup.bound) ctxt x :: names_of ctxt rest
+    | names_of _ t = raise TERM ("Vimp_Grammar_Tr: names_of", [t])
 end
 \<close>
 

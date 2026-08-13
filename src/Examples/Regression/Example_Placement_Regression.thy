@@ -38,7 +38,8 @@ lemma m48_glocal_not_global [simp]: "\<not> m48_gs (STR ''Glocal'')"
 text \<open>Case 3: the mixed program computes a real, non-trivial result: \<open>total\<close>
   starts at the \<open>SZero\<close> global seed, \<open>Glocal\<close> is locally \<open>1\<close> (\<open>SPos\<close>), and
   \<open>SZero \<squnion> SPos = SNonNeg\<close>.\<close>
-lemma m48_total_result: "sign_exec_prog m48_gs (STR ''main'') m48_program (STR ''total'') = SNonNeg"
+lemma m48_total_result:
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog m48_gs (STR ''main'') m48_program) (STR ''total'') = SNonNeg"
   by eval
 
 subsection \<open>4. Classic exclusive placement\<close>

@@ -160,6 +160,45 @@ lemma meet_sign_mono:
   using assms
   by (metis inf_mono inf_sign_def)
 
+text \<open>
+  Reductiveness: @{const meet_sign} is exactly @{term "(\<sqinter>)"} for @{typ sign}
+  (@{thm inf_sign_def}), so it never enlarges either operand.
+\<close>
+
+lemma meet_sign_le1: "meet_sign a b \<le> a"
+  by (cases a; cases b; auto simp: less_eq_sign_def)
+
+lemma meet_sign_le2: "meet_sign a b \<le> b"
+  by (cases a; cases b; auto simp: less_eq_sign_def)
+
+lemma sbot_le: "SBot \<le> (a :: sign)"
+  by (cases a; auto simp: less_eq_sign_def)
+
+text \<open>
+  @{const inv_less_sign} only ever narrows an operand via @{const meet_sign} or
+  passes it through unchanged, so it is reductive in both components. Each branch
+  applies @{const meet_sign} with the bounded operand in either argument position
+  (e.g. \<open>meet_sign a1 SNeg\<close> for the first component, \<open>meet_sign a2 SPos\<close> for the
+  second), so both @{thm meet_sign_le1} and @{thm meet_sign_le2} are needed.
+\<close>
+
+lemma inv_less_sign_reductive1: "fst (inv_less_sign res a1 a2) \<le> a1"
+  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 split: if_splits)
+
+lemma inv_less_sign_reductive2: "snd (inv_less_sign res a1 a2) \<le> a2"
+  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 split: if_splits)
+
+text \<open>
+  @{const inv_eq_sign} narrows via @{const meet_sign}, collapses to @{const SBot}
+  (below every operand, @{thm sbot_le}), or passes an operand through unchanged.
+\<close>
+
+lemma inv_eq_sign_reductive1: "fst (inv_eq_sign res a1 a2) \<le> a1"
+  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 sbot_le split: if_splits)
+
+lemma inv_eq_sign_reductive2: "snd (inv_eq_sign res a1 a2) \<le> a2"
+  by (cases res; auto simp: Let_def meet_sign_le1 meet_sign_le2 sbot_le split: if_splits)
+
 lemma inv_eq_sign_false_fst_mono:
   assumes "a1 \<le> (a1' :: sign)" and "a2 \<le> a2'"
   shows
@@ -195,115 +234,13 @@ lemma inv_eq_sign_mono:
   using assms inv_eq_sign_false_fst_mono inv_eq_sign_false_snd_mono 
   by (auto simp add: meet_sign_mono)
 
-subsection \<open>Backward-domain interpretation\<close>
-
-global_interpretation sign_backward_domain:
-    backward_domain meet_sign aval_sign
-                    inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
-  defines
-    afilter_sign = sign_backward_domain.afilter
-    and bfilter_sign = sign_backward_domain.bfilter
-    and afilter_sign_st = sign_backward_domain.afilter_st
-    and bfilter_sign_st = sign_backward_domain.bfilter_st
-    and sign_less_true_of_inv = sign_backward_domain.less_true
-    and sign_less_false_of_inv = sign_backward_domain.less_false
-    and sign_eq_true_of_less = sign_backward_domain.eq_true
-    and sign_eq_false_of_meet = sign_backward_domain.eq_false
-proof unfold_locales
-  fix n :: int and a b :: sign
-  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
-  have h1: "n \<in> gamma_sign a" using H1 by simp
-  have h2: "n \<in> gamma_sign b" using H2 by simp
-  show "n \<in> gamma (meet_sign a b)"
-    using meet_sign_sound[OF h1 h2] by simp
-next
-  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> sign"
-  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
-  have h: "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" using H by simp
-  show "aval e s \<in> gamma (aval_sign e \<sigma>)"
-    using aval_sign_sound[OF h] by simp
-next
-  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
-  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
-  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
-  show "n1 \<in> gamma (fst (inv_less_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_sign res a1 a2))"
-    using inv_less_sign_sound[OF h1 h2 H3] by simp
-next
-  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 = n2) = res"
-  have h1: "n1 \<in> gamma_sign a1" using H1 by simp
-  have h2: "n2 \<in> gamma_sign a2" using H2 by simp
-  show "n1 \<in> gamma (fst (inv_eq_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_sign res a1 a2))"
-    using inv_eq_sign_sound[OF h1 h2 H3] by simp
-next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-next
-  fix n1 n2 :: int and a1 a2 r :: sign
-  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
-  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
-    using inv_conservative_sound[OF H1 H2] .
-qed
-
 text \<open>
-  Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /
-  \<open>bfilter_sign\<close>, and \<open>bfilter_sign\<close>'s commutation with the abstract filter
-  through @{const fun_of_resolved_st_q_for}. Both come from the generic
-  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); no Sign-level
-  caller needs the \<open>afilter_st\<close> commutation on its own (only \<open>bfilter_st\<close>'s
-  is used, by \<open>assume_sign_st\<close>/\<open>assume_not_sign_st\<close>), so it stays reachable
-  as \<open>sign_backward_domain.afilter_st_commute\<close> without a short alias here.
+  Monotonicity of @{const inv_less_sign} needs a case split on both the guard's
+  truth value and which side of the shared narrowing threshold each operand sits;
+  \<open>narrow1_mono\<close>/\<open>narrow2_mono\<close> factor the \<open>if\<close>-cascade shape common to both
+  branches so the case split is done once, generically in a
+  @{class semilattice_inf} operand, rather than twice inline.
 \<close>
-
-lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
-
-text \<open>
-  \<open>sign_eq_true_of_less\<close> sits two \<open>sublocale\<close> layers below \<open>backward_domain\<close>
-  (\<open>backward_domain \<subseteq> derived_less_queries \<subseteq> derived_eq_true_from_less\<close>), one
-  layer deeper than \<open>sign_less_true_of_inv\<close>/\<open>sign_less_false_of_inv\<close> or
-  \<open>sign_eq_false_of_meet\<close>. The automatic code-equation chain the \<open>defines\<close>
-  clause above sets up does not reach that deep, so this restates the
-  definition explicitly in terms of the already-executable
-  \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.
-\<close>
-
-lemma sign_eq_true_of_less_code [code]:
-  "sign_eq_true_of_less a b = (sign_less_false_of_inv a b \<and> sign_less_false_of_inv b a)"
-  using sign_backward_domain.eq_true_def sign_eq_true_of_less_def sign_less_false_of_inv_def
-  by auto
-
-subsection \<open>Abstract assume\<close>
-
-text \<open>
-  Guard refinement via backward evaluation.  @{text assume_sign} narrows the
-  abstract state on the then-branch; @{text assume_not_sign} on the else-branch.
-  Both delegate to the generic @{text bfilter} proved sound in @{locale backward_domain}.
-\<close>
-
-definition assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
-  "assume_sign b \<sigma> = bfilter_sign b True \<sigma>"
-
-definition assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
-  "assume_not_sign b \<sigma> = bfilter_sign b False \<sigma>"
-
-lemma assume_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_sign b \<sigma>\<rbrakk>"
-  unfolding assume_sign_def
-  using sign_backward_domain.bfilter_sound by simp
-
-lemma assume_not_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_sign b \<sigma>\<rbrakk>"
-  unfolding assume_not_sign_def
-  using sign_backward_domain.bfilter_sound by simp
-
 
 lemma sign_le_iff:
   "sign_le a b \<longleftrightarrow> a \<le> b"
@@ -374,7 +311,7 @@ next
     "(if a2 \<le> SPos then a1 \<sqinter> SPos
       else if a2 \<le> SNonNeg then a1 \<sqinter> SNonNeg
       else a1)
-      \<le>  
+      \<le>
      (if a2' \<le> SPos then a1' \<sqinter> SPos
       else if a2' \<le> SNonNeg then a1' \<sqinter> SNonNeg
       else a1')"
@@ -395,56 +332,166 @@ next
     by fastforce
 qed
 
+subsection \<open>Backward-domain interpretation\<close>
+
 text \<open>
-  Monotonicity of @{const afilter_sign} / @{const bfilter_sign} is the generic
-  @{locale backward_domain_mono} result: interpret it at the sign operators
-  (soundness as in @{term sign_backward_domain}, plus the six operator-mono facts)
-  and the filter monotonicity follows by the shared induction.
+  One interpretation discharges soundness, monotonicity, and reductiveness
+  together against @{locale backward_domain_refined} -- each \<open>inv_*\<close>'s
+  mono/reductive obligation is one @{const le_pair} fact, transparent notation for
+  the componentwise \<open>\<and>\<close> the per-operator lemmas above already prove, so no
+  bridging step is needed at any of these call sites.
 \<close>
 
-context begin
-interpretation sign_bdm:
-  backward_domain_mono meet_sign aval_sign
-                       inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
+global_interpretation sign_backward_domain:
+    backward_domain_refined meet_sign aval_sign
+                    inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
+  defines
+    afilter_sign = sign_backward_domain.afilter
+    and bfilter_sign = sign_backward_domain.bfilter
+    and afilter_sign_st = sign_backward_domain.afilter_st
+    and bfilter_sign_st = sign_backward_domain.bfilter_st
+    and sign_less_true_of_inv = sign_backward_domain.less_true
+    and sign_less_false_of_inv = sign_backward_domain.less_false
+    and sign_eq_true_of_less = sign_backward_domain.eq_true
+    and sign_eq_false_of_meet = sign_backward_domain.eq_false
 proof unfold_locales
+  fix n :: int and a b :: sign
+  assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
+  show "n \<in> gamma (meet_sign a b)"
+    using meet_sign_sound[of n a b] H1 H2 by simp
+next
+  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> sign"
+  assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
+  show "aval e s \<in> gamma (aval_sign e \<sigma>)"
+    using aval_sign_sound[of s \<sigma> e] H by simp
+next
+  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
+  show "n1 \<in> gamma (fst (inv_less_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less_sign res a1 a2))"
+    using inv_less_sign_sound[of n1 a1 n2 a2 res] H1 H2 H3 by simp
+next
+  fix n1 n2 :: int and a1 a2 :: sign and res :: bool
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 = n2) = res"
+  show "n1 \<in> gamma (fst (inv_eq_sign res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq_sign res a1 a2))"
+    using inv_eq_sign_sound[of n1 a1 n2 a2 res] H1 H2 H3 by simp
+next
+  fix n1 n2 :: int and a1 a2 r :: sign
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 + n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
+next
+  fix n1 n2 :: int and a1 a2 r :: sign
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 - n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
+next
+  fix n1 n2 :: int and a1 a2 r :: sign
+  assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
+  show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+    using inv_conservative_sound[OF H1 H2] .
+next
   fix a1 a2 b1 b2 :: sign
   assume "a1 \<le> a2" and "b1 \<le> b2"
-  thus "meet_sign a1 b1 \<le> meet_sign a2 b2"
-    using inf_mono[OF \<open>a1 \<le> a2\<close> \<open>b1 \<le> b2\<close>] by simp
+  thus "meet_sign a1 b1 \<le> meet_sign a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
 next
   fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
   assume "\<sigma>1 \<le> \<sigma>2"
   thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
 next
   fix x1 x2 y1 y2 :: sign and res :: bool
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_less_sign res x1 y1) \<le> fst (inv_less_sign res x2 y2) \<and>
-        snd (inv_less_sign res x1 y1) \<le> snd (inv_less_sign res x2 y2)"
-    by (rule inv_less_sign_mono)
+  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_less_sign res x1 y1) (inv_less_sign res x2 y2)"
+    using inv_less_sign_mono[OF A B] by (simp add: le_pair_def)
 next
   fix x1 x2 y1 y2 :: sign and res :: bool
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_eq_sign res x1 y1) \<le> fst (inv_eq_sign res x2 y2) \<and>
-        snd (inv_eq_sign res x1 y1) \<le> snd (inv_eq_sign res x2 y2)"
-    by (rule inv_eq_sign_mono)
+  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_eq_sign res x1 y1) (inv_eq_sign res x2 y2)"
+    using inv_eq_sign_mono[OF A B] by (simp add: le_pair_def)
 next
   fix r1 r2 x1 x2 y1 y2 :: sign
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_conservative r1 x1 y1) \<le> fst (inv_conservative r2 x2 y2) \<and>
-        snd (inv_conservative r1 x1 y1) \<le> snd (inv_conservative r2 x2 y2)"
-    by (simp add: inv_conservative_def)
+  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
+    using A B by (simp add: inv_conservative_def le_pair_def)
+next
+  fix a b :: sign
+  show "meet_sign a b \<le> a" by (rule meet_sign_le1)
+next
+  fix a b :: sign
+  show "meet_sign a b \<le> b" by (rule meet_sign_le2)
+next
+  fix res :: bool and a1 a2 :: sign
+  show "le_pair (inv_less_sign res a1 a2) (a1, a2)"
+    using inv_less_sign_reductive1 inv_less_sign_reductive2 by (simp add: le_pair_def)
+next
+  fix res :: bool and a1 a2 :: sign
+  show "le_pair (inv_eq_sign res a1 a2) (a1, a2)"
+    using inv_eq_sign_reductive1 inv_eq_sign_reductive2 by (simp add: le_pair_def)
+next
+  fix r a1 a2 :: sign
+  show "le_pair (inv_conservative r a1 a2) (a1, a2)"
+    by (simp add: inv_conservative_def le_pair_def)
 qed
+
+text \<open>
+  Executable @{typ "sign resolved_st_q"} mirror of \<open>afilter_sign\<close> /
+  \<open>bfilter_sign\<close>, and \<open>bfilter_sign\<close>'s commutation with the abstract filter
+  through @{const fun_of_resolved_st_q_for}. Both come from the generic
+  @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); no Sign-level
+  caller needs the \<open>afilter_st\<close> commutation on its own (only \<open>bfilter_st\<close>'s
+  is used, by \<open>assume_sign_st\<close>/\<open>assume_not_sign_st\<close>), so it stays reachable
+  as \<open>sign_backward_domain.afilter_st_commute\<close> without a short alias here.
+\<close>
+
+lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
+
+text \<open>
+  \<open>sign_eq_true_of_less\<close> sits two \<open>sublocale\<close> layers below \<open>backward_domain\<close>
+  (\<open>backward_domain \<subseteq> derived_less_queries \<subseteq> derived_eq_true_from_less\<close>), one
+  layer deeper than \<open>sign_less_true_of_inv\<close>/\<open>sign_less_false_of_inv\<close> or
+  \<open>sign_eq_false_of_meet\<close>. The automatic code-equation chain the \<open>defines\<close>
+  clause above sets up does not reach that deep, so this restates the
+  definition explicitly in terms of the already-executable
+  \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.
+\<close>
+
+lemma sign_eq_true_of_less_code [code]:
+  "sign_eq_true_of_less a b = (sign_less_false_of_inv a b \<and> sign_less_false_of_inv b a)"
+  using sign_backward_domain.eq_true_def sign_eq_true_of_less_def sign_less_false_of_inv_def
+  by auto
+
+subsection \<open>Abstract assume\<close>
+
+text \<open>
+  Guard refinement via backward evaluation.  @{text assume_sign} narrows the
+  abstract state on the then-branch; @{text assume_not_sign} on the else-branch.
+  Both delegate to the generic @{text bfilter} proved sound in @{locale backward_domain}.
+\<close>
+
+definition assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
+  "assume_sign b \<sigma> = bfilter_sign b True \<sigma>"
+
+definition assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
+  "assume_not_sign b \<sigma> = bfilter_sign b False \<sigma>"
+
+lemma assume_sign_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_sign b \<sigma>\<rbrakk>"
+  unfolding assume_sign_def
+  using sign_backward_domain.bfilter_sound by simp
+
+lemma assume_not_sign_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_sign b \<sigma>\<rbrakk>"
+  unfolding assume_not_sign_def
+  using sign_backward_domain.bfilter_sound by simp
+
 
 lemma afilter_sign_mono:
   "a1 \<le> (a2::sign) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
    afilter_sign e a1 sigma1 \<le> afilter_sign e a2 sigma2"
-  using sign_bdm.afilter_mono by (simp add: afilter_sign_def)
+  using sign_backward_domain.afilter_mono by (simp add: afilter_sign_def)
 
 lemma bfilter_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_sign b res sigma1 \<le> bfilter_sign b res sigma2"
-  using sign_bdm.bfilter_mono by (simp add: bfilter_sign_def)
-
-end
+  using sign_backward_domain.bfilter_mono by (simp add: bfilter_sign_def)
 
 subsection \<open>Executable equality-narrowing tests\<close>
 

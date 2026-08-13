@@ -60,15 +60,15 @@ theorem side_ivl_analysis_sound:
   assumes side_solve_dom:
     "side_cfg_solve_dom_eff gs (compile_prog \<Pi> ps mnm main) (ivl_etf gs) bot s0 ()
        (cfg_exit (compile_prog \<Pi> ps mnm main))"
-  shows "t \<in> \<lbrakk>side_analyse_eff gs \<Pi> ps mnm main (ivl_etf gs) bot s0 ()
-         (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
+  shows "t \<in> gamma_state_lift (side_analyse_eff gs \<Pi> ps mnm main (ivl_etf gs) bot s0 ()
+         (cfg_exit (compile_prog \<Pi> ps mnm main)))"
 proof -
   have sub: "{s} \<le> \<lbrakk>s0\<rbrakk>" using s_sound by simp
   have collect:
     "ltr_collect gs (compile_prog \<Pi> ps mnm main) {s}
        (cfg_exit (compile_prog \<Pi> ps mnm main))
-     \<le> \<lbrakk>side_analyse_eff gs \<Pi> ps mnm main (ivl_etf gs) bot s0 ()
-           (cfg_exit (compile_prog \<Pi> ps mnm main))\<rbrakk>"
+     \<le> gamma_state_lift (side_analyse_eff gs \<Pi> ps mnm main (ivl_etf gs) bot s0 ()
+           (cfg_exit (compile_prog \<Pi> ps mnm main)))"
     by (rule side_analyse_eff_collect_sound_exit_ltr_cone
           [OF ivl_sound_etf ivl_etf_threefold_mono ivl_etf_cone_compatible
               side_solve_dom sub])

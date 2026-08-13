@@ -1,0 +1,37 @@
+// PARAM: --analysis interval --context entry-state
+// Recursive factorial under entry-state context sensitivity. Solver-key
+// inspection (not just this CLI report) confirms context separation itself
+// is exact: factorial's entry is covered by four distinct, precise
+// contexts (n=[1,1], [2,2], [3,3], [4,4]), each with an exact n.
+//
+// At each n>=2 context, the "return 1" base-case edge (guarded by n<2) is
+// structurally unreachable there: the reachability-lift fix (#113) makes
+// that branch's own local state genuinely Bot in the lifted D/G carrier,
+// not merely imprecise, so its #ret := 1 assignment never contributes a
+// spurious [1,1] to FunctionResult's join. Reaching this result at all
+// additionally required buffering same-origin, same-key Side contributions
+// in the keyed D/G generator before publication (#123): without it, two
+// predecessor edges (or a callee-return combine and an intra edge) writing
+// the same global key within one equation evaluation destabilized the
+// update rule's per-origin gate and never converged. See
+// 03-procedures/precision/05-dead_branch_no_bottom_leak.vimp for the flat,
+// non-recursive, non-context minimal case of the same dead-branch pattern.
+void factorial(n) {
+  __voblint_check(0 < n); // PROVED
+
+  if (n < 2) {
+    return 1
+  } else {
+    r := factorial(n - 1);
+    __voblint_check(0 < r); // PROVED
+    return n * r
+  }
+}
+
+void main() {
+  a := factorial(3);
+  b := factorial(4);
+
+  __voblint_check(a == 6);   // PROVED
+  __voblint_check(b == 24)   // PROVED
+}

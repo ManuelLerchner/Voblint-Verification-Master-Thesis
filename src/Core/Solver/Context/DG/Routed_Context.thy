@@ -50,15 +50,50 @@ where
        let caller = locals caller_state;
        let globals1 = globs globals_state1;
        let ctx' = route cc ctx caller ca;
-       publish_global gk0 (enter_global S fs as caller globals1);
+       let eg = enter_global S fs as caller globals1;
        publish_seed (seed_key (FunctionEntry (result_proc ex)) ctx')
          (enter_local S fs as caller globals1);
        callee_state \<leftarrow> read_local (ex, ctx');
        globals_state2 \<leftarrow> read_global gk0;
        let callee = locals callee_state;
        let globals2 = globs globals_state2;
-       publish_global gk0 (combine_global S dst caller callee globals2);
+       let cg = combine_global S dst caller callee globals2;
+       publish_global gk0 (eg \<squnion> cg);
        answer_local (combine_local S dst caller callee globals2)
+     })"
+
+text \<open>
+  Side-free analogue of \<open>routed_cmb\<close>, for folding several \<open>comb\<close>/\<open>intra\<close> contributions
+  into one buffered generator equation (issue #121, keyed): instead of publishing \<open>gk0\<close>
+  itself, it answers the unsplit \<open>(eg \<squnion> cg, combine_local ...)\<close> pair, matching
+  \<^const>\<open>dg_edge_contribution_tree\<close>'s shape. A caller folds several such trees with
+  \<^const>\<open>fold_rhs_trees\<close> and publishes \<open>gk0\<close> once, after every contribution has been
+  read. The seed publication is unaffected: each call action's \<open>seed_key\<close> is distinct
+  from every other call action's, so it never collides within one fold and stays a
+  \<open>Side\<close> here exactly as in \<open>routed_cmb\<close>.
+\<close>
+definition routed_cmb_contribution ::
+  "('d::bounded_semilattice_sup_bot, 'd) dg_spec \<Rightarrow> 'k
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'd) dg_state) strategy_tree"
+where
+  "routed_cmb_contribution S gk0 seed_key route ctx ca cc ex =
+     with_call ca (\<lambda>dst fs as. do {
+       caller_state \<leftarrow> read_local (cc, ctx);
+       globals_state1 \<leftarrow> read_global gk0;
+       let caller = locals caller_state;
+       let globals1 = globs globals_state1;
+       let ctx' = route cc ctx caller ca;
+       let eg = enter_global S fs as caller globals1;
+       publish_seed (seed_key (FunctionEntry (result_proc ex)) ctx')
+         (enter_local S fs as caller globals1);
+       callee_state \<leftarrow> read_local (ex, ctx');
+       globals_state2 \<leftarrow> read_global gk0;
+       let callee = locals callee_state;
+       let globals2 = globs globals_state2;
+       let cg = combine_global S dst caller callee globals2;
+       answer (DG (combine_local S dst caller callee globals2) (eg \<squnion> cg))
      })"
 
 text \<open>Per node \<open>v\<close>: if \<open>v\<close> is a callee entry, read back its own routed seed. The call-site
@@ -79,6 +114,66 @@ where
         [do { seed_state \<leftarrow> read_global (seed_key v ctx); answer_local (globs seed_state) }]
        | _ \<Rightarrow> [])"
 
+subsection \<open>Buffering correspondence hooks: routed_cmb / routed_cmb_contribution / routed_extra\<close>
+
+text \<open>
+  Purely syntactic facts about the tree shapes of \<^const>\<open>routed_cmb\<close>,
+  \<^const>\<open>routed_cmb_contribution\<close>, and \<^const>\<open>routed_extra\<close> --- independent of any
+  solved system, needed only to discharge
+  \<^theory>\<open>Voblint_Core.DG_Framework\<close>'s \<open>side_cfg_T_eff_keyed_seed_dg_buffered_correspondence\<close>
+  hypotheses when \<open>routed_cmb\<close>/\<open>routed_cmb_contribution\<close>/\<open>routed_extra\<close> instantiate its
+  \<open>cmb\<close>/\<open>cmb_c\<close>/\<open>extra\<close> parameters. Stated standalone (not inside \<open>routed_context_base\<close>)
+  since they need only \<open>seed_key\<close>'s freeness from \<open>gk0\<close>, not a solved-system
+  interpretation.
+\<close>
+
+lemma routed_cmb_contribution_matches_local_standalone:
+  "locals (traverse_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau)
+     = locals (traverse_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau)"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def)
+
+lemma routed_cmb_contribution_matches_global_standalone:
+  assumes ne: "\<And>p c. seed_key p c \<noteq> gk0"
+  shows "globs (traverse_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau)
+     = globs (sides_of_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau (Inr gk0))"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def ne[THEN not_sym])
+
+lemma routed_cmb_side_pure:
+  assumes ne: "\<And>p c. seed_key p c \<noteq> gk0"
+  shows "locals (sides_of_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau (Inr gk0)) = bot"
+  unfolding routed_cmb_def
+  by (cases ca) (simp add: Let_def ne)
+
+lemma routed_cmb_contribution_free_at_key:
+  assumes ne: "\<And>p c. seed_key p c \<noteq> gk0"
+  shows "sides_of_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau (Inr gk0) = bot"
+  unfolding routed_cmb_contribution_def
+  by (cases ca) (simp add: Let_def ne[THEN not_sym])
+
+lemma routed_cmb_contribution_sides_off_key:
+  assumes ne: "\<And>p c. seed_key p c \<noteq> gk0"
+    and z: "z \<noteq> Inr gk0"
+  shows "sides_of_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau z
+       = sides_of_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau z"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def ne z)
+
+lemma routed_cmb_contribution_dep:
+  "dep_aux tau (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex)
+     = dep_aux tau (routed_cmb S gk0 seed_key route ctx ca cc ex)"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def)
+
+lemma routed_extra_free:
+  "x \<in> set (routed_extra seed_key gk0 route ctx v) \<Longrightarrow> sides_of_rhs x tau z = bot"
+  unfolding routed_extra_def by (cases v) (auto simp: bot_fun_def)
+
+lemma routed_extra_local_only:
+  "x \<in> set (routed_extra seed_key gk0 route ctx v) \<Longrightarrow> globs (traverse_rhs x tau) = bot"
+  unfolding routed_extra_def by (cases v) auto
+
 subsection \<open>The locale\<close>
 
 text \<open>Beyond \<^locale>\<open>dg_ctx_activation\<close>'s parameters: \<open>seed_key\<close> injects a routed
@@ -92,6 +187,330 @@ text \<open>Beyond \<^locale>\<open>dg_ctx_activation\<close>'s parameters: \<op
   matched edge, and keeps the obligation provable for an abstract domain that is exact on
   edges actually present in the program without being exact everywhere. This is a
   per-instance proof obligation, not a locale theorem.\<close>
+
+subsection \<open>A carrier-generic routed-context locale, staged ahead of routed_context's own migration (issue #123)\<close>
+
+text \<open>
+  Layer 4 (issue #123): as with \<^locale>\<open>dg_ctx_activation\<close>, \<open>routed_context\<close> hardcoded
+  \<^const>\<open>gamma_unit\<close> and \<open>abs_state\<close> even though only \<open>route_enterc_agree\<close> names a
+  concretization at all -- the other lemmas below compose \<^locale>\<open>dg_ctx_activation_base\<close>'s
+  own inherited facts (\<open>enter_sound_fs\<close>, \<open>combine_sound_fs\<close>, \<open>gammaDG_mono\<close>, \<open>sg_cov\<close>) with
+  routing bookkeeping that never fixes \<open>gammaDG\<close>'s or \<open>gammaM\<close>'s concrete choice.
+  \<open>routed_context_base\<close> makes both free, matching \<open>dg_ctx_activation_base\<close>; \<open>routed_context\<close>
+  below stays a thin specialization.
+\<close>
+
+locale routed_context_base =
+  dg_ctx_activation_base S gammaDG gs g gk0 route
+    "routed_cmb S gk0 seed_key" "routed_extra seed_key gk0"
+    bot0 s0d s0g sigma vars x0 sg gammaM
+  for S :: "('D::bounded_semilattice_sup_bot, 'D) dg_spec"
+    and gammaDG :: "'D \<Rightarrow> 'D \<Rightarrow> store set"
+    and gs :: "vname \<Rightarrow> bool"
+    and g gk0
+    and route ("context\<^sup>#")
+    and bot0 s0d s0g sigma vars x0 sg
+    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and gammaM :: "'M \<Rightarrow> store set" +
+  fixes enterc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  assumes finC[intro,simp]: "finite (calls g)"
+    and seed_key_ne_gk0[simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+    and route_enterc_agree:
+    "\<And>u ctx dst pars args p cont s.
+       (u, ctx) \<in> vars
+       \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+       \<Longrightarrow>       s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
+       \<Longrightarrow> route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+            = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
+    and call_fwd:
+    "\<And>u ctx dst pars args p cont.
+       (u, ctx) \<in> vars \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+       \<Longrightarrow> (FunctionEntry p, route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+             \<in> vars"
+    and comb_fwd:
+    "\<And>cl c1 dst pars args p cont.
+       (cl, c1) \<in> vars \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+       \<Longrightarrow> (cont, c1) \<in> vars"
+    and call_enter_store_agree:
+    "\<And>cl s es dst pars args p cont.
+       call_enter_store gs g cl s es
+       \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+       \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
+begin
+
+lemma le_dg_state_localsD: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
+  by (simp add: less_eq_dg_state_def)
+
+lemma le_dg_state_globsD: "d \<le> d' \<Longrightarrow> globs d \<le> globs d'"
+  by (simp add: less_eq_dg_state_def)
+
+subsection \<open>CALL: the routed callee entry\<close>
+
+lemma routed_seed_read_bound:
+  assumes covV: "(FunctionEntry p, ctx') \<in> vars"
+  shows "globs (sigma (Inr (seed_key (FunctionEntry p) ctx')))
+           \<le> locals (sigma (Inl (FunctionEntry p, ctx')))"
+proof -
+  let ?t = "QueryG (seed_key (FunctionEntry p) ctx') (\<lambda>s. Answer (DG (globs s) bot))"
+  have mem: "?t \<in> set (trees (FunctionEntry p) ctx')"
+    by (simp add: routed_extra_def)
+  have "globs (sigma (Inr (seed_key (FunctionEntry p) ctx')))
+      = locals (traverse_rhs ?t sigma)"
+    by simp
+  also have "\<dots> \<le> side_acc_dg (acc0 (FunctionEntry p)) sigma (trees (FunctionEntry p) ctx')"
+    using locals_traverse_le_side_acc_dg[OF mem] .
+  also have "\<dots> = locals (eq Gen (FunctionEntry p, ctx') sigma)"
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+  also have "\<dots> \<le> locals (sigma (Inl (FunctionEntry p, ctx')))"
+    using pp_eq_bound[OF covV] by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+lemma routed_seed_publish_bound_local:
+  assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covV_cont: "(cont, ctx) \<in> vars"
+    and covV: "(FunctionEntry p,
+                 route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)) \<in> vars"
+  shows "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+         \<le> locals (sigma (Inl (FunctionEntry p,
+               route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))))"
+proof -
+  let ?ctx' = "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)"
+  let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
+              Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals d) (globs gv)))
+                (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)
+                                        \<squnion> combine_global S dst (locals d) (locals dex) (globs gv2)))
+                      (Answer (DG (combine_local S dst (locals d) (locals dex) (globs gv2)) bot)))))))"
+  have ret: "(u, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
+    using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
+  have mem: "?t \<in> set (trees cont ctx)"
+    unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
+  have snd_bound:
+    "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+       \<le> globs (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+  proof -
+    have "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+        = globs (sides_of_rhs ?t sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+      by (simp add: seed_key_ne_gk0)
+    also have "\<dots> \<le> globs (sides_of_rhs
+        (side_rhs_fold_dg (acc0 cont) (trees cont ctx)) sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+      by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
+    also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, ctx)) sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+      by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
+    also have "\<dots> \<le> globs (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+      using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr (seed_key (FunctionEntry p) ?ctx')"]
+      by (rule le_dg_state_globsD)
+    finally show ?thesis .
+  qed
+  have seed_le: "globs (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))
+      \<le> locals (sigma (Inl (FunctionEntry p, ?ctx')))"
+    by (rule routed_seed_read_bound[OF covV])
+  show ?thesis using order_trans[OF snd_bound seed_le] .
+qed
+
+lemma routed_seed_publish_bound_global:
+  assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covV_cont: "(cont, ctx) \<in> vars"
+  shows "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+           \<le> globs (sigma (Inr gk0))"
+proof -
+  let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
+              Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals d) (globs gv)))
+                (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)
+                                        \<squnion> combine_global S dst (locals d) (locals dex) (globs gv2)))
+                      (Answer (DG (combine_local S dst (locals d) (locals dex) (globs gv2)) bot)))))))"
+  have ret: "(u, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
+    using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
+  have mem: "?t \<in> set (trees cont ctx)"
+    unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
+  have "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+      \<le> globs (sides_of_rhs ?t sigma (Inr gk0))"
+    by (auto simp: seed_key_ne_gk0 seed_key_ne_gk0[symmetric] sup_dg_state_def bot_dg_state_def
+             intro: le_supI1)
+  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 cont) (trees cont ctx)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
+  also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, ctx)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
+  also have "\<dots> \<le> globs (sigma (Inr gk0))"
+    using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr gk0"]
+    by (rule le_dg_state_globsD)
+  finally show ?thesis .
+qed
+
+lemma routed_cmb_contribution_matches_local:
+  "locals (traverse_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau)
+     = locals (traverse_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau)"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def)
+
+lemma routed_cmb_contribution_matches_global:
+  "globs (traverse_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau)
+     = globs (sides_of_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau (Inr gk0))"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def bot_dg_state_def sup_dg_state_def
+    seed_key_ne_gk0 seed_key_ne_gk0[symmetric])
+
+theorem routed_context_call:
+  assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and sin: "s \<in> gammaM (sg (Inl (u, ctx)))"
+  shows "call_enter gs (CallEdge dst pars args) s
+           \<in> gammaM (sg (Inl (FunctionEntry p,
+                 enterc u ctx (call_enter gs (CallEdge dst pars args) s))))"
+proof (cases "(u, ctx) \<in> vars")
+  case False
+  hence "gammaM (sg (Inl (u, ctx))) = {}" by (rule sg_uncovered_empty)
+  thus ?thesis using sin by simp
+next
+  case True
+  let ?d = "locals (sigma (Inl (u, ctx)))"
+  let ?g = "globs (sigma (Inr gk0))"
+  let ?ctx' = "route u ctx ?d (CallEdge dst pars args)"
+  have covV: "(FunctionEntry p, ?ctx') \<in> vars"
+    using call_fwd[OF True ce] .
+  have covV_cont: "(cont, ctx) \<in> vars"
+    using comb_fwd[OF True ce] .
+  have sin': "s \<in> gammaDG ?d ?g"
+    using sin True by (simp add: sg_cov)
+  have route_agree: "?ctx' = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
+    using route_enterc_agree[OF True ce sin'] .
+  have "call_enter gs (CallEdge dst pars args) s
+      \<in> gammaDG (snd (dgs_enter S pars args ?d ?g)) (fst (dgs_enter S pars args ?d ?g))"
+    using enter_sound_fs[OF sin'] .
+  also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (FunctionEntry p, ?ctx')))) ?g"
+    by (rule gammaDG_mono[OF routed_seed_publish_bound_local[OF ce covV_cont covV]
+          routed_seed_publish_bound_global[OF ce covV_cont]])
+  also have "\<dots> = gammaM (sg (Inl (FunctionEntry p, ?ctx')))"
+    using covV by (simp add: sg_cov)
+  finally show ?thesis using route_agree by simp
+qed
+
+subsection \<open>COMB: the routed return combine\<close>
+
+lemma routed_comb_bound_local:
+  assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covV_cont: "(cont, c1) \<in> vars"
+  shows "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1))))
+               (locals (sigma (Inl (FunctionResult p,
+                 route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
+               (globs (sigma (Inr gk0))))
+         \<le> locals (sigma (Inl (cont, c1)))"
+proof -
+  let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
+  let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryG gk0 (\<lambda>gv1.
+              Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals dcl) (globs gv1)))
+                (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)
+                                        \<squnion> fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))))
+                      (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))) bot)))))))"
+  have ret: "(cl, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
+    using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
+  have mem: "?t \<in> set (trees cont c1)"
+    unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
+  have "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
+           (globs (sigma (Inr gk0))))
+      = locals (traverse_rhs ?t sigma)"
+    by simp
+  also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (trees cont c1)"
+    using locals_traverse_le_side_acc_dg[OF mem] .
+  also have "\<dots> = locals (eq Gen (cont, c1) sigma)"
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+  also have "\<dots> \<le> locals (sigma (Inl (cont, c1)))"
+    using pp_eq_bound[OF covV_cont] by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+lemma routed_comb_bound_global:
+  assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covV_cont: "(cont, c1) \<in> vars"
+  shows "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1))))
+               (locals (sigma (Inl (FunctionResult p,
+                 route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
+               (globs (sigma (Inr gk0))))
+         \<le> globs (sigma (Inr gk0))"
+proof -
+  let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
+  let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryG gk0 (\<lambda>gv1.
+              Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals dcl) (globs gv1)))
+                (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)
+                                        \<squnion> fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))))
+                      (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))) bot)))))))"
+  have ret: "(cl, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
+    using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
+  have mem: "?t \<in> set (trees cont c1)"
+    unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
+  have "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
+           (globs (sigma (Inr gk0))))
+      \<le> globs (sides_of_rhs ?t sigma (Inr gk0))"
+    by (auto simp: seed_key_ne_gk0 seed_key_ne_gk0[symmetric] sup_dg_state_def bot_dg_state_def
+        intro: le_supI2)
+  also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 cont) (trees cont c1)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
+  also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, c1)) sigma (Inr gk0))"
+    by (rule le_dg_state_globsD[OF sides_fold_le_Gen])
+  also have "\<dots> \<le> globs (sigma (Inr gk0))"
+    using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr gk0"]
+    by (rule le_dg_state_globsD)
+  finally show ?thesis .
+qed
+
+theorem routed_context_comb:
+  assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and s: "s \<in> gammaM (sg (Inl (cl, c1)))"
+    and t: "t \<in> gammaM (sg (Inl (FunctionResult p, enterc cl c1 es)))"
+    and ces: "call_enter_store gs g cl s es"
+  shows "combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
+proof (cases "(cl, c1) \<in> vars")
+  case False
+  hence "gammaM (sg (Inl (cl, c1))) = {}" by (rule sg_uncovered_empty)
+  thus ?thesis using s by simp
+next
+  case True
+  let ?d = "locals (sigma (Inl (cl, c1)))"
+  let ?g = "globs (sigma (Inr gk0))"
+  let ?ex_ctx = "route cl c1 ?d (CallEdge dst pars args)"
+  have sin: "s \<in> gammaDG ?d ?g"
+    using s True by (simp add: sg_cov)
+  have es_eq: "es = call_enter gs (CallEdge dst pars args) s"
+    using call_enter_store_agree ces ce by blast
+  have route_agree: "?ex_ctx = enterc cl c1 es"
+    using route_enterc_agree[OF True ce sin] es_eq by simp
+  show ?thesis
+  proof (cases "(FunctionResult p, ?ex_ctx) \<in> vars")
+    case False
+    hence "gammaM (sg (Inl (FunctionResult p, ?ex_ctx))) = {}" by (rule sg_uncovered_empty)
+    with route_agree have "gammaM (sg (Inl (FunctionResult p, enterc cl c1 es))) = {}" by simp
+    with t show ?thesis by simp
+  next
+    case True
+    have covV_cont: "(cont, c1) \<in> vars"
+      using comb_fwd[OF \<open>(cl, c1) \<in> vars\<close> ce] .
+    have tin: "t \<in> gammaDG (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g"
+      using t route_agree True by (simp add: sg_cov)
+    have "combine_collect gs dst s t
+        \<in> gammaDG (snd (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g))
+             (fst (dgs_combine S dst ?d (locals (sigma (Inl (FunctionResult p, ?ex_ctx)))) ?g))"
+      using combine_sound_fs[OF sin tin] .
+    also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (cont, c1)))) ?g"
+      by (rule gammaDG_mono[OF routed_comb_bound_local[OF ce covV_cont]
+            routed_comb_bound_global[OF ce covV_cont]])
+    also have "\<dots> = gammaM (sg (Inl (cont, c1)))"
+      using covV_cont by (simp add: sg_cov)
+    finally show ?thesis .
+  qed
+qed
+
+end
 
 locale routed_context =
   dg_ctx_activation S gs g gk0 route "routed_cmb S gk0 seed_key" "routed_extra seed_key gk0"
@@ -127,6 +546,39 @@ locale routed_context =
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
+
+text \<open>
+  \<open>routed_context\<close> is exactly \<open>routed_context_base\<close> at \<open>gammaDG := gamma_unit gs\<close>,
+  \<open>gammaM := gamma_state\<close>, matching \<^locale>\<open>dg_ctx_activation\<close>'s own specialization.
+\<close>
+sublocale base: routed_context_base S "\<lambda>d g. gamma_unit gs d g" gs
+  g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key "\<lambda>s. \<lbrakk>s\<rbrakk>" enterc
+proof unfold_locales
+  show "finite (calls g)" by (rule finC)
+next
+  show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
+next
+  fix u ctx dst pars args p cont s
+  assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    "s \<in> gamma_unit gs (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
+  then show "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+      = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
+    by (rule route_enterc_agree)
+next
+  fix u ctx dst pars args p cont
+  assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "(FunctionEntry p, route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+        \<in> vars"
+    by (rule call_fwd)
+next
+  fix cl c1 dst pars args p cont
+  assume "(cl, c1) \<in> vars" "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "(cont, c1) \<in> vars" by (rule comb_fwd)
+next
+  fix cl s es dst pars args p cont
+  assume "call_enter_store gs g cl s es" "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "es = call_enter gs (CallEdge dst pars args) s" by (rule call_enter_store_agree)
+qed
 
 lemma le_dg_state_localsD: "d \<le> d' \<Longrightarrow> locals d \<le> locals d'"
   by (simp add: less_eq_dg_state_def)
@@ -179,13 +631,13 @@ lemma routed_seed_publish_bound_local:
 proof -
   let ?ctx' = "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)"
   let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
-              Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)))
-                (Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
-                  (DG bot (enter_local S pars args (locals d) (globs gv)))
-                  (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
-                    (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
-                      Side gk0 (DG bot (combine_global S dst (locals d) (locals dex) (globs gv2)))
-                        (Answer (DG (combine_local S dst (locals d) (locals dex) (globs gv2)) bot))))))))"
+              Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals d) (globs gv)))
+                (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)
+                                        \<squnion> combine_global S dst (locals d) (locals dex) (globs gv2)))
+                      (Answer (DG (combine_local S dst (locals d) (locals dex) (globs gv2)) bot)))))))"
   have ret: "(u, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont ctx)"
@@ -220,20 +672,21 @@ lemma routed_seed_publish_bound_global:
            \<le> globs (sigma (Inr gk0))"
 proof -
   let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
-              Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)))
-                (Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
-                  (DG bot (enter_local S pars args (locals d) (globs gv)))
-                  (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
-                    (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
-                      Side gk0 (DG bot (combine_global S dst (locals d) (locals dex) (globs gv2)))
-                        (Answer (DG (combine_local S dst (locals d) (locals dex) (globs gv2)) bot))))))))"
+              Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals d) (globs gv)))
+                (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)
+                                        \<squnion> combine_global S dst (locals d) (locals dex) (globs gv2)))
+                      (Answer (DG (combine_local S dst (locals d) (locals dex) (globs gv2)) bot)))))))"
   have ret: "(u, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont ctx)"
     unfolding routed_cmb_def Let_def using ret by (force intro: rev_image_eqI)
   have "fst (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
       \<le> globs (sides_of_rhs ?t sigma (Inr gk0))"
-    by (simp add: seed_key_ne_gk0 seed_key_ne_gk0[symmetric] sup_dg_state_def le_supI2)
+    by (auto simp: seed_key_ne_gk0 seed_key_ne_gk0[symmetric] sup_dg_state_def bot_dg_state_def
+             intro: le_supI1)
   also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 cont) (trees cont ctx)) sigma (Inr gk0))"
     by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
   also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, ctx)) sigma (Inr gk0))"
@@ -243,6 +696,19 @@ proof -
     by (rule le_dg_state_globsD)
   finally show ?thesis .
 qed
+
+lemma routed_cmb_contribution_matches_local:
+  "locals (traverse_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau)
+     = locals (traverse_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau)"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def)
+
+lemma routed_cmb_contribution_matches_global:
+  "globs (traverse_rhs (routed_cmb_contribution S gk0 seed_key route ctx ca cc ex) tau)
+     = globs (sides_of_rhs (routed_cmb S gk0 seed_key route ctx ca cc ex) tau (Inr gk0))"
+  unfolding routed_cmb_contribution_def routed_cmb_def
+  by (cases ca) (simp add: Let_def bot_dg_state_def sup_dg_state_def
+    seed_key_ne_gk0 seed_key_ne_gk0[symmetric])
 
 theorem routed_context_call:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
@@ -295,13 +761,13 @@ lemma routed_comb_bound_local:
 proof -
   let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
   let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryG gk0 (\<lambda>gv1.
-              Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)))
-                (Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
-                  (DG bot (enter_local S pars args (locals dcl) (globs gv1)))
-                  (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
-                    (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
-                      Side gk0 (DG bot (fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))))
-                        (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))) bot))))))))"
+              Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals dcl) (globs gv1)))
+                (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)
+                                        \<squnion> fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))))
+                      (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))) bot)))))))"
   have ret: "(cl, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont c1)"
@@ -330,13 +796,13 @@ lemma routed_comb_bound_global:
 proof -
   let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
   let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryG gk0 (\<lambda>gv1.
-              Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)))
-                (Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
-                  (DG bot (enter_local S pars args (locals dcl) (globs gv1)))
-                  (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
-                    (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
-                      Side gk0 (DG bot (fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))))
-                        (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))) bot))))))))"
+              Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
+                (DG bot (enter_local S pars args (locals dcl) (globs gv1)))
+                (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+                  (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
+                    Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)
+                                        \<squnion> fst (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))))
+                      (Answer (DG (snd (dgs_combine S dst (locals dcl) (locals dex) (globs gv2))) bot)))))))"
   have ret: "(cl, CallEdge dst pars args, FunctionResult p) \<in> set (return_call_action_list g cont)"
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont c1)"
@@ -344,8 +810,8 @@ proof -
   have "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (FunctionResult p, ?ex_ctx))))
            (globs (sigma (Inr gk0))))
       \<le> globs (sides_of_rhs ?t sigma (Inr gk0))"
-    by (auto simp: seed_key_ne_gk0 seed_key_ne_gk0[symmetric] sup_dg_state_def
-        intro: le_supI1 le_supI2)
+    by (auto simp: seed_key_ne_gk0 seed_key_ne_gk0[symmetric] sup_dg_state_def bot_dg_state_def
+        intro: le_supI2)
   also have "\<dots> \<le> globs (sides_of_rhs (side_rhs_fold_dg (acc0 cont) (trees cont c1)) sigma (Inr gk0))"
     by (rule le_dg_state_globsD[OF sides_le_side_rhs_fold_dg[OF mem]])
   also have "\<dots> \<le> globs (sides_of_rhs (Gen (cont, c1)) sigma (Inr gk0))"

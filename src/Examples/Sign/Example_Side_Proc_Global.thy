@@ -30,8 +30,8 @@ theorem proc_global_side_sign_analysis:
     "side_cfg_solve_dom_eff gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) (sign_etf gs) bot
        side_proc_global_s0 ()
        (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))"
-  shows "t \<in> \<lbrakk>side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs) bot side_proc_global_s0 ()
-         (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
+  shows "t \<in> gamma_state_lift (side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs) bot side_proc_global_s0 ()
+         (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
   by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
 subsection \<open>Executable sign analysis\<close>
 
@@ -41,10 +41,10 @@ text \<open>Reuses @{const inc_program} (\<open>Example_Inc_Proc\<close>) direct
 abbreviation inc_gs :: "vname \<Rightarrow> bool" where
   "inc_gs \<equiv> declared_global inc_program"
 
-value "sign_exec_prog inc_gs (STR ''main'') inc_program (STR ''counter'')"
+value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog inc_gs (STR ''main'') inc_program) (STR ''counter'')"
 
 lemma inc_counter_nonneg:
-  "sign_exec_prog inc_gs (STR ''main'') inc_program (STR ''counter'') = SNonNeg"
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog inc_gs (STR ''main'') inc_program) (STR ''counter'') = SNonNeg"
   by eval
 
 lemma inc_terminates: "sign_terminates_prog inc_gs (STR ''main'') inc_program"
@@ -52,8 +52,8 @@ lemma inc_terminates: "sign_terminates_prog inc_gs (STR ''main'') inc_program"
 
 corollary inc_certified_sound:
   "ltr_collect inc_gs (prog_cfg (STR ''main'') inc_program) (cinit_stores inc_gs) (cfg_exit (prog_cfg (STR ''main'') inc_program))
-   \<le> \<lbrakk>sign_exec_prog inc_gs (STR ''main'') inc_program\<rbrakk>"
-  by (rule sign_exec_prog_sound_collecting[OF inc_terminates])
+   \<le> gamma_state_lift (sign_exec_prog inc_gs (STR ''main'') inc_program)"
+  by (rule sign_exec_prog_sound_collecting[OF refl inc_terminates])
 
 subsection \<open>Annotated CFG visualisation\<close>
 

@@ -106,15 +106,19 @@ text \<open>
   proof unfolds to establish soundness.
 \<close>
 
-value "sign_exec_eqs random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
+value "sign_exec_eqs (resolved_st_q_is_bot_for (declared_global_vars random_guard_program))
+         random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
          (STR ''main'') (prog_main random_guard_program)"
 
-value "sign_exec_raw random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
+value "sign_exec_raw (resolved_st_q_is_bot_for (declared_global_vars random_guard_program))
+         random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
          (STR ''main'') (prog_main random_guard_program)"
 
 value "sign_exec_prog random_guard_gs (STR ''main'') random_guard_program"
 
-lemma random_guard_exec_y: "sign_exec_prog random_guard_gs (STR ''main'') random_guard_program (STR ''y'') = SNonNeg"
+lemma random_guard_exec_y:
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program) (STR ''y'')
+     = SNonNeg"
   by eval
 
 lemma random_guard_solver_terminates: "sign_terminates_prog random_guard_gs (STR ''main'') random_guard_program"
@@ -123,8 +127,8 @@ lemma random_guard_solver_terminates: "sign_terminates_prog random_guard_gs (STR
 corollary random_guard_exit_sound:
   "ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
      (cfg_exit (prog_cfg (STR ''main'') random_guard_program))
-   \<le> \<lbrakk>sign_exec_prog random_guard_gs (STR ''main'') random_guard_program\<rbrakk>"
-  by (rule sign_exec_prog_sound_collecting[OF random_guard_solver_terminates])
+   \<le> gamma_state_lift (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program)"
+  by (rule sign_exec_prog_sound_collecting[OF refl random_guard_solver_terminates])
 
 text \<open>
   Closing issue #43: for every concrete execution state that reaches the
@@ -136,14 +140,21 @@ text \<open>
   integers.
 \<close>
 
+lemma gamma_state_case_lifted:
+  fixes x :: "'a::sound_domain abs_state lifted"
+  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
+  by (cases x) (simp_all add: gamma_state_bot)
+
 corollary random_guard_exit_y_nonneg:
   assumes "t \<in> ltr_collect random_guard_gs (prog_cfg (STR ''main'') random_guard_program) (cinit_stores random_guard_gs)
              (cfg_exit (prog_cfg (STR ''main'') random_guard_program))"
   shows "t (STR ''y'') \<ge> 0"
 proof -
-  have t_in: "t \<in> \<lbrakk>sign_exec_prog random_guard_gs (STR ''main'') random_guard_program\<rbrakk>"
-    using assms random_guard_exit_sound by blast
-  have "t (STR ''y'') \<in> gamma_sign (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program (STR ''y''))"
+  have t_in: "t \<in> \<lbrakk>case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program)\<rbrakk>"
+    unfolding gamma_state_case_lifted using assms random_guard_exit_sound by blast
+  have "t (STR ''y'')
+          \<in> gamma_sign (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program)
+                          (STR ''y''))"
     using gamma_stateD[OF t_in] by simp
   then show ?thesis using random_guard_exec_y by simp
 qed

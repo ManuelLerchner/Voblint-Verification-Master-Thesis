@@ -57,10 +57,12 @@ text \<open>
 \<close>
 
 fun sign_eqs :: "pp \<Rightarrow> (pp, glob, sign resolved_st_q) strategy_tree" where
-  "sign_eqs P0 = Answer bot"
-| "sign_eqs P1 = QueryL P0 (\<lambda>s. Answer (assign_st s (STR ''x'') (N 1)))"
-| "sign_eqs P2 = QueryL P1 (\<lambda>s. Answer
-     (assign_st s (STR ''y'') (Plus (V (STR ''x'')) (V (STR ''x'')))))"
+  "sign_eqs P0 = answer bot"
+| "sign_eqs P1 = do { s \<leftarrow> read_local P0; answer (assign_st s (STR ''x'') (N 1)) }"
+| "sign_eqs P2 = do {
+     s \<leftarrow> read_local P1;
+     answer (assign_st s (STR ''y'') (Plus (V (STR ''x'')) (V (STR ''x''))))
+   }"
 
 definition sign_solution :: "pp set \<times> (pp + glob \<Rightarrow> sign resolved_st_q)" where
   "sign_solution = TD_side_always_join_Interp_solve sign_eqs P2"

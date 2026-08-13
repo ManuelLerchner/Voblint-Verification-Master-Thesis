@@ -141,10 +141,99 @@ next
   then show ?thesis using A1 A2 by simp
 qed
 
+lemma aval_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl a sigma1 \<le> aval_ivl a sigma2"
+  by (induction a arbitrary: sigma1 sigma2)
+     (auto simp: ivl_plus_mono ivl_minus_mono ivl_times_mono le_funD)
+
+lemma inv_less_ivl_mono:
+  assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"
+  shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
+       \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
+proof -
+  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
+  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
+  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (rule ivl_exhaustE)
+  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (rule ivl_exhaustE)
+  from a1[unfolded ha1 ha1' less_eq_ivl_def] have ord1: "eint_le l1' l1" "eint_le u1 u1'" by auto
+  from a2[unfolded ha2 ha2' less_eq_ivl_def] have ord2: "eint_le l2' l2" "eint_le u2 u2'" by auto
+  show ?thesis
+  proof (cases res)
+    case True
+    then have r: "res = True" by simp
+    have aux1: "Ivl MinInf (u2 - Fin 1) \<le> Ivl MinInf (u2' - Fin (1::int))"
+      by (simp add: less_eq_ivl_def eint_minus_mono[OF ord2(2) eint_le_refl])
+    have aux2: "Ivl (l1 + Fin 1) PlusInf \<le> Ivl (l1' + Fin (1::int)) PlusInf"
+      by (simp add: less_eq_ivl_def eint_plus_mono[OF ord1(1) eint_le_refl])
+    show ?thesis
+      unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
+    proof (intro conjI)
+      show "Ivl l1 u1 \<sqinter> Ivl MinInf (u2 - Fin 1) \<le> Ivl l1' u1' \<sqinter> Ivl MinInf (u2' - Fin 1)"
+        by (intro inf_mono a1[unfolded ha1 ha1'] aux1)
+      show "Ivl l2 u2 \<sqinter> Ivl (l1 + Fin 1) PlusInf \<le> Ivl l2' u2' \<sqinter> Ivl (l1' + Fin 1) PlusInf"
+        by (intro inf_mono a2[unfolded ha2 ha2'] aux2)
+    qed
+  next
+    case False
+    then have r: "res = False" by simp
+    have aux3: "Ivl l2 PlusInf \<le> Ivl l2' PlusInf"
+      by (simp add: less_eq_ivl_def ord2(1) eint_le_refl)
+    have aux4: "Ivl MinInf u1 \<le> Ivl MinInf u1'"
+      by (simp add: less_eq_ivl_def ord1(2) eint_le_refl)
+    show ?thesis
+      unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
+    proof (intro conjI)
+      show "Ivl l1 u1 \<sqinter> Ivl l2 PlusInf \<le> Ivl l1' u1' \<sqinter> Ivl l2' PlusInf"
+        by (intro inf_mono a1[unfolded ha1 ha1'] aux3)
+      show "Ivl l2 u2 \<sqinter> Ivl MinInf u1 \<le> Ivl l2' u2' \<sqinter> Ivl MinInf u1'"
+        by (intro inf_mono a2[unfolded ha2 ha2'] aux4)
+    qed
+  qed
+qed
+
+text \<open>
+  Reductiveness: @{const inv_less_ivl}/@{const inv_eq_ivl} only ever narrow an
+  operand via @{const meet_ivl} or pass it through unchanged. \<open>meet_ivl_le_lb1\<close>/
+  \<open>meet_ivl_le_lb2\<close> are stated via \<open>(\<sqinter>)\<close>, not \<open>meet_ivl\<close> itself, so restate them
+  directly in terms of \<open>meet_ivl\<close> here (matching the case-split style already
+  used in the @{class semilattice_inf} instance proof) for direct use below.
+\<close>
+
+lemma meet_ivl_le1: "meet_ivl a b \<le> a"
+  by (cases a; cases b;
+      simp add: less_eq_ivl_def;
+      metis eint_le_linear eint_le_trans eint_le_refl)
+
+lemma meet_ivl_le2: "meet_ivl a b \<le> b"
+  by (cases a; cases b;
+      auto simp: less_eq_ivl_def split: if_splits intro: eint_le_trans eint_le_refl)
+
+lemma inv_less_ivl_reductive1: "fst (inv_less_ivl res a1 a2) \<le> a1"
+  apply (cases res; cases a1; cases a2)
+  using eint_le_linear less_eq_ivl_def by(auto)
+
+lemma inv_less_ivl_reductive2: "snd (inv_less_ivl res a1 a2) \<le> a2"
+  apply (cases res; cases a1; cases a2)
+  using eint_le_linear less_eq_ivl_def by(auto)
+
+lemma inv_eq_ivl_reductive1: "fst (inv_eq_ivl res a1 a2) \<le> a1"
+  by (cases res; simp add: meet_ivl_le1)
+
+lemma inv_eq_ivl_reductive2: "snd (inv_eq_ivl res a1 a2) \<le> a2"
+  by (cases res; simp add: meet_ivl_le2)
+
+
 subsection \<open>Backward-domain interpretation\<close>
 
+text \<open>
+  One interpretation discharges soundness, monotonicity, and reductiveness
+  together against @{locale backward_domain_refined} -- each \<open>inv_*\<close>'s
+  mono/reductive obligation is one @{const le_pair} fact, built from the
+  componentwise per-operator lemmas above.
+\<close>
+
 global_interpretation ivl_backward_domain:
-    backward_domain meet_ivl aval_ivl
+    backward_domain_refined meet_ivl aval_ivl
                     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
@@ -193,6 +282,47 @@ next
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
   show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
+next
+  fix a1 a2 b1 b2 :: ivl
+  assume "a1 \<le> a2" and "b1 \<le> b2"
+  thus "meet_ivl a1 b1 \<le> meet_ivl a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
+next
+  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
+  assume "\<sigma>1 \<le> \<sigma>2"
+  thus "aval_ivl e \<sigma>1 \<le> aval_ivl e \<sigma>2" by (rule aval_ivl_mono)
+next
+  fix x1 x2 y1 y2 :: ivl and res :: bool
+  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_less_ivl res x1 y1) (inv_less_ivl res x2 y2)"
+    using inv_less_ivl_mono[OF A B] by (simp add: le_pair_def)
+next
+  fix x1 x2 y1 y2 :: ivl and res :: bool
+  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_eq_ivl res x1 y1) (inv_eq_ivl res x2 y2)"
+    using inv_eq_ivl_mono[OF A B] by (simp add: le_pair_def)
+next
+  fix r1 r2 x1 x2 y1 y2 :: ivl
+  assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  show "le_pair (inv_conservative r1 x1 y1) (inv_conservative r2 x2 y2)"
+    using A B by (simp add: inv_conservative_def le_pair_def)
+next
+  fix a b :: ivl
+  show "meet_ivl a b \<le> a" by (rule meet_ivl_le1)
+next
+  fix a b :: ivl
+  show "meet_ivl a b \<le> b" by (rule meet_ivl_le2)
+next
+  fix res :: bool and a1 a2 :: ivl
+  show "le_pair (inv_less_ivl res a1 a2) (a1, a2)"
+    using inv_less_ivl_reductive1 inv_less_ivl_reductive2 by (simp add: le_pair_def)
+next
+  fix res :: bool and a1 a2 :: ivl
+  show "le_pair (inv_eq_ivl res a1 a2) (a1, a2)"
+    using inv_eq_ivl_reductive1 inv_eq_ivl_reductive2 by (simp add: le_pair_def)
+next
+  fix r a1 a2 :: ivl
+  show "le_pair (inv_conservative r a1 a2) (a1, a2)"
+    by (simp add: inv_conservative_def le_pair_def)
 qed
 
 text \<open>
@@ -205,107 +335,14 @@ text \<open>
 lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute
 lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
 
-lemma aval_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl a sigma1 \<le> aval_ivl a sigma2"
-  by (induction a arbitrary: sigma1 sigma2)
-     (auto simp: ivl_plus_mono ivl_minus_mono ivl_times_mono le_funD)
-
-
-lemma inv_less_ivl_mono:
-  assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"
-  shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
-       \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
-proof -
-  obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
-  obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
-  obtain l1' u1' where ha1': "a1' = Ivl l1' u1'" by (rule ivl_exhaustE)
-  obtain l2' u2' where ha2': "a2' = Ivl l2' u2'" by (rule ivl_exhaustE)
-  from a1[unfolded ha1 ha1' less_eq_ivl_def] have ord1: "eint_le l1' l1" "eint_le u1 u1'" by auto
-  from a2[unfolded ha2 ha2' less_eq_ivl_def] have ord2: "eint_le l2' l2" "eint_le u2 u2'" by auto
-  show ?thesis
-  proof (cases res)
-    case True
-    then have r: "res = True" by simp
-    have aux1: "Ivl MinInf (u2 - Fin 1) \<le> Ivl MinInf (u2' - Fin (1::int))"
-      by (simp add: less_eq_ivl_def eint_minus_mono[OF ord2(2) eint_le_refl])
-    have aux2: "Ivl (l1 + Fin 1) PlusInf \<le> Ivl (l1' + Fin (1::int)) PlusInf"
-      by (simp add: less_eq_ivl_def eint_plus_mono[OF ord1(1) eint_le_refl])
-    show ?thesis
-      unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
-    proof (intro conjI)
-      show "Ivl l1 u1 \<sqinter> Ivl MinInf (u2 - Fin 1) \<le> Ivl l1' u1' \<sqinter> Ivl MinInf (u2' - Fin 1)"
-        by (intro inf_mono a1[unfolded ha1 ha1'] aux1)
-      show "Ivl l2 u2 \<sqinter> Ivl (l1 + Fin 1) PlusInf \<le> Ivl l2' u2' \<sqinter> Ivl (l1' + Fin 1) PlusInf"
-        by (intro inf_mono a2[unfolded ha2 ha2'] aux2)
-    qed
-  next
-    case False
-    then have r: "res = False" by simp
-    have aux3: "Ivl l2 PlusInf \<le> Ivl l2' PlusInf"
-      by (simp add: less_eq_ivl_def ord2(1) eint_le_refl)
-    have aux4: "Ivl MinInf u1 \<le> Ivl MinInf u1'"
-      by (simp add: less_eq_ivl_def ord1(2) eint_le_refl)
-    show ?thesis
-      unfolding r ha1 ha2 ha1' ha2' inv_less_ivl.simps fst_conv snd_conv
-    proof (intro conjI)
-      show "Ivl l1 u1 \<sqinter> Ivl l2 PlusInf \<le> Ivl l1' u1' \<sqinter> Ivl l2' PlusInf"
-        by (intro inf_mono a1[unfolded ha1 ha1'] aux3)
-      show "Ivl l2 u2 \<sqinter> Ivl MinInf u1 \<le> Ivl l2' u2' \<sqinter> Ivl MinInf u1'"
-        by (intro inf_mono a2[unfolded ha2 ha2'] aux4)
-    qed
-  qed
-qed
-
-text \<open>
-  Monotonicity of @{const afilter_ivl} / @{const bfilter_ivl} is the generic
-  @{locale backward_domain_mono} result: interpret it at the interval operators
-  (the parent @{term ivl_backward_domain} already discharges soundness, so only the
-  six operator-mono facts remain) and the filter monotonicity follows.
-\<close>
-
-context begin
-interpretation ivl_bdm:
-  backward_domain_mono meet_ivl aval_ivl
-                       inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
-proof unfold_locales
-  fix a1 a2 b1 b2 :: ivl
-  assume "a1 \<le> a2" and "b1 \<le> b2"
-  hence "a1 \<sqinter> b1 \<le> a2 \<sqinter> b2" by (rule inf_mono)
-  thus "meet_ivl a1 b1 \<le> meet_ivl a2 b2" by (simp add: inf_ivl_def)
-next
-  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
-  assume "\<sigma>1 \<le> \<sigma>2"
-  thus "aval_ivl e \<sigma>1 \<le> aval_ivl e \<sigma>2" by (rule aval_ivl_mono)
-next
-  fix x1 x2 y1 y2 :: ivl and res :: bool
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_less_ivl res x1 y1) \<le> fst (inv_less_ivl res x2 y2) \<and>
-        snd (inv_less_ivl res x1 y1) \<le> snd (inv_less_ivl res x2 y2)"
-    by (rule inv_less_ivl_mono)
-next
-  fix x1 x2 y1 y2 :: ivl and res :: bool
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_eq_ivl res x1 y1) \<le> fst (inv_eq_ivl res x2 y2) \<and>
-        snd (inv_eq_ivl res x1 y1) \<le> snd (inv_eq_ivl res x2 y2)"
-    by (rule inv_eq_ivl_mono)
-next
-  fix r1 r2 x1 x2 y1 y2 :: ivl
-  assume "x1 \<le> x2" and "y1 \<le> y2"
-  thus "fst (inv_conservative r1 x1 y1) \<le> fst (inv_conservative r2 x2 y2) \<and>
-        snd (inv_conservative r1 x1 y1) \<le> snd (inv_conservative r2 x2 y2)"
-    by (simp add: inv_conservative_def)
-
-qed
-
 lemma afilter_ivl_mono:
   "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
    afilter_ivl e a1 sigma1 \<le> afilter_ivl e a2 sigma2"
-  using ivl_bdm.afilter_mono by (simp add: afilter_ivl_def)
+  using ivl_backward_domain.afilter_mono by (simp add: afilter_ivl_def)
 
 lemma bfilter_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl b res sigma1 \<le> bfilter_ivl b res sigma2"
-  using ivl_bdm.bfilter_mono by (simp add: bfilter_ivl_def)
+  using ivl_backward_domain.bfilter_mono by (simp add: bfilter_ivl_def)
 
 end
 
-end

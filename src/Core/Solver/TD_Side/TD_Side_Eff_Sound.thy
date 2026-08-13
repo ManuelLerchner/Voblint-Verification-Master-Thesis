@@ -1,4 +1,4 @@
-theory TD_Side_Eff_Sound
+  theory TD_Side_Eff_Sound
   imports TD_Side_Tree TD_Side_CFG Constraint_System_Sound
 begin
 
@@ -31,49 +31,49 @@ text \<open>
 
 lemma etf_sound_assignD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
-      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+      and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
   shows
     "s(x := aval e s)
-       \<in> \<lbrakk>etf_collecting_full (etf_assign etf x e u) \<sigma>\<rbrakk>"
-  using assms etf_sound_assign unfolding side_env_def
+       \<in> gamma_state_lift (etf_collecting_full_lift (etf_assign etf x e u) \<sigma>)"
+  using assms etf_sound_assign unfolding side_env_lift_def
   by blast
 
 lemma etf_sound_randomD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
-      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+      and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
   shows
     "s(x := v)
-       \<in> \<lbrakk>etf_collecting_full (etf_random etf x u) \<sigma>\<rbrakk>"
-  using assms etf_sound_random unfolding side_env_def
+       \<in> gamma_state_lift (etf_collecting_full_lift (etf_random etf x u) \<sigma>)"
+  using assms etf_sound_random unfolding side_env_lift_def
   by blast
 
 lemma etf_sound_assumeD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
-      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+      and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
       and "bval b s"
   shows
-    "s \<in> \<lbrakk>etf_collecting_full (etf_assume etf b u) \<sigma>\<rbrakk>"
-  using assms etf_sound_assume unfolding side_env_def
+    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume etf b u) \<sigma>)"
+  using assms etf_sound_assume unfolding side_env_lift_def
   by blast
 
 lemma etf_sound_assume_notD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
-      and "s \<in> \<lbrakk>side_env \<sigma> u\<rbrakk>"
+      and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
       and "\<not> bval b s"
   shows
-    "s \<in> \<lbrakk>etf_collecting_full (etf_assume_not etf b u) \<sigma>\<rbrakk>"
-  using assms etf_sound_assume_not unfolding side_env_def
+    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume_not etf b u) \<sigma>)"
+  using assms etf_sound_assume_not unfolding side_env_lift_def
   by blast
 
 
 lemma edge_collect_etf_sound:
   assumes inr: "inr_slot_locals_bot gs \<sigma>"
   shows
-    "edge_collect a \<lbrakk>side_env \<sigma> u\<rbrakk>
-       \<subseteq> \<lbrakk>etf_collecting_full (apply_etf etf a u) \<sigma>\<rbrakk>"
+    "edge_collect a (gamma_state_lift (side_env_lift \<sigma> u))
+       \<subseteq> gamma_state_lift (etf_collecting_full_lift (apply_etf etf a u) \<sigma>)"
   using inr
   by (cases a;
-      auto simp: etf_sound_nop side_env_apply
+      auto simp: etf_sound_nop side_env_lift_def
            split: option.splits)
 
 end

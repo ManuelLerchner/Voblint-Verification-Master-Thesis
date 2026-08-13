@@ -102,6 +102,13 @@ voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
 # lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
 regression-lint = "python3 tests/run.py --lint"
 
+# Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
+# (see the test module's own docstring). Deliberately outside tests/property/
+# and property-build's CLI-build dependency: this only imports the generator
+# and grammar/vimp.yaml directly, no CLI binary needed, so it stays as fast
+# and fail-fast as regression-lint above.
+id-position-check = "python3 -m pytest tests/test_gen_isabelle_id_position.py"
+
 # Everything CI runs, under one name. Spans all four features (lint,
 # grammar, test, and build's plain isabelle/ocaml calls), so this only
 # resolves from an environment that composes all of them -- i.e. default.
@@ -111,6 +118,7 @@ ci = { depends-on = [
   "build",
   "codegen-check",
   "regression-lint",
+  "id-position-check",
   "cli-test",
   "cli-smoke",
   "codegen-regression",

@@ -14,19 +14,19 @@ text \<open>Local answers are indexed by program point, while side effects join 
 subsection \<open>Generic soundness from any partial post-solution\<close>
 
 theorem mixed_flow_analysis_sound:
-  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state"
+  fixes g :: cfg and \<sigma> :: "pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted"
     and bot0 s0 :: "'a abs_state" and S :: "store set"
     and etf :: "('g, 'a) effectful_domain_transfer" and gseed :: 'g
     and gs :: "vname \<Rightarrow> bool"
   assumes se:    "sound_effectful_transfer gs etf"
   assumes pp:    "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) (cfg_exit g) \<sigma> vars"
-  assumes entry: "S \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
+  assumes entry: "S \<le> gamma_state_lift (side_env_lift \<sigma> (cfg_entry g))"
   assumes cone:  "cone_compatible_etf gs etf"
   assumes fin:   "finite (intra g)"
   assumes finC:  "finite (calls g)"
   assumes wf:    "wf_cfg g"
   assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  shows "ltr_collect gs g S (cfg_exit g) \<le> \<lbrakk>side_env \<sigma> (cfg_exit g)\<rbrakk>"
+  shows "ltr_collect gs g S (cfg_exit g) \<le> gamma_state_lift (side_env_lift \<sigma> (cfg_exit g))"
   by (rule side_collect_sound_exit_eff_ltr_cone[OF se pp fin finC wf entry cone inr])
 
 subsection \<open>Optimal soundness via the TD solver (threefold monotonicity)\<close>
@@ -44,7 +44,7 @@ theorem mixed_flow_analysis_optimal:
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   shows sound:
     "ltr_collect gs g S (cfg_exit g)
-       \<le> \<lbrakk>side_analyse_eff gs \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+       \<le> gamma_state_lift (side_analyse_eff gs \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g))"
     and optimal:
     "least_part_post_solution (side_cfg_T_eff gs g etf bot s0 gseed) (cfg_exit g)
        (td_cfg_side_solver_eff.nu_at gs g etf bot s0 gseed (cfg_exit g))
@@ -57,7 +57,7 @@ proof -
     by unfold_locales
   show sound:
     "ltr_collect gs g S (cfg_exit g)
-       \<le> \<lbrakk>side_analyse_eff gs \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g)\<rbrakk>"
+       \<le> gamma_state_lift (side_analyse_eff gs \<Pi> ps mnm main etf bot s0 gseed (cfg_exit g))"
     unfolding g_eq
     by (rule side_analyse_eff_collect_sound_exit_ltr_cone[OF se
           tfm[unfolded T_eq g_eq] cone dom[unfolded g_eq] S_sound])

@@ -15,7 +15,7 @@ fun eint_le :: "eint => eint => bool" where
   | "eint_le _       MinInf  = False"
   | "eint_le PlusInf _       = False"
 
-lemma eint_le_refl: "eint_le x x"
+lemma eint_le_refl [simp]: "eint_le x x"
   by (cases x) simp_all
 
 lemma eint_le_antisym: "eint_le x y \<Longrightarrow> eint_le y x \<Longrightarrow> x = y"

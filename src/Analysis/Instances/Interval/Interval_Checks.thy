@@ -101,7 +101,9 @@ text \<open>Thin composition, mirroring \<open>sign_check_report\<close>: \<^con
 definition interval_check_report ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "interval_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p) (ivl_exec_prog_at gs mnm p) interval_classify_check"
+     classify_checks (prog_cfg mnm p)
+       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at gs mnm p v))
+       interval_classify_check"
 
 text \<open>
   The definitional equation above unfolds \<^const>\<open>ivl_exec_prog_at\<close> at every
@@ -110,7 +112,8 @@ text \<open>
   whole D/G solver once per check, for an \<open>N\<close>-check program, \<open>N\<close> solver
   runs instead of one. The \<open>[code]\<close> equation below is provably equal (a
   direct \<open>Let\<close>-unfold of the same definitions) but binds
-  \<^term>\<open>ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)\<close>
+  \<^term>\<open>ivl_exec_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+        (prog_table p) (prog_procs p) mnm (prog_main p)\<close>
   once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the
   target language compiles that \<open>let\<close> to a single shared thunk, so the
   generated OCaml computes the solved system exactly once per
@@ -123,11 +126,14 @@ declare interval_check_report_def [code del]
 
 lemma interval_check_report_code [code]:
   "interval_check_report gs mnm p =
-     (let raw = ivl_exec_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+     (let raw = ivl_exec_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                  (prog_table p) (prog_procs p) mnm (prog_main p)
       in classify_checks (prog_cfg mnm p)
-           (\<lambda>v. side_env (fun_of_resolved_st_q_for gs \<circ> raw) v)
+           (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                  (side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))
            interval_classify_check)"
   unfolding interval_check_report_def ivl_exec_prog_at_def[abs_def] ivl_exec_at_def[abs_def] Let_def
+            side_env_lift_st_eq_side_env_lift
   by (rule refl)
 
 text \<open>
@@ -151,6 +157,11 @@ text \<open>
   \<open>p\<close> instead.
 \<close>
 
+lemma gamma_state_case_lifted:
+  fixes x :: "'a::sound_domain abs_state lifted"
+  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
+  by (cases x) (simp_all add: gamma_state_bot)
+
 theorem analyse_interval_report_sound_proved:
   fixes p :: imp_prog and v :: pp and c :: bexp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
@@ -161,12 +172,13 @@ theorem analyse_interval_report_sound_proved:
            bval c s"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-                       \<subseteq> \<lbrakk>ivl_exec_prog_at (declared_global p) prog_main_name p v\<rbrakk>"
-    by (rule ivl_exec_prog_sound_collecting_at[OF terminates reach_exit])
+                       \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v))"
+    unfolding gamma_state_case_lifted
+    by (rule ivl_exec_prog_sound_collecting_at[OF refl terminates reach_exit])
   show ?thesis
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg prog_main_name p"
-             and env = "ivl_exec_prog_at (declared_global p) prog_main_name p"
+             and env = "\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v)"
              and classify = interval_classify_check
              and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
              and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
@@ -184,12 +196,13 @@ theorem analyse_interval_report_sound_refuted:
            \<not> bval c s"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-                       \<subseteq> \<lbrakk>ivl_exec_prog_at (declared_global p) prog_main_name p v\<rbrakk>"
-    by (rule ivl_exec_prog_sound_collecting_at[OF terminates reach_exit])
+                       \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v))"
+    unfolding gamma_state_case_lifted
+    by (rule ivl_exec_prog_sound_collecting_at[OF refl terminates reach_exit])
   show ?thesis
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg prog_main_name p"
-             and env = "ivl_exec_prog_at (declared_global p) prog_main_name p"
+             and env = "\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v)"
              and classify = interval_classify_check
              and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
              and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
@@ -211,12 +224,16 @@ text \<open>
 definition interval_td_check_report ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "interval_td_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p) (analyse_interval_td_at gs (prog_table p) (prog_procs p) mnm (prog_main p))
+     classify_checks (prog_cfg mnm p)
+       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+              (analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                 (prog_table p) (prog_procs p) mnm (prog_main p) v))
        interval_classify_check"
 
 text \<open>
   Same single-solve-per-report fix as \<open>interval_check_report_code\<close>: bind
-  \<^term>\<open>analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)\<close> once, outside
+  \<^term>\<open>analyse_interval_td_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+        (prog_table p) (prog_procs p) mnm (prog_main p)\<close> once, outside
   \<^const>\<open>classify_checks\<close>'s per-check closure.
 \<close>
 
@@ -224,11 +241,14 @@ declare interval_td_check_report_def [code del]
 
 lemma interval_td_check_report_code [code]:
   "interval_td_check_report gs mnm p =
-     (let raw = analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+     (let raw = analyse_interval_td_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                  (prog_table p) (prog_procs p) mnm (prog_main p)
       in classify_checks (prog_cfg mnm p)
-           (\<lambda>v. side_env (fun_of_resolved_st_q_for gs \<circ> raw) v)
+           (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                  (side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))
            interval_classify_check)"
   unfolding interval_td_check_report_def analyse_interval_td_at_def[abs_def] Let_def
+            side_env_lift_st_eq_side_env_lift
   by (rule refl)
 
 definition analyse_interval_td_report :: "imp_prog \<Rightarrow> check_report_entry list" where
@@ -243,22 +263,30 @@ text \<open>
 theorem analyse_interval_td_report_sound_proved:
   fixes p :: imp_prog and v :: pp and c :: bexp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
-      and terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
-                          prog_main_name (prog_main p)"
+      and terminates: "analyse_interval_td_terminates
+                          (resolved_st_q_is_bot_for (declared_global_vars p))
+                          (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_interval_td_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
            bval c s"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-                       \<subseteq> \<lbrakk>analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
-                            prog_main_name (prog_main p) v\<rbrakk>"
+                       \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                           (analyse_interval_td_at
+                              (resolved_st_q_is_bot_for (declared_global_vars p))
+                              (declared_global p) (prog_table p) (prog_procs p)
+                              prog_main_name (prog_main p) v))"
+    unfolding gamma_state_case_lifted
     by (rule analyse_interval_td_prog_sound_collecting_at[OF terminates reach_exit])
   show ?thesis
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg prog_main_name p"
-             and env = "analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
-                          prog_main_name (prog_main p)"
+             and env = "\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                          (analyse_interval_td_at
+                             (resolved_st_q_is_bot_for (declared_global_vars p))
+                             (declared_global p) (prog_table p) (prog_procs p)
+                             prog_main_name (prog_main p) v)"
              and classify = interval_classify_check
              and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
              and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
@@ -269,22 +297,30 @@ qed
 theorem analyse_interval_td_report_sound_refuted:
   fixes p :: imp_prog and v :: pp and c :: bexp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
-      and terminates: "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
-                          prog_main_name (prog_main p)"
+      and terminates: "analyse_interval_td_terminates
+                          (resolved_st_q_is_bot_for (declared_global_vars p))
+                          (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_interval_td_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
            \<not> bval c s"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-                       \<subseteq> \<lbrakk>analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
-                            prog_main_name (prog_main p) v\<rbrakk>"
+                       \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                           (analyse_interval_td_at
+                              (resolved_st_q_is_bot_for (declared_global_vars p))
+                              (declared_global p) (prog_table p) (prog_procs p)
+                              prog_main_name (prog_main p) v))"
+    unfolding gamma_state_case_lifted
     by (rule analyse_interval_td_prog_sound_collecting_at[OF terminates reach_exit])
   show ?thesis
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg prog_main_name p"
-             and env = "analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
-                          prog_main_name (prog_main p)"
+             and env = "\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                          (analyse_interval_td_at
+                             (resolved_st_q_is_bot_for (declared_global_vars p))
+                             (declared_global p) (prog_table p) (prog_procs p)
+                             prog_main_name (prog_main p) v)"
              and classify = interval_classify_check
              and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
              and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
@@ -306,19 +342,25 @@ definition interval_td_check_report_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> ivl abs_state) list" where
   "interval_td_check_report_with_state gs mnm p =
      classify_checks_with_state (prog_cfg mnm p)
-       (analyse_interval_td_at gs (prog_table p) (prog_procs p) mnm (prog_main p))
+       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+              (analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                 (prog_table p) (prog_procs p) mnm (prog_main p) v))
        interval_classify_check"
 
 declare interval_td_check_report_with_state_def [code del]
 
 lemma interval_td_check_report_with_state_code [code]:
   "interval_td_check_report_with_state gs mnm p =
-     (let raw = analyse_interval_td_raw gs (prog_table p) (prog_procs p) mnm (prog_main p)
+     (let raw = analyse_interval_td_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                  (prog_table p) (prog_procs p) mnm (prog_main p)
       in classify_checks_with_state (prog_cfg mnm p)
-           (\<lambda>v. side_env (fun_of_resolved_st_q_for gs \<circ> raw) v)
+           (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                  (side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))
            interval_classify_check)"
   unfolding interval_td_check_report_with_state_def analyse_interval_td_at_def[abs_def] Let_def
+            side_env_lift_st_eq_side_env_lift
   by (rule refl)
+
 
 definition analyse_interval_td_report_with_state ::
     "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> ivl abs_state) list" where

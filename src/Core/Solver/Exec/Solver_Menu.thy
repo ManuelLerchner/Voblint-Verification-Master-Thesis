@@ -62,7 +62,7 @@ text \<open>Read one global/local slot's variable under every solver on the menu
 definition run_menu where
   "run_menu gs eqs entry k var =
      map (\<lambda>(nm, solve).
-       (nm, lookup_resolved_st_q (snd (solve eqs entry) k) (location_of gs var)))
+       (nm, case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of gs var)) (snd (solve eqs entry) k)))
        solver_menu"
 
 end

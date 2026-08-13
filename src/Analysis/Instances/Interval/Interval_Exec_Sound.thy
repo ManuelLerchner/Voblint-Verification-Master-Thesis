@@ -23,31 +23,66 @@ text \<open>
   soundness theorems; concrete examples only fix a program and instantiate them.
 \<close>
 
+text \<open>
+  Every definition here is generic in \<open>is_bot_pred\<close>, the executable
+  witness-bottom test \<^const>\<open>unit_edge_tree_st\<close>/\<^const>\<open>unit_combine_tree_st\<close>
+  need (@{theory Voblint_Core.Exec_Bridge}): at this \<open>(\<Pi>, ps, mnm, main)\<close>
+  layer there is no @{type imp_prog} yet to read a declared-global list off
+  of. The \<open>prog_at\<close> family below, which does have one, instantiates
+  \<open>is_bot_pred\<close> to \<^const>\<open>resolved_st_q_is_bot_for\<close> at that program's own
+  \<^const>\<open>declared_global_vars\<close> and closes the \<open>exact\<close> obligation with
+  @{thm resolved_st_q_is_bot_for_iff}, so its own signature stays exactly
+  what it was before this parameter existed -- mirroring
+  \<open>Sign_Exec_Sound\<close>'s \<open>sign_exec_eqs\<close> family.
+\<close>
+
 definition ivl_exec_eqs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp, unit, ivl resolved_st_q) eqsT" where
-  "ivl_exec_eqs gs \<Pi> ps mnm main =
-     side_cfg_T_eff_st (compile_prog \<Pi> ps mnm main) (ivl_etf_st_for gs) bot cinit_ivl_st ()"
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp, unit, ivl resolved_st_q lifted) eqsT" where
+  "ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main =
+     side_cfg_T_eff_st_buffered (compile_prog \<Pi> ps mnm main)
+       (ivl_etf_st_contribution_for is_bot_pred gs) bot cinit_ivl_st ()"
 
 definition ivl_exec_raw ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
-  "ivl_exec_raw gs \<Pi> ps mnm main =
-     snd (TD_side_always_join_Interp_solve (ivl_exec_eqs gs \<Pi> ps mnm main)
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
+  "ivl_exec_raw is_bot_pred gs \<Pi> ps mnm main =
+     snd (TD_side_always_join_Interp_solve (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main)
             (cfg_exit (compile_prog \<Pi> ps mnm main)))"
 
 definition ivl_exec_at ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "ivl_exec_at gs \<Pi> ps mnm main v =
-     side_env (fun_of_resolved_st_q_for gs \<circ> ivl_exec_raw gs \<Pi> ps mnm main) v"
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp
+     \<Rightarrow> ivl abs_state lifted" where
+  "ivl_exec_at is_bot_pred gs \<Pi> ps mnm main v =
+     side_env_lift (map_lift (fun_of_resolved_st_q_for gs) \<circ> ivl_exec_raw is_bot_pred gs \<Pi> ps mnm main) v"
+
+text \<open>
+  Same finite readback swap as \<open>Interval_Checks\<close>'s \<open>interval_check_report_code\<close>:
+  \<open>side_env_lift\<close> materializes the full \<open>vname \<Rightarrow> ivl\<close> function via pointwise \<open>\<squnion>\<close>,
+  not executable over the infinite @{typ vname}. \<open>side_env_lift_st\<close> computes the
+  same value straight from the two finite \<open>resolved_st_q\<close> slots.
+\<close>
+
+declare ivl_exec_at_def [code del]
+
+lemma ivl_exec_at_code [code]:
+  "ivl_exec_at is_bot_pred gs \<Pi> ps mnm main v =
+     side_env_lift_st gs
+       (ivl_exec_raw is_bot_pred gs \<Pi> ps mnm main (Inl v))
+       (ivl_exec_raw is_bot_pred gs \<Pi> ps mnm main (Inr ()))"
+  unfolding ivl_exec_at_def side_env_lift_st_eq_side_env_lift
+  by (rule refl)
 
 definition ivl_exec ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> ivl abs_state" where
-  "ivl_exec gs \<Pi> ps mnm main = ivl_exec_at gs \<Pi> ps mnm main (cfg_exit (compile_prog \<Pi> ps mnm main))"
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> ivl abs_state lifted" where
+  "ivl_exec is_bot_pred gs \<Pi> ps mnm main = ivl_exec_at is_bot_pred gs \<Pi> ps mnm main (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 definition ivl_exec_terminates ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "ivl_exec_terminates gs \<Pi> ps mnm main =
-     TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q)
-        (ivl_exec_eqs gs \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "ivl_exec_terminates is_bot_pred gs \<Pi> ps mnm main =
+     TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q lifted)
+        (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit (compile_prog \<Pi> ps mnm main))"
 
 text \<open>
   Discharging termination by execution, exactly as
@@ -58,9 +93,9 @@ text \<open>
 \<close>
 
 lemma ivl_exec_terminates_via_solve_c:
-  assumes "TD_side_always_join_Interp_solve_c (ivl_exec_eqs gs \<Pi> ps mnm main)
+  assumes "TD_side_always_join_Interp_solve_c (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main)
              (cfg_exit (compile_prog \<Pi> ps mnm main)) \<noteq> None"
-  shows "ivl_exec_terminates gs \<Pi> ps mnm main"
+  shows "ivl_exec_terminates is_bot_pred gs \<Pi> ps mnm main"
   unfolding ivl_exec_terminates_def TD_side_always_join_Interp.term_equivalence
             TD_side_always_join_Interp.solve_c_dom_def
   using assms by simp
@@ -81,27 +116,32 @@ text \<open>
 
 theorem ivl_exec_sound_collecting_at:
   fixes mnm :: pname and v :: pp
-  assumes solves: "ivl_exec_terminates gs \<Pi> ps mnm main"
+  assumes solves: "ivl_exec_terminates is_bot_pred gs \<Pi> ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
     and reach_v: "cfg_reaches (compile_prog \<Pi> ps mnm main) v (cfg_exit (compile_prog \<Pi> ps mnm main))"
   shows "ltr_collect gs (compile_prog \<Pi> ps mnm main) (cinit_stores gs) v
-         \<le> \<lbrakk>ivl_exec_at gs \<Pi> ps mnm main v\<rbrakk>"
+         \<le> gamma_state_lift (ivl_exec_at is_bot_pred gs \<Pi> ps mnm main v)"
 proof -
   define g :: cfg where "g = compile_prog \<Pi> ps mnm main"
-  define sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
-    "sol = TD_side_always_join_Interp_solve (ivl_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g)"
-  define \<sigma> :: "pp + unit \<Rightarrow> ivl abs_state" where "\<sigma> = fun_of_resolved_st_q_for gs \<circ> snd sol"
+  define sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
+    "sol = TD_side_always_join_Interp_solve (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit g)"
+  define \<sigma> :: "pp + unit \<Rightarrow> ivl abs_state lifted" where
+    "\<sigma> = map_lift (fun_of_resolved_st_q_for gs) \<circ> snd sol"
   have fin: "finite (intra g)" unfolding g_def using compile_prog_finite by simp
   have finC: "finite (calls g)" unfolding g_def using compile_prog_finite by simp
   have wf: "wf_cfg g" unfolding g_def by (rule compile_prog_wf)
-  have dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q)
-               (ivl_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g)"
+  have dom: "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q lifted)
+               (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit g)"
     using solves unfolding ivl_exec_terminates_def g_def by simp
-  have pp0: "part_post_solution (ivl_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
+  have pp0: "part_post_solution (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
     using TD_side_always_join_Interp.partial_post_solution[OF dom, of "fst sol" "snd sol"]
     unfolding sol_def by simp
-  have pp_st: "part_post_solution (side_cfg_T_eff_st g (ivl_etf_st_for gs) bot cinit_ivl_st ())
+  have pp_st: "part_post_solution (side_cfg_T_eff_st g (ivl_etf_st_for is_bot_pred gs) bot cinit_ivl_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
-    using pp0 by (simp add: ivl_exec_eqs_def g_def)
+    using pp0
+    unfolding ivl_exec_eqs_def g_def side_cfg_T_eff_st_buffered_def side_cfg_T_eff_st_def
+              dep_def dep\<^sub>L_def
+    by (simp add: ivl_buffered_correspondence ivl_buffered_dep_aux ivl_buffered_sides_full)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff gs g (ivl_etf gs) bot
                      (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf) ())
@@ -109,17 +149,17 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF ivl_etf_edge_tree ivl_etf_combine_tree
                 ivl_etf_st_for_edge_tree ivl_etf_st_for_combine_tree ivl_tf_st_for_commute
-                ivl_etf_enter_tree ivl_etf_st_for_enter_tree ivl_enter_st_for_commute pp_st]
+                ivl_etf_enter_tree ivl_etf_st_for_enter_tree ivl_enter_st_for_commute
+                exact pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_ivl_st_for bot_fun_def)
   have cone: "cone_compatible_etf gs (ivl_etf gs)" by (rule ivl_etf_cone_compatible)
-  have srz: "\<And>z. side_rg (ivl_exec_eqs gs \<Pi> ps mnm main z)"
-    unfolding ivl_exec_eqs_def
-    by (rule side_rg_side_cfg_T_eff_st_unit
-          [OF ivl_etf_st_for_exists_unit ivl_etf_st_for_enter_exists_unit ivl_etf_st_for_combine_tree])
-  have solpair: "TD_side_always_join_Interp_solve (ivl_exec_eqs gs \<Pi> ps mnm main) (cfg_exit g)
+  have srz: "\<And>z. side_rg (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main z)"
+    unfolding ivl_exec_eqs_def side_cfg_T_eff_st_buffered_def ivl_etf_st_contribution_for_def
+    by (rule side_rg_unit_etf_st_contribution_of_transfer[OF ivl_tf_st_for_reduces])
+  have solpair: "TD_side_always_join_Interp_solve (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp
-  have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_resolved_q (snd sol (Inr gg))"
+  have rg: "\<And>gg. snd sol (Inr gg) = map_lift restrict_global_resolved_q (snd sol (Inr gg))"
     by (rule TD_side_always_join_solve_Inr_rg[OF dom srz solpair])
   have inr: "inr_slot_locals_bot gs \<sigma>"
     unfolding \<sigma>_def
@@ -128,19 +168,22 @@ proof -
     by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
     by (rule side_cone_in_vars_eff_cone[OF pp_eff fin finC wf cone reach])
-  have entry_le: "(\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)
-                    \<le> side_env \<sigma> (cfg_entry g)"
+  have entry_le: "Lifted (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)
+                    \<le> side_env_lift \<sigma> (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
   have seed_cov: "cinit_stores gs
                     \<subseteq> \<lbrakk>\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf\<rbrakk>"
     unfolding cinit_stores_def gamma_state_def
     by auto
-  have entry_cov: "cinit_stores gs \<le> \<lbrakk>side_env \<sigma> (cfg_entry g)\<rbrakk>"
-    using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
+  have entry_le': "\<lbrakk>\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf\<rbrakk>
+                     \<subseteq> gamma_state_lift (side_env_lift \<sigma> (cfg_entry g))"
+    using gamma_lift_mono[OF gamma_state_mono entry_le] by simp
+  have entry_cov: "cinit_stores gs \<le> gamma_state_lift (side_env_lift \<sigma> (cfg_entry g))"
+    using seed_cov entry_le' by (rule subset_trans)
   have reach_v': "cfg_reaches g v (cfg_exit g)"
     using reach_v unfolding g_def by simp
   have "ltr_collect gs g (cinit_stores gs) v
-        \<le> \<lbrakk>side_env \<sigma> v\<rbrakk>"
+        \<le> gamma_state_lift (side_env_lift \<sigma> v)"
     by (rule side_collect_sound_in_eff_cone
           [OF ivl_sound_etf pp_eff fin finC wf entry_cov cone inr reach_v'])
   then show ?thesis
@@ -149,11 +192,12 @@ qed
 
 corollary ivl_exec_sound_collecting:
   fixes mnm :: pname
-  assumes solves: "ivl_exec_terminates gs \<Pi> ps mnm main"
+  assumes solves: "ivl_exec_terminates is_bot_pred gs \<Pi> ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "ltr_collect gs (compile_prog \<Pi> ps mnm main) (cinit_stores gs) (cfg_exit (compile_prog \<Pi> ps mnm main))
-         \<le> \<lbrakk>ivl_exec gs \<Pi> ps mnm main\<rbrakk>"
+         \<le> gamma_state_lift (ivl_exec is_bot_pred gs \<Pi> ps mnm main)"
   unfolding ivl_exec_def
-  by (rule ivl_exec_sound_collecting_at[OF solves cfg_reaches_refl])
+  by (rule ivl_exec_sound_collecting_at[OF solves exact cfg_reaches_refl])
 
 section \<open>Whole-program convenience layer\<close>
 
@@ -166,39 +210,68 @@ text \<open>
   domain-independent instance of this same projection for the CFG itself, so
   it is imported rather than redefined here --- Sign uses the exact same
   constant, not an equivalent local copy.
+
+  This is where a concrete @{type imp_prog} finally exists, so \<open>is_bot_pred\<close>
+  is fixed here to \<^const>\<open>resolved_st_q_is_bot_for\<close> at \<open>p\<close>'s own
+  \<^const>\<open>declared_global_vars\<close> -- executable, and exact for
+  @{const is_bot_state} by @{thm resolved_st_q_is_bot_for_iff}
+  (@{thm declared_global_iff}) -- rather than staying a parameter, so every
+  signature below is unchanged from before \<open>is_bot_pred\<close> existed.
 \<close>
 
-definition ivl_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "ivl_exec_prog_at gs mnm p v = ivl_exec_at gs (prog_table p) (prog_procs p) mnm (prog_main p) v"
+definition ivl_exec_prog_at :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state lifted" where
+  "ivl_exec_prog_at gs mnm p v =
+     ivl_exec_at (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+       (prog_table p) (prog_procs p) mnm (prog_main p) v"
 
-definition ivl_exec_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+definition ivl_exec_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state lifted" where
   "ivl_exec_prog gs mnm p = ivl_exec_prog_at gs mnm p (cfg_exit (prog_cfg mnm p))"
 
 definition ivl_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "ivl_terminates_prog gs mnm p = ivl_exec_terminates gs (prog_table p) (prog_procs p) mnm (prog_main p)"
+  "ivl_terminates_prog gs mnm p =
+     ivl_exec_terminates (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 lemma ivl_terminates_prog_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c
-             (ivl_exec_eqs gs (prog_table p) (prog_procs p) mnm (prog_main p))
+             (ivl_exec_eqs (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                (prog_table p) (prog_procs p) mnm (prog_main p))
              (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p))) \<noteq> None"
   shows "ivl_terminates_prog gs mnm p"
   unfolding ivl_terminates_prog_def
   using assms by (rule ivl_exec_terminates_via_solve_c)
 
+text \<open>
+  The exactness of \<^const>\<open>resolved_st_q_is_bot_for\<close> baked into
+  \<^const>\<open>ivl_exec_prog_at\<close> needs \<open>gs\<close> to actually be the classifier
+  \<^const>\<open>declared_global_vars\<close> \<open>p\<close> lists -- true of every real caller (\<open>gs\<close> is
+  always some program's own \<^const>\<open>declared_global\<close>), but not a fact the
+  generic \<open>gs\<close>/\<open>p\<close> signature enforces on its own, so it becomes an explicit
+  hypothesis here.
+\<close>
+
 corollary ivl_exec_prog_sound_collecting_at:
-  assumes "ivl_terminates_prog gs mnm p"
-    and "cfg_reaches (prog_cfg mnm p) v (cfg_exit (prog_cfg mnm p))"
+  assumes gs_eq: "gs = declared_global p"
+    and terminates: "ivl_terminates_prog gs mnm p"
+    and reach: "cfg_reaches (prog_cfg mnm p) v (cfg_exit (prog_cfg mnm p))"
   shows "ltr_collect gs (prog_cfg mnm p) (cinit_stores gs) v
-           \<le> \<lbrakk>ivl_exec_prog_at gs mnm p v\<rbrakk>"
-  using assms unfolding ivl_terminates_prog_def prog_cfg_def ivl_exec_prog_at_def
-  by (rule ivl_exec_sound_collecting_at)
+           \<le> gamma_state_lift (ivl_exec_prog_at gs mnm p v)"
+proof -
+  have exact: "\<And>s. resolved_st_q_is_bot_for (declared_global_vars p) s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    unfolding gs_eq by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
+  show ?thesis
+    using terminates reach exact
+    unfolding ivl_terminates_prog_def prog_cfg_def ivl_exec_prog_at_def
+    using ivl_exec_sound_collecting_at by blast
+qed
 
 corollary ivl_exec_prog_sound_collecting:
-  assumes "ivl_terminates_prog gs mnm p"
+  assumes gs_eq: "gs = declared_global p"
+    and terminates: "ivl_terminates_prog gs mnm p"
   shows "ltr_collect gs (prog_cfg mnm p) (cinit_stores gs) (cfg_exit (prog_cfg mnm p))
-           \<le> \<lbrakk>ivl_exec_prog gs mnm p\<rbrakk>"
+           \<le> gamma_state_lift (ivl_exec_prog gs mnm p)"
   unfolding ivl_exec_prog_def
-  by (rule ivl_exec_prog_sound_collecting_at[OF assms cfg_reaches_refl])
+  by (rule ivl_exec_prog_sound_collecting_at[OF gs_eq terminates cfg_reaches_refl])
 
 text \<open>
   \<open>analyse_interval_for\<close>/\<open>analyse_interval\<close> fix the main-procedure name to
@@ -208,50 +281,82 @@ text \<open>
   collecting-soundness chain \<open>ivl_exec_prog_sound_collecting\<close> already gives.
 \<close>
 
-definition analyse_interval_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+definition analyse_interval_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state lifted" where
   "analyse_interval_for gs p = ivl_exec_prog gs prog_main_name p"
 
-definition analyse_interval :: "imp_prog \<Rightarrow> ivl abs_state" where
+definition analyse_interval :: "imp_prog \<Rightarrow> ivl abs_state lifted" where
   "analyse_interval p = analyse_interval_for (declared_global p) p"
 
 corollary analyse_interval_sound:
   assumes "ivl_terminates_prog (declared_global p) prog_main_name p"
   shows "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))
            (cfg_exit (prog_cfg prog_main_name p))
-         \<le> \<lbrakk>analyse_interval p\<rbrakk>"
+         \<le> gamma_state_lift (analyse_interval p)"
   unfolding analyse_interval_def analyse_interval_for_def
-  by (rule ivl_exec_prog_sound_collecting[OF assms])
+  by (rule ivl_exec_prog_sound_collecting[OF refl assms])
 
 text \<open>
   \<open>analyse_interval_td\<close>/\<open>analyse_interval_td_for\<close> mirror \<open>analyse_interval\<close>
   but solve via @{const TD_side_warrowing_apinis_Interp_solve} instead of the
   always-join rule, following \<open>ivl_exec_raw\<close>/\<open>ivl_exec_at\<close>/\<open>ivl_exec_prog\<close>'s
-  own shape.  A soundness theorem for this pipeline follows the same collecting chain
-  \<open>ivl_exec_sound_collecting_at\<close> uses, with \<open>TD_side_always_join_solve_Inr_rg\<close> replaced by
-  \<^theory>\<open>Voblint_Core.Solver_Side_RG\<close>'s \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close>: the warrowing
-  update rule reads back its own per-origin bookkeeping (@{const sup_over_origins}) rather than
-  just joining, so that bridge lemma additionally needs \<open>bot \<nabla> bot = bot\<close>/\<open>bot \<Delta> bot = bot\<close> for
-  the domain in play --- \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close>
+  own shape -- the unmodified, vendored APINIS warrowing rule.  Voblint issue #121:
+  a CFG merge node's RHS evaluation issues more than one \<open>Side\<close> write to the same
+  global key (one per predecessor edge, through @{const unit_edge_tree_st}'s shared
+  global slot), and if one write is structurally \<^const>\<open>Bot\<close> the per-origin-gated
+  update rule can destabilize its own \<open>QueryG\<close> dependency forever. \<open>ivl_exec_eqs\<close> fixes
+  this at the generator layer instead of the solver: \<^const>\<open>side_cfg_T_eff_st_buffered\<close>
+  folds every predecessor's Side-free contribution (\<^const>\<open>ivl_etf_st_contribution_for\<close>)
+  through the untouched \<^const>\<open>fold_rhs_trees\<close> combinator and publishes the aggregated
+  result as a single \<open>Side\<close> write per RHS evaluation, so the solver never observes more
+  than one write per \<open>(global key, origin)\<close> pair. \<open>ivl_buffered_correspondence\<close>/
+  \<open>ivl_buffered_dep_aux\<close>/\<open>ivl_buffered_sides_full\<close> transport \<open>part_post_solution\<close> and
+  \<open>side_rg\<close> facts for the buffered generator back to the original, unbuffered
+  \<^const>\<open>side_cfg_T_eff_st\<close> shape the executable-to-abstract transport lemmas
+  (\<open>part_post_solution_st_to_abs_eff_unit_transfer\<close> etc.) are stated against, so those
+  lemmas need no changes of their own. A soundness theorem for this pipeline follows the
+  same collecting chain \<open>ivl_exec_sound_collecting_at\<close> uses, with
+  \<open>TD_side_always_join_solve_Inr_rg\<close> replaced by \<^theory>\<open>Voblint_Core.Solver_Side_RG\<close>'s
+  \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close>: the warrowing update rule reads back its own
+  per-origin bookkeeping (@{const sup_over_origins}) rather than just joining, so that
+  bridge lemma additionally needs \<open>bot \<nabla> bot = bot\<close>/\<open>bot \<Delta> bot = bot\<close> for the domain in
+  play --- \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>) discharge exactly that for \<open>ivl\<close>.
 \<close>
 
 definition analyse_interval_td_raw ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
-  "analyse_interval_td_raw gs Pi ps mnm main =
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
+  "analyse_interval_td_raw is_bot_pred gs Pi ps mnm main =
      snd (TD_side_warrowing_apinis_Interp_solve
-            (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main)))"
+            (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main)))"
 
 definition analyse_interval_td_at ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_td_at gs Pi ps mnm main v =
-     side_env (fun_of_resolved_st_q_for gs \<circ> analyse_interval_td_raw gs Pi ps mnm main) v"
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> pp
+     \<Rightarrow> ivl abs_state lifted" where
+  "analyse_interval_td_at is_bot_pred gs Pi ps mnm main v =
+     side_env_lift (map_lift (fun_of_resolved_st_q_for gs) \<circ> analyse_interval_td_raw is_bot_pred gs Pi ps mnm main) v"
 
-definition analyse_interval_td_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state" where
+text \<open>
+  \<open>side_env_lift\<close> materializes the full \<open>vname \<Rightarrow> ivl\<close> function via pointwise \<open>\<squnion>\<close>,
+  not executable over the infinite @{typ vname}. \<open>side_env_lift_st\<close> computes the
+  same value straight from the two finite \<open>resolved_st_q\<close> slots.
+\<close>
+
+lemma analyse_interval_td_at_code [code]:
+  "analyse_interval_td_at is_bot_pred gs Pi ps mnm main v =
+     side_env_lift_st gs
+       (analyse_interval_td_raw is_bot_pred gs Pi ps mnm main (Inl v))
+       (analyse_interval_td_raw is_bot_pred gs Pi ps mnm main (Inr ()))"
+  unfolding analyse_interval_td_at_def side_env_lift_st_eq_side_env_lift
+  by (rule refl)
+
+definition analyse_interval_td_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state lifted" where
   "analyse_interval_td_for gs p =
-     analyse_interval_td_at gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+     analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+       (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (cfg_exit (prog_cfg prog_main_name p))"
 
-definition analyse_interval_td :: "imp_prog \<Rightarrow> ivl abs_state" where
+definition analyse_interval_td :: "imp_prog \<Rightarrow> ivl abs_state lifted" where
   "analyse_interval_td p = analyse_interval_td_for (declared_global p) p"
 
 text \<open>
@@ -261,15 +366,15 @@ text \<open>
 \<close>
 
 definition analyse_interval_td_terminates ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
-  "analyse_interval_td_terminates gs Pi ps mnm main =
-     TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q)
-        (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main))"
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "analyse_interval_td_terminates is_bot_pred gs Pi ps mnm main =
+     TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q lifted)
+        (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main))"
 
 lemma analyse_interval_td_terminates_via_solve_c:
-  assumes "TD_side_warrowing_apinis_Interp_solve_c (ivl_exec_eqs gs Pi ps mnm main)
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (ivl_exec_eqs is_bot_pred gs Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main)) \<noteq> None"
-  shows "analyse_interval_td_terminates gs Pi ps mnm main"
+  shows "analyse_interval_td_terminates is_bot_pred gs Pi ps mnm main"
   unfolding analyse_interval_td_terminates_def TD_side_warrowing_apinis_Interp.term_equivalence
             TD_side_warrowing_apinis_Interp.solve_c_dom_def
   using assms by simp
@@ -284,27 +389,32 @@ text \<open>
 
 theorem analyse_interval_td_sound_collecting_at:
   fixes mnm :: pname and v :: pp
-  assumes solves: "analyse_interval_td_terminates gs Pi ps mnm main"
+  assumes solves: "analyse_interval_td_terminates is_bot_pred gs Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
     and reach_v: "cfg_reaches (compile_prog Pi ps mnm main) v (cfg_exit (compile_prog Pi ps mnm main))"
   shows "ltr_collect gs (compile_prog Pi ps mnm main) (cinit_stores gs) v
-         \<le> \<lbrakk>analyse_interval_td_at gs Pi ps mnm main v\<rbrakk>"
+         \<le> gamma_state_lift (analyse_interval_td_at is_bot_pred gs Pi ps mnm main v)"
 proof -
   define g :: cfg where "g = compile_prog Pi ps mnm main"
-  define sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
-    "sol = TD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit g)"
-  define sigma :: "pp + unit \<Rightarrow> ivl abs_state" where "sigma = fun_of_resolved_st_q_for gs \<circ> snd sol"
+  define sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
+    "sol = TD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit g)"
+  define sigma :: "pp + unit \<Rightarrow> ivl abs_state lifted" where
+    "sigma = map_lift (fun_of_resolved_st_q_for gs) \<circ> snd sol"
   have fin: "finite (intra g)" unfolding g_def using compile_prog_finite by simp
   have finC: "finite (calls g)" unfolding g_def using compile_prog_finite by simp
   have wf: "wf_cfg g" unfolding g_def by (rule compile_prog_wf)
-  have dom: "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q)
-               (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit g)"
+  have dom: "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE(ivl resolved_st_q lifted)
+               (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit g)"
     using solves unfolding analyse_interval_td_terminates_def g_def by simp
-  have pp0: "part_post_solution (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
+  have pp0: "part_post_solution (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit g) (snd sol) (fst sol)"
     using TD_side_warrowing_apinis_Interp.partial_post_solution[OF dom, of "fst sol" "snd sol"]
     unfolding sol_def by simp
-  have pp_st: "part_post_solution (side_cfg_T_eff_st g (ivl_etf_st_for gs) bot cinit_ivl_st ())
+  have pp_st: "part_post_solution (side_cfg_T_eff_st g (ivl_etf_st_for is_bot_pred gs) bot cinit_ivl_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
-    using pp0 by (simp add: ivl_exec_eqs_def g_def)
+    using pp0
+    unfolding ivl_exec_eqs_def g_def side_cfg_T_eff_st_buffered_def side_cfg_T_eff_st_def
+              dep_def dep\<^sub>L_def
+    by (simp add: ivl_buffered_correspondence ivl_buffered_dep_aux ivl_buffered_sides_full)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff gs g (ivl_etf gs) bot
                      (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf) ())
@@ -312,17 +422,17 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF ivl_etf_edge_tree ivl_etf_combine_tree
                 ivl_etf_st_for_edge_tree ivl_etf_st_for_combine_tree ivl_tf_st_for_commute
-                ivl_etf_enter_tree ivl_etf_st_for_enter_tree ivl_enter_st_for_commute pp_st]
+                ivl_etf_enter_tree ivl_etf_st_for_enter_tree ivl_enter_st_for_commute
+                exact pp_st]
     by (simp add: sigma_def fun_of_st_cinit_ivl_st_for bot_fun_def)
   have cone: "cone_compatible_etf gs (ivl_etf gs)" by (rule ivl_etf_cone_compatible)
-  have srz: "\<And>z. side_rg (ivl_exec_eqs gs Pi ps mnm main z)"
-    unfolding ivl_exec_eqs_def
-    by (rule side_rg_side_cfg_T_eff_st_unit
-          [OF ivl_etf_st_for_exists_unit ivl_etf_st_for_enter_exists_unit ivl_etf_st_for_combine_tree])
-  have solpair: "TD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs gs Pi ps mnm main) (cfg_exit g)
+  have srz: "\<And>z. side_rg (ivl_exec_eqs is_bot_pred gs Pi ps mnm main z)"
+    unfolding ivl_exec_eqs_def side_cfg_T_eff_st_buffered_def ivl_etf_st_contribution_for_def
+    by (rule side_rg_unit_etf_st_contribution_of_transfer[OF ivl_tf_st_for_reduces])
+  have solpair: "TD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp
-  have rg: "\<And>gg. snd sol (Inr gg) = restrict_global_resolved_q (snd sol (Inr gg))"
+  have rg: "\<And>gg. snd sol (Inr gg) = map_lift restrict_global_resolved_q (snd sol (Inr gg))"
     by (rule TD_side_warrowing_apinis_solve_Inr_rg
           [OF dom srz ivl_widen_bot_bot ivl_narrow_bot_bot solpair])
   have inr: "inr_slot_locals_bot gs sigma"
@@ -332,19 +442,22 @@ proof -
     by (simp add: g_def compile_prog_entry_cfg_reaches_exit)
   have entry_in: "cfg_entry g \<in> fst sol"
     by (rule side_cone_in_vars_eff_cone[OF pp_eff fin finC wf cone reach])
-  have entry_le: "(\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)
-                    \<le> side_env sigma (cfg_entry g)"
+  have entry_le: "Lifted (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)
+                    \<le> side_env_lift sigma (cfg_entry g)"
     by (rule s0_le_side_env_entry_eff[OF pp_eff entry_in])
   have seed_cov: "cinit_stores gs
                     \<subseteq> \<lbrakk>\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf\<rbrakk>"
     unfolding cinit_stores_def gamma_state_def
     by auto
-  have entry_cov: "cinit_stores gs \<le> \<lbrakk>side_env sigma (cfg_entry g)\<rbrakk>"
-    using seed_cov gamma_state_mono[OF entry_le] by (rule subset_trans)
+  have entry_le': "\<lbrakk>\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf\<rbrakk>
+                     \<subseteq> gamma_state_lift (side_env_lift sigma (cfg_entry g))"
+    using gamma_lift_mono[OF gamma_state_mono entry_le] by simp
+  have entry_cov: "cinit_stores gs \<le> gamma_state_lift (side_env_lift sigma (cfg_entry g))"
+    using seed_cov entry_le' by (rule subset_trans)
   have reach_v': "cfg_reaches g v (cfg_exit g)"
     using reach_v unfolding g_def by simp
   have "ltr_collect gs g (cinit_stores gs) v
-        \<le> \<lbrakk>side_env sigma v\<rbrakk>"
+        \<le> gamma_state_lift (side_env_lift sigma v)"
     by (rule side_collect_sound_in_eff_cone
           [OF ivl_sound_etf pp_eff fin finC wf entry_cov cone inr reach_v'])
   then show ?thesis
@@ -353,11 +466,13 @@ qed
 
 corollary analyse_interval_td_sound_collecting:
   fixes mnm :: pname
-  assumes solves: "analyse_interval_td_terminates gs Pi ps mnm main"
+  assumes solves: "analyse_interval_td_terminates is_bot_pred gs Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "ltr_collect gs (compile_prog Pi ps mnm main) (cinit_stores gs)
            (cfg_exit (compile_prog Pi ps mnm main))
-         \<le> \<lbrakk>analyse_interval_td_at gs Pi ps mnm main (cfg_exit (compile_prog Pi ps mnm main))\<rbrakk>"
-  by (rule analyse_interval_td_sound_collecting_at[OF solves cfg_reaches_refl])
+         \<le> gamma_state_lift (analyse_interval_td_at is_bot_pred gs Pi ps mnm main
+              (cfg_exit (compile_prog Pi ps mnm main)))"
+  by (rule analyse_interval_td_sound_collecting_at[OF solves exact cfg_reaches_refl])
 
 text \<open>
   The node-arbitrary prog-level corollary, mirroring \<open>ivl_exec_prog_sound_collecting_at\<close>:
@@ -366,27 +481,33 @@ text \<open>
 \<close>
 
 corollary analyse_interval_td_prog_sound_collecting_at:
-  assumes "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
-             prog_main_name (prog_main p)"
-    and "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+  assumes terminates: "analyse_interval_td_terminates
+             (resolved_st_q_is_bot_for (declared_global_vars p))
+             (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+    and reach: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
   shows "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-           \<le> \<lbrakk>analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
-                prog_main_name (prog_main p) v\<rbrakk>"
+           \<le> gamma_state_lift (analyse_interval_td_at
+                (resolved_st_q_is_bot_for (declared_global_vars p))
+                (declared_global p) (prog_table p) (prog_procs p)
+                prog_main_name (prog_main p) v)"
   unfolding prog_cfg_def
-  by (rule analyse_interval_td_sound_collecting_at[OF assms(1) assms(2)[unfolded prog_cfg_def]])
+  by (rule analyse_interval_td_sound_collecting_at
+        [OF terminates resolved_st_q_is_bot_for_iff[OF declared_global_iff] reach[unfolded prog_cfg_def]])
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_sound\<close>'s shape.
 \<close>
 
 corollary analyse_interval_td_sound:
-  assumes "analyse_interval_td_terminates (declared_global p) (prog_table p) (prog_procs p)
-             prog_main_name (prog_main p)"
+  assumes terminates: "analyse_interval_td_terminates
+             (resolved_st_q_is_bot_for (declared_global_vars p))
+             (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
   shows "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))
            (cfg_exit (prog_cfg prog_main_name p))
-         \<le> \<lbrakk>analyse_interval_td p\<rbrakk>"
+         \<le> gamma_state_lift (analyse_interval_td p)"
   unfolding analyse_interval_td_def analyse_interval_td_for_def prog_cfg_def
-  by (rule analyse_interval_td_sound_collecting[OF assms[unfolded prog_cfg_def]])
+  by (rule analyse_interval_td_sound_collecting
+        [OF terminates[unfolded prog_cfg_def] resolved_st_q_is_bot_for_iff[OF declared_global_iff]])
 
 section \<open>Visualisation convenience\<close>
 
@@ -423,16 +544,18 @@ definition ivl_graph_solution ::
      | Inr () \<Rightarrow> fun_of_resolved_st_q_for gs (sol (Inr ())) )"
 
 definition ivl_annotated_dot_lit ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> String.literal" where
-  "ivl_annotated_dot_lit gs \<Pi> ps mnm main =
+  "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> String.literal" where
+  "ivl_annotated_dot_lit is_bot_pred gs \<Pi> ps mnm main =
     String.implode
       (let g = compile_prog \<Pi> ps mnm main;
            domain = contextual_graph_domain g (\<lambda>_. [()]) @ [Inr ()];
-           sol = ivl_graph_solution gs (ivl_exec_raw gs \<Pi> ps mnm main)
+           sol = ivl_graph_solution gs
+                   (\<lambda>z. case ivl_exec_raw is_bot_pred gs \<Pi> ps mnm main z of Bot \<Rightarrow> bot | Lifted d \<Rightarrow> d)
        in contextual_analysis_dot (ivl_graph_config gs \<Pi> ps mnm main) g domain sol)"
 
 definition ivl_annotated_dot_prog_lit :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "ivl_annotated_dot_prog_lit gs mnm p =
-     ivl_annotated_dot_lit gs (prog_table p) (prog_procs p) mnm (prog_main p)"
+     ivl_annotated_dot_lit (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 end

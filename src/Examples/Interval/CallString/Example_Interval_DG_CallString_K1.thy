@@ -122,8 +122,24 @@ lemma nest_1_terminates:
 
 subsection \<open>Coverage\<close>
 
+text \<open>The full solved node set, computed once; every membership fact below is a
+  \<open>simp\<close> lookup into this literal set instead of a separate \<open>eval\<close> re-derivation.\<close>
+
+definition nest_1_nodes :: "(pp \<times> cfg_node list) set" where
+  "nest_1_nodes = {
+     (FunctionEntry (STR ''main''), []), (Statement 5, []), (Statement 6, []), (Statement 7, []),
+     (FunctionEntry (STR ''f''), [Statement 5]), (Statement 2, [Statement 5]),
+     (Statement 3, [Statement 5]), (FunctionResult (STR ''f''), [Statement 5]),
+     (FunctionEntry (STR ''f''), [Statement 6]), (Statement 2, [Statement 6]),
+     (Statement 3, [Statement 6]), (FunctionResult (STR ''f''), [Statement 6]),
+     (FunctionEntry (STR ''g''), [Statement 2]), (Statement 0, [Statement 2]),
+     (FunctionResult (STR ''g''), [Statement 2]), (FunctionResult (STR ''main''), [])}"
+
+lemma nest_1_nodes_eq: "fst nest_1_sol = nest_1_nodes"
+  unfolding nest_1_sol_def nest_1_eqs_def nest_1_nodes_def by eval
+
 lemma entry_covered_1: "(cfg_entry nest_cfg, []) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def nest_entry by eval
+  unfolding nest_entry nest_1_nodes_eq nest_1_nodes_def by simp
 
 lemma nest_fwd_closed_all_1:
   "\<forall>(u, c)\<in>fst nest_1_sol. \<forall>(u', a, v)\<in>intra nest_cfg.
@@ -150,27 +166,21 @@ lemma enter_callers_g_1:
   unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 lemma callee_covered_f3_1: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 lemma callee_covered_f10_1: "(FunctionEntry (STR ''f''), [Statement 6]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 lemma callee_covered_g_1: "(FunctionEntry (STR ''g''), [Statement 2]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 
 lemma covered_ret6_1: "(Statement 6, []) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 lemma covered_ret7_1: "(Statement 7, []) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 lemma covered_ret3_f3_1: "(Statement 3, [Statement 5]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 lemma covered_ret3_f10_1: "(Statement 3, [Statement 6]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 
-lemma callee_exit_f3_1: "(FunctionResult (STR ''f''), [Statement 5]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-lemma callee_exit_f10_1: "(FunctionResult (STR ''f''), [Statement 6]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-lemma callee_exit_g_1: "(FunctionResult (STR ''g''), [Statement 2]) \<in> fst nest_1_sol"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
 
 section \<open>Abstract transport of the routed solution\<close>
 

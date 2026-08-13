@@ -1,0 +1,24 @@
+// PARAM: --analysis interval
+// Minimal reproducer from issue #113: n=5 makes "n < 2" false, so the
+// "return 1" branch is provably unreachable. Before the reachability-lift
+// fix, the dead branch's own #ret := 1 assignment transfer still produced
+// a non-bottom #ret=[1,1] from an already-unreachable predecessor state,
+// and the exit node's join widened the result to a=[1,500] instead of the
+// exact a=[500,500]. Locks in the fixed, precise result -- flat, no
+// procedure recursion, no --context flag. The recursive-factorial variant
+// of this same pattern under entry-state context sensitivity
+// (03-procedures/known-imprecision/02-recursive_factorial_dead_branch_bottom_leak.vimp)
+// is NOT fixed by the same mechanism and remains UNKNOWN -- see that
+// fixture's own header comment.
+void f(n) {
+  if (n < 2) {
+    return 1
+  } else {
+    return n * 100
+  }
+}
+
+void main() {
+  a := f(5);
+  __voblint_check(a == 500) // PROVED
+}

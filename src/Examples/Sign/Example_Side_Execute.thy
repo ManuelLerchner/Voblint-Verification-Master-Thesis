@@ -31,18 +31,18 @@ text \<open>
   evaluate at build time): \<open>x\<close> is \<open>SPos\<close>, an untouched \<open>y\<close> stays \<open>STop\<close>.
 \<close>
 
-value "sign_exec_prog x1_gs (STR ''main'') x1_prog (STR ''x'')"
-value "sign_exec_prog x1_gs (STR ''main'') x1_prog (STR ''y'')"
+value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''x'')"
+value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''y'')"
 
 text \<open>The solver computes \<open>x \<mapsto> SPos\<close> at the exit, captured as a theorem
   by code reflection.\<close>
 
 lemma x1_computes_x_pos:
-  "sign_exec_prog x1_gs (STR ''main'') x1_prog (STR ''x'') = SPos"
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''x'') = SPos"
   by eval
 
 lemma x1_y_top:
-  "sign_exec_prog x1_gs (STR ''main'') x1_prog (STR ''y'') = STop"
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''y'') = STop"
   by eval
 
 text \<open>
@@ -63,8 +63,8 @@ text \<open>
 
 corollary x1_certified_sound:
   "ltr_collect x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))
-   \<le> \<lbrakk>sign_exec_prog x1_gs (STR ''main'') x1_prog\<rbrakk>"
-  by (rule sign_exec_prog_sound_collecting[OF x1_terminates])
+   \<le> gamma_state_lift (sign_exec_prog x1_gs (STR ''main'') x1_prog)"
+  by (rule sign_exec_prog_sound_collecting[OF refl x1_terminates])
 
 definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"
@@ -102,7 +102,7 @@ qed
 theorem x1_explicit_completed_run_covered:
   "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0((STR ''x'') := 1))
-   \<and> x1_s0((STR ''x'') := 1) \<in> \<lbrakk>sign_exec_prog x1_gs (STR ''main'') x1_prog\<rbrakk>"
+   \<and> x1_s0((STR ''x'') := 1) \<in> gamma_state_lift (sign_exec_prog x1_gs (STR ''main'') x1_prog)"
 proof (rule conjI)
   show "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
       (x1_s0((STR ''x'') := 1))"
@@ -113,7 +113,7 @@ next
       ltr_collect x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))"
     using x1_completed_run_collect
     by (simp add: prog_cfg_def)
-  show "x1_s0((STR ''x'') := 1) \<in> \<lbrakk>sign_exec_prog x1_gs (STR ''main'') x1_prog\<rbrakk>"
+  show "x1_s0((STR ''x'') := 1) \<in> gamma_state_lift (sign_exec_prog x1_gs (STR ''main'') x1_prog)"
     using x1_certified_sound collect by blast
 qed
 
