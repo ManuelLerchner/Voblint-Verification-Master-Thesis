@@ -305,6 +305,50 @@ lemma sides_unit_edge_tree_Inr:
   unfolding unit_edge_tree_def res_edge_def
   by (simp add: Let_def)
 
+text \<open>
+  \<open>unit_edge_contribution\<close> is \<^const>\<open>unit_edge_tree\<close>'s body without the
+  \<open>depend_on\<close>/\<open>answer\<close> split: it reads the same predecessor local and global,
+  computes the same unsplit \<open>res_edge\<close> value, and answers it directly,
+  publishing no \<^const>\<open>Side\<close> at all (\<open>issue #121\<close>). A CFG merge node with
+  several such contribution trees can therefore be folded via the existing
+  \<open>fold_rhs_trees\<close> combinator and split \<^emph>\<open>once\<close>, instead of each predecessor
+  edge publishing (and each sibling observing) its own intermediate \<open>Side\<close>
+  -- see \<open>publish_split_lifted\<close> in the RHS-tree theory that already imports
+  this one.\<close>
+
+definition unit_edge_contribution ::
+  "(vname => bool)
+   => ('a::sound_domain abs_state => 'a abs_state)
+   => (unit, 'a) edge_tf_tree"
+where
+  "unit_edge_contribution gs f u = do {
+     su <- read_local u;
+     g <- read_global ();
+     answer (transfer_lift is_bot_state f (assemble_local_global su g))
+   }"
+
+lemma traverse_unit_edge_contribution:
+  "traverse_rhs (unit_edge_contribution gs f u) \<sigma> = res_edge f u \<sigma>"
+  unfolding unit_edge_contribution_def res_edge_def by simp
+
+lemma sides_of_rhs_unit_edge_contribution [simp]:
+  "sides_of_rhs (unit_edge_contribution gs f u) \<sigma> = \<bottom>"
+  unfolding unit_edge_contribution_def by (simp add: bot_fun_def)
+
+text \<open>\<open>unit_edge_contribution\<close> queries exactly the same keys as
+  \<^const>\<open>unit_edge_tree\<close> -- \<^const>\<open>dep_aux\<close> only accumulates at
+  \<^const>\<open>QueryL\<close>/\<^const>\<open>QueryG\<close> nodes and passes straight through a
+  \<^const>\<open>Side\<close> (\<open>dep_aux \<sigma> (Side y d t) = dep_aux \<sigma> t\<close>; its payload \<open>d\<close> is a
+  plain value, not a tree, so it hides no further dependency), and the two
+  trees share the identical \<open>QueryL\<close>/\<open>QueryG\<close> prefix, differing only in
+  whether that prefix ends in \<open>depend_on ... (answer ...)\<close> or plain \<open>answer\<close>.
+  So this is an equality, not merely the subset the buffered publication
+  needs.\<close>
+
+lemma dep_aux_unit_edge_contribution_eq_unit_edge_tree:
+  "dep_aux \<sigma> (unit_edge_contribution gs f u) = dep_aux \<sigma> (unit_edge_tree gs f u)"
+  unfolding unit_edge_contribution_def unit_edge_tree_def by (simp add: Let_def)
+
 (* Reassembling the tree's local Answer and global Side recovers the full result:
    map_lift distributes over assemble_local_global's Lifted/Lifted case exactly as
    restrict_local_for_global_join does for the unlifted join, and both sides are
@@ -427,6 +471,33 @@ lemma reachability_coherent_unit_combine_tree:
   by (cases "res_combine gs dst cc ex \<sigma>")
      (simp_all add: traverse_unit_combine_tree all_sides_eq_sides_Inr_unit
        sides_unit_combine_tree_Inr)
+
+text \<open>Side-free counterpart of \<^const>\<open>unit_combine_tree\<close>, mirroring
+  \<^const>\<open>unit_edge_contribution\<close> (\<open>issue #121\<close>).\<close>
+
+definition unit_combine_contribution ::
+  "(vname => bool) => vname option => pp => pp
+   => (pp, unit, 'a::sound_domain abs_state lifted) strategy_tree"
+where
+  "unit_combine_contribution gs dst cc ex = do {
+     sc <- read_local cc;
+     se <- read_local ex;
+     g <- read_global ();
+     answer (transfer_lift2 is_bot_state (combine\<^sup># gs dst)
+               (assemble_local_global sc g) (assemble_local_global se g))
+   }"
+
+lemma traverse_unit_combine_contribution:
+  "traverse_rhs (unit_combine_contribution gs dst cc ex) \<sigma> = res_combine gs dst cc ex \<sigma>"
+  unfolding unit_combine_contribution_def res_combine_def by simp
+
+lemma sides_of_rhs_unit_combine_contribution [simp]:
+  "sides_of_rhs (unit_combine_contribution gs dst cc ex) \<sigma> = \<bottom>"
+  unfolding unit_combine_contribution_def by (simp add: bot_fun_def)
+
+lemma dep_aux_unit_combine_contribution_eq_unit_combine_tree:
+  "dep_aux \<sigma> (unit_combine_contribution gs dst cc ex) = dep_aux \<sigma> (unit_combine_tree gs dst cc ex)"
+  unfolding unit_combine_contribution_def unit_combine_tree_def by (simp add: Let_def)
 
 
 subsection \<open>Local-only effectful edge trees\<close>

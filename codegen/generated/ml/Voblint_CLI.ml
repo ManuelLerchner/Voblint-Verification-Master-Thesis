@@ -2188,165 +2188,6 @@ let rec csize
     | Restore -> one_nat
     | Unwind -> one_nat;;
 
-let rec combine_assign_resolved _A
-  gs dst v s =
-    (match dst with None -> s
-      | Some x -> update_resolved_st _A s (location_of gs x) v);;
-
-let rec location_is_global = function Local_Location x -> false
-                             | Global_Location x -> true;;
-
-let rec location_is_local = function Local_Location x -> true
-                            | Global_Location x -> false;;
-
-let rec combine_resolved_st _A
-  sc se =
-    (let (dlc, (_, psc)) = sc in
-     let (_, (dge, pse)) = se in
-      (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
-                    filtera (fun p -> location_is_global (fst p)) pse)));;
-
-let rec combine_collect_resolved_for _A
-  gs dst sc se =
-    combine_assign_resolved _A gs dst
-      (lookup_resolved_st _A se (location_of gs ret_var))
-      (combine_resolved_st _A sc se);;
-
-let rec combine_collect_resolved_for_q _A
-  xc xb (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (combine_collect_resolved_for _A xc xb xa x);;
-
-let rec assemble_local_global _A
-  x0 g = match x0, g with Bot, g -> Bot
-    | Lifted su, Bot -> Lifted su
-    | Lifted su, Lifted sg -> Lifted (sup _A.sup_semilattice_sup su sg);;
-
-let rec restrict_global_resolved _A
-  s = (let (_, (dg, ps)) = s in
-        (bot _A, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
-
-let rec restrict_global_resolved_q _A
-  (Abs_resolved_st x) = Abs_resolved_st (restrict_global_resolved _A x);;
-
-let rec restrict_local_resolved _A
-  s = (let (dl, (_, ps)) = s in
-        (dl, (bot _A, filtera (fun p -> location_is_local (fst p)) ps)));;
-
-let rec restrict_local_resolved_q _A
-  (Abs_resolved_st x) = Abs_resolved_st (restrict_local_resolved _A x);;
-
-let rec seqcomp_tree
-  x0 k = match x0, k with Answer v, k -> k v
-    | QueryL (u, f), k -> QueryL (u, (fun d -> seqcomp_tree (f d) k))
-    | QueryG (g, f), k -> QueryG (g, (fun d -> seqcomp_tree (f d) k))
-    | Side (g, v, t), k -> Side (g, v, seqcomp_tree t k);;
-
-let rec normalize_lift
-  is_bot_pred a = (if is_bot_pred a then Bot else Lifted a);;
-
-let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
-                    | Lifted a, f -> f a;;
-
-let rec transfer_lift2
-  is_bot_pred f x y =
-    bind_lift x
-      (fun a -> bind_lift y (fun b -> normalize_lift is_bot_pred (f a b)));;
-
-let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
-
-let rec unit_combine_tree_st _A
-  is_bot_pred gs dst cc ex =
-    seqcomp_tree (QueryL (cc, (fun a -> Answer a)))
-      (fun sc ->
-        seqcomp_tree (QueryL (ex, (fun a -> Answer a)))
-          (fun se ->
-            seqcomp_tree (QueryG ((), (fun a -> Answer a)))
-              (fun g ->
-                (let res =
-                   transfer_lift2 is_bot_pred
-                     (combine_collect_resolved_for_q
-                       _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs
-                       dst)
-                     (assemble_local_global (semilattice_sup_resolved_st_q _A)
-                       sc g)
-                     (assemble_local_global (semilattice_sup_resolved_st_q _A)
-                       se g)
-                   in
-                  Side ((), map_lift
-                              (restrict_global_resolved_q
-                                _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-                              res,
-                         Answer
-                           (map_lift
-                             (restrict_local_resolved_q
-                               _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-                             res))))));;
-
-let rec transfer_lift
-  is_bot_pred f x = bind_lift x (fun a -> normalize_lift is_bot_pred (f a));;
-
-let rec unit_edge_tree_st _A
-  is_bot_pred f u =
-    seqcomp_tree (QueryL (u, (fun a -> Answer a)))
-      (fun su ->
-        seqcomp_tree (QueryG ((), (fun a -> Answer a)))
-          (fun g ->
-            (let res =
-               transfer_lift is_bot_pred f
-                 (assemble_local_global (semilattice_sup_resolved_st_q _A) su g)
-               in
-              Side ((), map_lift
-                          (restrict_global_resolved_q
-                            _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-                          res,
-                     Answer
-                       (map_lift
-                         (restrict_local_resolved_q
-                           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-                         res)))));;
-
-let rec unit_etf_st_of_transfer _A
-  is_bot_pred gs tf_st enter_st =
-    Effectful_st_transfer_ext
-      (unit_edge_tree_st _A is_bot_pred (tf_st EA_Nop),
-        (fun x e ->
-          unit_edge_tree_st _A is_bot_pred (tf_st (EA_Assign (x, e)))),
-        (fun x -> unit_edge_tree_st _A is_bot_pred (tf_st (EA_Random x))),
-        (fun b -> unit_edge_tree_st _A is_bot_pred (tf_st (EA_Assume b))),
-        (fun b -> unit_edge_tree_st _A is_bot_pred (tf_st (EA_AssumeNot b))),
-        (fun xs es -> unit_edge_tree_st _A is_bot_pred (enter_st xs es)),
-        unit_combine_tree_st _A is_bot_pred gs, ());;
-
-let rec enter_frame_D_resolved _A
-  top_val s =
-    (let (_, (dg, ps)) = s in
-      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
-
-let rec enter_frame_D_resolved_q _A
-  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
-
-let rec bind_formals_resolved _A
-  gs xs avs s =
-    fold (fun (x, a) t -> update_resolved_st _A t (location_of gs x) a)
-      (zip xs avs) s;;
-
-let rec bind_formals_resolved_q _A
-  xc xb xa (Abs_resolved_st x) =
-    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
-
-let rec ivl_enter_st_for
-  source_global xs es s =
-    bind_formals_resolved_q bot_ivl source_global xs
-      (map (fun e ->
-             aval_ivl e (fun_of_resolved_st_q_for bot_ivl source_global s))
-        es)
-      (enter_frame_D_resolved_q bot_ivl ivl_top s);;
-
-let rec ivl_etf_st_for
-  is_bot_pred gs =
-    unit_etf_st_of_transfer bounded_semilattice_sup_bot_ivl is_bot_pred gs
-      (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
-
 let rec meet_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | SNeg, SBot -> SBot
                     | SNonPos, SBot -> SBot
@@ -2403,6 +2244,11 @@ let rec proc_rep
 let rec prog_table p = map_of equal_literal (proc_rep p);;
 
 let rec prog_main p = body (the (prog_table p prog_main_name));;
+
+let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
+                    | Lifted a, f -> f a;;
+
+let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
 
 let rec uminus_int k = Int_of_integer (Z.neg (integer_of_int k));;
 
@@ -2485,6 +2331,12 @@ let rec apply_etf_st
         (match e with None -> etf_st_nop etf u
           | Some a -> etf_st_assign etf ret_var a u)
     | etf, EA_Check cnd, u -> etf_st_nop etf u;;
+
+let rec seqcomp_tree
+  x0 k = match x0, k with Answer v, k -> k v
+    | QueryL (u, f), k -> QueryL (u, (fun d -> seqcomp_tree (f d) k))
+    | QueryG (g, f), k -> QueryG (g, (fun d -> seqcomp_tree (f d) k))
+    | Side (g, v, t), k -> Side (g, v, seqcomp_tree t k);;
 
 let rec dg_combine_tree _A _B
   comb dst cc ex =
@@ -3089,6 +2941,37 @@ let rec compile
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
 
+let rec location_is_local = function Local_Location x -> true
+                            | Global_Location x -> false;;
+
+let rec location_is_global = function Local_Location x -> false
+                             | Global_Location x -> true;;
+
+let rec enter_frame_D_resolved _A
+  top_val s =
+    (let (_, (dg, ps)) = s in
+      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
+
+let rec enter_frame_D_resolved_q _A
+  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
+
+let rec bind_formals_resolved _A
+  gs xs avs s =
+    fold (fun (x, a) t -> update_resolved_st _A t (location_of gs x) a)
+      (zip xs avs) s;;
+
+let rec bind_formals_resolved_q _A
+  xc xb xa (Abs_resolved_st x) =
+    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
+
+let rec ivl_enter_st_for
+  source_global xs es s =
+    bind_formals_resolved_q bot_ivl source_global xs
+      (map (fun e ->
+             aval_ivl e (fun_of_resolved_st_q_for bot_ivl source_global s))
+        es)
+      (enter_frame_D_resolved_q bot_ivl ivl_top s);;
+
 let rec result_proc (FunctionResult x3) = x3;;
 
 let rec routed_cmb _A
@@ -3263,6 +3146,27 @@ let rec compile_prog
 
 let rec prog_cfg
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
+
+let rec restrict_global_resolved _A
+  s = (let (_, (dg, ps)) = s in
+        (bot _A, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
+
+let rec restrict_global_resolved_q _A
+  (Abs_resolved_st x) = Abs_resolved_st (restrict_global_resolved _A x);;
+
+let rec restrict_local_resolved _A
+  s = (let (dl, (_, ps)) = s in
+        (dl, (bot _A, filtera (fun p -> location_is_local (fst p)) ps)));;
+
+let rec restrict_local_resolved_q _A
+  (Abs_resolved_st x) = Abs_resolved_st (restrict_local_resolved _A x);;
+
+let rec combine_resolved_st _A
+  sc se =
+    (let (dlc, (_, psc)) = sc in
+     let (_, (dge, pse)) = se in
+      (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
+                    filtera (fun p -> location_is_global (fst p)) pse)));;
 
 let rec combine_resolved_st_q _A
   (Abs_resolved_st xa) (Abs_resolved_st x) =
@@ -3540,66 +3444,11 @@ let rec point
 
 let rec rho (Ug_state_ext (rho, more)) = rho;;
 
-let rec etf_st_enter
-  (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
-    = etf_st_enter;;
+let rec normalize_lift
+  is_bot_pred a = (if is_bot_pred a then Bot else Lifted a);;
 
-let rec side_contribution_trees_st _B
-  etf es ens cs =
-    map (fun (u, a) -> apply_etf_st etf a u) es @
-      map (fun (cl, (fs, asa)) -> etf_st_enter etf fs asa cl) ens @
-        map (fun (cc, (dst, a)) -> etf_combine_st etf dst cc a) cs;;
-
-let rec side_rhs_fold_eff_st _B
-  etf acc es ens cs =
-    fold_rhs_trees
-      (bounded_semilattice_sup_bot_lifted (semilattice_sup_resolved_st_q _B))
-      acc (side_contribution_trees_st _B etf es ens cs);;
-
-let rec return_call_list
-  g v = map_filter
-          (fun x ->
-            (if (let (_, (_, (ce, k))) = x in
-                  equal_cfg_nodea k v &&
-                    (match ce with Statement _ -> false
-                      | FunctionEntry _ -> true | FunctionResult _ -> false))
-              then Some (let (c, (ca, (ce, _))) = x in
-                          (c, ((let CallEdge (dst, _, _) = ca in dst),
-                                (match ce with Statement _ -> ce
-                                  | FunctionEntry a -> FunctionResult a
-                                  | FunctionResult _ -> ce))))
-              else None))
-          (cfg_calls_list g);;
-
-let rec make_side_rhs_tree_eff_st _B
-  g etf bot0_st s0_st gseed v =
-    (let acc0 =
-       (if equal_cfg_nodea v (cfg_entry g)
-         then Lifted
-                (sup_resolved_st_qa _B bot0_st
-                  (restrict_local_resolved_q
-                    _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    s0_st))
-         else Bot)
-       in
-     let t =
-       side_rhs_fold_eff_st _B etf acc0 (intra_predecessor_list g v)
-         (entry_seed_list g v) (return_call_list g v)
-       in
-      (if equal_cfg_nodea v (cfg_entry g)
-        then Side (gseed,
-                    Lifted
-                      (restrict_global_resolved_q
-                        _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                        s0_st),
-                    t)
-        else t));;
-
-let rec side_cfg_T_eff_st _B
-  g etf bot0_st s0_st gseed =
-    make_side_rhs_tree_eff_st _B g etf bot0_st s0_st gseed;;
+let rec transfer_lift
+  is_bot_pred f x = bind_lift x (fun a -> normalize_lift is_bot_pred (f a));;
 
 let rec sigma_update
   sigmaa (State_ext (c, infl, stabl, sigma, more)) =
@@ -3624,6 +3473,11 @@ let rec join_source
   sep x1 = match sep, x1 with sep, [] -> []
     | sep, [s] -> s
     | sep, s :: v :: va -> s @ sep @ join_source sep (v :: va);;
+
+let rec transfer_lift2
+  is_bot_pred f x y =
+    bind_lift x
+      (fun a -> bind_lift y (fun b -> normalize_lift is_bot_pred (f a b)));;
 
 let rec resolved_st_is_bot_for _A
   globals gs s =
@@ -3670,6 +3524,11 @@ let rec fun_of_dg_st_for _A _B
   gs d =
     DG (fun_of_exec_dg_st_for _A gs (locals d),
          fun_of_exec_dg_st_for _B gs (globs d));;
+
+let rec combine_assign_resolved _A
+  gs dst v s =
+    (match dst with None -> s
+      | Some x -> update_resolved_st _A s (location_of gs x) v);;
 
 let rec combine_env_abs gs sc se = (fun x -> (if gs x then se x else sc x));;
 
@@ -4023,14 +3882,139 @@ let rec string_of_com
         [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
           char_0x64; char_0x3E];;
 
+let rec return_call_list
+  g v = map_filter
+          (fun x ->
+            (if (let (_, (_, (ce, k))) = x in
+                  equal_cfg_nodea k v &&
+                    (match ce with Statement _ -> false
+                      | FunctionEntry _ -> true | FunctionResult _ -> false))
+              then Some (let (c, (ca, (ce, _))) = x in
+                          (c, ((let CallEdge (dst, _, _) = ca in dst),
+                                (match ce with Statement _ -> ce
+                                  | FunctionEntry a -> FunctionResult a
+                                  | FunctionResult _ -> ce))))
+              else None))
+          (cfg_calls_list g);;
+
 let rec resolved_st_q_is_bot_for _A
   xb (Abs_resolved_st xa) =
     resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
 
+let rec etf_st_enter
+  (Effectful_st_transfer_ext
+    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
+      etf_st_enter, etf_st_combine, more))
+    = etf_st_enter;;
+
+let rec side_contribution_trees_st _B
+  etf es ens cs =
+    map (fun (u, a) -> apply_etf_st etf a u) es @
+      map (fun (cl, (fs, asa)) -> etf_st_enter etf fs asa cl) ens @
+        map (fun (cc, (dst, a)) -> etf_combine_st etf dst cc a) cs;;
+
+let rec make_side_rhs_tree_eff_st_buffered _B
+  g etf bot0_st s0_st gseed v =
+    (let acc0 =
+       (if equal_cfg_nodea v (cfg_entry g)
+         then Lifted (sup_resolved_st_qa _B bot0_st s0_st) else Bot)
+       in
+     let t =
+       fold_rhs_trees
+         (bounded_semilattice_sup_bot_lifted (semilattice_sup_resolved_st_q _B))
+         acc0
+         (side_contribution_trees_st _B etf (intra_predecessor_list g v)
+           (entry_seed_list g v) (return_call_list g v))
+       in
+      seqcomp_tree t
+        (fun res ->
+          seqcomp_tree
+            (Side (gseed,
+                    map_lift
+                      (restrict_global_resolved_q
+                        _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                      res,
+                    Answer bot_lifteda))
+            (fun _ ->
+              Answer
+                (map_lift
+                  (restrict_local_resolved_q
+                    _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                  res))));;
+
+let rec side_cfg_T_eff_st_buffered _B
+  g etf bot0_st s0_st gseed =
+    make_side_rhs_tree_eff_st_buffered _B g etf bot0_st s0_st gseed;;
+
+let rec combine_collect_resolved_for _A
+  gs dst sc se =
+    combine_assign_resolved _A gs dst
+      (lookup_resolved_st _A se (location_of gs ret_var))
+      (combine_resolved_st _A sc se);;
+
+let rec combine_collect_resolved_for_q _A
+  xc xb (Abs_resolved_st xa) (Abs_resolved_st x) =
+    Abs_resolved_st (combine_collect_resolved_for _A xc xb xa x);;
+
+let rec assemble_local_global _A
+  x0 g = match x0, g with Bot, g -> Bot
+    | Lifted su, Bot -> Lifted su
+    | Lifted su, Lifted sg -> Lifted (sup _A.sup_semilattice_sup su sg);;
+
+let rec unit_combine_contribution_st _A
+  is_bot_pred gs dst cc ex =
+    seqcomp_tree (QueryL (cc, (fun a -> Answer a)))
+      (fun sc ->
+        seqcomp_tree (QueryL (ex, (fun a -> Answer a)))
+          (fun se ->
+            seqcomp_tree (QueryG ((), (fun a -> Answer a)))
+              (fun g ->
+                Answer
+                  (transfer_lift2 is_bot_pred
+                    (combine_collect_resolved_for_q
+                      _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs
+                      dst)
+                    (assemble_local_global (semilattice_sup_resolved_st_q _A) sc
+                      g)
+                    (assemble_local_global (semilattice_sup_resolved_st_q _A) se
+                      g)))));;
+
+let rec unit_edge_contribution_st _A
+  is_bot_pred f u =
+    seqcomp_tree (QueryL (u, (fun a -> Answer a)))
+      (fun su ->
+        seqcomp_tree (QueryG ((), (fun a -> Answer a)))
+          (fun g ->
+            Answer
+              (transfer_lift is_bot_pred f
+                (assemble_local_global (semilattice_sup_resolved_st_q _A) su
+                  g))));;
+
+let rec unit_etf_st_contribution_of_transfer _A
+  is_bot_pred gs tf_st enter_st =
+    Effectful_st_transfer_ext
+      (unit_edge_contribution_st _A is_bot_pred (tf_st EA_Nop),
+        (fun x e ->
+          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_Assign (x, e)))),
+        (fun x ->
+          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_Random x))),
+        (fun b ->
+          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_Assume b))),
+        (fun b ->
+          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_AssumeNot b))),
+        (fun xs es ->
+          unit_edge_contribution_st _A is_bot_pred (enter_st xs es)),
+        unit_combine_contribution_st _A is_bot_pred gs, ());;
+
+let rec ivl_etf_st_contribution_for
+  is_bot_pred gs =
+    unit_etf_st_contribution_of_transfer bounded_semilattice_sup_bot_ivl
+      is_bot_pred gs (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
+
 let rec ivl_exec_eqs
   is_bot_pred gs pi ps mnm main =
-    side_cfg_T_eff_st bounded_semilattice_sup_bot_ivl
-      (compile_prog pi ps mnm main) (ivl_etf_st_for is_bot_pred gs)
+    side_cfg_T_eff_st_buffered bounded_semilattice_sup_bot_ivl
+      (compile_prog pi ps mnm main) (ivl_etf_st_contribution_for is_bot_pred gs)
       (bot_resolved_st_qa bot_ivl) cinit_ivl_st ();;
 
 let rec ectx_spec

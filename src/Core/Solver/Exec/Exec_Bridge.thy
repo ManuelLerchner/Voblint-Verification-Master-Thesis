@@ -233,6 +233,26 @@ text \<open>
   theory proves about \<open>is_bot_pred\<close> in the abstract carries over unchanged to
   that instantiation.
 \<close>
+lemma restrict_local_resolved_q_sup [simp]:
+  "restrict_local_resolved_q (a \<squnion> b)
+     = restrict_local_resolved_q a \<squnion> restrict_local_resolved_q b"
+  by (simp add: resolved_st_q_eq_iff fun_eq_iff split: location.splits)
+
+lemma restrict_global_resolved_q_sup [simp]:
+  "restrict_global_resolved_q (a \<squnion> b)
+     = restrict_global_resolved_q a \<squnion> restrict_global_resolved_q b"
+  by (simp add: resolved_st_q_eq_iff fun_eq_iff split: location.splits)
+
+lemma map_lift_restrict_local_resolved_q_join [simp]:
+  "map_lift restrict_local_resolved_q (a \<squnion> b)
+     = map_lift restrict_local_resolved_q a \<squnion> map_lift restrict_local_resolved_q b"
+  by (cases a; cases b) simp_all
+
+lemma map_lift_restrict_global_resolved_q_join [simp]:
+  "map_lift restrict_global_resolved_q (a \<squnion> b)
+     = map_lift restrict_global_resolved_q a \<squnion> map_lift restrict_global_resolved_q b"
+  by (cases a; cases b) simp_all
+
 definition unit_edge_tree_st ::
   "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool)
    \<Rightarrow> ('a resolved_st_q \<Rightarrow> 'a resolved_st_q)
@@ -260,6 +280,36 @@ where
                  (assemble_local_global sc g) (assemble_local_global se g);
      depend_on () (map_lift restrict_global_resolved_q res)
        (answer (map_lift restrict_local_resolved_q res))
+   }"
+
+text \<open>
+  \<open>unit_edge_contribution_st\<close>/\<open>unit_combine_contribution_st\<close> are the Side-free,
+  unsplit counterparts of \<^const>\<open>unit_edge_tree_st\<close>/\<^const>\<open>unit_combine_tree_st\<close>
+  (Voblint issue #121): same reads, same computed unsplit \<open>res\<close>, but answered
+  directly instead of split-and-published. See \<open>make_side_rhs_tree_eff_st_buffered\<close>
+  below.\<close>
+
+definition unit_edge_contribution_st ::
+  "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool)
+   \<Rightarrow> ('a resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (unit, 'a resolved_st_q lifted) st_edge_tf_tree"
+where
+  "unit_edge_contribution_st is_bot_pred f u = do {
+     su \<leftarrow> read_local u;
+     g \<leftarrow> read_global ();
+     answer (transfer_lift is_bot_pred f (assemble_local_global su g))
+   }"
+
+definition unit_combine_contribution_st ::
+  "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> (pp, unit, 'a resolved_st_q lifted) strategy_tree"
+where
+  "unit_combine_contribution_st is_bot_pred gs dst cc ex = do {
+     sc \<leftarrow> read_local cc;
+     se \<leftarrow> read_local ex;
+     g \<leftarrow> read_global ();
+     answer (transfer_lift2 is_bot_pred (combine_collect_resolved_for_q gs dst)
+               (assemble_local_global sc g) (assemble_local_global se g))
    }"
 
 subsection \<open>Placement-aware executable trees\<close>
@@ -727,6 +777,32 @@ lemma dep_aux_unit_combine_tree_st:
   "dep_aux \<sigma>1 (unit_combine_tree_st is_bot_pred gs dst cc ex) = dep_aux \<sigma>2 (unit_combine_tree gs dst' cc ex)"
   unfolding unit_combine_tree_st_def unit_combine_tree_def Let_def by simp
 
+lemma traverse_unit_edge_contribution_st:
+  "traverse_rhs (unit_edge_contribution_st is_bot_pred f u) \<sigma>_st = res_edge_st is_bot_pred f u \<sigma>_st"
+  unfolding unit_edge_contribution_st_def res_edge_st_def by simp
+
+lemma sides_of_rhs_unit_edge_contribution_st [simp]:
+  "sides_of_rhs (unit_edge_contribution_st is_bot_pred f u) \<sigma>_st = \<bottom>"
+  unfolding unit_edge_contribution_st_def by (simp add: bot_fun_def)
+
+lemma traverse_unit_combine_contribution_st:
+  "traverse_rhs (unit_combine_contribution_st is_bot_pred gs dst cc ex) \<sigma>_st
+     = res_combine_st is_bot_pred gs dst cc ex \<sigma>_st"
+  unfolding unit_combine_contribution_st_def res_combine_st_def by simp
+
+lemma sides_of_rhs_unit_combine_contribution_st [simp]:
+  "sides_of_rhs (unit_combine_contribution_st is_bot_pred gs dst cc ex) \<sigma>_st = \<bottom>"
+  unfolding unit_combine_contribution_st_def by (simp add: bot_fun_def)
+
+lemma dep_aux_unit_edge_contribution_st_eq_unit_edge_tree_st:
+  "dep_aux \<sigma> (unit_edge_contribution_st is_bot_pred f u) = dep_aux \<sigma> (unit_edge_tree_st is_bot_pred f u)"
+  unfolding unit_edge_contribution_st_def unit_edge_tree_st_def Let_def by simp
+
+lemma dep_aux_unit_combine_contribution_st_eq_unit_combine_tree_st:
+  "dep_aux \<sigma> (unit_combine_contribution_st is_bot_pred gs dst cc ex)
+     = dep_aux \<sigma> (unit_combine_tree_st is_bot_pred gs dst cc ex)"
+  unfolding unit_combine_contribution_st_def unit_combine_tree_st_def Let_def by simp
+
 
 subsection \<open>Globally-restricted side values\<close>
 
@@ -971,12 +1047,448 @@ definition side_cfg_T_eff_st ::
 where
   "side_cfg_T_eff_st g etf bot0_st s0_st gseed = make_side_rhs_tree_eff_st g etf bot0_st s0_st gseed"
 
+subsection \<open>Buffered executable generator: fold Side-free contributions, publish once (issue #121)\<close>
+
+text \<open>
+  Executable mirror of \<^theory>\<open>Voblint_Core.TD_Side_Tree\<close>'s
+  \<open>make_side_rhs_tree_eff_buffered\<close>/\<open>make_side_rhs_tree_eff_buffered_correspondence\<close>,
+  adapted to the executable \<open>resolved_st_q\<close> layer: \<^const>\<open>restrict_local_resolved_q\<close>/
+  \<^const>\<open>restrict_global_resolved_q\<close> already carry the local/global tag on every
+  \<^typ>\<open>location\<close>, so unlike the spec-level \<open>restrict_local_for gs\<close>/\<open>restrict_global_for
+  gs\<close> the split here needs no classifier argument.\<close>
+
+definition make_side_rhs_tree_eff_st_buffered ::
+  "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer
+   \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'g \<Rightarrow> pp
+   \<Rightarrow> (pp, 'g, 'a resolved_st_q lifted) strategy_tree"
+where
+  "make_side_rhs_tree_eff_st_buffered g etf bot0_st s0_st gseed v =
+     (let acc0 = (if v = cfg_entry g then Lifted (bot0_st \<squnion> s0_st) else Bot);
+          t    = fold_rhs_trees acc0
+                   (side_contribution_trees_st etf
+                      (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v))
+      in do {
+        res \<leftarrow> t;
+        side_publish gseed (map_lift restrict_global_resolved_q res);
+        answer (map_lift restrict_local_resolved_q res)
+      })"
+
+definition side_cfg_T_eff_st_buffered ::
+  "cfg \<Rightarrow> ('g, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer
+   \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'g
+   \<Rightarrow> (pp, 'g, 'a resolved_st_q lifted) eqsT"
+where
+  "side_cfg_T_eff_st_buffered g etf bot0_st s0_st gseed
+     = make_side_rhs_tree_eff_st_buffered g etf bot0_st s0_st gseed"
+
+text \<open>
+  Correspondence theorem, mirroring
+  \<open>make_side_rhs_tree_eff_buffered_correspondence\<close> at the executable layer:
+  given the four per-tree obligations relating an \<open>etf_old\<close> (Side-emitting,
+  e.g. \<^const>\<open>unit_edge_tree_st\<close>) to an \<open>etf_new\<close> (Side-free, e.g.
+  \<open>unit_edge_contribution_st\<close>) -- exactly the facts already proved above for
+  Interval's own pair -- the buffered generator over \<open>etf_new\<close> has the
+  identical \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close> value as the original
+  generator over \<open>etf_old\<close>, at \<open>bot0_st = bot\<close> (every current call site's
+  actual argument). Specialized to \<open>'g = unit\<close>, matching every current
+  \<open>side_cfg_T_eff_st\<close> caller.
+\<close>
+
+lemma make_side_rhs_tree_eff_st_buffered_correspondence:
+  fixes etf_old etf_new :: "(unit, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer"
+  assumes edge_t: "\<And>a u \<sigma>. traverse_rhs (apply_etf_st etf_old a u) \<sigma>
+                    = map_lift restrict_local_resolved_q (traverse_rhs (apply_etf_st etf_new a u) \<sigma>)"
+    and edge_s: "\<And>a u \<sigma>. sides_of_rhs (apply_etf_st etf_old a u) \<sigma> (Inr ())
+                    = map_lift restrict_global_resolved_q (traverse_rhs (apply_etf_st etf_new a u) \<sigma>)"
+    and edge_free: "\<And>a u \<sigma>. sides_of_rhs (apply_etf_st etf_new a u) \<sigma> = \<bottom>"
+    and enter_t: "\<And>fs as cl \<sigma>. traverse_rhs (etf_st_enter etf_old fs as cl) \<sigma>
+                    = map_lift restrict_local_resolved_q (traverse_rhs (etf_st_enter etf_new fs as cl) \<sigma>)"
+    and enter_s: "\<And>fs as cl \<sigma>. sides_of_rhs (etf_st_enter etf_old fs as cl) \<sigma> (Inr ())
+                    = map_lift restrict_global_resolved_q (traverse_rhs (etf_st_enter etf_new fs as cl) \<sigma>)"
+    and enter_free: "\<And>fs as cl \<sigma>. sides_of_rhs (etf_st_enter etf_new fs as cl) \<sigma> = \<bottom>"
+    and comb_t: "\<And>dst cc ex \<sigma>. traverse_rhs (etf_combine_st etf_old dst cc ex) \<sigma>
+                    = map_lift restrict_local_resolved_q (traverse_rhs (etf_combine_st etf_new dst cc ex) \<sigma>)"
+    and comb_s: "\<And>dst cc ex \<sigma>. sides_of_rhs (etf_combine_st etf_old dst cc ex) \<sigma> (Inr ())
+                    = map_lift restrict_global_resolved_q (traverse_rhs (etf_combine_st etf_new dst cc ex) \<sigma>)"
+    and comb_free: "\<And>dst cc ex \<sigma>. sides_of_rhs (etf_combine_st etf_new dst cc ex) \<sigma> = \<bottom>"
+  shows "traverse_rhs (make_side_rhs_tree_eff_st_buffered g etf_new bot s0_st () v) \<sigma>
+          = traverse_rhs (make_side_rhs_tree_eff_st g etf_old bot s0_st () v) \<sigma>"
+    (is ?T)
+    and "sides_of_rhs (make_side_rhs_tree_eff_st_buffered g etf_new bot s0_st () v) \<sigma> (Inr ())
+          = sides_of_rhs (make_side_rhs_tree_eff_st g etf_old bot s0_st () v) \<sigma> (Inr ())"
+    (is ?S)
+proof -
+  define cs :: "(pp, unit, 'a resolved_st_q lifted) strategy_tree list"
+    where "cs = side_contribution_trees_st etf_new
+                  (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)"
+  have cs_old_eq: "side_contribution_trees_st etf_old
+                     (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)
+                 = map (\<lambda>(u,a). apply_etf_st etf_old a u) (intra_predecessor_list g v)
+                   @ map (\<lambda>(cl,fs,as). etf_st_enter etf_old fs as cl) (entry_seed_list g v)
+                   @ map (\<lambda>(cc,dst,ex). etf_combine_st etf_old dst cc ex) (return_call_list g v)"
+    by (simp add: side_contribution_trees_st_def etf_combine_st.simps)
+  have cs_new_eq: "cs = map (\<lambda>(u,a). apply_etf_st etf_new a u) (intra_predecessor_list g v)
+                   @ map (\<lambda>(cl,fs,as). etf_st_enter etf_new fs as cl) (entry_seed_list g v)
+                   @ map (\<lambda>(cc,dst,ex). etf_combine_st etf_new dst cc ex) (return_call_list g v)"
+    unfolding cs_def by (simp add: side_contribution_trees_st_def etf_combine_st.simps)
+  have free: "\<And>c \<sigma>'. c \<in> set cs \<Longrightarrow> sides_of_rhs c \<sigma>' = \<bottom>"
+    unfolding cs_new_eq using edge_free enter_free comb_free by (auto split: prod.splits)
+  let ?acc0new = "if v = cfg_entry g then Lifted (bot \<squnion> s0_st) else Bot"
+  have acc0_split: "map_lift restrict_local_resolved_q ?acc0new
+       = (if v = cfg_entry g then Lifted (bot \<squnion> restrict_local_resolved_q s0_st) else Bot)"
+    by (cases "v = cfg_entry g") simp_all
+  have restrict_global_acc0: "map_lift restrict_global_resolved_q ?acc0new
+       = (if v = cfg_entry g then Lifted (restrict_global_resolved_q s0_st) else Bot)"
+    by (cases "v = cfg_entry g") simp_all
+  have tvT: "traverse_rhs (fold_rhs_trees ?acc0new cs) \<sigma>
+       = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs ?acc0new"
+    by (rule traverse_fold_rhs_trees_char)
+  have seed_swap: "foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs ?acc0new
+       = ?acc0new \<squnion> foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs \<bottom>"
+    using foldr_sup_seed_swap[of "\<lambda>t. traverse_rhs t \<sigma>" cs "?acc0new" "\<bottom>"] by fastforce
+  have map_join_local: "map_lift restrict_local_resolved_q
+        (foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs \<bottom>)
+     = foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>"
+    by (induction cs) simp_all
+  have map_join_global: "map_lift restrict_global_resolved_q
+        (foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs \<bottom>)
+     = foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>"
+    by (induction cs) simp_all
+  have edge_seg_t:
+    "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
+       (map (\<lambda>(u,a). apply_etf_st etf_new a u) xs) seed
+     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(u,a). apply_etf_st etf_old a u) xs) seed"
+    for xs :: "(pp \<times> edge_action) list" and seed
+    by (induction xs arbitrary: seed) (auto simp: edge_t split: prod.splits)
+  have enter_seg_t:
+    "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
+       (map (\<lambda>(cl,fs,as). etf_st_enter etf_new fs as cl) xs) seed
+     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cl,fs,as). etf_st_enter etf_old fs as cl) xs) seed"
+    for xs :: "(pp \<times> vname list \<times> aexp list) list" and seed
+    by (induction xs arbitrary: seed) (auto simp: enter_t split: prod.splits)
+  have comb_seg_t:
+    "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
+       (map (\<lambda>(cc,dst,ex). etf_combine_st etf_new dst cc ex) xs) seed
+     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_st etf_old dst cc ex) xs) seed"
+    for xs :: "(pp \<times> vname option \<times> pp) list" and seed
+    by (induction xs arbitrary: seed) (auto simp del: etf_combine_st.simps simp: comb_t split: prod.splits)
+  have elem_local: "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
+       = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc')
+           (side_contribution_trees_st etf_old
+              (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)) \<bottom>"
+    unfolding cs_new_eq cs_old_eq foldr_append edge_seg_t enter_seg_t comb_seg_t by (rule refl)
+  have edge_seg_s:
+    "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
+       (map (\<lambda>(u,a). apply_etf_st etf_new a u) xs) seed
+     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(u,a). apply_etf_st etf_old a u) xs) seed"
+    for xs :: "(pp \<times> edge_action) list" and seed
+    by (induction xs arbitrary: seed) (auto simp: edge_s split: prod.splits)
+  have enter_seg_s:
+    "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
+       (map (\<lambda>(cl,fs,as). etf_st_enter etf_new fs as cl) xs) seed
+     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cl,fs,as). etf_st_enter etf_old fs as cl) xs) seed"
+    for xs :: "(pp \<times> vname list \<times> aexp list) list" and seed
+    by (induction xs arbitrary: seed) (auto simp: enter_s split: prod.splits)
+  have comb_seg_s:
+    "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
+       (map (\<lambda>(cc,dst,ex). etf_combine_st etf_new dst cc ex) xs) seed
+     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_st etf_old dst cc ex) xs) seed"
+    for xs :: "(pp \<times> vname option \<times> pp) list" and seed
+    by (induction xs arbitrary: seed) (auto simp del: etf_combine_st.simps simp: comb_s split: prod.splits)
+  have elem_global: "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
+       = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc')
+           (side_contribution_trees_st etf_old
+              (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)) \<bottom>"
+    unfolding cs_new_eq cs_old_eq foldr_append edge_seg_s enter_seg_s comb_seg_s by (rule refl)
+  have told_sides_char: "sides_of_rhs
+        (fold_rhs_trees \<bottom> (side_contribution_trees_st etf_old
+              (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v))) \<sigma> (Inr ())
+     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc')
+         (side_contribution_trees_st etf_old
+            (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)) \<bottom>"
+    by (rule sides_of_rhs_fold_rhs_trees_char)
+  define t_old where "t_old = side_rhs_fold_eff_st etf_old
+        (if v = cfg_entry g then Lifted (bot \<squnion> restrict_local_resolved_q s0_st) else Bot)
+        (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)"
+  have t_old_sides_indep: "sides_of_rhs t_old \<sigma> (Inr ())
+     = sides_of_rhs
+         (fold_rhs_trees \<bottom> (side_contribution_trees_st etf_old
+            (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v))) \<sigma> (Inr ())"
+    unfolding t_old_def side_rhs_fold_eff_st_def sides_of_rhs_fold_rhs_trees_char
+    by simp
+  have t_old_traverse: "traverse_rhs t_old \<sigma>
+     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc')
+         (side_contribution_trees_st etf_old
+            (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v))
+         (if v = cfg_entry g then Lifted (bot \<squnion> restrict_local_resolved_q s0_st) else Bot)"
+    unfolding t_old_def side_rhs_fold_eff_st_def traverse_fold_rhs_trees_char by simp
+  have t_old_traverse_seed_swap: "traverse_rhs t_old \<sigma>
+       = (if v = cfg_entry g then Lifted (bot \<squnion> restrict_local_resolved_q s0_st) else Bot)
+         \<squnion> foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc')
+             (side_contribution_trees_st etf_old
+                (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)) \<bottom>"
+    unfolding t_old_traverse
+    using foldr_sup_seed_swap[of "\<lambda>t. traverse_rhs t \<sigma>"
+            "side_contribution_trees_st etf_old
+               (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g))
+               (return_call_list g (cfg_entry g))"
+            "Lifted (bot \<squnion> restrict_local_resolved_q s0_st)" "\<bottom>"]
+    by simp
+  have buffered_traverse: "traverse_rhs (make_side_rhs_tree_eff_st_buffered g etf_new bot s0_st () v) \<sigma>
+       = map_lift restrict_local_resolved_q (foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs ?acc0new)"
+    unfolding make_side_rhs_tree_eff_st_buffered_def Let_def cs_def[symmetric]
+    by (simp add: traverse_seqcomp tvT)
+  have buffered_sides: "sides_of_rhs (make_side_rhs_tree_eff_st_buffered g etf_new bot s0_st () v) \<sigma> (Inr ())
+       = map_lift restrict_global_resolved_q (foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') cs ?acc0new)"
+    unfolding make_side_rhs_tree_eff_st_buffered_def Let_def cs_def[symmetric]
+    by (simp add: sides_of_rhs_seqcomp_at sides_of_rhs_fold_rhs_trees_bot[OF free] tvT)
+  have old_traverse: "traverse_rhs (make_side_rhs_tree_eff_st g etf_old bot s0_st () v) \<sigma>
+       = traverse_rhs t_old \<sigma>"
+    unfolding make_side_rhs_tree_eff_st_def Let_def t_old_def side_rhs_fold_eff_st_def
+    by (simp add: traverse_seqcomp)
+  have old_sides: "sides_of_rhs (make_side_rhs_tree_eff_st g etf_old bot s0_st () v) \<sigma> (Inr ())
+       = (if v = cfg_entry g then Lifted (restrict_global_resolved_q s0_st) else Bot)
+         \<squnion> sides_of_rhs t_old \<sigma> (Inr ())"
+    unfolding make_side_rhs_tree_eff_st_def Let_def t_old_def side_rhs_fold_eff_st_def
+    by (smt (verit, best) all_sides.simps(4) all_sides_eq_sides_Inr_unit
+        sup_lifted.simps(1))
+  have T: ?T
+    unfolding buffered_traverse old_traverse seed_swap
+    using elem_local map_join_local t_old_traverse_seed_swap by auto
+  have S: ?S
+    unfolding buffered_sides old_sides seed_swap
+    using elem_global map_join_global t_old_sides_indep told_sides_char
+    by auto
+  from T S show ?T ?S by simp_all
+qed
+
+text \<open>
+  \<^const>\<open>dep_aux\<close> companion to
+  \<open>make_side_rhs_tree_eff_st_buffered_correspondence\<close>: \<^const>\<open>Side\<close> nodes are
+  transparent to \<^const>\<open>dep_aux\<close> (it tracks reads, not writes), so the
+  buffered generator's single trailing \<open>depend_on\<close>/\<open>answer\<close> wrapper
+  contributes no dependency at all and the whole-generator \<^const>\<open>dep_aux\<close>
+  reduces to the union of its Side-free contribution list's own
+  \<^const>\<open>dep_aux\<close> values via \<open>dep_aux_fold_rhs_trees_char\<close> -- exactly
+  paralleling \<open>cs_old_eq\<close>/\<open>cs_new_eq\<close> above, without needing the
+  seed-swap/segment machinery the value correspondence required.
+\<close>
+lemma make_side_rhs_tree_eff_st_buffered_dep_aux:
+  fixes etf_old etf_new :: "(unit, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer"
+  assumes edge_d: "\<And>a u \<sigma>. dep_aux \<sigma> (apply_etf_st etf_old a u) = dep_aux \<sigma> (apply_etf_st etf_new a u)"
+    and enter_d: "\<And>fs as cl \<sigma>. dep_aux \<sigma> (etf_st_enter etf_old fs as cl) = dep_aux \<sigma> (etf_st_enter etf_new fs as cl)"
+    and comb_d: "\<And>dst cc ex \<sigma>. dep_aux \<sigma> (etf_combine_st etf_old dst cc ex) = dep_aux \<sigma> (etf_combine_st etf_new dst cc ex)"
+  shows "dep_aux \<sigma> (make_side_rhs_tree_eff_st_buffered g etf_new bot s0_st () v)
+          = dep_aux \<sigma> (make_side_rhs_tree_eff_st g etf_old bot s0_st () v)"
+proof -
+  define cs :: "(pp, unit, 'a resolved_st_q lifted) strategy_tree list"
+    where "cs = side_contribution_trees_st etf_new
+                  (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)"
+  have cs_old_eq: "side_contribution_trees_st etf_old
+                     (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)
+                 = map (\<lambda>(u,a). apply_etf_st etf_old a u) (intra_predecessor_list g v)
+                   @ map (\<lambda>(cl,fs,as). etf_st_enter etf_old fs as cl) (entry_seed_list g v)
+                   @ map (\<lambda>(cc,dst,ex). etf_combine_st etf_old dst cc ex) (return_call_list g v)"
+    by (simp add: side_contribution_trees_st_def etf_combine_st.simps)
+  have cs_new_eq: "cs = map (\<lambda>(u,a). apply_etf_st etf_new a u) (intra_predecessor_list g v)
+                   @ map (\<lambda>(cl,fs,as). etf_st_enter etf_new fs as cl) (entry_seed_list g v)
+                   @ map (\<lambda>(cc,dst,ex). etf_combine_st etf_new dst cc ex) (return_call_list g v)"
+    unfolding cs_def by (simp add: side_contribution_trees_st_def etf_combine_st.simps)
+  have union_eq: "(\<Union>c\<in>set cs. dep_aux \<sigma> c)
+       = (\<Union>c\<in>set (side_contribution_trees_st etf_old
+             (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)). dep_aux \<sigma> c)"
+    unfolding cs_new_eq cs_old_eq set_append set_map
+    using edge_d enter_d comb_d by (auto split: prod.splits)
+  show ?thesis
+    unfolding make_side_rhs_tree_eff_st_buffered_def make_side_rhs_tree_eff_st_def
+              Let_def cs_def[symmetric] side_rhs_fold_eff_st_def
+    by (simp add: dep_aux_fold_rhs_trees_char union_eq)
+qed
+
+text \<open>
+  Side-free counterpart of \<^const>\<open>unit_etf_st_of_transfer\<close>, built from
+  \<^const>\<open>unit_edge_contribution_st\<close>/\<^const>\<open>unit_combine_contribution_st\<close>
+  instead of \<^const>\<open>unit_edge_tree_st\<close>/\<^const>\<open>unit_combine_tree_st\<close>, over the
+  identical \<open>tf_st\<close>/\<open>enter_st\<close> domain-transfer functions. Every domain that
+  builds its production \<open>effectful_st_transfer\<close> via \<^const>\<open>unit_etf_st_of_transfer\<close>
+  (Interval, Sign, Parity) gets a buffered contribution counterpart, and the
+  buffered-generator correspondence with it, for free from
+  \<open>unit_etf_st_of_transfer_buffered_correspondence\<close> below -- no per-domain proof.
+\<close>
+definition unit_etf_st_contribution_of_transfer ::
+  "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool)
+   \<Rightarrow> (vname \<Rightarrow> bool)
+   \<Rightarrow> (edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (unit, 'a resolved_st_q lifted) effectful_st_transfer"
+where
+  "unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st = \<lparr>
+    etf_st_nop        = unit_edge_contribution_st is_bot_pred (tf_st EA_Nop),
+    etf_st_assign     = (\<lambda>x e. unit_edge_contribution_st is_bot_pred (tf_st (EA_Assign x e))),
+    etf_st_random     = (\<lambda>x. unit_edge_contribution_st is_bot_pred (tf_st (EA_Random x))),
+    etf_st_assume     = (\<lambda>b. unit_edge_contribution_st is_bot_pred (tf_st (EA_Assume b))),
+    etf_st_assume_not = (\<lambda>b. unit_edge_contribution_st is_bot_pred (tf_st (EA_AssumeNot b))),
+    etf_st_enter      = (\<lambda>xs es. unit_edge_contribution_st is_bot_pred (enter_st xs es)),
+    etf_st_combine    = unit_combine_contribution_st is_bot_pred gs
+  \<rparr>"
+
+lemma apply_etf_st_unit_of_transfer_contribution:
+  assumes reduces: "action_reduces tf_st"
+  shows "apply_etf_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) a u
+           = unit_edge_contribution_st is_bot_pred (tf_st a) u"
+proof -
+  interpret action_reduces tf_st by (rule reduces)
+  show ?thesis
+    unfolding unit_etf_st_contribution_of_transfer_def
+    by (cases a) (simp_all add: ret_none ret_some check split: option.splits)
+qed
+
+lemma etf_combine_st_unit_of_transfer_contribution:
+  "etf_combine_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex
+     = unit_combine_contribution_st is_bot_pred gs dst cc ex"
+  unfolding unit_etf_st_contribution_of_transfer_def by simp
+
+lemma etf_st_enter_unit_of_transfer_contribution:
+  "etf_st_enter (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) xs es u
+     = unit_edge_contribution_st is_bot_pred (enter_st xs es) u"
+  unfolding unit_etf_st_contribution_of_transfer_def by simp
+
+lemma unit_etf_st_of_transfer_buffered_correspondence:
+  assumes reduces: "action_reduces tf_st"
+  shows "traverse_rhs (make_side_rhs_tree_eff_st_buffered g
+            (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) bot s0_st () v) \<sigma>
+          = traverse_rhs (make_side_rhs_tree_eff_st g
+            (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) bot s0_st () v) \<sigma>"
+    (is ?T)
+    and "sides_of_rhs (make_side_rhs_tree_eff_st_buffered g
+            (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) bot s0_st () v) \<sigma> (Inr ())
+          = sides_of_rhs (make_side_rhs_tree_eff_st g
+            (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) bot s0_st () v) \<sigma> (Inr ())"
+    (is ?S)
+proof -
+  have et: "\<And>a u \<sigma>'. traverse_rhs (apply_etf_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) a u) \<sigma>'
+                = map_lift restrict_local_resolved_q
+                    (traverse_rhs (apply_etf_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) a u) \<sigma>')"
+    by (simp add: apply_etf_st_unit_of_transfer[OF reduces]
+                  apply_etf_st_unit_of_transfer_contribution[OF reduces]
+                  traverse_unit_edge_contribution_st traverse_unit_edge_tree_st)
+  have es: "\<And>a u \<sigma>'. sides_of_rhs (apply_etf_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) a u) \<sigma>' (Inr ())
+                = map_lift restrict_global_resolved_q
+                    (traverse_rhs (apply_etf_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) a u) \<sigma>')"
+    by (simp add: apply_etf_st_unit_of_transfer[OF reduces]
+                  apply_etf_st_unit_of_transfer_contribution[OF reduces]
+                  traverse_unit_edge_contribution_st sides_unit_edge_tree_st_Inr)
+  have ef: "\<And>a u \<sigma>'. sides_of_rhs (apply_etf_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) a u) \<sigma>' = \<bottom>"
+    by (simp add: apply_etf_st_unit_of_transfer_contribution[OF reduces])
+  have nt: "\<And>fs as cl \<sigma>'. traverse_rhs (etf_st_enter (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) fs as cl) \<sigma>'
+                = map_lift restrict_local_resolved_q
+                    (traverse_rhs (etf_st_enter (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) fs as cl) \<sigma>')"
+    by (simp add: etf_st_enter_unit_of_transfer etf_st_enter_unit_of_transfer_contribution
+                  traverse_unit_edge_contribution_st traverse_unit_edge_tree_st)
+  have ns: "\<And>fs as cl \<sigma>'. sides_of_rhs (etf_st_enter (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) fs as cl) \<sigma>' (Inr ())
+                = map_lift restrict_global_resolved_q
+                    (traverse_rhs (etf_st_enter (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) fs as cl) \<sigma>')"
+    by (simp add: etf_st_enter_unit_of_transfer etf_st_enter_unit_of_transfer_contribution
+                  traverse_unit_edge_contribution_st sides_unit_edge_tree_st_Inr)
+  have nf: "\<And>fs as cl \<sigma>'. sides_of_rhs (etf_st_enter (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) fs as cl) \<sigma>' = \<bottom>"
+    by (simp add: etf_st_enter_unit_of_transfer_contribution)
+  have ct: "\<And>dst cc ex \<sigma>'. traverse_rhs (etf_combine_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex) \<sigma>'
+                = map_lift restrict_local_resolved_q
+                    (traverse_rhs (etf_combine_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex) \<sigma>')"
+    by (simp del: etf_combine_st.simps
+        add: etf_combine_st_unit_of_transfer etf_combine_st_unit_of_transfer_contribution
+                  traverse_unit_combine_contribution_st traverse_unit_combine_tree_st)
+  have cst: "\<And>dst cc ex \<sigma>'. sides_of_rhs (etf_combine_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex) \<sigma>' (Inr ())
+                = map_lift restrict_global_resolved_q
+                    (traverse_rhs (etf_combine_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex) \<sigma>')"
+    by (simp del: etf_combine_st.simps
+        add: etf_combine_st_unit_of_transfer etf_combine_st_unit_of_transfer_contribution
+                  traverse_unit_combine_contribution_st sides_unit_combine_tree_st_Inr)
+  have cf: "\<And>dst cc ex \<sigma>'. sides_of_rhs (etf_combine_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex) \<sigma>' = \<bottom>"
+    by (simp del: etf_combine_st.simps add: etf_combine_st_unit_of_transfer_contribution)
+  show ?T ?S
+    using make_side_rhs_tree_eff_st_buffered_correspondence[OF et es ef nt ns nf ct cst cf]
+    by simp_all
+qed
+
+lemma unit_etf_st_of_transfer_buffered_dep_aux:
+  assumes reduces: "action_reduces tf_st"
+  shows "dep_aux \<sigma> (make_side_rhs_tree_eff_st_buffered g
+            (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) bot s0_st () v)
+          = dep_aux \<sigma> (make_side_rhs_tree_eff_st g
+            (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) bot s0_st () v)"
+proof -
+  have ed: "\<And>a u \<sigma>'. dep_aux \<sigma>' (apply_etf_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) a u)
+                = dep_aux \<sigma>' (apply_etf_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) a u)"
+    by (simp add: apply_etf_st_unit_of_transfer[OF reduces]
+                  apply_etf_st_unit_of_transfer_contribution[OF reduces]
+                  dep_aux_unit_edge_contribution_st_eq_unit_edge_tree_st)
+  have nd: "\<And>fs as cl \<sigma>'. dep_aux \<sigma>' (etf_st_enter (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) fs as cl)
+                = dep_aux \<sigma>' (etf_st_enter (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) fs as cl)"
+    by (simp add: etf_st_enter_unit_of_transfer etf_st_enter_unit_of_transfer_contribution
+                  dep_aux_unit_edge_contribution_st_eq_unit_edge_tree_st)
+  have cd: "\<And>dst cc ex \<sigma>'. dep_aux \<sigma>' (etf_combine_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex)
+                = dep_aux \<sigma>' (etf_combine_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex)"
+    by (simp del: etf_combine_st.simps
+        add: etf_combine_st_unit_of_transfer etf_combine_st_unit_of_transfer_contribution
+                  dep_aux_unit_combine_contribution_st_eq_unit_combine_tree_st)
+  show ?thesis
+    using make_side_rhs_tree_eff_st_buffered_dep_aux[OF ed nd cd] by simp
+qed
+
 
 lemma side_rg_fold_rhs_trees:
   assumes "\<And>t. t \<in> set ts \<Longrightarrow> side_rg t"
   shows "side_rg (fold_rhs_trees acc ts)"
   using assms
   by (induction ts arbitrary: acc) (auto intro: side_rg_seqcomp)
+
+text \<open>
+  \<^const>\<open>side_rg\<close> companion for the buffered generator: since a Side-free
+  contribution tree contains no \<^const>\<open>Side\<close> node at all, \<^const>\<open>side_rg\<close>
+  holds of it independently of any correspondence with the original
+  generator, and the buffered generator's single trailing \<open>side_publish\<close>
+  write is itself idempotent-restricted
+  (\<open>map_lift_restrict_global_resolved_q_idem\<close>), so \<open>side_rg\<close> holds of
+  the whole buffered tree under exactly the same three per-tree obligations
+  \<open>side_rg_make_side_rhs_tree_eff_st\<close> already needs for the original.
+\<close>
+lemma side_rg_unit_edge_contribution_st:
+  "side_rg (unit_edge_contribution_st is_bot_pred f u)"
+  unfolding unit_edge_contribution_st_def by simp
+
+lemma side_rg_unit_combine_contribution_st:
+  "side_rg (unit_combine_contribution_st is_bot_pred gs dst cc ex)"
+  unfolding unit_combine_contribution_st_def by simp
+
+lemma side_rg_make_side_rhs_tree_eff_st_buffered:
+  assumes "\<And>a u. side_rg (apply_etf_st etf a u)"
+    and "\<And>cl fs as. side_rg (etf_st_enter etf fs as cl)"
+    and "\<And>cc ex dst. side_rg (etf_combine_st etf dst cc ex)"
+  shows "side_rg (make_side_rhs_tree_eff_st_buffered g etf bot0_st s0_st gseed v)"
+  unfolding make_side_rhs_tree_eff_st_buffered_def Let_def
+  apply (rule side_rg_seqcomp)
+   apply (rule side_rg_fold_rhs_trees)
+   unfolding side_contribution_trees_st_def
+   using assms apply (auto split: prod.splits)
+  done
+
+lemma side_rg_unit_etf_st_contribution_of_transfer:
+  assumes reduces: "action_reduces tf_st"
+  shows "side_rg (make_side_rhs_tree_eff_st_buffered g
+           (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) bot0_st s0_st gseed v)"
+proof (rule side_rg_make_side_rhs_tree_eff_st_buffered)
+  show "\<And>a u. side_rg (apply_etf_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) a u)"
+    by (simp add: apply_etf_st_unit_of_transfer_contribution[OF reduces]
+                  side_rg_unit_edge_contribution_st)
+  show "\<And>cl fs as. side_rg (etf_st_enter
+           (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) fs as cl)"
+    by (simp add: etf_st_enter_unit_of_transfer_contribution side_rg_unit_edge_contribution_st)
+  show "\<And>cc ex dst. side_rg (etf_combine_st
+           (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex)"
+    by (simp del: etf_combine_st.simps
+        add: etf_combine_st_unit_of_transfer_contribution side_rg_unit_combine_contribution_st)
+qed
 
 lemma side_rg_side_rhs_fold_eff_st:
   assumes "\<And>a u. side_rg (apply_etf_st etf a u)"

@@ -40,7 +40,8 @@ definition ivl_exec_eqs ::
     "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
      \<Rightarrow> (pp, unit, ivl resolved_st_q lifted) eqsT" where
   "ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main =
-     side_cfg_T_eff_st (compile_prog \<Pi> ps mnm main) (ivl_etf_st_for is_bot_pred gs) bot cinit_ivl_st ()"
+     side_cfg_T_eff_st_buffered (compile_prog \<Pi> ps mnm main)
+       (ivl_etf_st_contribution_for is_bot_pred gs) bot cinit_ivl_st ()"
 
 definition ivl_exec_raw ::
     "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
@@ -137,7 +138,10 @@ proof -
     unfolding sol_def by simp
   have pp_st: "part_post_solution (side_cfg_T_eff_st g (ivl_etf_st_for is_bot_pred gs) bot cinit_ivl_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
-    using pp0 by (simp add: ivl_exec_eqs_def g_def)
+    using pp0
+    unfolding ivl_exec_eqs_def g_def side_cfg_T_eff_st_buffered_def side_cfg_T_eff_st_def
+              dep_def dep\<^sub>L_def
+    by (simp add: ivl_buffered_correspondence ivl_buffered_dep_aux ivl_buffered_sides_full)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff gs g (ivl_etf gs) bot
                      (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf) ())
@@ -150,9 +154,8 @@ proof -
     by (simp add: \<sigma>_def fun_of_st_cinit_ivl_st_for bot_fun_def)
   have cone: "cone_compatible_etf gs (ivl_etf gs)" by (rule ivl_etf_cone_compatible)
   have srz: "\<And>z. side_rg (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main z)"
-    unfolding ivl_exec_eqs_def
-    by (rule side_rg_side_cfg_T_eff_st_unit
-          [OF ivl_etf_st_for_exists_unit ivl_etf_st_for_enter_exists_unit ivl_etf_st_for_combine_tree])
+    unfolding ivl_exec_eqs_def side_cfg_T_eff_st_buffered_def ivl_etf_st_contribution_for_def
+    by (rule side_rg_unit_etf_st_contribution_of_transfer[OF ivl_tf_st_for_reduces])
   have solpair: "TD_side_always_join_Interp_solve (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp
@@ -296,12 +299,27 @@ text \<open>
   \<open>analyse_interval_td\<close>/\<open>analyse_interval_td_for\<close> mirror \<open>analyse_interval\<close>
   but solve via @{const TD_side_warrowing_apinis_Interp_solve} instead of the
   always-join rule, following \<open>ivl_exec_raw\<close>/\<open>ivl_exec_at\<close>/\<open>ivl_exec_prog\<close>'s
-  own shape.  A soundness theorem for this pipeline follows the same collecting chain
-  \<open>ivl_exec_sound_collecting_at\<close> uses, with \<open>TD_side_always_join_solve_Inr_rg\<close> replaced by
-  \<^theory>\<open>Voblint_Core.Solver_Side_RG\<close>'s \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close>: the warrowing
-  update rule reads back its own per-origin bookkeeping (@{const sup_over_origins}) rather than
-  just joining, so that bridge lemma additionally needs \<open>bot \<nabla> bot = bot\<close>/\<open>bot \<Delta> bot = bot\<close> for
-  the domain in play --- \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close>
+  own shape -- the unmodified, vendored APINIS warrowing rule.  Voblint issue #121:
+  a CFG merge node's RHS evaluation issues more than one \<open>Side\<close> write to the same
+  global key (one per predecessor edge, through @{const unit_edge_tree_st}'s shared
+  global slot), and if one write is structurally \<^const>\<open>Bot\<close> the per-origin-gated
+  update rule can destabilize its own \<open>QueryG\<close> dependency forever. \<open>ivl_exec_eqs\<close> fixes
+  this at the generator layer instead of the solver: \<^const>\<open>side_cfg_T_eff_st_buffered\<close>
+  folds every predecessor's Side-free contribution (\<^const>\<open>ivl_etf_st_contribution_for\<close>)
+  through the untouched \<^const>\<open>fold_rhs_trees\<close> combinator and publishes the aggregated
+  result as a single \<open>Side\<close> write per RHS evaluation, so the solver never observes more
+  than one write per \<open>(global key, origin)\<close> pair. \<open>ivl_buffered_correspondence\<close>/
+  \<open>ivl_buffered_dep_aux\<close>/\<open>ivl_buffered_sides_full\<close> transport \<open>part_post_solution\<close> and
+  \<open>side_rg\<close> facts for the buffered generator back to the original, unbuffered
+  \<^const>\<open>side_cfg_T_eff_st\<close> shape the executable-to-abstract transport lemmas
+  (\<open>part_post_solution_st_to_abs_eff_unit_transfer\<close> etc.) are stated against, so those
+  lemmas need no changes of their own. A soundness theorem for this pipeline follows the
+  same collecting chain \<open>ivl_exec_sound_collecting_at\<close> uses, with
+  \<open>TD_side_always_join_solve_Inr_rg\<close> replaced by \<^theory>\<open>Voblint_Core.Solver_Side_RG\<close>'s
+  \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close>: the warrowing update rule reads back its own
+  per-origin bookkeeping (@{const sup_over_origins}) rather than just joining, so that
+  bridge lemma additionally needs \<open>bot \<nabla> bot = bot\<close>/\<open>bot \<Delta> bot = bot\<close> for the domain in
+  play --- \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>) discharge exactly that for \<open>ivl\<close>.
 \<close>
 
@@ -393,7 +411,10 @@ proof -
     unfolding sol_def by simp
   have pp_st: "part_post_solution (side_cfg_T_eff_st g (ivl_etf_st_for is_bot_pred gs) bot cinit_ivl_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
-    using pp0 by (simp add: ivl_exec_eqs_def g_def)
+    using pp0
+    unfolding ivl_exec_eqs_def g_def side_cfg_T_eff_st_buffered_def side_cfg_T_eff_st_def
+              dep_def dep\<^sub>L_def
+    by (simp add: ivl_buffered_correspondence ivl_buffered_dep_aux ivl_buffered_sides_full)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff gs g (ivl_etf gs) bot
                      (\<lambda>x. if gs x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf) ())
@@ -406,9 +427,8 @@ proof -
     by (simp add: sigma_def fun_of_st_cinit_ivl_st_for bot_fun_def)
   have cone: "cone_compatible_etf gs (ivl_etf gs)" by (rule ivl_etf_cone_compatible)
   have srz: "\<And>z. side_rg (ivl_exec_eqs is_bot_pred gs Pi ps mnm main z)"
-    unfolding ivl_exec_eqs_def
-    by (rule side_rg_side_cfg_T_eff_st_unit
-          [OF ivl_etf_st_for_exists_unit ivl_etf_st_for_enter_exists_unit ivl_etf_st_for_combine_tree])
+    unfolding ivl_exec_eqs_def side_cfg_T_eff_st_buffered_def ivl_etf_st_contribution_for_def
+    by (rule side_rg_unit_etf_st_contribution_of_transfer[OF ivl_tf_st_for_reduces])
   have solpair: "TD_side_warrowing_apinis_Interp_solve (ivl_exec_eqs is_bot_pred gs Pi ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp

@@ -38,7 +38,8 @@ definition parity_exec_eqs ::
     "(parity resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
      \<Rightarrow> (pp, unit, parity resolved_st_q lifted) eqsT" where
   "parity_exec_eqs is_bot_pred gs \<Pi> ps mnm main =
-     side_cfg_T_eff_st (compile_prog \<Pi> ps mnm main) (parity_etf_st_for is_bot_pred gs) bot cinit_parity_st ()"
+     side_cfg_T_eff_st_buffered (compile_prog \<Pi> ps mnm main)
+       (parity_etf_st_contribution_for is_bot_pred gs) bot cinit_parity_st ()"
 
 definition parity_exec_raw ::
     "(parity resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
@@ -129,7 +130,10 @@ proof -
     unfolding sol_def by simp
   have pp_st: "part_post_solution (side_cfg_T_eff_st g (parity_etf_st_for is_bot_pred gs) bot cinit_parity_st ())
                  (cfg_exit g) (snd sol) (fst sol)"
-    using pp0 by (simp add: parity_exec_eqs_def g_def)
+    using pp0
+    unfolding parity_exec_eqs_def g_def side_cfg_T_eff_st_buffered_def side_cfg_T_eff_st_def
+              dep_def dep\<^sub>L_def
+    by (simp add: parity_buffered_correspondence parity_buffered_dep_aux parity_buffered_sides_full)
   have pp_eff: "part_post_solution
                   (side_cfg_T_eff gs g (parity_etf gs) bot
                      (\<lambda>x. if gs x then PEven else PTop) ())
@@ -142,9 +146,8 @@ proof -
     by (simp add: \<sigma>_def fun_of_st_cinit_parity_st_for bot_fun_def)
   have cone: "cone_compatible_etf gs (parity_etf gs)" by (rule parity_etf_cone_compatible)
   have srz: "\<And>z. side_rg (parity_exec_eqs is_bot_pred gs \<Pi> ps mnm main z)"
-    unfolding parity_exec_eqs_def
-    by (rule side_rg_side_cfg_T_eff_st_unit
-          [OF parity_etf_st_for_exists_unit parity_etf_st_for_enter_exists_unit parity_etf_st_for_combine_tree])
+    unfolding parity_exec_eqs_def side_cfg_T_eff_st_buffered_def parity_etf_st_contribution_for_def
+    by (rule side_rg_unit_etf_st_contribution_of_transfer[OF parity_tf_st_for_reduces])
   have solpair: "TD_side_always_join_Interp_solve (parity_exec_eqs is_bot_pred gs \<Pi> ps mnm main) (cfg_exit g)
                    = (fst sol, snd sol)"
     unfolding sol_def by simp
