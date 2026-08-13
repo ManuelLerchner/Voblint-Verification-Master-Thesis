@@ -28,23 +28,22 @@ lemma nest_2_eqs_statement3:
   "nest_2_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx) (\<lambda>caller_state.
          QueryG Global (\<lambda>globals_state1.
-           Side Global
-             (DG bot (enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+           Side (Seed (FunctionEntry (STR ''g''))
+                   (cs_route 2 (Statement 2) ctx (locals caller_state)
+                     (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
+             (DG bot (enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
                    (locals caller_state) (globs globals_state1)))
-             (Side (Seed (FunctionEntry (STR ''g''))
-                     (cs_route 2 (Statement 2) ctx (locals caller_state)
-                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
-               (DG bot (enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
-                     (locals caller_state) (globs globals_state1)))
-               (QueryL (FunctionResult (STR ''g''),
-                       cs_route 2 (Statement 2) ctx (locals caller_state)
-                         (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
-                 QueryG Global (\<lambda>globals_state2.
-                   Side Global
-                     (DG bot (combine_global Spoly (Some (STR ''t''))
+             (QueryL (FunctionResult (STR ''g''),
+                     cs_route 2 (Statement 2) ctx (locals caller_state)
+                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
+               QueryG Global (\<lambda>globals_state2.
+                 Side Global
+                   (DG bot (enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                         (locals caller_state) (globs globals_state1)
+                       \<squnion> combine_global Spoly (Some (STR ''t''))
                            (locals caller_state) (locals callee_state) (globs globals_state2)))
-                     (Answer (DG (combine_local Spoly (Some (STR ''t''))
-                           (locals caller_state) (locals callee_state) (globs globals_state2)) bot))))))))"
+                   (Answer (DG (combine_local Spoly (Some (STR ''t''))
+                         (locals caller_state) (locals callee_state) (globs globals_state2)) bot)))))))"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def routed_cmb_def
   by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def)
 
@@ -52,23 +51,22 @@ lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
      = QueryL (Statement 2, ctx) (\<lambda>caller_state.
          QueryG Global (\<lambda>globals_state1.
-           Side Global
-             (DG bot (enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+           Side (Seed (FunctionEntry (STR ''g''))
+                   (cs_route 1 (Statement 2) ctx (locals caller_state)
+                     (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
+             (DG bot (enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
                    (locals caller_state) (globs globals_state1)))
-             (Side (Seed (FunctionEntry (STR ''g''))
-                     (cs_route 1 (Statement 2) ctx (locals caller_state)
-                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
-               (DG bot (enter_local Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
-                     (locals caller_state) (globs globals_state1)))
-               (QueryL (FunctionResult (STR ''g''),
-                       cs_route 1 (Statement 2) ctx (locals caller_state)
-                         (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
-                 QueryG Global (\<lambda>globals_state2.
-                   Side Global
-                     (DG bot (combine_global Spoly (Some (STR ''t''))
+             (QueryL (FunctionResult (STR ''g''),
+                     cs_route 1 (Statement 2) ctx (locals caller_state)
+                       (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])) (\<lambda>callee_state.
+               QueryG Global (\<lambda>globals_state2.
+                 Side Global
+                   (DG bot (enter_global Spoly [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                         (locals caller_state) (globs globals_state1)
+                       \<squnion> combine_global Spoly (Some (STR ''t''))
                            (locals caller_state) (locals callee_state) (globs globals_state2)))
-                     (Answer (DG (combine_local Spoly (Some (STR ''t''))
-                           (locals caller_state) (locals callee_state) (globs globals_state2)) bot))))))))"
+                   (Answer (DG (combine_local Spoly (Some (STR ''t''))
+                         (locals caller_state) (locals callee_state) (globs globals_state2)) bot)))))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_def routed_cmb_def
   by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def)
 
