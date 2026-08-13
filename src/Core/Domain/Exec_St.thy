@@ -7,6 +7,16 @@ class bounded_widening = bounded_semilattice_sup_bot + widening
 class bounded_narrowing = bounded_semilattice_sup_bot + narrowing
 class bounded_warrowing = bounded_semilattice_sup_bot + warrowing
 
+text \<open>
+  The vendored TD solver's warrowing update rule needs \<open>'d::bounded_warrowing\<close>
+  (@{theory_text \<open>Solver_Side_RG\<close>}'s \<open>T :: (pp,unit,'a::bounded_warrowing resolved_st_q) eqsT\<close>).
+  \<^typ>\<open>'a lifted\<close> already carries \<open>widening\<close>/\<open>narrowing\<close> separately (\<open>Abstract_Domain.thy\<close>) and
+  \<open>bounded_semilattice_sup_bot\<close>; this registers the combined class explicitly, mirroring
+  \<open>bounded_semilattice_sup_bot\<close>'s own combined registration there.
+\<close>
+
+instance lifted :: (bounded_warrowing) bounded_warrowing ..
+
 section \<open>Classifier-independent executable abstract state\<close>
 
 text \<open>
@@ -393,6 +403,175 @@ proof (rule ext)
         simp_all add: location_of_def)
 qed
 
+
+
+subsection \<open>Executable witness-bottom detection\<close>
+
+text \<open>
+  A finite, executable sufficient condition for @{const is_bot_state} on the state a
+  resolved_st represents. Two disjuncts: the local default already bottom (covers
+  every unoverridden local); or some explicit override is bottom at a location gs
+  itself would actually produce for its own vname (ruling out an override at a
+  location no vname under this gs maps to, which would say nothing about
+  @{const is_bot_state}). The global default is deliberately not checked: unlike
+  locals, a @{term declared_global} classifier's true set is always finite for a
+  real program, so no generic (ps-independent) argument can guarantee a fresh
+  global escapes any given override list the way a fresh local's existence does;
+  only the ps branch can safely observe a global.
+\<close>
+
+definition resolved_st_is_bot ::
+  "(vname => bool) => ('a::computable_domain) resolved_st => bool" where
+  "resolved_st_is_bot gs s =
+     (case s of (dl, dg, ps) =>
+       is_bot dl \<or>
+       (\<exists>loc \<in> set (map fst ps). is_bot (lookup_resolved_st s loc)
+          \<and> location_of gs (location_vname loc) = loc))"
+
+text \<open>
+  Soundness needs gs to leave infinitely many vnames local, so that some local
+  witness always escapes any given (finite) override list -- true for any
+  @{term declared_global} of a real program, which only ever declares finitely
+  many globals while @{typ vname} is infinite.
+\<close>
+lemma resolved_st_is_bot_sound:
+  assumes bot: "resolved_st_is_bot gs s"
+    and infinite_local: "infinite {x. \<not> gs x}"
+  shows "is_bot_state (fun_of_resolved_st_for gs s)"
+proof -
+  obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s)
+  from bot consider
+      (dl) "is_bot dl"
+    | (ps) loc where "loc \<in> set (map fst ps)" "is_bot (lookup_resolved_st s loc)"
+        "location_of gs (location_vname loc) = loc"
+    unfolding resolved_st_is_bot_def s_eq by auto
+  then show ?thesis
+  proof cases
+    case dl
+    obtain x :: vname where not_gs: "\<not> gs x"
+        and fresh: "x \<notin> location_vname ` set (map fst ps)"
+      using infinite_local
+      by (metis (mono_tags, lifting) finite_surj list.set_finite
+          mem_Collect_eq subset_eq)
+    have local_ps: "Local_Location x \<notin> set (map fst ps)"
+    proof
+      assume "Local_Location x \<in> set (map fst ps)"
+      then have "location_vname (Local_Location x) \<in> location_vname ` set (map fst ps)"
+        by (rule location_vname_imageI)
+      with fresh show False by simp
+    qed
+    have mo_l: "map_of ps (Local_Location x) = None"
+      using local_ps by (simp add: map_of_resolved_none_iff)
+    have "lookup_resolved_st s (Local_Location x) = dl"
+      unfolding s_eq by (simp add: mo_l)
+    then have "is_bot (fun_of_resolved_st_for gs s x)"
+      unfolding fun_of_resolved_st_for_def location_of_def
+      using dl not_gs by simp
+    then show ?thesis by (rule is_bot_stateI)
+  next
+    case ps
+    let ?x = "location_vname loc"
+    have loc_eq: "location_of gs ?x = loc" by (rule ps(3))
+    have "fun_of_resolved_st_for gs s ?x = lookup_resolved_st s loc"
+      unfolding fun_of_resolved_st_for_def loc_eq by (rule refl)
+    then have "is_bot (fun_of_resolved_st_for gs s ?x)"
+      using ps(2) by simp
+    then show ?thesis by (rule is_bot_stateI)
+  qed
+qed
+
+text \<open>
+  \<^const>\<open>resolved_st_is_bot\<close> deliberately leaves the global default unchecked
+  because an opaque classifier gives no way to enumerate the (finite) globally
+  classified vnames. A concrete program's classifier is always backed by an
+  explicit finite list (@{term declared_global_vars}), and enumerating exactly
+  that list closes the gap: every globally classified vname is checked
+  directly, so the global branch needs no override witness. This makes the
+  combined check an exact (not merely sound) characterization of
+  @{const is_bot_state}, with no side condition on \<open>gs\<close> beyond \<open>globals\<close>
+  actually listing its true set -- unlike @{thm resolved_st_is_bot_sound},
+  which still needs infinitely many locals to exist.
+\<close>
+
+definition resolved_st_is_bot_for ::
+  "vname list => (vname => bool) => ('a::computable_domain) resolved_st => bool" where
+  "resolved_st_is_bot_for globals gs s =
+     ((\<exists>x \<in> set globals. is_bot (lookup_resolved_st s (location_of gs x))) \<or>
+      resolved_st_is_bot gs s)"
+
+lemma resolved_st_is_bot_for_iff:
+  fixes s :: "'a::sound_domain resolved_st"
+  assumes globals: "\<And>x. gs x = (x \<in> set globals)"
+  shows "resolved_st_is_bot_for globals gs s \<longleftrightarrow> is_bot_state (fun_of_resolved_st_for gs s)"
+proof -
+  have infinite_local: "infinite {x::vname. \<not> gs x}"
+  proof
+    assume fin: "finite {x::vname. \<not> gs x}"
+    have "finite (UNIV :: vname set)"
+    proof -
+      have "(UNIV :: vname set) = {x. \<not> gs x} \<union> set globals" using globals by auto
+      then show ?thesis using fin
+        by (metis finite_Un list.set_finite)
+    qed
+    then show False using infinite_literal by simp
+  qed
+  show ?thesis
+  proof
+    assume "resolved_st_is_bot_for globals gs s"
+    then show "is_bot_state (fun_of_resolved_st_for gs s)"
+      unfolding resolved_st_is_bot_for_def
+    proof (elim disjE)
+      assume "\<exists>x \<in> set globals. is_bot (lookup_resolved_st s (location_of gs x))"
+      then obtain x where "is_bot (lookup_resolved_st s (location_of gs x))" by blast
+      then have "is_bot (fun_of_resolved_st_for gs s x)"
+        unfolding fun_of_resolved_st_for_def by simp
+      then show ?thesis by (rule is_bot_stateI)
+    next
+      assume bot: "resolved_st_is_bot gs s"
+      show ?thesis by (rule resolved_st_is_bot_sound[OF bot infinite_local])
+    qed
+  next
+    assume "is_bot_state (fun_of_resolved_st_for gs s)"
+    then obtain x where x: "is_bot (fun_of_resolved_st_for gs s x)" by (rule is_bot_stateE)
+    show "resolved_st_is_bot_for globals gs s"
+    proof (cases "gs x")
+      case True
+      then have "x \<in> set globals" using globals by simp
+      moreover have "fun_of_resolved_st_for gs s x = lookup_resolved_st s (location_of gs x)"
+        unfolding fun_of_resolved_st_for_def by (rule refl)
+      ultimately have "\<exists>y \<in> set globals. is_bot (lookup_resolved_st s (location_of gs y))"
+        using x by auto
+      then show ?thesis unfolding resolved_st_is_bot_for_def by (rule disjI1)
+    next
+      case False
+      have loc_eq: "location_of gs x = Local_Location x"
+        using False unfolding location_of_def by simp
+      have lookup_eq: "lookup_resolved_st s (Local_Location x) = fun_of_resolved_st_for gs s x"
+        unfolding fun_of_resolved_st_for_def loc_eq by (rule refl)
+      obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s)
+      have "resolved_st_is_bot gs s"
+      proof (cases "Local_Location x \<in> set (map fst ps)")
+        case True
+        have loc_vname_eq: "location_of gs (location_vname (Local_Location x)) = Local_Location x"
+          using loc_eq by simp
+        show ?thesis
+          unfolding resolved_st_is_bot_def
+          using True lookup_eq x loc_vname_eq s_eq
+          by (metis (mono_tags, lifting) case_prod_conv)
+      next
+        case False
+        then have mo: "map_of ps (Local_Location x) = None"
+          by (simp add: map_of_resolved_none_iff)
+        have "lookup_resolved_st s (Local_Location x) = dl"
+          unfolding s_eq using mo by simp
+        with lookup_eq x have "is_bot dl" by simp
+        then show ?thesis
+          unfolding resolved_st_is_bot_def using s_eq by auto
+      qed
+      then show ?thesis unfolding resolved_st_is_bot_for_def by (rule disjI2)
+    qed
+  qed
+qed
 
 
 fun location_is_local :: "location => bool" where
@@ -1205,6 +1384,229 @@ lemma fun_of_resolved_st_q_for_bot [simp]:
   "fun_of_resolved_st_q_for gs (bot :: ('a::order_bot) resolved_st_q) = bot"
   by (rule ext) (simp add: fun_of_resolved_st_q_for_def)
 
+text \<open>
+  The quotient-level projection agrees with the raw one at \<open>s\<close>'s own chosen
+  representative -- so any raw-level fact about @{const fun_of_resolved_st_for}
+  transports directly to @{const fun_of_resolved_st_q_for} through
+  @{const rep_resolved_st}, with no separate quotient-respectfulness argument
+  needed: @{const rep_resolved_st} is a genuine function of \<open>s\<close>, so anything
+  defined through it is automatically well-defined on the quotient.
+\<close>
+
+lemma fun_of_resolved_st_q_for_rep:
+  "fun_of_resolved_st_q_for gs s = fun_of_resolved_st_for gs (rep_resolved_st s)"
+  unfolding fun_of_resolved_st_q_for_def fun_of_resolved_st_for_def
+  by (rule ext) (simp add: lookup_rep_resolved_st_q)
+
+text \<open>
+  Defaults are themselves an eq_resolved_st invariant: any resolved_st extensionally
+  equal to \<open>s\<close> agrees with \<open>s\<close>'s own defaults, witnessed by a location the finite
+  override lists of both representatives leave untouched.
+\<close>
+lemma eq_resolved_st_defaults:
+  assumes "eq_resolved_st (dl, dg, ps) (dl', dg', qs)"
+  shows "dl = dl'" and "dg = dg'"
+proof -
+  obtain x :: vname where fresh: "x \<notin> location_vname ` set (map fst ps @ map fst qs)"
+    using fresh_vname_notin[of ps qs] by auto
+  have local_notin: "Local_Location x \<notin> set (map fst ps @ map fst qs)"
+  proof
+    assume "Local_Location x \<in> set (map fst ps @ map fst qs)"
+    then have "location_vname (Local_Location x) \<in> location_vname ` set (map fst ps @ map fst qs)"
+      by (rule location_vname_imageI)
+    with fresh show False by simp
+  qed
+  have global_notin: "Global_Location x \<notin> set (map fst ps @ map fst qs)"
+  proof
+    assume "Global_Location x \<in> set (map fst ps @ map fst qs)"
+    then have "location_vname (Global_Location x) \<in> location_vname ` set (map fst ps @ map fst qs)"
+      by (rule location_vname_imageI)
+    with fresh show False by simp
+  qed
+  have lookup_eq: "lookup_resolved_st (dl, dg, ps) = lookup_resolved_st (dl', dg', qs)"
+    using assms unfolding eq_resolved_st_def by simp
+  have local_split: "Local_Location x \<notin> set (map fst ps)" "Local_Location x \<notin> set (map fst qs)"
+    using local_notin by auto
+  have global_split: "Global_Location x \<notin> set (map fst ps)" "Global_Location x \<notin> set (map fst qs)"
+    using global_notin by auto
+  have dl_pointwise: "lookup_resolved_st (dl, dg, ps) (Local_Location x)
+      = lookup_resolved_st (dl', dg', qs) (Local_Location x)"
+    using lookup_eq by (rule fun_cong)
+  have mo_l_ps: "map_of ps (Local_Location x) = None"
+    using local_split(1) by (simp add: map_of_resolved_none_iff)
+  have mo_l_qs: "map_of qs (Local_Location x) = None"
+    using local_split(2) by (simp add: map_of_resolved_none_iff)
+  show "dl = dl'"
+    using dl_pointwise by (simp add: mo_l_ps mo_l_qs)
+  have dg_pointwise: "lookup_resolved_st (dl, dg, ps) (Global_Location x)
+      = lookup_resolved_st (dl', dg', qs) (Global_Location x)"
+    using lookup_eq by (rule fun_cong)
+  have mo_g_ps: "map_of ps (Global_Location x) = None"
+    using global_split(1) by (simp add: map_of_resolved_none_iff)
+  have mo_g_qs: "map_of qs (Global_Location x) = None"
+    using global_split(2) by (simp add: map_of_resolved_none_iff)
+  show "dg = dg'"
+    using dg_pointwise by (simp add: mo_g_ps mo_g_qs)
+qed
+
+text \<open>
+  \<open>resolved_st_is_bot_for\<close> as written takes \<open>gs\<close> as a free parameter, which makes it
+  \<open>eq_resolved_st\<close>-respectful only when \<open>gs\<close> actually agrees with \<open>globals\<close> (a mismatched
+  pair can pick out a witness through one representative's override list that another,
+  extensionally equal, representative encodes via its defaults instead). Every real caller
+  already supplies exactly the matching pair (\<open>resolved_st_q_is_bot_for (declared_global_vars
+  p) (declared_global p)\<close>), so fixing \<open>gs\<close> to \<open>%x. x : set globals\<close> internally loses nothing
+  and restores unconditional respectfulness: the explicit \<open>globals\<close> scan then catches every
+  global witness a differing override encoding could produce, and \<open>eq_resolved_st_defaults\<close>
+  pins the two representatives' \<open>dl\<close>/\<open>dg\<close> together for the local case. This is what makes
+  \<open>resolved_st_q_is_bot_for\<close> below liftable to the quotient at all.
+\<close>
+
+lemma eq_resolved_st_is_bot_for_mono:
+  assumes eq: "eq_resolved_st s t"
+    and bot: "resolved_st_is_bot_for globals (%x. x : set globals) s"
+  shows "resolved_st_is_bot_for globals (%x. x : set globals) t"
+proof -
+  obtain dl dg ps where s_eq: "s = (dl, dg, ps)" by (cases s)
+  obtain dl' dg' qs where t_eq: "t = (dl', dg', qs)" by (cases t)
+  have eq_pat: "eq_resolved_st (dl, dg, ps) (dl', dg', qs)"
+    using eq unfolding s_eq t_eq .
+  have dl_eq: "dl = dl'" using eq_resolved_st_defaults(1)[OF eq_pat] .
+  have lookup_eq: "lookup_resolved_st s = lookup_resolved_st t"
+    using eq unfolding eq_resolved_st_def by simp
+  show ?thesis
+  proof (cases "EX x : set globals. is_bot (lookup_resolved_st s (location_of (%x. x : set globals) x))")
+    case True
+    then show ?thesis
+      unfolding resolved_st_is_bot_for_def using lookup_eq by auto
+  next
+    case False
+    then have rb: "resolved_st_is_bot (%x. x : set globals) s"
+      using bot unfolding resolved_st_is_bot_for_def by blast
+    then consider (dlc) "is_bot dl"
+      | (psc) loc0 where "loc0 : set (map fst ps)" "is_bot (lookup_resolved_st s loc0)"
+          "location_of (%x. x : set globals) (location_vname loc0) = loc0"
+      unfolding resolved_st_is_bot_def s_eq by auto
+    then show ?thesis
+    proof cases
+      case dlc
+      have "is_bot dl'" using dlc dl_eq by simp
+      then have "resolved_st_is_bot (%x. x : set globals) t"
+        unfolding resolved_st_is_bot_def t_eq by auto
+      then show ?thesis unfolding resolved_st_is_bot_for_def by blast
+    next
+      case (psc loc0)
+      have lookup_t_loc0: "lookup_resolved_st t loc0 = lookup_resolved_st s loc0"
+        using lookup_eq by simp
+      then have bot_t_loc0: "is_bot (lookup_resolved_st t loc0)"
+        using psc(2) by simp
+      show ?thesis
+      proof (cases "map_of qs loc0")
+        case (Some a)
+        then have loc0_in_qs: "loc0 : set (map fst qs)"
+          by (force dest: map_of_SomeD)
+        have bot_t_loc0': "is_bot (lookup_resolved_st (dl', dg', qs) loc0)"
+          using bot_t_loc0 unfolding t_eq .
+        have "resolved_st_is_bot (%x. x : set globals) t"
+          unfolding resolved_st_is_bot_def t_eq
+          using bot_t_loc0' psc(3) loc0_in_qs by auto
+        then show ?thesis unfolding resolved_st_is_bot_for_def by blast
+      next
+        case None
+        then have default_val:
+          "lookup_resolved_st t loc0 =
+             (case loc0 of Local_Location x => dl' | Global_Location x => dg')"
+          unfolding t_eq by simp
+        show ?thesis
+        proof (cases loc0)
+          case (Local_Location y)
+          then have "is_bot dl'"
+            using default_val bot_t_loc0 by simp
+          then have "resolved_st_is_bot (%x. x : set globals) t"
+            unfolding resolved_st_is_bot_def t_eq by auto
+          then show ?thesis unfolding resolved_st_is_bot_for_def by blast
+        next
+          case (Global_Location y)
+          then have gs_y: "y : set globals"
+            using psc(3) unfolding location_of_def by (auto split: if_splits)
+          have "is_bot (lookup_resolved_st t (location_of (%x. x : set globals) y))"
+            using default_val bot_t_loc0 Global_Location gs_y
+            unfolding location_of_def by simp
+          then show ?thesis
+            unfolding resolved_st_is_bot_for_def using gs_y by blast
+        qed
+      qed
+    qed
+  qed
+qed
+
+lemma eq_resolved_st_is_bot_for:
+  assumes eq: "eq_resolved_st s t"
+  shows "resolved_st_is_bot_for globals (%x. x : set globals) s
+       = resolved_st_is_bot_for globals (%x. x : set globals) t"
+proof
+  assume "resolved_st_is_bot_for globals (%x. x : set globals) s"
+  then show "resolved_st_is_bot_for globals (%x. x : set globals) t"
+    using eq_resolved_st_is_bot_for_mono[OF eq] by blast
+next
+  have eq': "eq_resolved_st t s"
+    using eq unfolding eq_resolved_st_def by simp
+  assume "resolved_st_is_bot_for globals (%x. x : set globals) t"
+  then show "resolved_st_is_bot_for globals (%x. x : set globals) s"
+    using eq_resolved_st_is_bot_for_mono[OF eq'] by blast
+qed
+
+text \<open>
+  The exec-bridge exact witness-bottom check (@{thm resolved_st_is_bot_for_iff}),
+  transported to the quotient through @{const rep_resolved_st}. This is the
+  predicate the executable side trees are built against: unlike
+  @{const is_bot_state} composed with @{const fun_of_resolved_st_q_for}, it has
+  a genuine \<open>[code]\<close> equation, since it never quantifies over all of
+  @{typ vname}.
+\<close>
+
+text \<open>
+  \<open>gs\<close> is deliberately not a parameter of the raw witness below (it always agrees with
+  \<open>%x. x : set globals\<close> at every real call site, per @{thm resolved_st_is_bot_for_iff}'s own
+  hypothesis) -- fixing it internally this way, rather than accepting a caller-supplied \<open>gs\<close>,
+  is exactly what makes @{thm eq_resolved_st_is_bot_for} apply unconditionally and this
+  definition liftable at all. Every real caller already recomputes the same \<open>gs\<close> from
+  \<open>globals\<close> at the call site, so dropping the redundant parameter loses nothing.
+\<close>
+
+lift_definition resolved_st_q_is_bot_for ::
+  "vname list => ('a::computable_domain) resolved_st_q => bool"
+  is "%globals s. resolved_st_is_bot_for globals (%x. x : set globals) s"
+  by (rule eq_resolved_st_is_bot_for)
+
+lemma resolved_st_q_is_bot_for_alt:
+  "resolved_st_q_is_bot_for globals s =
+     resolved_st_is_bot_for globals (%x. x : set globals) (rep_resolved_st s)"
+  by (rule resolved_st_q_is_bot_for.rep_eq)
+
+lemma resolved_st_q_is_bot_for_iff:
+  assumes globals: "\<And>x. gs x = (x \<in> set globals)"
+  shows "resolved_st_q_is_bot_for globals s \<longleftrightarrow> is_bot_state (fun_of_resolved_st_q_for gs s)"
+proof -
+  have gs_eq: "gs = (%x. x : set globals)"
+    using globals by (rule ext)
+  have step1: "resolved_st_q_is_bot_for globals s =
+                 resolved_st_is_bot_for globals (%x. x : set globals) (rep_resolved_st s)"
+    by (rule resolved_st_q_is_bot_for_alt)
+  have step2: "resolved_st_is_bot_for globals (%x. x : set globals) (rep_resolved_st s) =
+                 resolved_st_is_bot_for globals gs (rep_resolved_st s)"
+    using gs_eq by simp
+  have step3: "resolved_st_is_bot_for globals gs (rep_resolved_st s) =
+                 is_bot_state (fun_of_resolved_st_for gs (rep_resolved_st s))"
+    by (rule resolved_st_is_bot_for_iff[OF globals])
+  show ?thesis
+    using step1 step2 step3 fun_of_resolved_st_q_for_rep[of gs s] by simp
+qed
+
+
+
+
+
 lemma fun_of_resolved_st_q_for_mono:
   assumes "s \<le> t"
   shows "fun_of_resolved_st_q_for gs s \<le> fun_of_resolved_st_q_for gs t"
@@ -1259,6 +1661,309 @@ proof (rule ext)
         simp_all add: location_of_def)
 qed
 
+subsection \<open>Structural reachability lift for the resolved-state quotient\<close>
+
+definition live_resolved_st_q ::
+  "(vname => bool) => ('a::sound_domain) resolved_st_q => bool"
+where
+  "live_resolved_st_q gs s = (~ is_bot_state (fun_of_resolved_st_q_for gs s))"
+
+lemma live_resolved_st_qI:
+  "(!!x. ~ is_bot (fun_of_resolved_st_q_for gs s x)) ==> live_resolved_st_q gs s"
+  unfolding live_resolved_st_q_def is_bot_state_def by blast
+
+lemma live_resolved_st_qE:
+  assumes "live_resolved_st_q gs s"
+  shows "~ is_bot (fun_of_resolved_st_q_for gs s x)"
+  using assms unfolding live_resolved_st_q_def is_bot_state_def by blast
+
+text \<open>
+  \<open>is_bot_state\<close> on \<open>fun_of_resolved_st_q_for gs s\<close> is an infinite existential over
+  \<open>vname\<close>, not executable on a quotient value.  \<open>update_resolved_st_q_lift\<close> tracks it
+  incrementally instead: given a @{const live_resolved_st_q} input and the single
+  freshly computed element, the result is witness-bottom iff that element is
+  \<open>is_bot\<close> -- every other location is provably unchanged
+  (@{thm fun_of_resolved_st_q_for_update}), so it cannot newly become bottom.  This
+  mirrors Goblint's per-analysis \<open>Deadcode\<close> raise while staying generic: it lives at
+  the shared update primitive, not in each domain's own transfer code.
+\<close>
+
+definition update_resolved_st_q_lift ::
+  "('a::sound_domain) resolved_st_q lifted => location => 'a => 'a resolved_st_q lifted"
+where
+  "update_resolved_st_q_lift x loc a = do {
+     s <- x;
+     if is_bot a then Bot else Lifted (update_resolved_st_q s loc a)
+   }"
+
+lemma update_resolved_st_q_lift_Bot [simp]:
+  "update_resolved_st_q_lift Bot loc a = Bot"
+  unfolding update_resolved_st_q_lift_def by simp
+
+lemma update_resolved_st_q_lift_Lifted:
+  "update_resolved_st_q_lift (Lifted s) loc a =
+     (if is_bot a then Bot else Lifted (update_resolved_st_q s loc a))"
+  unfolding update_resolved_st_q_lift_def by simp
+
+text \<open>
+  The completeness theorem the location-scoped check relies on: from a live input,
+  the lifted update exactly tracks the spec-level normalized result.  Only the
+  freshly written variable's element needs checking -- every other variable's
+  \<open>abs_state\<close> component provably survives unchanged
+  (@{thm fun_of_resolved_st_q_for_update}), so it cannot be the source of a new
+  witness-bottom.
+\<close>
+lemma update_resolved_st_q_lift_correct:
+  fixes s :: "'a::sound_domain resolved_st_q"
+  assumes live: "live_resolved_st_q gs s"
+  shows "map_lift (fun_of_resolved_st_q_for gs)
+           (update_resolved_st_q_lift (Lifted s) (location_of gs x) a) =
+         normalize_lift is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+proof (cases "is_bot a")
+  case True
+  have "is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+    by (rule is_bot_stateI[of _ x]) (simp add: True)
+  with True show ?thesis
+    by (simp add: update_resolved_st_q_lift_Lifted)
+next
+  case False
+  have not_bot: "~ is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+  proof
+    assume "is_bot_state ((fun_of_resolved_st_q_for gs s)(x := a))"
+    then obtain y where y: "is_bot (((fun_of_resolved_st_q_for gs s)(x := a)) y)"
+      by (rule is_bot_stateE)
+    show False
+    proof (cases "y = x")
+      case True
+      with y False show ?thesis by simp
+    next
+      case False
+      with y have "is_bot (fun_of_resolved_st_q_for gs s y)" by simp
+      with live show ?thesis using live_resolved_st_qE by blast
+    qed
+  qed
+  from False not_bot show ?thesis
+    by (simp add: update_resolved_st_q_lift_Lifted fun_of_resolved_st_q_for_update)
+qed
+
+text \<open>
+  \<open>bind_formals_abs\<close>'s fold-of-updates is pointwise characterizable by \<open>map_of\<close> once
+  the formal names are distinct: no formal's binding is later overwritten by
+  another, so lookup at any location reduces to a single \<open>map_of\<close> probe.
+\<close>
+lemma fold_fun_upd_notin:
+  "x \<notin> set (map fst ps) ==> fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps sigma x = sigma x"
+proof (induction ps arbitrary: sigma)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  obtain y b where p: "p = (y, b)" by (cases p)
+  have neq: "x \<noteq> y" and notin: "x \<notin> set (map fst ps)" using Cons.prems p by auto
+  have "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (p # ps) sigma x =
+          fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (sigma(y := b)) x"
+    using p by simp
+  also have "... = (sigma(y := b)) x"
+    using Cons.IH[OF notin, of "sigma(y := b)"] .
+  also have "... = sigma x" using neq by simp
+  finally show ?case .
+qed
+
+lemma fold_fun_upd_apply:
+  assumes "distinct (map fst ps)"
+  shows "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps sigma y =
+           (case map_of ps y of Some a => a | None => sigma y)"
+  using assms
+proof (induction ps arbitrary: sigma)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  obtain x a where p: "p = (x, a)" by (cases p)
+  show ?case
+  proof (cases "y = x")
+    case True
+    have notin: "x \<notin> set (map fst ps)" using Cons.prems p by simp
+    have "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (p # ps) sigma y =
+            fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (sigma(x := a)) x"
+      using p True by simp
+    also have "... = (sigma(x := a)) x"
+      using fold_fun_upd_notin[OF notin] .
+    also have "... = a" by simp
+    also have "... = (case map_of (p # ps) y of Some b => b | None => sigma y)"
+      using p True by simp
+    finally show ?thesis .
+  next
+    case False
+    have dist: "distinct (map fst ps)" using Cons.prems p by simp
+    have "fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (p # ps) sigma y =
+            fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) ps (sigma(x := a)) y"
+      using p by simp
+    also have "... = (case map_of ps y of Some b => b | None => (sigma(x := a)) y)"
+      using Cons.IH[OF dist, of "sigma(x := a)"] .
+    also have "... = (case map_of ps y of Some b => b | None => sigma y)"
+      using False by (cases "map_of ps y") simp_all
+    also have "... = (case map_of (p # ps) y of Some b => b | None => sigma y)"
+      using p False by simp
+    finally show ?thesis .
+  qed
+qed
+
+text \<open>
+  A formals list names only finitely many locals, and (per Voblint's CFG
+  well-formedness) every classifier \<open>gs\<close> leaves infinitely many vnames local: this
+  is the same premise \<open>resolved_st_is_bot_sound\<close> relies on, needed here to
+  obtain a local vname the formals list does not shadow.
+\<close>
+lemma is_bot_state_bind_formals_abs_enter_frame_D:
+  fixes top_val :: "'a::sound_domain" and sigma :: "'a abs_state"
+  assumes live: "~ is_bot_state sigma"
+    and top_ok: "~ is_bot top_val"
+    and dist: "distinct xs"
+    and len: "length xs = length avs"
+    and infinite_local: "infinite {x. ~ gs x}"
+  shows "is_bot_state (bind_formals_abs xs avs (enter_frame_D gs top_val sigma))
+       \<longleftrightarrow> is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
+proof -
+  have dist': "distinct (map fst (zip xs avs))"
+    using dist len by (simp add: map_fst_zip)
+  show ?thesis
+  proof
+    assume "is_bot_state (bind_formals_abs xs avs (enter_frame_D gs top_val sigma))"
+    then obtain y where y:
+      "is_bot (bind_formals_abs xs avs (enter_frame_D gs top_val sigma) y)"
+      by (rule is_bot_stateE)
+    show "is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
+    proof (cases "map_of (zip xs avs) y")
+      case None
+      then have "bind_formals_abs xs avs (enter_frame_D gs top_val sigma) y =
+                   enter_frame_D gs top_val sigma y"
+        unfolding bind_formals_abs_def fold_fun_upd_apply[OF dist'] by simp
+      with y have "is_bot (enter_frame_D gs top_val sigma y)" by simp
+      then have "is_bot top_val \<or> is_bot (sigma y)"
+        unfolding enter_frame_D_def by (cases "gs y") simp_all
+      with live show ?thesis by (auto simp: is_bot_state_def)
+    next
+      case (Some v)
+      then have "bind_formals_abs xs avs (enter_frame_D gs top_val sigma) y = v"
+        unfolding bind_formals_abs_def fold_fun_upd_apply[OF dist'] by simp
+      with y have "is_bot v" by simp
+      moreover have "v \<in> set avs" using Some by (rule map_of_SomeD[THEN set_zip_rightD])
+      ultimately show ?thesis by blast
+    qed
+  next
+    assume disj: "is_bot top_val \<or> (\<exists>v \<in> set avs. is_bot v)"
+    show "is_bot_state (bind_formals_abs xs avs (enter_frame_D gs top_val sigma))"
+    proof (cases "\<exists>v \<in> set avs. is_bot v")
+      case True
+      then obtain v where v: "v \<in> set avs" "is_bot v" by blast
+      then obtain i where i: "i < length avs" "avs ! i = v" by (metis in_set_conv_nth)
+      then have i': "i < length xs" using len by simp
+      have len_zip: "i < length (zip xs avs)" using i' i(1) by simp
+      have mem: "(xs ! i, avs ! i) \<in> set (zip xs avs)"
+        using nth_mem[OF len_zip] nth_zip[OF i' i(1)] by simp
+      have "map_of (zip xs avs) (xs ! i) = Some v"
+        using dist' mem i by (simp add: map_of_eq_Some_iff)
+      then have "bind_formals_abs xs avs (enter_frame_D gs top_val sigma) (xs ! i) = v"
+        unfolding bind_formals_abs_def fold_fun_upd_apply[OF dist'] by simp
+      then show ?thesis using v by (metis is_bot_stateI)
+    next
+      case False
+      with disj have top_bot: "is_bot top_val" by blast
+      have "finite (set xs)" by (rule finite_set)
+      then have "infinite ({x. ~ gs x} - set xs)"
+        using infinite_local by (rule Diff_infinite_finite)
+      then obtain z where z: "~ gs z" "z \<notin> set xs"
+        using infinite_imp_nonempty by blast
+      have "fst ` set (zip xs avs) \<subseteq> set xs"
+        using set_zip_leftD by fastforce
+      with z(2) have "z \<notin> fst ` set (zip xs avs)" by blast
+      then have "map_of (zip xs avs) z = None"
+        by (simp add: map_of_eq_None_iff)
+      then have "bind_formals_abs xs avs (enter_frame_D gs top_val sigma) z =
+                   enter_frame_D gs top_val sigma z"
+        unfolding bind_formals_abs_def fold_fun_upd_apply[OF dist'] by simp
+      also have "... = top_val" using z unfolding enter_frame_D_def by simp
+      finally show ?thesis using top_bot by (metis is_bot_stateI)
+    qed
+  qed
+qed
+
+text \<open>
+  \<open>enter_resolved_st_q_lift\<close> is the exec analog of @{const update_resolved_st_q_lift}:
+  input-strict on \<open>Bot\<close>, and normalizes to \<open>Bot\<close> exactly when the fresh frame or one
+  of the freshly computed formal values is \<open>is_bot\<close> -- both finite, decidable checks,
+  never a scan of the resolved state itself.
+\<close>
+definition enter_resolved_st_q_lift ::
+  "(vname => bool) => 'a::sound_domain resolved_st_q lifted
+   => 'a => vname list => 'a list => 'a resolved_st_q lifted"
+where
+  "enter_resolved_st_q_lift gs x top_val xs avs = do {
+     s <- x;
+     if is_bot top_val \<or> list_ex is_bot avs then Bot
+     else Lifted (bind_formals_resolved_q gs xs avs (enter_frame_D_resolved_q top_val s))
+   }"
+
+lemma enter_resolved_st_q_lift_Bot [simp]:
+  "enter_resolved_st_q_lift gs Bot top_val xs avs = Bot"
+  unfolding enter_resolved_st_q_lift_def by simp
+
+lemma enter_resolved_st_q_lift_correct:
+  fixes s :: "'a::sound_domain resolved_st_q"
+  assumes live: "live_resolved_st_q gs s"
+    and dist: "distinct xs" and len: "length xs = length avs"
+    and infinite_local: "infinite {x. ~ gs x}"
+  shows "map_lift (fun_of_resolved_st_q_for gs)
+           (enter_resolved_st_q_lift gs (Lifted s) top_val xs avs) =
+         normalize_lift is_bot_state
+           (bind_formals_abs xs avs (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)))"
+proof -
+  have key: "is_bot_state
+      (bind_formals_abs xs avs (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)))
+    \<longleftrightarrow> is_bot top_val \<or> list_ex is_bot avs"
+  proof (cases "is_bot top_val")
+    case True
+    have dist': "distinct (map fst (zip xs avs))"
+      using dist len by (simp add: map_fst_zip)
+    have "finite (set xs)" by (rule finite_set)
+    then have "infinite ({x. ~ gs x} - set xs)"
+      using infinite_local by (rule Diff_infinite_finite)
+    then obtain z where z: "~ gs z" "z \<notin> set xs"
+      by (metis (mono_tags, lifting) Collect_mem_eq Collect_mono_iff
+          infinite_local list.set_finite rev_finite_subset)
+    have "fst ` set (zip xs avs) \<subseteq> set xs"
+      using set_zip_leftD by fastforce
+    with z(2) have "z \<notin> fst ` set (zip xs avs)" by blast
+    then have "map_of (zip xs avs) z = None"
+      by (simp add: map_of_eq_None_iff)
+    then have "bind_formals_abs xs avs
+                 (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)) z =
+               enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s) z"
+      unfolding bind_formals_abs_def fold_fun_upd_apply[OF dist'] by simp
+    also have "... = top_val" using z unfolding enter_frame_D_def by simp
+    finally have "is_bot (bind_formals_abs xs avs
+                    (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)) z)"
+      using True by simp
+    then have "is_bot_state
+        (bind_formals_abs xs avs (enter_frame_D gs top_val (fun_of_resolved_st_q_for gs s)))"
+      by (rule is_bot_stateI)
+    with True show ?thesis by simp
+  next
+    case False
+    show ?thesis
+      using is_bot_state_bind_formals_abs_enter_frame_D
+              [OF live[unfolded live_resolved_st_q_def] False dist len infinite_local]
+      by (simp add: list_ex_iff)
+  qed
+  show ?thesis
+    unfolding enter_resolved_st_q_lift_def normalize_lift_def
+    by (simp add: key)
+qed
+
+
+
+
 lemma fun_of_resolved_st_q_for_restrict_local [simp]:
   "fun_of_resolved_st_q_for gs (restrict_local_resolved_q s) x =
      (if gs x then bot else fun_of_resolved_st_q_for gs s x)"
@@ -1284,12 +1989,58 @@ proof (rule ext)
     by (cases "gs x") simp_all
 qed
 
+text \<open>
+  \<open>combine_env_abs\<close> is a pointwise selector (@{thm combine_env_abs_def}), not a join:
+  every location's result is exactly the caller's or the callee-exit's own value, so
+  two live operands can never combine into a witness-bottom result.  The combine
+  lift is therefore purely input-strict, with no output-side check at all.
+\<close>
+definition combine_resolved_st_q_lift ::
+  "'a::sound_domain resolved_st_q lifted => 'a resolved_st_q lifted
+   => 'a resolved_st_q lifted"
+where
+  "combine_resolved_st_q_lift x y = do {
+     sc <- x;
+     se <- y;
+     Lifted (combine_resolved_st_q sc se)
+   }"
+
+lemma combine_resolved_st_q_lift_Bot_left [simp]:
+  "combine_resolved_st_q_lift Bot y = Bot"
+  unfolding combine_resolved_st_q_lift_def by simp
+
+lemma combine_resolved_st_q_lift_Bot_right [simp]:
+  "combine_resolved_st_q_lift (Lifted sc) Bot = Bot"
+  unfolding combine_resolved_st_q_lift_def by simp
+
+lemma combine_resolved_st_q_lift_Lifted [simp]:
+  "combine_resolved_st_q_lift (Lifted sc) (Lifted se) =
+     Lifted (combine_resolved_st_q sc se)"
+  unfolding combine_resolved_st_q_lift_def by simp
+
+lemma combine_resolved_st_q_lift_correct:
+  fixes sc se :: "'a::sound_domain resolved_st_q"
+  assumes live_c: "live_resolved_st_q gs sc" and live_e: "live_resolved_st_q gs se"
+  shows "~ is_bot_state (fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se))"
+  unfolding fun_of_resolved_st_q_for_combine
+proof (rule notI)
+  assume "is_bot_state (combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
+                                        (fun_of_resolved_st_q_for gs se))"
+  then obtain y where y:
+    "is_bot (combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
+                              (fun_of_resolved_st_q_for gs se) y)"
+    by (rule is_bot_stateE)
+  show False
+    using y live_c live_e
+    unfolding combine_env_abs_def
+    by (cases "gs y") (auto simp: live_resolved_st_qE)
+qed
+
+
 lemma fun_of_resolved_st_q_for_sup [simp]:
   "fun_of_resolved_st_q_for gs (s \<squnion> t) =
    fun_of_resolved_st_q_for gs s \<squnion> fun_of_resolved_st_q_for gs t"
   by (rule ext) (simp add: fun_of_resolved_st_q_for_def sup_fun_def)
-
-
 
 lemma fun_of_resolved_st_q_for_enter [simp]:
   "fun_of_resolved_st_q_for gs

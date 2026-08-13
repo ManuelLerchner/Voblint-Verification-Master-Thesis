@@ -63,7 +63,8 @@ text \<open>The computed Interval environment at an arbitrary node, not fixed to
   exit: \<^const>\<open>ivl_exec_prog_at\<close> queries the same solver result
   \<^const>\<open>ivl_exec_prog\<close> reads only at the exit.\<close>
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
-  "checks_ivl_ex_env v = ivl_exec_prog_at checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program v"
+  "checks_ivl_ex_env v = case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+     (ivl_exec_prog_at checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program v)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>x := random()\<close>'s successor) branches on
@@ -142,18 +143,18 @@ text \<open>Node-local collecting soundness at each check node, via
   no store is forwarded to the exit.\<close>
 lemma checks_ivl_ex_node_sound_2:
   "checks_ivl_ex_reach (Statement 2) \<le> \<lbrakk>checks_ivl_ex_env (Statement 2)\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
-  by (rule ivl_exec_prog_sound_collecting_at[OF checks_ivl_ex_solver_terminates checks_ivl_ex_statement2_reaches_exit])
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def gamma_state_case_lifted
+  by (rule ivl_exec_prog_sound_collecting_at[OF refl checks_ivl_ex_solver_terminates checks_ivl_ex_statement2_reaches_exit])
 
 lemma checks_ivl_ex_node_sound_3:
   "checks_ivl_ex_reach (Statement 3) \<le> \<lbrakk>checks_ivl_ex_env (Statement 3)\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
-  by (rule ivl_exec_prog_sound_collecting_at[OF checks_ivl_ex_solver_terminates checks_ivl_ex_statement3_reaches_exit])
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def gamma_state_case_lifted
+  by (rule ivl_exec_prog_sound_collecting_at[OF refl checks_ivl_ex_solver_terminates checks_ivl_ex_statement3_reaches_exit])
 
 lemma checks_ivl_ex_node_sound_4:
   "checks_ivl_ex_reach (Statement 4) \<le> \<lbrakk>checks_ivl_ex_env (Statement 4)\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
-  by (rule ivl_exec_prog_sound_collecting_at[OF checks_ivl_ex_solver_terminates checks_ivl_ex_statement4_reaches_exit])
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def gamma_state_case_lifted
+  by (rule ivl_exec_prog_sound_collecting_at[OF refl checks_ivl_ex_solver_terminates checks_ivl_ex_statement4_reaches_exit])
 
 text \<open>Executable classification at each check's own node --- the guard
   \<open>0 < x \<and> x < 10\<close> narrows \<open>x\<close> to \<open>[1,9]\<close> at \<open>Statement 2\<close>, so \<open>x < 11\<close> is

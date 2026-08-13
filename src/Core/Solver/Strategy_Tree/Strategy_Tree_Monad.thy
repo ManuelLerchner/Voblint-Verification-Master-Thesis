@@ -1,5 +1,5 @@
 theory Strategy_Tree_Monad
-  imports TD_Side_CFG
+  imports "TD.Basics_side"
 begin
 
 section \<open>Strategy tree monad: sequential composition\<close>

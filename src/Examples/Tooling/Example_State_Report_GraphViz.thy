@@ -171,8 +171,10 @@ fun analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> pp \<
      SignValue \<circ> analyse_sign_env_for (declared_global p) p v"
 | "analyse_env_for Interval_Analysis p v =
      IntervalValue \<circ>
-       analyse_interval_td_at (declared_global p) (prog_table p) (prog_procs p)
-         prog_main_name (prog_main p) v"
+       case_lifted bot id
+         (analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p))
+           (declared_global p) (prog_table p) (prog_procs p)
+           prog_main_name (prog_main p) v)"
 
 text \<open>
   Unlike \<^const>\<open>state_report_node_annotation\<close>, every \<^typ>\<open>pp\<close> gets an

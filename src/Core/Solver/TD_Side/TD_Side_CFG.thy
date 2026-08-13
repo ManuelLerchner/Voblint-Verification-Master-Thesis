@@ -1,5 +1,6 @@
 theory TD_Side_CFG
   imports Constraint_System_Sound Split_State "Voblint_VIMP.VIMP_Globals" "TD.TD_side"
+    Strategy_Tree_Combinators
 begin
 
 (* TD_side defines a record field \<sigma> for its internal state; hide the short
@@ -44,6 +45,15 @@ lemma restrict_global_for_mono:
   unfolding restrict_global_for_def le_fun_def
   by (auto dest: le_funD)
 
+lemma restrict_global_for_le:
+  "restrict_global_for gs (sigma :: 'a::bounded_semilattice_sup_bot abs_state) \<le> sigma"
+  unfolding restrict_global_for_def le_fun_def by (auto simp: bot_least)
+
+lemma map_lift_restrict_global_for_le:
+  fixes x :: "'a::bounded_semilattice_sup_bot abs_state lifted"
+  shows "map_lift (restrict_global_for gs) x \<le> x"
+  by (cases x) (simp_all add: restrict_global_for_le)
+
 lemma restrict_local_for_join [simp]:
   "restrict_local_for gs (A \<squnion> B) = restrict_local_for gs A \<squnion> restrict_local_for gs B"
   unfolding restrict_local_for_def sup_fun_def by (rule ext) simp
@@ -59,6 +69,12 @@ lemma restrict_local_for_idem [simp]:
 lemma restrict_global_for_idem [simp]:
   "restrict_global_for gs (restrict_global_for gs A) = restrict_global_for gs A"
   unfolding restrict_global_for_def by (rule ext) simp
+
+lemma map_lift_restrict_global_for_idem [simp]:
+  fixes x :: "'a::bounded_semilattice_sup_bot abs_state lifted"
+  shows "map_lift (restrict_global_for gs) (map_lift (restrict_global_for gs) x)
+           = map_lift (restrict_global_for gs) x"
+  by (cases x) simp_all
 
 lemma restrict_local_for_restrict_global_for_bot [simp]:
   "restrict_local_for gs (restrict_global_for gs A) = bot"
@@ -173,6 +189,17 @@ lemma side_env_apply:
   "side_env \<sigma> v = \<sigma> (Inl v) \<squnion> glob_env \<sigma>"
   unfolding side_env_def by (rule refl)
 
+text \<open>
+  Lifted counterpart of \<^const>\<open>side_env\<close>: the same reconstruction, cross-role
+  (local slot against the accumulated global), so \<^const>\<open>assemble_local_global\<close>
+  replaces \<open>\<squnion>\<close> for exactly the reason \<open>unit_edge_tree\<close>'s reconstruction does
+  (AD-52) -- a \<open>Bot\<close> local unknown must dominate rather than be resurrected by
+  a live global.
+\<close>
+definition side_env_lift ::
+  "(pp + 'g::finite => 'a::bounded_semilattice_sup_bot abs_state lifted) => pp => 'a abs_state lifted" where
+  "side_env_lift \<sigma> v = assemble_local_global (\<sigma> (Inl v)) (glob_env \<sigma>)"
+
 (* Reading a single named global g combined with the locals at v. *)
 definition side_env_g ::
   "(pp + 'g => 'a::bounded_semilattice_sup_bot abs_state) => 'g => pp => 'a abs_state"
@@ -200,81 +227,206 @@ text \<open>
   Answer and the global Side contribution consumed by TD_side.
 \<close>
 
+text \<open>
+  Both trees reconstruct one local input (or two, for combine) from the queried
+  unknown and the current global.  With the solver payload lifted (AD-52), that
+  reconstruction is cross-role -- the queried local unknown against the accumulated
+  global -- so it goes through \<^const>\<open>assemble_local_global\<close> rather than plain
+  \<open>\<squnion>\<close>: a \<open>Bot\<close> local unknown (this control-flow point is unreachable) dominates
+  regardless of what the global side holds, while a \<open>Bot\<close> global (no side
+  contribution published yet) is neutral. The domain transfer \<open>f\<close> / \<open>combine\<^sup>#\<close> only
+  ever runs on an actually reconstructed \<open>Lifted\<close> input -- \<^const>\<open>transfer_lift\<close>
+  short-circuits \<open>Bot\<close> in without calling \<open>f\<close> at all, and additionally re-collapses
+  a live input whose own transfer result lands on witness-bottom, exactly as the
+  raw pipeline's \<open>is_bot_state\<close> check did, but now recorded structurally in the
+  result rather than erased back to a raw value indistinguishable from a live
+  bottom-valued state (AD-52's core finding). A reachable input's split reuses
+  \<^const>\<open>map_lift\<close>: \<open>Bot\<close> in gives \<open>Bot\<close> Answer and \<open>Bot\<close> Side (no local result, no
+  side contribution -- a dead edge publishes nothing), \<open>Lifted r\<close> gives the ordinary
+  local/global restriction of \<open>r\<close>, lifted.
+\<close>
+
 definition unit_edge_tree ::
   "(vname => bool)
-   => ('a::bounded_semilattice_sup_bot abs_state => 'a abs_state)
+   => ('a::sound_domain abs_state => 'a abs_state)
    => (unit, 'a) edge_tf_tree"
 where
-  "unit_edge_tree gs f u =
-     QueryL u (\<lambda>su. QueryG () (\<lambda>g.
-       let res = f (su \<squnion> g) in
-       Side () (restrict_global_for gs res)
-         (Answer (restrict_local_for gs res))))"
+  "unit_edge_tree gs f u = do {
+     su <- read_local u;
+     g <- read_global ();
+     let res = transfer_lift is_bot_state f (assemble_local_global su g);
+     depend_on () (map_lift (restrict_global_for gs) res)
+       (answer (map_lift (restrict_local_for gs) res))
+   }"
 
 (* Procedure-return combine: query the caller local cc, the callee-exit local
    ex, and the global; reassemble locals-from-caller + globals-from-callee
-   (= combine_env\<^sup>#) and split into a local Answer and a global Side. *)
+   (= combine_env\<^sup>#) and split into a local Answer and a global Side.  Either
+   reconstructed operand being Bot means no concrete predecessor reaches the
+   combine (an unreachable call site, or a callee exit reached only from dead
+   code), so the combine as a whole is dead too -- assemble_local_global's Bot
+   dominance on both operands, threaded through transfer_lift2, gives this for
+   free without a separate is_bot_state test. *)
 definition unit_combine_tree ::
   "(vname => bool) => vname option => pp => pp
-   => (pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+   => (pp, unit, 'a::sound_domain abs_state lifted) strategy_tree"
 where
-  "unit_combine_tree gs dst cc ex =
-     QueryL cc (\<lambda>sc. QueryL ex (\<lambda>se. QueryG () (\<lambda>g.
-       let res = combine\<^sup># gs dst (sc \<squnion> g) (se \<squnion> g) in
-       Side () (restrict_global_for gs res)
-         (Answer (restrict_local_for gs res)))))"
+  "unit_combine_tree gs dst cc ex = do {
+     sc <- read_local cc;
+     se <- read_local ex;
+     g <- read_global ();
+     let res = transfer_lift2 is_bot_state (combine\<^sup># gs dst)
+                 (assemble_local_global sc g) (assemble_local_global se g);
+     depend_on () (map_lift (restrict_global_for gs) res)
+       (answer (map_lift (restrict_local_for gs) res))
+   }"
+
+
+(* res_edge names the reconstructed input's transfer result -- Bot when either the
+   reconstructed input or f's own result is witness-bottom, Lifted f's result
+   otherwise -- so the three reassembly lemmas below state the same value instead
+   of repeating it. *)
+definition res_edge ::
+  "('a::sound_domain abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> pp
+   \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
+  "res_edge f u \<sigma> =
+     transfer_lift is_bot_state f (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
 
 lemma traverse_unit_edge_tree:
-  "traverse_rhs (unit_edge_tree gs f u) \<sigma> = restrict_local_for gs (f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
-  unfolding unit_edge_tree_def by (simp add: Let_def)
+  "traverse_rhs (unit_edge_tree gs f u) \<sigma> = map_lift (restrict_local_for gs) (res_edge f u \<sigma>)"
+  unfolding unit_edge_tree_def res_edge_def
+  by (simp add: Let_def)
 
 (* The tree's single Side contribution to the global slot is the global
    restriction of the result. *)
 lemma sides_unit_edge_tree_Inr:
   "sides_of_rhs (unit_edge_tree gs f u) \<sigma> (Inr ()) =
-   restrict_global_for gs (f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())))"
-  unfolding unit_edge_tree_def by (simp add: Let_def)
+   map_lift (restrict_global_for gs) (res_edge f u \<sigma>)"
+  unfolding unit_edge_tree_def res_edge_def
+  by (simp add: Let_def)
 
-(* Reassembling the tree's local Answer and global Side recovers the full result. *)
+(* Reassembling the tree's local Answer and global Side recovers the full result:
+   map_lift distributes over assemble_local_global's Lifted/Lifted case exactly as
+   restrict_local_for_global_join does for the unlifted join, and both sides are
+   Bot together when res_edge is Bot. *)
 lemma etf_full_unit_edge_tree:
-  "etf_full (unit_edge_tree gs f u) \<sigma> = f (\<sigma> (Inl u) \<squnion> \<sigma> (Inr ()))"
+  "etf_full (unit_edge_tree gs f u) \<sigma> = res_edge f u \<sigma>"
   unfolding etf_full_def
-  by (simp add: all_sides_eq_sides_Inr_unit traverse_unit_edge_tree sides_unit_edge_tree_Inr
-        restrict_local_for_global_join)
+  apply (simp add: all_sides_eq_sides_Inr_unit traverse_unit_edge_tree sides_unit_edge_tree_Inr)
+  apply (cases "res_edge f u \<sigma>")
+   apply simp
+  apply (simp add: restrict_local_for_global_join)
+  done
+
+(* Both traverse_rhs and its single Side are map_lift of the same res_edge, and
+   map_lift only ever produces Bot from a Bot input, so the two collapse together. *)
+lemma reachability_coherent_unit_edge_tree:
+  "reachability_coherent_tree (unit_edge_tree gs f u) \<sigma>"
+  unfolding reachability_coherent_tree_def
+  by (cases "res_edge f u \<sigma>")
+     (simp_all add: traverse_unit_edge_tree all_sides_eq_sides_Inr_unit sides_unit_edge_tree_Inr)
 
 
+
+text \<open>
+  res_edge is monotone whenever \<open>f\<close> is: witness-bottom is downward closed
+  (\<^const>\<open>is_bot_state\<close>'s own monotonicity lemma), so a smaller input can only make the
+  short-circuit fire \<^emph>\<open>more\<close> often, and \<^term>\<open>bot\<close> is below every other case.
+\<close>
+lemma res_edge_mono:
+  fixes \<sigma>1 \<sigma>2 :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted"
+  assumes f_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> f s1 \<le> f s2"
+    and le: "\<sigma>1 \<le> \<sigma>2"
+  shows "res_edge f u \<sigma>1 \<le> res_edge f u \<sigma>2"
+proof -
+  have inp_le: "assemble_local_global (\<sigma>1 (Inl u)) (\<sigma>1 (Inr ()))
+                  \<le> assemble_local_global (\<sigma>2 (Inl u)) (\<sigma>2 (Inr ()))"
+    by (rule assemble_local_global_mono; rule le_funD[OF le])
+  show ?thesis
+    unfolding res_edge_def by (rule transfer_lift_mono[OF f_mono is_bot_state_mono inp_le])
+qed
+
+(* res_combine mirrors res_edge for the two-input combine tree: Bot when either
+   reconstructed operand is Bot or the combine itself lands on witness-bottom,
+   the fixed abstract combine otherwise -- via transfer_lift2 rather than a
+   separate is_bot_state test, same as res_edge. *)
+definition res_combine ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> (pp + unit \<Rightarrow> ('a::sound_domain) abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
+  "res_combine gs dst cc ex \<sigma> =
+     transfer_lift2 is_bot_state (combine\<^sup># gs dst)
+       (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ())))
+       (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
+
+text \<open>
+  res_combine's monotonicity mirrors res_edge_mono, over two reconstructed operands
+  instead of one.
+\<close>
+lemma res_combine_mono:
+  fixes \<sigma>1 \<sigma>2 :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted"
+  assumes combine_mono: "\<And>t1 t2 u1 u2. t1 \<le> t2 \<Longrightarrow> u1 \<le> u2 \<Longrightarrow>
+             combine\<^sup># gs dst t1 u1 \<le> combine\<^sup># gs dst t2 u2"
+    and le: "\<sigma>1 \<le> \<sigma>2"
+  shows "res_combine gs dst cc ex \<sigma>1 \<le> res_combine gs dst cc ex \<sigma>2"
+proof -
+  have cc_le: "assemble_local_global (\<sigma>1 (Inl cc)) (\<sigma>1 (Inr ()))
+                 \<le> assemble_local_global (\<sigma>2 (Inl cc)) (\<sigma>2 (Inr ()))"
+    and ex_le: "assemble_local_global (\<sigma>1 (Inl ex)) (\<sigma>1 (Inr ()))
+                 \<le> assemble_local_global (\<sigma>2 (Inl ex)) (\<sigma>2 (Inr ()))"
+    by (rule assemble_local_global_mono; rule le_funD[OF le])+
+  show ?thesis
+    unfolding res_combine_def
+  proof (rule transfer_lift2_mono)
+    fix t1 t2 u1 u2 :: "'a abs_state"
+    assume "t1 \<le> t2" "u1 \<le> u2"
+    then show "combine\<^sup># gs dst t1 u1 \<le> combine\<^sup># gs dst t2 u2" using combine_mono
+      by (simp add: combine_collect_abs_mono)
+  next
+    fix a b :: "'a abs_state"
+    assume "a \<le> b" "is_bot_state b"
+    then show "is_bot_state a" by (rule is_bot_state_mono)
+  next
+    show "assemble_local_global (\<sigma>1 (Inl cc)) (\<sigma>1 (Inr ()))
+            \<le> assemble_local_global (\<sigma>2 (Inl cc)) (\<sigma>2 (Inr ()))" by (rule cc_le)
+  next
+    show "assemble_local_global (\<sigma>1 (Inl ex)) (\<sigma>1 (Inr ()))
+            \<le> assemble_local_global (\<sigma>2 (Inl ex)) (\<sigma>2 (Inr ()))" by (rule ex_le)
+  qed
+qed
 
 (* The unit-global combine tree returns the combined locals as its Answer; unlike
    a plain combine_env these include the destination when the call assigns one. *)
 lemma traverse_unit_combine_tree:
   "traverse_rhs (unit_combine_tree gs dst cc ex) \<sigma>
-     = restrict_local_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
-                                              (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
-  unfolding unit_combine_tree_def by (simp add: Let_def)
+     = map_lift (restrict_local_for gs) (res_combine gs dst cc ex \<sigma>)"
+  unfolding unit_combine_tree_def res_combine_def
+  by (simp add: Let_def)
 
 (* The unit-global combine tree contributes the combined globals to the global slot. *)
 lemma sides_unit_combine_tree_Inr:
   "sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr ()) =
-   restrict_global_for gs (combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
-                                            (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())))"
-  unfolding unit_combine_tree_def by (simp add: Let_def)
+   map_lift (restrict_global_for gs) (res_combine gs dst cc ex \<sigma>)"
+  unfolding unit_combine_tree_def res_combine_def
+  by (simp add: Let_def)
 
 (* The unit-global combine tree reassembles to the fixed abstract combine. *)
 lemma etf_full_unit_combine_tree:
-  "etf_full (unit_combine_tree gs dst cc ex) \<sigma>
-   = combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
-       (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
-proof -
-  let ?res = "combine\<^sup># gs dst (\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ()))
-                (\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ()))"
-  have "etf_full (unit_combine_tree gs dst cc ex) \<sigma>
-          = restrict_local_for gs ?res \<squnion> restrict_global_for gs ?res"
-    unfolding etf_full_def unit_combine_tree_def
-    by (simp add: Let_def)
-  also have "\<dots> = ?res"
-    by (rule restrict_local_for_global_join)
-  finally show ?thesis .
-qed
+  "etf_full (unit_combine_tree gs dst cc ex) \<sigma> = res_combine gs dst cc ex \<sigma>"
+  unfolding etf_full_def
+  apply (simp add: all_sides_eq_sides_Inr_unit traverse_unit_combine_tree sides_unit_combine_tree_Inr)
+  apply (cases "res_combine gs dst cc ex \<sigma>")
+   apply simp
+  apply (simp add: restrict_local_for_global_join)
+  done
+
+(* Both traverse_rhs and its single Side are map_lift of the same res_combine,
+   so they collapse together exactly as in the unit_edge_tree case. *)
+lemma reachability_coherent_unit_combine_tree:
+  "reachability_coherent_tree (unit_combine_tree gs dst cc ex) \<sigma>"
+  unfolding reachability_coherent_tree_def
+  by (cases "res_combine gs dst cc ex \<sigma>")
+     (simp_all add: traverse_unit_combine_tree all_sides_eq_sides_Inr_unit
+       sides_unit_combine_tree_Inr)
 
 
 subsection \<open>Local-only effectful edge trees\<close>
@@ -341,13 +493,6 @@ proof (clarify)
     using fold_bot by simp
 qed
 
-(* Every named-global slot of an inr_slot_locals_bot state is itself
-   local-bot; hoisted here (ahead of its first use below) so downstream
-   proofs can cite it instead of re-deriving it from both definitions. *)
-lemma inr_slot_locals_bot_imp [dest]:
-  "inr_slot_locals_bot gs \<sigma> \<Longrightarrow> local_bot_on_locals gs (\<sigma> (Inr g))"
-  unfolding inr_slot_locals_bot_def local_bot_on_locals_def by auto
-
 definition local_edge_invariant ::
   "(vname => bool) => ('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> bool"
 where
@@ -410,26 +555,99 @@ proof (intro allI impI)
     by (simp add: restrict_local_for_sup sup_assoc sup_left_commute sup_commute)
 qed
 
+text \<open>
+  local_edge_tree never queries the global -- \<open>local_edge_action\<close> edges neither
+  read nor write globals -- so unlike unit_edge_tree/unit_combine_tree there is no
+  cross-role reconstruction here: the only source of \<open>Bot\<close> is the queried local
+  unknown itself, propagated by \<^const>\<open>map_lift\<close>. Unlike unit_edge_tree, this
+  cannot use \<^const>\<open>transfer_lift\<close>'s extra witness-bottom re-check on the
+  reconstruction's own output: that output is always a \<^const>\<open>restrict_local_for\<close>-shaped
+  value (\<open>bot\<close> at every global-role position by construction, from both
+  \<open>restrict_local_for\<close> itself and \<open>restrict_global_for gs su\<close> being \<open>bot\<close> since
+  \<open>su\<close> is already restrict_local'd), so \<^const>\<open>is_bot_state\<close> on it is vacuously
+  true the moment the program has any global variable at all -- exactly AD-52's
+  vacuity trap, applied to a reconstruction rather than a stored value. Plain
+  structural propagation avoids it: only the queried unknown's own \<open>Bot\<close>-ness
+  (a genuine reachability fact carried through the solver, not a syntactic
+  artifact of restriction) can make this tree dead.
+\<close>
 definition local_edge_tree ::
-  "(vname => bool) => ('a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state)
+  "(vname => bool) => ('a::sound_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (unit, 'a) edge_tf_tree"
 where
-  "local_edge_tree gs f u =
-     QueryL u (\<lambda>su. Answer
-       (restrict_local_for gs (f (restrict_local_for gs su)) \<squnion> restrict_global_for gs su))"
+  "local_edge_tree gs f u = do {
+     su <- read_local u;
+     answer (map_lift
+               (\<lambda>s. restrict_local_for gs (f (restrict_local_for gs s)) \<squnion> restrict_global_for gs s) su)
+   }"
+
+(* res_local names local_edge_tree's reconstructed result, mirroring res_edge. *)
+definition res_local ::
+  "(vname => bool) \<Rightarrow> ('a::sound_domain abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> pp
+   \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
+  "res_local gs f u \<sigma> =
+     map_lift
+       (\<lambda>s. restrict_local_for gs (f (restrict_local_for gs s)) \<squnion> restrict_global_for gs s) (\<sigma> (Inl u))"
 
 lemma traverse_local_edge_tree:
-  "traverse_rhs (local_edge_tree gs f u) \<sigma> =
-   restrict_local_for gs (f (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion> restrict_global_for gs (\<sigma> (Inl u))"
-  unfolding local_edge_tree_def by simp
+  "traverse_rhs (local_edge_tree gs f u) \<sigma> = res_local gs f u \<sigma>"
+  unfolding local_edge_tree_def res_local_def by (simp add: seqcomp_tree.simps Let_def)
+
+text \<open>
+  res_local is monotone whenever f is, mirroring res_edge_mono: the reconstructed
+  local/global split composes restrict_local_for/restrict_global_for/f under
+  map_lift, all of which are monotone.
+\<close>
+lemma res_local_mono:
+  fixes \<sigma>1 \<sigma>2 :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted"
+  assumes f_mono: "\<And>s1 s2. s1 \<le> s2 \<Longrightarrow> f s1 \<le> f s2"
+    and le: "\<sigma>1 \<le> \<sigma>2"
+  shows "res_local gs f u \<sigma>1 \<le> res_local gs f u \<sigma>2"
+  unfolding res_local_def
+proof (rule map_lift_mono[OF _ le_funD[OF le]])
+  fix a b :: "'a abs_state"
+  assume ab: "a \<le> b"
+  show "restrict_local_for gs (f (restrict_local_for gs a)) \<squnion> restrict_global_for gs a
+          \<le> restrict_local_for gs (f (restrict_local_for gs b)) \<squnion> restrict_global_for gs b"
+    by (rule sup_mono[OF restrict_local_for_mono[OF f_mono[OF restrict_local_for_mono[OF ab]]]
+          restrict_global_for_mono[OF ab]])
+qed
 
 lemma sides_local_edge_tree_Inr:
-  "sides_of_rhs (local_edge_tree gs f u) \<sigma> (Inr ()) = bot"
-  unfolding local_edge_tree_def by simp
+  "sides_of_rhs (local_edge_tree gs f u) \<sigma> (Inr ()) = Bot"
+  unfolding local_edge_tree_def by (simp add: seqcomp_tree.simps split: lifted.splits)
 
 lemma local_bot_on_locals_restrict_global [intro]:
   "local_bot_on_locals gs (restrict_global_for gs \<sigma>)"
   unfolding restrict_global_for_def local_bot_on_locals_def by simp
+
+text \<open>
+  Role-aware lift of \<^const>\<open>local_bot_on_locals\<close> for a solver-facing global
+  slot: \<open>Bot\<close> (no side contribution published) trivially satisfies "carries bot
+  in its local components", since there is no reconstructed value to check;
+  \<open>Lifted g\<close> constrains \<open>g\<close> pointwise exactly as before.
+\<close>
+definition local_bot_on_locals_lift ::
+  "(vname => bool) => 'a::bounded_semilattice_sup_bot abs_state lifted \<Rightarrow> bool"
+where
+  "local_bot_on_locals_lift gs x = (case x of Bot \<Rightarrow> True | Lifted g \<Rightarrow> local_bot_on_locals gs g)"
+
+lemma local_bot_on_locals_lift_Bot [simp]: "local_bot_on_locals_lift gs Bot"
+  unfolding local_bot_on_locals_lift_def by simp
+
+lemma local_bot_on_locals_lift_Lifted [simp]:
+  "local_bot_on_locals_lift gs (Lifted g) = local_bot_on_locals gs g"
+  unfolding local_bot_on_locals_lift_def by simp
+
+lemma local_bot_on_locals_lift_join:
+  fixes a b :: "'a::bounded_semilattice_sup_bot abs_state lifted"
+  assumes "local_bot_on_locals_lift gs a" and "local_bot_on_locals_lift gs b"
+  shows "local_bot_on_locals_lift gs (a \<squnion> b)"
+  using assms by (cases a; cases b) (auto intro: local_bot_join)
+
+lemma local_bot_on_locals_lift_map_restrict_global [intro]:
+  "local_bot_on_locals_lift gs (map_lift (restrict_global_for gs) x)"
+  by (cases x) (simp_all add: local_bot_on_locals_restrict_global)
 
 lemma le_restrict_global_for_when_local_bot:
   fixes a b :: "'a::bounded_semilattice_sup_bot abs_state"
@@ -446,56 +664,76 @@ proof (intro allI impI)
 
 qed
 
+lemma le_map_lift_restrict_global_for_when_local_bot_lift:
+  fixes a b :: "'a::bounded_semilattice_sup_bot abs_state lifted"
+  assumes lb: "local_bot_on_locals_lift gs a"
+  assumes le: "a \<le> b"
+  shows "a \<le> map_lift (restrict_global_for gs) b"
+proof (cases a)
+  case Bot
+  then show ?thesis by simp
+next
+  case (Lifted a')
+  then obtain b' where b_eq: "b = Lifted b'" and le': "a' \<le> b'"
+    using le by (cases b) auto
+  have lb': "local_bot_on_locals gs a'"
+    using lb Lifted by simp
+  show ?thesis
+    unfolding Lifted b_eq
+    by (simp add: le_restrict_global_for_when_local_bot[OF lb' le'])
+qed
+
 
 lemma sides_inr_local_bot_unit_edge_tree:
-  "local_bot_on_locals gs (sides_of_rhs (unit_edge_tree gs f u) \<sigma> (Inr g))"
+  "local_bot_on_locals_lift gs (sides_of_rhs (unit_edge_tree gs f u) \<sigma> (Inr g))"
 proof (cases "g = ()")
   case True
   show ?thesis unfolding True sides_unit_edge_tree_Inr
-    by (rule local_bot_on_locals_restrict_global)
+    by (rule local_bot_on_locals_lift_map_restrict_global)
 next
   case False
-  have bot: "sides_of_rhs (unit_edge_tree gs f u) \<sigma> (Inr g) = bot"
-    unfolding unit_edge_tree_def using False by simp
-  show ?thesis unfolding local_bot_on_locals_def bot by simp
+  then show ?thesis by simp
 qed
 
 lemma sides_inr_local_bot_local_edge_tree:
-  "local_bot_on_locals gs (sides_of_rhs (local_edge_tree gs f u) \<sigma> (Inr g))"
-  unfolding local_edge_tree_def local_bot_on_locals_def by simp
+  "local_bot_on_locals_lift gs (sides_of_rhs (local_edge_tree gs f u) \<sigma> (Inr g))"
+  unfolding local_edge_tree_def by (simp add: seqcomp_tree.simps split: lifted.splits)
 
 lemma sides_inr_local_bot_unit_combine_tree:
-  "local_bot_on_locals gs (sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr g))"
+  "local_bot_on_locals_lift gs (sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr g))"
 proof (cases "g = ()")
   case True
   show ?thesis unfolding True sides_unit_combine_tree_Inr
-    by (rule local_bot_on_locals_restrict_global)
+    by (rule local_bot_on_locals_lift_map_restrict_global)
 next
   case False
-  have bot: "sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr g) = bot"
-    unfolding unit_combine_tree_def using False by simp
-  show ?thesis unfolding local_bot_on_locals_def bot by simp
+  then show ?thesis by simp
 qed
 
 lemma all_sides_local_edge_tree:
-  "all_sides (local_edge_tree gs f u) \<sigma> = bot"
-  unfolding local_edge_tree_def by simp
+  "all_sides (local_edge_tree gs f u) \<sigma> = Bot"
+  unfolding local_edge_tree_def by (simp add: seqcomp_tree.simps split: lifted.splits)
 
 lemma sides_local_edge_tree_Inl:
-  "sides_of_rhs (local_edge_tree gs f u) \<sigma> (Inl u') = bot"
-  unfolding local_edge_tree_def by simp
+  "sides_of_rhs (local_edge_tree gs f u) \<sigma> (Inl u') = Bot"
+  unfolding local_edge_tree_def by (simp add: seqcomp_tree.simps split: lifted.splits)
 
 lemma etf_full_local_edge_tree:
-  "etf_full (local_edge_tree gs f u) \<sigma> =
-   restrict_local_for gs (f (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion> restrict_global_for gs (\<sigma> (Inl u))"
-  unfolding etf_full_def traverse_local_edge_tree all_sides_local_edge_tree by simp
+  "etf_full (local_edge_tree gs f u) \<sigma> = res_local gs f u \<sigma>"
+  unfolding etf_full_def traverse_local_edge_tree all_sides_local_edge_tree
+  by (cases "res_local gs f u \<sigma>") simp_all
+
+(* all_sides is unconditionally Bot for local_edge_tree, so coherence holds
+   independently of what traverse_rhs is. *)
+lemma reachability_coherent_local_edge_tree:
+  "reachability_coherent_tree (local_edge_tree gs f u) \<sigma>"
+  unfolding reachability_coherent_tree_def by (simp add: all_sides_local_edge_tree)
 
 lemma etf_collecting_full_local_edge_tree:
-  "etf_collecting_full (local_edge_tree gs f u) \<sigma> =
-   restrict_local_for gs (f (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion>
-   restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
-  by (simp add: all_sides_local_edge_tree etf_collecting_full_def etf_full_def
-      traverse_local_edge_tree)
+  "etf_collecting_full_lift (local_edge_tree gs f u) \<sigma> =
+   assemble_local_global (res_local gs f u \<sigma>) (glob_env \<sigma>)"
+  unfolding etf_collecting_full_lift_def etf_collecting_full_with_def etf_full_local_edge_tree
+  by (rule refl)
 
 lemma dep_aux_local_edge_tree:
   "dep_aux \<sigma>1 (local_edge_tree gs f u) = dep_aux \<sigma>2 (local_edge_tree gs f u)"
@@ -508,7 +746,7 @@ lemma etf_collecting_full_le_side_env:
   shows "etf_collecting_full t \<sigma> \<le> side_env \<sigma> w"
 proof -
   have "etf_collecting_full t \<sigma> = etf_full t \<sigma> \<squnion> glob_env \<sigma>"
-    unfolding etf_collecting_full_def ..
+    unfolding etf_collecting_full_def etf_collecting_full_with_def ..
   also have "\<dots> \<le> side_env \<sigma> w \<squnion> glob_env \<sigma>"
     using le by (rule sup_mono[OF _ order_refl])
   also have "\<dots> = side_env \<sigma> w"
@@ -516,65 +754,61 @@ proof -
   finally show ?thesis .
 qed
 
+text \<open>
+  Lifted counterpart: cross-role reconstruction throughout, so \<^const>\<open>side_env_lift\<close>
+  bounds \<^const>\<open>etf_collecting_full_lift\<close> via \<open>assemble_local_global_mono\<close>
+  rather than plain \<open>sup_mono\<close> -- a \<open>Bot\<close> local answer under a \<open>Bot\<close> bound at \<open>w\<close>
+  stays \<open>Bot\<close> on both sides regardless of \<open>glob_env\<close>.
+\<close>
+lemma etf_collecting_full_le_side_env_lift:
+  fixes t :: "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree"
+    and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state lifted" and w :: pp
+  assumes le: "etf_full t \<sigma> \<le> side_env_lift \<sigma> w"
+  shows "etf_collecting_full_lift t \<sigma> \<le> side_env_lift \<sigma> w"
+proof -
+  have "etf_collecting_full_lift t \<sigma> = assemble_local_global (etf_full t \<sigma>) (glob_env \<sigma>)"
+    unfolding etf_collecting_full_lift_def etf_collecting_full_with_def ..
+  also have "\<dots> \<le> assemble_local_global (side_env_lift \<sigma> w) (glob_env \<sigma>)"
+    by (rule assemble_local_global_mono[OF le order_refl])
+  also have "\<dots> = side_env_lift \<sigma> w"
+    unfolding side_env_lift_def
+    by (cases "\<sigma> (Inl w)"; cases "glob_env \<sigma>") (simp_all add: sup_assoc sup_left_idem)
+  finally show ?thesis .
+qed
+
 lemma id_local_edge_invariant: "local_edge_invariant gs (\<lambda>env. env)"
   unfolding local_edge_invariant_def by (simp add: restrict_local_for_idem)
 
 
+text \<open>
+  Lifted callers only ever have a raw local witness \<open>su\<close> (from case-splitting
+  \<open>\<sigma> (Inl u)\<close> against a concrete membership witness) together with the raw
+  global contribution \<open>g'\<close> reconstructed from \<open>\<sigma> (Inr ())\<close> -- \<open>bot\<close> when it is
+  itself \<open>Bot\<close>, its payload when \<open>Lifted\<close>, exactly \<open>gamma_state_lift_assemble_local_global\<close>'s
+  \<open>g'\<close>. Stated directly over \<open>su\<close>/\<open>g'\<close> rather than \<open>\<sigma>\<close>, this is the same algebraic
+  fact the pre-lift version proved, letting every call site below reuse it unchanged.
+\<close>
 lemma local_edge_invariant_side_env_eq:
   fixes f :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
-    and u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state"
+    and su g' :: "'a abs_state"
   assumes inv: "local_edge_invariant gs f"
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  shows "f (side_env \<sigma> u) =
-    restrict_local_for gs (f (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion>
-    restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
+  assumes lb: "local_bot_on_locals gs g'"
+  shows "f (su \<squnion> g') =
+    restrict_local_for gs (f (restrict_local_for gs su)) \<squnion>
+    restrict_global_for gs su \<squnion> g'"
 proof -
-  have lb: "local_bot_on_locals gs (\<sigma> (Inr ()))"
-    using inr_slot_locals_bot_imp[OF inr] .
-  have gb: "local_bot_on_locals gs (glob_env \<sigma>)"
-    unfolding glob_env_unit by (rule lb)
-  have rg: "local_bot_on_locals gs (restrict_global_for gs (\<sigma> (Inl u)))"
+  have rg: "local_bot_on_locals gs (restrict_global_for gs su)"
     by (rule local_bot_on_locals_restrict_global)
-  have g: "local_bot_on_locals gs (restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
-    by (rule local_bot_join[OF rg gb])
-  have env: "side_env \<sigma> u = restrict_local_for gs (\<sigma> (Inl u)) \<squnion>
-              (restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
-  proof -
-    have "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-      unfolding side_env_def ..
-    also have "\<dots> = (restrict_local_for gs (\<sigma> (Inl u)) \<squnion> restrict_global_for gs (\<sigma> (Inl u)))
-                    \<squnion> glob_env \<sigma>"
-      by (simp add: restrict_local_for_global_join)
-    also have "\<dots> = restrict_local_for gs (\<sigma> (Inl u)) \<squnion>
-                    (restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
-      by (simp add: sup_assoc)
-    finally show ?thesis .
-  qed
-  have step: "f (restrict_local_for gs (\<sigma> (Inl u)) \<squnion>
-                  (restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)) =
-              restrict_local_for gs (f (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion>
-              (restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>)"
+  have g: "local_bot_on_locals gs (restrict_global_for gs su \<squnion> g')"
+    by (rule local_bot_join[OF rg lb])
+  have env: "su \<squnion> g' = restrict_local_for gs su \<squnion> (restrict_global_for gs su \<squnion> g')"
+    using restrict_local_for_global_join[of gs su] by (simp add: sup_commute sup_left_commute)
+  have step: "f (restrict_local_for gs su \<squnion> (restrict_global_for gs su \<squnion> g')) =
+              restrict_local_for gs (f (restrict_local_for gs su)) \<squnion>
+              (restrict_global_for gs su \<squnion> g')"
     using local_edge_invariantD[OF inv g] .
   show ?thesis
     by (simp only: env step sup_assoc)
-qed
-
-lemma local_edge_invariant_le_etf_collecting_full:
-  fixes f :: "'a::bounded_semilattice_sup_bot abs_state \<Rightarrow> 'a abs_state"
-    and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and u :: pp
-  assumes inv: "local_edge_invariant gs f"
-    and lb: "local_bot_on_locals gs (\<sigma> (Inr ()))"
-  shows "f (restrict_local_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>) \<le>
-         etf_collecting_full (local_edge_tree gs f u) \<sigma>"
-proof -
-  have gb: "local_bot_on_locals gs (glob_env \<sigma>)"
-    using lb glob_env_unit
-    by (auto intro!: glob_env_local_bot)
-  have eq: "f (restrict_local_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>) =
-            restrict_local_for gs (f (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion> glob_env \<sigma>"
-    using inv gb unfolding local_edge_invariant_def by blast
-  show ?thesis unfolding etf_collecting_full_local_edge_tree eq
-    by (simp add: boolean_algebra_cancel.sup1 s.fun_left_comm)
 qed
 
 lemma Inl_dep_aux_local_edge_tree:
@@ -649,201 +883,146 @@ lemma mixed_etf_edge_tree_unit:
   shows "mixed_etf_edge_tree gs tf a u = unit_edge_tree gs (apply_tf tf a) u"
   using assms unfolding mixed_etf_edge_tree_def by simp
 
+text \<open>
+  Every witness-based tree-soundness lemma below needs exactly this: a concrete
+  membership witness in the reconstructed input's concretization rules out
+  \<open>Bot\<close> in the local slot (the lifted counterpart of \<open>is_bot_state_witnessI\<close>'s
+  pre-lift role), extracting the local slot's raw payload \<open>su\<close> and reducing the
+  premise to the ordinary raw-join membership the underlying \<open>tf_sound_*_forD\<close>
+  facts are stated against.
+\<close>
+lemma local_input_witness:
+  fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted" and s :: store
+  assumes s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+  obtains su where "\<sigma> (Inl u) = Lifted su"
+    and "s \<in> \<lbrakk>su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
+proof (cases "\<sigma> (Inl u)")
+  case Bot
+  then have False using s unfolding gamma_state_lift_assemble_local_global by simp
+  then show ?thesis ..
+next
+  case (Lifted su)
+  have "s \<in> \<lbrakk>su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
+    using s unfolding Lifted gamma_state_lift_assemble_local_global by simp
+  with Lifted show ?thesis using that by blast
+qed
+
+lemma local_bot_on_locals_inr:
+  fixes \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted"
+  assumes "inr_slot_locals_bot gs \<sigma>"
+  shows "local_bot_on_locals gs (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)"
+  using assms unfolding inr_slot_locals_bot_def local_bot_on_locals_def
+  by (cases "\<sigma> (Inr ())") auto
+
 subsection \<open>Generic collecting soundness for tree shapes\<close>
+
+text \<open>
+  Every \<open>in_gamma_unit_edge_tree_*\<close> obligation below has the same shape: given a
+  concrete witness \<open>s\<close> in the reconstructed input and a semantic soundness step
+  \<open>sound\<close> for the concrete successor \<open>s'\<close>, \<open>unit_edge_tree\<close>'s \<open>res_edge\<close> collapses to
+  \<open>Bot\<close> only if the \<^emph>\<open>output\<close> \<open>f a\<close> is witness-bottom -- which \<open>sound\<close> itself rules
+  out, since \<open>s' \<in> \<lbrakk>f a\<rbrakk>\<close> is a concrete witness for the output, not the input. Proving
+  this once generically (parametric in \<open>f\<close>/\<open>s'\<close>/\<open>sound\<close>) avoids repeating the same
+  five-step derivation once per action.
+\<close>
+lemma in_gamma_unit_edge_tree:
+  fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted" and s s' :: store
+    and f :: "'a abs_state \<Rightarrow> 'a abs_state"
+  assumes inr: "inr_slot_locals_bot gs \<sigma>"
+  assumes s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+  assumes sound: "\<And>a. s \<in> \<lbrakk>a\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>f a\<rbrakk>"
+  shows "s' \<in> gamma_state_lift (etf_collecting_full_lift (unit_edge_tree gs f u) \<sigma>)"
+proof -
+  obtain su where hu: "\<sigma> (Inl u) = Lifted su"
+    and hs: "s \<in> \<lbrakk>su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
+    using local_input_witness[OF s] .
+  have hf: "s' \<in> \<lbrakk>f (su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))\<rbrakk>"
+    using sound[OF hs] .
+  have not_bot: "\<not> is_bot_state (f (su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
+    using hf is_bot_state_witnessI by blast
+  have eq: "etf_full (unit_edge_tree gs f u) \<sigma> =
+            Lifted (f (su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
+    unfolding etf_full_unit_edge_tree res_edge_def hu assemble_local_global_Lifted transfer_lift_Lifted
+    using not_bot by simp
+  have st: "s' \<in> gamma_state_lift (etf_full (unit_edge_tree gs f u) \<sigma>)"
+    using hf unfolding eq by simp
+  show ?thesis
+    by (rule in_gamma_etf_collecting_full_lift) (rule st)
+qed
 
 context sound_transfer_for
 begin
 
-lemma in_gamma_unit_edge_tree_nop:
-  fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
+
+text \<open>
+  local_edge_tree never checks witness-bottom at all (res_local uses map_lift, not
+  transfer_lift -- see local_edge_tree's own docstring), so this reconstructed-input
+  step has no not_bot side condition, unlike \<open>in_gamma_unit_edge_tree\<close>: the
+  reconstructed input reduces unconditionally once the local slot is known Lifted.
+  One generic lemma, parametric in \<open>f\<close>/\<open>s'\<close>/\<open>sound\<close>, covers every action; \<open>EA_Nop\<close>'s
+  case is the instance \<open>f = (\<lambda>env. env)\<close> via @{thm id_local_edge_invariant}.
+\<close>
+lemma in_gamma_local_edge_tree:
+  fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted" and s s' :: store
+    and f :: "'a abs_state \<Rightarrow> 'a abs_state"
+  assumes inv: "local_edge_invariant gs f"
   assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "s \<in> \<lbrakk>etf_collecting_full (unit_edge_tree gs (apply_tf tf EA_Nop) u) \<sigma>\<rbrakk>"
+  assumes s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+  assumes sound: "\<And>a. s \<in> \<lbrakk>a\<rbrakk> \<Longrightarrow> s' \<in> \<lbrakk>f a\<rbrakk>"
+  shows "s' \<in> gamma_state_lift (etf_collecting_full_lift (local_edge_tree gs f u) \<sigma>)"
 proof -
-  have eq: "etf_full (unit_edge_tree gs (apply_tf tf EA_Nop) u) \<sigma> =
-           \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-    unfolding apply_tf.simps etf_full_unit_edge_tree glob_env_unit by simp
-  have st: "s \<in> \<lbrakk>etf_full (unit_edge_tree gs (apply_tf tf EA_Nop) u) \<sigma>\<rbrakk>"
-    using s unfolding eq by simp
-  show ?thesis using in_gamma_etf_collecting_full[OF st] by simp
-qed
-
-lemma in_gamma_unit_edge_tree_assign:
-  fixes x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (apply_tf tf (EA_Assign x e)) u) \<sigma>\<rbrakk>"
-  using tf_sound_assign_forD[OF s]
-  by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
-
-lemma in_gamma_unit_edge_tree_random:
-  fixes x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (apply_tf tf (EA_Random x)) u) \<sigma>\<rbrakk>"
-  using tf_sound_random_forD[OF s]
-  by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
-
-lemma in_gamma_unit_edge_tree_assume:
-  fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "bval b s"
-  shows "s \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (apply_tf tf (EA_Assume b)) u) \<sigma>\<rbrakk>"
-  using tf_sound_assume_forD[OF s hb]
-  by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
-
-lemma in_gamma_unit_edge_tree_assume_not:
-  fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "\<not> bval b s"
-  shows "s \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u) \<sigma>\<rbrakk>"
-  using tf_sound_assume_not_forD[OF s hb]
-  by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
-
-lemma in_gamma_unit_edge_tree_enter:
-  fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-           \<in> \<lbrakk>etf_collecting_full
-           (unit_edge_tree gs (enter\<^sup># tf xs es) u) \<sigma>\<rbrakk>"
-  using tf_sound_enter_forD[OF s]
-  by (auto simp add: etf_full_unit_edge_tree glob_env_unit intro: in_gamma_etf_collecting_full)
-
-lemma in_gamma_local_edge_tree_nop:
-  fixes u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "s \<in> \<lbrakk>etf_collecting_full
-           (local_edge_tree gs (apply_tf tf EA_Nop) u) \<sigma>\<rbrakk>"
-proof -
-  have eq: "etf_collecting_full (local_edge_tree gs (apply_tf tf EA_Nop) u) \<sigma> =
-           \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-    unfolding apply_tf.simps
-    by (simp add: etf_collecting_full_local_edge_tree restrict_local_for_global_join
-         local_edge_invariant_local_result[OF id_local_edge_invariant])
-  show ?thesis using s unfolding eq glob_env_unit by simp
-qed
-
-lemma in_gamma_local_edge_tree_assign:
-  fixes x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inv: "local_edge_invariant gs (apply_tf tf (EA_Assign x e))"
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
-           (local_edge_tree gs (apply_tf tf (EA_Assign x e)) u) \<sigma>\<rbrakk>"
-proof -
-  have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-    by (simp add: side_env_def glob_env_unit)
-  have st: "s(x := aval e s) \<in> \<lbrakk>apply_tf tf (EA_Assign x e) (side_env \<sigma> u) \<rbrakk>"
-    using tf_sound_assign_forD[OF s] unfolding env apply_tf.simps by simp
-  have le: "apply_tf tf (EA_Assign x e) (side_env \<sigma> u) \<le>
-            etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Assign x e)) u) \<sigma>"
-  proof -
-    have "apply_tf tf (EA_Assign x e) (side_env \<sigma> u) =
-          restrict_local_for gs (apply_tf tf (EA_Assign x e) (restrict_local_for gs (\<sigma> (Inl u))))
-          \<squnion> restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
-      by (rule local_edge_invariant_side_env_eq[OF inv inr])
-    also have "\<dots> = etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Assign x e)) u) \<sigma>"
-      by (rule etf_collecting_full_local_edge_tree[symmetric])
-    finally have "apply_tf tf (EA_Assign x e) (side_env \<sigma> u) =
-          etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Assign x e)) u) \<sigma>" .
-    then show ?thesis by simp
-  qed
-  show ?thesis using st le gamma_state_mono by blast
-qed
-
-lemma in_gamma_local_edge_tree_random:
-  fixes x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inv: "local_edge_invariant gs (apply_tf tf (EA_Random x))"
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>etf_collecting_full
-           (local_edge_tree gs (apply_tf tf (EA_Random x)) u) \<sigma>\<rbrakk>"
-proof -
-  have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-    by (simp add: side_env_def glob_env_unit)
-  have st: "s(x := v) \<in> \<lbrakk>apply_tf tf (EA_Random x) (side_env \<sigma> u) \<rbrakk>"
-    using tf_sound_random_forD[OF s] unfolding env apply_tf.simps by simp
-  have le: "apply_tf tf (EA_Random x) (side_env \<sigma> u) \<le>
-            etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Random x)) u) \<sigma>"
-  proof -
-    have "apply_tf tf (EA_Random x) (side_env \<sigma> u) =
-          restrict_local_for gs (apply_tf tf (EA_Random x) (restrict_local_for gs (\<sigma> (Inl u))))
-          \<squnion> restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
-      by (rule local_edge_invariant_side_env_eq[OF inv inr])
-    also have "\<dots> = etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Random x)) u) \<sigma>"
-      by (rule etf_collecting_full_local_edge_tree[symmetric])
-    finally have "apply_tf tf (EA_Random x) (side_env \<sigma> u) =
-          etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Random x)) u) \<sigma>" .
-    then show ?thesis by simp
-  qed
-  show ?thesis using st le gamma_state_mono by blast
-qed
-
-lemma in_gamma_local_edge_tree_assume:
-  fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inv: "local_edge_invariant gs (apply_tf tf (EA_Assume b))"
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "bval b s"
-  shows "s \<in> \<lbrakk>etf_collecting_full
-           (local_edge_tree gs (apply_tf tf (EA_Assume b)) u) \<sigma>\<rbrakk>"
-proof -
-  have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-    by (simp add: side_env_def glob_env_unit)
-  have st: "s \<in> \<lbrakk>apply_tf tf (EA_Assume b) (side_env \<sigma> u)\<rbrakk>"
-    using tf_sound_assume_forD[OF s hb] unfolding env apply_tf.simps by simp
-  have le: "apply_tf tf (EA_Assume b) (side_env \<sigma> u) \<le>
-            etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Assume b)) u) \<sigma>"
-  proof -
-    have "apply_tf tf (EA_Assume b) (side_env \<sigma> u) =
-          restrict_local_for gs (apply_tf tf (EA_Assume b) (restrict_local_for gs (\<sigma> (Inl u))))
-          \<squnion> restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
-      by (rule local_edge_invariant_side_env_eq[OF inv inr])
-    also have "\<dots> = etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Assume b)) u) \<sigma>"
-      by (rule etf_collecting_full_local_edge_tree[symmetric])
-    finally have "apply_tf tf (EA_Assume b) (side_env \<sigma> u) =
-          etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_Assume b)) u) \<sigma>" .
-    then show ?thesis by simp
-  qed
-  show ?thesis using st le gamma_state_mono by blast
-qed
-
-lemma in_gamma_local_edge_tree_assume_not:
-  fixes b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-  assumes inv: "local_edge_invariant gs (apply_tf tf (EA_AssumeNot b))"
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>" and hb: "\<not> bval b s"
-  shows "s \<in> \<lbrakk>etf_collecting_full
-           (local_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u) \<sigma>\<rbrakk>"
-proof -
-  have env: "side_env \<sigma> u = \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-    by (simp add: side_env_def glob_env_unit)
-  have st: "s \<in> \<lbrakk>apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u)\<rbrakk>"
-    using tf_sound_assume_not_forD[OF s hb] unfolding env apply_tf.simps by simp
-  have le: "apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u) \<le>
-            etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u) \<sigma>"
-  proof -
-    have "apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u) =
-          restrict_local_for gs (apply_tf tf (EA_AssumeNot b) (restrict_local_for gs (\<sigma> (Inl u))))
-          \<squnion> restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
-      by (rule local_edge_invariant_side_env_eq[OF inv inr])
-    also have "\<dots> = etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u) \<sigma>"
-      by (rule etf_collecting_full_local_edge_tree[symmetric])
-    finally have "apply_tf tf (EA_AssumeNot b) (side_env \<sigma> u) =
-          etf_collecting_full (local_edge_tree gs (apply_tf tf (EA_AssumeNot b)) u) \<sigma>" .
-    then show ?thesis by simp
-  qed
-  show ?thesis using st le gamma_state_mono by blast
+  obtain su where hu: "\<sigma> (Inl u) = Lifted su"
+    and hs: "s \<in> \<lbrakk>su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
+    using local_input_witness[OF s] .
+  have lb: "local_bot_on_locals gs (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)"
+    using local_bot_on_locals_inr[OF inr] .
+  have hf: "s' \<in> \<lbrakk>f (su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))\<rbrakk>"
+    using sound[OF hs] .
+  have eq: "etf_collecting_full_lift (local_edge_tree gs f u) \<sigma> =
+            Lifted (f (su \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
+    unfolding etf_collecting_full_local_edge_tree res_local_def hu
+    by (simp add: assemble_local_global_Lifted glob_env_unit local_edge_invariant_side_env_eq[OF inv lb])
+  show ?thesis using hf unfolding eq by simp
 qed
 
 end
 
 subsection \<open>Generic effectful soundness from domain transfer\<close>
+
+text \<open>
+  Both @{const unit_etf_of_transfer} and @{const mixed_etf_of_transfer} route
+  \<open>etf_combine\<close> through the same @{const unit_combine_tree} (calls never take
+  the local-restriction branch), so the combine obligation is proved once here,
+  independent of \<open>tf\<close>, and reused by both instance proofs below.
+\<close>
+lemma in_gamma_unit_combine_tree:
+  fixes dst :: "vname option" and cc ex :: pp
+    and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted" and s t :: store
+  assumes inr: "inr_slot_locals_bot gs \<sigma>"
+  assumes s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ())))"
+  assumes t: "t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
+  shows "combine_collect gs dst s t \<in> gamma_state_lift (etf_full (unit_combine_tree gs dst cc ex) \<sigma>)"
+proof -
+  obtain sc where hc: "\<sigma> (Inl cc) = Lifted sc"
+    and hsc: "s \<in> \<lbrakk>sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
+    using local_input_witness[OF s] .
+  obtain se where he: "\<sigma> (Inl ex) = Lifted se"
+    and hse: "t \<in> \<lbrakk>se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
+    using local_input_witness[OF t] .
+  have not_bot: "\<not> is_bot_state (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
+                   \<and> \<not> is_bot_state (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))"
+    using is_bot_state_witnessI[OF hsc] is_bot_state_witnessI[OF hse] by simp
+  have eq: "etf_full (unit_combine_tree gs dst cc ex) \<sigma> =
+            Lifted (combine\<^sup># gs dst (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
+                                     (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
+    unfolding etf_full_unit_combine_tree res_combine_def hc he
+    using not_bot
+    by (smt (verit) assemble_local_global_Lifted combine_collect_sound hsc
+        hse is_bot_state_witnessI normalize_lift_not_bot
+        transfer_lift2_Lifted)
+  show ?thesis
+    using combine_collect_sound[OF hsc hse] unfolding eq by simp
+qed
 
 lemma sound_effectful_transfer_unit_of_transfer:
   fixes tf :: "'a::sound_domain domain_transfer"
@@ -854,61 +1033,49 @@ proof -
   show ?thesis
   proof (unfold_locales; unfold glob_env_unit)
     show "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              s \<in> \<lbrakk>etf_collecting_full (etf_nop (unit_etf_of_transfer gs tf) u) \<sigma>\<rbrakk>)"
-    proof (intro allI impI ballI)
-      fix u :: pp and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
-      assume inr: "inr_slot_locals_bot gs \<sigma>" and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      show "s \<in> \<lbrakk>etf_collecting_full (etf_nop (unit_etf_of_transfer gs tf) u) \<sigma>\<rbrakk>"
-        using s inr in_gamma_unit_edge_tree_nop
-        by (simp add: unit_etf_of_transfer_def glob_env_unit)
-    qed
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop (unit_etf_of_transfer gs tf) u) \<sigma>))"
+      by (auto simp add: unit_etf_of_transfer_def intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
-                (etf_assign (unit_etf_of_transfer gs tf) x e u) \<sigma>\<rbrakk>)"
-      by (auto simp add: unit_etf_of_transfer_def glob_env_unit
-           intro: in_gamma_unit_edge_tree_assign)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift
+                (etf_assign (unit_etf_of_transfer gs tf) x e u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<forall>v.
-              s(x := v) \<in> \<lbrakk>etf_collecting_full
-                (etf_random (unit_etf_of_transfer gs tf) x u) \<sigma>\<rbrakk>)"
-      by (auto simp add: unit_etf_of_transfer_def glob_env_unit
-           intro: in_gamma_unit_edge_tree_random)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<forall>v.
+              s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
+                (etf_random (unit_etf_of_transfer gs tf) x u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
-                  (etf_assume (unit_etf_of_transfer gs tf) b u) \<sigma>\<rbrakk>)"
-      by (auto simp add: unit_etf_of_transfer_def glob_env_unit
-           intro: in_gamma_unit_edge_tree_assume)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). bval b s
+            \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
+                  (etf_assume (unit_etf_of_transfer gs tf) b u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
-                  (etf_assume_not (unit_etf_of_transfer gs tf) b u) \<sigma>\<rbrakk>)"
-      by (auto simp add: unit_etf_of_transfer_def glob_env_unit
-           intro: in_gamma_unit_edge_tree_assume_not)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<not> bval b s
+            \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
+                  (etf_assume_not (unit_etf_of_transfer gs tf) b u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
 
   next
     show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
               bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-                \<in> \<lbrakk>etf_collecting_full
-                (etf_enter (unit_etf_of_transfer gs tf) xs es u) \<sigma>\<rbrakk>)"
-      by (auto simp add: unit_etf_of_transfer_def glob_env_unit
-           intro: in_gamma_unit_edge_tree_enter)
+                \<in> gamma_state_lift (etf_collecting_full_lift
+                (etf_enter (unit_etf_of_transfer gs tf) xs es u) \<sigma>))"
+      by (auto simp add: unit_etf_of_transfer_def intro: in_gamma_unit_edge_tree)
 
   next
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-            \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
+            \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_collect gs dst s t
-                \<in> \<lbrakk>etf_full (etf_combine (unit_etf_of_transfer gs tf) dst cc ex) \<sigma>\<rbrakk>)"
-      by (auto simp add: etf_combine_unit_of_transfer etf_full_unit_combine_tree
-           intro: combine_collect_sound)
+                \<in> gamma_state_lift (etf_full (etf_combine (unit_etf_of_transfer gs tf) dst cc ex) \<sigma>))"
+      by (auto simp add: etf_combine_unit_of_transfer intro: in_gamma_unit_combine_tree)
   qed
 qed
 
@@ -924,71 +1091,144 @@ proof -
   show ?thesis
   proof (unfold_locales; unfold glob_env_unit)
     show "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              s \<in> \<lbrakk>etf_collecting_full (etf_nop (mixed_etf_of_transfer gs tf) u) \<sigma>\<rbrakk>)"
-      by (auto simp add: mixed_etf_of_transfer_def local_edge_action.simps
-           mixed_etf_edge_tree_local glob_env_unit
-           intro: in_gamma_local_edge_tree_nop)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop (mixed_etf_of_transfer gs tf) u) \<sigma>))"
+      unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def apply_tf.simps
+      by (auto intro: in_gamma_local_edge_tree id_local_edge_invariant)
   next
     show "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-              s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
-                (etf_assign (mixed_etf_of_transfer gs tf) x e u) \<sigma>\<rbrakk>)"
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift
+                (etf_assign (mixed_etf_of_transfer gs tf) x e u) \<sigma>))"
     proof (intro allI impI ballI)
-      fix x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store
+      fix x e u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store
       assume inr: "inr_slot_locals_bot gs \<sigma>"
-        and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      show "s(x := aval e s) \<in> \<lbrakk>etf_collecting_full
-              (etf_assign (mixed_etf_of_transfer gs tf) x e u) \<sigma>\<rbrakk>"
-        by (simp add: glob_env_unit in_gamma_local_edge_tree_assign in_gamma_unit_edge_tree_assign inr
-            loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def s)
+        and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+      show "s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift
+              (etf_assign (mixed_etf_of_transfer gs tf) x e u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_Assign x e)")
+        case True
+        have inv': "local_edge_invariant gs (assign\<^sup># tf x e)"
+          using loc_inv[OF True]
+          by (simp add: local_edge_invariant_def)
+        have "s(x := aval e s) \<in> gamma_state_lift
+                (etf_collecting_full_lift (local_edge_tree gs (assign\<^sup># tf x e) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_assign_forD)
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
+      next
+        case False
+        have "s(x := aval e s) \<in> gamma_state_lift
+                (etf_collecting_full_lift (unit_edge_tree gs (assign\<^sup># tf x e) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_assign_forD)
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
+      qed
     qed
   next
     show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<forall>v.
-              s(x := v) \<in> \<lbrakk>etf_collecting_full
-                (etf_random (mixed_etf_of_transfer gs tf) x u) \<sigma>\<rbrakk>)"
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<forall>v.
+              s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
+                (etf_random (mixed_etf_of_transfer gs tf) x u) \<sigma>))"
     proof (intro allI impI ballI)
-      fix x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state" and s :: store and v
+      fix x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store and v
       assume inr: "inr_slot_locals_bot gs \<sigma>"
-        and s: "s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>"
-      show "s(x := v) \<in> \<lbrakk>etf_collecting_full
-              (etf_random (mixed_etf_of_transfer gs tf) x u) \<sigma>\<rbrakk>"
-        by (simp add: glob_env_unit in_gamma_local_edge_tree_random in_gamma_unit_edge_tree_random inr
-            loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def s)
+        and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+      show "s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
+              (etf_random (mixed_etf_of_transfer gs tf) x u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_Random x)")
+        case True
+        have inv': "local_edge_invariant gs (tf_random tf x)"
+          using loc_inv[OF True] by (simp add: apply_tf.simps)
+        have "s(x := v) \<in> gamma_state_lift
+                (etf_collecting_full_lift (local_edge_tree gs (tf_random tf x) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_random_forD)
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
+      next
+        case False
+        have "s(x := v) \<in> gamma_state_lift
+                (etf_collecting_full_lift (unit_edge_tree gs (tf_random tf x) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_random_forD)
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
+      qed
     qed
   next
     show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
-                  (etf_assume (mixed_etf_of_transfer gs tf) b u) \<sigma>\<rbrakk>)"
-      by (simp add: glob_env_unit in_gamma_local_edge_tree_assume in_gamma_unit_edge_tree_assume
-          loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). bval b s
+            \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
+                  (etf_assume (mixed_etf_of_transfer gs tf) b u) \<sigma>))"
+    proof (intro allI impI ballI)
+      fix b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store
+      assume inr: "inr_slot_locals_bot gs \<sigma>"
+        and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+        and hb: "bval b s"
+      show "s \<in> gamma_state_lift (etf_collecting_full_lift
+              (etf_assume (mixed_etf_of_transfer gs tf) b u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_Assume b)")
+        case True
+        have inv': "local_edge_invariant gs (tf_assume tf b)"
+          using loc_inv[OF True] by (simp add: apply_tf.simps)
+        have "s \<in> gamma_state_lift
+                (etf_collecting_full_lift (local_edge_tree gs (tf_assume tf b) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_assume_forD[OF _ hb])
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
+      next
+        case False
+        have "s \<in> gamma_state_lift
+                (etf_collecting_full_lift (unit_edge_tree gs (tf_assume tf b) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_assume_forD[OF _ hb])
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
+      qed
+    qed
   next
     show "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>. \<not> bval b s
-            \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full
-                  (etf_assume_not (mixed_etf_of_transfer gs tf) b u) \<sigma>\<rbrakk>)"
-      by (simp add: glob_env_unit in_gamma_local_edge_tree_assume_not in_gamma_unit_edge_tree_assume_not
-          loc_inv mixed_etf_edge_tree_def mixed_etf_of_transfer_def)
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<not> bval b s
+            \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
+                  (etf_assume_not (mixed_etf_of_transfer gs tf) b u) \<sigma>))"
+    proof (intro allI impI ballI)
+      fix b u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store
+      assume inr: "inr_slot_locals_bot gs \<sigma>"
+        and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+        and hb: "\<not> bval b s"
+      show "s \<in> gamma_state_lift (etf_collecting_full_lift
+              (etf_assume_not (mixed_etf_of_transfer gs tf) b u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_AssumeNot b)")
+        case True
+        have inv': "local_edge_invariant gs (tf_assume_not tf b)"
+          using loc_inv[OF True] by (simp add: apply_tf.simps)
+        have "s \<in> gamma_state_lift
+                (etf_collecting_full_lift (local_edge_tree gs (tf_assume_not tf b) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_assume_not_forD[OF _ hb])
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
+      next
+        case False
+        have "s \<in> gamma_state_lift
+                (etf_collecting_full_lift (unit_edge_tree gs (tf_assume_not tf b) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_assume_not_forD[OF _ hb])
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
+      qed
+    qed
 
   next
     show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
               bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-                \<in> \<lbrakk>etf_collecting_full
-                (etf_enter (mixed_etf_of_transfer gs tf) xs es u) \<sigma>\<rbrakk>)"
-      by (auto simp add: mixed_etf_of_transfer_def local_edge_action.simps
-           mixed_etf_edge_tree_unit glob_env_unit
-           intro: in_gamma_unit_edge_tree_enter)
+                \<in> gamma_state_lift (etf_collecting_full_lift
+                (etf_enter (mixed_etf_of_transfer gs tf) xs es u) \<sigma>))"
+      unfolding mixed_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> \<sigma> (Inr ())\<rbrakk>.
-            \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> \<sigma> (Inr ())\<rbrakk>.
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
+            \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_collect gs dst s t
-                \<in> \<lbrakk>etf_full (etf_combine (mixed_etf_of_transfer gs tf) dst cc ex) \<sigma>\<rbrakk>)"
-      by (auto simp add: etf_combine_mixed_of_transfer etf_full_unit_combine_tree
-           intro: combine_collect_sound)
+                \<in> gamma_state_lift (etf_full (etf_combine (mixed_etf_of_transfer gs tf) dst cc ex) \<sigma>))"
+      by (auto simp add: etf_combine_mixed_of_transfer intro: in_gamma_unit_combine_tree)
   qed
 qed
 

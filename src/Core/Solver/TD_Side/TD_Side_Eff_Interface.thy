@@ -19,14 +19,14 @@ where
 
 locale td_cfg_side_solver_eff =
   fixes gs :: "vname \<Rightarrow> bool" and g :: cfg and
-  etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer" and
+  etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer" and
   bot0 s0 :: "'a abs_state" and gseed :: 'g
   assumes mono_eq[intro]:    "is_mono_eq (side_cfg_T_eff gs g etf bot0 s0 gseed)"
     and   mono_sides[intro]: "mono_sides (side_cfg_T_eff gs g etf bot0 s0 gseed)"
     and   mono_deps[intro]:  "mono_deps (side_cfg_T_eff gs g etf bot0 s0 gseed)"
 begin
 
-definition cfg_pkg_eff :: "(pp, 'g, 'a abs_state) eqsT"
+definition cfg_pkg_eff :: "(pp, 'g, 'a abs_state lifted) eqsT"
   where "cfg_pkg_eff = side_cfg_T_eff gs g etf bot0 s0 gseed"
 
 lemma cfg_pkg_eff_eq[simp]: "cfg_pkg_eff = side_cfg_T_eff gs g etf bot0 s0 gseed"
@@ -42,11 +42,11 @@ qed
 definition stabl_at :: "pp \<Rightarrow> pp set"
   where "stabl_at x = fst (side.solve x)"
 
-definition nu_at :: "pp \<Rightarrow> pp + 'g \<Rightarrow> 'a abs_state"
+definition nu_at :: "pp \<Rightarrow> pp + 'g \<Rightarrow> 'a abs_state lifted"
   where "nu_at x = snd (side.solve x)"
 
-definition env_at :: "pp \<Rightarrow> pp \<Rightarrow> 'a abs_state"
-  where "env_at x0 v = side_env (nu_at x0) v"
+definition env_at :: "pp \<Rightarrow> pp \<Rightarrow> 'a abs_state lifted"
+  where "env_at x0 v = side_env_lift (nu_at x0) v"
 
 lemma solve_prod: "side.solve x = (stabl_at x, nu_at x)"
   unfolding stabl_at_def nu_at_def by (rule prod_eqI) simp_all
@@ -73,7 +73,7 @@ proof -
     using side.least_partial_post_solution[OF dv solve_prod] by blast
 qed
 
-lemma env_at_eq [simp]: "env_at x0 v = side_env (nu_at x0) v"
+lemma env_at_eq [simp]: "env_at x0 v = side_env_lift (nu_at x0) v"
   unfolding env_at_def by simp
 
 end
@@ -81,11 +81,11 @@ end
 text \<open>Executable-facing combined env at each pp (entry query).\<close>
 definition side_analyse_eff ::
     "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-     \<Rightarrow> ('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-     \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp \<Rightarrow> 'a abs_state"
+     \<Rightarrow> ('g::finite, 'a::sound_domain) effectful_domain_transfer
+     \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp \<Rightarrow> 'a abs_state lifted"
 where
   "side_analyse_eff gs \<Pi> ps mnm main etf bot0 s0 gseed v =
-     side_env (td_cfg_side_solver_eff.nu_at gs (compile_prog \<Pi> ps mnm main) etf bot0 s0 gseed v) v"
+     side_env_lift (td_cfg_side_solver_eff.nu_at gs (compile_prog \<Pi> ps mnm main) etf bot0 s0 gseed v) v"
 
 end
 

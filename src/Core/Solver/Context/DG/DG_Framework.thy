@@ -186,9 +186,12 @@ definition dg_edge_tree ::
    \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
   "dg_edge_tree step u =
-     QueryL u (\<lambda>d. QueryG () (\<lambda>g.
-       Side () (DG bot (fst (step (locals d) (globs g))))
-         (Answer (DG (snd (step (locals d) (globs g)))  bot))))"
+     do {
+       d <- read_local u;
+       g <- read_global ();
+       depend_on () (DG bot (fst (step (locals d) (globs g))))
+         (answer (DG (snd (step (locals d) (globs g))) bot))
+     }"
 
 lemma traverse_dg_edge_tree:
   "traverse_rhs (dg_edge_tree step u) \<tau>
@@ -224,9 +227,13 @@ definition dg_combine_tree ::
    \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
   "dg_combine_tree comb dst cc ex =
-     QueryL cc (\<lambda>dc. QueryL ex (\<lambda>de. QueryG () (\<lambda>g.
-       Side () (DG bot (fst (comb dst (locals dc) (locals de) (globs g))))
-         (Answer (DG (snd (comb dst (locals dc) (locals de) (globs g))) bot)))))"
+     do {
+       dc <- read_local cc;
+       de <- read_local ex;
+       g <- read_global ();
+       depend_on () (DG bot (fst (comb dst (locals dc) (locals de) (globs g))))
+         (answer (DG (snd (comb dst (locals dc) (locals de) (globs g))) bot))
+     }"
 
 lemma traverse_dg_combine_tree:
   "traverse_rhs (dg_combine_tree comb dst cc ex) \<tau>
@@ -769,7 +776,7 @@ where
           enter = map (\<lambda>(call, action). enter_tree ctx call action v)
             (entry_call_list g v);
           tree = side_rhs_fold_dg acc0 (intra @ combine @ enter)
-      in if v = cfg_entry g then Side (gkey ctx) (DG bot s0g) tree else tree)"
+      in if v = cfg_entry g then depend_on (gkey ctx) (DG bot s0g) tree else tree)"
 
 lemma eq_side_cfg_T_eff_keyed_seed_trees:
   "eq (side_cfg_T_eff_keyed_seed_trees pred_sel gkey edge_tree combine_tree enter_tree
@@ -911,7 +918,7 @@ where
             comb = map (\<lambda>(cc, ca, ex). cmb route c ca cc ex)
                        (return_call_action_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb @ extra route c v)
-        in if v = cfg_entry g then Side (gkey c) (DG bot s0g) t else t)"
+        in if v = cfg_entry g then depend_on (gkey c) (DG bot s0g) t else t)"
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg:
   "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)

@@ -63,7 +63,8 @@ text \<open>The computed Sign environment at an arbitrary node, not fixed to the
   exit: \<^const>\<open>sign_exec_prog_at\<close> queries the same solver result
   \<^const>\<open>sign_exec_prog\<close> reads only at the exit.\<close>
 definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
-  "checks_ex_env v = sign_exec_prog_at checks_ex_gs (STR ''main'') checks_ex_program v"
+  "checks_ex_env v = case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+     (sign_exec_prog_at checks_ex_gs (STR ''main'') checks_ex_program v)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>__voblint_check(0 < y)\<close>, proved) reaches \<open>Statement 2\<close> reaches
@@ -148,20 +149,25 @@ qed
 text \<open>Node-local collecting soundness at each check node, via
   \<open>sign_exec_prog_sound_collecting_at\<close> and the reachability facts above ---
   no store is forwarded to the exit.\<close>
+lemma gamma_state_case_lifted:
+  fixes x :: "'a::sound_domain abs_state lifted"
+  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
+  by (cases x) (simp_all add: gamma_state_bot)
+
 lemma checks_ex_node_sound_1:
   "checks_ex_reach (Statement 1) \<le> \<lbrakk>checks_ex_env (Statement 1)\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def
-  by (rule sign_exec_prog_sound_collecting_at[OF checks_ex_solver_terminates checks_ex_statement1_reaches_exit])
+  unfolding checks_ex_reach_def checks_ex_env_def gamma_state_case_lifted
+  by (rule sign_exec_prog_sound_collecting_at[OF refl checks_ex_solver_terminates checks_ex_statement1_reaches_exit])
 
 lemma checks_ex_node_sound_3:
   "checks_ex_reach (Statement 3) \<le> \<lbrakk>checks_ex_env (Statement 3)\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def
-  by (rule sign_exec_prog_sound_collecting_at[OF checks_ex_solver_terminates checks_ex_statement3_reaches_exit])
+  unfolding checks_ex_reach_def checks_ex_env_def gamma_state_case_lifted
+  by (rule sign_exec_prog_sound_collecting_at[OF refl checks_ex_solver_terminates checks_ex_statement3_reaches_exit])
 
 lemma checks_ex_node_sound_5:
   "checks_ex_reach (Statement 5) \<le> \<lbrakk>checks_ex_env (Statement 5)\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def
-  by (rule sign_exec_prog_sound_collecting_at[OF checks_ex_solver_terminates checks_ex_statement5_reaches_exit])
+  unfolding checks_ex_reach_def checks_ex_env_def gamma_state_case_lifted
+  by (rule sign_exec_prog_sound_collecting_at[OF refl checks_ex_solver_terminates checks_ex_statement5_reaches_exit])
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>SPos\<close>
   right after \<open>y := 5\<close> at \<open>Statement 1\<close>, \<open>SZero\<close> right after \<open>y := 0\<close> at

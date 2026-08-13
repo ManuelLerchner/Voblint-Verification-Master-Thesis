@@ -47,7 +47,7 @@ lemma side_acc_eff_mono_acc:
 
 lemma side_acc_eff_mono:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and sigma1 sigma2 :: "pp + 'g \<Rightarrow> 'a abs_state"
+    and sigma1 sigma2 :: "pp + 'g \<Rightarrow> 'a abs_state lifted"
   assumes edge_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        traverse_rhs (apply_etf etf a u) s1 \<le> traverse_rhs (apply_etf etf a u) s2"
@@ -84,7 +84,7 @@ lemma side_cfg_T_eff_is_mono_eq_gen:
   shows "is_mono_eq (side_cfg_T_eff gs g etf bot0 s0 gseed)"
   unfolding is_mono_eq_def
 proof (intro allI impI)
-  fix x :: pp and \<sigma>1 \<sigma>2 :: "pp + 'g \<Rightarrow> 'a abs_state"
+  fix x :: pp and \<sigma>1 \<sigma>2 :: "pp + 'g \<Rightarrow> 'a abs_state lifted"
   assume le: "\<sigma>1 \<le> \<sigma>2"
   show "eq (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma>1
         \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma>2"
@@ -147,7 +147,7 @@ qed
 
 lemma sides_side_rhs_fold_eff_mono:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and sigma1 sigma2 :: "pp + 'g \<Rightarrow> 'a abs_state"
+    and sigma1 sigma2 :: "pp + 'g \<Rightarrow> 'a abs_state lifted"
   assumes edge_sides_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
        sides_of_rhs (apply_etf etf a u) s1 \<le> sides_of_rhs (apply_etf etf a u) s2"
@@ -253,7 +253,7 @@ lemma side_cfg_T_eff_mono_sides_gen:
        sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
   shows "mono_sides (side_cfg_T_eff gs g etf bot0 s0 gseed)"
 proof (unfold mono_sides_def, intro allI impI)
-  fix w :: pp and \<sigma>1 \<sigma>2 :: "pp + 'g \<Rightarrow> 'a abs_state"
+  fix w :: pp and \<sigma>1 \<sigma>2 :: "pp + 'g \<Rightarrow> 'a abs_state lifted"
   assume le: "\<sigma>1 \<le> \<sigma>2"
   have fold_le: "\<And>acc. sides_of_rhs (side_rhs_fold_eff etf acc
                    (intra_predecessor_list g w) (entry_seed_list g w) (return_call_list g w)) \<sigma>1
@@ -266,16 +266,16 @@ proof (unfold mono_sides_def, intro allI impI)
     case False
     show ?thesis
       unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def Let_def
-      using False fold_le[of bot0] by simp
+      using False fold_le[of Bot] by simp
   next
     case True
-    have m_le: "sides_of_rhs (side_rhs_fold_eff etf (bot0 \<squnion> restrict_local_for gs s0)
+    have m_le: "sides_of_rhs (side_rhs_fold_eff etf (Lifted (bot0 \<squnion> restrict_local_for gs s0))
                   (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g))
                   (return_call_list g (cfg_entry g))) \<sigma>1
-              \<le> sides_of_rhs (side_rhs_fold_eff etf (bot0 \<squnion> restrict_local_for gs s0)
+              \<le> sides_of_rhs (side_rhs_fold_eff etf (Lifted (bot0 \<squnion> restrict_local_for gs s0))
                   (intra_predecessor_list g (cfg_entry g)) (entry_seed_list g (cfg_entry g))
                   (return_call_list g (cfg_entry g))) \<sigma>2"
-      using fold_le[of "bot0 \<squnion> restrict_local_for gs s0"] True by simp
+      using fold_le[of "Lifted (bot0 \<squnion> restrict_local_for gs s0)"] True by simp
     show ?thesis
       unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
       using True by (simp add: Let_def fun_upd_sup_mono[OF m_le])
@@ -348,7 +348,7 @@ qed
 lemma dep_aux_make_side_rhs_tree_eff:
   "dep_aux \<sigma> (make_side_rhs_tree_eff gs g etf bot0 s0 gseed v)
    = dep_aux \<sigma> (side_rhs_fold_eff etf
-        (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0)
+        (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot)
         (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v))"
   by (cases "v = cfg_entry g")
      (simp_all add: make_side_rhs_tree_eff_def Let_def)
@@ -423,7 +423,7 @@ lemma side_post_solution_le_local_eff:
   assumes "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
       and "v \<in> vars"
   shows "side_acc_eff etf
-           (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0)
+           (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot)
            \<sigma> (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v) \<le> \<sigma> (Inl v)"
 proof -
   from assms have "eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma> \<le> \<sigma> (Inl v)" by auto
@@ -436,7 +436,7 @@ lemma sides_fold_le_side_cfg_T_eff:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and gseed :: 'g
   shows "sides_of_rhs (side_rhs_fold_eff etf
-           (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0)
+           (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot)
            (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)) \<sigma> (Inr gg)
          \<le> sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed v) \<sigma> (Inr gg)"
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def Let_def
@@ -455,14 +455,25 @@ qed
 
 subsection \<open>Edge / enter / combine closure of a post-solution\<close>
 
+text \<open>
+  Each closure bound additionally requires the edge/enter/combine tree to be
+  \<^const>\<open>reachability_coherent_tree\<close> (see \<^theory>\<open>Voblint_Core.Constraint_System\<close>):
+  without it a dead local Answer and a live Side of the same tree could
+  recombine into a spuriously reachable \<^const>\<open>etf_full\<close> value.
+  \<^const>\<open>unit_edge_tree\<close>/\<^const>\<open>local_edge_tree\<close>/\<^const>\<open>unit_combine_tree\<close> all
+  discharge it (\<^theory>\<open>Voblint_Core.TD_Side_CFG\<close>'s
+  \<open>reachability_coherent_unit_edge_tree\<close> and siblings), matching every concrete
+  \<open>etf\<close> this codebase builds.
+\<close>
 lemma etf_combined_le_eff:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes pp:  "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
       and v:   "v \<in> vars"
       and e:   "(u, a, v) \<in> intra g"
       and fin: "finite (intra g)"
-  shows "etf_full (apply_etf etf a u) \<sigma> \<le> side_env \<sigma> v"
+      and coh: "reachability_coherent_tree (apply_etf etf a u) \<sigma>"
+  shows "etf_full (apply_etf etf a u) \<sigma> \<le> side_env_lift \<sigma> v"
 proof -
   have mem: "(u, a) \<in> set (intra_predecessor_list g v)"
     using e by (simp add: set_intra_predecessor_list[OF fin] intra_predecessors_def)
@@ -483,21 +494,20 @@ proof -
     also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono_Inr) (rule glob_name)
     finally show ?thesis .
   qed
-  have "etf_full (apply_etf etf a u) \<sigma>
-        = traverse_rhs (apply_etf etf a u) \<sigma> \<squnion> all_sides (apply_etf etf a u) \<sigma>"
-    by (simp add: etf_full_def)
-  also have "\<dots> \<le> \<sigma> (Inl v) \<squnion> glob_env \<sigma>" using loc glob by (rule sup_mono)
-  finally show ?thesis unfolding side_env_def .
+  show ?thesis
+    unfolding side_env_lift_def
+    by (rule etf_full_le_assemble_local_global[OF loc glob coh])
 qed
 
 lemma etf_enter_combined_le_eff:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes pp:  "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
       and v:   "v \<in> vars"
       and e:   "(cl, CallEdge dst fs as, v, k) \<in> calls g"
       and fin: "finite (calls g)"
-  shows "etf_full (etf_enter etf fs as cl) \<sigma> \<le> side_env \<sigma> v"
+      and coh: "reachability_coherent_tree (etf_enter etf fs as cl) \<sigma>"
+  shows "etf_full (etf_enter etf fs as cl) \<sigma> \<le> side_env_lift \<sigma> v"
 proof -
   have mem: "(cl, fs, as) \<in> set (entry_seed_list g v)"
     using fin e by (force simp: entry_seed_list_def entry_calls_def image_iff)
@@ -518,21 +528,20 @@ proof -
     also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono_Inr) (rule glob_name)
     finally show ?thesis .
   qed
-  have "etf_full (etf_enter etf fs as cl) \<sigma>
-        = traverse_rhs (etf_enter etf fs as cl) \<sigma> \<squnion> all_sides (etf_enter etf fs as cl) \<sigma>"
-    by (simp add: etf_full_def)
-  also have "\<dots> \<le> \<sigma> (Inl v) \<squnion> glob_env \<sigma>" using loc glob by (rule sup_mono)
-  finally show ?thesis unfolding side_env_def .
+  show ?thesis
+    unfolding side_env_lift_def
+    by (rule etf_full_le_assemble_local_global[OF loc glob coh])
 qed
 
 lemma etf_combine_combined_le_eff:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes pp:   "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
       and v:    "v \<in> vars"
       and e:    "(cc, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
       and finC: "finite (calls g)"
-  shows "etf_full (etf_combine etf dst cc (FunctionResult p)) \<sigma> \<le> side_env \<sigma> v"
+      and coh:  "reachability_coherent_tree (etf_combine etf dst cc (FunctionResult p)) \<sigma>"
+  shows "etf_full (etf_combine etf dst cc (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> v"
 proof -
   have mem: "(cc, dst, FunctionResult p) \<in> set (return_call_list g v)"
     using e by (force simp: set_return_call_list[OF finC] return_calls_def)
@@ -553,12 +562,9 @@ proof -
     also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono_Inr) (rule glob_name)
     finally show ?thesis .
   qed
-  have "etf_full (etf_combine etf dst cc (FunctionResult p)) \<sigma>
-        = traverse_rhs (etf_combine etf dst cc (FunctionResult p)) \<sigma>
-          \<squnion> all_sides (etf_combine etf dst cc (FunctionResult p)) \<sigma>"
-    by (simp add: etf_full_def)
-  also have "\<dots> \<le> \<sigma> (Inl v) \<squnion> glob_env \<sigma>" using loc glob by (rule sup_mono)
-  finally show ?thesis unfolding side_env_def .
+  show ?thesis
+    unfolding side_env_lift_def
+    by (rule etf_full_le_assemble_local_global[OF loc glob coh])
 qed
 
 subsection \<open>Inr-slot local bot on least post-solutions\<close>
@@ -569,30 +575,41 @@ text \<open>
   hence below the stripped env, so its Inr locals stay bottom.
 \<close>
 
-lemma inr_slot_locals_bot_iff_Inr_restrict_global:
-  shows "inr_slot_locals_bot gs \<sigma> \<longleftrightarrow> (\<forall>g. \<sigma> (Inr g) = restrict_global_for gs (\<sigma> (Inr g)))"
-  unfolding inr_slot_locals_bot_def restrict_global_for_def local_bot_on_locals_def
-  by (auto simp: fun_eq_iff)
-
 lemma local_bot_on_locals_eq_restrict_global:
   fixes a :: "'a::bounded_semilattice_sup_bot abs_state"
   shows "local_bot_on_locals gs a \<longleftrightarrow> a = restrict_global_for gs a"
   by (metis antisym dual_order.refl le_restrict_global_for_when_local_bot
       local_bot_on_locals_restrict_global restrict_local_for_global_join sup_ge2)
 
+lemma local_bot_on_locals_lift_eq_restrict_global:
+  fixes a :: "'a::sound_domain abs_state lifted"
+  shows "local_bot_on_locals_lift gs a \<longleftrightarrow> a = map_lift (restrict_global_for gs) a"
+  by (cases a) (simp_all add: local_bot_on_locals_eq_restrict_global)
+
+lemma inr_slot_locals_bot_iff_local_bot_on_locals_lift:
+  "inr_slot_locals_bot gs \<sigma> \<longleftrightarrow> (\<forall>g. local_bot_on_locals_lift gs (\<sigma> (Inr g)))"
+  unfolding inr_slot_locals_bot_def local_bot_on_locals_lift_def local_bot_on_locals_def
+  by (auto split: lifted.splits)
+
+lemma inr_slot_locals_bot_iff_Inr_restrict_global:
+  shows "inr_slot_locals_bot gs \<sigma> \<longleftrightarrow> (\<forall>g. \<sigma> (Inr g) = map_lift (restrict_global_for gs) (\<sigma> (Inr g)))"
+  unfolding inr_slot_locals_bot_iff_local_bot_on_locals_lift
+  using local_bot_on_locals_lift_eq_restrict_global by blast
+
 definition strip_inr_globals ::
-  "(vname => bool) => (pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state)
-   \<Rightarrow> pp + 'g \<Rightarrow> 'a abs_state"
+  "(vname => bool) => (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted)
+   \<Rightarrow> pp + 'g \<Rightarrow> 'a abs_state lifted"
 where
-  "strip_inr_globals gs \<sigma> k = (case k of Inl p \<Rightarrow> \<sigma> (Inl p) | Inr g \<Rightarrow> restrict_global_for gs (\<sigma> (Inr g)))"
+  "strip_inr_globals gs \<sigma> k =
+     (case k of Inl p \<Rightarrow> \<sigma> (Inl p) | Inr g \<Rightarrow> map_lift (restrict_global_for gs) (\<sigma> (Inr g)))"
 
 lemma strip_inr_globals_le:
   "strip_inr_globals gs \<sigma> \<le> \<sigma>"
   unfolding strip_inr_globals_def le_fun_def
-  by (auto simp: restrict_global_for_def le_funD bot_least split: sum.splits)
+  by (auto simp: map_lift_restrict_global_for_le split: sum.splits)
 
 lemma strip_inr_globals_Inr:
-  "strip_inr_globals gs \<sigma> (Inr g) = restrict_global_for gs (\<sigma> (Inr g))"
+  "strip_inr_globals gs \<sigma> (Inr g) = map_lift (restrict_global_for gs) (\<sigma> (Inr g))"
   unfolding strip_inr_globals_def by simp
 
 lemma strip_inr_globals_Inl:
@@ -600,25 +617,26 @@ lemma strip_inr_globals_Inl:
   unfolding strip_inr_globals_def by simp
 
 lemma sides_of_rhs_Side_Inr_local_bot:
-  fixes \<sigma> :: "pp + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  fixes \<sigma> :: "pp + 'g \<Rightarrow> 'a::sound_domain abs_state lifted"
     and g u :: 'g
-    and t :: "(pp, 'g, 'a abs_state) strategy_tree"
-    and d :: "'a abs_state"
-  assumes lb_t: "local_bot_on_locals gs (sides_of_rhs t \<sigma> (Inr u))"
-  assumes lb_d: "local_bot_on_locals gs d"
-  shows "local_bot_on_locals gs (sides_of_rhs (Side g d t) \<sigma> (Inr u))"
+    and t :: "(pp, 'g, 'a abs_state lifted) strategy_tree"
+    and d :: "'a abs_state lifted"
+  assumes lb_t: "local_bot_on_locals_lift gs (sides_of_rhs t \<sigma> (Inr u))"
+  assumes lb_d: "local_bot_on_locals_lift gs d"
+  shows "local_bot_on_locals_lift gs (sides_of_rhs (Side g d t) \<sigma> (Inr u))"
   unfolding sides_of_rhs.simps Let_def
-  using lb_d lb_t local_bot_join by auto
+  using local_bot_on_locals_lift_join[OF lb_d lb_t] lb_t
+  by (auto simp: sup_commute)
 
 lemma sides_side_rhs_fold_eff_Inr_local_bot:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
   assumes edge_inr:
-    "\<And>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+    "\<And>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes enter_inr:
-    "\<And>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+    "\<And>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
-  shows "local_bot_on_locals gs (sides_of_rhs (side_rhs_fold_eff etf acc ps ens cs) \<sigma> (Inr u))"
+    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+  shows "local_bot_on_locals_lift gs (sides_of_rhs (side_rhs_fold_eff etf acc ps ens cs) \<sigma> (Inr u))"
 proof (induction ps arbitrary: acc ens cs)
   case Nil
   then show ?case
@@ -627,64 +645,66 @@ proof (induction ps arbitrary: acc ens cs)
     then show ?case
     proof (induction cs arbitrary: acc)
       case Nil
-      show ?case unfolding local_bot_on_locals_def by simp
+      show ?case by simp
     next
       case (Cons ce cs)
       obtain cc dst ex where ce: "ce = (cc, dst, ex)" by (cases ce)
-      have tree: "local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr u))"
+      have tree: "local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr u))"
         by (rule comb_inr)
-      have rest: "local_bot_on_locals gs
+      have rest: "local_bot_on_locals_lift gs
             (sides_of_rhs (side_rhs_fold_eff etf
                (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>) [] [] cs) \<sigma> (Inr u))"
         by (rule Cons.IH)
       show ?case unfolding ce side_rhs_fold_eff_simps sides_of_rhs_seqcomp_at
-        by (rule local_bot_join[OF tree rest])
+        by (rule local_bot_on_locals_lift_join[OF tree rest])
     qed
   next
     case (Cons ee ens)
     obtain cl fs as where ee: "ee = (cl, fs, as)" by (cases ee)
-    have tree: "local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma> (Inr u))"
+    have tree: "local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma> (Inr u))"
       by (rule enter_inr)
-    have rest: "local_bot_on_locals gs
+    have rest: "local_bot_on_locals_lift gs
           (sides_of_rhs (side_rhs_fold_eff etf
              (acc \<squnion> traverse_rhs (etf_enter etf fs as cl) \<sigma>) [] ens cs) \<sigma> (Inr u))"
       by (rule Cons.IH)
     show ?case unfolding ee side_rhs_fold_eff_simps sides_of_rhs_seqcomp_at
-      by (rule local_bot_join[OF tree rest])
+      by (rule local_bot_on_locals_lift_join[OF tree rest])
   qed
 next
   case (Cons ea ps)
   obtain u' a where ea: "ea = (u', a)" by (cases ea)
-  have tree: "local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u') \<sigma> (Inr u))"
+  have tree: "local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u') \<sigma> (Inr u))"
     by (rule edge_inr)
-  have rest: "local_bot_on_locals gs
+  have rest: "local_bot_on_locals_lift gs
         (sides_of_rhs (side_rhs_fold_eff etf
            (acc \<squnion> traverse_rhs (apply_etf etf a u') \<sigma>) ps ens cs) \<sigma> (Inr u))"
     by (rule Cons.IH)
   show ?case unfolding ea side_rhs_fold_eff_simps sides_of_rhs_seqcomp_at
-    by (rule local_bot_join[OF tree rest])
+    by (rule local_bot_on_locals_lift_join[OF tree rest])
 qed
 
 lemma sides_make_side_rhs_tree_eff_Inr_local_bot:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes edge_inr:
-    "\<And>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+    "\<And>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes enter_inr:
-    "\<And>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+    "\<And>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
-  shows "local_bot_on_locals gs (sides_of_rhs (make_side_rhs_tree_eff gs g etf bot0 s0 gseed v) \<sigma> (Inr u))"
+    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+  shows "local_bot_on_locals_lift gs (sides_of_rhs (make_side_rhs_tree_eff gs g etf bot0 s0 gseed v) \<sigma> (Inr u))"
 proof -
-  have fold_lb: "local_bot_on_locals gs (sides_of_rhs (side_rhs_fold_eff etf acc' ps ens cs) \<sigma> (Inr u))"
+  have fold_lb: "local_bot_on_locals_lift gs (sides_of_rhs (side_rhs_fold_eff etf acc' ps ens cs) \<sigma> (Inr u))"
     for acc' ps ens cs
     by (rule sides_side_rhs_fold_eff_Inr_local_bot[OF edge_inr enter_inr comb_inr])
+  have d_lb: "local_bot_on_locals_lift gs (Lifted (restrict_global_for gs s0))"
+    by (simp add: local_bot_on_locals_restrict_global)
   show ?thesis
   proof (cases "v = cfg_entry g")
     case True
     then show ?thesis
       unfolding make_side_rhs_tree_eff_def Let_def
-      using sides_of_rhs_Side_Inr_local_bot[OF fold_lb local_bot_on_locals_restrict_global]
+      using sides_of_rhs_Side_Inr_local_bot[OF fold_lb d_lb]
       by simp
   next
     case False
@@ -694,28 +714,28 @@ proof -
 qed
 
 lemma sides_side_cfg_T_eff_Inr_local_bot:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes edge_inr:
-    "\<And>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+    "\<And>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes enter_inr:
-    "\<And>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+    "\<And>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
-  shows "local_bot_on_locals gs (sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed v) \<sigma> (Inr u))"
+    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+  shows "local_bot_on_locals_lift gs (sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed v) \<sigma> (Inr u))"
   unfolding side_cfg_T_eff_def
   by (rule sides_make_side_rhs_tree_eff_Inr_local_bot[OF edge_inr enter_inr comb_inr])
 
 lemma part_post_solution_strip_inr_globals_eff:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes pp: "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
   assumes edge_inr:
-    "\<And>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+    "\<And>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes enter_inr:
-    "\<And>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+    "\<And>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes enter_static: "\<And>cl fs as. static_deps (etf_enter etf fs as cl)"
   assumes comb_static: "\<And>cc dst ex. static_deps (etf_combine etf dst cc ex)"
@@ -782,15 +802,15 @@ proof -
            \<le> sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed u) \<sigma> (Inr g')"
           using mono_sides strip_le unfolding mono_sides_def
           by (simp add: le_funD)
-        have lb: "local_bot_on_locals gs
+        have lb: "local_bot_on_locals_lift gs
               (sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed u) \<sigma> (Inr g'))"
           by (rule sides_side_cfg_T_eff_Inr_local_bot[OF edge_inr enter_inr comb_inr])
         have sides_le: "sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed u) \<sigma> (Inr g')
                        \<le> \<sigma> (Inr g')"
           using u_vars[OF u] by (simp add: le_funD)
         have bound: "sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed u) \<sigma> (Inr g')
-                      \<le> restrict_global_for gs (\<sigma> (Inr g'))"
-          by (rule le_restrict_global_for_when_local_bot[OF lb sides_le])
+                      \<le> map_lift (restrict_global_for gs) (\<sigma> (Inr g'))"
+          by (rule le_map_lift_restrict_global_for_when_local_bot_lift[OF lb sides_le])
         show ?thesis
           using sides_mono bound strip_inr_globals_Inr
           by (metis (no_types, lifting) Inr le_funE order_trans)
@@ -802,18 +822,18 @@ qed
 lemma inr_slot_locals_bot_strip:
   "inr_slot_locals_bot gs (strip_inr_globals gs \<sigma>)"
   unfolding inr_slot_locals_bot_iff_Inr_restrict_global strip_inr_globals_Inr
-  using local_bot_on_locals_eq_restrict_global local_bot_on_locals_restrict_global by auto
+  by simp
 
 lemma least_part_post_solution_inr_slot_locals_bot_eff:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g
   assumes least: "least_part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
   assumes edge_inr:
-    "\<And>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+    "\<And>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes enter_inr:
-    "\<And>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+    "\<And>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+    "\<And>cc dst ex \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes enter_static: "\<And>cl fs as. static_deps (etf_enter etf fs as cl)"
   assumes comb_static: "\<And>cc dst ex. static_deps (etf_combine etf dst cc ex)"
@@ -839,9 +859,9 @@ proof -
     fix g
     have "\<sigma> (Inr g) = strip_inr_globals gs \<sigma> (Inr g)"
       using \<sigma>_le_strip strip_le by (simp add: le_antisym le_funD)
-    also have "\<dots> = restrict_global_for gs (\<sigma> (Inr g))"
+    also have "\<dots> = map_lift (restrict_global_for gs) (\<sigma> (Inr g))"
       by (simp add: strip_inr_globals_Inr)
-    finally show "\<sigma> (Inr g) = restrict_global_for gs (\<sigma> (Inr g))" .
+    finally show "\<sigma> (Inr g) = map_lift (restrict_global_for gs) (\<sigma> (Inr g))" .
   qed
 qed
 

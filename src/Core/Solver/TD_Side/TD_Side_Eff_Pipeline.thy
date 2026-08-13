@@ -34,7 +34,7 @@ subsection \<open>Solver interface from the per-tree contract\<close>
 
 lemma td_cfg_side_solver_eff_gen:
   fixes g :: cfg
-    and etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+    and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and bot0 s0 :: "'a abs_state" and gseed :: 'g
   assumes edge_mono:
     "\<And>a u s1 s2. s1 \<le> s2 \<Longrightarrow>
@@ -94,9 +94,12 @@ where
      (\<forall>a u. static_deps (apply_etf etf a u)) \<and>
      (\<forall>cc ex dst. static_deps (etf_combine etf dst cc ex)) \<and>
      (\<forall>cl fs as. static_deps (etf_enter etf fs as cl)) \<and>
-     (\<forall>a u \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
-     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))) \<and>
-     (\<forall>cl fs as \<sigma>' g. local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g)))"
+     (\<forall>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))) \<and>
+     (\<forall>cc ex dst \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))) \<and>
+     (\<forall>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))) \<and>
+     (\<forall>a u \<sigma>'. reachability_coherent_tree (apply_etf etf a u) \<sigma>') \<and>
+     (\<forall>cc ex dst \<sigma>'. reachability_coherent_tree (etf_combine etf dst cc ex) \<sigma>') \<and>
+     (\<forall>cl fs as \<sigma>'. reachability_coherent_tree (etf_enter etf fs as cl) \<sigma>')"
 
 
 
@@ -124,12 +127,12 @@ lemma cone_compatible_etf_comb_static:
 
 lemma cone_compatible_etf_edge_inr:
   "cone_compatible_etf gs etf \<Longrightarrow>
-     local_bot_on_locals gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
+     local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_comb_inr:
   "cone_compatible_etf gs etf \<Longrightarrow>
-     local_bot_on_locals gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+     local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
   unfolding cone_compatible_etf_def by auto
 
 lemma cone_compatible_etf_enter_dep:
@@ -142,7 +145,19 @@ lemma cone_compatible_etf_enter_static:
 
 lemma cone_compatible_etf_enter_inr:
   "cone_compatible_etf gs etf \<Longrightarrow>
-     local_bot_on_locals gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+     local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_edge_coherent:
+  "cone_compatible_etf gs etf \<Longrightarrow> reachability_coherent_tree (apply_etf etf a u) \<sigma>'"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_comb_coherent:
+  "cone_compatible_etf gs etf \<Longrightarrow> reachability_coherent_tree (etf_combine etf dst cc ex) \<sigma>'"
+  unfolding cone_compatible_etf_def by auto
+
+lemma cone_compatible_etf_enter_coherent:
+  "cone_compatible_etf gs etf \<Longrightarrow> reachability_coherent_tree (etf_enter etf fs as cl) \<sigma>'"
   unfolding cone_compatible_etf_def by auto
 
 

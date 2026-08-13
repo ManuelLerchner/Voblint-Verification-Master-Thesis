@@ -114,6 +114,8 @@ text \<open>Thin composition, mirroring \<open>sign_check_report\<close>/\<open>
 definition parity_check_report ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "parity_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p) (parity_exec_prog_at gs mnm p) parity_classify_check"
+     classify_checks (prog_cfg mnm p)
+       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (parity_exec_prog_at gs mnm p v))
+       parity_classify_check"
 
 end

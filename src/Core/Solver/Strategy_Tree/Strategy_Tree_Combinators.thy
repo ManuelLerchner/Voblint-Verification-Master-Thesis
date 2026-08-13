@@ -1,5 +1,5 @@
 theory Strategy_Tree_Combinators
-  imports TD_Side_CFG
+  imports Strategy_Tree_Do
 begin
 
 section \<open>Reading and side-publishing combinators\<close>

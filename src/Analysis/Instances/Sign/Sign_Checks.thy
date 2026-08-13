@@ -119,7 +119,9 @@ text \<open>
 definition sign_check_report ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "sign_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p) (sign_exec_prog_at gs mnm p) sign_classify_check"
+     classify_checks (prog_cfg mnm p)
+       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog_at gs mnm p v))
+       sign_classify_check"
 
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 

@@ -64,7 +64,8 @@ text \<open>The computed Parity environment at an arbitrary node, not fixed to t
   exit: \<^const>\<open>parity_exec_prog_at\<close> queries the same solver result
   \<^const>\<open>parity_exec_prog\<close> reads only at the exit.\<close>
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
-  "parity_ex_env v = parity_exec_prog_at parity_ex_gs (STR ''main'') parity_ex_program v"
+  "parity_ex_env v = case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+     (parity_exec_prog_at parity_ex_gs (STR ''main'') parity_ex_program v)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 0\<close> (\<open>x := random()\<close>) reaches \<open>Statement 1\<close>
@@ -149,20 +150,25 @@ qed
 text \<open>Node-local collecting soundness at each check node, via
   \<open>parity_exec_prog_sound_collecting_at\<close> and the reachability facts above ---
   no store is forwarded to the exit.\<close>
+lemma gamma_state_case_lifted:
+  fixes x :: "'a::sound_domain abs_state lifted"
+  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
+  by (cases x) (simp_all add: gamma_state_bot)
+
 lemma parity_ex_node_sound_3:
   "parity_ex_reach (Statement 3) \<le> \<lbrakk>parity_ex_env (Statement 3)\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def
-  by (rule parity_exec_prog_sound_collecting_at[OF parity_ex_solver_terminates parity_ex_statement3_reaches_exit])
+  unfolding parity_ex_reach_def parity_ex_env_def gamma_state_case_lifted
+  by (rule parity_exec_prog_sound_collecting_at[OF refl parity_ex_solver_terminates parity_ex_statement3_reaches_exit])
 
 lemma parity_ex_node_sound_4:
   "parity_ex_reach (Statement 4) \<le> \<lbrakk>parity_ex_env (Statement 4)\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def
-  by (rule parity_exec_prog_sound_collecting_at[OF parity_ex_solver_terminates parity_ex_statement4_reaches_exit])
+  unfolding parity_ex_reach_def parity_ex_env_def gamma_state_case_lifted
+  by (rule parity_exec_prog_sound_collecting_at[OF refl parity_ex_solver_terminates parity_ex_statement4_reaches_exit])
 
 lemma parity_ex_node_sound_6:
   "parity_ex_reach (Statement 6) \<le> \<lbrakk>parity_ex_env (Statement 6)\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def
-  by (rule parity_exec_prog_sound_collecting_at[OF parity_ex_solver_terminates parity_ex_statement6_reaches_exit])
+  unfolding parity_ex_reach_def parity_ex_env_def gamma_state_case_lifted
+  by (rule parity_exec_prog_sound_collecting_at[OF refl parity_ex_solver_terminates parity_ex_statement6_reaches_exit])
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>PEven\<close>
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not

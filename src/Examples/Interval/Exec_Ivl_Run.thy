@@ -61,31 +61,35 @@ lemma loop_cfg_entry [simp]: "cfg_entry loop_cfg = FunctionEntry (STR ''main'')"
 lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
   by (simp add: loop_cfg_def cfg_exit_def)
 
-definition loop_ivl_eqs :: "(pp, unit, ivl resolved_st_q) eqsT" where
-  "loop_ivl_eqs = side_cfg_T_eff_st loop_cfg (ivl_etf_st_for loop_gs) bot cinit_ivl_st ()"
+definition loop_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
+  "loop_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars loop_prog)"
 
-definition loop_sig0 :: "pp + unit \<Rightarrow> ivl resolved_st_q" where
+definition loop_ivl_eqs :: "(pp, unit, ivl resolved_st_q lifted) eqsT" where
+  "loop_ivl_eqs = side_cfg_T_eff_st loop_cfg (ivl_etf_st_for loop_is_bot_pred loop_gs) bot cinit_ivl_st ()"
+
+definition loop_sig0 :: "pp + unit \<Rightarrow> ivl resolved_st_q lifted" where
   "loop_sig0 k =
-     (case k of Inl _ \<Rightarrow> bot | Inr () \<Rightarrow> restrict_global_resolved_q cinit_ivl_st)"
+     (case k of Inl _ \<Rightarrow> Bot | Inr () \<Rightarrow> Lifted (restrict_global_resolved_q cinit_ivl_st))"
 
-definition loop_kleene_step :: "(pp + unit \<Rightarrow> ivl resolved_st_q) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
+definition loop_kleene_step :: "(pp + unit \<Rightarrow> ivl resolved_st_q lifted) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
   "loop_kleene_step sig =
      (\<lambda>k. case k of
         Inl v \<Rightarrow> eq loop_ivl_eqs v sig
       | Inr () \<Rightarrow> sig (Inr ()))"
 
-fun loop_iter_sig :: "nat \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
+fun loop_iter_sig :: "nat \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted) \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
   "loop_iter_sig 0 sig = sig"
 | "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
 
-definition loop_ivl_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
+definition loop_ivl_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
   "loop_ivl_sol =
      ({FunctionEntry (STR ''main''), FunctionResult (STR ''main'')}
         \<union> Statement ` {0, 1, 2, 3},
       loop_iter_sig 100 loop_sig0)"
 
 definition loop_ivl_at :: "pp \<Rightarrow> ivl" where
-  "loop_ivl_at pp = lookup_resolved_st_q (snd loop_ivl_sol (Inl pp)) (location_of loop_gs (STR ''x''))"
+  "loop_ivl_at pp = case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x'')))
+     (snd loop_ivl_sol (Inl pp))"
 
 text \<open>Loop head (node 1): @{text "[0,20]"}.  Body entry (node 2): @{text "[0,19]"} from
   @{const EA_Assume} backward refinement on @{text "x < 20"}.\<close>
@@ -101,11 +105,12 @@ lemma loop_body_ivl:
   "loop_ivl_at (Statement 2) = Ivl (Fin 0) (Fin 19)"
   by eval
 
-definition loop_ivl_td_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q)" where
+definition loop_ivl_td_sol :: "pp set \<times> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
   "loop_ivl_td_sol = TD_side_warrowing_apinis_Interp_solve loop_ivl_eqs (cfg_exit loop_cfg)"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
-  "loop_ivl_td_at pp = lookup_resolved_st_q (snd loop_ivl_td_sol (Inl pp)) (location_of loop_gs (STR ''x''))"
+  "loop_ivl_td_at pp = case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x'')))
+     (snd loop_ivl_td_sol (Inl pp))"
 
 text \<open>Widening TD (Apinis warrowing): same intervals as bounded Kleene --- backward
   filters carry the precision; widening is solver infrastructure only on this program.\<close>
@@ -161,7 +166,8 @@ lemma analyse_interval_demo2_terminates:
   by (rule ivl_terminates_prog_via_solve_c) eval
 
 lemma analyse_interval_demo2_result:
-  "analyse_interval analyse_interval_demo2_prog (STR ''b'') = Ivl (Fin 4) (Fin 4)"
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (analyse_interval analyse_interval_demo2_prog) (STR ''b'')
+     = Ivl (Fin 4) (Fin 4)"
   unfolding analyse_interval_def analyse_interval_for_def ivl_exec_prog_def
     ivl_exec_prog_at_def prog_cfg_def
   by eval
@@ -174,9 +180,9 @@ text \<open>
 \<close>
 
 lemma analyse_interval_td_demo2_result:
-  "analyse_interval_td analyse_interval_demo2_prog (STR ''b'') = Ivl (Fin 4) (Fin 4)"
-  unfolding analyse_interval_td_def analyse_interval_td_for_def analyse_interval_td_at_def
-    analyse_interval_td_raw_def prog_cfg_def
+  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (analyse_interval_td analyse_interval_demo2_prog) (STR ''b'')
+     = Ivl (Fin 4) (Fin 4)"
+  unfolding analyse_interval_td_def analyse_interval_td_for_def prog_cfg_def
   by eval
 
 subsection \<open>Executable code generation\<close>

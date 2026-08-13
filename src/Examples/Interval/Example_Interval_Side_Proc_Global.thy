@@ -31,8 +31,8 @@ theorem proc_global_side_ivl_analysis:
     "side_cfg_solve_dom_eff gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) (ivl_etf gs) bot
        side_proc_global_ivl_s0 ()
        (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))"
-  shows "t \<in> \<lbrakk>side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (ivl_etf gs) bot side_proc_global_ivl_s0 ()
-         (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))\<rbrakk>"
+  shows "t \<in> gamma_state_lift (side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (ivl_etf gs) bot side_proc_global_ivl_s0 ()
+         (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
   by (rule side_ivl_analysis_sound[OF s_sound collect_exit side_solve_dom])
 
 end

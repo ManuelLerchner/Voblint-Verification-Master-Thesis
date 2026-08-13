@@ -58,6 +58,28 @@ fun apply_tf :: "'a domain_transfer
        (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign\<^sup># tf ret_var a \<sigma>)"
   | "apply_tf tf (EA_Check c)        \<sigma> = \<sigma>"
 
+text \<open>
+  Point-free counterparts of \<^const>\<open>apply_tf\<close>'s primitive equations. The defining
+  equations only rewrite once an abstract state is applied; call sites that carry
+  \<^const>\<open>apply_tf\<close> tf a as an unapplied function value need these instead to reach
+  the underlying domain_transfer field.
+\<close>
+lemma apply_tf_EA_Assign [simp]:
+  "apply_tf tf (EA_Assign x a) = assign\<^sup># tf x a"
+  by (simp add: fun_eq_iff)
+
+lemma apply_tf_EA_Random [simp]:
+  "apply_tf tf (EA_Random x) = tf_random tf x"
+  by (simp add: fun_eq_iff)
+
+lemma apply_tf_EA_Assume [simp]:
+  "apply_tf tf (EA_Assume b) = tf_assume tf b"
+  by (simp add: fun_eq_iff)
+
+lemma apply_tf_EA_AssumeNot [simp]:
+  "apply_tf tf (EA_AssumeNot b) = tf_assume_not tf b"
+  by (simp add: fun_eq_iff)
+
 text \<open>\<^const>\<open>EA_Ret\<close> reuses the ordinary transfer of the assignment it publishes: a void return
   is the \<^const>\<open>EA_Nop\<close> identity, a value return is the \<^const>\<open>EA_Assign\<close> to \<^const>\<open>ret_var\<close>.
   These point-free identities let effectful factories dispatch \<^const>\<open>EA_Ret\<close> through the
@@ -147,11 +169,22 @@ text \<open>
   Finiteness of the predecessor set follows from finite (intra g) and finite (calls g).
 \<close>
 
+text \<open>
+  Generic in the folded payload type -- \<open>'a abs_state\<close> is one instance, and
+  \<open>'a abs_state lifted\<close> (AD-52's role-aware reconstruction) another, since
+  \<^const>\<open>Finite_Set.fold\<close> and \<^const>\<open>Sup_fin\<close> never depend on the payload being a
+  function type. Same-role accumulation (folding several global-slot or several
+  local-alternative contributions together) always uses ordinary \<open>\<squnion>\<close> regardless
+  of payload; only cross-role reconstruction (a local input against the
+  accumulated global) needs the asymmetric \<^const>\<open>assemble_local_global\<close>, and
+  that never goes through this fold.
+\<close>
+
 definition abs_join_set ::
-    "('a abs_state => 'a abs_state => 'a abs_state)
-     => 'a abs_state
-     => 'a abs_state set
-     => 'a abs_state"
+    "('d => 'd => 'd)
+     => 'd
+     => 'd set
+     => 'd"
 where
   "abs_join_set join_abs bot_abs S = Finite_Set.fold join_abs bot_abs S"
 
@@ -743,14 +776,14 @@ lemma is_post_fixpointD [dest]:
 
 
 lemma sup_fold_ge_state:
-  assumes "finite (A :: 'a::bounded_semilattice_sup_bot abs_state set)"
+  assumes "finite (A :: 'd::bounded_semilattice_sup_bot set)"
     and "x \<in> A"
   shows "x \<le> Finite_Set.fold (\<squnion>) bot A"
   using assms
   by (metis Sup_fin.coboundedI Sup_fin.eq_fold finite_insert insertCI)
 
 lemma fold_bot_le_superset:
-  fixes X Y :: "'a::bounded_semilattice_sup_bot abs_state set"
+  fixes X Y :: "'d::bounded_semilattice_sup_bot set"
   assumes finY: "finite Y"
   assumes sub: "X \<subseteq> Y"
   shows "Finite_Set.fold (\<squnion>) bot X \<le> Finite_Set.fold (\<squnion>) bot Y"
@@ -758,7 +791,7 @@ lemma fold_bot_le_superset:
       fold_empty sub sup.absorb_iff2 sup.commute sup_bot_left)
 
 lemma abs_join_set_le_superset:
-  fixes X Y :: "'a::bounded_semilattice_sup_bot abs_state set"
+  fixes X Y :: "'d::bounded_semilattice_sup_bot set"
   assumes finY: "finite Y"
   assumes sub: "X \<subseteq> Y"
   shows "abs_join_set (\<squnion>) bot X \<le> abs_join_set (\<squnion>) bot Y"
@@ -766,7 +799,7 @@ lemma abs_join_set_le_superset:
   by (simp add: finY fold_bot_le_superset sub)
 
 lemma abs_join_set_le:
-  fixes X :: "'a::bounded_semilattice_sup_bot abs_state"
+  fixes X :: "'d::bounded_semilattice_sup_bot"
   assumes fin: "finite S" and le: "\<And>s. s \<in> S \<Longrightarrow> s \<le> X"
   shows "abs_join_set (\<squnion>) bot S \<le> X"
 proof -
@@ -919,7 +952,7 @@ text \<open>
 \<close>
 
 type_synonym ('g, 'd) edge_tf_tree =
-  "pp \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
+  "pp \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
 
 text \<open>
   A combine (procedure return) tree producer takes the caller program point and
@@ -928,7 +961,7 @@ text \<open>
   combined local result.  Unlike an edge, it has two local inputs.
 \<close>
 type_synonym ('g, 'd) combine_tf_tree =
-  "pp \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
+  "pp \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
 
 record ('g, 'd) effectful_domain_transfer =
   etf_nop        :: "('g, 'd) edge_tf_tree"
@@ -941,7 +974,7 @@ record ('g, 'd) effectful_domain_transfer =
 
 fun apply_etf ::
   "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
-   \<Rightarrow> (pp, 'g, 'd abs_state) strategy_tree"
+   \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
 where
   "apply_etf etf EA_Nop           u = etf_nop etf u"
 | "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
@@ -998,8 +1031,8 @@ text \<open>
 \<close>
 
 primrec all_sides ::
-  "(pp, 'g, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
+  "(pp, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
 where
   "all_sides (Answer d) \<sigma> = \<bottom>"
 | "all_sides (QueryL y f) \<sigma> = all_sides (f (\<sigma> (Inl y))) \<sigma>"
@@ -1007,13 +1040,13 @@ where
 | "all_sides (Side y d t) \<sigma> = d \<squnion> all_sides t \<sigma>"
 
 lemma all_sides_eq_sides_Inr_unit:
-  fixes t :: "(pp, unit, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  fixes t :: "(pp, unit, 'd::bounded_semilattice_sup_bot) strategy_tree"
   shows "all_sides t \<sigma> = sides_of_rhs t \<sigma> (Inr ())"
   by (induction t) (auto simp: Let_def sup_commute)
 
 definition etf_full ::
-  "(pp, 'g, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
+  "(pp, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
 where
   "etf_full t \<sigma> = traverse_rhs t \<sigma> \<squnion> all_sides t \<sigma>"
 
@@ -1026,10 +1059,16 @@ text \<open>
   of UNIV), so it is well defined in a non-complete bounded_semilattice_sup_bot.
   At 'g = unit it is the single pot sigma (Inr ()) (glob_env_unit), so it
   generalises the unit pipeline's read of the global unknown.
+
+  Generic in the folded payload (\<open>'d::bounded_semilattice_sup_bot\<close>): several
+  global-slot contributions are always same-role accumulation, joined with
+  ordinary \<open>\<squnion>\<close> whether the payload is a raw \<open>abs_state\<close> or an
+  \<open>abs_state lifted\<close> reconstruction (AD-52) -- \<open>Bot\<close> here means only "no
+  contribution published yet" and is \<open>\<squnion>\<close>'s identity, never a control-flow claim.
 \<close>
 
 definition glob_env ::
-  "(pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> 'a abs_state"
+  "(pp + 'g::finite \<Rightarrow> 'd::bounded_semilattice_sup_bot) \<Rightarrow> 'd"
 where
   "glob_env \<sigma> = abs_join_set (\<squnion>) \<bottom> ((\<lambda>g. \<sigma> (Inr g)) ` UNIV)"
 
@@ -1038,7 +1077,7 @@ lemma glob_env_upper: "\<sigma> (Inr g) \<le> glob_env \<sigma>"
   by (rule mem_image_le_fold[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2]) blast
 
 lemma glob_env_unit:
-  fixes \<sigma> :: "pp + unit \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  fixes \<sigma> :: "pp + unit \<Rightarrow> 'd::bounded_semilattice_sup_bot"
   shows "glob_env \<sigma> = \<sigma> (Inr ())"
 proof (rule order_antisym)
   show "glob_env \<sigma> \<le> \<sigma> (Inr ())"
@@ -1070,22 +1109,119 @@ lemma glob_env_mono_Inr:
 
 text \<open>
   Collecting soundness for local-only trees: @{const etf_full} carries locals;
-  globals are restored by joining @{const glob_env}.
+  globals are restored by combining in @{const glob_env}. Unlike @{const glob_env}
+  itself, this combination is cross-role (a local result against the accumulated
+  globals), so it is parametric in the combinator rather than hardwired to
+  \<open>\<squnion>\<close>: the raw \<open>abs_state\<close> pipeline instantiates it at ordinary \<open>\<squnion>\<close>
+  (\<open>etf_collecting_full\<close> below, unchanged), while the lifted
+  \<open>abs_state lifted\<close> pipeline instantiates it at
+  \<^const>\<open>assemble_local_global\<close> (\<open>etf_collecting_full_lift\<close>), so that a
+  \<open>Bot\<close> local result is never resurrected by a live \<open>glob_env\<close> contribution --
+  exactly the resurrection AD-52 identifies in the raw split representation.
 \<close>
+
+definition etf_collecting_full_with ::
+  "('d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd)
+   \<Rightarrow> (pp, 'g::finite, 'd) strategy_tree \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
+where
+  "etf_collecting_full_with assemble t \<sigma> = assemble (etf_full t \<sigma>) (glob_env \<sigma>)"
 
 definition etf_collecting_full ::
   "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
 where
-  "etf_collecting_full t \<sigma> = etf_full t \<sigma> \<squnion> glob_env \<sigma>"
+  "etf_collecting_full = etf_collecting_full_with (\<squnion>)"
+
+definition etf_collecting_full_lift ::
+  "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted"
+where
+  "etf_collecting_full_lift = etf_collecting_full_with assemble_local_global"
+
+lemma etf_full_le_etf_collecting_full_with:
+  fixes assemble :: "'d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd"
+  assumes "\<And>l g. l \<le> assemble l g"
+  shows "etf_full t \<sigma> \<le> etf_collecting_full_with assemble t \<sigma>"
+  unfolding etf_collecting_full_with_def using assms .
 
 lemma etf_full_le_etf_collecting_full:
   "etf_full t \<sigma> \<le> etf_collecting_full t \<sigma>"
-  unfolding etf_collecting_full_def by simp
+  unfolding etf_collecting_full_def
+  by (rule etf_full_le_etf_collecting_full_with) (rule sup_ge1)
+
+lemma etf_full_le_etf_collecting_full_lift:
+  fixes t :: "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree"
+  shows "etf_full t \<sigma> \<le> etf_collecting_full_lift t \<sigma>"
+  unfolding etf_collecting_full_lift_def
+  by (rule etf_full_le_etf_collecting_full_with) (rule assemble_local_global_ge_local)
 
 lemma in_gamma_etf_collecting_full:
   "s \<in> \<lbrakk>etf_full t \<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>etf_collecting_full t \<sigma>\<rbrakk>"
   using gamma_state_mono[OF etf_full_le_etf_collecting_full] by blast
+
+lemma in_gamma_etf_collecting_full_lift:
+  fixes t :: "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree"
+  shows "s \<in> gamma_state_lift (etf_full t \<sigma>) \<Longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift t \<sigma>)"
+  using gamma_lift_mono[OF gamma_state_mono etf_full_le_etf_collecting_full_lift] by fastforce
+
+text \<open>
+  A tree's own local Answer and its own Side contribution can, for an
+  arbitrary \<^typ>\<open>(pp, 'g, 'd) strategy_tree\<close>, disagree on reachability: a
+  \<open>bot\<close> local Answer says ``this edge is dead'', but nothing in the
+  strategy_tree type itself forces the Side write emitted by the same tree to
+  also be \<open>bot\<close>. \<open>reachability_coherent_tree\<close> names exactly the missing
+  constraint -- the two must agree -- so that \<^const>\<open>etf_full\<close>'s plain-sup
+  combination cannot resurrect a dead local Answer through a live Side value.
+  \<open>unit_edge_tree\<close>, \<open>local_edge_tree\<close>, and \<open>unit_combine_tree\<close> each discharge
+  it because both halves are computed from one witness-checked reconstruction.
+\<close>
+definition reachability_coherent_tree ::
+  "(pp, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> bool"
+where
+  "reachability_coherent_tree t \<sigma> \<longleftrightarrow> (traverse_rhs t \<sigma> = bot \<longrightarrow> all_sides t \<sigma> = bot)"
+
+text \<open>
+  The algebraic kernel every \<open>_combined_le_eff\<close>-style bound reduces to:
+  separate bounds on a tree's local Answer and its Side contribution recombine
+  through \<^const>\<open>assemble_local_global\<close> exactly when the tree is
+  reachability-coherent. Without coherence a \<open>bot\<close> local bound \<open>l\<close> forces
+  \<^term>\<open>traverse_rhs t \<sigma> = bot\<close> but not \<^term>\<open>all_sides t \<sigma> = bot\<close>, and
+  \<^term>\<open>assemble_local_global bot g = bot\<close> cannot dominate a live \<open>all_sides\<close>
+  contribution the way plain \<open>\<squnion>\<close> would -- exactly AD-52's resurrection, one
+  layer up.
+\<close>
+lemma etf_full_le_assemble_local_global:
+  fixes t :: "(pp, 'g, 'a::sound_domain abs_state lifted) strategy_tree"
+    and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state lifted"
+  assumes loc: "traverse_rhs t \<sigma> \<le> l"
+    and glob: "all_sides t \<sigma> \<le> g"
+    and coh: "reachability_coherent_tree t \<sigma>"
+  shows "etf_full t \<sigma> \<le> assemble_local_global l g"
+proof (cases "traverse_rhs t \<sigma>")
+  case Bot
+  then have "all_sides t \<sigma> = Bot"
+    using coh unfolding reachability_coherent_tree_def by simp
+  with Bot show ?thesis unfolding etf_full_def by simp
+next
+  case (Lifted la')
+  note tr_eq = this
+  then obtain la where l_eq: "l = Lifted la" and la': "la' \<le> la"
+    using loc by (cases l) auto
+  show ?thesis
+  proof (cases "all_sides t \<sigma>")
+    case Bot
+    have "Lifted la' \<le> Lifted la" using la' by simp
+    also have "\<dots> \<le> assemble_local_global (Lifted la) g" by simp
+    finally show ?thesis unfolding etf_full_def tr_eq Bot l_eq by simp
+  next
+    case (Lifted lg')
+    then obtain lg where g_eq: "g = Lifted lg" and lg': "lg' \<le> lg"
+      using glob by (cases g) auto
+    show ?thesis
+      unfolding etf_full_def tr_eq Lifted l_eq g_eq
+      using sup_mono[OF la' lg'] by simp
+  qed
+qed
 
 text \<open>
   Executable form: when the global-name type additionally enumerates (Enum),
@@ -1122,7 +1258,7 @@ text \<open>
 \<close>
 
 lemma all_sides_le_glob_env_sides:
-  fixes t :: "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
+  fixes t :: "(pp, 'g::finite, 'd::bounded_semilattice_sup_bot) strategy_tree"
   shows "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
 proof (induction t)
   case (Answer d) show ?case by (simp add: le_fun_def)
@@ -1216,11 +1352,17 @@ proof -
     unfolding etf_full_def by (rule sup_mono[OF loc g])
 qed
 
+text \<open>
+  Lifted: a \<open>Bot\<close> global slot trivially satisfies "carries bot in its local
+  components" (there is no reconstructed state to check), so only \<open>Lifted \<tau>\<close>
+  constrains \<open>\<tau>\<close> pointwise as before.
+\<close>
+
 definition inr_slot_locals_bot ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted) \<Rightarrow> bool"
 where
   "inr_slot_locals_bot gs \<sigma> =
-     (\<forall>g. \<forall>x. \<not> gs x \<longrightarrow> \<sigma> (Inr g) x = bot)"
+     (\<forall>g. \<forall>x. \<not> gs x \<longrightarrow> (case \<sigma> (Inr g) of Bot \<Rightarrow> True | Lifted \<tau> \<Rightarrow> \<tau> x = bot))"
 
 text \<open>
   Dual of @{const inr_slot_locals_bot}: every local program-point unknown carries
@@ -1231,10 +1373,10 @@ text \<open>
 \<close>
 
 definition inl_slot_globals_bot ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted) \<Rightarrow> bool"
 where
   "inl_slot_globals_bot gs \<sigma> =
-     (\<forall>v. \<forall>x. gs x \<longrightarrow> \<sigma> (Inl v) x = bot)"
+     (\<forall>v. \<forall>x. gs x \<longrightarrow> (case \<sigma> (Inl v) of Bot \<Rightarrow> True | Lifted \<tau> \<Rightarrow> \<tau> x = bot))"
 
 text \<open>
   The snapshot relaxation of @{const inl_slot_globals_bot}: a local unknown may
@@ -1246,48 +1388,61 @@ text \<open>
   globals.
 \<close>
 definition inl_glob_le_glob_env ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state) \<Rightarrow> bool"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted) \<Rightarrow> bool"
 where
   "inl_glob_le_glob_env gs \<sigma> =
-     (\<forall>v. \<forall>x. gs x \<longrightarrow> \<sigma> (Inl v) x \<le> glob_env \<sigma> x)"
+     (\<forall>v. \<forall>x. gs x \<longrightarrow> (case \<sigma> (Inl v) of Bot \<Rightarrow> True
+                        | Lifted \<tau> \<Rightarrow> \<tau> x \<le> (case glob_env \<sigma> of Bot \<Rightarrow> bot | Lifted g \<Rightarrow> g x)))"
 
 lemma inl_slot_globals_bot_le_glob_env:
   "inl_slot_globals_bot gs \<sigma> \<Longrightarrow> inl_glob_le_glob_env gs \<sigma>"
-  by (auto simp: inl_slot_globals_bot_def inl_glob_le_glob_env_def)
+  by (fastforce simp: inl_slot_globals_bot_def inl_glob_le_glob_env_def split: lifted.splits)
+
+text \<open>
+  \<open>inr_slot_locals_bot gs \<sigma> \<longrightarrow> (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. ...)\<close> used to state
+  the reconstructed edge input by ordinary \<open>\<squnion>\<close>. With the solver payload lifted
+  (AD-52), that reconstruction is cross-role -- a queried local unknown against
+  the accumulated global -- so it goes through \<^const>\<open>assemble_local_global\<close>
+  instead: a \<open>Bot\<close> local unknown must dominate a live global rather than being
+  resurrected by it. \<^const>\<open>gamma_state_lift\<close> then makes the \<open>Bot\<close> case discharge
+  itself, since \<open>gamma_state_lift Bot = {}\<close> makes the membership premise
+  vacuously false; no explicit \<open>Bot\<close>/\<open>Lifted\<close> case split is needed at any
+  assumption below.
+\<close>
 
 locale sound_effectful_transfer =
   fixes gs :: "vname => bool"
     and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
   assumes etf_sound_nop[intro]:
     "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-         s \<in> \<lbrakk>etf_collecting_full (etf_nop etf u) \<sigma>\<rbrakk>)"
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop etf u) \<sigma>))"
   assumes etf_sound_assign[intro]:
     "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
-         s(x := aval e s) \<in> \<lbrakk>etf_collecting_full (etf_assign etf x e u) \<sigma>\<rbrakk>)"
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+         s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift (etf_assign etf x e u) \<sigma>))"
   assumes etf_sound_random[intro]:
     "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<forall>v.
-         s(x := v) \<in> \<lbrakk>etf_collecting_full (etf_random etf x u) \<sigma>\<rbrakk>)"
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
+         s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_random etf x u) \<sigma>))"
   assumes etf_sound_assume[intro]:
     "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. bval b s
-       \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume etf b u) \<sigma>\<rbrakk>)"
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s
+       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume etf b u) \<sigma>))"
   assumes etf_sound_assume_not[intro]:
     "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. \<not> bval b s
-       \<longrightarrow> s \<in> \<lbrakk>etf_collecting_full (etf_assume_not etf b u) \<sigma>\<rbrakk>)"
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<not> bval b s
+       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume_not etf b u) \<sigma>))"
   assumes etf_sound_enter[intro]:
     "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>.
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-           \<in> \<lbrakk>etf_collecting_full (etf_enter etf xs es u) \<sigma>\<rbrakk>)"
+           \<in> gamma_state_lift (etf_collecting_full_lift (etf_enter etf xs es u) \<sigma>))"
   assumes etf_sound_combine[intro]:
     "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> \<lbrakk>\<sigma> (Inl cc) \<squnion> glob_env \<sigma>\<rbrakk>.
-       \<forall>t \<in> \<lbrakk>\<sigma> (Inl ex) \<squnion> glob_env \<sigma>\<rbrakk>.
-         combine_collect gs dst s t \<in> \<lbrakk>etf_full (etf_combine etf dst cc ex) \<sigma>\<rbrakk>)"
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
+       \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
+         combine_collect gs dst s t \<in> gamma_state_lift (etf_full (etf_combine etf dst cc ex) \<sigma>))"
 
 text \<open>
   The keyed generator filters call-enter edges out of the intra predecessor fold
@@ -1346,7 +1501,7 @@ locale sound_effectful_transfer_framed = sound_effectful_transfer +
     "\<forall>xs (es::aexp list) u \<sigma>.
        local_formals gs xs \<longrightarrow>
        inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_slot_globals_bot gs \<sigma> \<longrightarrow>
-       etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
+       etf_full (etf_enter etf xs es u) \<sigma> \<le> assemble_local_global (Lifted fresh_frame) (glob_env \<sigma>)"
 
 text \<open>
   The snapshot-compatible companion of @{locale sound_effectful_transfer_framed}:
@@ -1362,7 +1517,7 @@ locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
     "\<forall>xs (es::aexp list) u \<sigma>.
        local_formals gs xs \<longrightarrow>
        inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_glob_le_glob_env gs \<sigma> \<longrightarrow>
-       etf_full (etf_enter etf xs es u) \<sigma> \<le> fresh_frame \<squnion> glob_env \<sigma>"
+       etf_full (etf_enter etf xs es u) \<sigma> \<le> assemble_local_global (Lifted fresh_frame) (glob_env \<sigma>)"
 
 sublocale sound_effectful_transfer_framed_le \<subseteq> sound_effectful_transfer_framed gs etf fresh_frame
   by (simp add: sound_effectful_transfer_framed_def sound_effectful_transfer_axioms

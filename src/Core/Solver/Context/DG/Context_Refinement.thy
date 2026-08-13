@@ -1,5 +1,5 @@
 theory Context_Refinement
-  imports Constraint_System Strategy_Tree_Monad
+  imports Constraint_System Strategy_Tree_Combinators
 begin
 
 section \<open>Projected post-solutions\<close>
@@ -87,9 +87,10 @@ definition seed_rhs ::
   "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> ('x + 'g \<Rightarrow> 'd) \<Rightarrow> 'g list \<Rightarrow> 'x
    \<Rightarrow> ('x, 'g, 'd) eqsT"
 where
-  "seed_rhs T s gseeds x0 x =
-     seqcomp_tree (T x)
-       (\<lambda>d. seed_sides (if x = x0 then gseeds else []) s (Answer (d \<squnion> s (Inl x))))"
+  "seed_rhs T s gseeds x0 x = do {
+     d \<leftarrow> T x;
+     seed_sides (if x = x0 then gseeds else []) s (answer (d \<squnion> s (Inl x)))
+   }"
 
 text \<open>
   @{const seed_rhs} joins the seed's local value into every unknown's answer,

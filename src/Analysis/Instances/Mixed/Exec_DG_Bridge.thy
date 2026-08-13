@@ -139,14 +139,16 @@ definition placed_abs_dg_edge_tree ::
    pp => pp => (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
-      transfer read_node write_node =
-    QueryL read_node (\<lambda>local. QueryG () (\<lambda>side.
-      let result = transfer (locals local \<squnion> globs side)
-      in Side () (DG bot
-          (project_abs_on (owner_of write_node) source_global publish_side result))
-        (Answer (DG
-          (project_abs_on (owner_of write_node) source_global keep_local result)
-          bot))))"
+      transfer read_node write_node = do {
+     local \<leftarrow> read_local read_node;
+     side \<leftarrow> read_global ();
+     let result = transfer (locals local \<squnion> globs side);
+     depend_on () (DG bot
+         (project_abs_on (owner_of write_node) source_global publish_side result))
+       (answer (DG
+         (project_abs_on (owner_of write_node) source_global keep_local result)
+         bot))
+   }"
 
 lemma traverse_placed_abs_dg_edge_tree:
   "traverse_rhs
@@ -189,16 +191,18 @@ definition placed_abs_dg_combine_tree ::
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
-      combine destination caller callee write_node =
-    QueryL caller (\<lambda>caller_state. QueryL callee (\<lambda>callee_state.
-      QueryG () (\<lambda>side.
-        let result = combine destination (locals caller_state)
-          (locals callee_state) (globs side)
-        in Side () (DG bot
-            (project_abs_on (owner_of write_node) source_global publish_side result))
-          (Answer (DG
-            (project_abs_on (owner_of write_node) source_global keep_local result)
-            bot)))))"
+      combine destination caller callee write_node = do {
+     caller_state \<leftarrow> read_local caller;
+     callee_state \<leftarrow> read_local callee;
+     side \<leftarrow> read_global ();
+     let result = combine destination (locals caller_state)
+       (locals callee_state) (globs side);
+     depend_on () (DG bot
+         (project_abs_on (owner_of write_node) source_global publish_side result))
+       (answer (DG
+         (project_abs_on (owner_of write_node) source_global keep_local result)
+         bot))
+   }"
 
 lemma traverse_placed_abs_dg_combine_tree:
   "traverse_rhs
@@ -765,15 +769,17 @@ definition placed_dg_edge_tree_with ::
      strategy_tree"
 where
   "placed_dg_edge_tree_with proj owner_of locations_of keep_local publish_side
-      transfer read_node write_node =
-    QueryL read_node (\<lambda>local. QueryG () (\<lambda>side.
-      let result = transfer (locals local \<squnion> globs side)
-      in Side () (DG bot
-          (proj (owner_of write_node) (locations_of write_node)
-            publish_side result))
-        (Answer (DG
-          (proj (owner_of write_node) (locations_of write_node)
-            keep_local result) bot))))"
+      transfer read_node write_node = do {
+     local \<leftarrow> read_local read_node;
+     side \<leftarrow> read_global ();
+     let result = transfer (locals local \<squnion> globs side);
+     depend_on () (DG bot
+         (proj (owner_of write_node) (locations_of write_node)
+           publish_side result))
+       (answer (DG
+         (proj (owner_of write_node) (locations_of write_node)
+           keep_local result) bot))
+   }"
 
 text \<open>
   Dependency tracking is purely structural (\<open>dep_aux\<close>'s equations only look
@@ -1220,17 +1226,19 @@ definition placed_dg_combine_tree_with ::
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_combine_tree_with proj owner_of locations_of keep_local publish_side
-      combine destination caller callee write_node =
-    QueryL caller (\<lambda>caller_state. QueryL callee (\<lambda>callee_state.
-      QueryG () (\<lambda>side.
-        let result = combine destination (locals caller_state)
-          (locals callee_state) (globs side)
-        in Side () (DG bot
-            (proj (owner_of write_node)
-              (locations_of write_node) publish_side result))
-          (Answer (DG
-            (proj (owner_of write_node)
-              (locations_of write_node) keep_local result) bot)))))"
+      combine destination caller callee write_node = do {
+     caller_state \<leftarrow> read_local caller;
+     callee_state \<leftarrow> read_local callee;
+     side \<leftarrow> read_global ();
+     let result = combine destination (locals caller_state)
+       (locals callee_state) (globs side);
+     depend_on () (DG bot
+         (proj (owner_of write_node)
+           (locations_of write_node) publish_side result))
+       (answer (DG
+         (proj (owner_of write_node)
+           (locations_of write_node) keep_local result) bot))
+   }"
 
 lemma dep_aux_placed_dg_combine_tree_with:
   "dep_aux sigma (placed_dg_combine_tree_with proj owner_of locations_of keep_local

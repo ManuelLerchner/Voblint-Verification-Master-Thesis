@@ -302,7 +302,7 @@ subsection \<open>Backward IP reachability lands in the effectful solver's depen
 
 lemma cfg_reaches_imp_trans_dep_or_eq_side_eff:
   fixes g :: cfg and etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state" and gseed :: 'g and gs :: "vname => bool"
+    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state lifted" and gseed :: 'g and gs :: "vname => bool"
   assumes fin: "finite (intra g)"
   assumes finC: "finite (calls g)"
   assumes wf: "wf_cfg g"
@@ -373,7 +373,7 @@ qed
 
 lemma side_cone_in_vars_eff:
   fixes g :: cfg and etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state" and gseed :: 'g and gs :: "vname => bool"
+    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state lifted" and gseed :: 'g and gs :: "vname => bool"
   assumes pp: "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) v0 \<sigma> vars"
   assumes fin: "finite (intra g)"
   assumes finC: "finite (calls g)"
@@ -406,7 +406,7 @@ qed
 
 corollary side_cone_in_vars_eff_cone:
   fixes g :: cfg and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
-    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state" and gseed :: 'g and gs :: "vname => bool"
+    and bot0 s0 :: "'a abs_state" and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state lifted" and gseed :: 'g and gs :: "vname => bool"
   assumes pp:   "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) v0 \<sigma> vars"
   assumes fin:  "finite (intra g)"
   assumes finC: "finite (calls g)"
@@ -433,11 +433,11 @@ text \<open>
 \<close>
 
 lemma restrict_global_s0_le_global_eff:
-  fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g and gs :: "vname => bool"
   assumes pp: "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
       and entry_in: "cfg_entry g \<in> vars"
-  shows "restrict_global_for gs s0 \<le> \<sigma> (Inr gseed)"
+  shows "Lifted (restrict_global_for gs s0) \<le> \<sigma> (Inr gseed)"
 proof -
   from pp entry_in
   have "sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed (cfg_entry g)) \<sigma> \<le> \<sigma>" by auto
@@ -445,14 +445,14 @@ proof -
              \<le> \<sigma> (Inr gseed)"
     by (simp add: le_fun_def)
   have e: "sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)
-           = sides_of_rhs (side_rhs_fold_eff etf (bot0 \<squnion> restrict_local_for gs s0)
+           = sides_of_rhs (side_rhs_fold_eff etf (Lifted (bot0 \<squnion> restrict_local_for gs s0))
                 (intra_predecessor_list g (cfg_entry g))
                 (entry_seed_list g (cfg_entry g))
                 (return_call_list g (cfg_entry g))) \<sigma> (Inr gseed)
-             \<squnion> restrict_global_for gs s0"
+             \<squnion> Lifted (restrict_global_for gs s0)"
     unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
     by (simp add: Let_def)
-  have "restrict_global_for gs s0
+  have "Lifted (restrict_global_for gs s0)
         \<le> sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)"
     unfolding e by (rule sup_ge2)
   thus ?thesis using le by (rule order_trans)
@@ -464,35 +464,37 @@ text \<open>
   itself is below the combined env at the entry -- for an arbitrary initial state.
 \<close>
 lemma s0_le_side_env_entry_eff:
-  fixes etf :: "('g::finite, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
     and gseed :: 'g and gs :: "vname => bool"
   assumes pp: "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) v0 \<sigma> vars"
   assumes entry_in: "cfg_entry g \<in> vars"
-  shows "s0 \<le> side_env \<sigma> (cfg_entry g)"
+  shows "Lifted s0 \<le> side_env_lift \<sigma> (cfg_entry g)"
 proof -
-  have acc_le: "side_acc_eff etf (bot0 \<squnion> restrict_local_for gs s0) \<sigma>
+  have acc_le: "side_acc_eff etf (Lifted (bot0 \<squnion> restrict_local_for gs s0)) \<sigma>
                   (intra_predecessor_list g (cfg_entry g))
                   (entry_seed_list g (cfg_entry g))
                   (return_call_list g (cfg_entry g))
                 \<le> \<sigma> (Inl (cfg_entry g))"
     using side_post_solution_le_local_eff[OF pp entry_in] by simp
-  have "restrict_local_for gs s0 \<le> bot0 \<squnion> restrict_local_for gs s0" by simp
-  also have "... \<le> side_acc_eff etf (bot0 \<squnion> restrict_local_for gs s0) \<sigma>
+  have "Lifted (restrict_local_for gs s0) \<le> Lifted (bot0 \<squnion> restrict_local_for gs s0)"
+    by simp
+  also have "... \<le> side_acc_eff etf (Lifted (bot0 \<squnion> restrict_local_for gs s0)) \<sigma>
                      (intra_predecessor_list g (cfg_entry g))
                      (entry_seed_list g (cfg_entry g))
                      (return_call_list g (cfg_entry g))"
     by (rule acc_le_side_acc_eff)
   also have "... \<le> \<sigma> (Inl (cfg_entry g))" by (rule acc_le)
-  finally have rl: "restrict_local_for gs s0 \<le> \<sigma> (Inl (cfg_entry g))" .
-  have rg: "restrict_global_for gs s0 \<le> \<sigma> (Inr gseed)"
+  finally have rl: "Lifted (restrict_local_for gs s0) \<le> \<sigma> (Inl (cfg_entry g))" .
+  have rg: "Lifted (restrict_global_for gs s0) \<le> \<sigma> (Inr gseed)"
     by (rule restrict_global_s0_le_global_eff[OF pp entry_in])
-  have "s0 = restrict_local_for gs s0 \<squnion> restrict_global_for gs s0"
-    by (rule restrict_local_for_global_join[symmetric])
-  also have "... \<le> \<sigma> (Inl (cfg_entry g)) \<squnion> \<sigma> (Inr gseed)"
-    using rl rg by (rule sup_mono)
-  also have "... \<le> \<sigma> (Inl (cfg_entry g)) \<squnion> glob_env \<sigma>"
-    by (rule sup_mono[OF order_refl glob_env_upper])
-  finally show ?thesis unfolding side_env_def .
+  have rg': "Lifted (restrict_global_for gs s0) \<le> glob_env \<sigma>"
+    using rg glob_env_upper order_trans by blast
+  have "Lifted s0 = assemble_local_global (Lifted (restrict_local_for gs s0))
+                       (Lifted (restrict_global_for gs s0))"
+    by (simp add: assemble_local_global_Lifted restrict_local_for_global_join)
+  also have "... \<le> assemble_local_global (\<sigma> (Inl (cfg_entry g))) (glob_env \<sigma>)"
+    by (rule assemble_local_global_mono[OF rl rg'])
+  finally show ?thesis unfolding side_env_lift_def .
 qed
 
 subsection \<open>Unit-global effectful record contracts\<close>
@@ -519,7 +521,7 @@ proof -
 qed
 
 lemma threefold_mono_unit_transfer:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
@@ -560,7 +562,7 @@ proof -
 qed
 
 lemma threefold_mono_local_unit_transfer:
-  fixes etf :: "(unit, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
+  fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"

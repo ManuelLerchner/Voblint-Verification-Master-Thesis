@@ -200,32 +200,42 @@ subsection \<open>Executable effectful transfer record, generic in the classifie
 text \<open>Mirrors \<open>ivl_etf_st_for\<close> \<open>Voblint_Analysis.Ivl_Exec\<close>: the executable
   effectful transfer record consumed by \<open>side_cfg_T_eff_st\<close>, built once from
   \<open>parity_tf_st_for\<close>/\<open>parity_enter_st_for\<close> above through the generic
-  \<^theory>\<open>Voblint_Core.Exec_Bridge\<close> wrapper.\<close>
+  \<^theory>\<open>Voblint_Core.Exec_Bridge\<close> wrapper.
+
+  \<open>is_bot_pred\<close> is the executable witness-bottom check
+  \<^const>\<open>unit_edge_tree_st\<close>/\<^const>\<open>unit_combine_tree_st\<close> take -- see
+  @{theory Voblint_Core.Exec_Bridge}. Callers with a concrete program supply
+  \<^const>\<open>resolved_st_q_is_bot_for\<close> at that program's own declared-global list,
+  which is exact for @{const is_bot_state}
+  (@{thm resolved_st_q_is_bot_for_iff}); this layer stays generic in it so it
+  does not itself need to know that a program exists yet.\<close>
 
 definition parity_etf_st_for ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (unit, parity resolved_st_q) effectful_st_transfer" where
-  "parity_etf_st_for gs = unit_etf_st_of_transfer gs (parity_tf_st_for gs) (parity_enter_st_for gs)"
+  "(parity resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
+   \<Rightarrow> (unit, parity resolved_st_q lifted) effectful_st_transfer" where
+  "parity_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (parity_tf_st_for gs) (parity_enter_st_for gs)"
 
 lemma parity_etf_st_for_edge_tree:
-  "apply_etf_st (parity_etf_st_for gs) a u = unit_edge_tree_st (parity_tf_st_for gs a) u"
+  "apply_etf_st (parity_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred (parity_tf_st_for gs a) u"
   unfolding parity_etf_st_for_def
   by (rule apply_etf_st_unit_of_transfer[OF parity_tf_st_for_reduces])
 
 lemma parity_etf_st_for_combine_tree:
-  "etf_combine_st (parity_etf_st_for gs) dst cc ex = unit_combine_tree_st gs dst cc ex"
+  "etf_combine_st (parity_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
   unfolding parity_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
 
 lemma parity_etf_st_for_enter_tree:
-  "etf_st_enter (parity_etf_st_for gs) xs es u = unit_edge_tree_st (parity_enter_st_for gs xs es) u"
+  "etf_st_enter (parity_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (parity_enter_st_for gs xs es) u"
   unfolding parity_etf_st_for_def by (rule etf_st_enter_unit_of_transfer)
 
 lemma parity_etf_st_for_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter (parity_etf_st_for gs) xs es u = unit_edge_tree_st f u"
+  "\<And>u xs es. \<exists>f. etf_st_enter (parity_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred f u"
   using parity_etf_st_for_enter_tree by blast
 
 lemma parity_etf_st_for_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st (parity_etf_st_for gs) a u = unit_edge_tree_st f u"
+  "\<And>a u. \<exists>f. apply_etf_st (parity_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred f u"
   using parity_etf_st_for_edge_tree by blast
+
 
 end
 

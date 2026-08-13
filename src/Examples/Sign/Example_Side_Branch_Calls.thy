@@ -80,12 +80,22 @@ text \<open>
   the result is \<open>SNonNeg\<close> (\<open>\<ge> 0\<close>), not \<open>STop\<close>.
 \<close>
 
-value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''result_val'')"
-value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''out_val'')"
+text \<open>
+  \<open>sign_exec_prog\<close> now returns a reachability-lifted \<^typ>\<open>sign abs_state lifted\<close>
+  (\<open>#113\<close>): \<open>branch_prog_env\<close> unwraps it to the raw environment
+  \<^const>\<open>case_lifted\<close> reads off directly, since \<open>branch_prog\<close>'s exit is reachable
+  and this witness is only ever used as a function of a vname below.
+\<close>
+
+definition branch_prog_env :: "vname \<Rightarrow> sign" where
+  "branch_prog_env = case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
+
+value "branch_prog_env (STR ''result_val'')"
+value "branch_prog_env (STR ''out_val'')"
 
 lemma ec_result_nonnneg:
-  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''result_val'') = SNonNeg"
-  by eval
+  "branch_prog_env (STR ''result_val'') = SNonNeg"
+  by (simp add: branch_prog_env_def) eval
 
 text \<open>Termination is proved, not assumed: the executable side solver returns a
   result, so by @{thm sign_terminates_prog_via_solve_c} the program is in the
@@ -103,8 +113,8 @@ text \<open>
 
 corollary ec_certified_sound:
   "ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
-   \<le> \<lbrakk>sign_exec_prog branch_prog_gs (STR ''main'') branch_prog\<rbrakk>"
-  by (rule sign_exec_prog_sound_collecting[OF ec_terminates])
+   \<le> gamma_state_lift (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
+  by (rule sign_exec_prog_sound_collecting[OF refl ec_terminates])
 
 text \<open>
   The store-level reading: \<^emph>\<open>any\<close> store reaching the exit under the
@@ -114,7 +124,7 @@ text \<open>
 
 corollary ec_certified_sound_store:
   assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
-  shows "s \<in> \<lbrakk>sign_exec_prog branch_prog_gs (STR ''main'') branch_prog\<rbrakk>"
+  shows "s \<in> gamma_state_lift (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
   using assms ec_certified_sound by blast
 
 text \<open>
@@ -123,7 +133,7 @@ text \<open>
   C-faithful initialisation seed (\<open>SZero\<close> for globals).
 \<close>
 
-value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''input_val'')"
+value "branch_prog_env (STR ''input_val'')"
 
 text \<open>
   \<open>input_val\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
@@ -132,10 +142,10 @@ text \<open>
 \<close>
 
 lemma ec_ginput_top:
-  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''input_val'') = STop"
-  by eval
+  "branch_prog_env (STR ''input_val'') = STop"
+  by (simp add: branch_prog_env_def) eval
 
-value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''out_val'')"
+value "branch_prog_env (STR ''out_val'')"
 
 text \<open>
   \<open>out_val\<close> is computed as \<open>100 * result_val\<close>.  With \<open>result_val = SNonNeg\<close>
@@ -144,14 +154,14 @@ text \<open>
 \<close>
 
 lemma ec_gout_nonnneg:
-  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''out_val'') = SNonNeg"
-  by eval
+  "branch_prog_env (STR ''out_val'') = SNonNeg"
+  by (simp add: branch_prog_env_def) eval
 
-value "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''r'')"
+value "branch_prog_env (STR ''r'')"
 
 lemma ec_r_pos:
-  "sign_exec_prog branch_prog_gs (STR ''main'') branch_prog (STR ''r'') = SPos"
-  by eval
+  "branch_prog_env (STR ''r'') = SPos"
+  by (simp add: branch_prog_env_def) eval
 
 text \<open>
   Precision summary.

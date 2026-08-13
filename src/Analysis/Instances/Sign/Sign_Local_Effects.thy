@@ -86,47 +86,6 @@ proof (intro allI impI)
   qed
 qed
 
-lemma assign_sign_le_etf_collecting_full_local:
-  assumes gl: "\<not> gs x" and ng: "\<not> aexp_mentions_global gs e"
-    and inr: "\<And>g. local_bot_on_locals gs (\<sigma> (Inr g))"
-  shows "assign_sign x e (side_env \<sigma> u) \<le>
-         etf_collecting_full (local_edge_tree gs (assign_sign x e) u) \<sigma>"
-proof -
-  have gb: "local_bot_on_locals gs (glob_env \<sigma>)"
-    using inr by (rule glob_env_local_bot)
-  have eq: "assign_sign x e (side_env \<sigma> u) =
-      restrict_local_for gs (assign_sign x e (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion>
-      restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>"
-  proof (rule ext)
-    fix y
-    show "(assign_sign x e (side_env \<sigma> u)) y =
-          ((restrict_local_for gs (assign_sign x e (restrict_local_for gs (\<sigma> (Inl u)))) \<squnion>
-            restrict_global_for gs (\<sigma> (Inl u)) \<squnion> glob_env \<sigma>) y)"
-    proof (cases "y = x")
-      case True
-      have aval_eq: "aval_sign e (\<sigma> (Inl u) \<squnion> glob_env \<sigma>) =
-          aval_sign e (restrict_local_for gs (\<sigma> (Inl u)))"
-        using aval_sign_restrict_su[OF ng, of "\<sigma> (Inl u)" "glob_env \<sigma>"]
-          aval_sign_restrict_local_bot[OF ng gb, of "\<sigma> (Inl u)"]
-        by simp
-      then show ?thesis
-        using True gl gb
-        unfolding assign_sign_def side_env_def restrict_local_for_def restrict_global_for_def
-          local_bot_on_locals_def sup_fun_def
-        by simp
-    next
-      case False
-      then show ?thesis
-        using gb
-        unfolding assign_sign_def side_env_def restrict_local_for_def restrict_global_for_def
-          local_bot_on_locals_def sup_fun_def
-        by auto
-    qed
-  qed
-  show ?thesis
-    unfolding etf_collecting_full_local_edge_tree eq by simp
-qed
-
 lemma afilter_sign_local_edge_invariant:
   assumes ng: "\<not> aexp_mentions_global gs e"
   shows "local_edge_invariant gs (\<lambda>\<sigma>. afilter_sign e a \<sigma>)"
@@ -440,15 +399,6 @@ lemma sign_tf_local_edge_invariant:
              id_local_edge_invariant
       split: option.splits)
   apply (auto simp: local_edge_invariant_def)
-  apply (metis aexp_mentions_global_def
-      assign_sign_local_edge_invariant
-      local_edge_invariant_def)
-  apply (metis local_edge_invariantD
-      random_sign_local_edge_invariant)
-  apply (metis assume_sign_local_edge_invariant
-      bexp_mentions_global_def
-      local_edge_invariantD)
-  using local_edge_invariantD apply fastforce
   by (metis aexp_mentions_global_def
       assign_sign_local_edge_invariant
       local_edge_invariant_def)

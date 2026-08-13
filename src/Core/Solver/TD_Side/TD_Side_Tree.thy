@@ -38,7 +38,7 @@ definition side_contribution_trees ::
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
-   \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree list"
+   \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree list"
 where
   "side_contribution_trees etf es ens cs =
      map (\<lambda>(u, a). apply_etf etf a u) es @
@@ -47,11 +47,11 @@ where
 
 definition side_rhs_fold_eff ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state
+   \<Rightarrow> 'a abs_state lifted
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
-   \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree"
+   \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree"
 where
   "side_rhs_fold_eff etf acc es ens cs =
      fold_rhs_trees acc (side_contribution_trees etf es ens cs)"
@@ -88,22 +88,31 @@ definition entry_seed_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> v
   "entry_seed_list g v =
      map (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> (c, fs, as)) (entry_call_list g v)"
 
+text \<open>
+  The fold seed is the lifted bottom, not a lifted domain value: a program
+  point with no live predecessor contribution is unreachable, not reachable
+  at the domain's bottom -- \<^const>\<open>Bot\<close> is \<open>fold_rhs_trees\<close>' join identity, so
+  it never forces reachability the way embedding \<open>bot0\<close> (always instantiated
+  to literal \<open>bot\<close>, see \<open>Mixed_Flow_Sound.thy\<close>) as \<open>Lifted bot0\<close> would. Only
+  the entry point starts genuinely reachable, seeded at the initial store.
+\<close>
+
 definition make_side_rhs_tree_eff ::
   "(vname => bool) \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g \<Rightarrow> pp
-   \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree"
+   \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree"
 where
   "make_side_rhs_tree_eff gs g etf bot0 s0 gseed v =
-     (let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0);
+     (let acc0 = (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot);
           t    = side_rhs_fold_eff etf acc0
                    (intra_predecessor_list g v) (entry_seed_list g v)
                    (return_call_list g v)
-      in if v = cfg_entry g then Side gseed (restrict_global_for gs s0) t else t)"
+      in if v = cfg_entry g then depend_on gseed (Lifted (restrict_global_for gs s0)) t else t)"
 
 definition side_cfg_T_eff ::
   "(vname => bool) \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
-   \<Rightarrow> (pp, 'g, 'a abs_state) eqsT"
+   \<Rightarrow> (pp, 'g, 'a abs_state lifted) eqsT"
 where
   "side_cfg_T_eff gs g etf bot0 s0 gseed = make_side_rhs_tree_eff gs g etf bot0 s0 gseed"
 
@@ -121,11 +130,11 @@ where
 
 definition side_acc_eff ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> 'a abs_state
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state)
+   \<Rightarrow> 'a abs_state lifted
+   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state lifted)
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a abs_state"
+   \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a abs_state lifted"
 where
   "side_acc_eff etf acc \<sigma> es ens cs =
      fold_rhs_values acc \<sigma> (side_contribution_trees etf es ens cs)"
@@ -163,7 +172,7 @@ lemma traverse_side_rhs_fold_eff:
 lemma eq_side_cfg_T_eff:
   "eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma> =
      side_acc_eff etf
-       (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0)
+       (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot)
        \<sigma> (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)"
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
   by (simp add: traverse_side_rhs_fold_eff Let_def)
@@ -180,7 +189,7 @@ text \<open>
 
 definition edge_constraint_tree ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
-   \<Rightarrow> pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'a abs_state) strategy_tree"
+   \<Rightarrow> pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree"
 where
   "edge_constraint_tree etf u a v = apply_etf etf a u"
 
@@ -369,10 +378,12 @@ qed
 
 lemma entry_local_seed_le_eq:
   fixes g :: cfg
-  shows "restrict_local_for gs s0 \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) (cfg_entry g) \<sigma>"
+  shows "Lifted (restrict_local_for gs s0)
+           \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) (cfg_entry g) \<sigma>"
 proof -
-  have "restrict_local_for gs s0 \<le> bot0 \<squnion> restrict_local_for gs s0" by (rule sup_ge2)
-  also have "\<dots> \<le> side_acc_eff etf (bot0 \<squnion> restrict_local_for gs s0) \<sigma>
+  have "Lifted (restrict_local_for gs s0) \<le> Lifted (bot0 \<squnion> restrict_local_for gs s0)"
+    by (simp add: sup_ge2)
+  also have "\<dots> \<le> side_acc_eff etf (Lifted (bot0 \<squnion> restrict_local_for gs s0)) \<sigma>
                     (intra_predecessor_list g (cfg_entry g))
                     (entry_seed_list g (cfg_entry g))
                     (return_call_list g (cfg_entry g))"
@@ -381,7 +392,7 @@ proof -
 qed
 
 lemma entry_global_seed_le_sides:
-  "restrict_global_for gs s0
+  "Lifted (restrict_global_for gs s0)
    \<le> sides_of_rhs (side_cfg_T_eff gs g etf bot0 s0 gseed (cfg_entry g)) \<sigma> (Inr gseed)"
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
   by (simp add: Let_def)
@@ -427,21 +438,21 @@ text \<open>
 definition side_cfg_T_eff_ctx ::
   "(vname => bool)
    \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
-     \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) strategy_tree)
+     \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state lifted) strategy_tree)
    \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g
-   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state) eqsT"
+   \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state lifted) eqsT"
 where
   "side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed =
      (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0);
+        let acc0 = (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot);
             intra = map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, c)) (apply_etf etf a u))
                         (intra_predecessor_list g v);
             enter = map (\<lambda>(cl, fs, as). map_ltree (\<lambda>w. (w, c)) (etf_enter etf fs as cl))
                         (entry_seed_list g v);
             comb  = map (\<lambda>(cc, dst, ex). cmb c dst cc ex) (return_call_list g v);
             t = fold_rhs_trees acc0 (intra @ enter @ comb)
-        in if v = cfg_entry g then Side gseed (restrict_global_for gs s0) t else t)"
+        in if v = cfg_entry g then depend_on gseed (Lifted (restrict_global_for gs s0)) t else t)"
 
 
 text \<open>
@@ -454,7 +465,7 @@ text \<open>
 lemma eq_side_cfg_T_eff_ctx:
   "eq (side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> =
      fold_rhs_values
-       (if v = cfg_entry g then bot0 \<squnion> restrict_local_for gs s0 else bot0) \<sigma>
+       (if v = cfg_entry g then Lifted (bot0 \<squnion> restrict_local_for gs s0) else Bot) \<sigma>
        (map (\<lambda>(u, a). map_ltree (\<lambda>w. (w, ctx)) (apply_etf etf a u))
             (intra_predecessor_list g v)
         @ map (\<lambda>(cl, fs, as). map_ltree (\<lambda>w. (w, ctx)) (etf_enter etf fs as cl))
@@ -473,7 +484,7 @@ text \<open>
 \<close>
 
 lemma fold_rhs_values_mono_seed:
-  fixes acc1 acc2 :: "'a::bounded_semilattice_sup_bot abs_state"
+  fixes acc1 acc2 :: "'a::bounded_semilattice_sup_bot"
   shows "acc1 \<le> acc2 \<Longrightarrow> fold_rhs_values acc1 \<sigma> ts \<le> fold_rhs_values acc2 \<sigma> ts"
 proof (induction ts arbitrary: acc1 acc2)
   case Nil then show ?case by simp
@@ -484,7 +495,7 @@ next
 qed
 
 lemma fold_rhs_values_ge_acc:
-  fixes acc :: "'a::bounded_semilattice_sup_bot abs_state"
+  fixes acc :: "'a::bounded_semilattice_sup_bot"
   shows "acc \<le> fold_rhs_values acc \<sigma> ts"
 proof (induction ts arbitrary: acc)
   case Nil then show ?case by simp
@@ -496,7 +507,7 @@ next
 qed
 
 lemma traverse_le_fold_rhs_values:
-  fixes acc :: "'a::bounded_semilattice_sup_bot abs_state"
+  fixes acc :: "'a::bounded_semilattice_sup_bot"
   shows "t \<in> set ts \<Longrightarrow> traverse_rhs t \<sigma> \<le> fold_rhs_values acc \<sigma> ts"
 proof (induction ts arbitrary: acc)
   case Nil then show ?case by simp
@@ -519,7 +530,7 @@ next
 qed
 
 lemma fold_rhs_values_mono_sigma:
-  fixes acc :: "'a::bounded_semilattice_sup_bot abs_state"
+  fixes acc :: "'a::bounded_semilattice_sup_bot"
   assumes tree_mono:
     "\<And>t s1 s2. t \<in> set ts \<Longrightarrow> s1 \<le> s2 \<Longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
   assumes sig: "\<sigma>1 \<le> \<sigma>2"
@@ -549,7 +560,7 @@ text \<open>
 \<close>
 
 lemma post_sol_tree_le_ctx:
-  fixes \<sigma> :: "pp \<times> 'c + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state"
+  fixes \<sigma> :: "pp \<times> 'c + 'g \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state lifted"
   assumes post:
     "eq (side_cfg_T_eff_ctx gs cmb g etf bot0 s0 gseed) (v, ctx) \<sigma> \<le> \<sigma> (Inl (v, ctx))"
   assumes mem:

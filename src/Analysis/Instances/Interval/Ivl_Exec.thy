@@ -395,30 +395,42 @@ lemma ivl_enter_st_for_commute:
 
 subsection \<open>Executable effectful transfer record, generic in the classifier\<close>
 
+text \<open>
+  \<open>is_bot_pred\<close> is the executable witness-bottom check
+  \<^const>\<open>unit_edge_tree_st\<close>/\<^const>\<open>unit_combine_tree_st\<close> take -- see
+  @{theory Voblint_Core.Exec_Bridge}. Callers with a concrete program supply
+  \<^const>\<open>resolved_st_q_is_bot_for\<close> at that program's own declared-global list,
+  which is exact for @{const is_bot_state}
+  (@{thm resolved_st_q_is_bot_for_iff}); this layer stays generic in it so it
+  does not itself need to know that a program exists yet.
+\<close>
+
 definition ivl_etf_st_for ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (unit, ivl resolved_st_q) effectful_st_transfer" where
-  "ivl_etf_st_for gs = unit_etf_st_of_transfer gs (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
+  "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
+   \<Rightarrow> (unit, ivl resolved_st_q lifted) effectful_st_transfer" where
+  "ivl_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
 
 lemma ivl_etf_st_for_edge_tree:
-  "apply_etf_st (ivl_etf_st_for gs) a u = unit_edge_tree_st (ivl_tf_st_for gs a) u"
+  "apply_etf_st (ivl_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred (ivl_tf_st_for gs a) u"
   unfolding ivl_etf_st_for_def
   by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_for_reduces])
 
 lemma ivl_etf_st_for_combine_tree:
-  "etf_combine_st (ivl_etf_st_for gs) dst cc ex = unit_combine_tree_st gs dst cc ex"
+  "etf_combine_st (ivl_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
   unfolding ivl_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
 
 lemma ivl_etf_st_for_enter_tree:
-  "etf_st_enter (ivl_etf_st_for gs) xs es u = unit_edge_tree_st (ivl_enter_st_for gs xs es) u"
+  "etf_st_enter (ivl_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (ivl_enter_st_for gs xs es) u"
   unfolding ivl_etf_st_for_def by (rule etf_st_enter_unit_of_transfer)
 
 lemma ivl_etf_st_for_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter (ivl_etf_st_for gs) xs es u = unit_edge_tree_st f u"
+  "\<And>u xs es. \<exists>f. etf_st_enter (ivl_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred f u"
   using ivl_etf_st_for_enter_tree by blast
 
 lemma ivl_etf_st_for_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st (ivl_etf_st_for gs) a u = unit_edge_tree_st f u"
+  "\<And>a u. \<exists>f. apply_etf_st (ivl_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred f u"
   using ivl_etf_st_for_edge_tree by blast
+
 
 end
 
