@@ -51,4 +51,42 @@ proof (rule subsetI)
   then show "st \<in> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>" using sn st by simp
 qed
 
+text \<open>
+  Generic counterpart of \<open>activation_collect_sound\<close>, parametric in the concretization
+  reader \<open>gammaM\<close> rather than fixed to \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close> (issue #123):
+  see \<open>valid_ltr_ctx_sound_gen\<close>'s comment (\<open>Activation_Local_Sound.thy\<close>) for why this is a
+  genuine generalization, not a new proof.
+\<close>
+
+theorem activation_collect_sound_gen:
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
+    and gammaM :: "'M \<Rightarrow> store set"
+    and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c
+    and gs :: "vname \<Rightarrow> bool"
+  assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, startcontext)))"
+    and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
+        \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
+        \<Longrightarrow> s' \<in> gammaM (sg (Inl (v, c)))"
+    and ADMISS_TOTAL: "\<And>u c s. \<exists>c'. admiss u c s c'"
+    and CALL: "\<And>u dst pars args p cont c s c'.
+        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c)))
+        \<Longrightarrow> admiss u c (call_enter gs (CallEdge dst pars args) s) c'
+        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> gammaM (sg (Inl (FunctionEntry p, c')))"
+    and COMB: "\<And>cl dst pars args p cont c1 c2 s t es.
+        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> gammaM (sg (Inl (cl, c1))) \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> gammaM (sg (Inl (FunctionResult p, c2)))
+        \<Longrightarrow> call_enter_store gs g cl s es
+        \<Longrightarrow> combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
+  shows "activation_collect gs admiss startcontext g S v ctx \<subseteq> gammaM (sg (Inl (v, ctx)))"
+proof (rule subsetI)
+  fix st assume "st \<in> activation_collect gs admiss startcontext g S v ctx"
+  then obtain t where t: "t \<in> valid_ltr gs g S"
+    and sn: "sink_node t = v" and kc: "ctx_key admiss startcontext t ctx" and st: "sink_store t = st"
+    by (rule activation_collect_E)
+  have "sink_store t \<in> gammaM (sg (Inl (sink_node t, ctx)))"
+    using ENTRY_G EDGE ADMISS_TOTAL CALL COMB t kc by (rule valid_ltr_ctx_sound_gen)
+  then show "st \<in> gammaM (sg (Inl (v, ctx)))" using sn st by simp
+qed
+
 end

@@ -638,6 +638,12 @@ lemma map_lift_mono:
   shows "map_lift f x \<le> map_lift f y"
   using le by (cases x; cases y) (auto simp: f_mono)
 
+lemma map_lift_sup:
+  fixes x y :: "'a::semilattice_sup lifted"
+  assumes f_sup: "\<And>a b. f (a \<squnion> b) = (f a \<squnion> f b :: 'b::semilattice_sup)"
+  shows "map_lift f (x \<squnion> y) = map_lift f x \<squnion> map_lift f y"
+  by (cases x; cases y) (simp_all add: f_sup)
+
 text \<open>
   Generic monotonicity for the reachability dispatch, proved once here instead of at every
   instantiation (\<open>abs_state\<close>, \<open>resolved_st_q\<close>, ...): whenever the underlying transfer is

@@ -73,7 +73,9 @@ value "sides_of_rhs (apply_etf_st (ivl_etf_st_for guard_is_bot_pred guard_gs) (E
 
 text \<open>Same two edges under the never-Bot control, at the never-Bot solver's
   own stable sigma -- Statement 2's local slot there is an ordinary
-  \<^const>\<open>Lifted\<close> non-canonical-empty interval, not \<^const>\<open>Bot\<close>.\<close>
+  \<^const>\<open>Lifted\<close> non-canonical-empty interval,value "TD_side_warrowing_apinis_Interp_solve_c
+         (entry_state_eqs_prog fact_gs prog_main_name fact_prog)
+         (cfg_exit fact_cfg, []) \<noteq> None" not \<^const>\<open>Bot\<close>.\<close>
 
 definition guard_never_bot_always_join_sigma where
   "guard_never_bot_always_join_sigma =

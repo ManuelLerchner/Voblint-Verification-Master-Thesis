@@ -20,6 +20,14 @@ begin
 interpretation ivl_dg: sound_dg_spec "unit_dg_spec_for gs (ivl_tf_for gs)" "gamma_unit gs" gs
   by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for reserved])
 
+text \<open>Structural-reachability staging (issue #123): the lifted interpretation is a one-line
+  corollary of \<open>sound_dg_spec_unit_for_lifted\<close> -- reuses the existing
+  \<open>ivl_is_sound_transfer_for\<close>/\<open>reserved\<close> leaf facts unchanged, with \<^const>\<open>is_bot_state\<close>
+  itself as the exact bottom predicate (\<open>refl\<close>). No new DG architecture reasoning.\<close>
+interpretation ivl_dg_lifted: sound_dg_spec
+  "unit_dg_spec_for_lifted gs is_bot_state (ivl_tf_for gs)" "gamma_unit_lifted gs" gs
+  by (rule sound_dg_spec_unit_for_lifted[OF ivl_is_sound_transfer_for reserved refl])
+
 end
 
 subsection \<open>Native endpoint\<close>

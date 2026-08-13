@@ -38,6 +38,11 @@ lemma dep_aux_map_ltree:
    = map_sum h id ` dep_aux (\<lambda>z. \<sigma> (map_sum h id z)) t"
   by (induction t arbitrary: \<sigma>) auto
 
+lemma dep_aux_map_gtree:
+  "dep_aux \<sigma> (map_gtree r t)
+   = map_sum id r ` dep_aux (\<lambda>z. \<sigma> (map_sum id r z)) t"
+  by (induction t arbitrary: \<sigma>) auto
+
 subsection \<open>Routing: the keyed intra tree reads the context / keyed-slot pullback\<close>
 
 text \<open>
