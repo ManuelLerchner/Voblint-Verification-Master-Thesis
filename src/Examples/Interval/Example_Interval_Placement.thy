@@ -200,12 +200,12 @@ lemma placement_factory_enter:
   by (rule etf_st_enter_unit_of_transfer_placed)
 
 lemma placement_factory_combine:
-  "etf_combine_st placement_ivl_etf_st dst caller callee =
+  "etf_combine_collect_st placement_ivl_etf_st dst caller callee =
     unit_combine_tree_st_placed (declared_global placement_prog)
       placement_node_owner placement_locations_of
       placement_keep_local placement_publish_side dst caller callee"
   unfolding placement_ivl_etf_st_def
-  by (rule etf_combine_st_unit_of_transfer_placed)
+  by (rule etf_combine_collect_st_unit_of_transfer_placed)
 
 lemma placement_factory_edge_recombine_lookup:
   fixes sigma :: "pp + unit => ivl resolved_st_q lifted"
@@ -241,9 +241,9 @@ lemma placement_factory_combine_recombine_lookup:
   shows
     "case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
       (traverse_rhs
-        (etf_combine_st placement_ivl_etf_st destination caller callee) sigma \<squnion>
+        (etf_combine_collect_st placement_ivl_etf_st destination caller callee) sigma \<squnion>
        sides_of_rhs
-        (etf_combine_st placement_ivl_etf_st destination caller callee) sigma
+        (etf_combine_collect_st placement_ivl_etf_st destination caller callee) sigma
           (Inr ())) =
      case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
        (Lifted (combine_collect_resolved_for_q (declared_global placement_prog) destination
@@ -1933,7 +1933,7 @@ text \<open>The combine node's raw agreement, in the same \<open>cases location\
   the enter node: a global location is imported unchanged from the callee
   exit; a non-\<open>answer\<close> local is carried over unchanged from the caller; the
   \<open>answer\<close> local is overwritten by the callee's \<open>ret_var\<close> value.  Both
-  \<open>combine_resolved_st_q\<close> and \<open>combine_env\<^sup>#\<close> already split local/global the
+  \<open>combine_resolved_st_q\<close> and \<open>combine_env_abs\<close> already split local/global the
   same way, so only the two value-agreement facts (callee's \<open>ret_var\<close>,
   caller's own locations) are new content.\<close>
 

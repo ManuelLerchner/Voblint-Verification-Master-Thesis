@@ -76,7 +76,7 @@ theorem ivl_dg_post_solution_collect_sound:
     and cover: "vars_cover g vars"
     and finI: "finite (intra g)"
     and finC: "finite (calls g)"
-    and sound0: "S0 \<subseteq> \<lbrakk>combine_env\<^sup># gs s0d s0g\<rbrakk>"
+    and sound0: "S0 \<subseteq> \<lbrakk>combine_env_abs gs s0d s0g\<rbrakk>"
   shows "ltr_collect gs g S0 v \<subseteq> ivl_dg_gamma gs sigma v"
   by (rule dg_post_solution_collect_sound_ltr_for
         [OF pp cover finI finC sound0[folded gamma_unit_def]])

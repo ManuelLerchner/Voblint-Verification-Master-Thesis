@@ -27,8 +27,8 @@ lemma parity_tf_for_enter_mono:
   by (simp add: parity_tf_for_def enter_parity_for_mono)
 
 lemma parity_etf_combine_tree:
-  "etf_combine (parity_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding parity_etf_def etf_combine_unit_of_transfer by simp
+  "etf_combine_collect (parity_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
+  unfolding parity_etf_def etf_combine_collect_unit_of_transfer by simp
 
 lemma parity_sound_etf:
   "sound_effectful_transfer gs (parity_etf gs)"

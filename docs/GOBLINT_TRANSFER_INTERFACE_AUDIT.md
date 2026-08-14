@@ -1,14 +1,15 @@
 # Goblint transfer-interface audit (issue #116/#117 follow-up)
 
-Status: **audit snapshot, most recommendations since applied.** This pass
+Status: **audit snapshot, all recommendations since applied.** This pass
 originally inspected the upstream `Analyses.Spec` interface docs-only, before
 the `tf_branch` unification, the `skip#`/`body#`/`return#` lifecycle-hook
-migration, and the `event#` migration landed. Those three migrations are now
-committed; the mapping table and deep-dive sections below have been updated
-in place to describe the current (post-migration) state rather than the
-snapshot this pass originally found. Findings unrelated to those three
-migrations (source-language and scope boundaries: `vdecl`, `asm`, `special`,
-`threadenter`, `threadspawn`) are unchanged from the original pass.
+migration, the `event#` migration, and the `combine_env`/`combine_assign`
+split landed. Those four migrations are now committed; the mapping table and
+deep-dive sections below have been updated in place to describe the current
+(post-migration) state rather than the snapshot this pass originally found.
+Findings unrelated to those four migrations (source-language and scope
+boundaries: `vdecl`, `asm`, `special`, `threadenter`, `threadspawn`) are
+unchanged from the original pass.
 
 **Upstream baseline.** `goblint/analyzer` `master` at `3062271a29bc1f2476d5993af7719d29991cdf16`
 (checked 2026-08-14), `src/framework/analyses.ml`, module type `Spec`. This is
@@ -65,8 +66,8 @@ audit's scope -- `context`/`startcontext` are already covered by
 | `skip` | `man -> D.t` (default: identity; a genuine, analysis-overridable hook -- some Goblint analyses use it for e.g. widening-point bookkeeping on empty loop bodies) | `tf_skip` / notation `skip#` (`domain_transfer`, **done**); `dgs_skip` (`dg_spec`, **done**); `etf_skip` (`effectful_domain_transfer`, **done**) | **Exact** | `EA_Nop` now dispatches through a genuine, overridable `skip#` field at every layer -- the divergence this audit originally flagged (Goblint's `skip` is overridable, Voblint's hardcoded identity was not) is closed. `EA_Check` no longer routes through `skip#` at all (see the `event` row below): the two only coincide today because every current domain happens to implement both as the identity, not because the interface conflates them. |
 | `special` | `man -> lval option -> varinfo -> exp list -> D.t` (library/builtin call dispatch: `malloc`, `pthread_create`, `rand`, `assert`, ... -- classified by `libraryFunctions.ml`) | None as a general mechanism | **Not applicable** | Voblint has no CIL-style special-function classification or library-function table. The one built-in nondeterminism source VIMP does have, `random()`, is not routed through anything resembling `special`; it is its own first-class `EA_Random` edge action with its own `tf_random` field. This is the structural reason `tf_random`'s name is ambiguous against Goblint (see the `tf_random`/`tf_nondet` section below): Goblint would reach unconstrained nondeterminism through `special`'s `Unknown`/`__VERIFIER_nondet_int` path, a dispatch mechanism Voblint has no analogue of at all, not just an unnamed one. |
 | `enter` | `man -> lval option -> fundec -> exp list -> (D.t * D.t) list` | `tf_enter` / notation `enter#` (`domain_transfer`); `call_enter` (concrete ground truth, `CFG_Def.thy`); `etf_enter`; `etf_st_enter`; `dgs_enter` (D/G layer -- does **not** universally reduce to `tf_enter`; `dgs_enter_rel` for relational domains is a real, intentional counterexample) | **Analogous** | Structural match on the "bind actuals to formals, produce callee entry state" content. Known, already-documented simplification: Goblint's `enter` returns a *list* of `(caller-continuation, callee-entry)` pairs (an analysis can split into several paths); Voblint's `tf_enter` is a single deterministic transfer with no path-splitting. This is `GOBLINT_ALIGNMENT_REGISTER.md`'s "Known simplifications" list, not new. Already notated and migrated (`TERMINOLOGY_AUDIT.md`, "Callee entry" row) -- no action needed here beyond what's already tracked. |
-| `combine_env` | `man -> lval option -> exp -> fundec -> exp list -> C.t option -> D.t -> Queries.ask -> D.t` (globals/mutexes/effects merge; must not assign the lval) | `dgs_combine_env` (`dg_spec`, **exact, done**); flat layer's `tf_combine :: 'a abs_state => 'a abs_state => 'a abs_state` plays the identical conceptual role per `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 3's own text, but is **not named to say so** | **Exact at the D/G layer; misleadingly named at the flat layer** | See "combine_env / combine_assign" section below -- this is the one concrete rename this audit recommends. |
-| `combine_assign` | same argument shape as `combine_env`, but must only assign the lval | `dgs_combine_assign` (`dg_spec`, **exact, done**); flat layer's `combine_assign_abs` is a **fixed, non-`domain_transfer`-parametrized** definition, proven domain-agnostic (a plain `dst := v` write) | **Exact at the D/G layer; deliberately not a hook at the flat layer** | See below. `etf_combine`/`etf_combine_st` (the two effectful/tree layers) still bundle env-merge and destination-write into one call each (`etf_combine :: vname option => ... => combine_tf_tree`, taking `dst` directly) -- the same architectural gap the D/G layer just closed, not yet propagated to either effectful layer. |
+| `combine_env` | `man -> lval option -> exp -> fundec -> exp list -> C.t option -> D.t -> Queries.ask -> D.t` (globals/mutexes/effects merge; must not assign the lval) | `dgs_combine_env` (`dg_spec`, **exact, done**); `tf_combine_env :: 'a abs_state => 'a abs_state => 'a abs_state` / notation `combine_env#` (`domain_transfer`, **done**); `etf_combine_env` (`effectful_domain_transfer`, **done**); `etf_st_combine_env` (`effectful_st_transfer`, **done**) | **Exact at every layer** | See "combine_env / combine_assign" section below for the split's shape at each layer -- the flat-layer rename and the effectful-layer field additions are both applied. |
+| `combine_assign` | same argument shape as `combine_env`, but must only assign the lval | `dgs_combine_assign` (`dg_spec`, **exact, done**); flat layer's `combine_assign_abs` / notation `combine_assign#` is a **fixed, non-`domain_transfer`-parametrized** definition, proven domain-agnostic (a plain `dst := v` write) | **Exact at the D/G layer; deliberately not a hook at the flat layer; not a separate field at either effectful layer** | See below. The two effectful/tree layers (`effectful_domain_transfer`, `effectful_st_transfer`) do **not** carry a standalone `combine_assign`-shaped field: `etf_combine_collect`/`etf_st_combine_collect` (renamed from `etf_combine`/`etf_st_combine`) keep the destination-aware whole operation as an independent primitive alongside the new `etf_combine_env`/`etf_st_combine_env`, rather than decomposing it into `combine_env` + `combine_assign` phases the way `dg_spec` does. Reason: composing two independently-queried `strategy_tree` phases at these layers is a **join** (`sides_of_rhs_seqcomp`), not an overwrite, so re-deriving the whole from an env phase and a generic assign phase would either duplicate collecting/global/side queries or lose precision, unlike the D/G layer's and the flat layer's plain function composition. |
 | `threadenter` | `man -> multiple:bool -> lval option -> varinfo -> exp list -> D.t list` | None | **Not applicable** | No concurrency model. Single-threaded VIMP, no thread-spawn construct. Explicitly out of scope: `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 7a, `GOBLINT_ALIGNMENT_REGISTER.md`'s "Multi-analysis manager" row. |
 | `threadspawn` | `man -> multiple:bool -> lval option -> varinfo -> exp list -> (D.t,G.t,C.t,V.t) man -> D.t` | None | **Not applicable** | Same reason as `threadenter`. |
 | `event` | `man -> Events.t -> man -> D.t` (inter-analysis event bus: lock/unlock, thread create/join, ...; default identity) | `tf_event` / notation `event#` (`domain_transfer`, **done**); `dgs_event` (`dg_spec`, **done**); `etf_event` (`effectful_domain_transfer`, **done**); `analysis_event = Check_Event bexp` | **Analogous** | Voblint now has a genuine event mechanism, deliberately smaller than Goblint's: no manager, no `Events.t` bus, no product-of-analyses composition -- a single closed datatype `analysis_event` with one constructor, `Check_Event bexp`. `EA_Check c` dispatches to `event# tf (Check_Event c)`, matching Goblint's own separation of ordinary `Spec` transfer methods from `Spec.event` (which is how Goblint's base analysis handles `Events.Assert`): a check is an analyzer-visible occurrence, not an ordinary state transfer, and must not by itself refine execution. Every current domain implements `event#` as the identity; `abstract_check_domain` does the actual proving/refuting/reporting, over the unmodified environment at the check's own node. The vocabulary is deliberately left at one constructor rather than pre-populated with Goblint's lock/unlock/thread-create shapes, since those are still `threadenter`/`threadspawn`-scoped concurrency concepts VIMP has no source construct for; adding another `analysis_event` constructor later extends the event handler, not the transfer record shape. |
@@ -93,52 +94,92 @@ project's `*_sound_<op>_for` convention uniformly across `assign`/`random`/
 `branch`/`enter`/`combine` -- no further renaming needed there once the
 record migration itself finishes.
 
-### 2. `combine_env` / `combine_assign`
+### 2. `combine_env` / `combine_assign` (done)
 
-The D/G layer (`dg_spec`) already has the exact Goblint-shaped split:
+Goblint's `Spec.combine` is explicitly two methods, not one: `combine_env`
+merges caller/callee environment effects and must not assign the destination
+lvalue; `combine_assign` then performs only the return-value assignment.
+There is no primitive `Spec.combine` upstream -- callers that want the whole
+operation compose the two themselves. Voblint now mirrors this at every
+layer, though the *shape* of the split differs by layer depending on whether
+composing the two halves back together is a cheap, precision-preserving
+operation there.
+
+**D/G layer (`dg_spec`, reference model, already aligned before this pass).**
 `dgs_combine_env :: 'dl => 'dl => 'dg => 'dg * 'dl` and
-`dgs_combine_assign :: vname option => 'dl => 'dg => 'dg * 'dl => 'dg * 'dl`,
-composed by a derived (non-field) `dgs_combine` definition
-(`DG_Framework.thy:501-504`) kept explicitly as "not a record field, so the
-split above is the single source of truth." This closes the gap
-`GOBLINT_ALIGNMENT_REGISTER.md`'s "Deferred" note (dated 2026-07-28, in
-`GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 3) said was still open at the DG
-layer -- that note is now stale relative to the code and should be updated
-by whoever next touches that document.
+`dgs_combine_assign :: vname option => 'dl => 'dg => 'dg * 'dl => 'dg * 'dl`
+are independent fields; `dgs_combine` (`DG_Framework.thy`) is a derived
+(non-field) definition composing them, kept explicitly as "not a record
+field, so the split above is the single source of truth." Unchanged by this
+migration -- it was the model the other layers were brought in line with.
 
-The flat layer's `tf_combine :: 'a abs_state => 'a abs_state => 'a abs_state`
-is a single record field, but `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md`'s own
-Gap 3 text already establishes *why* that's not "hiding two Goblint
-operations": `combine_assign_abs` (the destination write) is proven
-domain-agnostic -- a plain `dst := v` update under this project's
-function-based `abs_state`, with "no case where a domain needs to see
-anything but the value being written." Only the environment-merge half is
-genuinely analysis-specific, and `tf_combine` *is* that half. So the
-one-field interface is not a misleading compression of two Goblint
-operations into one; it is a correct recognition that only one of the two
-varies per domain at this layer.
+**Flat layer (`domain_transfer`, `Constraint_System.thy`).** The former
+`tf_combine :: 'a abs_state => 'a abs_state => 'a abs_state` field is renamed
+`tf_combine_env`, with notation `combine_env#`. `combine_assign_abs` (the
+destination write) is unchanged: it stays a fixed,
+non-`domain_transfer`-parametrized definition with notation `combine_assign#`
+-- proven domain-agnostic (a plain `dst := v` update), so it correctly has no
+per-domain hook. `tf_combine_collect_abs` (the whole operation) is a plain
+function composition of the two and is proved equal to specializing
+`combine_env_abs` (`tf_combine_collect_abs_combine_env_abs`) when a domain's
+`tf_combine_env` happens to coincide with the fixed structural default. The
+soundness assumption is renamed `tf_sound_combine_for` ->
+`tf_sound_combine_env_for` (`Constraint_System.thy`, `sound_transfer_for`
+locale), matching the `*_sound_<op>_for` family, and every derived lemma
+family (`tf_combine_env_mono`, `tf_combine_env_le_rhs`, `combine_of_bound`,
+...) follows the same rename. Consumers: `Sign_Transfer.thy`,
+`Interval_Transfer.thy`, `Parity_Transfer.thy`, `Constraint_System_Sound.thy`,
+and the `LTR_Analysis_Sound.thy`/example soundness interpretations that cite
+`tf_sound_combine_env_for` at their `unfold_locales` sites.
 
-What *is* misleading is the name: `tf_combine` reads as "the whole combine,"
-when it is specifically the `combine_env` half -- the D/G layer's sibling
-field is called `dgs_combine_env`, not `dgs_combine`. **Recommendation:**
-rename the flat-layer field `tf_combine` -> `tf_combine_env` (and its
-soundness assumption `tf_sound_combine_for` -> `tf_sound_combine_env_for`,
-matching the `*_sound_<op>_for` family), with no behavioral change and no new
-field for `combine_assign` at this layer (it stays fixed/non-parametrized,
-correctly). This is a naming-only fix, scoped to `Constraint_System.thy` and
-its ~5 direct consumers (`Sign_Transfer.thy`, `Interval_Transfer.thy`, the
-`tf_combine_le_rhs`/`combine_of_bound` lemma family, `LTR_Analysis_Sound.thy`).
-Not applied by this pass (docs-only); flagging as the one concrete, low-risk
-action item this audit found under item 2.
+**Effectful layers (`effectful_domain_transfer`, `effectful_st_transfer`).**
+Both `etf_combine` (`Constraint_System.thy`) and `etf_st_combine`
+(`Exec_Bridge.thy`) previously bundled env-merge and destination-write into
+one call each (`vname option => ... => combine_tf_tree`, taking `dst`
+directly) -- the single-phase shape the D/G layer's split had already moved
+past. Each record now carries a new, destination-free `etf_combine_env`/
+`etf_st_combine_env` field alongside the old field, renamed
+`etf_combine_collect`/`etf_st_combine_collect` rather than decomposed into
+`combine_assign`-shaped siblings. This is a deliberate deviation from the
+flat layer's fully-decomposed shape, not an oversight: at these two layers,
+a call site is a `strategy_tree`/`Side`-effecting query, and composing two
+independently-queried tree phases via `seqcomp_tree` is a **join**
+(`sides_of_rhs_seqcomp`), not an overwrite. Re-deriving the whole combine
+from an env phase plus a generic assign phase built the same way `tf_enter`
+etc. are would either duplicate the collecting/global/side queries the two
+phases share or lose precision relative to the original single-call
+`etf_combine`/`etf_st_combine`. Keeping the destination-aware whole as its
+own primitive, alongside the new destination-free `combine_env`, preserves
+exact behavior while still exposing the Goblint-shaped env-only phase for
+callers (context derivation, D/G bridging) that only need it. `combine_env`
+is genuinely primitive at these layers too -- callers needing only the
+environment-merge half use `etf_combine_env`/`etf_st_combine_env` directly,
+never routing through the whole `etf_combine_collect`/`etf_st_combine_collect`
+to get there.
 
-The two effectful/tree layers (`etf_combine`, `etf_combine_st`) are a
-separate, larger gap: both still take `dst` directly into one call that does
-env-merge and destination-write together, exactly the single-phase shape the
-D/G layer's `dgs_combine_env`/`dgs_combine_assign` split just moved past.
-Splitting these is a real migration (new fields, new soundness obligations,
-consumer updates across `Exec_Bridge.thy` and every named-global/executable
-instance), not a rename -- out of scope for a docs-only pass, recorded here
-so it isn't lost.
+Soundness-locale fallout: `sound_effectful_transfer`'s `etf_sound_combine`
+assumption is renamed `etf_sound_combine_collect`, with a new
+`etf_sound_combine_env` assumption added alongside it (both proved at every
+concrete instantiation: `unit_etf_of_transfer`, `mixed_etf_of_transfer`,
+`named_etf` in `Sign_Named_Global_Eff.thy`, and the `_st` counterparts in
+`Exec_Bridge.thy`/`Sign_Exec.thy`/`Ivl_Exec.thy`/`Parity_Exec.thy`). The
+generic executable-fold, cone-compatibility, and RHS-generator lemma
+families in `src/Core/Solver/TD_Side/` were mechanically propagated from
+`etf_combine`/`etf_combine_st` to `etf_combine_collect`/`etf_combine_collect_st`
+throughout (`TD_Side_Tree.thy`, `TD_Side_Eff_Bounds.thy`,
+`TD_Side_Eff_Pipeline.thy`, `TD_Side_RHS_Generator.thy`,
+`TD_Side_Eff_Cone_Lemmas.thy`, `LTR_TD_Side_Eff_Sound.thy`,
+`LTR_TD_Side_Eff_Exit.thy`).
+
+Net effect: there is no primitive `tf_combine`/`etf_combine`/`etf_st_combine`
+anywhere in the codebase anymore. `combine_env` is a genuine, independently
+queryable primitive at all four layers. `combine_assign` is a genuine
+independent primitive only where composing it back with `combine_env` is
+cheap (D/G's pointwise composition, the flat layer's plain function
+composition); at the two `strategy_tree`-based layers the destination-aware
+whole stays primitive instead, for the precision reason above, with
+`combine_env` exposed alongside it rather than the whole being decomposed
+into it.
 
 ### 3. `return` (done)
 
@@ -245,43 +286,47 @@ whichever session next has the `.thy` edit surface for this migration.
 
 Per `TERMINOLOGY_AUDIT.md`, already applied and in active use:
 `assign#` (`tf_assign`), `branch#` (`tf_branch`), `enter#` (`tf_enter`),
-`combine_env#` (`combine_env_abs`), `combine_assign#` (`combine_assign_abs`),
+`combine_env#` (`tf_combine_env`), `combine_assign#` (`combine_assign_abs`),
 `combine#` (`combine_collect_abs`). `dgs_enter`, `dgs_combine_env`,
-`dgs_combine_assign`, `combine_collect`, `dgs_combine`, `routed_cmb` are
-deliberately left unnotated (D/G-specific-with-no-universal-reduction,
-generator-layer, or concrete-layer, per that document's own reasoning,
-audited and not reopened here). If `tf_combine` -> `tf_combine_env` is
-applied (see item 2), it should receive the parallel notation
-`combine_env#`... except that token is already taken by `combine_env_abs`.
-This is worth flagging explicitly: the flat layer's `combine_env_abs`
-(fixed, concrete-adjacent structural merge) and a renamed `tf_combine_env`
-(domain-supplied, the `tf_combine_collect_abs` generalization point) are
-*not* the same operation -- `tf_combine_collect_abs_combine_env_abs`
-(`Constraint_System.thy:632-635`) is exactly the lemma proving one specializes
-to the other. Giving both the identical display token `combine_env#` would
-re-create the exact ambiguity `TERMINOLOGY_AUDIT.md`'s "Rejected candidates"
-section already worked through once for `combine_env`/`combine_env_abs`.
-Whoever applies the `tf_combine` rename should pick a distinct token (e.g.
-keep `tf_combine` bare/unnotated, matching how `dgs_combine_env` itself
-stays unnotated today) rather than reusing `combine_env#`.
+`dgs_combine_assign`, `combine_collect`, `dgs_combine`, `routed_cmb`,
+`etf_combine_env`, `etf_combine_collect`, `etf_st_combine_env`,
+`etf_st_combine_collect` are deliberately left unnotated
+(D/G-specific-with-no-universal-reduction, generator-layer, or
+executable-layer, per `TERMINOLOGY_AUDIT.md`'s own reasoning).
+
+The `combine_env#` token previously belonged to `combine_env_abs` (the fixed,
+concrete-adjacent structural default), a genuinely different operation from
+the domain-supplied `tf_combine_env` -- `tf_combine_collect_abs_combine_env_abs`
+(`Constraint_System.thy`) is exactly the lemma proving one specializes to the
+other, not that they coincide in general. Per this project's naming rule
+("canonical Goblint/Voblint transfer phases own the sharp notation"),
+`combine_env#` now belongs to `tf_combine_env` (the domain-supplied phase,
+matching `assign#`/`branch#`/`enter#`'s pattern of notating the
+`domain_transfer` field, not its structural default), and `combine_env_abs`
+lost the notation, keeping only its plain name -- documented inline at its
+definition site to prevent the same collision recurring. This is the
+resolution `TERMINOLOGY_AUDIT.md`'s "Rejected candidates" section anticipated
+would be needed once `tf_combine` was renamed, applied here.
 
 ## Summary
 
 Of the fourteen audited `Spec` methods: `assign`, `branch`, `skip`, `body`,
-and `return` are now exact matches, each a genuine, overridable
-`domain_transfer` field with the canonical `#` notation; `combine_env` and
-`combine_assign` are exact at the D/G layer but layer-conditional overall
-(flat-layer `tf_combine` plays `combine_env`'s role under a misleading name,
-and flat-layer `combine_assign` is correctly fixed rather than
-domain-parametrized -- this is the one concrete rename this audit still
-recommends, see item 2, and it is the subject of the next migration); `enter`
-is analogous (list-of-continuations vs. single deterministic transfer,
-already tracked elsewhere); `event` is analogous, a genuine but deliberately
-narrower mechanism than Goblint's manager/`Events.t` bus; `vdecl`, `asm`,
-`special`, `threadenter`, and `threadspawn` have no Voblint counterpart at
-all, five source-language or scope boundaries (scalar-only VIMP, no CIL
-library-call dispatch, no concurrency/manager model) rather than missing
-interface surface. No dummy fields were added anywhere in this migration
-wave; `EA_Check` moved from a hardcoded identity special case to a genuine
-`event#` dispatch, closing the last of the originally-flagged divergences
-except `combine_env`/`combine_assign`.
+`return`, and `combine_env` are now exact matches, each a genuine,
+overridable `domain_transfer` field (and its `effectful_domain_transfer`/
+`effectful_st_transfer`/`dg_spec` counterparts) with the canonical `#`
+notation where notated; `combine_assign` is exact at the D/G and flat layers
+(a genuine independent primitive, fixed/non-parametrized at the flat layer
+since it is proven domain-agnostic there) but is not a separate field at
+either `strategy_tree`-based effectful layer, where the destination-aware
+whole (`etf_combine_collect`/`etf_st_combine_collect`) stays primitive
+instead for precision reasons specific to those layers' join-shaped
+composition (see item 2); `enter` is analogous (list-of-continuations vs.
+single deterministic transfer, already tracked elsewhere); `event` is
+analogous, a genuine but deliberately narrower mechanism than Goblint's
+manager/`Events.t` bus; `vdecl`, `asm`, `special`, `threadenter`, and
+`threadspawn` have no Voblint counterpart at all, five source-language or
+scope boundaries (scalar-only VIMP, no CIL library-call dispatch, no
+concurrency/manager model) rather than missing interface surface. No dummy
+fields were added anywhere across any of these migration waves; there is no
+primitive `tf_combine`/`etf_combine`/`etf_st_combine` left anywhere in the
+codebase, closing the last of the originally-flagged divergences.

@@ -166,7 +166,7 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
                        tf_return  = return_sign,
                        tf_enter   = enter_sign_for gs,
                        tf_event   = event_sign,
-                       tf_combine = combine_env\<^sup># gs |)"
+                       tf_combine_env = combine_env_abs gs |)"
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def

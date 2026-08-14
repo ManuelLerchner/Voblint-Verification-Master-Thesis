@@ -18,24 +18,24 @@ locale sound_rhs_generator_base =
     and etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
   assumes comb[simp]:
     "\<And>cc ex dst.
-       etf_combine etf dst cc ex =
+       etf_combine_collect etf dst cc ex =
        unit_combine_tree gs dst cc ex"
 begin
 
 lemma dep_aux_comb_call:
-  "Inl cc \<in> dep_aux \<sigma> (etf_combine etf dst cc ex)"
+  "Inl cc \<in> dep_aux \<sigma> (etf_combine_collect etf dst cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
 lemma dep_aux_comb_exit:
-  "Inl ex \<in> dep_aux \<sigma> (etf_combine etf dst cc ex)"
+  "Inl ex \<in> dep_aux \<sigma> (etf_combine_collect etf dst cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
 lemma comb_inr:
-  "\<And>cc ex dst \<sigma> g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma> (Inr g))"
+  "\<And>cc ex dst \<sigma> g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine_collect etf dst cc ex) \<sigma> (Inr g))"
   unfolding comb by (rule sides_inr_local_bot_unit_combine_tree)
 
 lemma comb_coherent:
-  "\<And>cc ex dst \<sigma>. reachability_coherent_tree (etf_combine etf dst cc ex) \<sigma>"
+  "\<And>cc ex dst \<sigma>. reachability_coherent_tree (etf_combine_collect etf dst cc ex) \<sigma>"
   unfolding comb by (rule reachability_coherent_unit_combine_tree)
 
 end
@@ -44,7 +44,7 @@ locale sound_rhs_generator_static = sound_rhs_generator_base
 begin
 
 lemma static_deps_comb:
-  "static_deps (etf_combine etf dst cc ex)"
+  "static_deps (etf_combine_collect etf dst cc ex)"
   by (simp add: comb static_deps_def unit_combine_tree_def Let_def)
 
 end
@@ -226,10 +226,10 @@ lemma mono_sides:
   subgoal for cc dst ex s1 s2
   proof -
     assume le: "s1 \<le> s2"
-    show "sides_of_rhs (etf_combine etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine etf dst cc ex) s2"
+    show "sides_of_rhs (etf_combine_collect etf dst cc ex) s1 \<le> sides_of_rhs (etf_combine_collect etf dst cc ex) s2"
     proof (rule le_funI)
       fix k
-      show "sides_of_rhs (etf_combine etf dst cc ex) s1 k \<le> sides_of_rhs (etf_combine etf dst cc ex) s2 k"
+      show "sides_of_rhs (etf_combine_collect etf dst cc ex) s1 k \<le> sides_of_rhs (etf_combine_collect etf dst cc ex) s2 k"
       proof (cases k)
         case (Inl x)
         show ?thesis
@@ -262,3 +262,4 @@ lemma threefold_mono:
 end
 
 end
+

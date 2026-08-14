@@ -151,7 +151,7 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
                        tf_return  = return_ivl,
                        tf_enter   = enter_ivl_for gs,
                        tf_event   = event_ivl,
-                       tf_combine = combine_env\<^sup># gs |)"
+                       tf_combine_env = combine_env_abs gs |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def

@@ -338,14 +338,14 @@ definition sign_ctx_sg_1 :: "pp \<times> cfg_node list + gk_1 \<Rightarrow> sign
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst sign_nest_1_sol
-           then combine_env\<^sup># sign_nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))
+          then combine_env_abs sign_nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma sign_ctx_sg_1_covered:
   "(v, ctx) \<in> fst sign_nest_1_sol
    \<Longrightarrow> sign_ctx_sg_1 (Inl (v, ctx))
-       = combine_env\<^sup># sign_nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
+       = combine_env_abs sign_nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
   by (simp add: sign_ctx_sg_1_def)
 
 lemma sign_ctx_sg_1_uncovered_empty:
@@ -395,7 +395,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst sign_nest_1_sol"
   thus "sign_ctx_sg_1 (Inl (v, ctx))
-          = combine_env\<^sup># sign_nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
+          = combine_env_abs sign_nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global1)))"
     by (rule sign_ctx_sg_1_covered)
 next
   fix v ctx
@@ -496,7 +496,7 @@ proof (rule activation_collect_sound[where sg = sign_ctx_sg_1 and admiss = "admi
         and S = "cinit_stores sign_nest_gs" and g = sign_nest_cfg and gs = sign_nest_gs])
   \<comment>\<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_sign_st\<close>'s own
-    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env_abs\<close> exactly recovers
     \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
     the caller's local bound (\<open>entry_locals_ge_s0d_1\<close>) and the entry's global-seed
     bound (\<open>sign_nest_1_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>

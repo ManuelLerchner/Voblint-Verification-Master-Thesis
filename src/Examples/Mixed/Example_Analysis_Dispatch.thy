@@ -785,7 +785,7 @@ definition state_wiring_ex_prog :: imp_prog where
 text \<open>
   \<open>x\<close> is local (no \<open>global\<close> declaration). \<open>analyse_sign_report_for_code\<close>
   builds the per-point environment as
-  \<open>combine_env\<^sup># gs (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+  \<open>combine_env_abs gs (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
      (fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))\<close>,
   routing every name to the one component that actually owns it: local
   names read the local unknown, global names read the global/side unknown.

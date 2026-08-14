@@ -29,8 +29,8 @@ definition rc_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl abs_state" 
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst rc_ctx_sol
-           then combine_env\<^sup># rc_gs
-                  (locals ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inl (v, ctx))))
+           then combine_env_abs rc_gs
+                 (locals ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inl (v, ctx))))
                   (globs ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
@@ -66,7 +66,7 @@ lemma pp_eq_bound:
 lemma rc_ctx_sg_covered:
   "(v, ctx) \<in> fst rc_ctx_sol
    \<Longrightarrow> rc_ctx_sg (Inl (v, ctx))
-       = combine_env\<^sup># rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+       = combine_env_abs rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
   by (simp add: rc_ctx_sg_def)
 
 lemma rc_ctx_sg_uncovered_empty:
@@ -125,7 +125,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst rc_ctx_sol"
   thus "rc_ctx_sg (Inl (v, ctx))
-          = combine_env\<^sup># rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+          = combine_env_abs rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
     by (rule rc_ctx_sg_covered)
 next
   fix v ctx

@@ -1067,12 +1067,12 @@ instance resolved_st_q :: (bounded_warrowing) bounded_warrowing ..
 
 lemma fun_of_resolved_st_for_combine_resolved [simp]:
   "fun_of_resolved_st_for gs (combine_resolved_st sc se) =
-   combine_env\<^sup># gs (fun_of_resolved_st_for gs sc)
+   combine_env_abs gs (fun_of_resolved_st_for gs sc)
      (fun_of_resolved_st_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_for gs (combine_resolved_st sc se) x =
-      combine_env\<^sup># gs (fun_of_resolved_st_for gs sc)
+      combine_env_abs gs (fun_of_resolved_st_for gs sc)
         (fun_of_resolved_st_for gs se) x"
     unfolding fun_of_resolved_st_for_def combine_env_abs_def location_of_def
     by (cases "gs x") simp_all
@@ -1347,7 +1347,7 @@ lemma refines_combine:
   assumes sc: "resolved_st_refines_for gs sc sigma_c"
     and se: "resolved_st_refines_for gs se sigma_e"
   shows "resolved_st_refines_for gs (combine_resolved_st sc se)
-      (combine_env\<^sup># gs sigma_c sigma_e)"
+      (combine_env_abs gs sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_refines_for_def
   by simp
@@ -1978,12 +1978,12 @@ lemma fun_of_resolved_st_q_for_restrict_global [simp]:
 
 lemma fun_of_resolved_st_q_for_combine [simp]:
   "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) =
-   combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
+   combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
      (fun_of_resolved_st_q_for gs se)"
 proof (rule ext)
   fix x
   show "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) x =
-      combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
+      combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
         (fun_of_resolved_st_q_for gs se) x"
     unfolding fun_of_resolved_st_q_for_def combine_env_abs_def location_of_def
     by (cases "gs x") simp_all
@@ -2024,10 +2024,10 @@ lemma combine_resolved_st_q_lift_correct:
   shows "~ is_bot_state (fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se))"
   unfolding fun_of_resolved_st_q_for_combine
 proof (rule notI)
-  assume "is_bot_state (combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
+  assume "is_bot_state (combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
                                         (fun_of_resolved_st_q_for gs se))"
   then obtain y where y:
-    "is_bot (combine_env\<^sup># gs (fun_of_resolved_st_q_for gs sc)
+    "is_bot (combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
                               (fun_of_resolved_st_q_for gs se) y)"
     by (rule is_bot_stateE)
   show False
@@ -2095,7 +2095,7 @@ lemma refines_combine_q:
   assumes sc: "resolved_st_q_refines_for gs sc sigma_c"
     and se: "resolved_st_q_refines_for gs se sigma_e"
   shows "resolved_st_q_refines_for gs (combine_resolved_st_q sc se)
-      (combine_env\<^sup># gs sigma_c sigma_e)"
+      (combine_env_abs gs sigma_c sigma_e)"
   using sc se
   unfolding resolved_st_q_refines_for_def
   by simp

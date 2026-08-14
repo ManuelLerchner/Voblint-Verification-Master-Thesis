@@ -170,7 +170,7 @@ where
   "side_contribution_trees etf es ens cs =
      map (\<lambda>(u, a). apply_etf etf a u) es @
      map (\<lambda>(cl, fs, as). etf_enter etf fs as cl) ens @
-     map (\<lambda>(cc, dst, ex). etf_combine etf dst cc ex) cs"
+     map (\<lambda>(cc, dst, ex). etf_combine_collect etf dst cc ex) cs"
 
 definition side_rhs_fold_eff ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
@@ -201,7 +201,7 @@ lemma side_rhs_fold_eff_entry [simp]:
 
 lemma side_rhs_fold_eff_combine [simp]:
   "side_rhs_fold_eff etf acc [] [] ((cc, dst, ex) # cs) =
-   seqcomp_tree (etf_combine etf dst cc ex)
+   seqcomp_tree (etf_combine_collect etf dst cc ex)
      (\<lambda>res. side_rhs_fold_eff etf (acc \<squnion> res) [] [] cs)"
   by (simp add: side_rhs_fold_eff_def side_contribution_trees_def)
 
@@ -252,7 +252,7 @@ text \<open>
   fold -- at every node, not only the entry -- with a single trailing split
   (\<open>depend_on gseed ... (answer ...)\<close>) instead of relying on each
   \<open>etf\<close>-supplied tree to publish its own \<^const>\<open>Side\<close>. This is sound
-  \<^emph>\<open>only\<close> when \<open>etf\<close>'s own \<open>apply_etf\<close>/\<open>etf_enter\<close>/\<open>etf_combine\<close> trees are
+  \<^emph>\<open>only\<close> when \<open>etf\<close>'s own \<open>apply_etf\<close>/\<open>etf_enter\<close>/\<open>etf_combine_collect\<close> trees are
   themselves Side-free and unsplit (e.g. built from \<open>unit_edge_contribution\<close>
   rather than \<^const>\<open>unit_edge_tree\<close>) -- \<open>side_contribution_trees\<close> is reused
   unchanged, since it is agnostic to which kind of tree \<open>etf\<close> supplies.
@@ -296,7 +296,7 @@ where
 
 text \<open>
   Correspondence theorem: given per-tree hypotheses relating an
-  \<open>etf_old\<close> (each of whose \<open>apply_etf\<close>/\<open>etf_enter\<close>/\<open>etf_combine\<close> trees
+  \<open>etf_old\<close> (each of whose \<open>apply_etf\<close>/\<open>etf_enter\<close>/\<open>etf_combine_collect\<close> trees
   splits and publishes its own unsplit result, e.g. via
   \<^const>\<open>unit_edge_tree\<close>) to an \<open>etf_new\<close> (the corresponding Side-free,
   unsplit counterpart, e.g. \<open>unit_edge_contribution\<close>) -- exactly the four
@@ -320,11 +320,11 @@ lemma make_side_rhs_tree_eff_buffered_correspondence:
     and enter_s: "\<And>fs as cl \<sigma>. sides_of_rhs (etf_enter etf_old fs as cl) \<sigma> (Inr ())
                     = map_lift (restrict_global_for gs) (traverse_rhs (etf_enter etf_new fs as cl) \<sigma>)"
     and enter_free: "\<And>fs as cl \<sigma>. sides_of_rhs (etf_enter etf_new fs as cl) \<sigma> = \<bottom>"
-    and comb_t: "\<And>dst cc ex \<sigma>. traverse_rhs (etf_combine etf_old dst cc ex) \<sigma>
-                    = map_lift (restrict_local_for gs) (traverse_rhs (etf_combine etf_new dst cc ex) \<sigma>)"
-    and comb_s: "\<And>dst cc ex \<sigma>. sides_of_rhs (etf_combine etf_old dst cc ex) \<sigma> (Inr ())
-                    = map_lift (restrict_global_for gs) (traverse_rhs (etf_combine etf_new dst cc ex) \<sigma>)"
-    and comb_free: "\<And>dst cc ex \<sigma>. sides_of_rhs (etf_combine etf_new dst cc ex) \<sigma> = \<bottom>"
+    and comb_t: "\<And>dst cc ex \<sigma>. traverse_rhs (etf_combine_collect etf_old dst cc ex) \<sigma>
+                    = map_lift (restrict_local_for gs) (traverse_rhs (etf_combine_collect etf_new dst cc ex) \<sigma>)"
+    and comb_s: "\<And>dst cc ex \<sigma>. sides_of_rhs (etf_combine_collect etf_old dst cc ex) \<sigma> (Inr ())
+                    = map_lift (restrict_global_for gs) (traverse_rhs (etf_combine_collect etf_new dst cc ex) \<sigma>)"
+    and comb_free: "\<And>dst cc ex \<sigma>. sides_of_rhs (etf_combine_collect etf_new dst cc ex) \<sigma> = \<bottom>"
   shows "traverse_rhs (make_side_rhs_tree_eff_buffered gs g etf_new bot s0 () v) \<sigma>
           = traverse_rhs (make_side_rhs_tree_eff gs g etf_old bot s0 () v) \<sigma>"
     (is ?T)
@@ -339,11 +339,11 @@ proof -
                      (intra_predecessor_list g v) (entry_seed_list g v) (return_call_list g v)
                  = map (\<lambda>(u,a). apply_etf etf_old a u) (intra_predecessor_list g v)
                    @ map (\<lambda>(cl,fs,as). etf_enter etf_old fs as cl) (entry_seed_list g v)
-                   @ map (\<lambda>(cc,dst,ex). etf_combine etf_old dst cc ex) (return_call_list g v)"
+                   @ map (\<lambda>(cc,dst,ex). etf_combine_collect etf_old dst cc ex) (return_call_list g v)"
     unfolding side_contribution_trees_def by simp
   have cs_new_eq: "cs = map (\<lambda>(u,a). apply_etf etf_new a u) (intra_predecessor_list g v)
                    @ map (\<lambda>(cl,fs,as). etf_enter etf_new fs as cl) (entry_seed_list g v)
-                   @ map (\<lambda>(cc,dst,ex). etf_combine etf_new dst cc ex) (return_call_list g v)"
+                   @ map (\<lambda>(cc,dst,ex). etf_combine_collect etf_new dst cc ex) (return_call_list g v)"
     unfolding cs_def side_contribution_trees_def by simp
   have free: "\<And>c \<sigma>'. c \<in> set cs \<Longrightarrow> sides_of_rhs c \<sigma>' = \<bottom>"
     unfolding cs_new_eq using edge_free enter_free comb_free by (auto split: prod.splits)
@@ -378,8 +378,8 @@ proof -
     by (induction xs arbitrary: seed) (auto simp: enter_t split: prod.splits)
   have comb_seg_t:
     "foldr (\<lambda>t acc'. map_lift (restrict_local_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
-       (map (\<lambda>(cc,dst,ex). etf_combine etf_new dst cc ex) xs) seed
-     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine etf_old dst cc ex) xs) seed"
+       (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_new dst cc ex) xs) seed
+     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_old dst cc ex) xs) seed"
     for xs :: "(pp \<times> vname option \<times> pp) list" and seed
     by (induction xs arbitrary: seed) (auto simp: comb_t split: prod.splits)
   have elem_local: "foldr (\<lambda>t acc'. map_lift (restrict_local_for gs) (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
@@ -401,8 +401,8 @@ proof -
     by (induction xs arbitrary: seed) (auto simp: enter_s split: prod.splits)
   have comb_seg_s:
     "foldr (\<lambda>t acc'. map_lift (restrict_global_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
-       (map (\<lambda>(cc,dst,ex). etf_combine etf_new dst cc ex) xs) seed
-     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine etf_old dst cc ex) xs) seed"
+       (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_new dst cc ex) xs) seed
+     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_old dst cc ex) xs) seed"
     for xs :: "(pp \<times> vname option \<times> pp) list" and seed
     by (induction xs arbitrary: seed) (auto simp: comb_s split: prod.splits)
   have elem_global: "foldr (\<lambda>t acc'. map_lift (restrict_global_for gs) (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
@@ -523,7 +523,7 @@ lemma side_acc_eff_entry [simp]:
 lemma side_acc_eff_combine [simp]:
   "side_acc_eff etf acc \<sigma> [] [] ((cc, dst, ex) # cs) =
    side_acc_eff etf
-     (acc \<squnion> traverse_rhs (etf_combine etf dst cc ex) \<sigma>) \<sigma> [] [] cs"
+     (acc \<squnion> traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma>) \<sigma> [] [] cs"
   by (simp add: side_acc_eff_def side_contribution_trees_def)
 
 lemma traverse_fold_rhs_trees:
@@ -648,7 +648,7 @@ lemma side_acc_eff_enter_contributes:
 
 lemma side_acc_eff_combine_contributes:
   assumes "(cc, dst, ex) \<in> set cs"
-  shows "traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> es ens cs"
+  shows "traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> es ens cs"
   unfolding side_acc_eff_def
   apply (rule fold_rhs_values_member)
   unfolding side_contribution_trees_def
@@ -661,19 +661,19 @@ lemma side_acc_eff_nil_enter_contributes:
 
 lemma side_acc_eff_nil_nil_combine_contributes:
   assumes "(cc, dst, ex) \<in> set cs"
-  shows "traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] [] cs"
+  shows "traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] [] cs"
   by (rule side_acc_eff_combine_contributes[OF assms])
 
 lemma side_acc_eff_nil_combine_contributes:
   assumes "(cc, dst, ex) \<in> set cs"
-  shows "traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] ens cs"
+  shows "traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma> \<le> side_acc_eff etf acc \<sigma> [] ens cs"
   by (rule side_acc_eff_combine_contributes[OF assms])
 
 lemma side_acc_eff_least:
   assumes "acc \<le> b"
     and "\<And>u a. (u, a) \<in> set es \<Longrightarrow> traverse_rhs (apply_etf etf a u) \<sigma> \<le> b"
     and "\<And>c fs as. (c, fs, as) \<in> set ens \<Longrightarrow> traverse_rhs (etf_enter etf fs as c) \<sigma> \<le> b"
-    and "\<And>cc ex dst. (cc, dst, ex) \<in> set cs \<Longrightarrow> traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> b"
+    and "\<And>cc ex dst. (cc, dst, ex) \<in> set cs \<Longrightarrow> traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma> \<le> b"
   shows "side_acc_eff etf acc \<sigma> es ens cs \<le> b"
   unfolding side_acc_eff_def
   apply (rule fold_rhs_values_least[OF assms(1)])
@@ -683,14 +683,14 @@ lemma side_acc_eff_least:
 
 lemma side_acc_eff_nil_nil_least:
   assumes "acc \<le> b"
-    and "\<And>cc dst ex. (cc, dst, ex) \<in> set cs \<Longrightarrow> traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> b"
+    and "\<And>cc dst ex. (cc, dst, ex) \<in> set cs \<Longrightarrow> traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma> \<le> b"
   shows "side_acc_eff etf acc \<sigma> [] [] cs \<le> b"
   by (rule side_acc_eff_least[OF assms(1)]) (auto intro: assms(2))
 
 lemma side_acc_eff_nil_least:
   assumes "acc \<le> b"
     and "\<And>c fs as. (c, fs, as) \<in> set ens \<Longrightarrow> traverse_rhs (etf_enter etf fs as c) \<sigma> \<le> b"
-    and "\<And>cc ex dst. (cc, dst, ex) \<in> set cs \<Longrightarrow> traverse_rhs (etf_combine etf dst cc ex) \<sigma> \<le> b"
+    and "\<And>cc ex dst. (cc, dst, ex) \<in> set cs \<Longrightarrow> traverse_rhs (etf_combine_collect etf dst cc ex) \<sigma> \<le> b"
   shows "side_acc_eff etf acc \<sigma> [] ens cs \<le> b"
   by (rule side_acc_eff_least[OF assms(1)]) (auto intro: assms(2-3))
 
@@ -733,7 +733,7 @@ qed
 lemma cfg_combine_contributes_to_eq:
   fixes g :: cfg
   assumes "finite (calls g)" and "(cc, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
-  shows "traverse_rhs (etf_combine etf dst cc (FunctionResult p)) \<sigma>
+  shows "traverse_rhs (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma>
          \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma>"
 proof -
   have "(cc, dst, FunctionResult p) \<in> set (return_call_list g v)"
@@ -769,7 +769,7 @@ subsection \<open>Relabelling local unknowns for context indexing\<close>
 text \<open>
   Context-sensitivity reindexes the local unknown \<open>pp\<close> to \<open>pp \<times> 'c\<close>.  A
   per-edge tree \<open>apply_etf etf a u\<close> queries only the single predecessor \<open>u\<close>, and a
-  combine tree \<open>etf_combine etf dst cc ex\<close> queries the caller \<open>cc\<close> and the callee exit
+  combine tree \<open>etf_combine_collect etf dst cc ex\<close> queries the caller \<open>cc\<close> and the callee exit
   \<open>ex\<close>; so the context routing of either is captured by a position-aware
   relabelling \<open>h :: pp \<Rightarrow> pp \<times> 'c\<close> of the \<open>QueryL\<close> targets (intra: \<open>u \<mapsto> (u, c)\<close>;
   combine: caller \<open>\<mapsto> (cc, c)\<close>, callee \<open>\<mapsto> (ex, c')\<close>).  \<open>map_ltree\<close> performs that

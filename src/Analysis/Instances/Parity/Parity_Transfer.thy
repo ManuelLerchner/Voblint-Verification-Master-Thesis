@@ -176,7 +176,7 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
                          tf_return  = return_parity,
                          tf_enter   = enter_parity_for gs,
                          tf_event   = event_parity,
-                         tf_combine = combine_env\<^sup># gs |)"
+                         tf_combine_env = combine_env_abs gs |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def

@@ -429,8 +429,8 @@ lemma ivl_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_for_reduces])
 
 lemma ivl_etf_st_for_combine_tree:
-  "etf_combine_st (ivl_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
-  unfolding ivl_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
+  "etf_combine_collect_st (ivl_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  unfolding ivl_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma ivl_etf_st_for_enter_tree:
   "etf_st_enter (ivl_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (ivl_enter_st_for gs xs es) u"

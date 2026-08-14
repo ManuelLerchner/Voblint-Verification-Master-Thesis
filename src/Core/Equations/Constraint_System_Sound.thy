@@ -186,12 +186,12 @@ proof -
   proof (cases dst)
     case None
     then show ?thesis
-      using tf_sound_combine_forD[OF s t]
+      using tf_sound_combine_env_forD[OF s t]
       by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
     case (Some x)
-    have base: "combine_env gs s t \<in> \<lbrakk>tf_combine tf A B\<rbrakk>"
-      using tf_sound_combine_forD[OF s t] .
+    have base: "combine_env gs s t \<in> \<lbrakk>tf_combine_env tf A B\<rbrakk>"
+      using tf_sound_combine_env_forD[OF s t] .
     have ret: "t ret_var \<in> gamma (B ret_var)"
       using t unfolding gamma_state_def by auto
     show ?thesis

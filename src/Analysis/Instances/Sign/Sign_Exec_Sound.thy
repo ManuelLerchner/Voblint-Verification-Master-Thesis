@@ -317,7 +317,7 @@ text \<open>
 
 definition analyse_sign_env_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
   "analyse_sign_env_for gs p v =
-     combine_env\<^sup># gs
+     combine_env_abs gs
        (fun_of_exec_dg_st_for gs (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
        (fun_of_exec_dg_st_for gs (globs (snd (analyse_sign_for gs p) (Inr ()))))"
 
@@ -336,7 +336,7 @@ declare analyse_sign_env_for_def [code del]
 lemma analyse_sign_env_for_code [code]:
   "analyse_sign_env_for gs p =
      (let sol = snd (analyse_sign_for gs p)
-      in (\<lambda>v. combine_env\<^sup># gs
+      in (\<lambda>v. combine_env_abs gs
                 (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
                 (fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))))"
   unfolding analyse_sign_env_for_def Let_def by (rule refl)

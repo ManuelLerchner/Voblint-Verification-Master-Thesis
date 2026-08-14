@@ -182,10 +182,10 @@ lemma flagship_cover_combine:
 
 lemma flagship_sound0:
   "cinit_stores flagship_gs \<subseteq>
-     \<lbrakk>combine_env\<^sup># flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
+     \<lbrakk>combine_env_abs flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "combine_env\<^sup># flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
+  have "combine_env_abs flagship_gs (fun_of_exec_dg_st_for flagship_gs cinit_ivl_st)
           (fun_of_exec_dg_st_for flagship_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for flagship_gs cinit_ivl_st"
     by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
@@ -242,7 +242,7 @@ proof -
        (rule flagship_wf_reserved
              flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_random_for
              flagship_ex_transfer.tf_sound_branch_for
-             flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_for
+             flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              action_reduces.ret_none[OF ivl_tf_st_for_reduces]
@@ -307,14 +307,14 @@ lemma flagship_x_not_global: "\<not> flagship_gs (STR ''x'')"
   unfolding flagship_pi_def flagship_prog_def by (simp add: declared_global_def)
 
 lemma head_x_bound:
-  "combine_env\<^sup># flagship_gs
+  "combine_env_abs flagship_gs
      (locals ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inl (Statement (Suc 0), ()))))
      (globs ((fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Inr ()))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
 proof -
   have L: "flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'') = Ivl (Fin 0) (Fin 20)"
     using flagship_head_computed
     by (simp add: fun_of_resolved_st_q_for_def)
-  have C: "combine_env\<^sup># flagship_gs
+  have C: "combine_env_abs flagship_gs
              (flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))))
              (flagship_fun_of (globs (snd flagship_sol (Inr ())))) (STR ''x'')
            = flagship_fun_of (locals (snd flagship_sol (Inl (Statement (Suc 0), ())))) (STR ''x'')"

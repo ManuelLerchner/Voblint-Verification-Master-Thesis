@@ -36,7 +36,7 @@ theorem ltr_post_fixpoint_sound_at_eff_cone:
   assumes combine_le:
     "\<And>cl dst pars args p cont. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> cfg_reaches g cont v0
-       \<Longrightarrow> etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
+       \<Longrightarrow> etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
   shows "ltr_collect gs g S v0 \<subseteq> gamma_state_lift (side_env_lift \<sigma> v0)"
 proof -
   interpret se: sound_effectful_transfer gs etf by (rule se)
@@ -93,8 +93,8 @@ proof -
       have t_in: "t \<in> gamma_state_lift (side_env_lift \<sigma> (FunctionResult p))"
         using COMB(4) rex by simp
       have "combine_collect gs dst s t
-              \<in> gamma_state_lift (etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>)"
-        using se.etf_sound_combine inr s_in t_in unfolding side_env_lift_def by auto
+              \<in> gamma_state_lift (etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma>)"
+        using se.etf_sound_combine_collect inr s_in t_in unfolding side_env_lift_def by auto
       then have "combine_collect gs dst s t \<in> gamma_state_lift (side_env_lift \<sigma> cont)"
         using gamma_lift_mono[OF gamma_state_mono combine_le[OF COMB(1) True]] by fastforce
       then show ?thesis using True by simp
@@ -137,7 +137,7 @@ theorem ltr_post_fixpoint_sound_in_eff_cone:
   assumes combine_le:
     "\<And>cl dst pars args p cont. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> cfg_reaches g cont v0
-       \<Longrightarrow> etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
+       \<Longrightarrow> etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
   assumes v0_reach: "cfg_reaches g v v0"
   shows "ltr_collect gs g S v \<subseteq> gamma_state_lift (side_env_lift \<sigma> v)"
 proof (rule ltr_post_fixpoint_sound_at_eff_cone[OF se inr entry])
@@ -155,7 +155,7 @@ next
   fix cl dst pars args p cont
   assume cmb: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and rr: "cfg_reaches g cont v"
-  show "etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
+  show "etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
     by (rule combine_le[OF cmb cfg_reaches_trans[OF rr v0_reach]])
 qed
 
@@ -203,13 +203,13 @@ proof -
   have combine_le:
     "\<And>cl dst pars args p cont. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow> cfg_reaches g cont q
-       \<Longrightarrow> etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
+       \<Longrightarrow> etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
   proof -
     fix cl dst pars args p cont
     assume cmb: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
       and rr: "cfg_reaches g cont q"
     have rv: "cont \<in> vars" by (rule side_cone_in_vars_eff_cone[OF pp fin finC wf cone rr])
-    show "etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
+    show "etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
       by (rule etf_combine_combined_le_eff[OF pp rv cmb finC
             cone_compatible_etf_comb_coherent[OF cone]])
   qed
@@ -243,20 +243,20 @@ theorem side_analyse_eff_collect_sound_exit_ltr:
   assumes S_sound: "S \<le> \<lbrakk>s0\<rbrakk>"
   assumes edge_dep: "\<And>b z \<sigma>'. Inl z \<in> dep_aux \<sigma>' (apply_etf etf b z)"
   assumes enter_dep: "\<And>c2 f2 a2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_enter etf f2 a2 c2)"
-  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
-  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine etf d2 c2 e2)"
+  assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine_collect etf d2 c2 e2)"
+  assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine_collect etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
   assumes enter_static: "\<And>cl fs as. static_deps (etf_enter etf fs as cl)"
-  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine etf dst cc ex)"
+  assumes comb_static: "\<And>cc ex dst. static_deps (etf_combine_collect etf dst cc ex)"
   assumes edge_inr:
     "\<And>a u \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (apply_etf etf a u) \<sigma>' (Inr g))"
   assumes enter_inr:
     "\<And>cl fs as \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_enter etf fs as cl) \<sigma>' (Inr g))"
   assumes comb_inr:
-    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine etf dst cc ex) \<sigma>' (Inr g))"
+    "\<And>cc ex dst \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine_collect etf dst cc ex) \<sigma>' (Inr g))"
   assumes edge_coherent: "\<And>a u \<sigma>'. reachability_coherent_tree (apply_etf etf a u) \<sigma>'"
   assumes enter_coherent: "\<And>cl fs as \<sigma>'. reachability_coherent_tree (etf_enter etf fs as cl) \<sigma>'"
-  assumes comb_coherent: "\<And>cc ex dst \<sigma>'. reachability_coherent_tree (etf_combine etf dst cc ex) \<sigma>'"
+  assumes comb_coherent: "\<And>cc ex dst \<sigma>'. reachability_coherent_tree (etf_combine_collect etf dst cc ex) \<sigma>'"
   shows "ltr_collect gs (compile_prog \<Pi> ps mnm main) S (cfg_exit (compile_prog \<Pi> ps mnm main))
          \<le> gamma_state_lift (side_analyse_eff gs \<Pi> ps mnm main etf bot s0 gseed
               (cfg_exit (compile_prog \<Pi> ps mnm main)))"

@@ -162,10 +162,10 @@ lemma parity_cover_combine:
 
 lemma parity_sound0:
   "cinit_stores parity_gs \<subseteq>
-     \<lbrakk>combine_env\<^sup># parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
+     \<lbrakk>combine_env_abs parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
         (fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st))\<rbrakk>"
 proof -
-  have "combine_env\<^sup># parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
+  have "combine_env_abs parity_gs (fun_of_exec_dg_st_for parity_gs cinit_parity_st)
           (fun_of_exec_dg_st_for parity_gs (restrict_global_resolved_q cinit_parity_st))
         = fun_of_exec_dg_st_for parity_gs cinit_parity_st"
     by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_parity_st_for
@@ -220,7 +220,7 @@ proof -
        (rule parity_wf[THEN wf_compile_input_reserved_ret_var]
              parity_ex_transfer.tf_sound_assign_for parity_ex_transfer.tf_sound_random_for
              parity_ex_transfer.tf_sound_branch_for
-             parity_ex_transfer.tf_sound_enter_for parity_ex_transfer.tf_sound_combine_for
+             parity_ex_transfer.tf_sound_enter_for parity_ex_transfer.tf_sound_combine_env_for
              parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              action_reduces.ret_none[OF parity_tf_st_for_reduces]

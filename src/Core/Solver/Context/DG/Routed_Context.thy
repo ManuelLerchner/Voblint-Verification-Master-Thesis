@@ -608,7 +608,7 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>Split into the two componentwise bounds \<open>gamma_unit_mono\<close>/\<open>combine_env\<^sup>#\<close> routing
+text \<open>Split into the two componentwise bounds \<open>gamma_unit_mono\<close>/\<open>combine_env_abs\<close> routing
   needs, instead of one bound against the raw join: the local answer's own bound never
   mentions \<open>gk0\<close>, and the global publication's own bound never mentions the routed seed
   key at all, so each is proved (and usable) independently of the other.\<close>
@@ -749,7 +749,7 @@ subsection \<open>COMB: the routed return combine\<close>
 
 text \<open>Split as \<open>routed_seed_publish_bound_local\<close>/\<open>_global\<close> was: each componentwise
   bound stands on its own, matching what \<open>gamma_unit_mono\<close> needs for the routed
-  combine's \<open>combine_env\<^sup>#\<close>-shaped target.\<close>
+  combine's \<open>combine_env_abs\<close>-shaped target.\<close>
 lemma routed_comb_bound_local:
   assumes ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and covV_cont: "(cont, c1) \<in> vars"

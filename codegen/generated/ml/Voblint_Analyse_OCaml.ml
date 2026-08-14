@@ -1487,6 +1487,7 @@ type ('a, 'b, 'c) effectful_st_transfer_ext =
       (bexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (string list ->
         aexp list -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (cfg_node -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (string option ->
         cfg_node -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       'c;;
@@ -1989,31 +1990,31 @@ let rec dgs_combine
 let rec etf_st_assume_not
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_assume_not;;
 
 let rec etf_st_random
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_random;;
 
 let rec etf_st_assume
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_assume;;
 
 let rec etf_st_assign
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_assign;;
 
 let rec etf_st_nop
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_nop;;
 
 let rec apply_etf_st
@@ -2678,14 +2679,6 @@ let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
 
-let rec etf_st_combine
-  (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
-    = etf_st_combine;;
-
-let rec etf_combine_st etf dst cc ex = etf_st_combine etf dst cc ex;;
-
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
 
@@ -3349,14 +3342,23 @@ let rec resolved_st_q_is_bot_for _A
 let rec etf_st_enter
   (Effectful_st_transfer_ext
     (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine, more))
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_enter;;
+
+let rec etf_st_combine_collect
+  (Effectful_st_transfer_ext
+    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
+      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
+    = etf_st_combine_collect;;
+
+let rec etf_combine_collect_st
+  etf dst cc ex = etf_st_combine_collect etf dst cc ex;;
 
 let rec side_contribution_trees_st _B
   etf es ens cs =
     map (fun (u, a) -> apply_etf_st etf a u) es @
       map (fun (cl, (fs, asa)) -> etf_st_enter etf fs asa cl) ens @
-        map (fun (cc, (dst, a)) -> etf_combine_st etf dst cc a) cs;;
+        map (fun (cc, (dst, a)) -> etf_combine_collect_st etf dst cc a) cs;;
 
 let rec make_side_rhs_tree_eff_st_buffered _B
   g etf bot0_st s0_st gseed v =
@@ -3391,6 +3393,28 @@ let rec side_cfg_T_eff_st_buffered _B
   g etf bot0_st s0_st gseed =
     make_side_rhs_tree_eff_st_buffered _B g etf bot0_st s0_st gseed;;
 
+let rec assemble_local_global _A
+  x0 g = match x0, g with Bot, g -> Bot
+    | Lifted su, Bot -> Lifted su
+    | Lifted su, Lifted sg -> Lifted (sup _A.sup_semilattice_sup su sg);;
+
+let rec unit_combine_env_contribution_st _A
+  is_bot_pred cc ex =
+    seqcomp_tree (QueryL (cc, (fun a -> Answer a)))
+      (fun sc ->
+        seqcomp_tree (QueryL (ex, (fun a -> Answer a)))
+          (fun se ->
+            seqcomp_tree (QueryG ((), (fun a -> Answer a)))
+              (fun g ->
+                Answer
+                  (transfer_lift2 is_bot_pred
+                    (combine_resolved_st_q
+                      _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                    (assemble_local_global (semilattice_sup_resolved_st_q _A) sc
+                      g)
+                    (assemble_local_global (semilattice_sup_resolved_st_q _A) se
+                      g)))));;
+
 let rec combine_collect_resolved_for _A
   gs dst sc se =
     combine_assign_resolved _A gs dst
@@ -3400,11 +3424,6 @@ let rec combine_collect_resolved_for _A
 let rec combine_collect_resolved_for_q _A
   xc xb (Abs_resolved_st xa) (Abs_resolved_st x) =
     Abs_resolved_st (combine_collect_resolved_for _A xc xb xa x);;
-
-let rec assemble_local_global _A
-  x0 g = match x0, g with Bot, g -> Bot
-    | Lifted su, Bot -> Lifted su
-    | Lifted su, Lifted sg -> Lifted (sup _A.sup_semilattice_sup su sg);;
 
 let rec unit_combine_contribution_st _A
   is_bot_pred gs dst cc ex =
@@ -3449,6 +3468,7 @@ let rec unit_etf_st_contribution_of_transfer _A
           unit_edge_contribution_st _A is_bot_pred (tf_st (EA_AssumeNot b))),
         (fun xs es ->
           unit_edge_contribution_st _A is_bot_pred (enter_st xs es)),
+        unit_combine_env_contribution_st _A is_bot_pred,
         unit_combine_contribution_st _A is_bot_pred gs, ());;
 
 let rec ivl_etf_st_contribution_for
