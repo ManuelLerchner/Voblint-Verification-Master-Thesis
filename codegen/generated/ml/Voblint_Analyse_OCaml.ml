@@ -3948,31 +3948,11 @@ let rec analyse_sign_report_for_with_state
 let rec analyse_sign_report_with_state
   p = analyse_sign_report_for_with_state (declared_global p) p;;
 
-let rec entry_state_sigma_abs_exec
-  gs is_bot_pred pi ps mnm main =
-    comp (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for bot_ivl gs))
-           (map_lift (fun_of_resolved_st_q_for bot_ivl gs)))
-      (snd (entry_state_sol gs is_bot_pred pi ps mnm main));;
-
-let rec entry_state_sg_exec
-  gs is_bot_pred pi ps mnm main k =
-    (match k
-      with Inl (v, ctx) ->
-        (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
-              (fst (entry_state_sol gs is_bot_pred pi ps mnm main))
-          then assemble_env_abs bounded_semilattice_sup_bot_ivl gs
-                 (locals
-                   (entry_state_sigma_abs_exec gs is_bot_pred pi ps mnm main
-                     (Inl (v, ctx))))
-                 (globs
-                   (entry_state_sigma_abs_exec gs is_bot_pred pi ps mnm main
-                     (Inr Global)))
-          else Bot)
-      | Inr _ -> Bot);;
-
 let rec entry_state_classify_at
-  v cnd vars sg =
-    (let ctxs = image snd (filter (fun (va, _) -> equal_cfg_nodea va v) vars) in
+  v cnd reachable_keys sg =
+    (let ctxs =
+       image snd (filter (fun (va, _) -> equal_cfg_nodea va v) reachable_keys)
+       in
      let unlift =
        comp (fun a ->
               (match a with Bot -> bot_fun bot_ivl | Lifted sigma -> sigma))
@@ -3986,10 +3966,32 @@ let rec entry_state_classify_at
                    interval_classify_check cnd (unlift (Inl (v, ctx))))
                  ctxs)));;
 
+let rec entry_state_sigma_abs_exec_from_sol
+  gs sol_sigma =
+    comp (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for bot_ivl gs))
+           (map_lift (fun_of_resolved_st_q_for bot_ivl gs)))
+      sol_sigma;;
+
+let rec entry_state_sg_exec_from_sol
+  gs sol k =
+    (match k
+      with Inl (v, ctx) ->
+        (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
+              (fst sol)
+          then assemble_env_abs bounded_semilattice_sup_bot_ivl gs
+                 (locals
+                   (entry_state_sigma_abs_exec_from_sol gs (snd sol)
+                     (Inl (v, ctx))))
+                 (globs
+                   (entry_state_sigma_abs_exec_from_sol gs (snd sol)
+                     (Inr Global)))
+          else Bot)
+      | Inr _ -> Bot);;
+
 let rec entry_state_check_report
   gs is_bot_pred pi ps mnm main =
     (let sol = entry_state_sol gs is_bot_pred pi ps mnm main in
-     let sg = entry_state_sg_exec gs is_bot_pred pi ps mnm main in
+     let sg = entry_state_sg_exec_from_sol gs sol in
       map_filter
         (fun x ->
           (if (let (_, (a, _)) = x in is_EA_Check a)
