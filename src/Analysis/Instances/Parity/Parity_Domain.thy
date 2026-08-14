@@ -1,5 +1,6 @@
 theory Parity_Domain
   imports Voblint_Core.Abstract_Domain "Voblint_VIMP.VIMP_Expr" "TD.Update_rules"
+    Voblint_Core.Abstract_Arithmetic
 begin
 
 section \<open>Parity domain: finite even/odd abstraction\<close>
@@ -221,11 +222,6 @@ fun aval_parity :: "aexp => (vname => parity) => parity" where
   | "aval_parity (Minus a b) \<sigma> = aval_parity a \<sigma> - aval_parity b \<sigma>"
   | "aval_parity (Times a b) \<sigma> = aval_parity a \<sigma> * aval_parity b \<sigma>"
 
-lemma aval_parity_sound:
-  "(\<forall>x. s x \<in> gamma_parity (\<sigma> x)) \<Longrightarrow> aval a s \<in> gamma_parity (aval_parity a \<sigma>)"
-  by (induction a arbitrary: s \<sigma>;
-      simp add: parity_plus_sound parity_minus_sound parity_times_sound)
-
 subsection \<open>Monotonicity of arithmetic\<close>
 
 lemma parity_plus_mono1: "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::parity)"
@@ -244,12 +240,14 @@ lemma parity_times_mono2: "b1 \<le> b2 \<Longrightarrow> a * b1 \<le> a * (b2::p
 lemma parity_plus_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 + b1 \<le> a2 + (b2::parity)"
   by (meson order.trans parity_plus_mono1 parity_plus_mono2)
 
-lemma aval_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> aval_parity a sigma1 \<le> aval_parity a sigma2"
-  apply (induction a arbitrary: sigma1 sigma2)
-  apply (auto simp: parity_plus_combine_mono le_funD)
-  apply (meson order.trans parity_minus_mono1 parity_minus_mono2)
-  by (meson dual_order.trans parity_times_mono1 parity_times_mono2)
+lemma parity_minus_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 - b1 \<le> a2 - (b2::parity)"
+  by (meson order.trans parity_minus_mono1 parity_minus_mono2)
+
+lemma parity_times_combine_mono: "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 * b1 \<le> a2 * (b2::parity)"
+  by (meson order.trans parity_times_mono1 parity_times_mono2)
+
+
+
 
 subsection \<open>sound_domain instance\<close>
 
@@ -276,5 +274,13 @@ qed
 end
 
 instance parity :: abstract_domain ..
+
+interpretation parity_arith: arith_domain_sound aval_parity parity_of_int
+  by unfold_locales
+     (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
+                     parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono)
+
+lemmas aval_parity_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
+lemmas aval_parity_mono = parity_arith.aval_dom_mono
 
 end

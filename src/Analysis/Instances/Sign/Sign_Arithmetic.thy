@@ -1,5 +1,5 @@
 theory Sign_Arithmetic
-  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr"
+  imports Sign_Lattice "Voblint_VIMP.VIMP_Expr" Voblint_Core.Abstract_Arithmetic
 begin
 
 section \<open>Sign arithmetic\<close>
@@ -102,12 +102,6 @@ lemma sign_times_sound:
   using assms by (cases a; cases b; auto simp: mult_neg_neg mult_neg_pos mult_pos_neg
                                                 zero_le_mult_iff mult_le_0_iff)
 
-lemma aval_sign_sound:
-  "(\<forall>x. s x \<in> gamma_sign (\<sigma> x))
-   \<Longrightarrow> aval a s \<in> gamma_sign (aval_sign a \<sigma>)"
-  by (induction a arbitrary: s \<sigma>;
-      simp add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound)
-
 lemma sign_plus_mono1:
   "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::sign)"
   unfolding less_eq_sign_def
@@ -136,17 +130,26 @@ lemma sign_times_mono1:
 lemma sign_times_mono2:
   "b1 \<le> b2 \<Longrightarrow> a * b1 \<le> a * (b2::sign)"
   unfolding less_eq_sign_def
-
   by (cases a; cases b1; cases b2; simp)
+
 lemma sign_plus_combine_mono:
   "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 + b1 \<le> a2 + (b2::sign)"
   by (meson order.trans sign_plus_mono1 sign_plus_mono2)
 
-lemma aval_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> aval_sign a sigma1 \<le> aval_sign a sigma2"
-  apply (induction a arbitrary: sigma1 sigma2)
-  apply(auto simp add: sign_plus_combine_mono le_funD)
-  apply (meson order.trans sign_minus_mono1 sign_minus_mono2)
-  by (meson dual_order.trans sign_times_mono1 sign_times_mono2)
+lemma sign_minus_combine_mono:
+  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 - b1 \<le> a2 - (b2::sign)"
+  by (meson order.trans sign_minus_mono1 sign_minus_mono2)
+
+lemma sign_times_combine_mono:
+  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> a1 * b1 \<le> a2 * (b2::sign)"
+  by (meson order.trans sign_times_mono1 sign_times_mono2)
+
+interpretation sign_arith: arith_domain_sound aval_sign sign_of_int
+  by unfold_locales
+     (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
+                     sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono)
+
+lemmas aval_sign_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]
+lemmas aval_sign_mono = sign_arith.aval_dom_mono
 
 end
