@@ -98,10 +98,10 @@ module Core : sig
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
-  val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
   val string_of_bexp : bexp -> char list
+  val compile_program : unit imp_prog_ext -> unit cfg_ext
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
   val analyse_sign_report_with_state :
@@ -3558,6 +3558,9 @@ let rec ectx_spec
   gs is_bot_pred =
     unit_dg_spec_st_for_lifted bounded_semilattice_sup_bot_ivl gs is_bot_pred
       (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
+
+let rec compile_program
+  p = compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p);;
 
 let rec less_eint a b = eint_le a b && not (eint_le b a);;
 

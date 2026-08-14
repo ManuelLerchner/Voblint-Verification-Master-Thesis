@@ -323,17 +323,16 @@ module Core : sig
   val pretty_string_of_program :
     (string -> unit proc_decl_ext option) ->
       string list -> com -> string list -> char list
-  val entry_state_sg_exec :
-    (string -> bool) ->
-      (ivl resolved_st_q -> bool) ->
-        (string -> unit proc_decl_ext option) ->
-          string list ->
-            string ->
-              com -> ((cfg_node * ivl list), gk) sum -> (string -> ivl) lifted
   val entry_state_check_report_prog :
     string -> unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
   val analyse_interval_entry_state :
     unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+  val entry_state_sg_exec_from_sol :
+    (string -> bool) ->
+      (cfg_node * ivl list) set *
+        (((cfg_node * ivl list), gk) sum ->
+          (ivl resolved_st_q lifted, ivl resolved_st_q lifted) dg_state) ->
+        ((cfg_node * ivl list), gk) sum -> (string -> ivl) lifted
   val is_bot_sign : sign -> bool
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
@@ -4108,12 +4107,12 @@ and interval_check_false
     | Eqa (a, b), d -> interval_eq_false (aval_ivl a d) (aval_ivl b d);;
 
 let rec analyse_sign_env_for
-  gs p v =
-    combine_env_abs gs
-      (fun_of_exec_dg_st_for bot_sign gs
-        (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
-      (fun_of_exec_dg_st_for bot_sign gs
-        (globs (snd (analyse_sign_for gs p) (Inr ()))));;
+  gs p =
+    (let sol = snd (analyse_sign_for gs p) in
+      (fun v ->
+        combine_env_abs gs
+          (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
+          (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ()))))));;
 
 let rec dg_edge_contribution_tree _A _B
   step u =
@@ -4505,10 +4504,11 @@ let rec analyse_interval_td_report
   p = interval_td_check_report (declared_global p) prog_main_name p;;
 
 let rec analyse_interval_td_at
-  is_bot_pred gs pi ps mnm main v =
-    side_env_lift_st bounded_semilattice_sup_bot_ivl gs
-      (analyse_interval_td_raw is_bot_pred gs pi ps mnm main (Inl v))
-      (analyse_interval_td_raw is_bot_pred gs pi ps mnm main (Inr ()));;
+  is_bot_pred gs pi ps mnm main =
+    (let raw = analyse_interval_td_raw is_bot_pred gs pi ps mnm main in
+      (fun v ->
+        side_env_lift_st bounded_semilattice_sup_bot_ivl gs (raw (Inl v))
+          (raw (Inr ()))));;
 
 let rec analyse_sign_report_for_with_state
   gs p =
@@ -4636,6 +4636,28 @@ let rec entry_state_check_report_prog
 
 let rec analyse_interval_entry_state
   p = entry_state_check_report_prog prog_main_name p;;
+
+let rec entry_state_sigma_abs_exec_from_sol
+  gs sol_sigma =
+    comp (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for bot_ivl gs))
+           (map_lift (fun_of_resolved_st_q_for bot_ivl gs)))
+      sol_sigma;;
+
+let rec entry_state_sg_exec_from_sol
+  gs sol k =
+    (match k
+      with Inl (v, ctx) ->
+        (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
+              (fst sol)
+          then assemble_env_abs bounded_semilattice_sup_bot_ivl gs
+                 (locals
+                   (entry_state_sigma_abs_exec_from_sol gs (snd sol)
+                     (Inl (v, ctx))))
+                 (globs
+                   (entry_state_sigma_abs_exec_from_sol gs (snd sol)
+                     (Inr Global)))
+          else Bot)
+      | Inr _ -> Bot);;
 
 let rec is_bot_sign a = is_bottom_sign a;;
 
@@ -6189,47 +6211,53 @@ let rec program_vars
           (Core.prog_main_name :: Core.prog_procs p));;
 
 let rec analyse_env_for
-  x0 p v = match x0, p, v with
-    Analyse.Sign_Analysis, p, v ->
-      Core.comp (fun a -> Analyse.SignValue a)
-        (Core.analyse_sign_env_for (Core.declared_global p) p v)
-    | Analyse.Interval_Analysis, p, v ->
-        Core.comp (fun a -> Analyse.IntervalValue a)
-          (match
-            Core.analyse_interval_td_at
-              (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl
-                (Core.declared_global_vars p))
-              (Core.declared_global p) (Core.prog_table p) (Core.prog_procs p)
-              Core.prog_main_name (Core.prog_main p) v
-            with Core.Bot -> Core.bot_fun Core.bot_ivl
-            | Core.Lifted a -> Core.id a);;
+  kind p =
+    (match kind
+      with Analyse.Sign_Analysis ->
+        (let env = Core.analyse_sign_env_for (Core.declared_global p) p in
+          (fun v -> Core.comp (fun a -> Analyse.SignValue a) (env v)))
+      | Analyse.Interval_Analysis ->
+        (let env =
+           Core.analyse_interval_td_at
+             (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl
+               (Core.declared_global_vars p))
+             (Core.declared_global p) (Core.prog_table p) (Core.prog_procs p)
+             Core.prog_main_name (Core.prog_main p)
+           in
+          (fun v ->
+            Core.comp (fun a -> Analyse.IntervalValue a)
+              (match env v with Core.Bot -> Core.bot_fun Core.bot_ivl
+                | Core.Lifted a -> Core.id a))));;
 
 let rec bexp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.bexp_vnames b);;
 
 let rec entry_state_env_at
-  gs is_bot_pred pi ps mnm main v x =
+  gs is_bot_pred pi ps mnm main =
     (let sol = Core.entry_state_sol gs is_bot_pred pi ps mnm main in
-     let sg = Core.entry_state_sg_exec gs is_bot_pred pi ps mnm main in
-     let ctxs =
-       Core.image Core.snd
-         (Core.filter (fun (va, _) -> Core.equal_cfg_nodea va v) (Core.fst sol))
-       in
-      Analyse.IntervalValue
-        (if Core.equal_set (Core.equal_list Core.equal_ivl) ctxs Core.bot_set
-          then (match sg (Core.Inl (v, []))
-                 with Core.Bot -> Core.bot_fun Core.bot_ivl
-                 | Core.Lifted a -> Core.id a)
-                 x
-          else Core.sup_fin Core.semilattice_sup_ivl
-                 (Core.image
-                   (fun ctx ->
-                     (match sg (Core.Inl (v, ctx))
-                       with Core.Bot -> Core.bot_fun Core.bot_ivl
-                       | Core.Lifted a -> Core.id a)
-                       x)
-                   ctxs)));;
+     let sg = Core.entry_state_sg_exec_from_sol gs sol in
+      (fun v x ->
+        (let ctxs =
+           Core.image Core.snd
+             (Core.filter (fun (va, _) -> Core.equal_cfg_nodea va v)
+               (Core.fst sol))
+           in
+          Analyse.IntervalValue
+            (if Core.equal_set (Core.equal_list Core.equal_ivl) ctxs
+                  Core.bot_set
+              then (match sg (Core.Inl (v, []))
+                     with Core.Bot -> Core.bot_fun Core.bot_ivl
+                     | Core.Lifted a -> Core.id a)
+                     x
+              else Core.sup_fin Core.semilattice_sup_ivl
+                     (Core.image
+                       (fun ctx ->
+                         (match sg (Core.Inl (v, ctx))
+                           with Core.Bot -> Core.bot_fun Core.bot_ivl
+                           | Core.Lifted a -> Core.id a)
+                           x)
+                       ctxs)))));;
 
 let rec full_state_node_annotation
   vars env v =
