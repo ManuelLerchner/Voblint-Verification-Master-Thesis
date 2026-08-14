@@ -918,11 +918,17 @@ text \<open>
   filtering an already-finite set needs no such instance.
 \<close>
 
+text \<open>
+  The third parameter is the solver's own covered \<open>(node, context)\<close> key set
+  (\<^const>\<open>entry_state_sol\<close>'s first component), not variables -- named
+  \<open>reachable_keys\<close> accordingly, not \<open>vars\<close>.
+\<close>
+
 definition entry_state_classify_at ::
     "cfg_node \<Rightarrow> bexp \<Rightarrow> (pp \<times> ivl list) set \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted)
        \<Rightarrow> check_result" where
-  "entry_state_classify_at v cnd vars sg =
-     (let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) vars;
+  "entry_state_classify_at v cnd reachable_keys sg =
+     (let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) reachable_keys;
           unlift = case_lifted bot (\<lambda>\<sigma>. \<sigma>) \<circ> sg
       in if ctxs = {} then interval_classify_check cnd (unlift (Inl (v, [])))
          else Sup_fin ((\<lambda>ctx. interval_classify_check cnd (unlift (Inl (v, ctx)))) ` ctxs))"
@@ -941,7 +947,19 @@ text \<open>
   Same single-solve-per-report fix as \<open>interval_td_check_report_code\<close>: bind
   \<open>entry_state_sol\<close> once, outside \<^const>\<open>map\<close>'s per-check closure, so the
   generated code computes the solved system once per report regardless of
-  check count.
+  check count. Critically, \<open>sg\<close> below goes through
+  \<^const>\<open>entry_state_sg_exec_from_sol\<close>, not \<^const>\<open>entry_state_sg_exec\<close>: the
+  latter's own defining equation pattern-matches its key argument jointly with
+  \<open>gs is_bot_pred Pi ps mnm main\<close>, so a 6-arg partial application to those
+  produces an unevaluated closure whose body -- including its own three internal
+  \<open>entry_state_sol\<close> calls -- only runs once a key is supplied. Binding \<open>sg\<close> to
+  that partial application therefore does not share \<open>entry_state_sol\<close> across
+  the checks in this report at all, despite sitting outside \<open>map\<close>: every
+  \<open>entry_state_classify_at\<close> call underneath re-solves via \<open>sg\<close>'s own
+  internal calls, once per covered context per check. \<open>entry_state_sg_exec_from_sol\<close>
+  takes the already-computed \<open>sol\<close> above directly, so this report now solves
+  the entry-state analysis exactly once, full stop -- not once per report
+  modulo \<open>sg\<close>'s own hidden re-solving.
 \<close>
 
 declare entry_state_check_report_def [code del]
@@ -949,10 +967,11 @@ declare entry_state_check_report_def [code del]
 lemma entry_state_check_report_code [code]:
   "entry_state_check_report gs is_bot_pred Pi ps mnm main =
      (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main;
-          sg = entry_state_sg_exec gs is_bot_pred Pi ps mnm main
+          sg = entry_state_sg_exec_from_sol gs sol
       in map (\<lambda>(u, a, v). (u, ea_check_cond a, entry_state_classify_at u (ea_check_cond a) (fst sol) sg))
            (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list (compile_prog Pi ps mnm main))))"
-  unfolding entry_state_check_report_def Let_def by (rule refl)
+  unfolding entry_state_check_report_def Let_def entry_state_sg_exec_from_sol_eq[symmetric]
+  by (rule refl)
 
 definition entry_state_check_report_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "entry_state_check_report_prog mnm p =
