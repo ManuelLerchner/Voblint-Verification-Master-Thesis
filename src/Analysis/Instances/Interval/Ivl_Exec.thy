@@ -111,9 +111,9 @@ text \<open>
   its edge instead of re-deriving the agreement from \<^const>\<open>aval_ivl\<close>'s
   definition at every node.
 
-  \<open>EA_Nop\<close> and \<open>EA_Ret None\<close> reduce to the same identity shape
-  (\<open>apply_tf_EA_Ret_None\<close>); \<open>EA_Assign\<close> and \<open>EA_Ret (Some _)\<close> reduce to
-  the same single-write shape (\<open>apply_tf_EA_Ret_Some\<close>), so one lemma
+  \<open>EA_Nop\<close> and \<open>EA_Ret None\<close> both denote the identity shape (\<open>skip_ivl\<close> and
+  \<open>return_ivl None\<close> agree, though independently defined); \<open>EA_Assign\<close> and
+  \<open>EA_Ret (Some _)\<close> both denote the same single-write shape, so one lemma
   each covers both actions.
 \<close>
 
@@ -125,7 +125,7 @@ lemma ivl_tf_st_for_nop_agree:
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs EA_Nop s_exec) location =
       apply_tf (ivl_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by simp
+  using agree[OF location_in] by (simp add: ivl_tf_for_def skip_ivl_def)
 
 lemma ivl_tf_st_for_assign_agree:
   fixes y :: vname and a :: aexp
@@ -162,7 +162,7 @@ lemma ivl_tf_st_for_ret_none_agree:
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret None p) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
   using ivl_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: apply_tf_EA_Ret_None)
+  by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
 
 lemma ivl_tf_st_for_ret_some_agree:
   fixes a :: aexp and p :: pname
@@ -175,7 +175,7 @@ lemma ivl_tf_st_for_ret_some_agree:
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret (Some a) p) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_Ret (Some a) p) s_abs (location_vname location)"
   using ivl_tf_st_for_assign_agree[where y = ret_var, OF agree val_agree location_in canonical]
-  by (simp add: apply_tf_EA_Ret_Some)
+  by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
 
 text \<open>Guard filters commute totally through the readback
   (\<open>bfilter_ivl_st_commute\<close>), so full input agreement lifts directly --
@@ -359,10 +359,9 @@ lemma ivl_tf_st_for_commute:
    apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s))"
-    by (rule action_reduces_comp[OF ivl_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s) =
-      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
+    by (simp add: ivl_tf_for_def skip_ivl_def)
   show "\<And>x e. fun_of_resolved_st_q_for gs
       (ivl_tf_st_for gs (EA_Assign x e) s) =
     apply_tf (ivl_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
@@ -380,6 +379,25 @@ proof (rule apply_tf_wrap_eqI[
     apply_tf (ivl_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (rule ivl_tf_st_for_assume_not_agree[OF refl])
+  show "\<And>ea p. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Ret ea p) s) =
+    apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  proof -
+    fix ea p
+    show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_Ret ea p) s) =
+      apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    proof (cases ea)
+      case None
+      then show ?thesis by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
+    next
+      case (Some a)
+      then show ?thesis by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
+    qed
+  qed
+  show "\<And>c. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Check c) s) =
+    apply_tf (ivl_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
+    by simp
 qed
 
 lemma ivl_enter_st_for_commute:

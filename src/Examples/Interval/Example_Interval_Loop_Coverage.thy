@@ -114,7 +114,8 @@ proof (rule allI)
     by (auto split: if_splits
              simp: intra_predecessors_def loop_cfg_intra loop_env_def ivl_tf_for_def
                    apply_tf.simps assign_ivl_def ivl_backward_domain.bfilter.simps
-                   normalize_ivl_def less_eq_ivl_def le_fun_def)
+                   normalize_ivl_def less_eq_ivl_def le_fun_def
+                   skip_ivl_def return_ivl_def)
   show "rhs loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
   proof (cases "v = cfg_entry loop_cfg")
     case True

@@ -28,10 +28,12 @@ text \<open>
 
 definition keyed_spec :: "(ivl, ivl) dg_spec" where
   "keyed_spec =
-     \<lparr> dgs_nop = \<lambda>d g. (g, d),
+     \<lparr> dgs_skip = \<lambda>d g. (g, d),
        dgs_assign = \<lambda>x e d g. (g \<squnion> Ivl (Fin 1) (Fin 1), d),
        dgs_random = \<lambda>x d g. (g, d),
        dgs_branch = \<lambda>b pol d g. (g, d),
+       dgs_body = \<lambda>p d g. (g, d),
+       dgs_return = \<lambda>e p d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
        dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
        dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"
@@ -91,7 +93,7 @@ text \<open>
   \<^const>\<open>intra_predecessor_list\<close> selector (no hand-rolled \<open>pred_sel\<close>) --
   exactly the shape \<open>FunctionResult factorial\<close> has in the real factorial
   regression (two incoming intra edges, one per branch). \<open>merge_spec\<close>'s
-  \<open>dgs_nop\<close>/\<open>dgs_assign\<close> answer fixed constants regardless of the incoming
+  \<open>dgs_skip\<close>/\<open>dgs_assign\<close> answer fixed constants regardless of the incoming
   local/global state, so the solved global value at \<open>gkey ()\<close> is exactly
   the join of the two edges' own contributions, not a self-referential
   fixpoint -- letting the check below assert that join directly.
@@ -99,10 +101,12 @@ text \<open>
 
 definition merge_spec :: "(ivl, ivl) dg_spec" where
   "merge_spec =
-     \<lparr> dgs_nop = \<lambda>d g. (Ivl (Fin 0) (Fin 0), d),
+     \<lparr> dgs_skip = \<lambda>d g. (Ivl (Fin 0) (Fin 0), d),
        dgs_assign = \<lambda>x e d g. (Ivl (Fin 1) (Fin 1), d),
        dgs_random = \<lambda>x d g. (g, d),
        dgs_branch = \<lambda>b pol d g. (g, d),
+       dgs_body = \<lambda>p d g. (g, d),
+       dgs_return = \<lambda>e p d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
        dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
        dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"

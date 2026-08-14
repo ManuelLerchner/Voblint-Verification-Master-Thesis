@@ -892,10 +892,12 @@ definition unit_etf_of_transfer ::
   "(vname => bool) => 'a::sound_domain domain_transfer \<Rightarrow> (unit, 'a) effectful_domain_transfer"
 where
   "unit_etf_of_transfer gs tf = \<lparr>
-    etf_nop        = (\<lambda>u. unit_edge_tree gs (apply_tf tf EA_Nop) u),
+    etf_skip       = (\<lambda>u. unit_edge_tree gs (apply_tf tf EA_Nop) u),
     etf_assign     = (\<lambda>x e u. unit_edge_tree gs (apply_tf tf (EA_Assign x e)) u),
     etf_random     = (\<lambda>x u. unit_edge_tree gs (apply_tf tf (EA_Random x)) u),
     etf_branch     = (\<lambda>b pol u. unit_edge_tree gs (branch\<^sup># tf b pol) u),
+    etf_body       = (\<lambda>p u. unit_edge_tree gs (body\<^sup># tf p) u),
+    etf_return     = (\<lambda>e p u. unit_edge_tree gs (return\<^sup># tf e p) u),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
@@ -911,32 +913,36 @@ definition mixed_etf_of_transfer ::
   "(vname => bool) => 'a::sound_domain domain_transfer \<Rightarrow> (unit, 'a) effectful_domain_transfer"
 where
   "mixed_etf_of_transfer gs tf = \<lparr>
-    etf_nop        = mixed_etf_edge_tree gs tf EA_Nop,
+    etf_skip       = mixed_etf_edge_tree gs tf EA_Nop,
     etf_assign     = (\<lambda>x e. mixed_etf_edge_tree gs tf (EA_Assign x e)),
     etf_random     = (\<lambda>x. mixed_etf_edge_tree gs tf (EA_Random x)),
     etf_branch     = (\<lambda>b pol. mixed_etf_edge_tree gs tf (if pol then EA_Assume b else EA_AssumeNot b)),
+    etf_body       = (\<lambda>p u. unit_edge_tree gs (body\<^sup># tf p) u),
+    etf_return     = (\<lambda>e p. mixed_etf_edge_tree gs tf (EA_Ret e p)),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
 
+text \<open>\<open>EA_Check\<close>'s value is \<^const>\<open>unit_edge_tree\<close> applied to \<^const>\<open>apply_tf\<close> \<open>tf\<close>
+  \<open>EA_Nop\<close> (via \<^const>\<open>etf_skip\<close>), not to \<^const>\<open>apply_tf\<close> \<open>tf\<close> (\<open>EA_Check c\<close>) itself
+  (see the note on \<open>apply_etf\<close> in @{theory Voblint_Core.Constraint_System}); the \<open>if\<close>
+  states that coincidence instead of assuming it silently.\<close>
 lemma apply_etf_unit_of_transfer:
-  "apply_etf (unit_etf_of_transfer gs tf) a u = unit_edge_tree gs (apply_tf tf a) u"
+  "apply_etf (unit_etf_of_transfer gs tf) a u =
+     unit_edge_tree gs (apply_tf tf (if (\<exists>c. a = EA_Check c) then EA_Nop else a)) u"
   unfolding unit_etf_of_transfer_def
-  by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
-       split: option.splits)
+  by (cases a) simp_all
 
 lemma etf_combine_unit_of_transfer:
   "etf_combine (unit_etf_of_transfer gs tf) dst cc ex = unit_combine_tree gs dst cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
 lemma apply_etf_mixed_of_transfer:
-  "apply_etf (mixed_etf_of_transfer gs tf) a u = mixed_etf_edge_tree gs tf a u"
+  "apply_etf (mixed_etf_of_transfer gs tf) a u =
+     mixed_etf_edge_tree gs tf (if (\<exists>c. a = EA_Check c) then EA_Nop else a) u"
   unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def
-  by (cases a)
-     (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
-       split: option.splits)
+  by (cases a) simp_all
 
 lemma etf_combine_mixed_of_transfer:
   "etf_combine (mixed_etf_of_transfer gs tf) dst cc ex = unit_combine_tree gs dst cc ex"
@@ -1103,7 +1109,7 @@ proof -
   proof (unfold_locales; unfold glob_env_unit)
     show "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
-              s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop (unit_etf_of_transfer gs tf) u) \<sigma>))"
+              s \<in> gamma_state_lift (etf_collecting_full_lift (etf_skip (unit_etf_of_transfer gs tf) u) \<sigma>))"
       by (auto simp add: unit_etf_of_transfer_def intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
@@ -1123,7 +1129,19 @@ proof -
             \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
                   (etf_branch (unit_etf_of_transfer gs tf) b pol u) \<sigma>))"
       unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
-
+  next
+    show "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_body (unit_etf_of_transfer gs tf) p u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
+  next
+    show "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+                \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_return (unit_etf_of_transfer gs tf) e p u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
@@ -1155,9 +1173,14 @@ proof -
   proof (unfold_locales; unfold glob_env_unit)
     show "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
-              s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop (mixed_etf_of_transfer gs tf) u) \<sigma>))"
-      unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def apply_tf.simps
-      by (auto intro: in_gamma_local_edge_tree id_local_edge_invariant)
+              s \<in> gamma_state_lift (etf_collecting_full_lift (etf_skip (mixed_etf_of_transfer gs tf) u) \<sigma>))"
+    proof -
+      have inv': "local_edge_invariant gs (skip\<^sup># tf)"
+        using loc_inv[of EA_Nop] by (simp add: apply_tf.simps)
+      show ?thesis
+        unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def apply_tf.simps
+        using inv' by (auto intro: in_gamma_local_edge_tree in_gamma_unit_edge_tree)
+    qed
   next
     show "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
@@ -1278,6 +1301,46 @@ proof -
       qed
     qed
 
+  next
+    show "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_body (mixed_etf_of_transfer gs tf) p u) \<sigma>))"
+      unfolding mixed_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
+  next
+    show "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+                \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_return (mixed_etf_of_transfer gs tf) e p u) \<sigma>))"
+    proof (intro allI impI ballI)
+      fix e p u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store
+      assume inr: "inr_slot_locals_bot gs \<sigma>"
+        and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+      show "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in>
+              gamma_state_lift (etf_collecting_full_lift
+                (etf_return (mixed_etf_of_transfer gs tf) e p u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_Ret e p)")
+        case True
+        have inv': "local_edge_invariant gs (return\<^sup># tf e p)"
+          using loc_inv[OF True]
+          by (simp add: apply_tf.simps)
+        have "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in>
+                gamma_state_lift
+                  (etf_collecting_full_lift (local_edge_tree gs (return\<^sup># tf e p) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_return_forD)
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
+      next
+        case False
+        have "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in>
+                gamma_state_lift
+                  (etf_collecting_full_lift (unit_edge_tree gs (return\<^sup># tf e p) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_return_forD)
+        then show ?thesis
+          by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
+      qed
+    qed
   next
     show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).

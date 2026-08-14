@@ -83,10 +83,9 @@ theorem parity_tf_st_for_commute:
    apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s))"
-    by (rule action_reduces_comp[OF parity_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s) =
-      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def skip_parity_def)
   show "\<And>x e. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Assign x e) s) =
     apply_tf (parity_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
@@ -104,6 +103,25 @@ proof (rule apply_tf_wrap_eqI[
     apply_tf (parity_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (simp add: parity_tf_for_def branch_parity_def)
+  show "\<And>ea p. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Ret ea p) s) =
+    apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  proof -
+    fix ea p
+    show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs (EA_Ret ea p) s) =
+      apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    proof (cases ea)
+      case None
+      then show ?thesis by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
+    next
+      case (Some a)
+      then show ?thesis by (simp add: parity_tf_for_def return_parity_def assign_parity_def)
+    qed
+  qed
+  show "\<And>c. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Check c) s) =
+    apply_tf (parity_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
+    by simp
 qed
 
 lemma enter_frame_parity_st_for_commute:
@@ -131,7 +149,7 @@ lemma parity_tf_st_for_nop_agree:
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs EA_Nop s_exec) location =
       apply_tf (parity_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by simp
+  using agree[OF location_in] by (simp add: parity_tf_for_def skip_parity_def)
 
 lemma parity_tf_st_for_assign_agree:
   fixes y :: vname and a :: aexp
@@ -192,7 +210,7 @@ lemma parity_tf_st_for_ret_none_agree:
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Ret None p) s_exec) location =
       apply_tf (parity_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
   using parity_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: apply_tf_EA_Ret_None)
+  by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
 
 subsection \<open>Executable effectful transfer record, generic in the classifier\<close>
 

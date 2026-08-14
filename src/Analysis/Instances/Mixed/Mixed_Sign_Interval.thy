@@ -32,7 +32,8 @@ definition mixed_si_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> (sign abs_
 
 lemma mixed_si_spec_step [simp]:
   "dg_spec_step (mixed_si_spec gs) a d g = (apply_tf (ivl_tf_for gs) a g, apply_tf (sign_tf_for gs) a d)"
-  unfolding mixed_si_spec_def by (rule dg_spec_step_indep)
+  unfolding mixed_si_spec_def dg_spec_step_indep
+  by (cases a) (simp_all add: sign_tf_for_def skip_sign_def ivl_tf_for_def skip_ivl_def)
 
 text \<open>Mixed's combine, entry-seed, and equation-generator trees are the generic
   D/G executable helpers (@{const dg_cmb_of}, @{const dg_extra_of},

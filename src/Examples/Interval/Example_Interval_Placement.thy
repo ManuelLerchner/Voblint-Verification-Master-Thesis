@@ -1433,7 +1433,7 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
       (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
     using placement_edge_raw_nop[OF scope_eq loc placement_locations_of_canonical[OF loc]]
-    by (simp add: dg_hook_D_def dg_hook_G_def)
+    by (simp add: dg_hook_D_def dg_hook_G_def ivl_tf_for_def skip_ivl_def)
 qed
 
 lemma placement_dg_refines_edge_assign:
@@ -1504,7 +1504,7 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
       (dg_hook_D placement_sigma_abs u \<squnion> dg_hook_G placement_sigma_abs)
       (location_vname location)"
     using placement_edge_raw_nop[OF scope_eq loc placement_locations_of_canonical[OF loc]]
-    by (simp add: dg_hook_D_def dg_hook_G_def)
+    by (simp add: dg_hook_D_def dg_hook_G_def ivl_tf_for_def return_ivl_def)
 qed
 
 lemma placement_dg_refines_edge_ret_some:
@@ -1543,7 +1543,7 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
       (location_vname location)"
     using placement_edge_raw_assign[where y = ret_var, OF scope_eq val_agree' loc
         placement_locations_of_canonical[OF loc]]
-    by (simp add: dg_hook_D_def dg_hook_G_def ivl_tf_for_def assign_ivl_def)
+    by (simp add: dg_hook_D_def dg_hook_G_def ivl_tf_for_def return_ivl_def assign_ivl_def)
 qed
 
 subsection \<open>Per-node instantiation\<close>

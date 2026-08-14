@@ -46,6 +46,49 @@ lemma random_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> random_ivl x sigma1 \<le> random_ivl x sigma2"
   by (simp add: random_ivl_def le_funD le_funI)
 
+lemma assign_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"
+  by (simp add: assign_ivl_def aval_ivl_mono le_funD le_funI)
+
+subsection \<open>Skip, body-entry, and return\<close>
+
+text \<open>Interval has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close>
+  are the identity, and \<open>return\<^sup>#\<close> reuses the same \<open>EA_Ret\<close>-publishes-to-\<open>ret_var\<close>
+  behaviour \<^const>\<open>apply_tf\<close> used to hardcode for every domain.\<close>
+
+definition skip_ivl :: "(vname => ivl) => (vname => ivl)" where
+  "skip_ivl \<sigma> = \<sigma>"
+
+definition body_ivl :: "pname => (vname => ivl) => (vname => ivl)" where
+  "body_ivl p \<sigma> = \<sigma>"
+
+definition return_ivl ::
+    "aexp option => pname => (vname => ivl) => (vname => ivl)"
+where
+  "return_ivl e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_ivl ret_var a \<sigma>)"
+
+lemma skip_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_ivl \<sigma>\<rbrakk>"
+  by (simp add: skip_ivl_def)
+
+lemma body_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_ivl p \<sigma>\<rbrakk>"
+  by (simp add: body_ivl_def)
+
+lemma return_ivl_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_ivl e p \<sigma>\<rbrakk>"
+  using assign_ivl_sound[OF gs] gs
+  by (cases e) (simp_all add: return_ivl_def)
+
+lemma skip_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_ivl sigma1 \<le> skip_ivl sigma2"
+  by (simp add: skip_ivl_def)
+
+lemma body_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_ivl p sigma1 \<le> body_ivl p sigma2"
+  by (simp add: body_ivl_def)
+
+lemma return_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> return_ivl e p sigma1 \<le> return_ivl e p sigma2"
+  by (cases e) (simp_all add: return_ivl_def assign_ivl_mono)
+
 subsection \<open>Classifier-parametric procedure entry and bundled transfer functions\<close>
 
 text \<open>Procedure entry: keep globals, reset locals to the full interval, then bind
@@ -91,6 +134,9 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
   "ivl_tf_for gs = (| tf_assign  = assign_ivl,
                        tf_random  = random_ivl,
                        tf_branch  = bfilter_ivl,
+                       tf_skip    = skip_ivl,
+                       tf_body    = body_ivl,
+                       tf_return  = return_ivl,
                        tf_enter   = enter_ivl_for gs,
                        tf_combine = combine_env\<^sup># gs |)"
 
@@ -100,6 +146,9 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   subgoal by (simp add: assign_ivl_sound)
   subgoal by (simp add: random_ivl_sound)
   subgoal by (simp add: bfilter_ivl_sound)
+  subgoal by (simp add: skip_ivl_sound)
+  subgoal by (simp add: body_ivl_sound)
+  subgoal by (simp add: return_ivl_sound)
   subgoal by (simp add: enter_ivl_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
@@ -119,15 +168,11 @@ proof (rule enter_D_mono[OF assms])
     using assms by (simp add: list_all2_conv_all_nth aval_ivl_mono)
 qed
 
-lemma assign_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"
-  by (simp add: assign_ivl_def aval_ivl_mono le_funD le_funI)
-
 lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
      (auto simp: ivl_tf_for_def assign_ivl_mono random_ivl_mono bfilter_ivl_mono
-                 enter_ivl_for_mono split: option.splits)
+                 skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.

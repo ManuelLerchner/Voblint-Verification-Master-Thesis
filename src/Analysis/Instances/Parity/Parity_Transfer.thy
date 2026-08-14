@@ -75,6 +75,45 @@ lemma branch_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> branch_parity b pol sigma1 \<le> branch_parity b pol sigma2"
   by (simp add: branch_parity_def)
 
+subsection \<open>Skip, body-entry, and return\<close>
+
+text \<open>Parity has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close> are
+  the identity, and \<open>return\<^sup>#\<close> reuses the same \<open>EA_Ret\<close>-publishes-to-\<open>ret_var\<close>
+  behaviour \<^const>\<open>apply_tf\<close> used to hardcode for every domain.\<close>
+
+definition skip_parity :: "(vname => parity) => (vname => parity)" where
+  "skip_parity \<sigma> = \<sigma>"
+
+definition body_parity :: "pname => (vname => parity) => (vname => parity)" where
+  "body_parity p \<sigma> = \<sigma>"
+
+definition return_parity ::
+    "aexp option => pname => (vname => parity) => (vname => parity)"
+where
+  "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_parity ret_var a \<sigma>)"
+
+lemma skip_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_parity \<sigma>\<rbrakk>"
+  by (simp add: skip_parity_def)
+
+lemma body_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_parity p \<sigma>\<rbrakk>"
+  by (simp add: body_parity_def)
+
+lemma return_parity_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_parity e p \<sigma>\<rbrakk>"
+  using assign_parity_sound[OF gs] gs
+  by (cases e) (simp_all add: return_parity_def)
+
+lemma skip_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_parity sigma1 \<le> skip_parity sigma2"
+  by (simp add: skip_parity_def)
+
+lemma body_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_parity p sigma1 \<le> body_parity p sigma2"
+  by (simp add: body_parity_def)
+
+lemma return_parity_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> return_parity e p sigma1 \<le> return_parity e p sigma2"
+  by (cases e) (simp_all add: return_parity_def assign_parity_mono)
+
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
@@ -120,6 +159,9 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
   "parity_tf_for gs = (| tf_assign  = assign_parity,
                          tf_random  = random_parity,
                          tf_branch  = branch_parity,
+                         tf_skip    = skip_parity,
+                         tf_body    = body_parity,
+                         tf_return  = return_parity,
                          tf_enter   = enter_parity_for gs,
                          tf_combine = combine_env\<^sup># gs |)"
 
@@ -129,6 +171,9 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   subgoal by (simp add: assign_parity_sound)
   subgoal by (simp add: random_parity_sound)
   subgoal by (simp add: branch_parity_sound)
+  subgoal by (simp add: skip_parity_sound)
+  subgoal by (simp add: body_parity_sound)
+  subgoal by (simp add: return_parity_sound)
   subgoal by (simp add: enter_parity_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
@@ -152,6 +197,6 @@ lemma parity_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
   by (cases a)
      (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono branch_parity_mono
-                 enter_parity_for_mono split: option.splits)
+                 skip_parity_mono body_parity_mono return_parity_mono enter_parity_for_mono)
 
 end

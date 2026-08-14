@@ -177,7 +177,7 @@ qed
 
 lemma route_family_etf_sound:
   fixes E :: "(gname, sign) effectful_domain_transfer"
-  assumes nop: "\<And>u \<sigma>. etf_full (etf_nop E u) \<sigma>
+  assumes skip: "\<And>u \<sigma>. etf_full (etf_skip E u) \<sigma>
                    = transfer_lift is_bot_state (\<lambda>x. x) (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
     and assign: "\<And>x a u \<sigma>. etf_full (etf_assign E x a u) \<sigma>
                    = transfer_lift is_bot_state (assign\<^sup># (sign_tf_for gs) x a)
@@ -187,6 +187,11 @@ lemma route_family_etf_sound:
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
     and branch: "\<And>b pol u \<sigma>. etf_full (etf_branch E b pol u) \<sigma>
                    = transfer_lift is_bot_state (tf_branch (sign_tf_for gs) b pol)
+                       (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
+    and body: "\<And>p u \<sigma>. etf_full (etf_body E p u) \<sigma>
+                   = transfer_lift is_bot_state (\<lambda>x. x) (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
+    and return: "\<And>e p u \<sigma>. etf_full (etf_return E e p u) \<sigma>
+                   = transfer_lift is_bot_state (return\<^sup># (sign_tf_for gs) e p)
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
     and enter: "\<And>xs es u \<sigma>. etf_full (etf_enter E xs es u) \<sigma>
                    = transfer_lift is_bot_state (enter\<^sup># (sign_tf_for gs) xs es)
@@ -199,8 +204,8 @@ lemma route_family_etf_sound:
 proof (unfold_locales)
   show "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-            s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop E u) \<sigma>))"
-    by (auto simp add: nop intro: in_gamma_etf_collecting_lift_of_transfer)
+            s \<in> gamma_state_lift (etf_collecting_full_lift (etf_skip E u) \<sigma>))"
+    by (auto simp add: skip intro: in_gamma_etf_collecting_lift_of_transfer)
 next
   show "\<forall>x a u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
@@ -221,6 +226,18 @@ next
           \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch E b pol u) \<sigma>))"
     using bfilter_sign_sound
     by (auto simp add: branch sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
+next
+  show "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+          (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+            s \<in> gamma_state_lift (etf_collecting_full_lift (etf_body E p u) \<sigma>))"
+    by (auto simp add: body intro: in_gamma_etf_collecting_lift_of_transfer)
+next
+  show "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+          (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+            s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+              \<in> gamma_state_lift (etf_collecting_full_lift (etf_return E e p u) \<sigma>))"
+    using return_sign_sound
+    by (auto simp add: return sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
 next
   show "\<forall>xs es u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
@@ -331,19 +348,44 @@ text \<open>
 
 definition named_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (gname, sign) effectful_domain_transfer" where
   "named_etf gs =
-     \<lparr> etf_nop        = route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) EA_Nop),
+     \<lparr> etf_skip       = route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) EA_Nop),
        etf_assign     = \<lambda>x a. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Assign x a)),
        etf_random     = \<lambda>x. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Random x)),
        etf_branch     = \<lambda>b pol. route_tree gs (\<lambda>_. Gpos)
                            (apply_tf (sign_tf_for gs) (if pol then EA_Assume b else EA_AssumeNot b)),
+       etf_body       = \<lambda>p. route_tree gs (\<lambda>_. Gpos) (body\<^sup># (sign_tf_for gs) p),
+       etf_return     = \<lambda>e p. route_tree gs (\<lambda>_. Gpos) (return\<^sup># (sign_tf_for gs) e p),
        etf_enter      = (\<lambda>xs es. route_tree gs (\<lambda>_. Gpos) (enter\<^sup># (sign_tf_for gs) xs es)),
        etf_combine    = route_combine gs (\<lambda>_. Gneg) \<rparr>"
 
 lemma apply_etf_named:
   "apply_etf (named_etf gs) a u = route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) a) u"
-  by (cases a)
-     (simp_all add: named_etf_def apply_tf_EA_Ret_None apply_tf_EA_Ret_Some apply_tf_EA_Check
-        split: option.splits)
+proof (cases a)
+  case EA_Nop
+  then show ?thesis by (simp add: named_etf_def)
+next
+  case (EA_Assign x e)
+  then show ?thesis by (simp add: named_etf_def)
+next
+  case (EA_Random x)
+  then show ?thesis by (simp add: named_etf_def)
+next
+  case (EA_Assume b)
+  then show ?thesis by (simp add: named_etf_def)
+next
+  case (EA_AssumeNot b)
+  then show ?thesis by (simp add: named_etf_def)
+next
+  case (EA_Ret e p)
+  then show ?thesis by (simp add: named_etf_def apply_tf_EA_Ret)
+next
+  case (EA_Check c)
+  have "apply_tf (sign_tf_for gs) EA_Nop = (\<lambda>x. x)"
+    by (rule ext) (simp add: sign_tf_for_def skip_sign_def)
+  moreover have "apply_tf (sign_tf_for gs) (EA_Check c) = (\<lambda>x. x)"
+    by (rule ext) simp
+  ultimately show ?thesis using EA_Check by (simp add: named_etf_def)
+qed
 
 lemma etf_combine_named:
   "etf_combine (named_etf gs) dst cc ex = route_combine gs (\<lambda>_. Gneg) dst cc ex"
@@ -365,13 +407,29 @@ lemma named_comb_inr_local_bot:
   "\<And>dst cc ex \<sigma>' g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine (named_etf gs) dst cc ex) \<sigma>' (Inr g))"
   unfolding etf_combine_named by (rule sides_inr_local_bot_route_combine_const)
 
-lemma named_etf_full_nop:
-  "etf_full (etf_nop (named_etf gs) u) \<sigma>
+lemma named_etf_full_skip:
+  "etf_full (etf_skip (named_etf gs) u) \<sigma>
    = transfer_lift is_bot_state (\<lambda>x. x) (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
 proof -
-  have "apply_tf (sign_tf_for gs) EA_Nop = (\<lambda>x. x)" by (rule ext) simp
+  have "apply_tf (sign_tf_for gs) EA_Nop = (\<lambda>x. x)"
+    by (rule ext) (simp add: sign_tf_for_def skip_sign_def)
   then show ?thesis unfolding named_etf_def by (simp add: route_tree_etf_full)
 qed
+
+lemma named_etf_full_body:
+  "etf_full (etf_body (named_etf gs) p u) \<sigma>
+   = transfer_lift is_bot_state (\<lambda>x. x) (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
+proof -
+  have "body\<^sup># (sign_tf_for gs) p = (\<lambda>x. x)"
+    by (rule ext) (simp add: sign_tf_for_def body_sign_def)
+  then show ?thesis unfolding named_etf_def by (simp add: route_tree_etf_full)
+qed
+
+lemma named_etf_full_return:
+  "etf_full (etf_return (named_etf gs) e p u) \<sigma>
+   = transfer_lift is_bot_state (return\<^sup># (sign_tf_for gs) e p)
+       (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
+  unfolding named_etf_def by (simp add: route_tree_etf_full)
 
 lemma named_etf_full_assign:
   "etf_full (etf_assign (named_etf gs) x a u) \<sigma>
@@ -407,8 +465,9 @@ lemma named_etf_full_combine:
 
 theorem named_etf_sound:
   "sound_effectful_transfer gs (named_etf gs)"
-  by (rule route_family_etf_sound[OF named_etf_full_nop named_etf_full_assign
+  by (rule route_family_etf_sound[OF named_etf_full_skip named_etf_full_assign
         named_etf_full_random named_etf_full_branch
+        named_etf_full_body named_etf_full_return
         named_etf_full_enter named_etf_full_combine])
 
 subsection \<open>TD_side preconditions for named_etf (constant routing is monotone)\<close>

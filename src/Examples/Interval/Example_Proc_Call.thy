@@ -236,7 +236,9 @@ lemma main_prog_postfix:
 proof (rule allI)
   fix v
   let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)) ` intra_predecessors main_cfg v"
-  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> enter\<^sup># (ivl_tf_for proc_call_gs) fs as (main_prog_env c))
+  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow>
+               body\<^sup># (ivl_tf_for proc_call_gs) (entry_proc v)
+                 (enter\<^sup># (ivl_tf_for proc_call_gs) fs as (main_prog_env c)))
               ` entry_calls main_cfg v"
   let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs (ivl_tf_for proc_call_gs) dst (main_prog_env c) (main_prog_env ex))
               ` return_calls main_cfg v"
@@ -256,14 +258,15 @@ proof (rule allI)
       unfolding t
       by (elim insertE emptyE)
          (simp_all add: main_prog_env_def ivl_tf_for_def assign_ivl_def times_ivl_def
-                        normalize_ivl_def less_eq_ivl_def le_fun_def)
+                        normalize_ivl_def less_eq_ivl_def le_fun_def
+                        skip_ivl_def return_ivl_def)
   qed
   have leE: "\<And>t. t \<in> ?E \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: entry_calls_def main_cfg_calls main_prog_env_def ivl_tf_for_def
                    enter_ivl_for_def enter_frame_ivl_for_def enter_D_def enter_frame_D_def
                    ivl_top_def bind_formals_abs_def less_eq_ivl_def le_fun_def
-                   proc_call_gs_def)
+                   proc_call_gs_def body_ivl_def entry_proc_def)
   have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
     by (auto split: if_splits
              simp: return_calls_def main_cfg_calls main_prog_env_def
@@ -282,7 +285,7 @@ proof (rule allI)
       show "\<And>s. s \<in> insert main_prog_s0 (?I \<union> ?E \<union> ?R) \<Longrightarrow> s \<le> main_prog_env v"
         using s0 le by blast
     qed
-    thus ?thesis unfolding rhs_def Let_def using True by simp
+    from this[unfolded True] show ?thesis unfolding rhs_def Let_def using True by simp
   next
     case False
     have "abs_join_set (\<squnion>) bot (?I \<union> ?E \<union> ?R) \<le> main_prog_env v"

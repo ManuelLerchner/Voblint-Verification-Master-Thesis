@@ -380,16 +380,17 @@ lemma sign_tf_local_edge_invariant:
   shows "local_edge_invariant gs (apply_tf (sign_tf_for gs) a)"
   using loc
   apply (cases a)
-  apply (auto simp: sign_tf_for_def aexp_mentions_global_def
+  unfolding sign_tf_for_def aexp_mentions_global_def apply (auto simp: 
       intro: assign_sign_local_edge_invariant
              bfilter_sign_local_edge_invariant
              random_sign_local_edge_invariant
              id_local_edge_invariant
       split: option.splits)
-  apply (auto simp: local_edge_invariant_def)
-  by (metis aexp_mentions_global_def
-      assign_sign_local_edge_invariant
+  apply (auto simp: local_edge_invariant_def skip_sign_def return_sign_def)
+  by (metis aexp_mentions_global_def assign_sign_local_edge_invariant
       local_edge_invariant_def)
+ 
+ 
 
 end
 

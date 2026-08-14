@@ -62,10 +62,8 @@ lemma edge_collect_etf_sound:
   shows
     "edge_collect a (gamma_state_lift (side_env_lift \<sigma> u))
        \<subseteq> gamma_state_lift (etf_collecting_full_lift (apply_etf etf a u) \<sigma>)"
-  using inr
-  by (cases a;
-      auto simp: etf_sound_nop side_env_lift_def
-           split: option.splits)
+      using inr
+  by (cases a; auto simp: etf_sound_skip etf_sound_return side_env_lift_def)
 
 end
 

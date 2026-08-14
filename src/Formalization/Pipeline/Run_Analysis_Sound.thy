@@ -197,8 +197,26 @@ lemma unit_dg_Hstep_for:
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
              (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
            = dg_spec_step (unit_dg_spec_for gs tf) a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (simp add: dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for
-                unit_step_st_commute_for commute)
+proof -
+  interpret action_reduces tf_st by (rule reduces)
+  show ?thesis
+  proof (cases "\<exists>bx. a = EA_Check bx")
+    case True
+    then obtain c where a_eq: "a = EA_Check c" by blast
+    have commute_nop: "\<And>s. fun_of_exec_dg_st_for gs (tf_st EA_Nop s) = skip\<^sup># tf (fun_of_exec_dg_st_for gs s)"
+      using commute by simp
+    show ?thesis
+      unfolding dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for a_eq
+      by (simp add: check) (rule unit_step_st_commute_for
+            [where f_st = "tf_st EA_Nop" and f_abs = "skip\<^sup># tf", OF commute_nop])
+  next
+    case False
+    then show ?thesis
+      unfolding dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for
+      by simp (rule unit_step_st_commute_for
+            [where f_st = "tf_st a" and f_abs = "apply_tf tf a", OF commute])
+  qed
+qed
 
 lemma unit_dg_Henter_for:
   assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"

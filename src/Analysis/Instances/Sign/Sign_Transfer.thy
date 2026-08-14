@@ -65,6 +65,45 @@ lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
   by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
 
+subsection \<open>Skip, body-entry, and return\<close>
+
+text \<open>Sign has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close> are
+  the identity, and \<open>return\<^sup>#\<close> reuses the same \<open>EA_Ret\<close>-publishes-to-\<open>ret_var\<close>
+  behaviour \<^const>\<open>apply_tf\<close> used to hardcode for every domain.\<close>
+
+definition skip_sign :: "(vname => sign) => (vname => sign)" where
+  "skip_sign \<sigma> = \<sigma>"
+
+definition body_sign :: "pname => (vname => sign) => (vname => sign)" where
+  "body_sign p \<sigma> = \<sigma>"
+
+definition return_sign ::
+    "aexp option => pname => (vname => sign) => (vname => sign)"
+where
+  "return_sign e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_sign ret_var a \<sigma>)"
+
+lemma skip_sign_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_sign \<sigma>\<rbrakk>"
+  by (simp add: skip_sign_def)
+
+lemma body_sign_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_sign p \<sigma>\<rbrakk>"
+  by (simp add: body_sign_def)
+
+lemma return_sign_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_sign e p \<sigma>\<rbrakk>"
+  using assign_sign_sound[OF gs] gs
+  by (cases e) (simp_all add: return_sign_def)
+
+lemma skip_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_sign sigma1 \<le> skip_sign sigma2"
+  by (simp add: skip_sign_def)
+
+lemma body_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_sign p sigma1 \<le> body_sign p sigma2"
+  by (simp add: body_sign_def)
+
+lemma return_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> return_sign e p sigma1 \<le> return_sign e p sigma2"
+  by (cases e) (simp_all add: return_sign_def assign_sign_mono)
+
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
@@ -110,6 +149,9 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
   "sign_tf_for gs = (| tf_assign  = assign_sign,
                        tf_random  = random_sign,
                        tf_branch  = bfilter_sign,
+                       tf_skip    = skip_sign,
+                       tf_body    = body_sign,
+                       tf_return  = return_sign,
                        tf_enter   = enter_sign_for gs,
                        tf_combine = combine_env\<^sup># gs |)"
 
@@ -119,6 +161,9 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   subgoal by (simp add: assign_sign_sound)
   subgoal by (simp add: random_sign_sound)
   subgoal by (simp add: bfilter_sign_sound)
+  subgoal by (simp add: skip_sign_sound)
+  subgoal by (simp add: body_sign_sound)
+  subgoal by (simp add: return_sign_sound)
   subgoal by (simp add: enter_sign_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
@@ -142,6 +187,6 @@ lemma sign_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
   by (cases a)
      (auto simp: sign_tf_for_def assign_sign_mono random_sign_mono bfilter_sign_mono
-                 enter_sign_for_mono split: option.splits)
+                 skip_sign_mono body_sign_mono return_sign_mono enter_sign_for_mono)
 
 end

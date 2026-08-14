@@ -262,11 +262,22 @@ text \<open>Every step except the two precise \<open>assume\<close>/\<open>assum
   is sound by forgetting or by leaving the carrier untouched -- deliberately
   imprecise: no closure, no normalization, havoc-based calls.\<close>
 
-definition dgs_nop_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_nop_rel d g = (g, d)"
+definition dgs_skip_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_skip_rel d g = (g, d)"
 
 definition dgs_assign_rel :: "vname \<Rightarrow> aexp \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_assign_rel x e d g = (forget_relc x g, forget_relc x d)"
+
+definition dgs_body_rel :: "pname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_body_rel p d g = (g, d)"
+
+text \<open>
+  \<open>return\<close> reuses the same forget-based imprecision \<open>dgs_assign_rel\<close> already
+  applies to every ordinary assignment: with an expression, forget \<open>ret_var\<close>;
+  without one, behave like \<open>skip\<close>.
+\<close>
+definition dgs_return_rel :: "aexp option \<Rightarrow> pname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_return_rel e p d g = (case e of None \<Rightarrow> dgs_skip_rel d g | Some a \<Rightarrow> dgs_assign_rel ret_var a d g)"
 
 definition dgs_random_rel :: "vname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_random_rel x d g = (forget_relc x g, forget_relc x d)"
@@ -296,10 +307,12 @@ where
 
 definition rel_order_spec :: "(relc, relc) dg_spec" where
   "rel_order_spec = \<lparr>
-     dgs_nop = dgs_nop_rel,
+     dgs_skip = dgs_skip_rel,
      dgs_assign = dgs_assign_rel,
      dgs_random = dgs_random_rel,
      dgs_branch = dgs_branch_rel,
+     dgs_body = dgs_body_rel,
+     dgs_return = dgs_return_rel,
      dgs_enter = dgs_enter_rel,
      dgs_combine_env = dgs_combine_env_rel,
      dgs_combine_assign = dgs_combine_assign_rel
@@ -310,7 +323,9 @@ named_theorems rel_order_simps
 declare
   dgs_branch_rel_def     [rel_order_simps]
   branch_step_rel_def    [rel_order_simps]
-  dgs_nop_rel_def        [rel_order_simps]
+  dgs_skip_rel_def       [rel_order_simps]
+  dgs_body_rel_def       [rel_order_simps]
+  dgs_return_rel_def     [rel_order_simps]
   rel_order_spec_def     [rel_order_simps]
   gammaDG_rel_def        [rel_order_simps]
   dgs_assign_rel_def     [rel_order_simps]
@@ -318,10 +333,10 @@ declare
 
 subsection \<open>Per-edge soundness\<close>
 
-lemma dgs_nop_rel_sound[intro]:
+lemma dgs_skip_rel_sound[intro]:
   "edge_collect EA_Nop (gammaDG_rel d g) \<subseteq>
-     (case dgs_nop_rel d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
-  unfolding dgs_nop_rel_def by simp
+     (case dgs_skip_rel d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+  unfolding dgs_skip_rel_def by simp
 
 lemma dgs_assign_rel_sound[intro]:
   "edge_collect (EA_Assign x e) (gammaDG_rel d g) \<subseteq>
@@ -381,7 +396,7 @@ lemma dgs_ret_rel_sound[intro]:
 proof (cases e)
   case None
   then show ?thesis
-    by (simp add: rel_order_spec_def dgs_nop_rel_def)
+    by (simp add: rel_order_spec_def dgs_return_rel_def dgs_skip_rel_def)
 next
   case (Some a)
   have "edge_collect (EA_Ret (Some a) p) (gammaDG_rel d g)
@@ -391,7 +406,7 @@ next
     using forget_relc_sound unfolding gammaDG_rel_def by blast
   finally show ?thesis
     using Some
-    by (simp add: rel_order_spec_def dgs_assign_rel_def gammaDG_rel_def)
+    by (simp add: rel_order_spec_def dgs_return_rel_def dgs_assign_rel_def gammaDG_rel_def)
 qed
 
 lemma step_sound_rel:

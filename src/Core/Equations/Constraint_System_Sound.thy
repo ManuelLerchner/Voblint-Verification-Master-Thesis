@@ -84,11 +84,11 @@ lemma tf_enter_le_rhs:
     and env :: "pp \<Rightarrow> 'a abs_state" and s0 :: "'a abs_state"
   assumes finI: "finite (intra g)" and finC: "finite (calls g)"
     and uce: "(c, CallEdge dst fs as, v, k) \<in> calls g"
-  shows "enter\<^sup># tf fs as (env c) \<le> rhs g tf (\<squnion>) bot s0 env v"
+  shows "body\<^sup># tf (entry_proc v) (enter\<^sup># tf fs as (env c)) \<le> rhs g tf (\<squnion>) bot s0 env v"
 proof (rule le_rhs_of_mem[OF finI finC])
-  have "enter\<^sup># tf fs as (env c) \<in> rhs_entry_sources g tf env v"
+  have "body\<^sup># tf (entry_proc v) (enter\<^sup># tf fs as (env c)) \<in> rhs_entry_sources g tf env v"
     by (rule rhs_entry_sourcesI[OF uce])
-  thus "enter\<^sup># tf fs as (env c) \<in> rhs_sources g tf env v"
+  thus "body\<^sup># tf (entry_proc v) (enter\<^sup># tf fs as (env c)) \<in> rhs_sources g tf env v"
     unfolding rhs_sources_def by blast
 qed
 
@@ -128,7 +128,19 @@ begin
 
 lemma edge_collect_apply_tf_sound_for:
   "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
-  apply(cases a) by (auto split:option.splits)
+  by (cases a) auto
+
+text \<open>A \<open>dg_spec\<close>/executable-mirror instance dispatches its own \<open>EA_Check\<close> case
+  through \<^const>\<open>tf_skip\<close> rather than the (independent) \<^const>\<open>apply_tf\<close>
+  identity (\<open>EA_Check\<close> stays a hardcoded, non-overridable case at this level, but
+  a \<open>dg_spec\<close>'s \<open>dg_spec_step\<close> has no such structural identity to fall back on
+  and so routes it through \<open>dgs_skip\<close> instead -- the same choice \<^const>\<open>apply_etf\<close>
+  makes for lack of a \<open>gs\<close>-independent tree). Concretely, though, an \<open>EA_Check\<close>
+  step and an \<open>EA_Nop\<close> step coincide (@{thm edge_collect_simps}), so this bridges
+  the two without needing \<open>apply_tf tf (EA_Check c)\<close> at all.\<close>
+lemma edge_collect_check_sound_for:
+  "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
+  by auto
 
 text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer
   over \<open>A\<close> is dominated by \<open>B\<close>, a concrete step from a store in \<open>[[A]]\<close> lands in \<open>[[B]]\<close>.
@@ -148,16 +160,21 @@ proof -
   finally show ?thesis using m by blast
 qed
 
-text \<open>Call-entry companion of \<open>edge_of_bound\<close>, generic in the classifier: if the
-  abstract enter transfer over \<open>A\<close> is dominated by \<open>B\<close>, the concrete callee-entry
-  store built from a caller store in \<open>[[A]]\<close> lies in \<open>[[B]]\<close>.\<close>
+text \<open>Call-entry companion of \<open>edge_of_bound\<close>, generic in the classifier: if
+  \<open>body\<^sup>#\<close> applied to the abstract enter transfer over \<open>A\<close> (the actual value
+  \<^const>\<open>rhs_entry_sources\<close> publishes at a \<open>FunctionEntry\<close>, per \<open>tf_enter_le_rhs\<close>)
+  is dominated by \<open>B\<close>, the concrete callee-entry store built from a caller store
+  in \<open>[[A]]\<close> still lies in \<open>[[B]]\<close>: \<^const>\<open>tf_body\<close>'s soundness never drops a
+  store that was already sound for its input.\<close>
 lemma call_enter_of_bound_for:
-  assumes bound: "enter\<^sup># tf pars args A \<le> B"
+  assumes bound: "body\<^sup># tf p (enter\<^sup># tf pars args A) \<le> B"
     and s: "s \<in> \<lbrakk>A\<rbrakk>"
   shows "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>B\<rbrakk>"
 proof -
   have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args A\<rbrakk>"
     using tf_sound_enter_forD[OF s] by (simp add: call_enter_CallEdge)
+  then have "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>body\<^sup># tf p (enter\<^sup># tf pars args A)\<rbrakk>"
+    by (rule tf_sound_body_forD)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
