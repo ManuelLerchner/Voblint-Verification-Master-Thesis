@@ -187,7 +187,7 @@ next
   then show ?case ..
 next
   case (Random x)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Random x, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Special Nondet_Int x, k) \<in> intra g"
     by (auto split: prod.splits)
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
@@ -314,7 +314,7 @@ next
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
   case (Random x)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Random x, k) \<in> intra g"
+  then have en: "en = Statement n" and mem: "(Statement n, EA_Special Nondet_Int x, k) \<in> intra g"
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next

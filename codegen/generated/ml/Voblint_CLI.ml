@@ -122,11 +122,12 @@ module Core : sig
   val equal_option : 'a HOL.equal -> 'a option -> 'a option -> bool
   type call_action = CallEdge of string option * string list * aexp list
   val equal_call_actiona : call_action -> call_action -> bool
+  type special_call
   type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp
     | Less of aexp * aexp | Eqa of aexp * aexp
-  type edge_action = EA_Nop | EA_Assign of string * aexp | EA_Random of string |
-    EA_Assume of bexp | EA_AssumeNot of bexp | EA_Ret of aexp option * string |
-    EA_Check of bexp
+  type edge_action = EA_Nop | EA_Assign of string * aexp |
+    EA_Special of special_call * string | EA_Assume of bexp |
+    EA_AssumeNot of bexp | EA_Ret of aexp option * string | EA_Check of bexp
   val equal_edge_actiona : edge_action -> edge_action -> bool
   type eint = MinInf | Fin of int | PlusInf
   type ivl = Ivl of eint * eint
@@ -875,6 +876,10 @@ let order_call_action =
 let linorder_call_action =
   ({order_linorder = order_call_action} : call_action linorder);;
 
+type special_call = Nondet_Int;;
+
+let rec equal_special_call Nondet_Int Nondet_Int = true;;
+
 let rec equal_bool p pa = match p, pa with false, p -> not p
                      | true, p -> p
                      | p, false -> not p
@@ -923,9 +928,9 @@ let rec equal_bexp
     | Not x2, Not y2 -> equal_bexp x2 y2
     | Bc x1, Bc y1 -> equal_bool x1 y1;;
 
-type edge_action = EA_Nop | EA_Assign of string * aexp | EA_Random of string |
-  EA_Assume of bexp | EA_AssumeNot of bexp | EA_Ret of aexp option * string |
-  EA_Check of bexp;;
+type edge_action = EA_Nop | EA_Assign of string * aexp |
+  EA_Special of special_call * string | EA_Assume of bexp | EA_AssumeNot of bexp
+  | EA_Ret of aexp option * string | EA_Check of bexp;;
 
 let rec equal_edge_actiona
   x0 x1 = match x0, x1 with EA_Ret (x61, x62), EA_Check x7 -> false
@@ -940,14 +945,14 @@ let rec equal_edge_actiona
     | EA_Ret (x61, x62), EA_Assume x4 -> false
     | EA_Assume x4, EA_AssumeNot x5 -> false
     | EA_AssumeNot x5, EA_Assume x4 -> false
-    | EA_Random x3, EA_Check x7 -> false
-    | EA_Check x7, EA_Random x3 -> false
-    | EA_Random x3, EA_Ret (x61, x62) -> false
-    | EA_Ret (x61, x62), EA_Random x3 -> false
-    | EA_Random x3, EA_AssumeNot x5 -> false
-    | EA_AssumeNot x5, EA_Random x3 -> false
-    | EA_Random x3, EA_Assume x4 -> false
-    | EA_Assume x4, EA_Random x3 -> false
+    | EA_Special (x31, x32), EA_Check x7 -> false
+    | EA_Check x7, EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Ret (x61, x62) -> false
+    | EA_Ret (x61, x62), EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_AssumeNot x5 -> false
+    | EA_AssumeNot x5, EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Assume x4 -> false
+    | EA_Assume x4, EA_Special (x31, x32) -> false
     | EA_Assign (x21, x22), EA_Check x7 -> false
     | EA_Check x7, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Ret (x61, x62) -> false
@@ -956,8 +961,8 @@ let rec equal_edge_actiona
     | EA_AssumeNot x5, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Assume x4 -> false
     | EA_Assume x4, EA_Assign (x21, x22) -> false
-    | EA_Assign (x21, x22), EA_Random x3 -> false
-    | EA_Random x3, EA_Assign (x21, x22) -> false
+    | EA_Assign (x21, x22), EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Assign (x21, x22) -> false
     | EA_Nop, EA_Check x7 -> false
     | EA_Check x7, EA_Nop -> false
     | EA_Nop, EA_Ret (x61, x62) -> false
@@ -966,8 +971,8 @@ let rec equal_edge_actiona
     | EA_AssumeNot x5, EA_Nop -> false
     | EA_Nop, EA_Assume x4 -> false
     | EA_Assume x4, EA_Nop -> false
-    | EA_Nop, EA_Random x3 -> false
-    | EA_Random x3, EA_Nop -> false
+    | EA_Nop, EA_Special (x31, x32) -> false
+    | EA_Special (x31, x32), EA_Nop -> false
     | EA_Nop, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Nop -> false
     | EA_Check x7, EA_Check y7 -> equal_bexp x7 y7
@@ -975,13 +980,16 @@ let rec equal_edge_actiona
         equal_option equal_aexp x61 y61 && ((x62 : string) = y62)
     | EA_AssumeNot x5, EA_AssumeNot y5 -> equal_bexp x5 y5
     | EA_Assume x4, EA_Assume y4 -> equal_bexp x4 y4
-    | EA_Random x3, EA_Random y3 -> ((x3 : string) = y3)
+    | EA_Special (x31, x32), EA_Special (y31, y32) ->
+        equal_special_call x31 y31 && ((x32 : string) = y32)
     | EA_Assign (x21, x22), EA_Assign (y21, y22) ->
         ((x21 : string) = y21) && equal_aexpa x22 y22
     | EA_Nop, EA_Nop -> true;;
 
 let equal_edge_action =
   ({HOL.equal = equal_edge_actiona} : edge_action HOL.equal);;
+
+let rec comparator_special_call Nondet_Int Nondet_Int = Eq;;
 
 let rec comparator_bool x0 x1 = match x0, x1 with false, false -> Eq
                           | false, true -> Lt
@@ -1037,59 +1045,61 @@ let rec comparator_bexp
 let rec comparator_edge_action
   x0 x1 = match x0, x1 with EA_Nop, EA_Nop -> Eq
     | EA_Nop, EA_Assign (y, ya) -> Lt
-    | EA_Nop, EA_Random yb -> Lt
-    | EA_Nop, EA_Assume yc -> Lt
-    | EA_Nop, EA_AssumeNot yd -> Lt
-    | EA_Nop, EA_Ret (ye, yf) -> Lt
-    | EA_Nop, EA_Check yg -> Lt
+    | EA_Nop, EA_Special (yb, yc) -> Lt
+    | EA_Nop, EA_Assume yd -> Lt
+    | EA_Nop, EA_AssumeNot ye -> Lt
+    | EA_Nop, EA_Ret (yf, yg) -> Lt
+    | EA_Nop, EA_Check yh -> Lt
     | EA_Assign (x, xa), EA_Nop -> Gt
     | EA_Assign (x, xa), EA_Assign (y, ya) ->
         (match comparator_of (equal_literal, linorder_literal) x y
           with Eq -> comparator_aexp xa ya | Lt -> Lt | Gt -> Gt)
-    | EA_Assign (x, xa), EA_Random yb -> Lt
-    | EA_Assign (x, xa), EA_Assume yc -> Lt
-    | EA_Assign (x, xa), EA_AssumeNot yd -> Lt
-    | EA_Assign (x, xa), EA_Ret (ye, yf) -> Lt
-    | EA_Assign (x, xa), EA_Check yg -> Lt
-    | EA_Random x, EA_Nop -> Gt
-    | EA_Random x, EA_Assign (y, ya) -> Gt
-    | EA_Random x, EA_Random yb ->
-        comparator_of (equal_literal, linorder_literal) x yb
-    | EA_Random x, EA_Assume yc -> Lt
-    | EA_Random x, EA_AssumeNot yd -> Lt
-    | EA_Random x, EA_Ret (ye, yf) -> Lt
-    | EA_Random x, EA_Check yg -> Lt
+    | EA_Assign (x, xa), EA_Special (yb, yc) -> Lt
+    | EA_Assign (x, xa), EA_Assume yd -> Lt
+    | EA_Assign (x, xa), EA_AssumeNot ye -> Lt
+    | EA_Assign (x, xa), EA_Ret (yf, yg) -> Lt
+    | EA_Assign (x, xa), EA_Check yh -> Lt
+    | EA_Special (x, xa), EA_Nop -> Gt
+    | EA_Special (x, xa), EA_Assign (y, ya) -> Gt
+    | EA_Special (x, xa), EA_Special (yb, yc) ->
+        (match comparator_special_call x yb
+          with Eq -> comparator_of (equal_literal, linorder_literal) xa yc
+          | Lt -> Lt | Gt -> Gt)
+    | EA_Special (x, xa), EA_Assume yd -> Lt
+    | EA_Special (x, xa), EA_AssumeNot ye -> Lt
+    | EA_Special (x, xa), EA_Ret (yf, yg) -> Lt
+    | EA_Special (x, xa), EA_Check yh -> Lt
     | EA_Assume x, EA_Nop -> Gt
     | EA_Assume x, EA_Assign (y, ya) -> Gt
-    | EA_Assume x, EA_Random yb -> Gt
-    | EA_Assume x, EA_Assume yc -> comparator_bexp x yc
-    | EA_Assume x, EA_AssumeNot yd -> Lt
-    | EA_Assume x, EA_Ret (ye, yf) -> Lt
-    | EA_Assume x, EA_Check yg -> Lt
+    | EA_Assume x, EA_Special (yb, yc) -> Gt
+    | EA_Assume x, EA_Assume yd -> comparator_bexp x yd
+    | EA_Assume x, EA_AssumeNot ye -> Lt
+    | EA_Assume x, EA_Ret (yf, yg) -> Lt
+    | EA_Assume x, EA_Check yh -> Lt
     | EA_AssumeNot x, EA_Nop -> Gt
     | EA_AssumeNot x, EA_Assign (y, ya) -> Gt
-    | EA_AssumeNot x, EA_Random yb -> Gt
-    | EA_AssumeNot x, EA_Assume yc -> Gt
-    | EA_AssumeNot x, EA_AssumeNot yd -> comparator_bexp x yd
-    | EA_AssumeNot x, EA_Ret (ye, yf) -> Lt
-    | EA_AssumeNot x, EA_Check yg -> Lt
+    | EA_AssumeNot x, EA_Special (yb, yc) -> Gt
+    | EA_AssumeNot x, EA_Assume yd -> Gt
+    | EA_AssumeNot x, EA_AssumeNot ye -> comparator_bexp x ye
+    | EA_AssumeNot x, EA_Ret (yf, yg) -> Lt
+    | EA_AssumeNot x, EA_Check yh -> Lt
     | EA_Ret (x, xa), EA_Nop -> Gt
     | EA_Ret (x, xa), EA_Assign (y, ya) -> Gt
-    | EA_Ret (x, xa), EA_Random yb -> Gt
-    | EA_Ret (x, xa), EA_Assume yc -> Gt
-    | EA_Ret (x, xa), EA_AssumeNot yd -> Gt
-    | EA_Ret (x, xa), EA_Ret (ye, yf) ->
-        (match comparator_option comparator_aexp x ye
-          with Eq -> comparator_of (equal_literal, linorder_literal) xa yf
+    | EA_Ret (x, xa), EA_Special (yb, yc) -> Gt
+    | EA_Ret (x, xa), EA_Assume yd -> Gt
+    | EA_Ret (x, xa), EA_AssumeNot ye -> Gt
+    | EA_Ret (x, xa), EA_Ret (yf, yg) ->
+        (match comparator_option comparator_aexp x yf
+          with Eq -> comparator_of (equal_literal, linorder_literal) xa yg
           | Lt -> Lt | Gt -> Gt)
-    | EA_Ret (x, xa), EA_Check yg -> Lt
+    | EA_Ret (x, xa), EA_Check yh -> Lt
     | EA_Check x, EA_Nop -> Gt
     | EA_Check x, EA_Assign (y, ya) -> Gt
-    | EA_Check x, EA_Random yb -> Gt
-    | EA_Check x, EA_Assume yc -> Gt
-    | EA_Check x, EA_AssumeNot yd -> Gt
-    | EA_Check x, EA_Ret (ye, yf) -> Gt
-    | EA_Check x, EA_Check yg -> comparator_bexp x yg;;
+    | EA_Check x, EA_Special (yb, yc) -> Gt
+    | EA_Check x, EA_Assume yd -> Gt
+    | EA_Check x, EA_AssumeNot ye -> Gt
+    | EA_Check x, EA_Ret (yf, yg) -> Gt
+    | EA_Check x, EA_Check yh -> comparator_bexp x yh;;
 
 let rec less_eq_edge_action x = le_of_comp comparator_edge_action x;;
 
@@ -1680,8 +1690,8 @@ type analysis_event = Check_Event of bexp;;
 type ('a, 'b, 'c) dg_spec_ext =
   Dg_spec_ext of
     ('a -> 'b -> 'b * 'a) * (string -> aexp -> 'a -> 'b -> 'b * 'a) *
-      (string -> 'a -> 'b -> 'b * 'a) * (bexp -> bool -> 'a -> 'b -> 'b * 'a) *
-      (string -> 'a -> 'b -> 'b * 'a) *
+      (special_call -> string -> 'a -> 'b -> 'b * 'a) *
+      (bexp -> bool -> 'a -> 'b -> 'b * 'a) * (string -> 'a -> 'b -> 'b * 'a) *
       (aexp option -> string -> 'a -> 'b -> 'b * 'a) *
       (string list -> aexp list -> 'a -> 'b -> 'b * 'a) *
       (analysis_event -> 'a -> 'b -> 'b * 'a) * ('a -> 'a -> 'b -> 'b * 'a) *
@@ -1713,9 +1723,8 @@ type ('a, 'b, 'c) effectful_st_transfer_ext =
   Effectful_st_transfer_ext of
     (cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (string -> aexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (string -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (bexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (bexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (special_call -> string -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (bexp -> bool -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (string list ->
         aexp list -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (cfg_node -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
@@ -2123,7 +2132,7 @@ let rec ivl_tf_st_for
     | source_global, EA_Assign (x, a), s ->
         update_resolved_st_q bot_ivl s (location_of source_global x)
           (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
-    | source_global, EA_Random x, s ->
+    | source_global, EA_Special (sc, x), s ->
         update_resolved_st_q bot_ivl s (location_of source_global x) ivl_top
     | source_global, EA_Assume b, s -> branch_ivl_st_for source_global b true s
     | source_global, EA_AssumeNot b, s ->
@@ -2289,55 +2298,49 @@ let rec show_int
 
 let rec dgs_combine_assign
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_combine_assign;;
 
 let rec dgs_combine_env
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_combine_env;;
 
 let rec dgs_combine
   s dst dc de g = dgs_combine_assign s dst de g (dgs_combine_env s dc de g);;
 
-let rec etf_st_assume_not
+let rec etf_st_special
   (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
-    = etf_st_assume_not;;
+    (etf_st_nop, etf_st_assign, etf_st_special, etf_st_branch, etf_st_enter,
+      etf_st_combine_env, etf_st_combine_collect, more))
+    = etf_st_special;;
 
-let rec etf_st_random
+let rec etf_st_branch
   (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
-    = etf_st_random;;
-
-let rec etf_st_assume
-  (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
-    = etf_st_assume;;
+    (etf_st_nop, etf_st_assign, etf_st_special, etf_st_branch, etf_st_enter,
+      etf_st_combine_env, etf_st_combine_collect, more))
+    = etf_st_branch;;
 
 let rec etf_st_assign
   (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
+    (etf_st_nop, etf_st_assign, etf_st_special, etf_st_branch, etf_st_enter,
+      etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_assign;;
 
 let rec etf_st_nop
   (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
+    (etf_st_nop, etf_st_assign, etf_st_special, etf_st_branch, etf_st_enter,
+      etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_nop;;
 
 let rec apply_etf_st
   etf x1 u = match etf, x1, u with etf, EA_Nop, u -> etf_st_nop etf u
     | etf, EA_Assign (x, a), u -> etf_st_assign etf x a u
-    | etf, EA_Random x, u -> etf_st_random etf x u
-    | etf, EA_Assume b, u -> etf_st_assume etf b u
-    | etf, EA_AssumeNot b, u -> etf_st_assume_not etf b u
+    | etf, EA_Special (sc, x), u -> etf_st_special etf sc x u
+    | etf, EA_Assume b, u -> etf_st_branch etf b true u
+    | etf, EA_AssumeNot b, u -> etf_st_branch etf b false u
     | etf, EA_Ret (e, p), u ->
         (match e with None -> etf_st_nop etf u
           | Some a -> etf_st_assign etf ret_var a u)
@@ -2428,45 +2431,45 @@ let rec side_rhs_fold_dg _A _D
                 acc (locals res))
               ts);;
 
+let rec dgs_special
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_special;;
+
 let rec dgs_return
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_return;;
 
-let rec dgs_random
-  (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
-    = dgs_random;;
-
 let rec dgs_branch
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_branch;;
 
 let rec dgs_assign
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_assign;;
 
 let rec dgs_event
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_event;;
 
 let rec dgs_skip
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_skip;;
 
 let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
                        | s, EA_Assign (x, e) -> dgs_assign s x e
-                       | s, EA_Random x -> dgs_random s x
+                       | s, EA_Special (sc, x) -> dgs_special s sc x
                        | s, EA_Assume b -> dgs_branch s b true
                        | s, EA_AssumeNot b -> dgs_branch s b false
                        | s, EA_Ret (e, p) -> dgs_return s e p
@@ -2537,7 +2540,7 @@ let rec entry_call_list
 
 let rec dgs_enter
   (Dg_spec_ext
-    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
       dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_enter;;
 
@@ -2802,7 +2805,7 @@ let rec sign_tf_st_for
     | source_global, EA_Assign (x, a), s ->
         update_resolved_st_q bot_sign s (location_of source_global x)
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
-    | source_global, EA_Random x, s ->
+    | source_global, EA_Special (sc, x), s ->
         update_resolved_st_q bot_sign s (location_of source_global x) STop
     | source_global, EA_Assume b, s -> branch_sign_st_for source_global b true s
     | source_global, EA_AssumeNot b, s ->
@@ -2852,7 +2855,7 @@ let rec compile
             (insert
                (equal_prod equal_cfg_node
                  (equal_prod equal_edge_action equal_cfg_node))
-               (Statement n, (EA_Random x, k)) bot_set,
+               (Statement n, (EA_Special (Nondet_Int, x), k)) bot_set,
               bot_set)))
     | pi, p, Check c, k, n ->
         (suc n,
@@ -3026,7 +3029,7 @@ let rec ea_check_cond (EA_Check x7) = x7;;
 
 let rec is_EA_Check = function EA_Nop -> false
                       | EA_Assign (x21, x22) -> false
-                      | EA_Random x3 -> false
+                      | EA_Special (x31, x32) -> false
                       | EA_Assume x4 -> false
                       | EA_AssumeNot x5 -> false
                       | EA_Ret (x61, x62) -> false
@@ -3690,7 +3693,7 @@ let rec unit_dg_spec_st_for _A
     Dg_spec_ext
       (unit_step_st _A (tf_st EA_Nop),
         (fun x e -> unit_step_st _A (tf_st (EA_Assign (x, e)))),
-        (fun x -> unit_step_st _A (tf_st (EA_Random x))),
+        (fun sc x -> unit_step_st _A (tf_st (EA_Special (sc, x)))),
         (fun b pol ->
           unit_step_st _A
             (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
@@ -3874,14 +3877,14 @@ let rec resolved_st_q_is_bot_for _A
 
 let rec etf_st_enter
   (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
+    (etf_st_nop, etf_st_assign, etf_st_special, etf_st_branch, etf_st_enter,
+      etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_enter;;
 
 let rec etf_st_combine_collect
   (Effectful_st_transfer_ext
-    (etf_st_nop, etf_st_assign, etf_st_random, etf_st_assume, etf_st_assume_not,
-      etf_st_enter, etf_st_combine_env, etf_st_combine_collect, more))
+    (etf_st_nop, etf_st_assign, etf_st_special, etf_st_branch, etf_st_enter,
+      etf_st_combine_env, etf_st_combine_collect, more))
     = etf_st_combine_collect;;
 
 let rec etf_combine_collect_st
@@ -3993,12 +3996,12 @@ let rec unit_etf_st_contribution_of_transfer _A
       (unit_edge_contribution_st _A is_bot_pred (tf_st EA_Nop),
         (fun x e ->
           unit_edge_contribution_st _A is_bot_pred (tf_st (EA_Assign (x, e)))),
-        (fun x ->
-          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_Random x))),
-        (fun b ->
-          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_Assume b))),
-        (fun b ->
-          unit_edge_contribution_st _A is_bot_pred (tf_st (EA_AssumeNot b))),
+        (fun sc x ->
+          unit_edge_contribution_st _A is_bot_pred
+            (tf_st (EA_Special (sc, x)))),
+        (fun b pol ->
+          unit_edge_contribution_st _A is_bot_pred
+            (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
         (fun xs es ->
           unit_edge_contribution_st _A is_bot_pred (enter_st xs es)),
         unit_combine_env_contribution_st _A is_bot_pred,
@@ -4080,7 +4083,8 @@ let rec unit_dg_spec_st_for_lifted _A
       (unit_step_st_lifted _A is_bot_pred (tf_st EA_Nop),
         (fun x e ->
           unit_step_st_lifted _A is_bot_pred (tf_st (EA_Assign (x, e)))),
-        (fun x -> unit_step_st_lifted _A is_bot_pred (tf_st (EA_Random x))),
+        (fun sc x ->
+          unit_step_st_lifted _A is_bot_pred (tf_st (EA_Special (sc, x)))),
         (fun b pol ->
           unit_step_st_lifted _A is_bot_pred
             (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
@@ -5500,7 +5504,7 @@ let rec string_of_action
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20] @
             Core.string_of_aexp a
-    | Core.EA_Random x ->
+    | Core.EA_Special (sc, x) ->
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
             Core.char_0x72; Core.char_0x61; Core.char_0x6E; Core.char_0x64;
@@ -5531,7 +5535,7 @@ let rec source_action_label
                      Core.char_0x20] @
                      Core.string_of_aexp e
               else string_of_action a)
-          | Core.EA_Random _ -> string_of_action a
+          | Core.EA_Special (_, _) -> string_of_action a
           | Core.EA_Assume aa -> Core.string_of_bexp aa
           | Core.EA_AssumeNot b ->
             [Core.char_0x6E; Core.char_0x6F; Core.char_0x74; Core.char_0x20;

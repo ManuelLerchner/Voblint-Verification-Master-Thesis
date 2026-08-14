@@ -30,7 +30,7 @@ definition keyed_spec :: "(ivl, ivl) dg_spec" where
   "keyed_spec =
      \<lparr> dgs_skip = \<lambda>d g. (g, d),
        dgs_assign = \<lambda>x e d g. (g \<squnion> Ivl (Fin 1) (Fin 1), d),
-       dgs_random = \<lambda>x d g. (g, d),
+       dgs_special = \<lambda>sc x d g. (g, d),
        dgs_branch = \<lambda>b pol d g. (g, d),
        dgs_body = \<lambda>p d g. (g, d),
        dgs_return = \<lambda>e p d g. (g, d),
@@ -104,7 +104,7 @@ definition merge_spec :: "(ivl, ivl) dg_spec" where
   "merge_spec =
      \<lparr> dgs_skip = \<lambda>d g. (Ivl (Fin 0) (Fin 0), d),
        dgs_assign = \<lambda>x e d g. (Ivl (Fin 1) (Fin 1), d),
-       dgs_random = \<lambda>x d g. (g, d),
+       dgs_special = \<lambda>sc x d g. (g, d),
        dgs_branch = \<lambda>b pol d g. (g, d),
        dgs_body = \<lambda>p d g. (g, d),
        dgs_return = \<lambda>e p d g. (g, d),

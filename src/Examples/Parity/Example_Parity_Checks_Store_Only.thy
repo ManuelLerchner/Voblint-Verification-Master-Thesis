@@ -77,12 +77,12 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
 lemma parity_ex_intra_eval:
   "intra (prog_cfg (STR ''main'') parity_ex_program) =
      {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-      (Statement 0, EA_Random (STR ''x''), Statement 1),
+      (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2)), Statement 2),
       (Statement 2, EA_Assign (STR ''z'') (Plus (V (STR ''y'')) (N 1)), Statement 3),
       (Statement 3, EA_Check (Not (Eq (V (STR ''y'')) (V (STR ''z'')))), Statement 4),
       (Statement 4, EA_Check (Eq (V (STR ''y'')) (V (STR ''z''))), Statement 5),
-      (Statement 5, EA_Random (STR ''w''), Statement 6),
+      (Statement 5, EA_Special Nondet_Int (STR ''w''), Statement 6),
       (Statement 6, EA_Check (Eq (V (STR ''y'')) (V (STR ''w''))), Statement 7),
       (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
@@ -238,7 +238,7 @@ qed
 
 text \<open>Non-vacuity: \<open>parity_ex_reach\<close> is not merely vacuously true because no
   store ever reaches these nodes. Threading \<open>x := 7\<close> and \<open>w := 99\<close> through the
-  compiled prefix, admissible \<^const>\<open>EA_Random\<close> choices, reaches both the
+  compiled prefix, admissible \<^const>\<open>EA_Special\<close> choices, reaches both the
   proved/refuted checks' shared node pair and the unknown check's own node.\<close>
 lemma parity_ex_reach3_witness:
   "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)
@@ -258,11 +258,11 @@ proof -
     using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
         "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
     using s0 e0 unfolding parity_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Random (STR ''x''), Statement 1) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
+  have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''x'') := 7) \<in> parity_ex_reach (Statement 1)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
-        "cinit_stores parity_ex_gs" "Statement 0" "EA_Random (STR ''x'')" "Statement 1"
+        "cinit_stores parity_ex_gs" "Statement 0" "EA_Special Nondet_Int (STR ''x'')" "Statement 1"
         "(\<lambda>_. 0)((STR ''x'') := 7)"]
     using s1 e1 unfolding parity_ex_reach_def by force
   have e2: "(Statement 1, EA_Assign (STR ''y'') (Times (V (STR ''x'')) (N 2)), Statement 2)
@@ -306,12 +306,12 @@ proof -
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 4" "EA_Check (Eq (V (STR ''y'')) (V (STR ''z'')))" "Statement 5"]
     using s4 e5 unfolding parity_ex_reach_def by force
-  have e6: "(Statement 5, EA_Random (STR ''w''), Statement 6) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
+  have e6: "(Statement 5, EA_Special Nondet_Int (STR ''w''), Statement 6) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99) \<in> parity_ex_reach (Statement 6)"
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
-        "Statement 5" "EA_Random (STR ''w'')" "Statement 6"
+        "Statement 5" "EA_Special Nondet_Int (STR ''w'')" "Statement 6"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99)"]
     using s5 e6 unfolding parity_ex_reach_def by force
   then show ?thesis by blast

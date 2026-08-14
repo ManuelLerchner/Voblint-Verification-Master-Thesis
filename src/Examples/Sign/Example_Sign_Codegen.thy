@@ -39,7 +39,7 @@ proof -
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
        (rule reserved
-             p_transfer.tf_sound_assign_for p_transfer.tf_sound_random_for
+             p_transfer.tf_sound_assign_for p_transfer.tf_sound_special_for
              p_transfer.tf_sound_branch_for
              p_transfer.tf_sound_enter_for p_transfer.tf_sound_combine_env_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]

@@ -387,7 +387,7 @@ export_code
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_bexp
 
 export_code
@@ -403,7 +403,7 @@ export_code
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Random EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_bexp
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 

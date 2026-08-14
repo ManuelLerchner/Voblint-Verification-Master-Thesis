@@ -913,7 +913,7 @@ where
   "unit_dg_spec_st_for gs tf_st enter_st = \<lparr>
     dgs_skip       = unit_step_st (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st (tf_st (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_st (tf_st (EA_Random x))),
+    dgs_special    = (\<lambda>sc x. unit_step_st (tf_st (EA_Special sc x))),
     dgs_branch     = (\<lambda>b pol. unit_step_st (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     dgs_body       = (\<lambda>p. unit_step_st (tf_st EA_Nop)),
     dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p))),
@@ -1044,7 +1044,7 @@ where
   "unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = \<lparr>
     dgs_skip       = unit_step_st_lifted is_bot_pred (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st_lifted is_bot_pred (tf_st (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_st_lifted is_bot_pred (tf_st (EA_Random x))),
+    dgs_special    = (\<lambda>sc x. unit_step_st_lifted is_bot_pred (tf_st (EA_Special sc x))),
     dgs_branch     = (\<lambda>b pol. unit_step_st_lifted is_bot_pred
       (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     dgs_body       = (\<lambda>p. unit_step_st_lifted is_bot_pred (tf_st EA_Nop)),

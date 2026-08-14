@@ -20,6 +20,22 @@ text \<open>
   state, discarding pending statements up to the nearest enclosing activation frame.
 \<close>
 
+text \<open>
+  \<open>special_call\<close> classifies analyzer-recognized special functions, the VIMP
+  analogue of Goblint's library-function dispatch: a closed, VIMP-scoped
+  enumeration (unlike Goblint's open library-function table) of the special
+  operations VIMP source programs can invoke, kept separate from ordinary
+  procedure calls so their abstract semantics need not simulate \<open>enter\<close>/
+  \<open>body\<close>/\<open>return\<close>/\<open>combine_env\<close>/\<open>combine_assign\<close> for an operation that isn't
+  a real activation. \<open>Nondet_Int\<close> is the only current case: an unconstrained
+  nondeterministic integer, written to its destination.
+\<close>
+
+datatype special_call = Nondet_Int
+
+instance special_call :: countable
+  by countable_datatype
+
 datatype com =
     SKIP
   | Assign (assign_var: vname) (assign_rhs: aexp)

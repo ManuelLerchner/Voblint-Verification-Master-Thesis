@@ -31,20 +31,20 @@ lemma assign_ivl_sound:
 
 subsection \<open>Abstract nondeterministic assignment\<close>
 
-definition random_ivl ::
-    "vname => (vname => ivl) => (vname => ivl)"
+definition special_ivl ::
+    "special_call => vname => (vname => ivl) => (vname => ivl)"
 where
-  "random_ivl x \<sigma> = \<sigma>(x := ivl_top)"
+  "special_ivl sc x \<sigma> = \<sigma>(x := ivl_top)"
 
-lemma random_ivl_sound:
+lemma special_ivl_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk>
-   \<Longrightarrow> s(x := v) \<in> \<lbrakk>random_ivl x \<sigma>\<rbrakk>"
-  unfolding gamma_state_def random_ivl_def
+   \<Longrightarrow> s(x := v) \<in> \<lbrakk>special_ivl sc x \<sigma>\<rbrakk>"
+  unfolding gamma_state_def special_ivl_def
   by (auto simp: gamma_ivl_top)
 
-lemma random_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> random_ivl x sigma1 \<le> random_ivl x sigma2"
-  by (simp add: random_ivl_def le_funD le_funI)
+lemma special_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> special_ivl sc x sigma1 \<le> special_ivl sc x sigma2"
+  by (simp add: special_ivl_def le_funD le_funI)
 
 lemma assign_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"
@@ -144,7 +144,7 @@ qed
 
 definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
   "ivl_tf_for gs = (| tf_assign  = assign_ivl,
-                       tf_random  = random_ivl,
+                       tf_special = special_ivl,
                        tf_branch  = bfilter_ivl,
                        tf_skip    = skip_ivl,
                        tf_body    = body_ivl,
@@ -157,7 +157,7 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_ivl_sound)
-  subgoal by (simp add: random_ivl_sound)
+  subgoal by (simp add: special_ivl_sound)
   subgoal by (simp add: bfilter_ivl_sound)
   subgoal by (simp add: skip_ivl_sound)
   subgoal by (simp add: body_ivl_sound)
@@ -185,7 +185,7 @@ qed
 lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
-     (auto simp: ivl_tf_for_def assign_ivl_mono random_ivl_mono bfilter_ivl_mono
+     (auto simp: ivl_tf_for_def assign_ivl_mono special_ivl_mono bfilter_ivl_mono
                  skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono
                  event_ivl_mono)
 

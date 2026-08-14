@@ -214,8 +214,8 @@ lemma route_family_etf_sound:
     and assign: "\<And>x a u \<sigma>. etf_full (etf_assign E x a u) \<sigma>
                    = transfer_lift is_bot_state (assign\<^sup># (sign_tf_for gs) x a)
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
-    and random: "\<And>x u \<sigma>. etf_full (etf_random E x u) \<sigma>
-                   = transfer_lift is_bot_state (tf_random (sign_tf_for gs) x)
+    and special: "\<And>x u \<sigma>. etf_full (etf_special E Nondet_Int x u) \<sigma>
+                   = transfer_lift is_bot_state (special\<^sup># (sign_tf_for gs) Nondet_Int x)
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
     and branch: "\<And>b pol u \<sigma>. etf_full (etf_branch E b pol u) \<sigma>
                    = transfer_lift is_bot_state (tf_branch (sign_tf_for gs) b pol)
@@ -255,9 +255,9 @@ next
   show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
             s(x := v)
-              \<in> gamma_state_lift (etf_collecting_full_lift (etf_random E x u) \<sigma>))"
-    using random_sign_sound
-    by (auto simp add: random sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
+              \<in> gamma_state_lift (etf_collecting_full_lift (etf_special E Nondet_Int x u) \<sigma>))"
+    using special_sign_sound
+    by (auto simp add: special sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
 next
   show "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s = pol
@@ -399,7 +399,7 @@ definition named_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (gname, sign) 
   "named_etf gs =
      \<lparr> etf_skip       = route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) EA_Nop),
        etf_assign     = \<lambda>x a. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Assign x a)),
-       etf_random     = \<lambda>x. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Random x)),
+       etf_special    = \<lambda>sc x. route_tree gs (\<lambda>_. Gpos) (apply_tf (sign_tf_for gs) (EA_Special sc x)),
        etf_branch     = \<lambda>b pol. route_tree gs (\<lambda>_. Gpos)
                            (apply_tf (sign_tf_for gs) (if pol then EA_Assume b else EA_AssumeNot b)),
        etf_body       = \<lambda>p. route_tree gs (\<lambda>_. Gpos) (body\<^sup># (sign_tf_for gs) p),
@@ -418,7 +418,7 @@ next
   case (EA_Assign x e)
   then show ?thesis by (simp add: named_etf_def)
 next
-  case (EA_Random x)
+  case (EA_Special sc x)
   then show ?thesis by (simp add: named_etf_def)
 next
   case (EA_Assume b)
@@ -497,9 +497,9 @@ lemma named_etf_full_assign:
        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
-lemma named_etf_full_random:
-  "etf_full (etf_random (named_etf gs) x u) \<sigma>
-   = transfer_lift is_bot_state (tf_random (sign_tf_for gs) x)
+lemma named_etf_full_special:
+  "etf_full (etf_special (named_etf gs) Nondet_Int x u) \<sigma>
+   = transfer_lift is_bot_state (special\<^sup># (sign_tf_for gs) Nondet_Int x)
        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
@@ -533,7 +533,7 @@ lemma named_etf_full_combine:
 theorem named_etf_sound:
   "sound_effectful_transfer gs (named_etf gs)"
   by (rule route_family_etf_sound[OF named_etf_full_skip named_etf_full_assign
-        named_etf_full_random named_etf_full_branch
+        named_etf_full_special named_etf_full_branch
         named_etf_full_body named_etf_full_return
         named_etf_full_enter named_etf_full_event
         named_etf_full_combine_env named_etf_full_combine])

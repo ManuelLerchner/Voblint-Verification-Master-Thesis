@@ -79,7 +79,7 @@ lemma checks_ex_intra_eval:
       (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
       (Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3),
       (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
-      (Statement 4, EA_Random (STR ''z''), Statement 5),
+      (Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5),
       (Statement 5, EA_Check (Eq (V (STR ''z'')) (N 1)), Statement 6),
       (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
@@ -309,11 +309,11 @@ proof -
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (Less (N 0) (V (STR ''y'')))" "Statement 4"]
     using s4 e4 unfolding checks_ex_reach_def by simp
-  have e5: "(Statement 4, EA_Random (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e5: "(Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7) \<in> checks_ex_reach (Statement 5)"
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 4" "EA_Random (STR ''z'')" "Statement 5"
+        "cinit_stores checks_ex_gs" "Statement 4" "EA_Special Nondet_Int (STR ''z'')" "Statement 5"
         "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7)"]
     using s5 e5 unfolding checks_ex_reach_def by force
   then show ?thesis by blast

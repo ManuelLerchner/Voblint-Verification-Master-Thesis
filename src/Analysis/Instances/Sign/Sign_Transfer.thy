@@ -32,15 +32,15 @@ qed
 
 subsection \<open>Abstract nondeterministic assignment\<close>
 
-definition random_sign ::
-    "vname => (vname => sign) => (vname => sign)"
+definition special_sign ::
+    "special_call => vname => (vname => sign) => (vname => sign)"
 where
-  "random_sign x \<sigma> = \<sigma>(x := STop)"
+  "special_sign sc x \<sigma> = \<sigma>(x := STop)"
 
-lemma random_sign_sound:
+lemma special_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>random_sign x \<sigma>\<rbrakk>"
-  unfolding random_sign_def gamma_state_def
+  shows "s(x := v) \<in> \<lbrakk>special_sign sc x \<sigma>\<rbrakk>"
+  unfolding special_sign_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
@@ -55,9 +55,9 @@ proof safe
   qed
 qed
 
-lemma random_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> random_sign x sigma1 \<le> random_sign x sigma2"
-  by (simp add: random_sign_def le_funD le_funI)
+lemma special_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> special_sign sc x sigma1 \<le> special_sign sc x sigma2"
+  by (simp add: special_sign_def le_funD le_funI)
 
 subsection \<open>Bundled transfer functions\<close>
 
@@ -159,7 +159,7 @@ qed
 
 definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
   "sign_tf_for gs = (| tf_assign  = assign_sign,
-                       tf_random  = random_sign,
+                       tf_special = special_sign,
                        tf_branch  = bfilter_sign,
                        tf_skip    = skip_sign,
                        tf_body    = body_sign,
@@ -172,7 +172,7 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_sign_sound)
-  subgoal by (simp add: random_sign_sound)
+  subgoal by (simp add: special_sign_sound)
   subgoal by (simp add: bfilter_sign_sound)
   subgoal by (simp add: skip_sign_sound)
   subgoal by (simp add: body_sign_sound)
@@ -200,7 +200,7 @@ qed
 lemma sign_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
   by (cases a)
-     (auto simp: sign_tf_for_def assign_sign_mono random_sign_mono bfilter_sign_mono
+     (auto simp: sign_tf_for_def assign_sign_mono special_sign_mono bfilter_sign_mono
                  skip_sign_mono body_sign_mono return_sign_mono enter_sign_for_mono
                  event_sign_mono)
 

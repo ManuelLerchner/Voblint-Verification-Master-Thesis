@@ -128,7 +128,10 @@ begin
 
 lemma edge_collect_apply_tf_sound_for:
   "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
-  by (cases a) auto
+proof (cases a)
+  case (EA_Special sc x)
+  then show ?thesis by (cases sc) auto
+qed auto
 
 text \<open>A \<open>dg_spec\<close>/executable-mirror instance dispatches its own \<open>EA_Check\<close> case
   through its own \<open>dgs_event\<close>/\<^const>\<open>etf_event\<close> field, matching \<^const>\<open>apply_tf\<close>'s

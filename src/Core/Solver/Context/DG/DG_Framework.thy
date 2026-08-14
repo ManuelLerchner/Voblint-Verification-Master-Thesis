@@ -488,7 +488,7 @@ text \<open>
 record ('dl, 'dg) dg_spec =
   dgs_skip       :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_random     :: "vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_body       :: "pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -517,7 +517,7 @@ fun dg_spec_step ::
 where
   "dg_spec_step S EA_Nop           = dgs_skip S"
 | "dg_spec_step S (EA_Assign x e)  = dgs_assign S x e"
-| "dg_spec_step S (EA_Random x)    = dgs_random S x"
+| "dg_spec_step S (EA_Special sc x) = dgs_special S sc x"
 | "dg_spec_step S (EA_Assume b)    = dgs_branch S b True"
 | "dg_spec_step S (EA_AssumeNot b) = dgs_branch S b False"
 | "dg_spec_step S (EA_Ret e p)     = dgs_return S e p"
@@ -722,8 +722,8 @@ where
     dgs_skip       = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_placed keep_local publish_side
       (apply_tf tf (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_placed keep_local publish_side
-      (apply_tf tf (EA_Random x))),
+    dgs_special    = (\<lambda>sc x. unit_step_placed keep_local publish_side
+      (apply_tf tf (EA_Special sc x))),
     dgs_branch     = (\<lambda>b pol. unit_step_placed keep_local publish_side
       (branch\<^sup># tf b pol)),
     dgs_body       = (\<lambda>p. unit_step_placed keep_local publish_side
@@ -760,7 +760,7 @@ where
   "unit_dg_spec_for gs tf = \<lparr>
     dgs_skip       = unit_step_for gs (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_for gs (apply_tf tf (EA_Random x))),
+    dgs_special    = (\<lambda>sc x. unit_step_for gs (apply_tf tf (EA_Special sc x))),
     dgs_branch     = (\<lambda>b pol. unit_step_for gs (branch\<^sup># tf b pol)),
     dgs_body       = (\<lambda>p. unit_step_for gs (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_for gs (return\<^sup># tf e p)),
@@ -825,7 +825,7 @@ where
   "unit_dg_spec_for_lifted gs is_bot_pred tf = \<lparr>
     dgs_skip       = unit_step_for_lifted gs is_bot_pred (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_Random x))),
+    dgs_special    = (\<lambda>sc x. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_Special sc x))),
     dgs_branch     = (\<lambda>b pol. unit_step_for_lifted gs is_bot_pred (branch\<^sup># tf b pol)),
     dgs_body       = (\<lambda>p. unit_step_for_lifted gs is_bot_pred (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_for_lifted gs is_bot_pred (return\<^sup># tf e p)),

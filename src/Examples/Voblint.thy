@@ -322,7 +322,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
-      \<open>x := random()\<close>, closed end to end: \<^const>\<open>random_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
+      \<open>x := random()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
       guard on \<open>x\<close> narrows each branch, and the branches join to \<^term>\<open>SNonNeg\<close> rather than
       \<^term>\<open>STop\<close>. Computed by \<^const>\<open>sign_exec_prog\<close> and the vendored TD solver, not asserted
       by hand; \<open>random_guard_exit_sound\<close> over-approximates every reachable exit state and

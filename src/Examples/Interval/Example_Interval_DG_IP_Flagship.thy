@@ -272,7 +272,7 @@ proof -
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
        (rule twice_reserved
-             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_random_for
+             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
              twice_transfer.tf_sound_branch_for
              twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_env_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]

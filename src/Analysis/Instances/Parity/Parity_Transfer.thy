@@ -27,14 +27,14 @@ qed
 
 subsection \<open>Abstract nondeterministic assignment\<close>
 
-definition random_parity ::
-    "vname => (vname => parity) => (vname => parity)" where
-  "random_parity x \<sigma> = \<sigma>(x := PTop)"
+definition special_parity ::
+    "special_call => vname => (vname => parity) => (vname => parity)" where
+  "special_parity sc x \<sigma> = \<sigma>(x := PTop)"
 
-lemma random_parity_sound:
+lemma special_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>random_parity x \<sigma>\<rbrakk>"
-  unfolding random_parity_def gamma_state_def
+  shows "s(x := v) \<in> \<lbrakk>special_parity sc x \<sigma>\<rbrakk>"
+  unfolding special_parity_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)" unfolding gamma_state_def by simp
@@ -46,9 +46,9 @@ proof safe
   qed
 qed
 
-lemma random_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> random_parity x sigma1 \<le> random_parity x sigma2"
-  by (simp add: random_parity_def le_funD le_funI)
+lemma special_parity_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> special_parity sc x sigma1 \<le> special_parity sc x sigma2"
+  by (simp add: special_parity_def le_funD le_funI)
 
 subsection \<open>Branch: parity does not refine guards, so the transfer is the identity\<close>
 
@@ -169,7 +169,7 @@ qed
 
 definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
   "parity_tf_for gs = (| tf_assign  = assign_parity,
-                         tf_random  = random_parity,
+                         tf_special = special_parity,
                          tf_branch  = branch_parity,
                          tf_skip    = skip_parity,
                          tf_body    = body_parity,
@@ -182,7 +182,7 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_parity_sound)
-  subgoal by (simp add: random_parity_sound)
+  subgoal by (simp add: special_parity_sound)
   subgoal by (simp add: branch_parity_sound)
   subgoal by (simp add: skip_parity_sound)
   subgoal by (simp add: body_parity_sound)
@@ -210,7 +210,7 @@ qed
 lemma parity_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
   by (cases a)
-     (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono branch_parity_mono
+     (auto simp: parity_tf_for_def assign_parity_mono special_parity_mono branch_parity_mono
                  skip_parity_mono body_parity_mono return_parity_mono enter_parity_for_mono
                  event_parity_mono)
 

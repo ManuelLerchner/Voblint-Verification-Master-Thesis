@@ -348,10 +348,10 @@ next
   qed
 qed
 
-lemma random_sign_local_edge_invariant [intro]:
+lemma special_sign_local_edge_invariant [intro]:
   assumes gl: "\<not> gs x"
-  shows "local_edge_invariant gs (random_sign x)"
-  unfolding local_edge_invariant_def random_sign_def
+  shows "local_edge_invariant gs (special_sign sc x)"
+  unfolding local_edge_invariant_def special_sign_def
 proof (intro allI impI)
   fix su :: "sign abs_state"
   fix g :: "sign abs_state"
@@ -383,7 +383,7 @@ lemma sign_tf_local_edge_invariant:
   unfolding sign_tf_for_def aexp_mentions_global_def apply (auto simp: 
       intro: assign_sign_local_edge_invariant
              bfilter_sign_local_edge_invariant
-             random_sign_local_edge_invariant
+             special_sign_local_edge_invariant
              id_local_edge_invariant
       split: option.splits)
   apply (auto simp: local_edge_invariant_def skip_sign_def return_sign_def event_sign_def)

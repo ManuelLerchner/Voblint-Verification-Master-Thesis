@@ -74,7 +74,7 @@ text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own 
 lemma checks_ivl_ex_intra_eval:
   "intra (prog_cfg (STR ''main'') checks_ivl_ex_program) =
      {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-      (Statement 0, EA_Random (STR ''x''), Statement 1),
+      (Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1),
       (Statement 1, EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 2),
       (Statement 1, EA_AssumeNot (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 5),
       (Statement 2, EA_Check (Less (V (STR ''x'')) (N 11)), Statement 3),
@@ -254,11 +254,11 @@ proof -
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
         "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
     using s0 e0 unfolding checks_ivl_ex_reach_def by simp
-  have e1: "(Statement 0, EA_Random (STR ''x''), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ivl_ex_program)"
+  have e1: "(Statement 0, EA_Special Nondet_Int (STR ''x''), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''x'') := 5) \<in> checks_ivl_ex_reach (Statement 1)"
     using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
-        "cinit_stores checks_ivl_ex_gs" "Statement 0" "EA_Random (STR ''x'')" "Statement 1"
+        "cinit_stores checks_ivl_ex_gs" "Statement 0" "EA_Special Nondet_Int (STR ''x'')" "Statement 1"
         "(\<lambda>_. 0)((STR ''x'') := 5)"]
     using s1 e1 unfolding checks_ivl_ex_reach_def by force
   have e2: "(Statement 1, EA_Assume (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))), Statement 2)

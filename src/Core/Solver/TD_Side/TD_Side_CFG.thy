@@ -912,7 +912,7 @@ where
   "unit_etf_of_transfer gs tf = \<lparr>
     etf_skip       = (\<lambda>u. unit_edge_tree gs (apply_tf tf EA_Nop) u),
     etf_assign     = (\<lambda>x e u. unit_edge_tree gs (apply_tf tf (EA_Assign x e)) u),
-    etf_random     = (\<lambda>x u. unit_edge_tree gs (apply_tf tf (EA_Random x)) u),
+    etf_special    = (\<lambda>sc x u. unit_edge_tree gs (apply_tf tf (EA_Special sc x)) u),
     etf_branch     = (\<lambda>b pol u. unit_edge_tree gs (branch\<^sup># tf b pol) u),
     etf_body       = (\<lambda>p u. unit_edge_tree gs (body\<^sup># tf p) u),
     etf_return     = (\<lambda>e p u. unit_edge_tree gs (return\<^sup># tf e p) u),
@@ -935,7 +935,7 @@ where
   "mixed_etf_of_transfer gs tf = \<lparr>
     etf_skip       = mixed_etf_edge_tree gs tf EA_Nop,
     etf_assign     = (\<lambda>x e. mixed_etf_edge_tree gs tf (EA_Assign x e)),
-    etf_random     = (\<lambda>x. mixed_etf_edge_tree gs tf (EA_Random x)),
+    etf_special    = (\<lambda>sc x. mixed_etf_edge_tree gs tf (EA_Special sc x)),
     etf_branch     = (\<lambda>b pol. mixed_etf_edge_tree gs tf (if pol then EA_Assume b else EA_AssumeNot b)),
     etf_body       = (\<lambda>p u. unit_edge_tree gs (body\<^sup># tf p) u),
     etf_return     = (\<lambda>e p. mixed_etf_edge_tree gs tf (EA_Ret e p)),
@@ -1214,7 +1214,7 @@ proof -
     show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<forall>v.
               s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
-                (etf_random (unit_etf_of_transfer gs tf) x u) \<sigma>))"
+                (etf_special (unit_etf_of_transfer gs tf) Nondet_Int x u) \<sigma>))"
       unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
@@ -1321,27 +1321,27 @@ proof -
     show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<forall>v.
               s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
-                (etf_random (mixed_etf_of_transfer gs tf) x u) \<sigma>))"
+                (etf_special (mixed_etf_of_transfer gs tf) Nondet_Int x u) \<sigma>))"
     proof (intro allI impI ballI)
       fix x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store and v
       assume inr: "inr_slot_locals_bot gs \<sigma>"
         and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
       show "s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
-              (etf_random (mixed_etf_of_transfer gs tf) x u) \<sigma>)"
-      proof (cases "local_edge_action gs (EA_Random x)")
+              (etf_special (mixed_etf_of_transfer gs tf) Nondet_Int x u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_Special Nondet_Int x)")
         case True
-        have inv': "local_edge_invariant gs (tf_random tf x)"
+        have inv': "local_edge_invariant gs (special\<^sup># tf Nondet_Int x)"
           using loc_inv[OF True] by (simp add: apply_tf.simps)
         have "s(x := v) \<in> gamma_state_lift
-                (etf_collecting_full_lift (local_edge_tree gs (tf_random tf x) u) \<sigma>)"
-          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_random_forD)
+                (etf_collecting_full_lift (local_edge_tree gs (special\<^sup># tf Nondet_Int x) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_special_forD)
         then show ?thesis
           by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
       next
         case False
         have "s(x := v) \<in> gamma_state_lift
-                (etf_collecting_full_lift (unit_edge_tree gs (tf_random tf x) u) \<sigma>)"
-          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_random_forD)
+                (etf_collecting_full_lift (unit_edge_tree gs (special\<^sup># tf Nondet_Int x) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_special_forD)
         then show ?thesis
           by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
       qed

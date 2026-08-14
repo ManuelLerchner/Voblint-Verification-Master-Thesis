@@ -129,7 +129,7 @@ where
 | "compile \<Pi> p (Assign x a) k n =
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
 | "compile \<Pi> p (Random x) k n =
-     (Suc n, Statement n, {(Statement n, EA_Random x, k)}, {})"
+     (Suc n, Statement n, {(Statement n, EA_Special Nondet_Int x, k)}, {})"
 | "compile \<Pi> p (Check c) k n =
      (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =

@@ -52,7 +52,7 @@ text \<open>
 datatype edge_action =
     EA_Nop
   | EA_Assign   (ea_var: vname) (ea_rhs: aexp)
-  | EA_Random   (ea_var: vname)
+  | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
   | EA_Assume   (ea_cond: bexp)
   | EA_AssumeNot (ea_cond: bexp)
   | EA_Ret      (ea_ret_val: "aexp option") (ea_ret_proc: pname)
@@ -84,13 +84,36 @@ record cfg =
 
 subsection \<open>Intra edge execution\<close>
 
+text \<open>
+  \<open>special_step\<close> is \<open>special_call\<close>'s own step function, factored out of \<open>edge_step\<close>
+  so that extending the special-call vocabulary only touches this function and
+  \<open>special_step_nonempty\<close> below, not every generic lemma stated over \<open>edge_action\<close>.
+\<close>
+
+fun special_step :: "special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
+  "special_step Nondet_Int x s = {s(x := v) |v. True}"
+
+lemma special_step_nonempty [simp]: "special_step sc x s \<noteq> {}"
+  by (cases sc) auto
+
+text \<open>
+  The single-constructor equation for \<open>special_step\<close>, stated generically over \<open>sc\<close>
+  and tagged \<open>[simp]\<close> so callers reasoning about an as-yet-unclassified \<open>sc\<close> don't
+  each need their own \<open>cases sc\<close> step. This becomes false the moment a second
+  \<open>special_call\<close> constructor exists with different concrete semantics -- deleting
+  it then is expected, self-signposting migration cost (every downstream proof
+  that relied on it will fail to simplify, at this lemma's name).
+\<close>
+lemma special_step_eq_havoc [simp]: "special_step sc x s = {s(x := v) |v. True}"
+  by (cases sc) simp
+
 text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
   every constructor and has no call case; guards are the only source of \<open>None\<close>.\<close>
 
 fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
   "edge_step EA_Nop s = {s}"
 | "edge_step (EA_Assign x a) s = {s(x := aval a s)}"
-| "edge_step (EA_Random x) s = {s(x := v) |v. True}"
+| "edge_step (EA_Special sc x) s = special_step sc x s"
 | "edge_step (EA_Assume b) s = (if bval b s then {s} else {})"
 | "edge_step (EA_AssumeNot b) s = (if bval b s then {} else {s})"
 | "edge_step (EA_Ret e p) s =

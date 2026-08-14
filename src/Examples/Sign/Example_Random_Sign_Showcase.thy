@@ -7,7 +7,7 @@ begin
 hide_const phase.N
 
 text \<open>
-  \<open>x := random()\<close> is nondeterministic. \<^const>\<open>random_sign\<close>
+  \<open>x := random()\<close> is nondeterministic. \<^const>\<open>special_sign\<close>
   answers it by forgetting \<open>x\<close> entirely -- setting it to \<^term>\<open>STop\<close>,
   the sign abstraction of the infinite concrete successor set
   \<open>{s(x := v) | v. True}\<close> -- regardless of what was known about \<open>x\<close>

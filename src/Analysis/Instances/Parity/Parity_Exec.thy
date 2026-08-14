@@ -65,7 +65,7 @@ fun parity_tf_st_for ::
   | "parity_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
          (aval_parity a (fun_of_resolved_st_q_for source_global s))"
-  | "parity_tf_st_for source_global (EA_Random x) s =
+  | "parity_tf_st_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x) PTop"
   | "parity_tf_st_for source_global (EA_Assume b) s = s"
   | "parity_tf_st_for source_global (EA_AssumeNot b) s = s"
@@ -90,10 +90,10 @@ proof (rule apply_tf_wrap_eqI[
       (parity_tf_st_for gs (EA_Assign x e) s) =
     apply_tf (parity_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
     by (simp add: parity_tf_for_def assign_parity_def)
-  show "\<And>x. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Random x) s) =
-    apply_tf (parity_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def random_parity_def)
+  show "\<And>sc x. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Special sc x) s) =
+    apply_tf (parity_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def special_parity_def)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Assume b) s) =
     apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"

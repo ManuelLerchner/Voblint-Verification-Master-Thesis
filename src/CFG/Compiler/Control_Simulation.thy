@@ -70,12 +70,12 @@ next
   then show ?case using jw E by blast
 qed simp_all
 
-text \<open>A located \<^const>\<open>Random\<close> sits on the compiled \<^term>\<open>EA_Random\<close> edge, and its source step
+text \<open>A located \<^const>\<open>Random\<close> sits on the compiled \<^term>\<open>EA_Special\<close> edge, and its source step
   re-locates the residual \<^const>\<open>SKIP\<close> at that edge's target, exactly as \<open>control_at_assign_edge\<close>.\<close>
 lemma control_at_random_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Random x \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
-   \<exists>j w. v = Statement j \<and> (Statement j, EA_Random x, w) \<in> E
+   \<exists>j w. v = Statement j \<and> (Statement j, EA_Special Nondet_Int x, w) \<in> E
        \<and> control_at \<Pi> p c0 k n SKIP w"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (Random x' k n0)
@@ -87,7 +87,7 @@ next
     and E: "E = E1 \<union> E2"
     by (rule compile_SeqE)
   from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Random x, w) \<in> E2"
+    jw: "v = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E2"
         "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
     using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
@@ -101,7 +101,7 @@ next
                  (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
   from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Random x, w) \<in> E1"
+    jw: "v = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E1"
         "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
   then show ?case using jw E by blast
@@ -114,7 +114,7 @@ next
                  (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Random x, w) \<in> E2"
+    jw: "v = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
   then show ?case using jw E by blast
@@ -585,11 +585,11 @@ next
     by (auto elim: intra_RandomE)
   have ca: "control_at \<Pi> p (Random x) k n0 (Random x) (Statement n0)" by (rule control_at.Random)
   from control_at_random_edge[OF ca refl Random.prems(2)] obtain j w where
-    jw: "Statement n0 = Statement j" "(Statement j, EA_Random x, w) \<in> E"
+    jw: "Statement n0 = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E"
         "control_at \<Pi> p (Random x) k n0 SKIP w" by blast
-  have edgeg: "(Statement j, EA_Random x, w) \<in> intra g"
+  have edgeg: "(Statement j, EA_Special Nondet_Int x, w) \<in> intra g"
     using jw(2) Random.prems(3) by blast
-  have mem: "s(x := v) \<in> edge_step (EA_Random x) s" by auto
+  have mem: "s(x := v) \<in> edge_step (EA_Special Nondet_Int x) s" by auto
   have "cstep source_global g (Statement j, s, stk) (w, s(x := v), stk)"
     using cstep.Intra[OF edgeg mem] by simp
   then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
