@@ -37,6 +37,7 @@ conceivable, only that no rename earns its churn today.
 | Context projection | `pi` | analysis-specific filtering inside `context` | No standalone constant -- the old `context_domain` locale's `ctx_sel`/`prep` two-stage split (`route = ctx_sel . prep`) was removed with `Context_Domain.thy` (AD-44); `route` now does the whole job in one step per instance | No action -- nothing to rename, the projection is inlined per-instance rather than factored out generically. Worth a note for a future generic-`route` factoring, not a terminology fix |
 | Call strings | call strings, `k`-bounded | context lifter (framework-level, analysis-agnostic) | Per-instance `CallString` examples (`Example_*_DG_CallString*`), `route_cs`, `enterc_cs` | Keep -- these are example instances of the context mechanism above, not a separate abstraction requiring its own vocabulary yet |
 | Full/partial contexts, Context Widening, Context Gas | named paper mechanisms for bounding discovered contexts | Goblint context lifters / widening | Not modeled (`docs/GOBLINT_ALIGNMENT_REGISTER.md`'s "Termination and context bounding" row: open, partly upstream-gated) | N/A -- nothing to align terminology on until the mechanism exists |
+| Bound-variable naming convention: local/global classifier, proc table, proc-name list, main-procedure name | -- | -- (Voblint-internal plumbing, no single Goblint counterpart) | `gs :: vname => bool` (see the "Global abstract domain" row above), `Pi :: pname => proc_decl option`, `ps :: pname list`, `mnm :: pname` -- the standard bound-variable names for these four roles project-wide | Keep, all four -- checked, not assumed. Issue #127 measured actual occurrence counts before proposing a rename (`gs` 4166 across 89 files; `Pi` 1650/32; `ps` 873/31; `mnm` 757/28) and found these are not isolated mistakes in one or two definitions but the established, consistent, project-wide bound-variable convention for these four roles, reused across thousands of independent lemma statements and proof scripts by deliberate style -- comparable in size and risk to #116's `tf_branch` migration, not a low-risk mechanical fix. Declined for that reason, same "Keep means no rename earns its churn today" standard this table applies throughout, not a claim that no better name is conceivable. If picked up later, scope narrowly to the handful of functions whose formal parameter names actually leak into generated/exported API surface (`codegen/generated/`), not a project-wide sweep, and confirm no lemma instantiates the target via `[where gs = ...]`-style syntax first (issue #127's own recommendation) |
 
 ## Methodology note: record-field renames need an extra collision check
 
@@ -149,6 +150,22 @@ the record against Goblint's `Spec` interface, checked at the pinned commit
   (`Havoc` vs. a generic `special#` builtin mechanism), not a mechanical
   rename -- a surface-keyword change would also cross into the governed
   VIMP grammar pipeline (`AGENTS.md`).
+
+  Resolution (2026-08-14): retain `Random`/`EA_Random`/`tf_random` as-is.
+  `Random` is a genuine VIMP language primitive with already-verified
+  operational (`pstep`) and CFG (`edge_step`) semantics, not a builtin
+  routed through anything Goblint-`special`-shaped, and it is currently the
+  only construct that would consume a general special-call classifier --
+  there is no second case to justify the mechanism. A `special#` migration
+  would discard proved semantics and re-derive the same fact
+  (`x` may become any integer) through added dispatch machinery, for no new
+  capability. Goblint-architecture convergence, including at the
+  datatype/IR level, remains a legitimate long-term direction, but a
+  convergence migration needs a concrete payoff (a capability gain, or
+  removed duplicated bespoke machinery) beyond structural resemblance to
+  Goblint. Revisit this item if VIMP gains a second construct that
+  genuinely needs special/external-call classification -- at that point a
+  general mechanism is justified by two consumers, not invented for one.
 
 ## Deferred: canonical abstract-operation layer
 

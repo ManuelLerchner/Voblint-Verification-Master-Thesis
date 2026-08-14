@@ -51,7 +51,24 @@ combine_env, combine_assign, threadenter, threadspawn, event
 (`sync`, `query`, `context`, `startcontext`, `paths_as_set` are lifecycle/
 manager methods, not per-edge transfer functions, and are out of this
 audit's scope -- `context`/`startcontext` are already covered by
-`TERMINOLOGY_AUDIT.md`'s "Context derivation" and "Initial context" rows.)
+`TERMINOLOGY_AUDIT.md`'s "Context derivation" and "Initial context" rows.
+`sync` was separately audited (2026-08-14): every caller in Goblint's
+`constraints.ml` invokes it unconditionally, but `base.ml`'s own
+implementation (`sync'`) is the identity on `man.local` unless `earlyglobs`
+or the analysis has gone multithreaded, in which case it delegates to a
+`Priv` privatization strategy (`basePriv.ml`/`relationPriv.ml`) -- every
+non-trivial `sync` implementation in the analyzer is shared-memory-global
+privatization machinery. VIMP has no concurrency construct and Voblint has
+no `earlyglobs`-equivalent anticipatory-global mode, so `sync`'s own
+precondition for doing anything is categorically false here: Goblint's own
+single-threaded path is also just `man.local`, identity. No `sync#` to add.
+Context/`startcontext` were re-checked against the current `routed_context`
+locale (`Routed_Context.thy`) the same pass: `enterc`/`route`/`x0` are
+already the generic carrier/derivation/seed abstraction `Spec.C`/`context`/
+`startcontext` describe, demonstrated across two independent
+instantiations (call-string, entry-state) -- confirms, not supersedes,
+`TERMINOLOGY_AUDIT.md`'s existing "Context derivation" row and #114's
+findings; no new migration justified.)
 
 ## Mapping table
 
@@ -231,6 +248,15 @@ a `Havoc`-flavored rename and a generic `special#`-shaped builtin mechanism
 (which would first require deciding whether Voblint wants a `special`
 analogue at all, per the `special` row above) is a design decision, not a
 mechanical one, and issue #117 already tracks it as such.
+
+Resolution (2026-08-14): neither. `Random` stays as the native VIMP
+primitive it already is. It carries proved `pstep`/`edge_step` semantics
+and is currently the sole would-be consumer of a `special#` mechanism, so
+building the classifier now would add dispatch machinery to re-derive an
+already-proved fact, not gain capability -- and a `Havoc` rename now risks
+becoming churn undone by a later `special#` migration if VIMP ever grows a
+second special/external-call construct. See `TERMINOLOGY_AUDIT.md`'s #117
+entry for the full resolution note and the criterion for revisiting it.
 
 ### 7. `event` (done) and the `EA_Check` cutover
 
