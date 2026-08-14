@@ -70,9 +70,9 @@ locale abstract_expression_domain =
 section \<open>A domain-generic sound decision procedure for compiled checks\<close>
 
 text \<open>
-  Reusing the existing per-domain guard/assume machinery
+  Reusing the existing per-domain guard/branch machinery
   (\<^theory>\<open>Voblint_Core.Abstract_Domain\<close>'s \<open>backward_domain\<close> locale, its \<open>bfilter\<close>/
-  \<open>afilter\<close>, and the Sign instances \<open>assume_sign\<close>/\<open>assume_not_sign\<close>) was
+  \<open>afilter\<close>, and the Sign instance \<open>bfilter_sign\<close>) was
   investigated first: \<open>check_true c \<sigma> \<longleftrightarrow> bfilter c False \<sigma> = bot\<close> is sound
   whenever \<open>gamma bot = {}\<close>, and would give \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> for free from
   \<open>bfilter\<close>'s own recursion. It is not usable as an executable decision

@@ -219,7 +219,7 @@ proof -
     by unfold_locales
        (rule parity_wf[THEN wf_compile_input_reserved_ret_var]
              parity_ex_transfer.tf_sound_assign_for parity_ex_transfer.tf_sound_random_for
-             parity_ex_transfer.tf_sound_assume_for parity_ex_transfer.tf_sound_assume_not_for
+             parity_ex_transfer.tf_sound_branch_for
              parity_ex_transfer.tf_sound_enter_for parity_ex_transfer.tf_sound_combine_for
              parity_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              parity_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]

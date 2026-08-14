@@ -65,16 +65,6 @@ lemma assign_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_sign x a sigma1 \<le> assign_sign x a sigma2"
   by (simp add: assign_sign_def aval_sign_mono le_funD le_funI)
 
-lemma assume_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_sign b sigma1 \<le> assume_sign b sigma2"
-  unfolding assume_sign_def
-  by (rule bfilter_sign_mono)
-
-lemma assume_not_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_sign b sigma1 \<le> assume_not_sign b sigma2"
-  unfolding assume_not_sign_def
-  by (rule bfilter_sign_mono)
-
 subsection \<open>Classifier-parametric transfer\<close>
 
 text \<open>
@@ -117,20 +107,18 @@ next
 qed
 
 definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
-  "sign_tf_for gs = (| tf_assign     = assign_sign,
-                       tf_random     = random_sign,
-                       tf_assume     = assume_sign,
-                       tf_assume_not = assume_not_sign,
-                       tf_enter      = enter_sign_for gs,
-                       tf_combine    = combine_env\<^sup># gs |)"
+  "sign_tf_for gs = (| tf_assign  = assign_sign,
+                       tf_random  = random_sign,
+                       tf_branch  = bfilter_sign,
+                       tf_enter   = enter_sign_for gs,
+                       tf_combine = combine_env\<^sup># gs |)"
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_sign_sound)
   subgoal by (simp add: random_sign_sound)
-  subgoal by (simp add: assume_sign_sound)
-  subgoal by (simp add: assume_not_sign_sound)
+  subgoal by (simp add: bfilter_sign_sound)
   subgoal by (simp add: enter_sign_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
@@ -153,7 +141,7 @@ qed
 lemma sign_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
   by (cases a)
-     (auto simp: sign_tf_for_def assign_sign_mono random_sign_mono assume_sign_mono
-                 assume_not_sign_mono enter_sign_for_mono split: option.splits)
+     (auto simp: sign_tf_for_def assign_sign_mono random_sign_mono bfilter_sign_mono
+                 enter_sign_for_mono split: option.splits)
 
 end

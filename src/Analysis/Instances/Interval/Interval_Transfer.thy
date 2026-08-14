@@ -4,28 +4,18 @@ begin
 
 section \<open>Interval transfer functions\<close>
 
-subsection \<open>Abstract assume and assignment\<close>
+subsection \<open>Abstract branch and assignment\<close>
 
 text \<open>
-  Both guards delegate to the generic @{text bfilter} proved sound in
-  @{locale backward_domain}.  @{text "assume_ivl b \<sigma>"} filters for @{text "bval b"},
-  @{text "assume_not_ivl b \<sigma>"} for @{text "\<not> bval b"}.
+  Guard refinement delegates to the generic @{text bfilter} proved sound in
+  @{locale backward_domain}. @{const bfilter_ivl} narrows on the branch selected
+  by its boolean polarity argument (@{text True} for @{text "bval b"}, @{text False}
+  for @{text "\<not> bval b"}) -- this is @{text ivl_tf_for}'s @{text tf_branch} instance
+  directly, matching Goblint's single polarity-parametrized @{text Spec.branch}.
 \<close>
 
-definition assume_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
-  "assume_ivl b \<sigma> = bfilter_ivl b True \<sigma>"
-
-lemma assume_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_ivl b \<sigma>\<rbrakk>"
-  unfolding assume_ivl_def
-  using ivl_backward_domain.bfilter_sound by simp
-
-definition assume_not_ivl :: "bexp => (vname => ivl) => (vname => ivl)" where
-  "assume_not_ivl b \<sigma> = bfilter_ivl b False \<sigma>"
-
-lemma assume_not_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_ivl b \<sigma>\<rbrakk>"
-  unfolding assume_not_ivl_def
+lemma bfilter_ivl_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
   using ivl_backward_domain.bfilter_sound by simp
 
 definition assign_ivl ::
@@ -98,33 +88,21 @@ next
 qed
 
 definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
-  "ivl_tf_for gs = (| tf_assign     = assign_ivl,
-                       tf_random     = random_ivl,
-                       tf_assume     = assume_ivl,
-                       tf_assume_not = assume_not_ivl,
-                       tf_enter      = enter_ivl_for gs,
-                       tf_combine    = combine_env\<^sup># gs |)"
+  "ivl_tf_for gs = (| tf_assign  = assign_ivl,
+                       tf_random  = random_ivl,
+                       tf_branch  = bfilter_ivl,
+                       tf_enter   = enter_ivl_for gs,
+                       tf_combine = combine_env\<^sup># gs |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_ivl_sound)
   subgoal by (simp add: random_ivl_sound)
-  subgoal by (simp add: assume_ivl_sound)
-  subgoal by (simp add: assume_not_ivl_sound)
+  subgoal by (simp add: bfilter_ivl_sound)
   subgoal by (simp add: enter_ivl_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
-
-lemma assume_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_ivl b sigma1 \<le> assume_ivl b sigma2"
-  unfolding assume_ivl_def
-  by (rule bfilter_ivl_mono)
-
-lemma assume_not_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_ivl b sigma1 \<le> assume_not_ivl b sigma2"
-  unfolding assume_not_ivl_def
-  by (rule bfilter_ivl_mono)
 
 lemma enter_frame_ivl_for_mono:
   assumes "s1 \<le> s2"
@@ -148,16 +126,15 @@ lemma assign_ivl_mono:
 lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
-     (auto simp: ivl_tf_for_def assign_ivl_mono random_ivl_mono assume_ivl_mono
-                 assume_not_ivl_mono enter_ivl_for_mono split: option.splits)
+     (auto simp: ivl_tf_for_def assign_ivl_mono random_ivl_mono bfilter_ivl_mono
+                 enter_ivl_for_mono split: option.splits)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.
   Covers the core evaluation rules shared by all interval examples.
   Examples with multiplication also need @{thm [source] times_ivl_def},
   @{thm [source] ivl_times_core.simps}, @{thm [source] ivl_nonempty.simps};
-  examples with assume edges also need @{thm [source] assume_ivl_def},
-  @{thm [source] assume_not_ivl_def}, @{thm [source] ivl_backward_domain.bfilter.simps};
+  examples with branch edges also need @{thm [source] ivl_backward_domain.bfilter.simps};
   examples with procedure calls also need @{thm [source] enter_ivl_for_def},
   @{thm [source] enter_frame_ivl_for_def}, @{thm [source] bind_formals_abs_def},
   @{thm [source] combine_env_abs_def}.

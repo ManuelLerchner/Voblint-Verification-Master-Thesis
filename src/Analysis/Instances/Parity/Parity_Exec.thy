@@ -45,9 +45,9 @@ subsection \<open>Classifier-parametric executable transfer\<close>
 
 text \<open>The executable mirror of \<open>parity_tf_for\<close>/\<open>enter_parity_for\<close>, parametric
   in the classifier, following the same pattern as \<open>sign_tf_st_for\<close>/
-  \<open>sign_enter_st_for\<close> for the sign domain. Parity's assume/assume-not
-  transfer is the identity (\<open>assume_parity_def\<close>), so unlike the sign mirror
-  there is no separate \<open>bfilter\<close>-based executable step to parametrize.\<close>
+  \<open>sign_enter_st_for\<close> for the sign domain. Parity's branch transfer is the
+  identity (\<open>branch_parity_def\<close>), so unlike the sign mirror there is no
+  separate \<open>bfilter\<close>-based executable step to parametrize.\<close>
 
 definition parity_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
@@ -98,12 +98,12 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>b. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Assume b) s) =
     apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def assume_parity_def)
+    by (simp add: parity_tf_for_def branch_parity_def)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_AssumeNot b) s) =
     apply_tf (parity_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def assume_not_parity_def)
+    by (simp add: parity_tf_for_def branch_parity_def)
 qed
 
 lemma enter_frame_parity_st_for_commute:
@@ -159,10 +159,9 @@ next
     using agree[OF location_in] neq False by (simp add: parity_tf_for_def assign_parity_def)
 qed
 
-text \<open>Parity's assume/assume-not transfer is the identity on both sides
-  (\<open>assume_parity_def\<close>/\<open>assume_not_parity_def\<close>, \<open>parity_tf_st_for\<close>'s own
-  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> cases), so these two agreement facts have the
-  same shape as \<open>parity_tf_st_for_nop_agree\<close>.\<close>
+text \<open>Parity's branch transfer is the identity on both sides (\<open>branch_parity_def\<close>,
+  \<open>parity_tf_st_for\<close>'s own \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> cases), so these two
+  agreement facts have the same shape as \<open>parity_tf_st_for_nop_agree\<close>.\<close>
 
 lemma parity_tf_st_for_assume_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -172,7 +171,7 @@ lemma parity_tf_st_for_assume_agree:
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assume b) s_exec) location =
       apply_tf (parity_tf_for gs) (EA_Assume b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def assume_parity_def)
+  using agree[OF location_in] by (simp add: parity_tf_for_def branch_parity_def)
 
 lemma parity_tf_st_for_assume_not_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -182,7 +181,7 @@ lemma parity_tf_st_for_assume_not_agree:
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_AssumeNot b) s_exec) location =
       apply_tf (parity_tf_for gs) (EA_AssumeNot b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def assume_not_parity_def)
+  using agree[OF location_in] by (simp add: parity_tf_for_def branch_parity_def)
 
 lemma parity_tf_st_for_ret_none_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"

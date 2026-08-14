@@ -47,22 +47,13 @@ lemma etf_sound_randomD [intro]:
   using assms etf_sound_random unfolding side_env_lift_def
   by blast
 
-lemma etf_sound_assumeD [intro]:
+lemma etf_sound_branchD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
-      and "bval b s"
+      and "bval b s = pol"
   shows
-    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume etf b u) \<sigma>)"
-  using assms etf_sound_assume unfolding side_env_lift_def
-  by blast
-
-lemma etf_sound_assume_notD [intro]:
-  assumes "inr_slot_locals_bot gs \<sigma>"
-      and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
-      and "\<not> bval b s"
-  shows
-    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume_not etf b u) \<sigma>)"
-  using assms etf_sound_assume_not unfolding side_env_lift_def
+    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>)"
+  using assms etf_sound_branch unfolding side_env_lift_def
   by blast
 
 

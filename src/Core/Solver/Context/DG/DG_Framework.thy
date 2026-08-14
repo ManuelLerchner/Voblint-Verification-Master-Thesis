@@ -489,8 +489,7 @@ record ('dl, 'dg) dg_spec =
   dgs_nop        :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_random     :: "vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_assume     :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_assume_not :: "bexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_env    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_assign :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"
@@ -510,8 +509,8 @@ where
   "dg_spec_step S EA_Nop           = dgs_nop S"
 | "dg_spec_step S (EA_Assign x e)  = dgs_assign S x e"
 | "dg_spec_step S (EA_Random x)    = dgs_random S x"
-| "dg_spec_step S (EA_Assume b)    = dgs_assume S b"
-| "dg_spec_step S (EA_AssumeNot b) = dgs_assume_not S b"
+| "dg_spec_step S (EA_Assume b)    = dgs_branch S b True"
+| "dg_spec_step S (EA_AssumeNot b) = dgs_branch S b False"
 | "dg_spec_step S (EA_Ret e p) =
      (case e of None \<Rightarrow> dgs_nop S | Some a \<Rightarrow> dgs_assign S ret_var a)"
 | "dg_spec_step S (EA_Check cnd) = dgs_nop S"
@@ -717,10 +716,8 @@ where
       (apply_tf tf (EA_Assign x e))),
     dgs_random     = (\<lambda>x. unit_step_placed keep_local publish_side
       (apply_tf tf (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_placed keep_local publish_side
-      (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_placed keep_local publish_side
-      (apply_tf tf (EA_AssumeNot b))),
+    dgs_branch     = (\<lambda>b pol. unit_step_placed keep_local publish_side
+      (branch\<^sup># tf b pol)),
     dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
       (enter\<^sup># tf xs es)),
     dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
@@ -752,8 +749,7 @@ where
     dgs_nop        = unit_step_for gs (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_for gs (apply_tf tf (EA_Assign x e))),
     dgs_random     = (\<lambda>x. unit_step_for gs (apply_tf tf (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_for gs (apply_tf tf (EA_AssumeNot b))),
+    dgs_branch     = (\<lambda>b pol. unit_step_for gs (branch\<^sup># tf b pol)),
     dgs_enter      = (\<lambda>xs es. unit_step_for gs (enter\<^sup># tf xs es)),
     dgs_combine_env    = unit_combine_step_env_for gs,
     dgs_combine_assign = unit_combine_step_assign_for gs
@@ -818,8 +814,7 @@ where
     dgs_nop        = unit_step_for_lifted gs is_bot_pred (apply_tf tf EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_Assign x e))),
     dgs_random     = (\<lambda>x. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_for_lifted gs is_bot_pred (apply_tf tf (EA_AssumeNot b))),
+    dgs_branch     = (\<lambda>b pol. unit_step_for_lifted gs is_bot_pred (branch\<^sup># tf b pol)),
     dgs_enter      = (\<lambda>xs es. unit_step_for_lifted gs is_bot_pred (enter\<^sup># tf xs es)),
     dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_env_for_lifted gs dc g),
     dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_assign_for_lifted gs dst is_bot_pred de merged)

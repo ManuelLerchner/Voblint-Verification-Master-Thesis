@@ -35,11 +35,17 @@ text \<open>
   Parameterised by the abstract value type 'a.
 \<close>
 
+text \<open>
+  \<open>tf_branch\<close> is the single, polarity-parametrized branch transfer, matching Goblint's
+  \<open>Spec.branch : man -> exp -> bool -> D.t\<close> (one operation taking a boolean outcome, not two
+  independently-named callbacks). \<open>tf_branch tf b True\<close> is the former \<open>tf_assume tf b\<close> (take the
+  branch where \<open>b\<close> evaluates true); \<open>tf_branch tf b False\<close> is the former \<open>tf_assume_not tf b\<close>.
+\<close>
+
 record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
   tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
-  tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
-  tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
+  tf_branch    :: "bexp => bool => ('a abs_state) => ('a abs_state)" ("branch\<^sup>#")
   tf_enter     :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_combine   :: "('a abs_state) => ('a abs_state) => ('a abs_state)"
 
@@ -52,8 +58,8 @@ fun apply_tf :: "'a domain_transfer
     "apply_tf tf EA_Nop              \<sigma> = \<sigma>"
   | "apply_tf tf (EA_Assign x a)     \<sigma> = assign\<^sup># tf x a \<sigma>"
   | "apply_tf tf (EA_Random x)       \<sigma> = tf_random tf x \<sigma>"
-  | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
-  | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
+  | "apply_tf tf (EA_Assume b)       \<sigma> = branch\<^sup># tf b True \<sigma>"
+  | "apply_tf tf (EA_AssumeNot b)    \<sigma> = branch\<^sup># tf b False \<sigma>"
   | "apply_tf tf (EA_Ret e p)        \<sigma> =
        (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign\<^sup># tf ret_var a \<sigma>)"
   | "apply_tf tf (EA_Check c)        \<sigma> = \<sigma>"
@@ -73,11 +79,11 @@ lemma apply_tf_EA_Random [simp]:
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_Assume [simp]:
-  "apply_tf tf (EA_Assume b) = tf_assume tf b"
+  "apply_tf tf (EA_Assume b) = branch\<^sup># tf b True"
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_AssumeNot [simp]:
-  "apply_tf tf (EA_AssumeNot b) = tf_assume_not tf b"
+  "apply_tf tf (EA_AssumeNot b) = branch\<^sup># tf b False"
   by (simp add: fun_eq_iff)
 
 text \<open>\<^const>\<open>EA_Ret\<close> reuses the ordinary transfer of the assignment it publishes: a void return
@@ -846,12 +852,9 @@ locale sound_transfer_for =
        s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_random_for[intro]:
     "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-  assumes tf_sound_assume_for[intro]:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
-       \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-  assumes tf_sound_assume_not_for[intro]:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s
-       \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+  assumes tf_sound_branch_for[intro]:
+    "\<forall>(b::bexp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol
+       \<longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   assumes tf_sound_enter_for[intro]:
     "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
@@ -871,13 +874,9 @@ lemma tf_sound_random_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
   using tf_sound_random_for by blast
 
-lemma tf_sound_assume_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-  using tf_sound_assume_for by blast
-
-lemma tf_sound_assume_not_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-  using tf_sound_assume_not_for by blast
+lemma tf_sound_branch_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+  using tf_sound_branch_for by blast
 
 lemma tf_sound_enter_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
@@ -901,12 +900,9 @@ lemma sound_transferI_for:
     and random[intro]:
     "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-    and assm[intro]:
-    "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow>
-       s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    and assm_not[intro]:
-    "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow>
-       s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    and branch[intro]:
+    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow>
+       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     and enter[intro]:
     "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
@@ -921,12 +917,9 @@ proof unfold_locales
   show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v.
       s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
     using random by blast
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow>
-      s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    using assm by blast
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow>
-      s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-    using assm_not by blast
+  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol \<longrightarrow>
+      s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+    using branch by blast
   show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
@@ -967,8 +960,7 @@ record ('g, 'd) effectful_domain_transfer =
   etf_nop        :: "('g, 'd) edge_tf_tree"
   etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_random     :: "vname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_assume     :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_assume_not :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_combine    :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
 
@@ -979,8 +971,8 @@ where
   "apply_etf etf EA_Nop           u = etf_nop etf u"
 | "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
 | "apply_etf etf (EA_Random x)    u = etf_random etf x u"
-| "apply_etf etf (EA_Assume b)    u = etf_assume etf b u"
-| "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
+| "apply_etf etf (EA_Assume b)    u = etf_branch etf b True u"
+| "apply_etf etf (EA_AssumeNot b) u = etf_branch etf b False u"
 | "apply_etf etf (EA_Ret e p) u =
      (case e of None \<Rightarrow> etf_nop etf u | Some a \<Rightarrow> etf_assign etf ret_var a u)"
 | "apply_etf etf (EA_Check c) u = etf_nop etf u"
@@ -1425,14 +1417,10 @@ locale sound_effectful_transfer =
     "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
          s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_random etf x u) \<sigma>))"
-  assumes etf_sound_assume[intro]:
-    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s
-       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume etf b u) \<sigma>))"
-  assumes etf_sound_assume_not[intro]:
-    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume_not etf b u) \<sigma>))"
+  assumes etf_sound_branch[intro]:
+    "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s = pol
+       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>))"
   assumes etf_sound_enter[intro]:
     "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).

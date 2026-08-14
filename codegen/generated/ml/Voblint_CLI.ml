@@ -1678,8 +1678,7 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
 type ('a, 'b, 'c) dg_spec_ext =
   Dg_spec_ext of
     ('a -> 'b -> 'b * 'a) * (string -> aexp -> 'a -> 'b -> 'b * 'a) *
-      (string -> 'a -> 'b -> 'b * 'a) * (bexp -> 'a -> 'b -> 'b * 'a) *
-      (bexp -> 'a -> 'b -> 'b * 'a) *
+      (string -> 'a -> 'b -> 'b * 'a) * (bexp -> bool -> 'a -> 'b -> 'b * 'a) *
       (string list -> aexp list -> 'a -> 'b -> 'b * 'a) *
       ('a -> 'a -> 'b -> 'b * 'a) *
       (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
@@ -1934,8 +1933,6 @@ let rec lookup_resolved_st_q _A (Abs_resolved_st x) = lookup_resolved_st _A x;;
 let rec fun_of_resolved_st_q_for _A
   gs s x = lookup_resolved_st_q _A s (location_of gs x);;
 
-let rec inv_conservative r a1 a2 = (a1, a2);;
-
 let rec remove_resolved_key
   loc x1 = match loc, x1 with loc, [] -> []
     | loca, (loc, a) :: ps ->
@@ -1947,6 +1944,8 @@ let rec update_resolved_st _A
 
 let rec update_resolved_st_q _A
   (Abs_resolved_st xb) xa x = Abs_resolved_st (update_resolved_st _A xb xa x);;
+
+let rec inv_conservative r a1 a2 = (a1, a2);;
 
 let rec times_int
   k l = Int_of_integer (Z.mul (integer_of_int k) (integer_of_int l));;
@@ -2110,11 +2109,8 @@ let rec bfilter_ivl_st
           afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s))
     | gs, Bc v, uv, s -> s;;
 
-let rec assume_not_ivl_st_for
-  source_global b s = bfilter_ivl_st source_global b false s;;
-
-let rec assume_ivl_st_for
-  source_global b s = bfilter_ivl_st source_global b true s;;
+let rec branch_ivl_st_for
+  source_global b pol s = bfilter_ivl_st source_global b pol s;;
 
 let rec ivl_tf_st_for
   source_global x1 s = match source_global, x1, s with
@@ -2124,9 +2120,9 @@ let rec ivl_tf_st_for
           (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
     | source_global, EA_Random x, s ->
         update_resolved_st_q bot_ivl s (location_of source_global x) ivl_top
-    | source_global, EA_Assume b, s -> assume_ivl_st_for source_global b s
+    | source_global, EA_Assume b, s -> branch_ivl_st_for source_global b true s
     | source_global, EA_AssumeNot b, s ->
-        assume_not_ivl_st_for source_global b s
+        branch_ivl_st_for source_global b false s
     | source_global, EA_Ret (None, p), s -> s
     | source_global, EA_Ret (Some a, p), s ->
         update_resolved_st_q bot_ivl s (location_of source_global ret_var)
@@ -2288,14 +2284,14 @@ let rec show_int
 
 let rec dgs_combine_assign
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_combine_assign;;
 
 let rec dgs_combine_env
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_combine_env;;
 
 let rec dgs_combine
@@ -2427,42 +2423,36 @@ let rec side_rhs_fold_dg _A _D
                 acc (locals res))
               ts);;
 
-let rec dgs_assume_not
-  (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
-    = dgs_assume_not;;
-
 let rec dgs_random
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_random;;
 
-let rec dgs_assume
+let rec dgs_branch
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
-    = dgs_assume;;
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
+    = dgs_branch;;
 
 let rec dgs_assign
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_assign;;
 
 let rec dgs_nop
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_nop;;
 
 let rec dg_spec_step
   s x1 = match s, x1 with s, EA_Nop -> dgs_nop s
     | s, EA_Assign (x, e) -> dgs_assign s x e
     | s, EA_Random x -> dgs_random s x
-    | s, EA_Assume b -> dgs_assume s b
-    | s, EA_AssumeNot b -> dgs_assume_not s b
+    | s, EA_Assume b -> dgs_branch s b true
+    | s, EA_AssumeNot b -> dgs_branch s b false
     | s, EA_Ret (e, p) ->
         (match e with None -> dgs_nop s | Some a -> dgs_assign s ret_var a)
     | s, EA_Check cnd -> dgs_nop s;;
@@ -2532,8 +2522,8 @@ let rec entry_call_list
 
 let rec dgs_enter
   (Dg_spec_ext
-    (dgs_nop, dgs_assign, dgs_random, dgs_assume, dgs_assume_not, dgs_enter,
-      dgs_combine_env, dgs_combine_assign, more))
+    (dgs_nop, dgs_assign, dgs_random, dgs_branch, dgs_enter, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_enter;;
 
 let rec dg_extra_of _A _B
@@ -2788,11 +2778,8 @@ let rec bfilter_sign_st
           afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s))
     | gs, Bc v, uv, s -> s;;
 
-let rec assume_not_sign_st_for
-  source_global b s = bfilter_sign_st source_global b false s;;
-
-let rec assume_sign_st_for
-  source_global b s = bfilter_sign_st source_global b true s;;
+let rec branch_sign_st_for
+  source_global b pol s = bfilter_sign_st source_global b pol s;;
 
 let rec sign_tf_st_for
   source_global x1 s = match source_global, x1, s with
@@ -2802,9 +2789,9 @@ let rec sign_tf_st_for
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Random x, s ->
         update_resolved_st_q bot_sign s (location_of source_global x) STop
-    | source_global, EA_Assume b, s -> assume_sign_st_for source_global b s
+    | source_global, EA_Assume b, s -> branch_sign_st_for source_global b true s
     | source_global, EA_AssumeNot b, s ->
-        assume_not_sign_st_for source_global b s
+        branch_sign_st_for source_global b false s
     | source_global, EA_Ret (None, p), s -> s
     | source_global, EA_Ret (Some a, p), s ->
         update_resolved_st_q bot_sign s (location_of source_global ret_var)
@@ -3697,8 +3684,9 @@ let rec unit_dg_spec_st_for _A
       (unit_step_st _A (tf_st EA_Nop),
         (fun x e -> unit_step_st _A (tf_st (EA_Assign (x, e)))),
         (fun x -> unit_step_st _A (tf_st (EA_Random x))),
-        (fun b -> unit_step_st _A (tf_st (EA_Assume b))),
-        (fun b -> unit_step_st _A (tf_st (EA_AssumeNot b))),
+        (fun b pol ->
+          unit_step_st _A
+            (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
         (fun xs es -> unit_step_st _A (enter_st xs es)),
         unit_combine_step_st_env _A, unit_combine_step_st_assign_for _A gs,
         ());;
@@ -4056,8 +4044,9 @@ let rec unit_dg_spec_st_for_lifted _A
         (fun x e ->
           unit_step_st_lifted _A is_bot_pred (tf_st (EA_Assign (x, e)))),
         (fun x -> unit_step_st_lifted _A is_bot_pred (tf_st (EA_Random x))),
-        (fun b -> unit_step_st_lifted _A is_bot_pred (tf_st (EA_Assume b))),
-        (fun b -> unit_step_st_lifted _A is_bot_pred (tf_st (EA_AssumeNot b))),
+        (fun b pol ->
+          unit_step_st_lifted _A is_bot_pred
+            (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
         (fun xs es -> unit_step_st_lifted _A is_bot_pred (enter_st xs es)),
         (fun dc _ -> unit_combine_step_st_env_lifted _A dc),
         (fun dst de _ ->

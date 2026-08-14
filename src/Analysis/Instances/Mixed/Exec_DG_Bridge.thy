@@ -914,8 +914,7 @@ where
     dgs_nop        = unit_step_st (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st (tf_st (EA_Assign x e))),
     dgs_random     = (\<lambda>x. unit_step_st (tf_st (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_st (tf_st (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_st (tf_st (EA_AssumeNot b))),
+    dgs_branch     = (\<lambda>b pol. unit_step_st (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
     dgs_combine_env    = unit_combine_step_st_env,
     dgs_combine_assign = unit_combine_step_st_assign_for gs
@@ -1047,8 +1046,8 @@ where
     dgs_nop        = unit_step_st_lifted is_bot_pred (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st_lifted is_bot_pred (tf_st (EA_Assign x e))),
     dgs_random     = (\<lambda>x. unit_step_st_lifted is_bot_pred (tf_st (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_st_lifted is_bot_pred (tf_st (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_st_lifted is_bot_pred (tf_st (EA_AssumeNot b))),
+    dgs_branch     = (\<lambda>b pol. unit_step_st_lifted is_bot_pred
+      (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     dgs_enter      = (\<lambda>xs es. unit_step_st_lifted is_bot_pred (enter_st xs es)),
     dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_st_env_lifted dc g),
     dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de merged)

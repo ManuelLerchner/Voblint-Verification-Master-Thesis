@@ -53,15 +53,10 @@ text \<open>The executable mirror of \<open>sign_tf_for\<close>/\<open>enter_sig
   the classifier, following the same pattern as \<open>ivl_tf_st_for\<close>/
   \<open>ivl_enter_st_for\<close> for the interval domain.\<close>
 
-definition assume_sign_st_for ::
-  "(vname => bool) => bexp => sign resolved_st_q => sign resolved_st_q" where
-  "assume_sign_st_for source_global b s =
-    bfilter_sign_st source_global b True s"
-
-definition assume_not_sign_st_for ::
-  "(vname => bool) => bexp => sign resolved_st_q => sign resolved_st_q" where
-  "assume_not_sign_st_for source_global b s =
-    bfilter_sign_st source_global b False s"
+definition branch_sign_st_for ::
+  "(vname => bool) => bexp => bool => sign resolved_st_q => sign resolved_st_q" where
+  "branch_sign_st_for source_global b pol s =
+    bfilter_sign_st source_global b pol s"
 
 definition sign_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
@@ -82,9 +77,9 @@ fun sign_tf_st_for ::
   | "sign_tf_st_for source_global (EA_Random x) s =
        update_resolved_st_q s (location_of source_global x) STop"
   | "sign_tf_st_for source_global (EA_Assume b) s =
-       assume_sign_st_for source_global b s"
+       branch_sign_st_for source_global b True s"
   | "sign_tf_st_for source_global (EA_AssumeNot b) s =
-       assume_not_sign_st_for source_global b s"
+       branch_sign_st_for source_global b False s"
   | "sign_tf_st_for source_global (EA_Ret None p) s = s"
   | "sign_tf_st_for source_global (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of source_global ret_var)
@@ -175,12 +170,12 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Assume b) s) =
     apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def assume_sign_st_for_def assume_sign_def bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def branch_sign_st_for_def apply_tf.simps bfilter_sign_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_AssumeNot b) s) =
     apply_tf (sign_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def assume_not_sign_st_for_def assume_not_sign_def bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def branch_sign_st_for_def apply_tf.simps bfilter_sign_st_commute)
 qed
 
 lemma enter_frame_sign_st_for_commute:

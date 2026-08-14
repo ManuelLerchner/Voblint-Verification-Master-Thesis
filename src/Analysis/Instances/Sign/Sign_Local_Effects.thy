@@ -375,17 +375,6 @@ proof (intro allI impI)
   qed
 qed
 
-lemma assume_sign_local_edge_invariant [intro]:
-  assumes ng: "\<not> bexp_mentions_global gs b"
-  shows "local_edge_invariant gs (assume_sign b)"
-  unfolding assume_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
-
-lemma assume_not_sign_local_edge_invariant [intro]:
-  assumes ng: "\<not> bexp_mentions_global gs b"
-  shows "local_edge_invariant gs (assume_not_sign b)"
-  unfolding assume_not_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
-
-
 lemma sign_tf_local_edge_invariant:
   assumes loc: "local_edge_action gs a"
   shows "local_edge_invariant gs (apply_tf (sign_tf_for gs) a)"
@@ -393,8 +382,7 @@ lemma sign_tf_local_edge_invariant:
   apply (cases a)
   apply (auto simp: sign_tf_for_def aexp_mentions_global_def
       intro: assign_sign_local_edge_invariant
-             assume_sign_local_edge_invariant
-             assume_not_sign_local_edge_invariant
+             bfilter_sign_local_edge_invariant
              random_sign_local_edge_invariant
              id_local_edge_invariant
       split: option.splits)

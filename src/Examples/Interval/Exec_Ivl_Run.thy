@@ -14,7 +14,7 @@ text \<open>
   @{text "x := 0; while (x < 20) { x := x + 1 }"}.
 
   The executable transfer \<open>ivl_tf_st_for\<close> applies the same backward guard
-  filters as @{const assume_ivl} (via \<open>assume_ivl_st_for\<close> / @{const bfilter_ivl_st})
+  filters as @{const bfilter_ivl} (via \<open>branch_ivl_st_for\<close> / @{const bfilter_ivl_st})
   on @{const EA_Assume} edges.  Node~2 therefore reads @{text "[0,19]"} because
   @{text "x < 20"} refines @{text "x"} at the loop head --- not because of widening.
 

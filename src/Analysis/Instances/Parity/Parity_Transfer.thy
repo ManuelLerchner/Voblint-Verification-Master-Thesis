@@ -50,24 +50,20 @@ lemma random_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> random_parity x sigma1 \<le> random_parity x sigma2"
   by (simp add: random_parity_def le_funD le_funI)
 
-subsection \<open>Assume: parity does not refine guards, so the transfer is the identity\<close>
+subsection \<open>Branch: parity does not refine guards, so the transfer is the identity\<close>
 
 text \<open>
   No boolean guard in the language constrains the parity of a variable, so the
-  sound and most precise parity assume keeps the incoming state unchanged.
+  sound and most precise parity branch keeps the incoming state unchanged --
+  the identity is trivially polarity-independent, matching @{const tf_branch}'s
+  shape directly (no separate assume/assume-not case, since both bodies coincide).
 \<close>
 
-definition assume_parity :: "bexp => (vname => parity) => (vname => parity)" where
-  "assume_parity b \<sigma> = \<sigma>"
+definition branch_parity :: "bexp => bool => (vname => parity) => (vname => parity)" where
+  "branch_parity b pol \<sigma> = \<sigma>"
 
-definition assume_not_parity :: "bexp => (vname => parity) => (vname => parity)" where
-  "assume_not_parity b \<sigma> = \<sigma>"
-
-lemma assume_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_parity b \<sigma>\<rbrakk>"
-  by (simp add: assume_parity_def)
-
-lemma assume_not_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_parity b \<sigma>\<rbrakk>"
-  by (simp add: assume_not_parity_def)
+lemma branch_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
+  by (simp add: branch_parity_def)
 
 subsection \<open>Bundled transfer functions\<close>
 
@@ -75,13 +71,9 @@ lemma assign_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity x a sigma1 \<le> assign_parity x a sigma2"
   by (simp add: assign_parity_def aval_parity_mono le_funD le_funI)
 
-lemma assume_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_parity b sigma1 \<le> assume_parity b sigma2"
-  by (simp add: assume_parity_def)
-
-lemma assume_not_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_parity b sigma1 \<le> assume_not_parity b sigma2"
-  by (simp add: assume_not_parity_def)
+lemma branch_parity_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_parity b pol sigma1 \<le> branch_parity b pol sigma2"
+  by (simp add: branch_parity_def)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -125,20 +117,18 @@ next
 qed
 
 definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
-  "parity_tf_for gs = (| tf_assign     = assign_parity,
-                         tf_random     = random_parity,
-                         tf_assume     = assume_parity,
-                         tf_assume_not = assume_not_parity,
-                         tf_enter      = enter_parity_for gs,
-                         tf_combine    = combine_env\<^sup># gs |)"
+  "parity_tf_for gs = (| tf_assign  = assign_parity,
+                         tf_random  = random_parity,
+                         tf_branch  = branch_parity,
+                         tf_enter   = enter_parity_for gs,
+                         tf_combine = combine_env\<^sup># gs |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_parity_sound)
   subgoal by (simp add: random_parity_sound)
-  subgoal by (simp add: assume_parity_sound)
-  subgoal by (simp add: assume_not_parity_sound)
+  subgoal by (simp add: branch_parity_sound)
   subgoal by (simp add: enter_parity_for_sound)
   subgoal by (simp add: combine_env_sound)
   done
@@ -161,7 +151,7 @@ qed
 lemma parity_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
   by (cases a)
-     (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono assume_parity_mono
-                 assume_not_parity_mono enter_parity_for_mono split: option.splits)
+     (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono branch_parity_mono
+                 enter_parity_for_mono split: option.splits)
 
 end

@@ -273,7 +273,7 @@ proof -
     by unfold_locales
        (rule twice_reserved
              twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_random_for
-             twice_transfer.tf_sound_assume_for twice_transfer.tf_sound_assume_not_for
+             twice_transfer.tf_sound_branch_for
              twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]

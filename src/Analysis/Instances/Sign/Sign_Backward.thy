@@ -459,28 +459,19 @@ lemma sign_eq_true_of_less_code [code]:
   using sign_backward_domain.eq_true_def sign_eq_true_of_less_def sign_less_false_of_inv_def
   by auto
 
-subsection \<open>Abstract assume\<close>
+subsection \<open>Abstract branch\<close>
 
 text \<open>
-  Guard refinement via backward evaluation.  @{text assume_sign} narrows the
-  abstract state on the then-branch; @{text assume_not_sign} on the else-branch.
-  Both delegate to the generic @{text bfilter} proved sound in @{locale backward_domain}.
+  Guard refinement via backward evaluation. @{const bfilter_sign} narrows the
+  abstract state on the branch selected by its boolean polarity argument
+  (@{text True} for the then-branch, @{text False} for the else-branch),
+  delegating to the generic @{text bfilter} proved sound in @{locale backward_domain}.
+  This is the domain's @{text tf_branch} instance directly (@{text Sign_Transfer.thy}),
+  matching Goblint's single polarity-parametrized @{text Spec.branch}.
 \<close>
 
-definition assume_sign :: "bexp => (vname => sign) => (vname => sign)" where
-  "assume_sign b \<sigma> = bfilter_sign b True \<sigma>"
-
-definition assume_not_sign :: "bexp => (vname => sign) => (vname => sign)" where
-  "assume_not_sign b \<sigma> = bfilter_sign b False \<sigma>"
-
-lemma assume_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_sign b \<sigma>\<rbrakk>"
-  unfolding assume_sign_def
-  using sign_backward_domain.bfilter_sound by simp
-
-lemma assume_not_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_sign b \<sigma>\<rbrakk>"
-  unfolding assume_not_sign_def
+lemma bfilter_sign_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.bfilter_sound by simp
 
 

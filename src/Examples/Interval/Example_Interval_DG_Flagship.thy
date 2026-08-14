@@ -241,7 +241,7 @@ proof -
     by unfold_locales
        (rule flagship_wf_reserved
              flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_random_for
-             flagship_ex_transfer.tf_sound_assume_for flagship_ex_transfer.tf_sound_assume_not_for
+             flagship_ex_transfer.tf_sound_branch_for
              flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]

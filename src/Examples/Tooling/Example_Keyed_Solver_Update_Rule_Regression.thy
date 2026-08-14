@@ -31,8 +31,7 @@ definition keyed_spec :: "(ivl, ivl) dg_spec" where
      \<lparr> dgs_nop = \<lambda>d g. (g, d),
        dgs_assign = \<lambda>x e d g. (g \<squnion> Ivl (Fin 1) (Fin 1), d),
        dgs_random = \<lambda>x d g. (g, d),
-       dgs_assume = \<lambda>b d g. (g, d),
-       dgs_assume_not = \<lambda>b d g. (g, d),
+       dgs_branch = \<lambda>b pol d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
        dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
        dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"
@@ -103,8 +102,7 @@ definition merge_spec :: "(ivl, ivl) dg_spec" where
      \<lparr> dgs_nop = \<lambda>d g. (Ivl (Fin 0) (Fin 0), d),
        dgs_assign = \<lambda>x e d g. (Ivl (Fin 1) (Fin 1), d),
        dgs_random = \<lambda>x d g. (g, d),
-       dgs_assume = \<lambda>b d g. (g, d),
-       dgs_assume_not = \<lambda>b d g. (g, d),
+       dgs_branch = \<lambda>b pol d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
        dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
        dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"

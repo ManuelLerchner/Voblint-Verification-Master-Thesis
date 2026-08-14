@@ -40,7 +40,7 @@ proof -
     by unfold_locales
        (rule reserved
              p_transfer.tf_sound_assign_for p_transfer.tf_sound_random_for
-             p_transfer.tf_sound_assume_for p_transfer.tf_sound_assume_not_for
+             p_transfer.tf_sound_branch_for
              p_transfer.tf_sound_enter_for p_transfer.tf_sound_combine_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]

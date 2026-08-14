@@ -27,9 +27,9 @@ definition assume_ivl_identity :: "bexp \<Rightarrow> ivl abs_state \<Rightarrow
 subsection \<open>One guard: @{text "x < 20"} narrows the upper bound\<close>
 
 lemma refine_x_lt_20:
-  "assume_ivl (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   unfolding sigma_x_def
-  by (simp add: assume_ivl_def)
+  by eval
 
 lemma identity_x_lt_20:
   "assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'') =
@@ -45,7 +45,7 @@ lemma refine_excludes_20:
   "20 \<notin> gamma_ivl (Ivl (Fin 0) (Fin 19))"
   by simp_all
 
-value "assume_ivl (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'')"
+value "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head (STR ''x'')"
 value "assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'')"
 
 subsection \<open>One body step: @{text "x := x + 1"} after the guard\<close>
@@ -53,7 +53,7 @@ subsection \<open>One body step: @{text "x := x + 1"} after the guard\<close>
 definition body_after_refined :: "ivl abs_state" where
   "body_after_refined =
      assign_ivl (STR ''x'') (Plus (V (STR ''x'')) (N 1))
-       (assume_ivl (Less (V (STR ''x'')) (N 20)) sigma_loop_head)"
+       (bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head)"
 
 definition body_after_identity :: "ivl abs_state" where
   "body_after_identity =
@@ -63,7 +63,7 @@ definition body_after_identity :: "ivl abs_state" where
 lemma body_step_refined:
   "body_after_refined (STR ''x'') = Ivl (Fin 1) (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
-  by (simp add: assign_ivl_def assume_ivl_def normalize_ivl_def)
+  by eval
 
 lemma body_step_identity:
   "body_after_identity (STR ''x'') = Ivl (Fin 1) (Fin 21)"
@@ -78,7 +78,7 @@ text \<open>
 lemma loop_join_refined:
   "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_refined (STR ''x'') = Ivl (Fin 0) (Fin 20)"
   unfolding body_after_refined_def sigma_x_def
-  by (simp add: sup_ivl_def assign_ivl_def assume_ivl_def normalize_ivl_def)
+  by eval
 
 lemma loop_join_identity:
   "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'') = Ivl (Fin 0) (Fin 21)"

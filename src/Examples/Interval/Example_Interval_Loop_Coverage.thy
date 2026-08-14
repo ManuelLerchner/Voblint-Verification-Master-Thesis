@@ -17,14 +17,14 @@ text \<open>
   The interval domain proves the bounded invariant \<^verbatim>\<open>0 <= x <= 20\<close>
   (i.e. \<^verbatim>\<open>x \<in> [0, 20]\<close>) at the loop head over every reaching store.  Both bounds
   are interval-specific: the lower bound \<^verbatim>\<open>0\<close> is the joined initial value, and the
-  upper bound \<^verbatim>\<open>20\<close> comes from guard refinement -- @{const assume_ivl} narrows
+  upper bound \<^verbatim>\<open>20\<close> comes from guard refinement -- @{const bfilter_ivl} narrows
   \<^verbatim>\<open>x\<close> to \<^verbatim>\<open>[.., 19]\<close> on entering the body (\<^verbatim>\<open>x < 20\<close>), so after \<^verbatim>\<open>x := x + 1\<close> and the
   join with the initial \<^verbatim>\<open>[0,0]\<close> the loop head stabilises at \<^verbatim>\<open>[0,20]\<close> with no
   widening needed.  The Sign lattice expresses neither bound (it collapses
   \<^verbatim>\<open>[0,0]\<close> joined with \<^verbatim>\<open>[1,1]\<close> to sign top).
 
   Certified backward-analysis story: @{text "Example_Guard_Refinement"}
-  isolates the guard step; this theory carries the same @{const assume_ivl} transfers
+  isolates the guard step; this theory carries the same @{const bfilter_ivl} transfers
   through the full CFG to the trace-native post-fixpoint soundness theorem.
 
   Executable mirror (Kleene / warrowing TD on @{text "ivl st"}, eval only):
@@ -113,8 +113,8 @@ proof (rule allI)
   have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> loop_env v"
     by (auto split: if_splits
              simp: intra_predecessors_def loop_cfg_intra loop_env_def ivl_tf_for_def
-                   assign_ivl_def assume_ivl_def assume_not_ivl_def normalize_ivl_def
-                   less_eq_ivl_def le_fun_def)
+                   apply_tf.simps assign_ivl_def ivl_backward_domain.bfilter.simps
+                   normalize_ivl_def less_eq_ivl_def le_fun_def)
   show "rhs loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
   proof (cases "v = cfg_entry loop_cfg")
     case True
@@ -136,7 +136,7 @@ subsection \<open>Backward guard refinement at the body entry\<close>
 text \<open>
   Edge from node 2 to node 3 is @{const EA_Assume} on @{text "x < 20"}.  The body-entry
   interval @{text "[0,19]"} in @{const loop_env} is exactly
-  @{const assume_ivl} applied at the loop head --- not widening and not join
+  @{const bfilter_ivl} applied at the loop head --- not widening and not join
   alone (identity assume would keep @{text "[0,20]"}; see
   @{text "Example_Guard_Refinement"}).
 \<close>
@@ -144,8 +144,8 @@ text \<open>
 abbreviation "loop_body_entry \<equiv> Statement 2"
 
 lemma loop_body_x_from_assume:
-  "tf_assume (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
-  unfolding ivl_tf_for_def assume_ivl_def loop_env_def
+  "tf_branch (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  unfolding ivl_tf_for_def loop_env_def
   by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
         ivl_backward_domain.afilter.simps aval_ivl.simps meet_ivl.simps)
 
