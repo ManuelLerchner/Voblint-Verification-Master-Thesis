@@ -598,6 +598,54 @@ definition entry_state_sg_exec ::
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
 
+text \<open>
+  Solution-consuming siblings of \<^const>\<open>entry_state_sigma_abs_exec\<close>/
+  \<^const>\<open>entry_state_sg_exec\<close>, taking an already-computed \<^const>\<open>entry_state_sol\<close>
+  result instead of recomputing it. \<open>entry_state_sg_exec\<close> itself calls \<open>entry_state_sol\<close>
+  once directly plus twice more through \<open>entry_state_sigma_abs_exec\<close> (locals/globs), so a
+  caller that queries several \<open>(v, x)\<close> pairs against the *same* solved analysis -- e.g. one
+  full-state GraphViz render walking every CFG node -- must not go through those definitions
+  directly: doing so re-runs the whole context-sensitive TD solve on every query. These
+  \<open>_from_sol\<close> variants let such a caller solve exactly once and reuse the result;
+  \<open>entry_state_sg_exec\<close> itself is unchanged, so the soundness proofs below still apply to it
+  unmodified.
+\<close>
+
+definition entry_state_sigma_abs_exec_from_sol ::
+    "(vname \<Rightarrow> bool)
+       \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
+  "entry_state_sigma_abs_exec_from_sol gs sol_sigma =
+     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+       \<circ> sol_sigma"
+
+lemma entry_state_sigma_abs_exec_from_sol_eq:
+  "entry_state_sigma_abs_exec_from_sol gs (snd (entry_state_sol gs is_bot_pred Pi ps mnm main))
+     = entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main"
+  unfolding entry_state_sigma_abs_exec_from_sol_def entry_state_sigma_abs_exec_def
+  by (rule refl)
+
+definition entry_state_sg_exec_from_sol ::
+    "(vname \<Rightarrow> bool)
+       \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted" where
+  "entry_state_sg_exec_from_sol gs sol k =
+     (case k of
+        Inl (v, ctx) \<Rightarrow>
+          (if (v, ctx) \<in> fst sol
+           then assemble_env_abs gs
+                  (locals (entry_state_sigma_abs_exec_from_sol gs (snd sol) (Inl (v, ctx))))
+                  (globs (entry_state_sigma_abs_exec_from_sol gs (snd sol) (Inr Global)))
+           else Bot)
+      | Inr _ \<Rightarrow> Bot)"
+
+lemma entry_state_sg_exec_from_sol_eq:
+  "entry_state_sg_exec_from_sol gs (entry_state_sol gs is_bot_pred Pi ps mnm main)
+     = entry_state_sg_exec gs is_bot_pred Pi ps mnm main"
+  unfolding entry_state_sg_exec_from_sol_def entry_state_sg_exec_def
+    entry_state_sigma_abs_exec_from_sol_def entry_state_sigma_abs_exec_def
+  by (rule refl)
+
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com

@@ -340,14 +340,21 @@ text \<open>
   \<open>side_env_lift\<close> materializes the full \<open>vname \<Rightarrow> ivl\<close> function via pointwise \<open>\<squnion>\<close>,
   not executable over the infinite @{typ vname}. \<open>side_env_lift_st\<close> computes the
   same value straight from the two finite \<open>resolved_st_q\<close> slots.
+
+  Point-free in \<open>v\<close>, matching \<open>interval_td_check_report_code\<close>'s own single-solve-per-report
+  fix one layer up: naive unfolding calls \<^const>\<open>analyse_interval_td_raw\<close> -- a full TD solve --
+  twice per \<open>v\<close> queried (once each for \<open>Inl v\<close>/\<open>Inr ()\<close>), so a caller that queries several
+  points against the same solved analysis (e.g. a full-state GraphViz render walking every CFG
+  node) must not hit the unfolded form. Binding \<open>raw\<close> here, outside the returned \<open>\<lambda>v\<close>, means a
+  partial application to \<open>is_bot_pred gs Pi ps mnm main\<close> solves exactly once, reused for every
+  \<open>v\<close> queried afterward against the resulting closure.
 \<close>
 
 lemma analyse_interval_td_at_code [code]:
-  "analyse_interval_td_at is_bot_pred gs Pi ps mnm main v =
-     side_env_lift_st gs
-       (analyse_interval_td_raw is_bot_pred gs Pi ps mnm main (Inl v))
-       (analyse_interval_td_raw is_bot_pred gs Pi ps mnm main (Inr ()))"
-  unfolding analyse_interval_td_at_def side_env_lift_st_eq_side_env_lift
+  "analyse_interval_td_at is_bot_pred gs Pi ps mnm main =
+     (let raw = analyse_interval_td_raw is_bot_pred gs Pi ps mnm main
+      in (\<lambda>v. side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))"
+  unfolding analyse_interval_td_at_def side_env_lift_st_eq_side_env_lift Let_def
   by (rule refl)
 
 definition analyse_interval_td_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ivl abs_state lifted" where
