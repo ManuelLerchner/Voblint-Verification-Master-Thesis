@@ -29,7 +29,8 @@ text \<open>
   concrete store \<open>s\<close>, \<open>c'\<close> is an admissible context for the callee.  This generalizes a
   deterministic \<open>enterc\<close> (\<open>admiss_exact\<close>, \<^theory>\<open>Voblint_CFG.CFG_Local_Trace\<close>) to a
   relation: several \<open>c'\<close> may be admissible for the same call, which is what lets an abstract
-  analysis choose a WIDE context (e.g. covering every concrete argument to \<open>random()\<close>) rather
+  analysis choose a WIDE context (e.g. covering every concrete argument to
+  \<open>__voblint_nondet_int()\<close>) rather
   than being forced to compute one exactly per concrete store.  The abstract context type
   \<open>'c\<close> is arbitrary; \<^const>\<open>ctx_key\<close> may quotient distinct activations to the same context,
   and several contexts may be admissible for one activation.  Nothing here claims a context

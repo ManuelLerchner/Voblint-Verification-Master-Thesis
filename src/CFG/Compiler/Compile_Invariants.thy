@@ -87,6 +87,10 @@ lemma wf_compile_input_source_com:
   "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> source_com main"
   using wf_compile_input_source_program wf_source_program_source_com by blast
 
+lemma wf_compile_input_special_table_none:
+  "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
+  using wf_compile_input_source_program wf_source_program_special_table_none by blast
+
 lemma wf_compile_input_no_return:
   "wf_compile_input gs \<Pi> ps mnm main \<Longrightarrow> no_return main"
   using wf_compile_input_source_program wf_source_program_no_return by blast
@@ -262,12 +266,15 @@ theorem inv13_multi_return_converge:
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
 
 text \<open>A self-call targets the procedure's own entry node; its call site is an ordinary
-  statement node and its continuation is the caller's own next program point.\<close>
+  statement node and its continuation is the caller's own next program point.  Restricted to
+  \<open>p\<close> classified as an ordinary procedure: a self-call \<^const>\<open>special_table\<close> classifies
+  instead sits on an intra edge, not a \<^const>\<open>CallEdge\<close>.\<close>
 theorem inv14_recursion_edge:
-  "(Statement n, CallEdge None (call_formals \<Pi> p) [],
+  assumes "special_table p = None"
+  shows "(Statement n, CallEdge None (call_formals \<Pi> p) [],
     FunctionEntry p, k)
      \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
-  by simp
+  using assms by simp
 
 text \<open>The program entry is the entry node of the distinguished root procedure.\<close>
 theorem inv16_entry_is_main:

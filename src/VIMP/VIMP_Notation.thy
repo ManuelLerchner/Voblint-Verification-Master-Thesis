@@ -355,7 +355,7 @@ subsection \<open>Executable examples\<close>
 
 value "imp \<lbrakk> x := 0 \<rbrakk>"
 value "imp \<lbrakk> x := 0; y := 1 \<rbrakk>"
-value "imp \<lbrakk> x := random() \<rbrakk>"
+value "imp \<lbrakk> x := f() \<rbrakk>"
 value "imp \<lbrakk> if (x < 10) { x := 0 } else { x := 1 } \<rbrakk>"
 value "imp \<lbrakk> while (x < 10) { x := x + 1 } \<rbrakk>"
 value "imp \<lbrakk> return 7 \<rbrakk>"

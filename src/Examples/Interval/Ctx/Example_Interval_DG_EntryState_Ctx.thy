@@ -9,9 +9,9 @@ section \<open>Context-sensitive interval analysis of \<open>rc_program\<close> 
 text \<open>
   The generalized D/G generator is instantiated with routed context hooks.  The one
   call to \<open>p\<close> receives the abstract entry value of formal \<open>a\<close> as its context: since
-  \<open>x\<close> was just assigned from \<open>random()\<close>, its interval at the call site is \<open>Top\<close>, so
+  \<open>x\<close> was just assigned from \<open>__voblint_nondet_int()\<close>, its interval at the call site is \<open>Top\<close>, so
   the routed context is \<open>Top\<close> itself --- one context, not a family of contexts
-  covering the infinitely many concrete arguments \<open>random()\<close> can produce.
+  covering the infinitely many concrete arguments \<open>__voblint_nondet_int()\<close> can produce.
 \<close>
 
 subsection \<open>Global key: real globals vs callee-entry seed slots\<close>

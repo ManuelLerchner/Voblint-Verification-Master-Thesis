@@ -20,19 +20,21 @@ text \<open>
   bounds --- not just its sign --- narrow the checked variable.
 \<close>
 
+text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
+  written inside the \<open>program { ... }\<close> quotation the way other calls can: Pure's inner-syntax
+  lexer reserves leading-underscore tokens for translation-internal nonterminals, rejecting any
+  user identifier that begins with one.  The call is spliced in directly instead.\<close>
 definition checks_ivl_ex_program :: imp_prog where
-  "checks_ivl_ex_program = program {
-     void main() {
-       x := random();
-       if (0 < x && x < 10) {
-         __voblint_check(x < 11);
-         __voblint_check(x < 0);
-         __voblint_check(x == 5)
-       } else {
-         y := 0
-       }
-     }
-   }"
+  "checks_ivl_ex_program = mk_program []
+     (Seq (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
+          (imp \<lbrakk> if (0 < x && x < 10) {
+                   __voblint_check(x < 11);
+                   __voblint_check(x < 0);
+                   __voblint_check(x == 5)
+                 } else {
+                   y := 0
+                 } \<rbrakk>))
+     []"
 
 text \<open>Computed, not asserted: the three \<open>__voblint_check(...)\<close> statements land
   at the nodes \<^const>\<open>compile\<close> actually assigns them, inside the guarded
@@ -67,7 +69,7 @@ definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
      (ivl_exec_prog_at checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program v)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
-  shape: \<open>Statement 1\<close> (\<open>x := random()\<close>'s successor) branches on
+  shape: \<open>Statement 1\<close> (\<open>x := __voblint_nondet_int()\<close>'s successor) branches on
   \<open>0 < x \<and> x < 10\<close> to \<open>Statement 2\<close> (the guarded branch, holding all three
   checks) or to \<open>Statement 5\<close> (\<open>y := 0\<close>, the else branch); both rejoin at
   \<open>Statement 6\<close>.\<close>
@@ -236,7 +238,7 @@ qed
 text \<open>Non-vacuity: \<open>checks_ivl_ex_reach\<close> is not merely vacuously true because
   no store ever reaches these nodes. The all-zero store, admissible as an
   initial \<^const>\<open>cinit_stores\<close> witness, runs the compiled prefix, picks
-  \<open>x := 5\<close> at the \<open>random()\<close> step (satisfying the guard \<open>0 < x \<and> x < 10\<close>),
+  \<open>x := 5\<close> at the \<open>__voblint_nondet_int()\<close> step (satisfying the guard \<open>0 < x \<and> x < 10\<close>),
   and reaches the guarded branch holding all three checks.\<close>
 lemma checks_ivl_ex_reach2_nonempty: "checks_ivl_ex_reach (Statement 2) \<noteq> {}"
 proof -
@@ -373,7 +375,7 @@ text \<open>
   \<^const>\<open>ivl_annotated_dot_prog_lit\<close> renders the same compiled CFG with every
   node labelled by its own computed \<^const>\<open>ivl_exec_prog_at\<close> value --- the
   full per-node abstract environment, not only the three check nodes above.
-  \<open>x\<close> shows \<^term>\<open>ivl_top\<close> before \<open>random()\<close> runs, then \<open>[1,9]\<close> on the
+  \<open>x\<close> shows \<^term>\<open>ivl_top\<close> before \<open>__voblint_nondet_int()\<close> runs, then \<open>[1,9]\<close> on the
   guarded branch and its unconstrained complement on the \<open>else\<close> branch,
   visibly rejoining at \<open>Statement 6\<close>.
 \<close>

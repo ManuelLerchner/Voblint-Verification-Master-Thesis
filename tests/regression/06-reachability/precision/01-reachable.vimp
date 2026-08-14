@@ -4,12 +4,12 @@
 // (a CFG-compilation completeness property) from "is the analysis precise
 // enough to prove this specific fact" -- 'true' is provable in every
 // abstract state, live or dead, so its presence is the only thing being
-// tested here. x is unconstrained (random()), not a known exact value, so
+// tested here. x is unconstrained (__voblint_nondet_int()), not a known exact value, so
 // neither if-branch is infeasible -- both stay genuinely reachable, unlike
 // an exact guard (see infeasible_guard_nowarn.vimp, where a known-exact x
 // makes one branch provably dead).
 void main() {
-  x := random();
+  x := __voblint_nondet_int();
   __voblint_check(true); // reachable
   if (x < 10) {
     __voblint_check(true) // reachable

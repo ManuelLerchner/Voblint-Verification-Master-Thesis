@@ -12,29 +12,30 @@ text \<open>
   node-locally through \<^theory>\<open>Voblint_Analysis.Parity_Checks\<close> rather than by
   forwarding stores to the procedure exit.
 
-  \<open>x\<close> is read from \<open>random()\<close>, so neither Sign nor Interval learns anything
+  \<open>x\<close> is read from \<open>__voblint_nondet_int()\<close>, so neither Sign nor Interval learns anything
   about it. \<open>y := x * 2\<close> is \<^emph>\<open>always even\<close>, regardless of \<open>x\<close>'s sign or
   range --- a fact only Parity expresses. \<open>z := y + 1\<close> is then always odd.
   \<open>y\<close> and \<open>z\<close> therefore land in disjoint parity classes no matter what \<open>x\<close>
-  or \<open>w\<close> (a second, independent \<open>random()\<close> read) turn out to be: the first
+  or \<open>w\<close> (a second, independent \<open>__voblint_nondet_int()\<close> read) turn out to be: the first
   check, \<open>!(y == z)\<close>, is \<^term>\<open>Check_Proved\<close>; the second, \<open>y == z\<close> again, is
   \<^term>\<open>Check_Refuted\<close>; the third, \<open>y == w\<close> against the unconstrained \<open>w\<close>, is
   \<^term>\<open>Check_Unknown\<close> (Parity has no singleton representation, so it can
   never prove a positive equality).
 \<close>
 
+text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
+  written inside the \<open>program { ... }\<close> quotation the way other calls can: Pure's inner-syntax
+  lexer reserves leading-underscore tokens for translation-internal nonterminals, rejecting any
+  user identifier that begins with one.  Both calls are spliced in directly instead.\<close>
 definition parity_ex_program :: imp_prog where
-  "parity_ex_program = program {
-     void main() {
-       x := random();
-       y := x * 2;
-       z := y + 1;
-       __voblint_check(! (y == z));
-       __voblint_check(y == z);
-       w := random();
-       __voblint_check(y == w)
-     }
-   }"
+  "parity_ex_program = mk_program []
+     (Seq (Seq (Seq
+       (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
+       (imp \<lbrakk> y := x * 2; z := y + 1;
+              __voblint_check(! (y == z)); __voblint_check(y == z) \<rbrakk>))
+       (VIMP_Proc.com.Call (Some (STR ''w'')) special_pname_nondet_int []))
+       (imp \<lbrakk> __voblint_check(y == w) \<rbrakk>))
+     []"
 
 text \<open>Computed, not asserted: the three \<open>__voblint_check(...)\<close> statements
   land at the nodes \<^const>\<open>compile\<close> actually assigns them.\<close>
@@ -68,11 +69,11 @@ definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
      (parity_exec_prog_at parity_ex_gs (STR ''main'') parity_ex_program v)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
-  shape: \<open>Statement 0\<close> (\<open>x := random()\<close>) reaches \<open>Statement 1\<close>
+  shape: \<open>Statement 0\<close> (\<open>x := __voblint_nondet_int()\<close>) reaches \<open>Statement 1\<close>
   (\<open>y := x * 2\<close>, always even) reaches \<open>Statement 2\<close> (\<open>z := y + 1\<close>, always
   odd) reaches \<open>Statement 3\<close> (\<open>__voblint_check(!(y == z))\<close>, proved) reaches
   \<open>Statement 4\<close> (\<open>__voblint_check(y == z)\<close>, refuted) reaches \<open>Statement 5\<close>
-  (\<open>w := random()\<close>) reaches \<open>Statement 6\<close> (\<open>__voblint_check(y == w)\<close>,
+  (\<open>w := __voblint_nondet_int()\<close>) reaches \<open>Statement 6\<close> (\<open>__voblint_check(y == w)\<close>,
   unknown) reaches the epilogue \<open>Statement 7\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma parity_ex_intra_eval:
   "intra (prog_cfg (STR ''main'') parity_ex_program) =
@@ -173,7 +174,7 @@ lemma parity_ex_node_sound_6:
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>PEven\<close>
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not
   change the store), and \<open>w\<close> is \<open>PTop\<close> at \<open>Statement 6\<close> (unconstrained by
-  \<open>random()\<close>).\<close>
+  \<open>__voblint_nondet_int()\<close>).\<close>
 lemma parity_ex_classify_3:
   "parity_classify_check (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) (parity_ex_env (Statement 3)) = Check_Proved"
   unfolding parity_ex_env_def by eval

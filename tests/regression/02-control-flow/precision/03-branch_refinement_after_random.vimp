@@ -1,5 +1,5 @@
 // PARAM: --analysis interval
-// random() gives x no bound at all (Top), but the guard on each branch
+// __voblint_nondet_int() gives x no bound at all (Top), but the guard on each branch
 // narrows it before the check runs: the true arm's assume tightens x to
 // [1,+inf), the false arm's to (-inf,0]. Both checks read back their own
 // arm's narrowed range, not the pre-branch Top -- a guard/assume-narrowing
@@ -11,7 +11,7 @@
 // to refute "0<x", missing the touching-boundary case x=[-inf,0] where
 // u2=l1=0 -- sound but needlessly conservative, now u2<=l1.
 void main() {
-  x := random();
+  x := __voblint_nondet_int();
   if (0 < x) {
     __voblint_check(0 < x) // PROVED
   } else {

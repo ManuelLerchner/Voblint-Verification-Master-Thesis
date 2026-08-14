@@ -99,7 +99,8 @@ lemma dgEx_wf:
   unfolding wf_compile_input_simps
     sign_ex_pi_def sign_ex_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
-      reserved_ret_var_def split: if_splits)
+      reserved_ret_var_def prog_main_name_def special_table_def special_pname_nondet_int_def
+      split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 

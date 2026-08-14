@@ -14,7 +14,7 @@ section \<open>A random-argument call: the compiled base for the entry-state wit
 text \<open>
   \<open>rc_program\<close> is the acceptance witness for the entry-state coverage instance: a
   procedure \<open>p\<close> returning its formal unchanged, called once with an argument whose
-  concrete value is unconstrained (\<open>random()\<close>).  Unlike a program that calls its
+  concrete value is unconstrained (\<open>__voblint_nondet_int()\<close>).  Unlike a program that calls its
   callee with distinct literal arguments and so routes to distinct exact contexts,
   this program's single call site is entered from infinitely many distinct concrete
   stores, all sharing one caller-local abstract value (\<open>Top\<close>).  The routed context
@@ -23,11 +23,15 @@ text \<open>
   a family of contexts covering them.
 \<close>
 
+text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
+  written inside the \<open>program { ... }\<close> quotation the way other calls can: Pure's inner-syntax
+  lexer reserves leading-underscore tokens for translation-internal nonterminals, rejecting any
+  user identifier that begins with one.  The call is spliced in directly instead.\<close>
 definition rc_program :: imp_prog where
-  "rc_program = program {
-     void p(a) { return a }
-     void main() { x := random(); y := p(x) }
-   }"
+  "rc_program = mk_program [(STR ''p'', proc_decl_of [STR ''a''] (imp \<lbrakk> return a \<rbrakk>))]
+     (Seq (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
+          (imp \<lbrakk> y := p(x) \<rbrakk>))
+     []"
 
 definition rc_pi :: proc_table where "rc_pi = prog_table rc_program"
 definition rc_procs :: "pname list" where "rc_procs = prog_procs rc_program"
@@ -46,8 +50,8 @@ definition rc_cfg :: cfg where
 
 text \<open>
   The compiled CFG.  Procedure \<open>p\<close> runs between \<open>FunctionEntry (STR ''p'')\<close> and
-  \<open>FunctionResult (STR ''p'')\<close>: the body's \<open>return a\<close> publishes through \<open>EA_Ret\<close> at
-  statement \<open>0\<close>.  \<open>main\<close> occupies statements \<open>2..4\<close>: \<open>2\<close> draws \<open>x\<close> from \<open>random()\<close> and
+  \<open>FunctionResult (STR ''p'')\<close>: the body's  \<open>return a\<close> publishes through \<open>EA_Ret\<close> at
+  statement \<open>0\<close>.  \<open>main\<close> occupies statements \<open>2..4\<close>: \<open>2\<close> draws \<open>x\<close> from \<open>__voblint_nondet_int()\<close> and
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
 lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')" by eval
@@ -105,6 +109,7 @@ lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs (STR ''main'') rc_main"
     rc_pi_def rc_procs_def rc_main_def rc_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
       value_providing_def source_aexp_def ret_var_def
+      special_table_def special_pname_nondet_int_def
       split: if_splits option.splits)
 
 end

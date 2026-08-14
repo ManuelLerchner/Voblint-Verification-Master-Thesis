@@ -177,7 +177,7 @@ let rec show_bexp_compact = function
 let show_edge_action = function
   | EA_Nop -> "nop"
   | EA_Assign (x, a) -> x ^ " := " ^ show_aexp_compact a
-  | EA_Special (Nondet_Int, x) -> x ^ " := random()"
+  | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
   | EA_Assume b -> "[" ^ show_bexp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_bexp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"

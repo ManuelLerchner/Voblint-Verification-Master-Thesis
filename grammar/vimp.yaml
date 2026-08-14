@@ -95,7 +95,6 @@ keywords:
   global: GLOBAL
   void: VOID
   skip: SKIP
-  random: RANDOM
   return: RETURN
   __voblint_check: CHECK
   if: IF
@@ -171,8 +170,6 @@ productions:
   - {name: stmt_skip,     result: stmt, rhs: [SKIP], lower: {ctor: SKIP, args: []}}
   - {name: stmt_assign,   result: stmt, rhs: [IDENT, ASSIGN, aexp],
      lower: {ctor: Assign, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: stmt_random,   result: stmt, rhs: [IDENT, ASSIGN, RANDOM, LPAREN, RPAREN],
-     lower: {ctor: Random, args: [{rhs: 0}]}}
   - {name: stmt_return,   result: stmt, rhs: [RETURN, aexp],
      lower: {ctor: Return, args: [{some: {rhs: 1}}]}}
   - {name: stmt_return0,  result: stmt, rhs: [RETURN],

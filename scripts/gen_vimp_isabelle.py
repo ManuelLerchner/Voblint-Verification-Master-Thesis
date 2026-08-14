@@ -469,7 +469,6 @@ TR_CONST = {
     "SKIP": "VIMP_Proc.com.SKIP",
     "Seq": "VIMP_Proc.com.Seq",
     "Assign": "VIMP_Proc.com.Assign",
-    "Random": "VIMP_Proc.com.Random",
     "Return": "VIMP_Proc.com.Return",
     "Check": "VIMP_Proc.com.Check",
     "If": "VIMP_Proc.com.If",
@@ -485,7 +484,7 @@ CTOR_VAL = {
     "V": "c_V", "Plus": "c_Plus", "Minus": "c_Minus", "Times": "c_Times",
     "Bc": "c_Bc", "Less": "c_Less", "Eqa": "c_Eq", "Not": "c_Not",
     "And": "c_And", "Or": "c_Or",
-    "SKIP": "c_SKIP", "Seq": "c_Seq", "Assign": "c_Assign", "Random": "c_Random",
+    "SKIP": "c_SKIP", "Seq": "c_Seq", "Assign": "c_Assign",
     "Return": "c_Return", "Check": "c_Check", "If": "c_If", "While": "c_While",
     "Call": "c_Call",
 }
@@ -699,7 +698,6 @@ val c_If     = "VIMP_Proc.com.If"
 val c_While  = "VIMP_Proc.com.While"
 val c_Call   = "VIMP_Proc.com.Call"
 val c_Return = "VIMP_Proc.com.Return"
-val c_Random = "VIMP_Proc.com.Random"
 val c_Check  = "VIMP_Proc.com.Check"
 
 val c_None   = "Option.option.None"

@@ -5,7 +5,6 @@
 %token GLOBAL
 %token VOID
 %token SKIP
-%token RANDOM
 %token RETURN
 %token CHECK
 %token IF
@@ -98,8 +97,6 @@ stmt:
       { Voblint_CLI.Core.SKIP }
   | v0 = IDENT v1 = ASSIGN v2 = aexp
       { Voblint_CLI.Core.Assign (v0, v2) }
-  | v0 = IDENT v1 = ASSIGN v2 = RANDOM v3 = LPAREN v4 = RPAREN
-      { Voblint_CLI.Core.Random v0 }
   | v0 = RETURN v1 = aexp
       { Voblint_CLI.Core.Return (Some v1) }
   | v0 = RETURN

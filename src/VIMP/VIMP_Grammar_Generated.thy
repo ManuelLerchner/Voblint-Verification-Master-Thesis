@@ -61,7 +61,6 @@ syntax
   "_bexp_or" :: "imp2_bexp => imp2_bexp => imp2_bexp" ("_ || _" [30, 31] 30)
   "_stmt_skip" :: imp2_stmt ("skip" 61)
   "_stmt_assign" :: "id_position => imp2_aexp => imp2_stmt" ("_ := _" [900, 0] 61)
-  "_stmt_random" :: "id_position => imp2_stmt" ("_ := random'(')" [900] 61)
   "_stmt_return" :: "imp2_aexp => imp2_stmt" ("return _" [0] 61)
   "_stmt_return0" :: imp2_stmt ("return" 61)
   "_stmt_check" :: "imp2_bexp => imp2_stmt" ("'_'_voblint'_check '( _ ')" [0] 61)
@@ -107,7 +106,6 @@ struct
   val c_While  = "VIMP_Proc.com.While"
   val c_Call   = "VIMP_Proc.com.Call"
   val c_Return = "VIMP_Proc.com.Return"
-  val c_Random = "VIMP_Proc.com.Random"
   val c_Check  = "VIMP_Proc.com.Check"
 
   val c_None   = "Option.option.None"
@@ -208,7 +206,6 @@ struct
          | (Const ("_stmt_callret0", _), [x0, x2]) => K c_Call $ ((K c_Some $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)))) $ (HOLogic.mk_literal (dest_id_position (SOME Markup.skolem) ctxt x2)) $ K c_Nil
          | (Const ("_stmt_skip", _), []) => K c_SKIP
          | (Const ("_stmt_assign", _), [x0, a2]) => K c_Assign $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0)) $ (aexp_tr ctxt a2)
-         | (Const ("_stmt_random", _), [x0]) => K c_Random $ (HOLogic.mk_literal (dest_id_position (SOME Markup.free) ctxt x0))
          | (Const ("_stmt_return", _), [a1]) => K c_Return $ ((K c_Some $ (aexp_tr ctxt a1)))
          | (Const ("_stmt_return0", _), []) => K c_Return $ (K c_None)
          | (Const ("_stmt_check", _), [a2]) => K c_Check $ (bexp_tr ctxt a2)

@@ -39,7 +39,6 @@ instance special_call :: countable
 datatype com =
     SKIP
   | Assign (assign_var: vname) (assign_rhs: aexp)
-  | Random (random_var: vname)
   | Check  (check_cond: bexp)
   | Seq    (seq_first: com) (seq_second: com)
   | If     (if_cond: bexp) (if_then: com) (if_else: com)
@@ -67,6 +66,25 @@ text \<open>
 \<close>
 definition ret_var :: vname where
   "ret_var = STR ''#ret''"
+
+text \<open>
+  \<open>special_table\<close> is VIMP's closed analogue of Goblint's open library-function
+  classification: a name-based lookup from a call's callee to its special
+  semantics, checked at the same point Goblint's own frontend recognizes a call
+  target as special rather than a declared procedure -- not a dedicated
+  keyword or AST constructor. Ordinary call syntax parses
+  \<open>x := __voblint_nondet_int()\<close> exactly like any other call; classification
+  happens here, downstream of parsing. \<open>special_pname_nondet_int\<close> is the sole
+  entry today, and is an ordinary lexable identifier (unlike \<open>ret_var\<close>), so a
+  source program could otherwise declare a colliding procedure of the same
+  name -- program well-formedness (below) rejects that explicitly rather than
+  letting a declared procedure be silently shadowed by special-call semantics.
+\<close>
+definition special_pname_nondet_int :: pname where
+  "special_pname_nondet_int = STR ''__voblint_nondet_int''"
+
+definition special_table :: "pname => special_call option" where
+  "special_table p = (if p = special_pname_nondet_int then Some Nondet_Int else None)"
 
 datatype source_location =
     LocalVar pname
@@ -98,7 +116,6 @@ inductive
   for gs :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
 where
   Assign:  "pstep gs \<Pi> (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
-| Random:  "pstep gs \<Pi> (Random x, s, frs) (SKIP, s(x := v), frs)"
 | Check:   "pstep gs \<Pi> (Check c, s, frs) (SKIP, s, frs)"
 | Seq1:    "pstep gs \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | Seq2:    "pstep gs \<Pi> (c1, s, frs) (c1', s', frs')
@@ -116,6 +133,8 @@ where
                  (Seq (body decl) Restore,
                   callee,
                   Frame s dst # frs)"
+| Special: "special_table p = Some Nondet_Int
+             \<Longrightarrow> pstep gs \<Pi> (Call (Some x) p [], s, frs) (SKIP, s(x := v), frs)"
 | RestoreStep:
     "pstep gs \<Pi> (Restore, s, Frame fr dst # frs)
        (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)"
@@ -143,8 +162,6 @@ inductive_cases SkipSE[elim!]:
   "pstep gs \<Pi> (SKIP, s, frs) cfg"
 inductive_cases AssignSE[elim!]:
   "pstep gs \<Pi> (Assign x a, s, frs) cfg"
-inductive_cases RandomSE[elim!]:
-  "pstep gs \<Pi> (Random x, s, frs) cfg"
 inductive_cases CheckSE[elim!]:
   "pstep gs \<Pi> (Check c, s, frs) cfg"
 inductive_cases SeqSE[elim]:
@@ -207,8 +224,9 @@ lemma pcompletes_skip: "pcompletes gs \<Pi> SKIP s s"
 lemma pcompletes_assign: "pcompletes gs \<Pi> (Assign x a) s (s(x := aval a s))"
   by (simp add: pcompletes_def)
 
-lemma pcompletes_random: "pcompletes gs \<Pi> (Random x) s (s(x := v))"
-  by (simp add: pcompletes_def)
+lemma pcompletes_special_nondet_int:
+  "pcompletes gs \<Pi> (Call (Some x) special_pname_nondet_int []) s (s(x := v))"
+  by (simp add: pcompletes_def special_table_def)
 
 lemma pcompletes_check: "pcompletes gs \<Pi> (Check c) s s"
   by (simp add: pcompletes_def)
@@ -550,7 +568,6 @@ fun bexp_vnames :: "bexp => vname set" where
 fun com_vnames :: "com => vname set" where
   "com_vnames SKIP = {}"
 | "com_vnames (Assign x a) = insert x (aexp_vnames a)"
-| "com_vnames (Random x) = {x}"
 | "com_vnames (Check c) = bexp_vnames c"
 | "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
 | "com_vnames (If b c1 c2) =
@@ -576,9 +593,6 @@ proof (induction c)
   then show ?case by simp
 next
   case Assign
-  then show ?case by simp
-next
-  case Random
   then show ?case by simp
 next
   case Check
@@ -616,7 +630,6 @@ qed
 fun source_com :: "com => bool" where
   "source_com SKIP = True"
 | "source_com (Assign x a) = True"
-| "source_com (Random x) = True"
 | "source_com (Check c) = True"
 | "source_com (Seq c1 c2) = (source_com c1 \<and> source_com c2)"
 | "source_com (If b c1 c2) = (source_com c1 \<and> source_com c2)"
@@ -665,7 +678,6 @@ text \<open>
 fun may_fallthrough :: "com => bool" where
   "may_fallthrough SKIP = True"
 | "may_fallthrough (Assign _ _) = True"
-| "may_fallthrough (Random _) = True"
 | "may_fallthrough (Check _) = True"
 | "may_fallthrough (Seq c1 c2) = (may_fallthrough c1 \<and> may_fallthrough c2)"
 | "may_fallthrough (If _ c1 c2) = (may_fallthrough c1 \<or> may_fallthrough c2)"
@@ -708,21 +720,24 @@ text \<open>
 fun wf_source_com :: "proc_table => com => bool" where
   "wf_source_com \<Pi> SKIP = True"
 | "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_aexp a)"
-| "wf_source_com \<Pi> (Random x) = (x \<noteq> ret_var)"
 | "wf_source_com \<Pi> (Check c) = source_bexp c"
 | "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
 | "wf_source_com \<Pi> (If b c1 c2) =
      (source_bexp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
 | "wf_source_com \<Pi> (While b c) = (source_bexp b \<and> wf_source_com \<Pi> c)"
 | "wf_source_com \<Pi> (Call dst p actuals) =
-     (case \<Pi> p of
-        None \<Rightarrow> False
-      | Some decl \<Rightarrow>
-          length actuals = length (formals decl) \<and>
-          list_all source_aexp actuals \<and>
-          (case dst of
-             None \<Rightarrow> True
-           | Some x \<Rightarrow> x \<noteq> ret_var \<and> value_providing (body decl)))"
+     (case special_table p of
+        Some Nondet_Int \<Rightarrow>
+          actuals = [] \<and> (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> ret_var)
+      | None \<Rightarrow>
+          (case \<Pi> p of
+             None \<Rightarrow> False
+           | Some decl \<Rightarrow>
+               length actuals = length (formals decl) \<and>
+               list_all source_aexp actuals \<and>
+               (case dst of
+                  None \<Rightarrow> True
+                | Some x \<Rightarrow> x \<noteq> ret_var \<and> value_providing (body decl))))"
 | "wf_source_com \<Pi> (Return e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_aexp a)"
 | "wf_source_com \<Pi> Restore = False"
 | "wf_source_com \<Pi> Unwind = False"
@@ -748,7 +763,8 @@ definition wf_source_program :: "(vname => bool) => proc_table => pname => com =
      reserved_ret_var gs \<and>
      \<Pi> mnm = Some (proc_decl_of [] main) \<and>
      wf_source_com \<Pi> main \<and> no_return main \<and>
-     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl)"
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl gs \<Pi> decl) \<and>
+     (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
 
 text \<open>
   Compiler-input well-formedness, defined downstream in the CFG session, unfolds
@@ -792,5 +808,9 @@ lemma wf_source_program_source_pi:
 lemma wf_source_program_source_com:
   "wf_source_program gs \<Pi> mnm main \<Longrightarrow> source_com main"
   using wf_source_program_main wf_source_com_source_com by blast
+
+lemma wf_source_program_special_table_none:
+  "wf_source_program gs \<Pi> mnm main \<Longrightarrow> \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
+  by (simp add: wf_source_program_def)
 
 end

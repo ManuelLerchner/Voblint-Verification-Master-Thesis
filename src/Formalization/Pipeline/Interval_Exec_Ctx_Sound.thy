@@ -15,12 +15,12 @@ section \<open>Generic executable entry-state context analysis for Interval\<clo
 
 text \<open>
   Promotes the routed D/G machinery a fixed-program example (an entry-state
-  acceptance case such as \<open>void p(a) { return a }\<close> / \<open>void main() { x := random();
+  acceptance case such as \<open>void p(a) { return a }\<close> / \<open>void main() { x := __voblint_nondet_int();
   y := p(x) }\<close>) exercises to an executable analysis over an arbitrary
   \<^type>\<open>imp_prog\<close>: the context at a call is the entered abstract value of the
   callee's declared formals (\<^const>\<open>formals_route\<close>/\<^const>\<open>formals_context\<close>),
   never call-site history, so a call whose argument is unconstrained (e.g.
-  \<open>random()\<close>) is analyzed once under one wide context rather than diverging over
+  \<open>__voblint_nondet_int()\<close>) is analyzed once under one wide context rather than diverging over
   every concrete value. Mirrors \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
   \<open>analyse_interval_td\<close> family and naming convention, adding one context
   dimension: every quantity here is keyed on \<^typ>\<open>pp \<times> ivl list\<close>, not \<^typ>\<open>pp\<close>

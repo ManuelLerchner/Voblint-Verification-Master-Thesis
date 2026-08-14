@@ -70,59 +70,10 @@ next
   then show ?case using jw E by blast
 qed simp_all
 
-text \<open>A located \<^const>\<open>Random\<close> sits on the compiled \<^term>\<open>EA_Special\<close> edge, and its source step
-  re-locates the residual \<^const>\<open>SKIP\<close> at that edge's target, exactly as \<open>control_at_assign_edge\<close>.\<close>
-lemma control_at_random_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Random x \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
-   \<exists>j w. v = Statement j \<and> (Statement j, EA_Special Nondet_Int x, w) \<in> E
-       \<and> control_at \<Pi> p c0 k n SKIP w"
-proof (induction arbitrary: n' en E K rule: control_at.induct)
-  case (Random x' k n0)
-  then show ?case by (auto intro: control_at.RandomDone)
-next
-  case (SeqRight c1 c2 k n0 r v)
-  from SeqRight.prems(2) obtain n2 E2 K2 n1 E1 K1 where
-    c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
-    and E: "E = E1 \<union> E2"
-    by (rule compile_SeqE)
-  from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E2"
-        "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
-  have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
-    using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
-
-  then show ?case using jw E by blast
-next
-  case (IfLeft c1 k n0 r v b c2)
-  from IfLeft.prems(2) obtain n1 E1 K1 n2 E2 K2 where
-    c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
-    and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
-                 (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
-    by (rule compile_IfE)
-  from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E1"
-        "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
-  then show ?case using jw E by blast
-next
-  case (IfRight c2 k n0 c1 r v b)
-  from IfRight.prems(2) obtain n1 E1 K1 n2 E2 K2 where
-    c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
-            = (n2, Statement (Suc n0 + csize c1), E2, K2)"
-    and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
-                 (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
-    by (rule compile_IfE)
-  from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
-    jw: "v = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E2"
-        "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
-  then show ?case using jw E by blast
-qed simp_all
 
 text \<open>A located \<^const>\<open>VIMP_Proc.com.Check\<close> sits on the compiled \<^term>\<open>EA_Check cnd\<close> edge, and
   its source step re-locates the residual \<^const>\<open>SKIP\<close> at that edge's target, exactly as
-  \<open>control_at_assign_edge\<close> and \<open>control_at_random_edge\<close>. The check's own condition is named
+  \<open>control_at_assign_edge\<close>. The check's own condition is named
   \<open>cnd\<close>, not \<open>b\<close>: the \<open>IfLeft\<close>/\<open>IfRight\<close> induction cases below bind their own \<open>b\<close> for the
   unrelated if-guard, and \<open>b\<close> here would be silently shadowed inside those cases.\<close>
 lemma control_at_check_edge:
@@ -174,24 +125,27 @@ next
 qed simp_all
 
 text \<open>A located call sits on the compiled \<^term>\<open>CallEdge\<close> into the callee entry, and its source
-  step re-locates \<^const>\<open>SKIP\<close> at the call's continuation node.\<close>
+  step re-locates \<^const>\<open>SKIP\<close> at the call's continuation node.  Restricted to \<open>q\<close> classified
+  as an ordinary procedure: a call \<^const>\<open>special_table\<close> classifies instead sits on an
+  \<^term>\<open>EA_Special\<close> or \<^term>\<open>EA_Nop\<close> intra edge, covered separately by
+  \<open>control_at_special_edge\<close> below.\<close>
 lemma control_at_call_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Call dst q actuals \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> special_table q = None \<Longrightarrow>
    \<exists>j w. v = Statement j
        \<and> (Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K
        \<and> control_at \<Pi> p c0 k n SKIP w"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (CallHead dst' q' actuals' k n0)
-  then show ?case by (auto intro: control_at.CallDone)
+  then show ?case by (auto simp: Let_def split: prod.splits intro: control_at.CallDone)
 next
   case (SeqRight c1 c2 k n0 r v)
   from SeqRight.prems(2) obtain n2 E2 K2 n1 E1 K1 where
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_SeqE)
-  from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
+  from SeqRight.IH[OF SeqRight.prems(1) c2c SeqRight.prems(3)] obtain j w where
     jw: "v = Statement j"
         "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K2"
@@ -206,7 +160,7 @@ next
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
-  from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
+  from IfLeft.IH[OF IfLeft.prems(1) c1c IfLeft.prems(3)] obtain j w where
     jw: "v = Statement j"
         "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K1"
@@ -220,13 +174,65 @@ next
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
-  from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
+  from IfRight.IH[OF IfRight.prems(1) c2c IfRight.prems(3)] obtain j w where
     jw: "v = Statement j"
         "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
   then show ?case using jw K by blast
+qed simp_all
+
+text \<open>A located call \<^const>\<open>special_table\<close> classifies sits on the compiled
+  \<^term>\<open>EA_Special\<close> edge instead, and its source step re-locates \<^const>\<open>SKIP\<close> at that edge's
+  target, exactly as \<open>control_at_assign_edge\<close>.  Well-formedness (\<open>wf_source_com\<close>) fixes a
+  special call's destination to \<^term>\<open>Some x\<close>, so this lemma is stated for that shape rather
+  than the general \<^const>\<open>com.Call\<close> destination \<^typ>\<open>vname option\<close>.\<close>
+lemma control_at_special_edge:
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Call (Some x) q actuals \<Longrightarrow> special_table q = Some sc \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
+   \<exists>j w. v = Statement j \<and> (Statement j, EA_Special sc x, w) \<in> E
+       \<and> control_at \<Pi> p c0 k n SKIP w"
+proof (induction arbitrary: n' en E K rule: control_at.induct)
+  case (CallHead dst' q' actuals' k n0)
+  then show ?case by (auto simp: Let_def split: prod.splits intro: control_at.CallDone)
+next
+  case (SeqRight c1 c2 k n0 r v)
+  from SeqRight.prems(3) obtain n2 E2 K2 n1 E1 K1 where
+    c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
+    and E: "E = E1 \<union> E2"
+    by (rule compile_SeqE)
+  from SeqRight.IH[OF SeqRight.prems(1,2) c2c] obtain j w where
+    jw: "v = Statement j" "(Statement j, EA_Special sc x, w) \<in> E2"
+        "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
+  have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
+    using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
+  then show ?case using jw E by blast
+next
+  case (IfLeft c1 k n0 r v b c2)
+  from IfLeft.prems(3) obtain n1 E1 K1 n2 E2 K2 where
+    c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
+    and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
+                 (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
+    by (rule compile_IfE)
+  from IfLeft.IH[OF IfLeft.prems(1,2) c1c] obtain j w where
+    jw: "v = Statement j" "(Statement j, EA_Special sc x, w) \<in> E1"
+        "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
+  then show ?case using jw E by blast
+next
+  case (IfRight c2 k n0 c1 r v b)
+  from IfRight.prems(3) obtain n1 E1 K1 n2 E2 K2 where
+    c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
+            = (n2, Statement (Suc n0 + csize c1), E2, K2)"
+    and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
+                 (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
+    by (rule compile_IfE)
+  from IfRight.IH[OF IfRight.prems(1,2) c2c] obtain j w where
+    jw: "v = Statement j" "(Statement j, EA_Special sc x, w) \<in> E2"
+        "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
+  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
+  then show ?case using jw E by blast
 qed simp_all
 
 
@@ -511,7 +517,8 @@ text \<open>\<open>intra_step\<close> is the fragment of \<^const>\<open>pstep\<
 inductive intra_step ::
   "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
   IAssign: "intra_step \<Pi> (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
-| IRandom: "intra_step \<Pi> (Random x, s, frs) (SKIP, s(x := v), frs)"
+| ISpecial: "special_table q = Some sc \<Longrightarrow>
+             intra_step \<Pi> (Call (Some x) q [], s, frs) (SKIP, s(x := v), frs)"
 | ICheck:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) (SKIP, s, frs)"
 | ISeq1:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | ISeq2:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
@@ -522,7 +529,6 @@ inductive intra_step ::
 
 inductive_cases intra_SkipE:   "intra_step \<Pi> (SKIP, s, frs) y"
 inductive_cases intra_AssignE: "intra_step \<Pi> (Assign x a, s, frs) y"
-inductive_cases intra_RandomE: "intra_step \<Pi> (Random x, s, frs) y"
 inductive_cases intra_CheckE:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) y"
 inductive_cases intra_SeqE:    "intra_step \<Pi> (Seq c1 c2, s, frs) y"
 inductive_cases intra_IfE:     "intra_step \<Pi> (If b c1 c2, s, frs) y"
@@ -579,24 +585,6 @@ next
   then show ?case using out(1,3) jw(3) by auto
 next
   case (AssignDone x a k n0) then show ?case by (blast elim: intra_SkipE)
-next
-  case (Random x k n0)
-  from Random.prems(1) obtain v where out: "c' = SKIP" "s' = s(x := v)" "frs' = frs"
-    by (auto elim: intra_RandomE)
-  have ca: "control_at \<Pi> p (Random x) k n0 (Random x) (Statement n0)" by (rule control_at.Random)
-  from control_at_random_edge[OF ca refl Random.prems(2)] obtain j w where
-    jw: "Statement n0 = Statement j" "(Statement j, EA_Special Nondet_Int x, w) \<in> E"
-        "control_at \<Pi> p (Random x) k n0 SKIP w" by blast
-  have edgeg: "(Statement j, EA_Special Nondet_Int x, w) \<in> intra g"
-    using jw(2) Random.prems(3) by blast
-  have mem: "s(x := v) \<in> edge_step (EA_Special Nondet_Int x) s" by auto
-  have "cstep source_global g (Statement j, s, stk) (w, s(x := v), stk)"
-    using cstep.Intra[OF edgeg mem] by simp
-  then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
-    using jw(1) out(2) by (simp add: cstep_star_single)
-  then show ?case using out(1,3) jw(3) by auto
-next
-  case (RandomDone x k n0) then show ?case by (blast elim: intra_SkipE)
 next
   case (Check b k n0)
   from Check.prems(1) have out: "c' = SKIP" "s' = s" "frs' = frs"
@@ -796,7 +784,25 @@ next
 next
   case (WhileDone b cW k n0) then show ?case by (blast elim: intra_SkipE)
 next
-  case (CallHead dst q actuals k n0) then show ?case by (blast elim: intra_CallE)
+  case (CallHead dst q actuals k n0)
+  from CallHead.prems(1) obtain x v sc where
+    out: "dst = Some x" "actuals = []" "special_table q = Some sc"
+         "c' = SKIP" "s' = s(x := v)" "frs' = frs"
+    by (auto elim: intra_CallE)
+  have ca: "control_at \<Pi> p (Call (Some x) q []) k n0 (Call (Some x) q []) (Statement n0)"
+    by (rule control_at.CallHead)
+  from control_at_special_edge[OF ca refl out(3) CallHead.prems(2)[unfolded out(1,2)]]
+  obtain j w where
+    jw: "Statement n0 = Statement j" "(Statement j, EA_Special sc x, w) \<in> E"
+        "control_at \<Pi> p (Call (Some x) q []) k n0 SKIP w" by blast
+  have edgeg: "(Statement j, EA_Special sc x, w) \<in> intra g"
+    using jw(2) CallHead.prems(3) by blast
+  have mem: "s(x := v) \<in> edge_step (EA_Special sc x) s" by auto
+  have "cstep source_global g (Statement j, s, stk) (w, s(x := v), stk)"
+    using cstep.Intra[OF edgeg mem] by simp
+  then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
+    using jw(1) out(5) by (simp add: cstep_star_single)
+  then show ?case using out(1,2,4,6) jw(3) by auto
 next
   case (CallDone dst q actuals k n0) then show ?case by (blast elim: intra_SkipE)
 next
@@ -947,11 +953,6 @@ lemma seq_after_eq_Assign_iff [simp]:
   "(Assign x a = seq_after c afters) = (c = Assign x a \<and> afters = [])"
   by (induction afters arbitrary: c; auto)+
 
-lemma seq_after_eq_Random_iff [simp]:
-  "(seq_after c afters = Random x) = (c = Random x \<and> afters = [])"
-  "(Random x = seq_after c afters) = (c = Random x \<and> afters = [])"
-  by (induction afters arbitrary: c; auto)+
-
 lemma seq_after_eq_Check_iff [simp]:
   "(seq_after c afters = VIMP_Proc.com.Check b) = (c = VIMP_Proc.com.Check b \<and> afters = [])"
   "(VIMP_Proc.com.Check b = seq_after c afters) = (c = VIMP_Proc.com.Check b \<and> afters = [])"
@@ -1012,17 +1013,18 @@ text \<open>Located call with pending continuations: when the caller's active re
   --- at the call's continuation node.  Generalises \<open>control_at_call_edge\<close> (its \<^term>\<open>afters = []\<close>
   instance): the \<open>SeqLeft\<close> / \<open>WhileBody\<close> cases peel the outermost continuation, the passthrough
   cases keep it, and the leaf cases are impossible (a \<^const>\<open>seq_after\<close> spine never equals a
-  non-\<^const>\<open>Seq\<close> atom unless its head does and the list is empty).\<close>
+  non-\<^const>\<open>Seq\<close> atom unless its head does and the list is empty).  Restricted to \<open>q\<close>
+  classified as an ordinary procedure, matching \<open>control_at_call_edge\<close>.\<close>
 lemma control_at_seq_after_call_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = seq_after (Call dst q actuals) afters \<Longrightarrow>
-   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
+   compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> special_table q = None \<Longrightarrow>
    \<exists>j w. v = Statement j
        \<and> (Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K
        \<and> control_at \<Pi> p c0 k n (seq_after SKIP afters) w"
 proof (induction arbitrary: afters n' en E K rule: control_at.induct)
   case (CallHead dst' q' actuals' k n0 afters)
-  then show ?case by (auto intro: control_at.CallDone)
+  then show ?case by (auto simp: Let_def split: prod.splits intro: control_at.CallDone)
 next
   case (SeqLeft c1 n0 r v c2 k afters)
   obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Call dst q actuals) xs"
@@ -1031,7 +1033,7 @@ next
     c1c: "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (n1, Statement n0, E1, K1)"
     and Keq: "K = K1 \<union> K2"
     by (rule compile_SeqE)
-  from SeqLeft.IH[OF req c1c] obtain j w where
+  from SeqLeft.IH[OF req c1c SeqLeft.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
@@ -1045,7 +1047,7 @@ next
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and Keq: "K = K1 \<union> K2"
     by (rule compile_SeqE)
-  from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
+  from SeqRight.IH[OF SeqRight.prems(1) c2c SeqRight.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
@@ -1060,7 +1062,7 @@ next
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and Keq: "K = K1 \<union> K2"
     by (rule compile_IfE)
-  from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
+  from IfLeft.IH[OF IfLeft.prems(1) c1c IfLeft.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
@@ -1075,7 +1077,7 @@ next
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and Keq: "K = K1 \<union> K2"
     by (rule compile_IfE)
-  from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
+  from IfRight.IH[OF IfRight.prems(1) c2c IfRight.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
@@ -1092,7 +1094,7 @@ next
     cc: "compile \<Pi> p c (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and Keq: "K = K1"
     by (rule compile_WhileE)
-  from WhileBody.IH[OF req cc] obtain j w where
+  from WhileBody.IH[OF req cc WhileBody.prems(3)] obtain j w where
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
@@ -1101,6 +1103,7 @@ next
     using control_at.WhileBody[OF jw(3)] by (simp add: afx seq_after_snoc)
   then show ?case using jw Keq by blast
 qed simp_all
+
 
 text \<open>Located return with pending continuations: a source \<^const>\<open>Return\<close> at the bottom-left of a
   \<^const>\<open>seq_after\<close> spine sits on the compiled \<^term>\<open>EA_Ret e p\<close> edge the compiler emitted at the
@@ -1379,12 +1382,15 @@ lemma is_returning_seq_after [simp]:
 
 subsection \<open>The call-redex source shape\<close>
 
-text \<open>\<open>head_call c\<close> holds when the leftmost-innermost of \<open>c\<close> is a \<^const>\<open>Call\<close>: the shape of an
-  active residual whose next \<^const>\<open>pstep\<close> fires the call.  Like \<^const>\<open>is_returning\<close> it descends the
-  leftmost \<^const>\<open>Seq\<close> spine and so is insensitive to \<^const>\<open>seq_after\<close> wrapping and to whether the
-  activation is a \<open>Base\<close> or a \<open>Nested\<close> inner.\<close>
+text \<open>\<open>head_call c\<close> holds when the leftmost-innermost of \<open>c\<close> is a \<^const>\<open>Call\<close> to a procedure
+  \<^const>\<open>special_table\<close> does not classify: the shape of an active residual whose next
+  \<^const>\<open>pstep\<close> pushes a frame.  A call \<^const>\<open>special_table\<close> classifies resolves in place
+  instead (\<^const>\<open>intra_step\<close>'s \<open>ISpecial\<close>), so it is deliberately excluded here, mirroring
+  \<^const>\<open>intra_step\<close>'s own exclusion of \<^const>\<open>Call\<close>.  Like \<^const>\<open>is_returning\<close> it descends
+  the leftmost \<^const>\<open>Seq\<close> spine and so is insensitive to \<^const>\<open>seq_after\<close> wrapping and to
+  whether the activation is a \<open>Base\<close> or a \<open>Nested\<close> inner.\<close>
 fun head_call :: "com \<Rightarrow> bool" where
-  "head_call (Call dst q actuals) = True"
+  "head_call (Call dst q actuals) = (special_table q = None)"
 | "head_call (Seq c1 c2) = head_call c1"
 | "head_call _ = False"
 
@@ -1398,17 +1404,20 @@ lemma head_call_not_SKIP: "head_call c \<Longrightarrow> c \<noteq> SKIP"
 lemma head_call_not_Unwind: "head_call c \<Longrightarrow> c \<noteq> Unwind"
   by (cases c) auto
 
-text \<open>A call-headed residual is exactly a \<^const>\<open>Call\<close> at the bottom-left of a \<^const>\<open>seq_after\<close>
-  spine; the spine is the pending continuations collected up the leftmost path.\<close>
+text \<open>A call-headed residual is exactly a \<^const>\<open>Call\<close> to a procedure \<^const>\<open>special_table\<close>
+  does not classify at the bottom-left of a \<^const>\<open>seq_after\<close> spine; the spine is the pending
+  continuations collected up the leftmost path.\<close>
 lemma head_call_seq_after_form:
-  "head_call c \<Longrightarrow> \<exists>dst q actuals afters. c = seq_after (Call dst q actuals) afters"
+  "head_call c \<Longrightarrow> \<exists>dst q actuals afters.
+     c = seq_after (Call dst q actuals) afters \<and> special_table q = None"
 proof (induction c)
   case (Seq c1 c2)
   from Seq.prems have "head_call c1" by simp
   from Seq.IH(1)[OF this] obtain dst q actuals afters where
-    "c1 = seq_after (Call dst q actuals) afters" by blast
+    "c1 = seq_after (Call dst q actuals) afters" "special_table q = None" by blast
   then have "Seq c1 c2 = seq_after (Call dst q actuals) (afters @ [c2])"
-    by (simp add: seq_after_snoc)
+             "special_table q = None"
+    by (simp_all add: seq_after_snoc)
   then show ?case by blast
 qed auto
 
@@ -1467,7 +1476,6 @@ text \<open>\<open>ret_guarded rok c\<close> is the deep source-only well-formed
 fun ret_guarded :: "bool \<Rightarrow> com \<Rightarrow> bool" where
   "ret_guarded rok SKIP = True"
 | "ret_guarded rok (Assign x a) = True"
-| "ret_guarded rok (Random x) = True"
 | "ret_guarded rok (VIMP_Proc.com.Check b) = True"
 | "ret_guarded rok (Seq c1 c2) =
      (if c2 = Restore then ret_guarded True c1
@@ -1568,15 +1576,23 @@ lemma intra_step_not_returning:
   by (induction "(c, s, frs)" "(c', s', frs')" arbitrary: c s frs c' s' frs'
       rule: intra_step.induct) auto
 
+text \<open>A declared procedure's name is never one \<^const>\<open>special_table\<close> also classifies: this is
+  the same disjointness \<open>procs_compiled\<close> bundles below, supplied here directly since this
+  lemma sits upstream of that definition in the theory.  Without it, the \<open>pstep.Call\<close>
+  case cannot rule out \<open>c\<close> also matching \<open>pstep.Special\<close>, which \<^const>\<open>head_call\<close> excludes.\<close>
 lemma pstep_intra_classify:
-  "pstep source_global \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow> \<not> is_returning c \<Longrightarrow>
-   intra_step \<Pi> (c, s, frs) (c', s', frs')"
+  assumes disj: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
+  shows "pstep source_global \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow>
+   \<not> is_returning c \<Longrightarrow> intra_step \<Pi> (c, s, frs) (c', s', frs')"
 proof (induction "(c, s, frs)" "(c', s', frs')"
        arbitrary: c s frs c' s' frs' rule: pstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2)
   from Seq2.prems have "\<not> head_call c1" "\<not> head_return c1" "\<not> is_returning c1" by auto
   from Seq2.hyps(2)[OF this] have ih: "intra_step \<Pi> (c1, s1, f1) (c1', s1', f1')" .
   from intra_step_frame_eq[OF ih] ih show ?case by (auto intro: intra_step.ISeq2)
+next
+  case (Call p decl actuals dst vals callee s1 frs0)
+  then show ?case using disj by simp
 qed (auto intro: intra_step.intros)
 
 text \<open>Ordinary location never produces a returning command: \<^const>\<open>control_at\<close> locates only source
@@ -1622,8 +1638,6 @@ next
   case SKIP    from SKIP.prems(1)   show ?case by simp
 next
   case Assign  from Assign.prems(1) show ?case by simp
-next
-  case Random  from Random.prems(1) show ?case by simp
 next
   case Check   from Check.prems(1)  show ?case by simp
 next
@@ -1926,7 +1940,7 @@ definition procs_compiled :: "proc_table \<Rightarrow> cfg \<Rightarrow> bool" w
          \<and> (FunctionEntry p, EA_Nop, en) \<in> intra g
          \<and> (falls_through (body decl) \<longrightarrow>
               (k, EA_Ret None p, FunctionResult p) \<in> intra g)
-         \<and> source_com (body decl)))"
+         \<and> source_com (body decl) \<and> special_table p = None))"
 
 text \<open>Projection: the compiled fragment of a declared procedure's body, with its edge inclusions
   and entry/epilogue wiring, all read off a single \<^const>\<open>procs_compiled\<close> assumption.  The
@@ -1939,7 +1953,7 @@ lemma procs_compiled_proc:
     "E \<subseteq> intra g" "K \<subseteq> calls g"
     "(FunctionEntry p, EA_Nop, en) \<in> intra g"
     "falls_through (body decl) \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
-    "source_com (body decl)"
+    "source_com (body decl)" "special_table p = None"
   using assms unfolding procs_compiled_def by blast
 
 
@@ -1947,6 +1961,14 @@ text \<open>A declared procedure's body is a source command.\<close>
 lemma procs_compiled_source_com:
   assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
   shows "source_com (body decl)"
+  using assms by (blast elim: procs_compiled_proc)
+
+text \<open>A declared procedure's name is never one \<^const>\<open>special_table\<close> also classifies:
+  \<open>procs_compiled\<close> bundles this disjointness alongside compiler-correctness so a declared call
+  and a special call are always distinguishable without a separate well-formedness premise.\<close>
+lemma procs_compiled_special_table_none:
+  assumes "procs_compiled \<Pi> g" and "\<Pi> p = Some decl"
+  shows "special_table p = None"
   using assms by (blast elim: procs_compiled_proc)
 
 
@@ -1975,6 +1997,7 @@ lemma csim_call_base:
       and decl: "\<Pi> q = Some decl"
       and arity: "length actuals = length (formals decl)"
       and distinct: "distinct (formals decl)"
+      and spNone: "special_table q = None"
   shows "\<exists>cfg'. star (cstep source_global g) (v, s, [])  cfg'
               \<and> csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
                           bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
@@ -1985,7 +2008,7 @@ proof -
     "bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals) (enter_state source_global s)"
   from cacc obtain n' en E K where comp: "compile \<Pi> p c0 kk n = (n', en, E, K)"
       and Ksub: "K \<subseteq> calls g" by (auto simp: compiled_at_def)
-  from control_at_seq_after_call_edge[OF loc refl comp] obtain j w where
+  from control_at_seq_after_call_edge[OF loc refl comp spNone] obtain j w where
     vk: "v = Statement j"
     and edgeK: "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
                  FunctionEntry q, w) \<in> K"
@@ -2004,6 +2027,7 @@ proof -
       and exitq: "falls_through (body decl) \<longrightarrow>
                     (kq, EA_Ret None q, FunctionResult q) \<in> intra g"
       and srcbody: "source_com (body decl)"
+      and "special_table q = None"
     by (rule procs_compiled_proc[OF pc decl])
   have caccq: "compiled_at \<Pi> g q (body decl) kq m"
     by (rule compiled_atI[OF cbody E_qsub K_qsub exitq])
@@ -2065,7 +2089,8 @@ theorem csim_call_completion:
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rule: csim.induct)
   case (Base p c0 kk n cc vv ss)
   from head_call_seq_after_form[OF Base.prems(2)] obtain dst q actuals afters where
-    ceq: "cc = seq_after (Call dst q actuals) afters" by blast
+    ceq: "cc = seq_after (Call dst q actuals) afters" and spNone: "special_table q = None"
+    by blast
   have step: "pstep source_global \<Pi> (seq_after (Call dst q actuals) afters, ss, []) src'"
     using Base.prems(3) ceq by simp
   have w1: "Call dst q actuals \<noteq> SKIP" by simp
@@ -2074,7 +2099,7 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
     src': "src' = (seq_after h' afters, s', fz)"
       and pcall: "pstep source_global \<Pi> (Call dst q actuals, ss, []) (h', s', fz)"
     by (rule pstep_seq_after_headD[OF step w1 w2])
-  from pcall obtain decl where
+  from pcall spNone obtain decl where
     qdecl: "\<Pi> q = Some decl" and ar: "length actuals = length (formals decl)"
       and di: "distinct (formals decl)"
       and heq: "h' = Seq (body decl) Restore"
@@ -2084,7 +2109,8 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
     by (auto elim!: CallSE)
   have loc': "control_at \<Pi> p c0 kk n (seq_after (Call dst q actuals) afters) vv"
     using Base.hyps(1) ceq by simp
-  from csim_call_base[OF Base.prems(1) loc' Base.hyps(2) Base.hyps(3) qdecl ar di, where s = ss]
+  from csim_call_base[OF Base.prems(1) loc' Base.hyps(2) Base.hyps(3) qdecl ar di spNone,
+      where s = ss]
   obtain cfg' where
     cstar: "star (cstep source_global g) (vv, ss, []) cfg'"
       and csimr: "csim \<Pi> g (seq_after (Seq (body decl) Restore) afters,
@@ -2418,7 +2444,8 @@ proof -
     case intra
     obtain c' s' frs' where sc: "src' = (c', s', frs')" by (cases src')
     have "intra_step \<Pi> (c, s, frs) (c', s', frs')"
-      by (rule pstep_intra_classify[OF STEP[unfolded sc] intra(1) intra(2) intra(3)])
+      by (rule pstep_intra_classify[OF procs_compiled_special_table_none[OF PC]
+            STEP[unfolded sc] intra(1) intra(2) intra(3)])
     from csim_intra_completion[OF SIM PC this] show ?thesis by (simp add: sc)
   qed
 qed

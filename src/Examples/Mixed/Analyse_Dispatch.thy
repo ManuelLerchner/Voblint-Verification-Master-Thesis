@@ -223,7 +223,7 @@ text \<open>
   (\<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>/\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>), already
   the target language's native string (\<^verbatim>\<open>string\<close> in OCaml
   --- \<^theory>\<open>HOL.String\<close> ships that mapping
-  unconditionally), so \<open>V\<close>/\<open>Assign\<close>/\<open>Random\<close>/\<open>com.Call\<close>/\<open>FunctionEntry\<close>/
+  unconditionally), so \<open>V\<close>/\<open>Assign\<close>/\<open>com.Call\<close>/\<open>FunctionEntry\<close>/
   \<open>FunctionResult\<close>/\<open>proc_decl_of\<close>/\<open>imp_prog.make\<close> below already take and
   return native strings directly --- no separate construction facade needed.
 
@@ -379,7 +379,7 @@ export_code
   analyse_with_state SignValue IntervalValue
   analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
   Check_Proved Check_Refuted Check_Unknown
@@ -395,7 +395,7 @@ export_code
   analyse_with_state SignValue IntervalValue
   analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
   Check_Proved Check_Refuted Check_Unknown

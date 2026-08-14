@@ -78,8 +78,8 @@ module Core : sig
   type num
   type 'a set
   type char
-  type com = SKIP | Assign of string * aexp | Random of string | Check of bexp |
-    Seq of com * com | If of bexp * com * com | While of bexp * com |
+  type com = SKIP | Assign of string * aexp | Check of bexp | Seq of com * com |
+    If of bexp * com * com | While of bexp * com |
     Call of string option * string * aexp list | Return of aexp option | Restore
     | Unwind
   type 'a cfg_ext
@@ -1431,8 +1431,8 @@ type 'a fset = Abs_fset of 'a set;;
 
 type char = Chr of Z.t;;
 
-type com = SKIP | Assign of string * aexp | Random of string | Check of bexp |
-  Seq of com * com | If of bexp * com * com | While of bexp * com |
+type com = SKIP | Assign of string * aexp | Check of bexp | Seq of com * com |
+  If of bexp * com * com | While of bexp * com |
   Call of string option * string * aexp list | Return of aexp option | Restore |
   Unwind;;
 
@@ -1909,7 +1909,6 @@ let rec proc_decl_of xs bdy = Proc_decl_ext (xs, bdy, ());;
 let rec csize
   = function SKIP -> one_nat
     | Assign (x, a) -> one_nat
-    | Random x -> one_nat
     | Check c -> one_nat
     | Seq (c1, c2) -> plus_nat (csize c1) (csize c2)
     | If (b, c1, c2) -> plus_nat (plus_nat one_nat (csize c1)) (csize c2)
@@ -1975,6 +1974,12 @@ let rec proc_rep
 let rec prog_table p = map_of equal_literal (proc_rep p);;
 
 let rec prog_main p = body (the (prog_table p prog_main_name));;
+
+let special_pname_nondet_int : string = "__voblint_nondet_int";;
+
+let rec special_table
+  p = (if ((p : string) = special_pname_nondet_int) then Some Nondet_Int
+        else None);;
 
 let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
                     | Lifted a, f -> f a;;
@@ -2540,14 +2545,6 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Assign (x, a), k)) bot_set,
               bot_set)))
-    | pi, p, Random x, k, n ->
-        (suc n,
-          (Statement n,
-            (insert
-               (equal_prod equal_cfg_node
-                 (equal_prod equal_edge_action equal_cfg_node))
-               (Statement n, (EA_Special (Nondet_Int, x), k)) bot_set,
-              bot_set)))
     | pi, p, Check c, k, n ->
         (suc n,
           (Statement n,
@@ -2611,17 +2608,37 @@ let rec compile
                     e1,
                    k1))))
     | pi, p, Call (dst, q, actuals), k, n ->
-        (suc n,
-          (Statement n,
-            (bot_set,
-              insert
-                (equal_prod equal_cfg_node
-                  (equal_prod equal_call_action
-                    (equal_prod equal_cfg_node equal_cfg_node)))
-                (Statement n,
-                  (CallEdge (dst, call_formals pi q, actuals),
-                    (FunctionEntry q, k)))
-                bot_set)))
+        (match special_table q
+          with None ->
+            (suc n,
+              (Statement n,
+                (bot_set,
+                  insert
+                    (equal_prod equal_cfg_node
+                      (equal_prod equal_call_action
+                        (equal_prod equal_cfg_node equal_cfg_node)))
+                    (Statement n,
+                      (CallEdge (dst, call_formals pi q, actuals),
+                        (FunctionEntry q, k)))
+                    bot_set)))
+          | Some sc ->
+            (match dst
+              with None ->
+                (suc n,
+                  (Statement n,
+                    (insert
+                       (equal_prod equal_cfg_node
+                         (equal_prod equal_edge_action equal_cfg_node))
+                       (Statement n, (EA_Nop, k)) bot_set,
+                      bot_set)))
+              | Some x ->
+                (suc n,
+                  (Statement n,
+                    (insert
+                       (equal_prod equal_cfg_node
+                         (equal_prod equal_edge_action equal_cfg_node))
+                       (Statement n, (EA_Special (sc, x), k)) bot_set,
+                      bot_set)))))
     | pi, p, Return e, k, n ->
         (suc n,
           (Statement n,
@@ -2719,7 +2736,6 @@ let rec is_EA_Check = function EA_Nop -> false
 let rec falls_through
   = function SKIP -> true
     | Assign (x, a) -> true
-    | Random x -> true
     | Check c -> true
     | Seq (c1, c2) -> falls_through c1 && falls_through c2
     | If (b, c1, c2) -> falls_through c1 || falls_through c2
