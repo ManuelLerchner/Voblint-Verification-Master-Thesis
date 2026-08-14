@@ -70,7 +70,7 @@ theory Voblint
     Example_Relational_DG_Demo
     Example_Strategy_Tree_Demo
     Example_Sign_Codegen
-    Example_Analysis_Dispatch
+    Analyse_Dispatch
 begin
 
 text \<open>
@@ -393,7 +393,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis.Interval_Checks} --- \<^verbatim>\<open>analyse_interval_report\<close>,
       the Interval counterpart, built the same way on
       \<^verbatim>\<open>ivl_exec_prog_sound_collecting_at\<close>.
-    \<^item> @{theory Voblint_Examples.Example_Analysis_Dispatch} --- \<^verbatim>\<open>analyse\<close>
+    \<^item> @{theory Voblint_Examples.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
       dispatches on \<^verbatim>\<open>analysis_kind\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type

@@ -192,7 +192,7 @@ text \<open>
   \<open>loop_ivl_td_sol\<close> (Apinis warrowing), already export cleanly through Isabelle's code generator
   (confirmed once, historically, as the M1 codegen-closure milestone). \<open>analyse_interval\<close> and
   \<open>analyse_interval_td\<close> are reached by external callers through the unified dispatcher
-  \<open>analyse\<close> (\<open>Example_Analysis_Dispatch\<close>, downstream, which dispatches \<open>Interval_Analysis\<close> to
+  \<open>analyse\<close> (\<open>Analyse_Dispatch\<close>, downstream, which dispatches \<open>Interval_Analysis\<close> to
   \<open>analyse_interval_td_report\<close>) instead --- a second, domain-specific export module here would
   just be a parallel, redundant API surface for the same computation.
 \<close>

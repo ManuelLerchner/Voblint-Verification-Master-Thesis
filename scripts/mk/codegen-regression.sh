@@ -2,7 +2,8 @@
 # Compile and run the hand-written OCaml driver under codegen/regression/
 # against the tracked codegen/generated/ sources, and check its output
 # against the values already proved by
-# src/Examples/Mixed/Example_Analysis_Dispatch.thy's dispatch_demo_* lemmas.
+# src/Examples/Regression/Example_Analysis_Dispatch_Regression.thy's
+# dispatch_demo_* lemmas.
 # Requires ocamlfind (+ the zarith package -- Code_Target_Numeral backs
 # int/nat by Zarith's Z.t on the OCaml side) on PATH; does not require
 # Isabelle.

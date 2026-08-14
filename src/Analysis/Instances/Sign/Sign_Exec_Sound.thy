@@ -285,7 +285,7 @@ section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
 text \<open>
   \<open>sign_exec_prog\<close> above is the older \<open>side_cfg_T_eff_st\<close> pipeline, mirroring
   \<open>Interval_Exec_Sound\<close>'s \<open>ivl_exec_prog\<close> exactly. The exported runtime API \<open>analyse\<close>
-  (\<open>Example_Analysis_Dispatch\<close>, downstream in Examples) dispatches through a
+  (\<open>Analyse_Dispatch\<close>, downstream in Examples) dispatches through a
   different, newer pipeline instead: the native D/G equation system (\<open>dg_gen_of\<close>,
   \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>), because that is what the \<open>Exec_Sign_DG_Run\<close> flagship
   example (\<open>dgEx_sol\<close>, downstream in Examples) already used before this API existed. Only the

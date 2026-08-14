@@ -411,7 +411,7 @@ text \<open>
   \<^const>\<open>analyse_sign\<close> already export cleanly (confirmed once, historically, as the M1
   codegen-closure milestone), but a caller reaches the same generic, already-sound
   \<^const>\<open>analyse_sign_report\<close> through the unified dispatcher \<open>analyse\<close>
-  (\<open>Example_Analysis_Dispatch\<close>, downstream), which is the one thing actually exported to
+  (\<open>Analyse_Dispatch\<close>, downstream), which is the one thing actually exported to
   OCaml --- a second, domain-specific export module here would just be a parallel,
   redundant API surface for the same computation.
 \<close>

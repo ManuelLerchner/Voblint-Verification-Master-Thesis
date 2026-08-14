@@ -3,7 +3,7 @@ theory Example_State_Report_GraphViz
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Sign_Print"
     "Voblint_Analysis.Interval_Print"
-    "Voblint_Examples.Example_Analysis_Dispatch"
+    "Voblint_Examples.Example_Analysis_Dispatch_Regression"
 begin
 
 text \<open>
@@ -90,7 +90,7 @@ definition state_report_dot ::
 
 text \<open>
   Reuses \<open>state_wiring_ex_prog\<close>
-  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>) rather than a fresh
+  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch_Regression\<close>) rather than a fresh
   program: a single exact write with no widening, so \<^const>\<open>analyse\<close>
   itself already classifies the check \<open>Check_Proved\<close> under
   \<open>Interval_Analysis\<close>, and \<open>analyse_with_state\<close> reports the exact
@@ -144,7 +144,7 @@ ML_val \<open>writeln (@{code state_report_demo_dot})\<close>
 text \<open>
   A second, self-contained \<open>export_code\<close> surface for the \<open>voblint\<close> CLI: the
   narrower \<open>Voblint_Analyse_OCaml\<close> export
-  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>) has no reachable
+  (\<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>) has no reachable
   GraphViz-rendering constant, and that theory precedes this one in the
   import order, so \<open>state_report_dot_auto\<close> cannot be added to its existing
   blocks. This block otherwise mirrors that one's constant list exactly
@@ -300,7 +300,7 @@ text \<open>
   \<^class>\<open>complete_lattice\<close> set instance for the first time. Left unmapped,
   OCaml's single-file serializer places \<open>Complete_Lattices\<close> in its own
   module, and the two end up needing each other, which
-  \<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>'s own header already
+  \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>'s own header already
   documents as an OCaml module-splitting limit, not fixable by regrouping ---
   only by folding the two together, exactly as done there for \<open>Sign\<close>/\<open>Interval\<close>.
 \<close>

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Regenerates codegen/generated/ from the export_files declarations in
 # src/Examples/ROOT (which mirror the export_code declarations in
-# src/Examples/Mixed/Example_Analysis_Dispatch.thy). Do not hand-edit files
+# src/Examples/Mixed/Analyse_Dispatch.thy). Do not hand-edit files
 # under codegen/generated/ -- rerun this script instead.
 set -eu
 

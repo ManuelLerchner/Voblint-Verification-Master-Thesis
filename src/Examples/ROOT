@@ -72,7 +72,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Mixed (Sign x Interval, relational) *)
     Example_Relational_DG_Demo
-    Example_Analysis_Dispatch
+    Analyse_Dispatch
+    Example_Analysis_Dispatch_Regression
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo
@@ -87,6 +88,6 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
   document_files
     (in "../Analysis/document") "root.bib"
   export_files (in "../../codegen/generated/ml") [2]
-    "Voblint_Examples.Example_Analysis_Dispatch:code/*.ocaml"
+    "Voblint_Examples.Analyse_Dispatch:code/*.ocaml"
   export_files (in "../../codegen/generated/ml") [2]
     "Voblint_Examples.Example_State_Report_GraphViz:code/*.ocaml"

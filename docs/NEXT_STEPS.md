@@ -163,7 +163,7 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    is the random()-argument acceptance case (one wide context, terminates,
    UNKNOWN is the sound verdict, not a false PROVED). `context_mode`/
    `analyse_ctx` export through the same Haskell/OCaml `export_code`
-   pipeline as `analyse` (`Example_Analysis_Dispatch.thy`,
+   pipeline as `analyse` (`Analyse_Dispatch.thy`,
    `Example_State_Report_GraphViz.thy`), including the CI-only OCaml
    compile check (`Voblint_OCaml_Check.thy`). `--dot`/`--dot-full`/
    `--graph-snapshot` also support `--context entry-state`
