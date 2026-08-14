@@ -182,8 +182,7 @@ record ('g, 'c) effectful_st_transfer =
   etf_st_nop        :: "('g, 'c) st_edge_tf_tree"
   etf_st_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_random     :: "vname \<Rightarrow> ('g, 'c) st_edge_tf_tree"
-  etf_st_assume     :: "bexp  \<Rightarrow> ('g, 'c) st_edge_tf_tree"
-  etf_st_assume_not :: "bexp  \<Rightarrow> ('g, 'c) st_edge_tf_tree"
+  etf_st_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_combine_env     :: "('g, 'c) st_combine_tf_tree"
   etf_st_combine_collect :: "vname option \<Rightarrow> ('g, 'c) st_combine_tf_tree"
@@ -195,8 +194,8 @@ where
   "apply_etf_st etf EA_Nop           u = etf_st_nop etf u"
 | "apply_etf_st etf (EA_Assign x a)  u = etf_st_assign etf x a u"
 | "apply_etf_st etf (EA_Random x)    u = etf_st_random etf x u"
-| "apply_etf_st etf (EA_Assume b)    u = etf_st_assume etf b u"
-| "apply_etf_st etf (EA_AssumeNot b) u = etf_st_assume_not etf b u"
+| "apply_etf_st etf (EA_Assume b)    u = etf_st_branch etf b True u"
+| "apply_etf_st etf (EA_AssumeNot b) u = etf_st_branch etf b False u"
 | "apply_etf_st etf (EA_Ret e p) u =
      (case e of None \<Rightarrow> etf_st_nop etf u | Some a \<Rightarrow> etf_st_assign etf ret_var a u)"
 | "apply_etf_st etf (EA_Check cnd) u = etf_st_nop etf u"
@@ -469,12 +468,9 @@ where
       etf_st_random = (\<lambda>x.
         unit_edge_tree_st_placed owner_of locations_of keep_local
           publish_side (tf_st (EA_Random x))),
-      etf_st_assume = (\<lambda>b.
+      etf_st_branch = (\<lambda>b pol.
         unit_edge_tree_st_placed owner_of locations_of keep_local
-          publish_side (tf_st (EA_Assume b))),
-      etf_st_assume_not = (\<lambda>b.
-        unit_edge_tree_st_placed owner_of locations_of keep_local
-          publish_side (tf_st (EA_AssumeNot b))),
+          publish_side (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
       etf_st_enter = (\<lambda>xs es.
         unit_edge_tree_st_placed owner_of locations_of keep_local
           publish_side (enter_st xs es)),
@@ -766,8 +762,8 @@ where
     etf_st_nop        = unit_edge_tree_st is_bot_pred (tf_st EA_Nop),
     etf_st_assign     = (\<lambda>x e. unit_edge_tree_st is_bot_pred (tf_st (EA_Assign x e))),
     etf_st_random     = (\<lambda>x. unit_edge_tree_st is_bot_pred (tf_st (EA_Random x))),
-    etf_st_assume     = (\<lambda>b. unit_edge_tree_st is_bot_pred (tf_st (EA_Assume b))),
-    etf_st_assume_not = (\<lambda>b. unit_edge_tree_st is_bot_pred (tf_st (EA_AssumeNot b))),
+    etf_st_branch     = (\<lambda>b pol. unit_edge_tree_st is_bot_pred
+                            (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st is_bot_pred (enter_st xs es)),
     etf_st_combine_env     = unit_combine_env_tree_st is_bot_pred,
     etf_st_combine_collect = unit_combine_tree_st is_bot_pred gs
@@ -1408,8 +1404,8 @@ where
     etf_st_nop        = unit_edge_contribution_st is_bot_pred (tf_st EA_Nop),
     etf_st_assign     = (\<lambda>x e. unit_edge_contribution_st is_bot_pred (tf_st (EA_Assign x e))),
     etf_st_random     = (\<lambda>x. unit_edge_contribution_st is_bot_pred (tf_st (EA_Random x))),
-    etf_st_assume     = (\<lambda>b. unit_edge_contribution_st is_bot_pred (tf_st (EA_Assume b))),
-    etf_st_assume_not = (\<lambda>b. unit_edge_contribution_st is_bot_pred (tf_st (EA_AssumeNot b))),
+    etf_st_branch     = (\<lambda>b pol. unit_edge_contribution_st is_bot_pred
+                            (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     etf_st_enter      = (\<lambda>xs es. unit_edge_contribution_st is_bot_pred (enter_st xs es)),
     etf_st_combine_env     = unit_combine_env_contribution_st is_bot_pred,
     etf_st_combine_collect = unit_combine_contribution_st is_bot_pred gs
