@@ -16,18 +16,7 @@ definition parity_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (unit, parity
 
 lemma parity_etf_edge_tree:
   "apply_etf (parity_etf gs) a u = unit_edge_tree gs (apply_tf (parity_tf_for gs) a) u"
-proof (cases "\<exists>c. a = EA_Check c")
-  case True
-  then obtain c where a_eq: "a = EA_Check c" by blast
-  have "apply_tf (parity_tf_for gs) EA_Nop = apply_tf (parity_tf_for gs) (EA_Check c)"
-    by (rule ext) (simp add: parity_tf_for_def skip_parity_def)
-  then show ?thesis
-    unfolding parity_etf_def apply_etf_unit_of_transfer a_eq by simp
-next
-  case False
-  then show ?thesis
-    unfolding parity_etf_def apply_etf_unit_of_transfer by simp
-qed
+  unfolding parity_etf_def apply_etf_unit_of_transfer by simp
 
 lemma parity_etf_enter_tree:
   "etf_enter (parity_etf gs) fs as cl = unit_edge_tree gs (enter\<^sup># (parity_tf_for gs) fs as) cl"

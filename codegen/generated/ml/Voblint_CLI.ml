@@ -1675,6 +1675,8 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
   Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
 
+type analysis_event = Check_Event of bexp;;
+
 type ('a, 'b, 'c) dg_spec_ext =
   Dg_spec_ext of
     ('a -> 'b -> 'b * 'a) * (string -> aexp -> 'a -> 'b -> 'b * 'a) *
@@ -1682,7 +1684,7 @@ type ('a, 'b, 'c) dg_spec_ext =
       (string -> 'a -> 'b -> 'b * 'a) *
       (aexp option -> string -> 'a -> 'b -> 'b * 'a) *
       (string list -> aexp list -> 'a -> 'b -> 'b * 'a) *
-      ('a -> 'a -> 'b -> 'b * 'a) *
+      (analysis_event -> 'a -> 'b -> 'b * 'a) * ('a -> 'a -> 'b -> 'b * 'a) *
       (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
@@ -2287,13 +2289,13 @@ let rec show_int
 let rec dgs_combine_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_combine_assign;;
 
 let rec dgs_combine_env
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_combine_env;;
 
 let rec dgs_combine
@@ -2428,31 +2430,37 @@ let rec side_rhs_fold_dg _A _D
 let rec dgs_return
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_return;;
 
 let rec dgs_random
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_random;;
 
 let rec dgs_branch
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_branch;;
 
 let rec dgs_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_assign;;
+
+let rec dgs_event
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+    = dgs_event;;
 
 let rec dgs_skip
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_skip;;
 
 let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
@@ -2461,7 +2469,7 @@ let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
                        | s, EA_Assume b -> dgs_branch s b true
                        | s, EA_AssumeNot b -> dgs_branch s b false
                        | s, EA_Ret (e, p) -> dgs_return s e p
-                       | s, EA_Check cnd -> dgs_skip s;;
+                       | s, EA_Check cnd -> dgs_event s (Check_Event cnd);;
 
 let rec dg_edge_tree _A _B
   step u =
@@ -2529,7 +2537,7 @@ let rec entry_call_list
 let rec dgs_enter
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_random, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
     = dgs_enter;;
 
 let rec dg_extra_of _A _B
@@ -3696,6 +3704,7 @@ let rec unit_dg_spec_st_for _A
         (fun _ -> unit_step_st _A (tf_st EA_Nop)),
         (fun e p -> unit_step_st _A (tf_st (EA_Ret (e, p)))),
         (fun xs es -> unit_step_st _A (enter_st xs es)),
+        (fun (Check_Event bc) -> unit_step_st _A (tf_st (EA_Check bc))),
         unit_combine_step_st_env _A, unit_combine_step_st_assign_for _A gs,
         ());;
 
@@ -4058,6 +4067,8 @@ let rec unit_dg_spec_st_for_lifted _A
         (fun _ -> unit_step_st_lifted _A is_bot_pred (tf_st EA_Nop)),
         (fun e p -> unit_step_st_lifted _A is_bot_pred (tf_st (EA_Ret (e, p)))),
         (fun xs es -> unit_step_st_lifted _A is_bot_pred (enter_st xs es)),
+        (fun (Check_Event bc) ->
+          unit_step_st_lifted _A is_bot_pred (tf_st (EA_Check bc))),
         (fun dc _ -> unit_combine_step_st_env_lifted _A dc),
         (fun dst de _ ->
           unit_combine_step_st_assign_for_lifted _A gs dst is_bot_pred de),

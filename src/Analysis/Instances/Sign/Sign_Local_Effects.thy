@@ -386,7 +386,7 @@ lemma sign_tf_local_edge_invariant:
              random_sign_local_edge_invariant
              id_local_edge_invariant
       split: option.splits)
-  apply (auto simp: local_edge_invariant_def skip_sign_def return_sign_def)
+  apply (auto simp: local_edge_invariant_def skip_sign_def return_sign_def event_sign_def)
   by (metis aexp_mentions_global_def assign_sign_local_edge_invariant
       local_edge_invariant_def)
  

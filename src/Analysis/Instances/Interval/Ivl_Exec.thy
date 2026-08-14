@@ -397,7 +397,7 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>c. fun_of_resolved_st_q_for gs
       (ivl_tf_st_for gs (EA_Check c) s) =
     apply_tf (ivl_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
-    by simp
+    by (simp add: ivl_tf_for_def event_ivl_def)
 qed
 
 lemma ivl_enter_st_for_commute:

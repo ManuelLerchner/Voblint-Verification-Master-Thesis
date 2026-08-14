@@ -35,6 +35,7 @@ definition keyed_spec :: "(ivl, ivl) dg_spec" where
        dgs_body = \<lambda>p d g. (g, d),
        dgs_return = \<lambda>e p d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
+       dgs_event = \<lambda>ev d g. (g, d),
        dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
        dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"
 
@@ -108,6 +109,7 @@ definition merge_spec :: "(ivl, ivl) dg_spec" where
        dgs_body = \<lambda>p d g. (g, d),
        dgs_return = \<lambda>e p d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
+       dgs_event = \<lambda>ev d g. (g, d),
        dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
        dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"
 

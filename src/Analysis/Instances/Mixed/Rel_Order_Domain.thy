@@ -282,6 +282,11 @@ definition dgs_return_rel :: "aexp option \<Rightarrow> pname \<Rightarrow> relc
 definition dgs_random_rel :: "vname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_random_rel x d g = (forget_relc x g, forget_relc x d)"
 
+text \<open>A check observes its condition but never refines the state, matching
+  \<open>dgs_skip_rel\<close>'s own imprecision.\<close>
+definition dgs_event_rel :: "analysis_event \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_event_rel ev d g = (g, d)"
+
 text \<open>
   \<open>assume_step\<close>/\<open>assume_not_step\<close> stay separate, genuinely asymmetric
   operations (\<open>x < y\<close> vs.\ its mirror \<open>y \<le> x\<close> insert different pairs, not
@@ -314,6 +319,7 @@ definition rel_order_spec :: "(relc, relc) dg_spec" where
      dgs_body = dgs_body_rel,
      dgs_return = dgs_return_rel,
      dgs_enter = dgs_enter_rel,
+     dgs_event = dgs_event_rel,
      dgs_combine_env = dgs_combine_env_rel,
      dgs_combine_assign = dgs_combine_assign_rel
    \<rparr>"
@@ -326,6 +332,7 @@ declare
   dgs_skip_rel_def       [rel_order_simps]
   dgs_body_rel_def       [rel_order_simps]
   dgs_return_rel_def     [rel_order_simps]
+  dgs_event_rel_def      [rel_order_simps]
   rel_order_spec_def     [rel_order_simps]
   gammaDG_rel_def        [rel_order_simps]
   dgs_assign_rel_def     [rel_order_simps]

@@ -1,13 +1,14 @@
 # Goblint transfer-interface audit (issue #116/#117 follow-up)
 
-Status: **audit snapshot, docs-only.** This pass inspects the current upstream
-`Analyses.Spec` interface and maps every transfer/state-transition method to
-its Voblint counterpart, operation by operation. It does not edit any `.thy`
-file: a separate in-flight session is actively migrating
-`dgs_assume`/`dgs_assume_not` -> `dgs_branch` and related fields in the
-working tree at the time of this pass, and this document is deliberately
-scoped to stay out of that edit surface. Findings below note current (partly
-mid-migration) state, not a target state this document enacts.
+Status: **audit snapshot, most recommendations since applied.** This pass
+originally inspected the upstream `Analyses.Spec` interface docs-only, before
+the `tf_branch` unification, the `skip#`/`body#`/`return#` lifecycle-hook
+migration, and the `event#` migration landed. Those three migrations are now
+committed; the mapping table and deep-dive sections below have been updated
+in place to describe the current (post-migration) state rather than the
+snapshot this pass originally found. Findings unrelated to those three
+migrations (source-language and scope boundaries: `vdecl`, `asm`, `special`,
+`threadenter`, `threadspawn`) are unchanged from the original pass.
 
 **Upstream baseline.** `goblint/analyzer` `master` at `3062271a29bc1f2476d5993af7719d29991cdf16`
 (checked 2026-08-14), `src/framework/analyses.ml`, module type `Spec`. This is
@@ -58,17 +59,17 @@ audit's scope -- `context`/`startcontext` are already covered by
 | `assign` | `man -> lval -> exp -> D.t` | `tf_assign` / notation `assign#` (`domain_transfer`); `etf_assign` (`effectful_domain_transfer`); `etf_st_assign` (`effectful_st_transfer`); `dgs_assign` (`dg_spec`) | **Exact** | One-for-one: assignment to a program variable given the current abstract state. Same shape modulo the manager argument (Goblint threads `man` for `ask`/`sideg`/etc.; Voblint's effectful layers thread the equivalent through `strategy_tree`/`Side` instead of a manager record -- a representational difference, not a semantic one). Already notated (`assign#`) and already the canonical example the rest of this audit's naming conventions were built from. |
 | `vdecl` | `man -> varinfo -> D.t` (default: identity; used for VLA-length expressions) | None | **Not applicable** | VIMP is scalar IMP2: no variable-length arrays, no declaration statement distinct from first assignment. There is no source construct this method would ever fire on, so no field is missing -- this is the source-language boundary (`GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md`'s C/CIL gap), not an interface gap. Do not add `tf_vdecl`. |
 | `branch` | `man -> exp -> bool -> D.t` | `tf_branch` / notation `branch#` (`domain_transfer`, **done**); `etf_branch` (`effectful_domain_transfer`, **done**); `dgs_branch` (`dg_spec`, **in progress**, two call sites still reference the removed `dgs_assume`/`dgs_assume_not` fields, see below); `etf_st_assume`/`etf_st_assume_not` (`effectful_st_transfer`, **not started**) | **Exact** (where migrated) | Goblint has one `branch man exp bool` method -- "take the true/false outcome of `exp`" is one operation parametrized by a boolean, not two independently-named callbacks. `tf_branch tf b True` is the former `tf_assume tf b`; `tf_branch tf b False` is the former `tf_assume_not tf b`. Issue #116's premise is correct and about half-applied across the four layers today. |
-| `body` | `man -> fundec -> D.t` (function-entry transition, e.g. local-variable init distinct from `vdecl`) | None as a separate field; folded into `tf_enter`/`call_enter` | **Analogous, not a gap** | Goblint's `body` exists because C functions can have entry-time work beyond formal-parameter binding (local declarations, VLA sizing via `vdecl`, stack frame setup). VIMP procedures have no locals distinct from parameters and no declarations -- `bind_formals`/`bind_formals_abs` (invoked from `enter_state`/`tf_enter`) is definitionally the entire content of "transition into the function body" for this source language. There is no residual semantic step for a `tf_body` field to own. If VIMP ever gains local declarations (tracked nowhere currently), this row would need to be revisited before that feature lands, not after. |
-| `return` | `man -> exp option -> fundec -> D.t` | No dedicated field; `EA_Ret e p` routes through `assign# tf ret_var a` in `apply_tf` (`apply_tf tf (EA_Ret e p) sigma = (case e of None => sigma | Some a => assign# tf ret_var a sigma)`) | **Analogous, not exact** | VIMP's concrete `edge_step (EA_Ret e p) s = {s(ret_var := ...)}` is *definitionally* a store write to a fixed variable -- the same reduction the abstract side takes. This is honest for VIMP (no resource release, no scope-exit cleanup, no multiple-return-value shapes to model), but it is a narrower concrete semantics than what Goblint's `return` covers in general (C functions can have return-time work beyond the value, e.g. stack-allocated object lifetime). Do not read the current `assign#` reduction as proof that `tf_return` is unnecessary for every future extension -- it is sound and complete for *today's* VIMP, contingent on VIMP staying memory-free and single-return. A literal-naming-parity option (adding `tf_return` as a thin field whose default implementation is `assign# tf ret_var`) would buy nothing operationally today; flagging it as an option, not a recommendation. |
+| `body` | `man -> fundec -> D.t` (function-entry transition, e.g. local-variable init distinct from `vdecl`) | `tf_body` / notation `body#` (`domain_transfer`, **done**); `dgs_body` (`dg_spec`, **done**); `etf_body` (`effectful_domain_transfer`, **done**) | **Exact** | `body#` is now a genuine `domain_transfer` field, attached to the actual procedure-body-entry transition: `rhs_entry_sources` applies `body# tf (entry_proc v) (tf_enter tf fs as (env c))`, i.e. `body#` fires on the callee-entry result of `enter#`, not merely "somewhere near" it. Every current domain (Sign/Interval/Parity) implements it as the identity, since VIMP procedures have no locals distinct from parameters -- but that is now a per-domain implementation choice living behind the interface, not a structural fact the generic dispatch hardcodes. If VIMP ever gains local declarations, only the concrete `body_sign`/`body_ivl`/`body_parity` definitions need to change. |
+| `return` | `man -> exp option -> fundec -> D.t` | `tf_return` / notation `return#` (`domain_transfer`, **done**); `dgs_return` (`dg_spec`, **done**); `etf_return` (`effectful_domain_transfer`, **done**) | **Exact** | `return#` is now a genuine `domain_transfer` field; `apply_tf tf (EA_Ret e p) = return# tf e p` dispatches to it directly (no structural collapse to `assign#` in the generic machinery anymore). Every current domain still *implements* `return#` as `case e of None => sigma | Some a => assign# tf ret_var a sigma` -- the same reduction VIMP's own concrete `edge_step` performs -- but that behavior now lives behind the interface rather than being hardcoded by `apply_tf` for every domain, so a future domain with return-time work beyond the value (should VIMP ever gain one) only needs to override `return#`, not add a new dispatch case. |
 | `asm` | `man -> D.t` (default: identity, logs "ASM ignored") | None | **Not applicable** | No inline-assembly construct in VIMP. Source-language boundary, same class as `vdecl`. |
-| `skip` | `man -> D.t` (default: identity; a genuine, analysis-overridable hook -- some Goblint analyses use it for e.g. widening-point bookkeeping on empty loop bodies) | `EA_Nop`/`EA_Check` hard-coded to identity inside `apply_tf`/`apply_etf`/`dg_spec_step`, **not routed through any `domain_transfer`/`dg_spec` field at all** | **Analogous, with a real divergence** | Every current Voblint instance treats nop/check edges as identity, matching Goblint's *default* `IdentitySpec.skip`. But Goblint exposes `skip` as an overridable method -- an analysis *can* do something on a skip edge; Voblint structurally cannot, because there is no field to override. This is a genuine interface gap, not just a naming one, but per the task's own instruction: do not add `tf_skip` speculatively. No current Sign/Interval/Mixed/relational instance needs anything but identity here, and adding an unused hook would be exactly the "dummy field to make the record shapes match" this audit was told to avoid. Record the divergence; do not paper over it by claiming `skip` "is" `EA_Nop`'s hard-coded identity -- they coincide today, they are not the same kind of thing. |
+| `skip` | `man -> D.t` (default: identity; a genuine, analysis-overridable hook -- some Goblint analyses use it for e.g. widening-point bookkeeping on empty loop bodies) | `tf_skip` / notation `skip#` (`domain_transfer`, **done**); `dgs_skip` (`dg_spec`, **done**); `etf_skip` (`effectful_domain_transfer`, **done**) | **Exact** | `EA_Nop` now dispatches through a genuine, overridable `skip#` field at every layer -- the divergence this audit originally flagged (Goblint's `skip` is overridable, Voblint's hardcoded identity was not) is closed. `EA_Check` no longer routes through `skip#` at all (see the `event` row below): the two only coincide today because every current domain happens to implement both as the identity, not because the interface conflates them. |
 | `special` | `man -> lval option -> varinfo -> exp list -> D.t` (library/builtin call dispatch: `malloc`, `pthread_create`, `rand`, `assert`, ... -- classified by `libraryFunctions.ml`) | None as a general mechanism | **Not applicable** | Voblint has no CIL-style special-function classification or library-function table. The one built-in nondeterminism source VIMP does have, `random()`, is not routed through anything resembling `special`; it is its own first-class `EA_Random` edge action with its own `tf_random` field. This is the structural reason `tf_random`'s name is ambiguous against Goblint (see the `tf_random`/`tf_nondet` section below): Goblint would reach unconstrained nondeterminism through `special`'s `Unknown`/`__VERIFIER_nondet_int` path, a dispatch mechanism Voblint has no analogue of at all, not just an unnamed one. |
 | `enter` | `man -> lval option -> fundec -> exp list -> (D.t * D.t) list` | `tf_enter` / notation `enter#` (`domain_transfer`); `call_enter` (concrete ground truth, `CFG_Def.thy`); `etf_enter`; `etf_st_enter`; `dgs_enter` (D/G layer -- does **not** universally reduce to `tf_enter`; `dgs_enter_rel` for relational domains is a real, intentional counterexample) | **Analogous** | Structural match on the "bind actuals to formals, produce callee entry state" content. Known, already-documented simplification: Goblint's `enter` returns a *list* of `(caller-continuation, callee-entry)` pairs (an analysis can split into several paths); Voblint's `tf_enter` is a single deterministic transfer with no path-splitting. This is `GOBLINT_ALIGNMENT_REGISTER.md`'s "Known simplifications" list, not new. Already notated and migrated (`TERMINOLOGY_AUDIT.md`, "Callee entry" row) -- no action needed here beyond what's already tracked. |
 | `combine_env` | `man -> lval option -> exp -> fundec -> exp list -> C.t option -> D.t -> Queries.ask -> D.t` (globals/mutexes/effects merge; must not assign the lval) | `dgs_combine_env` (`dg_spec`, **exact, done**); flat layer's `tf_combine :: 'a abs_state => 'a abs_state => 'a abs_state` plays the identical conceptual role per `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 3's own text, but is **not named to say so** | **Exact at the D/G layer; misleadingly named at the flat layer** | See "combine_env / combine_assign" section below -- this is the one concrete rename this audit recommends. |
 | `combine_assign` | same argument shape as `combine_env`, but must only assign the lval | `dgs_combine_assign` (`dg_spec`, **exact, done**); flat layer's `combine_assign_abs` is a **fixed, non-`domain_transfer`-parametrized** definition, proven domain-agnostic (a plain `dst := v` write) | **Exact at the D/G layer; deliberately not a hook at the flat layer** | See below. `etf_combine`/`etf_combine_st` (the two effectful/tree layers) still bundle env-merge and destination-write into one call each (`etf_combine :: vname option => ... => combine_tf_tree`, taking `dst` directly) -- the same architectural gap the D/G layer just closed, not yet propagated to either effectful layer. |
 | `threadenter` | `man -> multiple:bool -> lval option -> varinfo -> exp list -> D.t list` | None | **Not applicable** | No concurrency model. Single-threaded VIMP, no thread-spawn construct. Explicitly out of scope: `GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` Gap 7a, `GOBLINT_ALIGNMENT_REGISTER.md`'s "Multi-analysis manager" row. |
 | `threadspawn` | `man -> multiple:bool -> lval option -> varinfo -> exp list -> (D.t,G.t,C.t,V.t) man -> D.t` | None | **Not applicable** | Same reason as `threadenter`. |
-| `event` | `man -> Events.t -> man -> D.t` (inter-analysis event bus: lock/unlock, thread create/join, ...; default identity) | None | **Not applicable** | No manager, no `Events.t`, no product-of-analyses composition. Same scope boundary as `threadenter`/`threadspawn` and Gap 7a's `ask`/`emit`. |
+| `event` | `man -> Events.t -> man -> D.t` (inter-analysis event bus: lock/unlock, thread create/join, ...; default identity) | `tf_event` / notation `event#` (`domain_transfer`, **done**); `dgs_event` (`dg_spec`, **done**); `etf_event` (`effectful_domain_transfer`, **done**); `analysis_event = Check_Event bexp` | **Analogous** | Voblint now has a genuine event mechanism, deliberately smaller than Goblint's: no manager, no `Events.t` bus, no product-of-analyses composition -- a single closed datatype `analysis_event` with one constructor, `Check_Event bexp`. `EA_Check c` dispatches to `event# tf (Check_Event c)`, matching Goblint's own separation of ordinary `Spec` transfer methods from `Spec.event` (which is how Goblint's base analysis handles `Events.Assert`): a check is an analyzer-visible occurrence, not an ordinary state transfer, and must not by itself refine execution. Every current domain implements `event#` as the identity; `abstract_check_domain` does the actual proving/refuting/reporting, over the unmodified environment at the check's own node. The vocabulary is deliberately left at one constructor rather than pre-populated with Goblint's lock/unlock/thread-create shapes, since those are still `threadenter`/`threadspawn`-scoped concurrency concepts VIMP has no source construct for; adding another `analysis_event` constructor later extends the event handler, not the transfer record shape. |
 
 ## Deep dives on the six flagged items
 
@@ -139,41 +140,38 @@ consumer updates across `Exec_Bridge.thy` and every named-global/executable
 instance), not a rename -- out of scope for a docs-only pass, recorded here
 so it isn't lost.
 
-### 3. `return`
+### 3. `return` (done)
 
-No `tf_return` exists. `EA_Ret` reduces through `assign# tf ret_var` in
-`apply_tf`'s defining equation. This is sound and complete for VIMP today
-(single scalar return value, no resource lifetime, no multi-value return),
-and matches VIMP's own concrete `edge_step` doing exactly a store write. It
-is not, however, evidence that Goblint's separate `return` method is
-redundant in general -- it is redundant specifically because VIMP's return
-has no content beyond the value. Recorded as *analogous*, not *exact*, and
-flagged as contingent on VIMP staying memory-free.
+`tf_return`/`return#` is now a genuine `domain_transfer` field; `apply_tf`
+dispatches `EA_Ret e p` to it directly rather than collapsing it to
+`assign# tf ret_var` in the generic machinery. Every current domain still
+*implements* `return#` as `case e of None => sigma | Some a => assign# tf
+ret_var a sigma` -- sound and complete for VIMP today (single scalar return
+value, no resource lifetime, no multi-value return), matching VIMP's own
+concrete `edge_step`'s store write -- but that behavior now lives behind the
+interface, not hardcoded by `apply_tf` for every domain. A future domain with
+return-time work beyond the value only needs to override `return#`.
 
-### 4. `skip`
+### 4. `skip` (done)
 
-`EA_Nop`/`EA_Check` are hard-coded identity in `apply_tf`/`apply_etf`/
-`dg_spec_step` -- not a `domain_transfer` field at all. This matches every
-current instance's actual behavior (nothing needs non-identity skip today)
-and matches Goblint's *default* implementation, but not Goblint's
-*interface*: Goblint's `skip` is a genuine override point; Voblint's is not
-overridable by construction. Per the task's instruction, this audit does
-**not** recommend adding `tf_skip` absent a concrete need -- but it also
-should not be described as "the same as Goblint" without qualification. This
-is the cleanest example in the whole audit of a documented, deliberate
-simplification that costs nothing today and should be revisited only if a
-future domain genuinely needs non-identity nop behavior.
+`EA_Nop` now dispatches through a genuine `tf_skip`/`skip#` field at every
+layer (`domain_transfer`, `effectful_domain_transfer`, `dg_spec`), closing
+the divergence this audit originally flagged: Goblint's `skip` is a genuine
+override point, and Voblint's now is too. `EA_Check` no longer routes
+through `skip#` -- see item 7 below.
 
-### 5. `body`
+### 5. `body` (done)
 
-No separate transition exists; `bind_formals`/`bind_formals_abs`, invoked
-from `enter_state`/`tf_enter`, is the entire content of "enter the function
-body" for VIMP, because VIMP has no local declarations distinct from formal
-parameters. This is structural, not an oversight: there is nothing left over
-for a `tf_body` field to do once formal binding is accounted for. Flagged as
-a load-bearing assumption tied to VIMP's current scope (no VLAs, no locals) --
-worth re-checking if/when local-variable declarations are ever added to the
-grammar.
+`tf_body`/`body#` is now a genuine `domain_transfer` field, and critically it
+is attached to the actual procedure-body-entry transition:
+`rhs_entry_sources` computes `body# tf (entry_proc v) (tf_enter tf fs as (env
+c))`, i.e. `body#` fires on `enter#`'s own result, making it a real lifecycle
+event rather than an ornamental identity hook placed nearby. Every current
+domain implements it as the identity, since VIMP has no local declarations
+distinct from formal parameters -- that remains a load-bearing assumption
+tied to VIMP's current scope, worth re-checking if local declarations are
+ever added, but it is now a per-domain implementation choice rather than a
+structural fact `apply_tf` hardcodes for every domain.
 
 ### 6. `random` vs. `tf_nondet` (issue #117)
 
@@ -192,6 +190,33 @@ a `Havoc`-flavored rename and a generic `special#`-shaped builtin mechanism
 (which would first require deciding whether Voblint wants a `special`
 analogue at all, per the `special` row above) is a design decision, not a
 mechanical one, and issue #117 already tracks it as such.
+
+### 7. `event` (done) and the `EA_Check` cutover
+
+Voblint's `EA_Check` is modeled as an analysis event, analogous to Goblint's
+own `Spec.event` handling of `Events.Assert` -- it is deliberately **not**
+Goblint `Spec.skip`, and no longer routes through `skip#`/`dgs_skip`/
+`etf_skip` anywhere. The dispatch is expressed once, at the generic layer:
+
+```text
+EA_Nop   -> skip#
+EA_Check -> event# (Check_Event c)
+```
+
+`analysis_event = Check_Event bexp` is deliberately a single-constructor,
+closed datatype rather than pre-populated with Goblint's fuller `Events.t`
+vocabulary (lock/unlock, thread create/join, split-begin/end, globalize,
+assume-join): those are Goblint annotation- or concurrency-scoped concepts
+VIMP has no source construct for yet (same boundary as `threadenter`/
+`threadspawn`/`special` above). The event mechanism is the extension point;
+adding a future event only grows `analysis_event`'s handler, not the
+`domain_transfer`/`effectful_domain_transfer`/`dg_spec` record shapes
+themselves. Every current domain (Sign/Interval/Parity) implements `event#`
+as the identity -- the check's condition is observed but never refines the
+concrete store, matching Goblint's own `refine`-flag-off assertion
+semantics -- with the actual proving/refuting/reporting done separately by
+`abstract_check_domain` over the unmodified environment at the check's own
+node.
 
 ## Repository-wide stale-name findings
 
@@ -242,17 +267,21 @@ stays unnotated today) rather than reusing `combine_env#`.
 
 ## Summary
 
-Of the fourteen audited `Spec` methods: `assign` and `branch` are exact
-matches (`branch` only once the in-progress migration finishes across all
-four layers); `combine_env` and `combine_assign` are exact at the D/G layer
-but layer-conditional overall (flat-layer `tf_combine` plays `combine_env`'s
-role under a misleading name, and flat-layer `combine_assign` is correctly
-fixed rather than domain-parametrized); `enter`, `body`, `return`, and `skip`
-are analogous -- each a deliberate, source-language- or architecture-driven
-narrowing, not an oversight; `vdecl`, `asm`, `special`, `threadenter`,
-`threadspawn`, and `event` have no Voblint counterpart at all, six
-source-language or scope boundaries (scalar-only VIMP, no CIL library-call
-dispatch, no concurrency/manager model) rather than missing interface
-surface. No dummy fields are recommended anywhere in this table. The one
-concrete rename recommended (`tf_combine` -> `tf_combine_env`) is
-naming-only and does not change any proof obligation.
+Of the fourteen audited `Spec` methods: `assign`, `branch`, `skip`, `body`,
+and `return` are now exact matches, each a genuine, overridable
+`domain_transfer` field with the canonical `#` notation; `combine_env` and
+`combine_assign` are exact at the D/G layer but layer-conditional overall
+(flat-layer `tf_combine` plays `combine_env`'s role under a misleading name,
+and flat-layer `combine_assign` is correctly fixed rather than
+domain-parametrized -- this is the one concrete rename this audit still
+recommends, see item 2, and it is the subject of the next migration); `enter`
+is analogous (list-of-continuations vs. single deterministic transfer,
+already tracked elsewhere); `event` is analogous, a genuine but deliberately
+narrower mechanism than Goblint's manager/`Events.t` bus; `vdecl`, `asm`,
+`special`, `threadenter`, and `threadspawn` have no Voblint counterpart at
+all, five source-language or scope boundaries (scalar-only VIMP, no CIL
+library-call dispatch, no concurrency/manager model) rather than missing
+interface surface. No dummy fields were added anywhere in this migration
+wave; `EA_Check` moved from a hardcoded identity special case to a genuine
+`event#` dispatch, closing the last of the originally-flagged divergences
+except `combine_env`/`combine_assign`.

@@ -92,11 +92,20 @@ definition return_parity ::
 where
   "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_parity ret_var a \<sigma>)"
 
+text \<open>A check observes its condition but never refines the state (that is
+  \<open>abstract_check_domain\<close>'s job): Parity has no notion of that observation
+  either, so \<open>event_parity\<close> is the identity like \<open>skip_parity\<close>/\<open>body_parity\<close>.\<close>
+definition event_parity :: "analysis_event => (vname => parity) => (vname => parity)" where
+  "event_parity ev \<sigma> = \<sigma>"
+
 lemma skip_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_parity \<sigma>\<rbrakk>"
   by (simp add: skip_parity_def)
 
 lemma body_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_parity p \<sigma>\<rbrakk>"
   by (simp add: body_parity_def)
+
+lemma event_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_parity ev \<sigma>\<rbrakk>"
+  by (simp add: event_parity_def)
 
 lemma return_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -109,6 +118,9 @@ lemma skip_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_parity sigma
 
 lemma body_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_parity p sigma1 \<le> body_parity p sigma2"
   by (simp add: body_parity_def)
+
+lemma event_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_parity ev sigma1 \<le> event_parity ev sigma2"
+  by (simp add: event_parity_def)
 
 lemma return_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> return_parity e p sigma1 \<le> return_parity e p sigma2"
@@ -163,6 +175,7 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
                          tf_body    = body_parity,
                          tf_return  = return_parity,
                          tf_enter   = enter_parity_for gs,
+                         tf_event   = event_parity,
                          tf_combine = combine_env\<^sup># gs |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
@@ -175,6 +188,7 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   subgoal by (simp add: body_parity_sound)
   subgoal by (simp add: return_parity_sound)
   subgoal by (simp add: enter_parity_for_sound)
+  subgoal by (simp add: event_parity_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
@@ -197,6 +211,7 @@ lemma parity_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
   by (cases a)
      (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono branch_parity_mono
-                 skip_parity_mono body_parity_mono return_parity_mono enter_parity_for_mono)
+                 skip_parity_mono body_parity_mono return_parity_mono enter_parity_for_mono
+                 event_parity_mono)
 
 end

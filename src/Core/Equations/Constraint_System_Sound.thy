@@ -131,15 +131,11 @@ lemma edge_collect_apply_tf_sound_for:
   by (cases a) auto
 
 text \<open>A \<open>dg_spec\<close>/executable-mirror instance dispatches its own \<open>EA_Check\<close> case
-  through \<^const>\<open>tf_skip\<close> rather than the (independent) \<^const>\<open>apply_tf\<close>
-  identity (\<open>EA_Check\<close> stays a hardcoded, non-overridable case at this level, but
-  a \<open>dg_spec\<close>'s \<open>dg_spec_step\<close> has no such structural identity to fall back on
-  and so routes it through \<open>dgs_skip\<close> instead -- the same choice \<^const>\<open>apply_etf\<close>
-  makes for lack of a \<open>gs\<close>-independent tree). Concretely, though, an \<open>EA_Check\<close>
-  step and an \<open>EA_Nop\<close> step coincide (@{thm edge_collect_simps}), so this bridges
-  the two without needing \<open>apply_tf tf (EA_Check c)\<close> at all.\<close>
+  through its own \<open>dgs_event\<close>/\<^const>\<open>etf_event\<close> field, matching \<^const>\<open>apply_tf\<close>'s
+  own \<open>event\<^sup>#\<close> dispatch: this is the per-domain soundness bound each such
+  instance needs at that dispatch point.\<close>
 lemma edge_collect_check_sound_for:
-  "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
+  "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>event\<^sup># tf (Check_Event c) \<sigma>\<rbrakk>"
   by auto
 
 text \<open>Single-store edge soundness under a post-fixpoint bound: if the abstract transfer

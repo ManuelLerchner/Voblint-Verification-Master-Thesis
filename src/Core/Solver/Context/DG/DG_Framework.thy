@@ -493,6 +493,7 @@ record ('dl, 'dg) dg_spec =
   dgs_body       :: "pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_event      :: "analysis_event \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_env    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_assign :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"
 
@@ -506,12 +507,10 @@ where
   "dgs_combine S dst dc de g = dgs_combine_assign S dst de g (dgs_combine_env S dc de g)"
 
 text \<open>
-  Unlike \<^const>\<open>apply_tf\<close>, \<open>dg_spec_step\<close> has no domain-independent identity for
-  \<^const>\<open>EA_Check\<close> to fall back on: the D/G split's own notion of "unchanged"
-  routes through the same join-then-project machinery \<^const>\<open>dgs_skip\<close>
-  implementations use (\<open>unit_step_for\<close> and siblings), not a bare pair swap, so
-  \<^const>\<open>EA_Check\<close> keeps routing through \<^const>\<open>dgs_skip\<close> here, exactly as
-  \<^const>\<open>apply_etf\<close>'s does through \<^const>\<open>etf_skip\<close>.
+  \<open>EA_Check\<close> routes through \<^const>\<open>dgs_event\<close> here, matching \<^const>\<open>apply_tf\<close>'s
+  own \<open>event\<^sup>#\<close> dispatch: a concrete \<open>dg_spec\<close> supplies the D/G split's own
+  notion of a check event directly, the same way it already supplies
+  \<^const>\<open>dgs_body\<close>/\<^const>\<open>dgs_return\<close>.
 \<close>
 fun dg_spec_step ::
   "('dl, 'dg, 'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -522,7 +521,7 @@ where
 | "dg_spec_step S (EA_Assume b)    = dgs_branch S b True"
 | "dg_spec_step S (EA_AssumeNot b) = dgs_branch S b False"
 | "dg_spec_step S (EA_Ret e p)     = dgs_return S e p"
-| "dg_spec_step S (EA_Check cnd)   = dgs_skip S"
+| "dg_spec_step S (EA_Check cnd)   = dgs_event S (Check_Event cnd)"
 
 definition apply_dg_spec ::
   "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
@@ -733,21 +732,14 @@ where
       (return\<^sup># tf e p)),
     dgs_enter      = (\<lambda>xs es. unit_step_placed keep_local publish_side
       (enter\<^sup># tf xs es)),
+    dgs_event      = (\<lambda>ev. unit_step_placed keep_local publish_side
+      (event\<^sup># tf ev)),
     dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
     dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
   \<rparr>"
-text \<open>
-  \<open>EA_Check\<close>'s value is \<^const>\<open>unit_step_placed\<close> applied to \<^const>\<open>apply_tf\<close> \<open>tf\<close>
-  \<open>EA_Nop\<close> (via \<^const>\<open>dgs_skip\<close>), not to \<^const>\<open>apply_tf\<close> \<open>tf\<close> (\<open>EA_Check c\<close>)
-  itself: the two only coincide because every current \<open>domain_transfer\<close> implements
-  \<^const>\<open>tf_skip\<close> as the identity, matching \<^const>\<open>apply_tf\<close>'s own hardcoded
-  \<open>EA_Check\<close> case; the \<open>if\<close> rewrite below states exactly that coincidence instead
-  of assuming it silently.
-\<close>
 lemma dg_spec_step_unit_placed:
   "dg_spec_step (unit_dg_spec_placed source_global keep_local publish_side tf) a =
-    unit_step_placed keep_local publish_side
-      (apply_tf tf (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a))"
+    unit_step_placed keep_local publish_side (apply_tf tf a)"
   unfolding unit_dg_spec_placed_def
   by (cases a) simp_all
 
@@ -773,6 +765,7 @@ where
     dgs_body       = (\<lambda>p. unit_step_for gs (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_for gs (return\<^sup># tf e p)),
     dgs_enter      = (\<lambda>xs es. unit_step_for gs (enter\<^sup># tf xs es)),
+    dgs_event      = (\<lambda>ev. unit_step_for gs (event\<^sup># tf ev)),
     dgs_combine_env    = unit_combine_step_env_for gs,
     dgs_combine_assign = unit_combine_step_assign_for gs
   \<rparr>"
@@ -802,8 +795,7 @@ proof -
 qed
 
 lemma dg_spec_step_unit_for:
-  "dg_spec_step (unit_dg_spec_for gs tf) a =
-     unit_step_for gs (apply_tf tf (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a))"
+  "dg_spec_step (unit_dg_spec_for gs tf) a = unit_step_for gs (apply_tf tf a)"
   unfolding unit_dg_spec_for_def
   by (cases a) simp_all
 
@@ -838,6 +830,7 @@ where
     dgs_body       = (\<lambda>p. unit_step_for_lifted gs is_bot_pred (body\<^sup># tf p)),
     dgs_return     = (\<lambda>e p. unit_step_for_lifted gs is_bot_pred (return\<^sup># tf e p)),
     dgs_enter      = (\<lambda>xs es. unit_step_for_lifted gs is_bot_pred (enter\<^sup># tf xs es)),
+    dgs_event      = (\<lambda>ev. unit_step_for_lifted gs is_bot_pred (event\<^sup># tf ev)),
     dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_env_for_lifted gs dc g),
     dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_assign_for_lifted gs dst is_bot_pred de merged)
   \<rparr>"
@@ -848,8 +841,7 @@ text \<open>Gate 1 -- record-level type sanity: the generic \<^const>\<open>dg_s
 
 lemma dg_spec_step_unit_for_lifted:
   "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a =
-     unit_step_for_lifted gs is_bot_pred
-       (apply_tf tf (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a))"
+     unit_step_for_lifted gs is_bot_pred (apply_tf tf a)"
   unfolding unit_dg_spec_for_lifted_def
   by (cases a) simp_all
 
@@ -869,8 +861,7 @@ text \<open>Gate 2 -- whole-record agreement on reachable inputs whose transfer 
   wrapped in \<^const>\<open>Lifted\<close>.\<close>
 
 lemma dg_spec_step_unit_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (apply_tf tf (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a)
-                            (combine_env\<^sup># gs d g))"
+  assumes "\<not> is_bot_pred (apply_tf tf a (combine_env\<^sup># gs d g))"
   shows "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a (Lifted d) (Lifted g) =
            (Lifted (fst (dg_spec_step (unit_dg_spec_for gs tf) a d g)),
             Lifted (snd (dg_spec_step (unit_dg_spec_for gs tf) a d g)))"
@@ -901,8 +892,7 @@ text \<open>Gate 3 -- whole-record strictness: both the unary and the return/com
   construction never inspects \<open>de\<close>).\<close>
 
 lemma dg_spec_step_unit_for_lifted_collapses_bot:
-  assumes "is_bot_pred (apply_tf tf (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a)
-                          (combine_env\<^sup># gs d g))"
+  assumes "is_bot_pred (apply_tf tf a (combine_env\<^sup># gs d g))"
   shows "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a (Lifted d) (Lifted g) = (Bot, Bot)"
   using assms
   unfolding dg_spec_step_unit_for_lifted

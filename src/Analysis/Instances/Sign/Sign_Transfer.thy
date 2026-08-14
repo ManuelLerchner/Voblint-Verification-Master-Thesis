@@ -82,11 +82,20 @@ definition return_sign ::
 where
   "return_sign e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_sign ret_var a \<sigma>)"
 
+text \<open>A check observes its condition but never refines the state (that is
+  \<open>abstract_check_domain\<close>'s job): Sign has no notion of that observation
+  either, so \<open>event_sign\<close> is the identity like \<open>skip_sign\<close>/\<open>body_sign\<close>.\<close>
+definition event_sign :: "analysis_event => (vname => sign) => (vname => sign)" where
+  "event_sign ev \<sigma> = \<sigma>"
+
 lemma skip_sign_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_sign \<sigma>\<rbrakk>"
   by (simp add: skip_sign_def)
 
 lemma body_sign_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_sign p \<sigma>\<rbrakk>"
   by (simp add: body_sign_def)
+
+lemma event_sign_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_sign ev \<sigma>\<rbrakk>"
+  by (simp add: event_sign_def)
 
 lemma return_sign_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -99,6 +108,9 @@ lemma skip_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_sign sigma1 \<
 
 lemma body_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_sign p sigma1 \<le> body_sign p sigma2"
   by (simp add: body_sign_def)
+
+lemma event_sign_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_sign ev sigma1 \<le> event_sign ev sigma2"
+  by (simp add: event_sign_def)
 
 lemma return_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> return_sign e p sigma1 \<le> return_sign e p sigma2"
@@ -153,6 +165,7 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
                        tf_body    = body_sign,
                        tf_return  = return_sign,
                        tf_enter   = enter_sign_for gs,
+                       tf_event   = event_sign,
                        tf_combine = combine_env\<^sup># gs |)"
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
@@ -165,6 +178,7 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   subgoal by (simp add: body_sign_sound)
   subgoal by (simp add: return_sign_sound)
   subgoal by (simp add: enter_sign_for_sound)
+  subgoal by (simp add: event_sign_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
@@ -187,6 +201,7 @@ lemma sign_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
   by (cases a)
      (auto simp: sign_tf_for_def assign_sign_mono random_sign_mono bfilter_sign_mono
-                 skip_sign_mono body_sign_mono return_sign_mono enter_sign_for_mono)
+                 skip_sign_mono body_sign_mono return_sign_mono enter_sign_for_mono
+                 event_sign_mono)
 
 end

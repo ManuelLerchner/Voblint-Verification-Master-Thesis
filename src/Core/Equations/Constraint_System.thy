@@ -42,6 +42,23 @@ text \<open>
   true; \<open>tf_branch tf b False\<close> takes the branch where \<open>b\<close> evaluates false.
 \<close>
 
+subsection \<open>Analysis events\<close>
+
+text \<open>
+  An \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
+  control-flow transfer: a domain may observe it, but it must not by itself refine
+  execution (see the note on \<open>tf_event\<close>'s dispatch below). This matches Goblint's
+  own separation of its ordinary
+  \<open>Spec\<close> transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>, which
+  handles \<open>Events.Assert\<close> and similar occurrences outside the ordinary transfer
+  vocabulary. Voblint's sole current event is a check's condition; the vocabulary is
+  deliberately left open rather than pre-populated, so that a future VIMP source
+  construct with no current counterpart (e.g. an eventual assume/assert pair) adds a
+  constructor here instead of a new domain-transfer field.
+\<close>
+datatype analysis_event =
+  Check_Event bexp
+
 record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
   tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
@@ -50,6 +67,7 @@ record 'a domain_transfer =
   tf_body      :: "pname => ('a abs_state) => ('a abs_state)" ("body\<^sup>#")
   tf_return    :: "aexp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
   tf_enter     :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
+  tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
   tf_combine   :: "('a abs_state) => ('a abs_state) => ('a abs_state)"
 
 subsection \<open>Apply transfer function to one edge\<close>
@@ -59,12 +77,14 @@ text \<open>
   through this dispatcher) function-body entry are each a real lifecycle event with
   its own transfer field, matching Goblint's \<open>skip\<close>/\<open>return\<close>/entry-then-body split,
   even though every current domain implements \<open>skip\<^sup>#\<close> and \<open>body\<^sup>#\<close> as the identity
-  and \<open>return\<^sup>#\<close> as the assignment it publishes. \<open>EA_Check\<close> stays the one structural
-  exception: it observes its condition but never refines the state (that is
-  \<open>abstract_check_domain\<close>'s job, over the unmodified environment at the check's own
-  node), so its identity is hardcoded here rather than routed through \<open>skip\<^sup>#\<close> --
-  a future domain whose \<open>skip\<^sup>#\<close> is not the identity must not silently change what a
-  check edge does.
+  and \<open>return\<^sup>#\<close> as the assignment it publishes. \<open>EA_Check\<close> routes through
+  \<^const>\<open>tf_event\<close> rather than \<^const>\<open>tf_skip\<close>: a check is an analysis event
+  (matching Goblint's \<open>Spec.event\<close>, not \<open>Spec.skip\<close>), and conflating it with skip
+  would make a future domain's non-identity \<open>skip\<^sup>#\<close> silently change what a check
+  edge does. Every current domain implements \<open>event\<^sup>#\<close> as the identity too --
+  \<open>abstract_check_domain\<close> does the actual proving/refuting/reporting, over the
+  unmodified environment at the check's own node -- but that is a fact about today's
+  domains, not one this dispatcher hardcodes.
 \<close>
 fun apply_tf :: "'a domain_transfer
                  => edge_action
@@ -76,7 +96,7 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Assume b)       \<sigma> = branch\<^sup># tf b True \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = branch\<^sup># tf b False \<sigma>"
   | "apply_tf tf (EA_Ret e p)        \<sigma> = return\<^sup># tf e p \<sigma>"
-  | "apply_tf tf (EA_Check c)        \<sigma> = \<sigma>"
+  | "apply_tf tf (EA_Check c)        \<sigma> = event\<^sup># tf (Check_Event c) \<sigma>"
 
 text \<open>
   Point-free counterparts of \<^const>\<open>apply_tf\<close>'s primitive equations. The defining
@@ -108,12 +128,8 @@ lemma apply_tf_EA_Ret [simp]:
   "apply_tf tf (EA_Ret e p) = return\<^sup># tf e p"
   by (simp add: fun_eq_iff)
 
-text \<open>A check observes its condition but never refines the state it is evaluated
-  against (that is \<open>abstract_check_domain\<close>'s job, over the unmodified
-  environment at the check's own node): its identity is hardcoded here, not
-  routed through \<^const>\<open>tf_skip\<close> (see the note on \<^const>\<open>apply_tf\<close> above).\<close>
 lemma apply_tf_EA_Check [simp]:
-  "apply_tf tf (EA_Check c) = (\<lambda>\<sigma>. \<sigma>)"
+  "apply_tf tf (EA_Check c) = event\<^sup># tf (Check_Event c)"
   by (simp add: fun_eq_iff)
 
 text \<open>Some families this codebase builds over \<^typ>\<open>edge_action\<close> happen to reduce a
@@ -873,6 +889,8 @@ locale sound_transfer_for =
     "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+  assumes tf_sound_event_for[intro]:
+    "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
   assumes tf_sound_combine_for[intro]:
     "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
        combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
@@ -912,6 +930,10 @@ lemma tf_sound_enter_forD[intro]:
        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   using tf_sound_enter_for by blast
 
+lemma tf_sound_event_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+  using tf_sound_event_for by blast
+
 lemma tf_sound_combine_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
      combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
@@ -943,6 +965,8 @@ lemma sound_transferI_for:
     "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    and event[intro]:
+    "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
     and combine[intro]:
     "tf_combine tf = combine_env\<^sup># gs"
   shows "sound_transfer_for gs tf"
@@ -968,6 +992,8 @@ proof unfold_locales
       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
+  show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+    using event by blast
   show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
       combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
     unfolding combine using combine_env_sound by blast
@@ -1008,15 +1034,14 @@ record ('g, 'd) effectful_domain_transfer =
   etf_body       :: "pname \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_event      :: "analysis_event \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_combine    :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
 
 text \<open>
-  Unlike \<^const>\<open>apply_tf\<close>, this dispatcher has no \<^typ>\<open>vname \<Rightarrow> bool\<close> classifier
-  in scope to build a genuinely record-independent identity tree, so
-  \<^const>\<open>EA_Check\<close> keeps routing through \<^const>\<open>etf_skip\<close> here (as it already
-  did through the field this replaces) rather than getting its own hardcoded
-  case; every current family built over this record still implements
-  \<^const>\<open>etf_skip\<close> as the identity.
+  \<open>EA_Check\<close> routes through \<^const>\<open>etf_event\<close> here, matching \<^const>\<open>apply_tf\<close>'s
+  own \<open>event\<^sup>#\<close> dispatch: a family built over this record supplies the concrete
+  tree (with whatever \<^typ>\<open>vname \<Rightarrow> bool\<close> classifier it closed over when it was
+  built), the same way it already supplies \<^const>\<open>etf_skip\<close>/\<^const>\<open>etf_body\<close>.
 \<close>
 fun apply_etf ::
   "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
@@ -1028,7 +1053,7 @@ where
 | "apply_etf etf (EA_Assume b)    u = etf_branch etf b True u"
 | "apply_etf etf (EA_AssumeNot b) u = etf_branch etf b False u"
 | "apply_etf etf (EA_Ret e p)     u = etf_return etf e p u"
-| "apply_etf etf (EA_Check c)     u = etf_skip etf u"
+| "apply_etf etf (EA_Check c)     u = etf_event etf (Check_Event c) u"
 
 fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" where
   "local_edge_action gs EA_Nop = True"
@@ -1488,6 +1513,10 @@ locale sound_effectful_transfer =
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> gamma_state_lift (etf_collecting_full_lift (etf_enter etf xs es u) \<sigma>))"
+  assumes etf_sound_event[intro]:
+    "\<forall>ev u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_event etf ev u) \<sigma>))"
   assumes etf_sound_combine[intro]:
     "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).

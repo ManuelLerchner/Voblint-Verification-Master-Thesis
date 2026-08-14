@@ -13,39 +13,17 @@ text \<open>
 definition sign_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (unit, sign) effectful_domain_transfer" where
   "sign_etf gs = mixed_etf_of_transfer gs (sign_tf_for gs)"
 
-lemma sign_etf_check_skip:
-  "skip\<^sup># (sign_tf_for gs) = (\<lambda>\<sigma>. \<sigma>)"
-  by (rule ext) (simp add: sign_tf_for_def skip_sign_def)
-
 lemma sign_etf_edge_tree:
   "apply_etf (sign_etf gs) a u = mixed_etf_edge_tree gs (sign_tf_for gs) a u"
-proof (cases "\<exists>c. a = EA_Check c")
-  case True
-  then obtain c where a_eq: "a = EA_Check c" by blast
-  show ?thesis
-    unfolding sign_etf_def apply_etf_mixed_of_transfer a_eq mixed_etf_edge_tree_def
-    by (simp add: sign_etf_check_skip)
-next
-  case False
-  then show ?thesis
-    unfolding sign_etf_def apply_etf_mixed_of_transfer by simp
-qed
+  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def
+  by (cases a) simp_all
 
 lemma sign_etf_edge_tree_mixed:
   "apply_etf (sign_etf gs) a u =
    (if local_edge_action gs a then local_edge_tree gs (apply_tf (sign_tf_for gs) a) u
     else unit_edge_tree gs (apply_tf (sign_tf_for gs) a) u)"
-proof (cases "\<exists>c. a = EA_Check c")
-  case True
-  then obtain c where a_eq: "a = EA_Check c" by blast
-  show ?thesis
-    unfolding sign_etf_def apply_etf_mixed_of_transfer a_eq mixed_etf_edge_tree_def
-    by (simp add: sign_etf_check_skip)
-next
-  case False
-  then show ?thesis
-    unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def by simp
-qed
+  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def
+  by (cases a) simp_all
 
 lemma sign_etf_combine_tree:
   "etf_combine (sign_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
@@ -88,17 +66,7 @@ definition sign_etf_unit :: "(vname \<Rightarrow> bool) \<Rightarrow> (unit, sig
 
 lemma sign_etf_unit_edge_tree:
   "apply_etf (sign_etf_unit gs) a u = unit_edge_tree gs (apply_tf (sign_tf_for gs) a) u"
-proof (cases "\<exists>c. a = EA_Check c")
-  case True
-  then obtain c where a_eq: "a = EA_Check c" by blast
-  show ?thesis
-    unfolding sign_etf_unit_def apply_etf_unit_of_transfer a_eq
-    by (simp add: sign_etf_check_skip)
-next
-  case False
-  then show ?thesis
-    unfolding sign_etf_unit_def apply_etf_unit_of_transfer by simp
-qed
+  unfolding sign_etf_unit_def apply_etf_unit_of_transfer by simp
 
 lemma sign_etf_unit_combine_tree:
   "etf_combine (sign_etf_unit gs) dst cc ex = unit_combine_tree gs dst cc ex"

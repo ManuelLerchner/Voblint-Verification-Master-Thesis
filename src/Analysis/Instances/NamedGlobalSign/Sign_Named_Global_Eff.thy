@@ -196,6 +196,8 @@ lemma route_family_etf_sound:
     and enter: "\<And>xs es u \<sigma>. etf_full (etf_enter E xs es u) \<sigma>
                    = transfer_lift is_bot_state (enter\<^sup># (sign_tf_for gs) xs es)
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
+    and event: "\<And>ev u \<sigma>. etf_full (etf_event E ev u) \<sigma>
+                   = transfer_lift is_bot_state (\<lambda>x. x) (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
     and combine: "\<And>dst cc ex \<sigma>. etf_full (etf_combine E dst cc ex) \<sigma>
                    = transfer_lift2 is_bot_state (combine\<^sup># gs dst)
                        (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>))
@@ -245,6 +247,11 @@ next
               \<in> gamma_state_lift (etf_collecting_full_lift (etf_enter E xs es u) \<sigma>))"
     using enter_sign_for_sound
     by (auto simp add: enter sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
+next
+  show "\<forall>ev u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+          (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+            s \<in> gamma_state_lift (etf_collecting_full_lift (etf_event E ev u) \<sigma>))"
+    by (auto simp add: event intro: in_gamma_etf_collecting_lift_of_transfer)
 next
   show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s\<in>gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
@@ -356,6 +363,7 @@ definition named_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (gname, sign) 
        etf_body       = \<lambda>p. route_tree gs (\<lambda>_. Gpos) (body\<^sup># (sign_tf_for gs) p),
        etf_return     = \<lambda>e p. route_tree gs (\<lambda>_. Gpos) (return\<^sup># (sign_tf_for gs) e p),
        etf_enter      = (\<lambda>xs es. route_tree gs (\<lambda>_. Gpos) (enter\<^sup># (sign_tf_for gs) xs es)),
+       etf_event      = \<lambda>ev. route_tree gs (\<lambda>_. Gpos) (event\<^sup># (sign_tf_for gs) ev),
        etf_combine    = route_combine gs (\<lambda>_. Gneg) \<rparr>"
 
 lemma apply_etf_named:
@@ -380,11 +388,7 @@ next
   then show ?thesis by (simp add: named_etf_def apply_tf_EA_Ret)
 next
   case (EA_Check c)
-  have "apply_tf (sign_tf_for gs) EA_Nop = (\<lambda>x. x)"
-    by (rule ext) (simp add: sign_tf_for_def skip_sign_def)
-  moreover have "apply_tf (sign_tf_for gs) (EA_Check c) = (\<lambda>x. x)"
-    by (rule ext) simp
-  ultimately show ?thesis using EA_Check by (simp add: named_etf_def)
+  then show ?thesis by (simp add: named_etf_def)
 qed
 
 lemma etf_combine_named:
@@ -431,6 +435,15 @@ lemma named_etf_full_return:
        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
+lemma named_etf_full_event:
+  "etf_full (etf_event (named_etf gs) ev u) \<sigma>
+   = transfer_lift is_bot_state (\<lambda>x. x) (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
+proof -
+  have "event\<^sup># (sign_tf_for gs) ev = (\<lambda>x. x)"
+    by (rule ext) (simp add: sign_tf_for_def event_sign_def)
+  then show ?thesis unfolding named_etf_def by (simp add: route_tree_etf_full)
+qed
+
 lemma named_etf_full_assign:
   "etf_full (etf_assign (named_etf gs) x a u) \<sigma>
    = transfer_lift is_bot_state (assign\<^sup># (sign_tf_for gs) x a)
@@ -468,7 +481,7 @@ theorem named_etf_sound:
   by (rule route_family_etf_sound[OF named_etf_full_skip named_etf_full_assign
         named_etf_full_random named_etf_full_branch
         named_etf_full_body named_etf_full_return
-        named_etf_full_enter named_etf_full_combine])
+        named_etf_full_enter named_etf_full_event named_etf_full_combine])
 
 subsection \<open>TD_side preconditions for named_etf (constant routing is monotone)\<close>
 

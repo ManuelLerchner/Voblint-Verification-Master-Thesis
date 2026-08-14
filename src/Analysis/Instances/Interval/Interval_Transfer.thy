@@ -67,11 +67,20 @@ definition return_ivl ::
 where
   "return_ivl e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_ivl ret_var a \<sigma>)"
 
+text \<open>A check observes its condition but never refines the state (that is
+  \<open>abstract_check_domain\<close>'s job): Interval has no notion of that observation
+  either, so \<open>event_ivl\<close> is the identity like \<open>skip_ivl\<close>/\<open>body_ivl\<close>.\<close>
+definition event_ivl :: "analysis_event => (vname => ivl) => (vname => ivl)" where
+  "event_ivl ev \<sigma> = \<sigma>"
+
 lemma skip_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_ivl \<sigma>\<rbrakk>"
   by (simp add: skip_ivl_def)
 
 lemma body_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_ivl p \<sigma>\<rbrakk>"
   by (simp add: body_ivl_def)
+
+lemma event_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_ivl ev \<sigma>\<rbrakk>"
+  by (simp add: event_ivl_def)
 
 lemma return_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -84,6 +93,9 @@ lemma skip_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_ivl sigma1 \<le
 
 lemma body_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_ivl p sigma1 \<le> body_ivl p sigma2"
   by (simp add: body_ivl_def)
+
+lemma event_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_ivl ev sigma1 \<le> event_ivl ev sigma2"
+  by (simp add: event_ivl_def)
 
 lemma return_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> return_ivl e p sigma1 \<le> return_ivl e p sigma2"
@@ -138,6 +150,7 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
                        tf_body    = body_ivl,
                        tf_return  = return_ivl,
                        tf_enter   = enter_ivl_for gs,
+                       tf_event   = event_ivl,
                        tf_combine = combine_env\<^sup># gs |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
@@ -150,6 +163,7 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   subgoal by (simp add: body_ivl_sound)
   subgoal by (simp add: return_ivl_sound)
   subgoal by (simp add: enter_ivl_for_sound)
+  subgoal by (simp add: event_ivl_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
@@ -172,7 +186,8 @@ lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
      (auto simp: ivl_tf_for_def assign_ivl_mono random_ivl_mono bfilter_ivl_mono
-                 skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono)
+                 skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono
+                 event_ivl_mono)
 
 text \<open>
   Reusable simp bundle for post-fixpoint proofs over the interval domain.

@@ -918,6 +918,7 @@ where
     dgs_body       = (\<lambda>p. unit_step_st (tf_st EA_Nop)),
     dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
+    dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st (tf_st (EA_Check bc))),
     dgs_combine_env    = unit_combine_step_st_env,
     dgs_combine_assign = unit_combine_step_st_assign_for gs
   \<rparr>"
@@ -1022,12 +1023,8 @@ lemma unit_combine_step_st_commute_for:
 lemma dg_spec_step_unit_st_for:
   assumes reduces: "action_reduces tf_st"
   shows "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
-proof -
-  interpret action_reduces tf_st by (rule reduces)
-  show ?thesis
-    unfolding unit_dg_spec_st_for_def
-    by (cases a) (simp_all add: check)
-qed
+  unfolding unit_dg_spec_st_for_def
+  by (cases a) simp_all
 
 subsection \<open>The complete lifted D/G specification, additive alongside \<^const>\<open>unit_dg_spec_st_for\<close> (issue #123)\<close>
 
@@ -1053,6 +1050,7 @@ where
     dgs_body       = (\<lambda>p. unit_step_st_lifted is_bot_pred (tf_st EA_Nop)),
     dgs_return     = (\<lambda>e p. unit_step_st_lifted is_bot_pred (tf_st (EA_Ret e p))),
     dgs_enter      = (\<lambda>xs es. unit_step_st_lifted is_bot_pred (enter_st xs es)),
+    dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st_lifted is_bot_pred (tf_st (EA_Check bc))),
     dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_st_env_lifted dc g),
     dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de merged)
   \<rparr>"
@@ -1147,26 +1145,9 @@ theorem unit_dg_spec_st_for_lifted_dg_spec_step_commute:
            (dg_spec_step (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g) =
          dg_spec_step (unit_dg_spec_for_lifted gs is_bot_state tf) a
            (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-proof -
-  interpret action_reduces tf_st by (rule reduces)
-  show ?thesis
-  proof (cases "\<exists>bx. a = EA_Check bx")
-    case True
-    then obtain c where a_eq: "a = EA_Check c" by blast
-    have commute_nop: "\<And>s. fun_of_resolved_st_q_for gs (tf_st EA_Nop s) = skip\<^sup># tf (fun_of_resolved_st_q_for gs s)"
-      using commute by simp
-    show ?thesis
-      unfolding dg_spec_step_unit_st_for_lifted[OF reduces] dg_spec_step_unit_for_lifted a_eq
-      by (simp add: check) (rule unit_step_st_lifted_fun_of_resolved_st_q_for
-            [where f = "tf_st EA_Nop" and F = "skip\<^sup># tf", OF commute_nop exact])
-  next
-    case False
-    then show ?thesis
-      unfolding dg_spec_step_unit_st_for_lifted[OF reduces] dg_spec_step_unit_for_lifted
-      by simp (rule unit_step_st_lifted_fun_of_resolved_st_q_for
-            [where f = "tf_st a" and F = "apply_tf tf a", OF commute exact])
-  qed
-qed
+  unfolding dg_spec_step_unit_st_for_lifted[OF reduces] dg_spec_step_unit_for_lifted
+  by (rule unit_step_st_lifted_fun_of_resolved_st_q_for
+        [where f = "tf_st a" and F = "apply_tf tf a", OF commute exact])
 
 theorem unit_dg_spec_st_for_lifted_dgs_enter_commute:
   assumes commute: "\<And>xs es s. fun_of_resolved_st_q_for gs (enter_st xs es s) =

@@ -899,6 +899,7 @@ where
     etf_body       = (\<lambda>p u. unit_edge_tree gs (body\<^sup># tf p) u),
     etf_return     = (\<lambda>e p u. unit_edge_tree gs (return\<^sup># tf e p) u),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
+    etf_event      = (\<lambda>ev u. unit_edge_tree gs (event\<^sup># tf ev) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
@@ -920,17 +921,12 @@ where
     etf_body       = (\<lambda>p u. unit_edge_tree gs (body\<^sup># tf p) u),
     etf_return     = (\<lambda>e p. mixed_etf_edge_tree gs tf (EA_Ret e p)),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
+    etf_event      = (\<lambda>ev u. local_edge_tree gs (event\<^sup># tf ev) u),
     etf_combine    = unit_combine_tree gs
   \<rparr>"
 
-
-text \<open>\<open>EA_Check\<close>'s value is \<^const>\<open>unit_edge_tree\<close> applied to \<^const>\<open>apply_tf\<close> \<open>tf\<close>
-  \<open>EA_Nop\<close> (via \<^const>\<open>etf_skip\<close>), not to \<^const>\<open>apply_tf\<close> \<open>tf\<close> (\<open>EA_Check c\<close>) itself
-  (see the note on \<open>apply_etf\<close> in @{theory Voblint_Core.Constraint_System}); the \<open>if\<close>
-  states that coincidence instead of assuming it silently.\<close>
 lemma apply_etf_unit_of_transfer:
-  "apply_etf (unit_etf_of_transfer gs tf) a u =
-     unit_edge_tree gs (apply_tf tf (if (\<exists>c. a = EA_Check c) then EA_Nop else a)) u"
+  "apply_etf (unit_etf_of_transfer gs tf) a u = unit_edge_tree gs (apply_tf tf a) u"
   unfolding unit_etf_of_transfer_def
   by (cases a) simp_all
 
@@ -938,9 +934,15 @@ lemma etf_combine_unit_of_transfer:
   "etf_combine (unit_etf_of_transfer gs tf) dst cc ex = unit_combine_tree gs dst cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
+text \<open>\<open>EA_Check\<close> routes through \<^const>\<open>local_edge_tree\<close> here, not
+  \<^const>\<open>mixed_etf_edge_tree\<close>: \<^const>\<open>local_edge_action\<close> classifies \<open>EA_Check\<close>
+  as unconditionally local (matching \<open>EA_Nop\<close>'s own classification), so this is
+  the same routing \<open>mixed_etf_edge_tree gs tf EA_Nop\<close> would have picked, stated
+  directly instead of through an edge-action-shaped detour.\<close>
 lemma apply_etf_mixed_of_transfer:
   "apply_etf (mixed_etf_of_transfer gs tf) a u =
-     mixed_etf_edge_tree gs tf (if (\<exists>c. a = EA_Check c) then EA_Nop else a) u"
+     (case a of EA_Check bc \<Rightarrow> local_edge_tree gs (apply_tf tf a) u
+      | _ \<Rightarrow> mixed_etf_edge_tree gs tf a u)"
   unfolding mixed_etf_of_transfer_def mixed_etf_edge_tree_def
   by (cases a) simp_all
 
@@ -1151,6 +1153,12 @@ proof -
       by (auto simp add: unit_etf_of_transfer_def intro: in_gamma_unit_edge_tree)
 
   next
+    show "\<forall>ev u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_event (unit_etf_of_transfer gs tf) ev u) \<sigma>))"
+      unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
+  next
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
@@ -1348,6 +1356,24 @@ proof -
                 \<in> gamma_state_lift (etf_collecting_full_lift
                 (etf_enter (mixed_etf_of_transfer gs tf) xs es u) \<sigma>))"
       unfolding mixed_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
+  next
+    show "\<forall>ev u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
+              s \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_event (mixed_etf_of_transfer gs tf) ev u) \<sigma>))"
+    proof (intro allI impI ballI)
+      fix ev u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store
+      assume inr: "inr_slot_locals_bot gs \<sigma>"
+        and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+      obtain bc where ev_eq: "ev = Check_Event bc" by (cases ev) simp
+      have inv': "local_edge_invariant gs (event\<^sup># tf ev)"
+        using loc_inv[of "EA_Check bc"] by (simp add: ev_eq apply_tf.simps)
+      have "s \<in> gamma_state_lift (etf_collecting_full_lift (local_edge_tree gs (event\<^sup># tf ev) u) \<sigma>)"
+        by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_event_forD)
+      then show "s \<in> gamma_state_lift (etf_collecting_full_lift
+                    (etf_event (mixed_etf_of_transfer gs tf) ev u) \<sigma>)"
+        by (simp add: mixed_etf_of_transfer_def)
+    qed
   next
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).

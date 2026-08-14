@@ -1601,21 +1601,19 @@ where
     dgs_return     = (\<lambda>e p d g. (return\<^sup># tfG e p g, return\<^sup># tfD e p d)),
     dgs_enter      = (\<lambda>xs es d g. (enter\<^sup># tfG xs es g,
                                    enter\<^sup># tfD xs es d)),
+    dgs_event      = (\<lambda>ev d g. (event\<^sup># tfG ev g, event\<^sup># tfD ev d)),
     dgs_combine_env    = (\<lambda>dc de g. (combine_env\<^sup># gs g g, combine_env\<^sup># gs dc de)),
     dgs_combine_assign = (\<lambda>dst de g merged.
       (combine_assign\<^sup># dst (g ret_var) (fst merged),
        combine_assign\<^sup># dst (de ret_var) (snd merged)))
   \<rparr>"
 
-text \<open>Uniform in \<open>apply_tf tfG a\<close>/\<open>apply_tf tfD a\<close> for every case except
-  \<open>EA_Check\<close>, which -- like every \<open>dg_spec\<close> instance -- routes through
-  \<^const>\<open>dgs_skip\<close> rather than the (independent) \<^const>\<open>apply_tf\<close> identity;
-  the \<open>if\<close> makes that the same explicit statement as \<open>dg_spec_step_unit_for\<close>
-  and siblings.\<close>
+text \<open>Uniform in \<open>apply_tf tfG a\<close>/\<open>apply_tf tfD a\<close> for every case, including
+  \<open>EA_Check\<close>: \<^const>\<open>dgs_event\<close> is an independent field of both products, exactly
+  like \<^const>\<open>dgs_body\<close>/\<^const>\<open>dgs_return\<close> above.\<close>
 lemma dg_spec_step_indep [simp]:
   "dg_spec_step (indep_dg_spec gs tfD tfG) a d g
-   = (apply_tf tfG (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a) g,
-      apply_tf tfD (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a) d)"
+   = (apply_tf tfG a g, apply_tf tfD a d)"
   unfolding indep_dg_spec_def
   by (cases a) simp_all
 
@@ -1690,8 +1688,6 @@ lemma sound_dg_spec_indep:
       by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF soundG])
     show ?thesis
       using d_sound g_input g_transfer
-        sound_transfer_for.tf_sound_skip_forD[OF soundD]
-        sound_transfer_for.tf_sound_skip_forD[OF soundG]
       unfolding gamma_dg_def by auto
   qed
   subgoal premises prems by (rule gamma_dg_combine_sound[OF prems])
@@ -1878,34 +1874,30 @@ next
   have gamma_eq: "gamma_unit_lifted gs d g = \<lbrakk>m\<rbrakk>"
     using m_def unfolding Lifted gamma_unit_lifted_def gamma_unit_def
     by (cases g) auto
-  define a' where "a' = (if (\<exists>bx. a = EA_Check bx) then EA_Nop else a)"
-  have base: "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a' m\<rbrakk>"
-    unfolding a'_def
-    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
-      sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = m]
-    by auto
+  have base: "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a m\<rbrakk>"
+    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a] .
   have step: "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a d g
-                = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a' m)),
-                   map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a' m)))"
-    unfolding dg_spec_step_unit_for_lifted unit_step_for_lifted_def a'_def
+                = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
+                   map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))"
+    unfolding dg_spec_step_unit_for_lifted unit_step_for_lifted_def
     by (simp add: m_def Let_def transfer_lift_def)
   show ?thesis
     unfolding gamma_eq step
-  proof (cases "is_bot_pred (apply_tf tf a' m)")
+  proof (cases "is_bot_pred (apply_tf tf a m)")
     case True
-    with exact have "\<lbrakk>apply_tf tf a' m\<rbrakk> = {}"
+    with exact have "\<lbrakk>apply_tf tf a m\<rbrakk> = {}"
       using is_bot_state_iff_gamma_state_empty by blast
     with base have "edge_collect a \<lbrakk>m\<rbrakk> = {}" by blast
     then show "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq>
-        (case (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a' m)),
-               map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a' m)))
+        (case (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
+               map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))
           of (g', d') \<Rightarrow> gamma_unit_lifted gs d' g')"
       by (simp add: True)
   next
     case False
     then show "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq>
-        (case (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a' m)),
-               map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a' m)))
+        (case (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
+               map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))
           of (g', d') \<Rightarrow> gamma_unit_lifted gs d' g')"
       using base
       by (simp add: gamma_unit_def combine_env_abs_restrict_id)
