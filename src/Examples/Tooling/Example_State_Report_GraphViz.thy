@@ -142,13 +142,12 @@ definition state_report_demo_dot :: String.literal where
 ML_val \<open>writeln (@{code state_report_demo_dot})\<close>
 
 text \<open>
-  A second, self-contained \<open>export_code\<close> surface for the \<open>voblint\<close> CLI: the
-  narrower \<open>Voblint_Analyse_OCaml\<close> export
-  (\<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>) has no reachable
-  GraphViz-rendering constant, and that theory precedes this one in the
-  import order, so \<open>state_report_dot_auto\<close> cannot be added to its existing
-  blocks. This block otherwise mirrors that one's constant list exactly
-  (same AST constructors, same numeral/char bridges), plus
+  The codegen session collects this theory's GraphViz surface with the
+  analysis facade from \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>.
+  That narrower facade has no reachable GraphViz-rendering constant, and it
+  precedes this theory in the import order, so \<open>state_report_dot_auto\<close>
+  belongs in the later export declaration. The GraphViz surface uses the
+  same AST constructors and numeral/char bridges, plus
   \<open>state_report_dot_auto\<close>, \<open>bexp_vnames_list\<close>, and
   \<open>string_of_abstract_value\<close> for CLI-side rendering.
 \<close>
@@ -308,27 +307,6 @@ text \<open>
 code_identifier
   code_module Complete_Lattices \<rightharpoonup> (OCaml) Core
 
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  analyse_ctx Ctx_None Ctx_EntryState
-  analyse_with_state SignValue IntervalValue
-  state_report_dot_auto state_report_graph_snapshot_auto
-  full_state_dot_auto full_state_graph_snapshot_auto
-  entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
-  entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
-  bexp_vnames_list string_of_abstract_value
-  is_bottom_abstract_value program_vars
-  mk_program proc_decl_of declared_global_vars pretty_string_of_program
-  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  string_of_bexp
-  wf_program_compile_input_exec
-  analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
-  in OCaml file_prefix "Voblint_CLI"
+
 
 end

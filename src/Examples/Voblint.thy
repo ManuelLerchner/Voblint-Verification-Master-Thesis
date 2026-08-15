@@ -204,8 +204,9 @@ text \<open>
   GraphViz exporters present procedure entries, results, calls, resumes, and computed
   abstract states without changing the certified equation system.
 
-  The proof is layered into four Isabelle sessions.  The index below separates the proof spine from
-  executable frontends, DOT exporters, and research witnesses.
+  The proof is layered across the six-session dependency chain. A separate
+  downstream codegen session owns executable exports. The index below separates
+  the proof spine from executable frontends, DOT exporters, and research witnesses.
 
   \<^bold>\<open>1. Language.\<close> VIMP syntax, small-step semantics, and the procedural extension
   (scopes, calls, restores).
@@ -246,7 +247,7 @@ text \<open>
       \<open><\<close>/\<open>=\<close> over an abstract numeric value) and its derivation from any
       \<^locale>\<open>backward_domain\<close> instance's own narrowing operators
       (\<^locale>\<open>derived_less_queries\<close>, \<^locale>\<open>derived_eq_true_from_less\<close>,
-      \<^locale>\<open>derived_eq_false_from_meet\<close>) --- a sound default a concrete
+      \<^locale>\<open>derived_eq_false_from_intersection\<close>) --- a sound default a concrete
       domain may override with sharper, hand-tuned predicates.
     \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
       and \<^locale>\<open>abstract_check_domain\<close>: mutually recursive
@@ -259,9 +260,9 @@ text \<open>
       \<^const>\<open>meet_sign\<close>), no hand-built comparison tables.
     \<^item> @{theory Voblint_Analysis.Interval_Checks} --- the Interval instance:
       specialized bound-comparison queries (\<^const>\<open>interval_less_true\<close> and
-      siblings, \<open>Interval_Numeric_Queries\<close>), kept independent of the generic
-      derivation because Interval's non-canonical empty representations make
-      the generic \<open>meet = bot\<close> disjointness test strictly less precise.
+      siblings, \<open>Interval_Numeric_Queries\<close>). The backward-domain default derives
+      equality refutation through \<^const>\<open>intersect_ivl\<close>, whose canonical empty
+      result is independent of the raw lattice \<^const>\<open>inf\<close>.
 
   \<^bold>\<open>4. Concrete domains.\<close> Domain instances used by the proof spine and examples.
     \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice, transfer functions, soundness, monotonicity, display instance.
@@ -406,17 +407,16 @@ text \<open>
       branch here: it has no soundness theorem yet
       (@{theory Voblint_Analysis.Interval_Exec_Sound}).
 
-      \<^verbatim>\<open>analyse\<close>, the AST constructors, and \<^verbatim>\<open>imp_prog.make\<close> are exported to
-      OCaml (\<^verbatim>\<open>export_code ... in OCaml\<close>), so external code can build a
-      fresh \<^verbatim>\<open>imp_prog\<close> and call \<^verbatim>\<open>analyse\<close> without touching Isabelle. The
-      generated source is tracked under \<^verbatim>\<open>codegen/generated/\<close> (regenerated
-      by \<^verbatim>\<open>pixi run codegen\<close>; \<^verbatim>\<open>pixi run codegen-check\<close> fails if it has
-      drifted from the \<^verbatim>\<open>export_code\<close> declaration). A hand-written OCaml
-      driver under \<^verbatim>\<open>codegen/regression/\<close>
-      (\<^verbatim>\<open>pixi run codegen-regression\<close>) constructs
+      A downstream \<open>Voblint_Codegen\<close> session exports \<open>analyse\<close>, the AST
+      constructors, and \<open>imp_prog.make\<close> to OCaml, so external code can build a
+      fresh \<open>imp_prog\<close> and call \<open>analyse\<close> without touching Isabelle. The
+      generated source is tracked under \<open>codegen/generated/\<close> (regenerated
+      by \<open>pixi run codegen\<close>; \<open>pixi run codegen-check\<close> fails if it has
+      drifted from the export declarations). A hand-written OCaml driver under
+      \<open>codegen/regression/\<close> (\<open>pixi run codegen-regression\<close>) constructs
       that same program purely through the exported constructors, calls
-      \<^verbatim>\<open>analyse\<close>, and checks the result against the values
-      \<^verbatim>\<open>dispatch_demo_sign_precise\<close> and \<^verbatim>\<open>dispatch_demo_interval_precise\<close>
+      \<open>analyse\<close>, and checks the result against the values
+      \<open>dispatch_demo_sign_precise\<close> and \<open>dispatch_demo_interval_precise\<close>
       already proved --- so the generated OCaml is checked against the same
       theorems as the Isabelle source, not merely assumed to match it.
 

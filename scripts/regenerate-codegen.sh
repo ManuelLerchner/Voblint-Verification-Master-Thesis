@@ -1,7 +1,6 @@
 #!/bin/sh
 # Regenerates codegen/generated/ from the export_files declarations in
-# src/Examples/ROOT (which mirror the export_code declarations in
-# src/Examples/Mixed/Analyse_Dispatch.thy). Do not hand-edit files
+# src/Codegen/ROOT. Do not hand-edit files
 # under codegen/generated/ -- rerun this script instead.
 set -eu
 
@@ -17,7 +16,7 @@ mkdir -p codegen/generated
 # -e materializes the session's export_files declarations (ROOT) onto the
 # file system; -N builds a fresh log per session; the session itself is
 # rebuilt (or reused, if already up to date) as part of the same invocation.
-"$ISABELLE" build -v -j12 -o threads=12 -N -e -d "$AFP" -d "$TD_DIR" -D . Voblint_Examples
+"$ISABELLE" build -v -j12 -o threads=12 -N -e -d "$AFP" -d "$TD_DIR" -D . Voblint_Codegen
 
 # Isabelle's OCaml backend always names its export blob with a ".ocaml"
 # extension (fixed by the code generator, not by file_prefix), which is why

@@ -1,8 +1,9 @@
 # Voblint examples
 
-`Voblint_Examples` is the leaf session. It contains executable runs, concrete
-regressions, visualizations, and the narrative capstone. No soundness session
-depends on it.
+`Voblint_Examples` is the leaf of the proof-session chain. It contains
+executable runs, concrete regressions, visualizations, and the narrative
+capstone. No soundness session depends on it; the downstream
+`Voblint_Codegen` session imports its executable facade solely to export code.
 
 Folders are grouped by abstract domain, not by capability: every analysis in
 this framework runs concretely inside Isabelle/HOL (the executable pipeline is
@@ -23,7 +24,8 @@ procedure call.
 
 Regressions live in this session, not upstream, on purpose: `VIMP` -> `CFG` ->
 `Analysis` -> `Formalization` stay soundness-only, and concrete witness
-programs sit in the one session nothing else builds against.
+programs remain at the proof chain's leaf. The codegen session consumes their
+executable definitions without moving code export into the soundness chain.
 
 `Voblint.thy` imports the curated examples and presents the complete certified
 pipeline.

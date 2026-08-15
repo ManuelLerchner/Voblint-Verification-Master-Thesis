@@ -300,6 +300,11 @@ Isabelle: `export_code` translates the same executable equations the kernel
 checked, so the generated function is not a hand-written stand-in for a
 proved one.
 
+The downstream `Voblint_Codegen` session imports the executable facade and
+GraphViz surface, then owns their `export_code` declarations. Building
+`Voblint_Examples` therefore checks examples without materializing generated
+artifacts; `pixi run codegen` builds and exports the dedicated session.
+
 `analyse_interval_proved_sound`/`analyse_interval_refuted_sound` and
 `analyse_sign_proved_sound`/`analyse_sign_refuted_sound`
 (`Example_Analysis_Dispatch.thy`) restate the domains' soundness theorems

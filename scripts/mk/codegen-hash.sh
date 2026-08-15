@@ -1,6 +1,6 @@
 #!/bin/sh
 # Prints one hash of codegen's actual inputs: every .thy under src/ (the
-# Voblint_Examples session's dependency closure, per AGENTS.md's six-session
+# Voblint_Codegen session's dependency closure, which extends the six-session
 # chain, is what regenerate-codegen.sh builds and exports), every ROOT/ROOTS
 # session-structure file, and the two generation scripts themselves. Shared
 # by regenerate-codegen.sh (writes the stamp) and cli-build.sh (checks it) so

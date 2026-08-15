@@ -1,0 +1,8 @@
+session Voblint_Codegen in "." = "Voblint_Examples" +
+  description "Code export boundary for the Voblint CLI and GraphViz surfaces"
+  directories
+    "Export"
+  theories
+    Voblint_Codegen
+  export_files (in "../../codegen/generated/ml") [2]
+    "Voblint_Codegen.Voblint_Codegen:code/*.ocaml"
