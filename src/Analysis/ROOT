@@ -5,6 +5,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
   directories
     "Instances/Sign"
     "Instances/Interval"
+    "Instances/Congruence"
     "Instances/Parity"
     "Instances/Mixed"
     "Instances/NamedGlobalSign"
@@ -36,6 +37,11 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_DG
     Interval_Point_Digest
     Interval_Exec_Sound
+    Congruence_Domain
+    Congruence_Lattice
+    Congruence_Warrowing
+    Congruence_Arithmetic
+    Congruence_Backward
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
@@ -47,6 +53,14 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Parity_Exec_Sound
     Parity_Numeric_Queries
     Parity_Side_Soundness
+    Int_Domain
+    Int_Refinement
+    Int_Arithmetic
+    Int_Backward
+    Int_Warrowing
+    Int_Transfer
+    Int_DG
+    Int_Exec
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz

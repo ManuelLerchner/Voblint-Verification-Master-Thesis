@@ -8,6 +8,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     "Interval"
     "Interval/CallString"
     "Interval/Ctx"
+    "Congruence"
     "Parity"
     "Mixed"
     "CFG"
@@ -66,11 +67,20 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Guard_Refinement
     Example_Proc_Call
 
+    (* Congruence *)
+    Example_Congruence_Arithmetic
+    Example_Congruence_Backward
+
     (* Parity *)
     Example_Parity_DG_Flagship
     Example_Parity_Checks_Store_Only
 
-    (* Mixed (Sign x Interval, relational) *)
+    (* Composite and relational domains *)
+    Example_Int_Domain
+    Example_Int_Backward
+    Example_Int_Warrowing
+    Example_Int_Transfer
+    Exec_Int_DG_Run
     Example_Relational_DG_Demo
     Analyse_Dispatch
     Example_Analysis_Dispatch_Regression

@@ -130,6 +130,16 @@ shared product/reduction layer is planned. `sound_dg_spec`'s carriers are
 already opaque, so new heterogeneous or relational analyses (e.g.
 `Rel_Order_Domain.thy`) are added directly against it.
 
+### Cross-analysis query composition
+
+Goblint's MCP layer answers expression queries (`EvalInt` and friends) by
+meeting responses from every activated analysis, including recursively into
+subexpressions and callee-side `combine`. Voblint's expression evaluation is
+currently domain-local; the composite `int_dom` reduces internally between
+its own Sign/Interval/Parity/Congruence components but has no cross-analysis
+query channel. Design investigation tracked in #70; alignment inventory and
+staging in #141.
+
 ### Numeric precision
 
 Continue improving backward guard refinement, loop precision, widening policy,

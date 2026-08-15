@@ -128,7 +128,7 @@ The central abstraction is the `sound_dg_spec` locale, an Isabelle/HOL formaliza
 * reusable source-level correctness theorems,
 * a complete executable analysis pipeline.
 
-This separation allows Sign, Interval, mixed Sign × Interval, and future analyses to reuse the same verified infrastructure while varying only the domain-specific analysis logic.
+This separation allows Sign, Interval, the composite Sign × Interval × Parity × Congruence domain, and future analyses to reuse the same verified infrastructure while varying only the domain-specific analysis logic.
 
 The executable frontend is provided by `Exec_DG_Bridge.thy`, which implements:
 
@@ -178,7 +178,7 @@ Examples
 * **`VIMP/`**: Syntax, procedures, globals/locals, small-step semantics
 * **`CFG/`**: Procedure-aware CFG compilation, activation-local traces, and collecting semantics
 * **`Core/`**: Generic D/G framework, domains, equations, and the TD solver bridge -- no domain-specific content
-* **`Analysis/`**: Concrete domain instances (Sign, Interval, Parity, mixed Sign x Interval, ...) built on `Core/`
+* **`Analysis/`**: Concrete domain instances (Sign, Interval, Parity, Congruence, composite Sign × Interval × Parity × Congruence, ...) built on `Core/`
 * **`Formalization/`**: End-to-end solver, collecting-semantics, and source-level soundness
 * **`Examples/`**: Executable runs, flagship demos, and GraphViz tooling
 * **`vendor/`**: Verified TD solver submodule and Isabelle2025 patches

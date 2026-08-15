@@ -232,6 +232,15 @@ instance against the unmodified framework; see
 architecture. New heterogeneous or relational analyses are added directly
 against `sound_dg_spec`, not through a shared product/reduction layer.
 
+## Cross-analysis query composition
+
+Not yet modeled: Goblint's MCP-style `EvalInt` query channel, where every
+activated analysis can answer an expression query and a requester meets the
+answers, recursively into subexpressions and callee-side `combine`. Voblint's
+composite `int_dom` only reduces internally among its own scalar components.
+Design investigation tracked in #70; alignment inventory and staging (Phase 3)
+in #141.
+
 ## Numeric precision
 
 Improve interval guards, loop invariants, and widening policies through concrete
