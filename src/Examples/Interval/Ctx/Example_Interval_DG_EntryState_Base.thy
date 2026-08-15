@@ -110,6 +110,7 @@ lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs (STR ''main'') rc_main"
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
       value_providing_def source_aexp_def ret_var_def
       special_table_def special_pname_nondet_int_def
+      special_pname_min_def special_pname_max_def
       split: if_splits option.splits)
 
 end

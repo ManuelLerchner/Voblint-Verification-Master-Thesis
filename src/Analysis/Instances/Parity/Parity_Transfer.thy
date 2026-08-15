@@ -1,5 +1,5 @@
 theory Parity_Transfer
-  imports Parity_Domain Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
+  imports Parity_Domain Parity_Special Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Parity transfer functions\<close>
@@ -25,30 +25,8 @@ proof safe
   qed
 qed
 
-subsection \<open>Abstract nondeterministic assignment\<close>
-
-definition special_parity ::
-    "special_call => vname => (vname => parity) => (vname => parity)" where
-  "special_parity sc x \<sigma> = \<sigma>(x := PTop)"
-
-lemma special_parity_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>special_parity sc x \<sigma>\<rbrakk>"
-  unfolding special_parity_def gamma_state_def
-proof safe
-  fix y
-  from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)" unfolding gamma_state_def by simp
-  show "(s(x := v)) y \<in> gamma ((\<sigma>(x := PTop)) y)"
-  proof (cases "y = x")
-    case True then show ?thesis by simp
-  next
-    case False with V show ?thesis by simp
-  qed
-qed
-
-lemma special_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> special_parity sc x sigma1 \<le> special_parity sc x sigma2"
-  by (simp add: special_parity_def le_funD le_funI)
+text \<open>Nondeterministic and other special-call assignment (\<open>special_parity\<close>)
+  lives in \<open>Parity_Special\<close>, reused below.\<close>
 
 subsection \<open>Branch: parity does not refine guards, so the transfer is the identity\<close>
 

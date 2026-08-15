@@ -214,8 +214,8 @@ lemma route_family_etf_sound:
     and assign: "\<And>x a u \<sigma>. etf_full (etf_assign E x a u) \<sigma>
                    = transfer_lift is_bot_state (assign\<^sup># (sign_tf_for gs) x a)
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
-    and special: "\<And>x u \<sigma>. etf_full (etf_special E Nondet_Int x u) \<sigma>
-                   = transfer_lift is_bot_state (special\<^sup># (sign_tf_for gs) Nondet_Int x)
+    and special: "\<And>sc x u \<sigma>. etf_full (etf_special E sc x u) \<sigma>
+                   = transfer_lift is_bot_state (special\<^sup># (sign_tf_for gs) sc x)
                        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
     and branch: "\<And>b pol u \<sigma>. etf_full (etf_branch E b pol u) \<sigma>
                    = transfer_lift is_bot_state (tf_branch (sign_tf_for gs) b pol)
@@ -252,10 +252,11 @@ next
     using assign_sign_sound
     by (auto simp add: assign sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
 next
-  show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+  show "\<forall>sc x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
+            special_result sc s v \<longrightarrow>
             s(x := v)
-              \<in> gamma_state_lift (etf_collecting_full_lift (etf_special E Nondet_Int x u) \<sigma>))"
+              \<in> gamma_state_lift (etf_collecting_full_lift (etf_special E sc x u) \<sigma>))"
     using special_sign_sound
     by (auto simp add: special sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
 next
@@ -498,8 +499,8 @@ lemma named_etf_full_assign:
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 
 lemma named_etf_full_special:
-  "etf_full (etf_special (named_etf gs) Nondet_Int x u) \<sigma>
-   = transfer_lift is_bot_state (special\<^sup># (sign_tf_for gs) Nondet_Int x)
+  "etf_full (etf_special (named_etf gs) sc x u) \<sigma>
+   = transfer_lift is_bot_state (special\<^sup># (sign_tf_for gs) sc x)
        (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>))"
   unfolding named_etf_def by (simp add: route_tree_etf_full)
 

@@ -86,26 +86,19 @@ subsection \<open>Intra edge execution\<close>
 
 text \<open>
   \<open>special_step\<close> is \<open>special_call\<close>'s own step function, factored out of \<open>edge_step\<close>
-  so that extending the special-call vocabulary only touches this function and
+  so that extending the special-call vocabulary only touches this function (via
+  \<open>special_result\<close>, shared with the source small-step semantics) and
   \<open>special_step_nonempty\<close> below, not every generic lemma stated over \<open>edge_action\<close>.
+  \<open>Nondet_Int\<close> havocs the destination; \<open>Min\<close>/\<open>Max\<close> write exactly one, deterministic
+  value, so no single equation characterizes every \<open>sc\<close> uniformly any more --
+  callers reasoning about an as-yet-unclassified \<open>sc\<close> case-split on it instead.
 \<close>
 
 fun special_step :: "special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
-  "special_step Nondet_Int x s = {s(x := v) |v. True}"
+  "special_step sc x s = {s(x := v) |v. special_result sc s v}"
 
 lemma special_step_nonempty [simp]: "special_step sc x s \<noteq> {}"
   by (cases sc) auto
-
-text \<open>
-  The single-constructor equation for \<open>special_step\<close>, stated generically over \<open>sc\<close>
-  and tagged \<open>[simp]\<close> so callers reasoning about an as-yet-unclassified \<open>sc\<close> don't
-  each need their own \<open>cases sc\<close> step. This becomes false the moment a second
-  \<open>special_call\<close> constructor exists with different concrete semantics -- deleting
-  it then is expected, self-signposting migration cost (every downstream proof
-  that relied on it will fail to simplify, at this lemma's name).
-\<close>
-lemma special_step_eq_havoc [simp]: "special_step sc x s = {s(x := v) |v. True}"
-  by (cases sc) simp
 
 text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
   every constructor and has no call case; guards are the only source of \<open>None\<close>.\<close>

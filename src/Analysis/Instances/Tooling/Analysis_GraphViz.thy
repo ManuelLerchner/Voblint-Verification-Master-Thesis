@@ -27,7 +27,12 @@ subsection \<open>CFG and DOT helpers\<close>
 fun string_of_action :: "edge_action \<Rightarrow> string" where
   "string_of_action EA_Nop = ''nop''"
 | "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_aexp a"
-| "string_of_action (EA_Special sc x) = String.explode x @ '' := __voblint_nondet_int()''"
+| "string_of_action (EA_Special Nondet_Int x) =
+    String.explode x @ '' := __voblint_nondet_int()''"
+| "string_of_action (EA_Special (Min a b) x) =
+    String.explode x @ '' := min('' @ string_of_aexp a @ '', '' @ string_of_aexp b @ '')''"
+| "string_of_action (EA_Special (Max a b) x) =
+    String.explode x @ '' := max('' @ string_of_aexp a @ '', '' @ string_of_aexp b @ '')''"
 | "string_of_action (EA_Assume b) = ''['' @ string_of_bexp b @ '']''"
 | "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_bexp b @ '']''"
 | "string_of_action (EA_Ret None p) = ''return''"

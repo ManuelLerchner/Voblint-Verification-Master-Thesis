@@ -48,7 +48,13 @@ fun ivl_tf_st_for ::
        update_resolved_st_q s (location_of source_global x)
          (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
   | "ivl_tf_st_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x) ivl_top"
+       update_resolved_st_q s (location_of source_global x)
+         (case sc of
+            Nondet_Int => ivl_top
+          | Min a b => ivl_min (aval_ivl a (fun_of_resolved_st_q_for source_global s))
+                                (aval_ivl b (fun_of_resolved_st_q_for source_global s))
+          | Max a b => ivl_max (aval_ivl a (fun_of_resolved_st_q_for source_global s))
+                                (aval_ivl b (fun_of_resolved_st_q_for source_global s)))"
   | "ivl_tf_st_for source_global (EA_Assume b) s =
        branch_ivl_st_for source_global b True s"
   | "ivl_tf_st_for source_global (EA_AssumeNot b) s =
@@ -369,7 +375,7 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>sc x. fun_of_resolved_st_q_for gs
       (ivl_tf_st_for gs (EA_Special sc x) s) =
     apply_tf (ivl_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def special_ivl_def)
+    by (auto simp: ivl_tf_for_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (ivl_tf_st_for gs (EA_Assume b) s) =
     apply_tf (ivl_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"

@@ -24,6 +24,8 @@ REPL = {
     "⟩": r"\<rangle>",
     "⟦": r"\<lbrakk>",
     "⟧": r"\<rbrakk>",
+    "⦇": r"\<lparr>",
+    "⦈": r"\<rparr>",
     "⟹": r"\<Longrightarrow>",
     "⇒": r"\<Rightarrow>",
     "⟶": r"\<longrightarrow>",

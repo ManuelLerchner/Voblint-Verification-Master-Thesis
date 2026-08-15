@@ -265,6 +265,7 @@ lemma flagship_wf:
     flagship_pi_def flagship_prog_def
   by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       prog_main_name_def special_table_def special_pname_nondet_int_def
+      special_pname_min_def special_pname_max_def
       split: if_splits)
 
 theorem flagship_source_run_sound:

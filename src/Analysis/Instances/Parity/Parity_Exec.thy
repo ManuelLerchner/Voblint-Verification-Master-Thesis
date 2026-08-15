@@ -66,7 +66,13 @@ fun parity_tf_st_for ::
        update_resolved_st_q s (location_of source_global x)
          (aval_parity a (fun_of_resolved_st_q_for source_global s))"
   | "parity_tf_st_for source_global (EA_Special sc x) s =
-       update_resolved_st_q s (location_of source_global x) PTop"
+       update_resolved_st_q s (location_of source_global x)
+         (case sc of
+            Nondet_Int => PTop
+          | Min a b => parity_min (aval_parity a (fun_of_resolved_st_q_for source_global s))
+                                   (aval_parity b (fun_of_resolved_st_q_for source_global s))
+          | Max a b => parity_max (aval_parity a (fun_of_resolved_st_q_for source_global s))
+                                   (aval_parity b (fun_of_resolved_st_q_for source_global s)))"
   | "parity_tf_st_for source_global (EA_Assume b) s = s"
   | "parity_tf_st_for source_global (EA_AssumeNot b) s = s"
   | "parity_tf_st_for source_global (EA_Ret None p) s = s"
@@ -93,7 +99,7 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>sc x. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Special sc x) s) =
     apply_tf (parity_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def special_parity_def)
+    by (auto simp: parity_tf_for_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Assume b) s) =
     apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"

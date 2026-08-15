@@ -146,12 +146,15 @@ where
           K1))"
 | "compile \<Pi> p (Call dst q actuals) k n =
      (case special_table q of
-        Some sc \<Rightarrow>
-          (case dst of
-             Some x \<Rightarrow>
-               (Suc n, Statement n, {(Statement n, EA_Special sc x, k)}, {})
-           | None \<Rightarrow>
-               (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {}))
+        Some desc \<Rightarrow>
+          (case classify_special desc actuals of
+             None \<Rightarrow> (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})
+           | Some sc \<Rightarrow>
+               (case dst of
+                  Some x \<Rightarrow>
+                    (Suc n, Statement n, {(Statement n, EA_Special sc x, k)}, {})
+                | None \<Rightarrow>
+                    (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})))
       | None \<Rightarrow>
           (Suc n, Statement n, {},
            {(Statement n,

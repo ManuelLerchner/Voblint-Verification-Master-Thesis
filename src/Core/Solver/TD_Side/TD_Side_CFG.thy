@@ -1211,10 +1211,11 @@ proof -
                 (etf_assign (unit_etf_of_transfer gs tf) x e u) \<sigma>))"
       unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
-    show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>sc x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<forall>v.
+              special_result sc s v \<longrightarrow>
               s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
-                (etf_special (unit_etf_of_transfer gs tf) Nondet_Int x u) \<sigma>))"
+                (etf_special (unit_etf_of_transfer gs tf) sc x u) \<sigma>))"
       unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
     show "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
@@ -1318,30 +1319,32 @@ proof -
       qed
     qed
   next
-    show "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>sc x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). \<forall>v.
+              special_result sc s v \<longrightarrow>
               s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
-                (etf_special (mixed_etf_of_transfer gs tf) Nondet_Int x u) \<sigma>))"
+                (etf_special (mixed_etf_of_transfer gs tf) sc x u) \<sigma>))"
     proof (intro allI impI ballI)
-      fix x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store and v
+      fix sc x u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store and v
       assume inr: "inr_slot_locals_bot gs \<sigma>"
         and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
+        and sr: "special_result sc s v"
       show "s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift
-              (etf_special (mixed_etf_of_transfer gs tf) Nondet_Int x u) \<sigma>)"
-      proof (cases "local_edge_action gs (EA_Special Nondet_Int x)")
+              (etf_special (mixed_etf_of_transfer gs tf) sc x u) \<sigma>)"
+      proof (cases "local_edge_action gs (EA_Special sc x)")
         case True
-        have inv': "local_edge_invariant gs (special\<^sup># tf Nondet_Int x)"
+        have inv': "local_edge_invariant gs (special\<^sup># tf sc x)"
           using loc_inv[OF True] by (simp add: apply_tf.simps)
         have "s(x := v) \<in> gamma_state_lift
-                (etf_collecting_full_lift (local_edge_tree gs (special\<^sup># tf Nondet_Int x) u) \<sigma>)"
-          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_special_forD)
+                (etf_collecting_full_lift (local_edge_tree gs (special\<^sup># tf sc x) u) \<sigma>)"
+          by (rule in_gamma_local_edge_tree[OF inv' inr s]) (rule tf_sound_special_forD[OF _ sr])
         then show ?thesis
           by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_local[OF True] apply_tf.simps)
       next
         case False
         have "s(x := v) \<in> gamma_state_lift
-                (etf_collecting_full_lift (unit_edge_tree gs (special\<^sup># tf Nondet_Int x) u) \<sigma>)"
-          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_special_forD)
+                (etf_collecting_full_lift (unit_edge_tree gs (special\<^sup># tf sc x) u) \<sigma>)"
+          by (rule in_gamma_unit_edge_tree[OF inr s]) (rule tf_sound_special_forD[OF _ sr])
         then show ?thesis
           by (simp add: mixed_etf_of_transfer_def mixed_etf_edge_tree_unit[OF False] apply_tf.simps)
       qed

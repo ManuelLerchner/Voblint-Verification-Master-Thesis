@@ -269,19 +269,29 @@ next
       by (auto simp: Let_def split: prod.splits)
     then show ?thesis by (rule cfg_reaches_comb_caller)
   next
-    case (Some sc)
+    case (Some desc)
     note st = this
     show ?thesis
-    proof (cases dst)
+    proof (cases "classify_special desc actuals")
       case None
       with st Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
         by (auto simp: Let_def split: prod.splits)
       then show ?thesis by (rule cfg_reaches_intra)
     next
-      case (Some x)
-      with st Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
-        by (auto simp: Let_def split: prod.splits)
-      then show ?thesis by (rule cfg_reaches_intra)
+      case (Some sc)
+      note cl = this
+      show ?thesis
+      proof (cases dst)
+        case None
+        with st cl Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      next
+        case (Some x)
+        with st cl Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      qed
     qed
   qed
   then show ?case unfolding en ..
@@ -393,19 +403,29 @@ next
       by (auto simp: Let_def split: prod.splits)
     then show ?thesis by (rule cfg_reaches_comb_caller)
   next
-    case (Some sc)
+    case (Some desc)
     note st = this
     show ?thesis
-    proof (cases dst)
+    proof (cases "classify_special desc actuals")
       case None
       with st Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
         by (auto simp: Let_def split: prod.splits)
       then show ?thesis by (rule cfg_reaches_intra)
     next
-      case (Some x)
-      with st Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
-        by (auto simp: Let_def split: prod.splits)
-      then show ?thesis by (rule cfg_reaches_intra)
+      case (Some sc)
+      note cl = this
+      show ?thesis
+      proof (cases dst)
+        case None
+        with st cl Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      next
+        case (Some x)
+        with st cl Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      qed
     qed
   qed
   then show ?case unfolding en .

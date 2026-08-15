@@ -1,5 +1,6 @@
 theory Interval_Transfer
-  imports Interval_Backward Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
+  imports Interval_Backward Interval_Special Voblint_Core.Constraint_System
+    "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Interval transfer functions\<close>
@@ -29,22 +30,8 @@ lemma assign_ivl_sound:
   unfolding gamma_state_def assign_ivl_def
   by (auto simp: aval_ivl_sound)
 
-subsection \<open>Abstract nondeterministic assignment\<close>
-
-definition special_ivl ::
-    "special_call => vname => (vname => ivl) => (vname => ivl)"
-where
-  "special_ivl sc x \<sigma> = \<sigma>(x := ivl_top)"
-
-lemma special_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk>
-   \<Longrightarrow> s(x := v) \<in> \<lbrakk>special_ivl sc x \<sigma>\<rbrakk>"
-  unfolding gamma_state_def special_ivl_def
-  by (auto simp: gamma_ivl_top)
-
-lemma special_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> special_ivl sc x sigma1 \<le> special_ivl sc x sigma2"
-  by (simp add: special_ivl_def le_funD le_funI)
+text \<open>Nondeterministic and other special-call assignment (\<open>special_ivl\<close>) lives
+  in \<open>Interval_Special\<close>, reused below.\<close>
 
 lemma assign_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"

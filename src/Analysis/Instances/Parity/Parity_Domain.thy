@@ -132,6 +132,9 @@ definition is_top_parity :: "parity \<Rightarrow> bool" where
 lemma is_top_parity_correct: "is_top_parity p \<longleftrightarrow> p = top"
   unfolding is_top_parity_def top_parity_def ..
 
+lemma gamma_parity_top: "gamma_parity top = UNIV"
+  unfolding top_parity_def by simp
+
 instantiation parity :: sup begin
 definition sup_parity :: "parity => parity => parity" where "sup_parity = join_parity"
 instance ..

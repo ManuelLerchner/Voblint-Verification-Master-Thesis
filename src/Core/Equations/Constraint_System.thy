@@ -877,7 +877,7 @@ locale sound_transfer_for =
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_special_for[intro]:
-    "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>special\<^sup># tf Nondet_Int x \<sigma>\<rbrakk>"
+    "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
   assumes tf_sound_branch_for[intro]:
     "\<forall>(b::bexp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol
        \<longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
@@ -907,7 +907,7 @@ lemma tf_sound_assign_forD[intro]:
   using tf_sound_assign_for by blast
 
 lemma tf_sound_special_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf Nondet_Int x \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
   using tf_sound_special_for by blast
 
 lemma tf_sound_branch_forD[intro]:
@@ -952,8 +952,8 @@ lemma sound_transferI_for:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     and special[intro]:
-    "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := v) \<in> \<lbrakk>special\<^sup># tf Nondet_Int x \<sigma>\<rbrakk>"
+    "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow>
+       s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     and branch[intro]:
     "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow>
        s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
@@ -978,8 +978,8 @@ proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     using assign by blast
-  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v.
-      s(x := v) \<in> \<lbrakk>special\<^sup># tf Nondet_Int x \<sigma>\<rbrakk>"
+  show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow>
+      s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     using special by blast
   show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol \<longrightarrow>
       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
@@ -1068,7 +1068,7 @@ fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" whe
   "local_edge_action gs EA_Nop = True"
 | "local_edge_action gs (EA_Assign x e) =
     ((~ gs x) & (~ aexp_mentions_where gs e))"
-| "local_edge_action gs (EA_Special sc x) = (~ gs x)"
+| "local_edge_action gs (EA_Special sc x) = ((~ gs x) & (~ special_mentions_global gs sc))"
 | "local_edge_action gs (EA_Assume b) = (~ bexp_mentions_where gs b)"
 | "local_edge_action gs (EA_AssumeNot b) = (~ bexp_mentions_where gs b)"
 | "local_edge_action gs (EA_Ret e p) =
@@ -1501,9 +1501,10 @@ locale sound_effectful_transfer =
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift (etf_assign etf x e u) \<sigma>))"
   assumes etf_sound_special[intro]:
-    "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    "\<forall>sc x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
-         s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf Nondet_Int x u) \<sigma>))"
+         special_result sc s v \<longrightarrow>
+         s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf sc x u) \<sigma>))"
   assumes etf_sound_branch[intro]:
     "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s = pol

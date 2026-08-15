@@ -189,20 +189,22 @@ text \<open>A located call \<^const>\<open>special_table\<close> classifies sits
   special call's destination to \<^term>\<open>Some x\<close>, so this lemma is stated for that shape rather
   than the general \<^const>\<open>com.Call\<close> destination \<^typ>\<open>vname option\<close>.\<close>
 lemma control_at_special_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Call (Some x) q actuals \<Longrightarrow> special_table q = Some sc \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Call (Some x) q actuals \<Longrightarrow>
+   special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j w. v = Statement j \<and> (Statement j, EA_Special sc x, w) \<in> E
        \<and> control_at \<Pi> p c0 k n SKIP w"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (CallHead dst' q' actuals' k n0)
-  then show ?case by (auto simp: Let_def split: prod.splits intro: control_at.CallDone)
+  then show ?case
+    by (auto simp: Let_def split: prod.splits option.splits intro: control_at.CallDone)
 next
   case (SeqRight c1 c2 k n0 r v)
-  from SeqRight.prems(3) obtain n2 E2 K2 n1 E1 K1 where
+  from SeqRight.prems(4) obtain n2 E2 K2 n1 E1 K1 where
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and E: "E = E1 \<union> E2"
     by (rule compile_SeqE)
-  from SeqRight.IH[OF SeqRight.prems(1,2) c2c] obtain j w where
+  from SeqRight.IH[OF SeqRight.prems(1,2,3) c2c] obtain j w where
     jw: "v = Statement j" "(Statement j, EA_Special sc x, w) \<in> E2"
         "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
@@ -210,25 +212,25 @@ next
   then show ?case using jw E by blast
 next
   case (IfLeft c1 k n0 r v b c2)
-  from IfLeft.prems(3) obtain n1 E1 K1 n2 E2 K2 where
+  from IfLeft.prems(4) obtain n1 E1 K1 n2 E2 K2 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
                  (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
-  from IfLeft.IH[OF IfLeft.prems(1,2) c1c] obtain j w where
+  from IfLeft.IH[OF IfLeft.prems(1,2,3) c1c] obtain j w where
     jw: "v = Statement j" "(Statement j, EA_Special sc x, w) \<in> E1"
         "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3)] .
   then show ?case using jw E by blast
 next
   case (IfRight c2 k n0 c1 r v b)
-  from IfRight.prems(3) obtain n1 E1 K1 n2 E2 K2 where
+  from IfRight.prems(4) obtain n1 E1 K1 n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
     and E: "E = {(Statement n0, EA_Assume b, Statement (Suc n0)),
                  (Statement n0, EA_AssumeNot b, Statement (Suc n0 + csize c1))} \<union> E1 \<union> E2"
     by (rule compile_IfE)
-  from IfRight.IH[OF IfRight.prems(1,2) c2c] obtain j w where
+  from IfRight.IH[OF IfRight.prems(1,2,3) c2c] obtain j w where
     jw: "v = Statement j" "(Statement j, EA_Special sc x, w) \<in> E2"
         "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3)] .
@@ -517,8 +519,9 @@ text \<open>\<open>intra_step\<close> is the fragment of \<^const>\<open>pstep\<
 inductive intra_step ::
   "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
   IAssign: "intra_step \<Pi> (Assign x a, s, frs) (SKIP, s(x := aval a s), frs)"
-| ISpecial: "special_table q = Some sc \<Longrightarrow>
-             intra_step \<Pi> (Call (Some x) q [], s, frs) (SKIP, s(x := v), frs)"
+| ISpecial: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
+             special_result sc s v \<Longrightarrow>
+             intra_step \<Pi> (Call (Some x) q actuals, s, frs) (SKIP, s(x := v), frs)"
 | ICheck:  "intra_step \<Pi> (VIMP_Proc.com.Check b, s, frs) (SKIP, s, frs)"
 | ISeq1:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | ISeq2:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
@@ -785,24 +788,24 @@ next
   case (WhileDone b cW k n0) then show ?case by (blast elim: intra_SkipE)
 next
   case (CallHead dst q actuals k n0)
-  from CallHead.prems(1) obtain x v sc where
-    out: "dst = Some x" "actuals = []" "special_table q = Some sc"
-         "c' = SKIP" "s' = s(x := v)" "frs' = frs"
+  from CallHead.prems(1) obtain x desc sc v where
+    out: "dst = Some x" "special_table q = Some desc" "classify_special desc actuals = Some sc"
+         "special_result sc s v" "c' = SKIP" "s' = s(x := v)" "frs' = frs"
     by (auto elim: intra_CallE)
-  have ca: "control_at \<Pi> p (Call (Some x) q []) k n0 (Call (Some x) q []) (Statement n0)"
+  have ca: "control_at \<Pi> p (Call (Some x) q actuals) k n0 (Call (Some x) q actuals) (Statement n0)"
     by (rule control_at.CallHead)
-  from control_at_special_edge[OF ca refl out(3) CallHead.prems(2)[unfolded out(1,2)]]
+  from control_at_special_edge[OF ca refl out(2) out(3) CallHead.prems(2)[unfolded out(1)]]
   obtain j w where
     jw: "Statement n0 = Statement j" "(Statement j, EA_Special sc x, w) \<in> E"
-        "control_at \<Pi> p (Call (Some x) q []) k n0 SKIP w" by blast
+        "control_at \<Pi> p (Call (Some x) q actuals) k n0 SKIP w" by blast
   have edgeg: "(Statement j, EA_Special sc x, w) \<in> intra g"
     using jw(2) CallHead.prems(3) by blast
-  have mem: "s(x := v) \<in> edge_step (EA_Special sc x) s" by auto
+  have mem: "s(x := v) \<in> edge_step (EA_Special sc x) s" using out(4) by auto
   have "cstep source_global g (Statement j, s, stk) (w, s(x := v), stk)"
     using cstep.Intra[OF edgeg mem] by simp
   then have "star (cstep source_global g) (Statement n0, s, stk) (w, s', stk)"
-    using jw(1) out(5) by (simp add: cstep_star_single)
-  then show ?case using out(1,2,4,6) jw(3) by auto
+    using jw(1) out(6) by (simp add: cstep_star_single)
+  then show ?case using out(1,5,7) jw(3) by auto
 next
   case (CallDone dst q actuals k n0) then show ?case by (blast elim: intra_SkipE)
 next

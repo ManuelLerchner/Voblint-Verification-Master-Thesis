@@ -363,7 +363,7 @@ lemma dgs_special_rel_sound[intro]:
      (case dgs_special_rel sc x d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
   have "edge_collect (EA_Special sc x) (gammaDG_rel d g)
-      = {s(x := v) | s v. s \<in> gammaDG_rel d g}"
+      \<subseteq> {s(x := v) | s v. s \<in> gammaDG_rel d g}"
     by (cases sc) auto
   also have "... \<subseteq> gamma_rel (forget_relc x d) \<inter> gamma_rel (forget_relc x g)"
     using forget_relc_sound unfolding gammaDG_rel_def by blast

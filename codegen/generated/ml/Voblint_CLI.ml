@@ -122,7 +122,7 @@ module Core : sig
   val equal_option : 'a HOL.equal -> 'a option -> 'a option -> bool
   type call_action = CallEdge of string option * string list * aexp list
   val equal_call_actiona : call_action -> call_action -> bool
-  type special_call
+  type special_call = Nondet_Int | Min of aexp * aexp | Max of aexp * aexp
   type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp
     | Less of aexp * aexp | Eqa of aexp * aexp
   type edge_action = EA_Nop | EA_Assign of string * aexp |
@@ -876,9 +876,20 @@ let order_call_action =
 let linorder_call_action =
   ({order_linorder = order_call_action} : call_action linorder);;
 
-type special_call = Nondet_Int;;
+type special_call = Nondet_Int | Min of aexp * aexp | Max of aexp * aexp;;
 
-let rec equal_special_call Nondet_Int Nondet_Int = true;;
+let rec equal_special_call
+  x0 x1 = match x0, x1 with Min (x21, x22), Max (x31, x32) -> false
+    | Max (x31, x32), Min (x21, x22) -> false
+    | Nondet_Int, Max (x31, x32) -> false
+    | Max (x31, x32), Nondet_Int -> false
+    | Nondet_Int, Min (x21, x22) -> false
+    | Min (x21, x22), Nondet_Int -> false
+    | Max (x31, x32), Max (y31, y32) ->
+        equal_aexpa x31 y31 && equal_aexpa x32 y32
+    | Min (x21, x22), Min (y21, y22) ->
+        equal_aexpa x21 y21 && equal_aexpa x22 y22
+    | Nondet_Int, Nondet_Int -> true;;
 
 let rec equal_bool p pa = match p, pa with false, p -> not p
                      | true, p -> p
@@ -989,7 +1000,20 @@ let rec equal_edge_actiona
 let equal_edge_action =
   ({HOL.equal = equal_edge_actiona} : edge_action HOL.equal);;
 
-let rec comparator_special_call Nondet_Int Nondet_Int = Eq;;
+let rec comparator_special_call
+  x0 x1 = match x0, x1 with Nondet_Int, Nondet_Int -> Eq
+    | Nondet_Int, Min (y, ya) -> Lt
+    | Nondet_Int, Max (yb, yc) -> Lt
+    | Min (x, xa), Nondet_Int -> Gt
+    | Min (x, xa), Min (y, ya) ->
+        (match comparator_aexp x y with Eq -> comparator_aexp xa ya | Lt -> Lt
+          | Gt -> Gt)
+    | Min (x, xa), Max (yb, yc) -> Lt
+    | Max (x, xa), Nondet_Int -> Gt
+    | Max (x, xa), Min (y, ya) -> Gt
+    | Max (x, xa), Max (yb, yc) ->
+        (match comparator_aexp x yb with Eq -> comparator_aexp xa yc | Lt -> Lt
+          | Gt -> Gt);;
 
 let rec comparator_bool x0 x1 = match x0, x1 with false, false -> Eq
                           | false, true -> Lt
@@ -1121,6 +1145,20 @@ let ord_integer = ({less_eq = Z.leq; less = Z.lt} : Z.t ord);;
 
 type eint = MinInf | Fin of int | PlusInf;;
 
+let rec eint_le x0 uu = match x0, uu with MinInf, uu -> true
+                  | Fin v, PlusInf -> true
+                  | PlusInf, PlusInf -> true
+                  | Fin n, Fin m -> less_eq_int n m
+                  | Fin v, MinInf -> false
+                  | PlusInf, MinInf -> false
+                  | PlusInf, Fin v -> false;;
+
+let rec less_eq_eint x = eint_le x;;
+
+let rec less_eint a b = eint_le a b && not (eint_le b a);;
+
+let ord_eint = ({less_eq = less_eq_eint; less = less_eint} : eint ord);;
+
 let rec equal_eint x0 x1 = match x0, x1 with Fin x2, PlusInf -> false
                      | PlusInf, Fin x2 -> false
                      | MinInf, PlusInf -> false
@@ -1137,16 +1175,6 @@ let rec equal_ivla
   (Ivl (x1, x2)) (Ivl (y1, y2)) = equal_eint x1 y1 && equal_eint x2 y2;;
 
 let equal_ivl = ({HOL.equal = equal_ivla} : ivl HOL.equal);;
-
-let rec eint_le x0 uu = match x0, uu with MinInf, uu -> true
-                  | Fin v, PlusInf -> true
-                  | PlusInf, PlusInf -> true
-                  | Fin n, Fin m -> less_eq_int n m
-                  | Fin v, MinInf -> false
-                  | PlusInf, MinInf -> false
-                  | PlusInf, Fin v -> false;;
-
-let rec less_eq_eint x = eint_le x;;
 
 let rec join_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -1685,6 +1713,8 @@ type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
   Side of 'b * 'c * ('a, 'b, 'c) strategy_tree;;
 
+type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
+
 type analysis_event = Check_Event of bexp;;
 
 type ('a, 'b, 'c) dg_spec_ext =
@@ -1936,6 +1966,94 @@ let cinit_ivl_st : ivl resolved_st_q
 
 let rec snd (x1, x2) = x2;;
 
+let rec sign_max x0 uu = match x0, uu with SBot, uu -> SBot
+                   | SNeg, SBot -> SBot
+                   | SNonPos, SBot -> SBot
+                   | SZero, SBot -> SBot
+                   | SNonNeg, SBot -> SBot
+                   | SPos, SBot -> SBot
+                   | STop, SBot -> SBot
+                   | SNeg, SNeg -> SNeg
+                   | SNonPos, SNonPos -> SNonPos
+                   | SZero, SZero -> SZero
+                   | SNonNeg, SNonNeg -> SNonNeg
+                   | SPos, SPos -> SPos
+                   | STop, STop -> STop
+                   | SNeg, SNonPos -> SNonPos
+                   | SNonPos, SNeg -> SNonPos
+                   | SNeg, SZero -> SZero
+                   | SZero, SNeg -> SZero
+                   | SNeg, SNonNeg -> SNonNeg
+                   | SNonNeg, SNeg -> SNonNeg
+                   | SNeg, SPos -> SPos
+                   | SPos, SNeg -> SPos
+                   | SNeg, STop -> STop
+                   | STop, SNeg -> STop
+                   | SNonPos, SZero -> SZero
+                   | SZero, SNonPos -> SZero
+                   | SNonPos, SNonNeg -> SNonNeg
+                   | SNonNeg, SNonPos -> SNonNeg
+                   | SNonPos, SPos -> SPos
+                   | SPos, SNonPos -> SPos
+                   | SNonPos, STop -> STop
+                   | STop, SNonPos -> STop
+                   | SZero, SNonNeg -> SNonNeg
+                   | SNonNeg, SZero -> SNonNeg
+                   | SZero, SPos -> SPos
+                   | SPos, SZero -> SPos
+                   | SZero, STop -> SNonNeg
+                   | STop, SZero -> SNonNeg
+                   | SNonNeg, SPos -> SPos
+                   | SPos, SNonNeg -> SPos
+                   | SNonNeg, STop -> SNonNeg
+                   | STop, SNonNeg -> SNonNeg
+                   | SPos, STop -> SPos
+                   | STop, SPos -> SPos;;
+
+let rec sign_min x0 uu = match x0, uu with SBot, uu -> SBot
+                   | SNeg, SBot -> SBot
+                   | SNonPos, SBot -> SBot
+                   | SZero, SBot -> SBot
+                   | SNonNeg, SBot -> SBot
+                   | SPos, SBot -> SBot
+                   | STop, SBot -> SBot
+                   | SNeg, SNeg -> SNeg
+                   | SNonPos, SNonPos -> SNonPos
+                   | SZero, SZero -> SZero
+                   | SNonNeg, SNonNeg -> SNonNeg
+                   | SPos, SPos -> SPos
+                   | STop, STop -> STop
+                   | SNeg, SNonPos -> SNeg
+                   | SNonPos, SNeg -> SNeg
+                   | SNeg, SZero -> SNeg
+                   | SZero, SNeg -> SNeg
+                   | SNeg, SNonNeg -> SNeg
+                   | SNonNeg, SNeg -> SNeg
+                   | SNeg, SPos -> SNeg
+                   | SPos, SNeg -> SNeg
+                   | SNeg, STop -> SNeg
+                   | STop, SNeg -> SNeg
+                   | SNonPos, SZero -> SNonPos
+                   | SZero, SNonPos -> SNonPos
+                   | SNonPos, SNonNeg -> SNonPos
+                   | SNonNeg, SNonPos -> SNonPos
+                   | SNonPos, SPos -> SNonPos
+                   | SPos, SNonPos -> SNonPos
+                   | SNonPos, STop -> SNonPos
+                   | STop, SNonPos -> SNonPos
+                   | SZero, SNonNeg -> SZero
+                   | SNonNeg, SZero -> SZero
+                   | SZero, SPos -> SZero
+                   | SPos, SZero -> SZero
+                   | SZero, STop -> SNonPos
+                   | STop, SZero -> SNonPos
+                   | SNonNeg, SPos -> SNonNeg
+                   | SPos, SNonNeg -> SNonNeg
+                   | SNonNeg, STop -> STop
+                   | STop, SNonNeg -> STop
+                   | SPos, STop -> STop
+                   | STop, SPos -> STop;;
+
 let rec sup_fin _A = function Set [] -> abort_empty_set (sup_fin _A)
                      | Set (x :: xs) -> fold (sup _A.sup_semilattice_sup) xs x;;
 
@@ -1958,12 +2076,26 @@ let rec update_resolved_st _A
 let rec update_resolved_st_q _A
   (Abs_resolved_st xb) xa x = Abs_resolved_st (update_resolved_st _A xb xa x);;
 
+let rec normalize_ivl
+  v = (let Ivl (l, u) = v in
+        (if less_eq_eint l u &&
+              (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
+          then v else bot_ivla));;
+
+let rec min _A a b = (if less_eq _A a b then a else b);;
+
+let rec ivl_min
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
+
+let rec ivl_max
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    normalize_ivl (Ivl (max ord_eint l1 l2, max ord_eint u1 u2));;
+
 let rec inv_conservative r a1 a2 = (a1, a2);;
 
 let rec times_int
   k l = Int_of_integer (Z.mul (integer_of_int k) (integer_of_int l));;
-
-let rec min _A a b = (if less_eq _A a b then a else b);;
 
 let rec ivl_times_core
   uu uv = match uu, uv with
@@ -2005,12 +2137,6 @@ let rec minus_eint
     | PlusInf, MinInf -> PlusInf
     | PlusInf, Fin ux -> PlusInf
     | PlusInf, PlusInf -> PlusInf;;
-
-let rec normalize_ivl
-  v = (let Ivl (l, u) = v in
-        (if less_eq_eint l u &&
-              (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
-          then v else bot_ivla));;
 
 let rec minus_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -2132,7 +2258,16 @@ let rec ivl_tf_st_for
         update_resolved_st_q bot_ivl s (location_of source_global x)
           (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
     | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_ivl s (location_of source_global x) ivl_top
+        update_resolved_st_q bot_ivl s (location_of source_global x)
+          (match sc with Nondet_Int -> ivl_top
+            | Min (a, b) ->
+              ivl_min
+                (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
+                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl source_global s))
+            | Max (a, b) ->
+              ivl_max
+                (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
+                (aval_ivl b (fun_of_resolved_st_q_for bot_ivl source_global s)))
     | source_global, EA_Assume b, s -> branch_ivl_st_for source_global b true s
     | source_global, EA_AssumeNot b, s ->
         branch_ivl_st_for source_global b false s
@@ -2262,12 +2397,6 @@ let rec proc_rep
 let rec prog_table p = map_of equal_literal (proc_rep p);;
 
 let rec prog_main p = body (the (prog_table p prog_main_name));;
-
-let special_pname_nondet_int : string = "__voblint_nondet_int";;
-
-let rec special_table
-  p = (if ((p : string) = special_pname_nondet_int) then Some Nondet_Int
-        else None);;
 
 let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
                     | Lifted a, f -> f a;;
@@ -2810,7 +2939,20 @@ let rec sign_tf_st_for
         update_resolved_st_q bot_sign s (location_of source_global x)
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Special (sc, x), s ->
-        update_resolved_st_q bot_sign s (location_of source_global x) STop
+        update_resolved_st_q bot_sign s (location_of source_global x)
+          (match sc with Nondet_Int -> STop
+            | Min (a, b) ->
+              sign_min
+                (aval_sign a
+                  (fun_of_resolved_st_q_for bot_sign source_global s))
+                (aval_sign b
+                  (fun_of_resolved_st_q_for bot_sign source_global s))
+            | Max (a, b) ->
+              sign_max
+                (aval_sign a
+                  (fun_of_resolved_st_q_for bot_sign source_global s))
+                (aval_sign b
+                  (fun_of_resolved_st_q_for bot_sign source_global s)))
     | source_global, EA_Assume b, s -> branch_sign_st_for source_global b true s
     | source_global, EA_AssumeNot b, s ->
         branch_sign_st_for source_global b false s
@@ -2831,9 +2973,35 @@ let rec prog_procs
   p = filtera (fun n -> not ((n : string) = prog_main_name))
         (map fst (proc_rep p));;
 
+let rec classify_special
+  uu x1 = match uu, x1 with SD_Nondet_Int, [] -> Some Nondet_Int
+    | SD_Min, [a; b] -> Some (Min (a, b))
+    | SD_Max, [a; b] -> Some (Max (a, b))
+    | SD_Min, [] -> None
+    | SD_Min, [v] -> None
+    | SD_Min, v :: vb :: vd :: ve -> None
+    | SD_Max, [] -> None
+    | SD_Max, [v] -> None
+    | SD_Max, v :: vb :: vd :: ve -> None
+    | SD_Nondet_Int, v :: va -> None
+    | uu, [v] -> None
+    | uu, v :: vb :: vd :: ve -> None;;
+
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
 
 let rec call_formals pi q = (match pi q with None -> [] | Some a -> formals a);;
+
+let special_pname_nondet_int : string = "__voblint_nondet_int";;
+
+let special_pname_min : string = "min";;
+
+let special_pname_max : string = "max";;
+
+let rec special_table
+  p = (if ((p : string) = special_pname_nondet_int) then Some SD_Nondet_Int
+        else (if ((p : string) = special_pname_min) then Some SD_Min
+               else (if ((p : string) = special_pname_max) then Some SD_Max
+                      else None)));;
 
 let rec compile
   pi p x2 k n = match pi, p, x2, k, n with
@@ -2929,8 +3097,8 @@ let rec compile
                       (CallEdge (dst, call_formals pi q, actuals),
                         (FunctionEntry q, k)))
                     bot_set)))
-          | Some sc ->
-            (match dst
+          | Some desc ->
+            (match classify_special desc actuals
               with None ->
                 (suc n,
                   (Statement n,
@@ -2939,14 +3107,24 @@ let rec compile
                          (equal_prod equal_edge_action equal_cfg_node))
                        (Statement n, (EA_Nop, k)) bot_set,
                       bot_set)))
-              | Some x ->
-                (suc n,
-                  (Statement n,
-                    (insert
-                       (equal_prod equal_cfg_node
-                         (equal_prod equal_edge_action equal_cfg_node))
-                       (Statement n, (EA_Special (sc, x), k)) bot_set,
-                      bot_set)))))
+              | Some sc ->
+                (match dst
+                  with None ->
+                    (suc n,
+                      (Statement n,
+                        (insert
+                           (equal_prod equal_cfg_node
+                             (equal_prod equal_edge_action equal_cfg_node))
+                           (Statement n, (EA_Nop, k)) bot_set,
+                          bot_set)))
+                  | Some x ->
+                    (suc n,
+                      (Statement n,
+                        (insert
+                           (equal_prod equal_cfg_node
+                             (equal_prod equal_edge_action equal_cfg_node))
+                           (Statement n, (EA_Special (sc, x), k)) bot_set,
+                          bot_set))))))
     | pi, p, Return e, k, n ->
         (suc n,
           (Statement n,
@@ -4113,8 +4291,6 @@ let rec ectx_spec
   gs is_bot_pred =
     unit_dg_spec_st_for_lifted bounded_semilattice_sup_bot_ivl gs is_bot_pred
       (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
-
-let rec less_eint a b = eint_le a b && not (eint_le b a);;
 
 let rec interval_less_true
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -5509,7 +5685,7 @@ let rec string_of_action
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20] @
             Core.string_of_aexp a
-    | Core.EA_Special (sc, x) ->
+    | Core.EA_Special (Core.Nondet_Int, x) ->
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
             Core.char_0x5F; Core.char_0x5F; Core.char_0x76; Core.char_0x6F;
@@ -5518,6 +5694,20 @@ let rec string_of_action
             Core.char_0x6E; Core.char_0x64; Core.char_0x65; Core.char_0x74;
             Core.char_0x5F; Core.char_0x69; Core.char_0x6E; Core.char_0x74;
             Core.char_0x28; Core.char_0x29]
+    | Core.EA_Special (Core.Min (a, b), x) ->
+        Core.explode x @
+          [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
+            Core.char_0x6D; Core.char_0x69; Core.char_0x6E; Core.char_0x28] @
+            Core.string_of_aexp a @
+              [Core.char_0x2C; Core.char_0x20] @
+                Core.string_of_aexp b @ [Core.char_0x29]
+    | Core.EA_Special (Core.Max (a, b), x) ->
+        Core.explode x @
+          [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
+            Core.char_0x6D; Core.char_0x61; Core.char_0x78; Core.char_0x28] @
+            Core.string_of_aexp a @
+              [Core.char_0x2C; Core.char_0x20] @
+                Core.string_of_aexp b @ [Core.char_0x29]
     | Core.EA_Assume b ->
         [Core.char_0x5B] @ Core.string_of_bexp b @ [Core.char_0x5D]
     | Core.EA_AssumeNot b ->

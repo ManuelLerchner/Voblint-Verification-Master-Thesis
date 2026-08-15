@@ -174,7 +174,8 @@ lemma main_fallthrough_accepted:
   "wf_compile_input cr_gs fallthrough_pi [] (STR ''main'') SKIP"
   by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
         wf_proc_decl_def proc_decl_of_def reserved_ret_var_def ret_var_def
-        special_table_def special_pname_nondet_int_def)
+        special_table_def special_pname_nondet_int_def
+        special_pname_min_def special_pname_max_def)
 
 lemma missing_main_rejected:
   assumes "\<Pi> mnm = None"

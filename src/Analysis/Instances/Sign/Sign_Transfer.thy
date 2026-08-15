@@ -1,5 +1,5 @@
 theory Sign_Transfer
-  imports Sign_Backward Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
+  imports Sign_Backward Sign_Special Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
 
 begin
 
@@ -30,35 +30,8 @@ proof safe
   qed
 qed
 
-subsection \<open>Abstract nondeterministic assignment\<close>
-
-definition special_sign ::
-    "special_call => vname => (vname => sign) => (vname => sign)"
-where
-  "special_sign sc x \<sigma> = \<sigma>(x := STop)"
-
-lemma special_sign_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>special_sign sc x \<sigma>\<rbrakk>"
-  unfolding special_sign_def gamma_state_def
-proof safe
-  fix y
-  from gs have V: "\<forall>z. s z \<in> gamma_sign (\<sigma> z)"
-    using gamma_stateD[OF gs] by simp
-  show "(s(x := v)) y \<in> gamma ((\<sigma>(x := STop)) y)"
-  proof (cases "y = x")
-    case True
-    then show ?thesis by simp
-  next
-    case False
-    with V show ?thesis by simp
-  qed
-qed
-
-lemma special_sign_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> special_sign sc x sigma1 \<le> special_sign sc x sigma2"
-  by (simp add: special_sign_def le_funD le_funI)
-
+text \<open>Nondeterministic and other special-call assignment (\<open>special_sign\<close>) lives
+  in \<^theory>\<open>Voblint_Analysis.Sign_Special\<close>, reused below.\<close>
 subsection \<open>Bundled transfer functions\<close>
 
 lemma assign_sign_mono:

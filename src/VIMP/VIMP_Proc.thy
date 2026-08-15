@@ -1,5 +1,5 @@
 theory VIMP_Proc
-  imports VIMP_Expr VIMP_Globals
+  imports VIMP_Expr VIMP_Globals VIMP_Special
 begin
 
 section \<open>Procedure commands and activation frames\<close>
@@ -19,22 +19,6 @@ text \<open>
   programs): once a \<open>Return\<close> has fired, the computation is in \<open>Unwind\<close>
   state, discarding pending statements up to the nearest enclosing activation frame.
 \<close>
-
-text \<open>
-  \<open>special_call\<close> classifies analyzer-recognized special functions, the VIMP
-  analogue of Goblint's library-function dispatch: a closed, VIMP-scoped
-  enumeration (unlike Goblint's open library-function table) of the special
-  operations VIMP source programs can invoke, kept separate from ordinary
-  procedure calls so their abstract semantics need not simulate \<open>enter\<close>/
-  \<open>body\<close>/\<open>return\<close>/\<open>combine_env\<close>/\<open>combine_assign\<close> for an operation that isn't
-  a real activation. \<open>Nondet_Int\<close> is the only current case: an unconstrained
-  nondeterministic integer, written to its destination.
-\<close>
-
-datatype special_call = Nondet_Int
-
-instance special_call :: countable
-  by countable_datatype
 
 datatype com =
     SKIP
@@ -66,25 +50,6 @@ text \<open>
 \<close>
 definition ret_var :: vname where
   "ret_var = STR ''#ret''"
-
-text \<open>
-  \<open>special_table\<close> is VIMP's closed analogue of Goblint's open library-function
-  classification: a name-based lookup from a call's callee to its special
-  semantics, checked at the same point Goblint's own frontend recognizes a call
-  target as special rather than a declared procedure -- not a dedicated
-  keyword or AST constructor. Ordinary call syntax parses
-  \<open>x := __voblint_nondet_int()\<close> exactly like any other call; classification
-  happens here, downstream of parsing. \<open>special_pname_nondet_int\<close> is the sole
-  entry today, and is an ordinary lexable identifier (unlike \<open>ret_var\<close>), so a
-  source program could otherwise declare a colliding procedure of the same
-  name -- program well-formedness (below) rejects that explicitly rather than
-  letting a declared procedure be silently shadowed by special-call semantics.
-\<close>
-definition special_pname_nondet_int :: pname where
-  "special_pname_nondet_int = STR ''__voblint_nondet_int''"
-
-definition special_table :: "pname => special_call option" where
-  "special_table p = (if p = special_pname_nondet_int then Some Nondet_Int else None)"
 
 datatype source_location =
     LocalVar pname
@@ -133,8 +98,10 @@ where
                  (Seq (body decl) Restore,
                   callee,
                   Frame s dst # frs)"
-| Special: "special_table p = Some Nondet_Int
-             \<Longrightarrow> pstep gs \<Pi> (Call (Some x) p [], s, frs) (SKIP, s(x := v), frs)"
+| Special: "special_table p = Some desc
+             \<Longrightarrow> classify_special desc actuals = Some sc
+             \<Longrightarrow> special_result sc s v
+             \<Longrightarrow> pstep gs \<Pi> (Call (Some x) p actuals, s, frs) (SKIP, s(x := v), frs)"
 | RestoreStep:
     "pstep gs \<Pi> (Restore, s, Frame fr dst # frs)
        (SKIP, combine_assign dst (s ret_var) (combine_env gs fr s), frs)"
@@ -727,8 +694,9 @@ fun wf_source_com :: "proc_table => com => bool" where
 | "wf_source_com \<Pi> (While b c) = (source_bexp b \<and> wf_source_com \<Pi> c)"
 | "wf_source_com \<Pi> (Call dst p actuals) =
      (case special_table p of
-        Some Nondet_Int \<Rightarrow>
-          actuals = [] \<and> (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> ret_var)
+        Some desc \<Rightarrow>
+          classify_special desc actuals \<noteq> None \<and> list_all source_aexp actuals \<and>
+          (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> ret_var)
       | None \<Rightarrow>
           (case \<Pi> p of
              None \<Rightarrow> False

@@ -294,6 +294,7 @@ text \<open>
 code_identifier
   code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Special \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Source_Print \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Syntax \<rightharpoonup> (OCaml) Core
 | code_module CFG_Def \<rightharpoonup> (OCaml) Core
@@ -354,6 +355,7 @@ code_identifier
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
 | code_module Exec_DG_Bridge \<rightharpoonup> (OCaml) Core
 | code_module Sign_Arithmetic \<rightharpoonup> (OCaml) Core
+| code_module Sign_Special \<rightharpoonup> (OCaml) Core
 | code_module Sign_Backward \<rightharpoonup> (OCaml) Core
 | code_module Sign_Checks \<rightharpoonup> (OCaml) Core
 | code_module Sign_Exec \<rightharpoonup> (OCaml) Core
@@ -361,6 +363,7 @@ code_identifier
 | code_module Sign_Lattice \<rightharpoonup> (OCaml) Core
 | code_module Sign_Numeric_Queries \<rightharpoonup> (OCaml) Core
 | code_module Interval_Arithmetic \<rightharpoonup> (OCaml) Core
+| code_module Interval_Special \<rightharpoonup> (OCaml) Core
 | code_module Interval_Backward \<rightharpoonup> (OCaml) Core
 | code_module Interval_Bounds \<rightharpoonup> (OCaml) Core
 | code_module Interval_Checks \<rightharpoonup> (OCaml) Core

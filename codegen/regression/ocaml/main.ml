@@ -178,6 +178,10 @@ let show_edge_action = function
   | EA_Nop -> "nop"
   | EA_Assign (x, a) -> x ^ " := " ^ show_aexp_compact a
   | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
+  | EA_Special (Min (a, b), x) ->
+    x ^ " := min(" ^ show_aexp_compact a ^ ", " ^ show_aexp_compact b ^ ")"
+  | EA_Special (Max (a, b), x) ->
+    x ^ " := max(" ^ show_aexp_compact a ^ ", " ^ show_aexp_compact b ^ ")"
   | EA_Assume b -> "[" ^ show_bexp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_bexp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"

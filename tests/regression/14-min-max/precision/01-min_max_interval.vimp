@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// min/max special calls on concrete constants: min(3, -5) is negative,
+// max(3, -5) is positive -- exact for concrete constant intervals.
+void main() {
+  x := 3;
+  y := 0 - 5;
+  z := min(x, y);
+  w := max(x, y);
+  __voblint_check(z < 0); // PROVED
+  __voblint_check(0 < w) // PROVED
+}

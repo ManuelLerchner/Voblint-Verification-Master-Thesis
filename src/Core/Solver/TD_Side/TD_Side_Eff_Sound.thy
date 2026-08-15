@@ -41,9 +41,10 @@ lemma etf_sound_assignD [intro]:
 lemma etf_sound_specialD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
+      and "special_result sc s v"
   shows
     "s(x := v)
-       \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf Nondet_Int x u) \<sigma>)"
+       \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf sc x u) \<sigma>)"
   using assms etf_sound_special unfolding side_env_lift_def
   by blast
 
@@ -64,7 +65,7 @@ lemma edge_collect_etf_sound:
        \<subseteq> gamma_state_lift (etf_collecting_full_lift (apply_etf etf a u) \<sigma>)"
 proof (cases a)
   case (EA_Special sc x)
-  with inr show ?thesis by (cases sc) (auto simp: etf_sound_special)
+  with inr show ?thesis by (auto simp: etf_sound_special)
 qed (use inr in \<open>auto simp: etf_sound_skip etf_sound_return etf_sound_event side_env_lift_def\<close>)
 
 end
