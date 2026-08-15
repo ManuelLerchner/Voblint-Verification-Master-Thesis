@@ -48,6 +48,11 @@ let usage =
   \                             file:line:col message on a parse error); runs\n\
   \                             no analysis, no --analysis needed. For syntax\n\
   \                             checking and parser conformance testing.\n\
+  \                             A syntactically valid but ill-formed program\n\
+  \                             (e.g. a wrong-arity special call) still exits\n\
+  \                             4 with no message here -- well-formedness is\n\
+  \                             checked only on the full run below, after\n\
+  \                             --parse-only's own early exit.\n\
   \  --timeout SECONDS          Wall-clock budget for the analysis subprocess\n\
   \                             (default 10). The analyzer is proved sound but\n\
   \                             not proved total (see CLI_DESIGN.md's Interval\n\
@@ -256,6 +261,10 @@ let () =
       exit 2
   in
   if !parse_only then exit 0;
+  if not (Voblint_CLI.Core.wf_program_compile_input_exec prog) then begin
+    Printf.eprintf "%s: program is not well-formed\n" path;
+    exit 4
+  end;
   let kind =
     match !analysis with
     | Some k -> k

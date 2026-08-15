@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// Syntactically valid (min(x) parses like any ordinary call), but wrong
+// arity for the special call it resolves to: min needs exactly two
+// arguments. classify_special SD_Min [x] = None, so wf_source_com rejects
+// it -- not a silent fallback to treating min as an ordinary, undeclared
+// procedure. Rejected here by the CLI's well-formedness gate rather than
+// reaching the analyzer at all.
+void main() {
+  x := 3;
+  z := min(x);
+  __voblint_check(0 < z)
+}

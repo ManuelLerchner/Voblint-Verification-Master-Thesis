@@ -4,9 +4,15 @@
 // a dead-code sentinel, rather than a real condition that happens to be
 // dead (see 02-unreachable_nowarn.vimp for that variant). VIMP has no
 // integer truthiness, so the literal constant is the bexp "false" itself.
-void main() {
+// main itself may not contain a return (wf_source_program's no_return
+// conjunct), so the return lives in a helper procedure p instead, called
+// destination-less.
+void p() {
   x := 5;
   __voblint_check(true); // PROVED
   return x;
   __voblint_check(false) // NOWARN (unreachable)
+}
+void main() {
+  p()
 }
