@@ -1,0 +1,10 @@
+// PARAM: --analysis interval --solver join
+// Exercises the CLI's --solver flag routing through
+// analyse_with_solver rather than the default analyse entry point.
+// Interval's production default is Solver_Warrow (see
+// analyse_with_solver_interval_default); join is the always-terminating,
+// non-default alternative -- same verdict here regardless of choice.
+void main() {
+  x := 5;
+  __voblint_check(0 < x) // PROVED
+}

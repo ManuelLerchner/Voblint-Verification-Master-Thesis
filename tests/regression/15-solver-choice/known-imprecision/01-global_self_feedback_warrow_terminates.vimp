@@ -1,0 +1,13 @@
+// PARAM: --analysis interval --solver warrow
+// Direct contrast with ../04-global_self_feedback_join_hangs.vimp: the
+// identical self-referential global write, but under Interval's production
+// solver (Solver_Warrow). Widening breaks the fixpoint dependency that makes
+// Solver_Join hang on this program, terminating quickly with a sound (if
+// imprecise) UNKNOWN -- the flow-insensitive global summary only proves
+// total=[0,+inf), though total is exactly 3 here.
+global total;
+void main() {
+  total := 0;
+  total := total + 3;
+  __voblint_check(0 < total) // UNKNOWN
+}

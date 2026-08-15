@@ -1,0 +1,16 @@
+// PARAM: --analysis interval --solver join --timeout 2
+// Same program as ./known-imprecision/01-global_self_feedback_warrow_terminates.vimp
+// (and 12-widening/known-imprecision/01-global_self_feedback.vimp), but
+// forcing the always-join solver (no widening) instead of Interval's
+// production default (Solver_Warrow): the self-referential global-summary
+// constraint for `total` never reaches a fixpoint without widening, so the
+// solver genuinely does not terminate. --timeout bounds this to 2s instead
+// of the CLI's 10s default so the case stays fast. This is the concrete
+// reason Solver_Warrow, not Solver_Join, is Interval's production default --
+// see analyse_with_solver_interval_default in Analyse_Dispatch.thy.
+global total;
+void main() {
+  total := 0;
+  total := total + 3;
+  __voblint_check(0 < total)
+}
