@@ -1,10 +1,13 @@
 # Voblint formalization (`src/`)
 
-Isabelle/HOL sessions **Voblint_VIMP**, **Voblint_CFG**, **Voblint_Core**,
-**Voblint_Analysis**, **Voblint_Formalization**: sound static analysis from VIMP source with procedures
-through interprocedural CFG collecting semantics, abstract equations, and the
-vendored **TD side** solver (`vendor/td-verification`, session `TD`) to pipeline
-soundness theorems.
+The six-session Isabelle/HOL proof chain comprises **Voblint_VIMP**,
+**Voblint_CFG**, **Voblint_Core**, **Voblint_Analysis**,
+**Voblint_Formalization**, and **Voblint_Examples**. It formalizes sound static
+analysis from VIMP source with procedures through interprocedural CFG
+collecting semantics, abstract equations, and the vendored **TD side** solver
+(`vendor/td-verification`, session `TD`) to pipeline soundness theorems.
+**Voblint_Codegen** is a seventh, downstream session that owns executable
+exports; the CI-only **Voblint_OCaml_Check** session compile-checks them.
 
 **Top level:** the interprocedural / side-effecting spine —
 `Mixed_Flow_Sound`, `TD_Side_Eff_Soundness`, `Sign_Side_Soundness`,
@@ -16,7 +19,7 @@ in the sibling repo `voblint-formalization-classical`.
 **Pipeline (left to right):**
 
 ```
-VIMP (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD side) → Pipeline → Examples
+VIMP (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD side) → Pipeline → Examples → Codegen
                     Domains ────────────────────────────────┘
 ```
 
@@ -31,6 +34,7 @@ VIMP (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD s
 | [`Analysis/Instances/`](Analysis/Instances/) | [README](Analysis/Instances/README.md) | Concrete domains and native effectful transfer records (`sign_etf`, `ivl_etf`) |
 | [`Formalization/Pipeline/`](Formalization/Pipeline/) | [README](Formalization/Pipeline/README.md) | End-to-end soundness and mixed-flow optimality (`trace_analysis_sound`, `mixed_flow_analysis_optimal`) |
 | [`Examples/`](Examples/) | [README](Examples/README.md) | Concrete demonstrations and precision examples |
+| [`Codegen/`](Codegen/) | -- | Downstream OCaml export declarations |
 
 Also at CFG root: `CFG_GraphViz.thy` (Graphviz tooling), `CFG_Prune.thy` (reachability pruning).
 

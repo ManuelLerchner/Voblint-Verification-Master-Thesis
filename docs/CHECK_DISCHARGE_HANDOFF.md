@@ -155,8 +155,8 @@ The `abstract_less_queries`/`abstract_eq_queries`-style split proposed
 earlier landed under different names: `derived_less_queries` (reads
 `less_true`/`less_false` off a domain's `inv_less`), `derived_eq_true_from_less`
 (reads `eq_true` off `less_false` in both directions, integer trichotomy),
-and `derived_eq_false_from_meet` (reads `eq_false` off `meet` collapsing to
-`bot`) all sublocale under `backward_domain` automatically, no extra proof
+and `derived_eq_false_from_intersection` (reads `eq_false` off semantic
+intersection collapsing to `bot`) all sublocale under `backward_domain` automatically, no extra proof
 obligation; originally landed in `Abstract_Domain.thy`, later relocated to
 `Abstract_Numeric_Queries.thy` (see "Numeric-query theory split" below).
 Sign's `sign_less_true`/
@@ -188,7 +188,7 @@ chain.
 A separate structural refactor (commit `d4687c9`) acted on that diagnosis
 without adding the rejected bridge: `abstract_numeric_queries`,
 `derived_less_queries`, `derived_eq_true_from_less`, and
-`derived_eq_false_from_meet` moved out of `Abstract_Domain.thy`/
+`derived_eq_false_from_intersection` moved out of `Abstract_Domain.thy`/
 `Abstract_Checks.thy` into a new `Abstract_Numeric_Queries.thy`
 (`Abstract_Domain.thy` -> `Abstract_Numeric_Queries.thy` -> `Abstract_Checks.thy`).
 This confirmed the retroactive-composition diagnosis above was the real

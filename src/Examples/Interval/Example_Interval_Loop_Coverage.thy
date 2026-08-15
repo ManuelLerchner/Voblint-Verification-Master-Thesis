@@ -148,7 +148,7 @@ lemma loop_body_x_from_assume:
   "tf_branch (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   unfolding ivl_tf_for_def loop_env_def
   by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
-        ivl_backward_domain.afilter.simps aval_ivl.simps meet_ivl_norm.simps
+        ivl_backward_domain.afilter.simps aval_ivl.simps intersect_ivl_def
         normalize_ivl_def)
 
 lemma loop_body_entry_x:

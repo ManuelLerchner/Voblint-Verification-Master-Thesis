@@ -431,67 +431,63 @@ lemma meet_ivl_normalized_breaks_greatest:
 
 subsection \<open>Semantic intersection\<close>
 
-fun meet_ivl_norm :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "meet_ivl_norm (Ivl l1 u1) (Ivl l2 u2) =
-     mk_ivl (if l2 \<le> l1 then l1 else l2) (if u1 \<le> u2 then u1 else u2)"
+definition intersect_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  [simp]: "intersect_ivl a b = normalize_ivl (meet_ivl a b)"
 
 text \<open>
   \<^const>\<open>inf\<close> is the greatest lower bound of the representation order; the
   operation a backward filter actually wants is the intersection of the
   concretizations, which is a weaker requirement --- it need only preserve
   \<^const>\<open>gamma_ivl\<close> and be reductive and monotone, and is free to pick any
-  representative of the result.  \<^const>\<open>meet_ivl_norm\<close> is that operation: the
-  same bound intersection, built through \<^const>\<open>mk_ivl\<close> so an infeasible
-  intersection comes out as \<^const>\<open>bot\<close> rather than as a reversed pair.
+  representative of the result. \<^const>\<open>intersect_ivl\<close> is that operation:
+  it normalizes the bound intersection so an infeasible result becomes
+  \<^const>\<open>bot\<close> rather than a reversed pair.
 
   Goblint's interval @{text meet} is simultaneously both, because its carrier
   keeps only canonical inhabited values --- @{text norm} maps \<open>l > u\<close> to
   @{text None}, so no element corresponding to \<^term>\<open>Ivl (Fin 5) (Fin 3)\<close>
-  exists there to be a common lower bound.  On this larger raw carrier the two
+  exists there to be a common lower bound. On this larger raw carrier the two
   notions come apart, which is what
   @{thm [source] meet_ivl_normalized_breaks_greatest} records.
 \<close>
 
-lemma meet_ivl_norm_eq: "meet_ivl_norm a b = normalize_ivl (meet_ivl a b)"
-  by (cases a; cases b) simp
+lemma gamma_intersect_ivl [simp]:
+  "gamma_ivl (intersect_ivl a b) = gamma_ivl (meet_ivl a b)"
+  by (simp add: normalize_ivl_gamma)
 
-lemma gamma_meet_ivl_norm [simp]:
-  "gamma_ivl (meet_ivl_norm a b) = gamma_ivl (meet_ivl a b)"
-  by (simp add: meet_ivl_norm_eq normalize_ivl_gamma)
+lemma intersect_ivl_gamma:
+  "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (intersect_ivl a b)"
+  using meet_ivl_gamma[of n a b] by (simp add: normalize_ivl_gamma)
 
-lemma meet_ivl_norm_gamma:
-  "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (meet_ivl_norm a b)"
-  using meet_ivl_gamma[of n a b] by simp
-
-lemma meet_ivl_norm_le1: "meet_ivl_norm a b \<le> a"
+lemma intersect_ivl_le1: "intersect_ivl a b \<le> a"
 proof -
   have "normalize_ivl (meet_ivl a b) \<le> meet_ivl a b" by (rule normalize_ivl_le)
   also have "meet_ivl a b \<le> a" using meet_ivl_le_lb1[of a b] by simp
-  finally show ?thesis by (simp add: meet_ivl_norm_eq)
+  finally show ?thesis by simp
 qed
 
-lemma meet_ivl_norm_le2: "meet_ivl_norm a b \<le> b"
+lemma intersect_ivl_le2: "intersect_ivl a b \<le> b"
 proof -
   have "normalize_ivl (meet_ivl a b) \<le> meet_ivl a b" by (rule normalize_ivl_le)
   also have "meet_ivl a b \<le> b" using meet_ivl_le_lb2[of a b] by simp
-  finally show ?thesis by (simp add: meet_ivl_norm_eq)
+  finally show ?thesis by simp
 qed
 
-lemma meet_ivl_norm_mono:
+lemma intersect_ivl_mono:
   assumes "a1 \<le> a2" and "b1 \<le> b2"
-  shows "meet_ivl_norm a1 b1 \<le> meet_ivl_norm a2 b2"
+  shows "intersect_ivl a1 b1 \<le> intersect_ivl a2 b2"
 proof -
   have "meet_ivl a1 b1 \<le> meet_ivl a2 b2" using inf_mono[OF assms] by simp
-  then show ?thesis by (simp add: meet_ivl_norm_eq normalize_ivl_mono)
+  then show ?thesis by (simp add: normalize_ivl_mono)
 qed
 
-lemma normalize_ivl_meet_ivl_norm [simp]:
-  "normalize_ivl (meet_ivl_norm a b) = meet_ivl_norm a b"
-  by (simp add: meet_ivl_norm_eq)
+lemma normalize_ivl_intersect_ivl [simp]:
+  "normalize_ivl (intersect_ivl a b) = intersect_ivl a b"
+  by simp
 
-lemma is_bottom_ivl_meet_ivl_norm:
-  "is_bottom_ivl (meet_ivl_norm a b) \<longleftrightarrow> is_bottom_ivl (meet_ivl a b)"
-  by (simp add: meet_ivl_norm_eq)
+lemma is_bottom_ivl_intersect_ivl:
+  "is_bottom_ivl (intersect_ivl a b) \<longleftrightarrow> is_bottom_ivl (meet_ivl a b)"
+  by simp
 
 lemma ivl_le_top: "(x::ivl) \<le> ivl_top"
   by (cases x) (simp add: less_eq_ivl_def ivl_top_def)

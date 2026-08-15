@@ -99,7 +99,7 @@ text \<open>
   A guard no state can satisfy empties the filtered interval.  The stored value
   is the canonical \<^const>\<open>bot\<close>, not one of the many reversed bound pairs that
   denote the empty set just as well: \<open>ivl_backward_domain\<close> is interpreted with
-  \<^const>\<open>meet_ivl_norm\<close>, which normalises its result.
+  \<^const>\<open>intersect_ivl\<close>, which normalises its result.
 
   The raw lattice \<^const>\<open>inf\<close> keeps the reversed pair, and has to --- dropping it
   to \<^const>\<open>bot\<close> would cost the greatest-lower-bound law, since the reversed pair
@@ -112,16 +112,16 @@ lemma guard_infeasible_canonical_bot:
   "bfilter_ivl (Less (V (STR ''x'')) (N 0)) True (sigma_x (Ivl (Fin 5) (Fin 9))) (STR ''x'') = bot"
   unfolding sigma_x_def by eval
 
-lemma meet_ivl_norm_disjoint_bot:
-  "meet_ivl_norm (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9)) = bot"
+lemma intersect_ivl_disjoint_bot:
+  "intersect_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9)) = bot"
   by eval
 
 lemma meet_ivl_disjoint_keeps_reversed_bounds:
   "meet_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9)) = Ivl (Fin 5) (Fin 3)"
   by eval
 
-lemma disjoint_meet_results_agree_semantically:
-  "gamma_ivl (meet_ivl_norm (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9))) = {}"
+lemma disjoint_intersection_and_meet_agree_semantically:
+  "gamma_ivl (intersect_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9))) = {}"
   "gamma_ivl (meet_ivl (Ivl (Fin 0) (Fin 3)) (Ivl (Fin 5) (Fin 9))) = {}"
   by (simp_all add: is_bottom_ivl_correct[symmetric] is_bottom_ivl_def bot_ivl_def)
 

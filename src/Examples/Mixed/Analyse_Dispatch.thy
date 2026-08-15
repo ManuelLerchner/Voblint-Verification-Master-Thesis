@@ -308,16 +308,18 @@ text \<open>
 \<close>
 
 text \<open>
-  Without a \<open>module_name\<close>, \<open>export_code\<close> distributes generated code over one
-  module per contributing Isabelle theory --- around sixty of them here, most
-  named after internal proof-repo theories (\<open>TD_side\<close>, \<open>Interval_Warrowing\<close>,
+  The codegen session imports this theory and uses the following
+  \<open>code_identifier\<close> declaration to organize the generated OCaml. Without a
+  \<open>module_name\<close>, the serializer distributes output over one module per
+  contributing Isabelle theory --- around sixty of them here, most named
+  after internal proof-repo theories (\<open>TD_side\<close>, \<open>Interval_Warrowing\<close>,
   \<open>DG_Framework\<close>, ...) meaningless to an external reader and irrelevant to
-  \<open>analyse\<close>'s public surface. \<open>code_identifier\<close> remaps every contributing
-  theory onto two named OCaml modules instead, so an external reader is not
-  left staring at either one undifferentiated file or dozens of
+  \<open>analyse\<close>'s public surface. The remapping places every contributing
+  theory in two named OCaml modules, so an external reader is not left
+  staring at either one undifferentiated file or dozens of
   internal-theory names.
 
-  OCaml's serializer emits one file per \<open>export_code\<close> call regardless of
+  OCaml's serializer emits one file per export regardless of
   \<open>module_name\<close>/\<open>code_identifier\<close>, so the remapping instead organizes that
   one file into nested \<open>module ... = struct ... end\<close> blocks: \<open>Analyse\<close> for
   this theory's public facade (\<open>analysis_kind\<close>, \<open>analyse\<close> itself), and
@@ -438,39 +440,6 @@ code_identifier
 | code_module Analyse_Dispatch \<rightharpoonup> (OCaml) Analyse
 
 
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  analyse_with_state SignValue IntervalValue
-  analyse_ctx Ctx_None Ctx_EntryState
-  mk_program proc_decl_of
-  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
-  string_of_bexp
-  wf_program_compile_input_exec
 
-export_code
-  analyse Sign_Analysis Interval_Analysis
-  analyse_with_state SignValue IntervalValue
-  analyse_ctx Ctx_None Ctx_EntryState
-  mk_program proc_decl_of
-  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
-  string_of_bexp
-  wf_program_compile_input_exec
-  in OCaml file_prefix "Voblint_Analyse_OCaml"
 
 end

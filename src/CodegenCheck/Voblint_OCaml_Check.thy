@@ -1,20 +1,21 @@
 theory Voblint_OCaml_Check
-  imports Voblint_Examples.Analyse_Dispatch
+  imports Voblint_Codegen.Voblint_Codegen
 begin
 
 text \<open>
   CI-only OCaml compilation check for the \<open>export_code\<close> declarations in
-  \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>. Kept in a separate
+  \<^theory>\<open>Voblint_Codegen.Voblint_Codegen\<close>. Kept in a separate
   session, built only by CI's Linux job (see \<open>.github/workflows/ci.yml\<close>),
-  not by the default \<open>Voblint_Examples\<close> build.
+  not by the default \<open>Voblint_Examples\<close> or \<open>Voblint_Codegen\<close> build.
 
   On Apple Silicon macOS, Isabelle's bundled \<open>opam\<close> (2.0.7) is an x86_64
   binary, so its managed OCaml toolchain links against an x86_64
   \<open>libgmp\<close> while the platform (and Homebrew's own \<open>libgmp\<close>) is arm64 ---
   an environment/toolchain mismatch, not evidence that the generated OCaml
   itself is broken. Isolating this check in its own session keeps the
-  default \<open>Voblint_Examples\<close> build free of it; CI only builds this session
-  on Linux, where the architecture mismatch does not occur.
+  default \<open>Voblint_Examples\<close> and \<open>Voblint_Codegen\<close> builds free of it;
+  CI only builds this session on Linux, where the architecture mismatch does
+  not occur.
 
 \<close>
 

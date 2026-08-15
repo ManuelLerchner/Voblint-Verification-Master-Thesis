@@ -45,7 +45,7 @@ fun afilter_st ::
 where
     "afilter_st gs (V x) a s =
        update_resolved_st_q s (location_of gs x)
-         (meet a (fun_of_resolved_st_q_for gs s x))"
+         (intersect a (fun_of_resolved_st_q_for gs s x))"
   | "afilter_st gs (Plus e1 e2) a s =
        (let (a1, a2) = inv_plus a
               (aval_abs e1 (fun_of_resolved_st_q_for gs s))
@@ -107,7 +107,7 @@ where
     "afilter_st_lift gs (V x) a x_lift = do {
        s <- x_lift;
        update_resolved_st_q_lift (Lifted s) (location_of gs x)
-         (meet a (fun_of_resolved_st_q_for gs s x))
+         (intersect a (fun_of_resolved_st_q_for gs s x))
      }"
   | "afilter_st_lift gs (Plus e1 e2) a x_lift = do {
        s <- x_lift;

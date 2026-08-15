@@ -1,7 +1,7 @@
-session Voblint_OCaml_Check in "." = "Voblint_Examples" +
+session Voblint_OCaml_Check in "." = "Voblint_Codegen" +
   description
     "CI-only OCaml compilation check for the codegen export_code declarations
      (Linux only -- see Voblint_OCaml_Check.thy for why this is a separate
-     session rather than part of Voblint_Examples)"
+     session rather than part of Voblint_Codegen)"
   theories
     Voblint_OCaml_Check
