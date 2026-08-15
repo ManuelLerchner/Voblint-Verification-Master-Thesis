@@ -73,6 +73,54 @@ text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for both 
 lemma analyse_ctx_none_eq_analyse: "analyse_ctx k Ctx_None p = Some (analyse k p)"
   by (cases k) simp_all
 
+subsection \<open>Solver-choice dimension (experimental)\<close>
+
+text \<open>
+  The vendored side solver comes in several update-rule disciplines sharing
+  one signature (\<^const>\<open>TD_side_always_join_Interp_solve\<close>,
+  \<^const>\<open>TD_side_per_origin_Interp_solve\<close>,
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>): plain join, per-origin
+  join, and Apinis warrowing. \<open>analyse_with_solver\<close> exposes this choice for
+  experiments and regression comparisons on the same generated equation
+  system, without touching \<open>analyse\<close>/\<open>analyse_ctx\<close> or any domain's
+  production entry point (issue #131).
+
+  Not every combination is meaningful: only \<open>ivl\<close> has a \<open>widen\<close> type-class
+  instance (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>), so \<open>Solver_Warrow\<close>
+  does not even type-check against Sign -- adding a pointless \<open>widen\<close>
+  instance for a finite-height domain that needs no widening would be
+  scope creep, not a fix. \<open>analyse_with_solver\<close> is therefore a curated,
+  explicit list of the five valid pairings, not a general
+  compatibility predicate over an open solver/domain space: an
+  unsupported pairing returns \<open>None\<close>, the same explicit-gap discipline
+  \<open>analyse_ctx\<close> already uses for \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close>.
+
+  Each domain's own production default is exactly one of these five pairs
+  (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>) --
+  \<open>analyse_with_solver_sign_default\<close>/\<open>analyse_with_solver_interval_default\<close>
+  below confirm those two reproduce \<open>analyse\<close> exactly, not just
+  semantically.
+\<close>
+
+datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
+
+fun analyse_with_solver ::
+    "analysis_kind \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
+  "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse_sign_report p)"
+| "analyse_with_solver Sign_Analysis Solver_PerOrigin p = Some (analyse_sign_report_per_origin p)"
+| "analyse_with_solver Sign_Analysis Solver_Warrow p = None"
+| "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report p)"
+| "analyse_with_solver Interval_Analysis Solver_PerOrigin p = Some (analyse_interval_report_per_origin p)"
+| "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_td_report p)"
+
+lemma analyse_with_solver_sign_default:
+  "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse Sign_Analysis p)"
+  by simp
+
+lemma analyse_with_solver_interval_default:
+  "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse Interval_Analysis p)"
+  by simp
+
 subsection \<open>Domain-neutral state-carrying report\<close>
 
 text \<open>
