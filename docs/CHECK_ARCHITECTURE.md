@@ -60,10 +60,10 @@ generic layers, not separate implementations of the pipeline.
 ### `Abstract_Domain.thy` — lattice and backward refinement
 
 Owns `sound_domain`/`abstract_domain` (the type-class every domain value
-type instantiates), `backward_domain` (guard narrowing: `inv_less`,
+type instantiates), `semantic_intersection`, `backward_domain` (guard narrowing: `inv_less`,
 `inv_eq`, `afilter`/`bfilter`), and `backward_domain_mono`. Nothing here
 knows about checks. `derived_less_queries`/`derived_eq_true_from_less`/
-`derived_eq_false_from_meet` do **not** live here — see the next layer.
+`derived_eq_false_from_intersection` do **not** live here — see the next layer.
 
 ### `Abstract_Numeric_Queries.thy` — atomic-value entailment/refutation
 
@@ -75,12 +75,13 @@ as sublocales of the backward capability hierarchy, precisely:
 
 ```text
 backward_domain -> derived_less_queries -> derived_eq_true_from_less
-backward_domain -> derived_eq_false_from_meet
+backward_domain -> derived_eq_false_from_intersection
 ```
 
 (`derived_eq_true_from_less` sublocales under `derived_less_queries`, not
-directly under `backward_domain`; `derived_eq_false_from_meet` sublocales
-under `backward_domain` directly, reusing its own `meet_sound` premise.)
+directly under `backward_domain`; `derived_eq_false_from_intersection`
+sublocales under `backward_domain` directly, reusing its own
+`intersect_sound` premise.)
 A concrete `backward_domain` interpretation inherits all four query
 functions with no extra proof obligation *once `Abstract_Numeric_Queries.thy`
 is in scope at the point that interpretation is processed* — `Sign_Backward.thy`
@@ -120,7 +121,7 @@ They differ only in **which four query functions they feed in**:
 | | Sign (`Sign_Checks.thy`) | Interval (`Interval_Checks.thy`) |
 | --- | --- | --- |
 | `less_true`/`less_false` | derived from `inv_less_sign` | specialized, compares interval bounds directly |
-| `eq_true`/`eq_false` | derived from `sign_less_false` / `meet_sign` | specialized, compares interval bounds directly |
+| `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
 | Source | `Sign_Numeric_Queries.thy` | `Interval_Numeric_Queries.thy` |
 
 ### Solver frontends: `Sign_Exec_Sound.thy` / `Interval_Exec_Sound.thy`
@@ -155,14 +156,12 @@ reverted (`docs/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
 It answers two different questions, both against it:
 
 1. **Should the derived queries be canonical for every backward domain?**
-   No — Interval's own bound-comparison queries are strictly more precise
-   than the generic `derived_eq_false_from_meet` derivation would give:
-   `ivl`'s raw type has infinitely many non-canonical empty
-   representations, so the generic `meet a b = bot` disjointness test
-   under-approximates disjointness for Interval specifically
-   (`Interval_Numeric_Queries.thy`'s own counterexample lemmas). Forcing
-   the sublocale would take that precision away from any domain in
-   Interval's situation, independent of where the locale lives.
+   No — they inherit the precision of that domain's backward operators, which
+   need only be sound. A domain may expose sharper direct queries without
+   making those queries part of backward filtering. Interval does this for
+   bound comparisons, while its normalized `intersect_ivl` also makes the
+   generic equality-refutation default precise on disjoint intervals. An
+   automatic sublocale would still force one interface choice on every domain.
 2. **Would a downstream `sublocale` declaration have worked anyway?**
    The specific experiment tried it in the wrong place and failed for a
    second, narrower reason: the relation was declared in a theory

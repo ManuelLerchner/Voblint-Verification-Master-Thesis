@@ -816,25 +816,40 @@ definition widen_state ::
 subsection \<open>Backward-analysis locale\<close>
 
 text \<open>
+  A semantic intersection preserves every concrete value shared by both
+  operands. It need not be the lattice infimum: a domain may normalize an
+  empty result while its representation order still distinguishes several
+  empty elements. This locale records the preservation obligation;
+  \<open>backward_domain_refined\<close> adds the reductiveness and monotonicity needed
+  by solver-facing filters.
+\<close>
+
+
+locale semantic_intersection =
+  fixes intersect :: "'a::sound_domain => 'a => 'a"
+  assumes intersect_sound[intro]:
+    "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (intersect a b)"
+
+text \<open>
   Extends @{class sound_domain} with the infrastructure for backward
-  (inverse) evaluation of guards and arithmetic expressions.
-  Per-domain: provide meet, aval_abs, and inv_* operators; the generic
-  afilter / bfilter and their soundness theorems follow by induction.
+  (inverse) evaluation of guards and arithmetic expressions. Per-domain:
+  provide a @{locale semantic_intersection} instance, aval_abs, and inv_*
+  operators; the generic afilter / bfilter and their soundness theorems
+  follow by induction.
 \<close>
 
 locale backward_domain =
+  semantic_intersection intersect
+    for intersect :: "'a::sound_domain => 'a => 'a" +
   fixes
-    meet     :: "'a::sound_domain => 'a => 'a"
-    and aval_abs  :: "aexp => 'a abs_state => 'a"
+    aval_abs  :: "aexp => 'a abs_state => 'a"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
     and inv_minus :: "'a => 'a => 'a => 'a * 'a"
     and inv_times :: "'a => 'a => 'a => 'a * 'a"
   assumes
-    meet_sound[intro]:
-      "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (meet a b)"
-  and aval_abs_sound[intro]:
+    aval_abs_sound[intro]:
       "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
   and inv_less_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
@@ -854,7 +869,7 @@ locale backward_domain =
 begin
 
 fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
-    "afilter (V x) a \<sigma> = \<sigma>(x := meet a (\<sigma> x))"
+    "afilter (V x) a \<sigma> = \<sigma>(x := intersect a (\<sigma> x))"
   | "afilter (Plus  e1 e2) a \<sigma> =
        (let (a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
@@ -895,8 +910,8 @@ next
   show ?case
     unfolding gamma_state_def afilter.simps
   proof (intro CollectI allI)
-    fix y show "s y \<in> gamma ((\<sigma>(x := meet a (\<sigma> x))) y)"
-      using meet_sound[OF sx_a sx_s] gamma_stateD[OF V.prems(1)]
+    fix y show "s y \<in> gamma ((\<sigma>(x := intersect a (\<sigma> x))) y)"
+      using intersect_sound[OF sx_a sx_s] gamma_stateD[OF V.prems(1)]
       by (cases "y = x") auto
   qed
 next
@@ -1146,7 +1161,7 @@ text \<open>
 
     - Reductiveness: each operator's result is below the input operand it
       refines -- refinement narrows, never enlarges. Bottom-preservation for
-      \<open>meet\<close>/\<open>inv_*\<close> -- needed so a compound \<open>afilter\<close>/\<open>bfilter\<close>'s recursive
+      \<open>intersect\<close>/\<open>inv_*\<close> -- needed so a compound \<open>afilter\<close>/\<open>bfilter\<close>'s recursive
       re-narrowing of an already-dead location cannot revive it -- follows
       generically from this via @{thm is_bot_mono} and \<open>bot\<close>'s leastness,
       rather than as separate per-operator bottom axioms.
@@ -1158,8 +1173,8 @@ text \<open>
 \<close>
 
 locale backward_domain_refined = backward_domain +
-  assumes meet_mono[intro]:
-      "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> meet a1 b1 \<le> meet a2 b2"
+  assumes intersect_mono[intro]:
+      "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
   and aval_abs_mono[intro]:
       "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2"
   and inv_less_mono:
@@ -1172,8 +1187,8 @@ locale backward_domain_refined = backward_domain +
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_minus r1 x1 y1) (inv_minus r2 x2 y2)"
   and inv_times_mono:
       "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_times r1 x1 y1) (inv_times r2 x2 y2)"
-  and meet_reductive1[intro]: "meet a b \<le> a"
-  and meet_reductive2[intro]: "meet a b \<le> b"
+  and intersect_reductive1[intro]: "intersect a b \<le> a"
+  and intersect_reductive2[intro]: "intersect a b \<le> b"
   and inv_less_reductive: "le_pair (inv_less res a1 a2) (a1, a2)"
   and inv_eq_reductive: "le_pair (inv_eq res a1 a2) (a1, a2)"
   and inv_plus_reductive: "le_pair (inv_plus r a1 a2) (a1, a2)"
@@ -1242,15 +1257,15 @@ lemma inv_times_mono_conj:
    snd (inv_times r1 x1 y1) \<le> snd (inv_times r2 x2 y2)"
   using inv_times_mono le_pair_fst le_pair_snd by metis
 
-text \<open>Bottom-preservation, bare (not \<open>[intro]\<close>): @{term "meet_bot1"}/@{term "meet_bot2"}
+text \<open>Bottom-preservation, bare (not \<open>[intro]\<close>): @{term "intersect_bot1"}/@{term "intersect_bot2"}
   conclude the same @{term is_bot} goal from different premises, so tagging both would
   make \<open>blast\<close>/\<open>auto\<close> search ambiguous wherever these are pulled in unqualified; cited
   by name instead, matching this file's existing convention for non-searched facts.\<close>
 
-lemma meet_bot1: "is_bot a \<Longrightarrow> is_bot (meet a b)"
-  using meet_reductive1 is_bot_mono by blast
-lemma meet_bot2: "is_bot b \<Longrightarrow> is_bot (meet a b)"
-  using meet_reductive2 is_bot_mono by blast
+lemma intersect_bot1: "is_bot a \<Longrightarrow> is_bot (intersect a b)"
+  using intersect_reductive1 is_bot_mono by blast
+lemma intersect_bot2: "is_bot b \<Longrightarrow> is_bot (intersect a b)"
+  using intersect_reductive2 is_bot_mono by blast
 
 lemma inv_less_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_less res a1 a2))"
   using inv_less_reductive1 is_bot_mono by blast
@@ -1319,10 +1334,10 @@ next
     unfolding afilter.simps
   proof (rule le_funI)
     fix y
-    show "(\<sigma>1(x := meet a1 (\<sigma>1 x))) y \<le> (\<sigma>2(x := meet a2 (\<sigma>2 x))) y"
+    show "(\<sigma>1(x := intersect a1 (\<sigma>1 x))) y \<le> (\<sigma>2(x := intersect a2 (\<sigma>2 x))) y"
     proof (cases "y = x")
       case True
-      thus ?thesis using meet_mono[OF V.prems(1) le_funD[OF V.prems(2)]] by simp
+      thus ?thesis using intersect_mono[OF V.prems(1) le_funD[OF V.prems(2)]] by simp
     next
       case False thus ?thesis using le_funD[OF V.prems(2)] by simp
     qed
@@ -1448,7 +1463,7 @@ next
 qed
 
 text \<open>
-  Reductiveness of the whole recursion, not just its individual \<open>meet\<close>/\<open>inv_*\<close>
+  Reductiveness of the whole recursion, not just its individual \<open>intersect\<close>/\<open>inv_*\<close>
   steps: @{term \<open>afilter e a \<sigma>\<close>}/@{term \<open>bfilter b res \<sigma>\<close>} are always \<le> their
   input state. This is what lets a compound expression's re-narrowing of an
   already-settled location never revive it -- each recursive step only shrinks
@@ -1465,8 +1480,8 @@ next
   show ?case
     unfolding afilter.simps
   proof (rule le_funI)
-    fix y show "(\<sigma>(x := meet a (\<sigma> x))) y \<le> \<sigma> y"
-      by (cases "y = x") (auto intro: meet_reductive2)
+    fix y show "(\<sigma>(x := intersect a (\<sigma> x))) y \<le> \<sigma> y"
+      by (cases "y = x") (auto intro: intersect_reductive2)
   qed
 next
   case (Plus e1 e2)

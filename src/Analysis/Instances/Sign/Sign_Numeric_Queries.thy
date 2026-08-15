@@ -11,7 +11,7 @@ text \<open>
   instance of generic derivations in the same theory --- \<open>sign_less_true\<close>/
   \<open>sign_less_false\<close> from \<open>derived_less_queries\<close> (read off \<open>inv_less_sign\<close>),
   \<open>sign_eq_true\<close> from \<open>derived_eq_true_from_less\<close> (read off \<open>sign_less_false\<close>
-  in both directions), and \<open>sign_eq_false\<close> from \<open>derived_eq_false_from_meet\<close>
+  in both directions), and \<open>sign_eq_false\<close> from \<open>derived_eq_false_from_intersection\<close>
   (read off \<open>meet_sign\<close> collapsing to \<open>SBot\<close>) --- through the \<open>sublocale\<close>
   chain every \<open>backward_domain\<close> instance carries, with no extra proof
   obligation. Exhaustive case analysis over the seven-element lattice confirms
@@ -85,7 +85,7 @@ text \<open>Only \<open>SZero\<close> concretizes to a singleton, so equality is
   is Sign's instance of \<open>derived_eq_true_from_less\<close>
   (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>),
   read off \<open>sign_less_false\<close> in both directions (integer trichotomy);
-  \<open>sign_eq_false\<close> is Sign's instance of \<open>derived_eq_false_from_meet\<close>, read off
+  \<open>sign_eq_false\<close> is Sign's instance of \<open>derived_eq_false_from_intersection\<close>, read off
   \<open>meet_sign\<close> collapsing to \<open>SBot\<close> (disjoint concretizations). Both sublocale
   under \<open>backward_domain\<close> with no extra proof obligation, and exhaustive case
   analysis over the seven-element lattice confirms each classifies exactly the
@@ -110,7 +110,7 @@ proof -
 qed
 
 definition sign_eq_false :: "sign \<Rightarrow> sign \<Rightarrow> bool" where
-  "sign_eq_false = sign_eq_false_of_meet"
+  "sign_eq_false = sign_eq_false_of_intersection"
 
 lemma sign_eq_false_eq: "sign_eq_false a b \<longleftrightarrow> meet_sign a b = SBot"
   by (cases a; cases b;

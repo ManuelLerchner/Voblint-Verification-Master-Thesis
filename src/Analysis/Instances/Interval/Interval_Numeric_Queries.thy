@@ -244,30 +244,25 @@ global_interpretation interval_numeric_queries:
        interval_eq_true_sound
        interval_eq_false_sound)
 
-subsection \<open>Precision comparison against the generic meet-based derivation\<close>
+subsection \<open>Semantic intersection versus raw lattice meet\<close>
 
 text \<open>
-  Not a migration: unlike Sign, whose \<open>SBot\<close> is the lattice's unique empty
-  representative, the raw \<open>ivl\<close> type has infinitely many non-canonical empty
-  representations (any \<open>Ivl l u\<close> with \<open>l > u\<close>, documented at
-  \<open>normalize_ivl\<close>), and only \<open>Ivl PlusInf MinInf\<close> is literally \<open>bot\<close>. The
-  generic \<open>derived_eq_false_from_meet\<close> derivation
-  (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>)
-  tests \<open>meet a b = bot\<close> by that literal equality, so instantiating it at the
-  lattice \<^const>\<open>inf\<close> under-approximates disjointness severely: two disjoint,
-  non-empty, finite intervals meet to an empty-but-non-canonical result, not to
-  \<open>Ivl PlusInf MinInf\<close> itself. The witness below is disjoint by
-  \<open>interval_eq_false\<close>'s own (already sound) table, yet its raw meet is provably
-  not \<open>bot\<close>.
+  Unlike Sign, whose \<open>SBot\<close> is the lattice's unique empty representative, the
+  raw \<open>ivl\<close> type has infinitely many non-canonical empty representations
+  (any \<open>Ivl l u\<close> with \<open>l > u\<close>, documented at \<open>normalize_ivl\<close>), and only
+  \<open>Ivl PlusInf MinInf\<close> is literally \<open>bot\<close>. Testing the raw
+  \<^const>\<open>inf\<close> against \<open>bot\<close> therefore under-approximates disjointness:
+  two disjoint, non-empty finite intervals meet to an empty-but-non-canonical
+  result. The witness below is disjoint by \<open>interval_eq_false\<close>'s sound table,
+  yet its representation-level meet is not \<open>bot\<close>.
 
-  The obstacle is a property of the lattice \<^const>\<open>inf\<close>, not of the domain.
-  \<^const>\<open>meet_ivl_norm\<close> --- the semantic intersection the backward filters are
-  interpreted with --- returns \<^const>\<open>bot\<close> on that same witness, so the generic
-  derivation instantiated there would classify this pair correctly.  Interval
-  still keeps its own hand-tuned tables here; rerouting the queries through the
-  semantic intersection is a separate change, not made with this one.
-  \<open>interval_eq_true\<close> is unaffected either way, since it is derived from
-  \<open>interval_less_false\<close> in both directions rather than from a meet.
+  The generic \<^locale>\<open>derived_eq_false_from_intersection\<close> instead tests
+  semantic intersection. \<^const>\<open>intersect_ivl\<close> returns canonical \<^const>\<open>bot\<close>
+  on the same witness, so the generic derivation classifies it correctly.
+  Interval also exposes its hand-tuned query table; both operations agree on
+  this disjointness witness. \<open>interval_eq_true\<close> is independent of either
+  operation because it derives equality from \<open>interval_less_false\<close> in both
+  directions.
 \<close>
 
 lemma interval_eq_false_witness_disjoint:
@@ -278,8 +273,8 @@ lemma interval_meet_of_witness_not_bot:
   "meet_ivl (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) \<noteq> bot"
   by (simp add: bot_ivl_def)
 
-lemma interval_meet_norm_of_witness_bot:
-  "meet_ivl_norm (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) = bot"
+lemma interval_intersect_of_witness_bot:
+  "intersect_ivl (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) = bot"
   by eval
 
 end

@@ -2024,12 +2024,12 @@ let rec normalize_ivl
               (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
           then v else bot_ivla));;
 
-let rec mk_ivl l u = normalize_ivl (Ivl (l, u));;
-
-let rec meet_ivl_norm
+let rec meet_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    mk_ivl (if less_eq_eint l2 l1 then l1 else l2)
-      (if less_eq_eint u1 u2 then u1 else u2);;
+    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
+          (if less_eq_eint u1 u2 then u1 else u2));;
+
+let rec intersect_ivl a b = normalize_ivl (meet_ivl a b);;
 
 let rec remove_resolved_key
   loc x1 = match loc, x1 with loc, [] -> []
@@ -2125,7 +2125,7 @@ let rec afilter_ivl_st
   gs x1 a s = match gs, x1, a, s with
     gs, V x, a, s ->
       update_resolved_st_q bot_ivl s (location_of gs x)
-        (meet_ivl_norm a (fun_of_resolved_st_q_for bot_ivl gs s x))
+        (intersect_ivl a (fun_of_resolved_st_q_for bot_ivl gs s x))
     | gs, Plus (e1, e2), a, s ->
         (let (a1, a2) =
            inv_conservative a
@@ -2148,11 +2148,6 @@ let rec afilter_ivl_st
            in
           afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s))
     | gs, N v, a, s -> s;;
-
-let rec meet_ivl
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
-          (if less_eq_eint u1 u2 then u1 else u2));;
 
 let rec inf_ivl x = meet_ivl x;;
 
@@ -3661,9 +3656,10 @@ let rec sign_eq_true x = sign_eq_true_of_less x;;
 
 let rec sign_less_false x = sign_less_false_of_inv x;;
 
-let rec sign_eq_false_of_meet a b = equal_signa (meet_sign a b) bot_signa;;
+let rec sign_eq_false_of_intersection
+  a b = equal_signa (meet_sign a b) bot_signa;;
 
-let rec sign_eq_false x = sign_eq_false_of_meet x;;
+let rec sign_eq_false x = sign_eq_false_of_intersection x;;
 
 let rec sign_check_true
   x0 d = match x0, d with Bc v, d -> v

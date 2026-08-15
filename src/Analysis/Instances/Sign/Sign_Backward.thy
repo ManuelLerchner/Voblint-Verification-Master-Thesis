@@ -353,7 +353,7 @@ global_interpretation sign_backward_domain:
     and sign_less_true_of_inv = sign_backward_domain.less_true
     and sign_less_false_of_inv = sign_backward_domain.less_false
     and sign_eq_true_of_less = sign_backward_domain.eq_true
-    and sign_eq_false_of_meet = sign_backward_domain.eq_false
+    and sign_eq_false_of_intersection = sign_backward_domain.eq_false
 proof unfold_locales
   fix n :: int and a b :: sign
   assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
@@ -448,7 +448,7 @@ text \<open>
   \<open>sign_eq_true_of_less\<close> sits two \<open>sublocale\<close> layers below \<open>backward_domain\<close>
   (\<open>backward_domain \<subseteq> derived_less_queries \<subseteq> derived_eq_true_from_less\<close>), one
   layer deeper than \<open>sign_less_true_of_inv\<close>/\<open>sign_less_false_of_inv\<close> or
-  \<open>sign_eq_false_of_meet\<close>. The automatic code-equation chain the \<open>defines\<close>
+  \<open>sign_eq_false_of_intersection\<close>. The automatic code-equation chain the \<open>defines\<close>
   clause above sets up does not reach that deep, so this restates the
   definition explicitly in terms of the already-executable
   \<open>sign_less_false_of_inv\<close>, tagged \<open>[code]\<close> directly.

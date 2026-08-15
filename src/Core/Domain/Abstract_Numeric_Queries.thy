@@ -10,7 +10,7 @@ text \<open>
   values --- for free: narrowing under the assumed truth value collapses to \<open>bot\<close>
   exactly when no witness pair could have satisfied that assumption, by \<open>gamma_bot\<close>.
   Kept as its own locale, separate from @{locale backward_domain} itself, so a domain
-  with only \<open>inv_less\<close> (no \<open>meet\<close>/\<open>aval_abs\<close>/\<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close>)
+  with only \<open>inv_less\<close> (no \<open>intersect\<close>/\<open>aval_abs\<close>/\<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close>)
   could still interpret it; @{locale backward_domain} picks it up automatically through
   the \<open>sublocale\<close> declaration below, with no extra proof obligation. Like
   @{locale backward_domain} itself, \<open>gamma\<close> is the @{class sound_domain} class
@@ -18,7 +18,7 @@ text \<open>
   without an extra premise. \<open>bfilter\<close>'s own \<open>Eq\<close> case narrows through \<open>inv_eq\<close>
   directly (both branches), a separate backward-narrowing operator from the
   boolean query interface here; \<open>eq_true\<close>/\<open>eq_false\<close> are derived below from
-  \<open>less_false\<close> and \<open>meet\<close> instead, not from \<open>inv_less\<close> or \<open>inv_eq\<close>.
+  \<open>less_false\<close> and \<open>intersect\<close> instead, not from \<open>inv_less\<close> or \<open>inv_eq\<close>.
 \<close>
 
 locale derived_less_queries =
@@ -79,14 +79,15 @@ text \<open>
   \<open>less_false_sound\<close>, so \<open>derived_eq_true_from_less\<close> sublocales under it
   directly with no new premise.
 
-  \<open>eq_false\<close> follows from \<open>meet\<close>, via the same \<open>meet_sound\<close>/\<open>gamma_bot\<close> pair
-  \<open>backward_domain\<close> already assumes for narrowing: two values with no common
-  witness meet to \<open>bot\<close>, whose concretization is empty. \<open>derived_eq_false_from_meet\<close>
-  sublocales under \<open>backward_domain\<close> directly, reusing its \<open>meet_sound\<close> premise.
+  \<open>eq_false\<close> follows from \<open>intersect\<close>, via the same \<open>intersect_sound\<close>/\<open>gamma_bot\<close> pair
+  \<open>backward_domain\<close> already assumes for narrowing: if intersection yields
+  \<open>bot\<close>, any common witness would belong to its empty concretization.
+  \<open>derived_eq_false_from_intersection\<close> sublocales under \<open>backward_domain\<close>
+  directly, reusing its \<open>intersect_sound\<close> premise.
 
   Both locales fix their own capability rather than re-fixing \<open>inv_less\<close> or
-  \<open>meet\<close> as \<open>backward_domain\<close> does, so a domain with only one of these
-  operations --- a raw \<open>less_false\<close> query, or a raw \<open>meet\<close> --- could still
+  \<open>intersect\<close> as \<open>backward_domain\<close> does, so a domain with only one of these
+  operations --- a raw \<open>less_false\<close> query, or a raw \<open>intersect\<close> --- could still
   interpret the matching locale on its own.
 \<close>
 
@@ -115,14 +116,14 @@ end
 sublocale derived_less_queries \<subseteq> derived_eq_true_from_less less_false
   by unfold_locales (rule less_false_sound)
 
-locale derived_eq_false_from_meet =
-  fixes meet :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> 'a"
-  assumes meet_sound_for_eq[intro]:
-    "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (meet a b)"
+locale derived_eq_false_from_intersection =
+  fixes intersect :: "'a::sound_domain \<Rightarrow> 'a \<Rightarrow> 'a"
+  assumes intersect_sound_for_eq[intro]:
+    "n \<in> gamma a \<Longrightarrow> n \<in> gamma b \<Longrightarrow> n \<in> gamma (intersect a b)"
 begin
 
 definition eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool" where
-  "eq_false a b \<longleftrightarrow> meet a b = bot"
+  "eq_false a b \<longleftrightarrow> intersect a b = bot"
 
 lemma eq_false_sound:
   assumes "eq_false a b" and "i \<in> gamma a" and "j \<in> gamma b"
@@ -131,16 +132,16 @@ proof
   assume heq: "i = j"
   have hia: "i \<in> gamma a" using assms(2) .
   have hib: "i \<in> gamma b" using assms(3) heq by simp
-  have "i \<in> gamma (meet a b)" using meet_sound_for_eq[OF hia hib] .
-  moreover have "meet a b = bot" using assms(1) unfolding eq_false_def .
+  have "i \<in> gamma (intersect a b)" using intersect_sound_for_eq[OF hia hib] .
+  moreover have "intersect a b = bot" using assms(1) unfolding eq_false_def .
   ultimately have "i \<in> gamma (bot :: 'a)" by simp
   then show False using gamma_bot by auto
 qed
 
 end
 
-sublocale backward_domain \<subseteq> derived_eq_false_from_meet meet
-  by unfold_locales (rule meet_sound)
+sublocale backward_domain \<subseteq> derived_eq_false_from_intersection intersect
+  by unfold_locales (rule intersect_sound)
 
 section \<open>Generic numeric relational queries\<close>
 
