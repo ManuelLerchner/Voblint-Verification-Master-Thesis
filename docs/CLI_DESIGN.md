@@ -2,7 +2,7 @@
 
 Design only — no implementation in this pass. Scoped by issue #29 as a deliberate follow-up
 once a generated, runtime-parametric analyzer API existed; it now does
-(`analyse`/`Voblint_Analyse`, see `Example_Analysis_Dispatch.thy`).
+(`analyse`/`Voblint_Analyse`, see `Analyse_Dispatch.thy`).
 
 Issue #97 ("External `.voblint` regression corpus with inline expectations and standalone
 parser") already covers the standalone parser and `tests/regression/` corpus this design

@@ -119,13 +119,15 @@ proof (intro allI impI)
   have ext: "falls_through (body decl) \<longrightarrow>
                (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
     using Edef Esub by auto
+  have spNone: "special_table p = None"
+    using wf_compile_input_special_table_none[OF wf pd] .
   show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
           \<and> (FunctionEntry p, EA_Nop, en) \<in> intra ?g
           \<and> (falls_through (body decl) \<longrightarrow>
                (k, EA_Ret None p, FunctionResult p) \<in> intra ?g)
-          \<and> source_com (body decl)"
-    using cb Ebsub Ksub ent ext srccom by blast
+          \<and> source_com (body decl) \<and> special_table p = None"
+    using cb Ebsub Ksub ent ext srccom spNone by blast
 
 qed
 

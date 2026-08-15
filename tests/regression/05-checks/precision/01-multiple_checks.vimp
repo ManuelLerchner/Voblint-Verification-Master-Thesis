@@ -5,6 +5,6 @@ void main() {
   __voblint_check(0 < x); // PROVED
   x := 0 - 1;
   __voblint_check(0 < x); // REFUTED
-  y := random();
+  y := __voblint_nondet_int();
   __voblint_check(0 < y) // UNKNOWN
 }

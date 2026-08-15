@@ -285,7 +285,7 @@ section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
 text \<open>
   \<open>sign_exec_prog\<close> above is the older \<open>side_cfg_T_eff_st\<close> pipeline, mirroring
   \<open>Interval_Exec_Sound\<close>'s \<open>ivl_exec_prog\<close> exactly. The exported runtime API \<open>analyse\<close>
-  (\<open>Example_Analysis_Dispatch\<close>, downstream in Examples) dispatches through a
+  (\<open>Analyse_Dispatch\<close>, downstream in Examples) dispatches through a
   different, newer pipeline instead: the native D/G equation system (\<open>dg_gen_of\<close>,
   \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>), because that is what the \<open>Exec_Sign_DG_Run\<close> flagship
   example (\<open>dgEx_sol\<close>, downstream in Examples) already used before this API existed. Only the
@@ -317,9 +317,29 @@ text \<open>
 
 definition analyse_sign_env_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> sign abs_state" where
   "analyse_sign_env_for gs p v =
-     combine_env\<^sup># gs
+     combine_env_abs gs
        (fun_of_exec_dg_st_for gs (locals (snd (analyse_sign_for gs p) (Inl (v, ())))))
        (fun_of_exec_dg_st_for gs (globs (snd (analyse_sign_for gs p) (Inr ()))))"
+
+text \<open>
+  Same repeated-solve hazard \<open>analyse_sign_report_for_code\<close> below already guards against, one
+  layer up: naive definitional unfolding re-runs \<^const>\<open>analyse_sign_for\<close> once per \<open>v\<close> a caller
+  queries, not once per solved analysis. A caller that queries several points against the *same*
+  solved analysis -- e.g. a full-state GraphViz render walking every CFG node -- must not hit the
+  unfolded form. The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, so \<^const>\<open>analyse_sign_for\<close>
+  is solved exactly once per partial application to \<open>gs p\<close>, reused for every \<open>v\<close> queried
+  afterward against the resulting closure.
+\<close>
+
+declare analyse_sign_env_for_def [code del]
+
+lemma analyse_sign_env_for_code [code]:
+  "analyse_sign_env_for gs p =
+     (let sol = snd (analyse_sign_for gs p)
+      in (\<lambda>v. combine_env_abs gs
+                (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+                (fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))))"
+  unfolding analyse_sign_env_for_def Let_def by (rule refl)
 
 text \<open>
   Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval\<close>'s shape.

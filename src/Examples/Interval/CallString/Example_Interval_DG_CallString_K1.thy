@@ -347,14 +347,14 @@ definition ivl_ctx_sg_1 :: "pp \<times> cfg_node list + call_string_gk \<Rightar
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst nest_1_sol
-           then combine_env\<^sup># nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global)))
+          then combine_env_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
 
 lemma ivl_ctx_sg_1_covered:
   "(v, ctx) \<in> fst nest_1_sol
    \<Longrightarrow> ivl_ctx_sg_1 (Inl (v, ctx))
-       = combine_env\<^sup># nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global)))"
+       = combine_env_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global)))"
   by (simp add: ivl_ctx_sg_1_def)
 
 lemma ivl_ctx_sg_1_uncovered_empty:
@@ -404,7 +404,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst nest_1_sol"
   thus "ivl_ctx_sg_1 (Inl (v, ctx))
-          = combine_env\<^sup># nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global)))"
+          = combine_env_abs nest_gs (locals (sigma_1 (Inl (v, ctx)))) (globs (sigma_1 (Inr Global)))"
     by (rule ivl_ctx_sg_1_covered)
 next
   fix v ctx
@@ -505,7 +505,7 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg_1 and admiss = "admis
         and S = "cinit_stores nest_gs" and g = nest_cfg and gs = nest_gs])
   \<comment> \<open>ENTRY_G\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
-    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env_abs\<close> exactly recovers
     \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
     the caller's local bound (\<open>entry_locals_ge_s0d_1\<close>) and the entry's global-seed
     bound (\<open>nest_1_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>

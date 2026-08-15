@@ -15,17 +15,19 @@ definition sign_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (unit, sign) ef
 
 lemma sign_etf_edge_tree:
   "apply_etf (sign_etf gs) a u = mixed_etf_edge_tree gs (sign_tf_for gs) a u"
-  unfolding sign_etf_def apply_etf_mixed_of_transfer by simp
+  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def
+  by (cases a) simp_all
 
 lemma sign_etf_edge_tree_mixed:
   "apply_etf (sign_etf gs) a u =
    (if local_edge_action gs a then local_edge_tree gs (apply_tf (sign_tf_for gs) a) u
     else unit_edge_tree gs (apply_tf (sign_tf_for gs) a) u)"
-  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def by simp
+  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def
+  by (cases a) simp_all
 
 lemma sign_etf_combine_tree:
-  "etf_combine (sign_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding sign_etf_def etf_combine_mixed_of_transfer by simp
+  "etf_combine_collect (sign_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
+  unfolding sign_etf_def etf_combine_collect_mixed_of_transfer by simp
 
 lemma sign_etf_enter_tree:
   "etf_enter (sign_etf gs) fs as cl = unit_edge_tree gs (enter\<^sup># (sign_tf_for gs) fs as) cl"
@@ -67,8 +69,8 @@ lemma sign_etf_unit_edge_tree:
   unfolding sign_etf_unit_def apply_etf_unit_of_transfer by simp
 
 lemma sign_etf_unit_combine_tree:
-  "etf_combine (sign_etf_unit gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding sign_etf_unit_def etf_combine_unit_of_transfer by simp
+  "etf_combine_collect (sign_etf_unit gs) dst cc ex = unit_combine_tree gs dst cc ex"
+  unfolding sign_etf_unit_def etf_combine_collect_unit_of_transfer by simp
 
 lemma sign_etf_unit_enter_tree_tf:
   "etf_enter (sign_etf_unit gs) fs as cl = unit_edge_tree gs (enter\<^sup># (sign_tf_for gs) fs as) cl"

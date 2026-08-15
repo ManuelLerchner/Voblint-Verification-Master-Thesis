@@ -911,12 +911,14 @@ definition unit_dg_spec_st_for ::
    \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_spec"
 where
   "unit_dg_spec_st_for gs tf_st enter_st = \<lparr>
-    dgs_nop        = unit_step_st (tf_st EA_Nop),
+    dgs_skip       = unit_step_st (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st (tf_st (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_st (tf_st (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_st (tf_st (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_st (tf_st (EA_AssumeNot b))),
+    dgs_special    = (\<lambda>sc x. unit_step_st (tf_st (EA_Special sc x))),
+    dgs_branch     = (\<lambda>b pol. unit_step_st (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
+    dgs_body       = (\<lambda>p. unit_step_st (tf_st EA_Nop)),
+    dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
+    dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st (tf_st (EA_Check bc))),
     dgs_combine_env    = unit_combine_step_st_env,
     dgs_combine_assign = unit_combine_step_st_assign_for gs
   \<rparr>"
@@ -937,13 +939,13 @@ lemma snd_unit_step_st [simp]:
   "snd (unit_step_st f d g) = restrict_local_resolved_q (f (combine_resolved_st_q d g))"
   unfolding unit_step_st_def Let_def by simp
 
-lemma fst_dgs_nop_for:
-  "fst (dgs_nop (unit_dg_spec_st_for gs tf_st enter_st) d g)
+lemma fst_dgs_skip_for:
+  "fst (dgs_skip (unit_dg_spec_st_for gs tf_st enter_st) d g)
      = restrict_global_resolved_q (tf_st EA_Nop (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
-lemma snd_dgs_nop_for:
-  "snd (dgs_nop (unit_dg_spec_st_for gs tf_st enter_st) d g)
+lemma snd_dgs_skip_for:
+  "snd (dgs_skip (unit_dg_spec_st_for gs tf_st enter_st) d g)
      = restrict_local_resolved_q (tf_st EA_Nop (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
@@ -1021,12 +1023,8 @@ lemma unit_combine_step_st_commute_for:
 lemma dg_spec_step_unit_st_for:
   assumes reduces: "action_reduces tf_st"
   shows "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
-proof -
-  interpret action_reduces tf_st by (rule reduces)
-  show ?thesis
-    unfolding unit_dg_spec_st_for_def
-    by (cases a) (simp_all add: ret_none ret_some check split: option.splits)
-qed
+  unfolding unit_dg_spec_st_for_def
+  by (cases a) simp_all
 
 subsection \<open>The complete lifted D/G specification, additive alongside \<^const>\<open>unit_dg_spec_st_for\<close> (issue #123)\<close>
 
@@ -1044,12 +1042,15 @@ definition unit_dg_spec_st_for_lifted ::
    \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_spec"
 where
   "unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = \<lparr>
-    dgs_nop        = unit_step_st_lifted is_bot_pred (tf_st EA_Nop),
+    dgs_skip       = unit_step_st_lifted is_bot_pred (tf_st EA_Nop),
     dgs_assign     = (\<lambda>x e. unit_step_st_lifted is_bot_pred (tf_st (EA_Assign x e))),
-    dgs_random     = (\<lambda>x. unit_step_st_lifted is_bot_pred (tf_st (EA_Random x))),
-    dgs_assume     = (\<lambda>b. unit_step_st_lifted is_bot_pred (tf_st (EA_Assume b))),
-    dgs_assume_not = (\<lambda>b. unit_step_st_lifted is_bot_pred (tf_st (EA_AssumeNot b))),
+    dgs_special    = (\<lambda>sc x. unit_step_st_lifted is_bot_pred (tf_st (EA_Special sc x))),
+    dgs_branch     = (\<lambda>b pol. unit_step_st_lifted is_bot_pred
+      (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
+    dgs_body       = (\<lambda>p. unit_step_st_lifted is_bot_pred (tf_st EA_Nop)),
+    dgs_return     = (\<lambda>e p. unit_step_st_lifted is_bot_pred (tf_st (EA_Ret e p))),
     dgs_enter      = (\<lambda>xs es. unit_step_st_lifted is_bot_pred (enter_st xs es)),
+    dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st_lifted is_bot_pred (tf_st (EA_Check bc))),
     dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_st_env_lifted dc g),
     dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de merged)
   \<rparr>"
@@ -1064,7 +1065,7 @@ proof -
   interpret action_reduces tf_st by (rule reduces)
   show ?thesis
     unfolding unit_dg_spec_st_for_lifted_def
-    by (cases a) (simp_all add: ret_none ret_some check split: option.splits)
+    by (cases a) (simp_all add: check)
 qed
 
 lemma dgs_enter_unit_dg_spec_st_for_lifted:
@@ -1138,7 +1139,7 @@ text \<open>
 
 theorem unit_dg_spec_st_for_lifted_dg_spec_step_commute:
   assumes reduces: "action_reduces tf_st"
-    and commute: "\<And>s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
+    and commute: "\<And>a s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
            (dg_spec_step (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g) =

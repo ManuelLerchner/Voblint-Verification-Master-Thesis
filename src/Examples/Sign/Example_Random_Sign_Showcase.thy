@@ -7,33 +7,38 @@ begin
 hide_const phase.N
 
 text \<open>
-  \<open>x := random()\<close> is nondeterministic. \<^const>\<open>random_sign\<close>
+  \<open>x := __voblint_nondet_int()\<close> is nondeterministic. \<^const>\<open>special_sign\<close>
   answers it by forgetting \<open>x\<close> entirely -- setting it to \<^term>\<open>STop\<close>,
   the sign abstraction of the infinite concrete successor set
   \<open>{s(x := v) | v. True}\<close> -- regardless of what was known about \<open>x\<close>
   beforehand.
 
   A subsequent guard still recovers precision. For
-  \<open>x := 0; x := random(); if (x > 0) y := x else y := 0 - x\<close>, the leading
-  \<open>x := 0\<close> is overwritten by \<open>random()\<close> -- whatever was known about \<open>x\<close>
-  beforehand is gone -- yet each branch narrows \<open>x\<close> before assigning \<open>y\<close>,
-  and the two branches join to a single tight sign at the merge point: the
-  branch guards recover enough information to derive \<open>y = SNonNeg\<close>, rather
-  than losing all useful information after propagating the arbitrary value
-  of \<open>x\<close> into \<open>y\<close>. The equation-system generator and the vendored TD solver
-  compute this directly; no hand-derived abstract state is asserted here.
+  \<open>x := 0; x := __voblint_nondet_int(); if (x > 0) y := x else y := 0 - x\<close>,
+  the leading \<open>x := 0\<close> is overwritten by the nondeterministic call --
+  whatever was known about \<open>x\<close> beforehand is gone -- yet each branch
+  narrows \<open>x\<close> before assigning \<open>y\<close>, and the two branches join to a single
+  tight sign at the merge point: the branch guards recover enough
+  information to derive \<open>y = SNonNeg\<close>, rather than losing all useful
+  information after propagating the arbitrary value of \<open>x\<close> into \<open>y\<close>. The
+  equation-system generator and the vendored TD solver compute this
+  directly; no hand-derived abstract state is asserted here.
 \<close>
 
 subsection \<open>The source program\<close>
 
+text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so
+  it cannot be written inside the \<open>program { ... }\<close> quotation the way other
+  calls can: Pure's inner-syntax lexer reserves leading-underscore tokens for
+  translation-internal nonterminals, rejecting any user identifier that
+  begins with one.  The call is spliced in directly instead, exactly as
+  \<^const>\<open>mk_program\<close> (the constructor \<open>program { ... }\<close> itself expands to)
+  builds any procedure body from a \<^typ>\<open>VIMP_Proc.com\<close>.\<close>
 definition random_guard_program :: imp_prog where
-  "random_guard_program = program {
-     void main() {
-       x := 0;
-       x := random();
-       if (0 < x) { y := x } else { y := 0 - x }
-     }
-   }"
+  "random_guard_program = mk_program []
+     (Seq (Seq (imp \<lbrakk> x := 0 \<rbrakk>) (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int []))
+          (imp \<lbrakk> if (0 < x) { y := x } else { y := 0 - x } \<rbrakk>))
+     []"
 
 text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
   gives is trivially false everywhere.\<close>
@@ -44,7 +49,7 @@ lemma random_guard_program_declared_global_vars [simp]:
   "declared_global_vars random_guard_program = []"
   by (simp add: random_guard_program_def)
 
-subsection \<open>Non-vacuity: a concrete run where \<open>random()\<close> returns 42\<close>
+subsection \<open>Non-vacuity: a concrete run where the nondeterministic call returns 42\<close>
 
 text \<open>
   \<open>random_guard_exit_y_nonneg\<close> bounds every reachable exit state, but says
@@ -63,9 +68,12 @@ lemma random_guard_run_42:
 proof -
   have step1: "pcompletes gs \<Pi> (Assign (STR ''x'') (N 0)) s (s((STR ''x'') := 0))"
     by (metis aval.simps(1) pcompletes_assign)
-  have step2: "pcompletes gs \<Pi> (Random (STR ''x'')) (s((STR ''x'') := 0)) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
-    by (rule pcompletes_random)
-  have step12: "pcompletes gs \<Pi> (Seq (Assign (STR ''x'') (N 0)) (Random (STR ''x''))) s
+  have step2: "pcompletes gs \<Pi> (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])
+                 (s((STR ''x'') := 0)) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
+    by (rule pcompletes_special_nondet_int)
+  have step12: "pcompletes gs \<Pi>
+                  (Seq (Assign (STR ''x'') (N 0))
+                       (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])) s
                   ((s((STR ''x'') := 0))((STR ''x'') := 42))"
     using pcompletes_Seq[OF step1 step2] .
   have guard_true: "bval (Less (N 0) (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
@@ -78,7 +86,7 @@ proof -
       ((s((STR ''x'') := 0))((STR ''x'') := 42)) (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
     using pcompletes_IfTrue[OF guard_true step3] .
   have "pcompletes gs \<Pi>
-      (Seq (Seq (Assign (STR ''x'') (N 0)) (Random (STR ''x'')))
+      (Seq (Seq (Assign (STR ''x'') (N 0)) (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int []))
         (If (Less (N 0) (V (STR ''x''))) (Assign (STR ''y'') (V (STR ''x''))) (Assign (STR ''y'') (Minus (N 0) (V (STR ''x''))))))
       s (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"
     using pcompletes_Seq[OF step12 step3if] .
@@ -133,7 +141,7 @@ corollary random_guard_exit_sound:
 text \<open>
   Closing issue #43: for every concrete execution state that reaches the
   exit of \<open>random_guard_program\<close>, regardless of the value chosen by
-  \<open>random()\<close>, \<open>y\<close> is nonnegative. \<open>random_guard_exit_sound\<close>
+  the nondeterministic call, \<open>y\<close> is nonnegative. \<open>random_guard_exit_sound\<close>
   over-approximates every such exit state by the computed
   \<^const>\<open>sign_exec_prog\<close> result; \<open>random_guard_exec_y\<close> pins that result's
   \<open>y\<close> to \<^term>\<open>SNonNeg\<close>, whose concretization is exactly the nonnegative
@@ -164,7 +172,7 @@ subsection \<open>Annotated CFG\<close>
 text \<open>
   \<^const>\<open>sign_annotated_dot_prog_lit\<close> renders the compiled CFG with every node
   labelled by its computed sign abstract state, confirming visually that
-  \<open>x\<close> shows \<open>STop\<close> right after \<open>random()\<close>, narrows to \<open>SPos\<close>/\<open>SNonPos\<close> on
+  \<open>x\<close> shows \<open>STop\<close> right after the nondeterministic call, narrows to \<open>SPos\<close>/\<open>SNonPos\<close> on
   each branch, and that \<open>y\<close> is \<open>SNonNeg\<close> at the exit.
 \<close>
 

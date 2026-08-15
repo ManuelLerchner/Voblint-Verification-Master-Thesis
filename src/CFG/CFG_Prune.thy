@@ -14,10 +14,10 @@ text \<open>
     the callee entry's abstract state depends on the caller state routed through
     \<open>etf_enter\<close>.
   \<^item> COMB_CALLER: the same call gives \<open>c \<rightarrow> k\<close> --- the continuation depends on the saved
-    caller state via \<open>etf_combine\<close>.  This is not a concrete execution edge; execution
+    caller state via \<open>etf_combine_collect\<close>.  This is not a concrete execution edge; execution
     does not skip the callee.
   \<^item> COMB_RESULT: the same call gives \<open>FunctionResult p \<rightarrow> k\<close> --- the continuation depends
-    on the callee's result, the second \<open>etf_combine\<close> argument.
+    on the callee's result, the second \<open>etf_combine_collect\<close> argument.
 
   \<open>c \<rightarrow> k\<close> and \<open>FunctionResult p \<rightarrow> k\<close> are combine dependencies of the analysis, kept
   visibly separate from \<open>intra g\<close>.  They are never added to \<open>intra g\<close>.
@@ -186,12 +186,7 @@ next
   from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
 next
-  case (Random x)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Random x, k) \<in> intra g"
-    by (auto split: prod.splits)
-  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_intra)
-  then show ?case ..
-next
+
   case (Check b)
   then have en: "en = Statement n" and mem: "(Statement n, EA_Check b, k) \<in> intra g"
     by (auto split: prod.splits)
@@ -265,12 +260,41 @@ next
 next
   case (Call dst q actuals)
   have en: "en = Statement n"
-    and mem: "(Statement n,
-                CallEdge dst (call_formals \<Pi> q) actuals,
-                FunctionEntry q, k) \<in> calls g"
-    using Call.prems by (auto split: prod.splits)
-  from mem have "cfg_reaches g en k" unfolding en by (rule cfg_reaches_comb_caller)
-  then show ?case ..
+    using Call.prems by (auto simp: Let_def split: prod.splits option.splits)
+  have "cfg_reaches g (Statement n) k"
+  proof (cases "special_table q")
+    case None
+    with Call.prems have
+      "(Statement n, CallEdge dst (call_formals \<Pi> q) actuals, FunctionEntry q, k) \<in> calls g"
+      by (auto simp: Let_def split: prod.splits)
+    then show ?thesis by (rule cfg_reaches_comb_caller)
+  next
+    case (Some desc)
+    note st = this
+    show ?thesis
+    proof (cases "classify_special desc actuals")
+      case None
+      with st Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+        by (auto simp: Let_def split: prod.splits)
+      then show ?thesis by (rule cfg_reaches_intra)
+    next
+      case (Some sc)
+      note cl = this
+      show ?thesis
+      proof (cases dst)
+        case None
+        with st cl Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      next
+        case (Some x)
+        with st cl Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      qed
+    qed
+  qed
+  then show ?case unfolding en ..
 next
   case (Return e)
   have en: "en = Statement n"
@@ -313,11 +337,7 @@ next
     by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
-  case (Random x)
-  then have en: "en = Statement n" and mem: "(Statement n, EA_Random x, k) \<in> intra g"
-    by (auto split: prod.splits)
-  from mem show ?case unfolding en by (rule cfg_reaches_intra)
-next
+
   case (Check b)
   then have en: "en = Statement n" and mem: "(Statement n, EA_Check b, k) \<in> intra g"
     by (auto split: prod.splits)
@@ -374,11 +394,41 @@ next
 next
   case (Call dst q actuals)
   have en: "en = Statement n"
-    and mem: "(Statement n,
-                CallEdge dst (call_formals \<Pi> q) actuals,
-                FunctionEntry q, k) \<in> calls g"
-    using Call.prems by (auto split: prod.splits)
-  from mem show ?case unfolding en by (rule cfg_reaches_comb_caller)
+    using Call.prems by (auto simp: Let_def split: prod.splits option.splits)
+  have "cfg_reaches g (Statement n) k"
+  proof (cases "special_table q")
+    case None
+    with Call.prems have
+      "(Statement n, CallEdge dst (call_formals \<Pi> q) actuals, FunctionEntry q, k) \<in> calls g"
+      by (auto simp: Let_def split: prod.splits)
+    then show ?thesis by (rule cfg_reaches_comb_caller)
+  next
+    case (Some desc)
+    note st = this
+    show ?thesis
+    proof (cases "classify_special desc actuals")
+      case None
+      with st Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+        by (auto simp: Let_def split: prod.splits)
+      then show ?thesis by (rule cfg_reaches_intra)
+    next
+      case (Some sc)
+      note cl = this
+      show ?thesis
+      proof (cases dst)
+        case None
+        with st cl Call.prems have "(Statement n, EA_Nop, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      next
+        case (Some x)
+        with st cl Call.prems have "(Statement n, EA_Special sc x, k) \<in> intra g"
+          by (auto simp: Let_def split: prod.splits)
+        then show ?thesis by (rule cfg_reaches_intra)
+      qed
+    qed
+  qed
+  then show ?case unfolding en .
 next
   case (Return e)
   then show ?case by simp
@@ -404,7 +454,6 @@ proof (induction c arbitrary: k n n' en E K)
 next
   case (Assign x a) then show ?case by simp
 next
-  case (Random x) then show ?case by simp
 next
   case (Check b) then show ?case by simp
 next

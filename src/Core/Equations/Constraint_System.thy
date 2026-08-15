@@ -35,28 +35,68 @@ text \<open>
   Parameterised by the abstract value type 'a.
 \<close>
 
+text \<open>
+  \<open>tf_branch\<close> is the single, polarity-parametrized branch transfer, matching Goblint's
+  \<open>Spec.branch : man -> exp -> bool -> D.t\<close> (one operation taking a boolean outcome, not two
+  independently-named callbacks). \<open>tf_branch tf b True\<close> takes the branch where \<open>b\<close> evaluates
+  true; \<open>tf_branch tf b False\<close> takes the branch where \<open>b\<close> evaluates false.
+\<close>
+
+subsection \<open>Analysis events\<close>
+
+text \<open>
+  An \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
+  control-flow transfer: a domain may observe it, but it must not by itself refine
+  execution (see the note on \<open>tf_event\<close>'s dispatch below). This matches Goblint's
+  own separation of its ordinary
+  \<open>Spec\<close> transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>, which
+  handles \<open>Events.Assert\<close> and similar occurrences outside the ordinary transfer
+  vocabulary. Voblint's sole current event is a check's condition; the vocabulary is
+  deliberately left open rather than pre-populated, so that a future VIMP source
+  construct with no current counterpart (e.g. an eventual assume/assert pair) adds a
+  constructor here instead of a new domain-transfer field.
+\<close>
+datatype analysis_event =
+  Check_Event bexp
+
 record 'a domain_transfer =
   tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
-  tf_random    :: "vname => ('a abs_state) => ('a abs_state)"
-  tf_assume    :: "bexp  => ('a abs_state) => ('a abs_state)"
-  tf_assume_not :: "bexp => ('a abs_state) => ('a abs_state)"
+  tf_special   :: "special_call => vname => ('a abs_state) => ('a abs_state)" ("special\<^sup>#")
+  tf_branch    :: "bexp => bool => ('a abs_state) => ('a abs_state)" ("branch\<^sup>#")
+  tf_skip      :: "('a abs_state) => ('a abs_state)" ("skip\<^sup>#")
+  tf_body      :: "pname => ('a abs_state) => ('a abs_state)" ("body\<^sup>#")
+  tf_return    :: "aexp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
   tf_enter     :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
-  tf_combine   :: "('a abs_state) => ('a abs_state) => ('a abs_state)"
+  tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
+  tf_combine_env :: "('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
 
 subsection \<open>Apply transfer function to one edge\<close>
 
+text \<open>
+  \<open>EA_Nop\<close>, \<open>EA_Ret\<close>, and (via \<^const>\<open>tf_body\<close>, at procedure entry rather than
+  through this dispatcher) function-body entry are each a real lifecycle event with
+  its own transfer field, matching Goblint's \<open>skip\<close>/\<open>return\<close>/entry-then-body split,
+  even though every current domain implements \<open>skip\<^sup>#\<close> and \<open>body\<^sup>#\<close> as the identity
+  and \<open>return\<^sup>#\<close> as the assignment it publishes. \<open>EA_Check\<close> routes through
+  \<^const>\<open>tf_event\<close> rather than \<^const>\<open>tf_skip\<close>: a check is an analysis event
+  (matching Goblint's \<open>Spec.event\<close>, not \<open>Spec.skip\<close>), and conflating it with skip
+  would make a future domain's non-identity \<open>skip\<^sup>#\<close> silently change what a check
+  edge does. Every current domain implements \<open>event\<^sup>#\<close> as the identity too --
+  \<open>abstract_check_domain\<close> does the actual proving/refuting/reporting, over the
+  unmodified environment at the check's own node -- but that is a fact about today's
+  domains, not one this dispatcher hardcodes.
+\<close>
 fun apply_tf :: "'a domain_transfer
                  => edge_action
                  => ('a abs_state)
                  => ('a abs_state)" where
-    "apply_tf tf EA_Nop              \<sigma> = \<sigma>"
+    "apply_tf tf EA_Nop              \<sigma> = skip\<^sup># tf \<sigma>"
   | "apply_tf tf (EA_Assign x a)     \<sigma> = assign\<^sup># tf x a \<sigma>"
-  | "apply_tf tf (EA_Random x)       \<sigma> = tf_random tf x \<sigma>"
-  | "apply_tf tf (EA_Assume b)       \<sigma> = tf_assume tf b \<sigma>"
-  | "apply_tf tf (EA_AssumeNot b)    \<sigma> = tf_assume_not tf b \<sigma>"
-  | "apply_tf tf (EA_Ret e p)        \<sigma> =
-       (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign\<^sup># tf ret_var a \<sigma>)"
-  | "apply_tf tf (EA_Check c)        \<sigma> = \<sigma>"
+  | "apply_tf tf (EA_Special sc x)   \<sigma> = special\<^sup># tf sc x \<sigma>"
+  | "apply_tf tf (EA_Assume b)       \<sigma> = branch\<^sup># tf b True \<sigma>"
+  | "apply_tf tf (EA_AssumeNot b)    \<sigma> = branch\<^sup># tf b False \<sigma>"
+  | "apply_tf tf (EA_Ret e p)        \<sigma> = return\<^sup># tf e p \<sigma>"
+  | "apply_tf tf (EA_Check c)        \<sigma> = event\<^sup># tf (Check_Event c) \<sigma>"
 
 text \<open>
   Point-free counterparts of \<^const>\<open>apply_tf\<close>'s primitive equations. The defining
@@ -64,53 +104,45 @@ text \<open>
   \<^const>\<open>apply_tf\<close> tf a as an unapplied function value need these instead to reach
   the underlying domain_transfer field.
 \<close>
+lemma apply_tf_EA_Nop [simp]:
+  "apply_tf tf EA_Nop = skip\<^sup># tf"
+  by (simp add: fun_eq_iff)
+
 lemma apply_tf_EA_Assign [simp]:
   "apply_tf tf (EA_Assign x a) = assign\<^sup># tf x a"
   by (simp add: fun_eq_iff)
 
-lemma apply_tf_EA_Random [simp]:
-  "apply_tf tf (EA_Random x) = tf_random tf x"
+lemma apply_tf_EA_Special [simp]:
+  "apply_tf tf (EA_Special sc x) = special\<^sup># tf sc x"
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_Assume [simp]:
-  "apply_tf tf (EA_Assume b) = tf_assume tf b"
+  "apply_tf tf (EA_Assume b) = branch\<^sup># tf b True"
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_AssumeNot [simp]:
-  "apply_tf tf (EA_AssumeNot b) = tf_assume_not tf b"
+  "apply_tf tf (EA_AssumeNot b) = branch\<^sup># tf b False"
   by (simp add: fun_eq_iff)
 
-text \<open>\<^const>\<open>EA_Ret\<close> reuses the ordinary transfer of the assignment it publishes: a void return
-  is the \<^const>\<open>EA_Nop\<close> identity, a value return is the \<^const>\<open>EA_Assign\<close> to \<^const>\<open>ret_var\<close>.
-  These point-free identities let effectful factories dispatch \<^const>\<open>EA_Ret\<close> through the
-  \<open>nop\<close>/\<open>assign\<close> record fields.\<close>
-lemma apply_tf_EA_Ret_None:
-  "apply_tf tf (EA_Ret None p) = apply_tf tf EA_Nop"
+lemma apply_tf_EA_Ret [simp]:
+  "apply_tf tf (EA_Ret e p) = return\<^sup># tf e p"
   by (simp add: fun_eq_iff)
 
-lemma apply_tf_EA_Ret_Some:
-  "apply_tf tf (EA_Ret (Some a) p) = apply_tf tf (EA_Assign ret_var a)"
+lemma apply_tf_EA_Check [simp]:
+  "apply_tf tf (EA_Check c) = event\<^sup># tf (Check_Event c)"
   by (simp add: fun_eq_iff)
 
-text \<open>A check observes its condition but never refines the state it is evaluated
-  against (that is \<open>abstract_check_domain\<close>'s job, over the unmodified
-  environment at the check's own node): its transfer is the same identity as
-  \<^const>\<open>EA_Nop\<close>.\<close>
-lemma apply_tf_EA_Check:
-  "apply_tf tf (EA_Check c) = apply_tf tf EA_Nop"
-  by (simp add: fun_eq_iff)
-
-text \<open>Every family this codebase builds over \<^typ>\<open>edge_action\<close> reduces the same
-  non-primitive constructors to an already-handled one: a void return and a
-  check both collapse to \<^const>\<open>EA_Nop\<close>, a value return to \<^const>\<open>EA_Assign\<close>
-  (@{thm [source] apply_tf_EA_Ret_None} / @{thm [source] apply_tf_EA_Ret_Some} /
-  @{thm [source] apply_tf_EA_Check} give this for \<^const>\<open>apply_tf\<close> itself; \<open>F\<close>
-  is schematic, so it needs the same reduction as an explicit hypothesis).
-  \<open>action_reduces\<close> packages the three reduction facts as one predicate per
-  family \<open>F\<close> instead of three positional hypotheses, so \<open>apply_tf_wrap_eqI\<close>
-  and its effectful siblings each take a single \<open>action_reduces F\<close> premise.
-  Widening this locale is the only change a future reducible constructor needs:
-  every wrapper lemma and call site keeps citing the same one fact.\<close>
+text \<open>Some families this codebase builds over \<^typ>\<open>edge_action\<close> happen to reduce a
+  void return and a check to the same value as \<^const>\<open>EA_Nop\<close>, and a value return
+  to the same value as the \<^const>\<open>EA_Assign\<close> it publishes -- true of every current
+  executable mirror (\<open>sign_tf_st_for\<close> and siblings), since their \<open>EA_Ret\<close>/\<open>EA_Check\<close>
+  cases still literally implement today's \<open>skip\<^sup>#\<close>/\<open>return\<^sup>#\<close> semantics by hand. This
+  is a fact about a concrete family \<open>F\<close>, not a structural property \<^const>\<open>apply_tf\<close>
+  itself provides any more (\<open>return\<^sup>#\<close>/\<open>skip\<^sup>#\<close> are free fields a future domain may
+  implement differently), so \<open>action_reduces\<close> is not used to discharge
+  \<^const>\<open>apply_tf\<close>'s own \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_wrap_eqI\<close>
+  below); it only packages a mirror's own self-consistency for callers such as
+  \<open>unit_dg_exec_analysis\<close> that state it as an explicit obligation.\<close>
 locale action_reduces =
   fixes F :: "edge_action \<Rightarrow> 'y"
   assumes ret_none[simp,intro]: "\<And>p. F (EA_Ret None p) = F EA_Nop"
@@ -139,27 +171,15 @@ lemma apply_tf_wrap_eqI:
   fixes tf :: "'a domain_transfer"
     and F :: "edge_action \<Rightarrow> 'y"
     and H :: "('a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> 'y"
-  assumes reduces: "action_reduces F"
-    and nop: "F EA_Nop = H (apply_tf tf EA_Nop)"
+  assumes nop: "F EA_Nop = H (apply_tf tf EA_Nop)"
     and assign: "\<And>x e. F (EA_Assign x e) = H (apply_tf tf (EA_Assign x e))"
-    and random: "\<And>x. F (EA_Random x) = H (apply_tf tf (EA_Random x))"
+    and special: "\<And>sc x. F (EA_Special sc x) = H (apply_tf tf (EA_Special sc x))"
     and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
     and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
+    and ret: "\<And>e p. F (EA_Ret e p) = H (apply_tf tf (EA_Ret e p))"
+    and check: "\<And>c. F (EA_Check c) = H (apply_tf tf (EA_Check c))"
   shows "F a = H (apply_tf tf a)"
-proof -
-  interpret action_reduces F by (rule reduces)
-  show ?thesis
-  proof (cases a)
-    case (EA_Ret e p)
-    then show ?thesis
-      using ret_none ret_some nop assign
-      by (metis apply_tf_EA_Ret_None apply_tf_EA_Ret_Some option.collapse)
-  next
-    case (EA_Check c)
-    then show ?thesis
-      using check nop by (simp add: apply_tf_EA_Check)
-  qed (simp_all add: assms)
-qed
+  by (cases a) (simp_all add: nop assign special assm assm_not ret check)
 
 subsection \<open>Abstract join over a set\<close>
 
@@ -393,20 +413,21 @@ subsection \<open>Right-hand side of the equation system\<close>
 
 definition combine_env_abs ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  ("combine'_env\<^sup>#")
 where
   "combine_env_abs gs sc se = (\<lambda>x. if gs x then se x else sc x)"
 
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
-  a callee-exit store (sound for se) yields a store sound for \<open>combine_env\<^sup># gs sc se\<close>.
+  a callee-exit store (sound for se) yields a store sound for \<open>combine_env_abs gs sc se\<close>.
   A pure sound_domain fact -- independent of any transfer function -- reused by
   both the interprocedural constraint-system soundness and the effectful pipeline.
+  \<open>combine_env_abs\<close> is the fixed structural default; the \<open>combine_env\<^sup>#\<close> notation
+  belongs to the domain-supplied \<open>tf_combine_env\<close>, not to this helper.
 \<close>
 lemma combine_env_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># gs \<sigma>c \<sigma>e\<rbrakk>"
+  shows "combine_env gs s t \<in> \<lbrakk>combine_env_abs gs \<sigma>c \<sigma>e\<rbrakk>"
 proof -
   from sc have Vc: "\<forall>z. s z \<in> gamma (\<sigma>c z)"
     unfolding gamma_state_def by auto
@@ -583,7 +604,7 @@ text \<open>
 definition combine_collect_abs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     ("combine\<^sup>#") where
-  "combine_collect_abs gs dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (combine_env\<^sup># gs \<sigma>c \<sigma>e)"
+  "combine_collect_abs gs dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (combine_env_abs gs \<sigma>c \<sigma>e)"
 
 lemma combine_collect_abs_mono:
   fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
@@ -604,7 +625,7 @@ text \<open>
   return-threaded combine: with no destination the return slot is not written.
 \<close>
 lemma combine_collect_abs_None:
-  "combine\<^sup># gs None a b = combine_env\<^sup># gs a b"
+  "combine\<^sup># gs None a b = combine_env_abs gs a b"
   by (simp add: combine_collect_abs_def)
 
 text \<open>
@@ -614,17 +635,20 @@ text \<open>
   sound over-approximation of \<^const>\<open>combine_env\<close> instead of the structural
   local/global split.  The return-value write stays \<^const>\<open>combine_assign_abs\<close>: it is
   already domain-agnostic under the function-based \<^typ>\<open>'a abs_state\<close> representation,
-  so only the merge step is a per-analysis choice.
+  so only the merge step is a per-analysis choice.  This mirrors Goblint's own
+  \<open>Spec.combine_env\<close>/\<open>Spec.combine_assign\<close> split: there is no primitive whole
+  \<open>combine\<close>, only the domain-supplied \<open>combine_env\<^sup>#\<close> followed by the generic
+  \<open>combine_assign\<^sup>#\<close>.
 \<close>
 definition tf_combine_collect_abs ::
     "'a domain_transfer \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (tf_combine tf \<sigma>c \<sigma>e)"
+  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (tf_combine_env tf \<sigma>c \<sigma>e)"
 
-text \<open>The fixed structural merge is the special case where \<open>tf_combine\<close> is
+text \<open>The fixed structural merge is the special case where \<open>tf_combine_env\<close> is
   \<^const>\<open>combine_env_abs\<close>: the general definition specializes to the old one by
   instantiation, rather than duplicating it.\<close>
 lemma tf_combine_collect_abs_combine_env_abs:
-  assumes "tf_combine tf = combine_env\<^sup># gs"
+  assumes "tf_combine_env tf = combine_env_abs gs"
   shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine\<^sup># gs dst \<sigma>c \<sigma>e"
   using assms unfolding tf_combine_collect_abs_def combine_collect_abs_def by simp
 
@@ -645,7 +669,7 @@ proof (cases dst)
     by (simp add: combine_collect_def combine_collect_abs_def)
 next
   case (Some x)
-  have base: "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># gs \<sigma>c \<sigma>e\<rbrakk>"
+  have base: "combine_env gs s t \<in> \<lbrakk>combine_env_abs gs \<sigma>c \<sigma>e\<rbrakk>"
     by (rule combine_env_sound[OF sc se])
   have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
     using se unfolding gamma_state_def by auto
@@ -686,11 +710,19 @@ definition rhs_edge_sources ::
   "rhs_edge_sources g tf env v =
      (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v"
 
+text \<open>
+  \<^const>\<open>tf_body\<close> applies immediately after \<^const>\<open>tf_enter\<close>, at the actual
+  procedure-entry transition -- not somewhere merely near it: \<open>v\<close> here is always
+  the \<^const>\<open>FunctionEntry\<close> \<^const>\<open>entry_calls\<close> selects it for, so
+  \<^const>\<open>entry_proc\<close> \<open>v\<close> is the callee \<^const>\<open>tf_body\<close> fires for (the
+  \<open>CallEdge\<close>'s own \<open>dst\<close> is the call's assignment target, not the callee). This
+  is the one call site \<^const>\<open>tf_body\<close> is ever applied at.
+\<close>
 definition rhs_entry_sources ::
     "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
      \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
   "rhs_entry_sources g tf env v =
-     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
+     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)))
        ` entry_calls g v"
 
 definition rhs_combine_sources ::
@@ -709,7 +741,7 @@ definition rhs_sources ::
 lemma rhs_sources_characterization [simp]:
   "rhs_sources g tf env v =
      (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v \<union>
-     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> tf_enter tf fs as (env c))
+     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)))
        ` entry_calls g v \<union>
      (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex))
        ` return_calls g v"
@@ -723,7 +755,7 @@ lemma rhs_edge_sources_iff:
 
 lemma rhs_entry_sourcesI:
   assumes "(c, CallEdge dst fs as, v, k) \<in> calls g"
-  shows "tf_enter tf fs as (env c) \<in> rhs_entry_sources g tf env v"
+  shows "body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)) \<in> rhs_entry_sources g tf env v"
   unfolding rhs_entry_sources_def entry_calls_def
   using assms by (force simp: image_iff)
 
@@ -844,21 +876,28 @@ locale sound_transfer_for =
   assumes tf_sound_assign_for[intro]:
     "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
-  assumes tf_sound_random_for[intro]:
-    "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-  assumes tf_sound_assume_for[intro]:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s
-       \<longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-  assumes tf_sound_assume_not_for[intro]:
-    "\<forall>(b::bexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s
-       \<longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+  assumes tf_sound_special_for[intro]:
+    "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+  assumes tf_sound_branch_for[intro]:
+    "\<forall>(b::bexp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol
+       \<longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+  assumes tf_sound_skip_for[intro]:
+    "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
+  assumes tf_sound_body_for[intro]:
+    "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
+  assumes tf_sound_return_for[intro]:
+    "\<forall>(e::aexp option) p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+         \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
   assumes tf_sound_enter_for[intro]:
     "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
-  assumes tf_sound_combine_for[intro]:
+  assumes tf_sound_event_for[intro]:
+    "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+  assumes tf_sound_combine_env_for[intro]:
     "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-       combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+       combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
 
 context sound_transfer_for
 begin
@@ -867,17 +906,27 @@ lemma tf_sound_assign_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign_for by blast
 
-lemma tf_sound_random_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-  using tf_sound_random_for by blast
+lemma tf_sound_special_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+  using tf_sound_special_for by blast
 
-lemma tf_sound_assume_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-  using tf_sound_assume_for by blast
+lemma tf_sound_branch_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+  using tf_sound_branch_for by blast
 
-lemma tf_sound_assume_not_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-  using tf_sound_assume_not_for by blast
+lemma tf_sound_skip_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
+  using tf_sound_skip_for by blast
+
+lemma tf_sound_body_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
+  using tf_sound_body_for by blast
+
+lemma tf_sound_return_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+     s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+       \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
+  using tf_sound_return_for by blast
 
 lemma tf_sound_enter_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
@@ -885,10 +934,14 @@ lemma tf_sound_enter_forD[intro]:
        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   using tf_sound_enter_for by blast
 
-lemma tf_sound_combine_forD[intro]:
+lemma tf_sound_event_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+  using tf_sound_event_for by blast
+
+lemma tf_sound_combine_env_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-     combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
-  using tf_sound_combine_for by blast
+     combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  using tf_sound_combine_env_for by blast
 
 end
 
@@ -898,41 +951,55 @@ lemma sound_transferI_for:
   assumes assign[intro]:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
-    and random[intro]:
-    "\<And>x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-    and assm[intro]:
-    "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow>
-       s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    and assm_not[intro]:
-    "\<And>b \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow>
-       s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
+    and special[intro]:
+    "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow>
+       s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+    and branch[intro]:
+    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow>
+       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+    and skip[intro]:
+    "\<And>\<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
+    and body[intro]:
+    "\<And>p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
+    and return[intro]:
+    "\<And>e p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+         \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
     and enter[intro]:
     "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
+    and event[intro]:
+    "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
     and combine[intro]:
-    "tf_combine tf = combine_env\<^sup># gs"
+    "tf_combine_env tf = combine_env_abs gs"
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     using assign by blast
-  show "\<forall>x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v.
-      s(x := v) \<in> \<lbrakk>tf_random tf x \<sigma>\<rbrakk>"
-    using random by blast
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s \<longrightarrow>
-      s \<in> \<lbrakk>tf_assume tf b \<sigma>\<rbrakk>"
-    using assm by blast
-  show "\<forall>b \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<not> bval b s \<longrightarrow>
-      s \<in> \<lbrakk>tf_assume_not tf b \<sigma>\<rbrakk>"
-    using assm_not by blast
+  show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow>
+      s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+    using special by blast
+  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol \<longrightarrow>
+      s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+    using branch by blast
+  show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
+    using skip by blast
+  show "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
+    using body by blast
+  show "\<forall>e p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+      s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+        \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
+    using return by blast
   show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
+  show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+    using event by blast
   show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-      combine_env gs s t \<in> \<lbrakk>tf_combine tf \<sigma>c \<sigma>e\<rbrakk>"
+      combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
     unfolding combine using combine_env_sound by blast
 qed
 
@@ -958,38 +1025,50 @@ text \<open>
   A combine (procedure return) tree producer takes the caller program point and
   the callee-exit program point and builds a tree that queries both their local
   unknowns (and any globals), emits Side contributions, and ends with the
-  combined local result.  Unlike an edge, it has two local inputs.
+  combined local result.  Unlike an edge, it has two local inputs.  Mirroring
+  Goblint's \<open>Spec.combine_env\<close>/\<open>Spec.combine_assign\<close> split, this record exposes
+  the destination-free environment merge as \<open>etf_combine_env\<close> and the
+  destination-aware whole operation as \<open>etf_combine_collect\<close>; there is no
+  primitive one-phase \<open>etf_combine\<close>.
 \<close>
 type_synonym ('g, 'd) combine_tf_tree =
   "pp \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
 
 record ('g, 'd) effectful_domain_transfer =
-  etf_nop        :: "('g, 'd) edge_tf_tree"
+  etf_skip       :: "('g, 'd) edge_tf_tree"
   etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_random     :: "vname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_assume     :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_assume_not :: "bexp  \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_body       :: "pname \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_combine    :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
+  etf_event      :: "analysis_event \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_combine_env     :: "('g, 'd) combine_tf_tree"
+  etf_combine_collect :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
 
+text \<open>
+  \<open>EA_Check\<close> routes through \<^const>\<open>etf_event\<close> here, matching \<^const>\<open>apply_tf\<close>'s
+  own \<open>event\<^sup>#\<close> dispatch: a family built over this record supplies the concrete
+  tree (with whatever \<^typ>\<open>vname \<Rightarrow> bool\<close> classifier it closed over when it was
+  built), the same way it already supplies \<^const>\<open>etf_skip\<close>/\<^const>\<open>etf_body\<close>.
+\<close>
 fun apply_etf ::
   "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
    \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
 where
-  "apply_etf etf EA_Nop           u = etf_nop etf u"
+  "apply_etf etf EA_Nop           u = etf_skip etf u"
 | "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
-| "apply_etf etf (EA_Random x)    u = etf_random etf x u"
-| "apply_etf etf (EA_Assume b)    u = etf_assume etf b u"
-| "apply_etf etf (EA_AssumeNot b) u = etf_assume_not etf b u"
-| "apply_etf etf (EA_Ret e p) u =
-     (case e of None \<Rightarrow> etf_nop etf u | Some a \<Rightarrow> etf_assign etf ret_var a u)"
-| "apply_etf etf (EA_Check c) u = etf_nop etf u"
+| "apply_etf etf (EA_Special sc x) u = etf_special etf sc x u"
+| "apply_etf etf (EA_Assume b)    u = etf_branch etf b True u"
+| "apply_etf etf (EA_AssumeNot b) u = etf_branch etf b False u"
+| "apply_etf etf (EA_Ret e p)     u = etf_return etf e p u"
+| "apply_etf etf (EA_Check c)     u = etf_event etf (Check_Event c) u"
 
 fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" where
   "local_edge_action gs EA_Nop = True"
 | "local_edge_action gs (EA_Assign x e) =
     ((~ gs x) & (~ aexp_mentions_where gs e))"
-| "local_edge_action gs (EA_Random x) = (~ gs x)"
+| "local_edge_action gs (EA_Special sc x) = ((~ gs x) & (~ special_mentions_global gs sc))"
 | "local_edge_action gs (EA_Assume b) = (~ bexp_mentions_where gs b)"
 | "local_edge_action gs (EA_AssumeNot b) = (~ bexp_mentions_where gs b)"
 | "local_edge_action gs (EA_Ret e p) =
@@ -1413,36 +1492,51 @@ text \<open>
 locale sound_effectful_transfer =
   fixes gs :: "vname => bool"
     and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
-  assumes etf_sound_nop[intro]:
+  assumes etf_sound_skip[intro]:
     "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_nop etf u) \<sigma>))"
+         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_skip etf u) \<sigma>))"
   assumes etf_sound_assign[intro]:
     "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift (etf_assign etf x e u) \<sigma>))"
-  assumes etf_sound_random[intro]:
-    "\<forall>x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+  assumes etf_sound_special[intro]:
+    "\<forall>sc x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
-         s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_random etf x u) \<sigma>))"
-  assumes etf_sound_assume[intro]:
-    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s
-       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume etf b u) \<sigma>))"
-  assumes etf_sound_assume_not[intro]:
-    "\<forall>(b::bexp) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<not> bval b s
-       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume_not etf b u) \<sigma>))"
+         special_result sc s v \<longrightarrow>
+         s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf sc x u) \<sigma>))"
+  assumes etf_sound_branch[intro]:
+    "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s = pol
+       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>))"
+  assumes etf_sound_body[intro]:
+    "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_body etf p u) \<sigma>))"
+  assumes etf_sound_return[intro]:
+    "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+         s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+           \<in> gamma_state_lift (etf_collecting_full_lift (etf_return etf e p u) \<sigma>))"
   assumes etf_sound_enter[intro]:
     "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> gamma_state_lift (etf_collecting_full_lift (etf_enter etf xs es u) \<sigma>))"
-  assumes etf_sound_combine[intro]:
+  assumes etf_sound_event[intro]:
+    "\<forall>ev u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
+         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_event etf ev u) \<sigma>))"
+  assumes etf_sound_combine_env[intro]:
+    "\<forall>cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
+       \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
+         combine_env gs s t \<in> gamma_state_lift (etf_full (etf_combine_env etf cc ex) \<sigma>))"
+  assumes etf_sound_combine_collect[intro]:
     "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
        \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
-         combine_collect gs dst s t \<in> gamma_state_lift (etf_full (etf_combine etf dst cc ex) \<sigma>))"
+         combine_collect gs dst s t \<in> gamma_state_lift (etf_full (etf_combine_collect etf dst cc ex) \<sigma>))"
 
 text \<open>
   The keyed generator filters call-enter edges out of the intra predecessor fold

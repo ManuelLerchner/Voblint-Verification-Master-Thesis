@@ -348,60 +348,108 @@ next
   qed
 qed
 
-lemma random_sign_local_edge_invariant [intro]:
-  assumes gl: "\<not> gs x"
-  shows "local_edge_invariant gs (random_sign x)"
-  unfolding local_edge_invariant_def random_sign_def
+lemma special_sign_local_edge_invariant [intro]:
+  assumes gl: "\<not> gs x" and ng: "\<not> special_mentions_global gs sc"
+  shows "local_edge_invariant gs (special_sign sc x)"
+  unfolding local_edge_invariant_def
 proof (intro allI impI)
   fix su :: "sign abs_state"
   fix g :: "sign abs_state"
   assume lb: "local_bot_on_locals gs g"
-  show "(restrict_local_for gs su \<squnion> g)(x := STop) =
-        restrict_local_for gs ((restrict_local_for gs su)(x := STop)) \<squnion> g"
-  proof (rule ext)
-    fix y
-    show "((restrict_local_for gs su \<squnion> g)(x := STop)) y =
-          (restrict_local_for gs ((restrict_local_for gs su)(x := STop)) \<squnion> g) y"
-    proof (cases "y = x")
-      case True
-      then show ?thesis
-        using gl lb
-        unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by simp
-    next
-      case False
-      then show ?thesis
-        using lb unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by auto
+  show "special_sign sc x (restrict_local_for gs su \<squnion> g) =
+        restrict_local_for gs (special_sign sc x (restrict_local_for gs su)) \<squnion> g"
+  proof (cases sc)
+    case Nondet_Int
+    show ?thesis
+      unfolding Nondet_Int special_sign.simps
+    proof (rule ext)
+      fix y
+      show "((restrict_local_for gs su \<squnion> g)(x := STop)) y =
+            (restrict_local_for gs ((restrict_local_for gs su)(x := STop)) \<squnion> g) y"
+      proof (cases "y = x")
+        case True
+        then show ?thesis
+          using gl lb
+          unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by simp
+      next
+        case False
+        then show ?thesis
+          using lb unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by auto
+      qed
+    qed
+  next
+    case (Min a b)
+    with ng have nga: "\<not> aexp_mentions_global gs a" and ngb: "\<not> aexp_mentions_global gs b"
+      by simp_all
+    show ?thesis
+      unfolding Min special_sign.simps
+    proof (rule ext)
+      fix y
+      show "((restrict_local_for gs su \<squnion> g)
+              (x := sign_min (aval_sign a (restrict_local_for gs su \<squnion> g))
+                              (aval_sign b (restrict_local_for gs su \<squnion> g)))) y =
+            (restrict_local_for gs
+              ((restrict_local_for gs su)
+                (x := sign_min (aval_sign a (restrict_local_for gs su))
+                                (aval_sign b (restrict_local_for gs su)))) \<squnion> g) y"
+      proof (cases "y = x")
+        case True
+        then show ?thesis
+          using gl lb aval_sign_restrict_local_bot[OF nga lb, of su]
+                aval_sign_restrict_local_bot[OF ngb lb, of su]
+          unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by simp
+      next
+        case False
+        then show ?thesis
+          using lb unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by auto
+      qed
+    qed
+  next
+    case (Max a b)
+    with ng have nga: "\<not> aexp_mentions_global gs a" and ngb: "\<not> aexp_mentions_global gs b"
+      by simp_all
+    show ?thesis
+      unfolding Max special_sign.simps
+    proof (rule ext)
+      fix y
+      show "((restrict_local_for gs su \<squnion> g)
+              (x := sign_max (aval_sign a (restrict_local_for gs su \<squnion> g))
+                              (aval_sign b (restrict_local_for gs su \<squnion> g)))) y =
+            (restrict_local_for gs
+              ((restrict_local_for gs su)
+                (x := sign_max (aval_sign a (restrict_local_for gs su))
+                                (aval_sign b (restrict_local_for gs su)))) \<squnion> g) y"
+      proof (cases "y = x")
+        case True
+        then show ?thesis
+          using gl lb aval_sign_restrict_local_bot[OF nga lb, of su]
+                aval_sign_restrict_local_bot[OF ngb lb, of su]
+          unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by simp
+      next
+        case False
+        then show ?thesis
+          using lb unfolding restrict_local_for_def local_bot_on_locals_def sup_fun_def by auto
+      qed
     qed
   qed
 qed
-
-lemma assume_sign_local_edge_invariant [intro]:
-  assumes ng: "\<not> bexp_mentions_global gs b"
-  shows "local_edge_invariant gs (assume_sign b)"
-  unfolding assume_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
-
-lemma assume_not_sign_local_edge_invariant [intro]:
-  assumes ng: "\<not> bexp_mentions_global gs b"
-  shows "local_edge_invariant gs (assume_not_sign b)"
-  unfolding assume_not_sign_def using bfilter_sign_local_edge_invariant[OF ng] by simp
-
 
 lemma sign_tf_local_edge_invariant:
   assumes loc: "local_edge_action gs a"
   shows "local_edge_invariant gs (apply_tf (sign_tf_for gs) a)"
   using loc
   apply (cases a)
-  apply (auto simp: sign_tf_for_def aexp_mentions_global_def
+  unfolding sign_tf_for_def aexp_mentions_global_def apply (auto simp: 
       intro: assign_sign_local_edge_invariant
-             assume_sign_local_edge_invariant
-             assume_not_sign_local_edge_invariant
-             random_sign_local_edge_invariant
+             bfilter_sign_local_edge_invariant
+             special_sign_local_edge_invariant
              id_local_edge_invariant
       split: option.splits)
-  apply (auto simp: local_edge_invariant_def)
-  by (metis aexp_mentions_global_def
-      assign_sign_local_edge_invariant
+  apply (auto simp: local_edge_invariant_def skip_sign_def return_sign_def event_sign_def)
+  by (metis aexp_mentions_global_def assign_sign_local_edge_invariant
       local_edge_invariant_def)
+ 
+ 
 
 end
 

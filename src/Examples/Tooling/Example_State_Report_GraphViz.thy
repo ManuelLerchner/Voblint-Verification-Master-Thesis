@@ -3,7 +3,7 @@ theory Example_State_Report_GraphViz
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Sign_Print"
     "Voblint_Analysis.Interval_Print"
-    "Voblint_Examples.Example_Analysis_Dispatch"
+    "Voblint_Examples.Example_Analysis_Dispatch_Regression"
 begin
 
 text \<open>
@@ -90,7 +90,7 @@ definition state_report_dot ::
 
 text \<open>
   Reuses \<open>state_wiring_ex_prog\<close>
-  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>) rather than a fresh
+  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch_Regression\<close>) rather than a fresh
   program: a single exact write with no widening, so \<^const>\<open>analyse\<close>
   itself already classifies the check \<open>Check_Proved\<close> under
   \<open>Interval_Analysis\<close>, and \<open>analyse_with_state\<close> reports the exact
@@ -144,7 +144,7 @@ ML_val \<open>writeln (@{code state_report_demo_dot})\<close>
 text \<open>
   A second, self-contained \<open>export_code\<close> surface for the \<open>voblint\<close> CLI: the
   narrower \<open>Voblint_Analyse_OCaml\<close> export
-  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>) has no reachable
+  (\<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>) has no reachable
   GraphViz-rendering constant, and that theory precedes this one in the
   import order, so \<open>state_report_dot_auto\<close> cannot be added to its existing
   blocks. This block otherwise mirrors that one's constant list exactly
@@ -166,15 +166,28 @@ text \<open>
   whether that point happens to carry a check.
 \<close>
 
-fun analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
-  "analyse_env_for Sign_Analysis p v =
-     SignValue \<circ> analyse_sign_env_for (declared_global p) p v"
-| "analyse_env_for Interval_Analysis p v =
-     IntervalValue \<circ>
-       case_lifted bot id
-         (analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p))
-           (declared_global p) (prog_table p) (prog_procs p)
-           prog_main_name (prog_main p) v)"
+text \<open>
+  Point-free in \<open>v\<close>, mirroring \<^const>\<open>analyse_sign_env_for\<close>/\<^const>\<open>analyse_interval_td_at\<close>'s
+  own single-solve-per-report fix one layer down: a plain \<open>fun\<close> pattern-matching on \<open>kind, p, v\<close>
+  jointly would rebuild the \<open>analyse_sign_env_for (declared_global p) p\<close>/
+  \<open>analyse_interval_td_at ... (prog_main p)\<close> partial application -- and therefore re-solve --
+  on every \<open>v\<close>, even though each of those is itself already solved exactly once per partial
+  application. Binding \<open>env\<close> here, outside the returned \<open>\<lambda>v\<close>, means a caller that partially
+  applies \<open>analyse_env_for kind p\<close> once (every current caller does: \<open>full_state_node_annotation\<close>
+  reuses the same closure across every CFG node) solves the selected analysis exactly once,
+  regardless of how many nodes it renders.
+\<close>
+
+definition analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
+  "analyse_env_for kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          (let env = analyse_sign_env_for (declared_global p) p in (\<lambda>v. SignValue \<circ> env v))
+      | Interval_Analysis \<Rightarrow>
+          (let env = analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p))
+                       (declared_global p) (prog_table p) (prog_procs p)
+                       prog_main_name (prog_main p)
+           in (\<lambda>v. IntervalValue \<circ> case_lifted bot id (env v))))"
 
 text \<open>
   Unlike \<^const>\<open>state_report_node_annotation\<close>, every \<^typ>\<open>pp\<close> gets an
@@ -217,16 +230,26 @@ text \<open>
   uncovered case.
 \<close>
 
+text \<open>
+  Point-free in \<open>v\<close>/\<open>x\<close> so \<^const>\<open>entry_state_sol\<close> is solved exactly once per partial
+  application to \<open>gs is_bot_pred Pi ps mnm main\<close>, not once per \<open>(v, x)\<close> query. Every caller
+  already partially applies these six arguments once and reuses the result across every CFG node
+  (\<open>full_state_node_annotation\<close>'s \<open>env v\<close>/\<open>env v x\<close>), so this is a pure sharing fix, provably
+  the same function as the previous curried-all-the-way-through definition -- no lemma needed, the
+  \<open>let\<close>/lambda reordering is extensional equality, not a new fact about the analysis.
+\<close>
+
 definition entry_state_env_at ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> cfg_node \<Rightarrow> abstract_value abs_state" where
-  "entry_state_env_at gs is_bot_pred Pi ps mnm main v x =
+  "entry_state_env_at gs is_bot_pred Pi ps mnm main =
      (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main;
-          sg = entry_state_sg_exec gs is_bot_pred Pi ps mnm main;
-          ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (fst sol)
-      in IntervalValue
-           (if ctxs = {} then case_lifted bot id (sg (Inl (v, []))) x
-            else Sup_fin ((\<lambda>ctx. case_lifted bot id (sg (Inl (v, ctx))) x) ` ctxs)))"
+          sg = entry_state_sg_exec_from_sol gs sol
+      in (\<lambda>v x.
+            let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (fst sol)
+            in IntervalValue
+                 (if ctxs = {} then case_lifted bot id (sg (Inl (v, []))) x
+                  else Sup_fin ((\<lambda>ctx. case_lifted bot id (sg (Inl (v, ctx))) x) ` ctxs))))"
 
 definition entry_state_full_state_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_dot_auto p =
@@ -277,7 +300,7 @@ text \<open>
   \<^class>\<open>complete_lattice\<close> set instance for the first time. Left unmapped,
   OCaml's single-file serializer places \<open>Complete_Lattices\<close> in its own
   module, and the two end up needing each other, which
-  \<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>'s own header already
+  \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>'s own header already
   documents as an OCaml module-splitting limit, not fixable by regrouping ---
   only by folding the two together, exactly as done there for \<open>Sign\<close>/\<open>Interval\<close>.
 \<close>
@@ -296,7 +319,7 @@ export_code
   bexp_vnames_list string_of_abstract_value
   is_bottom_abstract_value program_vars
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
   Check_Proved Check_Refuted Check_Unknown

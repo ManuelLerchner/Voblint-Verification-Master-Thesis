@@ -177,7 +177,11 @@ let rec show_bexp_compact = function
 let show_edge_action = function
   | EA_Nop -> "nop"
   | EA_Assign (x, a) -> x ^ " := " ^ show_aexp_compact a
-  | EA_Random x -> x ^ " := random()"
+  | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
+  | EA_Special (Min (a, b), x) ->
+    x ^ " := min(" ^ show_aexp_compact a ^ ", " ^ show_aexp_compact b ^ ")"
+  | EA_Special (Max (a, b), x) ->
+    x ^ " := max(" ^ show_aexp_compact a ^ ", " ^ show_aexp_compact b ^ ")"
   | EA_Assume b -> "[" ^ show_bexp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_bexp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"
@@ -248,7 +252,7 @@ let () =
   let actual_interval = analyse Interval_Analysis demo_prog in
   let actual_proc_demo_sign = analyse Sign_Analysis proc_demo_prog in
   let actual_proc_demo_interval = analyse Interval_Analysis proc_demo_prog in
-  let proc_demo_cfg = prog_cfg prog_main_name proc_demo_prog in
+  let proc_demo_cfg = compile_program proc_demo_prog in
   let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
   let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
   let actual_no_call_global_self_ref_interval =

@@ -39,9 +39,9 @@ proof -
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
        (rule reserved
-             p_transfer.tf_sound_assign_for p_transfer.tf_sound_random_for
-             p_transfer.tf_sound_assume_for p_transfer.tf_sound_assume_not_for
-             p_transfer.tf_sound_enter_for p_transfer.tf_sound_combine_for
+             p_transfer.tf_sound_assign_for p_transfer.tf_sound_special_for
+             p_transfer.tf_sound_branch_for
+             p_transfer.tf_sound_enter_for p_transfer.tf_sound_combine_env_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              action_reduces.ret_none[OF sign_tf_st_for_reduces]
@@ -101,7 +101,7 @@ theorem analyse_sign_sound_for:
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
-       \<lbrakk>combine_env\<^sup># gs (fun_of_exec_dg_st_for gs cinit_sign_st)
+       \<lbrakk>combine_env_abs gs (fun_of_exec_dg_st_for gs cinit_sign_st)
           (fun_of_exec_dg_st_for gs cinit_sign_st)\<rbrakk>"
     by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def
                   gamma_state_def combine_env_abs_def)
@@ -145,7 +145,7 @@ theorem analyse_sign_collect_sound_for:
 proof -
   have sound0:
     "cinit_stores gs \<subseteq>
-       \<lbrakk>combine_env\<^sup># gs (fun_of_exec_dg_st_for gs cinit_sign_st)
+       \<lbrakk>combine_env_abs gs (fun_of_exec_dg_st_for gs cinit_sign_st)
           (fun_of_exec_dg_st_for gs cinit_sign_st)\<rbrakk>"
     by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def
                   gamma_state_def combine_env_abs_def)
@@ -411,7 +411,7 @@ text \<open>
   \<^const>\<open>analyse_sign\<close> already export cleanly (confirmed once, historically, as the M1
   codegen-closure milestone), but a caller reaches the same generic, already-sound
   \<^const>\<open>analyse_sign_report\<close> through the unified dispatcher \<open>analyse\<close>
-  (\<open>Example_Analysis_Dispatch\<close>, downstream), which is the one thing actually exported to
+  (\<open>Analyse_Dispatch\<close>, downstream), which is the one thing actually exported to
   OCaml --- a second, domain-specific export module here would just be a parallel,
   redundant API surface for the same computation.
 \<close>

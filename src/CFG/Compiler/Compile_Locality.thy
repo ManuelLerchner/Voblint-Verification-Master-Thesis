@@ -105,7 +105,7 @@ next
     and K: "K = K1"
     by (rule compile_WhileE)
   from While.prems(2) K show ?case using While.IH[OF c1] by auto
-qed (auto split: if_splits)
+qed (auto split: if_splits option.splits)
 
 text \<open>Source well-formedness ensures that every compiled call enters a declared procedure.\<close>
 lemma compile_call_target_declared:

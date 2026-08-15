@@ -101,7 +101,7 @@ and build_actuals = function
 and build_com = function
   | Atom "Skip" -> SKIP
   | Slist [ Atom "Assign"; Atom x; a ] -> Assign (x, build_aexp a)
-  | Slist [ Atom "Random"; Atom x ] -> Random x
+  | Slist [ Atom "Random"; Atom x ] -> Call (Some x, "__voblint_nondet_int", [])
   | Slist [ Atom "Check"; b ] -> Check (build_bexp b)
   | Slist [ Atom "Seq"; c1; c2 ] -> Seq (build_com c1, build_com c2)
   | Slist [ Atom "If"; b; c1; c2 ] -> If (build_bexp b, build_com c1, build_com c2)

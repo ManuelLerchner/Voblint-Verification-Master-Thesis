@@ -1,5 +1,5 @@
 theory Parity_Transfer
-  imports Parity_Domain Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
+  imports Parity_Domain Parity_Special Voblint_Core.Constraint_System "Voblint_VIMP.VIMP_Globals"
 begin
 
 section \<open>Parity transfer functions\<close>
@@ -25,49 +25,23 @@ proof safe
   qed
 qed
 
-subsection \<open>Abstract nondeterministic assignment\<close>
+text \<open>Nondeterministic and other special-call assignment (\<open>special_parity\<close>)
+  lives in \<open>Parity_Special\<close>, reused below.\<close>
 
-definition random_parity ::
-    "vname => (vname => parity) => (vname => parity)" where
-  "random_parity x \<sigma> = \<sigma>(x := PTop)"
-
-lemma random_parity_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>random_parity x \<sigma>\<rbrakk>"
-  unfolding random_parity_def gamma_state_def
-proof safe
-  fix y
-  from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)" unfolding gamma_state_def by simp
-  show "(s(x := v)) y \<in> gamma ((\<sigma>(x := PTop)) y)"
-  proof (cases "y = x")
-    case True then show ?thesis by simp
-  next
-    case False with V show ?thesis by simp
-  qed
-qed
-
-lemma random_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> random_parity x sigma1 \<le> random_parity x sigma2"
-  by (simp add: random_parity_def le_funD le_funI)
-
-subsection \<open>Assume: parity does not refine guards, so the transfer is the identity\<close>
+subsection \<open>Branch: parity does not refine guards, so the transfer is the identity\<close>
 
 text \<open>
   No boolean guard in the language constrains the parity of a variable, so the
-  sound and most precise parity assume keeps the incoming state unchanged.
+  sound and most precise parity branch keeps the incoming state unchanged --
+  the identity is trivially polarity-independent, matching @{const tf_branch}'s
+  shape directly (no separate assume/assume-not case, since both bodies coincide).
 \<close>
 
-definition assume_parity :: "bexp => (vname => parity) => (vname => parity)" where
-  "assume_parity b \<sigma> = \<sigma>"
+definition branch_parity :: "bexp => bool => (vname => parity) => (vname => parity)" where
+  "branch_parity b pol \<sigma> = \<sigma>"
 
-definition assume_not_parity :: "bexp => (vname => parity) => (vname => parity)" where
-  "assume_not_parity b \<sigma> = \<sigma>"
-
-lemma assume_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_parity b \<sigma>\<rbrakk>"
-  by (simp add: assume_parity_def)
-
-lemma assume_not_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> bval b s \<Longrightarrow> s \<in> \<lbrakk>assume_not_parity b \<sigma>\<rbrakk>"
-  by (simp add: assume_not_parity_def)
+lemma branch_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
+  by (simp add: branch_parity_def)
 
 subsection \<open>Bundled transfer functions\<close>
 
@@ -75,13 +49,60 @@ lemma assign_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity x a sigma1 \<le> assign_parity x a sigma2"
   by (simp add: assign_parity_def aval_parity_mono le_funD le_funI)
 
-lemma assume_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_parity b sigma1 \<le> assume_parity b sigma2"
-  by (simp add: assume_parity_def)
+lemma branch_parity_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_parity b pol sigma1 \<le> branch_parity b pol sigma2"
+  by (simp add: branch_parity_def)
 
-lemma assume_not_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assume_not_parity b sigma1 \<le> assume_not_parity b sigma2"
-  by (simp add: assume_not_parity_def)
+subsection \<open>Skip, body-entry, and return\<close>
+
+text \<open>Parity has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close> are
+  the identity, and \<open>return\<^sup>#\<close> reuses the same \<open>EA_Ret\<close>-publishes-to-\<open>ret_var\<close>
+  behaviour \<^const>\<open>apply_tf\<close> used to hardcode for every domain.\<close>
+
+definition skip_parity :: "(vname => parity) => (vname => parity)" where
+  "skip_parity \<sigma> = \<sigma>"
+
+definition body_parity :: "pname => (vname => parity) => (vname => parity)" where
+  "body_parity p \<sigma> = \<sigma>"
+
+definition return_parity ::
+    "aexp option => pname => (vname => parity) => (vname => parity)"
+where
+  "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_parity ret_var a \<sigma>)"
+
+text \<open>A check observes its condition but never refines the state (that is
+  \<open>abstract_check_domain\<close>'s job): Parity has no notion of that observation
+  either, so \<open>event_parity\<close> is the identity like \<open>skip_parity\<close>/\<open>body_parity\<close>.\<close>
+definition event_parity :: "analysis_event => (vname => parity) => (vname => parity)" where
+  "event_parity ev \<sigma> = \<sigma>"
+
+lemma skip_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_parity \<sigma>\<rbrakk>"
+  by (simp add: skip_parity_def)
+
+lemma body_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body_parity p \<sigma>\<rbrakk>"
+  by (simp add: body_parity_def)
+
+lemma event_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event_parity ev \<sigma>\<rbrakk>"
+  by (simp add: event_parity_def)
+
+lemma return_parity_sound:
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) \<in> \<lbrakk>return_parity e p \<sigma>\<rbrakk>"
+  using assign_parity_sound[OF gs] gs
+  by (cases e) (simp_all add: return_parity_def)
+
+lemma skip_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_parity sigma1 \<le> skip_parity sigma2"
+  by (simp add: skip_parity_def)
+
+lemma body_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> body_parity p sigma1 \<le> body_parity p sigma2"
+  by (simp add: body_parity_def)
+
+lemma event_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_parity ev sigma1 \<le> event_parity ev sigma2"
+  by (simp add: event_parity_def)
+
+lemma return_parity_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> return_parity e p sigma1 \<le> return_parity e p sigma2"
+  by (cases e) (simp_all add: return_parity_def assign_parity_mono)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -125,21 +146,27 @@ next
 qed
 
 definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
-  "parity_tf_for gs = (| tf_assign     = assign_parity,
-                         tf_random     = random_parity,
-                         tf_assume     = assume_parity,
-                         tf_assume_not = assume_not_parity,
-                         tf_enter      = enter_parity_for gs,
-                         tf_combine    = combine_env\<^sup># gs |)"
+  "parity_tf_for gs = (| tf_assign  = assign_parity,
+                         tf_special = special_parity,
+                         tf_branch  = branch_parity,
+                         tf_skip    = skip_parity,
+                         tf_body    = body_parity,
+                         tf_return  = return_parity,
+                         tf_enter   = enter_parity_for gs,
+                         tf_event   = event_parity,
+                         tf_combine_env = combine_env_abs gs |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_parity_sound)
-  subgoal by (simp add: random_parity_sound)
-  subgoal by (simp add: assume_parity_sound)
-  subgoal by (simp add: assume_not_parity_sound)
+  subgoal by (simp add: special_parity_sound)
+  subgoal by (simp add: branch_parity_sound)
+  subgoal by (simp add: skip_parity_sound)
+  subgoal by (simp add: body_parity_sound)
+  subgoal by (simp add: return_parity_sound)
   subgoal by (simp add: enter_parity_for_sound)
+  subgoal by (simp add: event_parity_sound)
   subgoal by (simp add: combine_env_sound)
   done
 
@@ -161,7 +188,8 @@ qed
 lemma parity_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
   by (cases a)
-     (auto simp: parity_tf_for_def assign_parity_mono random_parity_mono assume_parity_mono
-                 assume_not_parity_mono enter_parity_for_mono split: option.splits)
+     (auto simp: parity_tf_for_def assign_parity_mono special_parity_mono branch_parity_mono
+                 skip_parity_mono body_parity_mono return_parity_mono enter_parity_for_mono
+                 event_parity_mono)
 
 end

@@ -94,4 +94,20 @@ lemma eint_minus_mono:
   "eint_le a1 a2 \<Longrightarrow> eint_le b2 b1 \<Longrightarrow> eint_le (a1 - b1) (a2 - b2)"
   by (cases a1; cases a2; cases b1; cases b2; auto)
 
+text \<open>\<open>Fin\<close> embeds \<open>int\<close> into \<open>eint\<close> as an order isomorphism onto the finite
+  bounds, so it commutes with \<open>min\<close>/\<open>max\<close>.\<close>
+lemma Fin_min: "Fin (min i j) = min (Fin i) (Fin j)"
+  by (simp add: min_def)
+
+lemma Fin_max: "Fin (max i j) = max (Fin i) (Fin j)"
+  by (simp add: max_def)
+
+lemma eint_min_mono:
+  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (min a1 b1) (min a2 b2)"
+  by (cases a1; cases a2; cases b1; cases b2; auto simp: min_def)
+
+lemma eint_max_mono:
+  "eint_le a1 a2 \<Longrightarrow> eint_le b1 b2 \<Longrightarrow> eint_le (max a1 b1) (max a2 b2)"
+  by (cases a1; cases a2; cases b1; cases b2; auto simp: max_def)
+
 end

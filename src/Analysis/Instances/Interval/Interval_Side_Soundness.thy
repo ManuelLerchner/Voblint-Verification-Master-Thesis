@@ -27,8 +27,8 @@ lemma ivl_tf_for_enter_mono:
   by (simp add: ivl_tf_for_def enter_ivl_for_mono)
 
 lemma ivl_etf_combine_tree:
-  "etf_combine (ivl_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding ivl_etf_def etf_combine_unit_of_transfer by simp
+  "etf_combine_collect (ivl_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
+  unfolding ivl_etf_def etf_combine_collect_unit_of_transfer by simp
 
 lemma ivl_sound_etf:
   "sound_effectful_transfer gs (ivl_etf gs)"

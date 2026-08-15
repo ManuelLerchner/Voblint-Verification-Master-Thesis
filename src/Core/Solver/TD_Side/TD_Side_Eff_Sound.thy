@@ -38,31 +38,23 @@ lemma etf_sound_assignD [intro]:
   using assms etf_sound_assign unfolding side_env_lift_def
   by blast
 
-lemma etf_sound_randomD [intro]:
+lemma etf_sound_specialD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
+      and "special_result sc s v"
   shows
     "s(x := v)
-       \<in> gamma_state_lift (etf_collecting_full_lift (etf_random etf x u) \<sigma>)"
-  using assms etf_sound_random unfolding side_env_lift_def
+       \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf sc x u) \<sigma>)"
+  using assms etf_sound_special unfolding side_env_lift_def
   by blast
 
-lemma etf_sound_assumeD [intro]:
+lemma etf_sound_branchD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
-      and "bval b s"
+      and "bval b s = pol"
   shows
-    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume etf b u) \<sigma>)"
-  using assms etf_sound_assume unfolding side_env_lift_def
-  by blast
-
-lemma etf_sound_assume_notD [intro]:
-  assumes "inr_slot_locals_bot gs \<sigma>"
-      and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
-      and "\<not> bval b s"
-  shows
-    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_assume_not etf b u) \<sigma>)"
-  using assms etf_sound_assume_not unfolding side_env_lift_def
+    "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>)"
+  using assms etf_sound_branch unfolding side_env_lift_def
   by blast
 
 
@@ -71,10 +63,10 @@ lemma edge_collect_etf_sound:
   shows
     "edge_collect a (gamma_state_lift (side_env_lift \<sigma> u))
        \<subseteq> gamma_state_lift (etf_collecting_full_lift (apply_etf etf a u) \<sigma>)"
-  using inr
-  by (cases a;
-      auto simp: etf_sound_nop side_env_lift_def
-           split: option.splits)
+proof (cases a)
+  case (EA_Special sc x)
+  with inr show ?thesis by (auto simp: etf_sound_special)
+qed (use inr in \<open>auto simp: etf_sound_skip etf_sound_return etf_sound_event side_env_lift_def\<close>)
 
 end
 

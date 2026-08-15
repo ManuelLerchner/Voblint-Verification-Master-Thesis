@@ -14,7 +14,7 @@ text \<open>
   @{text "x := 0; while (x < 20) { x := x + 1 }"}.
 
   The executable transfer \<open>ivl_tf_st_for\<close> applies the same backward guard
-  filters as @{const assume_ivl} (via \<open>assume_ivl_st_for\<close> / @{const bfilter_ivl_st})
+  filters as @{const bfilter_ivl} (via \<open>branch_ivl_st_for\<close> / @{const bfilter_ivl_st})
   on @{const EA_Assume} edges.  Node~2 therefore reads @{text "[0,19]"} because
   @{text "x < 20"} refines @{text "x"} at the loop head --- not because of widening.
 
@@ -192,7 +192,7 @@ text \<open>
   \<open>loop_ivl_td_sol\<close> (Apinis warrowing), already export cleanly through Isabelle's code generator
   (confirmed once, historically, as the M1 codegen-closure milestone). \<open>analyse_interval\<close> and
   \<open>analyse_interval_td\<close> are reached by external callers through the unified dispatcher
-  \<open>analyse\<close> (\<open>Example_Analysis_Dispatch\<close>, downstream, which dispatches \<open>Interval_Analysis\<close> to
+  \<open>analyse\<close> (\<open>Analyse_Dispatch\<close>, downstream, which dispatches \<open>Interval_Analysis\<close> to
   \<open>analyse_interval_td_report\<close>) instead --- a second, domain-specific export module here would
   just be a parallel, redundant API surface for the same computation.
 \<close>

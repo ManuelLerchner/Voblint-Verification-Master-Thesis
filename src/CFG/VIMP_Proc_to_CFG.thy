@@ -43,7 +43,6 @@ text \<open>\<open>csize c\<close> is the number of \<open>Statement\<close> ind
 fun csize :: "com \<Rightarrow> nat" where
   "csize SKIP = 1"
 | "csize (Assign x a) = 1"
-| "csize (Random x) = 1"
 | "csize (Check c) = 1"
 | "csize (Seq c1 c2) = csize c1 + csize c2"
 | "csize (If b c1 c2) = 1 + csize c1 + csize c2"
@@ -68,7 +67,6 @@ text \<open>\<open>falls_through c\<close>: control can leave the fragment of \<
 fun falls_through :: "com \<Rightarrow> bool" where
   "falls_through SKIP = True"
 | "falls_through (Assign x a) = True"
-| "falls_through (Random x) = True"
 | "falls_through (Check c) = True"
 | "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
 | "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
@@ -128,8 +126,6 @@ where
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p (Assign x a) k n =
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
-| "compile \<Pi> p (Random x) k n =
-     (Suc n, Statement n, {(Statement n, EA_Random x, k)}, {})"
 | "compile \<Pi> p (Check c) k n =
      (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
@@ -149,10 +145,21 @@ where
           {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1,
           K1))"
 | "compile \<Pi> p (Call dst q actuals) k n =
-     (Suc n, Statement n, {},
-      {(Statement n,
-        CallEdge dst (call_formals \<Pi> q) actuals,
-        FunctionEntry q, k)})"
+     (case special_table q of
+        Some desc \<Rightarrow>
+          (case classify_special desc actuals of
+             None \<Rightarrow> (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})
+           | Some sc \<Rightarrow>
+               (case dst of
+                  Some x \<Rightarrow>
+                    (Suc n, Statement n, {(Statement n, EA_Special sc x, k)}, {})
+                | None \<Rightarrow>
+                    (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})))
+      | None \<Rightarrow>
+          (Suc n, Statement n, {},
+           {(Statement n,
+             CallEdge dst (call_formals \<Pi> q) actuals,
+             FunctionEntry q, k)}))"
 | "compile \<Pi> p (Return e) k n =
      (Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})"
 | "compile \<Pi> p Restore k n =
@@ -281,7 +288,7 @@ text \<open>Every fragment enters at its base counter.  Handing the continuation
 lemma compile_entry:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> en = Statement n"
   by (induction c arbitrary: k n n' en E K rule: com.induct)
-     (auto simp: Let_def split: prod.splits)
+     (auto simp: Let_def split: prod.splits option.splits)
 
 lemma compile_entry_stmt:
   assumes "compile \<Pi> p c k n = (n', en, E, K)"
@@ -884,7 +891,7 @@ subsection \<open>Finiteness\<close>
 lemma compile_finite:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> finite E \<and> finite K"
   by (induction c arbitrary: k n n' en E K rule: com.induct)
-     (auto simp: Let_def split: prod.splits)
+     (auto simp: Let_def split: prod.splits option.splits)
 
 lemma compile_proc_finite:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
@@ -925,7 +932,7 @@ lemma compile_call_ce_entry:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
   by (induction c arbitrary: k n n' en E K)
-     (auto simp: Let_def split: prod.splits if_splits)
+     (auto simp: Let_def split: prod.splits if_splits option.splits)
 
 text \<open>Edge endpoints: a source is always an allocated \<open>Statement\<close>; a target is an allocated
   \<open>Statement\<close>, the own \<^term>\<open>FunctionResult p\<close>, or the continuation.  The continuation
@@ -1006,7 +1013,7 @@ lemma compile_ret_wf:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E
    \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> v = FunctionResult q"
   by (induction c arbitrary: k n n' en E K)
-     (auto simp: Let_def split: prod.splits if_splits)
+     (auto simp: Let_def split: prod.splits if_splits option.splits)
 
 lemma compile_proc_call_ce_entry:
   "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
@@ -1133,7 +1140,7 @@ text \<open>The compiler emits, for a call to a declared procedure, a single \<o
   the callee's formal parameters (looked up in the procedure table) and the actual argument
   expressions.\<close>
 lemma compile_Call_calls:
-  assumes "\<Pi> q = Some decl"
+  assumes "\<Pi> q = Some decl" and "special_table q = None"
   shows "snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))
            = {(Statement n, CallEdge dst (formals decl) actuals, FunctionEntry q, k)}"
   using assms by simp
@@ -1151,14 +1158,15 @@ lemma call_enter_eq_source_call_store:
 text \<open>Combined: traversing the compiled call edge lands the callee at the source callee-entry
   store.\<close>
 lemma compile_call_enter_eq_source:
-  assumes "\<Pi> q = Some decl"
+  assumes "\<Pi> q = Some decl" and "special_table q = None"
     and "(cs, CallEdge dst pars actuals, FunctionEntry q, af)
            \<in> snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))"
   shows "call_enter source_global (CallEdge dst pars actuals) s
            = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
              (enter_state source_global s)"
 proof -
-  from assms(2) have "pars = formals decl" by (simp add: assms(1))
+  from assms(3) have "pars = formals decl"
+    by (simp add: assms(1,2))
   then show ?thesis by (simp add: call_enter_eq_source_call_store)
 qed
 

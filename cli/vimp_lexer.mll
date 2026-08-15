@@ -20,7 +20,6 @@ rule token = parse
   | "global"            { GLOBAL }
   | "void"              { VOID }
   | "skip"              { SKIP }
-  | "random"            { RANDOM }
   | "return"            { RETURN }
   | "__voblint_check"   { CHECK }
   | "if"                { IF }

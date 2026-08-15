@@ -207,10 +207,10 @@ lemma twice_cover_combine:
 
 lemma twice_sound0:
   "cinit_stores twice_gs \<subseteq>
-     \<lbrakk>combine_env\<^sup># twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+     \<lbrakk>combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))\<rbrakk>"
 proof -
-  have "combine_env\<^sup># twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
+  have "combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
           (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st))
         = fun_of_exec_dg_st_for twice_gs cinit_ivl_st"
     by (simp add: combine_env_abs_def fun_of_exec_dg_st_for_def fun_of_st_cinit_ivl_st_for
@@ -272,9 +272,9 @@ proof -
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     by unfold_locales
        (rule twice_reserved
-             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_random_for
-             twice_transfer.tf_sound_assume_for twice_transfer.tf_sound_assume_not_for
-             twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_for
+             twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
+             twice_transfer.tf_sound_branch_for
+             twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_env_for
              ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
              action_reduces.ret_none[OF ivl_tf_st_for_reduces]
@@ -290,6 +290,8 @@ lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') t
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
       value_providing_def source_aexp_def ret_var_def
+      special_table_def special_pname_nondet_int_def
+      special_pname_min_def special_pname_max_def
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:

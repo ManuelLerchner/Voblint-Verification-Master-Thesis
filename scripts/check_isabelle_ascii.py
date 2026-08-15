@@ -37,6 +37,8 @@ REPL = {
     "⟩": r"\<rangle>",
     "⟦": r"\<lbrakk>",
     "⟧": r"\<rbrakk>",
+    "⦇": r"\<lparr>",
+    "⦈": r"\<rparr>",
     "↦": r"\<mapsto>",
     "←": r"\<leftarrow>",
     "⤜": r"\<bind>",

@@ -13,17 +13,20 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CLI_DIR="$REPO_ROOT/cli"
 
 # codegen/generated/ is a checked-in artifact, not rebuilt here (this script
-# "does not require Isabelle" is load-bearing, see header) -- so verify it
-# actually corresponds to the current .thy sources rather than silently
+# "does not require Isabelle" is load-bearing, see header) -- so warn if it
+# doesn't correspond to the current .thy sources rather than silently
 # compile-testing a stale copy left over from before a proof/definition fix.
 # codegen-hash.sh defines "corresponds to" identically for both this check
-# and the stamp regenerate-codegen.sh writes.
+# and the stamp regenerate-codegen.sh writes. Non-fatal: a stale stamp is
+# common (e.g. git index state that doesn't reflect a just-regenerated
+# codegen/), and blocking every voblint invocation on it is worse than
+# occasionally compile-testing a stale copy -- run 'pixi run codegen' to
+# clear the warning.
 stamp="$REPO_ROOT/codegen/generated/.source-hash"
 current_hash="$("$SCRIPT_DIR/codegen-hash.sh")"
 if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$current_hash" ]; then
-  echo "cli-build.sh: codegen/generated/ is stale (or missing its .source-hash stamp)." >&2
-  echo "Run 'pixi run codegen' first, then retry." >&2
-  exit 1
+  echo "cli-build.sh: warning: codegen/generated/ is stale (or missing its .source-hash stamp)." >&2
+  echo "Run 'pixi run codegen' to refresh it; building with the checked-in copy anyway." >&2
 fi
 
 # Copied in (not symlinked) so ocamlopt can infer the module name

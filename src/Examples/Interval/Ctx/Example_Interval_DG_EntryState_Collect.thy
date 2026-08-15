@@ -6,7 +6,7 @@ theory Example_Interval_DG_EntryState_Collect
     "Voblint_Core.DG_Ctx_Activation"
 begin
 
-section \<open>Activation-indexed collecting soundness: one context covers every random() draw\<close>
+section \<open>Activation-indexed collecting soundness: one context covers every __voblint_nondet_int() draw\<close>
 
 text \<open>
   The connecting theorem between the routed executable post-solution and the
@@ -17,7 +17,7 @@ text \<open>
   \<open>ivl_context\<close> does for \<open>twice\<close>'s literal-argument calls), \<open>rc_context\<close> ignores its
   store argument and always returns the caller's already-solved routed value.  That
   single design choice is what turns the per-value exact-context story into the
-  one-context coverage story: every concrete \<open>random()\<close> outcome enters under the
+  one-context coverage story: every concrete \<open>__voblint_nondet_int()\<close> outcome enters under the
   very same admissible context \<open>ctx_call\<close>, because \<open>rc_context\<close> never looks at which
   outcome it was.
 \<close>
@@ -29,8 +29,8 @@ definition rc_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl abs_state" 
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst rc_ctx_sol
-           then combine_env\<^sup># rc_gs
-                  (locals ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inl (v, ctx))))
+           then combine_env_abs rc_gs
+                 (locals ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inl (v, ctx))))
                   (globs ((fun_of_dg_st_for rc_gs \<circ> snd rc_ctx_sol) (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
@@ -66,7 +66,7 @@ lemma pp_eq_bound:
 lemma rc_ctx_sg_covered:
   "(v, ctx) \<in> fst rc_ctx_sol
    \<Longrightarrow> rc_ctx_sg (Inl (v, ctx))
-       = combine_env\<^sup># rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+       = combine_env_abs rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
   by (simp add: rc_ctx_sg_def)
 
 lemma rc_ctx_sg_uncovered_empty:
@@ -125,7 +125,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst rc_ctx_sol"
   thus "rc_ctx_sg (Inl (v, ctx))
-          = combine_env\<^sup># rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+          = combine_env_abs rc_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
     by (rule rc_ctx_sg_covered)
 next
   fix v ctx
@@ -274,10 +274,10 @@ next
     using adm tm rc_ctx_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
-subsection \<open>Acceptance witness: one context covers every \<open>random()\<close> draw\<close>
+subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
-  (in particular, every store obtained by any \<open>random()\<close> outcome, since \<open>x\<close>'s solved
+  (in particular, every store obtained by any \<open>__voblint_nondet_int()\<close> outcome, since \<open>x\<close>'s solved
   interval there is \<open>Top\<close>), the callee entry lands at the \<^emph>\<open>same, fixed\<close> context
   \<open>ctx_call\<close>.  The conclusion's context component is the literal constant \<open>ctx_call\<close>,
   not an expression mentioning \<open>s\<close>: nothing here is a family of contexts indexed by
@@ -299,7 +299,7 @@ qed
 
 text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<open>ctx_call\<close> makes the \<open>ctx_key\<close> side of
   the same fact syntactically manifest: every concrete callee-entry trace this set
-  counts --- one per concrete \<open>random()\<close> outcome that actually occurs --- is one
+  counts --- one per concrete \<open>__voblint_nondet_int()\<close> outcome that actually occurs --- is one
   whose \<open>ctx_key\<close> equals the single context \<open>ctx_call\<close>, not a family of contexts
   varying with the trace.  \<open>rc_activation_collect_sound\<close> then bounds this whole set,
   every context alike, in \<open>\<lbrakk>rc_ctx_sg (Inl (FunctionEntry (STR ''p''), ctx_call))\<rbrakk>\<close>.\<close>

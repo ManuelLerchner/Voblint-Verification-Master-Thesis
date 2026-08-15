@@ -20,6 +20,93 @@ fun minus_ivl :: "ivl => ivl => ivl" where
 instance ..
 end
 
+text \<open>
+  \<open>ivl_min\<close>/\<open>ivl_max\<close> abstract the two-argument \<open>Min\<close>/\<open>Max\<close> special calls:
+  componentwise \<open>min\<close>/\<open>max\<close> of the bounds, exact whenever both operands are
+  non-empty (\<open>min\<close>/\<open>max\<close> of two non-empty ranges is again non-empty, unlike
+  multiplication's corner case), normalized like \<open>plus_ivl\<close>/\<open>minus_ivl\<close> so an
+  empty operand still collapses to the canonical @{const bot}.
+\<close>
+fun ivl_min :: "ivl => ivl => ivl" where
+    "ivl_min (Ivl l1 u1) (Ivl l2 u2) = normalize_ivl (Ivl (min l1 l2) (min u1 u2))"
+
+fun ivl_max :: "ivl => ivl => ivl" where
+    "ivl_max (Ivl l1 u1) (Ivl l2 u2) = normalize_ivl (Ivl (max l1 l2) (max u1 u2))"
+
+lemma ivl_min_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "min i j \<in> gamma_ivl (ivl_min a b)"
+  using assms
+  by (cases a; cases b)
+     (auto simp: normalize_ivl_gamma Fin_min intro: eint_min_mono)
+
+lemma ivl_max_sound:
+  assumes "i \<in> gamma_ivl a" "j \<in> gamma_ivl b"
+  shows "max i j \<in> gamma_ivl (ivl_max a b)"
+  using assms
+  by (cases a; cases b)
+     (auto simp: normalize_ivl_gamma Fin_max intro: eint_max_mono)
+
+lemma ivl_min_mono1: "a1 \<le> a2 \<Longrightarrow> ivl_min a1 b \<le> ivl_min a2 (b::ivl)"
+proof -
+  assume le: "a1 \<le> a2"
+  obtain x1 x2 where a1: "a1 = Ivl x1 x2" by (rule ivl_exhaustE)
+  obtain x1a x2a where a2: "a2 = Ivl x1a x2a" by (rule ivl_exhaustE)
+  obtain x1b x2b where b: "b = Ivl x1b x2b" by (rule ivl_exhaustE)
+  from le a1 a2 have h: "eint_le x1a x1" "eint_le x2 x2a"
+    by (simp_all add: less_eq_ivl_def)
+  have "Ivl (min x1 x1b) (min x2 x2b) \<le> Ivl (min x1a x1b) (min x2a x2b)"
+    unfolding less_eq_ivl_def using h by (auto intro: eint_min_mono)
+  then show ?thesis unfolding a1 a2 b ivl_min.simps by (rule normalize_ivl_mono)
+qed
+
+lemma ivl_min_mono2: "b1 \<le> b2 \<Longrightarrow> ivl_min a b1 \<le> ivl_min a (b2::ivl)"
+proof -
+  assume le: "b1 \<le> b2"
+  obtain x1 x2 where a: "a = Ivl x1 x2" by (rule ivl_exhaustE)
+  obtain x1a x2a where b1: "b1 = Ivl x1a x2a" by (rule ivl_exhaustE)
+  obtain x1b x2b where b2: "b2 = Ivl x1b x2b" by (rule ivl_exhaustE)
+  from le b1 b2 have h: "eint_le x1b x1a" "eint_le x2a x2b"
+    by (simp_all add: less_eq_ivl_def)
+  have "Ivl (min x1 x1a) (min x2 x2a) \<le> Ivl (min x1 x1b) (min x2 x2b)"
+    unfolding less_eq_ivl_def using h by (auto intro: eint_min_mono)
+  then show ?thesis unfolding a b1 b2 ivl_min.simps by (rule normalize_ivl_mono)
+qed
+
+lemma ivl_min_combine_mono:
+  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> ivl_min a1 b1 \<le> ivl_min a2 (b2::ivl)"
+  by (meson order.trans ivl_min_mono1 ivl_min_mono2)
+
+lemma ivl_max_mono1: "a1 \<le> a2 \<Longrightarrow> ivl_max a1 b \<le> ivl_max a2 (b::ivl)"
+proof -
+  assume le: "a1 \<le> a2"
+  obtain x1 x2 where a1: "a1 = Ivl x1 x2" by (rule ivl_exhaustE)
+  obtain x1a x2a where a2: "a2 = Ivl x1a x2a" by (rule ivl_exhaustE)
+  obtain x1b x2b where b: "b = Ivl x1b x2b" by (rule ivl_exhaustE)
+  from le a1 a2 have h: "eint_le x1a x1" "eint_le x2 x2a"
+    by (simp_all add: less_eq_ivl_def)
+  have "Ivl (max x1 x1b) (max x2 x2b) \<le> Ivl (max x1a x1b) (max x2a x2b)"
+    unfolding less_eq_ivl_def using h by (auto intro: eint_max_mono)
+  then show ?thesis unfolding a1 a2 b ivl_max.simps by (rule normalize_ivl_mono)
+qed
+
+lemma ivl_max_mono2: "b1 \<le> b2 \<Longrightarrow> ivl_max a b1 \<le> ivl_max a (b2::ivl)"
+proof -
+  assume le: "b1 \<le> b2"
+  obtain x1 x2 where a: "a = Ivl x1 x2" by (rule ivl_exhaustE)
+  obtain x1a x2a where b1: "b1 = Ivl x1a x2a" by (rule ivl_exhaustE)
+  obtain x1b x2b where b2: "b2 = Ivl x1b x2b" by (rule ivl_exhaustE)
+  from le b1 b2 have h: "eint_le x1b x1a" "eint_le x2a x2b"
+    by (simp_all add: less_eq_ivl_def)
+  have "Ivl (max x1 x1a) (max x2 x2a) \<le> Ivl (max x1 x1b) (max x2 x2b)"
+    unfolding less_eq_ivl_def using h by (auto intro: eint_max_mono)
+  then show ?thesis unfolding a b1 b2 ivl_max.simps by (rule normalize_ivl_mono)
+qed
+
+lemma ivl_max_combine_mono:
+  "\<lbrakk>a1 \<le> a2; b1 \<le> b2\<rbrakk> \<Longrightarrow> ivl_max a1 b1 \<le> ivl_max a2 (b2::ivl)"
+  by (meson order.trans ivl_max_mono1 ivl_max_mono2)
+
 lemma int_mult_in_corners_lo:
   fixes l1 u1 l2 u2 i j :: int
   assumes "l1 \<le> i" "i \<le> u1" "l2 \<le> j" "j \<le> u2"

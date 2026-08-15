@@ -195,7 +195,7 @@ instance ivl :: bounded_semilattice_sup_bot ..
 subsection \<open>Meet (greatest lower bound)\<close>
 
 text \<open>
-  Interval intersection.  Used by @{text assume_ivl} to refine a variable's
+  Interval intersection.  Used by @{text bfilter_ivl} to refine a variable's
   interval on a guard (@{text "x < n"} narrows the upper bound).
 \<close>
 fun meet_ivl :: "ivl => ivl => ivl" where

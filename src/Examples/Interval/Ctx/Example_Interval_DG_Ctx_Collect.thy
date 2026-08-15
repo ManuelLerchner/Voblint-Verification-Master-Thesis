@@ -40,8 +40,8 @@ definition ivl_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl abs_state"
      (case k of
         Inl (v, ctx) \<Rightarrow>
           (if (v, ctx) \<in> fst twice_ctx_sol
-           then combine_env\<^sup># twice_gs
-                  (locals ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inl (v, ctx))))
+           then combine_env_abs twice_gs
+                 (locals ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inl (v, ctx))))
                   (globs ((fun_of_dg_st_for twice_gs \<circ> snd twice_ctx_sol) (Inr Global)))
            else bot)
       | Inr _ \<Rightarrow> bot)"
@@ -75,7 +75,7 @@ text \<open>The two faces of the guarded reader: on the solved domain it is the 
 lemma ivl_ctx_sg_covered:
   "(v, ctx) \<in> fst twice_ctx_sol
    \<Longrightarrow> ivl_ctx_sg (Inl (v, ctx))
-       = combine_env\<^sup># twice_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+       = combine_env_abs twice_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
   by (simp add: ivl_ctx_sg_def)
 
 lemma ivl_ctx_sg_uncovered_empty:
@@ -183,7 +183,7 @@ next
   fix v ctx
   assume "(v, ctx) \<in> fst twice_ctx_sol"
   thus "ivl_ctx_sg (Inl (v, ctx))
-          = combine_env\<^sup># twice_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
+          = combine_env_abs twice_gs (locals (sigma_abs (Inl (v, ctx)))) (globs (sigma_abs (Inr Global)))"
     by (rule ivl_ctx_sg_covered)
 next
   fix v ctx
@@ -430,7 +430,7 @@ proof (rule activation_collect_sound[where sg = ivl_ctx_sg and admiss = "admiss_
         and S = "cinit_stores twice_gs" and g = twice_cfg and gs = twice_gs])
   \<comment> \<open>ENTRY_G --- mirrors \<open>twice_sound0\<close>: cinit stores lie in the seeded entry slot.\<close>
   text \<open>Both the local seed \<open>s0d\<close> and the global seed \<open>s0g\<close> are \<open>cinit_ivl_st\<close>'s own
-    projections, so routing them back together through \<open>combine_env\<^sup>#\<close> exactly recovers
+    projections, so routing them back together through \<open>combine_env_abs\<close> exactly recovers
     \<open>s0d\<close>; the membership transports through \<open>gamma_unit_mono\<close> componentwise, needing
     the caller's local bound (\<open>entry_locals_ge_s0d\<close>) and the entry's global-seed
     bound (\<open>twice_dg.pp_entry_s0g_bound\<close>) separately instead of one joined bound.\<close>

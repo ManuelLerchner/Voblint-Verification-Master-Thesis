@@ -1,10 +1,10 @@
 theory Voblint_OCaml_Check
-  imports Voblint_Examples.Example_Analysis_Dispatch
+  imports Voblint_Examples.Analyse_Dispatch
 begin
 
 text \<open>
   CI-only OCaml compilation check for the \<open>export_code\<close> declarations in
-  \<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch\<close>. Kept in a separate
+  \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>. Kept in a separate
   session, built only by CI's Linux job (see \<open>.github/workflows/ci.yml\<close>),
   not by the default \<open>Voblint_Examples\<close> build.
 
@@ -22,7 +22,7 @@ export_code
   analyse Sign_Analysis Interval_Analysis
   analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
-  SKIP com.Call Random com.If Assign Seq While Restore Unwind Return Check
+  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
   Bc bexp.Not And Or Less bexp.Eq
   Check_Proved Check_Refuted Check_Unknown

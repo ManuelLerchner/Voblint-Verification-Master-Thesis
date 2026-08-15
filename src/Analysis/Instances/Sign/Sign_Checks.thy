@@ -130,7 +130,7 @@ text \<open>
   \<^const>\<open>analyse_sign_env_for\<close> (the native D/G pipeline \<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>
   computes) instead of \<^const>\<open>sign_exec_prog_at\<close> (the older \<open>side_cfg_T_eff_st\<close> pipeline) ---
   this is the report function the exported \<open>analyse\<close> API actually dispatches to (see
-  \<open>Example_Analysis_Dispatch\<close>, downstream in Examples), fixed at \<open>prog_main_name\<close> rather than
+  \<open>Analyse_Dispatch\<close>, downstream in Examples), fixed at \<open>prog_main_name\<close> rather than
   an arbitrary \<open>mnm\<close> since \<open>analyse_sign_env_for\<close> already is.
 \<close>
 
@@ -155,7 +155,7 @@ lemma analyse_sign_report_for_code [code]:
   "analyse_sign_report_for gs p =
      (let sol = snd (analyse_sign_for gs p)
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env\<^sup># gs
+           (\<lambda>v. combine_env_abs gs
                   (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
                   (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
            sign_classify_check)"
@@ -192,7 +192,7 @@ lemma analyse_sign_report_for_with_state_code [code]:
   "analyse_sign_report_for_with_state gs p =
      (let sol = snd (analyse_sign_for gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env\<^sup># gs
+           (\<lambda>v. combine_env_abs gs
                   (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
                   (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
            sign_classify_check)"

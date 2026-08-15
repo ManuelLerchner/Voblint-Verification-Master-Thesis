@@ -53,15 +53,10 @@ text \<open>The executable mirror of \<open>sign_tf_for\<close>/\<open>enter_sig
   the classifier, following the same pattern as \<open>ivl_tf_st_for\<close>/
   \<open>ivl_enter_st_for\<close> for the interval domain.\<close>
 
-definition assume_sign_st_for ::
-  "(vname => bool) => bexp => sign resolved_st_q => sign resolved_st_q" where
-  "assume_sign_st_for source_global b s =
-    bfilter_sign_st source_global b True s"
-
-definition assume_not_sign_st_for ::
-  "(vname => bool) => bexp => sign resolved_st_q => sign resolved_st_q" where
-  "assume_not_sign_st_for source_global b s =
-    bfilter_sign_st source_global b False s"
+definition branch_sign_st_for ::
+  "(vname => bool) => bexp => bool => sign resolved_st_q => sign resolved_st_q" where
+  "branch_sign_st_for source_global b pol s =
+    bfilter_sign_st source_global b pol s"
 
 definition sign_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
@@ -79,12 +74,18 @@ fun sign_tf_st_for ::
   | "sign_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
          (aval_sign a (fun_of_resolved_st_q_for source_global s))"
-  | "sign_tf_st_for source_global (EA_Random x) s =
-       update_resolved_st_q s (location_of source_global x) STop"
+  | "sign_tf_st_for source_global (EA_Special sc x) s =
+       update_resolved_st_q s (location_of source_global x)
+         (case sc of
+            Nondet_Int => STop
+          | Min a b => sign_min (aval_sign a (fun_of_resolved_st_q_for source_global s))
+                                 (aval_sign b (fun_of_resolved_st_q_for source_global s))
+          | Max a b => sign_max (aval_sign a (fun_of_resolved_st_q_for source_global s))
+                                 (aval_sign b (fun_of_resolved_st_q_for source_global s)))"
   | "sign_tf_st_for source_global (EA_Assume b) s =
-       assume_sign_st_for source_global b s"
+       branch_sign_st_for source_global b True s"
   | "sign_tf_st_for source_global (EA_AssumeNot b) s =
-       assume_not_sign_st_for source_global b s"
+       branch_sign_st_for source_global b False s"
   | "sign_tf_st_for source_global (EA_Ret None p) s = s"
   | "sign_tf_st_for source_global (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of source_global ret_var)
@@ -105,7 +106,7 @@ lemma sign_tf_st_for_nop_agree:
   shows
     "lookup_resolved_st_q (sign_tf_st_for gs EA_Nop s_exec) location =
       apply_tf (sign_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by simp
+  using agree[OF location_in] by (simp add: sign_tf_for_def skip_sign_def)
 
 lemma sign_tf_st_for_assign_agree:
   fixes y :: vname and a :: aexp
@@ -142,7 +143,7 @@ lemma sign_tf_st_for_ret_none_agree:
     "lookup_resolved_st_q (sign_tf_st_for gs (EA_Ret None p) s_exec) location =
       apply_tf (sign_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
   using sign_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: apply_tf_EA_Ret_None)
+  by (simp add: sign_tf_for_def skip_sign_def return_sign_def)
 
 subsection \<open>Classifier-parametric commutation\<close>
 
@@ -160,27 +161,45 @@ theorem sign_tf_st_for_commute:
    apply_tf (sign_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (sign_tf_st_for gs a s))"
-    by (rule action_reduces_comp[OF sign_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs EA_Nop s) =
-      apply_tf (sign_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+      apply_tf (sign_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
+    by (simp add: sign_tf_for_def skip_sign_def)
   show "\<And>x e. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Assign x e) s) =
     apply_tf (sign_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
     by (simp add: sign_tf_for_def assign_sign_def)
-  show "\<And>x. fun_of_resolved_st_q_for gs
-      (sign_tf_st_for gs (EA_Random x) s) =
-    apply_tf (sign_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def random_sign_def)
+  show "\<And>sc x. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Special sc x) s) =
+    apply_tf (sign_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
+    by (auto simp: sign_tf_for_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Assume b) s) =
     apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def assume_sign_st_for_def assume_sign_def bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def branch_sign_st_for_def apply_tf.simps bfilter_sign_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_AssumeNot b) s) =
     apply_tf (sign_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def assume_not_sign_st_for_def assume_not_sign_def bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def branch_sign_st_for_def apply_tf.simps bfilter_sign_st_commute)
+  show "\<And>ea p. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Ret ea p) s) =
+    apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  proof -
+    fix ea p
+    show "fun_of_resolved_st_q_for gs (sign_tf_st_for gs (EA_Ret ea p) s) =
+      apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    proof (cases ea)
+      case None
+      then show ?thesis by (simp add: sign_tf_for_def return_sign_def)
+    next
+      case (Some a)
+      then show ?thesis by (simp add: sign_tf_for_def return_sign_def assign_sign_def)
+    qed
+  qed
+  show "\<And>c. fun_of_resolved_st_q_for gs
+      (sign_tf_st_for gs (EA_Check c) s) =
+    apply_tf (sign_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: sign_tf_for_def event_sign_def)
 qed
 
 lemma enter_frame_sign_st_for_commute:
@@ -217,8 +236,8 @@ lemma sign_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_for_reduces])
 
 lemma sign_etf_st_for_combine_tree:
-  "etf_combine_st (sign_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
-  unfolding sign_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
+  "etf_combine_collect_st (sign_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  unfolding sign_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma sign_etf_st_for_enter_tree:
   "etf_st_enter (sign_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (sign_enter_st_for gs xs es) u"

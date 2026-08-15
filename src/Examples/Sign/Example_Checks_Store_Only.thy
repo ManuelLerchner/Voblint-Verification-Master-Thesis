@@ -12,7 +12,7 @@ text \<open>
   check node's stores to the procedure exit. The compiled \<^const>\<open>checks\<close> field
   comes from a real compiler run (\<open>collect_checks_prog\<close>, \<open>VIMP_Proc_to_CFG.thy\<close>);
   \<open>y\<close> is overwritten (\<open>y := 0\<close>) between the first and second check, and \<open>z\<close> is
-  set by a nondeterministic \<open>random()\<close> read, so the three checks land in each
+  set by a nondeterministic \<open>__voblint_nondet_int()\<close> read, so the three checks land in each
   of the three possible outcomes: the first is \<^term>\<open>Check_Proved\<close>, the second
   --- checking \<open>0 < y\<close> again after \<open>y := 0\<close> --- is \<^term>\<open>Check_Refuted\<close>, and
   the third --- \<open>z = 1\<close> against an unconstrained \<open>z\<close> --- is \<^term>\<open>Check_Unknown\<close>.
@@ -23,17 +23,16 @@ text \<open>
   condition is a plain \<^typ>\<open>bexp\<close>.
 \<close>
 
+text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
+  written inside the \<open>program { ... }\<close> quotation the way other calls can: Pure's inner-syntax
+  lexer reserves leading-underscore tokens for translation-internal nonterminals, rejecting any
+  user identifier that begins with one.  The call is spliced in directly instead.\<close>
 definition checks_ex_program :: imp_prog where
-  "checks_ex_program = program {
-     void main() {
-       y := 5;
-       __voblint_check(0 < y);
-       y := 0;
-       __voblint_check(0 < y);
-       z := random();
-       __voblint_check(z == 1)
-     }
-   }"
+  "checks_ex_program = mk_program []
+     (Seq (Seq (imp \<lbrakk> y := 5; __voblint_check(0 < y); y := 0; __voblint_check(0 < y) \<rbrakk>)
+                (VIMP_Proc.com.Call (Some (STR ''z'')) special_pname_nondet_int []))
+          (imp \<lbrakk> __voblint_check(z == 1) \<rbrakk>))
+     []"
 
 text \<open>Computed, not asserted: the three \<open>check(...)\<close> statements land at the
   nodes \<^const>\<open>compile\<close> actually assigns them.\<close>
@@ -69,7 +68,7 @@ definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>__voblint_check(0 < y)\<close>, proved) reaches \<open>Statement 2\<close> reaches
   \<open>Statement 3\<close> (\<open>y := 0\<close> already ran, so this second \<open>__voblint_check(0 < y)\<close> is
-  refuted) reaches \<open>Statement 4\<close> (\<open>z := random()\<close>) reaches \<open>Statement 5\<close>
+  refuted) reaches \<open>Statement 4\<close> (\<open>z := __voblint_nondet_int()\<close>) reaches \<open>Statement 5\<close>
   (\<open>__voblint_check(z == 1)\<close>, unknown --- \<open>z\<close> is unconstrained) reaches the epilogue
   \<open>Statement 6\<close> reaches \<open>cfg_exit\<close>.\<close>
 lemma checks_ex_intra_eval:
@@ -79,7 +78,7 @@ lemma checks_ex_intra_eval:
       (Statement 1, EA_Check (Less (N 0) (V (STR ''y''))), Statement 2),
       (Statement 2, EA_Assign (STR ''y'') (N 0), Statement 3),
       (Statement 3, EA_Check (Less (N 0) (V (STR ''y''))), Statement 4),
-      (Statement 4, EA_Random (STR ''z''), Statement 5),
+      (Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5),
       (Statement 5, EA_Check (Eq (V (STR ''z'')) (N 1)), Statement 6),
       (Statement 6, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval
@@ -172,7 +171,7 @@ lemma checks_ex_node_sound_5:
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>SPos\<close>
   right after \<open>y := 5\<close> at \<open>Statement 1\<close>, \<open>SZero\<close> right after \<open>y := 0\<close> at
   \<open>Statement 3\<close> (so the second \<open>0 < y\<close> is refuted, not merely unproven), and
-  \<open>z\<close> is \<open>STop\<close> at \<open>Statement 5\<close> (unconstrained by \<open>random()\<close>).\<close>
+  \<open>z\<close> is \<open>STop\<close> at \<open>Statement 5\<close> (unconstrained by \<open>__voblint_nondet_int()\<close>).\<close>
 lemma checks_ex_classify_1:
   "sign_classify_check (Less (N 0) (V (STR ''y''))) (checks_ex_env (Statement 1)) = Check_Proved"
   unfolding checks_ex_env_def by eval
@@ -309,11 +308,11 @@ proof -
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (Less (N 0) (V (STR ''y'')))" "Statement 4"]
     using s4 e4 unfolding checks_ex_reach_def by simp
-  have e5: "(Statement 4, EA_Random (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
+  have e5: "(Statement 4, EA_Special Nondet_Int (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7) \<in> checks_ex_reach (Statement 5)"
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
-        "cinit_stores checks_ex_gs" "Statement 4" "EA_Random (STR ''z'')" "Statement 5"
+        "cinit_stores checks_ex_gs" "Statement 4" "EA_Special Nondet_Int (STR ''z'')" "Statement 5"
         "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7)"]
     using s5 e5 unfolding checks_ex_reach_def by force
   then show ?thesis by blast

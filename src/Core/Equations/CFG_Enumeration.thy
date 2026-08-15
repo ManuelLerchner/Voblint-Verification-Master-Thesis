@@ -20,6 +20,7 @@ text \<open>Structural orders make @{const sorted_list_of_set} a deterministic e
   enumeration of intra and call relations. They affect only solver representation, not
   CFG semantics.\<close>
 derive linorder bexp
+derive linorder special_call
 derive linorder edge_action
 derive linorder call_action
 derive linorder cfg_node

@@ -15,12 +15,12 @@ section \<open>Generic executable entry-state context analysis for Interval\<clo
 
 text \<open>
   Promotes the routed D/G machinery a fixed-program example (an entry-state
-  acceptance case such as \<open>void p(a) { return a }\<close> / \<open>void main() { x := random();
+  acceptance case such as \<open>void p(a) { return a }\<close> / \<open>void main() { x := __voblint_nondet_int();
   y := p(x) }\<close>) exercises to an executable analysis over an arbitrary
   \<^type>\<open>imp_prog\<close>: the context at a call is the entered abstract value of the
   callee's declared formals (\<^const>\<open>formals_route\<close>/\<^const>\<open>formals_context\<close>),
   never call-site history, so a call whose argument is unconstrained (e.g.
-  \<open>random()\<close>) is analyzed once under one wide context rather than diverging over
+  \<open>__voblint_nondet_int()\<close>) is analyzed once under one wide context rather than diverging over
   every concrete value. Mirrors \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
   \<open>analyse_interval_td\<close> family and naming convention, adding one context
   dimension: every quantity here is keyed on \<^typ>\<open>pp \<times> ivl list\<close>, not \<^typ>\<open>pp\<close>
@@ -598,6 +598,54 @@ definition entry_state_sg_exec ::
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
 
+text \<open>
+  Solution-consuming siblings of \<^const>\<open>entry_state_sigma_abs_exec\<close>/
+  \<^const>\<open>entry_state_sg_exec\<close>, taking an already-computed \<^const>\<open>entry_state_sol\<close>
+  result instead of recomputing it. \<open>entry_state_sg_exec\<close> itself calls \<open>entry_state_sol\<close>
+  once directly plus twice more through \<open>entry_state_sigma_abs_exec\<close> (locals/globs), so a
+  caller that queries several \<open>(v, x)\<close> pairs against the *same* solved analysis -- e.g. one
+  full-state GraphViz render walking every CFG node -- must not go through those definitions
+  directly: doing so re-runs the whole context-sensitive TD solve on every query. These
+  \<open>_from_sol\<close> variants let such a caller solve exactly once and reuse the result;
+  \<open>entry_state_sg_exec\<close> itself is unchanged, so the soundness proofs below still apply to it
+  unmodified.
+\<close>
+
+definition entry_state_sigma_abs_exec_from_sol ::
+    "(vname \<Rightarrow> bool)
+       \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
+  "entry_state_sigma_abs_exec_from_sol gs sol_sigma =
+     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+       \<circ> sol_sigma"
+
+lemma entry_state_sigma_abs_exec_from_sol_eq:
+  "entry_state_sigma_abs_exec_from_sol gs (snd (entry_state_sol gs is_bot_pred Pi ps mnm main))
+     = entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main"
+  unfolding entry_state_sigma_abs_exec_from_sol_def entry_state_sigma_abs_exec_def
+  by (rule refl)
+
+definition entry_state_sg_exec_from_sol ::
+    "(vname \<Rightarrow> bool)
+       \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted" where
+  "entry_state_sg_exec_from_sol gs sol k =
+     (case k of
+        Inl (v, ctx) \<Rightarrow>
+          (if (v, ctx) \<in> fst sol
+           then assemble_env_abs gs
+                  (locals (entry_state_sigma_abs_exec_from_sol gs (snd sol) (Inl (v, ctx))))
+                  (globs (entry_state_sigma_abs_exec_from_sol gs (snd sol) (Inr Global)))
+           else Bot)
+      | Inr _ \<Rightarrow> Bot)"
+
+lemma entry_state_sg_exec_from_sol_eq:
+  "entry_state_sg_exec_from_sol gs (entry_state_sol gs is_bot_pred Pi ps mnm main)
+     = entry_state_sg_exec gs is_bot_pred Pi ps mnm main"
+  unfolding entry_state_sg_exec_from_sol_def entry_state_sg_exec_def
+    entry_state_sigma_abs_exec_from_sol_def entry_state_sigma_abs_exec_def
+  by (rule refl)
+
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
@@ -870,11 +918,17 @@ text \<open>
   filtering an already-finite set needs no such instance.
 \<close>
 
+text \<open>
+  The third parameter is the solver's own covered \<open>(node, context)\<close> key set
+  (\<^const>\<open>entry_state_sol\<close>'s first component), not variables -- named
+  \<open>reachable_keys\<close> accordingly, not \<open>vars\<close>.
+\<close>
+
 definition entry_state_classify_at ::
     "cfg_node \<Rightarrow> bexp \<Rightarrow> (pp \<times> ivl list) set \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted)
        \<Rightarrow> check_result" where
-  "entry_state_classify_at v cnd vars sg =
-     (let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) vars;
+  "entry_state_classify_at v cnd reachable_keys sg =
+     (let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) reachable_keys;
           unlift = case_lifted bot (\<lambda>\<sigma>. \<sigma>) \<circ> sg
       in if ctxs = {} then interval_classify_check cnd (unlift (Inl (v, [])))
          else Sup_fin ((\<lambda>ctx. interval_classify_check cnd (unlift (Inl (v, ctx)))) ` ctxs))"
@@ -893,7 +947,19 @@ text \<open>
   Same single-solve-per-report fix as \<open>interval_td_check_report_code\<close>: bind
   \<open>entry_state_sol\<close> once, outside \<^const>\<open>map\<close>'s per-check closure, so the
   generated code computes the solved system once per report regardless of
-  check count.
+  check count. Critically, \<open>sg\<close> below goes through
+  \<^const>\<open>entry_state_sg_exec_from_sol\<close>, not \<^const>\<open>entry_state_sg_exec\<close>: the
+  latter's own defining equation pattern-matches its key argument jointly with
+  \<open>gs is_bot_pred Pi ps mnm main\<close>, so a 6-arg partial application to those
+  produces an unevaluated closure whose body -- including its own three internal
+  \<open>entry_state_sol\<close> calls -- only runs once a key is supplied. Binding \<open>sg\<close> to
+  that partial application therefore does not share \<open>entry_state_sol\<close> across
+  the checks in this report at all, despite sitting outside \<open>map\<close>: every
+  \<open>entry_state_classify_at\<close> call underneath re-solves via \<open>sg\<close>'s own
+  internal calls, once per covered context per check. \<open>entry_state_sg_exec_from_sol\<close>
+  takes the already-computed \<open>sol\<close> above directly, so this report now solves
+  the entry-state analysis exactly once, full stop -- not once per report
+  modulo \<open>sg\<close>'s own hidden re-solving.
 \<close>
 
 declare entry_state_check_report_def [code del]
@@ -901,10 +967,11 @@ declare entry_state_check_report_def [code del]
 lemma entry_state_check_report_code [code]:
   "entry_state_check_report gs is_bot_pred Pi ps mnm main =
      (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main;
-          sg = entry_state_sg_exec gs is_bot_pred Pi ps mnm main
+          sg = entry_state_sg_exec_from_sol gs sol
       in map (\<lambda>(u, a, v). (u, ea_check_cond a, entry_state_classify_at u (ea_check_cond a) (fst sol) sg))
            (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list (compile_prog Pi ps mnm main))))"
-  unfolding entry_state_check_report_def Let_def by (rule refl)
+  unfolding entry_state_check_report_def Let_def entry_state_sg_exec_from_sol_eq[symmetric]
+  by (rule refl)
 
 definition entry_state_check_report_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "entry_state_check_report_prog mnm p =

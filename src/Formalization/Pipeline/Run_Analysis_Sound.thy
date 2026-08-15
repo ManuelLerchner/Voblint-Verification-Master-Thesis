@@ -197,8 +197,9 @@ lemma unit_dg_Hstep_for:
   shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
              (dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a d g)
            = dg_spec_step (unit_dg_spec_for gs tf) a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  by (simp add: dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for
-                unit_step_st_commute_for commute)
+  unfolding dg_spec_step_unit_st_for[OF reduces] dg_spec_step_unit_for
+  by (rule unit_step_st_commute_for
+        [where f_st = "tf_st a" and f_abs = "apply_tf tf a", OF commute])
 
 lemma unit_dg_Henter_for:
   assumes enter_commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) = enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"

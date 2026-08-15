@@ -25,6 +25,8 @@ lemma ex_fallthrough:
   using assms by (auto simp: compile_proc_def proc_decl_of_def Let_def split: prod.splits)
 
 lemma ex_nested_calls:
+  assumes "special_table p1 = None" and "special_table p2 = None"
+  shows
   "(Statement n, CallEdge (Some r1) (call_formals \<Pi> p1) [], FunctionEntry p1, Statement (Suc n))
       \<in> snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
@@ -32,12 +34,12 @@ lemma ex_nested_calls:
       \<in> snd (snd (snd (compile \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"
-  by (simp add: Let_def)
+  using assms by (simp add: Let_def)
 
 lemmas ex_recursion = inv14_recursion_edge
 
 lemma compile_seq_call_edge:
-  assumes "\<Pi> pin = Some decl"
+  assumes "\<Pi> pin = Some decl" and "special_table pin = None"
       and "compile \<Pi> pout (Seq (Call (Some rin) pin actuals) after) k n = (n', en, E, K)"
   shows "(Statement n, CallEdge (Some rin) (formals decl) actuals, FunctionEntry pin,
           Statement (Suc n)) \<in> K"
@@ -69,7 +71,7 @@ proof -
 qed
 
 theorem example_nested_call_preserves_outer:
-  assumes p: "\<Pi> pin = Some decl"
+  assumes p: "\<Pi> pin = Some decl" and spNone: "special_table pin = None"
       and comp: "compile \<Pi> pout (Seq (Call (Some rin) pin actuals) after) k n = (n', en, E, K)"
       and sub: "K \<subseteq> calls g"
   shows "cstep cr_gs g (Statement n, s, outer # stk)
@@ -79,7 +81,7 @@ theorem example_nested_call_preserves_outer:
 proof -
   have "(Statement n, CallEdge (Some rin) (formals decl) actuals, FunctionEntry pin,
          Statement (Suc n)) \<in> calls g"
-    using compile_seq_call_edge[OF p comp] sub by blast
+    using compile_seq_call_edge[OF p spNone comp] sub by blast
   from cstep_call[OF this] show ?thesis .
 qed
 
@@ -105,12 +107,13 @@ qed
 section \<open>Compiler-input contract regressions\<close>
 
 lemma unknown_call_rejected:
-  assumes "\<Pi> p = None"
+  assumes "\<Pi> p = None" and "special_table p = None"
   shows "\<not> wf_source_com \<Pi> (Call dst p actuals)"
   using assms by simp
 
 lemma wrong_call_arity_rejected:
   assumes "\<Pi> p = Some decl" and "length actuals \<noteq> length (formals decl)"
+      and "special_table p = None"
   shows "\<not> wf_source_com \<Pi> (Call dst p actuals)"
   using assms by simp
 
@@ -140,24 +143,24 @@ lemma root_return_rejected:
   by (simp add: wf_compile_input_def wf_source_program_def)
 
 lemma value_call_requires_value_provider:
-  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)"
+  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)" and "special_table p = None"
   shows "\<not> wf_source_com \<Pi> (Call (Some x) p [])"
   using assms by (simp add: proc_decl_of_def value_providing_def)
 
 lemma void_call_accepted:
-  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)"
+  assumes "\<Pi> p = Some (proc_decl_of [] SKIP)" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call None p [])"
   using assms by (simp add: proc_decl_of_def)
 
 lemma value_call_accepted:
   assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))"
-      and "x \<noteq> ret_var"
+      and "x \<noteq> ret_var" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call (Some x) p [])"
   using assms
   by (simp add: proc_decl_of_def value_providing_def source_aexp_def)
 
 lemma ignored_value_call_accepted:
-  assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))"
+  assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call None p [])"
   using assms by (simp add: proc_decl_of_def)
 
@@ -170,7 +173,9 @@ lemma explode_ret_hd [simp]: "hd (String.explode (STR ''#ret'')) \<noteq> CHR ''
 lemma main_fallthrough_accepted:
   "wf_compile_input cr_gs fallthrough_pi [] (STR ''main'') SKIP"
   by (auto simp: wf_compile_input_def wf_source_program_def fallthrough_pi_def
-        wf_proc_decl_def proc_decl_of_def reserved_ret_var_def ret_var_def)
+        wf_proc_decl_def proc_decl_of_def reserved_ret_var_def ret_var_def
+        special_table_def special_pname_nondet_int_def
+        special_pname_min_def special_pname_max_def)
 
 lemma missing_main_rejected:
   assumes "\<Pi> mnm = None"

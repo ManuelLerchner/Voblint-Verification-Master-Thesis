@@ -1,5 +1,6 @@
 theory Interval_Backward
   imports Interval_Arithmetic Voblint_Core.Exec_Backward "Voblint_VIMP.VIMP_Expr"
+    Voblint_Core.Abstract_Arithmetic
 begin
 
 section \<open>Interval backward filtering\<close>
@@ -13,11 +14,12 @@ fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
   | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
   | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
 
-lemma aval_ivl_sound:
-  "(\<forall>x. s x \<in> gamma_ivl (\<sigma> x))
-   \<Longrightarrow> aval a s \<in> gamma_ivl (aval_ivl a \<sigma>)"
-  by (induction a;
-      simp add: ivl_plus_sound ivl_minus_sound ivl_times_sound)
+interpretation ivl_arith: arith_domain_sound aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)"
+  by unfold_locales
+     (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound
+                     ivl_plus_mono ivl_minus_mono ivl_times_mono)
+
+lemmas aval_ivl_sound = ivl_arith.aval_dom_sound[unfolded gamma_abs_ivl]
 
 subsection \<open>Backward inverse operators\<close>
 
@@ -141,10 +143,7 @@ next
   then show ?thesis using A1 A2 by simp
 qed
 
-lemma aval_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> aval_ivl a sigma1 \<le> aval_ivl a sigma2"
-  by (induction a arbitrary: sigma1 sigma2)
-     (auto simp: ivl_plus_mono ivl_minus_mono ivl_times_mono le_funD)
+lemmas aval_ivl_mono = ivl_arith.aval_dom_mono
 
 lemma inv_less_ivl_mono:
   assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"

@@ -71,7 +71,7 @@ theorem ltr_post_fixpoint_sound_at_eff:
        etf_full (etf_enter etf pars args u) \<sigma> \<le> side_env_lift \<sigma> (FunctionEntry p)"
   assumes combine_le:
     "\<And>cl dst pars args p cont. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g \<Longrightarrow>
-       etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
+       etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> cont"
   assumes entry_le: "Lifted s0 \<le> side_env_lift \<sigma> (cfg_entry g)"
   shows "ltr_collect gs g S v0 \<subseteq> gamma_state_lift (side_env_lift \<sigma> v0)"
 proof -
@@ -95,8 +95,8 @@ proof -
   next
     case (COMB cl dst pars args p cont c1 c2 s t es)
     have "combine_collect gs dst s t
-            \<in> gamma_state_lift (etf_full (etf_combine etf dst cl (FunctionResult p)) \<sigma>)"
-      using etf_sound_combine inr COMB(2) COMB(4) unfolding side_env_lift_def by auto
+            \<in> gamma_state_lift (etf_full (etf_combine_collect etf dst cl (FunctionResult p)) \<sigma>)"
+      using etf_sound_combine_collect inr COMB(2) COMB(4) unfolding side_env_lift_def by auto
     then show ?case
       using gamma_lift_mono[OF gamma_state_mono combine_le[OF COMB(1)]] by fastforce
   qed

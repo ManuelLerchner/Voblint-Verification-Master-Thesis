@@ -48,10 +48,6 @@ where
     "control_at \<Pi> p (Assign x a) k n (Assign x a) (Statement n)"
 | AssignDone:
     "control_at \<Pi> p (Assign x a) k n SKIP k"
-| Random:
-    "control_at \<Pi> p (Random x) k n (Random x) (Statement n)"
-| RandomDone:
-    "control_at \<Pi> p (Random x) k n SKIP k"
 | Check:
     "control_at \<Pi> p (VIMP_Proc.com.Check c) k n (VIMP_Proc.com.Check c) (Statement n)"
 | CheckDone:
@@ -117,8 +113,6 @@ proof (induction c arbitrary: k n)
 next
   case (Assign x a) show ?case by (rule control_at.Assign)
 next
-  case (Random x) show ?case by (rule control_at.Random)
-next
   case (Check b) show ?case by (rule control_at.Check)
 next
   case (Seq c1 c2)
@@ -173,9 +167,6 @@ proof (induction c0 k n "SKIP :: com" v arbitrary: n' en E K rule: control_at.in
   then show ?case by (rule intra_path_nop)
 next
   case (AssignDone x a k n)
-  then show ?case by (simp add: star.refl)
-next
-  case (RandomDone x k n)
   then show ?case by (simp add: star.refl)
 next
   case (CheckDone c k n)

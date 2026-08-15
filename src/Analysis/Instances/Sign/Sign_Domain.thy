@@ -32,8 +32,8 @@ value "aval_sign (Plus (V (STR ''x'')) (V (STR ''x''))) ((\<lambda>_. SBot)((STR
 
 value "assign_sign (STR ''x'') (N 1) (\<lambda>_. SBot) (STR ''x'')"
 
-text \<open>Backward guard refinement is the abstract spec @{const assume_sign}.
-  Its executable mirror @{text assume_sign_st} on @{text "sign st"} is defined and
+text \<open>Backward guard refinement is the abstract spec @{const bfilter_sign}.
+  Its executable mirror @{text bfilter_sign_st} on @{text "sign st"} is defined and
   demonstrated in theory @{text Sign_Exec}.\<close>
 
 end

@@ -26,15 +26,10 @@ text \<open>
 
 subsection \<open>Executable transfer function and seeds, generic in the classifier\<close>
 
-definition assume_ivl_st_for ::
-  "(vname => bool) => bexp => ivl resolved_st_q => ivl resolved_st_q" where
-  "assume_ivl_st_for source_global b s =
-    bfilter_ivl_st source_global b True s"
-
-definition assume_not_ivl_st_for ::
-  "(vname => bool) => bexp => ivl resolved_st_q => ivl resolved_st_q" where
-  "assume_not_ivl_st_for source_global b s =
-    bfilter_ivl_st source_global b False s"
+definition branch_ivl_st_for ::
+  "(vname => bool) => bexp => bool => ivl resolved_st_q => ivl resolved_st_q" where
+  "branch_ivl_st_for source_global b pol s =
+    bfilter_ivl_st source_global b pol s"
 
 definition ivl_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
@@ -52,12 +47,18 @@ fun ivl_tf_st_for ::
   | "ivl_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
          (aval_ivl a (fun_of_resolved_st_q_for source_global s))"
-  | "ivl_tf_st_for source_global (EA_Random x) s =
-       update_resolved_st_q s (location_of source_global x) ivl_top"
+  | "ivl_tf_st_for source_global (EA_Special sc x) s =
+       update_resolved_st_q s (location_of source_global x)
+         (case sc of
+            Nondet_Int => ivl_top
+          | Min a b => ivl_min (aval_ivl a (fun_of_resolved_st_q_for source_global s))
+                                (aval_ivl b (fun_of_resolved_st_q_for source_global s))
+          | Max a b => ivl_max (aval_ivl a (fun_of_resolved_st_q_for source_global s))
+                                (aval_ivl b (fun_of_resolved_st_q_for source_global s)))"
   | "ivl_tf_st_for source_global (EA_Assume b) s =
-       assume_ivl_st_for source_global b s"
+       branch_ivl_st_for source_global b True s"
   | "ivl_tf_st_for source_global (EA_AssumeNot b) s =
-       assume_not_ivl_st_for source_global b s"
+       branch_ivl_st_for source_global b False s"
   | "ivl_tf_st_for source_global (EA_Ret None p) s = s"
   | "ivl_tf_st_for source_global (EA_Ret (Some a) p) s =
        update_resolved_st_q s (location_of source_global ret_var)
@@ -116,9 +117,9 @@ text \<open>
   its edge instead of re-deriving the agreement from \<^const>\<open>aval_ivl\<close>'s
   definition at every node.
 
-  \<open>EA_Nop\<close> and \<open>EA_Ret None\<close> reduce to the same identity shape
-  (\<open>apply_tf_EA_Ret_None\<close>); \<open>EA_Assign\<close> and \<open>EA_Ret (Some _)\<close> reduce to
-  the same single-write shape (\<open>apply_tf_EA_Ret_Some\<close>), so one lemma
+  \<open>EA_Nop\<close> and \<open>EA_Ret None\<close> both denote the identity shape (\<open>skip_ivl\<close> and
+  \<open>return_ivl None\<close> agree, though independently defined); \<open>EA_Assign\<close> and
+  \<open>EA_Ret (Some _)\<close> both denote the same single-write shape, so one lemma
   each covers both actions.
 \<close>
 
@@ -130,7 +131,7 @@ lemma ivl_tf_st_for_nop_agree:
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs EA_Nop s_exec) location =
       apply_tf (ivl_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by simp
+  using agree[OF location_in] by (simp add: ivl_tf_for_def skip_ivl_def)
 
 lemma ivl_tf_st_for_assign_agree:
   fixes y :: vname and a :: aexp
@@ -167,7 +168,7 @@ lemma ivl_tf_st_for_ret_none_agree:
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret None p) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
   using ivl_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: apply_tf_EA_Ret_None)
+  by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
 
 lemma ivl_tf_st_for_ret_some_agree:
   fixes a :: aexp and p :: pname
@@ -180,27 +181,27 @@ lemma ivl_tf_st_for_ret_some_agree:
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Ret (Some a) p) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_Ret (Some a) p) s_abs (location_vname location)"
   using ivl_tf_st_for_assign_agree[where y = ret_var, OF agree val_agree location_in canonical]
-  by (simp add: apply_tf_EA_Ret_Some)
+  by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
 
 text \<open>Guard filters commute totally through the readback
   (\<open>bfilter_ivl_st_commute\<close>), so full input agreement lifts directly --
   no scope side condition is needed, unlike the write-shaped actions above.\<close>
 
-lemma ivl_tf_st_for_assume_agree:
+lemma ivl_tf_st_for_branch_agree:
   assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
   shows
-    "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_Assume b) s_exec) =
-      apply_tf (ivl_tf_for gs) (EA_Assume b) s_abs"
+    "fun_of_resolved_st_q_for gs (branch_ivl_st_for gs b pol s_exec) =
+      branch\<^sup># (ivl_tf_for gs) b pol s_abs"
   unfolding agree[symmetric]
-  by (simp add: assume_ivl_st_for_def bfilter_ivl_st_commute ivl_tf_for_def assume_ivl_def)
+  by (simp add: branch_ivl_st_for_def bfilter_ivl_st_commute ivl_tf_for_def)
 
-lemma ivl_tf_st_for_assume_not_agree:
-  assumes agree: "fun_of_resolved_st_q_for gs s_exec = s_abs"
-  shows
-    "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_AssumeNot b) s_exec) =
-      apply_tf (ivl_tf_for gs) (EA_AssumeNot b) s_abs"
-  unfolding agree[symmetric]
-  by (simp add: assume_not_ivl_st_for_def bfilter_ivl_st_commute ivl_tf_for_def assume_not_ivl_def)
+lemmas ivl_tf_st_for_assume_agree =
+  ivl_tf_st_for_branch_agree[of gs s_exec s_abs b True for gs s_exec s_abs b,
+    unfolded ivl_tf_st_for.simps(4)[symmetric] apply_tf.simps(4)[symmetric]]
+
+lemmas ivl_tf_st_for_assume_not_agree =
+  ivl_tf_st_for_branch_agree[of gs s_exec s_abs b False for gs s_exec s_abs b,
+    unfolded ivl_tf_st_for.simps(5)[symmetric] apply_tf.simps(5)[symmetric]]
 
 text \<open>
   A per-location specialization of the two lemmas above for the single-
@@ -272,7 +273,7 @@ lemma ivl_tf_st_for_assume_var_lit_agree:
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Assume (Less (V x) (N n))) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_Assume (Less (V x) (N n))) s_abs (location_vname location)"
   using ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = True]
-  by (simp add: assume_ivl_st_for_def ivl_tf_for_def assume_ivl_def)
+  by (simp add: branch_ivl_st_for_def ivl_tf_for_def apply_tf.simps)
 
 lemma ivl_tf_st_for_assume_not_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
@@ -286,7 +287,7 @@ lemma ivl_tf_st_for_assume_not_var_lit_agree:
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_AssumeNot (Less (V x) (N n))) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_AssumeNot (Less (V x) (N n))) s_abs (location_vname location)"
   using ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = False]
-  by (simp add: assume_not_ivl_st_for_def ivl_tf_for_def assume_not_ivl_def)
+  by (simp add: branch_ivl_st_for_def ivl_tf_for_def apply_tf.simps)
 
 text \<open>
   A one-argument call entry: the bound formal's location gets the evaluated
@@ -364,18 +365,17 @@ lemma ivl_tf_st_for_commute:
    apply_tf (ivl_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (ivl_tf_st_for gs a s))"
-    by (rule action_reduces_comp[OF ivl_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs EA_Nop s) =
-      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+      apply_tf (ivl_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
+    by (simp add: ivl_tf_for_def skip_ivl_def)
   show "\<And>x e. fun_of_resolved_st_q_for gs
       (ivl_tf_st_for gs (EA_Assign x e) s) =
     apply_tf (ivl_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
     by (simp add: ivl_tf_for_def assign_ivl_def)
-  show "\<And>x. fun_of_resolved_st_q_for gs
-      (ivl_tf_st_for gs (EA_Random x) s) =
-    apply_tf (ivl_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: ivl_tf_for_def random_ivl_def)
+  show "\<And>sc x. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Special sc x) s) =
+    apply_tf (ivl_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
+    by (auto simp: ivl_tf_for_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (ivl_tf_st_for gs (EA_Assume b) s) =
     apply_tf (ivl_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
@@ -385,6 +385,25 @@ proof (rule apply_tf_wrap_eqI[
     apply_tf (ivl_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
     by (rule ivl_tf_st_for_assume_not_agree[OF refl])
+  show "\<And>ea p. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Ret ea p) s) =
+    apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  proof -
+    fix ea p
+    show "fun_of_resolved_st_q_for gs (ivl_tf_st_for gs (EA_Ret ea p) s) =
+      apply_tf (ivl_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    proof (cases ea)
+      case None
+      then show ?thesis by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
+    next
+      case (Some a)
+      then show ?thesis by (simp add: ivl_tf_for_def return_ivl_def assign_ivl_def)
+    qed
+  qed
+  show "\<And>c. fun_of_resolved_st_q_for gs
+      (ivl_tf_st_for gs (EA_Check c) s) =
+    apply_tf (ivl_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: ivl_tf_for_def event_ivl_def)
 qed
 
 lemma ivl_enter_st_for_commute:
@@ -416,8 +435,8 @@ lemma ivl_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF ivl_tf_st_for_reduces])
 
 lemma ivl_etf_st_for_combine_tree:
-  "etf_combine_st (ivl_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
-  unfolding ivl_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
+  "etf_combine_collect_st (ivl_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  unfolding ivl_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma ivl_etf_st_for_enter_tree:
   "etf_st_enter (ivl_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (ivl_enter_st_for gs xs es) u"

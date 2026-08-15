@@ -193,6 +193,9 @@ definition is_top_sign :: "sign \<Rightarrow> bool" where
 lemma is_top_sign_correct: "is_top_sign s \<longleftrightarrow> s = top"
   unfolding is_top_sign_def top_sign_def ..
 
+lemma gamma_sign_top: "gamma_sign top = UNIV"
+  unfolding top_sign_def by simp
+
 instantiation sign :: sup begin
 definition sup_sign :: "sign => sign => sign" where
   "sup_sign = join_sign"

@@ -92,11 +92,11 @@ codegen-regression = "bash scripts/mk/codegen-regression.sh"
 
 # voblint CLI
 cli-build = "bash scripts/mk/cli-build.sh"
-cli-test = { cmd = "python3 tests/run.py", depends-on = ["cli-build"] }
+cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", depends-on = ["cli-build"] }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
 cli-smoke = { cmd = "python3 tests/cli_smoke.py", depends-on = ["cli-build"] }
-voblint = { cmd = "cli/voblint", depends-on = ["cli-build"] }
+voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = ["cli-build"] }
 # Static checks over tests/regression/ fixture source -- no CLI build, no
 # OCaml, so this fails fast before cli-test's build cost. See tests/run.py's
 # lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").

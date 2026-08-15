@@ -1590,28 +1590,32 @@ definition indep_dg_spec ::
    \<Rightarrow> ('d abs_state, 'g abs_state) dg_spec"
 where
   "indep_dg_spec gs tfD tfG = \<lparr>
-    dgs_nop        = (\<lambda>d g. (apply_tf tfG EA_Nop g, apply_tf tfD EA_Nop d)),
+    dgs_skip       = (\<lambda>d g. (apply_tf tfG EA_Nop g, apply_tf tfD EA_Nop d)),
     dgs_assign     = (\<lambda>x e d g. (apply_tf tfG (EA_Assign x e) g,
                                  apply_tf tfD (EA_Assign x e) d)),
-    dgs_random     = (\<lambda>x d g. (apply_tf tfG (EA_Random x) g,
-                               apply_tf tfD (EA_Random x) d)),
-    dgs_assume     = (\<lambda>b d g. (apply_tf tfG (EA_Assume b) g,
-                               apply_tf tfD (EA_Assume b) d)),
-    dgs_assume_not = (\<lambda>b d g. (apply_tf tfG (EA_AssumeNot b) g,
-                               apply_tf tfD (EA_AssumeNot b) d)),
+    dgs_special    = (\<lambda>sc x d g. (apply_tf tfG (EA_Special sc x) g,
+                                  apply_tf tfD (EA_Special sc x) d)),
+    dgs_branch     = (\<lambda>b pol d g. (branch\<^sup># tfG b pol g,
+                                   branch\<^sup># tfD b pol d)),
+    dgs_body       = (\<lambda>p d g. (body\<^sup># tfG p g, body\<^sup># tfD p d)),
+    dgs_return     = (\<lambda>e p d g. (return\<^sup># tfG e p g, return\<^sup># tfD e p d)),
     dgs_enter      = (\<lambda>xs es d g. (enter\<^sup># tfG xs es g,
                                    enter\<^sup># tfD xs es d)),
-    dgs_combine_env    = (\<lambda>dc de g. (combine_env\<^sup># gs g g, combine_env\<^sup># gs dc de)),
+    dgs_event      = (\<lambda>ev d g. (event\<^sup># tfG ev g, event\<^sup># tfD ev d)),
+    dgs_combine_env    = (\<lambda>dc de g. (combine_env_abs gs g g, combine_env_abs gs dc de)),
     dgs_combine_assign = (\<lambda>dst de g merged.
       (combine_assign\<^sup># dst (g ret_var) (fst merged),
        combine_assign\<^sup># dst (de ret_var) (snd merged)))
   \<rparr>"
 
+text \<open>Uniform in \<open>apply_tf tfG a\<close>/\<open>apply_tf tfD a\<close> for every case, including
+  \<open>EA_Check\<close>: \<^const>\<open>dgs_event\<close> is an independent field of both products, exactly
+  like \<^const>\<open>dgs_body\<close>/\<^const>\<open>dgs_return\<close> above.\<close>
 lemma dg_spec_step_indep [simp]:
   "dg_spec_step (indep_dg_spec gs tfD tfG) a d g
    = (apply_tf tfG a g, apply_tf tfD a d)"
   unfolding indep_dg_spec_def
-  by (cases a) (simp_all add: apply_tf_EA_Ret_None apply_tf_EA_Ret_Some split: option.splits)
+  by (cases a) simp_all
 
 lemma dgs_combine_indep [simp]:
   "dgs_combine (indep_dg_spec gs tfD tfG) dst dc de g
@@ -1703,7 +1707,7 @@ text \<open>
 definition gamma_unit ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
 where
-  "gamma_unit gs d g = \<lbrakk>combine_env\<^sup># gs d g\<rbrakk>"
+  "gamma_unit gs d g = \<lbrakk>combine_env_abs gs d g\<rbrakk>"
 
 lemma gamma_unit_mono:
   assumes "d \<le> d'" and "g \<le> g'"
@@ -1711,7 +1715,7 @@ lemma gamma_unit_mono:
   unfolding gamma_unit_def
   by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_env_abs_def le_fun_def\<close>)
 
-lemma gamma_unitD [dest]: "s \<in> gamma_unit gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_env\<^sup># gs d g\<rbrakk>"
+lemma gamma_unitD [dest]: "s \<in> gamma_unit gs d g \<Longrightarrow> s \<in> \<lbrakk>combine_env_abs gs d g\<rbrakk>"
   unfolding gamma_unit_def by simp
 
 text \<open>
@@ -1719,7 +1723,7 @@ text \<open>
   full equality (not just the membership direction \<open>gamma_unitD\<close> gives) can
   cite this instead of reaching for \<open>gamma_unit_def\<close> directly.
 \<close>
-lemma gamma_unit_eq: "gamma_unit gs d g = \<lbrakk>combine_env\<^sup># gs d g\<rbrakk>"
+lemma gamma_unit_eq: "gamma_unit gs d g = \<lbrakk>combine_env_abs gs d g\<rbrakk>"
   unfolding gamma_unit_def ..
 
 
@@ -1730,11 +1734,11 @@ text \<open>
   it through \<^const>\<open>combine_env_abs\<close> a second time.
 \<close>
 lemma combine_env_abs_combine_env_abs_left [simp]:
-  "combine_env\<^sup># gs (combine_env\<^sup># gs dc g) (combine_env\<^sup># gs de g) = combine_env\<^sup># gs dc g"
+  "combine_env_abs gs (combine_env_abs gs dc g) (combine_env_abs gs de g) = combine_env_abs gs dc g"
   by (auto simp: combine_env_abs_def)
 
 lemma combine_env_abs_local_eq [simp]:
-  "\<not> gs x \<Longrightarrow> combine_env\<^sup># gs sc se x = sc x"
+  "\<not> gs x \<Longrightarrow> combine_env_abs gs sc se x = sc x"
   by (simp add: combine_env_abs_def)
 
 text \<open>The \<^const>\<open>combine_env_abs\<close> analogue of \<open>restrict_local_for_global_join\<close>:
@@ -1742,7 +1746,7 @@ text \<open>The \<^const>\<open>combine_env_abs\<close> analogue of \<open>restr
   \<^const>\<open>combine_env_abs\<close> recovers the original state exactly, since each half is
   already zero outside the location it owns.\<close>
 lemma combine_env_abs_restrict_id [simp]:
-  "combine_env\<^sup># gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
+  "combine_env_abs gs (restrict_local_for gs sigma) (restrict_global_for gs sigma) = sigma"
   by (simp add: combine_env_abs_for_eq_restrict restrict_local_for_global_join)
 
 lemma gamma_unit_combine_sound_for:
@@ -1751,10 +1755,10 @@ lemma gamma_unit_combine_sound_for:
   shows "combine_collect gs dst s t \<in>
            (case dgs_combine (unit_dg_spec_for gs tf) dst dc de g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
-  have tc': "t \<in> \<lbrakk>combine_env\<^sup># gs de g\<rbrakk>" using gamma_unitD[OF tc] .
+  have sc': "s \<in> \<lbrakk>combine_env_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
+  have tc': "t \<in> \<lbrakk>combine_env_abs gs de g\<rbrakk>" using gamma_unitD[OF tc] .
   have "combine_collect gs dst s t \<in>
-          \<lbrakk>combine\<^sup># gs dst (combine_env\<^sup># gs dc g) (combine_env\<^sup># gs de g)\<rbrakk>"
+          \<lbrakk>combine\<^sup># gs dst (combine_env_abs gs dc g) (combine_env_abs gs de g)\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   then show ?thesis
     using reserved
@@ -1769,9 +1773,9 @@ lemma gamma_unit_enter_sound_for:
   shows "call_enter gs (CallEdge dst pars args) s \<in>
            (case dgs_enter (unit_dg_spec_for gs tf) pars args dc g of (g', d') \<Rightarrow> gamma_unit gs d' g')"
 proof -
-  have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
+  have sc': "s \<in> \<lbrakk>combine_env_abs gs dc g\<rbrakk>" using gamma_unitD[OF sc] .
   have "call_enter gs (CallEdge dst pars args) s \<in>
-      \<lbrakk>enter\<^sup># tf pars args (combine_env\<^sup># gs dc g)\<rbrakk>"
+      \<lbrakk>enter\<^sup># tf pars args (combine_env_abs gs dc g)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   then show ?thesis
@@ -1789,10 +1793,12 @@ lemma sound_dg_spec_unit_for:
   subgoal for a d g
     unfolding gamma_unit_def dg_spec_step_unit_for unit_step_for_def
     using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
-    by (simp add: Let_def restrict_local_for_global_join)
+      sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = "combine_env_abs gs d g"]
+    by (auto simp add: Let_def restrict_local_for_global_join)
   subgoal premises prems
     by (rule gamma_unit_combine_sound_for[OF reserved prems])
   subgoal premises prems
+
     by (rule gamma_unit_enter_sound_for[OF sound prems])
   done
 
@@ -1810,7 +1816,7 @@ text \<open>
 text \<open>
   The g=Bot case concretizes through \<^const>\<open>combine_env_abs\<close> at \<open>bot\<close>, not as \<open>\<lbrakk>d0\<rbrakk>\<close>
   unchanged: coarser than what \<^const>\<open>unit_step_for_lifted\<close> actually preserves (sound,
-  since \<open>\<lbrakk>combine_env\<^sup># gs d0 bot\<rbrakk> \<subseteq> \<lbrakk>d0\<rbrakk>\<close> whenever \<open>bot\<close> is more precise than an unrelated
+  since \<open>\<lbrakk>combine_env_abs gs d0 bot\<rbrakk> \<subseteq> \<lbrakk>d0\<rbrakk>\<close> whenever \<open>bot\<close> is more precise than an unrelated
   live value), but this is what lets every obligation below reduce directly to the existing
   \<open>gamma_unit\<close>-based lemmas at a literal \<open>g := bot\<close>, with no purity side-condition on \<open>d0\<close>.
 \<close>
@@ -1870,7 +1876,7 @@ next
     using m_def unfolding Lifted gamma_unit_lifted_def gamma_unit_def
     by (cases g) auto
   have base: "edge_collect a \<lbrakk>m\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a m\<rbrakk>"
-    by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound])
+    using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a] .
   have step: "dg_spec_step (unit_dg_spec_for_lifted gs is_bot_pred tf) a d g
                 = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)),
                    map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (apply_tf tf a m)))"
@@ -1918,20 +1924,20 @@ proof -
                (case dgs_combine (unit_dg_spec_for gs tf) dst dc0 de0 g0 of (g', d') \<Rightarrow> gamma_unit gs d' g')"
     by (rule gamma_unit_combine_sound_for[OF reserved sc' tc'])
   have raw_eq: "dgs_combine (unit_dg_spec_for gs tf) dst dc0 de0 g0
-                  = (let res = combine_assign\<^sup># dst (de0 ret_var) (combine_env\<^sup># gs dc0 g0)
+                  = (let res = combine_assign\<^sup># dst (de0 ret_var) (combine_env_abs gs dc0 g0)
                      in (restrict_global_for gs res, restrict_local_for gs res))"
     unfolding dgs_combine_unit_dg_spec_for by simp
   have target: "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g
-                  = (let res = combine_assign\<^sup># dst (de0 ret_var) (combine_env\<^sup># gs dc0 g0)
+                  = (let res = combine_assign\<^sup># dst (de0 ret_var) (combine_env_abs gs dc0 g0)
                      in (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred res),
                          map_lift (restrict_local_for gs) (normalize_lift is_bot_pred res)))"
     unfolding dgs_combine_unit_dg_spec_for_lifted
     unfolding unit_combine_step_assign_for_lifted_def unit_combine_step_env_for_lifted_def
     by (simp add: dc0 de0 g0_def Let_def transfer_lift2_def restrict_global_for_local_join)
   show ?thesis
-  proof (cases "is_bot_pred (combine_assign\<^sup># dst (de0 ret_var) (combine_env\<^sup># gs dc0 g0))")
+  proof (cases "is_bot_pred (combine_assign\<^sup># dst (de0 ret_var) (combine_env_abs gs dc0 g0))")
     case True
-    have empty: "\<lbrakk>combine_assign\<^sup># dst (de0 ret_var) (combine_env\<^sup># gs dc0 g0)\<rbrakk> = {}"
+    have empty: "\<lbrakk>combine_assign\<^sup># dst (de0 ret_var) (combine_env_abs gs dc0 g0)\<rbrakk> = {}"
       using exact True is_bot_state_iff_gamma_state_empty by blast
     with raw raw_eq have "combine_collect gs dst s t \<in> {}"
       by (simp add: Let_def gamma_unit_def combine_env_abs_restrict_id)
@@ -1940,7 +1946,7 @@ proof -
   next
     case False
     with raw raw_eq have "combine_collect gs dst s t \<in>
-        \<lbrakk>combine_assign\<^sup># dst (de0 ret_var) (combine_env\<^sup># gs dc0 g0)\<rbrakk>"
+        \<lbrakk>combine_assign\<^sup># dst (de0 ret_var) (combine_env_abs gs dc0 g0)\<rbrakk>"
       by (simp add: Let_def gamma_unit_def combine_env_abs_restrict_id)
     with target False show ?thesis
       by (simp add: Let_def gamma_unit_def normalize_lift_def combine_env_abs_restrict_id)
@@ -1957,20 +1963,20 @@ lemma gamma_unit_enter_sound_for_lifted:
 proof -
   obtain dc0 where dc0: "dc = Lifted dc0" using sc by (cases dc) auto
   define g0 where "g0 = (case g of Bot \<Rightarrow> bot | Lifted x \<Rightarrow> x)"
-  have sc': "s \<in> \<lbrakk>combine_env\<^sup># gs dc0 g0\<rbrakk>"
+  have sc': "s \<in> \<lbrakk>combine_env_abs gs dc0 g0\<rbrakk>"
     using sc unfolding dc0 g0_def gamma_unit_lifted_def gamma_unit_def by (cases g) auto
-  have base: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args (combine_env\<^sup># gs dc0 g0)\<rbrakk>"
+  have base: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args (combine_env_abs gs dc0 g0)\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF sound sc']
     by (simp add: call_enter_CallEdge)
   have enter: "dgs_enter (unit_dg_spec_for_lifted gs is_bot_pred tf) pars args dc g
-                 = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (enter\<^sup># tf pars args (combine_env\<^sup># gs dc0 g0))),
-                    map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (enter\<^sup># tf pars args (combine_env\<^sup># gs dc0 g0))))"
+                 = (map_lift (restrict_global_for gs) (normalize_lift is_bot_pred (enter\<^sup># tf pars args (combine_env_abs gs dc0 g0))),
+                    map_lift (restrict_local_for gs) (normalize_lift is_bot_pred (enter\<^sup># tf pars args (combine_env_abs gs dc0 g0))))"
     unfolding dgs_enter_unit_dg_spec_for_lifted unit_step_for_lifted_def
     by (simp add: dc0 g0_def Let_def transfer_lift_def)
   show ?thesis
-  proof (cases "is_bot_pred (enter\<^sup># tf pars args (combine_env\<^sup># gs dc0 g0))")
+  proof (cases "is_bot_pred (enter\<^sup># tf pars args (combine_env_abs gs dc0 g0))")
     case True
-    with exact base have "\<lbrakk>enter\<^sup># tf pars args (combine_env\<^sup># gs dc0 g0)\<rbrakk> = {}"
+    with exact base have "\<lbrakk>enter\<^sup># tf pars args (combine_env_abs gs dc0 g0)\<rbrakk> = {}"
       using is_bot_state_iff_gamma_state_empty by blast
     with base show ?thesis using enter True by simp
   next
@@ -2040,7 +2046,7 @@ text \<open>\<open>gamma_unit\<close> refines \<open>gamma_join\<close>: routing
   chain fixes described), so this is a one-way refinement, not an equivalence --
   \<open>gamma_join\<close> stays the sound target for \<^const>\<open>unit_dg_spec_placed\<close>'s non-exclusive
   covering, where no single component owns every name.\<close>
-lemma combine_env_abs_le_sup: "combine_env\<^sup># gs sc se \<le> sc \<squnion> se"
+lemma combine_env_abs_le_sup: "combine_env_abs gs sc se \<le> sc \<squnion> se"
   by (auto simp: combine_env_abs_def le_fun_def)
 
 lemma gamma_unit_subset_gamma_join: "gamma_unit gs d g \<subseteq> gamma_join d g"
@@ -2068,7 +2074,7 @@ proof -
   have env_join:
     "fst (unit_combine_step_env_placed source_global keep_local publish_side dc de g) \<squnion>
        snd (unit_combine_step_env_placed source_global keep_local publish_side dc de g) =
-     combine_env\<^sup># source_global (dc \<squnion> g) (de \<squnion> g)"
+     combine_env_abs source_global (dc \<squnion> g) (de \<squnion> g)"
     unfolding unit_combine_step_env_placed_def
     by (simp add: Let_def project_component_cover_sup[OF cover])
   show ?thesis
@@ -2120,7 +2126,8 @@ theorem sound_dg_spec_unit_placed:
   subgoal for a d g
     unfolding gamma_join_def dg_spec_step_unit_placed unit_step_placed_def
     using sound_transfer_for.edge_collect_apply_tf_sound_for[OF sound, where a = a]
-    by (simp add: Let_def project_component_cover_sup2[OF cover])
+      sound_transfer_for.edge_collect_check_sound_for[OF sound, where \<sigma> = "d \<squnion> g"]
+    by (auto simp add: Let_def project_component_cover_sup2[OF cover])
   subgoal premises prems
     by (rule gamma_join_combine_sound_placed[OF cover prems])
   subgoal premises prems

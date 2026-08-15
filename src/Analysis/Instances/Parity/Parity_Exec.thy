@@ -45,9 +45,9 @@ subsection \<open>Classifier-parametric executable transfer\<close>
 
 text \<open>The executable mirror of \<open>parity_tf_for\<close>/\<open>enter_parity_for\<close>, parametric
   in the classifier, following the same pattern as \<open>sign_tf_st_for\<close>/
-  \<open>sign_enter_st_for\<close> for the sign domain. Parity's assume/assume-not
-  transfer is the identity (\<open>assume_parity_def\<close>), so unlike the sign mirror
-  there is no separate \<open>bfilter\<close>-based executable step to parametrize.\<close>
+  \<open>sign_enter_st_for\<close> for the sign domain. Parity's branch transfer is the
+  identity (\<open>branch_parity_def\<close>), so unlike the sign mirror there is no
+  separate \<open>bfilter\<close>-based executable step to parametrize.\<close>
 
 definition parity_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
@@ -65,8 +65,14 @@ fun parity_tf_st_for ::
   | "parity_tf_st_for source_global (EA_Assign x a) s =
        update_resolved_st_q s (location_of source_global x)
          (aval_parity a (fun_of_resolved_st_q_for source_global s))"
-  | "parity_tf_st_for source_global (EA_Random x) s =
-       update_resolved_st_q s (location_of source_global x) PTop"
+  | "parity_tf_st_for source_global (EA_Special sc x) s =
+       update_resolved_st_q s (location_of source_global x)
+         (case sc of
+            Nondet_Int => PTop
+          | Min a b => parity_min (aval_parity a (fun_of_resolved_st_q_for source_global s))
+                                   (aval_parity b (fun_of_resolved_st_q_for source_global s))
+          | Max a b => parity_max (aval_parity a (fun_of_resolved_st_q_for source_global s))
+                                   (aval_parity b (fun_of_resolved_st_q_for source_global s)))"
   | "parity_tf_st_for source_global (EA_Assume b) s = s"
   | "parity_tf_st_for source_global (EA_AssumeNot b) s = s"
   | "parity_tf_st_for source_global (EA_Ret None p) s = s"
@@ -83,27 +89,45 @@ theorem parity_tf_st_for_commute:
    apply_tf (parity_tf_for gs) a (fun_of_resolved_st_q_for gs s)"
 proof (rule apply_tf_wrap_eqI[
     where H = "\<lambda>f. f (fun_of_resolved_st_q_for gs s)"])
-  show "action_reduces (\<lambda>a. fun_of_resolved_st_q_for gs (parity_tf_st_for gs a s))"
-    by (rule action_reduces_comp[OF parity_tf_st_for_reduces])
   show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs EA_Nop s) =
-      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)" by simp
+      apply_tf (parity_tf_for gs) EA_Nop (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def skip_parity_def)
   show "\<And>x e. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Assign x e) s) =
     apply_tf (parity_tf_for gs) (EA_Assign x e) (fun_of_resolved_st_q_for gs s)"
     by (simp add: parity_tf_for_def assign_parity_def)
-  show "\<And>x. fun_of_resolved_st_q_for gs
-      (parity_tf_st_for gs (EA_Random x) s) =
-    apply_tf (parity_tf_for gs) (EA_Random x) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def random_parity_def)
+  show "\<And>sc x. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Special sc x) s) =
+    apply_tf (parity_tf_for gs) (EA_Special sc x) (fun_of_resolved_st_q_for gs s)"
+    by (auto simp: parity_tf_for_def split: special_call.splits)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_Assume b) s) =
     apply_tf (parity_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def assume_parity_def)
+    by (simp add: parity_tf_for_def branch_parity_def)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (parity_tf_st_for gs (EA_AssumeNot b) s) =
     apply_tf (parity_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: parity_tf_for_def assume_not_parity_def)
+    by (simp add: parity_tf_for_def branch_parity_def)
+  show "\<And>ea p. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Ret ea p) s) =
+    apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+  proof -
+    fix ea p
+    show "fun_of_resolved_st_q_for gs (parity_tf_st_for gs (EA_Ret ea p) s) =
+      apply_tf (parity_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
+    proof (cases ea)
+      case None
+      then show ?thesis by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
+    next
+      case (Some a)
+      then show ?thesis by (simp add: parity_tf_for_def return_parity_def assign_parity_def)
+    qed
+  qed
+  show "\<And>c. fun_of_resolved_st_q_for gs
+      (parity_tf_st_for gs (EA_Check c) s) =
+    apply_tf (parity_tf_for gs) (EA_Check c) (fun_of_resolved_st_q_for gs s)"
+    by (simp add: parity_tf_for_def event_parity_def)
 qed
 
 lemma enter_frame_parity_st_for_commute:
@@ -131,7 +155,7 @@ lemma parity_tf_st_for_nop_agree:
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs EA_Nop s_exec) location =
       apply_tf (parity_tf_for gs) EA_Nop s_abs (location_vname location)"
-  using agree[OF location_in] by simp
+  using agree[OF location_in] by (simp add: parity_tf_for_def skip_parity_def)
 
 lemma parity_tf_st_for_assign_agree:
   fixes y :: vname and a :: aexp
@@ -159,10 +183,9 @@ next
     using agree[OF location_in] neq False by (simp add: parity_tf_for_def assign_parity_def)
 qed
 
-text \<open>Parity's assume/assume-not transfer is the identity on both sides
-  (\<open>assume_parity_def\<close>/\<open>assume_not_parity_def\<close>, \<open>parity_tf_st_for\<close>'s own
-  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> cases), so these two agreement facts have the
-  same shape as \<open>parity_tf_st_for_nop_agree\<close>.\<close>
+text \<open>Parity's branch transfer is the identity on both sides (\<open>branch_parity_def\<close>,
+  \<open>parity_tf_st_for\<close>'s own \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> cases), so these two
+  agreement facts have the same shape as \<open>parity_tf_st_for_nop_agree\<close>.\<close>
 
 lemma parity_tf_st_for_assume_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -172,7 +195,7 @@ lemma parity_tf_st_for_assume_agree:
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Assume b) s_exec) location =
       apply_tf (parity_tf_for gs) (EA_Assume b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def assume_parity_def)
+  using agree[OF location_in] by (simp add: parity_tf_for_def branch_parity_def)
 
 lemma parity_tf_st_for_assume_not_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -182,7 +205,7 @@ lemma parity_tf_st_for_assume_not_agree:
   shows
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_AssumeNot b) s_exec) location =
       apply_tf (parity_tf_for gs) (EA_AssumeNot b) s_abs (location_vname location)"
-  using agree[OF location_in] by (simp add: parity_tf_for_def assume_not_parity_def)
+  using agree[OF location_in] by (simp add: parity_tf_for_def branch_parity_def)
 
 lemma parity_tf_st_for_ret_none_agree:
   fixes s_exec :: "parity resolved_st_q" and s_abs :: "parity abs_state"
@@ -193,7 +216,7 @@ lemma parity_tf_st_for_ret_none_agree:
     "lookup_resolved_st_q (parity_tf_st_for gs (EA_Ret None p) s_exec) location =
       apply_tf (parity_tf_for gs) (EA_Ret None p) s_abs (location_vname location)"
   using parity_tf_st_for_nop_agree[OF agree location_in]
-  by (simp add: apply_tf_EA_Ret_None)
+  by (simp add: parity_tf_for_def skip_parity_def return_parity_def)
 
 subsection \<open>Executable effectful transfer record, generic in the classifier\<close>
 
@@ -221,8 +244,8 @@ lemma parity_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF parity_tf_st_for_reduces])
 
 lemma parity_etf_st_for_combine_tree:
-  "etf_combine_st (parity_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
-  unfolding parity_etf_st_for_def by (rule etf_combine_st_unit_of_transfer)
+  "etf_combine_collect_st (parity_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  unfolding parity_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma parity_etf_st_for_enter_tree:
   "etf_st_enter (parity_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (parity_enter_st_for gs xs es) u"

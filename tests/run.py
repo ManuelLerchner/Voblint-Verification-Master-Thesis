@@ -14,7 +14,8 @@ sits under one of two subdirectories that answer "what kind of guarantee":
                                    not a feature.
   <NN-group>/soundness/           the concrete program's result is genuinely
                                    undetermined (e.g. an unconstrained
-                                   random() feeds the checked condition):
+                                   __voblint_nondet_int() feeds the checked
+                                   condition):
                                    both a satisfying and a violating
                                    execution exist, so UNKNOWN is the only
                                    sound answer -- not a limitation to name,
@@ -500,7 +501,7 @@ def lint_case(path: Path) -> list[str]:
         if len(header) < 1:
             problems.append(
                 "soundness case has no header comment naming what's "
-                "unconstrained (e.g. an unbounded random())"
+                "unconstrained (e.g. an unbounded __voblint_nondet_int())"
             )
         if set(expected.values()) - {"UNKNOWN"}:
             problems.append(
