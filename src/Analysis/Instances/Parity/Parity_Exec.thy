@@ -1,5 +1,5 @@
 theory Parity_Exec
-  imports Voblint_Core.Exec_Bridge Parity_Transfer
+  imports Voblint_Core.Exec_Bridge Voblint_Core.Numeric_Ops Parity_Transfer
 begin
 
 section \<open>Parity executable seam: transfer mirror and commutation\<close>
@@ -49,14 +49,31 @@ text \<open>The executable mirror of \<open>parity_tf_for\<close>/\<open>enter_p
   identity (\<open>branch_parity_def\<close>), so unlike the sign mirror there is no
   separate \<open>bfilter\<close>-based executable step to parametrize.\<close>
 
+text \<open>
+  \<open>parity_ops\<close> bundles Parity's own primitives for the generic
+  \<open>generic_enter_st_for\<close> construction (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>), the
+  same way \<open>sign_ops\<close>/\<open>ivl_ops\<close> do for Sign/Interval. Parity's branch
+  transfer is the identity, so unlike Sign/Interval there is no
+  \<open>branch_parity_st_for\<close> to generalize -- only \<open>n_bfilter\<close>'s VALUE would be
+  the identity function, and nothing here needs to name that value
+  separately since \<open>generic_branch_st_for\<close> is never applied to Parity.
+\<close>
+
+definition parity_ops :: "parity numeric_ops" where
+  "parity_ops = \<lparr> n_aval = aval_parity, n_bfilter = (\<lambda>_ _ _ s. s), n_top = PTop \<rparr>"
+
 definition parity_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
    parity resolved_st_q => parity resolved_st_q" where
+  "parity_enter_st_for = generic_enter_st_for parity_ops"
+
+lemma parity_enter_st_for_eq [simp]:
   "parity_enter_st_for source_global xs es s =
     bind_formals_resolved_q source_global xs
       (map (\<lambda>e. aval_parity e
         (fun_of_resolved_st_q_for source_global s)) es)
       (enter_frame_D_resolved_q PTop s)"
+  by (simp add: parity_enter_st_for_def generic_enter_st_for_def parity_ops_def)
 
 fun parity_tf_st_for ::
   "(vname => bool) => edge_action =>
@@ -138,7 +155,7 @@ lemma enter_frame_parity_st_for_commute:
 lemma parity_enter_st_for_commute:
   "fun_of_resolved_st_q_for gs (parity_enter_st_for gs xs es s) =
    enter\<^sup># (parity_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: parity_enter_st_for_def parity_tf_for_def enter_parity_for_def enter_D_def
+  by (simp add: parity_tf_for_def enter_parity_for_def enter_D_def
                 enter_frame_parity_for_def enter_frame_parity_st_for_commute)
 
 text \<open>The Nop/Assign executable-abstract correspondence facts, mirroring
