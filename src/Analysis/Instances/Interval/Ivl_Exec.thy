@@ -254,12 +254,12 @@ proof -
     by (simp add: fun_of_resolved_st_q_for_def location_of_def)
   have shape: "bfilter_ivl_st gs (Less (V x) (N n)) res s_exec =
       update_resolved_st_q s_exec (location_of gs x)
-        (meet_ivl (fst (inv_less_ivl res (fun_of_resolved_st_q_for gs s_exec x) (Ivl (Fin n) (Fin n))))
+        (meet_ivl_norm (fst (inv_less_ivl res (fun_of_resolved_st_q_for gs s_exec x) (Ivl (Fin n) (Fin n))))
           (fun_of_resolved_st_q_for gs s_exec x))"
     by (simp add: ivl_backward_domain.bfilter_st.simps(1) ivl_backward_domain.afilter_st.simps(1)
       Let_def split: prod.splits)
   have shape_abs: "bfilter_ivl (Less (V x) (N n)) res s_abs =
-      s_abs(x := meet_ivl (fst (inv_less_ivl res (s_abs x) (Ivl (Fin n) (Fin n)))) (s_abs x))"
+      s_abs(x := meet_ivl_norm (fst (inv_less_ivl res (s_abs x) (Ivl (Fin n) (Fin n)))) (s_abs x))"
     by (simp add: ivl_backward_domain.bfilter.simps(1) ivl_backward_domain.afilter.simps(1)
       Let_def split: prod.splits)
   show ?thesis

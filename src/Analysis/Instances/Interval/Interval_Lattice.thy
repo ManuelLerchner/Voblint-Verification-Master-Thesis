@@ -331,6 +331,168 @@ lemma ivl_nonempty_mono: "ivl_nonempty a \<Longrightarrow> a \<le> b \<Longright
   by (cases a; cases b; auto simp: less_eq_ivl_def intro: eint_le_trans
         elim: eint_le.elims)
 
+subsection \<open>Canonical representatives\<close>
+
+text \<open>
+  \<^const>\<open>normalize_ivl\<close> picks one representative per abstract value: non-empty
+  intervals are already determined by their bounds, and every empty one collapses
+  to \<^const>\<open>bot\<close>.  This mirrors the component-local normalisation each Goblint
+  integer domain performs for itself (@{text Interval.norm} sending \<open>l > u\<close> to
+  \<open>None\<close>, @{text Congruence.normalize} pinning the residue and modulus), which is
+  what makes a structural stability test on a representation meaningful.
+
+  \<^const>\<open>is_bottom_ivl\<close> stays an exact test on arbitrary bounds rather than an
+  equality against \<^const>\<open>bot\<close>: \<^typ>\<open>ivl\<close> is an ordinary datatype, so
+  \<^term>\<open>Ivl (Fin 5) (Fin 3)\<close> remains writable by any caller and must still be
+  recognised as empty.
+\<close>
+
+lemma is_bottom_ivl_iff_not_nonempty:
+  "is_bottom_ivl v \<longleftrightarrow> \<not> ivl_nonempty v"
+  by (cases v) (auto simp: is_bottom_ivl_def)
+
+lemma is_bottom_ivl_bot [simp]: "is_bottom_ivl bot"
+  by (simp add: is_bottom_ivl_def bot_ivl_def)
+
+lemma normalize_ivl_bot_case [simp]:
+  "is_bottom_ivl v \<Longrightarrow> normalize_ivl v = bot"
+  by (cases v) (auto simp: normalize_ivl_def is_bottom_ivl_def)
+
+lemma normalize_ivl_id [simp]:
+  "\<not> is_bottom_ivl v \<Longrightarrow> normalize_ivl v = v"
+  by (cases v) (simp add: normalize_ivl_def is_bottom_ivl_def)
+
+lemma normalize_ivl_bot [simp]: "normalize_ivl bot = bot"
+  by simp
+
+lemma normalize_ivl_idem [simp]:
+  "normalize_ivl (normalize_ivl v) = normalize_ivl v"
+  by (cases "is_bottom_ivl v") simp_all
+
+lemma normalize_ivl_le: "normalize_ivl v \<le> v"
+  by (cases "is_bottom_ivl v") simp_all
+
+lemma is_bottom_ivl_normalize [simp]:
+  "is_bottom_ivl (normalize_ivl v) = is_bottom_ivl v"
+  by (cases "is_bottom_ivl v") simp_all
+
+definition mk_ivl :: "eint \<Rightarrow> eint \<Rightarrow> ivl" where
+  [simp]: "mk_ivl l u = normalize_ivl (Ivl l u)"
+
+text \<open>
+  \<^const>\<open>mk_ivl\<close> is the canonical constructor: any operation that computes new
+  bounds should build its result through it instead of applying \<^const>\<open>Ivl\<close> to
+  possibly inverted bounds and leaving the emptiness implicit.  Its defining
+  equation is a simp rule, like \<^const>\<open>inf\<close>'s above, so a caller that already
+  rewrites with \<^const>\<open>normalize_ivl\<close>'s equations sees through it rather than
+  meeting an opaque constant.
+\<close>
+
+lemma gamma_mk_ivl [simp]: "gamma_ivl (mk_ivl l u) = gamma_ivl (Ivl l u)"
+  by (simp add: normalize_ivl_gamma)
+
+lemma normalize_ivl_mk_ivl [simp]: "normalize_ivl (mk_ivl l u) = mk_ivl l u"
+  by simp
+
+lemma mk_ivl_mono:
+  "Ivl l1 u1 \<le> Ivl l2 u2 \<Longrightarrow> mk_ivl l1 u1 \<le> mk_ivl l2 u2"
+  by (simp add: normalize_ivl_mono)
+
+lemma mk_ivl_le: "mk_ivl l u \<le> Ivl l u"
+  by (simp add: normalize_ivl_le)
+
+text \<open>
+  \<^const>\<open>inf\<close> is the one operation that is deliberately left un-normalised: it
+  intersects the bounds and lets an infeasible intersection come out as an
+  inverted pair.
+\<close>
+
+lemma meet_ivl_not_canonical:
+  "normalize_ivl (Ivl (Fin 0) (Fin 3) \<sqinter> Ivl (Fin 5) (Fin 9))
+     \<noteq> Ivl (Fin 0) (Fin 3) \<sqinter> Ivl (Fin 5) (Fin 9)"
+  by (simp add: normalize_ivl_def bot_ivl_def)
+
+text \<open>
+  Normalising it instead would break \<^class>\<open>semilattice_inf\<close>: the greatest-lower-bound
+  law @{thm [source] meet_ivl_greatest} quantifies over *all* lower bounds, including
+  the un-normalised empty ones a caller may write down, and those are not below
+  \<^const>\<open>bot\<close>.  The three facts below are exactly that counterexample --
+  \<^term>\<open>Ivl (Fin 5) (Fin 3)\<close> is a lower bound of both operands, yet it is not below
+  the normalised meet.  Canonicity therefore belongs to the operations that build
+  new values (arithmetic, \<^const>\<open>mk_ivl\<close>), not to the order-theoretic \<^const>\<open>inf\<close>.
+\<close>
+
+lemma meet_ivl_normalized_breaks_greatest:
+  "Ivl (Fin 5) (Fin 3) \<le> Ivl (Fin 0) (Fin 3)"
+  "Ivl (Fin 5) (Fin 3) \<le> Ivl (Fin 5) (Fin 9)"
+  "\<not> Ivl (Fin 5) (Fin 3)
+       \<le> normalize_ivl (Ivl (Fin 0) (Fin 3) \<sqinter> Ivl (Fin 5) (Fin 9))"
+  by (simp_all add: less_eq_ivl_def normalize_ivl_def bot_ivl_def)
+
+subsection \<open>Semantic intersection\<close>
+
+fun meet_ivl_norm :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "meet_ivl_norm (Ivl l1 u1) (Ivl l2 u2) =
+     mk_ivl (if l2 \<le> l1 then l1 else l2) (if u1 \<le> u2 then u1 else u2)"
+
+text \<open>
+  \<^const>\<open>inf\<close> is the greatest lower bound of the representation order; the
+  operation a backward filter actually wants is the intersection of the
+  concretizations, which is a weaker requirement --- it need only preserve
+  \<^const>\<open>gamma_ivl\<close> and be reductive and monotone, and is free to pick any
+  representative of the result.  \<^const>\<open>meet_ivl_norm\<close> is that operation: the
+  same bound intersection, built through \<^const>\<open>mk_ivl\<close> so an infeasible
+  intersection comes out as \<^const>\<open>bot\<close> rather than as a reversed pair.
+
+  Goblint's interval @{text meet} is simultaneously both, because its carrier
+  keeps only canonical inhabited values --- @{text norm} maps \<open>l > u\<close> to
+  @{text None}, so no element corresponding to \<^term>\<open>Ivl (Fin 5) (Fin 3)\<close>
+  exists there to be a common lower bound.  On this larger raw carrier the two
+  notions come apart, which is what
+  @{thm [source] meet_ivl_normalized_breaks_greatest} records.
+\<close>
+
+lemma meet_ivl_norm_eq: "meet_ivl_norm a b = normalize_ivl (meet_ivl a b)"
+  by (cases a; cases b) simp
+
+lemma gamma_meet_ivl_norm [simp]:
+  "gamma_ivl (meet_ivl_norm a b) = gamma_ivl (meet_ivl a b)"
+  by (simp add: meet_ivl_norm_eq normalize_ivl_gamma)
+
+lemma meet_ivl_norm_gamma:
+  "n \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> n \<in> gamma_ivl (meet_ivl_norm a b)"
+  using meet_ivl_gamma[of n a b] by simp
+
+lemma meet_ivl_norm_le1: "meet_ivl_norm a b \<le> a"
+proof -
+  have "normalize_ivl (meet_ivl a b) \<le> meet_ivl a b" by (rule normalize_ivl_le)
+  also have "meet_ivl a b \<le> a" using meet_ivl_le_lb1[of a b] by simp
+  finally show ?thesis by (simp add: meet_ivl_norm_eq)
+qed
+
+lemma meet_ivl_norm_le2: "meet_ivl_norm a b \<le> b"
+proof -
+  have "normalize_ivl (meet_ivl a b) \<le> meet_ivl a b" by (rule normalize_ivl_le)
+  also have "meet_ivl a b \<le> b" using meet_ivl_le_lb2[of a b] by simp
+  finally show ?thesis by (simp add: meet_ivl_norm_eq)
+qed
+
+lemma meet_ivl_norm_mono:
+  assumes "a1 \<le> a2" and "b1 \<le> b2"
+  shows "meet_ivl_norm a1 b1 \<le> meet_ivl_norm a2 b2"
+proof -
+  have "meet_ivl a1 b1 \<le> meet_ivl a2 b2" using inf_mono[OF assms] by simp
+  then show ?thesis by (simp add: meet_ivl_norm_eq normalize_ivl_mono)
+qed
+
+lemma normalize_ivl_meet_ivl_norm [simp]:
+  "normalize_ivl (meet_ivl_norm a b) = meet_ivl_norm a b"
+  by (simp add: meet_ivl_norm_eq)
+
+lemma is_bottom_ivl_meet_ivl_norm:
+  "is_bottom_ivl (meet_ivl_norm a b) \<longleftrightarrow> is_bottom_ivl (meet_ivl a b)"
+  by (simp add: meet_ivl_norm_eq)
+
 lemma ivl_le_top: "(x::ivl) \<le> ivl_top"
   by (cases x) (simp add: less_eq_ivl_def ivl_top_def)
 

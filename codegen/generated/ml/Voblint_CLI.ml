@@ -2018,6 +2018,19 @@ let rec fun_of_resolved_st_q_for _A
 
 let rec inv_conservative r a1 a2 = (a1, a2);;
 
+let rec normalize_ivl
+  v = (let Ivl (l, u) = v in
+        (if less_eq_eint l u &&
+              (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
+          then v else bot_ivla));;
+
+let rec mk_ivl l u = normalize_ivl (Ivl (l, u));;
+
+let rec meet_ivl_norm
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    mk_ivl (if less_eq_eint l2 l1 then l1 else l2)
+      (if less_eq_eint u1 u2 then u1 else u2);;
+
 let rec remove_resolved_key
   loc x1 = match loc, x1 with loc, [] -> []
     | loca, (loc, a) :: ps ->
@@ -2076,12 +2089,6 @@ let rec minus_eint
     | PlusInf, Fin ux -> PlusInf
     | PlusInf, PlusInf -> PlusInf;;
 
-let rec normalize_ivl
-  v = (let Ivl (l, u) = v in
-        (if less_eq_eint l u &&
-              (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
-          then v else bot_ivla));;
-
 let rec minus_ivl
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
     (let (Ivl (a, b), Ivl (c, d)) =
@@ -2114,16 +2121,11 @@ let rec aval_ivl
     | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma);;
 
-let rec meet_ivl
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
-          (if less_eq_eint u1 u2 then u1 else u2));;
-
 let rec afilter_ivl_st
   gs x1 a s = match gs, x1, a, s with
     gs, V x, a, s ->
       update_resolved_st_q bot_ivl s (location_of gs x)
-        (meet_ivl a (fun_of_resolved_st_q_for bot_ivl gs s x))
+        (meet_ivl_norm a (fun_of_resolved_st_q_for bot_ivl gs s x))
     | gs, Plus (e1, e2), a, s ->
         (let (a1, a2) =
            inv_conservative a
@@ -2146,6 +2148,11 @@ let rec afilter_ivl_st
            in
           afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s))
     | gs, N v, a, s -> s;;
+
+let rec meet_ivl
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
+          (if less_eq_eint u1 u2 then u1 else u2));;
 
 let rec inf_ivl x = meet_ivl x;;
 

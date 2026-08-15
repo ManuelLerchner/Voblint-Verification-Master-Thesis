@@ -229,10 +229,19 @@ text \<open>
   together against @{locale backward_domain_refined} -- each \<open>inv_*\<close>'s
   mono/reductive obligation is one @{const le_pair} fact, built from the
   componentwise per-operator lemmas above.
+
+  The \<open>meet\<close> parameter is instantiated with \<^const>\<open>meet_ivl_norm\<close>, not with the
+  lattice \<^const>\<open>inf\<close>.  The locale only ever requires \<open>meet\<close> to intersect
+  concretizations, to be reductive in both arguments, and to be monotone --- never
+  that it is the greatest lower bound of the representation order --- and the
+  normalising variant additionally keeps every filtered state canonical, so an
+  infeasible guard stores \<^const>\<open>bot\<close> instead of a reversed bound pair.
+  \<^const>\<open>inf\<close> itself cannot be normalised without losing the greatest-lower-bound
+  law; @{thm [source] meet_ivl_normalized_breaks_greatest} is that counterexample.
 \<close>
 
 global_interpretation ivl_backward_domain:
-    backward_domain_refined meet_ivl aval_ivl
+    backward_domain_refined meet_ivl_norm aval_ivl
                     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
@@ -244,8 +253,8 @@ proof unfold_locales
   assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
   have h1: "n \<in> gamma_ivl a" using H1 by simp
   have h2: "n \<in> gamma_ivl b" using H2 by simp
-  show "n \<in> gamma (meet_ivl a b)"
-    using meet_ivl_gamma[simplified, OF h1 h2] by simp
+  show "n \<in> gamma (meet_ivl_norm a b)"
+    using meet_ivl_norm_gamma[OF h1 h2] by simp
 next
   fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> ivl"
   assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
@@ -284,7 +293,7 @@ next
 next
   fix a1 a2 b1 b2 :: ivl
   assume "a1 \<le> a2" and "b1 \<le> b2"
-  thus "meet_ivl a1 b1 \<le> meet_ivl a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
+  thus "meet_ivl_norm a1 b1 \<le> meet_ivl_norm a2 b2" by (rule meet_ivl_norm_mono)
 next
   fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
   assume "\<sigma>1 \<le> \<sigma>2"
@@ -306,10 +315,10 @@ next
     using A B by (simp add: inv_conservative_def le_pair_def)
 next
   fix a b :: ivl
-  show "meet_ivl a b \<le> a" by (rule meet_ivl_le1)
+  show "meet_ivl_norm a b \<le> a" by (rule meet_ivl_norm_le1)
 next
   fix a b :: ivl
-  show "meet_ivl a b \<le> b" by (rule meet_ivl_le2)
+  show "meet_ivl_norm a b \<le> b" by (rule meet_ivl_norm_le2)
 next
   fix res :: bool and a1 a2 :: ivl
   show "le_pair (inv_less_ivl res a1 a2) (a1, a2)"
