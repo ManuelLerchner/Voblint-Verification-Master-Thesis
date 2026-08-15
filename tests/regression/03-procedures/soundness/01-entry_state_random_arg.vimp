@@ -15,5 +15,5 @@ void p(a) {
 }
 void main() {
   x := __voblint_nondet_int();
-  y := p(x)
+  p(x)
 }

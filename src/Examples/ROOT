@@ -75,6 +75,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Analyse_Dispatch
     Example_Analysis_Dispatch_Regression
     Example_Min_Max_Regression
+    Example_Solver_Choice_Regression
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo

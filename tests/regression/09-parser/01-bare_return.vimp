@@ -3,7 +3,13 @@
 // expression), but vimp_parser.ml's KW_RETURN case used to unconditionally
 // require an aexp afterward -- found by tests/property's round-trip
 // property (Hypothesis generated Return None, print/parse disagreed).
-void main() {
+// main itself may not contain a return (wf_source_program's no_return
+// conjunct), so the bare return lives in a helper procedure p instead,
+// called destination-less (a bare return provides no value).
+void p() {
   __voblint_check(1 < 2); // PROVED
   return
+}
+void main() {
+  p()
 }

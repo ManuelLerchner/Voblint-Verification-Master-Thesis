@@ -73,6 +73,65 @@ text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for both 
 lemma analyse_ctx_none_eq_analyse: "analyse_ctx k Ctx_None p = Some (analyse k p)"
   by (cases k) simp_all
 
+subsection \<open>Solver-choice dimension (experimental)\<close>
+
+text \<open>
+  The vendored side solver comes in several update-rule disciplines sharing
+  one signature (\<^const>\<open>TD_side_always_join_Interp_solve\<close>,
+  \<^const>\<open>TD_side_per_origin_Interp_solve\<close>,
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>): plain join, per-origin
+  join, and Apinis warrowing. \<open>analyse_with_solver\<close> exposes this choice for
+  experiments and regression comparisons on the same generated equation
+  system, without touching \<open>analyse\<close>/\<open>analyse_ctx\<close> or any domain's
+  production entry point (issue #131).
+
+  Not every combination is meaningful: only \<open>ivl\<close> has a \<open>widen\<close> type-class
+  instance (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>), so \<open>Solver_Warrow\<close>
+  does not even type-check against Sign -- adding a pointless \<open>widen\<close>
+  instance for a finite-height domain that needs no widening would be
+  scope creep, not a fix. \<open>analyse_with_solver\<close> is therefore a curated,
+  explicit list of the five valid pairings, not a general
+  compatibility predicate over an open solver/domain space: an
+  unsupported pairing returns \<open>None\<close>, the same explicit-gap discipline
+  \<open>analyse_ctx\<close> already uses for \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close>.
+
+  Each domain's own production default is exactly one of these five pairs
+  (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>) --
+  \<open>analyse_with_solver_sign_default\<close>/\<open>analyse_with_solver_interval_default\<close>
+  below confirm those two reproduce \<open>analyse\<close> exactly, not just
+  semantically.
+
+  These three update-rule disciplines are convergence strategies, not
+  alternative precision semantics: \<open>Exec_Ivl_Run\<close>'s
+  \<open>loop_head_across_update_rules\<close> proves join, per-origin, and warrowing
+  compute the identical result on a bounded local loop whenever all three
+  terminate, since interval narrowing and the backward guard filter -- not
+  the update rule -- carry that precision. A flow-insensitive global's
+  write-back has no such filter, so widening buys only termination there,
+  not precision; without it, a self-referential global write can leave
+  \<open>Solver_Join\<close>/\<open>Solver_PerOrigin\<close> without a fixpoint at all. Termination,
+  not precision, is therefore the axis on which this choice is observable.
+\<close>
+
+datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
+
+fun analyse_with_solver ::
+    "analysis_kind \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
+  "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse_sign_report p)"
+| "analyse_with_solver Sign_Analysis Solver_PerOrigin p = Some (analyse_sign_report_per_origin p)"
+| "analyse_with_solver Sign_Analysis Solver_Warrow p = None"
+| "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report p)"
+| "analyse_with_solver Interval_Analysis Solver_PerOrigin p = Some (analyse_interval_report_per_origin p)"
+| "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_td_report p)"
+
+lemma analyse_with_solver_sign_default:
+  "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse Sign_Analysis p)"
+  by simp
+
+lemma analyse_with_solver_interval_default:
+  "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse Interval_Analysis p)"
+  by simp
+
 subsection \<open>Domain-neutral state-carrying report\<close>
 
 text \<open>
@@ -293,6 +352,7 @@ text \<open>
 
 code_identifier
   code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Source_Print \<rightharpoonup> (OCaml) Core
@@ -303,6 +363,7 @@ code_identifier
 | code_module Compile_Invariants \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc_to_CFG \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
+| code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core
 | code_module Exec_Bridge \<rightharpoonup> (OCaml) Core
 | code_module AList \<rightharpoonup> (OCaml) Core
@@ -392,6 +453,7 @@ export_code
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_bexp
+  wf_program_compile_input_exec
 
 export_code
   analyse Sign_Analysis Interval_Analysis
@@ -408,6 +470,7 @@ export_code
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_bexp
+  wf_program_compile_input_exec
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 
 end

@@ -44,6 +44,87 @@ lemma wf_program_compile_inputD:
       (prog_procs p) prog_main_name (prog_main p)"
   by (simp add: wf_program_compile_input_def)
 
+subsection \<open>An executable, sufficient reformulation\<close>
+
+text \<open>
+  \<open>wf_source_program\<close>'s two \<open>\<forall>p. \<Pi> p = ... \<longrightarrow> ...\<close> conjuncts range over
+  \<open>\<Pi> :: pname => proc_decl option\<close>'s entire (unbounded) function domain, so
+  \<^const>\<open>wf_program_compile_input\<close> cannot be exported/evaluated as literally
+  stated -- Isabelle's code generator has nothing to enumerate a function's
+  domain against. \<open>proc_rep\<close> is always finite in practice (\<open>prog_table p =
+  map_of (proc_rep p)\<close>), so both conjuncts are provably implied by the
+  corresponding \<open>list_all\<close> check over \<open>proc_rep p\<close> directly: every entry
+  \<open>proc_rep p\<close> actually lists is checked, which is at least as strong as
+  checking only the ones \<open>map_of\<close> would resolve a lookup to.
+
+  \<open>wf_program_compile_input_exec\<close> only needs to be \<^emph>\<open>sufficient\<close> for the CLI
+  well-formedness gate to be sound (never silently accepting a source program
+  \<^const>\<open>wf_program_compile_input\<close> would reject) -- not a decision procedure
+  complete in the other direction, which \<open>map_of\<close>'s first-occurrence-wins
+  semantics on a \<open>proc_rep\<close> with a shadowed duplicate key would make
+  materially harder to establish for no operational benefit here.
+\<close>
+
+definition wf_program_compile_input_exec :: "imp_prog => bool" where
+  "wf_program_compile_input_exec p \<longleftrightarrow>
+     (let procs = proc_rep p; gs = storage_global p prog_main_name; pi = map_of procs
+      in reserved_ret_var gs \<and>
+         distinct (prog_procs p) \<and>
+         set (prog_procs p) = set (map fst procs) - {prog_main_name} \<and>
+         prog_main_name \<notin> set (prog_procs p) \<and>
+         pi prog_main_name = Some (proc_decl_of [] (prog_main p)) \<and>
+         wf_source_com pi (prog_main p) \<and> no_return (prog_main p) \<and>
+         list_all (\<lambda>(_, decl). wf_proc_decl gs pi decl) procs \<and>
+         list_all (\<lambda>(q, _). special_table q = None) procs)"
+
+lemma wf_program_compile_input_exec_sound:
+  assumes "wf_program_compile_input_exec p"
+  shows "wf_program_compile_input p"
+proof -
+  define procs where "procs = proc_rep p"
+  define gs where "gs = storage_global p prog_main_name"
+  define pi where "pi = map_of procs"
+  have pi_eq: "pi = prog_table p"
+    unfolding pi_def procs_def prog_table_def ..
+  from assms have h:
+    "reserved_ret_var gs"
+    "distinct (prog_procs p)"
+    "set (prog_procs p) = set (map fst procs) - {prog_main_name}"
+    "prog_main_name \<notin> set (prog_procs p)"
+    "pi prog_main_name = Some (proc_decl_of [] (prog_main p))"
+    "wf_source_com pi (prog_main p)"
+    "no_return (prog_main p)"
+    "list_all (\<lambda>(_, decl). wf_proc_decl gs pi decl) procs"
+    "list_all (\<lambda>(q, _). special_table q = None) procs"
+    unfolding wf_program_compile_input_exec_def procs_def gs_def pi_def Let_def
+    by simp_all
+  have domain: "set (map fst procs) = {q. pi q \<noteq> None}"
+    unfolding pi_def by (induction procs) auto
+  have every_decl: "\<And>q decl. pi q = Some decl \<Longrightarrow> wf_proc_decl gs pi decl"
+  proof -
+    fix q decl assume "pi q = Some decl"
+    then have "(q, decl) \<in> set procs" unfolding pi_def by (rule map_of_SomeD)
+    with h(8) show "wf_proc_decl gs pi decl" by (auto simp: list_all_iff)
+  qed
+  have every_special: "\<And>q. pi q \<noteq> None \<Longrightarrow> special_table q = None"
+  proof -
+    fix q assume "pi q \<noteq> None"
+    then    obtain decl where "(q, decl) \<in> set procs"
+      using domain by force
+    with h(9) show "special_table q = None" by (auto simp: list_all_iff)
+  qed
+  have wf_source_program: "wf_source_program gs pi prog_main_name (prog_main p)"
+    unfolding wf_source_program_def
+    using h(1) h(5) h(6) h(7) every_decl every_special by blast
+  have wf_compile_input: "wf_compile_input gs pi (prog_procs p) prog_main_name (prog_main p)"
+    unfolding wf_compile_input_def
+    using h(2) h(3) h(4) wf_source_program
+    using domain by blast
+  show ?thesis
+    unfolding wf_program_compile_input_def gs_def[symmetric] pi_eq[symmetric]
+    using wf_compile_input .
+qed
+
 definition compile_program :: "imp_prog => cfg" where
   "compile_program p =
     compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)"

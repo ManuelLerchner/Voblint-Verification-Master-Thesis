@@ -253,15 +253,21 @@ text \<open>
   \<open>normalize_ivl\<close>), and only \<open>Ivl PlusInf MinInf\<close> is literally \<open>bot\<close>. The
   generic \<open>derived_eq_false_from_meet\<close> derivation
   (\<^theory>\<open>Voblint_Core.Abstract_Numeric_Queries\<close>)
-  tests \<open>meet a b = bot\<close> by that literal equality, so for Interval it
-  under-approximates disjointness severely: two disjoint, non-empty, finite
-  intervals meet to an empty-but-non-canonical result, not to \<open>Ivl PlusInf
-  MinInf\<close> itself. The witness below is disjoint by \<open>interval_eq_false\<close>'s own
-  (already sound) table, yet its raw meet is provably not \<open>bot\<close> --- so the
-  generic derivation would classify strictly fewer pairs than the hand-tuned
-  table here. \<open>interval_eq_true\<close>'s situation is analogous, since it is
-  derived from \<open>interval_less_false\<close> in both directions and inherits the same
-  gap. This is reported, not fixed: Interval keeps its own hand-tuned tables.
+  tests \<open>meet a b = bot\<close> by that literal equality, so instantiating it at the
+  lattice \<^const>\<open>inf\<close> under-approximates disjointness severely: two disjoint,
+  non-empty, finite intervals meet to an empty-but-non-canonical result, not to
+  \<open>Ivl PlusInf MinInf\<close> itself. The witness below is disjoint by
+  \<open>interval_eq_false\<close>'s own (already sound) table, yet its raw meet is provably
+  not \<open>bot\<close>.
+
+  The obstacle is a property of the lattice \<^const>\<open>inf\<close>, not of the domain.
+  \<^const>\<open>meet_ivl_norm\<close> --- the semantic intersection the backward filters are
+  interpreted with --- returns \<^const>\<open>bot\<close> on that same witness, so the generic
+  derivation instantiated there would classify this pair correctly.  Interval
+  still keeps its own hand-tuned tables here; rerouting the queries through the
+  semantic intersection is a separate change, not made with this one.
+  \<open>interval_eq_true\<close> is unaffected either way, since it is derived from
+  \<open>interval_less_false\<close> in both directions rather than from a meet.
 \<close>
 
 lemma interval_eq_false_witness_disjoint:
@@ -271,5 +277,9 @@ lemma interval_eq_false_witness_disjoint:
 lemma interval_meet_of_witness_not_bot:
   "meet_ivl (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) \<noteq> bot"
   by (simp add: bot_ivl_def)
+
+lemma interval_meet_norm_of_witness_bot:
+  "meet_ivl_norm (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6)) = bot"
+  by eval
 
 end

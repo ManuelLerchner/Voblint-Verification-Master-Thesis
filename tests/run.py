@@ -61,9 +61,13 @@ and its own expected verdict inline next to each check:
                                    check contributes zero lines of output,
                                    not a vacuous PROVED.
 
-A case with no verdict annotations at all is a parse-rejection case (see
-00-sanity/02-malformed.vimp) and is checked for a structured parse error
-instead of a report.
+A case with no verdict annotations at all is a rejection case -- a parse
+error (see 00-sanity/02-malformed.vimp), a well-formedness error (e.g. a
+wrong-arity special call, rejected before compilation reaches the analyzer),
+or a solver that does not terminate on this program's fixpoint dependency
+structure (see 15-solver-choice/04-global_self_feedback_join_hangs.vimp,
+using --timeout to keep the case fast) -- and is checked for one of those
+structured error messages instead of a report.
 
 A case may also carry a canonical CFG snapshot, checked independently of its
 verdicts:
@@ -393,10 +397,17 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
         if result.returncode == 0:
             lines.append(f"FAIL {cmd}: expected a non-zero exit (no verdict annotations present)")
             return False, lines
-        if "parse error" in result.stderr:
+        if (
+            "parse error" in result.stderr
+            or "not well-formed" in result.stderr
+            or "did not finish within" in result.stderr
+        ):
             lines.append(f"OK   {cmd} (rejected: {result.stderr.strip()})")
             return True, lines
-        lines.append(f"FAIL {cmd}: rejected, but not with a parse error")
+        lines.append(
+            f"FAIL {cmd}: rejected, but not with a parse error, well-formedness error, "
+            "or solver timeout"
+        )
         lines.append(f"  stderr: {result.stderr.strip()}")
         return False, lines
 

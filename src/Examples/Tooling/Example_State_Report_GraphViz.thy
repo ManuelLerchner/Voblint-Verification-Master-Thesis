@@ -327,6 +327,8 @@ export_code
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
   string_of_bexp
+  wf_program_compile_input_exec
+  analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
   in OCaml file_prefix "Voblint_CLI"
 
 end

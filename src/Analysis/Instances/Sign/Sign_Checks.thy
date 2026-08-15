@@ -169,6 +169,36 @@ text \<open>
 definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report p = analyse_sign_report_for (declared_global p) p"
 
+subsection \<open>Solver-choice variant: per-origin update rule\<close>
+
+text \<open>
+  \<open>analyse_sign_report_per_origin\<close> is \<open>analyse_sign_report\<close>'s sibling under the
+  per-origin update rule (\<^const>\<open>TD_side_per_origin_Interp_solve\<close>, keeping
+  each write origin's contribution separate instead of folding every
+  contribution into one join) instead of the always-join rule production
+  uses. Experimental: unlike \<open>analyse_sign_report\<close>, no dedicated soundness
+  theorem is proved for this combination here -- \<open>analyse\<close> and its soundness
+  corollaries are unaffected, and this definition exists solely so
+  \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close> can compare solver choices on
+  the same equation system (issue #131).
+\<close>
+
+definition analyse_sign_for_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+       (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+  "analyse_sign_for_per_origin gs p =
+     TD_side_per_origin_Interp_solve (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ())"
+
+definition analyse_sign_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_sign_report_per_origin p =
+     (let gs = declared_global p;
+          sol = snd (analyse_sign_for_per_origin gs p)
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. combine_env_abs gs
+                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
+                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+           sign_classify_check)"
+
 subsection \<open>Whole-program check report with state\<close>
 
 text \<open>

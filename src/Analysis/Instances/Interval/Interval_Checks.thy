@@ -367,4 +367,41 @@ definition analyse_interval_td_report_with_state ::
   "analyse_interval_td_report_with_state p =
      interval_td_check_report_with_state (declared_global p) prog_main_name p"
 
+subsection \<open>Solver-choice variant: per-origin update rule\<close>
+
+text \<open>
+  \<open>analyse_interval_report_per_origin\<close> is \<open>analyse_interval_report\<close>'s
+  sibling under the per-origin update rule (\<^const>\<open>TD_side_per_origin_Interp_solve\<close>,
+  keeping each write origin's contribution separate instead of folding
+  every contribution into one join) instead of the always-join backend.
+  Experimental, matching the analogous \<open>analyse_sign_report_per_origin\<close>
+  for Sign: no dedicated soundness theorem is
+  proved for this combination here -- \<open>analyse\<close> and its soundness
+  corollaries are unaffected, and this definition exists solely so
+  \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close> can compare solver choices on
+  the same equation system (issue #131). Reuses \<^const>\<open>ivl_exec_eqs\<close>
+  unchanged, only the solve call differs from \<^const>\<open>ivl_exec_raw\<close>.
+\<close>
+
+definition ivl_exec_raw_per_origin ::
+    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+     \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
+  "ivl_exec_raw_per_origin is_bot_pred gs \<Pi> ps mnm main =
+     snd (TD_side_per_origin_Interp_solve (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main)
+            (cfg_exit (compile_prog \<Pi> ps mnm main)))"
+
+definition interval_check_report_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "interval_check_report_per_origin gs mnm p =
+     (let raw = ivl_exec_raw_per_origin (resolved_st_q_is_bot_for (declared_global_vars p)) gs
+                  (prog_table p) (prog_procs p) mnm (prog_main p)
+      in classify_checks (prog_cfg mnm p)
+           (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
+                  (side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))
+           interval_classify_check)"
+
+definition analyse_interval_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_per_origin p =
+     interval_check_report_per_origin (declared_global p) prog_main_name p"
+
 end

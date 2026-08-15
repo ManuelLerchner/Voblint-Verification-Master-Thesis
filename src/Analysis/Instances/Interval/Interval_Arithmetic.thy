@@ -341,4 +341,36 @@ next
     using ivl_times_core_mono[OF _ _ assms] True by simp
 qed
 
+subsection \<open>Results are canonical\<close>
+
+text \<open>
+  Every public interval operation returns a canonical representative: a non-empty
+  interval, or \<^const>\<open>bot\<close> itself.  No operation manufactures a fresh inverted
+  bound pair such as \<^term>\<open>Ivl (Fin 2) (Fin 1)\<close>, so structural equality on
+  results distinguishes exactly the abstract values they denote.
+\<close>
+
+lemma normalize_ivl_plus [simp]: "normalize_ivl (a + b) = a + b"
+  by (simp add: plus_ivl_norm split: ivl.splits prod.splits)
+
+lemma normalize_ivl_minus [simp]: "normalize_ivl (a - b) = a - b"
+  by (simp add: minus_ivl_norm split: ivl.splits prod.splits)
+
+lemma normalize_ivl_ivl_min [simp]: "normalize_ivl (ivl_min a b) = ivl_min a b"
+  by (cases a; cases b) simp
+
+lemma normalize_ivl_ivl_max [simp]: "normalize_ivl (ivl_max a b) = ivl_max a b"
+  by (cases a; cases b) simp
+
+lemma is_bottom_ivl_times_core [simp]:
+  "\<not> is_bottom_ivl (ivl_times_core x y)"
+proof (induction x y rule: ivl_times_core.induct)
+  case (1 l1 u1 l2 u2)
+  show ?case
+    by (auto simp: is_bottom_ivl_def min_le_iff_disj le_max_iff_disj)
+qed (simp_all add: is_bottom_ivl_def ivl_top_def)
+
+lemma normalize_ivl_times [simp]: "normalize_ivl (a * b) = a * b"
+  by (cases "ivl_nonempty a \<and> ivl_nonempty b") (auto simp: times_ivl_def)
+
 end

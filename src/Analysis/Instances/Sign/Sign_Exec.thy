@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports Voblint_Core.Exec_Bridge Sign_Domain
+  imports Voblint_Core.Exec_Bridge Voblint_Core.Numeric_Ops Sign_Domain
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
@@ -53,19 +53,38 @@ text \<open>The executable mirror of \<open>sign_tf_for\<close>/\<open>enter_sig
   the classifier, following the same pattern as \<open>ivl_tf_st_for\<close>/
   \<open>ivl_enter_st_for\<close> for the interval domain.\<close>
 
+text \<open>
+  \<open>sign_ops\<close> bundles Sign's own primitives for the generic
+  \<open>generic_branch_st_for\<close>/\<open>generic_enter_st_for\<close> construction
+  (\<^theory>\<open>Voblint_Core.Numeric_Ops\<close>): \<open>branch_sign_st_for\<close>/\<open>sign_enter_st_for\<close>
+  below are exactly those generic constructions instantiated at \<open>sign_ops\<close>,
+  not independent definitions -- Interval and Parity instantiate the same
+  generic pair at their own primitives.
+\<close>
+
+definition sign_ops :: "sign numeric_ops" where
+  "sign_ops = \<lparr> n_aval = aval_sign, n_bfilter = bfilter_sign_st, n_top = STop \<rparr>"
+
 definition branch_sign_st_for ::
   "(vname => bool) => bexp => bool => sign resolved_st_q => sign resolved_st_q" where
-  "branch_sign_st_for source_global b pol s =
-    bfilter_sign_st source_global b pol s"
+  "branch_sign_st_for = generic_branch_st_for sign_ops"
+
+lemma branch_sign_st_for_eq [simp]:
+  "branch_sign_st_for source_global b pol s = bfilter_sign_st source_global b pol s"
+  by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
   "(vname => bool) => vname list => aexp list =>
    sign resolved_st_q => sign resolved_st_q" where
+  "sign_enter_st_for = generic_enter_st_for sign_ops"
+
+lemma sign_enter_st_for_eq [simp]:
   "sign_enter_st_for source_global xs es s =
     bind_formals_resolved_q source_global xs
       (map (\<lambda>e. aval_sign e
         (fun_of_resolved_st_q_for source_global s)) es)
       (enter_frame_D_resolved_q STop s)"
+  by (simp add: sign_enter_st_for_def generic_enter_st_for_def sign_ops_def)
 
 fun sign_tf_st_for ::
   "(vname => bool) => edge_action =>
@@ -175,12 +194,12 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Assume b) s) =
     apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def branch_sign_st_for_def apply_tf.simps bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def bfilter_sign_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_AssumeNot b) s) =
     apply_tf (sign_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def branch_sign_st_for_def apply_tf.simps bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def bfilter_sign_st_commute)
   show "\<And>ea p. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Ret ea p) s) =
     apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
@@ -210,7 +229,7 @@ lemma enter_frame_sign_st_for_commute:
 lemma sign_enter_st_for_commute:
   "fun_of_resolved_st_q_for gs (sign_enter_st_for gs xs es s) =
    enter\<^sup># (sign_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
-  by (simp add: sign_enter_st_for_def sign_tf_for_def enter_sign_for_def enter_D_def
+  by (simp add: sign_tf_for_def enter_sign_for_def enter_D_def
                 enter_frame_sign_for_def enter_frame_sign_st_for_commute)
 
 subsection \<open>Executable effectful transfer record, generic in the classifier\<close>

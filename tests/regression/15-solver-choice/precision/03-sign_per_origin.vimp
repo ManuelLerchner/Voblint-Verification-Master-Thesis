@@ -1,0 +1,8 @@
+// PARAM: --analysis sign --solver per-origin
+// Exercises --solver per-origin and the Sign domain together (Sign has no
+// widen instance, so Solver_Warrow is rejected for it at the CLI with exit
+// code 1, but join and per-origin both apply).
+void main() {
+  x := 5;
+  __voblint_check(0 < x) // PROVED
+}

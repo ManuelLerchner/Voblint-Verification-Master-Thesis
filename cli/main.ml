@@ -35,6 +35,14 @@ let usage =
   \                             --analysis interval supports it -- any other\n\
   \                             combination is a clear configuration error,\n\
   \                             not a silent fallback to --context none.\n\
+  \  --solver join|per-origin|warrow\n\
+  \                             Pick the vendored solver's update-rule\n\
+  \                             discipline directly, bypassing the domain's\n\
+  \                             production default (experimental; issue\n\
+  \                             #131). warrow only type-checks against\n\
+  \                             interval (sign has no widen instance).\n\
+  \                             Plain text report only -- incompatible with\n\
+  \                             --context/--dot/--dot-full/--graph-snapshot.\n\
   \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
   \                             annotated at check nodes only, instead of the\n\
   \                             textual check report.\n\
@@ -48,6 +56,11 @@ let usage =
   \                             file:line:col message on a parse error); runs\n\
   \                             no analysis, no --analysis needed. For syntax\n\
   \                             checking and parser conformance testing.\n\
+  \                             A syntactically valid but ill-formed program\n\
+  \                             (e.g. a wrong-arity special call) still exits\n\
+  \                             4 with no message here -- well-formedness is\n\
+  \                             checked only on the full run below, after\n\
+  \                             --parse-only's own early exit.\n\
   \  --timeout SECONDS          Wall-clock budget for the analysis subprocess\n\
   \                             (default 10). The analyzer is proved sound but\n\
   \                             not proved total (see CLI_DESIGN.md's Interval\n\
@@ -203,6 +216,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
 let () =
   let analysis = ref None in
   let context = ref Voblint_CLI.Analyse.Ctx_None in
+  let solver = ref None in
   let dot = ref false in
   let dot_full = ref false in
   let graph_snapshot = ref false in
@@ -223,6 +237,13 @@ let () =
        | "none" -> context := Voblint_CLI.Analyse.Ctx_None
        | "entry-state" -> context := Voblint_CLI.Analyse.Ctx_EntryState
        | _ -> prerr_endline ("unknown --context value: " ^ v); exit 1);
+      parse_args rest
+    | "--solver" :: v :: rest ->
+      (match v with
+       | "join" -> solver := Some Voblint_CLI.Analyse.Solver_Join
+       | "per-origin" -> solver := Some Voblint_CLI.Analyse.Solver_PerOrigin
+       | "warrow" -> solver := Some Voblint_CLI.Analyse.Solver_Warrow
+       | _ -> prerr_endline ("unknown --solver value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest
     | "--dot-full" :: rest -> dot_full := true; parse_args rest
@@ -256,6 +277,10 @@ let () =
       exit 2
   in
   if !parse_only then exit 0;
+  if not (Voblint_CLI.Core.wf_program_compile_input_exec prog) then begin
+    Printf.eprintf "%s: program is not well-formed\n" path;
+    exit 4
+  end;
   let kind =
     match !analysis with
     | Some k -> k
@@ -270,6 +295,22 @@ let () =
      substitution for a requested Sign report. *)
   if !context <> Voblint_CLI.Analyse.Ctx_None && kind <> Voblint_CLI.Analyse.Interval_Analysis then begin
     prerr_endline "voblint: unsupported --analysis/--context combination";
+    exit 1
+  end;
+  (* --solver picks the vendored solver's update-rule discipline directly
+     (analyse_with_solver, Analyse_Dispatch.thy -- experiments/regression
+     comparisons, issue #131), bypassing analyse/analyse_ctx entirely. It has
+     no context dimension and produces the same flat check_report_entry list
+     analyse_ctx does, not a per-node state map, so it can't drive
+     --context/--dot/--dot-full/--graph-snapshot -- reject those combinations
+     statically rather than silently ignoring --solver or a requested
+     rendering. *)
+  if !solver <> None && !context <> Voblint_CLI.Analyse.Ctx_None then begin
+    prerr_endline "voblint: unsupported --context/--solver combination";
+    exit 1
+  end;
+  if !solver <> None && (!dot || !dot_full || !graph_snapshot) then begin
+    prerr_endline "voblint: --solver only supports the plain text report";
     exit 1
   end;
   let vars_to_probe = Voblint_CLI.Example_State_Report_GraphViz.program_vars prog in
@@ -299,6 +340,10 @@ let () =
         (match Voblint_CLI.Analyse.analyse_ctx kind !context prog with
          | Some report -> Ok_text (render_flat_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--context combination")
+      else if !solver <> None then
+        (match Voblint_CLI.Analyse.analyse_with_solver kind (Option.get !solver) prog with
+         | Some report -> Ok_text (render_flat_report report check_positions)
+         | None -> Unsupported_combo "unsupported --analysis/--solver combination")
       else
         Ok_text
           (render_text_report ~vars_to_probe
