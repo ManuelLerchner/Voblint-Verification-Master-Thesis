@@ -8,6 +8,12 @@
 // of the CLI's 10s default so the case stays fast. This is the concrete
 // reason Solver_Warrow, not Solver_Join, is Interval's production default --
 // see analyse_with_solver_interval_default in Analyse_Dispatch.thy.
+//
+// Solver choice is tested here through convergence, not precision:
+// Exec_Ivl_Run.loop_head_across_update_rules proves join/per_origin/warrow
+// produce the identical result on a bounded loop whenever all three
+// terminate. This program isolates the one axis where they can actually
+// diverge -- whether they terminate at all.
 global total;
 void main() {
   total := 0;

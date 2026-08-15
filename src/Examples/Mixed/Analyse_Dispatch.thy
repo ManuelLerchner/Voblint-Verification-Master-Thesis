@@ -100,6 +100,17 @@ text \<open>
   \<open>analyse_with_solver_sign_default\<close>/\<open>analyse_with_solver_interval_default\<close>
   below confirm those two reproduce \<open>analyse\<close> exactly, not just
   semantically.
+
+  These three update-rule disciplines are convergence strategies, not
+  alternative precision semantics: \<open>Exec_Ivl_Run\<close>'s
+  \<open>loop_head_across_update_rules\<close> proves join, per-origin, and warrowing
+  compute the identical result on a bounded local loop whenever all three
+  terminate, since interval narrowing and the backward guard filter -- not
+  the update rule -- carry that precision. A flow-insensitive global's
+  write-back has no such filter, so widening buys only termination there,
+  not precision; without it, a self-referential global write can leave
+  \<open>Solver_Join\<close>/\<open>Solver_PerOrigin\<close> without a fixpoint at all. Termination,
+  not precision, is therefore the axis on which this choice is observable.
 \<close>
 
 datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow

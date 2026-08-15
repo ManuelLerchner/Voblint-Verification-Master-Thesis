@@ -5,6 +5,12 @@
 // Solver_Join hang on this program, terminating quickly with a sound (if
 // imprecise) UNKNOWN -- the flow-insensitive global summary only proves
 // total=[0,+inf), though total is exactly 3 here.
+//
+// Widening only buys termination, not precision, here: the [0,+inf) bound
+// is what every solver would report if it terminated (the write-back can't
+// be bounded by narrowing or a guard filter the way a local loop variable
+// can -- contrast Exec_Ivl_Run.loop_head_across_update_rules, where
+// join/per_origin/warrow agree exactly because all three terminate).
 global total;
 void main() {
   total := 0;
