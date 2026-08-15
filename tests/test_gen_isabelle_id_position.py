@@ -47,8 +47,10 @@ GRAMMAR = yaml.safe_load(GRAMMAR_PATH.read_text())
 VARIABLE_ROLE_SLOTS = [
     ("aexp_var", 0),        # expression use
     ("stmt_assign", 0),     # assignment target
-    ("stmt_random", 0),     # random target
-    ("stmt_callret", 0),    # return-value target
+    ("stmt_callret", 0),    # return-value target -- also covers special
+                             # calls (e.g. __voblint_nondet_int()), which
+                             # parse as ordinary calls, not a dedicated
+                             # production
 ]
 CALLEE_ROLE_SLOTS = [
     ("stmt_call", 0),
