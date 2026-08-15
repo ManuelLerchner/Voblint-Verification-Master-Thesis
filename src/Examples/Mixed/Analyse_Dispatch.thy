@@ -341,6 +341,7 @@ text \<open>
 
 code_identifier
   code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Source_Print \<rightharpoonup> (OCaml) Core
@@ -351,6 +352,7 @@ code_identifier
 | code_module Compile_Invariants \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc_to_CFG \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
+| code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core
 | code_module Exec_Bridge \<rightharpoonup> (OCaml) Core
 | code_module AList \<rightharpoonup> (OCaml) Core
@@ -440,6 +442,7 @@ export_code
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_bexp
+  wf_program_compile_input_exec
 
 export_code
   analyse Sign_Analysis Interval_Analysis
@@ -456,6 +459,7 @@ export_code
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_bexp
+  wf_program_compile_input_exec
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 
 end

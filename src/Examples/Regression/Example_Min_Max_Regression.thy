@@ -96,4 +96,30 @@ lemma min_wrong_arity_call_not_wf:
        (VIMP_Proc.com.Call (Some (STR ''z'')) special_pname_min [V (STR ''x'')])"
   by eval
 
+text \<open>
+  End-to-end witness for the same fact through \<^const>\<open>wf_program_compile_input_exec\<close>
+  (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>), the executable reformulation the CLI's
+  well-formedness gate actually calls: a whole program, not just one bare
+  \<open>com\<close> value, confirming the gate itself would reject this program (issue
+  tracked for the CLI \<open>wf_source_program\<close> enforcement gate). Contrasted with
+  \<open>min_max_demo_prog\<close> above, which is well-formed.
+\<close>
+
+definition min_wrong_arity_prog :: imp_prog where
+  "min_wrong_arity_prog =
+     program {
+       void main() {
+         x := 3;
+         z := min(x)
+       }
+     }"
+
+lemma min_max_demo_prog_wf:
+  "wf_program_compile_input_exec min_max_demo_prog"
+  by eval
+
+lemma min_wrong_arity_prog_not_wf:
+  "\<not> wf_program_compile_input_exec min_wrong_arity_prog"
+  by eval
+
 end
