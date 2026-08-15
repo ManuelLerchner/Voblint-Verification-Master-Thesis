@@ -327,6 +327,7 @@ export_code
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
   string_of_bexp
+  wf_program_compile_input_exec
   in OCaml file_prefix "Voblint_CLI"
 
 end

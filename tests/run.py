@@ -61,8 +61,10 @@ and its own expected verdict inline next to each check:
                                    check contributes zero lines of output,
                                    not a vacuous PROVED.
 
-A case with no verdict annotations at all is a parse-rejection case (see
-00-sanity/02-malformed.vimp) and is checked for a structured parse error
+A case with no verdict annotations at all is a rejection case -- either a
+parse error (see 00-sanity/02-malformed.vimp) or a well-formedness error
+(e.g. a wrong-arity special call, rejected before compilation reaches the
+analyzer) -- and is checked for one of those two structured error messages
 instead of a report.
 
 A case may also carry a canonical CFG snapshot, checked independently of its
@@ -393,10 +395,10 @@ def _check_case_body(path: Path, args: list[str], cmd: str) -> tuple[bool, list[
         if result.returncode == 0:
             lines.append(f"FAIL {cmd}: expected a non-zero exit (no verdict annotations present)")
             return False, lines
-        if "parse error" in result.stderr:
+        if "parse error" in result.stderr or "not well-formed" in result.stderr:
             lines.append(f"OK   {cmd} (rejected: {result.stderr.strip()})")
             return True, lines
-        lines.append(f"FAIL {cmd}: rejected, but not with a parse error")
+        lines.append(f"FAIL {cmd}: rejected, but not with a parse error or well-formedness error")
         lines.append(f"  stderr: {result.stderr.strip()}")
         return False, lines
 
