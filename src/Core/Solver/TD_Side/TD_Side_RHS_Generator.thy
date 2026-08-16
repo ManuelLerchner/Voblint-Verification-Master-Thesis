@@ -73,7 +73,7 @@ text \<open>Each per-edge tree is a local or a unit edge tree.  The disjunction 
   local/unit mix, so one locale covers both.\<close>
 locale mixed_rhs_generator = sound_rhs_generator_static +
   fixes F :: "edge_action \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes edge:
       "\<And>a u.
          apply_etf etf a u = local_edge_tree gs (F a) u

@@ -12,7 +12,7 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Sign_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Sign expression
   evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
-  Boolean recursion over \<^typ>\<open>bexp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
+  Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
   classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come
   from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
   once, below, reusing the numeric-query facts already proved sound in
@@ -30,7 +30,7 @@ global_interpretation sign_check_domain:
     and sign_classify_check = sign_check_domain.classify_check
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: aexp and \<sigma> :: "sign abs_state"
+  fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
   then have "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
@@ -211,7 +211,7 @@ text \<open>
 \<close>
 
 definition analyse_sign_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_for_with_state gs p =
      classify_checks_with_state (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
        sign_classify_check"
@@ -233,7 +233,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_sign_report\<close>'s shape.\<close>
 
 definition analyse_sign_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_with_state p = analyse_sign_report_for_with_state (declared_global p) p"
 
 end

@@ -17,14 +17,14 @@ export_code
   mk_program proc_decl_of
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
+  exp.Not And Or Less exp.Eq
   Check_Proved Check_Refuted Check_Unknown
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
   compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
-  string_of_bexp
+  string_of_exp
   wf_program_compile_input_exec
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 
@@ -36,17 +36,17 @@ export_code
   full_state_dot_auto full_state_graph_snapshot_auto
   entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
   entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
-  bexp_vnames_list string_of_abstract_value
+  exp_vnames_list string_of_abstract_value
   is_bottom_abstract_value program_vars
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
+  exp.Not And Or Less exp.Eq
   Check_Proved Check_Refuted Check_Unknown
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
-  string_of_bexp
+  string_of_exp
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
   in OCaml file_prefix "Voblint_CLI"

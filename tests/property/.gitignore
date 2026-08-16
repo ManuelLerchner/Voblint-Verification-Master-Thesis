@@ -11,4 +11,3 @@ vimp_lexer.mll
 vimp_lexer.ml
 vimp_frontend.ml
 ast_driver
-paren_roundtrip

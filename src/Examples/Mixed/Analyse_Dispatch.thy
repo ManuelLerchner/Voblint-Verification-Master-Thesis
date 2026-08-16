@@ -150,7 +150,7 @@ text \<open>
 datatype abstract_value = SignValue sign | IntervalValue ivl
 
 fun analyse_with_state ::
-    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> abstract_value abs_state) list" where
+    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> abstract_value abs_state) list" where
   "analyse_with_state Sign_Analysis p =
      map (\<lambda>(u, c, r, s). (u, c, r, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
 | "analyse_with_state Interval_Analysis p =
@@ -185,14 +185,14 @@ text \<open>
 \<close>
 
 corollary analyse_interval_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes terminates: "analyse_interval_td_terminates
                           (resolved_st_q_is_bot_for (declared_global_vars p))
                           (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           bval c s"
+           truthy (aval c s)"
 proof -
   have fin: "finite (intra (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
@@ -202,14 +202,14 @@ proof -
 qed
 
 corollary analyse_interval_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes terminates: "analyse_interval_td_terminates
                           (resolved_st_q_is_bot_for (declared_global_vars p))
                           (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> bval c s"
+           \<not> truthy (aval c s)"
 proof -
   have fin: "finite (intra (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
@@ -219,7 +219,7 @@ proof -
 qed
 
 corollary analyse_sign_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign p)"
@@ -232,7 +232,7 @@ corollary analyse_sign_proved_sound:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, ()) \<in> fst (analyse_sign p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. bval c s"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
 proof -
   have finI: "finite (intra (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
@@ -245,7 +245,7 @@ proof -
 qed
 
 corollary analyse_sign_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign p)"
@@ -258,7 +258,7 @@ corollary analyse_sign_refuted_sound:
         "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, ()) \<in> fst (analyse_sign p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> bval c s"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
 proof -
   have finI: "finite (intra (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
@@ -301,9 +301,9 @@ text \<open>
   result) rather than through the opaque \<open>String.literal\<close> above.
   \<open>char_of_integer\<close>/\<open>integer_of_char\<close> are that bridge.
 
-  \<open>string_of_bexp\<close> is exported alongside the structured \<open>bexp\<close> already in
+  \<open>string_of_exp\<close> is exported alongside the structured \<open>exp\<close> already in
   every \<open>check_report_entry\<close>: a consumer can pattern-match the AST directly,
-  or call \<open>string_of_bexp\<close> to render a check's condition as a native string
+  or call \<open>string_of_exp\<close> to render a check's condition as a native string
   without decoding it --- both stay available, not a replacement report type.
 \<close>
 

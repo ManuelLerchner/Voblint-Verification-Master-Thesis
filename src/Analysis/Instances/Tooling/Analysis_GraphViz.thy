@@ -26,25 +26,25 @@ subsection \<open>CFG and DOT helpers\<close>
 
 fun string_of_action :: "edge_action \<Rightarrow> string" where
   "string_of_action EA_Nop = ''nop''"
-| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_aexp a"
+| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_exp 0 a"
 | "string_of_action (EA_Special Nondet_Int x) =
     String.explode x @ '' := __voblint_nondet_int()''"
 | "string_of_action (EA_Special (Min a b) x) =
-    String.explode x @ '' := min('' @ string_of_aexp a @ '', '' @ string_of_aexp b @ '')''"
+    String.explode x @ '' := min('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
 | "string_of_action (EA_Special (Max a b) x) =
-    String.explode x @ '' := max('' @ string_of_aexp a @ '', '' @ string_of_aexp b @ '')''"
-| "string_of_action (EA_Assume b) = ''['' @ string_of_bexp b @ '']''"
-| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_bexp b @ '']''"
+    String.explode x @ '' := max('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
+| "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 b @ '']''"
+| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 b @ '']''"
 | "string_of_action (EA_Ret None p) = ''return''"
 | "string_of_action (EA_Ret (Some e) p) =
-    ''return '' @ string_of_aexp e"
-| "string_of_action (EA_Check cnd) = ''check('' @ string_of_bexp cnd @ '')''"
+    ''return '' @ string_of_exp 0 e"
+| "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 cnd @ '')''"
 
 fun string_of_call_action :: "call_action \<Rightarrow> string" where
   "string_of_call_action (CallEdge None fs es) =
-    ''call('' @ concat (map string_of_aexp es) @ '')''"
+    ''call('' @ concat (map (string_of_exp 0) es) @ '')''"
 | "string_of_call_action (CallEdge (Some x) fs es) =
-    String.explode x @ '' := call('' @ concat (map string_of_aexp es) @ '')''"
+    String.explode x @ '' := call('' @ concat (map (string_of_exp 0) es) @ '')''"
 
 definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
@@ -157,23 +157,23 @@ definition no_annotations :: "pp \<Rightarrow> graphviz_node_annotation option" 
 text \<open>
   Shared status-to-style mapping for a compiled \<^verbatim>\<open>__voblint_check(...)\<close>
   condition, given its executable \<^typ>\<open>check_result\<close> classification.
-  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>bexp\<close>), so every
+  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>exp\<close>), so every
   domain's check-discharge example renders proof status through this one
   mapping instead of restating it. \<^term>\<open>Check_Proved\<close> renders dark green,
   \<^term>\<open>Check_Refuted\<close> red, \<^term>\<open>Check_Unknown\<close> grey.
 \<close>
 
-definition check_result_annotation :: "check_result \<Rightarrow> bexp \<Rightarrow> graphviz_node_annotation" where
+definition check_result_annotation :: "check_result \<Rightarrow> exp \<Rightarrow> graphviz_node_annotation" where
   "check_result_annotation res cnd =
      (case res of
         Check_Proved \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd)
+          Node_Annotation (''check '' @ string_of_exp 0 cnd)
             ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white''
       | Check_Unknown \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [unknown]'')
+          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [unknown]'')
             ''shape=box,style=filled,fillcolor=gray70''
       | Check_Refuted \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [REFUTED]'')
+          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [REFUTED]'')
             ''shape=box,style=filled,fillcolor=red,fontcolor=white'')"
 
 record ('ctx, 'g, 'a, 'd) analysis_graph_config =
@@ -656,11 +656,11 @@ definition analysis_node_attrs ::
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
     | SourceNode _ \<Rightarrow> ''shape=plain'')" 
 
-fun enter_bindings :: "vname list \<Rightarrow> aexp list \<Rightarrow> string list" where
+fun enter_bindings :: "vname list \<Rightarrow> exp list \<Rightarrow> string list" where
   "enter_bindings [] _ = []"
 | "enter_bindings _ [] = []"
 | "enter_bindings (x # xs) (e # es) =
-    (String.explode x @ '' := '' @ string_of_aexp e) # enter_bindings xs es"
+    (String.explode x @ '' := '' @ string_of_exp 0 e) # enter_bindings xs es"
 
 definition enter_action_label :: "call_action \<Rightarrow> string" where
   "enter_action_label a = string_of_call_action a"
@@ -668,8 +668,8 @@ definition enter_action_label :: "call_action \<Rightarrow> string" where
 definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
   "source_action_label g a =
     (case a of EA_Assign x e \<Rightarrow>
-       if x = ret_var then ''ret := '' @ string_of_aexp e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_bexp b
-    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_bexp b @ '')''
+       if x = ret_var then ''ret := '' @ string_of_exp 0 e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_exp 0 b
+    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_exp 0 b @ '')''
     | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
     | _ \<Rightarrow> string_of_action a)"
 
@@ -679,7 +679,7 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
       IntraEdge a \<Rightarrow> ''label='' @ dq @ source_action_label g a @ dq
     | EnterEdge callee a \<Rightarrow> ''color=purple,penwidth=2,weight=10,label='' @ dq
         @ ''call '' @ callee @ ''('' @
-          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')'' @ dq
+          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')'' @ dq
     | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
              (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode x @ '' := '' @ String.explode r
@@ -703,7 +703,7 @@ definition canonical_edge_kind_text :: "cfg \<Rightarrow> analysis_edge_kind \<R
     (case kind of
       IntraEdge a \<Rightarrow> source_action_label g a
     | EnterEdge callee a \<Rightarrow> ''enter '' @ callee @ ''(''
-        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')''
+        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')''
     | CombineEdge call dst ret \<Rightarrow> ''combine''
         @ (case (dst, ret) of
              (Some x, Some r) \<Rightarrow> '' '' @ String.explode x @ '' := '' @ String.explode r
@@ -898,7 +898,7 @@ fun string_of_check_result :: "check_result \<Rightarrow> string" where
 definition string_of_check_report_entry :: "check_report_entry \<Rightarrow> string" where
   "string_of_check_report_entry entry =
      (case entry of (v, cnd, res) \<Rightarrow>
-        string_of_cfg_node v @ '': '' @ string_of_bexp cnd @ ''  '' @ string_of_check_result res)"
+        string_of_cfg_node v @ '': '' @ string_of_exp 0 cnd @ ''  '' @ string_of_check_result res)"
 
 definition string_of_check_report :: "check_report_entry list \<Rightarrow> string" where
   "string_of_check_report report =
@@ -912,7 +912,7 @@ text \<open>
   \<^const>\<open>check_result_annotation\<close>. This lets a caller's
   \<open>node_annotation\<close> hook consume a whole-program \<^const>\<open>classify_checks\<close>
   report directly instead of restating a manually maintained \<^typ>\<open>pp\<close>-to-
-  \<^typ>\<open>bexp\<close> table --- the report already names every checked node once.
+  \<^typ>\<open>exp\<close> table --- the report already names every checked node once.
 \<close>
 
 definition check_report_node_annotation ::

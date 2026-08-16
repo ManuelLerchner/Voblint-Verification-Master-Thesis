@@ -62,17 +62,17 @@ abbreviation fact_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarr
 definition ctx_a :: "ivl list" where
   "ctx_a = entry_state_route fact_gs fact_is_bot_pred
              (locals (snd fact_sol (Inl (Statement 7, []))))
-             (CallEdge (Some (STR ''a'')) [STR ''n''] [aexp.N 3])"
+             (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3])"
 
 definition ctx_b :: "ivl list" where
   "ctx_b = entry_state_route fact_gs fact_is_bot_pred
              (locals (snd fact_sol (Inl (Statement 8, []))))
-             (CallEdge (Some (STR ''b'')) [STR ''n''] [aexp.N 4])"
+             (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
 
 definition ctx_rec :: "ivl list \<Rightarrow> ivl list" where
   "ctx_rec caller_ctx = entry_state_route fact_gs fact_is_bot_pred
                           (locals (snd fact_sol (Inl (Statement 3, caller_ctx))))
-                          (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (aexp.N 1)])"
+                          (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])"
 
 definition ctx_a2 :: "ivl list" where "ctx_a2 = ctx_rec ctx_a"
 definition ctx_a1 :: "ivl list" where "ctx_a1 = ctx_rec ctx_a2"
@@ -121,10 +121,10 @@ text \<open>Final acceptance value: the production check-report pipeline end to 
   branch never leaking into \<open>FunctionResult\<close>'s join.\<close>
 lemma fact_analyse_interval_entry_state:
   "analyse_interval_entry_state fact_prog =
-     [(Statement 0, Less (aexp.N 0) (V (STR ''n'')), Check_Proved),
-      (Statement 4, Less (aexp.N 0) (V (STR ''r'')), Check_Proved),
-      (Statement 9, bexp.Eq (V (STR ''a'')) (aexp.N 6), Check_Proved),
-      (Statement 10, bexp.Eq (V (STR ''b'')) (aexp.N 24), Check_Proved)]"
+     [(Statement 0, Less (exp.N 0) (V (STR ''n'')), Check_Proved),
+      (Statement 4, Less (exp.N 0) (V (STR ''r'')), Check_Proved),
+      (Statement 9, exp.Eq (V (STR ''a'')) (exp.N 6), Check_Proved),
+      (Statement 10, exp.Eq (V (STR ''b'')) (exp.N 24), Check_Proved)]"
   by eval
 
 end

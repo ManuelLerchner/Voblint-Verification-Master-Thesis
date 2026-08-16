@@ -20,7 +20,7 @@ text \<open>
   connects the computed node-indexed environment back to \<^const>\<open>ltr_collect\<close> at
   each check's own node, for any node the solver's query seed can reach ---
   not only the seed itself. No ghost or trace-projection content: the check
-  condition is a plain \<^typ>\<open>bexp\<close>.
+  condition is a plain \<^typ>\<open>exp\<close>.
 \<close>
 
 text \<open>\<open>special_pname_nondet_int\<close> is an ordinary identifier, not a keyword, so it cannot be
@@ -192,7 +192,7 @@ text \<open>The payoff: the proved check's condition genuinely holds at every
 
 corollary checks_ex_first_check_holds:
   assumes "t \<in> checks_ex_reach (Statement 1)"
-  shows "bval (Less (N 0) (V (STR ''y''))) t"
+  shows "truthy (aval (Less (N 0) (V (STR ''y''))) t)"
 proof -
   have "t \<in> \<lbrakk>checks_ex_env (Statement 1)\<rbrakk>" using checks_ex_node_sound_1 assms by blast
   then show ?thesis using sign_classify_check_proved[OF checks_ex_classify_1] by blast
@@ -200,7 +200,7 @@ qed
 
 corollary checks_ex_second_check_refuted:
   assumes "t \<in> checks_ex_reach (Statement 3)"
-  shows "\<not> bval (Less (N 0) (V (STR ''y''))) t"
+  shows "\<not> truthy (aval (Less (N 0) (V (STR ''y''))) t)"
 proof -
   have "t \<in> \<lbrakk>checks_ex_env (Statement 3)\<rbrakk>" using checks_ex_node_sound_3 assms by blast
   then show ?thesis using sign_classify_check_refuted[OF checks_ex_classify_3] by blast
@@ -216,7 +216,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 lemma checks_ex_proven_check_discharged:
   "sign_checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_env"
 proof (rule sign_checks_provenI)
-  fix v :: pp and cnd :: bexp
+  fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
   then have v_eq: "v = Statement 1" and cnd_eq: "cnd = Less (N 0) (V (STR ''y''))" by auto
   show "sign_check_true cnd (checks_ex_env v)"
@@ -226,7 +226,7 @@ qed
 lemma checks_ex_proven_check_checks_proven:
   "checks_proven {(Statement 1, Less (N 0) (V (STR ''y'')))} checks_ex_reach"
 proof (rule sign_checks_proven_sound)
-  fix v :: pp and cnd :: bexp
+  fix v :: pp and cnd :: exp
   assume "(v, cnd) \<in> {(Statement 1, Less (N 0) (V (STR ''y'')))}"
   then show "checks_ex_reach v \<le> \<lbrakk>checks_ex_env v\<rbrakk>"
     using checks_ex_node_sound_1 by auto
@@ -375,7 +375,7 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close> pipeline every other example uses
   (\<^const>\<open>raw_cfg_dot_lit\<close>), not a bespoke renderer, through the same
   check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook every other annotated
-  example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>bexp\<close> table:
+  example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table:
   \<^const>\<open>check_report_node_annotation\<close> looks each node up directly in the
   computed \<^const>\<open>sign_check_report\<close>, so a change to the program or the
   solver result changes the rendered color automatically.
@@ -385,7 +385,7 @@ text \<open>
   end-of-procedure node is not visually confused with a refuted check.
 \<close>
 
-text \<open>No manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>bexp\<close> table: the check nodes
+text \<open>No manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table: the check nodes
   and their conditions are read off \<^const>\<open>sign_check_report\<close>'s own computed
   report through \<^const>\<open>check_report_node_annotation\<close>.\<close>
 

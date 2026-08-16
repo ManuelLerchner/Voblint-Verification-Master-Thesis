@@ -1,24 +1,27 @@
-"""Pins the known, inherent round-trip limit documented in
-VIMP_Source_Print.thy's string_of_aexp comment: a Plus/Minus tree demoted
-under a Times, or a Plus/Minus chain nested on its own right branch, has no
-parenthesized aexp source form at all, so it cannot print to text that
-re-parses back to the same tree.
+"""Regression pins for shapes that used to be non-expressible before
+VIMP_Source_Print.thy's string_of_exp grew a uniform, precedence-climbing
+parenthesization rule (exp_prio) covering every constructor, together with
+grammar/vimp.yaml's exp_paren production (`LPAREN exp RPAREN`, passthrough).
 
-Kept separate from strategies.py's generators (which only ever produce
-source-expressible shapes, by construction) and from the round-trip
-property test: these are deliberately-excluded shapes, asserted here to
-still fail the same way (not "OK") -- a regression pin, not a property.
-If pretty_string_of_program ever grows aexp parens, these would need to
-become positive cases instead.
+Before that: a Plus/Minus tree demoted under a Times, or a Plus/Minus chain
+nested on its own right branch, had no parenthesized source form at all, so
+it could not print to text that re-parsed back to the same tree. Now the
+printer inserts parentheses wherever exp_prio says a subtree needs them, so
+these same shapes round-trip like any other -- this file was updated from
+"must fail" to "must round-trip" once that limitation was fixed (its
+predecessor docstring anticipated exactly this: "if pretty_string_of_program
+ever grows aexp parens, these would need to become positive cases instead").
+
+Kept separate from the main round-trip property (test_roundtrip.py) as
+concrete regression anchors, not just probabilistic Hypothesis coverage.
 """
 
 import pytest
 
 from oracle import run_ast_driver
 
-NON_EXPRESSIBLE_PROGRAMS = [
-    # Times(Plus(a, b), c): a Plus demoted under Times -- the doc comment's
-    # own example of a tree "not obtainable from any concrete VIMP source".
+PAREN_REQUIRED_PROGRAMS = [
+    # Times(Plus(a, b), c): a Plus demoted under Times.
     (
         "times-over-plus",
         ([], ("Assign", "x", ("Times", ("Plus", ("V", "a"), ("V", "b")), ("V", "c"))), []),
@@ -29,7 +32,8 @@ NON_EXPRESSIBLE_PROGRAMS = [
         ([], ("Assign", "x", ("Times", ("V", "a"), ("Plus", ("V", "b"), ("V", "c")))), []),
     ),
     # Plus(a, Plus(b, c)): a Plus/Minus chain nesting on the right, not the
-    # left -- source's "expr := term ((+|-) term)*" only ever nests left.
+    # left -- source's "expr := term ((+|-) term)*" only ever nests left
+    # without parens.
     (
         "plus-nested-right",
         ([], ("Assign", "x", ("Plus", ("V", "a"), ("Plus", ("V", "b"), ("V", "c")))), []),
@@ -43,11 +47,11 @@ NON_EXPRESSIBLE_PROGRAMS = [
 
 
 @pytest.mark.parametrize(
-    "prog", [p for _, p in NON_EXPRESSIBLE_PROGRAMS], ids=[n for n, _ in NON_EXPRESSIBLE_PROGRAMS]
+    "prog", [p for _, p in PAREN_REQUIRED_PROGRAMS], ids=[n for n, _ in PAREN_REQUIRED_PROGRAMS]
 )
-def test_non_expressible_shape_does_not_roundtrip(prog):
+def test_paren_required_shape_roundtrips(prog):
     result = run_ast_driver(prog)
-    assert result.stdout.startswith("FAIL"), (
-        f"expected {prog!r} to fail the round trip (documented grammar limit), "
+    assert result.stdout.strip() == "OK", (
+        f"expected {prog!r} to round-trip via printer-inserted parens, "
         f"but ast_driver said:\n{result.stdout}"
     )

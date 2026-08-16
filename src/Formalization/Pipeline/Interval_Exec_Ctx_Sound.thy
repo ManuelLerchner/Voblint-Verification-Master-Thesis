@@ -925,7 +925,7 @@ text \<open>
 \<close>
 
 definition entry_state_classify_at ::
-    "cfg_node \<Rightarrow> bexp \<Rightarrow> (pp \<times> ivl list) set \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted)
+    "cfg_node \<Rightarrow> exp \<Rightarrow> (pp \<times> ivl list) set \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted)
        \<Rightarrow> check_result" where
   "entry_state_classify_at v cnd reachable_keys sg =
      (let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) reachable_keys;

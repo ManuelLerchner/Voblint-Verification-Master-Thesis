@@ -66,28 +66,23 @@ open Voblint_CLI.Core
 
 let int_of_atom s = Int_of_integer (Z.of_string s)
 
-let rec build_aexp = function
+let rec build_exp = function
   | Slist [ Atom "N"; Atom n ] -> N (int_of_atom n)
   | Slist [ Atom "V"; Atom x ] -> V x
-  | Slist [ Atom "Plus"; a; b ] -> Plus (build_aexp a, build_aexp b)
-  | Slist [ Atom "Minus"; a; b ] -> Minus (build_aexp a, build_aexp b)
-  | Slist [ Atom "Times"; a; b ] -> Times (build_aexp a, build_aexp b)
-  | s -> failwith ("ast_driver: bad aexp sexp: " ^ show_sexp s)
+  | Slist [ Atom "Plus"; a; b ] -> Plus (build_exp a, build_exp b)
+  | Slist [ Atom "Minus"; a; b ] -> Minus (build_exp a, build_exp b)
+  | Slist [ Atom "Times"; a; b ] -> Times (build_exp a, build_exp b)
+  | Slist [ Atom "Less"; a; b ] -> Less (build_exp a, build_exp b)
+  | Slist [ Atom "Eq"; a; b ] -> Eq (build_exp a, build_exp b)
+  | Slist [ Atom "Not"; a ] -> Not (build_exp a)
+  | Slist [ Atom "And"; a; b ] -> And (build_exp a, build_exp b)
+  | Slist [ Atom "Or"; a; b ] -> Or (build_exp a, build_exp b)
+  | s -> failwith ("ast_driver: bad exp sexp: " ^ show_sexp s)
 
-and build_bexp = function
-  | Slist [ Atom "Bc"; Atom "true" ] -> Bc true
-  | Slist [ Atom "Bc"; Atom "false" ] -> Bc false
-  | Slist [ Atom "Not"; b ] -> Not (build_bexp b)
-  | Slist [ Atom "And"; b1; b2 ] -> And (build_bexp b1, build_bexp b2)
-  | Slist [ Atom "Or"; b1; b2 ] -> Or (build_bexp b1, build_bexp b2)
-  | Slist [ Atom "Less"; a1; a2 ] -> Less (build_aexp a1, build_aexp a2)
-  | Slist [ Atom "Eq"; a1; a2 ] -> Eqa (build_aexp a1, build_aexp a2)
-  | s -> failwith ("ast_driver: bad bexp sexp: " ^ show_sexp s)
-
-and build_aexp_opt = function
+and build_exp_opt = function
   | Atom "None" -> None
-  | Slist [ Atom "Some"; a ] -> Some (build_aexp a)
-  | s -> failwith ("ast_driver: bad aexp option sexp: " ^ show_sexp s)
+  | Slist [ Atom "Some"; a ] -> Some (build_exp a)
+  | s -> failwith ("ast_driver: bad exp option sexp: " ^ show_sexp s)
 
 and build_dst_opt = function
   | Atom "None" -> None
@@ -95,20 +90,20 @@ and build_dst_opt = function
   | s -> failwith ("ast_driver: bad dst option sexp: " ^ show_sexp s)
 
 and build_actuals = function
-  | Slist es -> List.map build_aexp es
+  | Slist es -> List.map build_exp es
   | s -> failwith ("ast_driver: bad actuals sexp: " ^ show_sexp s)
 
 and build_com = function
   | Atom "Skip" -> SKIP
-  | Slist [ Atom "Assign"; Atom x; a ] -> Assign (x, build_aexp a)
+  | Slist [ Atom "Assign"; Atom x; a ] -> Assign (x, build_exp a)
   | Slist [ Atom "Random"; Atom x ] -> Call (Some x, "__voblint_nondet_int", [])
-  | Slist [ Atom "Check"; b ] -> Check (build_bexp b)
+  | Slist [ Atom "Check"; b ] -> Check (build_exp b)
   | Slist [ Atom "Seq"; c1; c2 ] -> Seq (build_com c1, build_com c2)
-  | Slist [ Atom "If"; b; c1; c2 ] -> If (build_bexp b, build_com c1, build_com c2)
-  | Slist [ Atom "While"; b; c ] -> While (build_bexp b, build_com c)
+  | Slist [ Atom "If"; b; c1; c2 ] -> If (build_exp b, build_com c1, build_com c2)
+  | Slist [ Atom "While"; b; c ] -> While (build_exp b, build_com c)
   | Slist [ Atom "Call"; dst; Atom p; actuals ] ->
     Call (build_dst_opt dst, p, build_actuals actuals)
-  | Slist [ Atom "Return"; aopt ] -> Return (build_aexp_opt aopt)
+  | Slist [ Atom "Return"; aopt ] -> Return (build_exp_opt aopt)
   | s -> failwith ("ast_driver: bad com sexp: " ^ show_sexp s)
 
 and show_sexp = function

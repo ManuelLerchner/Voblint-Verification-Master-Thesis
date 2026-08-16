@@ -487,12 +487,12 @@ text \<open>
 
 record ('dl, 'dg) dg_spec =
   dgs_skip       :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_body       :: "pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_event      :: "analysis_event \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_env    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_assign :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"

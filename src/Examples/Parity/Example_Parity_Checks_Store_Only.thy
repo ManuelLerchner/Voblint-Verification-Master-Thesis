@@ -195,7 +195,7 @@ text \<open>The payoff: the proved check's condition genuinely holds at every
 
 corollary parity_ex_first_check_holds:
   assumes "t \<in> parity_ex_reach (Statement 3)"
-  shows "bval (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) t"
+  shows "truthy (aval (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) t)"
 proof -
   have "t \<in> \<lbrakk>parity_ex_env (Statement 3)\<rbrakk>" using parity_ex_node_sound_3 assms by blast
   then show ?thesis using parity_classify_check_proved[OF parity_ex_classify_3] by blast
@@ -203,7 +203,7 @@ qed
 
 corollary parity_ex_second_check_refuted:
   assumes "t \<in> parity_ex_reach (Statement 4)"
-  shows "\<not> bval (Eq (V (STR ''y'')) (V (STR ''z''))) t"
+  shows "\<not> truthy (aval (Eq (V (STR ''y'')) (V (STR ''z''))) t)"
 proof -
   have "t \<in> \<lbrakk>parity_ex_env (Statement 4)\<rbrakk>" using parity_ex_node_sound_4 assms by blast
   then show ?thesis using parity_classify_check_refuted[OF parity_ex_classify_4] by blast
@@ -218,7 +218,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 lemma parity_ex_proven_check_discharged:
   "parity_checks_proven {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))} parity_ex_env"
 proof (rule parity_checks_provenI)
-  fix v :: pp and cnd :: bexp
+  fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))}"
   then have v_eq: "v = Statement 3" and cnd_eq: "cnd = Not (Eq (V (STR ''y'')) (V (STR ''z'')))" by auto
   show "parity_check_true cnd (parity_ex_env v)"
@@ -228,7 +228,7 @@ qed
 lemma parity_ex_proven_check_checks_proven:
   "checks_proven {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))} parity_ex_reach"
 proof (rule parity_checks_proven_sound)
-  fix v :: pp and cnd :: bexp
+  fix v :: pp and cnd :: exp
   assume "(v, cnd) \<in> {(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))))}"
   then show "parity_ex_reach v \<le> \<lbrakk>parity_ex_env v\<rbrakk>"
     using parity_ex_node_sound_3 by auto
@@ -366,7 +366,7 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close> pipeline every other example uses
   (\<^const>\<open>raw_cfg_dot_lit\<close>), through the same check-agnostic
   \<^type>\<open>graphviz_node_annotation\<close> hook. There is no manually maintained
-  \<^typ>\<open>pp\<close>-to-\<^typ>\<open>bexp\<close> table: \<^const>\<open>check_report_node_annotation\<close> looks
+  \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table: \<^const>\<open>check_report_node_annotation\<close> looks
   each node up directly in the computed \<^const>\<open>parity_check_report\<close>.
   \<^term>\<open>Check_Proved\<close> renders dark green, \<^term>\<open>Check_Refuted\<close> red,
   \<^term>\<open>Check_Unknown\<close> grey. The unrelated \<open>FunctionResult (STR ''main'')\<close> exit

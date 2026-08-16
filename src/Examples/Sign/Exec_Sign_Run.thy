@@ -48,7 +48,7 @@ text \<open>
   (sign_lookup gives the vname => sign view) and store the result at v.
 \<close>
 
-abbreviation assign_st :: "sign resolved_st_q \<Rightarrow> vname \<Rightarrow> aexp \<Rightarrow> sign resolved_st_q" where
+abbreviation assign_st :: "sign resolved_st_q \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> sign resolved_st_q" where
   "assign_st s v e \<equiv> sign_update s v (aval_sign e (sign_lookup s))"
 
 text \<open>

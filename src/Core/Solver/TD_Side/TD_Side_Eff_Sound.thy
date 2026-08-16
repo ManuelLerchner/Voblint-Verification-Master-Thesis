@@ -51,7 +51,7 @@ lemma etf_sound_specialD [intro]:
 lemma etf_sound_branchD [intro]:
   assumes "inr_slot_locals_bot gs \<sigma>"
       and "s \<in> gamma_state_lift (side_env_lift \<sigma> u)"
-      and "bval b s = pol"
+      and "truthy (aval b s) = pol"
   shows
     "s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>)"
   using assms etf_sound_branch unfolding side_env_lift_def

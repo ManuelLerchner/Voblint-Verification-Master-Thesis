@@ -13,7 +13,7 @@ text \<open>
   \<open>interval_eq_false\<close>) and their \<open>Interval_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Interval expression
   evaluator \<open>aval_ivl\<close> lives in \<open>Interval_Backward\<close>. The Boolean recursion over
-  \<^typ>\<open>bexp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way classification, and the
+  \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way classification, and the
   node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
   \<open>abstract_check_domain\<close> once, below, reusing the numeric-query facts
   already proved sound in \<open>interval_numeric_queries\<close> rather than re-deriving
@@ -30,7 +30,7 @@ global_interpretation interval_check_domain:
     and interval_classify_check = interval_check_domain.classify_check
     and interval_checks_proven = interval_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: aexp and \<sigma> :: "ivl abs_state"
+  fix s :: store and e :: exp and \<sigma> :: "ivl abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
   then have "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" by simp
@@ -163,13 +163,13 @@ lemma gamma_state_case_lifted:
   by (cases x) (simp_all add: gamma_state_bot)
 
 theorem analyse_interval_report_sound_proved:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
       and terminates: "ivl_terminates_prog (declared_global p) prog_main_name p"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_interval_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           bval c s"
+           truthy (aval c s)"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
                        \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v))"
@@ -187,13 +187,13 @@ proof -
 qed
 
 theorem analyse_interval_report_sound_refuted:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
       and terminates: "ivl_terminates_prog (declared_global p) prog_main_name p"
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_interval_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> bval c s"
+           \<not> truthy (aval c s)"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
                        \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v))"
@@ -261,7 +261,7 @@ text \<open>
 \<close>
 
 theorem analyse_interval_td_report_sound_proved:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
       and terminates: "analyse_interval_td_terminates
                           (resolved_st_q_is_bot_for (declared_global_vars p))
@@ -269,7 +269,7 @@ theorem analyse_interval_td_report_sound_proved:
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_interval_td_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           bval c s"
+           truthy (aval c s)"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
                        \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>)
@@ -295,7 +295,7 @@ proof -
 qed
 
 theorem analyse_interval_td_report_sound_refuted:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes fin: "finite (intra (prog_cfg prog_main_name p))"
       and terminates: "analyse_interval_td_terminates
                           (resolved_st_q_is_bot_for (declared_global_vars p))
@@ -303,7 +303,7 @@ theorem analyse_interval_td_report_sound_refuted:
       and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_interval_td_report p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> bval c s"
+           \<not> truthy (aval c s)"
 proof -
   have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
                        \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>)
@@ -339,7 +339,7 @@ text \<open>
 \<close>
 
 definition interval_td_check_report_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> ivl abs_state) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> ivl abs_state) list" where
   "interval_td_check_report_with_state gs mnm p =
      classify_checks_with_state (prog_cfg mnm p)
        (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
@@ -363,7 +363,7 @@ lemma interval_td_check_report_with_state_code [code]:
 
 
 definition analyse_interval_td_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> ivl abs_state) list" where
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> ivl abs_state) list" where
   "analyse_interval_td_report_with_state p =
      interval_td_check_report_with_state (declared_global p) prog_main_name p"
 

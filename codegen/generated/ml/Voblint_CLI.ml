@@ -105,13 +105,14 @@ module Core : sig
   val equal_sum : 'a HOL.equal -> 'b HOL.equal -> ('a, 'b) sum HOL.equal
   val equal_literal : string HOL.equal
   val linorder_literal : string linorder
+  type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
+    Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
+    And of exp * exp | Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
   val equal_cfg_nodea : cfg_node -> cfg_node -> bool
   val equal_cfg_node : cfg_node HOL.equal
   type location
-  type aexp = N of int | V of string | Plus of aexp * aexp |
-    Minus of aexp * aexp | Times of aexp * aexp
   val equal_prod : 'a HOL.equal -> 'b HOL.equal -> ('a * 'b) HOL.equal
   val equal_unit : unit HOL.equal
   type sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop
@@ -120,14 +121,12 @@ module Core : sig
   type 'a semilattice_sup
   type 'a bounded_semilattice_sup_bot
   val equal_option : 'a HOL.equal -> 'a option -> 'a option -> bool
-  type call_action = CallEdge of string option * string list * aexp list
+  type call_action = CallEdge of string option * string list * exp list
   val equal_call_actiona : call_action -> call_action -> bool
-  type special_call = Nondet_Int | Min of aexp * aexp | Max of aexp * aexp
-  type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp
-    | Less of aexp * aexp | Eqa of aexp * aexp
-  type edge_action = EA_Nop | EA_Assign of string * aexp |
-    EA_Special of special_call * string | EA_Assume of bexp |
-    EA_AssumeNot of bexp | EA_Ret of aexp option * string | EA_Check of bexp
+  type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
+  type edge_action = EA_Nop | EA_Assign of string * exp |
+    EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
+    | EA_Ret of exp option * string | EA_Check of exp
   val equal_edge_actiona : edge_action -> edge_action -> bool
   type eint = MinInf | Fin of int | PlusInf
   type ivl = Ivl of eint * eint
@@ -146,10 +145,10 @@ module Core : sig
   type 'a lifted = Bot | Lifted of 'a
   type gk
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
-  type com = SKIP | Assign of string * aexp | Check of bexp | Seq of com * com |
-    If of bexp * com * com | While of bexp * com |
-    Call of string option * string * aexp list | Return of aexp option | Restore
-    | Unwind
+  type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
+    If of exp * com * com | While of exp * com |
+    Call of string option * string * exp list | Return of exp option | Restore |
+    Unwind
   type 'a proc_decl_ext
   type num
   type 'a set = Set of 'a list | Coset of 'a list
@@ -176,9 +175,10 @@ module Core : sig
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val ret_var : string
   val cfg_entry : 'a cfg_ext -> cfg_node
+  val is_bot_sign : sign -> bool
   val bot_set : 'a set
   val sup_seta : 'a HOL.equal -> 'a set set -> 'a set
-  val bexp_vnames : bexp -> string set
+  val exp_vnames : exp -> string set
   val snd : 'a * 'b -> 'b
   val sup_fin : 'a semilattice_sup -> 'a set -> 'a
   val char_of_integer : Z.t -> char
@@ -292,17 +292,16 @@ module Core : sig
   val bot_fun : 'b bot -> 'a -> 'b
   val join_source : char list -> (char list) list -> char list
   val analyse_sign_report :
-    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val scope_vnames_list : unit imp_prog_ext -> string -> string list
   val string_of_nat : nat -> char list
-  val string_of_aexp : aexp -> char list
-  val string_of_bexp : bexp -> char list
+  val string_of_exp : nat -> exp -> char list
   val resolved_st_q_is_bot_for :
     'a computable_domain -> string list -> 'a resolved_st_q -> bool
   val analyse_sign_env_for :
     (string -> bool) -> unit imp_prog_ext -> cfg_node -> string -> sign
   val analyse_interval_report :
-    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val entry_state_sol :
     (string -> bool) ->
       (ivl resolved_st_q -> bool) ->
@@ -315,17 +314,17 @@ module Core : sig
                     (ivl resolved_st_q lifted, ivl resolved_st_q lifted)
                       dg_state)
   val analyse_interval_td_report :
-    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_interval_td_at :
     (ivl resolved_st_q -> bool) ->
       (string -> bool) ->
         (string -> unit proc_decl_ext option) ->
           string list -> string -> com -> cfg_node -> (string -> ivl) lifted
   val analyse_sign_report_per_origin :
-    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (bexp * (check_result * (string -> sign)))) list
+      (cfg_node * (exp * (check_result * (string -> sign)))) list
   val pretty_string_of_program :
     (string -> unit proc_decl_ext option) ->
       string list -> com -> string list -> char list
@@ -337,15 +336,14 @@ module Core : sig
           (ivl resolved_st_q lifted, ivl resolved_st_q lifted) dg_state) ->
         ((cfg_node * ivl list), gk) sum -> (string -> ivl) lifted
   val analyse_interval_report_per_origin :
-    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val entry_state_check_report_prog :
-    string -> unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
+    string -> unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_interval_entry_state :
-    unit imp_prog_ext -> (cfg_node * (bexp * check_result)) list
-  val is_bot_sign : sign -> bool
+    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (bexp * (check_result * (string -> ivl)))) list
+      (cfg_node * (exp * (check_result * (string -> ivl)))) list
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -398,6 +396,13 @@ let order_nat = ({preorder_order = preorder_nat} : nat order);;
 
 let linorder_nat = ({order_linorder = order_nat} : nat linorder);;
 
+let rec equal_boola p pa = match p, pa with false, p -> not p
+                      | true, p -> p
+                      | p, false -> not p
+                      | p, true -> p;;
+
+let equal_bool = ({HOL.equal = equal_boola} : bool HOL.equal);;
+
 let rec equal_lista _A
   x0 x1 = match x0, x1 with [], x21 :: x22 -> false
     | x21 :: x22, [] -> false
@@ -438,6 +443,119 @@ let order_literal = ({preorder_order = preorder_literal} : string order);;
 
 let linorder_literal = ({order_linorder = order_literal} : string linorder);;
 
+type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
+  Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
+  And of exp * exp | Or of exp * exp;;
+
+let rec equal_expa
+  x0 x1 = match x0, x1 with And (x91, x92), Or (x101, x102) -> false
+    | Or (x101, x102), And (x91, x92) -> false
+    | Not x8, Or (x101, x102) -> false
+    | Or (x101, x102), Not x8 -> false
+    | Not x8, And (x91, x92) -> false
+    | And (x91, x92), Not x8 -> false
+    | Eq (x71, x72), Or (x101, x102) -> false
+    | Or (x101, x102), Eq (x71, x72) -> false
+    | Eq (x71, x72), And (x91, x92) -> false
+    | And (x91, x92), Eq (x71, x72) -> false
+    | Eq (x71, x72), Not x8 -> false
+    | Not x8, Eq (x71, x72) -> false
+    | Less (x61, x62), Or (x101, x102) -> false
+    | Or (x101, x102), Less (x61, x62) -> false
+    | Less (x61, x62), And (x91, x92) -> false
+    | And (x91, x92), Less (x61, x62) -> false
+    | Less (x61, x62), Not x8 -> false
+    | Not x8, Less (x61, x62) -> false
+    | Less (x61, x62), Eq (x71, x72) -> false
+    | Eq (x71, x72), Less (x61, x62) -> false
+    | Times (x51, x52), Or (x101, x102) -> false
+    | Or (x101, x102), Times (x51, x52) -> false
+    | Times (x51, x52), And (x91, x92) -> false
+    | And (x91, x92), Times (x51, x52) -> false
+    | Times (x51, x52), Not x8 -> false
+    | Not x8, Times (x51, x52) -> false
+    | Times (x51, x52), Eq (x71, x72) -> false
+    | Eq (x71, x72), Times (x51, x52) -> false
+    | Times (x51, x52), Less (x61, x62) -> false
+    | Less (x61, x62), Times (x51, x52) -> false
+    | Minus (x41, x42), Or (x101, x102) -> false
+    | Or (x101, x102), Minus (x41, x42) -> false
+    | Minus (x41, x42), And (x91, x92) -> false
+    | And (x91, x92), Minus (x41, x42) -> false
+    | Minus (x41, x42), Not x8 -> false
+    | Not x8, Minus (x41, x42) -> false
+    | Minus (x41, x42), Eq (x71, x72) -> false
+    | Eq (x71, x72), Minus (x41, x42) -> false
+    | Minus (x41, x42), Less (x61, x62) -> false
+    | Less (x61, x62), Minus (x41, x42) -> false
+    | Minus (x41, x42), Times (x51, x52) -> false
+    | Times (x51, x52), Minus (x41, x42) -> false
+    | Plus (x31, x32), Or (x101, x102) -> false
+    | Or (x101, x102), Plus (x31, x32) -> false
+    | Plus (x31, x32), And (x91, x92) -> false
+    | And (x91, x92), Plus (x31, x32) -> false
+    | Plus (x31, x32), Not x8 -> false
+    | Not x8, Plus (x31, x32) -> false
+    | Plus (x31, x32), Eq (x71, x72) -> false
+    | Eq (x71, x72), Plus (x31, x32) -> false
+    | Plus (x31, x32), Less (x61, x62) -> false
+    | Less (x61, x62), Plus (x31, x32) -> false
+    | Plus (x31, x32), Times (x51, x52) -> false
+    | Times (x51, x52), Plus (x31, x32) -> false
+    | Plus (x31, x32), Minus (x41, x42) -> false
+    | Minus (x41, x42), Plus (x31, x32) -> false
+    | V x2, Or (x101, x102) -> false
+    | Or (x101, x102), V x2 -> false
+    | V x2, And (x91, x92) -> false
+    | And (x91, x92), V x2 -> false
+    | V x2, Not x8 -> false
+    | Not x8, V x2 -> false
+    | V x2, Eq (x71, x72) -> false
+    | Eq (x71, x72), V x2 -> false
+    | V x2, Less (x61, x62) -> false
+    | Less (x61, x62), V x2 -> false
+    | V x2, Times (x51, x52) -> false
+    | Times (x51, x52), V x2 -> false
+    | V x2, Minus (x41, x42) -> false
+    | Minus (x41, x42), V x2 -> false
+    | V x2, Plus (x31, x32) -> false
+    | Plus (x31, x32), V x2 -> false
+    | N x1, Or (x101, x102) -> false
+    | Or (x101, x102), N x1 -> false
+    | N x1, And (x91, x92) -> false
+    | And (x91, x92), N x1 -> false
+    | N x1, Not x8 -> false
+    | Not x8, N x1 -> false
+    | N x1, Eq (x71, x72) -> false
+    | Eq (x71, x72), N x1 -> false
+    | N x1, Less (x61, x62) -> false
+    | Less (x61, x62), N x1 -> false
+    | N x1, Times (x51, x52) -> false
+    | Times (x51, x52), N x1 -> false
+    | N x1, Minus (x41, x42) -> false
+    | Minus (x41, x42), N x1 -> false
+    | N x1, Plus (x31, x32) -> false
+    | Plus (x31, x32), N x1 -> false
+    | N x1, V x2 -> false
+    | V x2, N x1 -> false
+    | Or (x101, x102), Or (y101, y102) ->
+        equal_expa x101 y101 && equal_expa x102 y102
+    | And (x91, x92), And (y91, y92) -> equal_expa x91 y91 && equal_expa x92 y92
+    | Not x8, Not y8 -> equal_expa x8 y8
+    | Eq (x71, x72), Eq (y71, y72) -> equal_expa x71 y71 && equal_expa x72 y72
+    | Less (x61, x62), Less (y61, y62) ->
+        equal_expa x61 y61 && equal_expa x62 y62
+    | Times (x51, x52), Times (y51, y52) ->
+        equal_expa x51 y51 && equal_expa x52 y52
+    | Minus (x41, x42), Minus (y41, y42) ->
+        equal_expa x41 y41 && equal_expa x42 y42
+    | Plus (x31, x32), Plus (y31, y32) ->
+        equal_expa x31 y31 && equal_expa x32 y32
+    | V x2, V y2 -> ((x2 : string) = y2)
+    | N x1, N y1 -> equal_inta x1 y1;;
+
+let equal_exp = ({HOL.equal = equal_expa} : exp HOL.equal);;
+
 type cfg_node = Statement of nat | FunctionEntry of string |
   FunctionResult of string;;
 
@@ -454,11 +572,11 @@ let rec equal_cfg_nodea
 
 let equal_cfg_node = ({HOL.equal = equal_cfg_nodea} : cfg_node HOL.equal);;
 
-type ordera = Eq | Lt | Gt;;
+type ordera = Eqa | Lt | Gt;;
 
 let rec comparator_of (_A1, _A2)
   x y = (if less _A2.order_linorder.preorder_order.ord_preorder x y then Lt
-          else (if HOL.eq _A1 x y then Eq else Gt));;
+          else (if HOL.eq _A1 x y then Eqa else Gt));;
 
 let rec comparator_cfg_node
   x0 x1 = match x0, x1 with
@@ -475,12 +593,12 @@ let rec comparator_cfg_node
         comparator_of (equal_literal, linorder_literal) x yb;;
 
 let rec le_of_comp
-  acomp x y = (match acomp x y with Eq -> true | Lt -> true | Gt -> false);;
+  acomp x y = (match acomp x y with Eqa -> true | Lt -> true | Gt -> false);;
 
 let rec less_eq_cfg_node x = le_of_comp comparator_cfg_node x;;
 
 let rec lt_of_comp
-  acomp x y = (match acomp x y with Eq -> false | Lt -> true | Gt -> false);;
+  acomp x y = (match acomp x y with Eqa -> false | Lt -> true | Gt -> false);;
 
 let rec less_cfg_node x = lt_of_comp comparator_cfg_node x;;
 
@@ -503,41 +621,6 @@ let rec equal_locationa
     | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
 
 let equal_location = ({HOL.equal = equal_locationa} : location HOL.equal);;
-
-type aexp = N of int | V of string | Plus of aexp * aexp | Minus of aexp * aexp
-  | Times of aexp * aexp;;
-
-let rec equal_aexpa
-  x0 x1 = match x0, x1 with Minus (x41, x42), Times (x51, x52) -> false
-    | Times (x51, x52), Minus (x41, x42) -> false
-    | Plus (x31, x32), Times (x51, x52) -> false
-    | Times (x51, x52), Plus (x31, x32) -> false
-    | Plus (x31, x32), Minus (x41, x42) -> false
-    | Minus (x41, x42), Plus (x31, x32) -> false
-    | V x2, Times (x51, x52) -> false
-    | Times (x51, x52), V x2 -> false
-    | V x2, Minus (x41, x42) -> false
-    | Minus (x41, x42), V x2 -> false
-    | V x2, Plus (x31, x32) -> false
-    | Plus (x31, x32), V x2 -> false
-    | N x1, Times (x51, x52) -> false
-    | Times (x51, x52), N x1 -> false
-    | N x1, Minus (x41, x42) -> false
-    | Minus (x41, x42), N x1 -> false
-    | N x1, Plus (x31, x32) -> false
-    | Plus (x31, x32), N x1 -> false
-    | N x1, V x2 -> false
-    | V x2, N x1 -> false
-    | Times (x51, x52), Times (y51, y52) ->
-        equal_aexpa x51 y51 && equal_aexpa x52 y52
-    | Minus (x41, x42), Minus (y41, y42) ->
-        equal_aexpa x41 y41 && equal_aexpa x42 y42
-    | Plus (x31, x32), Plus (y31, y32) ->
-        equal_aexpa x31 y31 && equal_aexpa x32 y32
-    | V x2, V y2 -> ((x2 : string) = y2)
-    | N x1, N y1 -> equal_inta x1 y1;;
-
-let equal_aexp = ({HOL.equal = equal_aexpa} : aexp HOL.equal);;
 
 let rec equal_proda _A _B
   (x1, x2) (y1, y2) = HOL.eq _A x1 y1 && HOL.eq _B x2 y2;;
@@ -798,73 +881,156 @@ let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
                           | Some x2, Some y2 -> HOL.eq _A x2 y2
                           | None, None -> true;;
 
-type call_action = CallEdge of string option * string list * aexp list;;
+type call_action = CallEdge of string option * string list * exp list;;
 
 let rec equal_call_actiona
   (CallEdge (x1, x2, x3)) (CallEdge (y1, y2, y3)) =
     equal_option equal_literal x1 y1 &&
-      (equal_lista equal_literal x2 y2 && equal_lista equal_aexp x3 y3);;
+      (equal_lista equal_literal x2 y2 && equal_lista equal_exp x3 y3);;
 
 let equal_call_action =
   ({HOL.equal = equal_call_actiona} : call_action HOL.equal);;
 
 let rec comparator_option
-  comp_a x1 x2 = match comp_a, x1, x2 with comp_a, None, None -> Eq
+  comp_a x1 x2 = match comp_a, x1, x2 with comp_a, None, None -> Eqa
     | comp_a, None, Some y -> Lt
     | comp_a, Some x, None -> Gt
     | comp_a, Some x, Some y -> comp_a x y;;
 
 let rec comparator_list
-  comp_a x1 x2 = match comp_a, x1, x2 with comp_a, [], [] -> Eq
+  comp_a x1 x2 = match comp_a, x1, x2 with comp_a, [], [] -> Eqa
     | comp_a, [], y :: ya -> Lt
     | comp_a, x :: xa, [] -> Gt
     | comp_a, x :: xa, y :: ya ->
-        (match comp_a x y with Eq -> comparator_list comp_a xa ya | Lt -> Lt
+        (match comp_a x y with Eqa -> comparator_list comp_a xa ya | Lt -> Lt
           | Gt -> Gt);;
 
-let rec comparator_aexp
+let rec comparator_exp
   x0 x1 = match x0, x1 with
     N x, N y -> comparator_of (equal_int, linorder_int) x y
     | N x, V ya -> Lt
     | N x, Plus (yb, yc) -> Lt
     | N x, Minus (yd, ye) -> Lt
     | N x, Times (yf, yg) -> Lt
+    | N x, Less (yh, yi) -> Lt
+    | N x, Eq (yj, yk) -> Lt
+    | N x, Not yl -> Lt
+    | N x, And (ym, yn) -> Lt
+    | N x, Or (yo, yp) -> Lt
     | V x, N y -> Gt
     | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
     | V x, Plus (yb, yc) -> Lt
     | V x, Minus (yd, ye) -> Lt
     | V x, Times (yf, yg) -> Lt
+    | V x, Less (yh, yi) -> Lt
+    | V x, Eq (yj, yk) -> Lt
+    | V x, Not yl -> Lt
+    | V x, And (ym, yn) -> Lt
+    | V x, Or (yo, yp) -> Lt
     | Plus (x, xa), N y -> Gt
     | Plus (x, xa), V ya -> Gt
     | Plus (x, xa), Plus (yb, yc) ->
-        (match comparator_aexp x yb with Eq -> comparator_aexp xa yc | Lt -> Lt
+        (match comparator_exp x yb with Eqa -> comparator_exp xa yc | Lt -> Lt
           | Gt -> Gt)
     | Plus (x, xa), Minus (yd, ye) -> Lt
     | Plus (x, xa), Times (yf, yg) -> Lt
+    | Plus (x, xa), Less (yh, yi) -> Lt
+    | Plus (x, xa), Eq (yj, yk) -> Lt
+    | Plus (x, xa), Not yl -> Lt
+    | Plus (x, xa), And (ym, yn) -> Lt
+    | Plus (x, xa), Or (yo, yp) -> Lt
     | Minus (x, xa), N y -> Gt
     | Minus (x, xa), V ya -> Gt
     | Minus (x, xa), Plus (yb, yc) -> Gt
     | Minus (x, xa), Minus (yd, ye) ->
-        (match comparator_aexp x yd with Eq -> comparator_aexp xa ye | Lt -> Lt
+        (match comparator_exp x yd with Eqa -> comparator_exp xa ye | Lt -> Lt
           | Gt -> Gt)
     | Minus (x, xa), Times (yf, yg) -> Lt
+    | Minus (x, xa), Less (yh, yi) -> Lt
+    | Minus (x, xa), Eq (yj, yk) -> Lt
+    | Minus (x, xa), Not yl -> Lt
+    | Minus (x, xa), And (ym, yn) -> Lt
+    | Minus (x, xa), Or (yo, yp) -> Lt
     | Times (x, xa), N y -> Gt
     | Times (x, xa), V ya -> Gt
     | Times (x, xa), Plus (yb, yc) -> Gt
     | Times (x, xa), Minus (yd, ye) -> Gt
     | Times (x, xa), Times (yf, yg) ->
-        (match comparator_aexp x yf with Eq -> comparator_aexp xa yg | Lt -> Lt
+        (match comparator_exp x yf with Eqa -> comparator_exp xa yg | Lt -> Lt
+          | Gt -> Gt)
+    | Times (x, xa), Less (yh, yi) -> Lt
+    | Times (x, xa), Eq (yj, yk) -> Lt
+    | Times (x, xa), Not yl -> Lt
+    | Times (x, xa), And (ym, yn) -> Lt
+    | Times (x, xa), Or (yo, yp) -> Lt
+    | Less (x, xa), N y -> Gt
+    | Less (x, xa), V ya -> Gt
+    | Less (x, xa), Plus (yb, yc) -> Gt
+    | Less (x, xa), Minus (yd, ye) -> Gt
+    | Less (x, xa), Times (yf, yg) -> Gt
+    | Less (x, xa), Less (yh, yi) ->
+        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
+          | Gt -> Gt)
+    | Less (x, xa), Eq (yj, yk) -> Lt
+    | Less (x, xa), Not yl -> Lt
+    | Less (x, xa), And (ym, yn) -> Lt
+    | Less (x, xa), Or (yo, yp) -> Lt
+    | Eq (x, xa), N y -> Gt
+    | Eq (x, xa), V ya -> Gt
+    | Eq (x, xa), Plus (yb, yc) -> Gt
+    | Eq (x, xa), Minus (yd, ye) -> Gt
+    | Eq (x, xa), Times (yf, yg) -> Gt
+    | Eq (x, xa), Less (yh, yi) -> Gt
+    | Eq (x, xa), Eq (yj, yk) ->
+        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
+          | Gt -> Gt)
+    | Eq (x, xa), Not yl -> Lt
+    | Eq (x, xa), And (ym, yn) -> Lt
+    | Eq (x, xa), Or (yo, yp) -> Lt
+    | Not x, N y -> Gt
+    | Not x, V ya -> Gt
+    | Not x, Plus (yb, yc) -> Gt
+    | Not x, Minus (yd, ye) -> Gt
+    | Not x, Times (yf, yg) -> Gt
+    | Not x, Less (yh, yi) -> Gt
+    | Not x, Eq (yj, yk) -> Gt
+    | Not x, Not yl -> comparator_exp x yl
+    | Not x, And (ym, yn) -> Lt
+    | Not x, Or (yo, yp) -> Lt
+    | And (x, xa), N y -> Gt
+    | And (x, xa), V ya -> Gt
+    | And (x, xa), Plus (yb, yc) -> Gt
+    | And (x, xa), Minus (yd, ye) -> Gt
+    | And (x, xa), Times (yf, yg) -> Gt
+    | And (x, xa), Less (yh, yi) -> Gt
+    | And (x, xa), Eq (yj, yk) -> Gt
+    | And (x, xa), Not yl -> Gt
+    | And (x, xa), And (ym, yn) ->
+        (match comparator_exp x ym with Eqa -> comparator_exp xa yn | Lt -> Lt
+          | Gt -> Gt)
+    | And (x, xa), Or (yo, yp) -> Lt
+    | Or (x, xa), N y -> Gt
+    | Or (x, xa), V ya -> Gt
+    | Or (x, xa), Plus (yb, yc) -> Gt
+    | Or (x, xa), Minus (yd, ye) -> Gt
+    | Or (x, xa), Times (yf, yg) -> Gt
+    | Or (x, xa), Less (yh, yi) -> Gt
+    | Or (x, xa), Eq (yj, yk) -> Gt
+    | Or (x, xa), Not yl -> Gt
+    | Or (x, xa), And (ym, yn) -> Gt
+    | Or (x, xa), Or (yo, yp) ->
+        (match comparator_exp x yo with Eqa -> comparator_exp xa yp | Lt -> Lt
           | Gt -> Gt);;
 
 let rec comparator_call_action
   (CallEdge (x, xa, xb)) (CallEdge (y, ya, yb)) =
     (match
       comparator_option (comparator_of (equal_literal, linorder_literal)) x y
-      with Eq ->
+      with Eqa ->
         (match
           comparator_list (comparator_of (equal_literal, linorder_literal)) xa
             ya
-          with Eq -> comparator_list comparator_aexp xb yb | Lt -> Lt
+          with Eqa -> comparator_list comparator_exp xb yb | Lt -> Lt
           | Gt -> Gt)
       | Lt -> Lt | Gt -> Gt);;
 
@@ -884,7 +1050,7 @@ let order_call_action =
 let linorder_call_action =
   ({order_linorder = order_call_action} : call_action linorder);;
 
-type special_call = Nondet_Int | Min of aexp * aexp | Max of aexp * aexp;;
+type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp;;
 
 let rec equal_special_call
   x0 x1 = match x0, x1 with Min (x21, x22), Max (x31, x32) -> false
@@ -893,63 +1059,13 @@ let rec equal_special_call
     | Max (x31, x32), Nondet_Int -> false
     | Nondet_Int, Min (x21, x22) -> false
     | Min (x21, x22), Nondet_Int -> false
-    | Max (x31, x32), Max (y31, y32) ->
-        equal_aexpa x31 y31 && equal_aexpa x32 y32
-    | Min (x21, x22), Min (y21, y22) ->
-        equal_aexpa x21 y21 && equal_aexpa x22 y22
+    | Max (x31, x32), Max (y31, y32) -> equal_expa x31 y31 && equal_expa x32 y32
+    | Min (x21, x22), Min (y21, y22) -> equal_expa x21 y21 && equal_expa x22 y22
     | Nondet_Int, Nondet_Int -> true;;
 
-let rec equal_bool p pa = match p, pa with false, p -> not p
-                     | true, p -> p
-                     | p, false -> not p
-                     | p, true -> p;;
-
-type bexp = Bc of bool | Not of bexp | And of bexp * bexp | Or of bexp * bexp |
-  Less of aexp * aexp | Eqa of aexp * aexp;;
-
-let rec equal_bexp
-  x0 x1 = match x0, x1 with Less (x51, x52), Eqa (x61, x62) -> false
-    | Eqa (x61, x62), Less (x51, x52) -> false
-    | Or (x41, x42), Eqa (x61, x62) -> false
-    | Eqa (x61, x62), Or (x41, x42) -> false
-    | Or (x41, x42), Less (x51, x52) -> false
-    | Less (x51, x52), Or (x41, x42) -> false
-    | And (x31, x32), Eqa (x61, x62) -> false
-    | Eqa (x61, x62), And (x31, x32) -> false
-    | And (x31, x32), Less (x51, x52) -> false
-    | Less (x51, x52), And (x31, x32) -> false
-    | And (x31, x32), Or (x41, x42) -> false
-    | Or (x41, x42), And (x31, x32) -> false
-    | Not x2, Eqa (x61, x62) -> false
-    | Eqa (x61, x62), Not x2 -> false
-    | Not x2, Less (x51, x52) -> false
-    | Less (x51, x52), Not x2 -> false
-    | Not x2, Or (x41, x42) -> false
-    | Or (x41, x42), Not x2 -> false
-    | Not x2, And (x31, x32) -> false
-    | And (x31, x32), Not x2 -> false
-    | Bc x1, Eqa (x61, x62) -> false
-    | Eqa (x61, x62), Bc x1 -> false
-    | Bc x1, Less (x51, x52) -> false
-    | Less (x51, x52), Bc x1 -> false
-    | Bc x1, Or (x41, x42) -> false
-    | Or (x41, x42), Bc x1 -> false
-    | Bc x1, And (x31, x32) -> false
-    | And (x31, x32), Bc x1 -> false
-    | Bc x1, Not x2 -> false
-    | Not x2, Bc x1 -> false
-    | Eqa (x61, x62), Eqa (y61, y62) ->
-        equal_aexpa x61 y61 && equal_aexpa x62 y62
-    | Less (x51, x52), Less (y51, y52) ->
-        equal_aexpa x51 y51 && equal_aexpa x52 y52
-    | Or (x41, x42), Or (y41, y42) -> equal_bexp x41 y41 && equal_bexp x42 y42
-    | And (x31, x32), And (y31, y32) -> equal_bexp x31 y31 && equal_bexp x32 y32
-    | Not x2, Not y2 -> equal_bexp x2 y2
-    | Bc x1, Bc y1 -> equal_bool x1 y1;;
-
-type edge_action = EA_Nop | EA_Assign of string * aexp |
-  EA_Special of special_call * string | EA_Assume of bexp | EA_AssumeNot of bexp
-  | EA_Ret of aexp option * string | EA_Check of bexp;;
+type edge_action = EA_Nop | EA_Assign of string * exp |
+  EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp |
+  EA_Ret of exp option * string | EA_Check of exp;;
 
 let rec equal_edge_actiona
   x0 x1 = match x0, x1 with EA_Ret (x61, x62), EA_Check x7 -> false
@@ -994,88 +1110,37 @@ let rec equal_edge_actiona
     | EA_Special (x31, x32), EA_Nop -> false
     | EA_Nop, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Nop -> false
-    | EA_Check x7, EA_Check y7 -> equal_bexp x7 y7
+    | EA_Check x7, EA_Check y7 -> equal_expa x7 y7
     | EA_Ret (x61, x62), EA_Ret (y61, y62) ->
-        equal_option equal_aexp x61 y61 && ((x62 : string) = y62)
-    | EA_AssumeNot x5, EA_AssumeNot y5 -> equal_bexp x5 y5
-    | EA_Assume x4, EA_Assume y4 -> equal_bexp x4 y4
+        equal_option equal_exp x61 y61 && ((x62 : string) = y62)
+    | EA_AssumeNot x5, EA_AssumeNot y5 -> equal_expa x5 y5
+    | EA_Assume x4, EA_Assume y4 -> equal_expa x4 y4
     | EA_Special (x31, x32), EA_Special (y31, y32) ->
         equal_special_call x31 y31 && ((x32 : string) = y32)
     | EA_Assign (x21, x22), EA_Assign (y21, y22) ->
-        ((x21 : string) = y21) && equal_aexpa x22 y22
+        ((x21 : string) = y21) && equal_expa x22 y22
     | EA_Nop, EA_Nop -> true;;
 
 let equal_edge_action =
   ({HOL.equal = equal_edge_actiona} : edge_action HOL.equal);;
 
 let rec comparator_special_call
-  x0 x1 = match x0, x1 with Nondet_Int, Nondet_Int -> Eq
+  x0 x1 = match x0, x1 with Nondet_Int, Nondet_Int -> Eqa
     | Nondet_Int, Min (y, ya) -> Lt
     | Nondet_Int, Max (yb, yc) -> Lt
     | Min (x, xa), Nondet_Int -> Gt
     | Min (x, xa), Min (y, ya) ->
-        (match comparator_aexp x y with Eq -> comparator_aexp xa ya | Lt -> Lt
+        (match comparator_exp x y with Eqa -> comparator_exp xa ya | Lt -> Lt
           | Gt -> Gt)
     | Min (x, xa), Max (yb, yc) -> Lt
     | Max (x, xa), Nondet_Int -> Gt
     | Max (x, xa), Min (y, ya) -> Gt
     | Max (x, xa), Max (yb, yc) ->
-        (match comparator_aexp x yb with Eq -> comparator_aexp xa yc | Lt -> Lt
-          | Gt -> Gt);;
-
-let rec comparator_bool x0 x1 = match x0, x1 with false, false -> Eq
-                          | false, true -> Lt
-                          | true, true -> Eq
-                          | true, false -> Gt;;
-
-let rec comparator_bexp
-  x0 x1 = match x0, x1 with Bc x, Bc y -> comparator_bool x y
-    | Bc x, Not ya -> Lt
-    | Bc x, And (yb, yc) -> Lt
-    | Bc x, Or (yd, ye) -> Lt
-    | Bc x, Less (yf, yg) -> Lt
-    | Bc x, Eqa (yh, yi) -> Lt
-    | Not x, Bc y -> Gt
-    | Not x, Not ya -> comparator_bexp x ya
-    | Not x, And (yb, yc) -> Lt
-    | Not x, Or (yd, ye) -> Lt
-    | Not x, Less (yf, yg) -> Lt
-    | Not x, Eqa (yh, yi) -> Lt
-    | And (x, xa), Bc y -> Gt
-    | And (x, xa), Not ya -> Gt
-    | And (x, xa), And (yb, yc) ->
-        (match comparator_bexp x yb with Eq -> comparator_bexp xa yc | Lt -> Lt
-          | Gt -> Gt)
-    | And (x, xa), Or (yd, ye) -> Lt
-    | And (x, xa), Less (yf, yg) -> Lt
-    | And (x, xa), Eqa (yh, yi) -> Lt
-    | Or (x, xa), Bc y -> Gt
-    | Or (x, xa), Not ya -> Gt
-    | Or (x, xa), And (yb, yc) -> Gt
-    | Or (x, xa), Or (yd, ye) ->
-        (match comparator_bexp x yd with Eq -> comparator_bexp xa ye | Lt -> Lt
-          | Gt -> Gt)
-    | Or (x, xa), Less (yf, yg) -> Lt
-    | Or (x, xa), Eqa (yh, yi) -> Lt
-    | Less (x, xa), Bc y -> Gt
-    | Less (x, xa), Not ya -> Gt
-    | Less (x, xa), And (yb, yc) -> Gt
-    | Less (x, xa), Or (yd, ye) -> Gt
-    | Less (x, xa), Less (yf, yg) ->
-        (match comparator_aexp x yf with Eq -> comparator_aexp xa yg | Lt -> Lt
-          | Gt -> Gt)
-    | Less (x, xa), Eqa (yh, yi) -> Lt
-    | Eqa (x, xa), Bc y -> Gt
-    | Eqa (x, xa), Not ya -> Gt
-    | Eqa (x, xa), And (yb, yc) -> Gt
-    | Eqa (x, xa), Or (yd, ye) -> Gt
-    | Eqa (x, xa), Less (yf, yg) -> Gt
-    | Eqa (x, xa), Eqa (yh, yi) ->
-        (match comparator_aexp x yh with Eq -> comparator_aexp xa yi | Lt -> Lt
+        (match comparator_exp x yb with Eqa -> comparator_exp xa yc | Lt -> Lt
           | Gt -> Gt);;
 
 let rec comparator_edge_action
-  x0 x1 = match x0, x1 with EA_Nop, EA_Nop -> Eq
+  x0 x1 = match x0, x1 with EA_Nop, EA_Nop -> Eqa
     | EA_Nop, EA_Assign (y, ya) -> Lt
     | EA_Nop, EA_Special (yb, yc) -> Lt
     | EA_Nop, EA_Assume yd -> Lt
@@ -1085,7 +1150,7 @@ let rec comparator_edge_action
     | EA_Assign (x, xa), EA_Nop -> Gt
     | EA_Assign (x, xa), EA_Assign (y, ya) ->
         (match comparator_of (equal_literal, linorder_literal) x y
-          with Eq -> comparator_aexp xa ya | Lt -> Lt | Gt -> Gt)
+          with Eqa -> comparator_exp xa ya | Lt -> Lt | Gt -> Gt)
     | EA_Assign (x, xa), EA_Special (yb, yc) -> Lt
     | EA_Assign (x, xa), EA_Assume yd -> Lt
     | EA_Assign (x, xa), EA_AssumeNot ye -> Lt
@@ -1095,7 +1160,7 @@ let rec comparator_edge_action
     | EA_Special (x, xa), EA_Assign (y, ya) -> Gt
     | EA_Special (x, xa), EA_Special (yb, yc) ->
         (match comparator_special_call x yb
-          with Eq -> comparator_of (equal_literal, linorder_literal) xa yc
+          with Eqa -> comparator_of (equal_literal, linorder_literal) xa yc
           | Lt -> Lt | Gt -> Gt)
     | EA_Special (x, xa), EA_Assume yd -> Lt
     | EA_Special (x, xa), EA_AssumeNot ye -> Lt
@@ -1104,7 +1169,7 @@ let rec comparator_edge_action
     | EA_Assume x, EA_Nop -> Gt
     | EA_Assume x, EA_Assign (y, ya) -> Gt
     | EA_Assume x, EA_Special (yb, yc) -> Gt
-    | EA_Assume x, EA_Assume yd -> comparator_bexp x yd
+    | EA_Assume x, EA_Assume yd -> comparator_exp x yd
     | EA_Assume x, EA_AssumeNot ye -> Lt
     | EA_Assume x, EA_Ret (yf, yg) -> Lt
     | EA_Assume x, EA_Check yh -> Lt
@@ -1112,7 +1177,7 @@ let rec comparator_edge_action
     | EA_AssumeNot x, EA_Assign (y, ya) -> Gt
     | EA_AssumeNot x, EA_Special (yb, yc) -> Gt
     | EA_AssumeNot x, EA_Assume yd -> Gt
-    | EA_AssumeNot x, EA_AssumeNot ye -> comparator_bexp x ye
+    | EA_AssumeNot x, EA_AssumeNot ye -> comparator_exp x ye
     | EA_AssumeNot x, EA_Ret (yf, yg) -> Lt
     | EA_AssumeNot x, EA_Check yh -> Lt
     | EA_Ret (x, xa), EA_Nop -> Gt
@@ -1121,8 +1186,8 @@ let rec comparator_edge_action
     | EA_Ret (x, xa), EA_Assume yd -> Gt
     | EA_Ret (x, xa), EA_AssumeNot ye -> Gt
     | EA_Ret (x, xa), EA_Ret (yf, yg) ->
-        (match comparator_option comparator_aexp x yf
-          with Eq -> comparator_of (equal_literal, linorder_literal) xa yg
+        (match comparator_option comparator_exp x yf
+          with Eqa -> comparator_of (equal_literal, linorder_literal) xa yg
           | Lt -> Lt | Gt -> Gt)
     | EA_Ret (x, xa), EA_Check yh -> Lt
     | EA_Check x, EA_Nop -> Gt
@@ -1131,7 +1196,7 @@ let rec comparator_edge_action
     | EA_Check x, EA_Assume yd -> Gt
     | EA_Check x, EA_AssumeNot ye -> Gt
     | EA_Check x, EA_Ret (yf, yg) -> Gt
-    | EA_Check x, EA_Check yh -> comparator_bexp x yh;;
+    | EA_Check x, EA_Check yh -> comparator_exp x yh;;
 
 let rec less_eq_edge_action x = le_of_comp comparator_edge_action x;;
 
@@ -1692,9 +1757,9 @@ let semilattice_sup_check_result =
      order_semilattice_sup = order_check_result}
     : check_result semilattice_sup);;
 
-type com = SKIP | Assign of string * aexp | Check of bexp | Seq of com * com |
-  If of bexp * com * com | While of bexp * com |
-  Call of string option * string * aexp list | Return of aexp option | Restore |
+type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
+  If of exp * com * com | While of exp * com |
+  Call of string option * string * exp list | Return of exp option | Restore |
   Unwind;;
 
 let rec equal_com
@@ -1788,18 +1853,18 @@ let rec equal_com
     | Check x3, SKIP -> false
     | SKIP, Assign (x21, x22) -> false
     | Assign (x21, x22), SKIP -> false
-    | Return x8, Return y8 -> equal_option equal_aexp x8 y8
+    | Return x8, Return y8 -> equal_option equal_exp x8 y8
     | Call (x71, x72, x73), Call (y71, y72, y73) ->
         equal_option equal_literal x71 y71 &&
-          (((x72 : string) = y72) && equal_lista equal_aexp x73 y73)
+          (((x72 : string) = y72) && equal_lista equal_exp x73 y73)
     | While (x61, x62), While (y61, y62) ->
-        equal_bexp x61 y61 && equal_com x62 y62
+        equal_expa x61 y61 && equal_com x62 y62
     | If (x51, x52, x53), If (y51, y52, y53) ->
-        equal_bexp x51 y51 && (equal_com x52 y52 && equal_com x53 y53)
+        equal_expa x51 y51 && (equal_com x52 y52 && equal_com x53 y53)
     | Seq (x41, x42), Seq (y41, y42) -> equal_com x41 y41 && equal_com x42 y42
-    | Check x3, Check y3 -> equal_bexp x3 y3
+    | Check x3, Check y3 -> equal_expa x3 y3
     | Assign (x21, x22), Assign (y21, y22) ->
-        ((x21 : string) = y21) && equal_aexpa x22 y22
+        ((x21 : string) = y21) && equal_expa x22 y22
     | Unwind, Unwind -> true
     | Restore, Restore -> true
     | SKIP, SKIP -> true;;
@@ -1826,7 +1891,7 @@ type 'a cfg_ext =
   Cfg_ext of
     (cfg_node * (edge_action * cfg_node)) set *
       (cfg_node * (call_action * (cfg_node * cfg_node))) set * cfg_node *
-      (cfg_node * bexp) set * 'a;;
+      (cfg_node * exp) set * 'a;;
 
 type ('a, 'b, 'c, 'd) state_ext =
   State_ext of
@@ -1842,15 +1907,15 @@ type source_location = LocalVar of string | GlobalVar;;
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
-type analysis_event = Check_Event of bexp;;
+type analysis_event = Check_Event of exp;;
 
 type ('a, 'b, 'c) dg_spec_ext =
   Dg_spec_ext of
-    ('a -> 'b -> 'b * 'a) * (string -> aexp -> 'a -> 'b -> 'b * 'a) *
+    ('a -> 'b -> 'b * 'a) * (string -> exp -> 'a -> 'b -> 'b * 'a) *
       (special_call -> string -> 'a -> 'b -> 'b * 'a) *
-      (bexp -> bool -> 'a -> 'b -> 'b * 'a) * (string -> 'a -> 'b -> 'b * 'a) *
-      (aexp option -> string -> 'a -> 'b -> 'b * 'a) *
-      (string list -> aexp list -> 'a -> 'b -> 'b * 'a) *
+      (exp -> bool -> 'a -> 'b -> 'b * 'a) * (string -> 'a -> 'b -> 'b * 'a) *
+      (exp option -> string -> 'a -> 'b -> 'b * 'a) *
+      (string list -> exp list -> 'a -> 'b -> 'b * 'a) *
       (analysis_event -> 'a -> 'b -> 'b * 'a) * ('a -> 'a -> 'b -> 'b * 'a) *
       (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
 
@@ -1864,9 +1929,9 @@ type 'a imp_prog_ext =
 
 type ('a, 'b) numeric_ops_ext =
   Numeric_ops_ext of
-    (aexp -> (string -> 'a) -> 'a) *
+    (exp -> (string -> 'a) -> 'a) *
       ((string -> bool) ->
-        bexp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
+        exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
       'a * 'b;;
 
 type ('a, 'b, 'c, 'd) func_state =
@@ -1884,11 +1949,11 @@ type ('a, 'b, 'c, 'd) func_state =
 type ('a, 'b, 'c) effectful_st_transfer_ext =
   Effectful_st_transfer_ext of
     (cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (string -> aexp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (string -> exp -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (special_call -> string -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
-      (bexp -> bool -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+      (exp -> bool -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (string list ->
-        aexp list -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
+        exp list -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (cfg_node -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
       (string option ->
         cfg_node -> cfg_node -> (cfg_node, 'a, 'b) strategy_tree) *
@@ -2114,12 +2179,110 @@ let rec plus_ivl
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (plus_eint a c, plus_eint b d)));;
 
+let rec interval_eq_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
+
+let rec interval_eq_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) ||
+        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
+
+let zero_int : int = Int_of_integer Z.zero;;
+
+let rec interval_tobool
+  a = (if interval_eq_false a (Ivl (Fin zero_int, Fin zero_int)) then Some true
+        else (if interval_eq_true a (Ivl (Fin zero_int, Fin zero_int))
+               then Some false else None));;
+
+let rec interval_eqb
+  a b = (if interval_eq_true a b then Some true
+          else (if interval_eq_false a b then Some false else None));;
+
+let rec interval_less_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
+
+let rec interval_less_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
+
+let rec interval_lt
+  a b = (if interval_less_true a b then Some true
+          else (if interval_less_false a b then Some false else None));;
+
+let one_int : int = Int_of_integer (Z.of_int 1);;
+
 let rec aval_ivl
   x0 sigma = match x0, sigma with N n, sigma -> Ivl (Fin n, Fin n)
     | V x, sigma -> sigma x
     | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
     | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma);;
+    | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma)
+    | Less (a, b), sigma ->
+        (if is_bot_ivl (aval_ivl a sigma) || is_bot_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
+                     (Some true)
+                 then Ivl (Fin one_int, Fin one_int)
+                 else (if equal_option equal_bool
+                            (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))
+                            (Some false)
+                        then Ivl (Fin zero_int, Fin zero_int)
+                        else Ivl (Fin zero_int, Fin one_int))))
+    | Eq (a, b), sigma ->
+        (if is_bot_ivl (aval_ivl a sigma) || is_bot_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool
+                     (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
+                     (Some true)
+                 then Ivl (Fin one_int, Fin one_int)
+                 else (if equal_option equal_bool
+                            (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))
+                            (Some false)
+                        then Ivl (Fin zero_int, Fin zero_int)
+                        else Ivl (Fin zero_int, Fin one_int))))
+    | Not a, sigma ->
+        (if is_bot_ivl (aval_ivl a sigma) then bot_ivla
+          else (if equal_option equal_bool (interval_tobool (aval_ivl a sigma))
+                     (Some true)
+                 then Ivl (Fin zero_int, Fin zero_int)
+                 else (if equal_option equal_bool
+                            (interval_tobool (aval_ivl a sigma)) (Some false)
+                        then Ivl (Fin one_int, Fin one_int)
+                        else Ivl (Fin zero_int, Fin one_int))))
+    | And (a, b), sigma ->
+        (if is_bot_ivl (aval_ivl a sigma) || is_bot_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool (interval_tobool (aval_ivl a sigma))
+                     (Some false) ||
+                     equal_option equal_bool
+                       (interval_tobool (aval_ivl b sigma)) (Some false)
+                 then Ivl (Fin zero_int, Fin zero_int)
+                 else (if equal_option equal_bool
+                            (interval_tobool (aval_ivl a sigma)) (Some true) &&
+                            equal_option equal_bool
+                              (interval_tobool (aval_ivl b sigma)) (Some true)
+                        then Ivl (Fin one_int, Fin one_int)
+                        else Ivl (Fin zero_int, Fin one_int))))
+    | Or (a, b), sigma ->
+        (if is_bot_ivl (aval_ivl a sigma) || is_bot_ivl (aval_ivl b sigma)
+          then bot_ivla
+          else (if equal_option equal_bool (interval_tobool (aval_ivl a sigma))
+                     (Some true) ||
+                     equal_option equal_bool
+                       (interval_tobool (aval_ivl b sigma)) (Some true)
+                 then Ivl (Fin one_int, Fin one_int)
+                 else (if equal_option equal_bool
+                            (interval_tobool (aval_ivl a sigma)) (Some false) &&
+                            equal_option equal_bool
+                              (interval_tobool (aval_ivl b sigma)) (Some false)
+                        then Ivl (Fin zero_int, Fin zero_int)
+                        else Ivl (Fin zero_int, Fin one_int))));;
 
 let rec afilter_ivl_st
   gs x1 a s = match gs, x1, a, s with
@@ -2147,11 +2310,14 @@ let rec afilter_ivl_st
              (aval_ivl e2 (fun_of_resolved_st_q_for bot_ivl gs s))
            in
           afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s))
-    | gs, N v, a, s -> s;;
+    | gs, N v, a, s -> s
+    | gs, Less (v, va), a, s -> s
+    | gs, Eq (v, va), a, s -> s
+    | gs, Not v, a, s -> s
+    | gs, And (v, va), a, s -> s
+    | gs, Or (v, va), a, s -> s;;
 
 let rec inf_ivl x = meet_ivl x;;
-
-let one_int : int = Int_of_integer (Z.of_int 1);;
 
 let rec inv_less_ivl
   x0 x1 x2 = match x0, x1, x2 with
@@ -2186,13 +2352,47 @@ let rec bfilter_ivl_st
           (bfilter_ivl_st gs b1 true s) (bfilter_ivl_st gs b2 true s)
     | gs, Or (b1, b2), false, s ->
         bfilter_ivl_st gs b1 false (bfilter_ivl_st gs b2 false s)
-    | gs, Eqa (e1, e2), res, s ->
+    | gs, Eq (e1, e2), res, s ->
         (let (a1, a2) =
            inv_eq_ivl res (aval_ivl e1 (fun_of_resolved_st_q_for bot_ivl gs s))
              (aval_ivl e2 (fun_of_resolved_st_q_for bot_ivl gs s))
            in
           afilter_ivl_st gs e1 a1 (afilter_ivl_st gs e2 a2 s))
-    | gs, Bc v, uv, s -> s;;
+    | gs, N v, res, s ->
+        (let (a1, _) =
+           inv_eq_ivl (not res)
+             (aval_ivl (N v) (fun_of_resolved_st_q_for bot_ivl gs s))
+             (aval_ivl (N zero_int) (fun_of_resolved_st_q_for bot_ivl gs s))
+           in
+          afilter_ivl_st gs (N v) a1 s)
+    | gs, V v, res, s ->
+        (let (a1, _) =
+           inv_eq_ivl (not res)
+             (aval_ivl (V v) (fun_of_resolved_st_q_for bot_ivl gs s))
+             (aval_ivl (N zero_int) (fun_of_resolved_st_q_for bot_ivl gs s))
+           in
+          afilter_ivl_st gs (V v) a1 s)
+    | gs, Plus (v, va), res, s ->
+        (let (a1, _) =
+           inv_eq_ivl (not res)
+             (aval_ivl (Plus (v, va)) (fun_of_resolved_st_q_for bot_ivl gs s))
+             (aval_ivl (N zero_int) (fun_of_resolved_st_q_for bot_ivl gs s))
+           in
+          afilter_ivl_st gs (Plus (v, va)) a1 s)
+    | gs, Minus (v, va), res, s ->
+        (let (a1, _) =
+           inv_eq_ivl (not res)
+             (aval_ivl (Minus (v, va)) (fun_of_resolved_st_q_for bot_ivl gs s))
+             (aval_ivl (N zero_int) (fun_of_resolved_st_q_for bot_ivl gs s))
+           in
+          afilter_ivl_st gs (Minus (v, va)) a1 s)
+    | gs, Times (v, va), res, s ->
+        (let (a1, _) =
+           inv_eq_ivl (not res)
+             (aval_ivl (Times (v, va)) (fun_of_resolved_st_q_for bot_ivl gs s))
+             (aval_ivl (N zero_int) (fun_of_resolved_st_q_for bot_ivl gs s))
+           in
+          afilter_ivl_st gs (Times (v, va)) a1 s);;
 
 let ivl_ops : (ivl, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_ivl, bfilter_ivl_st, ivl_top, ());;
@@ -2221,6 +2421,10 @@ let rec cfg_exit
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 
 let rec apsnd f (x, y) = (x, f y);;
+
+let rec is_bottom_sign s = equal_signa s SBot;;
+
+let rec is_bot_sign a = is_bottom_sign a;;
 
 let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
                      | SNeg, SBot -> SBot
@@ -2354,19 +2558,91 @@ let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | STop, SPos -> STop
                     | STop, STop -> STop;;
 
-let zero_int : int = Int_of_integer Z.zero;;
+let rec sign_tobool
+  a = (if sign_le a SNeg || sign_le a SPos then Some true
+        else (if sign_le a SZero then Some false else None));;
 
 let rec sign_of_int
   n = (if less_int n zero_int then SNeg
         else (if equal_inta n zero_int then SZero else SPos));;
+
+let rec sign_eqb
+  a b = (if equal_signa a SZero && equal_signa b SZero then Some true
+          else (if sign_le a SNeg && sign_le b SNonNeg ||
+                     (sign_le b SNeg && sign_le a SNonNeg ||
+                       (sign_le a SPos && sign_le b SNonPos ||
+                         sign_le b SPos && sign_le a SNonPos))
+                 then Some false else None));;
+
+let rec sign_lt
+  a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
+          else (if sign_le a SNonPos && sign_le b SPos then Some true
+                 else (if sign_le b SNonPos && sign_le a SNonNeg then Some false
+                        else (if sign_le b SNeg && sign_le a SPos
+                               then Some false else None))));;
 
 let rec aval_sign
   x0 sigma = match x0, sigma with N n, sigma -> sign_of_int n
     | V x, sigma -> sigma x
     | Plus (a, b), sigma -> plus_sign (aval_sign a sigma) (aval_sign b sigma)
     | Minus (a, b), sigma -> minus_sign (aval_sign a sigma) (aval_sign b sigma)
-    | Times (a, b), sigma ->
-        times_sign (aval_sign a sigma) (aval_sign b sigma);;
+    | Times (a, b), sigma -> times_sign (aval_sign a sigma) (aval_sign b sigma)
+    | Less (a, b), sigma ->
+        (if is_bot_sign (aval_sign a sigma) || is_bot_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_lt (aval_sign a sigma) (aval_sign b sigma))
+                     (Some true)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_lt (aval_sign a sigma) (aval_sign b sigma))
+                            (Some false)
+                        then SZero else SNonNeg)))
+    | Eq (a, b), sigma ->
+        (if is_bot_sign (aval_sign a sigma) || is_bot_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool
+                     (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
+                     (Some true)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_eqb (aval_sign a sigma) (aval_sign b sigma))
+                            (Some false)
+                        then SZero else SNonNeg)))
+    | Not a, sigma ->
+        (if is_bot_sign (aval_sign a sigma) then bot_signa
+          else (if equal_option equal_bool (sign_tobool (aval_sign a sigma))
+                     (Some true)
+                 then SZero
+                 else (if equal_option equal_bool
+                            (sign_tobool (aval_sign a sigma)) (Some false)
+                        then SPos else SNonNeg)))
+    | And (a, b), sigma ->
+        (if is_bot_sign (aval_sign a sigma) || is_bot_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool (sign_tobool (aval_sign a sigma))
+                     (Some false) ||
+                     equal_option equal_bool (sign_tobool (aval_sign b sigma))
+                       (Some false)
+                 then SZero
+                 else (if equal_option equal_bool
+                            (sign_tobool (aval_sign a sigma)) (Some true) &&
+                            equal_option equal_bool
+                              (sign_tobool (aval_sign b sigma)) (Some true)
+                        then SPos else SNonNeg)))
+    | Or (a, b), sigma ->
+        (if is_bot_sign (aval_sign a sigma) || is_bot_sign (aval_sign b sigma)
+          then bot_signa
+          else (if equal_option equal_bool (sign_tobool (aval_sign a sigma))
+                     (Some true) ||
+                     equal_option equal_bool (sign_tobool (aval_sign b sigma))
+                       (Some true)
+                 then SPos
+                 else (if equal_option equal_bool
+                            (sign_tobool (aval_sign a sigma)) (Some false) &&
+                            equal_option equal_bool
+                              (sign_tobool (aval_sign b sigma)) (Some false)
+                        then SZero else SNonNeg)));;
 
 let rec meet_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | SNeg, SBot -> SBot
@@ -2438,7 +2714,12 @@ let rec afilter_sign_st
              (aval_sign e2 (fun_of_resolved_st_q_for bot_sign gs s))
            in
           afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s))
-    | gs, N v, a, s -> s;;
+    | gs, N v, a, s -> s
+    | gs, Less (v, va), a, s -> s
+    | gs, Eq (v, va), a, s -> s
+    | gs, Not v, a, s -> s
+    | gs, And (v, va), a, s -> s
+    | gs, Or (v, va), a, s -> s;;
 
 let rec inv_less_sign
   x0 a1 a2 = match x0, a1, a2 with
@@ -2497,14 +2778,50 @@ let rec bfilter_sign_st
           (bfilter_sign_st gs b1 true s) (bfilter_sign_st gs b2 true s)
     | gs, Or (b1, b2), false, s ->
         bfilter_sign_st gs b1 false (bfilter_sign_st gs b2 false s)
-    | gs, Eqa (e1, e2), res, s ->
+    | gs, Eq (e1, e2), res, s ->
         (let (a1, a2) =
            inv_eq_sign res
              (aval_sign e1 (fun_of_resolved_st_q_for bot_sign gs s))
              (aval_sign e2 (fun_of_resolved_st_q_for bot_sign gs s))
            in
           afilter_sign_st gs e1 a1 (afilter_sign_st gs e2 a2 s))
-    | gs, Bc v, uv, s -> s;;
+    | gs, N v, res, s ->
+        (let (a1, _) =
+           inv_eq_sign (not res)
+             (aval_sign (N v) (fun_of_resolved_st_q_for bot_sign gs s))
+             (aval_sign (N zero_int) (fun_of_resolved_st_q_for bot_sign gs s))
+           in
+          afilter_sign_st gs (N v) a1 s)
+    | gs, V v, res, s ->
+        (let (a1, _) =
+           inv_eq_sign (not res)
+             (aval_sign (V v) (fun_of_resolved_st_q_for bot_sign gs s))
+             (aval_sign (N zero_int) (fun_of_resolved_st_q_for bot_sign gs s))
+           in
+          afilter_sign_st gs (V v) a1 s)
+    | gs, Plus (v, va), res, s ->
+        (let (a1, _) =
+           inv_eq_sign (not res)
+             (aval_sign (Plus (v, va)) (fun_of_resolved_st_q_for bot_sign gs s))
+             (aval_sign (N zero_int) (fun_of_resolved_st_q_for bot_sign gs s))
+           in
+          afilter_sign_st gs (Plus (v, va)) a1 s)
+    | gs, Minus (v, va), res, s ->
+        (let (a1, _) =
+           inv_eq_sign (not res)
+             (aval_sign (Minus (v, va))
+               (fun_of_resolved_st_q_for bot_sign gs s))
+             (aval_sign (N zero_int) (fun_of_resolved_st_q_for bot_sign gs s))
+           in
+          afilter_sign_st gs (Minus (v, va)) a1 s)
+    | gs, Times (v, va), res, s ->
+        (let (a1, _) =
+           inv_eq_sign (not res)
+             (aval_sign (Times (v, va))
+               (fun_of_resolved_st_q_for bot_sign gs s))
+             (aval_sign (N zero_int) (fun_of_resolved_st_q_for bot_sign gs s))
+           in
+          afilter_sign_st gs (Times (v, va)) a1 s);;
 
 let sign_ops : (sign, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_sign, bfilter_sign_st, STop, ());;
@@ -2545,38 +2862,34 @@ let bot_set : 'a set = Set [];;
 
 let rec sup_seta _A (Set xs) = fold (sup_set _A) xs bot_set;;
 
-let rec aexp_vnames
+let rec exp_vnames
   = function N uu -> bot_set
     | V x -> insert equal_literal x bot_set
-    | Plus (a, b) -> sup_set equal_literal (aexp_vnames a) (aexp_vnames b)
-    | Minus (a, b) -> sup_set equal_literal (aexp_vnames a) (aexp_vnames b)
-    | Times (a, b) -> sup_set equal_literal (aexp_vnames a) (aexp_vnames b);;
-
-let rec bexp_vnames
-  = function Bc uu -> bot_set
-    | Not b -> bexp_vnames b
-    | And (b1, b2) -> sup_set equal_literal (bexp_vnames b1) (bexp_vnames b2)
-    | Or (b1, b2) -> sup_set equal_literal (bexp_vnames b1) (bexp_vnames b2)
-    | Less (a, b) -> sup_set equal_literal (aexp_vnames a) (aexp_vnames b)
-    | Eqa (a, b) -> sup_set equal_literal (aexp_vnames a) (aexp_vnames b);;
+    | Plus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Minus (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Times (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Less (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Eq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
+    | Not b -> exp_vnames b
+    | And (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2)
+    | Or (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2);;
 
 let rec com_vnames
   = function SKIP -> bot_set
-    | Assign (x, a) -> insert equal_literal x (aexp_vnames a)
-    | Check c -> bexp_vnames c
+    | Assign (x, a) -> insert equal_literal x (exp_vnames a)
+    | Check c -> exp_vnames c
     | Seq (c1, c2) -> sup_set equal_literal (com_vnames c1) (com_vnames c2)
     | If (b, c1, c2) ->
         sup_set equal_literal
-          (sup_set equal_literal (bexp_vnames b) (com_vnames c1))
-          (com_vnames c2)
-    | While (b, c) -> sup_set equal_literal (bexp_vnames b) (com_vnames c)
+          (sup_set equal_literal (exp_vnames b) (com_vnames c1)) (com_vnames c2)
+    | While (b, c) -> sup_set equal_literal (exp_vnames b) (com_vnames c)
     | Call (dst, uu, actuals) ->
         sup_set equal_literal
           (match dst with None -> bot_set
             | Some x -> insert equal_literal x bot_set)
-          (sup_seta equal_literal (Set (map aexp_vnames actuals)))
+          (sup_seta equal_literal (Set (map exp_vnames actuals)))
     | Return None -> bot_set
-    | Return (Some a) -> aexp_vnames a
+    | Return (Some a) -> exp_vnames a
     | Restore -> bot_set
     | Unwind -> bot_set;;
 
@@ -2590,6 +2903,22 @@ let rec source_com = function SKIP -> true
                      | Return e -> true
                      | Restore -> false
                      | Unwind -> false;;
+
+let rec exp_mentions_where
+  p x1 = match p, x1 with p, N uu -> false
+    | p, V x -> p x
+    | p, Plus (a, b) -> exp_mentions_where p a || exp_mentions_where p b
+    | p, Minus (a, b) -> exp_mentions_where p a || exp_mentions_where p b
+    | p, Times (a, b) -> exp_mentions_where p a || exp_mentions_where p b
+    | p, Less (a, b) -> exp_mentions_where p a || exp_mentions_where p b
+    | p, Eq (a, b) -> exp_mentions_where p a || exp_mentions_where p b
+    | p, Not b -> exp_mentions_where p b
+    | p, And (b1, b2) -> exp_mentions_where p b1 || exp_mentions_where p b2
+    | p, Or (b1, b2) -> exp_mentions_where p b1 || exp_mentions_where p b2;;
+
+let rec exp_mentions x = exp_mentions_where (fun a -> ((x : string) = a));;
+
+let rec source_exp a = not (exp_mentions ret_var a);;
 
 let cinit_ivl_st : ivl resolved_st_q
   = Abs_resolved_st
@@ -2689,29 +3018,6 @@ let rec sup_fin _A = function Set [] -> abort_empty_set (sup_fin _A)
                      | Set (x :: xs) -> fold (sup _A.sup_semilattice_sup) xs x;;
 
 let rec sup_fset _A s = sup_fin _A (fset s);;
-
-let rec aexp_mentions_where
-  p x1 = match p, x1 with p, N uu -> false
-    | p, V x -> p x
-    | p, Plus (a, b) -> aexp_mentions_where p a || aexp_mentions_where p b
-    | p, Minus (a, b) -> aexp_mentions_where p a || aexp_mentions_where p b
-    | p, Times (a, b) -> aexp_mentions_where p a || aexp_mentions_where p b;;
-
-let rec aexp_mentions x = aexp_mentions_where (fun a -> ((x : string) = a));;
-
-let rec source_aexp a = not (aexp_mentions ret_var a);;
-
-let rec bexp_mentions_where
-  p x1 = match p, x1 with p, Bc uu -> false
-    | p, Not b -> bexp_mentions_where p b
-    | p, And (b1, b2) -> bexp_mentions_where p b1 || bexp_mentions_where p b2
-    | p, Or (b1, b2) -> bexp_mentions_where p b1 || bexp_mentions_where p b2
-    | p, Less (a, b) -> aexp_mentions_where p a || aexp_mentions_where p b
-    | p, Eqa (a, b) -> aexp_mentions_where p a || aexp_mentions_where p b;;
-
-let rec bexp_mentions x = bexp_mentions_where (fun a -> ((x : string) = a));;
-
-let rec source_bexp b = not (bexp_mentions ret_var b);;
 
 let rec ivl_min
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -2890,29 +3196,29 @@ let rec value_providing
 
 let rec wf_source_com
   pi x1 = match pi, x1 with pi, SKIP -> true
-    | pi, Assign (x, a) -> not ((x : string) = ret_var) && source_aexp a
-    | pi, Check c -> source_bexp c
+    | pi, Assign (x, a) -> not ((x : string) = ret_var) && source_exp a
+    | pi, Check c -> source_exp c
     | pi, Seq (c1, c2) -> wf_source_com pi c1 && wf_source_com pi c2
     | pi, If (b, c1, c2) ->
-        source_bexp b && (wf_source_com pi c1 && wf_source_com pi c2)
-    | pi, While (b, c) -> source_bexp b && wf_source_com pi c
+        source_exp b && (wf_source_com pi c1 && wf_source_com pi c2)
+    | pi, While (b, c) -> source_exp b && wf_source_com pi c
     | pi, Call (dst, p, actuals) ->
         (match special_table p
           with None ->
             (match pi p with None -> false
               | Some decl ->
                 equal_nata (size_list actuals) (size_list (formals decl)) &&
-                  (list_all source_aexp actuals &&
+                  (list_all source_exp actuals &&
                     (match dst with None -> true
                       | Some x ->
                         not ((x : string) = ret_var) &&
                           value_providing (body decl))))
           | Some desc ->
             not (is_none (classify_special desc actuals)) &&
-              (list_all source_aexp actuals &&
+              (list_all source_exp actuals &&
                 (match dst with None -> false
                   | Some x -> not ((x : string) = ret_var))))
-    | pi, Return e -> (match e with None -> true | Some a -> source_aexp a)
+    | pi, Return e -> (match e with None -> true | Some a -> source_exp a)
     | pi, Restore -> false
     | pi, Unwind -> false;;
 
@@ -3510,6 +3816,17 @@ let rec scope_vnames
 
 let rec reserved_ret_var gs = not (gs ret_var);;
 
+let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
+                   | V uv -> nat_of_integer (Z.of_int 1000)
+                   | Not uw -> nat_of_integer (Z.of_int 80)
+                   | Times (ux, uy) -> nat_of_integer (Z.of_int 70)
+                   | Plus (uz, va) -> nat_of_integer (Z.of_int 60)
+                   | Minus (vb, vc) -> nat_of_integer (Z.of_int 60)
+                   | Less (vd, ve) -> nat_of_integer (Z.of_int 50)
+                   | Eq (vf, vg) -> nat_of_integer (Z.of_int 50)
+                   | And (vh, vi) -> nat_of_integer (Z.of_int 40)
+                   | Or (vj, vk) -> nat_of_integer (Z.of_int 30);;
+
 let rec ea_check_cond (EA_Check x7) = x7;;
 
 let rec is_EA_Check = function EA_Nop -> false
@@ -3645,6 +3962,11 @@ let rec sign_less_true_of_inv
 
 let rec sign_less_true x = sign_less_true_of_inv x;;
 
+let rec sign_eq_false_of_intersection
+  a b = equal_signa (meet_sign a b) bot_signa;;
+
+let rec sign_eq_false x = sign_eq_false_of_intersection x;;
+
 let rec sign_less_false_of_inv
   a b = equal_signa (fst (inv_less_sign true a b)) bot_signa ||
           equal_signa (snd (inv_less_sign true a b)) bot_signa;;
@@ -3656,29 +3978,36 @@ let rec sign_eq_true x = sign_eq_true_of_less x;;
 
 let rec sign_less_false x = sign_less_false_of_inv x;;
 
-let rec sign_eq_false_of_intersection
-  a b = equal_signa (meet_sign a b) bot_signa;;
-
-let rec sign_eq_false x = sign_eq_false_of_intersection x;;
-
 let rec sign_check_true
-  x0 d = match x0, d with Bc v, d -> v
-    | Not b, d -> sign_check_false b d
+  x0 d = match x0, d with Not b, d -> sign_check_false b d
     | And (b1, b2), d -> sign_check_true b1 d && sign_check_true b2 d
     | Or (b1, b2), d -> sign_check_true b1 d || sign_check_true b2 d
     | Less (a, b), d -> sign_less_true (aval_sign a d) (aval_sign b d)
-    | Eqa (a, b), d -> sign_eq_true (aval_sign a d) (aval_sign b d)
+    | Eq (a, b), d -> sign_eq_true (aval_sign a d) (aval_sign b d)
+    | N v, d -> sign_eq_false (aval_sign (N v) d) (aval_sign (N zero_int) d)
+    | V v, d -> sign_eq_false (aval_sign (V v) d) (aval_sign (N zero_int) d)
+    | Plus (v, va), d ->
+        sign_eq_false (aval_sign (Plus (v, va)) d) (aval_sign (N zero_int) d)
+    | Minus (v, va), d ->
+        sign_eq_false (aval_sign (Minus (v, va)) d) (aval_sign (N zero_int) d)
+    | Times (v, va), d ->
+        sign_eq_false (aval_sign (Times (v, va)) d) (aval_sign (N zero_int) d)
 and sign_check_false
-  x0 d = match x0, d with Bc v, d -> not v
-    | Not b, d -> sign_check_true b d
+  x0 d = match x0, d with Not b, d -> sign_check_true b d
     | And (b1, b2), d -> sign_check_false b1 d || sign_check_false b2 d
     | Or (b1, b2), d -> sign_check_false b1 d && sign_check_false b2 d
     | Less (a, b), d -> sign_less_false (aval_sign a d) (aval_sign b d)
-    | Eqa (a, b), d -> sign_eq_false (aval_sign a d) (aval_sign b d);;
+    | Eq (a, b), d -> sign_eq_false (aval_sign a d) (aval_sign b d)
+    | N v, d -> sign_eq_true (aval_sign (N v) d) (aval_sign (N zero_int) d)
+    | V v, d -> sign_eq_true (aval_sign (V v) d) (aval_sign (N zero_int) d)
+    | Plus (v, va), d ->
+        sign_eq_true (aval_sign (Plus (v, va)) d) (aval_sign (N zero_int) d)
+    | Minus (v, va), d ->
+        sign_eq_true (aval_sign (Minus (v, va)) d) (aval_sign (N zero_int) d)
+    | Times (v, va), d ->
+        sign_eq_true (aval_sign (Times (v, va)) d) (aval_sign (N zero_int) d);;
 
 let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
-
-let rec is_bottom_sign s = equal_signa s SBot;;
 
 let rec fold_rhs_trees _A
   acc x1 = match acc, x1 with acc, [] -> Answer acc
@@ -4257,44 +4586,55 @@ let rec string_of_int
         then [char_0x2D] @ string_of_nat (nat (uminus_int i))
         else string_of_nat (nat i));;
 
-let rec string_of_aexp
-  = function N n -> string_of_int n
-    | V x -> explode x
-    | Plus (a, b) -> string_of_aexp a @ [char_0x2B] @ string_of_aexp b
-    | Minus (a, b) -> string_of_aexp a @ [char_0x2D] @ string_of_aexp b
-    | Times (a, b) -> string_of_aexp a @ [char_0x2A] @ string_of_aexp b;;
-
-let rec string_of_bexp
-  = function Bc true -> [char_0x74; char_0x72; char_0x75; char_0x65]
-    | Bc false -> [char_0x66; char_0x61; char_0x6C; char_0x73; char_0x65]
-    | Not b -> [char_0x21; char_0x28] @ string_of_bexp b @ [char_0x29]
-    | And (b1, b2) ->
-        [char_0x28] @
-          string_of_bexp b1 @
-            [char_0x26; char_0x26] @ string_of_bexp b2 @ [char_0x29]
-    | Or (b1, b2) ->
-        [char_0x28] @
-          string_of_bexp b1 @
-            [char_0x7C; char_0x7C] @ string_of_bexp b2 @ [char_0x29]
-    | Less (a1, a2) -> string_of_aexp a1 @ [char_0x3C] @ string_of_aexp a2
-    | Eqa (a1, a2) ->
-        string_of_aexp a1 @ [char_0x3D; char_0x3D] @ string_of_aexp a2;;
+let rec string_of_exp
+  min_prio e =
+    (let body =
+       (match e with N a -> string_of_int a | V a -> explode a
+         | Plus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 60)) a @
+             [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | Minus (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 60)) a @
+             [char_0x2D] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
+         | Times (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 70)) a @
+             [char_0x2A] @ string_of_exp (nat_of_integer (Z.of_int 71)) b
+         | Less (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 51)) a @
+             [char_0x3C] @ string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Eq (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 51)) a @
+             [char_0x3D; char_0x3D] @
+               string_of_exp (nat_of_integer (Z.of_int 51)) b
+         | Not a -> [char_0x21] @ string_of_exp (nat_of_integer (Z.of_int 80)) a
+         | And (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 40)) a @
+             [char_0x26; char_0x26] @
+               string_of_exp (nat_of_integer (Z.of_int 41)) b
+         | Or (a, b) ->
+           string_of_exp (nat_of_integer (Z.of_int 30)) a @
+             [char_0x7C; char_0x7C] @
+               string_of_exp (nat_of_integer (Z.of_int 31)) b)
+       in
+      (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
+        else body));;
 
 let rec string_of_com
   = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70]
     | Assign (x, e) ->
         explode x @
-          [char_0x20; char_0x3A; char_0x3D; char_0x20] @ string_of_aexp e
+          [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+            string_of_exp zero_nat e
     | Check c ->
         [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
           char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
           char_0x65; char_0x63; char_0x6B; char_0x28] @
-          string_of_bexp c @ [char_0x29]
+          string_of_exp zero_nat c @ [char_0x29]
     | Seq (c1, c2) ->
         string_of_com c1 @ [char_0x3B] @ source_nl @ string_of_com c2
     | If (b, c1, c2) ->
         [char_0x69; char_0x66; char_0x20; char_0x28] @
-          string_of_bexp b @
+          string_of_exp zero_nat b @
             [char_0x29; char_0x20; char_0x7B; char_0x20] @
               string_of_com c1 @
                 [char_0x20; char_0x7D; char_0x20; char_0x65; char_0x6C;
@@ -4303,7 +4643,7 @@ let rec string_of_com
     | While (b, c) ->
         [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
           char_0x28] @
-          string_of_bexp b @
+          string_of_exp zero_nat b @
             [char_0x29; char_0x20; char_0x7B; char_0x20] @
               string_of_com c @ [char_0x20; char_0x7D]
     | Call (dst, p, es) ->
@@ -4311,19 +4651,21 @@ let rec string_of_com
           with None ->
             explode p @
               [char_0x28] @
-                join_source [char_0x2C; char_0x20] (map string_of_aexp es) @
+                join_source [char_0x2C; char_0x20]
+                  (map (string_of_exp zero_nat) es) @
                   [char_0x29]
           | Some x ->
             explode x @
               [char_0x20; char_0x3A; char_0x3D; char_0x20] @
                 explode p @
                   [char_0x28] @
-                    join_source [char_0x2C; char_0x20] (map string_of_aexp es) @
+                    join_source [char_0x2C; char_0x20]
+                      (map (string_of_exp zero_nat) es) @
                       [char_0x29])
     | Return (Some e) ->
         [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E;
           char_0x20] @
-          string_of_aexp e
+          string_of_exp zero_nat e
     | Return None ->
         [char_0x72; char_0x65; char_0x74; char_0x75; char_0x72; char_0x6E]
     | Restore ->
@@ -4595,40 +4937,35 @@ let rec ectx_spec
     unit_dg_spec_st_for_lifted bounded_semilattice_sup_bot_ivl gs is_bot_pred
       (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
 
-let rec interval_less_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
-
-let rec interval_eq_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) ||
-        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
-
-let rec interval_less_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || less_eq_eint u2 l1);;
-
-let rec interval_eq_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
-
 let rec interval_check_true
-  x0 d = match x0, d with Bc v, d -> v
-    | Not b, d -> interval_check_false b d
+  x0 d = match x0, d with Not b, d -> interval_check_false b d
     | And (b1, b2), d -> interval_check_true b1 d && interval_check_true b2 d
     | Or (b1, b2), d -> interval_check_true b1 d || interval_check_true b2 d
     | Less (a, b), d -> interval_less_true (aval_ivl a d) (aval_ivl b d)
-    | Eqa (a, b), d -> interval_eq_true (aval_ivl a d) (aval_ivl b d)
+    | Eq (a, b), d -> interval_eq_true (aval_ivl a d) (aval_ivl b d)
+    | N v, d -> interval_eq_false (aval_ivl (N v) d) (aval_ivl (N zero_int) d)
+    | V v, d -> interval_eq_false (aval_ivl (V v) d) (aval_ivl (N zero_int) d)
+    | Plus (v, va), d ->
+        interval_eq_false (aval_ivl (Plus (v, va)) d) (aval_ivl (N zero_int) d)
+    | Minus (v, va), d ->
+        interval_eq_false (aval_ivl (Minus (v, va)) d) (aval_ivl (N zero_int) d)
+    | Times (v, va), d ->
+        interval_eq_false (aval_ivl (Times (v, va)) d) (aval_ivl (N zero_int) d)
 and interval_check_false
-  x0 d = match x0, d with Bc v, d -> not v
-    | Not b, d -> interval_check_true b d
+  x0 d = match x0, d with Not b, d -> interval_check_true b d
     | And (b1, b2), d -> interval_check_false b1 d || interval_check_false b2 d
     | Or (b1, b2), d -> interval_check_false b1 d && interval_check_false b2 d
     | Less (a, b), d -> interval_less_false (aval_ivl a d) (aval_ivl b d)
-    | Eqa (a, b), d -> interval_eq_false (aval_ivl a d) (aval_ivl b d);;
+    | Eq (a, b), d -> interval_eq_false (aval_ivl a d) (aval_ivl b d)
+    | N v, d -> interval_eq_true (aval_ivl (N v) d) (aval_ivl (N zero_int) d)
+    | V v, d -> interval_eq_true (aval_ivl (V v) d) (aval_ivl (N zero_int) d)
+    | Plus (v, va), d ->
+        interval_eq_true (aval_ivl (Plus (v, va)) d) (aval_ivl (N zero_int) d)
+    | Minus (v, va), d ->
+        interval_eq_true (aval_ivl (Minus (v, va)) d) (aval_ivl (N zero_int) d)
+    | Times (v, va), d ->
+        interval_eq_true (aval_ivl (Times (v, va)) d)
+          (aval_ivl (N zero_int) d);;
 
 let rec analyse_sign_env_for
   gs p =
@@ -5158,20 +5495,21 @@ let rec pretty_source_lines_com
     | n, Assign (x, e) ->
         [source_indent n @
            explode x @
-             [char_0x20; char_0x3A; char_0x3D; char_0x20] @ string_of_aexp e]
+             [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+               string_of_exp zero_nat e]
     | n, Check c ->
         [source_indent n @
            [char_0x5F; char_0x5F; char_0x76; char_0x6F; char_0x62; char_0x6C;
              char_0x69; char_0x6E; char_0x74; char_0x5F; char_0x63; char_0x68;
              char_0x65; char_0x63; char_0x6B; char_0x28] @
-             string_of_bexp c @ [char_0x29]]
+             string_of_exp zero_nat c @ [char_0x29]]
     | n, Seq (c1, c2) ->
         append_last [char_0x3B] (pretty_source_lines_com n c1) @
           pretty_source_lines_com n c2
     | n, If (b, c1, c2) ->
         [source_indent n @
            [char_0x69; char_0x66; char_0x20; char_0x28] @
-             string_of_bexp b @ [char_0x29; char_0x20; char_0x7B]] @
+             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
           pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
             c1 @
             [source_indent n @
@@ -5184,7 +5522,7 @@ let rec pretty_source_lines_com
         [source_indent n @
            [char_0x77; char_0x68; char_0x69; char_0x6C; char_0x65; char_0x20;
              char_0x28] @
-             string_of_bexp b @ [char_0x29; char_0x20; char_0x7B]] @
+             string_of_exp zero_nat b @ [char_0x29; char_0x20; char_0x7B]] @
           pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2))) c @
             [source_indent n @ [char_0x7D]]
     | n, Call (dst, p, es) ->
@@ -5389,8 +5727,6 @@ let rec entry_state_check_report_prog
 let rec analyse_interval_entry_state
   p = entry_state_check_report_prog prog_main_name p;;
 
-let rec is_bot_sign a = is_bottom_sign a;;
-
 let rec analyse_interval_td_report_with_state
   p = interval_td_check_report_with_state (declared_global p) prog_main_name p;;
 
@@ -5404,22 +5740,22 @@ module Analyse : sig
   val analyse :
     analysis_kind ->
       unit Core.imp_prog_ext ->
-        (Core.cfg_node * (Core.bexp * Core.check_result)) list
+        (Core.cfg_node * (Core.exp * Core.check_result)) list
   val analyse_ctx :
     analysis_kind ->
       context_mode ->
         unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.bexp * Core.check_result)) list) option
+          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
   val analyse_with_state :
     analysis_kind ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node *
-          (Core.bexp * (Core.check_result * (string -> abstract_value)))) list
+          (Core.exp * (Core.check_result * (string -> abstract_value)))) list
   val analyse_with_solver :
     analysis_kind ->
       solver_choice ->
         unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.bexp * Core.check_result)) list) option
+          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
 end = struct
 
 type context_mode = Ctx_None | Ctx_EntryState;;
@@ -5529,7 +5865,7 @@ module Analysis_GraphViz : sig
           Core.com ->
             (Core.cfg_node -> graphviz_node_annotation option) -> string
   val check_result_annotation :
-    Core.check_result -> Core.bexp -> graphviz_node_annotation
+    Core.check_result -> Core.exp -> graphviz_node_annotation
   val raw_cfg_canonical_text_lit :
     (string -> unit Core.proc_decl_ext option) ->
       string list ->
@@ -6239,7 +6575,7 @@ let rec string_of_action
     | Core.EA_Assign (x, a) ->
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20] @
-            Core.string_of_aexp a
+            Core.string_of_exp Core.zero_nat a
     | Core.EA_Special (Core.Nondet_Int, x) ->
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
@@ -6253,32 +6589,32 @@ let rec string_of_action
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
             Core.char_0x6D; Core.char_0x69; Core.char_0x6E; Core.char_0x28] @
-            Core.string_of_aexp a @
+            Core.string_of_exp Core.zero_nat a @
               [Core.char_0x2C; Core.char_0x20] @
-                Core.string_of_aexp b @ [Core.char_0x29]
+                Core.string_of_exp Core.zero_nat b @ [Core.char_0x29]
     | Core.EA_Special (Core.Max (a, b), x) ->
         Core.explode x @
           [Core.char_0x20; Core.char_0x3A; Core.char_0x3D; Core.char_0x20;
             Core.char_0x6D; Core.char_0x61; Core.char_0x78; Core.char_0x28] @
-            Core.string_of_aexp a @
+            Core.string_of_exp Core.zero_nat a @
               [Core.char_0x2C; Core.char_0x20] @
-                Core.string_of_aexp b @ [Core.char_0x29]
+                Core.string_of_exp Core.zero_nat b @ [Core.char_0x29]
     | Core.EA_Assume b ->
-        [Core.char_0x5B] @ Core.string_of_bexp b @ [Core.char_0x5D]
+        [Core.char_0x5B] @ Core.string_of_exp Core.zero_nat b @ [Core.char_0x5D]
     | Core.EA_AssumeNot b ->
         [Core.char_0x21; Core.char_0x5B] @
-          Core.string_of_bexp b @ [Core.char_0x5D]
+          Core.string_of_exp Core.zero_nat b @ [Core.char_0x5D]
     | Core.EA_Ret (None, p) ->
         [Core.char_0x72; Core.char_0x65; Core.char_0x74; Core.char_0x75;
           Core.char_0x72; Core.char_0x6E]
     | Core.EA_Ret (Some e, p) ->
         [Core.char_0x72; Core.char_0x65; Core.char_0x74; Core.char_0x75;
           Core.char_0x72; Core.char_0x6E; Core.char_0x20] @
-          Core.string_of_aexp e
+          Core.string_of_exp Core.zero_nat e
     | Core.EA_Check cnd ->
         [Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
           Core.char_0x6B; Core.char_0x28] @
-          Core.string_of_bexp cnd @ [Core.char_0x29];;
+          Core.string_of_exp Core.zero_nat cnd @ [Core.char_0x29];;
 
 let rec source_action_label
   g a = (match a with Core.EA_Nop -> string_of_action a
@@ -6287,14 +6623,14 @@ let rec source_action_label
               then [Core.char_0x72; Core.char_0x65; Core.char_0x74;
                      Core.char_0x20; Core.char_0x3A; Core.char_0x3D;
                      Core.char_0x20] @
-                     Core.string_of_aexp e
+                     Core.string_of_exp Core.zero_nat e
               else string_of_action a)
           | Core.EA_Special (_, _) -> string_of_action a
-          | Core.EA_Assume aa -> Core.string_of_bexp aa
+          | Core.EA_Assume aa -> Core.string_of_exp Core.zero_nat aa
           | Core.EA_AssumeNot b ->
             [Core.char_0x6E; Core.char_0x6F; Core.char_0x74; Core.char_0x20;
               Core.char_0x28] @
-              Core.string_of_bexp b @ [Core.char_0x29]
+              Core.string_of_exp Core.zero_nat b @ [Core.char_0x29]
           | Core.EA_Ret (_, p) ->
             (if Core.equal_cfg_nodea (Core.cfg_entry g) (Core.FunctionEntry p)
               then [Core.char_0x74; Core.char_0x65; Core.char_0x72;
@@ -6327,7 +6663,7 @@ let rec analysis_edge_attrs
                    [Core.char_0x28] @
                      (let Core.CallEdge (_, _, es) = a in
                        Core.join_source [Core.char_0x2C; Core.char_0x20]
-                         (Core.map Core.string_of_aexp es)) @
+                         (Core.map (Core.string_of_exp Core.zero_nat) es)) @
                        [Core.char_0x29] @ dq
       | CombineEdge (_, dst, ret) ->
         [Core.char_0x73; Core.char_0x74; Core.char_0x79; Core.char_0x6C;
@@ -6783,7 +7119,7 @@ let rec canonical_edge_kind_text
             [Core.char_0x28] @
               (let Core.CallEdge (_, _, es) = a in
                 Core.join_source [Core.char_0x2C; Core.char_0x20]
-                  (Core.map Core.string_of_aexp es)) @
+                  (Core.map (Core.string_of_exp Core.zero_nat) es)) @
                 [Core.char_0x29]
       | CombineEdge (_, dst, ret) ->
         [Core.char_0x63; Core.char_0x6F; Core.char_0x6D; Core.char_0x62;
@@ -6877,7 +7213,7 @@ let rec check_result_annotation
         Node_Annotation
           ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
              Core.char_0x6B; Core.char_0x20] @
-             Core.string_of_bexp cnd,
+             Core.string_of_exp Core.zero_nat cnd,
             [Core.char_0x73; Core.char_0x68; Core.char_0x61; Core.char_0x70;
               Core.char_0x65; Core.char_0x3D; Core.char_0x62; Core.char_0x6F;
               Core.char_0x78; Core.char_0x2C; Core.char_0x73; Core.char_0x74;
@@ -6897,7 +7233,7 @@ let rec check_result_annotation
         Node_Annotation
           ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
              Core.char_0x6B; Core.char_0x20] @
-             Core.string_of_bexp cnd @
+             Core.string_of_exp Core.zero_nat cnd @
                [Core.char_0x20; Core.char_0x5B; Core.char_0x52; Core.char_0x45;
                  Core.char_0x46; Core.char_0x55; Core.char_0x54; Core.char_0x45;
                  Core.char_0x44; Core.char_0x5D],
@@ -6918,7 +7254,7 @@ let rec check_result_annotation
         Node_Annotation
           ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
              Core.char_0x6B; Core.char_0x20] @
-             Core.string_of_bexp cnd @
+             Core.string_of_exp Core.zero_nat cnd @
                [Core.char_0x20; Core.char_0x5B; Core.char_0x75; Core.char_0x6E;
                  Core.char_0x6B; Core.char_0x6E; Core.char_0x6F; Core.char_0x77;
                  Core.char_0x6E; Core.char_0x5D],
@@ -6942,7 +7278,7 @@ end;; (*struct Analysis_GraphViz*)
 module Example_State_Report_GraphViz : sig
   val string_of_abstract_value : Analyse.abstract_value -> Core.char list
   val program_vars : unit Core.imp_prog_ext -> string list
-  val bexp_vnames_list : Core.bexp -> string list
+  val exp_vnames_list : Core.exp -> string list
   val full_state_dot_auto :
     Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
   val state_report_dot_auto :
@@ -6970,7 +7306,7 @@ let rec report_vars
   report =
     Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
       (Core.sup_seta Core.equal_literal
-        (Core.image (fun (_, (c, (_, _))) -> Core.bexp_vnames c)
+        (Core.image (fun (_, (c, (_, _))) -> Core.exp_vnames c)
           (Core.Set report)));;
 
 let rec program_vars
@@ -6997,9 +7333,9 @@ let rec analyse_env_for
               (match env v with Core.Bot -> Core.bot_fun Core.bot_ivl
                 | Core.Lifted a -> Core.id a))));;
 
-let rec bexp_vnames_list
+let rec exp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
-        (Core.bexp_vnames b);;
+        (Core.exp_vnames b);;
 
 let rec entry_state_env_at
   gs is_bot_pred pi ps mnm main =

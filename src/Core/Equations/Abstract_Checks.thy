@@ -49,7 +49,7 @@ lemma SPIKE_sup_fin_eval: "Sup_fin {Check_Proved, Check_Proved} = Check_Proved" 
 section \<open>Expression abstraction over a state, given numeric queries\<close>
 
 text \<open>
-  Adds the one capability every domain with an \<open>aexp\<close> evaluator already has:
+  Adds the one capability every domain with an \<open>exp\<close> evaluator already has:
   \<open>aval_abs_sound\<close>-shaped soundness, the same reuse point
   \<^theory>\<open>Voblint_Core.Abstract_Domain\<close>'s \<open>backward_domain\<close> locale takes for its own
   \<open>aval_abs\<close> parameter.
@@ -63,7 +63,7 @@ locale abstract_expression_domain =
     and eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
   + fixes gamma_state :: "'d \<Rightarrow> store set"
-    and aval_abs :: "aexp \<Rightarrow> 'd \<Rightarrow> 'a"
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
   assumes aval_abs_sound[intro]:
       "s \<in> gamma_state d \<Longrightarrow> aval e s \<in> gamma_num (aval_abs e d)"
 
@@ -110,24 +110,22 @@ locale abstract_check_domain =
     and eq_true :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and eq_false :: "'a \<Rightarrow> 'a \<Rightarrow> bool"
     and gamma_state :: "'d \<Rightarrow> store set"
-    and aval_abs :: "aexp \<Rightarrow> 'd \<Rightarrow> 'a"
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
 begin
 
-subsection \<open>Mutual truth/falsity judgments over \<^typ>\<open>bexp\<close>\<close>
+subsection \<open>Mutual truth/falsity judgments over \<^typ>\<open>exp\<close>\<close>
 
 text \<open>
   \<open>check_true\<close>/\<open>check_false\<close> are mutually recursive so \<open>Not\<close> can go through
   definitely-false reasoning on its argument rather than a one-sided negation
   of \<open>check_true\<close> (which would be unsound: "not provably true" is not
-  "provably false"). Both may be \<^const>\<open>False\<close> on the same \<open>bexp\<close>/state pair;
+  "provably false"). Both may be \<^const>\<open>False\<close> on the same \<open>exp\<close>/state pair;
   that combination means unknown, not refuted.
 \<close>
 
-fun check_true :: "bexp \<Rightarrow> 'd \<Rightarrow> bool"
-  and check_false :: "bexp \<Rightarrow> 'd \<Rightarrow> bool" where
-    "check_true (Bc v) d = v"
-  | "check_false (Bc v) d = (\<not> v)"
-  | "check_true (Not b) d = check_false b d"
+fun check_true :: "exp \<Rightarrow> 'd \<Rightarrow> bool"
+  and check_false :: "exp \<Rightarrow> 'd \<Rightarrow> bool" where
+    "check_true (Not b) d = check_false b d"
   | "check_false (Not b) d = check_true b d"
   | "check_true (And b1 b2) d = (check_true b1 d \<and> check_true b2 d)"
   | "check_false (And b1 b2) d = (check_false b1 d \<or> check_false b2 d)"
@@ -137,12 +135,94 @@ fun check_true :: "bexp \<Rightarrow> 'd \<Rightarrow> bool"
   | "check_false (Less a b) d = less_false (aval_abs a d) (aval_abs b d)"
   | "check_true (Eq a b) d = eq_true (aval_abs a d) (aval_abs b d)"
   | "check_false (Eq a b) d = eq_false (aval_abs a d) (aval_abs b d)"
+  | "check_true e d = eq_false (aval_abs e d) (aval_abs (N 0) d)"
+  | "check_false e d = eq_true (aval_abs e d) (aval_abs (N 0) d)"
+
+text \<open>Soundness of the arithmetic fallback, proved once and cited by every
+  induction case it covers (\<open>N\<close>/\<open>V\<close>/\<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>).\<close>
+lemma check_true_default_sound:
+  assumes "s \<in> gamma_state d" "eq_false (aval_abs e d) (aval_abs (N 0) d)"
+  shows "truthy (aval e s)"
+proof -
+  have ec: "aval e s \<in> gamma_num (aval_abs e d)" using aval_abs_sound assms(1) by blast
+  have e0: "aval (N 0) s \<in> gamma_num (aval_abs (N 0) d)" using aval_abs_sound assms(1) by blast
+  have "aval e s \<noteq> aval (N 0) s" using eq_false_sound[OF assms(2) ec e0] .
+  then show ?thesis by simp
+qed
+
+lemma check_false_default_sound:
+  assumes "s \<in> gamma_state d" "eq_true (aval_abs e d) (aval_abs (N 0) d)"
+  shows "\<not> truthy (aval e s)"
+proof -
+  have ec: "aval e s \<in> gamma_num (aval_abs e d)" using aval_abs_sound assms(1) by blast
+  have e0: "aval (N 0) s \<in> gamma_num (aval_abs (N 0) d)" using aval_abs_sound assms(1) by blast
+  have "aval e s = aval (N 0) s" using eq_true_sound[OF assms(2) ec e0] .
+  then show ?thesis by simp
+qed
 
 lemma check_true_check_false_sound:
-  "(\<forall>d s. check_true c d \<longrightarrow> s \<in> gamma_state d \<longrightarrow> bval c s) \<and>
-   (\<forall>d s. check_false c d \<longrightarrow> s \<in> gamma_state d \<longrightarrow> \<not> bval c s)"
+  "(\<forall>d s. check_true c d \<longrightarrow> s \<in> gamma_state d \<longrightarrow> truthy (aval c s)) \<and>
+   (\<forall>d s. check_false c d \<longrightarrow> s \<in> gamma_state d \<longrightarrow> \<not> truthy (aval c s))"
 proof (induction c)
-  case (Bc x) then show ?case by simp
+  case (N n)
+  show ?case
+  proof (intro conjI allI impI)
+    fix d s assume ct: "check_true (N n) d" and mem: "s \<in> gamma_state d"
+    have "eq_false (aval_abs (N n) d) (aval_abs (N 0) d)" using ct by simp
+    then show "truthy (aval (N n) s)" using check_true_default_sound[OF mem] by blast
+  next
+    fix d s assume cf: "check_false (N n) d" and mem: "s \<in> gamma_state d"
+    have "eq_true (aval_abs (N n) d) (aval_abs (N 0) d)" using cf by simp
+    then show "\<not> truthy (aval (N n) s)" using check_false_default_sound[OF mem] by blast
+  qed
+next
+  case (V x)
+  show ?case
+  proof (intro conjI allI impI)
+    fix d s assume ct: "check_true (V x) d" and mem: "s \<in> gamma_state d"
+    have "eq_false (aval_abs (V x) d) (aval_abs (N 0) d)" using ct by simp
+    then show "truthy (aval (V x) s)" using check_true_default_sound[OF mem] by blast
+  next
+    fix d s assume cf: "check_false (V x) d" and mem: "s \<in> gamma_state d"
+    have "eq_true (aval_abs (V x) d) (aval_abs (N 0) d)" using cf by simp
+    then show "\<not> truthy (aval (V x) s)" using check_false_default_sound[OF mem] by blast
+  qed
+next
+  case (Plus e1 e2)
+  show ?case
+  proof (intro conjI allI impI)
+    fix d s assume ct: "check_true (Plus e1 e2) d" and mem: "s \<in> gamma_state d"
+    have "eq_false (aval_abs (Plus e1 e2) d) (aval_abs (N 0) d)" using ct by simp
+    then show "truthy (aval (Plus e1 e2) s)" using check_true_default_sound[OF mem] by blast
+  next
+    fix d s assume cf: "check_false (Plus e1 e2) d" and mem: "s \<in> gamma_state d"
+    have "eq_true (aval_abs (Plus e1 e2) d) (aval_abs (N 0) d)" using cf by simp
+    then show "\<not> truthy (aval (Plus e1 e2) s)" using check_false_default_sound[OF mem] by blast
+  qed
+next
+  case (Minus e1 e2)
+  show ?case
+  proof (intro conjI allI impI)
+    fix d s assume ct: "check_true (Minus e1 e2) d" and mem: "s \<in> gamma_state d"
+    have "eq_false (aval_abs (Minus e1 e2) d) (aval_abs (N 0) d)" using ct by simp
+    then show "truthy (aval (Minus e1 e2) s)" using check_true_default_sound[OF mem] by blast
+  next
+    fix d s assume cf: "check_false (Minus e1 e2) d" and mem: "s \<in> gamma_state d"
+    have "eq_true (aval_abs (Minus e1 e2) d) (aval_abs (N 0) d)" using cf by simp
+    then show "\<not> truthy (aval (Minus e1 e2) s)" using check_false_default_sound[OF mem] by blast
+  qed
+next
+  case (Times e1 e2)
+  show ?case
+  proof (intro conjI allI impI)
+    fix d s assume ct: "check_true (Times e1 e2) d" and mem: "s \<in> gamma_state d"
+    have "eq_false (aval_abs (Times e1 e2) d) (aval_abs (N 0) d)" using ct by simp
+    then show "truthy (aval (Times e1 e2) s)" using check_true_default_sound[OF mem] by blast
+  next
+    fix d s assume cf: "check_false (Times e1 e2) d" and mem: "s \<in> gamma_state d"
+    have "eq_true (aval_abs (Times e1 e2) d) (aval_abs (N 0) d)" using cf by simp
+    then show "\<not> truthy (aval (Times e1 e2) s)" using check_false_default_sound[OF mem] by blast
+  qed
 next
   case (Not c) then show ?case by auto
 next
@@ -158,11 +238,11 @@ next
 qed
 
 lemma check_true_sound:
-  "check_true c d \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> bval c s"
+  "check_true c d \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (aval c s)"
   using check_true_check_false_sound by blast
 
 lemma check_false_sound:
-  "check_false c d \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> bval c s"
+  "check_false c d \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
   using check_true_check_false_sound by blast
 
 text \<open>Both judgments holding at once is consistent only if the state itself is
@@ -176,14 +256,14 @@ lemma check_true_false_vacuous:
 proof (rule ccontr)
   assume "gamma_state d \<noteq> {}"
   then obtain s where s: "s \<in> gamma_state d" by blast
-  have "bval c s" using check_true_sound[OF assms(1) s] .
-  moreover have "\<not> bval c s" using check_false_sound[OF assms(2) s] .
+  have "truthy (aval c s)" using check_true_sound[OF assms(1) s] .
+  moreover have "\<not> truthy (aval c s)" using check_false_sound[OF assms(2) s] .
   ultimately show False by blast
 qed
 
 subsection \<open>Executable three-way classification\<close>
 
-definition classify_check :: "bexp \<Rightarrow> 'd \<Rightarrow> check_result" where
+definition classify_check :: "exp \<Rightarrow> 'd \<Rightarrow> check_result" where
   "classify_check c d =
      (if check_true c d then Check_Proved
       else if check_false c d then Check_Refuted
@@ -191,7 +271,7 @@ definition classify_check :: "bexp \<Rightarrow> 'd \<Rightarrow> check_result" 
 
 lemma classify_check_proved:
   assumes "classify_check c d = Check_Proved" and "s \<in> gamma_state d"
-  shows "bval c s"
+  shows "truthy (aval c s)"
 proof -
   have "check_true c d" using assms(1) unfolding classify_check_def by (auto split: if_splits)
   then show ?thesis using assms(2) check_true_sound by blast
@@ -199,14 +279,14 @@ qed
 
 lemma classify_check_refuted:
   assumes "classify_check c d = Check_Refuted" and "s \<in> gamma_state d"
-  shows "\<not> bval c s"
+  shows "\<not> truthy (aval c s)"
 proof -
   have "check_false c d" using assms(1) unfolding classify_check_def by (auto split: if_splits)
   then show ?thesis using assms(2) check_false_sound by blast
 qed
 
-text \<open>\<open>Check_Unknown\<close> carries no semantic claim: no lemma concludes \<open>bval c s\<close>
-  or its negation from it, by design.\<close>
+text \<open>\<open>Check_Unknown\<close> carries no semantic claim: no lemma concludes \<open>truthy
+  (aval c s)\<close> or its negation from it, by design.\<close>
 
 subsection \<open>Node-indexed bridge to \<^const>\<open>checks_proven\<close>\<close>
 
@@ -228,7 +308,7 @@ proof (rule checks_provenI)
     using checked ck' unfolding abstract_checks_proven_def by blast
   have in_gamma: "s \<in> gamma_state (env v)"
     using node_sound[OF ck'] mem by blast
-  show "bval c s"
+  show "truthy (aval c s)"
     using check_true_sound[OF proven in_gamma] .
 qed
 
@@ -243,16 +323,16 @@ text \<open>
   siblings, or \<open>abstract_check_domain.classify_check\<close> generically). Entries
   are read directly off \<^const>\<open>intra\<close> through the same deterministic order
   \<^const>\<open>cfg_intra_list\<close> already gives the TD bridge, rather than sorting
-  \<^typ>\<open>pp\<close> or \<^typ>\<open>bexp\<close> values by hand: a compiled \<^const>\<open>checks\<close> table has
+  \<^typ>\<open>pp\<close> or \<^typ>\<open>exp\<close> values by hand: a compiled \<^const>\<open>checks\<close> table has
   exactly the same \<^const>\<open>EA_Check\<close> edges as its source, by construction, so
   this report is a second view of that one representation, not a parallel
   table.
 \<close>
 
-type_synonym check_report_entry = "pp \<times> bexp \<times> check_result"
+type_synonym check_report_entry = "pp \<times> exp \<times> check_result"
 
 definition classify_checks ::
-    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (bexp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> check_report_entry list" where
+    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> check_report_entry list" where
   "classify_checks g env classify =
      map (\<lambda>(u, a, v). (u, ea_check_cond a, classify (ea_check_cond a) (env u)))
        (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
@@ -285,30 +365,30 @@ theorem classify_checks_proved_sound:
   fixes gamma_state :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Proved) \<in> set (classify_checks g env classify)"
-    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> bval c s"
+    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (aval c s)"
     and node_sound: "reach v \<le> gamma_state (env v)"
-  shows "\<forall>s \<in> reach v. bval c s"
+  shows "\<forall>s \<in> reach v. truthy (aval c s)"
 proof
   fix s assume s: "s \<in> reach v"
   have "classify c (env v) = Check_Proved"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Proved env classify] by auto
   moreover have "s \<in> gamma_state (env v)" using node_sound s by blast
-  ultimately show "bval c s" using classify_proved by blast
+  ultimately show "truthy (aval c s)" using classify_proved by blast
 qed
 
 theorem classify_checks_refuted_sound:
   fixes gamma_state :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
-    and classify_refuted: "\<And>d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> bval c s"
+    and classify_refuted: "\<And>d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
     and node_sound: "reach v <= gamma_state (env v)"
-  shows "ALL s : reach v. ~ bval c s"
+  shows "ALL s : reach v. ~ truthy (aval c s)"
 proof
   fix s assume s: "s : reach v"
   have "classify c (env v) = Check_Refuted"
     using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
   moreover have "s : gamma_state (env v)" using node_sound s by blast
-  ultimately show "~ bval c s" using classify_refuted by blast
+  ultimately show "~ truthy (aval c s)" using classify_refuted by blast
 qed
 
 text \<open>
@@ -322,7 +402,7 @@ text \<open>
 \<close>
 
 definition classify_checks_with_state ::
-    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (bexp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> 's) list" where
+    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> 's) list" where
   "classify_checks_with_state g env classify =
      map (\<lambda>(u, c, r). (u, c, r, env u)) (classify_checks g env classify)"
 

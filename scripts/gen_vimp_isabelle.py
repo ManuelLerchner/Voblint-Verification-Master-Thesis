@@ -9,7 +9,7 @@ Generated theory has no notion of `imp_prog`: whole-program assembly
 VIMP_Notation.thy's own hand-written territory, matching
 `special: program_structure`'s scope in grammar/vimp.yaml and
 gen_vimp_menhir.py's own hand-written gen_program_rule. VIMP_Notation.thy
-imports this theory and calls `Vimp_Grammar_Tr.stmts_opt_tr`/`aexp_tr`/
+imports this theory and calls `Vimp_Grammar_Tr.stmts_opt_tr`/`exp_tr`/
 `formals_of`/etc. directly.
 
 Two lowering rules stay hand-written inside `Vimp_Grammar_Tr` (as fixed
@@ -17,7 +17,7 @@ text this module emits, not derived from grammar/vimp.yaml's structured
 metadata): Isabelle's binary Num literal decoding (`dest_num`/
 `read_num_const`, no Menhir analogue, since Isabelle's own numeral literals
 compile to a binary One/Bit0/Bit1 encoding, not a plain digit string) and
-the compositional unary-minus rule. `_aexp_zero`/`_aexp_one` and
+the compositional unary-minus rule. `_exp_zero`/`_exp_one` and
 `_stmt_call0`/`_stmt_callret0` (gen_isabelle_extra_syntax/_actions) are
 Isabelle-target realizations of a canonical rule Isabelle's own mixfix
 grammar can't express directly -- see those functions' comments.
@@ -56,8 +56,7 @@ MIXFIX_ESCAPE = {"(": "'(", ")": "')", "_": "'_"}
 # gen_program_rule rather than forcing "main" selection through the
 # generic per-production template.
 NONTERMINAL = {
-    "aexp": "imp2_aexp",
-    "bexp": "imp2_bexp",
+    "exp": "imp2_exp",
     "stmt": "imp2_stmt",
     "stmts": "imp2_stmts",
     "stmts_opt": "imp2_stmts_opt",
@@ -229,16 +228,16 @@ def precedence_of(g: dict, token: str):
 
 # -- Syntax line rendering ------------------------------------------------
 
-ATOM_PRIORITY = 1000  # aexp/bexp productions with no listed operator: unconditionally embeddable
+ATOM_PRIORITY = 1000  # exp productions with no listed operator: unconditionally embeddable
 
 # `stmt` has no precedence-climbing structure at all -- every stmt
 # production sits at one flat level (matching VIMP_Notation.thy's own
 # convention: every `_imp2_*` stmt production ends in "... 61"), since
 # statements combine only via ';' (stmts' own _one/_seq priority, a
-# separate nonterminal), never as each other's operands. An aexp/bexp/
-# actuals argument gets 0 (accepts any expression of that type
-# unconditionally -- correct here since parens/self-priority already make
-# every aexp/bexp producible at any argument priority).
+# separate nonterminal), never as each other's operands. An exp/actuals
+# argument gets 0 (accepts any expression of that type unconditionally --
+# correct here since parens/self-priority already make every exp
+# producible at any argument priority).
 #
 # An `id` argument is NOT uniformly ATOM_PRIORITY: a bare 1000 for every
 # id slot was tried and is genuinely wrong, not just non-matching style --
@@ -269,10 +268,10 @@ def render_syntax_line(g: dict, prod: dict) -> str:
     template = TEMPLATE_OVERRIDE.get(prod["name"]) or mixfix_template(g, rhs)
     arg_positions = [i for i, s in enumerate(rhs) if is_arg_symbol(s)]
 
-    # A production's own `precedence:` field (e.g. aexp_uminus's UMINUS)
+    # A production's own `precedence:` field (e.g. exp_uminus's UMINUS)
     # overrides scanning its rhs tokens against the table -- required
     # whenever an rhs token is itself ambiguous between levels (MINUS
-    # appears in both the binary PLUS/MINUS level and, via aexp_uminus's
+    # appears in both the binary PLUS/MINUS level and, via exp_uminus's
     # override, the unary NOT/UMINUS level; scanning rhs tokens alone
     # would silently pick the binary level for the unary production too).
     # Confirmed by an actual failed load test, not just by inspection: a
@@ -290,10 +289,10 @@ def render_syntax_line(g: dict, prod: dict) -> str:
             prio = f" [{level}] {level}"
         else:
             prio = f" {level}"
-    elif result_nt in ("aexp", "bexp"):
-        # A recursive self-typed argument (the inner aexp/bexp in a paren
+    elif result_nt == "exp":
+        # A recursive self-typed argument (the inner exp in a paren
         # production) needs an explicit, unconstrained [0] so it can hold
-        # anything; a foreign-typed argument (aexp_var's `id`) needs no
+        # anything; a foreign-typed argument (exp_var's `id`) needs no
         # bracket at all -- it's outside this priority chain entirely.
         recursive_args = [i for i in arg_positions if rhs[i] == result_nt]
         if recursive_args:
@@ -327,7 +326,7 @@ def gen_list_syntax(prod: dict) -> list:
       accumulator-first (`imp2_stmts => imp2_stmt => imp2_stmts`) -- matches
       how Seq naturally left-associates a sequence.
     - `constructor:` absent (actuals/formals/ids): right-recursive cons,
-      `_one`/`_cons`, item-first (`imp2_aexp => imp2_actuals => imp2_actuals`)
+      `_one`/`_cons`, item-first (`imp2_exp => imp2_actuals => imp2_actuals`)
       -- matches how the hand-written actuals_tr/formals_of/names_of already
       pattern-match (item, then the rest of the list).
 
@@ -389,8 +388,8 @@ def gen_list_syntax(prod: dict) -> list:
 
 def gen_isabelle_extra_syntax() -> list:
     return [
-        '  "_aexp_zero" :: imp2_aexp ("0" 1000)',
-        '  "_aexp_one" :: imp2_aexp ("1" 1000)',
+        '  "_exp_zero" :: imp2_exp ("0" 1000)',
+        '  "_exp_one" :: imp2_exp ("1" 1000)',
         # Both ids are id_position now (see isabelle_type/ident_role):
         # first is the zero-arg callret's return TARGET (variable role),
         # second the callee (callee role) -- both carry position, only
@@ -402,9 +401,9 @@ def gen_isabelle_extra_syntax() -> list:
 
 def gen_isabelle_extra_actions() -> dict:
     return {
-        "aexp": [
-            '(Const ("_aexp_zero", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 0',
-            '(Const ("_aexp_one", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 1',
+        "exp": [
+            '(Const ("_exp_zero", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 0',
+            '(Const ("_exp_one", _), []) => K c_N $ HOLogic.mk_number HOLogic.intT 1',
         ],
         "stmt": [
             f'(Const ("_stmt_call0", _), [x0]) => K c_Call $ (K c_None) $ (HOLogic.mk_literal (dest_id_position ({IDENT_MARKUP["callee"]}) ctxt x0)) $ K c_Nil',
@@ -414,12 +413,12 @@ def gen_isabelle_extra_actions() -> dict:
 
 
 def gen_syntax_block(g: dict) -> str:
-    # `special:` productions (aexp_num, aexp_uminus) still need a mixfix
+    # `special:` productions (exp_num, exp_uminus) still need a mixfix
     # syntax line -- the mixfix TEMPLATE is fully mechanical from rhs/
     # precedence metadata; only the ACTION (parse_translation) is hand-
     # written for these. An earlier version filtered them out here too,
     # matching the parse_translation-side skip -- wrong: without
-    # `_aexp_num`/`_aexp_uminus` declared, no numeral or unary-minus
+    # `_exp_num`/`_exp_uminus` declared, no numeral or unary-minus
     # expression parses at all, which a real load test caught (every
     # `value` command touching a numeral failed with "Inner syntax
     # error"). `program_structure`'s production (`program`) doesn't need
@@ -456,16 +455,16 @@ def gen_syntax_block(g: dict) -> str:
 # not derivable from grammar/vimp.yaml -- same status as
 # gen_vimp_menhir.py's `Voblint_CLI.Core.` qualification prefix.
 TR_CONST = {
+    "N": "VIMP_Syntax.N",
     "V": "VIMP_Syntax.V",
-    "Plus": "VIMP_Syntax.aexp.Plus",
-    "Minus": "VIMP_Syntax.aexp.Minus",
-    "Times": "VIMP_Syntax.aexp.Times",
-    "Bc": "VIMP_Syntax.Bc",
-    "Less": "VIMP_Syntax.bexp.Less",
-    "Eqa": "VIMP_Syntax.bexp.Eq",
-    "Not": "VIMP_Syntax.bexp.Not",
-    "And": "VIMP_Syntax.bexp.And",
-    "Or": "VIMP_Syntax.bexp.Or",
+    "Plus": "VIMP_Syntax.exp.Plus",
+    "Minus": "VIMP_Syntax.exp.Minus",
+    "Times": "VIMP_Syntax.exp.Times",
+    "Less": "VIMP_Syntax.exp.Less",
+    "Eq": "VIMP_Syntax.exp.Eq",
+    "Not": "VIMP_Syntax.exp.Not",
+    "And": "VIMP_Syntax.exp.And",
+    "Or": "VIMP_Syntax.exp.Or",
     "SKIP": "VIMP_Proc.com.SKIP",
     "Seq": "VIMP_Proc.com.Seq",
     "Assign": "VIMP_Proc.com.Assign",
@@ -481,8 +480,8 @@ TR_CONST = {
 # re-quoting the literal string keeps every occurrence of a given
 # constructor spelled identically, one string constant per constructor.
 CTOR_VAL = {
-    "V": "c_V", "Plus": "c_Plus", "Minus": "c_Minus", "Times": "c_Times",
-    "Bc": "c_Bc", "Less": "c_Less", "Eqa": "c_Eq", "Not": "c_Not",
+    "N": "c_N", "V": "c_V", "Plus": "c_Plus", "Minus": "c_Minus", "Times": "c_Times",
+    "Less": "c_Less", "Eq": "c_Eq", "Not": "c_Not",
     "And": "c_And", "Or": "c_Or",
     "SKIP": "c_SKIP", "Seq": "c_Seq", "Assign": "c_Assign",
     "Return": "c_Return", "Check": "c_Check", "If": "c_If", "While": "c_While",
@@ -495,8 +494,7 @@ CTOR_VAL = {
 # at all -- it's part of VIMP_Notation.thy's hand-written program_structure
 # territory, which calls Vimp_Grammar_Tr.formals_of directly.
 TR_FN = {
-    "aexp": "aexp_tr",
-    "bexp": "bexp_tr",
+    "exp": "exp_tr",
     "stmt": "stmt_tr",
     "stmts": "stmts_tr",
     "stmts_opt": "stmts_opt_tr",
@@ -532,7 +530,7 @@ def render_lower_arg_isabelle(prod: dict, arg: dict, binds: dict, raw_idents: bo
     """`raw_idents` covers the one real ambiguity in this rendering: whether
     an IDENT-typed slot becomes a HOL string literal immediately (every
     `{ctor: ..., args: [...]}` site -- the result feeds straight into an
-    aexp/bexp/stmt HOL constructor) or stays a plain SML string
+    exp/stmt HOL constructor) or stays a plain SML string
     (`{tuple: [...]}`'s sole use, function_decl -- its one caller is
     `special: program_structure`, hand-written code that partitions by name
     equality and needs a raw string, matching how gen_vimp_menhir.py's own
@@ -555,6 +553,8 @@ def render_lower_arg_isabelle(prod: dict, arg: dict, binds: dict, raw_idents: bo
         return "K c_None"
     if "literal" in arg:
         return "@{term True}" if arg["literal"] else "@{term False}"
+    if "int" in arg:
+        return f"HOLogic.mk_number HOLogic.intT {arg['int']}"
     raise ValueError(f"unrecognized lower arg shape: {arg}")
 
 
@@ -680,16 +680,15 @@ def indent(text: str, prefix: str = "  ") -> str:
 VAL_DECLS = """\
 val c_N      = "VIMP_Syntax.N"
 val c_V      = "VIMP_Syntax.V"
-val c_Plus   = "VIMP_Syntax.aexp.Plus"
-val c_Minus  = "VIMP_Syntax.aexp.Minus"
-val c_Times  = "VIMP_Syntax.aexp.Times"
+val c_Plus   = "VIMP_Syntax.exp.Plus"
+val c_Minus  = "VIMP_Syntax.exp.Minus"
+val c_Times  = "VIMP_Syntax.exp.Times"
 
-val c_Bc     = "VIMP_Syntax.Bc"
-val c_Less   = "VIMP_Syntax.bexp.Less"
-val c_Eq     = "VIMP_Syntax.bexp.Eq"
-val c_Not    = "VIMP_Syntax.bexp.Not"
-val c_And    = "VIMP_Syntax.bexp.And"
-val c_Or     = "VIMP_Syntax.bexp.Or"
+val c_Less   = "VIMP_Syntax.exp.Less"
+val c_Eq     = "VIMP_Syntax.exp.Eq"
+val c_Not    = "VIMP_Syntax.exp.Not"
+val c_And    = "VIMP_Syntax.exp.And"
+val c_Or     = "VIMP_Syntax.exp.Or"
 
 val c_SKIP   = "VIMP_Proc.com.SKIP"
 val c_Assign = "VIMP_Proc.com.Assign"
@@ -769,34 +768,33 @@ fun dest_id_position report_markup ctxt (Const ("_constrain", _) $ Free (s, _) $
   | dest_id_position _ _ (Free (s, _)) = s
   | dest_id_position _ _ t = raise TERM ("Vimp_Grammar_Tr: dest_id_position", [t])"""
 
-AEXP_SPECIALS = [
-    '(Const ("_aexp_num", _), [n]) =>\n'
+EXP_SPECIALS = [
+    '(Const ("_exp_num", _), [n]) =>\n'
     '           K c_N $ HOLogic.mk_number HOLogic.intT (read_num_const n)',
-    '(Const ("_aexp_uminus", _), [a]) =>\n'
+    '(Const ("_exp_uminus", _), [a]) =>\n'
     '           (case Term.strip_comb a of\n'
-    '              (Const ("_aexp_num", _), [n]) => neg_num (read_num_const n)\n'
-    '            | (Const ("_aexp_zero", _), []) =>\n'
+    '              (Const ("_exp_num", _), [n]) => neg_num (read_num_const n)\n'
+    '            | (Const ("_exp_zero", _), []) =>\n'
     '                K c_N $ HOLogic.mk_number HOLogic.intT 0\n'
-    '            | (Const ("_aexp_one", _), []) => neg_num 1\n'
+    '            | (Const ("_exp_one", _), []) => neg_num 1\n'
     '            | _ =>\n'
-    '                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ aexp_tr ctxt a)',
+    '                K c_Minus $ (K c_N $ HOLogic.mk_number HOLogic.intT 0) $ exp_tr ctxt a)',
 ]
 
 
 def gen_grammar_tr_structure(g: dict) -> str:
-    """The `Vimp_Grammar_Tr` ML structure body: aexp_tr/bexp_tr/actuals_tr
-    each stand alone (aexp_tr calls only itself; bexp_tr and actuals_tr
-    call the already-defined aexp_tr), while stmts_tr/stmts_opt_tr/stmt_tr
-    form one genuine mutual-recursion cycle (stmt_tr -> stmts_opt_tr ->
-    stmts_tr -> stmt_tr) and must share one `fun ... and ...` chain.
-    formals_of/names_of stand alone too (IDENT items only, no recursion
-    into the rest). This shape mirrors VIMP_Notation.thy's own pre-cutover
-    structure (aexp_tr/bexp_tr/actuals_tr separate, pbody_tr+stmts_tr+
-    stmt_tr+com_tr one chain, names_of/formals_of separate) -- not
-    arbitrary, just what SML's mutual-recursion rules require here."""
+    """The `Vimp_Grammar_Tr` ML structure body: exp_tr/actuals_tr each
+    stand alone (exp_tr calls only itself; actuals_tr calls the
+    already-defined exp_tr), while stmts_tr/stmts_opt_tr/stmt_tr form one
+    genuine mutual-recursion cycle (stmt_tr -> stmts_opt_tr -> stmts_tr ->
+    stmt_tr) and must share one `fun ... and ...` chain. formals_of/names_of
+    stand alone too (IDENT items only, no recursion into the rest). This
+    shape mirrors VIMP_Notation.thy's own pre-cutover structure (aexp_tr/
+    bexp_tr/actuals_tr separate, pbody_tr+stmts_tr+stmt_tr+com_tr one chain,
+    names_of/formals_of separate) -- not arbitrary, just what SML's
+    mutual-recursion rules require here."""
     extra_actions = gen_isabelle_extra_actions()
-    aexp_body = gen_tr_function(g, "aexp", AEXP_SPECIALS + extra_actions["aexp"])
-    bexp_body = gen_tr_function(g, "bexp")
+    exp_body = gen_tr_function(g, "exp", EXP_SPECIALS + extra_actions["exp"])
     stmt_body = gen_tr_function(g, "stmt", extra_actions["stmt"])
 
     list_by_name = {p["name"]: p for p in g["productions"] if p.get("list_of") or p.get("optional_list_of")}
@@ -812,8 +810,7 @@ def gen_grammar_tr_structure(g: dict) -> str:
         VAL_DECLS,
         DEST_NUM,
         DEST_ID_POSITION,
-        f"fun {aexp_body}",
-        f"fun {bexp_body}",
+        f"fun {exp_body}",
         f"fun {actuals_body}",
         stmt_chain,
         f"fun {formals_body}",
@@ -848,7 +845,7 @@ text \\<open>
   and the compositional unary-minus rule (folds a numeral operand into a
   negative \\<open>N\\<close>, otherwise \\<open>Minus (N 0) x\\<close> -- deliberately does NOT cancel a
   nested unary minus; \\<open>--x\\<close> lowers to \\<open>Minus (N 0) (Minus (N 0) (V x))\\<close>,
-  matching the shipped CLI frontend, not to \\<open>x\\<close>). \\<open>_aexp_zero\\<close>/\\<open>_aexp_one\\<close>
+  matching the shipped CLI frontend, not to \\<open>x\\<close>). \\<open>_exp_zero\\<close>/\\<open>_exp_one\\<close>
   and \\<open>_stmt_call0\\<close>/\\<open>_stmt_callret0\\<close> are Isabelle-target realizations of a
   canonical rule that Isabelle's own mixfix grammar cannot express directly:
   \\<open>num_const\\<close> has no derivation for the literal \\<open>0\\<close> or \\<open>1\\<close> (\\<open>Num.num\\<close>'s

@@ -508,7 +508,7 @@ text \<open>
 lemma cone_compatible_etf_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
@@ -523,7 +523,7 @@ qed
 lemma threefold_mono_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
@@ -547,7 +547,7 @@ qed
 lemma cone_compatible_etf_local_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action gs a then local_edge_tree gs (F a) u
@@ -564,7 +564,7 @@ qed
 lemma threefold_mono_local_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action gs a then local_edge_tree gs (F a) u

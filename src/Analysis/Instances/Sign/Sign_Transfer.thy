@@ -8,7 +8,7 @@ section \<open>Sign transfer functions\<close>
 subsection \<open>Abstract assignment\<close>
 
 definition assign_sign ::
-    "vname => aexp => (vname => sign) => (vname => sign)"
+    "vname => exp => (vname => sign) => (vname => sign)"
 where
   "assign_sign x a \<sigma> = \<sigma>(x := aval_sign a \<sigma>)"
 
@@ -51,7 +51,7 @@ definition body_sign :: "pname => (vname => sign) => (vname => sign)" where
   "body_sign p \<sigma> = \<sigma>"
 
 definition return_sign ::
-    "aexp option => pname => (vname => sign) => (vname => sign)"
+    "exp option => pname => (vname => sign) => (vname => sign)"
 where
   "return_sign e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_sign ret_var a \<sigma>)"
 
@@ -103,7 +103,7 @@ definition enter_frame_sign_for ::
   "enter_frame_sign_for gs = enter_frame_D gs STop"
 
 definition enter_sign_for ::
-    "(vname => bool) => vname list => aexp list =>
+    "(vname => bool) => vname list => exp list =>
       sign abs_state => sign abs_state" where
   "enter_sign_for gs = enter_D gs STop aval_sign"
 

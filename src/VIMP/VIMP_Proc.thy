@@ -22,13 +22,13 @@ text \<open>
 
 datatype com =
     SKIP
-  | Assign (assign_var: vname) (assign_rhs: aexp)
-  | Check  (check_cond: bexp)
+  | Assign (assign_var: vname) (assign_rhs: exp)
+  | Check  (check_cond: exp)
   | Seq    (seq_first: com) (seq_second: com)
-  | If     (if_cond: bexp) (if_then: com) (if_else: com)
-  | While  (while_cond: bexp) (while_body: com)
-  | Call   (call_dest: "vname option") (call_proc: pname) (call_args: "aexp list")
-  | Return (return_val: "aexp option")
+  | If     (if_cond: exp) (if_then: com) (if_else: com)
+  | While  (while_cond: exp) (while_body: com)
+  | Call   (call_dest: "vname option") (call_proc: pname) (call_args: "exp list")
+  | Return (return_val: "exp option")
   | Restore
   | Unwind
 
@@ -85,8 +85,8 @@ where
 | Seq1:    "pstep gs \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | Seq2:    "pstep gs \<Pi> (c1, s, frs) (c1', s', frs')
              \<Longrightarrow> pstep gs \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
-| IfTrue:  "bval b s \<Longrightarrow> pstep gs \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
-| IfFalse: "\<not> bval b s \<Longrightarrow> pstep gs \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
+| IfTrue:  "truthy (aval b s) \<Longrightarrow> pstep gs \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
+| IfFalse: "\<not> truthy (aval b s) \<Longrightarrow> pstep gs \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
 | While:   "pstep gs \<Pi> (While b c, s, frs)
                       (If b (Seq c (While b c)) SKIP, s, frs)"
 | Call:    "\<Pi> p = Some decl
@@ -223,19 +223,19 @@ proof -
 qed
 
 lemma pcompletes_IfTrue:
-  "bval b s \<Longrightarrow> pcompletes gs \<Pi> c1 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
+  "truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> c1 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
   unfolding pcompletes_def by (meson IfTrue star.step)
 
 lemma pcompletes_IfFalse:
-  "\<not> bval b s \<Longrightarrow> pcompletes gs \<Pi> c2 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
+  "\<not> truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> c2 s t \<Longrightarrow> pcompletes gs \<Pi> (If b c1 c2) s t"
   unfolding pcompletes_def by (meson IfFalse star.step)
 
 lemma pcompletes_WhileFalse:
-  "\<not> bval b s \<Longrightarrow> pcompletes gs \<Pi> (While b c) s s"
+  "\<not> truthy (aval b s) \<Longrightarrow> pcompletes gs \<Pi> (While b c) s s"
   unfolding pcompletes_def by (meson While IfFalse star.refl star.step)
 
 lemma pcompletes_WhileTrue:
-  assumes b:    "bval b s"
+  assumes b:    "truthy (aval b s)"
       and body: "pcompletes gs \<Pi> c s s2"
       and rest: "pcompletes gs \<Pi> (While b c) s2 t"
   shows "pcompletes gs \<Pi> (While b c) s t"
@@ -517,42 +517,36 @@ text \<open>
 
 subsection \<open>Finite syntactic variable sets\<close>
 
-fun aexp_vnames :: "aexp => vname set" where
-  "aexp_vnames (N _) = {}"
-| "aexp_vnames (V x) = {x}"
-| "aexp_vnames (Plus a b) = aexp_vnames a \<union> aexp_vnames b"
-| "aexp_vnames (Minus a b) = aexp_vnames a \<union> aexp_vnames b"
-| "aexp_vnames (Times a b) = aexp_vnames a \<union> aexp_vnames b"
-
-fun bexp_vnames :: "bexp => vname set" where
-  "bexp_vnames (Bc _) = {}"
-| "bexp_vnames (Not b) = bexp_vnames b"
-| "bexp_vnames (And b1 b2) = bexp_vnames b1 \<union> bexp_vnames b2"
-| "bexp_vnames (Or b1 b2) = bexp_vnames b1 \<union> bexp_vnames b2"
-| "bexp_vnames (Less a b) = aexp_vnames a \<union> aexp_vnames b"
-| "bexp_vnames (Eq a b) = aexp_vnames a \<union> aexp_vnames b"
+fun exp_vnames :: "exp => vname set" where
+  "exp_vnames (N _) = {}"
+| "exp_vnames (V x) = {x}"
+| "exp_vnames (Plus a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Minus a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Times a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Less a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Eq a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Not b) = exp_vnames b"
+| "exp_vnames (And b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
+| "exp_vnames (Or b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
 
 fun com_vnames :: "com => vname set" where
   "com_vnames SKIP = {}"
-| "com_vnames (Assign x a) = insert x (aexp_vnames a)"
-| "com_vnames (Check c) = bexp_vnames c"
+| "com_vnames (Assign x a) = insert x (exp_vnames a)"
+| "com_vnames (Check c) = exp_vnames c"
 | "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
 | "com_vnames (If b c1 c2) =
-    bexp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
-| "com_vnames (While b c) = bexp_vnames b \<union> com_vnames c"
+    exp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
+| "com_vnames (While b c) = exp_vnames b \<union> com_vnames c"
 | "com_vnames (Call dst _ actuals) =
     (case dst of None => {} | Some x => {x}) \<union>
-    \<Union> (set (map aexp_vnames actuals))"
+    \<Union> (set (map exp_vnames actuals))"
 | "com_vnames (Return None) = {}"
-| "com_vnames (Return (Some a)) = aexp_vnames a"
+| "com_vnames (Return (Some a)) = exp_vnames a"
 | "com_vnames Restore = {}"
 | "com_vnames Unwind = {}"
 
-lemma finite_aexp_vnames [simp]: "finite (aexp_vnames a)"
+lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
   by (induction a) auto
-
-lemma finite_bexp_vnames [simp]: "finite (bexp_vnames b)"
-  by (induction b) auto
 
 lemma finite_com_vnames [simp]: "finite (com_vnames c)"
 proof (induction c)
@@ -611,24 +605,18 @@ definition source_pi :: "proc_table => bool" where
 
 text \<open>
   Occurrence of one specific variable is the same syntax-directed walk as
-  @{const aexp_mentions_global} (\<open>VIMP_Expr\<close>), with the leaf predicate
+  @{const exp_mentions_global} (\<open>VIMP_Expr\<close>), with the leaf predicate
   specialised to an equality test instead of an arbitrary classifier.
 \<close>
 
-definition aexp_mentions :: "vname => aexp => bool" where
-  "aexp_mentions x = aexp_mentions_where ((=) x)"
-
-definition bexp_mentions :: "vname => bexp => bool" where
-  "bexp_mentions x = bexp_mentions_where ((=) x)"
+definition exp_mentions :: "vname => exp => bool" where
+  "exp_mentions x = exp_mentions_where ((=) x)"
 
 lemmas mentions_defs [simp] =
-  aexp_mentions_def bexp_mentions_def
+  exp_mentions_def
 
-definition source_aexp :: "aexp => bool" where
-  "source_aexp a \<longleftrightarrow> \<not> aexp_mentions ret_var a"
-
-definition source_bexp :: "bexp => bool" where
-  "source_bexp b \<longleftrightarrow> \<not> bexp_mentions ret_var b"
+definition source_exp :: "exp => bool" where
+  "source_exp a \<longleftrightarrow> \<not> exp_mentions ret_var a"
 
 definition valid_formal :: "(vname => bool) => vname => bool" where
   "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x ~= ret_var"
@@ -686,27 +674,27 @@ text \<open>
 
 fun wf_source_com :: "proc_table => com => bool" where
   "wf_source_com \<Pi> SKIP = True"
-| "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_aexp a)"
-| "wf_source_com \<Pi> (Check c) = source_bexp c"
+| "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_exp a)"
+| "wf_source_com \<Pi> (Check c) = source_exp c"
 | "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
 | "wf_source_com \<Pi> (If b c1 c2) =
-     (source_bexp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
-| "wf_source_com \<Pi> (While b c) = (source_bexp b \<and> wf_source_com \<Pi> c)"
+     (source_exp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
+| "wf_source_com \<Pi> (While b c) = (source_exp b \<and> wf_source_com \<Pi> c)"
 | "wf_source_com \<Pi> (Call dst p actuals) =
      (case special_table p of
         Some desc \<Rightarrow>
-          classify_special desc actuals \<noteq> None \<and> list_all source_aexp actuals \<and>
+          classify_special desc actuals \<noteq> None \<and> list_all source_exp actuals \<and>
           (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> ret_var)
       | None \<Rightarrow>
           (case \<Pi> p of
              None \<Rightarrow> False
            | Some decl \<Rightarrow>
                length actuals = length (formals decl) \<and>
-               list_all source_aexp actuals \<and>
+               list_all source_exp actuals \<and>
                (case dst of
                   None \<Rightarrow> True
                 | Some x \<Rightarrow> x \<noteq> ret_var \<and> value_providing (body decl))))"
-| "wf_source_com \<Pi> (Return e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_aexp a)"
+| "wf_source_com \<Pi> (Return e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_exp a)"
 | "wf_source_com \<Pi> Restore = False"
 | "wf_source_com \<Pi> Unwind = False"
 

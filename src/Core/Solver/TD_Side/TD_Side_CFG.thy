@@ -1218,11 +1218,12 @@ proof -
                 (etf_special (unit_etf_of_transfer gs tf) sc x u) \<sigma>))"
       unfolding unit_etf_of_transfer_def apply_tf.simps by (auto intro: in_gamma_unit_edge_tree)
   next
-    show "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). bval b s = pol
+    show "\<forall>(b::exp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). truthy (aval b s) = pol
             \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
                   (etf_branch (unit_etf_of_transfer gs tf) b pol u) \<sigma>))"
-      unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
+      unfolding unit_etf_of_transfer_def
+      by (fastforce intro: in_gamma_unit_edge_tree tf_sound_branch_forD)
   next
     show "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
@@ -1230,14 +1231,14 @@ proof -
                     (etf_body (unit_etf_of_transfer gs tf) p u) \<sigma>))"
       unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
   next
-    show "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>(e::exp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
               s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
                 \<in> gamma_state_lift (etf_collecting_full_lift
                     (etf_return (unit_etf_of_transfer gs tf) e p u) \<sigma>))"
       unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
   next
-    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>xs (es::exp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
               bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
                 \<in> gamma_state_lift (etf_collecting_full_lift
@@ -1350,20 +1351,20 @@ proof -
       qed
     qed
   next
-    show "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). bval b s = pol
+    show "\<forall>(b::exp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+            (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))). truthy (aval b s) = pol
             \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift
                   (etf_branch (mixed_etf_of_transfer gs tf) b pol u) \<sigma>))"
     proof (intro allI impI ballI)
       fix b pol u :: _ and \<sigma> :: "pp + unit \<Rightarrow> 'a abs_state lifted" and s :: store
       assume inr: "inr_slot_locals_bot gs \<sigma>"
         and s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ())))"
-        and hb: "bval b s = pol"
+        and hb: "truthy (aval b s) = pol"
       show "s \<in> gamma_state_lift (etf_collecting_full_lift
               (etf_branch (mixed_etf_of_transfer gs tf) b pol u) \<sigma>)"
       proof (cases pol)
         case True
-        then have hbT: "bval b s = True" using hb by simp
+        then have hbT: "truthy (aval b s) = True" using hb by simp
         show ?thesis
         proof (cases "local_edge_action gs (EA_Assume b)")
           case local_True: True
@@ -1386,7 +1387,7 @@ proof -
         qed
       next
         case False
-        then have hbF: "bval b s = False" using hb by simp
+        then have hbF: "truthy (aval b s) = False" using hb by simp
         show ?thesis
         proof (cases "local_edge_action gs (EA_AssumeNot b)")
           case local_True: True
@@ -1417,7 +1418,7 @@ proof -
                     (etf_body (mixed_etf_of_transfer gs tf) p u) \<sigma>))"
       unfolding mixed_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
   next
-    show "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>(e::exp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
               s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
                 \<in> gamma_state_lift (etf_collecting_full_lift
@@ -1451,7 +1452,7 @@ proof -
       qed
     qed
   next
-    show "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>xs (es::exp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (\<sigma> (Inr ()))).
               bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
                 \<in> gamma_state_lift (etf_collecting_full_lift

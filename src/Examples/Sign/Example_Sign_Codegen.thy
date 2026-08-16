@@ -203,7 +203,7 @@ text \<open>
 \<close>
 
 theorem analyse_sign_report_sound_proved_for:
-  fixes v :: pp and c :: bexp
+  fixes v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for gs p)"
@@ -218,7 +218,7 @@ theorem analyse_sign_report_sound_proved_for:
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_sign_report_for gs p)"
-  shows "\<forall>s \<in> ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v. bval c s"
+  shows "\<forall>s \<in> ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v. truthy (aval c s)"
 proof -
   have node_sound: "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v \<subseteq> \<lbrakk>analyse_sign_env_for gs p v\<rbrakk>"
     using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
@@ -233,7 +233,7 @@ proof -
 qed
 
 theorem analyse_sign_report_sound_refuted_for:
-  fixes v :: pp and c :: bexp
+  fixes v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input gs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for gs p)"
@@ -248,7 +248,7 @@ theorem analyse_sign_report_sound_refuted_for:
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_sign_report_for gs p)"
-  shows "\<forall>s \<in> ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v. \<not> bval c s"
+  shows "\<forall>s \<in> ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v. \<not> truthy (aval c s)"
 proof -
   have node_sound: "ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v \<subseteq> \<lbrakk>analyse_sign_env_for gs p v\<rbrakk>"
     using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
@@ -308,7 +308,7 @@ text \<open>
 \<close>
 
 corollary analyse_sign_report_sound_proved:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign p)"
@@ -323,7 +323,7 @@ corollary analyse_sign_report_sound_proved:
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Proved) \<in> set (analyse_sign_report p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. bval c s"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
   unfolding analyse_sign_def analyse_sign_eqs_def
   by (rule analyse_sign_report_sound_proved_for
         [OF wf[THEN wf_compile_input_reserved_ret_var]
@@ -336,7 +336,7 @@ corollary analyse_sign_report_sound_proved:
             finI finC mem[unfolded analyse_sign_report_def]])
 
 corollary analyse_sign_report_sound_refuted:
-  fixes p :: imp_prog and v :: pp and c :: bexp
+  fixes p :: imp_prog and v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
       and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign p)"
@@ -351,7 +351,7 @@ corollary analyse_sign_report_sound_refuted:
       and finI: "finite (intra (prog_cfg prog_main_name p))"
       and finC: "finite (calls (prog_cfg prog_main_name p))"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_sign_report p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> bval c s"
+  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
   unfolding analyse_sign_def analyse_sign_eqs_def
   by (rule analyse_sign_report_sound_refuted_for
         [OF wf[THEN wf_compile_input_reserved_ret_var]

@@ -687,8 +687,8 @@ lemma bind_formals_resolved_q_singleton:
   by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
 
 definition enter_resolved_for ::
-  "(vname => bool) => 'a => (aexp => 'a abs_state => 'a)
-   => vname list => aexp list => ('a::bot) resolved_st => 'a resolved_st"
+  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
+   => vname list => exp list => ('a::bot) resolved_st => 'a resolved_st"
 where
   "enter_resolved_for gs top_val aval_abs xs es s =
      bind_formals_resolved gs xs
@@ -1147,8 +1147,8 @@ proof -
 qed
 
 lift_definition enter_resolved_for_q ::
-  "(vname => bool) => 'a => (aexp => 'a abs_state => 'a)
-   => vname list => aexp list => ('a::bot) resolved_st_q
+  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
+   => vname list => exp list => ('a::bot) resolved_st_q
    => 'a resolved_st_q"
   is enter_resolved_for
   by (rule eq_resolved_st_enter_resolved_for)

@@ -231,7 +231,7 @@ locale unit_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and solve :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
                    \<Rightarrow> (pp \<times> unit) set \<times>

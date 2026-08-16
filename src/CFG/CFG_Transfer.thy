@@ -16,8 +16,8 @@ lemma edge_collect_simps [simp]:
   "edge_collect EA_Nop S = S"
   "edge_collect (EA_Assign x a) S = {s(x := aval a s) | s. s \<in> S}"
   "edge_collect (EA_Special sc x) S = {t. \<exists>s\<in>S. t \<in> special_step sc x s}"
-  "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> bval b s}"
-  "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> bval b s}"
+  "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> truthy (aval b s)}"
+  "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> truthy (aval b s)}"
   "edge_collect (EA_Ret e p) S =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)) | s. s \<in> S}"
   "edge_collect (EA_Check c) S = S"

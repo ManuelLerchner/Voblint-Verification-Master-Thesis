@@ -107,7 +107,7 @@ lemma twice_reserved: "reserved_ret_var twice_gs"
   unfolding wf_compile_input_simps
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_aexp_def ret_var_def
+      value_providing_def source_exp_def ret_var_def
       split: if_splits option.splits)
 
 interpretation twice_sds:
@@ -289,7 +289,7 @@ lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') t
   unfolding wf_compile_input_simps
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_aexp_def ret_var_def
+      value_providing_def source_exp_def ret_var_def
       special_table_def special_pname_nondet_int_def
       special_pname_min_def special_pname_max_def
       split: if_splits option.splits)

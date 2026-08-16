@@ -66,7 +66,7 @@ definition sign_ops :: "sign numeric_ops" where
   "sign_ops = \<lparr> n_aval = aval_sign, n_bfilter = bfilter_sign_st, n_top = STop \<rparr>"
 
 definition branch_sign_st_for ::
-  "(vname => bool) => bexp => bool => sign resolved_st_q => sign resolved_st_q" where
+  "(vname => bool) => exp => bool => sign resolved_st_q => sign resolved_st_q" where
   "branch_sign_st_for = generic_branch_st_for sign_ops"
 
 lemma branch_sign_st_for_eq [simp]:
@@ -74,7 +74,7 @@ lemma branch_sign_st_for_eq [simp]:
   by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
-  "(vname => bool) => vname list => aexp list =>
+  "(vname => bool) => vname list => exp list =>
    sign resolved_st_q => sign resolved_st_q" where
   "sign_enter_st_for = generic_enter_st_for sign_ops"
 
@@ -128,7 +128,7 @@ lemma sign_tf_st_for_nop_agree:
   using agree[OF location_in] by (simp add: sign_tf_for_def skip_sign_def)
 
 lemma sign_tf_st_for_assign_agree:
-  fixes y :: vname and a :: aexp
+  fixes y :: vname and a :: exp
   assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
       lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
     and val_agree: "aval_sign a (fun_of_resolved_st_q_for gs s_exec) = aval_sign a s_abs"

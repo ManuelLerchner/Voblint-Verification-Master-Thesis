@@ -63,7 +63,7 @@ definition parity_ops :: "parity numeric_ops" where
   "parity_ops = \<lparr> n_aval = aval_parity, n_bfilter = (\<lambda>_ _ _ s. s), n_top = PTop \<rparr>"
 
 definition parity_enter_st_for ::
-  "(vname => bool) => vname list => aexp list =>
+  "(vname => bool) => vname list => exp list =>
    parity resolved_st_q => parity resolved_st_q" where
   "parity_enter_st_for = generic_enter_st_for parity_ops"
 
@@ -175,7 +175,7 @@ lemma parity_tf_st_for_nop_agree:
   using agree[OF location_in] by (simp add: parity_tf_for_def skip_parity_def)
 
 lemma parity_tf_st_for_assign_agree:
-  fixes y :: vname and a :: aexp
+  fixes y :: vname and a :: exp
   assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
       lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
     and val_agree: "aval_parity a (fun_of_resolved_st_q_for gs s_exec) = aval_parity a s_abs"

@@ -56,7 +56,7 @@ lemma inc_g_eq_compile:
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma edge_collect_assign_enter_state:
-  fixes s :: store and x :: vname and a :: aexp and gs :: "vname \<Rightarrow> bool"
+  fixes s :: store and x :: vname and a :: exp and gs :: "vname \<Rightarrow> bool"
   assumes "enter_state gs s \<in> S"
   shows "(enter_state gs s)(x := aval a (enter_state gs s))
            \<in> edge_collect (EA_Assign x a) S"

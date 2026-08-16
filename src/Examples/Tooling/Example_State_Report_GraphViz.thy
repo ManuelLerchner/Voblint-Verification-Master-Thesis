@@ -72,7 +72,7 @@ definition state_line :: "(vname \<Rightarrow> abstract_value) \<Rightarrow> vna
   "state_line f x = String.explode x @ ''='' @ string_of_abstract_value (f x)"
 
 definition state_report_node_annotation ::
-    "vname list \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
+    "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
      \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
   "state_report_node_annotation vars report v =
      (case find (\<lambda>entry. fst entry = v) report of
@@ -99,7 +99,7 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>report_vars\<close> and \<open>bexp_vnames_list\<close> turn \<^const>\<open>bexp_vnames\<close>'s set of
+  \<open>report_vars\<close> and \<open>exp_vnames_list\<close> turn \<^const>\<open>exp_vnames\<close>'s set of
   variable occurrences into a sorted list, the same idiom
   \<^const>\<open>scope_vnames_list\<close> already uses over \<^typ>\<open>vname\<close> via
   \<^const>\<open>sorted_list_of_set\<close>. \<open>state_report_dot_auto\<close> is the CLI-facing
@@ -108,13 +108,13 @@ text \<open>
   in the report, solving the program once rather than once per call.
 \<close>
 
-definition bexp_vnames_list :: "bexp \<Rightarrow> vname list" where
-  "bexp_vnames_list b = sorted_list_of_set (bexp_vnames b)"
+definition exp_vnames_list :: "exp \<Rightarrow> vname list" where
+  "exp_vnames_list b = sorted_list_of_set (exp_vnames b)"
 
 definition report_vars ::
-    "(pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list \<Rightarrow> vname list" where
+    "(pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list \<Rightarrow> vname list" where
   "report_vars report =
-     sorted_list_of_set (\<Union> ((\<lambda>(_, c, _, _). bexp_vnames c) ` set report))"
+     sorted_list_of_set (\<Union> ((\<lambda>(_, c, _, _). exp_vnames c) ` set report))"
 
 definition state_report_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_dot_auto kind p =
@@ -148,7 +148,7 @@ text \<open>
   precedes this theory in the import order, so \<open>state_report_dot_auto\<close>
   belongs in the later export declaration. The GraphViz surface uses the
   same AST constructors and numeral/char bridges, plus
-  \<open>state_report_dot_auto\<close>, \<open>bexp_vnames_list\<close>, and
+  \<open>state_report_dot_auto\<close>, \<open>exp_vnames_list\<close>, and
   \<open>string_of_abstract_value\<close> for CLI-side rendering.
 \<close>
 
@@ -269,12 +269,12 @@ text \<open>
   (already the context-aggregated verdict, \<^const>\<open>entry_state_classify_at\<close>)
   paired with \<open>entry_state_env_at\<close>'s own, separately joined, per-variable
   state reading, giving \<^const>\<open>state_report_node_annotation\<close> the same
-  \<open>(pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list\<close> shape
+  \<open>(pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list\<close> shape
   \<open>analyse_with_state\<close>'s report already has.
 \<close>
 
 definition entry_state_report_for_annotation ::
-    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list" where
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list" where
   "entry_state_report_for_annotation p =
      map (\<lambda>(v, cnd, res). (v, cnd, res,
             entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))

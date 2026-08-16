@@ -191,7 +191,7 @@ text \<open>The payoff: the proved check's condition genuinely holds at every
 
 corollary checks_ivl_ex_first_check_holds:
   assumes "t \<in> checks_ivl_ex_reach (Statement 2)"
-  shows "bval (Less (V (STR ''x'')) (N 11)) t"
+  shows "truthy (aval (Less (V (STR ''x'')) (N 11)) t)"
 proof -
   have "t \<in> \<lbrakk>checks_ivl_ex_env (Statement 2)\<rbrakk>" using checks_ivl_ex_node_sound_2 assms by blast
   then show ?thesis using interval_classify_check_proved[OF checks_ivl_ex_classify_2] by blast
@@ -199,7 +199,7 @@ qed
 
 corollary checks_ivl_ex_second_check_refuted:
   assumes "t \<in> checks_ivl_ex_reach (Statement 3)"
-  shows "\<not> bval (Less (V (STR ''x'')) (N 0)) t"
+  shows "\<not> truthy (aval (Less (V (STR ''x'')) (N 0)) t)"
 proof -
   have "t \<in> \<lbrakk>checks_ivl_ex_env (Statement 3)\<rbrakk>" using checks_ivl_ex_node_sound_3 assms by blast
   then show ?thesis using interval_classify_check_refuted[OF checks_ivl_ex_classify_3] by blast
@@ -216,7 +216,7 @@ text \<open>The generic \<^const>\<open>checks_proven\<close>/\<^theory>\<open>V
 lemma checks_ivl_ex_proven_check_discharged:
   "interval_checks_proven {(Statement 2, Less (V (STR ''x'')) (N 11))} checks_ivl_ex_env"
 proof (rule interval_checks_provenI)
-  fix v :: pp and cnd :: bexp
+  fix v :: pp and cnd :: exp
   assume mem: "(v, cnd) \<in> {(Statement 2, Less (V (STR ''x'')) (N 11))}"
   then have v_eq: "v = Statement 2" and cnd_eq: "cnd = Less (V (STR ''x'')) (N 11)" by auto
   show "interval_check_true cnd (checks_ivl_ex_env v)"
@@ -226,7 +226,7 @@ qed
 lemma checks_ivl_ex_proven_check_checks_proven:
   "checks_proven {(Statement 2, Less (V (STR ''x'')) (N 11))} checks_ivl_ex_reach"
 proof (rule interval_checks_proven_sound)
-  fix v :: pp and cnd :: bexp
+  fix v :: pp and cnd :: exp
   assume "(v, cnd) \<in> {(Statement 2, Less (V (STR ''x'')) (N 11))}"
   then show "checks_ivl_ex_reach v \<le> \<lbrakk>checks_ivl_ex_env v\<rbrakk>"
     using checks_ivl_ex_node_sound_2 by auto
@@ -325,7 +325,7 @@ text \<open>
   \<open>Example_Checks_Store_Only\<close> (Sign) uses --- shared there, not redefined
   here, confirming the mapping is analysis-independent: no Interval-specific
   rendering code was needed. There is no manually maintained \<^typ>\<open>pp\<close>-to-
-  \<^typ>\<open>bexp\<close> table either: \<^const>\<open>check_report_node_annotation\<close> looks each
+  \<^typ>\<open>exp\<close> table either: \<^const>\<open>check_report_node_annotation\<close> looks each
   node up directly in the computed \<^const>\<open>interval_check_report\<close>.
 \<close>
 

@@ -76,7 +76,7 @@ proof -
                        (VIMP_Proc.com.Call (Some (STR ''x'')) special_pname_nondet_int [])) s
                   ((s((STR ''x'') := 0))((STR ''x'') := 42))"
     using pcompletes_Seq[OF step1 step2] .
-  have guard_true: "bval (Less (N 0) (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))"
+  have guard_true: "truthy (aval (Less (N 0) (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42)))"
     by simp
   have step3: "pcompletes gs \<Pi> (Assign (STR ''y'') (V (STR ''x''))) ((s((STR ''x'') := 0))((STR ''x'') := 42))
                  (((s((STR ''x'') := 0))((STR ''x'') := 42))((STR ''y'') := 42))"

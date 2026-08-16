@@ -14,7 +14,7 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Parity_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Parity expression
   evaluator \<open>aval_parity\<close> lives in \<^theory>\<open>Voblint_Analysis.Parity_Domain\<close>. The
-  Boolean recursion over \<^typ>\<open>bexp\<close>, the three-way classification, and the
+  Boolean recursion over \<^typ>\<open>exp\<close>, the three-way classification, and the
   node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
   \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>) once, below,
   reusing the numeric-query facts already proved sound in
@@ -31,7 +31,7 @@ global_interpretation parity_check_domain:
     and parity_classify_check = parity_check_domain.classify_check
     and parity_checks_proven = parity_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: aexp and \<sigma> :: "parity abs_state"
+  fix s :: store and e :: exp and \<sigma> :: "parity abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
   then have "\<forall>x. s x \<in> gamma_parity (\<sigma> x)" by simp

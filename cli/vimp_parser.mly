@@ -36,12 +36,11 @@
 %left STAR
 %right NOT UMINUS
 
-%type <Voblint_CLI.Core.aexp> aexp
-%type <Voblint_CLI.Core.bexp> bexp
+%type <Voblint_CLI.Core.exp> exp
 %type <Voblint_CLI.Core.com> stmt
 %type <Voblint_CLI.Core.com> stmts
 %type <Voblint_CLI.Core.com> stmts_opt
-%type <Voblint_CLI.Core.aexp list> actuals
+%type <Voblint_CLI.Core.exp list> actuals
 %type <string list> formals
 %type <string list> ids
 %type <string list> globals_decl
@@ -52,60 +51,56 @@
 %start <unit Voblint_CLI.Core.imp_prog_ext> program
 %%
 
-(* aexp: *)
-aexp:
+(* exp: *)
+exp:
   | v0 = IDENT
       { Voblint_CLI.Core.V v0 }
   | v0 = INT
       { Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.of_int v0)) }
-  | v0 = MINUS v1 = aexp %prec UMINUS
+  | v0 = MINUS v1 = exp %prec UMINUS
       { match v1 with
       | Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer z) ->
         Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.neg z))
       | _ ->
         Voblint_CLI.Core.Minus
           (Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer Z.zero), v1) }
-  | v0 = aexp v1 = PLUS v2 = aexp
+  | v0 = exp v1 = PLUS v2 = exp
       { Voblint_CLI.Core.Plus (v0, v2) }
-  | v0 = aexp v1 = MINUS v2 = aexp
+  | v0 = exp v1 = MINUS v2 = exp
       { Voblint_CLI.Core.Minus (v0, v2) }
-  | v0 = aexp v1 = STAR v2 = aexp
+  | v0 = exp v1 = STAR v2 = exp
       { Voblint_CLI.Core.Times (v0, v2) }
-  | v0 = LPAREN v1 = aexp v2 = RPAREN
-      { v1 }
-(* bexp: *)
-bexp:
   | v0 = BOOL_TRUE
-      { Voblint_CLI.Core.Bc true }
+      { Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.of_int 1)) }
   | v0 = BOOL_FALSE
-      { Voblint_CLI.Core.Bc false }
-  | v0 = aexp v1 = LT v2 = aexp
+      { Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.of_int 0)) }
+  | v0 = exp v1 = LT v2 = exp
       { Voblint_CLI.Core.Less (v0, v2) }
-  | v0 = aexp v1 = EQEQ v2 = aexp
-      { Voblint_CLI.Core.Eqa (v0, v2) }
-  | v0 = LPAREN v1 = bexp v2 = RPAREN
-      { v1 }
-  | v0 = NOT v1 = bexp
+  | v0 = exp v1 = EQEQ v2 = exp
+      { Voblint_CLI.Core.Eq (v0, v2) }
+  | v0 = NOT v1 = exp
       { Voblint_CLI.Core.Not v1 }
-  | v0 = bexp v1 = AND v2 = bexp
+  | v0 = exp v1 = AND v2 = exp
       { Voblint_CLI.Core.And (v0, v2) }
-  | v0 = bexp v1 = OR v2 = bexp
+  | v0 = exp v1 = OR v2 = exp
       { Voblint_CLI.Core.Or (v0, v2) }
+  | v0 = LPAREN v1 = exp v2 = RPAREN
+      { v1 }
 (* stmt: *)
 stmt:
   | v0 = SKIP
       { Voblint_CLI.Core.SKIP }
-  | v0 = IDENT v1 = ASSIGN v2 = aexp
+  | v0 = IDENT v1 = ASSIGN v2 = exp
       { Voblint_CLI.Core.Assign (v0, v2) }
-  | v0 = RETURN v1 = aexp
+  | v0 = RETURN v1 = exp
       { Voblint_CLI.Core.Return (Some v1) }
   | v0 = RETURN
       { Voblint_CLI.Core.Return None }
-  | v0 = CHECK v1 = LPAREN v2 = bexp v3 = RPAREN
+  | v0 = CHECK v1 = LPAREN v2 = exp v3 = RPAREN
       { Voblint_CLI.Core.Check v2 }
-  | v0 = IF v1 = LPAREN v2 = bexp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
       { Voblint_CLI.Core.If (v2, v5, v9) }
-  | v0 = WHILE v1 = LPAREN v2 = bexp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
+  | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
       { Voblint_CLI.Core.While (v2, v5) }
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN
       { Voblint_CLI.Core.Call (None, v0, v2) }
@@ -127,9 +122,9 @@ stmts_opt:
 actuals:
   | (* empty *)
       { [] }
-  | x = aexp
+  | x = exp
       { [x] }
-  | xs = actuals COMMA x = aexp
+  | xs = actuals COMMA x = exp
       { xs @ [x] }
 (* formals: *)
 formals:

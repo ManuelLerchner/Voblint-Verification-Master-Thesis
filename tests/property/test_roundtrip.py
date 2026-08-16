@@ -1,10 +1,12 @@
 """Property 1: AST -> print -> parse round-trips to a structurally equal AST.
 
-This is the primary correctness property. Hypothesis generates only
-source-expressible ASTs (see strategies.py), so every generated example is
-expected to print to text that Vimp_parser reads back into the same tree --
-a mismatch here is a real printer or parser bug, not a known grammar limit
-(those are pinned separately in test_nonexpressible_regression.py).
+This is the primary correctness property. Hypothesis generates arbitrary exp
+trees (see strategies.py) -- grammar/vimp.yaml's exp_paren production and
+VIMP_Source_Print.thy's precedence-climbing printer make every shape
+source-expressible -- so every generated example is expected to print to
+text that Vimp_parser reads back into the same tree; a mismatch here is a
+real printer or parser bug. test_nonexpressible_regression.py pins a few
+concrete shapes that specifically exercise printer-inserted parentheses.
 
 As a secondary, more readable invariant: printing the re-parsed AST again
 must reproduce the same source text as the first print. Structural equality

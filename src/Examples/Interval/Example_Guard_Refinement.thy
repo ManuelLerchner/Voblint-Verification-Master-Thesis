@@ -21,7 +21,7 @@ definition sigma_x :: "ivl \<Rightarrow> ivl abs_state" where
 abbreviation "sigma_loop_head \<equiv> sigma_x (Ivl (Fin 0) (Fin 20))"
 
 text \<open>The identity baseline leaves the abstract state unchanged.\<close>
-definition assume_ivl_identity :: "bexp \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
+definition assume_ivl_identity :: "exp \<Rightarrow> ivl abs_state \<Rightarrow> ivl abs_state" where
   "assume_ivl_identity _ sigma = sigma"
 
 subsection \<open>One guard: @{text "x < 20"} narrows the upper bound\<close>

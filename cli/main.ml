@@ -102,7 +102,7 @@ let is_unreachable vars_to_probe (f : string -> Voblint_CLI.Analyse.abstract_val
 
 let render_text_report ~vars_to_probe (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.bexp
+       * (Voblint_CLI.Core.exp
           * (Voblint_CLI.Core.check_result * (string -> Voblint_CLI.Analyse.abstract_value))))
       list)
     (check_positions : (int * int) list) =
@@ -114,7 +114,7 @@ let render_text_report ~vars_to_probe (report :
   List.iter2
     (fun (node, (cond, (verdict, f))) (line, col) ->
        if not (is_unreachable vars_to_probe f) then begin
-         let vars = Voblint_CLI.Example_State_Report_GraphViz.bexp_vnames_list cond in
+         let vars = Voblint_CLI.Example_State_Report_GraphViz.exp_vnames_list cond in
          let state =
            vars
            |> List.map (fun x ->
@@ -123,7 +123,7 @@ let render_text_report ~vars_to_probe (report :
          in
          Buffer.add_string buf
            (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
-              (un_string (Voblint_CLI.Core.string_of_bexp cond))
+              (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
               (verdict_label verdict) state)
        end)
     report check_positions;
@@ -135,14 +135,14 @@ let render_text_report ~vars_to_probe (report :
    only the check verdict itself. *)
 let render_flat_report
     (report :
-      (Voblint_CLI.Core.cfg_node * (Voblint_CLI.Core.bexp * Voblint_CLI.Core.check_result)) list)
+      (Voblint_CLI.Core.cfg_node * (Voblint_CLI.Core.exp * Voblint_CLI.Core.check_result)) list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
   List.iter2
     (fun (node, (cond, verdict)) (line, col) ->
        Buffer.add_string buf
          (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
-            (un_string (Voblint_CLI.Core.string_of_bexp cond))
+            (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
             (verdict_label verdict)))
     report check_positions;
   Buffer.contents buf

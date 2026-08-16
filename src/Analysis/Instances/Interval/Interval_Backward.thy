@@ -1,25 +1,197 @@
 theory Interval_Backward
   imports Interval_Arithmetic Voblint_Core.Exec_Backward "Voblint_VIMP.VIMP_Expr"
-    Voblint_Core.Abstract_Arithmetic
+    Voblint_Core.Abstract_Arithmetic Interval_Numeric_Queries
 begin
 
 section \<open>Interval backward filtering\<close>
 
+subsection \<open>Comparison and truthiness queries\<close>
+
+text \<open>
+  \<open>interval_lt\<close>/\<open>interval_eqb\<close>/\<open>interval_tobool\<close> restate
+  \<open>Interval_Numeric_Queries\<close>'s \<open>interval_less_true\<close>/\<open>interval_less_false\<close>/
+  \<open>interval_eq_true\<close>/\<open>interval_eq_false\<close> as the three-valued \<open>bool option\<close>
+  queries \<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  locale expects: \<open>Some True\<close>/\<open>Some False\<close> when the bound-based table decides
+  it, \<open>None\<close> otherwise. \<open>interval_tobool\<close> is truthiness against the point
+  interval \<open>[0,0]\<close>.
+\<close>
+
+definition interval_lt :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "interval_lt a b =
+     (if interval_less_true a b then Some True
+      else if interval_less_false a b then Some False
+      else None)"
+
+definition interval_eqb :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "interval_eqb a b =
+     (if interval_eq_true a b then Some True
+      else if interval_eq_false a b then Some False
+      else None)"
+
+definition interval_tobool :: "ivl \<Rightarrow> bool option" where
+  "interval_tobool a =
+     (if interval_eq_false a (Ivl (Fin 0) (Fin 0)) then Some True
+      else if interval_eq_true a (Ivl (Fin 0) (Fin 0)) then Some False
+      else None)"
+
+lemma interval_lt_sound:
+  assumes "interval_lt p q = Some b" and "i \<in> gamma_ivl p" and "j \<in> gamma_ivl q"
+  shows "(i < j) = b"
+  using assms unfolding interval_lt_def
+  by (auto split: if_splits dest: interval_less_true_sound interval_less_false_sound)
+
+lemma interval_eqb_sound:
+  assumes "interval_eqb p q = Some b" and "i \<in> gamma_ivl p" and "j \<in> gamma_ivl q"
+  shows "(i = j) = b"
+  using assms unfolding interval_eqb_def
+  by (auto split: if_splits dest: interval_eq_true_sound interval_eq_false_sound)
+
+lemma interval_tobool_sound:
+  assumes "interval_tobool p = Some b" and "i \<in> gamma_ivl p"
+  shows "truthy i = b"
+proof -
+  have z: "(0::int) \<in> gamma_ivl (Ivl (Fin 0) (Fin 0))" by simp
+  show ?thesis
+    using assms z
+    unfolding interval_tobool_def truthy_def
+    by (auto split: if_splits dest: interval_eq_false_sound interval_eq_true_sound)
+qed
+
+lemma interval_lt_mono:
+  assumes hp: "\<not> is_bot (p1::ivl)" and hq: "\<not> is_bot q1"
+      and hpm: "p1 \<le> p2" and hqm: "q1 \<le> q2"
+      and hwide: "interval_lt p2 q2 = Some b"
+  shows "interval_lt p1 q1 = Some b"
+proof -
+  obtain l1 u1 where p1_def: "p1 = Ivl l1 u1" by (cases p1)
+  obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
+  obtain l2 u2 where q1_def: "q1 = Ivl l2 u2" by (cases q1)
+  obtain l2' u2' where q2_def: "q2 = Ivl l2' u2'" by (cases q2)
+  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_bot_ivl is_bottom_ivl_def by auto
+  have ne_q1: "l2 \<le> u2" using hq unfolding q1_def is_bot_ivl is_bottom_ivl_def by auto
+  have bnds: "l1' \<le> l1" "u1 \<le> u1'" "l2' \<le> l2" "u2 \<le> u2'"
+    using hpm hqm unfolding p1_def p2_def q1_def q2_def less_eq_ivl_def by auto
+  have ne_p2: "l1' \<le> u1'" and ne_q2: "l2' \<le> u2'"
+    using bnds ne_p1 ne_q1 by order+
+  show ?thesis
+  proof (cases "interval_less_true p2 q2")
+    case True
+    then have "u1' < l2'" using p2_def q2_def ne_p2 ne_q2 by simp
+    then have "u1 < l2" using bnds by order
+    then have p1q1: "interval_less_true p1 q1" using p1_def q1_def ne_p1 ne_q1 by simp
+    have "interval_lt p2 q2 = Some True" using True unfolding interval_lt_def by simp
+    with hwide have "b = True" by simp
+    then show ?thesis using p1q1 unfolding interval_lt_def by simp
+  next
+    case False
+    then have hlf: "interval_less_false p2 q2"
+      using hwide unfolding interval_lt_def by (auto split: if_splits)
+    then have "u2' \<le> l1'" using p2_def q2_def ne_p2 ne_q2 by simp
+    then have hle: "u2 \<le> l1" using bnds by order
+    then have p1q1f: "interval_less_false p1 q1" using p1_def q1_def ne_p1 ne_q1 by simp
+    have p1q1nt: "\<not> interval_less_true p1 q1"
+    proof
+      assume "interval_less_true p1 q1"
+      then have "u1 < l2" using p1_def q1_def ne_p1 ne_q1 by simp
+      with hle ne_p1 ne_q1 show False by order
+    qed
+    have "interval_lt p2 q2 = Some False" using False hlf unfolding interval_lt_def by simp
+    with hwide have "b = False" by simp
+    then show ?thesis using p1q1f p1q1nt unfolding interval_lt_def by simp
+  qed
+qed
+
+
+lemma interval_eqb_mono:
+  assumes hp: "\<not> is_bot (p1::ivl)" and hq: "\<not> is_bot q1"
+      and hpm: "p1 \<le> p2" and hqm: "q1 \<le> q2"
+      and hwide: "interval_eqb p2 q2 = Some b"
+  shows "interval_eqb p1 q1 = Some b"
+proof -
+  obtain l1 u1 where p1_def: "p1 = Ivl l1 u1" by (cases p1)
+  obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
+  obtain l2 u2 where q1_def: "q1 = Ivl l2 u2" by (cases q1)
+  obtain l2' u2' where q2_def: "q2 = Ivl l2' u2'" by (cases q2)
+  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_bot_ivl is_bottom_ivl_def by auto
+  have ne_q1: "l2 \<le> u2" using hq unfolding q1_def is_bot_ivl is_bottom_ivl_def by auto
+  have bnds: "l1' \<le> l1" "u1 \<le> u1'" "l2' \<le> l2" "u2 \<le> u2'"
+    using hpm hqm unfolding p1_def p2_def q1_def q2_def less_eq_ivl_def by auto
+  have ne_p2: "l1' \<le> u1'" and ne_q2: "l2' \<le> u2'"
+    using bnds ne_p1 ne_q1 by order+
+  show ?thesis
+    using hwide ne_p1 ne_q1 ne_p2 ne_q2 bnds
+    unfolding interval_eqb_def p1_def p2_def q1_def q2_def
+    by (auto split: if_splits; order)
+qed
+
+lemma interval_tobool_mono:
+  assumes hp: "\<not> is_bot (p1::ivl)" and hpm: "p1 \<le> p2"
+      and hwide: "interval_tobool p2 = Some b"
+  shows "interval_tobool p1 = Some b"
+proof -
+  obtain l1 u1 where p1_def: "p1 = Ivl l1 u1" by (cases p1)
+  obtain l1' u1' where p2_def: "p2 = Ivl l1' u1'" by (cases p2)
+  have ne_p1: "l1 \<le> u1" using hp unfolding p1_def is_bot_ivl is_bottom_ivl_def by auto
+  have bnds: "l1' \<le> l1" "u1 \<le> u1'"
+    using hpm unfolding p1_def p2_def less_eq_ivl_def by auto
+  have ne_p2: "l1' \<le> u1'" using bnds ne_p1 by order
+  show ?thesis
+    using hwide ne_p1 ne_p2 bnds
+    unfolding interval_tobool_def p1_def p2_def
+    by (auto split: if_splits; order)
+qed
+
 subsection \<open>Abstract expression evaluation\<close>
 
-fun aval_ivl :: "aexp => (vname => ivl) => ivl" where
+fun aval_ivl :: "exp => (vname => ivl) => ivl" where
     "aval_ivl (N n)        \<sigma> = Ivl (Fin n) (Fin n)"
   | "aval_ivl (V x)        \<sigma> = \<sigma> x"
   | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
   | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
   | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
+  | "aval_ivl (Less a b)   \<sigma> =
+       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
+        else if interval_lt (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (exp.Eq a b) \<sigma> =
+       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
+        else if interval_eqb (aval_ivl a \<sigma>) (aval_ivl b \<sigma>) = Some False then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (exp.Not a)  \<sigma> =
+       (if is_bot (aval_ivl a \<sigma>) then bot
+        else if interval_tobool (aval_ivl a \<sigma>) = Some True then Ivl (Fin 0) (Fin 0)
+        else if interval_tobool (aval_ivl a \<sigma>) = Some False then Ivl (Fin 1) (Fin 1)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (And a b)    \<sigma> =
+       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+        else if interval_tobool (aval_ivl a \<sigma>) = Some False \<or> interval_tobool (aval_ivl b \<sigma>) = Some False
+        then Ivl (Fin 0) (Fin 0)
+        else if interval_tobool (aval_ivl a \<sigma>) = Some True \<and> interval_tobool (aval_ivl b \<sigma>) = Some True
+        then Ivl (Fin 1) (Fin 1)
+        else Ivl (Fin 0) (Fin 1))"
+  | "aval_ivl (Or a b)     \<sigma> =
+       (if is_bot (aval_ivl a \<sigma>) \<or> is_bot (aval_ivl b \<sigma>) then bot
+        else if interval_tobool (aval_ivl a \<sigma>) = Some True \<or> interval_tobool (aval_ivl b \<sigma>) = Some True
+        then Ivl (Fin 1) (Fin 1)
+        else if interval_tobool (aval_ivl a \<sigma>) = Some False \<and> interval_tobool (aval_ivl b \<sigma>) = Some False
+        then Ivl (Fin 0) (Fin 0)
+        else Ivl (Fin 0) (Fin 1))"
 
-interpretation ivl_arith: arith_domain_sound aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)"
+interpretation ivl_arith: expression_domain_sound
+    aval_ivl "\<lambda>n. Ivl (Fin n) (Fin n)" interval_lt interval_eqb interval_tobool
   by unfold_locales
      (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound
-                     ivl_plus_mono ivl_minus_mono ivl_times_mono)
+                     ivl_plus_mono ivl_minus_mono ivl_times_mono
+                     interval_lt_sound interval_eqb_sound
+                     interval_tobool_sound[unfolded truthy_def]
+                     interval_lt_mono interval_eqb_mono interval_tobool_mono
+                     sup_ivl_def join_ivl.simps truthy_def)
 
 lemmas aval_ivl_sound = ivl_arith.aval_dom_sound[unfolded gamma_abs_ivl]
+
 
 subsection \<open>Backward inverse operators\<close>
 
@@ -256,7 +428,7 @@ proof unfold_locales
   show "n \<in> gamma (intersect_ivl a b)"
     using intersect_ivl_gamma[OF h1 h2] by simp
 next
-  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> ivl"
+  fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> ivl"
   assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
   have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using H by simp
   show "aval e s \<in> gamma (aval_ivl e \<sigma>)"
@@ -295,7 +467,7 @@ next
   assume "a1 \<le> a2" and "b1 \<le> b2"
   thus "intersect_ivl a1 b1 \<le> intersect_ivl a2 b2" by (rule intersect_ivl_mono)
 next
-  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
+  fix e :: exp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
   assume "\<sigma>1 \<le> \<sigma>2"
   thus "aval_ivl e \<sigma>1 \<le> aval_ivl e \<sigma>2" by (rule aval_ivl_mono)
 next

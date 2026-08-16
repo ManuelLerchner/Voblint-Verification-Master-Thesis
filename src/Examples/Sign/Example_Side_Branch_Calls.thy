@@ -25,7 +25,7 @@ text \<open>
   }
   \end{verbatim}
 
-  Two modelling notes.  The expression language @{type aexp} has \<open>Plus\<close> /
+  Two modelling notes.  The expression language @{type exp} has \<open>Plus\<close> /
   \<open>Minus\<close> / \<open>Times\<close> but no division, so \<open>100 / result_val\<close> is written as the
   multiplication \<open>100 * result_val\<close>.  \<open>input_val\<close>, \<open>result_val\<close>, and \<open>out_val\<close> are
   declared \<open>global\<close> in the source below despite carrying no naming hint;

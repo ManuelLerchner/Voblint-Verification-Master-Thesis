@@ -842,7 +842,7 @@ locale backward_domain =
   semantic_intersection intersect
     for intersect :: "'a::sound_domain => 'a => 'a" +
   fixes
-    aval_abs  :: "aexp => 'a abs_state => 'a"
+    aval_abs  :: "exp => 'a abs_state => 'a"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
@@ -868,7 +868,7 @@ locale backward_domain =
        \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
 begin
 
-fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
+fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
     "afilter (V x) a \<sigma> = \<sigma>(x := intersect a (\<sigma> x))"
   | "afilter (Plus  e1 e2) a \<sigma> =
        (let (a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
@@ -881,7 +881,21 @@ fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
   | "afilter _ a \<sigma> = \<sigma>"
 
-fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
+text \<open>
+  \<open>bfilter\<close> narrows a state under an assumed truth value of \<open>e\<close>: \<open>bfilter e
+  True\<close> is \<open>assume e\<close>, \<open>bfilter e False\<close> is \<open>assume-not e\<close>. \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>
+  distribute structurally (De Morgan, over \<open>\<squnion>\<close> for the disjunctive branch);
+  \<open>Less\<close>/\<open>Eq\<close> go straight through \<open>inv_less\<close>/\<open>inv_eq\<close> on their two operands.
+  Every other constructor -- \<open>N\<close>, \<open>V\<close>, \<open>Plus\<close>, \<open>Minus\<close>, \<open>Times\<close> -- has no
+  Boolean-shaped narrowing operator of its own, so the fallback case reduces
+  truthiness to the one comparison every domain already inverts: \<open>truthy
+  (aval e s) = res\<close> iff \<open>(aval e s = 0) = (\<not> res)\<close>, so \<open>inv_eq (\<not> res)\<close>
+  against the abstract constant \<open>0\<close> narrows \<open>e\<close>'s own target value, and
+  \<open>afilter\<close> propagates that target through \<open>e\<close>'s structure. This reuses
+  \<open>inv_eq\<close>/\<open>afilter\<close> rather than adding a new domain-author operator.
+\<close>
+
+fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
     "bfilter (Less e1 e2) res \<sigma> =
        (let (a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
@@ -893,7 +907,9 @@ fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter (Eq  e1 e2) res  \<sigma> =
        (let (a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "bfilter _ _ \<sigma> = \<sigma>"
+  | "bfilter e res \<sigma> =
+       (let (a1, a2) = inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)
+        in afilter e a1 \<sigma>)"
 
 lemma afilter_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
@@ -959,84 +975,130 @@ next
   show ?case
     unfolding afilter.simps pair[symmetric] Let_def
     using Times.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+next
+  case (Less e1 e2) then show ?case by simp
+next
+  case (Eq e1 e2) then show ?case by simp
+next
+  case (Not e) then show ?case by simp
+next
+  case (And e1 e2) then show ?case by simp
+next
+  case (Or e1 e2) then show ?case by simp
+qed
+
+text \<open>
+  Every constructor without its own Boolean-shaped narrowing operator --
+  \<open>N\<close>, \<open>V\<close>, \<open>Plus\<close>, \<open>Minus\<close>, \<open>Times\<close> -- reduces \<open>bfilter\<close>'s target truth
+  value to an \<open>inv_eq\<close> narrowing against the abstract constant \<open>0\<close> (see
+  \<open>bfilter\<close>'s own comment), then propagates the narrowed target through
+  \<open>afilter\<close>. Proved once here, generically in \<open>e\<close>, so the induction below
+  cites it instead of repeating the same \<open>inv_eq\<close>/\<open>afilter_sound\<close> chain per
+  arithmetic constructor.
+\<close>
+lemma bfilter_default_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
+  shows "s \<in> \<lbrakk>afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma>\<rbrakk>"
+proof -
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e0: "aval (N 0) s \<in> gamma (aval_abs (N 0) \<sigma>)" by (rule aval_abs_sound[of s \<sigma> "N 0", OF gs])
+  have eq0: "(aval e s = aval (N 0) s) = (\<not> res)" using assms(2) by auto
+  have "aval e s \<in> gamma (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)))"
+    using inv_eq_sound[OF ea e0 eq0] by simp
+  then show ?thesis using afilter_sound[OF assms(1)] by simp
 qed
 
 lemma bfilter_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "bval b s = res"
-  shows "s \<in> \<lbrakk>bfilter b res \<sigma>\<rbrakk>"
-using assms proof (induction b arbitrary: res \<sigma>)
-  case (Bc b') thus ?case by simp
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
+  shows "s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>"
+using assms proof (induction e arbitrary: res \<sigma>)
+  case (N n) show ?case using bfilter_default_sound[OF N.prems(1) N.prems(2)] by simp
 next
-  case (Not b)
-  have bv': "bval b s = (\<not> res)" using Not.prems(2) by (auto)
+  case (V x) show ?case
+    using bfilter_default_sound[OF V.prems(1) V.prems(2)]
+    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+next
+  case (Plus e1 e2) show ?case
+    using bfilter_default_sound[OF Plus.prems(1) Plus.prems(2)] by (simp add: Let_def case_prod_beta)
+next
+  case (Minus e1 e2) show ?case
+    using bfilter_default_sound[OF Minus.prems(1) Minus.prems(2)] by (simp add: Let_def case_prod_beta)
+next
+  case (Times e1 e2) show ?case
+    using bfilter_default_sound[OF Times.prems(1) Times.prems(2)] by (simp add: Let_def case_prod_beta)
+next
+  case (Not e)
+  have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
   from Not.IH[OF Not.prems(1) bv'] show ?case by simp
 next
-  case (And b1 b2)
+  case (And e1 e2)
   show ?case proof (cases res)
     case True
-    have v1: "bval b1 s = True" and v2: "bval b2 s = True"
-      using And.prems(2) True by simp_all
-    have gs2: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
+    have v1: "truthy (aval e1 s) = True" and v2: "truthy (aval e2 s) = True"
+      using And.prems(2) True by (auto split: if_splits)
+    have gs2: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
       using And.IH(2)[OF And.prems(1) v2] by simp
     show ?thesis
       using And.IH(1)[OF gs2 v1] by (simp add: True)
   next
     case False
-    have disj: "\<not> bval b1 s \<or> \<not> bval b2 s"
-      using And.prems(2) False by auto
-    show ?thesis proof (cases "bval b1 s")
+    have disj: "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
+      using And.prems(2) False by (auto split: if_splits)
+    show ?thesis proof (cases "truthy (aval e1 s)")
       case b1F: False
-      have v1: "bval b1 s = False" using b1F by simp
-      have h: "s \<in> \<lbrakk>bfilter b1 False \<sigma>\<rbrakk>"
+      have v1: "truthy (aval e1 s) = False" using b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter e1 False \<sigma>\<rbrakk>"
         using And.IH(1)[OF And.prems(1) v1] by simp
-      have sup1: "s \<in> \<lbrakk>bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub1[of "bfilter b1 False \<sigma>" "bfilter b2 False \<sigma>"] h]
+      have sup1: "s \<in> \<lbrakk>bfilter e1 False \<sigma> \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1[of "bfilter e1 False \<sigma>" "bfilter e2 False \<sigma>"] h]
         by simp
       show ?thesis using False sup1
         using bfilter.simps(4) by presburger
     next
       case b1T: True
-      have v2: "bval b2 s = False" using disj b1T by simp
-      have h: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
+      have v2: "truthy (aval e2 s) = False" using disj b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
         using And.IH(2)[OF And.prems(1) v2] by simp
-      have sup2: "s \<in> \<lbrakk>bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub2[of "bfilter b2 False \<sigma>" "bfilter b1 False \<sigma>"] h]
+      have sup2: "s \<in> \<lbrakk>bfilter e1 False \<sigma> \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2[of "bfilter e2 False \<sigma>" "bfilter e1 False \<sigma>"] h]
         by simp
       show ?thesis using False sup2
         using bfilter.simps(4) by presburger 
     qed
   qed
 next
-  case (Or b1 b2)
+  case (Or e1 e2)
   show ?case proof (cases res)
     case True
-    have disj: "bval b1 s \<or> bval b2 s" using Or.prems(2) True by simp
-    show ?thesis proof (cases "bval b1 s")
+    have disj: "truthy (aval e1 s) \<or> truthy (aval e2 s)"
+      using Or.prems(2) True by (auto split: if_splits)
+    show ?thesis proof (cases "truthy (aval e1 s)")
       case b1T: True
-      have v1: "bval b1 s = True" using b1T by simp
-      have h: "s \<in> \<lbrakk>bfilter b1 True \<sigma>\<rbrakk>"
+      have v1: "truthy (aval e1 s) = True" using b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter e1 True \<sigma>\<rbrakk>"
         using Or.IH(1)[OF Or.prems(1) v1] by simp
-      have sup1: "s \<in> \<lbrakk>bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub1[of "bfilter b1 True \<sigma>" "bfilter b2 True \<sigma>"] h]
+      have sup1: "s \<in> \<lbrakk>bfilter e1 True \<sigma> \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1[of "bfilter e1 True \<sigma>" "bfilter e2 True \<sigma>"] h]
         by simp
       show ?thesis using True sup1
         using bfilter.simps(5) by presburger 
     next
       case b1F: False
-      have v2: "bval b2 s = True" using disj b1F by simp
-      have h: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
+      have v2: "truthy (aval e2 s) = True" using disj b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
         using Or.IH(2)[OF Or.prems(1) v2] by simp
-      have sup2: "s \<in> \<lbrakk>bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub2[of "bfilter b2 True \<sigma>" "bfilter b1 True \<sigma>"] h]
+      have sup2: "s \<in> \<lbrakk>bfilter e1 True \<sigma> \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2[of "bfilter e2 True \<sigma>" "bfilter e1 True \<sigma>"] h]
         by simp
       show ?thesis using True sup2
         using bfilter.simps(5) by presburger
     qed
   next
     case False
-    have v1: "bval b1 s = False" and v2: "bval b2 s = False"
-      using Or.prems(2) False by simp_all
-    have gs2: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
+    have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
+      using Or.prems(2) False by (auto split: if_splits)
+    have gs2: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
       using Or.IH(2)[OF Or.prems(1) v2] by simp
     show ?thesis
       using Or.IH(1)[OF gs2 v1] by (simp add: False)
@@ -1048,7 +1110,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Less.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by simp
+  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (auto split: if_splits)
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -1063,7 +1125,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by simp
+  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by (auto split: if_splits)
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_eq_sound[OF e1a e2a eq] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -1384,12 +1446,58 @@ next
     by (rule Times.IH(2)[OF conjunct2[OF iv] Times.prems(2)])
   show ?case unfolding afilter_Times_unfold
     by (rule Times.IH(1)[OF conjunct1[OF iv] step])
+next
+  case (Less e1 e2) then show ?case by simp
+next
+  case (Eq e1 e2) then show ?case by simp
+next
+  case (Not e) then show ?case by simp
+next
+  case (And e1 e2) then show ?case by simp
+next
+  case (Or e1 e2) then show ?case by simp
+qed
+
+text \<open>
+  Monotonicity companion to \<open>bfilter_default_sound\<close>: the same \<open>inv_eq\<close>-
+  against-\<open>0\<close> reduction is monotone in \<open>\<sigma>\<close>, following directly from
+  \<open>aval_abs_mono\<close>, \<open>inv_eq_mono\<close>, and \<open>afilter_mono\<close>.
+\<close>
+lemma bfilter_default_mono:
+  assumes "\<sigma>1 \<le> \<sigma>2"
+  shows "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))) \<sigma>1
+       \<le> afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))) \<sigma>2"
+proof -
+  have v1: "aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2" by (rule aval_abs_mono[OF assms])
+  have v0: "aval_abs (N 0) \<sigma>1 \<le> aval_abs (N 0) \<sigma>2" by (rule aval_abs_mono[OF assms])
+  have iv: "fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))
+              \<le> fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))"
+    using inv_eq_mono_conj[OF v1 v0] by simp
+  show ?thesis by (rule afilter_mono[OF iv assms])
 qed
 
 lemma bfilter_mono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
-  case (Bc b') thus ?case by simp
+  case (N n) show ?case
+    using bfilter_default_mono[where e = "N n" and res = res, OF N.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (V x) show ?case
+    using bfilter_default_mono[where e = "V x" and res = res, OF V.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+next
+  case (Plus e1 e2) show ?case
+    using bfilter_default_mono[where e = "Plus e1 e2" and res = res, OF Plus.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Minus e1 e2) show ?case
+    using bfilter_default_mono[where e = "Minus e1 e2" and res = res, OF Minus.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Times e1 e2) show ?case
+    using bfilter_default_mono[where e = "Times e1 e2" and res = res, OF Times.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
 next
   case (Not b) show ?case unfolding bfilter.simps by (rule Not.IH[OF Not.prems])
 next
@@ -1510,12 +1618,48 @@ next
             \<le> afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
     by (rule Times.IH(1))
   show ?case unfolding afilter_Times_unfold by (rule order_trans[OF h1 h2])
+next
+  case (Less e1 e2) show ?case by simp
+next
+  case (Eq e1 e2) show ?case by simp
+next
+  case (Not e) show ?case by simp
+next
+  case (And e1 e2) show ?case by simp
+next
+  case (Or e1 e2) show ?case by simp
 qed
+
+text \<open>
+  Reductiveness companion to \<open>bfilter_default_sound\<close>: the \<open>inv_eq\<close>-against-\<open>0\<close>
+  reduction is exactly an \<open>afilter\<close> call, so reductiveness falls straight out
+  of \<open>afilter_reductive\<close> with no further argument.
+\<close>
+lemma bfilter_default_reductive:
+  "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma> \<le> \<sigma>"
+  by (rule afilter_reductive)
 
 lemma bfilter_reductive: "bfilter b res \<sigma> \<le> \<sigma>"
 proof (induction b arbitrary: res \<sigma>)
-  case (Bc b')
-  then show ?case by simp
+  case (N n) show ?case
+    using bfilter_default_reductive[where e = "N n" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (V x) show ?case
+    using bfilter_default_reductive[where e = "V x" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+next
+  case (Plus e1 e2) show ?case
+    using bfilter_default_reductive[where e = "Plus e1 e2" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Minus e1 e2) show ?case
+    using bfilter_default_reductive[where e = "Minus e1 e2" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Times e1 e2) show ?case
+    using bfilter_default_reductive[where e = "Times e1 e2" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
 next
   case (Not b)
   show ?case unfolding bfilter.simps by (rule Not.IH)

@@ -251,7 +251,7 @@ text \<open>
       domain may override with sharper, hand-tuned predicates.
     \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
       and \<^locale>\<open>abstract_check_domain\<close>: mutually recursive
-      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>bexp\<close>, the three-way
+      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>exp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
       \<^const>\<open>checks_proven\<close>.

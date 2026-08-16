@@ -18,8 +18,7 @@ subsection \<open>Executable orders\<close>
 
 text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
   enumeration of intra and call relations. They affect only solver representation, not
-  CFG semantics.\<close>
-derive linorder bexp
+  CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
 derive linorder special_call
 derive linorder edge_action
 derive linorder call_action

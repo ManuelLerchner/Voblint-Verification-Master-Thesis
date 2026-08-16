@@ -33,13 +33,13 @@ datatype special_desc = SD_Nondet_Int | SD_Min | SD_Max
 
 datatype special_call =
     Nondet_Int
-  | Min aexp aexp
-  | Max aexp aexp
+  | Min exp exp
+  | Max exp exp
 
 instance special_call :: countable
   by countable_datatype
 
-fun classify_special :: "special_desc => aexp list => special_call option" where
+fun classify_special :: "special_desc => exp list => special_call option" where
   "classify_special SD_Nondet_Int [] = Some Nondet_Int"
 | "classify_special SD_Min [a, b] = Some (Min a b)"
 | "classify_special SD_Max [a, b] = Some (Max a b)"
@@ -63,19 +63,19 @@ lemma special_result_ex [simp]: "\<exists>v. special_result sc s v"
   by (cases sc) auto
 
 text \<open>
-  \<open>special_mentions_global\<close> is \<open>special_call\<close>'s analogue of \<open>aexp_mentions_global\<close>:
+  \<open>special_mentions_global\<close> is \<open>special_call\<close>'s analogue of \<open>exp_mentions_global\<close>:
   whether evaluating the classified operation could read a global variable,
   needed wherever a special call's locality is at stake (mirroring how an
-  ordinary assignment's RHS needs \<open>aexp_mentions_global\<close>). \<open>Nondet_Int\<close> reads
+  ordinary assignment's RHS needs \<open>exp_mentions_global\<close>). \<open>Nondet_Int\<close> reads
   nothing, so it never mentions a global; \<open>Min\<close>/\<open>Max\<close> read exactly their two
   argument expressions.
 \<close>
 fun special_mentions_global :: "(vname => bool) => special_call => bool" where
   "special_mentions_global gs Nondet_Int = False"
 | "special_mentions_global gs (Min a b) =
-     (aexp_mentions_global gs a \<or> aexp_mentions_global gs b)"
+     (exp_mentions_global gs a \<or> exp_mentions_global gs b)"
 | "special_mentions_global gs (Max a b) =
-     (aexp_mentions_global gs a \<or> aexp_mentions_global gs b)"
+     (exp_mentions_global gs a \<or> exp_mentions_global gs b)"
 
 text \<open>
   \<open>special_table\<close> is VIMP's closed analogue of Goblint's open library-function

@@ -360,7 +360,7 @@ proof unfold_locales
   show "n \<in> gamma (meet_sign a b)"
     using meet_sign_sound[of n a b] H1 H2 by simp
 next
-  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> sign"
+  fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
   assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
   show "aval e s \<in> gamma (aval_sign e \<sigma>)"
     using aval_sign_sound[of s \<sigma> e] H by simp
@@ -394,7 +394,7 @@ next
   assume "a1 \<le> a2" and "b1 \<le> b2"
   thus "meet_sign a1 b1 \<le> meet_sign a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
 next
-  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
+  fix e :: exp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
   assume "\<sigma>1 \<le> \<sigma>2"
   thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
 next
@@ -471,7 +471,7 @@ text \<open>
 \<close>
 
 lemma bfilter_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.bfilter_sound by simp
 
 

@@ -10,17 +10,18 @@ subsection \<open>Abstract branch and assignment\<close>
 text \<open>
   Guard refinement delegates to the generic @{text bfilter} proved sound in
   @{locale backward_domain}. @{const bfilter_ivl} narrows on the branch selected
-  by its boolean polarity argument (@{text True} for @{text "bval b"}, @{text False}
-  for @{text "\<not> bval b"}) -- this is @{text ivl_tf_for}'s @{text tf_branch} instance
+  by its boolean polarity argument (@{text True} for @{text "truthy (aval b s)"},
+  @{text False} for @{text "\<not> truthy (aval b s)"}) -- this is @{text ivl_tf_for}'s
+  @{text tf_branch} instance
   directly, matching Goblint's single polarity-parametrized @{text Spec.branch}.
 \<close>
 
 lemma bfilter_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
   using ivl_backward_domain.bfilter_sound by simp
 
 definition assign_ivl ::
-    "vname => aexp => (vname => ivl) => (vname => ivl)"
+    "vname => exp => (vname => ivl) => (vname => ivl)"
 where
   "assign_ivl x a \<sigma> = \<sigma>(x := aval_ivl a \<sigma>)"
 
@@ -50,7 +51,7 @@ definition body_ivl :: "pname => (vname => ivl) => (vname => ivl)" where
   "body_ivl p \<sigma> = \<sigma>"
 
 definition return_ivl ::
-    "aexp option => pname => (vname => ivl) => (vname => ivl)"
+    "exp option => pname => (vname => ivl) => (vname => ivl)"
 where
   "return_ivl e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_ivl ret_var a \<sigma>)"
 
@@ -102,7 +103,7 @@ definition enter_frame_ivl_for ::
   "enter_frame_ivl_for gs = enter_frame_D gs ivl_top"
 
 definition enter_ivl_for ::
-    "(vname => bool) => vname list => aexp list =>
+    "(vname => bool) => vname list => exp list =>
       ivl abs_state => ivl abs_state" where
   "enter_ivl_for gs = enter_D gs ivl_top aval_ivl"
 

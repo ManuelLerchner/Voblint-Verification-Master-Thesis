@@ -99,7 +99,7 @@ text \<open>
 theorem dispatch_demo_first_check_certified:
   "\<forall>s \<in> ltr_collect (declared_global dispatch_demo_prog) (prog_cfg prog_main_name dispatch_demo_prog)
            (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
-     bval (Less (N 0) (V (STR ''y''))) s"
+     truthy (aval (Less (N 0) (V (STR ''y''))) s)"
 proof (rule analyse_interval_proved_sound)
   show "analyse_interval_td_terminates
           (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
@@ -114,14 +114,14 @@ proof (rule analyse_interval_proved_sound)
 qed
 
 text \<open>
-  \<^const>\<open>string_of_bexp\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>, already an
-  ancestor) renders the \<open>bexp\<close> half of a \<open>check_report_entry\<close> as a native
+  \<^const>\<open>string_of_exp\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>, already an
+  ancestor) renders the \<open>exp\<close> half of a \<open>check_report_entry\<close> as a native
   string, so an external consumer of \<open>analyse\<close>'s report can print a check's
-  condition without decoding the \<open>bexp\<close> AST itself.
+  condition without decoding the \<open>exp\<close> AST itself.
 \<close>
 
 lemma dispatch_demo_check_cond_rendered:
-  "string_of_bexp (Less (N 0) (V (STR ''y''))) = ''0<y''"
+  "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = ''0<y''"
   by eval
 
 subsection \<open>Sign: trivial straight-line code is precise\<close>
@@ -199,9 +199,9 @@ lemma proc_demo_sign_unknown:
   by eval
 
 text \<open>
-  \<open>total+n\<close>, not \<open>(total+n)\<close>: \<open>string_of_aexp\<close> no longer parenthesizes
+  \<open>total+n\<close>, not \<open>(total+n)\<close>: \<open>string_of_exp\<close> no longer parenthesizes
   \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close> (see \<open>VIMP_Source_Print.thy\<close> --- VIMP's source
-  grammar has no parenthesized \<open>aexp\<close> at all, so the old parenthesized
+  grammar has no parenthesized \<open>exp\<close> at all, so the old parenthesized
   rendering was never actually valid VIMP source).
 \<close>
 

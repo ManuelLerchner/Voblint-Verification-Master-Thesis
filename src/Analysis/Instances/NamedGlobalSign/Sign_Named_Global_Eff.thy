@@ -260,8 +260,8 @@ next
     using special_sign_sound
     by (auto simp add: special sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
 next
-  show "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-          (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s = pol
+  show "\<forall>(b::exp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+          (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). truthy (aval b s) = pol
           \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch E b pol u) \<sigma>))"
     using bfilter_sign_sound
     by (auto simp add: branch sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
@@ -271,7 +271,7 @@ next
             s \<in> gamma_state_lift (etf_collecting_full_lift (etf_body E p u) \<sigma>))"
     by (auto simp add: body intro: in_gamma_etf_collecting_lift_of_transfer)
 next
-  show "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+  show "\<forall>(e::exp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
             s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
               \<in> gamma_state_lift (etf_collecting_full_lift (etf_return E e p u) \<sigma>))"

@@ -105,13 +105,13 @@ proof -
   let ?e0 = "enter_state vpr_gs ?s0"
   let ?e1 = "?e0((STR ''Gx'') := 0)"
   let ?ei = "enter_state vpr_gs ?e1"
-  have inner_guard: "\<not> bval (Less (N 0) (V (STR ''Gx''))) ?ei"
+  have inner_guard: "\<not> truthy (aval (Less (N 0) (V (STR ''Gx''))) ?ei)"
     by (simp add: enter_state_def)
   have inner_body: "pcompletes vpr_gs \<Pi> rec_body ?ei ?ei"
     unfolding rec_body_def by (rule pcompletes_IfFalse[OF inner_guard pcompletes_skip])
   have inner_call: "pcompletes vpr_gs \<Pi> (imp \<lbrakk> r() \<rbrakk>) ?e1 (combine_env vpr_gs ?e1 ?ei)"
     by (rule pcompletes_Call_parameterless[OF p inner_body])
-  have outer_guard: "bval (Less (N 0) (V (STR ''Gx''))) ?e0"
+  have outer_guard: "truthy (aval (Less (N 0) (V (STR ''Gx''))) ?e0)"
     by (simp add: enter_state_def)
   have dec: "pcompletes vpr_gs \<Pi> (imp \<lbrakk> Gx := Gx - 1 \<rbrakk>) ?e0 ?e1"
   proof -

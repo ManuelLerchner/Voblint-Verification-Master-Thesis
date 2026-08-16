@@ -16,12 +16,12 @@ text \<open>
 \<close>
 
 abbreviation enter_global ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
+  "('dl, 'dg) dg_spec \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
 where
   "enter_global S fs as d g \<equiv> fst (dgs_enter S fs as d g)"
 
 abbreviation enter_local ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
+  "('dl, 'dg) dg_spec \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
 where
   "enter_local S fs as d g \<equiv> snd (dgs_enter S fs as d g)"
 
@@ -87,7 +87,7 @@ text \<open>
 \<close>
 
 abbreviation with_call ::
-  "call_action \<Rightarrow> (vname option \<Rightarrow> vname list \<Rightarrow> aexp list \<Rightarrow> 'a) \<Rightarrow> 'a"
+  "call_action \<Rightarrow> (vname option \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a) \<Rightarrow> 'a"
 where
   "with_call ca f \<equiv> case ca of CallEdge dst fs as \<Rightarrow> f dst fs as"
 

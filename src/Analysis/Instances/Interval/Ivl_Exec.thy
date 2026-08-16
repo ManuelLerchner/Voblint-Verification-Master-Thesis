@@ -38,7 +38,7 @@ definition ivl_ops :: "ivl numeric_ops" where
   "ivl_ops = \<lparr> n_aval = aval_ivl, n_bfilter = bfilter_ivl_st, n_top = ivl_top \<rparr>"
 
 definition branch_ivl_st_for ::
-  "(vname => bool) => bexp => bool => ivl resolved_st_q => ivl resolved_st_q" where
+  "(vname => bool) => exp => bool => ivl resolved_st_q => ivl resolved_st_q" where
   "branch_ivl_st_for = generic_branch_st_for ivl_ops"
 
 lemma branch_ivl_st_for_eq [simp]:
@@ -46,7 +46,7 @@ lemma branch_ivl_st_for_eq [simp]:
   by (simp add: branch_ivl_st_for_def generic_branch_st_for_def ivl_ops_def)
 
 definition ivl_enter_st_for ::
-  "(vname => bool) => vname list => aexp list =>
+  "(vname => bool) => vname list => exp list =>
    ivl resolved_st_q => ivl resolved_st_q" where
   "ivl_enter_st_for = generic_enter_st_for ivl_ops"
 
@@ -152,7 +152,7 @@ lemma ivl_tf_st_for_nop_agree:
   using agree[OF location_in] by (simp add: ivl_tf_for_def skip_ivl_def)
 
 lemma ivl_tf_st_for_assign_agree:
-  fixes y :: vname and a :: aexp
+  fixes y :: vname and a :: exp
   assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
       lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
     and val_agree: "aval_ivl a (fun_of_resolved_st_q_for gs s_exec) = aval_ivl a s_abs"
@@ -189,7 +189,7 @@ lemma ivl_tf_st_for_ret_none_agree:
   by (simp add: ivl_tf_for_def skip_ivl_def return_ivl_def)
 
 lemma ivl_tf_st_for_ret_some_agree:
-  fixes a :: aexp and p :: pname
+  fixes a :: exp and p :: pname
   assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
       lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
     and val_agree: "aval_ivl a (fun_of_resolved_st_q_for gs s_exec) = aval_ivl a s_abs"
@@ -318,7 +318,7 @@ text \<open>
 \<close>
 
 lemma ivl_enter_st_for_singleton_agree:
-  fixes x :: vname and e :: aexp
+  fixes x :: vname and e :: exp
   assumes formal_not_global: "\<not> gs x"
     and agree_global: "\<And>y. gs y \<Longrightarrow> location_of gs y \<in> universe \<Longrightarrow>
       fun_of_resolved_st_q_for gs s_exec y = s_abs y"

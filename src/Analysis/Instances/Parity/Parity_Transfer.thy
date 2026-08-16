@@ -7,7 +7,7 @@ section \<open>Parity transfer functions\<close>
 subsection \<open>Abstract assignment\<close>
 
 definition assign_parity ::
-    "vname => aexp => (vname => parity) => (vname => parity)" where
+    "vname => exp => (vname => parity) => (vname => parity)" where
   "assign_parity x a \<sigma> = \<sigma>(x := aval_parity a \<sigma>)"
 
 lemma assign_parity_sound:
@@ -37,10 +37,10 @@ text \<open>
   shape directly (no separate assume/assume-not case, since both bodies coincide).
 \<close>
 
-definition branch_parity :: "bexp => bool => (vname => parity) => (vname => parity)" where
+definition branch_parity :: "exp => bool => (vname => parity) => (vname => parity)" where
   "branch_parity b pol \<sigma> = \<sigma>"
 
-lemma branch_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
+lemma branch_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
   by (simp add: branch_parity_def)
 
 subsection \<open>Bundled transfer functions\<close>
@@ -66,7 +66,7 @@ definition body_parity :: "pname => (vname => parity) => (vname => parity)" wher
   "body_parity p \<sigma> = \<sigma>"
 
 definition return_parity ::
-    "aexp option => pname => (vname => parity) => (vname => parity)"
+    "exp option => pname => (vname => parity) => (vname => parity)"
 where
   "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_parity ret_var a \<sigma>)"
 
@@ -118,7 +118,7 @@ definition enter_frame_parity_for ::
   "enter_frame_parity_for gs = enter_frame_D gs PTop"
 
 definition enter_parity_for ::
-    "(vname => bool) => vname list => aexp list =>
+    "(vname => bool) => vname list => exp list =>
       parity abs_state => parity abs_state" where
   "enter_parity_for gs = enter_D gs PTop aval_parity"
 

@@ -15,40 +15,46 @@ definition string_of_int :: "int \<Rightarrow> string" where
       else string_of_nat (nat i))"
 
 text \<open>
-  No wrapping parens on \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>: unlike \<open>bexp\<close>, VIMP's source
-  grammar has no parenthesized \<open>aexp\<close> form at all (\<open>VIMP_Notation.thy\<close>'s
-  \<open>imp2_aexp\<close> productions never declare one), so a parenthesized rendering
-  here would print text this analyzer's own parsers cannot read back --
-  actively misleading for a "this is what the source looks like" printer.
-  Precedence is exactly \<open>*\<close> tighter than \<open>+\<close>/\<open>-\<close>, both left-associative
-  (\<open>VIMP_Notation.thy\<close>'s \<open>_ + _ [65,66] 65\<close> / \<open>_ * _ [70,71] 70\<close>), so this
-  prints correctly for any \<open>aexp\<close> actually reachable by parsing source text.
-  A tree built some other way (e.g. \<open>Times (Plus a b) c\<close>, not obtainable
-  from any concrete VIMP source, since nothing can demote a \<open>Plus\<close> back
-  under a \<open>*\<close> without parens) still prints as *some* string, just not one
-  that means the same tree back -- an inherent limit of the source grammar
-  itself, not a printer defect.
+  \<open>exp_prio\<close> mirrors \<open>VIMP_Grammar_Generated\<close>'s own generated mixfix
+  priorities level for level (\<open>Or\<close> loosest, \<open>Times\<close>/\<open>Not\<close>
+  tightest), so \<open>string_of_exp\<close> parenthesizes a suexpression exactly when
+  its own constructor binds looser than the calling position requires. The
+  printed text reparses to the same tree for any \<open>exp\<close> actually reachable
+  by parsing source text -- arithmetic, comparison, and logical operators
+  alike, sharing the one grammar. A tree built some other way (e.g.
+  \<open>Times (Plus a b) c\<close>, not obtainable from concrete VIMP source, since
+  nothing can demote a \<open>Plus\<close> back under a \<open>*\<close> without parens) still prints
+  as *some* string, just not necessarily the tightest one -- an inherent
+  limit of the source grammar itself, not a printer defect.
 \<close>
 
-fun string_of_aexp :: "aexp \<Rightarrow> string" where
-  "string_of_aexp (N n) = string_of_int n"
-| "string_of_aexp (V x) = String.explode x"
-| "string_of_aexp (Plus a b) = string_of_aexp a @ ''+'' @ string_of_aexp b"
-| "string_of_aexp (Minus a b) = string_of_aexp a @ ''-'' @ string_of_aexp b"
-| "string_of_aexp (Times a b) = string_of_aexp a @ ''*'' @ string_of_aexp b"
+fun exp_prio :: "exp \<Rightarrow> nat" where
+  "exp_prio (N _) = 1000"
+| "exp_prio (V _) = 1000"
+| "exp_prio (Not _) = 80"
+| "exp_prio (Times _ _) = 70"
+| "exp_prio (Plus _ _) = 60"
+| "exp_prio (Minus _ _) = 60"
+| "exp_prio (Less _ _) = 50"
+| "exp_prio (Eq _ _) = 50"
+| "exp_prio (And _ _) = 40"
+| "exp_prio (Or _ _) = 30"
 
-fun string_of_bexp :: "bexp \<Rightarrow> string" where
-  "string_of_bexp (Bc True) = ''true''"
-| "string_of_bexp (Bc False) = ''false''"
-| "string_of_bexp (Not b) = ''!('' @ string_of_bexp b @ '')''"
-| "string_of_bexp (And b1 b2) =
-    ''('' @ string_of_bexp b1 @ ''&&'' @ string_of_bexp b2 @ '')''"
-| "string_of_bexp (Or b1 b2) =
-    ''('' @ string_of_bexp b1 @ ''||'' @ string_of_bexp b2 @ '')''"
-| "string_of_bexp (Less a1 a2) =
-    string_of_aexp a1 @ ''<'' @ string_of_aexp a2"
-| "string_of_bexp (Eq a1 a2) =
-    string_of_aexp a1 @ ''=='' @ string_of_aexp a2"
+fun string_of_exp :: "nat \<Rightarrow> exp \<Rightarrow> string" where
+  "string_of_exp min_prio e =
+     (let body =
+        (case e of
+           N n \<Rightarrow> string_of_int n
+         | V x \<Rightarrow> String.explode x
+         | Plus a b \<Rightarrow> string_of_exp 60 a @ ''+'' @ string_of_exp 61 b
+         | Minus a b \<Rightarrow> string_of_exp 60 a @ ''-'' @ string_of_exp 61 b
+         | Times a b \<Rightarrow> string_of_exp 70 a @ ''*'' @ string_of_exp 71 b
+         | Less a b \<Rightarrow> string_of_exp 51 a @ ''<'' @ string_of_exp 51 b
+         | Eq a b \<Rightarrow> string_of_exp 51 a @ ''=='' @ string_of_exp 51 b
+         | Not a \<Rightarrow> ''!'' @ string_of_exp 80 a
+         | And a b \<Rightarrow> string_of_exp 40 a @ ''&&'' @ string_of_exp 41 b
+         | Or a b \<Rightarrow> string_of_exp 30 a @ ''||'' @ string_of_exp 31 b)
+      in if exp_prio e < min_prio then ''('' @ body @ '')'' else body)"
 
 definition source_nl :: string where "source_nl = [CHR 0x0A]"
 
@@ -59,21 +65,21 @@ fun join_source :: "string \<Rightarrow> string list \<Rightarrow> string" where
 
 fun string_of_com :: "com \<Rightarrow> string" where
   "string_of_com SKIP = ''skip''"
-| "string_of_com (Assign x e) = String.explode x @ '' := '' @ string_of_aexp e"
-| "string_of_com (VIMP_Proc.com.Check c) = ''__voblint_check('' @ string_of_bexp c @ '')''"
+| "string_of_com (Assign x e) = String.explode x @ '' := '' @ string_of_exp 0 e"
+| "string_of_com (VIMP_Proc.com.Check c) = ''__voblint_check('' @ string_of_exp 0 c @ '')''"
 | "string_of_com (Seq c1 c2) =
     string_of_com c1 @ '';'' @ source_nl @ string_of_com c2"
 | "string_of_com (If b c1 c2) =
-    ''if ('' @ string_of_bexp b @ '') { '' @ string_of_com c1
+    ''if ('' @ string_of_exp 0 b @ '') { '' @ string_of_com c1
     @ '' } else { '' @ string_of_com c2 @ '' }''"
 | "string_of_com (While b c) =
-    ''while ('' @ string_of_bexp b @ '') { '' @ string_of_com c @ '' }''"
+    ''while ('' @ string_of_exp 0 b @ '') { '' @ string_of_com c @ '' }''"
 | "string_of_com (Call dst p es) =
     (case dst of
-      None \<Rightarrow> String.explode p @ ''('' @ join_source '', '' (map string_of_aexp es) @ '')''
+      None \<Rightarrow> String.explode p @ ''('' @ join_source '', '' (map (string_of_exp 0) es) @ '')''
     | Some x \<Rightarrow> String.explode x @ '' := '' @ String.explode p @ ''(''
-        @ join_source '', '' (map string_of_aexp es) @ '')'')"
-| "string_of_com (Return (Some e)) = ''return '' @ string_of_aexp e"
+        @ join_source '', '' (map (string_of_exp 0) es) @ '')'')"
+| "string_of_com (Return (Some e)) = ''return '' @ string_of_exp 0 e"
 | "string_of_com (Return None) = ''return''"
 | "string_of_com Restore = ''restore''"
 | "string_of_com Unwind = ''<unwind>''"
@@ -98,19 +104,19 @@ fun append_last :: "string \<Rightarrow> string list \<Rightarrow> string list" 
 fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list" where
   "pretty_source_lines_com n SKIP = [source_indent n @ ''skip'']"
 | "pretty_source_lines_com n (Assign x e) =
-    [source_indent n @ String.explode x @ '' := '' @ string_of_aexp e]"
+    [source_indent n @ String.explode x @ '' := '' @ string_of_exp 0 e]"
 | "pretty_source_lines_com n (VIMP_Proc.com.Check c) =
-    [source_indent n @ ''__voblint_check('' @ string_of_bexp c @ '')'']"
+    [source_indent n @ ''__voblint_check('' @ string_of_exp 0 c @ '')'']"
 | "pretty_source_lines_com n (Seq c1 c2) =
     append_last '';'' (pretty_source_lines_com n c1) @ pretty_source_lines_com n c2"
 | "pretty_source_lines_com n (If b c1 c2) =
-    [source_indent n @ ''if ('' @ string_of_bexp b @ '') {'']
+    [source_indent n @ ''if ('' @ string_of_exp 0 b @ '') {'']
     @ pretty_source_lines_com (n + 2) c1
     @ [source_indent n @ ''} else {'']
     @ pretty_source_lines_com (n + 2) c2
     @ [source_indent n @ ''}'']"
 | "pretty_source_lines_com n (While b c) =
-    [source_indent n @ ''while ('' @ string_of_bexp b @ '') {'']
+    [source_indent n @ ''while ('' @ string_of_exp 0 b @ '') {'']
     @ pretty_source_lines_com (n + 2) c
     @ [source_indent n @ ''}'']"
 | "pretty_source_lines_com n (Call dst p es) =

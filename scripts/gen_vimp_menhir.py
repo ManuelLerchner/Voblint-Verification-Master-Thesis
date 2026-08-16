@@ -55,6 +55,8 @@ def render_lower_arg(arg: dict) -> str:
         return "None"
     if "literal" in arg:
         return "true" if arg["literal"] else "false"
+    if "int" in arg:
+        return f"(Voblint_CLI.Core.Int_of_integer (Z.of_int {arg['int']}))"
     raise ValueError(f"unrecognized lower arg shape: {arg}")
 
 
@@ -133,12 +135,11 @@ rule token = parse
 # there's no --infer two-pass typechecking loop; every nonterminal's OCaml
 # type must be stated upfront instead.
 NONTERMINAL_TYPES = {
-    "aexp": "Voblint_CLI.Core.aexp",
-    "bexp": "Voblint_CLI.Core.bexp",
+    "exp": "Voblint_CLI.Core.exp",
     "stmt": "Voblint_CLI.Core.com",
     "stmts": "Voblint_CLI.Core.com",
     "stmts_opt": "Voblint_CLI.Core.com",
-    "actuals": "Voblint_CLI.Core.aexp list",
+    "actuals": "Voblint_CLI.Core.exp list",
     "formals": "string list",
     "ids": "string list",
     "globals_decl": "string list",
@@ -168,7 +169,7 @@ def precedence_decls(g: dict) -> str:
 
 
 def binder(i: int, sym: str) -> str:
-    """Menhir binder for rhs position i (symbol name sym), e.g. `v2 = aexp`."""
+    """Menhir binder for rhs position i (symbol name sym), e.g. `v2 = exp`."""
     return f"v{i} = {sym}"
 
 
