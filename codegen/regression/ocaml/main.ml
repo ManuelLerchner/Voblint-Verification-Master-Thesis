@@ -25,8 +25,8 @@ let mk_nat n = nat_of_integer (Z.of_int n)
    native `string` (see Example_Analysis_Dispatch.thy), so variable/procedure
    names need no conversion at all. *)
 
-(* `string_of_bexp` renders a check's condition directly, as an alternative
-   to pattern-matching the `bexp` AST. Its Isabelle return type is `string`
+(* `string_of_exp` renders a check's condition directly, as an alternative
+   to pattern-matching the `exp` AST. Its Isabelle return type is `string`
    (`char list`), and `char` is still the opaque Code_Abstract_Char type
    here (only `vname`/`pname` moved to native `String.literal`), so the
    result needs the same `integer_of_char` bridge as everywhere else `char`
@@ -119,20 +119,20 @@ let expected_one_call_interval =
 
 let show_int i = Z.to_string (integer_of_int i)
 
-let rec show_aexp = function
+(* `exp` is one unified integer-valued expression language (no separate
+   aexp/bexp split -- see VIMP_Syntax.thy), so a single recursive renderer
+   covers arithmetic and comparison/logical constructors alike. *)
+let rec show_exp = function
   | N i -> show_int i
   | V s -> s
-  | Plus (a, b) -> "(" ^ show_aexp a ^ " + " ^ show_aexp b ^ ")"
-  | Minus (a, b) -> "(" ^ show_aexp a ^ " - " ^ show_aexp b ^ ")"
-  | Times (a, b) -> "(" ^ show_aexp a ^ " * " ^ show_aexp b ^ ")"
-
-let rec show_bexp = function
-  | Bc b -> string_of_bool b
-  | Not b -> "!" ^ show_bexp b
-  | And (a, b) -> "(" ^ show_bexp a ^ " && " ^ show_bexp b ^ ")"
-  | Or (a, b) -> "(" ^ show_bexp a ^ " || " ^ show_bexp b ^ ")"
-  | Less (a, b) -> "(" ^ show_aexp a ^ " < " ^ show_aexp b ^ ")"
-  | Eqa (a, b) -> "(" ^ show_aexp a ^ " == " ^ show_aexp b ^ ")"
+  | Plus (a, b) -> "(" ^ show_exp a ^ " + " ^ show_exp b ^ ")"
+  | Minus (a, b) -> "(" ^ show_exp a ^ " - " ^ show_exp b ^ ")"
+  | Times (a, b) -> "(" ^ show_exp a ^ " * " ^ show_exp b ^ ")"
+  | Not b -> "!" ^ show_exp b
+  | And (a, b) -> "(" ^ show_exp a ^ " && " ^ show_exp b ^ ")"
+  | Or (a, b) -> "(" ^ show_exp a ^ " || " ^ show_exp b ^ ")"
+  | Less (a, b) -> "(" ^ show_exp a ^ " < " ^ show_exp b ^ ")"
+  | Eq (a, b) -> "(" ^ show_exp a ^ " == " ^ show_exp b ^ ")"
 
 let show_check_result = function
   | Check_Proved -> "Check_Proved"
@@ -147,51 +147,48 @@ let show_entry (n, (b, r)) =
      | Statement k -> "Statement " ^ show_nat k
      | FunctionEntry s -> "FunctionEntry " ^ s
      | FunctionResult s -> "FunctionResult " ^ s)
-    (show_bexp b) (show_check_result r)
+    (show_exp b) (show_check_result r)
 
 (* Compact renderers matching string_of_cfg_node/string_of_action/
    string_of_call_action in Analysis_GraphViz.thy exactly (no spaces around
    infix operators, "pp"/"entry_"/"result_" node prefixes) -- deliberately
-   not show_aexp/show_bexp above, which use the driver's own spaced format
-   for the straight-line demo's own display purposes. *)
+   not show_exp above, which uses the driver's own spaced format for the
+   straight-line demo's own display purposes. *)
 let show_cfg_node_compact = function
   | Statement n -> "pp" ^ show_nat n
   | FunctionEntry s -> "entry_" ^ s
   | FunctionResult s -> "result_" ^ s
 
-let rec show_aexp_compact = function
+let rec show_exp_compact = function
   | N i -> show_int i
   | V s -> s
-  | Plus (a, b) -> "(" ^ show_aexp_compact a ^ "+" ^ show_aexp_compact b ^ ")"
-  | Minus (a, b) -> "(" ^ show_aexp_compact a ^ "-" ^ show_aexp_compact b ^ ")"
-  | Times (a, b) -> "(" ^ show_aexp_compact a ^ "*" ^ show_aexp_compact b ^ ")"
-
-let rec show_bexp_compact = function
-  | Bc b -> string_of_bool b
-  | Not b -> "!(" ^ show_bexp_compact b ^ ")"
-  | And (a, b) -> "(" ^ show_bexp_compact a ^ "&&" ^ show_bexp_compact b ^ ")"
-  | Or (a, b) -> "(" ^ show_bexp_compact a ^ "||" ^ show_bexp_compact b ^ ")"
-  | Less (a, b) -> show_aexp_compact a ^ "<" ^ show_aexp_compact b
-  | Eqa (a, b) -> show_aexp_compact a ^ "==" ^ show_aexp_compact b
+  | Plus (a, b) -> "(" ^ show_exp_compact a ^ "+" ^ show_exp_compact b ^ ")"
+  | Minus (a, b) -> "(" ^ show_exp_compact a ^ "-" ^ show_exp_compact b ^ ")"
+  | Times (a, b) -> "(" ^ show_exp_compact a ^ "*" ^ show_exp_compact b ^ ")"
+  | Not b -> "!(" ^ show_exp_compact b ^ ")"
+  | And (a, b) -> "(" ^ show_exp_compact a ^ "&&" ^ show_exp_compact b ^ ")"
+  | Or (a, b) -> "(" ^ show_exp_compact a ^ "||" ^ show_exp_compact b ^ ")"
+  | Less (a, b) -> show_exp_compact a ^ "<" ^ show_exp_compact b
+  | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
 
 let show_edge_action = function
   | EA_Nop -> "nop"
-  | EA_Assign (x, a) -> x ^ " := " ^ show_aexp_compact a
+  | EA_Assign (x, a) -> x ^ " := " ^ show_exp_compact a
   | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
   | EA_Special (Min (a, b), x) ->
-    x ^ " := min(" ^ show_aexp_compact a ^ ", " ^ show_aexp_compact b ^ ")"
+    x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
   | EA_Special (Max (a, b), x) ->
-    x ^ " := max(" ^ show_aexp_compact a ^ ", " ^ show_aexp_compact b ^ ")"
-  | EA_Assume b -> "[" ^ show_bexp_compact b ^ "]"
-  | EA_AssumeNot b -> "![" ^ show_bexp_compact b ^ "]"
+    x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
+  | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
+  | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
   | EA_Ret (None, _) -> "return"
-  | EA_Ret (Some e, _) -> "return " ^ show_aexp_compact e
-  | EA_Check b -> "check(" ^ show_bexp_compact b ^ ")"
+  | EA_Ret (Some e, _) -> "return " ^ show_exp_compact e
+  | EA_Check b -> "check(" ^ show_exp_compact b ^ ")"
 
 let show_call_action = function
-  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_aexp_compact es) ^ ")"
+  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
   | CallEdge (Some x, _, es) ->
-    x ^ " := call(" ^ String.concat "" (List.map show_aexp_compact es) ^ ")"
+    x ^ " := call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
 
 let show_intra_list es =
   String.concat "; "
@@ -288,8 +285,8 @@ let () =
       actual_one_call_interval expected_one_call_interval
   in
   let ok_check_cond_rendered =
-    check_case_str ~line:__LINE__ "string_of_bexp check condition"
-      (un_string (string_of_bexp check_cond)) "0<y"
+    check_case_str ~line:__LINE__ "string_of_exp check condition"
+      (un_string (string_of_exp (mk_nat 0) check_cond)) "0<y"
   in
   if
     ok_sign && ok_interval && ok_proc_demo_sign && ok_proc_demo_interval && ok_proc_demo_intra
