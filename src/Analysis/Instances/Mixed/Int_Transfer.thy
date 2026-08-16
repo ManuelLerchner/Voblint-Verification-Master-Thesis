@@ -37,6 +37,25 @@ lemma bfilter_int_dom_fixpoint_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_fixpoint b res \<sigma>\<rbrakk>"
   using int_dom_backward_fixpoint.bfilter_sound by simp
 
+text \<open>
+  \<open>branch_int_dom_*\<close> is the composite domain's Goblint-aligned \<open>tf_branch\<close>
+  instance per mode: a forward \<open>int_dom_tobool\<close> feasibility check ahead of
+  \<open>bfilter_int_dom_*\<close>, proved once generically as
+  @{thm [source] backward_domain.branch_sound}.
+\<close>
+
+lemma branch_int_dom_never_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_never b res \<sigma>\<rbrakk>"
+  using int_dom_backward_never.branch_sound by simp
+
+lemma branch_int_dom_once_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_once b res \<sigma>\<rbrakk>"
+  using int_dom_backward_once.branch_sound by simp
+
+lemma branch_int_dom_fixpoint_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy(aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_fixpoint b res \<sigma>\<rbrakk>"
+  using int_dom_backward_fixpoint.branch_sound by simp
+
 subsection \<open>Abstract assignment\<close>
 
 definition assign_int_dom ::
@@ -351,7 +370,7 @@ subsection \<open>Registered transfer bundles, one per refinement mode\<close>
 definition int_tf_never_for :: "(vname => bool) => int_dom domain_transfer" where
   "int_tf_never_for gs = (| tf_assign  = assign_int_dom Refine_Never,
                             tf_special = special_int_dom Refine_Never,
-                            tf_branch  = bfilter_int_dom_never,
+                            tf_branch  = branch_int_dom_never,
                             tf_skip    = skip_int_dom,
                             tf_body    = body_int_dom,
                             tf_return  = return_int_dom Refine_Never,
@@ -362,7 +381,7 @@ definition int_tf_never_for :: "(vname => bool) => int_dom domain_transfer" wher
 definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
   "int_tf_once_for gs = (| tf_assign  = assign_int_dom Refine_Once,
                            tf_special = special_int_dom Refine_Once,
-                           tf_branch  = bfilter_int_dom_once,
+                           tf_branch  = branch_int_dom_once,
                            tf_skip    = skip_int_dom,
                            tf_body    = body_int_dom,
                            tf_return  = return_int_dom Refine_Once,
@@ -373,7 +392,7 @@ definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
 definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" where
   "int_tf_fixpoint_for gs = (| tf_assign  = assign_int_dom Refine_Fixpoint,
                                tf_special = special_int_dom Refine_Fixpoint,
-                               tf_branch  = bfilter_int_dom_fixpoint,
+                               tf_branch  = branch_int_dom_fixpoint,
                                tf_skip    = skip_int_dom,
                                tf_body    = body_int_dom,
                                tf_return  = return_int_dom Refine_Fixpoint,
@@ -386,7 +405,7 @@ lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for 
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal by (simp add: bfilter_int_dom_never_sound)
+  subgoal by (simp add: branch_int_dom_never_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
@@ -400,7 +419,7 @@ lemma int_once_is_sound_transfer_for: "sound_transfer_for gs (int_tf_once_for gs
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal by (simp add: bfilter_int_dom_once_sound)
+  subgoal by (simp add: branch_int_dom_once_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
@@ -414,7 +433,7 @@ lemma int_fixpoint_is_sound_transfer_for: "sound_transfer_for gs (int_tf_fixpoin
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal by (simp add: bfilter_int_dom_fixpoint_sound)
+  subgoal by (simp add: branch_int_dom_fixpoint_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
@@ -439,14 +458,14 @@ lemma int_tf_never_for_mono:
   "s1 <= s2 \<Longrightarrow> apply_tf (int_tf_never_for gs) a s1 <= apply_tf (int_tf_never_for gs) a s2"
   by (cases a)
      (auto simp: int_tf_never_for_def assign_int_dom_mono special_int_dom_mono
-                 int_dom_backward_never.bfilter_mono skip_int_dom_mono body_int_dom_mono
+                 int_dom_backward_never.branch_mono skip_int_dom_mono body_int_dom_mono
                  return_int_dom_mono enter_int_dom_for_mono event_int_dom_mono)
 
 lemma int_tf_once_for_mono:
   "s1 <= s2 \<Longrightarrow> apply_tf (int_tf_once_for gs) a s1 <= apply_tf (int_tf_once_for gs) a s2"
   by (cases a)
      (auto simp: int_tf_once_for_def assign_int_dom_mono special_int_dom_mono
-                 int_dom_backward_once.bfilter_mono skip_int_dom_mono body_int_dom_mono
+                 int_dom_backward_once.branch_mono skip_int_dom_mono body_int_dom_mono
                  return_int_dom_mono enter_int_dom_for_mono event_int_dom_mono)
 
 end

@@ -63,7 +63,7 @@ text \<open>
 \<close>
 
 definition sign_ops :: "sign numeric_ops" where
-  "sign_ops = \<lparr> n_aval = aval_sign, n_bfilter = bfilter_sign_st, n_top = STop \<rparr>"
+  "sign_ops = \<lparr> n_aval = aval_sign, n_bfilter = branch_sign_st, n_top = STop \<rparr>"
 
 definition branch_sign_st_for ::
   "(vname => bool) => exp => bool => sign resolved_st_q => sign resolved_st_q" where

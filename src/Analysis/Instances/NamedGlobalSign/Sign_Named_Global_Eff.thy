@@ -263,7 +263,7 @@ next
   show "\<forall>(b::exp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
           (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). truthy (aval b s) = pol
           \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch E b pol u) \<sigma>))"
-    using bfilter_sign_sound
+    using branch_sign_sound
     by (auto simp add: branch sign_tf_for_def intro: in_gamma_etf_collecting_lift_of_transfer)
 next
   show "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>

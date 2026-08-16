@@ -1025,6 +1025,9 @@ abbreviation intersect_int_dom_never :: "int_dom => int_dom => int_dom" where
 abbreviation aval_int_dom_never :: "exp => (vname => int_dom) => int_dom" where
   "aval_int_dom_never == aval_int_dom Refine_Never"
 
+abbreviation tobool_int_dom_never :: "int_dom => bool option" where
+  "tobool_int_dom_never == int_dom_tobool"
+
 abbreviation inv_less_int_dom_never ::
     "bool => int_dom => int_dom => int_dom * int_dom"
 where
@@ -1052,14 +1055,16 @@ where
 
 global_interpretation int_dom_backward_never:
     backward_domain_refined
-      intersect_int_dom_never aval_int_dom_never
+      intersect_int_dom_never aval_int_dom_never tobool_int_dom_never
       inv_less_int_dom_never inv_eq_int_dom_never
       inv_plus_int_dom_never inv_minus_int_dom_never inv_times_int_dom_never
   defines
     afilter_int_dom_never = int_dom_backward_never.afilter
     and bfilter_int_dom_never = int_dom_backward_never.bfilter
+    and branch_int_dom_never = int_dom_backward_never.branch
     and afilter_int_dom_never_st = int_dom_backward_never.afilter_st
     and bfilter_int_dom_never_st = int_dom_backward_never.bfilter_st
+    and branch_int_dom_never_st = int_dom_backward_never.branch_st
 proof unfold_locales
   fix n :: int and a b :: int_dom
   assume "n \<in> gamma a" and "n \<in> gamma b"
@@ -1105,6 +1110,10 @@ next
     "n1 \<in> gamma (fst (inv_times_int_dom Refine_Never r a1 a2)) \<and>
      n2 \<in> gamma (snd (inv_times_int_dom Refine_Never r a1 a2))"
     using inv_times_int_dom_sound by simp
+next
+  fix p :: int_dom and b :: bool and i :: int
+  assume "tobool_int_dom_never p = Some b" and "i \<in> gamma p"
+  then show "truthy i = b" using int_dom_tobool_sound by simp
 next
   fix a1 a2 b1 b2 :: int_dom
   assume A: "a1 \<le> a2" and B: "b1 \<le> b2"
@@ -1192,6 +1201,10 @@ next
   show "le_pair (inv_times_int_dom Refine_Never r a1 a2) (a1, a2)"
     using inv_times_int_dom_reductive1 inv_times_int_dom_reductive2
     by (simp add: le_pair_def)
+next
+  fix p1 p2 :: int_dom and bv :: bool
+  assume "\<not> is_bot p1" and "p1 \<le> p2" and "tobool_int_dom_never p2 = Some bv"
+  then show "tobool_int_dom_never p1 = Some bv" using int_dom_tobool_mono by simp
 qed
 
 abbreviation intersect_int_dom_once :: "int_dom => int_dom => int_dom" where
@@ -1199,6 +1212,9 @@ abbreviation intersect_int_dom_once :: "int_dom => int_dom => int_dom" where
 
 abbreviation aval_int_dom_once :: "exp => (vname => int_dom) => int_dom" where
   "aval_int_dom_once == aval_int_dom Refine_Once"
+
+abbreviation tobool_int_dom_once :: "int_dom => bool option" where
+  "tobool_int_dom_once == int_dom_tobool"
 
 abbreviation inv_less_int_dom_once ::
     "bool => int_dom => int_dom => int_dom * int_dom"
@@ -1227,14 +1243,16 @@ where
 
 global_interpretation int_dom_backward_once:
     backward_domain_refined
-      intersect_int_dom_once aval_int_dom_once
+      intersect_int_dom_once aval_int_dom_once tobool_int_dom_once
       inv_less_int_dom_once inv_eq_int_dom_once
       inv_plus_int_dom_once inv_minus_int_dom_once inv_times_int_dom_once
   defines
     afilter_int_dom_once = int_dom_backward_once.afilter
     and bfilter_int_dom_once = int_dom_backward_once.bfilter
+    and branch_int_dom_once = int_dom_backward_once.branch
     and afilter_int_dom_once_st = int_dom_backward_once.afilter_st
     and bfilter_int_dom_once_st = int_dom_backward_once.bfilter_st
+    and branch_int_dom_once_st = int_dom_backward_once.branch_st
 proof unfold_locales
   fix n :: int and a b :: int_dom
   assume "n \<in> gamma a" and "n \<in> gamma b"
@@ -1280,6 +1298,10 @@ next
     "n1 \<in> gamma (fst (inv_times_int_dom Refine_Once r a1 a2)) \<and>
      n2 \<in> gamma (snd (inv_times_int_dom Refine_Once r a1 a2))"
     using inv_times_int_dom_sound by simp
+next
+  fix p :: int_dom and b :: bool and i :: int
+  assume "tobool_int_dom_once p = Some b" and "i \<in> gamma p"
+  then show "truthy i = b" using int_dom_tobool_sound by simp
 next
   fix a1 a2 b1 b2 :: int_dom
   assume A: "a1 \<le> a2" and B: "b1 \<le> b2"
@@ -1367,6 +1389,10 @@ next
   show "le_pair (inv_times_int_dom Refine_Once r a1 a2) (a1, a2)"
     using inv_times_int_dom_reductive1 inv_times_int_dom_reductive2
     by (simp add: le_pair_def)
+next
+  fix p1 p2 :: int_dom and bv :: bool
+  assume "\<not> is_bot p1" and "p1 \<le> p2" and "tobool_int_dom_once p2 = Some bv"
+  then show "tobool_int_dom_once p1 = Some bv" using int_dom_tobool_mono by simp
 qed
 
 abbreviation intersect_int_dom_fixpoint :: "int_dom => int_dom => int_dom" where
@@ -1374,6 +1400,9 @@ abbreviation intersect_int_dom_fixpoint :: "int_dom => int_dom => int_dom" where
 
 abbreviation aval_int_dom_fixpoint :: "exp => (vname => int_dom) => int_dom" where
   "aval_int_dom_fixpoint == aval_int_dom Refine_Fixpoint"
+
+abbreviation tobool_int_dom_fixpoint :: "int_dom => bool option" where
+  "tobool_int_dom_fixpoint == int_dom_tobool"
 
 abbreviation inv_less_int_dom_fixpoint ::
     "bool => int_dom => int_dom => int_dom * int_dom"
@@ -1402,14 +1431,16 @@ where
 
 global_interpretation int_dom_backward_fixpoint:
     backward_domain
-      intersect_int_dom_fixpoint aval_int_dom_fixpoint
+      intersect_int_dom_fixpoint aval_int_dom_fixpoint tobool_int_dom_fixpoint
       inv_less_int_dom_fixpoint inv_eq_int_dom_fixpoint
       inv_plus_int_dom_fixpoint inv_minus_int_dom_fixpoint inv_times_int_dom_fixpoint
   defines
     afilter_int_dom_fixpoint = int_dom_backward_fixpoint.afilter
     and bfilter_int_dom_fixpoint = int_dom_backward_fixpoint.bfilter
+    and branch_int_dom_fixpoint = int_dom_backward_fixpoint.branch
     and afilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.afilter_st
     and bfilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.bfilter_st
+    and branch_int_dom_fixpoint_st = int_dom_backward_fixpoint.branch_st
 proof unfold_locales
   fix n :: int and a b :: int_dom
   assume "n \<in> gamma a" and "n \<in> gamma b"
@@ -1455,6 +1486,10 @@ next
     "n1 \<in> gamma (fst (inv_times_int_dom Refine_Fixpoint r a1 a2)) \<and>
      n2 \<in> gamma (snd (inv_times_int_dom Refine_Fixpoint r a1 a2))"
     using inv_times_int_dom_sound by simp
+next
+  fix p :: int_dom and b :: bool and i :: int
+  assume "tobool_int_dom_fixpoint p = Some b" and "i \<in> gamma p"
+  then show "truthy i = b" using int_dom_tobool_sound by simp
 qed
 
 end

@@ -35,14 +35,14 @@ text \<open>
 \<close>
 
 definition ivl_ops :: "ivl numeric_ops" where
-  "ivl_ops = \<lparr> n_aval = aval_ivl, n_bfilter = bfilter_ivl_st, n_top = ivl_top \<rparr>"
+  "ivl_ops = \<lparr> n_aval = aval_ivl, n_bfilter = branch_ivl_st, n_top = ivl_top \<rparr>"
 
 definition branch_ivl_st_for ::
   "(vname => bool) => exp => bool => ivl resolved_st_q => ivl resolved_st_q" where
   "branch_ivl_st_for = generic_branch_st_for ivl_ops"
 
 lemma branch_ivl_st_for_eq [simp]:
-  "branch_ivl_st_for source_global b pol s = bfilter_ivl_st source_global b pol s"
+  "branch_ivl_st_for source_global b pol s = branch_ivl_st source_global b pol s"
   by (simp add: branch_ivl_st_for_def generic_branch_st_for_def ivl_ops_def)
 
 definition ivl_enter_st_for ::
@@ -211,7 +211,7 @@ lemma ivl_tf_st_for_branch_agree:
     "fun_of_resolved_st_q_for gs (branch_ivl_st_for gs b pol s_exec) =
       branch\<^sup># (ivl_tf_for gs) b pol s_abs"
   unfolding agree[symmetric]
-  by (simp add: bfilter_ivl_st_commute ivl_tf_for_def)
+  by (simp add: branch_ivl_st_commute ivl_tf_for_def)
 
 lemmas ivl_tf_st_for_assume_agree =
   ivl_tf_st_for_branch_agree[of gs s_exec s_abs b True for gs s_exec s_abs b,
@@ -279,6 +279,54 @@ proof -
   qed
 qed
 
+text \<open>
+  \<open>branch_ivl\<close>'s forward gate reads only \<open>x\<close>'s own value (\<open>Less (V x) (N n)\<close>
+  mentions no other variable), so its decision at the executable and abstract
+  sides already agrees from \<open>val_agree\<close> alone -- no whole-store premise is
+  needed there either. When the gate fires (define infeasibility), both sides
+  collapse to their own \<open>bot\<close>, and \<open>bot\<close>'s readback is \<open>bot\<close> at \<^emph>\<open>every\<close>
+  location, not only \<open>x\<close>'s -- so this holds for the same arbitrary
+  \<open>location\<close> \<open>ivl_bfilter_st_for_less_var_lit_agree\<close> does, with no extra
+  premise. When the gate falls through, this reduces to that lemma directly.
+\<close>
+
+lemma ivl_branch_st_for_less_var_lit_agree:
+  fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
+    and x :: vname and n :: int and res :: bool
+  assumes agree: "\<And>location. location \<in> universe \<Longrightarrow>
+      lookup_resolved_st_q s_exec location = s_abs (location_vname location)"
+    and location_in: "location \<in> universe"
+    and canonical: "location = location_of gs (location_vname location)"
+    and x_in: "location_of gs x \<in> universe"
+  shows
+    "lookup_resolved_st_q (branch_ivl_st gs (Less (V x) (N n)) res s_exec) location =
+      branch_ivl (Less (V x) (N n)) res s_abs (location_vname location)"
+proof -
+  have val_agree: "fun_of_resolved_st_q_for gs s_exec x = s_abs x"
+    using agree[OF x_in]
+    by (simp add: fun_of_resolved_st_q_for_def location_of_def)
+  have aval_agree: "aval_ivl (Less (V x) (N n)) (fun_of_resolved_st_q_for gs s_exec) =
+      aval_ivl (Less (V x) (N n)) s_abs"
+    using val_agree by simp
+  have bot_readback: "lookup_resolved_st_q (bot :: ivl resolved_st_q) location = bot"
+  proof -
+    have "lookup_resolved_st_q (bot :: ivl resolved_st_q) location =
+        fun_of_resolved_st_q_for gs bot (location_vname location)"
+      unfolding fun_of_resolved_st_q_for_def canonical[symmetric] ..
+    also have "\<dots> = bot" by simp
+    finally show ?thesis .
+  qed
+  have bf: "lookup_resolved_st_q (bfilter_ivl_st gs (Less (V x) (N n)) res s_exec) location =
+      bfilter_ivl (Less (V x) (N n)) res s_abs (location_vname location)"
+    by (rule ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in])
+  show ?thesis
+    unfolding ivl_backward_domain.branch_st_def ivl_backward_domain.branch_def[folded branch_ivl_def]
+      aval_agree bot_fun_def
+    using bot_readback bf
+    by (cases "is_bot (aval_ivl (Less (V x) (N n)) s_abs)")
+       (auto split: option.splits)
+qed
+
 lemma ivl_tf_st_for_assume_var_lit_agree:
   fixes s_exec :: "ivl resolved_st_q" and s_abs :: "ivl abs_state"
     and x :: vname and n :: int
@@ -290,7 +338,7 @@ lemma ivl_tf_st_for_assume_var_lit_agree:
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_Assume (Less (V x) (N n))) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_Assume (Less (V x) (N n))) s_abs (location_vname location)"
-  using ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = True]
+  using ivl_branch_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = True]
   by (simp add: ivl_tf_for_def apply_tf.simps)
 
 lemma ivl_tf_st_for_assume_not_var_lit_agree:
@@ -304,7 +352,7 @@ lemma ivl_tf_st_for_assume_not_var_lit_agree:
   shows
     "lookup_resolved_st_q (ivl_tf_st_for gs (EA_AssumeNot (Less (V x) (N n))) s_exec) location =
       apply_tf (ivl_tf_for gs) (EA_AssumeNot (Less (V x) (N n))) s_abs (location_vname location)"
-  using ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = False]
+  using ivl_branch_st_for_less_var_lit_agree[OF agree location_in canonical x_in, where res = False]
   by (simp add: ivl_tf_for_def apply_tf.simps)
 
 text \<open>

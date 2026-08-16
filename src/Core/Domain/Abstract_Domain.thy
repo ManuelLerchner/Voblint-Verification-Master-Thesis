@@ -843,6 +843,7 @@ locale backward_domain =
     for intersect :: "'a::sound_domain => 'a => 'a" +
   fixes
     aval_abs  :: "exp => 'a abs_state => 'a"
+    and tobool :: "'a => bool option"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
@@ -866,6 +867,8 @@ locale backward_domain =
   and inv_times_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 * n2 \<in> gamma r
        \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
+  and tobool_sound:
+      "tobool p = Some b \<Longrightarrow> i \<in> gamma p \<Longrightarrow> truthy i = b"
 begin
 
 fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
@@ -1135,6 +1138,67 @@ next
     using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
 qed
 
+text \<open>
+  \<open>branch\<close> is the Goblint-aligned two-stage branch transfer: a forward
+  \<open>tobool\<close> feasibility check ahead of \<open>bfilter\<close>, matching \<open>Base.branch\<close>'s
+  \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>. \<open>tobool\<close>'s
+  definite answer, when present, is exactly \<open>truthy\<close> of every concrete value
+  \<open>aval_abs e \<sigma>\<close> represents; \<open>truthy (aval e s) = pol\<close> for a represented
+  \<open>s\<close> then forces that answer to equal \<open>pol\<close>, so the \<open>else bot\<close> branch below
+  is exercised only when no represented \<open>s\<close> exists at all -- \<open>bfilter\<close>'s own
+  narrowing never had a chance to run, matching Goblint's \<open>Deadcode\<close> without
+  reference to it. When \<open>tobool\<close> is \<open>None\<close> (or agrees with \<open>pol\<close>), \<open>branch\<close>
+  falls through to \<open>bfilter\<close> unchanged.
+
+  The leading \<open>is_bot (aval_abs e \<sigma>)\<close> guard is not a separate soundness
+  case -- \<open>aval_abs_sound\<close> already makes it unreachable whenever \<open>\<sigma>\<close>
+  represents anything, so \<open>branch_sound\<close> discharges it the same way as the
+  \<open>tobool\<close> disagreement case. It exists for monotonicity: an author's
+  \<open>tobool\<close> is free to answer arbitrarily at its own domain's bottom (every
+  answer is vacuously sound there, since \<open>gamma bot = {}\<close>), so \<open>tobool\<close>
+  need not, and generally does not, agree across a bottom/non-bottom pair
+  \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Routing \<open>is_bot\<close> itself to
+  \<open>bot\<close> directly, ahead of \<open>tobool\<close>, sidesteps that disagreement instead of
+  relying on it.
+\<close>
+
+definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
+  "branch e pol \<sigma> =
+     (if is_bot (aval_abs e \<sigma>) then bot
+      else case tobool (aval_abs e \<sigma>) of
+        Some c \<Rightarrow> if c = pol then bfilter e pol \<sigma> else bot
+      | None \<Rightarrow> bfilter e pol \<sigma>)"
+
+lemma branch_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
+  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
+proof -
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have not_bot: "\<not> is_bot (aval_abs e \<sigma>)" using ea is_bot_correct by auto
+  show ?thesis
+  proof (cases "tobool (aval_abs e \<sigma>)")
+    case None
+    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_def)
+  next
+    case (Some c)
+    have "truthy (aval e s) = c" using tobool_sound[OF Some ea] .
+    with assms(2) have "c = pol" by simp
+    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_def Some)
+  qed
+qed
+
+text \<open>
+  \<open>branch\<close> only ever narrows further than \<open>bfilter\<close>: it either falls through
+  to \<open>bfilter\<close> unchanged, or short-circuits to \<open>bot\<close>, and \<open>bot\<close> is least.
+  Callers that only need an upper bound on \<open>branch\<close>'s result -- e.g.
+  post-fixpoint checks -- can reuse their existing \<open>bfilter\<close>-level reasoning
+  through this fact instead of re-deriving it against \<open>branch\<close>'s case split.
+\<close>
+
+lemma branch_le_bfilter: "branch e pol \<sigma> \<le> bfilter e pol \<sigma>"
+  unfolding branch_def by (auto split: option.splits)
+
 end
 
 subsection \<open>Conservative inverse operator\<close>
@@ -1256,6 +1320,8 @@ locale backward_domain_refined = backward_domain +
   and inv_plus_reductive: "le_pair (inv_plus r a1 a2) (a1, a2)"
   and inv_minus_reductive: "le_pair (inv_minus r a1 a2) (a1, a2)"
   and inv_times_reductive: "le_pair (inv_times r a1 a2) (a1, a2)"
+  and tobool_mono:
+      "\<not> is_bot (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some (bv::bool) \<Longrightarrow> tobool p1 = Some bv"
 begin
 
 text \<open>Componentwise projections of each pair-shaped reductive assumption, used by the
@@ -1568,6 +1634,61 @@ next
     by (rule afilter_mono[OF conjunct2[OF iv] Eq.prems])
   show ?case unfolding bfilter_Eq_unfold
     by (rule afilter_mono[OF conjunct1[OF iv] step])
+qed
+
+text \<open>
+  \<open>branch\<close>'s forward gate rests on \<open>tobool\<close>, and \<open>tobool_mono\<close> explicitly
+  excludes bottom operands -- an author's \<open>tobool\<close> may answer arbitrarily
+  there, since \<open>gamma bot = {}\<close> makes every answer vacuously sound. Routing
+  \<open>is_bot (aval_abs e \<sigma>)\<close> to \<open>bot\<close> directly (\<open>branch\<close>'s own leading guard)
+  is what keeps this total: whichever of \<open>\<sigma>1\<close>/\<open>\<sigma>2\<close> has a bottom \<open>aval_abs\<close>
+  value collapses to the global least state immediately, without needing
+  \<open>tobool\<close> to say anything about it.
+\<close>
+
+lemma branch_mono:
+  assumes "sigma1 \<le> sigma2"
+  shows "branch e pol sigma1 \<le> branch e pol sigma2"
+proof (cases "is_bot (aval_abs e sigma2)")
+  case True
+  have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
+  from True have "is_bot (aval_abs e sigma1)" using is_bot_mono[OF v] by simp
+  with True show ?thesis by (simp add: branch_def)
+next
+  case not_bot2: False
+  have below_bfilter: "\<And>sigma. branch e pol sigma \<le> bfilter e pol sigma"
+    unfolding branch_def by (auto split: option.splits)
+  show ?thesis
+  proof (cases "tobool (aval_abs e sigma2)")
+    case None
+    have eq2: "branch e pol sigma2 = bfilter e pol sigma2"
+      using None not_bot2 by (simp add: branch_def)
+    show ?thesis
+      unfolding eq2 by (rule order_trans[OF below_bfilter[of sigma1] bfilter_mono[OF assms]])
+  next
+    case (Some c2)
+    show ?thesis
+    proof (cases "c2 = pol")
+      case True
+      have eq2: "branch e pol sigma2 = bfilter e pol sigma2"
+        using Some True not_bot2 by (simp add: branch_def)
+      show ?thesis
+        unfolding eq2 by (rule order_trans[OF below_bfilter[of sigma1] bfilter_mono[OF assms]])
+    next
+      case False
+      show ?thesis
+      proof (cases "is_bot (aval_abs e sigma1)")
+        case True
+        then show ?thesis by (simp add: branch_def)
+      next
+        case not_bot1: False
+        have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
+        have "tobool (aval_abs e sigma1) = Some c2"
+          using tobool_mono[OF not_bot1 v Some] .
+        with False not_bot1 show ?thesis by (simp add: branch_def)
+      qed
+    qed
+  qed
 qed
 
 text \<open>

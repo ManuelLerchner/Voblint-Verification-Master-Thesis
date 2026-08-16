@@ -110,10 +110,40 @@ proof (rule allI)
   fix v
   let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for gs) a (loop_env u)) ` intra_predecessors loop_cfg v"
   have finI: "finite ?I" using loop_intra_predecessors_finite by blast
+  text \<open>
+    At the loop head (\<open>x \<in> [0,20]\<close>) the guard \<open>x < 20\<close> is neither definitely
+    true nor definitely false, so \<open>branch_ivl\<close>'s forward feasibility gate
+    always falls through to \<open>bfilter_ivl\<close> here -- \<open>branch_ivl = bfilter_ivl\<close>
+    as whole functions, not merely at one variable. Established once via
+    \<open>branch_def\<close>'s own case split, so the rest of this proof reasons about
+    \<open>bfilter_ivl\<close> exactly as before \<open>branch_ivl\<close> existed.
+  \<close>
+  have guard_not_bot: "\<not> is_bot (aval_ivl (Less (V (STR ''x'')) (N 20))
+        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))))"
+    by eval
+  have guard_tobool_none: "interval_tobool (aval_ivl (Less (V (STR ''x'')) (N 20))
+        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))) = None"
+    by eval
+  have branch_eq_true: "branch_ivl (Less (V (STR ''x'')) (N 20)) True
+        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))) =
+      bfilter_ivl (Less (V (STR ''x'')) (N 20)) True
+        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))"
+    unfolding branch_ivl_def bfilter_ivl_def
+    using bfilter_ivl_def branch_ivl_def guard_not_bot guard_tobool_none
+      ivl_backward_domain.branch_def by fastforce
+  have branch_eq_false: "branch_ivl (Less (V (STR ''x'')) (N 20)) False
+        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))) =
+      bfilter_ivl (Less (V (STR ''x'')) (N 20)) False
+        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))"
+    unfolding branch_ivl_def bfilter_ivl_def
+    using bfilter_ivl_def branch_ivl_def guard_not_bot guard_tobool_none
+      ivl_backward_domain.branch_def by auto
+ 
   have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> loop_env v"
     by (auto split: if_splits
              simp: intra_predecessors_def loop_cfg_intra loop_env_def ivl_tf_for_def
                    apply_tf.simps assign_ivl_def ivl_backward_domain.bfilter.simps
+                   branch_eq_true branch_eq_false
                    normalize_ivl_def less_eq_ivl_def le_fun_def
                    skip_ivl_def return_ivl_def)
   show "rhs loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
@@ -146,10 +176,10 @@ abbreviation "loop_body_entry \<equiv> Statement 2"
 
 lemma loop_body_x_from_assume:
   "tf_branch (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
-  unfolding ivl_tf_for_def loop_env_def
-  by (simp add: inv_less_ivl.simps ivl_backward_domain.bfilter.simps
-        ivl_backward_domain.afilter.simps aval_ivl.simps intersect_ivl_def
-        normalize_ivl_def)
+proof -
+  have "tf_branch (ivl_tf_for gs) = branch_ivl" by (simp add: ivl_tf_for_def)
+  then show ?thesis unfolding loop_env_def by (simp only:) eval
+qed
 
 lemma loop_body_entry_x:
   "loop_env loop_body_entry (STR ''x'') = Ivl (Fin 0) (Fin 19)"

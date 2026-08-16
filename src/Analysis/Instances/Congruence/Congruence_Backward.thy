@@ -966,10 +966,12 @@ lemma inv_times_congruence_reductive:
         intersect_congruence_le1)
 
 
+
+
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation congruence_backward_domain:
-    backward_domain_refined intersect_congruence aval_congruence
+    backward_domain_refined intersect_congruence aval_congruence congruence_tobool
       inv_less_congruence inv_eq_congruence
       inv_plus_congruence inv_minus_congruence inv_times_congruence
   defines
@@ -1048,6 +1050,10 @@ next
     "n1 : gamma (fst (inv_times_congruence r a1 a2)) \<and>
      n2 : gamma (snd (inv_times_congruence r a1 a2))"
     using inv_times_congruence_sound[OF h1 h2 h3] by simp
+next
+  fix p :: congruence and b :: bool and i :: int
+  assume "congruence_tobool p = Some b" and "i : gamma p"
+  then show "truthy i = b" using congruence_tobool_sound by simp
 next
   fix a1 a2 b1 b2 :: congruence
   assume "a1 <= a2" and "b1 <= b2"
@@ -1128,6 +1134,10 @@ next
   fix r a b :: congruence
   show "le_pair (inv_times_congruence r a b) (a, b)"
     by (rule inv_times_congruence_reductive)
+next
+  fix p1 p2 :: congruence and bv :: bool
+  assume "\<not> is_bot p1" and "p1 <= p2" and "congruence_tobool p2 = Some bv"
+  then show "congruence_tobool p1 = Some bv" using congruence_tobool_mono by simp
 qed
 
 lemmas afilter_congruence_st_commute =

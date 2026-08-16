@@ -49,7 +49,7 @@ subsection \<open>Refine_Never\<close>
 
 definition int_dom_ops_never :: "int_dom numeric_ops" where
   "int_dom_ops_never = (| n_aval = aval_int_dom Refine_Never,
-                          n_bfilter = bfilter_int_dom_never_st,
+                          n_bfilter = branch_int_dom_never_st,
                           n_top = top |)"
 
 definition branch_int_dom_never_st_for ::
@@ -58,7 +58,7 @@ where
   "branch_int_dom_never_st_for = generic_branch_st_for int_dom_ops_never"
 
 lemma branch_int_dom_never_st_for_eq [simp]:
-  "branch_int_dom_never_st_for source_global b pol s = bfilter_int_dom_never_st source_global b pol s"
+  "branch_int_dom_never_st_for source_global b pol s = branch_int_dom_never_st source_global b pol s"
   by (simp add: branch_int_dom_never_st_for_def generic_branch_st_for_def int_dom_ops_never_def)
 
 definition int_dom_enter_never_st_for ::
@@ -123,12 +123,12 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_never_for gs (EA_Assume b) s) =
     apply_tf (int_tf_never_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: int_tf_never_for_def int_dom_backward_never.bfilter_st_commute)
+    by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_never_for gs (EA_AssumeNot b) s) =
     apply_tf (int_tf_never_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: int_tf_never_for_def int_dom_backward_never.bfilter_st_commute)
+    by (simp add: int_tf_never_for_def int_dom_backward_never.branch_st_commute)
   show "\<And>ea p. fun_of_resolved_st_q_for gs
       (int_tf_st_never_for gs (EA_Ret ea p) s) =
     apply_tf (int_tf_never_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
@@ -199,7 +199,7 @@ subsection \<open>Refine_Once\<close>
 
 definition int_dom_ops_once :: "int_dom numeric_ops" where
   "int_dom_ops_once = (| n_aval = aval_int_dom Refine_Once,
-                         n_bfilter = bfilter_int_dom_once_st,
+                         n_bfilter = branch_int_dom_once_st,
                          n_top = top |)"
 
 definition branch_int_dom_once_st_for ::
@@ -208,7 +208,7 @@ where
   "branch_int_dom_once_st_for = generic_branch_st_for int_dom_ops_once"
 
 lemma branch_int_dom_once_st_for_eq [simp]:
-  "branch_int_dom_once_st_for source_global b pol s = bfilter_int_dom_once_st source_global b pol s"
+  "branch_int_dom_once_st_for source_global b pol s = branch_int_dom_once_st source_global b pol s"
   by (simp add: branch_int_dom_once_st_for_def generic_branch_st_for_def int_dom_ops_once_def)
 
 definition int_dom_enter_once_st_for ::
@@ -273,12 +273,12 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_once_for gs (EA_Assume b) s) =
     apply_tf (int_tf_once_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: int_tf_once_for_def int_dom_backward_once.bfilter_st_commute)
+    by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_once_for gs (EA_AssumeNot b) s) =
     apply_tf (int_tf_once_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: int_tf_once_for_def int_dom_backward_once.bfilter_st_commute)
+    by (simp add: int_tf_once_for_def int_dom_backward_once.branch_st_commute)
   show "\<And>ea p. fun_of_resolved_st_q_for gs
       (int_tf_st_once_for gs (EA_Ret ea p) s) =
     apply_tf (int_tf_once_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"
@@ -342,7 +342,7 @@ subsection \<open>Refine_Fixpoint\<close>
 
 definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
   "int_dom_ops_fixpoint = (| n_aval = aval_int_dom Refine_Fixpoint,
-                             n_bfilter = bfilter_int_dom_fixpoint_st,
+                             n_bfilter = branch_int_dom_fixpoint_st,
                              n_top = top |)"
 
 definition branch_int_dom_fixpoint_st_for ::
@@ -351,7 +351,7 @@ where
   "branch_int_dom_fixpoint_st_for = generic_branch_st_for int_dom_ops_fixpoint"
 
 lemma branch_int_dom_fixpoint_st_for_eq [simp]:
-  "branch_int_dom_fixpoint_st_for source_global b pol s = bfilter_int_dom_fixpoint_st source_global b pol s"
+  "branch_int_dom_fixpoint_st_for source_global b pol s = branch_int_dom_fixpoint_st source_global b pol s"
   by (simp add: branch_int_dom_fixpoint_st_for_def generic_branch_st_for_def int_dom_ops_fixpoint_def)
 
 definition int_dom_enter_fixpoint_st_for ::
@@ -416,12 +416,12 @@ proof (rule apply_tf_wrap_eqI[where H = "%f. f (fun_of_resolved_st_q_for gs s)"]
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_fixpoint_for gs (EA_Assume b) s) =
     apply_tf (int_tf_fixpoint_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.bfilter_st_commute)
+    by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.branch_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (int_tf_st_fixpoint_for gs (EA_AssumeNot b) s) =
     apply_tf (int_tf_fixpoint_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.bfilter_st_commute)
+    by (simp add: int_tf_fixpoint_for_def int_dom_backward_fixpoint.branch_st_commute)
   show "\<And>ea p. fun_of_resolved_st_q_for gs
       (int_tf_st_fixpoint_for gs (EA_Ret ea p) s) =
     apply_tf (int_tf_fixpoint_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"

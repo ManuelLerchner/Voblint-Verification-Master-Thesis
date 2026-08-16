@@ -20,6 +20,17 @@ lemma bfilter_ivl_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
   using ivl_backward_domain.bfilter_sound by simp
 
+text \<open>
+  @{const branch_ivl} is Interval's \<open>tf_branch\<close> instance: a forward
+  @{const interval_tobool} feasibility check ahead of @{const bfilter_ivl},
+  matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
+  @{thm [source] backward_domain.branch_sound}.
+\<close>
+
+lemma branch_ivl_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
+  using ivl_backward_domain.branch_sound by simp
+
 definition assign_ivl ::
     "vname => exp => (vname => ivl) => (vname => ivl)"
 where
@@ -133,7 +144,7 @@ qed
 definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
   "ivl_tf_for gs = (| tf_assign  = assign_ivl,
                        tf_special = special_ivl,
-                       tf_branch  = bfilter_ivl,
+                       tf_branch  = branch_ivl,
                        tf_skip    = skip_ivl,
                        tf_body    = body_ivl,
                        tf_return  = return_ivl,
@@ -146,7 +157,7 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   apply unfold_locales
   subgoal by (simp add: assign_ivl_sound)
   subgoal by (simp add: special_ivl_sound)
-  subgoal by (simp add: bfilter_ivl_sound)
+  subgoal by (simp add: branch_ivl_sound)
   subgoal by (simp add: skip_ivl_sound)
   subgoal by (simp add: body_ivl_sound)
   subgoal by (simp add: return_ivl_sound)
@@ -173,7 +184,7 @@ qed
 lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
-     (auto simp: ivl_tf_for_def assign_ivl_mono special_ivl_mono bfilter_ivl_mono
+     (auto simp: ivl_tf_for_def assign_ivl_mono special_ivl_mono branch_ivl_mono
                  skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono
                  event_ivl_mono)
 

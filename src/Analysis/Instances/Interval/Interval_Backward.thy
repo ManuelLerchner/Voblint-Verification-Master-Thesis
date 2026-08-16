@@ -413,13 +413,15 @@ text \<open>
 \<close>
 
 global_interpretation ivl_backward_domain:
-    backward_domain_refined intersect_ivl aval_ivl
+    backward_domain_refined intersect_ivl aval_ivl interval_tobool
                     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
     and bfilter_ivl = ivl_backward_domain.bfilter
+    and branch_ivl = ivl_backward_domain.branch
     and afilter_ivl_st = ivl_backward_domain.afilter_st
     and bfilter_ivl_st = ivl_backward_domain.bfilter_st
+    and branch_ivl_st = ivl_backward_domain.branch_st
 proof unfold_locales
   fix n :: int and a b :: ivl
   assume H1: "n \<in> gamma a" and H2: "n \<in> gamma b"
@@ -463,6 +465,10 @@ next
   show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
 next
+  fix p :: ivl and b :: bool and i :: int
+  assume "interval_tobool p = Some b" and "i \<in> gamma p"
+  then show "truthy i = b" using interval_tobool_sound by simp
+next
   fix a1 a2 b1 b2 :: ivl
   assume "a1 \<le> a2" and "b1 \<le> b2"
   thus "intersect_ivl a1 b1 \<le> intersect_ivl a2 b2" by (rule intersect_ivl_mono)
@@ -503,6 +509,10 @@ next
   fix r a1 a2 :: ivl
   show "le_pair (inv_conservative r a1 a2) (a1, a2)"
     by (simp add: inv_conservative_def le_pair_def)
+next
+  fix p1 p2 :: ivl and bv :: bool
+  assume "\<not> is_bot p1" and "p1 \<le> p2" and "interval_tobool p2 = Some bv"
+  then show "interval_tobool p1 = Some bv" using interval_tobool_mono by simp
 qed
 
 text \<open>
@@ -514,6 +524,7 @@ text \<open>
 
 lemmas afilter_ivl_st_commute = ivl_backward_domain.afilter_st_commute
 lemmas bfilter_ivl_st_commute = ivl_backward_domain.bfilter_st_commute
+lemmas branch_ivl_st_commute = ivl_backward_domain.branch_st_commute
 
 lemma afilter_ivl_mono:
   "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
@@ -523,6 +534,13 @@ lemma afilter_ivl_mono:
 lemma bfilter_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl b res sigma1 \<le> bfilter_ivl b res sigma2"
   using ivl_backward_domain.bfilter_mono by (simp add: bfilter_ivl_def)
+
+lemma branch_ivl_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_ivl b res sigma1 \<le> branch_ivl b res sigma2"
+  using ivl_backward_domain.branch_mono by (simp add: branch_ivl_def)
+
+lemma branch_ivl_le_bfilter_ivl: "branch_ivl e pol \<sigma> \<le> bfilter_ivl e pol \<sigma>"
+  using ivl_backward_domain.branch_le_bfilter by (simp add: branch_ivl_def bfilter_ivl_def)
 
 end
 

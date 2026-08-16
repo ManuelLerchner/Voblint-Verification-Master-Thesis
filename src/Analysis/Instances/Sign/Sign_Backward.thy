@@ -343,13 +343,15 @@ text \<open>
 \<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain_refined meet_sign aval_sign
+    backward_domain_refined meet_sign aval_sign sign_tobool
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
+    and branch_sign = sign_backward_domain.branch
     and afilter_sign_st = sign_backward_domain.afilter_st
     and bfilter_sign_st = sign_backward_domain.bfilter_st
+    and branch_sign_st = sign_backward_domain.branch_st
     and sign_less_true_of_inv = sign_backward_domain.less_true
     and sign_less_false_of_inv = sign_backward_domain.less_false
     and sign_eq_true_of_less = sign_backward_domain.eq_true
@@ -389,6 +391,10 @@ next
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "n1 * n2 \<in> gamma r"
   show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
+next
+  fix p :: sign and b :: bool and i :: int
+  assume "sign_tobool p = Some b" and "i \<in> gamma p"
+  then show "truthy i = b" using sign_tobool_sound by simp
 next
   fix a1 a2 b1 b2 :: sign
   assume "a1 \<le> a2" and "b1 \<le> b2"
@@ -430,6 +436,10 @@ next
   fix r a1 a2 :: sign
   show "le_pair (inv_conservative r a1 a2) (a1, a2)"
     by (simp add: inv_conservative_def le_pair_def)
+next
+  fix p1 p2 :: sign and bv :: bool
+  assume "\<not> is_bot p1" and "p1 \<le> p2" and "sign_tobool p2 = Some bv"
+  then show "sign_tobool p1 = Some bv" using sign_tobool_mono by simp
 qed
 
 text \<open>
@@ -443,6 +453,7 @@ text \<open>
 \<close>
 
 lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
+lemmas branch_sign_st_commute = sign_backward_domain.branch_st_commute
 
 text \<open>
   \<open>sign_eq_true_of_less\<close> sits two \<open>sublocale\<close> layers below \<open>backward_domain\<close>
@@ -474,6 +485,17 @@ lemma bfilter_sign_sound:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.bfilter_sound by simp
 
+text \<open>
+  @{const branch_sign} is Sign's \<open>tf_branch\<close> instance: a forward
+  @{const sign_tobool} feasibility check ahead of @{const bfilter_sign},
+  matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
+  @{thm [source] backward_domain.branch_sound}.
+\<close>
+
+lemma branch_sign_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
+  using sign_backward_domain.branch_sound by simp
+
 
 lemma afilter_sign_mono:
   "a1 \<le> (a2::sign) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
@@ -483,6 +505,10 @@ lemma afilter_sign_mono:
 lemma bfilter_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_sign b res sigma1 \<le> bfilter_sign b res sigma2"
   using sign_backward_domain.bfilter_mono by (simp add: bfilter_sign_def)
+
+lemma branch_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_sign b res sigma1 \<le> branch_sign b res sigma2"
+  using sign_backward_domain.branch_mono by (simp add: branch_sign_def)
 
 subsection \<open>Executable equality-narrowing tests\<close>
 

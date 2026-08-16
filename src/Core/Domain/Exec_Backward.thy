@@ -221,6 +221,32 @@ next
 qed
 
 text \<open>
+  \<open>branch_st\<close> is \<open>branch\<close>'s executable \<open>resolved_st_q\<close> mirror: the same
+  forward \<open>tobool\<close> feasibility gate ahead of \<open>bfilter_st\<close>, short-circuiting
+  to the global \<open>bot\<close> \<open>resolved_st_q\<close> exactly where \<open>branch\<close> short-circuits
+  to \<open>bot\<close>. \<open>fun_of_resolved_st_q_for_bot\<close> (\<open>Exec_St.thy\<close>) is what makes this
+  land on the right value: reading back the \<open>resolved_st_q\<close> \<open>bot\<close> instance
+  gives exactly the pointwise-\<open>bot\<close> function \<open>branch\<close>'s own \<open>bot\<close> case
+  produces, so \<open>branch_st_commute\<close> follows directly from \<open>branch_def\<close> and
+  \<open>bfilter_st_commute\<close>, with no new induction.
+\<close>
+
+definition branch_st ::
+  "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
+where
+  "branch_st gs e pol s =
+     (if is_bot (aval_abs e (fun_of_resolved_st_q_for gs s)) then bot
+      else case tobool (aval_abs e (fun_of_resolved_st_q_for gs s)) of
+             None \<Rightarrow> bfilter_st gs e pol s
+           | Some c \<Rightarrow> if c = pol then bfilter_st gs e pol s else bot)"
+
+lemma branch_st_commute:
+  "fun_of_resolved_st_q_for gs (branch_st gs e pol s) =
+     branch e pol (fun_of_resolved_st_q_for gs s)"
+    unfolding branch_st_def branch_def
+  by (simp add: bfilter_st_commute fun_of_resolved_st_q_for_bot split: option.splits)
+
+text \<open>
   Locality: \<open>afilter_st\<close>/\<open>bfilter_st\<close> never touch a location outside their own
   finite @{const footprint_exp}/@{const footprint_exp}. This is what lets the
   lifted compound-boolean join below decide witness-bottom for its raw \<open>\<squnion>\<close>
