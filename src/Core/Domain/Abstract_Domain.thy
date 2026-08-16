@@ -1163,8 +1163,9 @@ text \<open>
   disagreement instead of relying on it.
 
   \<open>branch\<close> is the plain-\<open>abs_state\<close> projection of \<open>branch_lifted\<close>, used by
-  the classical/specification \<open>rhs\<close> route and the executable mirror: it
-  collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that never needs to
+  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>) and the
+  executable mirror: it collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that
+  never needs to
   distinguish "no successor" from "successor whose store is bottom" can keep
   working with plain \<open>abs_state\<close>. The TD-side effectful pipeline instead
   consumes \<open>branch_lifted\<close> directly (see \<open>local_branch_tree\<close> in
@@ -1186,7 +1187,7 @@ definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
 text \<open>
   The original case-split shape, recovered as a lemma rather than the
   primitive definition: callers reasoning about \<open>branch\<close> at the plain
-  \<open>abs_state\<close> level (the classical/specification route, the executable
+  \<open>abs_state\<close> level (\<open>domain_transfer\<close>'s \<open>tf_branch\<close> field, the executable
   mirror) unfold through this instead of \<open>branch_lifted\<close>.
 \<close>
 

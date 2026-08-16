@@ -9,6 +9,18 @@ Base state audited: commit `c6c77443` ("wip(branch): forward-feasibility branch
 transfer + Sign local-edge-invariant conflict") on `refining-int-domain`, plus the live
 (unsaved) jEdit buffer for `Sign_Local_Effects.thy`.
 
+**Later correction.** A separate, subsequent audit (of the classical `rhs`/
+`is_post_fixpoint` route itself, not of this document's branch/Deadcode question)
+found that route contributed nothing the D/G side's own generic
+`part_post_solution`/`dg_post_solution_collect_sound_ltr_for` certificate didn't
+already provide against the real constraint system, and it was removed. Every
+`rhs`/`is_post_fixpoint`/`AD-51`/`AD-52`-as-bridge claim below describes the
+architecture as it stood for the branch/Deadcode migration this document audited,
+not the current one -- see `docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md` section 11
+for the settled picture. This document's actual subject -- `branch_lifted` as the
+canonical Dead/Reach primitive, `branch` as its projection -- is unaffected and
+still accurate.
+
 ## Executive conclusion
 
 **Where reachability should live:** at a new lifted sibling of `branch`, added once in

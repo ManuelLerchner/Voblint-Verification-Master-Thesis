@@ -12,20 +12,16 @@ text \<open>
     - An abstract domain  D  (instance of abstract_domain)
     - Per-domain transfer functions for each edge action
 
-  We construct an equation system (constraint system) where each
-  program point v has an equation:
-    \<sigma>(v) = join_over { tf(a)(\<sigma>(u)) | (u,a,v) in g }
-
-  plus the special base case at the entry:
-    \<sigma>(entry) includes the initial abstract state.
-
-  The equation system is represented as an RHS function:
-    rhs :: pp => (pp => D abs_state) => D abs_state
-
-  This is the format expected by the top-down solver locale.
+  this theory fixes the per-edge/per-domain transfer interface
+  (\<open>domain_transfer\<close>, \<open>apply_tf\<close>, \<open>glob_env\<close>) and its soundness contracts
+  (\<open>sound_transfer\<close>, \<open>sound_effectful_transfer\<close>) that every concrete
+  equation-system generator is built from. The generators themselves --
+  the side-effecting D/G equation system (\<open>DG_Framework.thy\<close>'s \<open>dg_gen\<close>)
+  solved by the verified top-down solver -- live downstream, in
+  \<open>Solver/Context/DG\<close> and \<open>Solver/TD_Side\<close>.
 
   All transfer functions are parameterised over the domain via a locale
-  so the same equation-system construction works for Sign, Interval, etc.
+  so the same interface works for Sign, Interval, etc.
 \<close>
 
 subsection \<open>Abstract transfer function record\<close>
@@ -697,138 +693,6 @@ proof -
     using sc se by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
-
-text \<open>
-  Each predecessor kind contributes a set of abstract states.  Keeping the
-  families separate gives downstream proofs precise introduction rules; their
-  union is the single source of truth used by the executable right-hand side.
-\<close>
-
-definition rhs_edge_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_edge_sources g tf env v =
-     (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v"
-
-text \<open>
-  \<^const>\<open>tf_body\<close> applies immediately after \<^const>\<open>tf_enter\<close>, at the actual
-  procedure-entry transition -- not somewhere merely near it: \<open>v\<close> here is always
-  the \<^const>\<open>FunctionEntry\<close> \<^const>\<open>entry_calls\<close> selects it for, so
-  \<^const>\<open>entry_proc\<close> \<open>v\<close> is the callee \<^const>\<open>tf_body\<close> fires for (the
-  \<open>CallEdge\<close>'s own \<open>dst\<close> is the call's assignment target, not the callee). This
-  is the one call site \<^const>\<open>tf_body\<close> is ever applied at.
-\<close>
-definition rhs_entry_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_entry_sources g tf env v =
-     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)))
-       ` entry_calls g v"
-
-definition rhs_combine_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_combine_sources g tf env v =
-     (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex)) ` return_calls g v"
-
-definition rhs_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_sources g tf env v =
-     rhs_edge_sources g tf env v \<union>
-     rhs_entry_sources g tf env v \<union>
-     rhs_combine_sources g tf env v"
-
-lemma rhs_sources_characterization [simp]:
-  "rhs_sources g tf env v =
-     (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v \<union>
-     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)))
-       ` entry_calls g v \<union>
-     (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex))
-       ` return_calls g v"
-  unfolding rhs_sources_def rhs_edge_sources_def rhs_entry_sources_def
-    rhs_combine_sources_def by simp
-
-lemma rhs_edge_sources_iff:
-  "x \<in> rhs_edge_sources g tf env v \<longleftrightarrow>
-   (\<exists>u a. (u, a, v) \<in> intra g \<and> x = apply_tf tf a (env u))"
-  unfolding rhs_edge_sources_def intra_predecessors_def by auto
-
-lemma rhs_entry_sourcesI:
-  assumes "(c, CallEdge dst fs as, v, k) \<in> calls g"
-  shows "body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)) \<in> rhs_entry_sources g tf env v"
-  unfolding rhs_entry_sources_def entry_calls_def
-  using assms by (force simp: image_iff)
-
-lemma rhs_combine_sourcesI:
-  assumes "(c, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
-  shows "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p))
-         \<in> rhs_combine_sources g tf env v"
-  unfolding rhs_combine_sources_def return_calls_def
-  using assms by (force simp: image_iff)
-
-text \<open>
-  \<open>rhs\<close> is the equation system's right-hand side at \<open>v\<close>: the join over
-  \<^const>\<open>rhs_sources\<close>'s abstract predecessor contributions, plus the seed
-  \<open>s0\<close> exactly when \<open>v\<close> is the graph's entry --- the one node with no
-  predecessor edge to supply a starting value otherwise.
-\<close>
-definition rhs ::
-    "cfg
-     \<Rightarrow> 'a domain_transfer
-     \<Rightarrow> ('a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp
-     \<Rightarrow> 'a abs_state"
-where
-  "rhs g tf join_abs bot_abs s0 env v =
-     abs_join_set join_abs bot_abs
-       (if v = cfg_entry g then insert s0 (rhs_sources g tf env v)
-        else rhs_sources g tf env v)"
-
-definition is_post_fixpoint ::
-    "cfg
-     \<Rightarrow> ('a::ord domain_transfer)
-     \<Rightarrow> ('a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> bool"
-where
-  "is_post_fixpoint g tf join_abs bot_abs s0 env =
-     (\<forall>v. rhs g tf join_abs bot_abs s0 env v \<le> env v)"
-
-(* The pointwise instance is_post_fixpoint_def unfolds to; downstream
-   proofs cite this instead of re-unfolding the quantified definition. *)
-lemma is_post_fixpointD [dest]:
-  "is_post_fixpoint g tf join_abs bot_abs s0 env
-   \<Longrightarrow> rhs g tf join_abs bot_abs s0 env v \<le> env v"
-  unfolding is_post_fixpoint_def by simp
-
-
-lemma sup_fold_ge_state:
-  assumes "finite (A :: 'd::bounded_semilattice_sup_bot set)"
-    and "x \<in> A"
-  shows "x \<le> Finite_Set.fold (\<squnion>) bot A"
-  using assms
-  by (metis Sup_fin.coboundedI Sup_fin.eq_fold finite_insert insertCI)
-
-lemma fold_bot_le_superset:
-  fixes X Y :: "'d::bounded_semilattice_sup_bot set"
-  assumes finY: "finite Y"
-  assumes sub: "X \<subseteq> Y"
-  shows "Finite_Set.fold (\<squnion>) bot X \<le> Finite_Set.fold (\<squnion>) bot Y"
-  by (metis (no_types, lifting) Sup_fin.eq_fold Sup_fin.insert Sup_fin.subset finY finite_subset
-      fold_empty sub sup.absorb_iff2 sup.commute sup_bot_left)
-
-lemma abs_join_set_le_superset:
-  fixes X Y :: "'d::bounded_semilattice_sup_bot set"
-  assumes finY: "finite Y"
-  assumes sub: "X \<subseteq> Y"
-  shows "abs_join_set (\<squnion>) bot X \<le> abs_join_set (\<squnion>) bot Y"
-  unfolding abs_join_set_def
-  by (simp add: finY fold_bot_le_superset sub)
 
 lemma abs_join_set_le:
   fixes X :: "'d::bounded_semilattice_sup_bot"

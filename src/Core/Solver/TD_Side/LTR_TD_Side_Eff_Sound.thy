@@ -15,9 +15,10 @@ text \<open>
 context sound_effectful_transfer
 begin
 
-text \<open>Single-store edge soundness under an effectful post-fixpoint bound: mirrors
-  \<open>edge_of_bound\<close> for the reassembled effectful transfer.  Shared by the intra (\<open>EDGE\<close>) and
-  enter (\<open>SEED\<close>) closure obligations.\<close>
+text \<open>Single-store edge soundness under an effectful post-fixpoint bound: if the
+  reassembled effectful transfer over \<open>u\<close> is dominated by the bound at \<open>v\<close>, a concrete
+  step from a store sound for \<open>u\<close> lands in the concretization at \<open>v\<close>.  Shared by the
+  intra (\<open>EDGE\<close>) and enter (\<open>SEED\<close>) closure obligations.\<close>
 lemma edge_step_sound_eff:
   assumes inr: "inr_slot_locals_bot gs \<sigma>"
     and bound: "etf_full (apply_etf etf a u) \<sigma> \<le> side_env_lift \<sigma> v"

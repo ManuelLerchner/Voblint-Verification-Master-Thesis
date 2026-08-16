@@ -229,7 +229,7 @@ text \<open>
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Core.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
     \<^item> @{theory Voblint_Core.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, \<^verbatim>\<open>sound_effectful_transfer\<close>.
-    \<^item> @{theory Voblint_Core.Constraint_System_Sound} --- per-edge / per-combine transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>), the building blocks of the monovariant trace endpoint \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close> (in \<^verbatim>\<open>LTR_Analysis_Sound\<close>, over \<^const>\<open>ltr_collect\<close>).
+    \<^item> @{theory Voblint_Core.Constraint_System_Sound} --- per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) and its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
     \<^item> @{theory Voblint_Core.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, unit-global effectful tree constructors.
     \<^item> @{theory Voblint_Core.TD_Side_Eff_Cone_Lemmas} --- query-cone soundness for the
       effectful TD_side solver over \<^const>\<open>ltr_collect\<close>
@@ -319,8 +319,8 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
     \<^item> @{theory Voblint_Examples.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the same.
     \<^item> @{theory Voblint_Examples.Example_Mixed_Flow_Sign} --- the mixed-flow soundness/optimality theorem applied to Sign.
-    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
-    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
+    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified interval analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global} / @{theory Voblint_Examples.Example_Interval_Side_Proc_Global}.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Ivl_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
       \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a

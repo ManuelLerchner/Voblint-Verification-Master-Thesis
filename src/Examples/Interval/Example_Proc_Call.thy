@@ -6,7 +6,6 @@ theory Example_Proc_Call
     "Voblint_CFG.CFG_Prune"
 
     "Voblint_Analysis.Interval_Domain"
-    "Voblint_Core.LTR_Analysis_Sound"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
@@ -193,149 +192,15 @@ lemma main_cfg_calls:
  
 
 
-subsection \<open>Abstract interval post-fixpoint\<close>
-
-text \<open>
-  The initial abstract state maps every variable to the full interval.
-\<close>
-definition main_prog_s0 :: "ivl abs_state" where
-  "main_prog_s0 = (\<lambda>_. Ivl MinInf PlusInf)"
-
-text \<open>
-  Abstract environment: each program point is assigned an interval state.
-  The assignment propagates @{text "Gx = [4,4]"} after @{text "Gx := 4"},
-  @{text "Gx = [5,5]"} after @{text "inc"} executes, and
-  @{text "Gx = [25,25]"} after @{text "sqr"} executes.
-  All local variables remain unconstrained throughout.
-
-  Node groupings:
-  @{text "4"} -- main body entry, before @{text "Gx := 4"};
-  @{text "5"} -- after @{text "Gx := 4"}, which is also the call site to inc;
-  @{text "0"} -- inc body entry (reached through the call edge from 5);
-  @{text "1"} -- inc body exit, feeding @{term \<open>FunctionResult (STR ''inc'')\<close>};
-  @{text "6"} -- continuation after inc, which is also the call site to sqr;
-  @{text "2"}, @{text "3"} -- sqr body entry and exit;
-  @{text "7"} -- continuation after sqr, feeding @{term \<open>FunctionResult (STR ''main'')\<close>}.
-\<close>
-
-definition main_prog_env :: "pp \<Rightarrow> ivl abs_state" where
-  "main_prog_env v x =
-     (if v \<in> {Statement 5, FunctionEntry (STR ''inc''), Statement 0} \<and> x = (STR ''Gx'')
-        then Ivl (Fin 4) (Fin 4)
-      else if v \<in> {Statement 1, FunctionResult (STR ''inc''), Statement 6,
-                   FunctionEntry (STR ''sqr''), Statement 2} \<and> x = (STR ''Gx'')
-        then Ivl (Fin 5) (Fin 5)
-      else if v \<in> {Statement 3, FunctionResult (STR ''sqr''), Statement 7,
-                   FunctionResult (STR ''main'')} \<and> x = (STR ''Gx'')
-        then Ivl (Fin 25) (Fin 25)
-      else Ivl MinInf PlusInf)"
-
-lemma main_prog_postfix:
-  "is_post_fixpoint main_cfg (ivl_tf_for proc_call_gs) (\<squnion>) bot main_prog_s0 main_prog_env"
-  unfolding is_post_fixpoint_def
-proof (rule allI)
-  fix v
-  let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)) ` intra_predecessors main_cfg v"
-  let ?E = "(\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow>
-               body\<^sup># (ivl_tf_for proc_call_gs) (entry_proc v)
-                 (enter\<^sup># (ivl_tf_for proc_call_gs) fs as (main_prog_env c)))
-              ` entry_calls main_cfg v"
-  let ?R = "(\<lambda>(c, dst, ex). tf_combine_collect_abs (ivl_tf_for proc_call_gs) dst (main_prog_env c) (main_prog_env ex))
-              ` return_calls main_cfg v"
-  have fin: "finite (?I \<union> ?E \<union> ?R)"
-    using finite_intra_predecessors[of main_cfg v] finite_entry_calls[of main_cfg v]
-          finite_return_calls[of main_cfg v]
-    by (simp add: main_cfg_intra main_cfg_calls)
-  \<comment> \<open>one bounded \<open>auto\<close> per constraint source: a single sweep over all three blows up
-     on the nested \<^const>\<open>main_prog_env\<close> conditionals\<close>
-  have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> main_prog_env v"
-  proof -
-    fix t assume "t \<in> ?I"
-    then obtain u a where e: "(u, a, v) \<in> intra main_cfg"
-      and t: "t = apply_tf (ivl_tf_for proc_call_gs) a (main_prog_env u)"
-      by (auto simp: intra_predecessors_def)
-    from e[unfolded main_cfg_intra] show "t \<le> main_prog_env v"
-      unfolding t
-      by (elim insertE emptyE)
-         (simp_all add: main_prog_env_def ivl_tf_for_def assign_ivl_def times_ivl_def
-                        normalize_ivl_def less_eq_ivl_def le_fun_def
-                        skip_ivl_def return_ivl_def)
-  qed
-  have leE: "\<And>t. t \<in> ?E \<Longrightarrow> t \<le> main_prog_env v"
-    by (auto split: if_splits
-             simp: entry_calls_def main_cfg_calls main_prog_env_def ivl_tf_for_def
-                   enter_ivl_for_def enter_frame_ivl_for_def enter_D_def enter_frame_D_def
-                   ivl_top_def bind_formals_abs_def less_eq_ivl_def le_fun_def
-                   proc_call_gs_def body_ivl_def entry_proc_def)
-  have leR: "\<And>t. t \<in> ?R \<Longrightarrow> t \<le> main_prog_env v"
-    by (auto split: if_splits
-             simp: return_calls_def main_cfg_calls main_prog_env_def
-                   tf_combine_collect_abs_def ivl_tf_for_def combine_env_abs_def normalize_ivl_def
-                   less_eq_ivl_def le_fun_def proc_call_gs_def)
-  have le: "\<And>t. t \<in> ?I \<union> ?E \<union> ?R \<Longrightarrow> t \<le> main_prog_env v"
-    using leI leE leR by blast
-  show "rhs main_cfg (ivl_tf_for proc_call_gs) (\<squnion>) bot main_prog_s0 main_prog_env v \<le> main_prog_env v"
-  proof (cases "v = cfg_entry main_cfg")
-    case True
-    have s0: "main_prog_s0 \<le> main_prog_env v"
-      using True by (simp add: main_cfg_entry main_prog_s0_def main_prog_env_def le_fun_def)
-    have "abs_join_set (\<squnion>) bot (insert main_prog_s0 (?I \<union> ?E \<union> ?R)) \<le> main_prog_env v"
-    proof (rule abs_join_set_le)
-      show "finite (insert main_prog_s0 (?I \<union> ?E \<union> ?R))" using fin by simp
-      show "\<And>s. s \<in> insert main_prog_s0 (?I \<union> ?E \<union> ?R) \<Longrightarrow> s \<le> main_prog_env v"
-        using s0 le by blast
-    qed
-    from this[unfolded True] show ?thesis unfolding rhs_def Let_def using True by simp
-  next
-    case False
-    have "abs_join_set (\<squnion>) bot (?I \<union> ?E \<union> ?R) \<le> main_prog_env v"
-      by (rule abs_join_set_le) (use fin le in blast)+
-    thus ?thesis unfolding rhs_def Let_def using False by simp
-  qed
-qed
-
-lemma main_prog_gx_exit_ivl:
-  "main_prog_env (cfg_exit main_cfg) (STR ''Gx'') = Ivl (Fin 25) (Fin 25)"
-  by (simp add: main_prog_env_def main_cfg_exit)
-
-
-subsection \<open>Interval analysis soundness\<close>
-
-text \<open>
-  For any store that reaches the program exit in the collecting semantics and
-  whose initial store is in the concretisation of @{const main_prog_s0},
-  the value of @{term \<open>(STR ''Gx'')\<close>} lies in @{term \<open>Ivl (Fin 25) (Fin 25)\<close>}.
-
-
-  The proof applies the generic trace-native post-fixpoint theorem to the exhibited
-  post-fixpoint @{thm [source] main_prog_postfix [no_vars]}.
-\<close>
-
-theorem main_prog_interval_analysis:
-  assumes S_sound: "S \<le> \<lbrakk>main_prog_s0\<rbrakk>"
-  assumes s: "s \<in> ltr_collect proc_call_gs main_cfg S (cfg_exit main_cfg)"
-  shows "s (STR ''Gx'') \<in> gamma_ivl (Ivl (Fin 25) (Fin 25))"
-proof -
-  have fin_e: "finite (intra main_cfg)" using compile_prog_finite by simp
-  have fin_c: "finite (calls main_cfg)" using compile_prog_finite by simp
-  have le: "ltr_collect proc_call_gs main_cfg S (cfg_exit main_cfg)
-              \<le> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>"
-    using sound_transfer_for.unified_ltr_post_fixpoint_sound_for
-          [OF ivl_is_sound_transfer_for fin_e fin_c main_prog_postfix S_sound]
-    by blast
-  from s le have "s \<in> \<lbrakk>main_prog_env (cfg_exit main_cfg)\<rbrakk>" by blast
-  then have "s (STR ''Gx'') \<in> gamma (main_prog_env (cfg_exit main_cfg) (STR ''Gx''))"
-    unfolding gamma_state_def by blast
-  then show ?thesis by (simp add: main_prog_env_def main_cfg_exit)
-qed
-
-
 subsection \<open>DOT output\<close>
 
 text \<open>
   @{const raw_cfg_dot_lit} emits the procedural CFG through the canonical
-  graph model and DOT backend, without interval annotations; the exhibited
-  post-fixpoint gives @{thm [source] main_prog_gx_exit_ivl} at exit instead.
+  graph model and DOT backend, without interval annotations. A certified
+  interval analysis of a shared-global increment call is
+  @{text "Example_Side_Proc_Global"} / @{text "Example_Interval_Side_Proc_Global"};
+  this theory's own contribution is the concrete run (@{thm [source]
+  main_prog_result [no_vars]}) and the compiled interprocedural CFG above.
 \<close>
 
 ML_val \<open>

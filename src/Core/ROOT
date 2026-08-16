@@ -29,7 +29,6 @@ session Voblint_Core in "." = "Voblint_CFG" +
     (* Domain-generic sound (incomplete) decision procedure discharging
        compiled checks, parametric in an arbitrary abstract-state type. *)
     Abstract_Checks
-    LTR_Analysis_Sound
     TD_Side_CFG
     Strategy_Tree_Monad
     Strategy_Tree_Do

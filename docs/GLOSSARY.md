@@ -58,8 +58,7 @@ layer without embedding line numbers that drift.
 | `sound_domain` | Abstract carrier, order, and concretization obligations. | `src/Core/Domain/Abstract_Domain.thy` |
 | `domain_transfer` | Pure abstract transfers for CFG actions, entry, and return combination. | `src/Core/Equations/Constraint_System.thy` |
 | `effectful_domain_transfer` | Strategy-tree-producing transfers used by the side-effecting solver. | `src/Core/Equations/Constraint_System.thy` |
-| `rhs` | Equation right-hand side built from local-edge, entry, and return-combine contributions. | `src/Core/Equations/Constraint_System.thy` |
-| `is_post_fixpoint` | Abstract environment closed under every equation contribution. | `src/Core/Equations/Constraint_System.thy` |
+| `part_post_solution` | Two-part certificate (local-result bound plus every side contribution) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
 | `TD_side` | Vendored verified side-effecting top-down solver used by executable analyses. | `vendor/td-verification` |
 
 ## D/G framework

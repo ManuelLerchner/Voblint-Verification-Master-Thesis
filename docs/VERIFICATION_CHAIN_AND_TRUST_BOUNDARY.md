@@ -313,49 +313,55 @@ These are different claims, and only the first is currently supported:
   -- it can change what appears on screen without a covering theorem, and
   the lexer/parser sit outside the proof entirely by design.
 
-## 11. Classical `rhs` specification vs. TD-Side execution
+## 11. One constraint semantics, one solver-independent certificate
 
-Voblint has two intentionally distinct analysis interfaces, both built on the same
-`domain_transfer` record (section 1).
-
-The classical
+Voblint does not maintain a second, simplified constraint system alongside the
+production one. Every analysis is stated over the side-effecting D/G equation system
+(`Core/Solver/Context/DG/DG_Framework.thy`'s `dg_gen`, an instance of the vendored
+`eqsT` type), and the same generic certificate applies uniformly regardless of who
+produces it:
 
 ```isabelle
-rhs :: pp => (pp => abs_state) => abs_state
-is_post_fixpoint
+part_post_solution :: ('x,'g,'d) eqsT => 'x => ('x + 'g => 'd) => 'x set => bool
 ```
 
-layer (`Core/Equations/Constraint_System.thy:775-800`) is a solver-independent
-declarative specification. It is not used by any currently executed analysis solver.
-`unified_ltr_post_fixpoint_sound_for` (`Core/Equations/LTR_Analysis_Sound.thy:56`)
-lets any environment proved to satisfy this post-fixpoint specification -- including a
-manually constructed witness -- inherit collecting/`ltr_collect` soundness. Its only two
-consumers, `Examples/Interval/Example_Interval_Loop_Coverage.thy` and
-`Examples/Interval/Example_Proc_Call.thy`, exploit exactly this: each hand-defines its
-own `env` and hand-proves it a post-fixpoint, with no `by eval` and no solver
-invocation.
+(`vendor/td-verification/Basics_side.thy`, generic in the unknown/value types). Its
+two-part shape -- a local-result bound (`eq T u sigma <= sigma (Inl u)`) and a bound on
+every side contribution (`sides_of_rhs (T u) sigma <= sigma`) -- is a solver-independent
+certificate: `dg_post_solution_collect_sound_ltr_for`
+(`Core/Solver/Context/DG/DG_LTR_Sound.thy:56`) proves `ltr_collect` soundness from any
+`sigma` satisfying it, with no reference to how `sigma` was produced. The vendored
+`TD_side` solver is one way to discharge that obligation
+(`part_post_solution_of_solve_c`, a one-line adapter from a successful `solve_c`); every
+shipped domain's own capstone (`ivl_dg_post_solution_collect_sound`, its Sign and mixed
+analogues) cites `dg_post_solution_collect_sound_ltr_for` directly, with an arbitrary
+`sigma`.
 
-All shipped/verified analysis execution instead uses the TD-Side effectful solver
-(`Core/Solver/TD_Side/TD_Side_CFG.thy`), instantiated over `abs_state lifted`, and
-certified through `side_collect_sound_in_eff_cone` (section 6's "Solver specification vs.
-executable `solve_c`" is this route). These routes are parallel, not an
-implementation/specification pair -- there is no bridge from one to the other:
-
-```text
-classical rhs:  solver-independent post-fixpoint certificate (2 example consumers)
-TD-Side:        the actual effectful solver and the project's main soundness spine
-```
-
-`AD-51`/`AD-52` (`Core/Solver/Exec/Exec_Bridge.thy:225,957`) is sometimes mistaken for a
-bridge between these two routes. It is not: it is the executable-state/function-state
-correspondence entirely internal to the lifted TD-Side architecture, and never mentions
-`rhs`/`is_post_fixpoint`.
+An earlier, separate classical route (`rhs`/`is_post_fixpoint` over the plain CFG,
+`Core/Equations/Constraint_System.thy`) offered the same "prove a post-fixpoint, get
+soundness, no solver required" capability but against a simplified, non-side-effecting
+constraint system that no live analysis was ever solved through. An audit found nothing
+this route contributed that `part_post_solution`/`dg_post_solution_collect_sound_ltr_for`
+did not already provide against the real constraint system, so it was removed rather than
+maintained as a parallel architecture; its two example consumers
+(`Examples/Interval/Example_Interval_Loop_Coverage.thy`,
+`Examples/Interval/Example_Proc_Call.thy`) were trimmed to their concrete-semantics and
+CFG-compilation content, pointing to the real production analyses of the same or
+equivalent programs (`Exec_Ivl_Run.thy`, `Example_Side_Proc_Global.thy`) where a
+certified bound is wanted.
 
 `domain_transfer`'s shared `tf_branch` field stays plain-state-valued (`branch`, not
-`branch_lifted`) on both routes. `branch` is intentionally the projection of the more
-expressive `branch_lifted`, which the TD-Side effectful architecture uses directly where
-it must preserve explicit Deadcode/reachability distinctions that `branch`'s
-whole-state-bottom encoding cannot make.
+`branch_lifted`); `unit_dg_spec_for`'s diagonal D/G spec still dispatches branch through
+it (`dgs_branch = unit_step_for gs (branch# tf b pol)`). `branch` is intentionally the
+projection of the more expressive `branch_lifted`, which the TD-Side effectful
+architecture uses directly where it must preserve explicit Deadcode/reachability
+distinctions that `branch`'s whole-state-bottom encoding cannot make; the production D/G
+carrier's own remaining conflation of the two is tracked separately (issue #123).
+
+`AD-51`/`AD-52` (`Core/Solver/Exec/Exec_Bridge.thy:225,957`) is sometimes mistaken for a
+bridge from the TD-Side solution back to a classical specification. It is not, and there
+is no such bridge in the codebase: AD-51/AD-52 is the executable-state/function-state
+correspondence entirely internal to the lifted TD-Side architecture.
 
 ## Coverage matrix
 

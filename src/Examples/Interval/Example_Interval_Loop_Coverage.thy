@@ -2,7 +2,7 @@ section \<open>Example: Interval Analysis of a Full Bounded Loop Program\<close>
 
 theory Example_Interval_Loop_Coverage
   imports Voblint_CFG.CFG_Prune
-    "Voblint_Analysis.Interval_Domain" "Voblint_Core.LTR_Analysis_Sound"
+    "Voblint_Analysis.Interval_Domain"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -24,11 +24,13 @@ text \<open>
   \<^verbatim>\<open>[0,0]\<close> joined with \<^verbatim>\<open>[1,1]\<close> to sign top).
 
   Certified backward-analysis story: @{text "Example_Guard_Refinement"}
-  isolates the guard step; this theory carries the same @{const bfilter_ivl} transfers
-  through the full CFG to the trace-native post-fixpoint soundness theorem.
-
-  Executable mirror (Kleene / warrowing TD on @{text "ivl st"}, eval only):
-  @{text "Exec_Ivl_Run"}.
+  isolates the guard step; this theory exhibits the same
+  @{const bfilter_ivl} narrowing at the body entry (\<open>loop_body_entry_x\<close> below),
+  computed from a hand-picked node-1 input rather than the analyzer's own
+  computed environment.  The certified end-to-end bound at the loop head is
+  the executable pipeline's own computed and soundness-backed result:
+  @{text "Exec_Ivl_Run"} (\<open>loop_head_ivl\<close>/\<open>loop_head_ivl_td\<close>, \<open>by eval\<close> against
+  the same program).
 \<close>
 
 definition loop_prog :: imp_prog where
@@ -71,18 +73,15 @@ lemma loop_cfg_intra:
 
 subsection \<open>An exhibited interval post-fixpoint\<close>
 
-definition loop_s0 :: "ivl abs_state" where
-  "loop_s0 = (\<lambda>_. Ivl MinInf PlusInf)"
-
 text \<open>
   The loop head (node 1) stabilises at \<^verbatim>\<open>[0,20]\<close>: the join of \<^verbatim>\<open>x := 0\<close> flowing in
   directly from node 0 and \<^verbatim>\<open>x := x + 1\<close> flowing back from the body.  Guard
   refinement narrows the body entry (node 2) to \<^verbatim>\<open>[0,19]\<close>; applying the body's
   own assignment to that value gives \<^verbatim>\<open>[1,20]\<close>, which joined with the initial
   \<^verbatim>\<open>[0,0]\<close> is exactly the loop-head value -- a finite (non-widened) fixpoint.
-  Neither intermediate join operand needs its own node: the continuation-passing
-  compiler routes both edges directly into the loop head, so \<^const>\<open>rhs\<close> computes
-  the join on the fly. Other variables stay at the full interval.
+  \<open>loop_env\<close> below exhibits these hand-picked values as ordinary input to the
+  guard-refinement computation; the certified computed environment for this
+  program is @{text "Exec_Ivl_Run"}'s.
 \<close>
 definition loop_env :: "pp \<Rightarrow> ivl abs_state" where
   "loop_env v =
@@ -90,78 +89,6 @@ definition loop_env :: "pp \<Rightarrow> ivl abs_state" where
       else if v \<in> {Statement 1, Statement 3}
         then (\<lambda>_. Ivl MinInf PlusInf)((STR ''x'') := Ivl (Fin 0) (Fin 20))
       else (\<lambda>_. Ivl MinInf PlusInf))"
-
-text \<open>The program is call-free, so both call-shaped sources of \<^const>\<open>rhs\<close> are empty and
-  only the intra predecessors constrain \<^const>\<open>loop_env\<close>.\<close>
-
-lemma loop_entry_calls: "entry_calls loop_cfg v = {}"
-  by (simp add: entry_calls_def loop_cfg_calls)
-
-lemma loop_return_calls: "return_calls loop_cfg v = {}"
-  by (simp add: return_calls_def loop_cfg_calls)
-
-lemma loop_intra_predecessors_finite: "finite (intra_predecessors loop_cfg v)"
-  by (rule finite_intra_predecessors) (simp add: loop_cfg_intra)
-
-lemma loop_postfix:
-  "is_post_fixpoint loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env"
-  unfolding is_post_fixpoint_def
-proof (rule allI)
-  fix v
-  let ?I = "(\<lambda>(u, a). apply_tf (ivl_tf_for gs) a (loop_env u)) ` intra_predecessors loop_cfg v"
-  have finI: "finite ?I" using loop_intra_predecessors_finite by blast
-  text \<open>
-    At the loop head (\<open>x \<in> [0,20]\<close>) the guard \<open>x < 20\<close> is neither definitely
-    true nor definitely false, so \<open>branch_ivl\<close>'s forward feasibility gate
-    always falls through to \<open>bfilter_ivl\<close> here -- \<open>branch_ivl = bfilter_ivl\<close>
-    as whole functions, not merely at one variable. Established once via
-    \<open>branch_unfold\<close>'s case split (\<open>branch\<close>'s original shape, recovered as a
-    lemma over the primitive \<open>branch_lifted\<close>), so the rest of this proof
-    reasons about \<open>bfilter_ivl\<close> exactly as before \<open>branch_ivl\<close> existed.
-  \<close>
-  have guard_not_bot: "\<not> is_bot (aval_ivl (Less (V (STR ''x'')) (N 20))
-        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))))"
-    by eval
-  have guard_tobool_none: "interval_tobool (aval_ivl (Less (V (STR ''x'')) (N 20))
-        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))) = None"
-    by eval
-  have branch_eq_true: "branch_ivl (Less (V (STR ''x'')) (N 20)) True
-        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))) =
-      bfilter_ivl (Less (V (STR ''x'')) (N 20)) True
-        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))"
-    unfolding branch_ivl_def bfilter_ivl_def
-    using bfilter_ivl_def branch_ivl_def guard_not_bot guard_tobool_none
-      ivl_backward_domain.branch_unfold by fastforce
-  have branch_eq_false: "branch_ivl (Less (V (STR ''x'')) (N 20)) False
-        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))) =
-      bfilter_ivl (Less (V (STR ''x'')) (N 20)) False
-        ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))"
-    unfolding branch_ivl_def bfilter_ivl_def
-    using bfilter_ivl_def branch_ivl_def guard_not_bot guard_tobool_none
-      ivl_backward_domain.branch_unfold by auto
- 
-  have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> loop_env v"
-    by (auto split: if_splits
-             simp: intra_predecessors_def loop_cfg_intra loop_env_def ivl_tf_for_def
-                   apply_tf.simps assign_ivl_def ivl_backward_domain.bfilter.simps
-                   branch_eq_true branch_eq_false
-                   normalize_ivl_def less_eq_ivl_def le_fun_def
-                   skip_ivl_def return_ivl_def)
-  show "rhs loop_cfg (ivl_tf_for gs) (\<squnion>) bot loop_s0 loop_env v \<le> loop_env v"
-  proof (cases "v = cfg_entry loop_cfg")
-    case True
-    then have "loop_s0 \<le> loop_env v"
-      by (simp add: loop_cfg_entry loop_s0_def loop_env_def)
-    with True finI leI show ?thesis
-      unfolding rhs_def Let_def
-      by (auto simp: loop_entry_calls loop_return_calls intro!: abs_join_set_le)
-  next
-    case False
-    with finI leI show ?thesis
-      unfolding rhs_def Let_def
-      by (auto simp: loop_entry_calls loop_return_calls intro!: abs_join_set_le)
-  qed
-qed
 
 subsection \<open>Backward guard refinement at the body entry\<close>
 
@@ -185,29 +112,6 @@ qed
 lemma loop_body_entry_x:
   "loop_env loop_body_entry (STR ''x'') = Ivl (Fin 0) (Fin 19)"
   by (simp add: loop_env_def)
-
-subsection \<open>Soundness: @{text "0 \<le> x \<le> 20"} at the loop head\<close>
-
-text \<open>The loop head is the assume node where @{term \<open>x < 20\<close>} is checked.\<close>
-abbreviation "loop_head \<equiv> Statement 1"
-
-lemma loop_head_x_bounded:
-  fixes gs :: "vname \<Rightarrow> bool"
-  assumes S_sound: "S \<subseteq> \<lbrakk>loop_s0\<rbrakk>"
-  assumes s: "s \<in> ltr_collect gs loop_cfg S loop_head"
-  shows "0 \<le> s (STR ''x'') \<and> s (STR ''x'') \<le> 20"
-proof -
-  have fin_e: "finite (intra loop_cfg)" using compile_prog_finite by simp
-  have fin_c: "finite (calls loop_cfg)" using compile_prog_finite by simp
-  have le: "ltr_collect gs loop_cfg S loop_head \<le> \<lbrakk>loop_env loop_head\<rbrakk>"
-    using sound_transfer_for.unified_ltr_post_fixpoint_sound_for
-          [OF ivl_is_sound_transfer_for fin_e fin_c loop_postfix S_sound]
-    by blast
-  from s le have "s \<in> \<lbrakk>loop_env loop_head\<rbrakk>" by blast
-  then have "s (STR ''x'') \<in> gamma (loop_env loop_head (STR ''x''))"
-    unfolding gamma_state_def by blast
-  then show ?thesis by (auto simp: loop_env_def)
-qed
 
 end
 
