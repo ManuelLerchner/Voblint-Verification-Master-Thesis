@@ -115,8 +115,9 @@ proof (rule allI)
     true nor definitely false, so \<open>branch_ivl\<close>'s forward feasibility gate
     always falls through to \<open>bfilter_ivl\<close> here -- \<open>branch_ivl = bfilter_ivl\<close>
     as whole functions, not merely at one variable. Established once via
-    \<open>branch_def\<close>'s own case split, so the rest of this proof reasons about
-    \<open>bfilter_ivl\<close> exactly as before \<open>branch_ivl\<close> existed.
+    \<open>branch_unfold\<close>'s case split (\<open>branch\<close>'s original shape, recovered as a
+    lemma over the primitive \<open>branch_lifted\<close>), so the rest of this proof
+    reasons about \<open>bfilter_ivl\<close> exactly as before \<open>branch_ivl\<close> existed.
   \<close>
   have guard_not_bot: "\<not> is_bot (aval_ivl (Less (V (STR ''x'')) (N 20))
         ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))))"
@@ -130,14 +131,14 @@ proof (rule allI)
         ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))"
     unfolding branch_ivl_def bfilter_ivl_def
     using bfilter_ivl_def branch_ivl_def guard_not_bot guard_tobool_none
-      ivl_backward_domain.branch_def by fastforce
+      ivl_backward_domain.branch_unfold by fastforce
   have branch_eq_false: "branch_ivl (Less (V (STR ''x'')) (N 20)) False
         ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20))) =
       bfilter_ivl (Less (V (STR ''x'')) (N 20)) False
         ((\<lambda>_. Ivl MinInf PlusInf)(STR ''x'' := Ivl (Fin 0) (Fin 20)))"
     unfolding branch_ivl_def bfilter_ivl_def
     using bfilter_ivl_def branch_ivl_def guard_not_bot guard_tobool_none
-      ivl_backward_domain.branch_def by auto
+      ivl_backward_domain.branch_unfold by auto
  
   have leI: "\<And>t. t \<in> ?I \<Longrightarrow> t \<le> loop_env v"
     by (auto split: if_splits

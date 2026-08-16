@@ -313,6 +313,50 @@ These are different claims, and only the first is currently supported:
   -- it can change what appears on screen without a covering theorem, and
   the lexer/parser sit outside the proof entirely by design.
 
+## 11. Classical `rhs` specification vs. TD-Side execution
+
+Voblint has two intentionally distinct analysis interfaces, both built on the same
+`domain_transfer` record (section 1).
+
+The classical
+
+```isabelle
+rhs :: pp => (pp => abs_state) => abs_state
+is_post_fixpoint
+```
+
+layer (`Core/Equations/Constraint_System.thy:775-800`) is a solver-independent
+declarative specification. It is not used by any currently executed analysis solver.
+`unified_ltr_post_fixpoint_sound_for` (`Core/Equations/LTR_Analysis_Sound.thy:56`)
+lets any environment proved to satisfy this post-fixpoint specification -- including a
+manually constructed witness -- inherit collecting/`ltr_collect` soundness. Its only two
+consumers, `Examples/Interval/Example_Interval_Loop_Coverage.thy` and
+`Examples/Interval/Example_Proc_Call.thy`, exploit exactly this: each hand-defines its
+own `env` and hand-proves it a post-fixpoint, with no `by eval` and no solver
+invocation.
+
+All shipped/verified analysis execution instead uses the TD-Side effectful solver
+(`Core/Solver/TD_Side/TD_Side_CFG.thy`), instantiated over `abs_state lifted`, and
+certified through `side_collect_sound_in_eff_cone` (section 6's "Solver specification vs.
+executable `solve_c`" is this route). These routes are parallel, not an
+implementation/specification pair -- there is no bridge from one to the other:
+
+```text
+classical rhs:  solver-independent post-fixpoint certificate (2 example consumers)
+TD-Side:        the actual effectful solver and the project's main soundness spine
+```
+
+`AD-51`/`AD-52` (`Core/Solver/Exec/Exec_Bridge.thy:225,957`) is sometimes mistaken for a
+bridge between these two routes. It is not: it is the executable-state/function-state
+correspondence entirely internal to the lifted TD-Side architecture, and never mentions
+`rhs`/`is_post_fixpoint`.
+
+`domain_transfer`'s shared `tf_branch` field stays plain-state-valued (`branch`, not
+`branch_lifted`) on both routes. `branch` is intentionally the projection of the more
+expressive `branch_lifted`, which the TD-Side effectful architecture uses directly where
+it must preserve explicit Deadcode/reachability distinctions that `branch`'s
+whole-state-bottom encoding cannot make.
+
 ## Coverage matrix
 
 | Domain / mode | Math transfer soundness | Exec-mirror commute | End-to-end collecting-soundness | Exported (`analysis_kind`/`export_code`) | Classification |

@@ -11,19 +11,35 @@ text \<open>
 \<close>
 
 definition sign_etf :: "(vname \<Rightarrow> bool) \<Rightarrow> (unit, sign) effectful_domain_transfer" where
-  "sign_etf gs = mixed_etf_of_transfer gs (sign_tf_for gs)"
+  "sign_etf gs = mixed_etf_of_transfer gs (sign_tf_for gs) branch_lifted_sign"
 
-lemma sign_etf_edge_tree:
-  "apply_etf (sign_etf gs) a u = mixed_etf_edge_tree gs (sign_tf_for gs) a u"
+text \<open>
+  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> no longer route through \<^const>\<open>mixed_etf_edge_tree\<close>
+  (their transfer is \<^const>\<open>local_branch_tree\<close>/\<^const>\<open>unit_edge_tree\<close> against
+  \<open>branch_lifted_sign\<close> instead), so a single monolithic equality against
+  \<^const>\<open>mixed_etf_edge_tree\<close> for every \<open>a\<close> no longer holds. This is stated as
+  two separate equations below instead: \<open>sign_etf_edge_tree_nonbranch\<close> for the
+  actions that still use the ordinary path, and \<open>sign_etf_edge_tree_branch\<close> for
+  the two branch actions.
+\<close>
+
+lemma sign_etf_edge_tree_nonbranch:
+  assumes "\<not> is_branch_action a"
+  shows "apply_etf (sign_etf gs) a u = mixed_etf_edge_tree gs (sign_tf_for gs) a u"
+  using assms
   unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def
   by (cases a) simp_all
 
-lemma sign_etf_edge_tree_mixed:
-  "apply_etf (sign_etf gs) a u =
-   (if local_edge_action gs a then local_edge_tree gs (apply_tf (sign_tf_for gs) a) u
-    else unit_edge_tree gs (apply_tf (sign_tf_for gs) a) u)"
-  unfolding sign_etf_def apply_etf_mixed_of_transfer mixed_etf_edge_tree_def
-  by (cases a) simp_all
+lemma sign_etf_edge_tree_branch:
+  "apply_etf (sign_etf gs) (EA_Assume b) u =
+     (if local_edge_action gs (EA_Assume b)
+      then local_branch_tree gs (branch_lifted_sign b True) u
+      else unit_edge_tree gs (branch_sign b True) u)"
+  "apply_etf (sign_etf gs) (EA_AssumeNot b) u =
+     (if local_edge_action gs (EA_AssumeNot b)
+      then local_branch_tree gs (branch_lifted_sign b False) u
+      else unit_edge_tree gs (branch_sign b False) u)"
+  unfolding sign_etf_def apply_etf_mixed_of_transfer sign_tf_for_def by simp_all
 
 lemma sign_etf_combine_tree:
   "etf_combine_collect (sign_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
@@ -40,18 +56,92 @@ lemma sign_tf_for_enter_mono:
 lemma sign_sound_etf:
   "sound_effectful_transfer gs (sign_etf gs)"
   unfolding sign_etf_def
-  by (rule sound_effectful_transfer_mixed_of_transfer
-        [OF sign_is_sound_transfer_for sign_tf_local_edge_invariant])
+proof (rule sound_effectful_transfer_mixed_of_transfer)
+  show "sound_transfer_for gs (sign_tf_for gs)" by (rule sign_is_sound_transfer_for)
+next
+  show "\<And>a. local_edge_action gs a \<Longrightarrow> \<not> is_branch_action a \<Longrightarrow>
+        local_edge_invariant gs (apply_tf (sign_tf_for gs) a)"
+    by (rule sign_tf_local_edge_invariant)
+next
+  show "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow>
+        s \<in> gamma_state_lift (branch_lifted_sign b pol \<sigma>)"
+    by (rule sign_backward_domain.branch_lifted_sound)
+next
+  fix b pol
+  assume "local_edge_action gs (if pol then EA_Assume b else EA_AssumeNot b)"
+  then have "\<not> exp_mentions_global gs b"
+    by (cases pol) (simp_all add: exp_mentions_global_def)
+  then show "local_edge_invariant_lifted gs (branch_lifted_sign b pol)"
+    by (rule branch_lifted_sign_local_edge_invariant_lifted)
+qed
+
+text \<open>
+  \<open>cone_compatible_etf_local_unit_transfer\<close>/\<open>threefold_mono_local_unit_transfer\<close>
+  no longer apply directly: their \<open>edge\<close> contract requires every action to be
+  either \<^const>\<open>local_edge_tree\<close> or \<^const>\<open>unit_edge_tree\<close> against one uniform
+  \<open>F\<close>, and Sign's local branch case is neither -- it is
+  \<^const>\<open>local_branch_tree\<close> against \<open>branch_lifted_sign\<close>. The
+  \<open>_local_branch_unit_transfer\<close> variants add exactly that third disjunct,
+  discharged here from \<open>sign_etf_edge_tree_nonbranch\<close>/\<open>sign_etf_edge_tree_branch\<close>.
+\<close>
+
+lemma sign_etf_edge_tree_disj:
+  "apply_etf (sign_etf gs) a u = local_edge_tree gs (apply_tf (sign_tf_for gs) a) u
+   \<or> apply_etf (sign_etf gs) a u = unit_edge_tree gs (apply_tf (sign_tf_for gs) a) u
+   \<or> apply_etf (sign_etf gs) a u =
+       local_branch_tree gs
+         (case a of EA_Assume b \<Rightarrow> branch_lifted_sign b True
+                  | EA_AssumeNot b \<Rightarrow> branch_lifted_sign b False
+                  | _ \<Rightarrow> (\<lambda>_. Bot)) u"
+proof (cases a)
+  case EA_Nop
+  then show ?thesis
+    using sign_etf_edge_tree_nonbranch[of EA_Nop gs u]
+    by (simp add: mixed_etf_edge_tree_def is_branch_action.simps)
+next
+  case (EA_Assign x e)
+  then show ?thesis
+    using sign_etf_edge_tree_nonbranch[of "EA_Assign x e" gs u]
+    by (simp add: mixed_etf_edge_tree_def is_branch_action.simps)
+next
+  case (EA_Special sc x)
+  then show ?thesis
+    using sign_etf_edge_tree_nonbranch[of "EA_Special sc x" gs u]
+    by (simp add: mixed_etf_edge_tree_def is_branch_action.simps)
+next
+  case (EA_Assume b)
+  show ?thesis
+    using sign_etf_edge_tree_branch(1)[of gs b u]
+    unfolding EA_Assume sign_tf_for_def
+    by (cases "local_edge_action gs (EA_Assume b)") auto
+next
+  case (EA_AssumeNot b)
+  show ?thesis
+    using sign_etf_edge_tree_branch(2)[of gs b u]
+    unfolding EA_AssumeNot sign_tf_for_def
+    by (cases "local_edge_action gs (EA_AssumeNot b)") auto
+next
+  case (EA_Ret e p)
+  then show ?thesis
+    using sign_etf_edge_tree_nonbranch[of "EA_Ret e p" gs u]
+    by (simp add: mixed_etf_edge_tree_def is_branch_action.simps)
+next
+  case (EA_Check c)
+  then show ?thesis
+    using sign_etf_edge_tree_nonbranch[of "EA_Check c" gs u]
+    by (simp add: mixed_etf_edge_tree_def is_branch_action.simps)
+qed
 
 lemma sign_etf_cone_compatible: "cone_compatible_etf gs (sign_etf gs)"
-  by (rule cone_compatible_etf_local_unit_transfer
-       [OF sign_etf_edge_tree_mixed sign_etf_enter_tree sign_etf_combine_tree])
+  by (rule cone_compatible_etf_local_branch_unit_transfer
+       [OF sign_etf_edge_tree_disj sign_etf_enter_tree sign_etf_combine_tree])
 
 lemma sign_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff gs g (sign_etf gs) bot0 s0 ())"
-  by (rule threefold_mono_local_unit_transfer
-       [OF sign_etf_edge_tree_mixed sign_etf_enter_tree sign_etf_combine_tree
+  by (rule threefold_mono_local_branch_unit_transfer
+       [OF sign_etf_edge_tree_disj sign_etf_enter_tree sign_etf_combine_tree
            sign_tf_for_mono sign_tf_for_enter_mono])
+     (auto simp: sign_backward_domain.branch_lifted_mono split: edge_action.splits)
 
 subsection \<open>Unit-only sign ETF (executable transport)\<close>
 

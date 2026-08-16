@@ -1062,6 +1062,7 @@ global_interpretation int_dom_backward_never:
     afilter_int_dom_never = int_dom_backward_never.afilter
     and bfilter_int_dom_never = int_dom_backward_never.bfilter
     and branch_int_dom_never = int_dom_backward_never.branch
+    and branch_lifted_int_dom_never = int_dom_backward_never.branch_lifted
     and afilter_int_dom_never_st = int_dom_backward_never.afilter_st
     and bfilter_int_dom_never_st = int_dom_backward_never.bfilter_st
     and branch_int_dom_never_st = int_dom_backward_never.branch_st
@@ -1250,6 +1251,7 @@ global_interpretation int_dom_backward_once:
     afilter_int_dom_once = int_dom_backward_once.afilter
     and bfilter_int_dom_once = int_dom_backward_once.bfilter
     and branch_int_dom_once = int_dom_backward_once.branch
+    and branch_lifted_int_dom_once = int_dom_backward_once.branch_lifted
     and afilter_int_dom_once_st = int_dom_backward_once.afilter_st
     and bfilter_int_dom_once_st = int_dom_backward_once.bfilter_st
     and branch_int_dom_once_st = int_dom_backward_once.branch_st
@@ -1438,6 +1440,7 @@ global_interpretation int_dom_backward_fixpoint:
     afilter_int_dom_fixpoint = int_dom_backward_fixpoint.afilter
     and bfilter_int_dom_fixpoint = int_dom_backward_fixpoint.bfilter
     and branch_int_dom_fixpoint = int_dom_backward_fixpoint.branch
+    and branch_lifted_int_dom_fixpoint = int_dom_backward_fixpoint.branch_lifted
     and afilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.afilter_st
     and bfilter_int_dom_fixpoint_st = int_dom_backward_fixpoint.bfilter_st
     and branch_int_dom_fixpoint_st = int_dom_backward_fixpoint.branch_st

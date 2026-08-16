@@ -321,10 +321,10 @@ proof -
     by (rule ivl_bfilter_st_for_less_var_lit_agree[OF agree location_in canonical x_in])
   show ?thesis
     unfolding ivl_backward_domain.branch_st_def ivl_backward_domain.branch_def[folded branch_ivl_def]
+      ivl_backward_domain.branch_lifted_def[folded branch_lifted_ivl_def]
       aval_agree bot_fun_def
     using bot_readback bf
-    by (cases "is_bot (aval_ivl (Less (V x) (N n)) s_abs)")
-       (auto split: option.splits)
+    by (simp split: option.splits)
 qed
 
 lemma ivl_tf_st_for_assume_var_lit_agree:

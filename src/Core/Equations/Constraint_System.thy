@@ -1083,6 +1083,24 @@ text \<open>
   locals.
 \<close>
 
+fun is_branch_action :: "edge_action \<Rightarrow> bool" where
+  "is_branch_action (EA_Assume _) = True"
+| "is_branch_action (EA_AssumeNot _) = True"
+| "is_branch_action _ = False"
+
+text \<open>
+  A local, but potentially-dead, branch guard is not a \<open>local_edge_invariant\<close>
+  instance: a domain's plain \<^const>\<open>tf_branch\<close> field may still collapse to
+  whole-state \<open>bot\<close> on a definite contradiction (M1's \<open>branch\<close> is only a
+  compatibility projection of \<open>branch_lifted\<close>, not itself frame-preserving), so
+  the ordinary local/global frame property genuinely fails for it even when the
+  guard mentions no global. \<^const>\<open>is_branch_action\<close> lets the generic effectful
+  soundness obligation (\<open>sound_effectful_transfer_mixed_of_transfer\<close>) exclude
+  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> from its plain-invariant premise, since those two
+  actions are covered separately by the lifted local-edge invariant on the
+  domain's own \<open>branch_lifted\<close> instead.
+\<close>
+
 subsection \<open>Reassembled full result and effectful soundness\<close>
 
 text \<open>

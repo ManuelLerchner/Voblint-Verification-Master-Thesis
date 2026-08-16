@@ -2073,6 +2073,24 @@ let rec fmdom (Fmap_of_list m) = fimage fst (fset_of_list m);;
 
 let rec fmupd _A k v m = fmadd _A m (Fmap_of_list [(k, v)]);;
 
+let rec interval_eq_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
+
+let rec interval_eq_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) ||
+        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
+
+let zero_int : int = Int_of_integer Z.zero;;
+
+let rec interval_tobool
+  a = (if interval_eq_false a (Ivl (Fin zero_int, Fin zero_int)) then Some true
+        else (if interval_eq_true a (Ivl (Fin zero_int, Fin zero_int))
+               then Some false else None));;
+
 let rec lookup_resolved_st_q _A (Abs_resolved_st x) = lookup_resolved_st _A x;;
 
 let rec location_of
@@ -2178,24 +2196,6 @@ let rec plus_ivl
     (let (Ivl (a, b), Ivl (c, d)) =
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (plus_eint a c, plus_eint b d)));;
-
-let rec interval_eq_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
-
-let rec interval_eq_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) ||
-        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
-
-let zero_int : int = Int_of_integer Z.zero;;
-
-let rec interval_tobool
-  a = (if interval_eq_false a (Ivl (Fin zero_int, Fin zero_int)) then Some true
-        else (if interval_eq_true a (Ivl (Fin zero_int, Fin zero_int))
-               then Some false else None));;
 
 let rec interval_eqb
   a b = (if interval_eq_true a b then Some true
@@ -2394,8 +2394,20 @@ let rec bfilter_ivl_st
            in
           afilter_ivl_st gs (Times (v, va)) a1 s);;
 
+let rec branch_ivl_st
+  gs e pol s =
+    (if is_bot_ivl (aval_ivl e (fun_of_resolved_st_q_for bot_ivl gs s))
+      then bot_resolved_st_qa bot_ivl
+      else (match
+             interval_tobool
+               (aval_ivl e (fun_of_resolved_st_q_for bot_ivl gs s))
+             with None -> bfilter_ivl_st gs e pol s
+             | Some c ->
+               (if equal_boola c pol then bfilter_ivl_st gs e pol s
+                 else bot_resolved_st_qa bot_ivl)));;
+
 let ivl_ops : (ivl, unit) numeric_ops_ext
-  = Numeric_ops_ext (aval_ivl, bfilter_ivl_st, ivl_top, ());;
+  = Numeric_ops_ext (aval_ivl, branch_ivl_st, ivl_top, ());;
 
 let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
 
@@ -2823,8 +2835,19 @@ let rec bfilter_sign_st
            in
           afilter_sign_st gs (Times (v, va)) a1 s);;
 
+let rec branch_sign_st
+  gs e pol s =
+    (if is_bot_sign (aval_sign e (fun_of_resolved_st_q_for bot_sign gs s))
+      then bot_resolved_st_qa bot_sign
+      else (match
+             sign_tobool (aval_sign e (fun_of_resolved_st_q_for bot_sign gs s))
+             with None -> bfilter_sign_st gs e pol s
+             | Some c ->
+               (if equal_boola c pol then bfilter_sign_st gs e pol s
+                 else bot_resolved_st_qa bot_sign)));;
+
 let sign_ops : (sign, unit) numeric_ops_ext
-  = Numeric_ops_ext (aval_sign, bfilter_sign_st, STop, ());;
+  = Numeric_ops_ext (aval_sign, branch_sign_st, STop, ());;
 
 let rec infl (State_ext (c, infl, stabl, sigma, more)) = infl;;
 

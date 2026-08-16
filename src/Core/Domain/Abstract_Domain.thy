@@ -1139,39 +1139,68 @@ next
 qed
 
 text \<open>
-  \<open>branch\<close> is the Goblint-aligned two-stage branch transfer: a forward
+  \<open>branch_lifted\<close> is the canonical Goblint-aligned branch semantics: a forward
   \<open>tobool\<close> feasibility check ahead of \<open>bfilter\<close>, matching \<open>Base.branch\<close>'s
-  \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>. \<open>tobool\<close>'s
-  definite answer, when present, is exactly \<open>truthy\<close> of every concrete value
-  \<open>aval_abs e \<sigma>\<close> represents; \<open>truthy (aval e s) = pol\<close> for a represented
-  \<open>s\<close> then forces that answer to equal \<open>pol\<close>, so the \<open>else bot\<close> branch below
-  is exercised only when no represented \<open>s\<close> exists at all -- \<open>bfilter\<close>'s own
-  narrowing never had a chance to run, matching Goblint's \<open>Deadcode\<close> without
-  reference to it. When \<open>tobool\<close> is \<open>None\<close> (or agrees with \<open>pol\<close>), \<open>branch\<close>
-  falls through to \<open>bfilter\<close> unchanged.
+  \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>. A definite
+  contradiction between \<open>tobool\<close>'s answer and \<open>pol\<close> denotes \<open>Bot\<close> -- no
+  concrete successor, matching Goblint's \<open>Deadcode\<close> as an outer control-flow
+  fact rather than a value of the domain -- while every other case narrows via
+  \<open>bfilter\<close> and returns \<open>Lifted\<close>. \<open>tobool\<close>'s definite answer, when present,
+  is exactly \<open>truthy\<close> of every concrete value \<open>aval_abs e \<sigma>\<close> represents;
+  \<open>truthy (aval e s) = pol\<close> for a represented \<open>s\<close> then forces that answer
+  to equal \<open>pol\<close>, so the \<open>Bot\<close> case below is exercised only when no
+  represented \<open>s\<close> exists at all.
 
   The leading \<open>is_bot (aval_abs e \<sigma>)\<close> guard is not a separate soundness
   case -- \<open>aval_abs_sound\<close> already makes it unreachable whenever \<open>\<sigma>\<close>
-  represents anything, so \<open>branch_sound\<close> discharges it the same way as the
-  \<open>tobool\<close> disagreement case. It exists for monotonicity: an author's
-  \<open>tobool\<close> is free to answer arbitrarily at its own domain's bottom (every
-  answer is vacuously sound there, since \<open>gamma bot = {}\<close>), so \<open>tobool\<close>
-  need not, and generally does not, agree across a bottom/non-bottom pair
-  \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Routing \<open>is_bot\<close> itself to
-  \<open>bot\<close> directly, ahead of \<open>tobool\<close>, sidesteps that disagreement instead of
-  relying on it.
+  represents anything, so \<open>branch_lifted_sound\<close> discharges it the same way
+  as the \<open>tobool\<close> disagreement case. It exists for monotonicity: an
+  author's \<open>tobool\<close> is free to answer arbitrarily at its own domain's
+  bottom (every answer is vacuously sound there, since \<open>gamma bot = {}\<close>),
+  so \<open>tobool\<close> need not, and generally does not, agree across a
+  bottom/non-bottom pair \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Routing
+  \<open>is_bot\<close> itself to \<open>Bot\<close> directly, ahead of \<open>tobool\<close>, sidesteps that
+  disagreement instead of relying on it.
+
+  \<open>branch\<close> is the plain-\<open>abs_state\<close> projection of \<open>branch_lifted\<close>, used by
+  the classical/specification \<open>rhs\<close> route and the executable mirror: it
+  collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that never needs to
+  distinguish "no successor" from "successor whose store is bottom" can keep
+  working with plain \<open>abs_state\<close>. The TD-side effectful pipeline instead
+  consumes \<open>branch_lifted\<close> directly (see \<open>local_branch_tree\<close> in
+  \<open>TD_Side_CFG.thy\<close>), so that a dead branch never has to be reconstructed
+  as a whole-state-bottom value indistinguishable from an ordinary
+  local/global-restricted result.
 \<close>
 
+definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
+  "branch_lifted e pol \<sigma> =
+     (if is_bot (aval_abs e \<sigma>) then Bot
+      else case tobool (aval_abs e \<sigma>) of
+        Some c \<Rightarrow> if c = pol then Lifted (bfilter e pol \<sigma>) else Bot
+      | None \<Rightarrow> Lifted (bfilter e pol \<sigma>))"
+
 definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
+  "branch e pol \<sigma> = (case branch_lifted e pol \<sigma> of Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>')"
+
+text \<open>
+  The original case-split shape, recovered as a lemma rather than the
+  primitive definition: callers reasoning about \<open>branch\<close> at the plain
+  \<open>abs_state\<close> level (the classical/specification route, the executable
+  mirror) unfold through this instead of \<open>branch_lifted\<close>.
+\<close>
+
+lemma branch_unfold:
   "branch e pol \<sigma> =
      (if is_bot (aval_abs e \<sigma>) then bot
       else case tobool (aval_abs e \<sigma>) of
         Some c \<Rightarrow> if c = pol then bfilter e pol \<sigma> else bot
       | None \<Rightarrow> bfilter e pol \<sigma>)"
+  unfolding branch_def branch_lifted_def by (simp split: option.splits)
 
-lemma branch_sound:
+lemma branch_lifted_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
-  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
+  shows "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)"
 proof -
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
   have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
@@ -1179,27 +1208,38 @@ proof -
   show ?thesis
   proof (cases "tobool (aval_abs e \<sigma>)")
     case None
-    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_def)
+    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_lifted_def)
   next
     case (Some c)
     have "truthy (aval e s) = c" using tobool_sound[OF Some ea] .
     with assms(2) have "c = pol" by simp
-    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_def Some)
+    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_lifted_def Some)
   qed
 qed
 
+lemma branch_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
+  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
+proof -
+  have "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)" by (rule branch_lifted_sound[OF assms])
+  then show ?thesis
+    unfolding branch_def by (cases "branch_lifted e pol \<sigma>") simp_all
+qed
+
 text \<open>
-  \<open>branch\<close> only ever narrows further than \<open>bfilter\<close>: it either falls through
-  to \<open>bfilter\<close> unchanged, or short-circuits to \<open>bot\<close>, and \<open>bot\<close> is least.
-  Callers that only need an upper bound on \<open>branch\<close>'s result -- e.g.
-  post-fixpoint checks -- can reuse their existing \<open>bfilter\<close>-level reasoning
-  through this fact instead of re-deriving it against \<open>branch\<close>'s case split.
+  \<open>branch\<close> only ever narrows further than \<open>bfilter\<close>: it either falls
+  through to \<open>bfilter\<close> unchanged, or short-circuits to \<open>bot\<close>, and \<open>bot\<close> is
+  least. Callers that only need an upper bound on \<open>branch\<close>'s result -- e.g.
+  post-fixpoint checks -- can reuse their existing \<open>bfilter\<close>-level
+  reasoning through this fact instead of re-deriving it against \<open>branch\<close>'s
+  case split.
 \<close>
 
 lemma branch_le_bfilter: "branch e pol \<sigma> \<le> bfilter e pol \<sigma>"
-  unfolding branch_def by (auto split: option.splits)
+  unfolding branch_unfold by (auto split: option.splits)
 
 end
+
 
 subsection \<open>Conservative inverse operator\<close>
 
@@ -1637,59 +1677,76 @@ next
 qed
 
 text \<open>
-  \<open>branch\<close>'s forward gate rests on \<open>tobool\<close>, and \<open>tobool_mono\<close> explicitly
-  excludes bottom operands -- an author's \<open>tobool\<close> may answer arbitrarily
-  there, since \<open>gamma bot = {}\<close> makes every answer vacuously sound. Routing
-  \<open>is_bot (aval_abs e \<sigma>)\<close> to \<open>bot\<close> directly (\<open>branch\<close>'s own leading guard)
-  is what keeps this total: whichever of \<open>\<sigma>1\<close>/\<open>\<sigma>2\<close> has a bottom \<open>aval_abs\<close>
-  value collapses to the global least state immediately, without needing
-  \<open>tobool\<close> to say anything about it.
+  \<open>branch_lifted\<close>'s forward gate rests on \<open>tobool\<close>, and \<open>tobool_mono\<close>
+  explicitly excludes bottom operands -- an author's \<open>tobool\<close> may answer
+  arbitrarily there, since \<open>gamma bot = {}\<close> makes every answer vacuously
+  sound. Routing \<open>is_bot (aval_abs e \<sigma>)\<close> to \<open>Bot\<close> directly
+  (\<open>branch_lifted\<close>'s own leading guard) is what keeps this total: whichever
+  of \<open>\<sigma>1\<close>/\<open>\<sigma>2\<close> has a bottom \<open>aval_abs\<close> value collapses to \<open>Bot\<close>
+  immediately, without needing \<open>tobool\<close> to say anything about it.
+  \<open>branch_mono\<close> is then a direct consequence: \<open>branch\<close>'s
+  \<open>Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>'\<close> projection is itself monotone (\<open>Bot\<close> is
+  least, so it can only project below whatever the \<open>Lifted\<close> side projects to).
 \<close>
 
-lemma branch_mono:
+lemma branch_lifted_mono:
   assumes "sigma1 \<le> sigma2"
-  shows "branch e pol sigma1 \<le> branch e pol sigma2"
+  shows "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
 proof (cases "is_bot (aval_abs e sigma2)")
   case True
   have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
   from True have "is_bot (aval_abs e sigma1)" using is_bot_mono[OF v] by simp
-  with True show ?thesis by (simp add: branch_def)
+  with True show ?thesis by (simp add: branch_lifted_def)
 next
   case not_bot2: False
-  have below_bfilter: "\<And>sigma. branch e pol sigma \<le> bfilter e pol sigma"
-    unfolding branch_def by (auto split: option.splits)
+  have below_bfilter: "\<And>sigma. branch_lifted e pol sigma \<le> Lifted (bfilter e pol sigma)"
+    unfolding branch_lifted_def by (auto split: option.splits)
   show ?thesis
   proof (cases "tobool (aval_abs e sigma2)")
     case None
-    have eq2: "branch e pol sigma2 = bfilter e pol sigma2"
-      using None not_bot2 by (simp add: branch_def)
+    have eq2: "branch_lifted e pol sigma2 = Lifted (bfilter e pol sigma2)"
+      using None not_bot2 by (simp add: branch_lifted_def)
     show ?thesis
-      unfolding eq2 by (rule order_trans[OF below_bfilter[of sigma1] bfilter_mono[OF assms]])
+      unfolding eq2
+      by (rule order_trans[OF below_bfilter[of sigma1]]) (simp add: bfilter_mono[OF assms])
   next
     case (Some c2)
     show ?thesis
     proof (cases "c2 = pol")
       case True
-      have eq2: "branch e pol sigma2 = bfilter e pol sigma2"
-        using Some True not_bot2 by (simp add: branch_def)
+      have eq2: "branch_lifted e pol sigma2 = Lifted (bfilter e pol sigma2)"
+        using Some True not_bot2 by (simp add: branch_lifted_def)
       show ?thesis
-        unfolding eq2 by (rule order_trans[OF below_bfilter[of sigma1] bfilter_mono[OF assms]])
+        unfolding eq2
+        by (rule order_trans[OF below_bfilter[of sigma1]]) (simp add: bfilter_mono[OF assms])
     next
       case False
       show ?thesis
       proof (cases "is_bot (aval_abs e sigma1)")
         case True
-        then show ?thesis by (simp add: branch_def)
+        then show ?thesis by (simp add: branch_lifted_def)
       next
         case not_bot1: False
         have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
         have "tobool (aval_abs e sigma1) = Some c2"
           using tobool_mono[OF not_bot1 v Some] .
-        with False not_bot1 show ?thesis by (simp add: branch_def)
+        with False not_bot1 show ?thesis by (simp add: branch_lifted_def)
       qed
     qed
   qed
 qed
+
+lemma branch_mono:
+  assumes "sigma1 \<le> sigma2"
+  shows "branch e pol sigma1 \<le> branch e pol sigma2"
+proof -
+  have lm: "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
+    by (rule branch_lifted_mono[OF assms])
+  show ?thesis
+    unfolding branch_def
+    using lm by (cases "branch_lifted e pol sigma1"; cases "branch_lifted e pol sigma2") auto
+qed
+
 
 text \<open>
   Reductiveness of the whole recursion, not just its individual \<open>intersect\<close>/\<open>inv_*\<close>

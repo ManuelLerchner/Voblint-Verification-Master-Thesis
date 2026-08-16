@@ -227,8 +227,10 @@ text \<open>
   to \<open>bot\<close>. \<open>fun_of_resolved_st_q_for_bot\<close> (\<open>Exec_St.thy\<close>) is what makes this
   land on the right value: reading back the \<open>resolved_st_q\<close> \<open>bot\<close> instance
   gives exactly the pointwise-\<open>bot\<close> function \<open>branch\<close>'s own \<open>bot\<close> case
-  produces, so \<open>branch_st_commute\<close> follows directly from \<open>branch_def\<close> and
-  \<open>bfilter_st_commute\<close>, with no new induction.
+    produces, so \<open>branch_st_commute\<close> follows directly from \<open>branch_unfold\<close> --
+  \<open>branch\<close>'s original case-split shape, recovered as a lemma now that
+  \<open>branch_lifted\<close> is the primitive definition -- and \<open>bfilter_st_commute\<close>,
+  with no new induction.
 \<close>
 
 definition branch_st ::
@@ -243,7 +245,7 @@ where
 lemma branch_st_commute:
   "fun_of_resolved_st_q_for gs (branch_st gs e pol s) =
      branch e pol (fun_of_resolved_st_q_for gs s)"
-    unfolding branch_st_def branch_def
+    unfolding branch_st_def branch_unfold
   by (simp add: bfilter_st_commute fun_of_resolved_st_q_for_bot split: option.splits)
 
 text \<open>

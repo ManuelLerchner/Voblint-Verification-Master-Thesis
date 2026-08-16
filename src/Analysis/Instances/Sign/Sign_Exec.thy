@@ -70,7 +70,7 @@ definition branch_sign_st_for ::
   "branch_sign_st_for = generic_branch_st_for sign_ops"
 
 lemma branch_sign_st_for_eq [simp]:
-  "branch_sign_st_for source_global b pol s = bfilter_sign_st source_global b pol s"
+  "branch_sign_st_for source_global b pol s = branch_sign_st source_global b pol s"
   by (simp add: branch_sign_st_for_def generic_branch_st_for_def sign_ops_def)
 
 definition sign_enter_st_for ::
@@ -194,12 +194,12 @@ proof (rule apply_tf_wrap_eqI[
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Assume b) s) =
     apply_tf (sign_tf_for gs) (EA_Assume b) (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
   show "\<And>b. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_AssumeNot b) s) =
     apply_tf (sign_tf_for gs) (EA_AssumeNot b)
       (fun_of_resolved_st_q_for gs s)"
-    by (simp add: sign_tf_for_def bfilter_sign_st_commute)
+    by (simp add: sign_tf_for_def sign_backward_domain.branch_st_commute)
   show "\<And>ea p. fun_of_resolved_st_q_for gs
       (sign_tf_st_for gs (EA_Ret ea p) s) =
     apply_tf (sign_tf_for gs) (EA_Ret ea p) (fun_of_resolved_st_q_for gs s)"

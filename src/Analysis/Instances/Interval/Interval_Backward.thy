@@ -419,6 +419,7 @@ global_interpretation ivl_backward_domain:
     afilter_ivl = ivl_backward_domain.afilter
     and bfilter_ivl = ivl_backward_domain.bfilter
     and branch_ivl = ivl_backward_domain.branch
+    and branch_lifted_ivl = ivl_backward_domain.branch_lifted
     and afilter_ivl_st = ivl_backward_domain.afilter_st
     and bfilter_ivl_st = ivl_backward_domain.bfilter_st
     and branch_ivl_st = ivl_backward_domain.branch_st

@@ -349,6 +349,7 @@ global_interpretation sign_backward_domain:
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
     and branch_sign = sign_backward_domain.branch
+    and branch_lifted_sign = sign_backward_domain.branch_lifted
     and afilter_sign_st = sign_backward_domain.afilter_st
     and bfilter_sign_st = sign_backward_domain.bfilter_st
     and branch_sign_st = sign_backward_domain.branch_st
