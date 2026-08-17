@@ -192,11 +192,22 @@ definition string_of_calls_list ::
              string_of_call_action ca @ '']--> '' @ string_of_cfg_node entry
              @ '' ~cont~> '' @ string_of_cfg_node cont) es)"
 
-lemma proc_demo_sign_unknown:
+text \<open>
+  Under the Base-style migration, \<open>total\<close>'s value is exact by the second check
+  (\<open>0 < total\<close> is now \<open>Check_Proved\<close>, matching the true accumulated \<open>total = 7\<close>):
+  the local unknown carries the whole abstract state through both calls,
+  flow-sensitively, instead of routing \<open>total\<close> through a flow-insensitive
+  solver-global summary. The third check (\<open>total < 100\<close>) stays \<open>Check_Unknown\<close>
+  regardless -- Sign has no comparison-against-a-nonzero-constant table at all,
+  so it cannot decide a bound like \<open>< 100\<close> even given the exact value.
+\<close>
+
+lemma proc_demo_sign_result:
   "analyse Sign_Analysis proc_demo_prog =
-     [(Statement 5, Less (N 0) (V (STR ''total'')), Check_Unknown),
+     [(Statement 5, Less (N 0) (V (STR ''total'')), Check_Proved),
       (Statement 6, Less (V (STR ''total'')) (N 100), Check_Unknown)]"
   by eval
+
 
 text \<open>
   \<open>total+n\<close>, not \<open>(total+n)\<close>: \<open>string_of_exp\<close> no longer parenthesizes
@@ -390,15 +401,13 @@ definition state_wiring_ex_prog :: imp_prog where
      }"
 
 text \<open>
-  \<open>x\<close> is local (no \<open>global\<close> declaration). \<open>analyse_sign_report_for_code\<close>
-  builds the per-point environment as
-  \<open>combine_env_abs gs (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-     (fun_of_exec_dg_st_for gs (globs (sol (Inr ()))))\<close>,
-  routing every name to the one component that actually owns it: local
-  names read the local unknown, global names read the global/side unknown.
-  \<open>x\<close> is local, so it reads \<open>locals\<close>' own precise \<open>SPos\<close> directly, never
-  touching the global/side unknown's unrelated \<open>STop\<close> default for a name
-  it never tracks.
+  \<open>x\<close> is local (no \<open>global\<close> declaration). Under the Base-style native D/G pipeline,
+  \<open>analyse_sign_report_for_with_state_code\<close>'s per-point environment reads the whole
+  abstract state straight off the reachability-lifted local unknown (\<open>map_lift
+  (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))\<close>, unwrapped through
+  \<open>Lifted\<close>/\<open>Bot\<close>) --- there is no separate global/side unknown to route a name to,
+  so \<open>x\<close> reads its own precise \<open>SPos\<close> directly regardless of whether it happens to
+  be local or global.
 \<close>
 
 lemma state_wiring_ex_sign_at_check:
@@ -443,19 +452,23 @@ lemma no_call_two_step_prog_proved:
   by eval
 
 lemma no_call_two_step_prog_locals_precise:
-  "fun_of_exec_dg_st_for (declared_global no_call_two_step_prog)
-     (locals (snd (analyse_sign_for (declared_global no_call_two_step_prog)
-       no_call_two_step_prog) (Inl (Statement 2, ())))) (STR ''x'') = SPos"
+  "(case map_lift (fun_of_exec_dg_st_for (declared_global no_call_two_step_prog))
+          (locals (snd (analyse_sign no_call_two_step_prog) (Inl (Statement 2, ()))))
+    of Lifted s \<Rightarrow> Some (s (STR ''x'')) | Bot \<Rightarrow> None) = Some SPos"
   by eval
 
 text \<open>
   The same fix carries across an actual call boundary: \<open>foo\<close> neither reads
-  nor writes the caller-local \<open>x\<close>, and \<open>x\<close> now stays precise at the check
-  after the call, for exactly the same reason (the call's own combine step,
-  \<open>unit_combine_step_st_env\<close>, routes the caller's locals from \<open>dc\<close> directly
-  instead of joining them against \<open>g\<close>). Kept as a second, more realistic
-  witness alongside \<open>no_call_two_step_prog_locals_precise\<close>, which isolates
-  the same mechanism without any interprocedural machinery at all.
+  nor writes the caller-local \<open>x\<close>, and \<open>x\<close> stays precise at the check
+  after the call, for the same reason (the call's own combine step,
+  \<^const>\<open>base_dg_spec_st_for_lifted\<close>'s \<open>dgs_combine_assign\<close>, restores the
+  caller's own local unknown at the return, joining in only the callee's
+  declared return value). \<open>g\<close> is now proved too, not merely \<open>x\<close>/\<open>y\<close>: \<open>g\<close>
+  lives in the same lifted local unknown as everything else, so the call's
+  write reaches the check exactly, with no separate global summary to lose
+  precision in. Kept as a second, more realistic witness alongside
+  \<open>no_call_two_step_prog_locals_precise\<close>, which isolates the same mechanism
+  without any interprocedural machinery at all.
 \<close>
 
 definition dg_probe_prog :: imp_prog where
@@ -475,26 +488,25 @@ definition dg_probe_prog :: imp_prog where
        }
      }"
 
-lemma dg_probe_prog_locals_proved_global_unknown:
+lemma dg_probe_prog_all_proved:
   "analyse Sign_Analysis dg_probe_prog =
      [(Statement 5, Less (N 0) (V (STR ''x'')), Check_Proved),
-      (Statement 6, Less (N 0) (V (STR ''g'')), Check_Unknown),
+      (Statement 6, Less (N 0) (V (STR ''g'')), Check_Proved),
       (Statement 7, Less (N 0) (V (STR ''y'')), Check_Proved)]"
   by eval
 
 text \<open>
-  \<open>dg_probe_prog\<close>'s \<open>g\<close> above is \<open>Check_Unknown\<close> not because any D/G routing
-  loses precision, but because \<^const>\<open>cinit_sign_st\<close> seeds every declared
-  global at \<open>SZero\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec\<close>), and the
-  flow-insensitive global summary (\<^const>\<open>TD_side_always_join_Interp_solve\<close>,
-  the \<open>join\<close> discipline) folds that seed in as a real contribution alongside
-  every \<open>Side\<close> a write publishes --- it cannot tell "before this write" from
-  "after" apart, so soundness requires covering both. \<open>join_sign SZero SPos =
-  SNonNeg\<close>, and \<open>0 < g\<close> is genuinely undecided at \<open>SNonNeg\<close>: this is the
-  flow-insensitive model working as designed, not a residual gap in the same
-  fix as \<open>no_call_two_step_prog\<close>/\<open>dg_probe_prog\<close> above. The witness below pins
-  the actual semantic reason (the joined summary value itself), not merely
-  the report's \<open>Check_Unknown\<close>, which follows from it.
+  Base-migration acceptance witness: before the migration, \<open>g\<close>'s check above was
+  \<open>Check_Unknown\<close>, not because any per-edge routing lost precision, but because
+  \<^const>\<open>cinit_sign_st\<close> seeds every declared global at \<open>SZero\<close>, and the old
+  flow-\<^emph>\<open>in\<close>sensitive global summary (routed through a separate solver-global
+  unknown, joined via \<^const>\<open>TD_side_always_join_Interp_solve\<close>) folded that seed
+  in as a real contribution alongside every write, unable to distinguish "before
+  this write" from "after": \<open>join_sign SZero SPos = SNonNeg\<close>, and \<open>0 < g\<close> was
+  genuinely undecided at \<open>SNonNeg\<close>. With the whole abstract state lifted into the
+  local unknown (\<open>D\<close>, no separate global-summary routing at all), \<open>g\<close>'s value
+  after \<open>g := 5\<close> is exactly \<open>SPos\<close> by construction, with no entry seed to join
+  against -- the seed only ever contributes at the CFG entry, not at every write.
 \<close>
 
 definition global_initial_value_remains_in_summary_prog :: imp_prog where
@@ -507,15 +519,9 @@ definition global_initial_value_remains_in_summary_prog :: imp_prog where
        }
      }"
 
-lemma global_initial_value_remains_in_summary_prog_summary_nonneg:
-  "fun_of_exec_dg_st_for (declared_global global_initial_value_remains_in_summary_prog)
-     (globs (snd (analyse_sign_for (declared_global global_initial_value_remains_in_summary_prog)
-       global_initial_value_remains_in_summary_prog) (Inr ()))) (STR ''g'') = SNonNeg"
-  by eval
-
-lemma global_initial_value_remains_in_summary_prog_check_unknown:
+lemma global_initial_value_remains_in_summary_prog_check_proved:
   "analyse Sign_Analysis global_initial_value_remains_in_summary_prog =
-     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Unknown)]"
+     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Proved)]"
   by eval
 
 end

@@ -1,5 +1,5 @@
 theory VIMP_Syntax
-  imports Main "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
+  imports VIMP_Settings "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
 begin
 
 section \<open>Source-language expressions\<close>

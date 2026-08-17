@@ -577,6 +577,13 @@ let rec less_sign a b = sign_le a b && not (sign_le b a);;
 
 let ord_sign = ({less_eq = less_eq_sign; less = less_sign} : sign ord);;
 
+let top_signa : sign = STop;;
+
+type 'a top = {top : 'a};;
+let top _A = _A.top;;
+
+let top_sign = ({top = top_signa} : sign top);;
+
 let preorder_sign = ({ord_preorder = ord_sign} : sign preorder);;
 
 let order_sign = ({preorder_order = preorder_sign} : sign order);;
@@ -585,6 +592,11 @@ type 'a order_bot = {bot_order_bot : 'a bot; order_order_bot : 'a order};;
 
 let order_bot_sign =
   ({bot_order_bot = bot_sign; order_order_bot = order_sign} : sign order_bot);;
+
+type 'a order_top = {order_order_top : 'a order; top_order_top : 'a top};;
+
+let order_top_sign =
+  ({order_order_top = order_sign; top_order_top = top_sign} : sign order_top);;
 
 let rec widen_sign a b = join_sign a b;;
 
@@ -637,6 +649,29 @@ let bounded_warrowing_sign =
       bounded_semilattice_sup_bot_sign;
      warrowing_bounded_warrowing = warrowing_sign}
     : sign bounded_warrowing);;
+
+let rec is_top_sign s = equal_signa s STop;;
+
+let rec is_top_signa a = is_top_sign a;;
+
+let rec is_bottom_sign s = equal_signa s SBot;;
+
+let rec is_bot_sign a = is_bottom_sign a;;
+
+type 'a computable_domain =
+  {bounded_semilattice_sup_bot_computable_domain :
+     'a bounded_semilattice_sup_bot;
+    order_top_computable_domain : 'a order_top; is_bot : 'a -> bool;
+    is_top : 'a -> bool};;
+let is_bot _A = _A.is_bot;;
+let is_top _A = _A.is_top;;
+
+let computable_domain_sign =
+  ({bounded_semilattice_sup_bot_computable_domain =
+      bounded_semilattice_sup_bot_sign;
+     order_top_computable_domain = order_top_sign; is_bot = is_bot_sign;
+     is_top = is_top_signa}
+    : sign computable_domain);;
 
 let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
                           | Some x2, None -> false
@@ -1036,9 +1071,6 @@ let ivl_top : ivl = Ivl (MinInf, PlusInf);;
 
 let top_ivla : ivl = ivl_top;;
 
-type 'a top = {top : 'a};;
-let top _A = _A.top;;
-
 let top_ivl = ({top = top_ivla} : ivl top);;
 
 let preorder_ivl = ({ord_preorder = ord_ivl} : ivl preorder);;
@@ -1047,8 +1079,6 @@ let order_ivl = ({preorder_order = preorder_ivl} : ivl order);;
 
 let order_bot_ivl =
   ({bot_order_bot = bot_ivl; order_order_bot = order_ivl} : ivl order_bot);;
-
-type 'a order_top = {order_order_top : 'a order; top_order_top : 'a top};;
 
 let order_top_ivl =
   ({order_order_top = order_ivl; top_order_top = top_ivl} : ivl order_top);;
@@ -1104,14 +1134,6 @@ let rec is_bottom_ivl
           (equal_eint u MinInf || not (less_eq_eint l u)));;
 
 let rec is_bot_ivl a = is_bottom_ivl a;;
-
-type 'a computable_domain =
-  {bounded_semilattice_sup_bot_computable_domain :
-     'a bounded_semilattice_sup_bot;
-    order_top_computable_domain : 'a order_top; is_bot : 'a -> bool;
-    is_top : 'a -> bool};;
-let is_bot _A = _A.is_bot;;
-let is_top _A = _A.is_top;;
 
 let computable_domain_ivl =
   ({bounded_semilattice_sup_bot_computable_domain =
@@ -2184,10 +2206,6 @@ let rec cfg_exit
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 
 let rec apsnd f (x, y) = (x, f y);;
-
-let rec is_bottom_sign s = equal_signa s SBot;;
-
-let rec is_bot_sign a = is_bottom_sign a;;
 
 let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
                      | SNeg, SBot -> SBot
@@ -3619,41 +3637,12 @@ let rec compile_prog
 let rec prog_cfg
   mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p);;
 
-let rec restrict_global_resolved _A
-  s = (let (_, (dg, ps)) = s in
-        (bot _A, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
-
-let rec restrict_global_resolved_q _A
-  (Abs_resolved_st x) = Abs_resolved_st (restrict_global_resolved _A x);;
-
-let rec restrict_local_resolved _A
-  s = (let (dl, (_, ps)) = s in
-        (dl, (bot _A, filtera (fun p -> location_is_local (fst p)) ps)));;
-
-let rec restrict_local_resolved_q _A
-  (Abs_resolved_st x) = Abs_resolved_st (restrict_local_resolved _A x);;
-
 let rec combine_resolved_st _A
   sc se =
     (let (dlc, (_, psc)) = sc in
      let (_, (dge, pse)) = se in
       (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
                     filtera (fun p -> location_is_global (fst p)) pse)));;
-
-let rec combine_resolved_st_q _A
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (combine_resolved_st _A xa x);;
-
-let rec unit_step_st _A
-  f d g =
-    (let res =
-       f (combine_resolved_st_q
-           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot d g)
-       in
-      (restrict_global_resolved_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res,
-        restrict_local_resolved_q
-          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res));;
 
 let rec routed_extra _C
   seed_key gk0 route ctx v =
@@ -3807,6 +3796,10 @@ let rec assemble_env_abs _A
                 bot_fun _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
               | Lifted g0 -> g0));;
 
+let rec combine_resolved_st_q _A
+  (Abs_resolved_st xa) (Abs_resolved_st x) =
+    Abs_resolved_st (combine_resolved_st _A xa x);;
+
 let rec sigma_update
   sigmaa (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infl, stabl, sigmaa sigma, more);;
@@ -3869,6 +3862,10 @@ let rec combine_assign_resolved _A
   gs dst v s =
     (match dst with None -> s
       | Some x -> update_resolved_st _A s (location_of gs x) v);;
+
+let rec restrict_local_resolved _A
+  s = (let (dl, (_, ps)) = s in
+        (dl, (bot _A, filtera (fun p -> location_is_local (fst p)) ps)));;
 
 let rec fun_of_exec_dg_st_for _A gs = fun_of_resolved_st_q_for _A gs;;
 
@@ -4032,80 +4029,90 @@ let rec combine_assign_resolved_q _A
   xc xb xa (Abs_resolved_st x) =
     Abs_resolved_st (combine_assign_resolved _A xc xb xa x);;
 
-let rec unit_combine_step_st_assign_for _A
-  gs dst de g merged =
-    (let res =
-       combine_assign_resolved_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs dst
-         (lookup_resolved_st_q
-           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de
-           (location_of gs ret_var))
-         (sup_resolved_st_qa _A (fst merged) (snd merged))
-       in
-      (restrict_global_resolved_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res,
-        restrict_local_resolved_q
-          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot res));;
-
-let rec unit_combine_step_st_env _A
-  dc de g =
-    (let m =
-       combine_resolved_st_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot dc g
-       in
-      (restrict_global_resolved_q
-         _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot m,
-        restrict_local_resolved_q
-          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot m));;
-
-let rec unit_dg_spec_st_for _A
-  gs tf_st enter_st =
+let rec base_dg_spec_st_for_lifted _A _B
+  gs is_bot_pred tf_st enter_st =
     Dg_spec_ext
-      (unit_step_st _A (tf_st EA_Nop),
-        (fun x e -> unit_step_st _A (tf_st (EA_Assign (x, e)))),
-        (fun sc x -> unit_step_st _A (tf_st (EA_Special (sc, x)))),
-        (fun b pol ->
-          unit_step_st _A
-            (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
-        (fun _ -> unit_step_st _A (tf_st EA_Nop)),
-        (fun e p -> unit_step_st _A (tf_st (EA_Ret (e, p)))),
-        (fun xs es -> unit_step_st _A (enter_st xs es)),
-        (fun (Check_Event bc) -> unit_step_st _A (tf_st (EA_Check bc))),
-        unit_combine_step_st_env _A, unit_combine_step_st_assign_for _A gs,
+      ((fun d g -> (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
+        (fun x e d g ->
+          (g, transfer_lift is_bot_pred (tf_st (EA_Assign (x, e))) d)),
+        (fun sc x d g ->
+          (g, transfer_lift is_bot_pred (tf_st (EA_Special (sc, x))) d)),
+        (fun b pol d g ->
+          (g, transfer_lift is_bot_pred
+                (tf_st (if pol then EA_Assume b else EA_AssumeNot b)) d)),
+        (fun _ d g -> (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
+        (fun e p d g ->
+          (g, transfer_lift is_bot_pred (tf_st (EA_Ret (e, p))) d)),
+        (fun xs es d g -> (g, transfer_lift is_bot_pred (enter_st xs es) d)),
+        (fun ev d g ->
+          (g, (let Check_Event bc = ev in
+                transfer_lift is_bot_pred (tf_st (EA_Check bc)) d))),
+        (fun dc de g ->
+          (g, (match dc with Bot -> Bot
+                | Lifted x ->
+                  (match de with Bot -> Bot
+                    | Lifted y ->
+                      Lifted
+                        (combine_resolved_st_q
+                          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                          x y))))),
+        (fun dst de g merged ->
+          (g, transfer_lift2 is_bot_pred
+                (fun env0 de0 ->
+                  combine_assign_resolved_q
+                    _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs
+                    dst (lookup_resolved_st_q
+                          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                          de0 (location_of gs ret_var))
+                    env0)
+                (snd merged) de)),
         ());;
 
 let rec analyse_sign_eqs_for
-  gs p =
+  is_bot_pred gs p =
     dg_gen_of
-      (bounded_semilattice_sup_bot_resolved_st_q
-        bounded_semilattice_sup_bot_sign)
-      (bounded_semilattice_sup_bot_resolved_st_q
-        bounded_semilattice_sup_bot_sign)
-      (unit_dg_spec_st_for bounded_semilattice_sup_bot_sign gs
-        (sign_tf_st_for gs) (sign_enter_st_for gs))
-      (prog_cfg prog_main_name p) (bot_resolved_st_qa bot_sign) cinit_sign_st
-      cinit_sign_st;;
+      (bounded_semilattice_sup_bot_lifted
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+      (bounded_semilattice_sup_bot_lifted
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+      (base_dg_spec_st_for_lifted bounded_semilattice_sup_bot_sign
+        (bounded_semilattice_sup_bot_lifted
+          (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+        gs is_bot_pred (sign_tf_st_for gs) (sign_enter_st_for gs))
+      (prog_cfg prog_main_name p) bot_lifteda (Lifted cinit_sign_st)
+      (Lifted cinit_sign_st);;
 
 let rec analyse_sign_for
-  gs p =
+  is_bot_pred gs p =
     tD_side_always_join_Interp_solve (equal_prod equal_cfg_node equal_unit)
       equal_unit
       ((equal_dg_state
-         (equal_resolved_st_q
-           (equal_sign,
-             bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot))
-         (equal_resolved_st_q
-           (equal_sign,
-             bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot))),
+         (equal_lifted
+           (equal_resolved_st_q
+             (equal_sign,
+               bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+         (equal_lifted
+           (equal_resolved_st_q
+             (equal_sign,
+               bounded_warrowing_sign.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
         (bounded_semilattice_sup_bot_dg_state
-          (bounded_warrowing_resolved_st_q
-            bounded_warrowing_sign).bounded_semilattice_sup_bot_bounded_warrowing
-          (bounded_warrowing_resolved_st_q
-            bounded_warrowing_sign).bounded_semilattice_sup_bot_bounded_warrowing),
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              bounded_warrowing_sign)).bounded_semilattice_sup_bot_bounded_warrowing),
         (warrowing_dg_state
-          (bounded_warrowing_resolved_st_q bounded_warrowing_sign)
-          (bounded_warrowing_resolved_st_q bounded_warrowing_sign)))
-      (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ());;
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q bounded_warrowing_sign))
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q bounded_warrowing_sign))))
+      (analyse_sign_eqs_for is_bot_pred gs p)
+      (cfg_exit (prog_cfg prog_main_name p), ());;
+
+let rec resolved_st_q_is_bot_for _A
+  xb (Abs_resolved_st xa) =
+    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
 
 let rec sign_classify_check
   c d = (if sign_check_true c d then Check_Proved
@@ -4114,12 +4121,18 @@ let rec sign_classify_check
 
 let rec analyse_sign_report_for
   gs p =
-    (let sol = snd (analyse_sign_for gs p) in
+    (let sol =
+       snd (analyse_sign_for
+             (resolved_st_q_is_bot_for computable_domain_sign
+               (declared_global_vars p))
+             gs p)
+       in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          combine_env_abs gs
-            (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
-            (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
+          (match
+            map_lift (fun_of_exec_dg_st_for bot_sign gs)
+              (locals (sol (Inl (v, ()))))
+            with Bot -> bot_fun bot_sign | Lifted s -> s))
         sign_classify_check);;
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
@@ -4193,9 +4206,9 @@ let rec return_call_list
               else None))
           (cfg_calls_list g);;
 
-let rec resolved_st_q_is_bot_for _A
-  xb (Abs_resolved_st xa) =
-    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
+let rec restrict_global_resolved _A
+  s = (let (_, (dg, ps)) = s in
+        (bot _A, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
 
 let rec etf_st_enter
   (Effectful_st_transfer_ext
@@ -4217,6 +4230,12 @@ let rec side_contribution_trees_st _B
     map (fun (u, a) -> apply_etf_st etf a u) es @
       map (fun (cl, (fs, asa)) -> etf_st_enter etf fs asa cl) ens @
         map (fun (cc, (dst, a)) -> etf_combine_collect_st etf dst cc a) cs;;
+
+let rec restrict_global_resolved_q _A
+  (Abs_resolved_st x) = Abs_resolved_st (restrict_global_resolved _A x);;
+
+let rec restrict_local_resolved_q _A
+  (Abs_resolved_st x) = Abs_resolved_st (restrict_local_resolved _A x);;
 
 let rec make_side_rhs_tree_eff_st_buffered _B
   g etf bot0_st s0_st gseed v =
@@ -4796,12 +4815,18 @@ let rec analyse_interval_td_report
 
 let rec analyse_sign_report_for_with_state
   gs p =
-    (let sol = snd (analyse_sign_for gs p) in
+    (let sol =
+       snd (analyse_sign_for
+             (resolved_st_q_is_bot_for computable_domain_sign
+               (declared_global_vars p))
+             gs p)
+       in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          combine_env_abs gs
-            (fun_of_exec_dg_st_for bot_sign gs (locals (sol (Inl (v, ())))))
-            (fun_of_exec_dg_st_for bot_sign gs (globs (sol (Inr ())))))
+          (match
+            map_lift (fun_of_exec_dg_st_for bot_sign gs)
+              (locals (sol (Inl (v, ()))))
+            with Bot -> bot_fun bot_sign | Lifted s -> s))
         sign_classify_check);;
 
 let rec analyse_sign_report_with_state

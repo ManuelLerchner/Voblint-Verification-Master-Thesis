@@ -179,9 +179,9 @@ text \<open>
 
 definition analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
   "analyse_env_for kind p =
-     (case kind of
-        Sign_Analysis \<Rightarrow>
-          (let env = analyse_sign_env_for (declared_global p) p in (\<lambda>v. SignValue \<circ> env v))
+     (case kind of       Sign_Analysis \<Rightarrow>
+         (let env = analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
+          in (\<lambda>v. SignValue \<circ> env v))
       | Interval_Analysis \<Rightarrow>
           (let env = analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p))
                        (declared_global p) (prog_table p) (prog_procs p)

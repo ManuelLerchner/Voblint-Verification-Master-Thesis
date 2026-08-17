@@ -136,28 +136,29 @@ text \<open>
 
 definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report_for gs p =
-     classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p) sign_classify_check"
+     classify_checks (prog_cfg prog_main_name p)
+       (analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) sign_classify_check"
 
 text \<open>
   The definitional equation above unfolds \<^const>\<open>analyse_sign_env_for\<close> at every check node, and
-  that unfolding mentions \<^const>\<open>analyse_sign_for\<close> twice (once for \<open>locals\<close>, once for \<open>globs\<close>)
-  --- so naive code generation from it would re-run the whole D/G solver twice per check, for an
-  \<open>N\<close>-check program, \<open>2N\<close> solver runs instead of one. The \<open>[code]\<close> equation below is provably
-  equal (a direct \<open>Let\<close>-unfold of the same definitions) but binds \<^term>\<open>snd (analyse_sign_for gs
-  p)\<close> once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the target language
-  compiles that \<open>let\<close> to a single shared thunk, so the generated OCaml computes the
-  solved system exactly once per report, regardless of how many checks the program has.
+  that unfolding mentions \<^const>\<open>analyse_sign_for\<close> once per node --- so naive code generation
+  from it would re-run the whole D/G solver once per check, for an \<open>N\<close>-check program, \<open>N\<close> solver
+  runs instead of one. The \<open>[code]\<close> equation below is provably equal (a direct \<open>Let\<close>-unfold of
+  the same definitions) but binds \<^term>\<open>snd (analyse_sign_for (resolved_st_q_is_bot_for
+  (declared_global_vars p)) gs p)\<close> once, outside the per-check closure \<^const>\<open>classify_checks\<close>
+  applies; the target language compiles that \<open>let\<close> to a single shared thunk, so the generated
+  OCaml computes the solved system exactly once per report, regardless of how many checks the
+  program has.
 \<close>
 
 declare analyse_sign_report_for_def [code del]
 
 lemma analyse_sign_report_for_code [code]:
   "analyse_sign_report_for gs p =
-     (let sol = snd (analyse_sign_for gs p)
+     (let sol = snd (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env_abs gs
-                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
            sign_classify_check)"
   unfolding analyse_sign_report_for_def analyse_sign_env_for_def[abs_def] Let_def
   by (rule refl)
@@ -185,18 +186,18 @@ text \<open>
 
 definition analyse_sign_for_per_origin ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-       (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+       (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
   "analyse_sign_for_per_origin gs p =
-     TD_side_per_origin_Interp_solve (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ())"
+     TD_side_per_origin_Interp_solve (analyse_sign_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+       (cfg_exit (prog_cfg prog_main_name p), ())"
 
 definition analyse_sign_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report_per_origin p =
      (let gs = declared_global p;
           sol = snd (analyse_sign_for_per_origin gs p)
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env_abs gs
-                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
            sign_classify_check)"
 
 subsection \<open>Whole-program check report with state\<close>
@@ -206,25 +207,25 @@ text \<open>
   via \<^const>\<open>classify_checks_with_state\<close>: same D/G pipeline, same environment,
   with the per-check Sign environment attached to each report entry instead
   of discarded. The \<open>[code]\<close> rewrite mirrors the one above for the same
-  reason: naive definitional unfolding would re-run the solver twice per
+  reason: naive definitional unfolding would re-run the solver once per
   check.
 \<close>
 
 definition analyse_sign_report_for_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_for_with_state gs p =
-     classify_checks_with_state (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
+     classify_checks_with_state (prog_cfg prog_main_name p)
+       (analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
        sign_classify_check"
 
 declare analyse_sign_report_for_with_state_def [code del]
 
 lemma analyse_sign_report_for_with_state_code [code]:
   "analyse_sign_report_for_with_state gs p =
-     (let sol = snd (analyse_sign_for gs p)
+     (let sol = snd (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env_abs gs
-                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
            sign_classify_check)"
   unfolding analyse_sign_report_for_with_state_def analyse_sign_env_for_def[abs_def] Let_def
   by (rule refl)
