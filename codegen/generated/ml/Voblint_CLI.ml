@@ -5513,37 +5513,6 @@ let rec analyse_sign_for_per_origin
         gs p)
       (cfg_exit (prog_cfg prog_main_name p), ());;
 
-let rec analyse_interval_td_raw
-  is_bot_pred gs pi ps mnm main =
-    snd (tD_side_warrowing_apinis_Interp_solve equal_cfg_node equal_unit
-          ((equal_lifted
-             (equal_resolved_st_q
-               (equal_ivl,
-                 bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot))),
-            (bounded_semilattice_sup_bot_lifted
-              (bounded_warrowing_resolved_st_q
-                bounded_warrowing_ivl).bounded_semilattice_sup_bot_bounded_warrowing.semilattice_sup_bounded_semilattice_sup_bot),
-            (warrowing_lifted
-              (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))
-          (ivl_exec_eqs is_bot_pred gs pi ps mnm main)
-          (cfg_exit (compile_prog pi ps mnm main)));;
-
-let rec interval_td_check_report
-  gs mnm p =
-    (let raw =
-       analyse_interval_td_raw
-         (resolved_st_q_is_bot_for computable_domain_ivl
-           (declared_global_vars p))
-         gs (prog_table p) (prog_procs p) mnm (prog_main p)
-       in
-      classify_checks (prog_cfg mnm p)
-        (fun v ->
-          (match
-            side_env_lift_st bounded_semilattice_sup_bot_ivl gs (raw (Inl v))
-              (raw (Inr ()))
-            with Bot -> bot_fun bot_ivl | Lifted sigma -> sigma))
-        interval_classify_check);;
-
 let rec pretty_source_lines_com
   n x1 = match n, x1 with
     n, SKIP -> [source_indent n @ [char_0x73; char_0x6B; char_0x69; char_0x70]]
@@ -5597,8 +5566,81 @@ let rec classify_checks_with_state
     map (fun (u, (c, r)) -> (u, (c, (r, env u))))
       (classify_checks g env classify);;
 
+let rec analyse_interval_dg_eqs_for
+  is_bot_pred gs p =
+    dg_gen_of
+      (bounded_semilattice_sup_bot_lifted
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+      (bounded_semilattice_sup_bot_lifted
+        (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+      (base_dg_spec_st_for_lifted bounded_semilattice_sup_bot_ivl
+        (bounded_semilattice_sup_bot_lifted
+          (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+        gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
+      (prog_cfg prog_main_name p) bot_lifteda (Lifted cinit_ivl_st)
+      (Lifted cinit_ivl_st);;
+
+let rec analyse_interval_dg_for
+  is_bot_pred gs p =
+    tD_side_warrowing_apinis_Interp_solve (equal_prod equal_cfg_node equal_unit)
+      equal_unit
+      ((equal_dg_state
+         (equal_lifted
+           (equal_resolved_st_q
+             (equal_ivl,
+               bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+         (equal_lifted
+           (equal_resolved_st_q
+             (equal_ivl,
+               bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+        (bounded_semilattice_sup_bot_dg_state
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              bounded_warrowing_ivl)).bounded_semilattice_sup_bot_bounded_warrowing),
+        (warrowing_dg_state
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
+      (analyse_interval_dg_eqs_for is_bot_pred gs p)
+      (cfg_exit (prog_cfg prog_main_name p), ());;
+
+let rec analyse_interval_td_report_for
+  gs p =
+    (let sol =
+       snd (analyse_interval_dg_for
+             (resolved_st_q_is_bot_for computable_domain_ivl
+               (declared_global_vars p))
+             gs p)
+       in
+      classify_checks (prog_cfg prog_main_name p)
+        (fun v ->
+          (match
+            map_lift (fun_of_exec_dg_st_for bot_ivl gs)
+              (locals (sol (Inl (v, ()))))
+            with Bot -> bot_fun bot_ivl | Lifted s -> s))
+        interval_classify_check);;
+
 let rec analyse_interval_td_report
-  p = interval_td_check_report (declared_global p) prog_main_name p;;
+  p = analyse_interval_td_report_for (declared_global p) p;;
+
+let rec analyse_interval_td_raw
+  is_bot_pred gs pi ps mnm main =
+    snd (tD_side_warrowing_apinis_Interp_solve equal_cfg_node equal_unit
+          ((equal_lifted
+             (equal_resolved_st_q
+               (equal_ivl,
+                 bounded_warrowing_ivl.bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot))),
+            (bounded_semilattice_sup_bot_lifted
+              (bounded_warrowing_resolved_st_q
+                bounded_warrowing_ivl).bounded_semilattice_sup_bot_bounded_warrowing.semilattice_sup_bounded_semilattice_sup_bot),
+            (warrowing_lifted
+              (bounded_warrowing_resolved_st_q bounded_warrowing_ivl)))
+          (ivl_exec_eqs is_bot_pred gs pi ps mnm main)
+          (cfg_exit (compile_prog pi ps mnm main)));;
 
 let rec analyse_interval_td_at
   is_bot_pred gs pi ps mnm main =
@@ -5764,22 +5806,6 @@ let rec entry_state_check_report
 let rec analyse_interval_report_per_origin
   p = interval_check_report_per_origin (declared_global p) prog_main_name p;;
 
-let rec interval_td_check_report_with_state
-  gs mnm p =
-    (let raw =
-       analyse_interval_td_raw
-         (resolved_st_q_is_bot_for computable_domain_ivl
-           (declared_global_vars p))
-         gs (prog_table p) (prog_procs p) mnm (prog_main p)
-       in
-      classify_checks_with_state (prog_cfg mnm p)
-        (fun v ->
-          (match
-            side_env_lift_st bounded_semilattice_sup_bot_ivl gs (raw (Inl v))
-              (raw (Inr ()))
-            with Bot -> bot_fun bot_ivl | Lifted sigma -> sigma))
-        interval_classify_check);;
-
 let rec entry_state_check_report_prog
   mnm p =
     entry_state_check_report (declared_global p)
@@ -5789,8 +5815,24 @@ let rec entry_state_check_report_prog
 let rec analyse_interval_entry_state
   p = entry_state_check_report_prog prog_main_name p;;
 
+let rec analyse_interval_td_report_for_with_state
+  gs p =
+    (let sol =
+       snd (analyse_interval_dg_for
+             (resolved_st_q_is_bot_for computable_domain_ivl
+               (declared_global_vars p))
+             gs p)
+       in
+      classify_checks_with_state (prog_cfg prog_main_name p)
+        (fun v ->
+          (match
+            map_lift (fun_of_exec_dg_st_for bot_ivl gs)
+              (locals (sol (Inl (v, ()))))
+            with Bot -> bot_fun bot_ivl | Lifted s -> s))
+        interval_classify_check);;
+
 let rec analyse_interval_td_report_with_state
-  p = interval_td_check_report_with_state (declared_global p) prog_main_name p;;
+  p = analyse_interval_td_report_for_with_state (declared_global p) p;;
 
 end;; (*struct Core*)
 

@@ -45,16 +45,22 @@ lemma solver_choice_demo_sign_warrow_unsupported:
   by eval
 
 text \<open>
-  Both settle at \<open>Check_Unknown\<close>, not \<open>Check_Proved\<close>: \<open>cinit_ivl_st\<close> seeds
-  every declared global at \<open>Ivl (Fin 0) (Fin 0)\<close>, and the flow-insensitive
-  global summary joins that seed with the write's own contribution --
-  \<open>join [0,0] [1,1] = [0,1]\<close>, and \<open>0 < total\<close> is genuinely undecided at
-  \<open>[0,1]\<close> (\<open>0\<close> itself is a member). Exactly the same flow-insensitivity
-  mechanism already documented for Sign's
-  \<open>global_initial_value_remains_in_summary_prog\<close>
-  (\<open>Example_Analysis_Dispatch_Regression\<close>), confirmed here to apply
-  identically to Interval via the same before/after-join the model can't
-  tell apart -- not a precision bug, and not specific to either update rule.
+  \<open>Solver_Join\<close> and \<open>Solver_Warrow\<close> now diverge here, and the split is
+  \<^emph>\<open>which pipeline each dispatches to\<close>, not a shared precision limit: on
+  \<open>Interval_Analysis\<close>, \<open>Solver_Warrow\<close> dispatches to
+  \<^const>\<open>analyse_interval_td_report\<close>, the Base-style production pipeline
+  (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) where declared globals live
+  flow-sensitively in \<open>D\<close> like any local, so \<open>total := 1\<close> reaches the check
+  precisely and \<open>0 < total\<close> settles at \<open>Check_Proved\<close>. \<open>Solver_Join\<close>
+  instead dispatches to \<^const>\<open>analyse_interval_report\<close>
+  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>), built on the older
+  \<open>ivl_exec_prog\<close>/\<open>side_env_lift_st\<close> pipeline that was not part of the
+  production migration: \<open>cinit_ivl_st\<close> seeds every declared global at
+  \<open>Ivl (Fin 0) (Fin 0)\<close>, and its flow-insensitive global summary joins that
+  seed with the write's own contribution -- \<open>join [0,0] [1,1] = [0,1]\<close>,
+  under which \<open>0 < total\<close> is genuinely undecided (\<open>0\<close> itself is a member).
+  Not a precision bug in either pipeline; \<open>Solver_Join\<close>'s result reflects a
+  pipeline this migration has not touched.
 \<close>
 
 lemma solver_choice_demo_interval_join_defined:
@@ -64,7 +70,7 @@ lemma solver_choice_demo_interval_join_defined:
 
 lemma solver_choice_demo_interval_warrow_defined:
   "analyse_with_solver Interval_Analysis Solver_Warrow solver_choice_demo_prog
-     = Some [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+     = Some [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Proved)]"
   by eval
 
 subsection \<open>Per-origin, isolated\<close>

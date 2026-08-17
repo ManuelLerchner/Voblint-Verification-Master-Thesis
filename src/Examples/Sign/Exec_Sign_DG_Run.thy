@@ -1,14 +1,16 @@
 section \<open>Running the verified solver on the native D/G spine (Sign)\<close>
 
 text \<open>
-  An end-to-end certified run on the carrier-opaque D/G equation system, registered
-  through the \<open>unit_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
-  this file's own storage classifier \<open>sign_ex_gs\<close>, from just \<open>sign_is_sound_transfer_for\<close>
-  and \<open>sign_tf_st_for_commute\<close>).
+  An end-to-end certified run on the Base-style D/G equation system, registered
+  through the \<open>base_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
+  this file's own storage classifier \<open>sign_ex_gs\<close>, from \<open>sign_is_sound_transfer_for\<close>,
+  \<open>sign_tf_st_for_commute\<close>, and \<open>sign_enter_st_for_commute\<close>).
   A concrete call-free Sign program is compiled to a CFG; the executable D/G
-  generator (\<open>dg_gen_of (unit_dg_spec_st sign_tf_st)\<close>, values in
-  \<open>(sign exec_dg_st, sign exec_dg_st) dg_state\<close>) is handed to the vendored always-join TD-side
-  solver; the solver \<^emph>\<open>computes\<close> a partial post-solution.
+  generator (\<open>dg_gen_of (base_dg_spec_st_for_lifted sign_ex_gs \<dots> sign_tf_st_for sign_enter_st_for)\<close>,
+  values in \<open>(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state\<close> --- the whole
+  abstract state routed through the local unknown, no separate global/side slot) is
+  handed to the vendored always-join TD-side solver; the solver \<^emph>\<open>computes\<close> a
+  partial post-solution.
 
   The final theorem \<open>dgEx_source_run_sound\<close> turns the single \<open>by eval\<close> solver success
   directly into a source-level guarantee, matching the pattern in
@@ -22,7 +24,6 @@ theory Exec_Sign_DG_Run
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.DG_Base_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
-    "Voblint_Analysis.Sign_DG"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.Run_Analysis_Sound"
 begin

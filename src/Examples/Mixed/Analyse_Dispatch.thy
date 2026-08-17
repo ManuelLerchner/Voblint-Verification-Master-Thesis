@@ -1,7 +1,7 @@
 theory Analyse_Dispatch
   imports
     Example_Sign_Codegen
-    Voblint_Analysis.Interval_Checks
+    Example_Interval_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -13,7 +13,7 @@ section \<open>A unified, verified check-report API across domains\<close>
 
 text \<open>
   \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_Examples.Example_Sign_Codegen\<close>) and
-  \<open>interval_td_check_report\<close>/\<open>analyse_interval_td_report\<close>
+  \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) already share one observable
   result type, \<open>check_report_entry list\<close>
   (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>), even though the two domains'
@@ -24,15 +24,19 @@ text \<open>
 
   The \<open>Interval_Analysis\<close> branch dispatches to \<open>analyse_interval_td_report\<close>, the
   widening/warrowing-backed report, not the always-join \<open>analyse_interval_report\<close>: the
-  always-join backend's flow-insensitive global-summary update has no widening, so it can fail
-  to terminate on a finite program whose global-writing transfer depends on the summary's own
-  current value (\<open>total := total + n\<close> is the minimal reproducer, isolated in
+  always-join backend's older flow-insensitive global-summary route has no widening, so it can
+  fail to terminate on a finite program whose global-writing transfer depends on the summary's
+  own current value (\<open>total := total + n\<close> is the minimal reproducer, isolated in
   the regression theory \<open>Example_Analysis_Dispatch_Regression\<close> to \<^emph>\<open>not\<close>
-  require a call). \<open>analyse_interval_td_report\<close> now carries its own soundness theorems
-  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>'s \<open>analyse_interval_td_report_sound_proved\<close>/
-  \<open>_refuted\<close>, built on \<open>Voblint_Core.Solver_Side_RG\<close>'s generic
-  \<open>TD_side_warrowing_apinis_solve_Inr_rg\<close>), so this is a like-for-like swap, not a precision or
-  soundness downgrade.
+  require a call). \<open>analyse_interval_td_report\<close> now reads through the native Base-style D/G
+  pipeline (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_*\<close> family,
+  mirroring Sign's own migration): VIMP globals live in the same reachability-lifted local
+  unknown as locals, with no separate flow-insensitive summary at all, so this route needs
+  warrowing only for Interval's own infinite-height local lattice, not to route around a
+  self-referential global. Its soundness theorems
+  (\<^theory>\<open>Voblint_Examples.Example_Interval_Codegen\<close>'s \<open>analyse_interval_td_report_sound_proved\<close>/
+  \<open>_refuted\<close>, built on the \<open>base_dg_exec_analysis\<close> locale) make this a like-for-like swap for
+  callers, not a precision or soundness downgrade.
 \<close>
 
 datatype analysis_kind = Sign_Analysis | Interval_Analysis
@@ -186,36 +190,58 @@ text \<open>
 
 corollary analyse_interval_proved_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes terminates: "analyse_interval_td_terminates
-                          (resolved_st_q_is_bot_for (declared_global_vars p))
-                          (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+  assumes solve: "TD_side_warrowing_apinis_Interp_solve_c (analyse_interval_dg_eqs p)
+                    (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+      and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_interval_dg p)"
+      and cover_edge:
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_interval_dg p)"
+      and cover_enter:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_interval_dg p)"
+      and cover_combine:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_interval_dg p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
            truthy (aval c s)"
 proof -
-  have fin: "finite (intra (prog_cfg prog_main_name p))"
+  have finI: "finite (intra (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  have finC: "finite (calls (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
   show ?thesis
     by (rule analyse_interval_td_report_sound_proved
-          [OF fin terminates reach_exit mem[unfolded analyse.simps]])
+          [OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC
+              mem[unfolded analyse.simps]])
 qed
 
 corollary analyse_interval_refuted_sound:
   fixes p :: imp_prog and v :: pp and c :: exp
-  assumes terminates: "analyse_interval_td_terminates
-                          (resolved_st_q_is_bot_for (declared_global_vars p))
-                          (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
+  assumes solve: "TD_side_warrowing_apinis_Interp_solve_c (analyse_interval_dg_eqs p)
+                    (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+      and wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_interval_dg p)"
+      and cover_edge:
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_interval_dg p)"
+      and cover_enter:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_interval_dg p)"
+      and cover_combine:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_interval_dg p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
   shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
            \<not> truthy (aval c s)"
 proof -
-  have fin: "finite (intra (prog_cfg prog_main_name p))"
+  have finI: "finite (intra (prog_cfg prog_main_name p))"
+    unfolding prog_cfg_def using compile_prog_finite by simp
+  have finC: "finite (calls (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
   show ?thesis
     by (rule analyse_interval_td_report_sound_refuted
-          [OF fin terminates reach_exit mem[unfolded analyse.simps]])
+          [OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC
+              mem[unfolded analyse.simps]])
 qed
 
 corollary analyse_sign_proved_sound:

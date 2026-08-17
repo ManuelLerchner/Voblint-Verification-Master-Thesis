@@ -96,19 +96,46 @@ text \<open>
   concrete \<open>Check_Proved\<close> value \<open>analyse\<close> actually returns.
 \<close>
 
+lemma dispatch_demo_calls_eval:
+  "calls (prog_cfg prog_main_name dispatch_demo_prog) = {}"
+  unfolding prog_cfg_def by eval
+
+lemma dispatch_demo_cover_edge_ball:
+  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog).
+     (w, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+  by eval
+
+lemma dispatch_demo_cover_edge:
+  "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog)
+     \<Longrightarrow> (w, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+  using dispatch_demo_cover_edge_ball by auto
+
 theorem dispatch_demo_first_check_certified:
   "\<forall>s \<in> ltr_collect (declared_global dispatch_demo_prog) (prog_cfg prog_main_name dispatch_demo_prog)
            (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
      truthy (aval (Less (N 0) (V (STR ''y''))) s)"
 proof (rule analyse_interval_proved_sound)
-  show "analyse_interval_td_terminates
-          (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
-          (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
+  show "TD_side_warrowing_apinis_Interp_solve_c (analyse_interval_dg_eqs dispatch_demo_prog)
+          (cfg_exit (prog_cfg prog_main_name dispatch_demo_prog), ()) \<noteq> None"
+    by eval
+  show "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
           (prog_procs dispatch_demo_prog) prog_main_name (prog_main dispatch_demo_prog)"
-    by (rule analyse_interval_td_terminates_via_solve_c) eval
-  show "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 1)
-          (cfg_exit (prog_cfg prog_main_name dispatch_demo_prog))"
-    by (rule dispatch_demo_statement1_reaches_exit)
+    unfolding wf_compile_input_simps dispatch_demo_prog_def
+    by (auto simp: source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
+        prog_main_name_def special_table_def special_pname_nondet_int_def
+        special_pname_min_def special_pname_max_def
+        split: if_splits)
+  show "(cfg_entry (prog_cfg prog_main_name dispatch_demo_prog), ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+    by eval
+  show "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (w, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+    by (rule dispatch_demo_cover_edge)
+  show "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+    by (simp add: dispatch_demo_calls_eval)
+  show "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (k, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+    by (simp add: dispatch_demo_calls_eval)
   show "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
     unfolding dispatch_demo_interval_precise by simp
 qed
@@ -232,13 +259,21 @@ lemma proc_demo_cfg_calls:
 text \<open>
   The originally-documented crash case (a global, one procedure, two calls, two checks) through
   the exact runtime API \<open>analyse\<close> exposes: now terminates in a few seconds via the warrowing
-  backend \<open>analyse Interval_Analysis\<close> dispatches to, at \<open>Check_Unknown\<close> precision (widening's
-  cost, not a bug) rather than crashing.
+  backend \<open>analyse Interval_Analysis\<close> dispatches to. Base-migration acceptance witness: the
+  first check (\<open>0 < total\<close>) is now \<open>Check_Proved\<close> --- \<open>total\<close> lives in the reachability-lifted
+  local unknown, flow-sensitively through both calls to \<open>inc\<close>, so its exact value (\<open>7\<close>) survives
+  to the check, the same fix \<open>Sign_Analysis\<close>'s \<open>proc_demo_sign_result\<close> demonstrates. The second
+  check (\<open>total < 100\<close>) stays \<open>Check_Unknown\<close>: \<open>inc\<close>'s entry node is reached by two distinct call
+  sites (\<open>inc(3)\<close> then \<open>inc(4)\<close>), so the D/G solver revisits it, and Apinis warrowing widens the
+  entered parameter's upper bound to \<open>+inf\<close> on that second visit for termination; the following
+  narrowing phase recovers enough to keep \<open>total\<close>'s lower bound exact (proving \<open>0 < total\<close>) but
+  not its upper bound (leaving \<open>total < 100\<close> undecided) --- widening's precision cost at a
+  repeated call site, not a bug.
 \<close>
 
 lemma proc_demo_interval_terminates:
   "analyse Interval_Analysis proc_demo_prog =
-     [(Statement 5, Less (N 0) (V (STR ''total'')), Check_Unknown),
+     [(Statement 5, Less (N 0) (V (STR ''total'')), Check_Proved),
       (Statement 6, Less (V (STR ''total'')) (N 100), Check_Unknown)]"
   by eval
 
@@ -276,12 +311,15 @@ text \<open>
   whose global-summary update has no widening. Sign and Parity never hit this because their
   lattices are finite-height, so every join-only fixpoint on them is finite regardless.
 
-  \<^const>\<open>analyse_interval_td_report\<close> (the warrowing variant, now what \<open>analyse Interval_Analysis\<close>
-  dispatches to) has both the widening and a soundness theorem
-  (\<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>)
-  --- and empirically terminates on every case above, including \<open>proc_demo_prog\<close> itself
-  (\<open>proc_demo_interval_terminates\<close> below), at the cost of the precision the always-join backend
-  would have given on programs it could actually finish.
+  \<^const>\<open>analyse_interval_td_report\<close> (the warrowing, native-D/G variant, now what
+  \<open>analyse Interval_Analysis\<close> dispatches to) has both the widening and a soundness theorem
+  (\<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>,
+  \<^theory>\<open>Voblint_Examples.Example_Interval_Codegen\<close>) --- and empirically terminates on every
+  case above, including \<open>proc_demo_prog\<close> itself (\<open>proc_demo_interval_terminates\<close> below). Since
+  the Base-style migration, globals also live in the same reachability-lifted local unknown as
+  locals, so termination no longer costs the always-join backend's precision on the cases below
+  that never touched a repeated call site (\<open>one_call_prog\<close>, \<open>harmless_global_prog\<close>,
+  \<open>no_call_global_self_ref_prog\<close>): each is now precise, not merely terminating.
 \<close>
 
 text \<open>
@@ -306,9 +344,15 @@ definition one_call_prog :: imp_prog where
        }
      }"
 
+text \<open>
+  Base-migration acceptance witness: \<open>total\<close> is now \<open>Check_Proved\<close>, not merely a terminating
+  \<open>Check_Unknown\<close> --- \<open>inc\<close>'s single call site reaches its entry node once, so no repeated-visit
+  widening applies, and \<open>total\<close>'s exact value (\<open>3\<close>) survives the call/return combine step.
+\<close>
+
 lemma one_call_interval_terminates:
   "analyse Interval_Analysis one_call_prog =
-     [(Statement 4, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+     [(Statement 4, Less (N 0) (V (STR ''total'')), Check_Proved)]"
   by eval
 
 text \<open>
@@ -335,13 +379,12 @@ lemma no_global_call_interval_proved:
   by eval
 
 text \<open>
-  A harmless global write --- a plain constant assignment, no self-reference through the
+  A harmless global write --- a plain constant assignment, no self-reference through a
   summary --- always terminated, under \<^emph>\<open>either\<close> backend: distinguishes "a program has a
   global" from "a program has a self-dependent global side contribution" (the actual hazard
-  class, isolated below). The result is \<open>Check_Unknown\<close> here (this older \<open>side_cfg_T_eff_st\<close>
-  pipeline's local/global environment read loses precision on a global read back right after its
-  own write, independent of solver choice), not \<open>Check_Proved\<close> --- termination, not precision,
-  is the property this case demonstrates.
+  class, isolated below). Base-migration acceptance witness: the result is now \<open>Check_Proved\<close>,
+  not \<open>Check_Unknown\<close> --- with no separate flow-insensitive global summary to route \<open>g\<close> through
+  at all, the exact value \<open>g := 1\<close> writes reaches the check directly.
 \<close>
 
 definition harmless_global_prog :: imp_prog where
@@ -356,15 +399,20 @@ definition harmless_global_prog :: imp_prog where
 
 lemma harmless_global_interval_terminates:
   "analyse Interval_Analysis harmless_global_prog =
-     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Unknown)]"
+     [(Statement 1, Less (N 0) (V (STR ''g'')), Check_Proved)]"
   by eval
 
 text \<open>
   Acceptance regression A (no-call global self-feedback, task #39): no procedure, no call,
-  just one global write that reads its own prior value through the flow-insensitive global
-  summary, plus one independent base-case write. Isolates global-summary widening on its own,
-  without any interprocedural (\<open>dgs_enter\<close>/\<open>dgs_combine\<close>) machinery in play at all --- this is
-  the minimal case that first proved the call/return summary was never the actual hazard.
+  just one global write that reads its own prior value, plus one independent base-case write.
+  Isolates global-summary widening on its own, without any interprocedural
+  (\<open>dgs_enter\<close>/\<open>dgs_combine\<close>) machinery in play at all --- this is the minimal case that first
+  proved the call/return summary was never the actual hazard. Base-migration acceptance witness:
+  under the Base-style pipeline there is no separate flow-insensitive global summary for
+  \<open>total := total + 3\<close> to read back through in the first place, so the result is now
+  \<open>Check_Proved\<close>, not merely a terminating \<open>Check_Unknown\<close> --- termination and precision
+  coincide once the mechanism that caused both problems (a flow-insensitive global summary) is
+  gone.
 \<close>
 
 definition no_call_global_self_ref_prog :: imp_prog where
@@ -380,7 +428,7 @@ definition no_call_global_self_ref_prog :: imp_prog where
 
 lemma no_call_global_self_ref_interval_terminates:
   "analyse Interval_Analysis no_call_global_self_ref_prog =
-     [(Statement 2, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+     [(Statement 2, Less (N 0) (V (STR ''total'')), Check_Proved)]"
   by eval
 
 text \<open>

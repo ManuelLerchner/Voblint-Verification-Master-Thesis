@@ -41,6 +41,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Interval *)
     Exec_Ivl_Run
+    Example_Interval_Codegen
     (* Interval analogue of G-A1: checks_proven/checks_proven_sound, store-only. *)
     Example_Interval_Checks_Store_Only
     Example_Interval_Placement

@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// Call-mediated sibling of 01-global_self_feedback.vimp: the same
+// self-referential global write, but routed through a procedure call's
+// enter/combine handling rather than a direct assignment.
+//
+// Base-style migration acceptance case: with the whole abstract state
+// lifted into the local unknown, `total`'s write reaches the check exactly
+// through the call's own combine step, with no separate global summary to
+// lose precision (or termination) in -- this additionally exercises that
+// the fix holds across the interprocedural global-summary path, not only
+// the intraprocedural one 01-global_self_feedback.vimp isolates.
+global total;
+void inc(n) {
+  total := total + n
+}
+void main() {
+  total := 0;
+  inc(3);
+  __voblint_check(0 < total) // PROVED
+}

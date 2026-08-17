@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// Permanent regression for the certified Interval widening backend
+// (docs/... the warrowing/widening solver bridge fixed for issue #96):
+// before that fix, this two-line self-referential global write could make
+// the join-only Interval backend diverge, because the side-effecting
+// global-summary constraint for `total` folded the write's result back into
+// its own current value -- a fixpoint dependency that exists even without
+// any source-level loop.
+//
+// Base-style migration acceptance case: `total` now lives in the same
+// reachability-lifted local unknown as every local, so there is no
+// separate flow-insensitive global summary for its write to fold back
+// into in the first place. Termination and precision now coincide -- the
+// mechanism that used to cost both is gone, not merely worked around.
+global total;
+void main() {
+  total := 0;
+  total := total + 3;
+  __voblint_check(0 < total) // PROVED
+}

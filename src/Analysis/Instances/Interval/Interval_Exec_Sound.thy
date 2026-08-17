@@ -4,6 +4,8 @@ theory Interval_Exec_Sound
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_CFG.Compile_Invariants"
           Analysis_GraphViz
+          "Voblint_Analysis.Exec_DG_Bridge"
+          "Voblint_Analysis.DG_Base_Exec"
 begin
 
 section \<open>Executable interval analysis: the computed result and its certified soundness\<close>
@@ -564,5 +566,99 @@ definition ivl_annotated_dot_prog_lit :: "(vname \<Rightarrow> bool) \<Rightarro
   "ivl_annotated_dot_prog_lit gs mnm p =
      ivl_annotated_dot_lit (resolved_st_q_is_bot_for (declared_global_vars p)) gs
        (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
+
+text \<open>
+  \<open>ivl_exec_prog\<close>/\<open>analyse_interval_td\<close> above are the older \<open>side_cfg_T_eff_st\<close>
+  pipeline. The definitions below give Interval the same Base-style native D/G route
+  Sign's \<open>analyse_sign_eqs_for\<close>/\<open>analyse_sign_for\<close>/\<open>analyse_sign_env_for\<close> (\<open>Sign_Exec_Sound\<close>)
+  already give Sign: the local unknown is the whole
+  reachability-lifted abstract state (\<open>D\<close>), so a VIMP global lives exactly where a
+  local does, with no separate flow-insensitive solver-global summary to route it
+  through. Named \<open>analyse_interval_dg_*\<close>, distinct from the existing \<open>analyse_interval\<close>/
+  \<open>analyse_interval_td\<close> families above, so this new route can be introduced without
+  changing what those two already-wired pipelines mean --- \<open>analyse_interval_td_report_for\<close>
+  (\<open>Interval_Checks\<close>, downstream) is the only caller repointed onto this route;
+  \<open>analyse_interval_td_at\<close>/\<open>analyse_interval_td_terminates\<close> keep their existing callers
+  (the entry-state context analysis, the GraphViz state-report tooling) unchanged.
+
+  Interval's local lattice has infinite height (an unbounded integer bound), so unlike
+  Sign this route still needs widening for termination even though the flow-insensitive
+  global summary that motivated \<open>analyse_interval_td\<close>'s own switch to warrowing is gone:
+  a loop-carried local bound still needs \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>,
+  not the always-join rule \<open>analyse_sign_for\<close> uses --- \<open>Example_Interval_DG_Flagship\<close>
+  already demonstrates the same warrowing solver terminating on a genuinely unbounded
+  loop through the (pre-Base) native D/G spine.
+
+  Only the raw computation lives here --- soundness needs the \<open>base_dg_exec_analysis\<close>
+  locale (\<open>Run_Analysis_Sound\<close>, Formalization session), one session later than Analysis
+  in the locked six-session chain, so that half stays downstream in
+  \<open>Example_Interval_Codegen\<close> (Examples), mirroring \<open>Example_Sign_Codegen\<close>.
+
+  \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>dg_gen_of\<close> needs; its
+  content is never read, since every field of \<^const>\<open>base_dg_spec_st_for_lifted\<close>
+  threads its incoming \<open>g\<close> through unchanged.
+\<close>
+
+definition analyse_interval_dg_eqs_for ::
+  "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+     pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
+  "analyse_interval_dg_eqs_for is_bot_pred gs p =
+     dg_gen_of
+       (base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs))
+       (prog_cfg prog_main_name p) bot (Lifted cinit_ivl_st) (Lifted cinit_ivl_st)"
+
+definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
+    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "analyse_interval_dg_for is_bot_pred gs p =
+     TD_side_warrowing_apinis_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
+       (cfg_exit (prog_cfg prog_main_name p), ())"
+
+text \<open>
+  \<open>analyse_interval_dg_env_for\<close> reads the local unknown at \<open>v\<close> (\<open>Inl (v, ())\<close>) straight
+  back through \<^const>\<open>fun_of_exec_dg_st_for\<close>/\<^const>\<open>map_lift\<close>, mirroring
+  \<open>analyse_sign_env_for\<close> exactly: the whole abstract state already lives there, so there
+  is no locals-from-\<open>D\<close>/globals-from-\<open>G\<close> reconstruction to perform. A genuinely
+  unreachable local unknown (\<open>Bot\<close>) concretizes to \<open>bot\<close>, matching
+  \<^const>\<open>gamma_state_lift\<close>'s own \<open>Bot\<close> case.
+
+  The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, the same single-solve-per-report fix
+  \<open>analyse_sign_env_for_code\<close> uses: \<^const>\<open>analyse_interval_dg_for\<close> is solved exactly
+  once per partial application to \<open>is_bot_pred gs p\<close>, reused for every \<open>v\<close> queried
+  afterward against the resulting closure.
+\<close>
+
+definition analyse_interval_dg_env_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
+  "analyse_interval_dg_env_for is_bot_pred gs p v =
+     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_interval_dg_for is_bot_pred gs p) (Inl (v, ()))))
+      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
+
+declare analyse_interval_dg_env_for_def [code del]
+
+lemma analyse_interval_dg_env_for_code [code]:
+  "analyse_interval_dg_env_for is_bot_pred gs p =
+     (let sol = snd (analyse_interval_dg_for is_bot_pred gs p)
+      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
+  unfolding analyse_interval_dg_env_for_def Let_def by (rule refl)
+
+text \<open>
+  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_sign_eqs\<close>/
+  \<open>analyse_sign\<close>/\<open>analyse_sign_env\<close>'s shape. \<open>is_bot_pred\<close> is fixed here to
+  \<^const>\<open>resolved_st_q_is_bot_for\<close> at \<open>p\<close>'s own \<^const>\<open>declared_global_vars\<close>, exact for
+  \<^const>\<open>is_bot_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
+\<close>
+
+definition analyse_interval_dg_eqs :: "imp_prog \<Rightarrow>
+    pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
+  "analyse_interval_dg_eqs p = analyse_interval_dg_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+
+definition analyse_interval_dg :: "imp_prog \<Rightarrow>
+    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "analyse_interval_dg p = analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
+
+definition analyse_interval_dg_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
+  "analyse_interval_dg_env p = analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 end

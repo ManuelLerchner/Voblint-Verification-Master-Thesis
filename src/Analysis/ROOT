@@ -53,6 +53,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Parity_Exec_Sound
     Parity_Numeric_Queries
     Parity_Side_Soundness
+    Parity_Base_DG
     Int_Domain
     Int_Refinement
     Int_Arithmetic
@@ -61,6 +62,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Int_Transfer
     Int_DG
     Int_Exec
+    Int_Base_DG
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz
