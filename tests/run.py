@@ -62,12 +62,15 @@ and its own expected verdict inline next to each check:
                                    not a vacuous PROVED.
 
 A case with no verdict annotations at all is a rejection case -- a parse
-error (see 00-sanity/02-malformed.vimp), a well-formedness error (e.g. a
-wrong-arity special call, rejected before compilation reaches the analyzer),
-or a solver that does not terminate on this program's fixpoint dependency
-structure (see 15-solver-choice/04-global_self_feedback_join_hangs.vimp,
-using --timeout to keep the case fast) -- and is checked for one of those
-structured error messages instead of a report.
+error (see 00-sanity/02-malformed.vimp) or a well-formedness error (e.g. a
+wrong-arity special call, rejected before compilation reaches the analyzer)
+-- and is checked for one of those structured error messages instead of a
+report. A case whose solver genuinely does not terminate on its fixpoint
+dependency structure is the same shape, with --timeout bounding the wait;
+no live fixture currently exercises that path for Interval's non-default
+solver choices (Solver_Join's own known non-terminator, a self-referential
+global write with no source-level loop, was fixed by the Base-style
+migration -- see 15-solver-choice/precision/05-global_self_feedback_join_terminates.vimp).
 
 A case may also carry a canonical CFG snapshot, checked independently of its
 verdicts:

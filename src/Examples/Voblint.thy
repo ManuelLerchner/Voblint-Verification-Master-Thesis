@@ -46,7 +46,6 @@ theory Voblint
     Example_Interval_Checks_Store_Only
     Example_Parity_Checks_Store_Only
     Example_Interval_DG_Flagship
-    "Voblint_Formalization.Mixed_Flow_Sound"
     "Voblint_Formalization.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_CallString
@@ -61,7 +60,6 @@ theory Voblint
     Example_Side_Branch_Calls
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
-    Example_Mixed_Flow_Sign
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
@@ -296,7 +294,6 @@ text \<open>
       Interval's own transfer facts instead of Sign's.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
-    \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality over \<^const>\<open>ltr_collect\<close> (\<^verbatim>\<open>mixed_flow_analysis_sound\<close> / \<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
     \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling --- the
@@ -318,7 +315,6 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
     \<^item> @{theory Voblint_Examples.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the same.
-    \<^item> @{theory Voblint_Examples.Example_Mixed_Flow_Sign} --- the mixed-flow soundness/optimality theorem applied to Sign.
     \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified interval analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global} / @{theory Voblint_Examples.Example_Interval_Side_Proc_Global}.
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Ivl_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
@@ -391,9 +387,15 @@ text \<open>
       post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
       \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
       computation, not two.
-    \<^item> @{theory Voblint_Analysis.Interval_Checks} --- \<^verbatim>\<open>analyse_interval_report\<close>,
-      the Interval counterpart, built the same way on
-      \<^verbatim>\<open>ivl_exec_prog_sound_collecting_at\<close>.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Codegen} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
+      \<^verbatim>\<open>analyse_interval_td_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
+      dispatches to, built the same way on \<^verbatim>\<open>base_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
+      \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report\<close>/
+      \<^verbatim>\<open>analyse_interval_report_per_origin\<close>, the always-join and per-origin update-rule siblings
+      \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_Examples.Analyse_Dispatch}) compares against this
+      same production default on the identical equation system, each with its own soundness
+      theorems proved the same way one session later in @{theory
+      Voblint_Examples.Example_Interval_Codegen}.
     \<^item> @{theory Voblint_Examples.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
       dispatches on \<^verbatim>\<open>analysis_kind\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable

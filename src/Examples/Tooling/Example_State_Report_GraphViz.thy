@@ -159,17 +159,17 @@ text \<open>
   only ever populates at check nodes), so every non-check node renders with no
   state at all. \<open>full_state_dot_auto\<close> instead queries the solved environment
   directly at \<^emph>\<open>every\<close> \<^typ>\<open>pp\<close> via \<^const>\<open>analyse_sign_env_for\<close> /
-  \<^const>\<open>analyse_interval_td_at\<close> -- the same per-point lookup
-  \<open>analyse_sign_report_for_code\<close>/\<open>interval_td_check_report_code\<close> already use
+  \<^const>\<open>analyse_interval_dg_env_for\<close> -- the same per-point lookup
+  \<open>analyse_sign_report_for_code\<close>/\<open>analyse_interval_td_report_for_code\<close> already use
   to build a check's own state -- so the annotation exists independently of
   whether that point happens to carry a check.
 \<close>
 
 text \<open>
-  Point-free in \<open>v\<close>, mirroring \<^const>\<open>analyse_sign_env_for\<close>/\<^const>\<open>analyse_interval_td_at\<close>'s
+  Point-free in \<open>v\<close>, mirroring \<^const>\<open>analyse_sign_env_for\<close>/\<^const>\<open>analyse_interval_dg_env_for\<close>'s
   own single-solve-per-report fix one layer down: a plain \<open>fun\<close> pattern-matching on \<open>kind, p, v\<close>
   jointly would rebuild the \<open>analyse_sign_env_for (declared_global p) p\<close>/
-  \<open>analyse_interval_td_at ... (prog_main p)\<close> partial application -- and therefore re-solve --
+  \<open>analyse_interval_dg_env_for ... p\<close> partial application -- and therefore re-solve --
   on every \<open>v\<close>, even though each of those is itself already solved exactly once per partial
   application. Binding \<open>env\<close> here, outside the returned \<open>\<lambda>v\<close>, means a caller that partially
   applies \<open>analyse_env_for kind p\<close> once (every current caller does: \<open>full_state_node_annotation\<close>
@@ -183,10 +183,8 @@ definition analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow
          (let env = analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
           in (\<lambda>v. SignValue \<circ> env v))
       | Interval_Analysis \<Rightarrow>
-          (let env = analyse_interval_td_at (resolved_st_q_is_bot_for (declared_global_vars p))
-                       (declared_global p) (prog_table p) (prog_procs p)
-                       prog_main_name (prog_main p)
-           in (\<lambda>v. IntervalValue \<circ> case_lifted bot id (env v))))"
+          (let env = analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
+           in (\<lambda>v. IntervalValue \<circ> env v)))"
 
 text \<open>
   Unlike \<^const>\<open>state_report_node_annotation\<close>, every \<^typ>\<open>pp\<close> gets an

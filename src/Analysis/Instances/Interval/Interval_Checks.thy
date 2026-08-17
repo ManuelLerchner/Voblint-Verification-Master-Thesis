@@ -137,78 +137,66 @@ lemma interval_check_report_code [code]:
   by (rule refl)
 
 text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and \<open>prog_main_name\<close>,
-  matching \<^const>\<open>analyse_interval\<close>'s own fixed choices --- built on the
-  exact same \<^const>\<open>ivl_exec_prog\<close> pipeline, not a parallel one.
+  \<open>analyse_interval_report_for\<close> mirrors \<open>analyse_interval_td_report_for\<close> exactly, reading through
+  \<^const>\<open>analyse_interval_dg_join_env_for\<close> (the native D/G pipeline under the always-join update
+  rule, \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) instead of \<^const>\<open>analyse_interval_dg_env_for\<close>
+  (Apinis warrowing) --- this is the report function the exported \<open>analyse_with_solver\<close> API
+  dispatches to for \<open>Interval_Analysis\<close>/\<open>Solver_Join\<close> (\<open>Analyse_Dispatch\<close>, downstream in
+  Examples), not Interval's production default (\<open>analyse\<close>/\<open>analyse_with_solver Interval_Analysis
+  Solver_Warrow\<close> both still dispatch to \<open>analyse_interval_td_report\<close>): plain join has no widening,
+  so it lacks warrowing's termination guarantee on a genuine local loop with unbounded growth.
+  This route exists so \<open>analyse_with_solver\<close> can compare update rules on the identical equation
+  system (issue #131), mirroring Sign's own always-join default (\<open>Sign_Checks.analyse_sign_report\<close>).
+\<close>
+
+definition analyse_interval_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_for gs p =
+     classify_checks (prog_cfg prog_main_name p)
+       (analyse_interval_dg_join_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+       interval_classify_check"
+
+text \<open>
+  Same single-solve-per-report fix as \<open>analyse_interval_td_report_for_code\<close>: bind
+  \<^term>\<open>snd (analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)\<close>
+  once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the generated OCaml solves the
+  D/G equation system exactly once per report rather than once per check.
+\<close>
+
+declare analyse_interval_report_for_def [code del]
+
+lemma analyse_interval_report_for_code [code]:
+  "analyse_interval_report_for gs p =
+     (let sol = snd (analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           interval_classify_check)"
+  unfolding analyse_interval_report_for_def analyse_interval_dg_join_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_td_report\<close>'s
+  shape. Soundness (\<open>analyse_interval_report_sound_proved\<close>/\<open>_refuted\<close>) needs the
+  \<open>base_dg_exec_analysis\<close> locale interpretation, one session later than Analysis in the locked
+  six-session chain, so it stays downstream in \<open>Example_Interval_Codegen\<close> (Examples), mirroring
+  the same split \<open>analyse_interval_td_report\<close> (below) and \<open>Sign_Checks\<close>/\<open>Example_Sign_Codegen\<close> use.
 \<close>
 
 definition analyse_interval_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_interval_report p = interval_check_report (declared_global p) prog_main_name p"
+  "analyse_interval_report p = analyse_interval_report_for (declared_global p) p"
 
 text \<open>
-  Soundness reuses \<open>classify_checks_proved_sound\<close>/
-  \<open>classify_checks_refuted_sound\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>, fully
-  domain-generic already) with \<open>ivl_exec_prog_sound_collecting_at\<close>
-  supplying the one per-node fact each needs.  The
-  \<open>cfg_reaches ... (cfg_exit ...)\<close> hypothesis is real and unavoidable, not a
-  proof gap: it is the same structural fact \<open>Example_Checks_Store_Only\<close>
-  proves per concrete check node (\<open>checks_ex_statement1_reaches_exit\<close> etc.)
-  for its one hard-coded example, left here as a hypothesis for an arbitrary
-  \<open>p\<close> instead.
+  \<open>gamma_state_case_lifted\<close> stays: it is still the per-node soundness bridge for the older
+  \<^const>\<open>ivl_exec_prog_at\<close>/\<^const>\<open>interval_check_report\<close> pipeline, which remains load-bearing for
+  the entry-state context analysis and \<open>Example_Interval_Checks_Store_Only\<close>'s own worked example
+  --- only \<open>analyse_interval_report\<close> itself moved off that pipeline, not
+  \<^const>\<open>interval_check_report\<close> or its callers.
 \<close>
 
 lemma gamma_state_case_lifted:
   fixes x :: "'a::sound_domain abs_state lifted"
   shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
   by (cases x) (simp_all add: gamma_state_bot)
-
-theorem analyse_interval_report_sound_proved:
-  fixes p :: imp_prog and v :: pp and c :: exp
-  assumes fin: "finite (intra (prog_cfg prog_main_name p))"
-      and terminates: "ivl_terminates_prog (declared_global p) prog_main_name p"
-      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
-      and mem: "(v, c, Check_Proved) \<in> set (analyse_interval_report p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           truthy (aval c s)"
-proof -
-  have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-                       \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v))"
-    unfolding gamma_state_case_lifted
-    by (rule ivl_exec_prog_sound_collecting_at[OF refl terminates reach_exit])
-  show ?thesis
-    by (rule classify_checks_proved_sound
-          [where g = "prog_cfg prog_main_name p"
-             and env = "\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v)"
-             and classify = interval_classify_check
-             and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
-             and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
-           OF fin mem[unfolded analyse_interval_report_def interval_check_report_def]
-              interval_classify_check_proved node_sound])
-qed
-
-theorem analyse_interval_report_sound_refuted:
-  fixes p :: imp_prog and v :: pp and c :: exp
-  assumes fin: "finite (intra (prog_cfg prog_main_name p))"
-      and terminates: "ivl_terminates_prog (declared_global p) prog_main_name p"
-      and reach_exit: "cfg_reaches (prog_cfg prog_main_name p) v (cfg_exit (prog_cfg prog_main_name p))"
-      and mem: "(v, c, Check_Refuted) \<in> set (analyse_interval_report p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> truthy (aval c s)"
-proof -
-  have node_sound: "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v
-                       \<subseteq> gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v))"
-    unfolding gamma_state_case_lifted
-    by (rule ivl_exec_prog_sound_collecting_at[OF refl terminates reach_exit])
-  show ?thesis
-    by (rule classify_checks_refuted_sound
-          [where g = "prog_cfg prog_main_name p"
-             and env = "\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at (declared_global p) prog_main_name p v)"
-             and classify = interval_classify_check
-             and reach = "ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p))"
-             and v = v and gamma_state = "gamma_state :: ivl abs_state \<Rightarrow> store set",
-           OF fin mem[unfolded analyse_interval_report_def interval_check_report_def]
-              interval_classify_check_refuted node_sound])
-qed
 
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
@@ -300,38 +288,42 @@ definition analyse_interval_td_report_with_state ::
 subsection \<open>Solver-choice variant: per-origin update rule\<close>
 
 text \<open>
-  \<open>analyse_interval_report_per_origin\<close> is \<open>analyse_interval_report\<close>'s
-  sibling under the per-origin update rule (\<^const>\<open>TD_side_per_origin_Interp_solve\<close>,
-  keeping each write origin's contribution separate instead of folding
-  every contribution into one join) instead of the always-join backend.
-  Experimental, matching the analogous \<open>analyse_sign_report_per_origin\<close>
-  for Sign: no dedicated soundness theorem is
-  proved for this combination here -- \<open>analyse\<close> and its soundness
-  corollaries are unaffected, and this definition exists solely so
-  \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close> can compare solver choices on
-  the same equation system (issue #131). Reuses \<^const>\<open>ivl_exec_eqs\<close>
-  unchanged, only the solve call differs from \<^const>\<open>ivl_exec_raw\<close>.
+  \<open>analyse_interval_report_per_origin_for\<close> mirrors \<open>analyse_interval_report_for\<close> exactly, reading
+  through \<^const>\<open>analyse_interval_dg_per_origin_env_for\<close> (the native D/G pipeline under the
+  per-origin update rule, \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) instead of
+  \<^const>\<open>analyse_interval_dg_join_env_for\<close> --- keeping each write origin's contribution separate
+  instead of folding every contribution into one join. Reuses
+  \<^const>\<open>analyse_interval_dg_eqs_for\<close> unchanged, only the solve call differs; this definition
+  exists so \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close> can compare update rules on the identical
+  equation system (issue #131), the same role Sign's \<open>analyse_sign_report_per_origin\<close> plays there.
 \<close>
 
-definition ivl_exec_raw_per_origin ::
-    "(ivl resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-     \<Rightarrow> (pp + unit \<Rightarrow> ivl resolved_st_q lifted)" where
-  "ivl_exec_raw_per_origin is_bot_pred gs \<Pi> ps mnm main =
-     snd (TD_side_per_origin_Interp_solve (ivl_exec_eqs is_bot_pred gs \<Pi> ps mnm main)
-            (cfg_exit (compile_prog \<Pi> ps mnm main)))"
+definition analyse_interval_report_per_origin_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_per_origin_for gs p =
+     classify_checks (prog_cfg prog_main_name p)
+       (analyse_interval_dg_per_origin_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+       interval_classify_check"
 
-definition interval_check_report_per_origin ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "interval_check_report_per_origin gs mnm p =
-     (let raw = ivl_exec_raw_per_origin (resolved_st_q_is_bot_for (declared_global_vars p)) gs
-                  (prog_table p) (prog_procs p) mnm (prog_main p)
-      in classify_checks (prog_cfg mnm p)
-           (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-                  (side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))
+text \<open>Same single-solve-per-report fix as \<open>analyse_interval_report_for_code\<close>.\<close>
+
+declare analyse_interval_report_per_origin_for_def [code del]
+
+lemma analyse_interval_report_per_origin_for_code [code]:
+  "analyse_interval_report_per_origin_for gs p =
+     (let sol = snd (analyse_interval_dg_per_origin_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
            interval_classify_check)"
+  unfolding analyse_interval_report_per_origin_for_def analyse_interval_dg_per_origin_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_report\<close>'s
+  shape; soundness (\<open>analyse_interval_report_per_origin_sound_proved\<close>/\<open>_refuted\<close>) stays downstream
+  in \<open>Example_Interval_Codegen\<close> (Examples) for the same locale-interpretation reason.\<close>
 
 definition analyse_interval_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_per_origin p =
-     interval_check_report_per_origin (declared_global p) prog_main_name p"
+     analyse_interval_report_per_origin_for (declared_global p) p"
 
 end

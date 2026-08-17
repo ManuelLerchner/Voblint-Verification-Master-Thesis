@@ -164,4 +164,3 @@ Named, zero-cost (`abbreviation`) readings of the verified solver's four
 | --- | --- | --- |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Formalization/Pipeline/Source_Activation_Sound.thy` |
 | `dg_exec_run_source_sound_for` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Formalization/Pipeline/Run_Analysis_Sound.thy` |
-| `mixed_flow_analysis_sound` | Mixed local/global analysis soundness. | `src/Formalization/Pipeline/Mixed_Flow_Sound.thy` |

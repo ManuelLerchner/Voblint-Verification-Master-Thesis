@@ -219,9 +219,9 @@ text \<open>
   The fold seed is the lifted bottom, not a lifted domain value: a program
   point with no live predecessor contribution is unreachable, not reachable
   at the domain's bottom -- \<^const>\<open>Bot\<close> is \<open>fold_rhs_trees\<close>' join identity, so
-  it never forces reachability the way embedding \<open>bot0\<close> (always instantiated
-  to literal \<open>bot\<close>, see \<open>Mixed_Flow_Sound.thy\<close>) as \<open>Lifted bot0\<close> would. Only
-  the entry point starts genuinely reachable, seeded at the initial store.
+  it never forces reachability the way embedding a genuine domain seed \<open>bot0\<close>
+  as \<open>Lifted bot0\<close> would. Only the entry point starts genuinely reachable,
+  seeded at the initial store.
 \<close>
 
 definition make_side_rhs_tree_eff ::

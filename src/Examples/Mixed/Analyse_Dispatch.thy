@@ -23,20 +23,20 @@ text \<open>
   function unchanged.
 
   The \<open>Interval_Analysis\<close> branch dispatches to \<open>analyse_interval_td_report\<close>, the
-  widening/warrowing-backed report, not the always-join \<open>analyse_interval_report\<close>: the
-  always-join backend's older flow-insensitive global-summary route has no widening, so it can
-  fail to terminate on a finite program whose global-writing transfer depends on the summary's
-  own current value (\<open>total := total + n\<close> is the minimal reproducer, isolated in
-  the regression theory \<open>Example_Analysis_Dispatch_Regression\<close> to \<^emph>\<open>not\<close>
-  require a call). \<open>analyse_interval_td_report\<close> now reads through the native Base-style D/G
+  widening/warrowing-backed report, not the always-join \<open>analyse_interval_report\<close>: Interval's
+  local carrier has infinite height (an unbounded integer bound), so a genuine loop that grows a
+  local or global value without bound still needs widening for termination, warrowing's own
+  guarantee, unlike plain join. Both reports now read through the same native Base-style D/G
   pipeline (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_*\<close> family,
-  mirroring Sign's own migration): VIMP globals live in the same reachability-lifted local
-  unknown as locals, with no separate flow-insensitive summary at all, so this route needs
-  warrowing only for Interval's own infinite-height local lattice, not to route around a
-  self-referential global. Its soundness theorems
-  (\<^theory>\<open>Voblint_Examples.Example_Interval_Codegen\<close>'s \<open>analyse_interval_td_report_sound_proved\<close>/
-  \<open>_refuted\<close>, built on the \<open>base_dg_exec_analysis\<close> locale) make this a like-for-like swap for
-  callers, not a precision or soundness downgrade.
+  mirroring Sign's own migration): VIMP globals live in the same reachability-lifted local unknown
+  as locals, with no separate flow-insensitive summary at all, so \<open>Solver_Join\<close>'s own hazard is
+  purely a loop-termination question now, not a global-specific one: a program whose global
+  writes never occur inside a loop terminates identically under \<open>Solver_Join\<close> and
+  \<open>Solver_Warrow\<close>, only a genuine unbounded loop still needs warrowing.
+  \<open>analyse_interval_td_report\<close>'s soundness theorems (\<^theory>\<open>Voblint_Examples.Example_Interval_Codegen\<close>'s
+  \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, built on the \<open>base_dg_exec_analysis\<close>
+  locale) make dispatching Interval's production default to the warrowing report a like-for-like
+  swap for callers, not a precision or soundness downgrade.
 \<close>
 
 datatype analysis_kind = Sign_Analysis | Interval_Analysis
@@ -110,11 +110,14 @@ text \<open>
   \<open>loop_head_across_update_rules\<close> proves join, per-origin, and warrowing
   compute the identical result on a bounded local loop whenever all three
   terminate, since interval narrowing and the backward guard filter -- not
-  the update rule -- carry that precision. A flow-insensitive global's
-  write-back has no such filter, so widening buys only termination there,
-  not precision; without it, a self-referential global write can leave
-  \<open>Solver_Join\<close>/\<open>Solver_PerOrigin\<close> without a fixpoint at all. Termination,
-  not precision, is therefore the axis on which this choice is observable.
+  the update rule -- carry that precision. Since the Base-style migration,
+  a VIMP global lives in the same reachability-lifted local unknown as any
+  local, so the choice is no longer global-specific either: any node the
+  D/G solver revisits without a bounding narrowing phase --- a genuine
+  loop, or a call site reached more than once --- needs warrowing for
+  termination on Interval's infinite-height carrier; \<open>Solver_Join\<close> and
+  \<open>Solver_PerOrigin\<close> have no such guarantee there. Termination, not
+  precision, is therefore the axis on which this choice is observable.
 \<close>
 
 datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow

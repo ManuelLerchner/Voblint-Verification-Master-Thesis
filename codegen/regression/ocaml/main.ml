@@ -3,7 +3,7 @@
    (never touching Isabelle), runs it through the exported `analyse`
    dispatcher for both domains, and checks the result against the values
    already proved inside Isabelle by
-   src/Examples/Mixed/Example_Analysis_Dispatch.thy's
+   src/Examples/Regression/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_sign_precise / dispatch_demo_interval_precise lemmas.
 
    Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
@@ -22,7 +22,7 @@ let mk_int n = Int_of_integer (Z.of_int n)
 let mk_nat n = nat_of_integer (Z.of_int n)
 
 (* `vname`/`pname` are Isabelle's `String.literal`, which is already OCaml's
-   native `string` (see Example_Analysis_Dispatch.thy), so variable/procedure
+   native `string` (see Example_Analysis_Dispatch_Regression.thy), so variable/procedure
    names need no conversion at all. *)
 
 (* `string_of_exp` renders a check's condition directly, as an alternative
@@ -36,7 +36,7 @@ let un_char c = Char.chr (Z.to_int (integer_of_char c))
 let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c)) cs)
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
-   Same program as dispatch_demo_prog in Example_Analysis_Dispatch.thy. *)
+   Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
 let check_cond = Less (N (mk_int 0), V "y")
 
 let demo_prog =
@@ -59,12 +59,16 @@ let expected_interval =
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
    together -- not just straight-line assignment/check.
-   Same program as proc_demo_prog in Example_Analysis_Dispatch.thy; checked
-   against proc_demo_sign_unknown / proc_demo_cfg_intra / proc_demo_cfg_calls.
+   Same program as proc_demo_prog in Example_Analysis_Dispatch_Regression.thy; checked
+   against proc_demo_sign_result / proc_demo_cfg_intra / proc_demo_cfg_calls.
    Interval_Analysis on this program used to hang/segfault under the always-join backend (a
    flow-insensitive global read-and-grow has no widening there); the exported `analyse`
-   dispatcher now routes Interval through the warrowing backend, which terminates (at
-   Check_Unknown precision) -- see Example_Analysis_Dispatch.thy's proc_demo_interval_terminates. *)
+   dispatcher now routes Interval through the warrowing backend, which terminates -- see
+   Example_Analysis_Dispatch_Regression.thy's proc_demo_interval_terminates. Since the
+   Base-style migration, total lives in the reachability-lifted local unknown flow-sensitively
+   through both calls, so the first check (0 < total) is Check_Proved; the second
+   (total < 100) stays Check_Unknown -- inc's entry is reached by two call sites, so warrowing
+   widens the entered parameter's upper bound on the second visit. *)
 let proc_demo_prog =
   mk_program
     [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
@@ -78,20 +82,22 @@ let proc_demo_prog =
     [ "total" ]
 
 let expected_proc_demo_sign =
-  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Unknown));
+  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Proved));
     (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
 
 (* Same shape as expected_proc_demo_sign, but this is the case that used to hang: a global read
-   and grown across two calls, now solved via warrowing (Check_Unknown, not a crash). *)
+   and grown across two calls, now solved via warrowing. *)
 let expected_proc_demo_interval =
-  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Unknown));
+  [ (Statement (mk_nat 5), (Less (N (mk_int 0), V "total"), Check_Proved));
     (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
 
 (* Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
-   global write that reads its own prior value through the flow-insensitive global summary.
-   Same program as no_call_global_self_ref_prog in Example_Analysis_Dispatch.thy; checked
-   against no_call_global_self_ref_interval_terminates. Isolates that the call/return summary
-   was never the actual hazard -- a single self-referential global write reproduces it alone. *)
+   global write that reads its own prior value. Same program as no_call_global_self_ref_prog in
+   Example_Analysis_Dispatch_Regression.thy; checked against
+   no_call_global_self_ref_interval_terminates. Isolates that the call/return summary was never
+   the actual hazard -- a single self-referential global write reproduces it alone. Under the
+   Base-style pipeline there is no separate flow-insensitive global summary for total to read
+   back through, so the result is Check_Proved. *)
 let no_call_global_self_ref_prog =
   mk_program []
     (Seq
@@ -100,12 +106,14 @@ let no_call_global_self_ref_prog =
     [ "total" ]
 
 let expected_no_call_global_self_ref_interval =
-  [ (Statement (mk_nat 2), (Less (N (mk_int 0), V "total"), Check_Unknown)) ]
+  [ (Statement (mk_nat 2), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
 
 (* Acceptance regression B (interprocedural global self-feedback): a single call to a
    procedure that reads and grows the same global. Same program as one_call_prog in
-   Example_Analysis_Dispatch.thy; checked against one_call_interval_terminates -- confirms the
-   fix also survives entry/combine (call/return) handling, not just a straight-line write. *)
+   Example_Analysis_Dispatch_Regression.thy; checked against one_call_interval_terminates --
+   confirms the fix also survives entry/combine (call/return) handling, not just a
+   straight-line write. inc's single call site reaches its entry node once, so no
+   repeated-visit widening applies, and total's exact value survives the combine step. *)
 let one_call_prog =
   mk_program
     [ ("inc", proc_decl_of ["n"] (Assign ("total", Plus (V "total", V "n")))) ]
@@ -115,7 +123,7 @@ let one_call_prog =
     [ "total" ]
 
 let expected_one_call_interval =
-  [ (Statement (mk_nat 4), (Less (N (mk_int 0), V "total"), Check_Unknown)) ]
+  [ (Statement (mk_nat 4), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
 
 let show_int i = Z.to_string (integer_of_int i)
 

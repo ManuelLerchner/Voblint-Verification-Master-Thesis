@@ -45,27 +45,20 @@ lemma solver_choice_demo_sign_warrow_unsupported:
   by eval
 
 text \<open>
-  \<open>Solver_Join\<close> and \<open>Solver_Warrow\<close> now diverge here, and the split is
-  \<^emph>\<open>which pipeline each dispatches to\<close>, not a shared precision limit: on
-  \<open>Interval_Analysis\<close>, \<open>Solver_Warrow\<close> dispatches to
-  \<^const>\<open>analyse_interval_td_report\<close>, the Base-style production pipeline
-  (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) where declared globals live
-  flow-sensitively in \<open>D\<close> like any local, so \<open>total := 1\<close> reaches the check
-  precisely and \<open>0 < total\<close> settles at \<open>Check_Proved\<close>. \<open>Solver_Join\<close>
-  instead dispatches to \<^const>\<open>analyse_interval_report\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>), built on the older
-  \<open>ivl_exec_prog\<close>/\<open>side_env_lift_st\<close> pipeline that was not part of the
-  production migration: \<open>cinit_ivl_st\<close> seeds every declared global at
-  \<open>Ivl (Fin 0) (Fin 0)\<close>, and its flow-insensitive global summary joins that
-  seed with the write's own contribution -- \<open>join [0,0] [1,1] = [0,1]\<close>,
-  under which \<open>0 < total\<close> is genuinely undecided (\<open>0\<close> itself is a member).
-  Not a precision bug in either pipeline; \<open>Solver_Join\<close>'s result reflects a
-  pipeline this migration has not touched.
+  \<open>Solver_Join\<close>, \<open>Solver_PerOrigin\<close>, and \<open>Solver_Warrow\<close> now agree on this program: since the
+  Base-style migration, all three dispatch to variants of the same native D/G equation system
+  (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_eqs_for\<close>, solved under the
+  always-join, per-origin, and Apinis-warrowing update rules respectively), where declared globals
+  live flow-sensitively in \<open>D\<close> like any local. \<open>total := 1\<close> reaches the check precisely under all
+  three, so \<open>0 < total\<close> settles at \<open>Check_Proved\<close> regardless of update-rule choice --- update rule
+  is purely a termination axis for a self-referential global write (see \<open>Analyse_Dispatch\<close>'s own
+  documentation and the \<open>global_self_feedback\<close> regression fixture), not a precision one here, since
+  this program's global write is not self-referential.
 \<close>
 
 lemma solver_choice_demo_interval_join_defined:
   "analyse_with_solver Interval_Analysis Solver_Join solver_choice_demo_prog
-     = Some [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+     = Some [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Proved)]"
   by eval
 
 lemma solver_choice_demo_interval_warrow_defined:
@@ -73,21 +66,23 @@ lemma solver_choice_demo_interval_warrow_defined:
      = Some [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Proved)]"
   by eval
 
-subsection \<open>Per-origin, isolated\<close>
+subsection \<open>Per-origin\<close>
 
 text \<open>
-  Kept out of \<open>analyse_with_solver\<close> (\<open>Interval_Analysis\<close>/\<open>Solver_PerOrigin\<close>
-  returns \<open>None\<close> there) and tested here on its own: an earlier combined
-  three-way comparison lemma for Interval hung under interactive \<open>by eval\<close>,
-  and this isolates whether the per-origin construction itself is the
-  actual cause, separate from \<open>analyse_with_solver\<close>'s dispatch or from a
-  wrong expected value (which is what the Join/Warrow failures above turned
-  out to be).
+  \<open>Solver_PerOrigin\<close> dispatches through \<open>analyse_with_solver\<close> like the other two update rules
+  (\<^const>\<open>analyse_interval_report_per_origin\<close>, \<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) --- both
+  the dispatcher-level and the direct-function calls are checked here, so a regression in either
+  the dispatch wiring or the per-origin construction itself is caught.
 \<close>
 
 lemma solver_choice_demo_interval_per_origin_defined:
+  "analyse_with_solver Interval_Analysis Solver_PerOrigin solver_choice_demo_prog
+     = Some [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Proved)]"
+  by eval
+
+lemma solver_choice_demo_interval_report_per_origin_defined:
   "analyse_interval_report_per_origin solver_choice_demo_prog
-     = [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Unknown)]"
+     = [(Statement 1, Less (N 0) (V (STR ''total'')), Check_Proved)]"
   by eval
 
 end
