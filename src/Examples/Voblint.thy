@@ -48,7 +48,7 @@ theory Voblint
     Example_Interval_DG_Flagship
     "Voblint_Formalization.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
-    Example_Interval_DG_CallString
+    Example_Interval_DG_EntryState_Collect
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
     Example_Sign_DG_CallString_K1
@@ -130,21 +130,34 @@ text \<open>
 subsection \<open>Context sensitivity: the axis issue \<open>#66\<close> is about\<close>
 
 text \<open>
-  Three routing policies for the same \<open>twice\<close> program (called from two sites), each
-  certified against the same activation-indexed semantics.
+  Three storage policies, each certified against the same activation-indexed semantics
+  and by the same soundness shape --- \<^const>\<open>activation_collect\<close> bounded at every
+  \<open>(node, context)\<close> pair.  They differ only in what a context \<^emph>\<open>is\<close>.
 
-  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect}\<close> --- context routed by
-    \<open>ivl_context\<close>: the entered formal's point abstraction (partial tabulation,
-    \<^cite>\<open>SeidlEtAl2026\<close> Example 8). \<^verbatim>\<open>twice_activation_collect_sound\<close> bounds
-    \<^const>\<open>activation_collect\<close> at every \<open>(node, context)\<close>.
-  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString}\<close> --- context routed by
-    \<open>route_cs\<close>: the call site itself (1-call-string, \<^cite>\<open>SeidlEtAl2026\<close> Example 7).
-    \<^verbatim>\<open>twice_cs_activation_collect_sound\<close> is the same soundness shape as \<open>Ctx_Collect\<close>, for a
-    routing policy that needed \<open>enterc\<close> widened to see the call site (issue \<open>#66\<close>, G1) to be
-    expressible at all.
-  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_Source_Ctx}\<close> --- the sharpest of the three:
-    bound against \<^emph>\<open>actual source runs\<close> at each activation's own context, not just the
-    collecting semantics, so it is the source-level counterpart of \<open>Ctx_Collect\<close>.
+  \<^item> \<^bold>\<open>Monovariant\<close> --- no context: one abstract state per program point.
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_IP_Flagship}\<close> analyses \<open>twice\<close>, whose
+    single procedure is called from two sites with different arguments, under one shared
+    entry state, and \<^verbatim>\<open>twice_collect_sound\<close> bounds the result.  This is the baseline the
+    two policies below sharpen.
+  \<^item> \<^bold>\<open>Entry state\<close> --- the context is the entered abstract value of the callee's declared
+    formals (partial tabulation, \<^cite>\<open>SeidlEtAl2026\<close> Example 8).
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect}\<close> instantiates the production
+    entry-state analysis on that same \<open>twice\<close> program: the two calls route to the distinct
+    contexts \<open>[3,3]\<close> and \<open>[10,10]\<close> and keep their entry and return values apart, where the
+    monovariant baseline joins them.  \<^verbatim>\<open>twice_activation_collect_sound\<close> is the bound.
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_EntryState_Collect}\<close> is the complementary
+    witness on an unconstrained argument, where one wide context covers infinitely many
+    concrete entries rather than separating two.
+  \<^item> \<^bold>\<open>Call string\<close> --- the context is a bounded record of the call sites traversed to reach
+    the activation (\<^cite>\<open>SeidlEtAl2026\<close> Example 7 at \<open>k = 1\<close>).
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString_K1}\<close> and
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString_K2}\<close> run one \<open>nest\<close> program at
+    \<open>k = 1\<close> and \<open>k = 2\<close>, so the pair also measures what raising the bound buys.  This policy
+    needed \<open>enterc\<close> widened to see the call site (issue \<open>#66\<close>, G1) to be expressible at all.
+
+  \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_Source_Ctx}\<close> is the sharpest statement of the
+  entry-state route: bound against \<^emph>\<open>actual source runs\<close> at each activation's own context,
+  not just the collecting semantics.
 \<close>
 
 subsection \<open>Activation-local concrete semantics\<close>
@@ -298,7 +311,7 @@ text \<open>
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling --- the
     complete end-to-end analyses (\<open>Example_Interval_DG_Flagship\<close>, \<open>Exec_Sign_DG_Run\<close>,
-    \<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_CallString\<close>,
+    \<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_EntryState_Collect\<close>,
     \<open>Example_Interval_Source_Ctx\<close>) are indexed separately, above.
     \<^item> @{theory Voblint_Examples.Example_Checks_Store_Only} --- \<open>__voblint_check(...)\<close>
       discharged against a computed Sign post-solution, node-locally: one check
@@ -327,9 +340,9 @@ text \<open>
       \<open>random_guard_run_42\<close> is a non-vacuity witness at the source semantics: fixing the
       random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close> derives an actual terminating run
       reaching \<open>y = 42\<close>.
-    \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the same \<open>nest\<close>
-      program as \<open>Example_Interval_DG_CallString\<close>, computed and certified at a 1-call-string
-      context (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
+    \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the \<open>nest\<close> program,
+      computed and certified at a 1-call-string context
+      (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
       calls \<open>g\<close> from one, so a 1-call-string cannot separate \<open>g\<close>'s two activations.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K2} --- the same program at a
       2-call-string context (\<^verbatim>\<open>nest_2_activation_collect_sound\<close>), which does separate them.

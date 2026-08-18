@@ -1,31 +1,28 @@
 theory Example_Interval_Source_Ctx
   imports
     Example_Interval_DG_Ctx_Collect
-    Example_Interval_DG_IP_Flagship
     "Voblint_Formalization.Source_Activation_Sound"
 begin
 
 section \<open>Source-level context-sensitive certification for repeated calls\<close>
 
 text \<open>
-  The \<open>twice\<close> program calls one procedure from two sites.  The theorem below connects each source
-  configuration to the solver-computed interval slot for the activation that produced it.  The
-  context key keeps the two calls separate while the source/CFG simulation preserves the concrete
-  frame stack.
+  The \<open>twice\<close> program calls one procedure from two sites.  The theorems below connect each
+  source configuration to the production entry-state analysis' own slot
+  (\<^const>\<open>entry_state_sg\<close>) for the activation that produced it, read through the lifted
+  concretization \<^const>\<open>gamma_state_lift\<close> the whole-state carrier denotes with.  The
+  context key \<^const>\<open>entry_state_context\<close> keeps the two calls separate while the
+  source/CFG simulation preserves the concrete frame stack.
 \<close>
 
-text \<open>\<open>twice_program\<close> declares no globals, so \<^const>\<open>twice_gs\<close> is trivially false
-  on every name \<^const>\<open>twice_pi\<close> can touch: reprove \<open>twice_wf\<close>'s obligations at
-  \<^const>\<open>twice_gs\<close> directly, so the source-level run relation and the \<open>twice_gs\<close>-indexed
-  collecting semantics share one classifier end to end.\<close>
-lemma twice_wf_gs: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') twice_main"
-  unfolding wf_compile_input_simps
-    twice_pi_def twice_procs_def twice_main_def twice_program_def
-  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_exp_def ret_var_def
-      special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
-      split: if_splits option.splits)
+text \<open>The analysis' own context function and solved reader, abbreviated for the two
+  statements below.\<close>
+
+abbreviation twice_ctx :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
+  "twice_ctx \<equiv> entry_state_context twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+
+abbreviation twice_ctx_sg :: "pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted" where
+  "twice_ctx_sg \<equiv> entry_state_sg twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
 
 text \<open>Context-sensitive source soundness.  Any \<open>twice\<close> run reaches a store bounded at the interval
   slot indexed by the stable context of the activation that produced it.\<close>
@@ -35,18 +32,15 @@ theorem twice_source_ctx_run_sound:
   shows "\<exists>v stk t c.
            csim twice_pi (compile_prog twice_pi twice_procs (STR ''main'') twice_main)
              (residual, s, frs) (v, s, stk)
-           \<and> ctx_key (admiss_exact ivl_context) [] t c
-           \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, c))\<rbrakk>"
+           \<and> ctx_key (admiss_exact twice_ctx) [] t c
+           \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, c)))"
 proof -
-  have tot: "\<And>u c s. \<exists>c'. admiss_exact ivl_context u c s c'"
+  have tot: "\<And>u c s. \<exists>c'. admiss_exact twice_ctx u c s c'"
     by (simp add: admiss_exact_def)
-  have cap: "\<And>v ctx. activation_collect twice_gs (admiss_exact ivl_context) []
-                      (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
-                    \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
-    unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
   show ?thesis
-    by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact ivl_context",
-          OF twice_wf_gs init run tot cap])
+    by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact twice_ctx"
+            and gammaM = gamma_state_lift,
+          OF twice_wf init run tot twice_activation_collect_sound])
 qed
 
 text \<open>The witness-free specialisation: a \<open>twice\<close> store reached at the top level (empty source frame
@@ -58,17 +52,10 @@ theorem twice_source_toplevel_at_bot:
     and init: "s0 \<in> cinit_stores twice_gs"
   shows "\<exists>v. csim twice_pi (compile_prog twice_pi twice_procs (STR ''main'') twice_main)
                (residual, s, []) (v, s, [])
-             \<and> s \<in> \<lbrakk>ivl_ctx_sg (Inl (v, []))\<rbrakk>"
-proof -
-  have cap: "\<And>v ctx. activation_collect twice_gs (admiss_exact ivl_context) []
-                      (compile_prog twice_pi twice_procs (STR ''main'') twice_main) (cinit_stores twice_gs) v ctx
-                    \<subseteq> \<lbrakk>ivl_ctx_sg (Inl (v, ctx))\<rbrakk>"
-    unfolding twice_cfg_def[symmetric] by (rule twice_activation_collect_sound)
-  show ?thesis
-    by (rule source_sound_toplevel_from_collecting_cap
-              [where admiss = "admiss_exact ivl_context", OF twice_wf_gs init run cap])
-qed
+             \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, [])))"
+  by (rule source_sound_toplevel_from_collecting_cap
+            [where admiss = "admiss_exact twice_ctx" and gammaM = gamma_state_lift,
+             OF twice_wf init run twice_activation_collect_sound])
 
 end
-
 

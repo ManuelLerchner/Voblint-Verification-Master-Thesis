@@ -1,12 +1,7 @@
 theory Example_Interval_DG_EntryState_Base
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.Interval_DG"
-    "Voblint_Analysis.Ivl_Exec"
-    "Voblint_Core.Solver_Menu"
-    "Voblint_CFG.CFG_Prune"
+    "Voblint_Formalization.Interval_Exec_Ctx_Sound"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
 begin
 
 section \<open>A random-argument call: the compiled base for the entry-state witness\<close>
@@ -73,34 +68,6 @@ lemma rc_calls_unique_site:
 
 lemma rc_finE: "finite (intra rc_cfg)" unfolding rc_cfg_def using compile_prog_finite by simp
 lemma rc_finC: "finite (calls rc_cfg)" unfolding rc_cfg_def using compile_prog_finite by simp
-
-subsection \<open>The analysis specification (interval, as an executable D/G analysis)\<close>
-
-text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: the entry point for
-  this file, generic in the classifier rather than fixed to a name-based convention.\<close>
-
-lemmas ivl_Hstep_for =
-  unit_dg_Hstep_for[OF ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-    ivl_tf_st_for_reduces]
-
-lemmas ivl_Henter_for =
-  unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
-
-lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
-
-text \<open>The abstract D/G soundness interpretation at \<open>rc_gs\<close>, generic in the storage
-  classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close> accessors.\<close>
-lemma rc_reserved: "reserved_ret_var rc_gs"
-  unfolding wf_compile_input_simps
-    rc_pi_def rc_procs_def rc_main_def rc_program_def
-  by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_exp_def ret_var_def
-      split: if_splits option.splits)
-
-interpretation rc_sds:
-  sound_dg_spec_ltr_for "unit_dg_spec_for rc_gs (ivl_tf_for rc_gs)" "gamma_unit rc_gs" rc_gs
-  unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for rc_reserved])
 
 subsection \<open>Source-level well-formedness\<close>
 

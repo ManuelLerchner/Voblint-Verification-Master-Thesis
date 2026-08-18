@@ -48,17 +48,15 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship
-    Example_Interval_DG_Ctx_Sound
     Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_Ctx_Multi_Call_Regression
+    Example_Interval_DG_Ctx_Factorial_Regression
+    Example_Interval_DG_Ctx_Globals_Regression
     Example_Interval_DG_EntryState_Base
     Example_Interval_DG_EntryState_Ctx
-    Example_Interval_DG_EntryState_Sound
     Example_Interval_DG_EntryState_Collect
-    Example_Interval_DG_CallString
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
-    Call_String_Solver_Projection
     Call_String_Solver_Refinement_Seeded
     Call_String_Solver_Regression
     Example_Interval_Source_Ctx

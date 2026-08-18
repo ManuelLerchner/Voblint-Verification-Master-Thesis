@@ -1,180 +1,167 @@
 theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
+    "Voblint_Formalization.Interval_Exec_Ctx_Sound"
     "Voblint_Analysis.Analysis_GraphViz"
-    "Voblint_Core.Routed_Context"
 begin
 
 section \<open>Context-sensitive interval analysis of \<open>twice\<close> (executable)\<close>
 
 text \<open>
-  The generalized D/G generator is instantiated with routed context hooks.  Each call
-  to \<open>twice\<close> receives the abstract entry value of formal \<open>p\<close> as its context:
+  The production entry-state analysis
+  (\<^theory>\<open>Voblint_Formalization.Interval_Exec_Ctx_Sound\<close>) run on
+  \<^const>\<open>twice_program\<close>.  Each call to \<open>twice\<close> receives the abstract entry value
+  of formal \<open>p\<close> as its context:
 
   \<^item> \<open>twice(3)\<close> uses context \<open>[3,3]\<close> and computes \<open>#ret = [6,6]\<close> and \<open>x = [6,6]\<close>;
   \<^item> \<open>twice(10)\<close> uses context \<open>[10,10]\<close> and computes \<open>#ret = [20,20]\<close> and \<open>y = [20,20]\<close>.
 
-  The two repeated calls remain separate, whereas unit context joins their formal and
-  return values.  This entry-value key is finite for the two constant call sites.  A
-  general interval analysis needs a finite canonical context representation because
-  arbitrary interval states may grow under recursion and widening.
+  The two repeated calls stay separate, whereas the monovariant baseline of
+  \<^theory>\<open>Voblint_Examples.Example_Interval_DG_IP_Flagship\<close> forces one shared entry
+  state and reports \<open>p = [3,10]\<close>, \<open>#ret = [6,20]\<close>, and \<open>x = y = [6,20]\<close>.  This
+  entry-value key is finite for the two constant call sites.  A general interval
+  analysis needs a finite canonical context representation because arbitrary interval
+  states may grow under recursion and widening.
+
+  Nothing solver-shaped is owned here: the equation system, its routing hook, the
+  solver-global key type \<^type>\<open>gk\<close>, and the solved projection all come from the
+  production analysis.  The local unknown carries the whole abstract state on the
+  lifted carrier \<^typ>\<open>ivl exec_dg_st lifted\<close>, so a global is read where a local is
+  and there is no separate solver-global slot holding program state.
 \<close>
 
-subsection \<open>Global key: real globals vs callee-entry seed slots\<close>
+subsection \<open>The executable bottom predicate\<close>
 
-text \<open>The global-key type separates shared analysis globals from
-  context-sensitive callee-entry seeds. \<open>Global\<close> denotes the single
-  flow-insensitive slot; \<open>Seed\<close> keys an entry seed by program point and context.
-  Distinct constructors prevent the two roles from sharing a solver unknown.\<close>
+text \<open>\<^const>\<open>entry_state_sol\<close> takes \<open>is_bot_pred\<close> as an explicit parameter.  At a
+  concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on that program's own
+  declared globals, which is exact for \<^const>\<open>is_bot_state\<close>.\<close>
 
-datatype gk = Global | Seed (seed_pp: pp) (seed_ivl: "ivl list")
+definition twice_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
+  "twice_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars twice_program)"
 
-subsection \<open>The storage classifier\<close>
+lemma twice_exact: "twice_is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for twice_gs s)"
+  unfolding twice_is_bot_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
 
-text \<open>Storage here is decided from \<open>twice_program\<close>'s own
-  declarations (\<^const>\<open>declared_global\<close>) rather than a name-based naming
-  convention. \<open>twice_program\<close> declares no globals, so \<^term>\<open>twice_gs\<close> classifies
-  every variable this chain touches as local --- unlike a G-prefix convention, which
-  would still treat any \<open>G\<close>-prefixed name as global by naming convention alone.\<close>
-
-abbreviation twice_gs :: "vname \<Rightarrow> bool" where
-  "twice_gs \<equiv> declared_global twice_program"
-
-abbreviation twice_lookup_exec_dg_st :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
-  "twice_lookup_exec_dg_st s x \<equiv> lookup_resolved_st_q s (location_of twice_gs x)"
-
-subsection \<open>The routed context hooks\<close>
-
-definition Spoly :: "(ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
-  "Spoly = unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs) (ivl_enter_st_for twice_gs)"
-
-text \<open>Outgoing call edges of a node, as callee entry / call action / continuation.  The
-  procedure-aware \<^const>\<open>calls\<close> relation records all three on the edge, so no separate
-  matching relation is consulted.\<close>
-definition call_successor_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> call_action \<times> pp) list" where
-  "call_successor_list g v =
-     map (\<lambda>(c, ca, ce, k). (ce, ca, k)) (filter (\<lambda>(c, ca, ce, k). c = v) (cfg_calls_list g))"
-
-text \<open>A frame entry is a \<^const>\<open>FunctionEntry\<close> node: the seed slot lives there.\<close>
-fun is_function_entry :: "cfg_node \<Rightarrow> bool" where
-  "is_function_entry (FunctionEntry _) = True"
-| "is_function_entry _ = False"
-
-text \<open>The callee-entry local store produced by a \<^const>\<open>CallEdge\<close> from a caller-local
-  state (globals defaulted to \<open>bot\<close>: \<open>twice\<close> has none).\<close>
-definition entered_ivl :: "ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl exec_dg_st" where
-  "entered_ivl d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> snd (dgs_enter Spoly fs as d bot))"
-
-text \<open>The routing function: the context a call selects is the entered value of the
-  callee's declared formals, in the order the matched \<^const>\<open>CallEdge\<close> already
-  carries them (\<^const>\<open>formals_context\<close>, generic over any procedure's formals,
-  not one hardcoded name).\<close>
-definition route_ivl :: "ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl list" where
-  "route_ivl d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (twice_lookup_exec_dg_st (entered_ivl d ca)))"
-
-text \<open>The generator's routing hook is generic over call site and caller context; this
-  instance needs neither, using only the entered store.\<close>
-definition route_ivl_gen :: "pp \<Rightarrow> ivl list \<Rightarrow> ivl exec_dg_st \<Rightarrow> call_action \<Rightarrow> ivl list" where
-  "route_ivl_gen u ctx d ca = route_ivl d ca"
+text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable
+  point (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
+abbreviation twice_ctx_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
+  "twice_ctx_lookup d x \<equiv> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> twice_lookup d0 x)"
 
 subsection \<open>The routed equation system and its solution\<close>
 
-definition twice_ctx_eqs ::
-  "(pp \<times> ivl list, gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) eqsT" where
-  "twice_ctx_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_ivl_gen
-       (routed_cmb Spoly Global Seed) (routed_extra Seed Global)
-       twice_cfg Spoly bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
-
 text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the root activation, no formal binds it).\<close>
+
 definition twice_ctx_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
-  "twice_ctx_sol = TD_side_warrowing_apinis_Interp_solve twice_ctx_eqs (cfg_exit twice_cfg, [])"
+  "(pp \<times> ivl list) set
+     \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "twice_ctx_sol = entry_state_sol twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+
+lemma twice_ctx_terminates_c:
+  "TD_side_warrowing_apinis_Interp_solve_c
+     (entry_state_eqs twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main)
+     (cfg_exit twice_cfg, []) \<noteq> None"
+  unfolding twice_cfg_def by eval
 
 lemma twice_ctx_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c twice_ctx_eqs (cfg_exit twice_cfg, []) \<noteq> None"
-  by eval
+  "entry_state_terminates twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+  using twice_ctx_terminates_c[unfolded twice_cfg_def]
+  by (rule entry_state_terminates_via_solve_c)
 
 subsection \<open>The two calling contexts are distinct\<close>
 
 definition ctx_call1 :: "ivl list" where
-  "ctx_call1 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
+  "ctx_call1 = entry_state_route twice_gs twice_is_bot_pred
+                 (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
                  (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])"
 
 definition ctx_call2 :: "ivl list" where
-  "ctx_call2 = route_ivl (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
+  "ctx_call2 = entry_state_route twice_gs twice_is_bot_pred
+                 (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
                  (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])"
 
-lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
-  by eval
+lemma ctx_call1_val: "ctx_call1 = [Ivl (Fin 3) (Fin 3)]"
+  unfolding ctx_call1_def twice_ctx_sol_def twice_is_bot_pred_def by eval
 
-lemma ctx_call1_val: "ctx_call1 = [Ivl (Fin 3) (Fin 3)]" by eval
-lemma ctx_call2_val: "ctx_call2 = [Ivl (Fin 10) (Fin 10)]" by eval
+lemma ctx_call2_val: "ctx_call2 = [Ivl (Fin 10) (Fin 10)]"
+  unfolding ctx_call2_def twice_ctx_sol_def twice_is_bot_pred_def by eval
+
+lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
+  by (simp add: ctx_call1_val ctx_call2_val)
 
 subsection \<open>Per-context exact results\<close>
 
-text \<open>Callee entry parameter, per context.\<close>
+text \<open>Callee entry parameter, per context --- against the monovariant \<open>p = [3,10]\<close>.\<close>
 lemma call1_p_at_entry:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''p'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
-  by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
 
 lemma call2_p_at_entry:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''p'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
-  by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
 
-text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged.\<close>
+text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged into the monovariant
+  \<open>#ret = [6,20]\<close>.\<close>
 lemma call1_ret_at_exit:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call1)))) (STR ''#ret'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call1)))) (STR ''#ret'')
      = Ivl (Fin 6) (Fin 6)"
-  by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
 
 lemma call2_ret_at_exit:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call2)))) (STR ''#ret'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call2)))) (STR ''#ret'')
      = Ivl (Fin 20) (Fin 20)"
-  by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
 
-text \<open>Caller destinations after each return.\<close>
+text \<open>Caller destinations after each return, where the monovariant baseline reports
+  \<open>x = y = [6,20]\<close>.\<close>
 lemma x_computed:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 3, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
-  by eval
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 3, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
 
 lemma y_computed:
-  "twice_lookup_exec_dg_st (locals (snd twice_ctx_sol (Inl (Statement 4, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
-  by eval
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 4, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
 
 subsection \<open>Seed slots and coverage\<close>
 
-text \<open>Each call publishes the entered store into its own context's seed slot.\<close>
+text \<open>Each call publishes the entered store into its own context's seed slot.  The
+  heterogeneous seed channel (\<^const>\<open>routed_cmb_g_contribution\<close> / \<^const>\<open>routed_extra_g\<close>)
+  carries that store in the seed unknown's \<^const>\<open>locals\<close> half, the same carrier the
+  callee entry reads it back on.\<close>
 lemma seed_call1:
-  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call1)))) (STR ''p'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call1)))) (STR ''p'')
      = Ivl (Fin 3) (Fin 3)"
-  by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
 
 lemma seed_call2:
-  "twice_lookup_exec_dg_st (globs (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call2)))) (STR ''p'')
+  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inr (Seed (FunctionEntry (STR ''twice'')) ctx_call2)))) (STR ''p'')
      = Ivl (Fin 10) (Fin 10)"
-  by eval
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
 
 text \<open>The callee entry is materialized once per routed context and never under the
   main context: the two calls are analyzed separately.\<close>
-lemma callee_covered_call1: "(FunctionEntry (STR ''twice''), ctx_call1) \<in> fst twice_ctx_sol" by eval
-lemma callee_covered_call2: "(FunctionEntry (STR ''twice''), ctx_call2) \<in> fst twice_ctx_sol" by eval
-lemma callee_not_under_main: "(FunctionEntry (STR ''twice''), []) \<notin> fst twice_ctx_sol" by eval
+lemma callee_covered_call1: "(FunctionEntry (STR ''twice''), ctx_call1) \<in> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
+
+lemma callee_covered_call2: "(FunctionEntry (STR ''twice''), ctx_call2) \<in> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
+
+lemma callee_not_under_main: "(FunctionEntry (STR ''twice''), []) \<notin> fst twice_ctx_sol"
+  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
 
 subsection \<open>Context-expanded analysis graph\<close>
 
-
+text \<open>The exporter is retyped for the lifted whole-state carrier the production
+  analysis solves over: every reader below takes an \<^typ>\<open>ivl exec_dg_st lifted\<close> local
+  value, and the routing hook is \<^const>\<open>entry_state_route\<close> itself.\<close>
 
 definition twice_ctx_graph_config ::
-  "(ivl list, gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
+  "(ivl list, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state, ivl exec_dg_st lifted)
+     analysis_graph_config" where
   "twice_ctx_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ ctx action d. route_ivl d action),
+      route = (\<lambda>_ ctx action d. entry_state_route twice_gs twice_is_bot_pred d action),
       show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
@@ -185,10 +172,10 @@ definition twice_ctx_graph_config ::
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
-        String.explode x @ ''='' @ string_of_ivl (twice_lookup_exec_dg_st d x)) vars),
+        String.explode x @ ''='' @ string_of_ivl (twice_ctx_lookup d x)) vars),
       format_return = (\<lambda>p ctx ret d.
-        if twice_lookup_exec_dg_st d ret = ivl_top then []
-        else [''ret='' @ string_of_ivl (twice_lookup_exec_dg_st d ret)]),
+        if twice_ctx_lookup d ret = ivl_top then []
+        else [''ret='' @ string_of_ivl (twice_ctx_lookup d ret)]),
       show_global = (\<lambda>k vars s. [''(none)'']),
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
@@ -279,5 +266,4 @@ lemma twice_ctx_dot_has_context_clusters:
 ML_val \<open>writeln (@{code twice_ctx_dot})\<close>
 
 end
-
 

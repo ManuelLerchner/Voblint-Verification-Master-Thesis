@@ -41,7 +41,7 @@ text \<open>
   global-key publication -- the one shared \<open>gk0\<close> slot, or a routed seed
   slot, both living in the same global-key space \<open>'g\<close> -- carries its payload
   in the \<open>globs\<close> half; a local-key answer carries its payload in the
-  \<open>locals\<close> half (\<open>routed_extra\<close>'s frame-entry read and \<open>routed_cmb\<close>'s
+  \<open>locals\<close> half (\<open>routed_extra_g\<close>'s frame-entry read and \<open>routed_cmb_g\<close>'s
   final answer, both in \<open>Routed_Context\<close>, return the analysis's own local
   contribution this way). \<open>publish_global\<close>, \<open>publish_seed\<close>, and
   \<open>answer_local\<close> apply that convention so an equation never writes

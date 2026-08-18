@@ -9,20 +9,27 @@ text \<open>
   A reachable store of a compiled source program is bounded by the abstract analysis at the stable
   activation context of the trace that produced it.  The composition joins the stack-faithful source
   bridge \<open>source_store_in_activation_collect\<close> with \<open>activation_collect_sound\<close>.
+
+  The cap-consuming theorems read the abstract map through a supplied concretization \<open>gammaM\<close>
+  instead of fixing it to \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close>:
+  the cap is the only thing they touch, so a reachability-lifted map fits as readily as a raw one.
+  The backbone corollaries below read it at \<^const>\<open>gamma_state\<close>, which is what
+  \<open>activation_collect_sound\<close> produces.
 \<close>
 
 theorem source_sound_from_collecting_cap:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
+    and gammaM :: "'M \<Rightarrow> store set"
     and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c and mnm :: pname
   assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, frs)"
     and tot: "\<And>u c s. \<exists>c'. admiss u c s c'"
     and cap: "\<And>v ctx. activation_collect source_global admiss startcontext (compile_prog Pi ps mnm main) S v ctx
-                       \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+                       \<subseteq> gammaM (sg (Inl (v, ctx)))"
   shows "\<exists>v stk t c. csim Pi (compile_prog Pi ps mnm main) (residual, s, frs) (v, s, stk)
                    \<and> ctx_key admiss startcontext t c
-                   \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
+                   \<and> s \<in> gammaM (sg (Inl (v, c)))"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_store_in_activation_collect
@@ -32,7 +39,7 @@ proof -
     and ck: "ctx_key admiss startcontext t c"
     and mem: "s \<in> activation_collect source_global admiss startcontext ?g S v c"
     by blast
-  have "s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
+  have "s \<in> gammaM (sg (Inl (v, c)))"
     using cap[of v c] mem by blast
   then show ?thesis using m ck by blast
 qed
@@ -40,22 +47,23 @@ qed
 text \<open>The witness-free specialisation of the composition at top-level program points: an empty
   source frame stack lands at the fixed seed context, no \<^typ>\<open>ltr\<close> witness exposed.\<close>
 theorem source_sound_toplevel_from_collecting_cap:
-  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
+  fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
+    and gammaM :: "'M \<Rightarrow> store set"
     and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c and mnm :: pname
   assumes wf: "wf_compile_input source_global Pi ps mnm main"
     and s0: "s0 \<in> S"
     and run: "star (pstep source_global Pi) (main, s0, []) (residual, s, [])"
     and cap: "\<And>v ctx. activation_collect source_global admiss startcontext (compile_prog Pi ps mnm main) S v ctx
-                       \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+                       \<subseteq> gammaM (sg (Inl (v, ctx)))"
   shows "\<exists>v. csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])
-             \<and> s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>"
+             \<and> s \<in> gammaM (sg (Inl (v, startcontext)))"
 proof -
   let ?g = "compile_prog Pi ps mnm main"
   from source_toplevel_in_activation_collect
          [where mnm=mnm and admiss=admiss and startcontext=startcontext, OF wf s0 run]
   obtain v where m: "csim Pi (compile_prog Pi ps mnm main) (residual, s, []) (v, s, [])"
     and mem: "s \<in> activation_collect source_global admiss startcontext ?g S v startcontext" by blast
-  have "s \<in> \<lbrakk>sg (Inl (v, startcontext))\<rbrakk>" using cap[of v startcontext] mem by blast
+  have "s \<in> gammaM (sg (Inl (v, startcontext)))" using cap[of v startcontext] mem by blast
   then show ?thesis using m by blast
 qed
 
@@ -90,7 +98,8 @@ proof -
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE ADMISS_TOTAL CALL COMB])
   show ?thesis
-    by (rule source_sound_from_collecting_cap[where mnm=mnm, OF wf s0 run ADMISS_TOTAL cap])
+    by (rule source_sound_from_collecting_cap[where mnm=mnm and gammaM=gamma_state,
+          OF wf s0 run ADMISS_TOTAL cap])
 qed
 
 text \<open>The witness-free specialisation at top-level program points: a store reached with an empty
@@ -124,7 +133,8 @@ proof -
                      \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
     by (rule activation_collect_sound[OF ENTRY_G EDGE ADMISS_TOTAL CALL COMB])
   show ?thesis
-    by (rule source_sound_toplevel_from_collecting_cap[where mnm=mnm, OF wf s0 run cap])
+    by (rule source_sound_toplevel_from_collecting_cap[where mnm=mnm and gammaM=gamma_state,
+          OF wf s0 run cap])
 qed
 
 subsection \<open>Monovariant source bridge into the trace collecting\<close>

@@ -1,5 +1,5 @@
 theory Call_String_Solver_Projection
-  imports Example_Interval_DG_CallString_K1 "Voblint_Core.Context_Refinement"
+  imports Call_String_Context Context_Refinement
 begin
 
 section \<open>Generic k1 <= k2 CallString projection\<close>
@@ -9,13 +9,11 @@ text \<open>
   fine solution \<open>sigma2\<close>, and the coarse equation system \<open>T1\<close>/its start unknown \<open>root1\<close>.
   Nothing below names a concrete program, a concrete \<open>k2\<close>, or a concrete pair of
   equation systems: the same construction applies to any \<open>k1\<close>-bounded CallString
-  equation system seeded from any finite fragment of any finer solution. The one
-  remaining concrete dependency is the \<open>call_string_gk\<close> key type itself, which lives in
-  \<^theory>\<open>Voblint_Examples.Example_Interval_DG_CallString_K1\<close> rather than
-  \<^theory>\<open>Voblint_Core.Call_String_Context\<close> (\<open>#114\<close>'s hard cutover unified it across the
-  concrete K1/K2 examples, not yet across an abstract key type); that is why this theory
-  sits under \<open>Examples\<close> rather than \<open>Core\<close>, even though nothing in its statements or
-  proofs otherwise depends on the \<open>nest\<close> program.
+  equation system seeded from any finite fragment of any finer solution. The carrier
+  \<open>'d\<close> stays an arbitrary \<^class>\<open>bounded_semilattice_sup_bot\<close>, so no domain, no solver
+  instance, and no CFG appears here either --- only the call-string key type of
+  \<^theory>\<open>Voblint_Core.Call_String_Context\<close> and the generic seeding infrastructure of
+  \<^theory>\<open>Voblint_Core.Context_Refinement\<close>.
 \<close>
 
 subsection \<open>The projection\<close>
@@ -39,7 +37,7 @@ text \<open>The same, for a coarse global/seed key: \<open>Global\<close> passes
   covered \<open>(FunctionEntry p, c2)\<close>) whose context truncates to \<open>c1\<close>. Reusing \<open>vars2_lst\<close>
   here, rather than a separately enumerated seed-key list, keeps this in agreement with
   \<^const>\<open>proj_local\<close>: a seed is relevant exactly when its own entry node is a covered
-  fine variable -- true of any \<open>routed_cmb\<close>-based equation system, since a seed is only
+  fine variable -- true of any \<open>routed_cmb_g\<close>-based equation system, since a seed is only
   ever published as \<open>Seed (FunctionEntry (result_proc ex)) ctx'\<close>.\<close>
 definition proj_global ::
   "nat \<Rightarrow> (pp \<times> call_string) list
@@ -151,7 +149,7 @@ qed
 subsection \<open>Agreement with routed contexts\<close>
 
 text \<open>The central fact that lets \<^const>\<open>proj_global\<close>'s key shape agree with what a
-  \<open>routed_cmb\<close>-based equation actually computes: if the coarse caller context is already
+  \<open>routed_cmb_g\<close>-based equation actually computes: if the coarse caller context is already
   the \<open>k1\<close>-truncation of the fine caller context, routing a call at \<open>k1\<close> from the coarse
   context agrees with truncating the \<open>k2\<close>-routed callee context down to \<open>k1\<close>. This is
   \<^const>\<open>Call_String_Context.cs_route\<close>'s own truncation behaviour
