@@ -199,7 +199,7 @@ definition analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow
           (let env = analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
            in (\<lambda>v. IntervalValue \<circ> env v))
       | Int_Analysis \<Rightarrow>
-          (let env = analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
+          (let env = analyse_int_dg_env_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
            in (\<lambda>v. IntDomValue \<circ> env v)))"
 
 text \<open>

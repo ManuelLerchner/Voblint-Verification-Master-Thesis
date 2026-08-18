@@ -158,15 +158,15 @@ text \<open>
   \<open>analyse_sign_report_for\<close>/\<open>analyse_interval_td_report_for\<close>.
 \<close>
 
-definition analyse_int_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_int_report_for gs p =
+definition analyse_int_report_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_for mode gs p =
      classify_checks (prog_cfg prog_main_name p)
-       (analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+       (analyse_int_dg_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
        int_classify_check"
 
 text \<open>
   Same single-solve-per-report fix as \<open>analyse_interval_td_report_for_code\<close>: bind
-  \<^term>\<open>snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)\<close> once,
+  \<^term>\<open>snd (analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)\<close> once,
   outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the generated OCaml solves the D/G
   equation system exactly once per report rather than once per check.
 \<close>
@@ -174,8 +174,8 @@ text \<open>
 declare analyse_int_report_for_def [code del]
 
 lemma analyse_int_report_for_code [code]:
-  "analyse_int_report_for gs p =
-     (let sol = snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+  "analyse_int_report_for mode gs p =
+     (let sol = snd (analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
       in classify_checks (prog_cfg prog_main_name p)
            (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
                 of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
@@ -192,7 +192,7 @@ text \<open>
 \<close>
 
 definition analyse_int_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_int_report p = analyse_int_report_for (declared_global p) p"
+  "analyse_int_report p = analyse_int_report_for Refine_Fixpoint (declared_global p) p"
 
 subsection \<open>Whole-program check report with state: the native D/G runtime API\<close>
 
@@ -221,16 +221,16 @@ definition analyse_int_report_for_with_state ::
   "analyse_int_report_for_with_state gs p =
      classify_checks_with_state (prog_cfg prog_main_name p)
        (\<lambda>v. (resolved_st_q_lifted_is_bot_for (declared_global_vars p)
-               (locals (snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+               (locals (snd (analyse_int_dg_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
                           (Inl (v, ())))),
-             analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p v))
+             analyse_int_dg_env_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p v))
        (\<lambda>c (_, s). int_classify_check c s)"
 
 declare analyse_int_report_for_with_state_def [code del]
 
 lemma analyse_int_report_for_with_state_code [code]:
   "analyse_int_report_for_with_state gs p =
-     (let sol = snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let sol = snd (analyse_int_dg_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
            (\<lambda>v. let st = locals (sol (Inl (v, ())))
                 in (resolved_st_q_lifted_is_bot_for (declared_global_vars p) st,
@@ -245,5 +245,78 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 definition analyse_int_report_with_state ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_with_state p = analyse_int_report_for_with_state (declared_global p) p"
+
+subsection \<open>Solver-choice variants: always-join and per-origin update rules\<close>
+
+text \<open>
+  \<open>analyse_int_report_join_for\<close> mirrors \<open>analyse_int_report_for\<close> exactly, reading through
+  \<^const>\<open>analyse_int_dg_join_env_for\<close> (the always-join update rule,
+  \<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>) instead of \<^const>\<open>analyse_int_dg_env_for\<close>
+  (Apinis warrowing) --- this is the report function the exported \<open>analyse_with_solver\<close> API
+  dispatches to for \<open>Int_Analysis\<close>/\<open>Solver_Join\<close> (\<open>Analyse_Dispatch\<close>, downstream in Examples),
+  not \<open>Int_Analysis\<close>'s production default (\<open>analyse\<close>/\<open>analyse_with_solver Int_Analysis
+  Solver_Warrow\<close> both still dispatch to \<open>analyse_int_report\<close>). Reuses
+  \<^const>\<open>analyse_int_dg_eqs_for\<close> unchanged (\<open>mode\<close> included), only the solve call differs,
+  mirroring \<open>Interval_Checks.analyse_interval_report_for\<close>/\<open>Sign_Checks.analyse_sign_report_for\<close>'s
+  own always-join default.
+\<close>
+
+definition analyse_int_report_join_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_join_for mode gs p =
+     classify_checks (prog_cfg prog_main_name p)
+       (analyse_int_dg_join_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+       int_classify_check"
+
+declare analyse_int_report_join_for_def [code del]
+
+lemma analyse_int_report_join_for_code [code]:
+  "analyse_int_report_join_for mode gs p =
+     (let sol = snd (analyse_int_dg_join_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           int_classify_check)"
+  unfolding analyse_int_report_join_for_def analyse_int_dg_join_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+text \<open>
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, pinned at \<open>Refine_Fixpoint\<close> like
+  \<^const>\<open>analyse_int_report\<close>: this is the report the CLI's solver-choice axis reaches, and
+  the CLI does not yet expose refinement mode as a separate axis (that remains
+  \<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>'s own production default).
+\<close>
+
+definition analyse_int_report_join :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_join p = analyse_int_report_join_for Refine_Fixpoint (declared_global p) p"
+
+text \<open>
+  \<open>analyse_int_report_per_origin_for\<close> mirrors \<open>analyse_int_report_join_for\<close> exactly, reading
+  through \<^const>\<open>analyse_int_dg_per_origin_env_for\<close> instead of
+  \<^const>\<open>analyse_int_dg_join_env_for\<close> --- keeping each write origin's contribution separate
+  instead of folding every contribution into one join. Reuses \<^const>\<open>analyse_int_dg_eqs_for\<close>
+  unchanged, only the solve call differs.
+\<close>
+
+definition analyse_int_report_per_origin_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_per_origin_for mode gs p =
+     classify_checks (prog_cfg prog_main_name p)
+       (analyse_int_dg_per_origin_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+       int_classify_check"
+
+declare analyse_int_report_per_origin_for_def [code del]
+
+lemma analyse_int_report_per_origin_for_code [code]:
+  "analyse_int_report_per_origin_for mode gs p =
+     (let sol = snd (analyse_int_dg_per_origin_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
+                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           int_classify_check)"
+  unfolding analyse_int_report_per_origin_for_def analyse_int_dg_per_origin_env_for_def[abs_def] Let_def
+  by (rule refl)
+
+definition analyse_int_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_per_origin p =
+     analyse_int_report_per_origin_for Refine_Fixpoint (declared_global p) p"
 
 end

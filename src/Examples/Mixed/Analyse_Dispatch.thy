@@ -98,15 +98,21 @@ text \<open>
   does not even type-check against Sign -- adding a pointless \<open>widen\<close>
   instance for a finite-height domain that needs no widening would be
   scope creep, not a fix. \<open>analyse_with_solver\<close> is therefore a curated,
-  explicit list of the five valid pairings, not a general
-  compatibility predicate over an open solver/domain space: an
-  unsupported pairing returns \<open>None\<close>, the same explicit-gap discipline
-  \<open>analyse_ctx\<close> already uses for \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close>.
+  explicit list of the valid pairings, not a general compatibility
+  predicate over an open solver/domain space: an unsupported pairing
+  returns \<open>None\<close>, the same explicit-gap discipline \<open>analyse_ctx\<close> already
+  uses for \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close>. \<open>int_dom\<close> has a
+  \<^theory>\<open>Voblint_Analysis.Int_Warrowing\<close> instance already needed for its own
+  \<open>Solver_Warrow\<close> production route, so unlike Sign it has no type-level gap
+  left on this axis: all three \<open>int_dom\<close> pairings are supported, leaving
+  \<open>Sign_Analysis\<close>/\<open>Solver_Warrow\<close> the sole remaining \<open>None\<close> among the nine
+  \<open>analysis_kind \<times> solver_choice\<close> combinations.
 
-  Each domain's own production default is exactly one of these five pairs
-  (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>) --
-  \<open>analyse_with_solver_sign_default\<close>/\<open>analyse_with_solver_interval_default\<close>
-  below confirm those two reproduce \<open>analyse\<close> exactly, not just
+  Each domain's own production default is exactly one of these pairings
+  (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>,
+  \<open>Int_Analysis\<close>/\<open>Solver_Warrow\<close>) -- \<open>analyse_with_solver_sign_default\<close>/
+  \<open>analyse_with_solver_interval_default\<close>/\<open>analyse_with_solver_int_default\<close>
+  below confirm all three reproduce \<open>analyse\<close> exactly, not just
   semantically.
 
   These three update-rule disciplines are convergence strategies, not
@@ -134,8 +140,8 @@ fun analyse_with_solver ::
 | "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report p)"
 | "analyse_with_solver Interval_Analysis Solver_PerOrigin p = Some (analyse_interval_report_per_origin p)"
 | "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_td_report p)"
-| "analyse_with_solver Int_Analysis Solver_Join p = None"
-| "analyse_with_solver Int_Analysis Solver_PerOrigin p = None"
+| "analyse_with_solver Int_Analysis Solver_Join p = Some (analyse_int_report_join p)"
+| "analyse_with_solver Int_Analysis Solver_PerOrigin p = Some (analyse_int_report_per_origin p)"
 | "analyse_with_solver Int_Analysis Solver_Warrow p = Some (analyse_int_report p)"
 
 lemma analyse_with_solver_sign_default:
