@@ -81,6 +81,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Int_Warrowing
     Example_Int_Transfer
     Exec_Int_DG_Run
+    Example_Int_Codegen
     Example_Relational_DG_Demo
     Analyse_Dispatch
     Example_Analysis_Dispatch_Regression

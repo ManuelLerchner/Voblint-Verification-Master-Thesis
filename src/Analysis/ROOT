@@ -63,6 +63,8 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Int_DG
     Int_Exec
     Int_Base_DG
+    Int_Exec_Sound
+    Int_Checks
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Analysis_GraphViz
