@@ -3,6 +3,7 @@ theory Example_State_Report_GraphViz
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Sign_Print"
     "Voblint_Analysis.Interval_Print"
+    "Voblint_Analysis.Int_Print"
     "Voblint_Examples.Example_Analysis_Dispatch_Regression"
 begin
 
@@ -19,6 +20,7 @@ text \<open>
 fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
   "string_of_abstract_value (SignValue s) = string_of_sign s"
 | "string_of_abstract_value (IntervalValue i) = string_of_ivl i"
+| "string_of_abstract_value (IntDomValue d) = string_of_int_dom d"
 
 text \<open>
   \<open>is_bottom_abstract_value\<close> tests each domain's own \<^class>\<open>order_bot\<close>
@@ -44,6 +46,7 @@ text \<open>
 fun is_bottom_abstract_value :: "abstract_value \<Rightarrow> bool" where
   "is_bottom_abstract_value (SignValue s) = is_bot s"
 | "is_bottom_abstract_value (IntervalValue i) = is_bot i"
+| "is_bottom_abstract_value (IntDomValue d) = is_bot d"
 
 text \<open>
   \<open>program_vars\<close> is the union of \<^const>\<open>scope_vnames_list\<close> over every
@@ -184,7 +187,10 @@ definition analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow
           in (\<lambda>v. SignValue \<circ> env v))
       | Interval_Analysis \<Rightarrow>
           (let env = analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
-           in (\<lambda>v. IntervalValue \<circ> env v)))"
+           in (\<lambda>v. IntervalValue \<circ> env v))
+      | Int_Analysis \<Rightarrow>
+          (let env = analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
+           in (\<lambda>v. IntDomValue \<circ> env v)))"
 
 text \<open>
   Unlike \<^const>\<open>state_report_node_annotation\<close>, every \<^typ>\<open>pp\<close> gets an

@@ -2,6 +2,7 @@ theory Analyse_Dispatch
   imports
     Example_Sign_Codegen
     Example_Interval_Codegen
+    Example_Int_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -39,11 +40,12 @@ text \<open>
   swap for callers, not a precision or soundness downgrade.
 \<close>
 
-datatype analysis_kind = Sign_Analysis | Interval_Analysis
+datatype analysis_kind = Sign_Analysis | Interval_Analysis | Int_Analysis
 
 fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
+| "analyse Int_Analysis p = analyse_int_report p"
 
 subsection \<open>Context-sensitivity dimension\<close>
 
@@ -70,6 +72,8 @@ fun analyse_ctx :: "analysis_kind \<Rightarrow> context_mode \<Rightarrow> imp_p
 | "analyse_ctx Interval_Analysis Ctx_None p = Some (analyse_interval_td_report p)"
 | "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
 | "analyse_ctx Sign_Analysis Ctx_EntryState p = None"
+| "analyse_ctx Int_Analysis Ctx_None p = Some (analyse_int_report p)"
+| "analyse_ctx Int_Analysis Ctx_EntryState p = None"
 
 text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for both domains: the new dispatcher
   cannot silently drift from the one CLI/regression already exercises.\<close>
@@ -130,6 +134,9 @@ fun analyse_with_solver ::
 | "analyse_with_solver Interval_Analysis Solver_Join p = Some (analyse_interval_report p)"
 | "analyse_with_solver Interval_Analysis Solver_PerOrigin p = Some (analyse_interval_report_per_origin p)"
 | "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse_interval_td_report p)"
+| "analyse_with_solver Int_Analysis Solver_Join p = None"
+| "analyse_with_solver Int_Analysis Solver_PerOrigin p = None"
+| "analyse_with_solver Int_Analysis Solver_Warrow p = Some (analyse_int_report p)"
 
 lemma analyse_with_solver_sign_default:
   "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse Sign_Analysis p)"
@@ -137,6 +144,10 @@ lemma analyse_with_solver_sign_default:
 
 lemma analyse_with_solver_interval_default:
   "analyse_with_solver Interval_Analysis Solver_Warrow p = Some (analyse Interval_Analysis p)"
+  by simp
+
+lemma analyse_with_solver_int_default:
+  "analyse_with_solver Int_Analysis Solver_Warrow p = Some (analyse Int_Analysis p)"
   by simp
 
 subsection \<open>Domain-neutral state-carrying report\<close>
@@ -154,7 +165,7 @@ text \<open>
   their state-free counterparts.
 \<close>
 
-datatype abstract_value = SignValue sign | IntervalValue ivl
+datatype abstract_value = SignValue sign | IntervalValue ivl | IntDomValue int_dom
 
 fun analyse_with_state ::
     "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> abstract_value abs_state) list" where
@@ -162,6 +173,8 @@ fun analyse_with_state ::
      map (\<lambda>(u, c, r, s). (u, c, r, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
 | "analyse_with_state Interval_Analysis p =
      map (\<lambda>(u, c, r, s). (u, c, r, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
+| "analyse_with_state Int_Analysis p =
+     map (\<lambda>(u, c, r, s). (u, c, r, IntDomValue \<circ> s)) (analyse_int_report_with_state p)"
 
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 
@@ -467,6 +480,29 @@ code_identifier
 | code_module Ivl_Exec \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context \<rightharpoonup> (OCaml) Core
 | code_module Interval_Exec_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module HOL \<rightharpoonup> (OCaml) Core
+| code_module Multiset \<rightharpoonup> (OCaml) Core
+| code_module Groups_List \<rightharpoonup> (OCaml) Core
+| code_module GCD \<rightharpoonup> (OCaml) Core
+| code_module Factorial_Ring \<rightharpoonup> (OCaml) Core
+| code_module Euclidean_Algorithm \<rightharpoonup> (OCaml) Core
+| code_module While_Combinator \<rightharpoonup> (OCaml) Core
+| code_module Congruence_Domain \<rightharpoonup> (OCaml) Core
+| code_module Congruence_Lattice \<rightharpoonup> (OCaml) Core
+| code_module Congruence_Arithmetic \<rightharpoonup> (OCaml) Core
+| code_module Congruence_Backward \<rightharpoonup> (OCaml) Core
+| code_module Congruence_Warrowing \<rightharpoonup> (OCaml) Core
+| code_module Parity_Domain \<rightharpoonup> (OCaml) Core
+| code_module Parity_Special \<rightharpoonup> (OCaml) Core
+| code_module Int_Domain \<rightharpoonup> (OCaml) Core
+| code_module Int_Refinement \<rightharpoonup> (OCaml) Core
+| code_module Int_Arithmetic \<rightharpoonup> (OCaml) Core
+| code_module Int_Backward \<rightharpoonup> (OCaml) Core
+| code_module Int_Warrowing \<rightharpoonup> (OCaml) Core
+| code_module Int_Transfer \<rightharpoonup> (OCaml) Core
+| code_module Int_Exec \<rightharpoonup> (OCaml) Core
+| code_module Int_Exec_Sound \<rightharpoonup> (OCaml) Core
+| code_module Int_Checks \<rightharpoonup> (OCaml) Core
 | code_module Analyse_Dispatch \<rightharpoonup> (OCaml) Analyse
 
 

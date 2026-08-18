@@ -11,8 +11,8 @@ text "
 "
 
 export_code
-  analyse Sign_Analysis Interval_Analysis
-  analyse_with_state SignValue IntervalValue
+  analyse Sign_Analysis Interval_Analysis Int_Analysis
+  analyse_with_state SignValue IntervalValue IntDomValue
   analyse_ctx Ctx_None Ctx_EntryState
   mk_program proc_decl_of
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
@@ -29,9 +29,9 @@ export_code
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 
 export_code
-  analyse Sign_Analysis Interval_Analysis
+  analyse Sign_Analysis Interval_Analysis Int_Analysis
   analyse_ctx Ctx_None Ctx_EntryState
-  analyse_with_state SignValue IntervalValue
+  analyse_with_state SignValue IntervalValue IntDomValue
   state_report_dot_auto state_report_graph_snapshot_auto
   full_state_dot_auto full_state_graph_snapshot_auto
   entry_state_report_dot_auto entry_state_report_graph_snapshot_auto

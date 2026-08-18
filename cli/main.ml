@@ -19,12 +19,17 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval [--context none|entry-state] [--dot] \
+  "voblint --analysis sign|interval|int [--context none|entry-state] [--dot] \
    [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
-  \  --analysis sign|interval   Abstract domain to run (required, unless\n\
-  \                             --parse-only).\n\
+  \  --analysis sign|interval|int\n\
+  \                             Abstract domain to run (required, unless\n\
+  \                             --parse-only). int is the refining composite\n\
+  \                             Sign x Interval x Parity x Congruence domain,\n\
+  \                             fixed at its most precise refinement mode\n\
+  \                             (Refine_Fixpoint) and the warrowing solver; it\n\
+  \                             has no --context or --solver support yet.\n\
   \  --context none|entry-state Context sensitivity (default: none, today's\n\
   \                             flow-insensitive, call-site-insensitive\n\
   \                             behaviour). entry-state re-analyzes each\n\
@@ -230,6 +235,7 @@ let () =
       (match v with
        | "sign" -> analysis := Some Voblint_CLI.Analyse.Sign_Analysis
        | "interval" -> analysis := Some Voblint_CLI.Analyse.Interval_Analysis
+       | "int" -> analysis := Some Voblint_CLI.Analyse.Int_Analysis
        | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
       parse_args rest
     | "--context" :: v :: rest ->
