@@ -4,7 +4,11 @@
 
 > **A Generic, Executable, and Machine-Checked Framework for Interprocedural Abstract Interpretation in Isabelle/HOL**
 
-> Master's thesis. Manuel Lerchner, supervised by [@AlexandraGrass](https://www.github.com/AlexandraGrass)
+> Master's thesis. Manuel Lerchner, supervised by [@AlexandraGrass](https://github.com/AlexandraGrass)
+
+[![CI](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml/badge.svg)](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
+![Isabelle](https://img.shields.io/badge/Isabelle-2025-blue)
 
 ## Abstract
 
