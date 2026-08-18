@@ -168,13 +168,13 @@ text \<open>
 datatype abstract_value = SignValue sign | IntervalValue ivl | IntDomValue int_dom
 
 fun analyse_with_state ::
-    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> abstract_value abs_state) list" where
+    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
   "analyse_with_state Sign_Analysis p =
-     map (\<lambda>(u, c, r, s). (u, c, r, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
+     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
 | "analyse_with_state Interval_Analysis p =
-     map (\<lambda>(u, c, r, s). (u, c, r, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
+     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
 | "analyse_with_state Int_Analysis p =
-     map (\<lambda>(u, c, r, s). (u, c, r, IntDomValue \<circ> s)) (analyse_int_report_with_state p)"
+     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, IntDomValue \<circ> s)) (analyse_int_report_with_state p)"
 
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 

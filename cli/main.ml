@@ -90,25 +90,18 @@ let verdict_label = function
   | Voblint_CLI.Core.Check_Refuted -> "REFUTED"
   | Voblint_CLI.Core.Check_Unknown -> "UNKNOWN"
 
-(* A pointwise abstract state's concretisation is the conjunction of every
-   variable's own concretisation: it is empty iff SOME variable's is, not
-   only when one particular fixed variable's is (Sign and Interval are both
-   non-relational). Probing every variable in program_vars -- rather than
-   one fixed name -- is therefore an exact reachability test for these
-   domains, not just a sound-but-incomplete heuristic: see
-   is_bottom_abstract_value's doc comment in Example_State_Report_GraphViz.thy.
-   Unreachable entries are suppressed entirely, matching Goblint's
+(* analyse_with_state's report carries an exact, proved unreachable flag per
+   entry (resolved_st_q_lifted_is_bot_for, Exec_St.thy) instead of leaving
+   this CLI to reconstruct reachability by probing a variable list against
+   the already-converted state -- see docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md,
+   section 9. Unreachable entries are suppressed entirely, matching Goblint's
    "__goblint_check(0); // NOWARN (unreachable)" convention (no output at
    that location), rather than shown with a vacuous PROVED verdict. *)
-let is_unreachable vars_to_probe (f : string -> Voblint_CLI.Analyse.abstract_value) =
-  List.exists
-    (fun x -> Voblint_CLI.Example_State_Report_GraphViz.is_bottom_abstract_value (f x))
-    vars_to_probe
-
-let render_text_report ~vars_to_probe (report :
+let render_text_report (report :
       (Voblint_CLI.Core.cfg_node
        * (Voblint_CLI.Core.exp
-          * (Voblint_CLI.Core.check_result * (string -> Voblint_CLI.Analyse.abstract_value))))
+          * (Voblint_CLI.Core.check_result
+             * (bool * (string -> Voblint_CLI.Analyse.abstract_value)))))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
@@ -117,8 +110,8 @@ let render_text_report ~vars_to_probe (report :
      doc comment. A length mismatch would mean that invariant broke, so let
      it raise rather than silently misalign. *)
   List.iter2
-    (fun (node, (cond, (verdict, f))) (line, col) ->
-       if not (is_unreachable vars_to_probe f) then begin
+    (fun (node, (cond, (verdict, (unreachable, f)))) (line, col) ->
+       if not unreachable then begin
          let vars = Voblint_CLI.Example_State_Report_GraphViz.exp_vnames_list cond in
          let state =
            vars
@@ -319,7 +312,6 @@ let () =
     prerr_endline "voblint: --solver only supports the plain text report";
     exit 1
   end;
-  let vars_to_probe = Voblint_CLI.Example_State_Report_GraphViz.program_vars prog in
   match
     run_contained ~timeout:!timeout (fun () ->
       if !graph_snapshot && !dot_full then
@@ -352,7 +344,7 @@ let () =
          | None -> Unsupported_combo "unsupported --analysis/--solver combination")
       else
         Ok_text
-          (render_text_report ~vars_to_probe
+          (render_text_report
              (Voblint_CLI.Analyse.analyse_with_state kind prog)
              check_positions))
   with

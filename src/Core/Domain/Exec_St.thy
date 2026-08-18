@@ -1603,6 +1603,24 @@ proof -
     using step1 step2 step3 fun_of_resolved_st_q_for_rep[of gs s] by simp
 qed
 
+text \<open>
+  \<open>resolved_st_q_is_bot_for\<close>'s lifted counterpart: a solver-level \<open>Bot\<close> local
+  unknown is \<open>True\<close> outright, without inspecting any \<open>resolved_st_q\<close> payload at
+  all, matching \<^const>\<open>is_bot_state_lift\<close>'s own \<open>Bot\<close> case. This is the
+  executable predicate the report layer needs at the point where it currently
+  case-splits \<open>Bot\<close>/\<open>Lifted\<close> and discards which branch fired.
+\<close>
+
+fun resolved_st_q_lifted_is_bot_for ::
+  "vname list \<Rightarrow> ('a::computable_domain) resolved_st_q lifted \<Rightarrow> bool" where
+  "resolved_st_q_lifted_is_bot_for globals Bot = True"
+| "resolved_st_q_lifted_is_bot_for globals (Lifted s) = resolved_st_q_is_bot_for globals s"
+
+lemma resolved_st_q_lifted_is_bot_for_iff:
+  assumes globals: "\<And>x. gs x = (x \<in> set globals)"
+  shows "resolved_st_q_lifted_is_bot_for globals s
+       \<longleftrightarrow> is_bot_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
+  by (cases s) (simp_all add: resolved_st_q_is_bot_for_iff[OF globals])
 
 
 

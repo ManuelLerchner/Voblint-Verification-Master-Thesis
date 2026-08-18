@@ -209,14 +209,27 @@ text \<open>
   of discarded. The \<open>[code]\<close> rewrite mirrors the one above for the same
   reason: naive definitional unfolding would re-run the solver once per
   check.
+
+  Each entry also carries an exact \<open>unreachable\<close> flag,
+  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> read off the very same local unknown
+  \<^const>\<open>analyse_sign_env_for\<close> collapses to \<^term>\<open>bot\<close>: a solver-level \<open>Bot\<close>
+  local unknown \<^emph>\<open>and\<close> a \<open>Lifted\<close> one whose own \<open>resolved_st_q\<close> is already
+  witness-bottom both set it, matching \<open>analyse_sign_env_for\<close>'s own
+  \<open>Bot \<Rightarrow> bot\<close> collapse for the first case and adding the second, which that
+  collapse alone cannot distinguish from an ordinary live state. See
+  \<^theory>\<open>Voblint_Core.Exec_St\<close>'s \<open>resolved_st_q_lifted_is_bot_for_iff\<close> for the
+  exactness argument this flag now carries instead of a CLI-side heuristic.
 \<close>
 
 definition analyse_sign_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_for_with_state gs p =
      classify_checks_with_state (prog_cfg prog_main_name p)
-       (analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       sign_classify_check"
+       (\<lambda>v. (resolved_st_q_lifted_is_bot_for (declared_global_vars p)
+               (locals (snd (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+                          (Inl (v, ())))),
+             analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p v))
+       (\<lambda>c (_, s). sign_classify_check c s)"
 
 declare analyse_sign_report_for_with_state_def [code del]
 
@@ -224,9 +237,10 @@ lemma analyse_sign_report_for_with_state_code [code]:
   "analyse_sign_report_for_with_state gs p =
      (let sol = snd (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
-           sign_classify_check)"
+           (\<lambda>v. let st = locals (sol (Inl (v, ())))
+                in (resolved_st_q_lifted_is_bot_for (declared_global_vars p) st,
+                    case map_lift (fun_of_exec_dg_st_for gs) st of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))
+           (\<lambda>c (_, s). sign_classify_check c s))"
   unfolding analyse_sign_report_for_with_state_def analyse_sign_env_for_def[abs_def] Let_def
   by (rule refl)
 
@@ -234,7 +248,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_sign_report\<close>'s shape.\<close>
 
 definition analyse_sign_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_with_state p = analyse_sign_report_for_with_state (declared_global p) p"
 
 end

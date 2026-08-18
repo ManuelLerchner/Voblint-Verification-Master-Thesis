@@ -459,15 +459,46 @@ text \<open>
 \<close>
 
 lemma state_wiring_ex_sign_at_check:
-  "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
+  "(let (_, _, _, unreachable, f) = hd (filter (\<lambda>(u, _, _, _, _). u = Statement 1)
                              (analyse_with_state Sign_Analysis state_wiring_ex_prog))
-    in f (STR ''x'')) = SignValue SPos"
+    in (unreachable, f (STR ''x''))) = (False, SignValue SPos)"
   by eval
 
 lemma state_wiring_ex_interval_at_check:
-  "(let (_, _, _, f) = hd (filter (\<lambda>(u, _, _, _). u = Statement 1)
+  "(let (_, _, _, unreachable, f) = hd (filter (\<lambda>(u, _, _, _, _). u = Statement 1)
                              (analyse_with_state Interval_Analysis state_wiring_ex_prog))
-    in f (STR ''x'')) = IntervalValue (Ivl (Fin 5) (Fin 5))"
+    in (unreachable, f (STR ''x''))) = (False, IntervalValue (Ivl (Fin 5) (Fin 5)))"
+  by eval
+
+definition state_wiring_ex_dead_prog :: imp_prog where
+  "state_wiring_ex_dead_prog =
+     program {
+       void main() {
+         x := 1;
+         if (x < 0) {
+           __voblint_check(0 < x)
+         } else {
+           skip
+         }
+       }
+     }"
+
+text \<open>
+  \<open>x < 0\<close> is infeasible under \<open>SPos\<close>, so the check inside the \<open>then\<close>
+  branch is unreachable dead code -- exactly the case the exported
+  \<open>unreachable\<close> flag exists to report, rather than the CLI reconstructing
+  it from a probed variable list. \<open>sign_classify_check\<close> still reports a
+  vacuous \<open>Check_Proved\<close> here (the whole point's state is witness-bottom,
+  so both \<open>check_true\<close>/\<open>check_false\<close> hold vacuously): the \<open>unreachable\<close>
+  flag is what lets a caller distinguish this from a genuinely live proof,
+  matching Goblint's \<open>__voblint_check(0); // NOWARN (unreachable)\<close>
+  convention.
+\<close>
+
+lemma state_wiring_ex_dead_at_check:
+  "(let (_, _, r, unreachable, _) = hd (filter (\<lambda>(u, _, _, _, _). u = Statement 2)
+                             (analyse_with_state Sign_Analysis state_wiring_ex_dead_prog))
+    in (unreachable, r)) = (True, Check_Proved)"
   by eval
 
 text \<open>

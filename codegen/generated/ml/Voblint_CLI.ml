@@ -328,14 +328,15 @@ module Core : sig
                       dg_state)
   val analyse_int_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (exp * (check_result * (string -> unit int_dom_ext)))) list
+      (cfg_node *
+        (exp * (check_result * (bool * (string -> unit int_dom_ext))))) list
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (exp * (check_result * (string -> sign)))) list
+      (cfg_node * (exp * (check_result * (bool * (string -> sign))))) list
   val pretty_string_of_program :
     (string -> unit proc_decl_ext option) ->
       string list -> com -> string list -> char list
@@ -357,7 +358,7 @@ module Core : sig
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (exp * (check_result * (string -> ivl)))) list
+      (cfg_node * (exp * (check_result * (bool * (string -> ivl))))) list
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -7279,6 +7280,10 @@ cg))))))))));;
 let rec apply_dg_spec_contribution _A _B
   s a u = dg_edge_contribution_tree _A _B (dg_spec_step s a) u;;
 
+let rec resolved_st_q_lifted_is_bot_for _A
+  globals x1 = match globals, x1 with globals, Bot -> true
+    | globals, Lifted s -> resolved_st_q_is_bot_for _A globals s;;
+
 let rec analyse_interval_dg_eqs_for
   is_bot_pred gs p =
     dg_gen_of
@@ -7616,14 +7621,20 @@ let rec analyse_int_report_for_with_state
        in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift
-              (fun_of_exec_dg_st_for
-                (bot_int_dom_ext int_dom_record_lattice_unit) gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Lifted s -> s))
-        int_classify_check);;
+          (let st = locals (sol (Inl (v, ()))) in
+            (resolved_st_q_lifted_is_bot_for
+               (computable_domain_int_dom_ext
+                 (equal_unit, int_dom_record_lattice_unit))
+               (declared_global_vars p) st,
+              (match
+                map_lift
+                  (fun_of_exec_dg_st_for
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs)
+                  st
+                with Bot ->
+                  bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
+                | Lifted s -> s))))
+        (fun c (_, a) -> int_classify_check c a));;
 
 let rec analyse_int_report_with_state
   p = analyse_int_report_for_with_state (declared_global p) p;;
@@ -7744,11 +7755,12 @@ let rec analyse_sign_report_for_with_state
        in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift (fun_of_exec_dg_st_for bot_sign gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun bot_sign | Lifted s -> s))
-        sign_classify_check);;
+          (let st = locals (sol (Inl (v, ()))) in
+            (resolved_st_q_lifted_is_bot_for computable_domain_sign
+               (declared_global_vars p) st,
+              (match map_lift (fun_of_exec_dg_st_for bot_sign gs) st
+                with Bot -> bot_fun bot_sign | Lifted s -> s))))
+        (fun c (_, a) -> sign_classify_check c a));;
 
 let rec analyse_sign_report_with_state
   p = analyse_sign_report_for_with_state (declared_global p) p;;
@@ -7936,11 +7948,12 @@ let rec analyse_interval_td_report_for_with_state
        in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift (fun_of_exec_dg_st_for bot_ivl gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun bot_ivl | Lifted s -> s))
-        interval_classify_check);;
+          (let st = locals (sol (Inl (v, ()))) in
+            (resolved_st_q_lifted_is_bot_for computable_domain_ivl
+               (declared_global_vars p) st,
+              (match map_lift (fun_of_exec_dg_st_for bot_ivl gs) st
+                with Bot -> bot_fun bot_ivl | Lifted s -> s))))
+        (fun c (_, a) -> interval_classify_check c a));;
 
 let rec analyse_interval_td_report_with_state
   p = analyse_interval_td_report_for_with_state (declared_global p) p;;
@@ -7966,7 +7979,8 @@ module Analyse : sig
     analysis_kind ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node *
-          (Core.exp * (Core.check_result * (string -> abstract_value)))) list
+          (Core.exp *
+            (Core.check_result * (bool * (string -> abstract_value))))) list
   val analyse_with_solver :
     analysis_kind ->
       solver_choice ->
@@ -8002,18 +8016,19 @@ let rec analyse_with_state
   x0 p = match x0, p with
     Sign_Analysis, p ->
       Core.map
-        (fun (u, (c, (r, s))) ->
-          (u, (c, (r, Core.comp (fun a -> SignValue a) s))))
+        (fun (u, (c, (r, (unreachable, s)))) ->
+          (u, (c, (r, (unreachable, Core.comp (fun a -> SignValue a) s)))))
         (Core.analyse_sign_report_with_state p)
     | Interval_Analysis, p ->
         Core.map
-          (fun (u, (c, (r, s))) ->
-            (u, (c, (r, Core.comp (fun a -> IntervalValue a) s))))
+          (fun (u, (c, (r, (unreachable, s)))) ->
+            (u, (c, (r, (unreachable,
+                          Core.comp (fun a -> IntervalValue a) s)))))
           (Core.analyse_interval_td_report_with_state p)
     | Int_Analysis, p ->
         Core.map
-          (fun (u, (c, (r, s))) ->
-            (u, (c, (r, Core.comp (fun a -> IntDomValue a) s))))
+          (fun (u, (c, (r, (unreachable, s)))) ->
+            (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))
           (Core.analyse_int_report_with_state p);;
 
 let rec analyse_with_solver
@@ -9699,7 +9714,10 @@ let rec state_report_node_annotation
 
 let rec state_report_dot_auto
   kind p =
-    (let report = Analyse.analyse_with_state kind p in
+    (let report =
+       Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
+         (Analyse.analyse_with_state kind p)
+       in
       Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
         Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
@@ -9745,7 +9763,10 @@ let rec entry_state_full_state_dot_auto
 
 let rec state_report_graph_snapshot_auto
   kind p =
-    (let report = Analyse.analyse_with_state kind p in
+    (let report =
+       Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
+         (Analyse.analyse_with_state kind p)
+       in
       Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
         (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;

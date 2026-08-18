@@ -552,6 +552,24 @@ lemma gamma_lift_mono:
   using le by (cases x; cases y) (auto simp: gam_mono)
 
 text \<open>
+  \<open>is_bot_state\<close>'s lifted counterpart: a solver-level \<open>Bot\<close> already means the
+  point itself is unreachable, while \<open>Lifted \<sigma>\<close> defers to \<open>is_bot_state \<sigma>\<close>'s
+  own product-emptiness witness -- one component of \<open>\<sigma>\<close> collapsing to bottom
+  empties the whole point's concretization exactly as it does for a plain,
+  unlifted \<^typ>\<open>'a abs_state\<close>. The iff below needs no new argument beyond
+  \<open>is_bot_state_iff_gamma_state_empty\<close> and \<^const>\<open>gamma_lift\<close>'s own case
+  split.
+\<close>
+
+fun is_bot_state_lift :: "'a::sound_domain abs_state lifted \<Rightarrow> bool" where
+  "is_bot_state_lift Bot = True"
+| "is_bot_state_lift (Lifted \<sigma>) = is_bot_state \<sigma>"
+
+lemma is_bot_state_lift_iff:
+  "is_bot_state_lift s \<longleftrightarrow> gamma_state_lift s = {}"
+  by (cases s) (simp_all add: is_bot_state_iff_gamma_state_empty)
+
+text \<open>
   \<open>bind_lift\<close> is the reachability monad's Kleisli bind, exactly \<^const>\<open>Option.bind\<close>'s
   shape with \<open>Bot\<close> for \<open>None\<close> and \<open>Lifted\<close> for \<open>Some\<close>: \<open>Bot\<close> in, \<open>Bot\<close> out, without ever
   calling \<open>f\<close> -- matching Goblint's \<open>unlift\<close> being called before dispatch rather than inside

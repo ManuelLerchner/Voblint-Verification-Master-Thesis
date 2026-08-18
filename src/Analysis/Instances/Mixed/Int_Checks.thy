@@ -206,12 +206,25 @@ text \<open>
   single-solve-per-report reason.
 \<close>
 
+text \<open>
+  Each entry also carries an exact \<open>unreachable\<close> flag,
+  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> read off the very same local unknown
+  \<^const>\<open>analyse_int_dg_env_for\<close> collapses to \<^term>\<open>bot\<close> -- see
+  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart for the argument
+  (solver-level \<open>Bot\<close> and a componentwise-bottom \<open>Lifted\<close> state both set it)
+  and \<^theory>\<open>Voblint_Core.Exec_St\<close>'s \<open>resolved_st_q_lifted_is_bot_for_iff\<close> for
+  the exactness.
+\<close>
+
 definition analyse_int_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> int_dom abs_state) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_for_with_state gs p =
      classify_checks_with_state (prog_cfg prog_main_name p)
-       (analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       int_classify_check"
+       (\<lambda>v. (resolved_st_q_lifted_is_bot_for (declared_global_vars p)
+               (locals (snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+                          (Inl (v, ())))),
+             analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p v))
+       (\<lambda>c (_, s). int_classify_check c s)"
 
 declare analyse_int_report_for_with_state_def [code del]
 
@@ -219,9 +232,10 @@ lemma analyse_int_report_for_with_state_code [code]:
   "analyse_int_report_for_with_state gs p =
      (let sol = snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
-           int_classify_check)"
+           (\<lambda>v. let st = locals (sol (Inl (v, ())))
+                in (resolved_st_q_lifted_is_bot_for (declared_global_vars p) st,
+                    case map_lift (fun_of_exec_dg_st_for gs) st of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))
+           (\<lambda>c (_, s). int_classify_check c s))"
   unfolding analyse_int_report_for_with_state_def analyse_int_dg_env_for_def[abs_def] Let_def
   by (rule refl)
 
@@ -229,7 +243,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_int_report\<close>'s shape.\<close>
 
 definition analyse_int_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> int_dom abs_state) list" where
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_with_state p = analyse_int_report_for_with_state (declared_global p) p"
 
 end

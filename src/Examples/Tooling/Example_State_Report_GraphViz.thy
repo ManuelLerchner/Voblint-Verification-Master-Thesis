@@ -85,11 +85,21 @@ definition state_report_node_annotation ::
              Node_Annotation lbl style \<Rightarrow>
                Some (Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)))"
 
+text \<open>
+  \<open>analyse_with_state\<close>'s report also carries an exact \<open>unreachable\<close> flag
+  (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>); this GraphViz rendering projects it
+  away rather than threading it through \<^const>\<open>state_report_node_annotation\<close>,
+  since the rendered label already shows the (necessarily witness-bottom)
+  state at an unreachable point instead of suppressing the node the way the
+  CLI's text report does.
+\<close>
+
 definition state_report_dot ::
     "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> vname list \<Rightarrow> String.literal" where
   "state_report_dot kind p vars =
      raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (state_report_node_annotation vars (analyse_with_state kind p))"
+       (state_report_node_annotation vars
+          (map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)))"
 
 text \<open>
   Reuses \<open>state_wiring_ex_prog\<close>
@@ -121,7 +131,7 @@ definition report_vars ::
 
 definition state_report_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_dot_auto kind p =
-     (let report = analyse_with_state kind p
+     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
       in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
@@ -134,7 +144,7 @@ text \<open>
 
 definition state_report_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_graph_snapshot_auto kind p =
-     (let report = analyse_with_state kind p
+     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 

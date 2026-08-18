@@ -136,6 +136,51 @@ lemma analyse_int_dg_gamma_eq_env_for:
          split: lifted.splits)
 
 text \<open>
+  The corollary the CLI's exported \<open>unreachable\<close> flag
+  (\<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>, \<^theory>\<open>Voblint_Core.Exec_St\<close>) needs,
+  mirroring \<open>analyse_sign_report_unreachable_sound_for\<close>'s Sign counterpart:
+  when that flag holds at a report entry's own solved local unknown, the
+  point is genuinely unreachable under the collecting semantics, not merely
+  witness-bottom by construction.
+\<close>
+
+theorem analyse_int_report_unreachable_sound_for:
+  assumes solve: "TD_side_warrowing_apinis_Interp_solve_c
+                    (analyse_int_dg_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)
+                    (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+      and wf: "wf_compile_input pgs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in>
+                           fst (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and cover_edge:
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow>
+           (w, ()) \<in> fst (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and cover_enter:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and cover_combine:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and finI: "finite (intra (prog_cfg prog_main_name p))"
+      and finC: "finite (calls (prog_cfg prog_main_name p))"
+      and unreachable: "resolved_st_q_lifted_is_bot_for (declared_global_vars p)
+        (locals (snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p) (Inl (v, ()))))"
+  shows "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v = {}"
+proof -
+  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+      \<subseteq> \<lbrakk>analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk>"
+    using analyse_int_dg_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
+    unfolding analyse_int_dg_gamma_eq_env_for .
+  have empty: "\<lbrakk>analyse_int_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk> = {}"
+    using unreachable[unfolded resolved_st_q_lifted_is_bot_for_iff[OF declared_global_iff]
+                                is_bot_state_lift_iff]
+    unfolding analyse_int_dg_env_for_def
+    by (cases "map_lift (fun_of_exec_dg_st_for pgs)
+                 (locals (snd (analyse_int_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p) (Inl (v, ()))))")
+       (simp_all add: gamma_state_bot fun_of_exec_dg_st_for_def)
+  from node_sound empty show ?thesis by blast
+qed
+
+text \<open>
   Soundness for \<open>analyse_int_report_for\<close> (\<^theory>\<open>Voblint_Analysis.Int_Checks\<close>): reuses
   \<open>classify_checks_proved_sound\<close>/\<open>classify_checks_refuted_sound\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>,
   fully domain-generic already) with \<open>analyse_int_dg_collect_sound_for\<close> and

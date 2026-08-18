@@ -95,18 +95,19 @@ module Core : sig
   val compile_program : unit imp_prog_ext -> unit cfg_ext
   val analyse_int_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (exp * (check_result * (string -> unit int_dom_ext)))) list
+      (cfg_node *
+        (exp * (check_result * (bool * (string -> unit int_dom_ext))))) list
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (exp * (check_result * (string -> sign)))) list
+      (cfg_node * (exp * (check_result * (bool * (string -> sign))))) list
   val wf_program_compile_input_exec : unit imp_prog_ext -> bool
   val analyse_interval_entry_state :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
-      (cfg_node * (exp * (check_result * (string -> ivl)))) list
+      (cfg_node * (exp * (check_result * (bool * (string -> ivl))))) list
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -6714,6 +6715,10 @@ cg))))))))));;
 let rec apply_dg_spec_contribution _A _B
   s a u = dg_edge_contribution_tree _A _B (dg_spec_step s a) u;;
 
+let rec resolved_st_q_lifted_is_bot_for _A
+  globals x1 = match globals, x1 with globals, Bot -> true
+    | globals, Lifted s -> resolved_st_q_is_bot_for _A globals s;;
+
 let rec interval_classify_check
   c d = (if interval_check_true c d then Check_Proved
           else (if interval_check_false c d then Check_Refuted
@@ -6838,14 +6843,20 @@ let rec analyse_int_report_for_with_state
        in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift
-              (fun_of_exec_dg_st_for
-                (bot_int_dom_ext int_dom_record_lattice_unit) gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Lifted s -> s))
-        int_classify_check);;
+          (let st = locals (sol (Inl (v, ()))) in
+            (resolved_st_q_lifted_is_bot_for
+               (computable_domain_int_dom_ext
+                 (equal_unit, int_dom_record_lattice_unit))
+               (declared_global_vars p) st,
+              (match
+                map_lift
+                  (fun_of_exec_dg_st_for
+                    (bot_int_dom_ext int_dom_record_lattice_unit) gs)
+                  st
+                with Bot ->
+                  bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
+                | Lifted s -> s))))
+        (fun c (_, a) -> int_classify_check c a));;
 
 let rec analyse_int_report_with_state
   p = analyse_int_report_for_with_state (declared_global p) p;;
@@ -6921,11 +6932,12 @@ let rec analyse_sign_report_for_with_state
        in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift (fun_of_exec_dg_st_for bot_sign gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun bot_sign | Lifted s -> s))
-        sign_classify_check);;
+          (let st = locals (sol (Inl (v, ()))) in
+            (resolved_st_q_lifted_is_bot_for computable_domain_sign
+               (declared_global_vars p) st,
+              (match map_lift (fun_of_exec_dg_st_for bot_sign gs) st
+                with Bot -> bot_fun bot_sign | Lifted s -> s))))
+        (fun c (_, a) -> sign_classify_check c a));;
 
 let rec analyse_sign_report_with_state
   p = analyse_sign_report_for_with_state (declared_global p) p;;
@@ -7020,11 +7032,12 @@ let rec analyse_interval_td_report_for_with_state
        in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift (fun_of_exec_dg_st_for bot_ivl gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun bot_ivl | Lifted s -> s))
-        interval_classify_check);;
+          (let st = locals (sol (Inl (v, ()))) in
+            (resolved_st_q_lifted_is_bot_for computable_domain_ivl
+               (declared_global_vars p) st,
+              (match map_lift (fun_of_exec_dg_st_for bot_ivl gs) st
+                with Bot -> bot_fun bot_ivl | Lifted s -> s))))
+        (fun c (_, a) -> interval_classify_check c a));;
 
 let rec analyse_interval_td_report_with_state
   p = analyse_interval_td_report_for_with_state (declared_global p) p;;
@@ -7049,7 +7062,8 @@ module Analyse : sig
     analysis_kind ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node *
-          (Core.exp * (Core.check_result * (string -> abstract_value)))) list
+          (Core.exp *
+            (Core.check_result * (bool * (string -> abstract_value))))) list
 end = struct
 
 type context_mode = Ctx_None | Ctx_EntryState;;
@@ -7078,18 +7092,19 @@ let rec analyse_with_state
   x0 p = match x0, p with
     Sign_Analysis, p ->
       Core.map
-        (fun (u, (c, (r, s))) ->
-          (u, (c, (r, Core.comp (fun a -> SignValue a) s))))
+        (fun (u, (c, (r, (unreachable, s)))) ->
+          (u, (c, (r, (unreachable, Core.comp (fun a -> SignValue a) s)))))
         (Core.analyse_sign_report_with_state p)
     | Interval_Analysis, p ->
         Core.map
-          (fun (u, (c, (r, s))) ->
-            (u, (c, (r, Core.comp (fun a -> IntervalValue a) s))))
+          (fun (u, (c, (r, (unreachable, s)))) ->
+            (u, (c, (r, (unreachable,
+                          Core.comp (fun a -> IntervalValue a) s)))))
           (Core.analyse_interval_td_report_with_state p)
     | Int_Analysis, p ->
         Core.map
-          (fun (u, (c, (r, s))) ->
-            (u, (c, (r, Core.comp (fun a -> IntDomValue a) s))))
+          (fun (u, (c, (r, (unreachable, s)))) ->
+            (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))
           (Core.analyse_int_report_with_state p);;
 
 end;; (*struct Analyse*)

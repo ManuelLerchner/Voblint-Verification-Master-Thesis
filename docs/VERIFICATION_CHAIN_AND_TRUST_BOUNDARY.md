@@ -40,7 +40,7 @@ not duplicated here.
  cli/main.ml  ->  Vimp_frontend.program (lexer/parser)
               ->  Voblint_CLI.Core.wf_program_compile_input_exec  (gate)
               ->  Voblint_CLI.Analyse.analyse_with_state / analyse_ctx / analyse_with_solver
-              ->  render_text_report / is_unreachable  (hand-written OCaml)
+              ->  render_text_report  (hand-written OCaml; unreachable flag exported)
               ->  CLI output
 ```
 
@@ -281,18 +281,64 @@ call is hand-written OCaml, outside the proved chain by the project's own
 architecture (see `AGENTS.md`'s "VIMP grammar pipeline" section): the lexer
 and parser (`cli/vimp_frontend.ml`, wrapping generated-but-unverified
 `Vimp_lexer`/`Vimp_parser`) carry no soundness theorem. Downstream of the
-solver, most CLI output construction is pure presentation with no semantic
+solver, CLI output construction is pure presentation with no semantic
 computation (`render_text_report`, `node_label`, `verdict_label`, char/string
-decoding). One CLI-side function is semantically load-bearing rather than
-purely cosmetic: `is_unreachable` (`cli/main.ml:98-101`) decides whether a
-check row is even shown, by probing `is_bottom_abstract_value` (exported
-HOL, exact per variable via the proved `is_bot_correct` class law,
-`Core/Domain/Abstract_Domain.thy:59`) over every name in `program_vars`. The
-per-variable primitive is proved exact; the aggregate claim that this probe
-correctly classifies program-point *reachability* is argued only in prose
-(`Examples/Tooling/Example_State_Report_GraphViz.thy:49-65`), not by a lemma.
-A wrong prose argument here could suppress a genuine check verdict from CLI
-output without corrupting the underlying analysis result.
+decoding) -- including whether a check row is suppressed as unreachable.
+That decision used to be CLI-side, hand-written logic
+(`is_unreachable`, formerly `cli/main.ml:98-106`): it probed
+`is_bottom_abstract_value` over a CLI-computed `program_vars` list against
+the already-converted `vname => abstract_value` state function, with the
+aggregate claim that this probe correctly classifies program-point
+*reachability* argued only in prose, not by a lemma.
+
+That reachability decision is now exported HOL instead: `analyse_with_state`'s
+report (`Examples/Mixed/Analyse_Dispatch.thy`) carries an exact `unreachable`
+flag per entry, computed by each domain's `analyse_*_report_for_with_state`
+(`Sign_Checks.thy`, `Interval_Checks.thy`, `Int_Checks.thy`) from the same
+solved local unknown the state column already reads, via
+`resolved_st_q_lifted_is_bot_for` (`Core/Domain/Exec_St.thy`). Two theorems
+back it:
+
+- `resolved_st_q_lifted_is_bot_for_iff` (`Exec_St.thy`): the executable flag
+  agrees exactly with `is_bot_state_lift` composed with
+  `fun_of_resolved_st_q_for` -- a solver-level `Bot` local unknown *and* a
+  `Lifted` one whose own `resolved_st_q` is already witness-bottom both set
+  it, matching `is_bot_state`'s pointwise-product reading (one bottom
+  coordinate empties the whole state's concretization) rather than only the
+  structural `Bot` case.
+- `is_bot_state_lift_iff` (`Core/Domain/Abstract_Domain.thy`): that
+  math-level predicate agrees exactly with `gamma_state_lift s = {}`.
+
+`cli/main.ml` now only reads this flag (`render_text_report`); it no longer
+probes any variable list or calls `is_bottom_abstract_value` itself. A
+regression witness (`state_wiring_ex_dead_at_check`,
+`Examples/Regression/Example_Analysis_Dispatch_Regression.thy`) locks in
+`unreachable = True` at a genuinely infeasible branch, checked by `eval`.
+
+That flag's exactness now reaches all the way to `ltr_collect`, for the
+actual Base-style D/G pipeline the with-state report solves through (not
+the older `side_cfg_T_eff_st` equation system `sign_exec_sound_collecting_at`/
+`ivl_exec_sound_collecting_at` are stated over, and not the mathematical
+`abs_state` generator the DG-native capstones `sign_dg_post_solution_collect_sound`/
+`ivl_dg_post_solution_collect_sound` are stated over). The connection reuses
+`base_dg_exec_analysis.collect_sound` (`Formalization/Pipeline/Run_Analysis_Sound.thy`)
+-- the same generic locale fact `analyse_sign_collect_sound_for`/
+`analyse_interval_dg_collect_sound_for` already cite to prove
+`analyse_sign_report_sound_proved_for`/`analyse_interval_td_report_sound_proved_for`
+-- composed with `resolved_st_q_lifted_is_bot_for_iff` and
+`is_bot_state_lift_iff`:
+
+- `analyse_sign_report_unreachable_sound_for` (`Examples/Sign/Example_Sign_Codegen.thy`)
+- `analyse_interval_td_report_unreachable_sound_for` (`Examples/Interval/Example_Interval_Codegen.thy`)
+- `analyse_int_report_unreachable_sound_for` (`Examples/Mixed/Example_Int_Codegen.thy`)
+
+Each proves, under the same solver-termination/well-formedness/coverage
+hypotheses `analyse_*_report_sound_proved_for` already needs: if the
+report's `unreachable` flag holds at a node `v`, then
+`ltr_collect gs (prog_cfg prog_main_name p) (cinit_stores gs) v = {}` --
+genuinely no concrete execution reaches `v`, not merely a witness-bottom
+encoding. The CLI's suppression of unreachable check rows is therefore
+backed by a real theorem end to end, not a probe-and-prose heuristic.
 
 `wf_program_compile_input_exec` (`CFG/Compiler/Compile_Invariants.thy:68`) is
 the exported gate the CLI runs before analysis; its soundness theorem
@@ -308,10 +354,13 @@ These are different claims, and only the first is currently supported:
 - **The analysis result is verified** (for Sign and Interval): every step
   from concrete semantics through the solver to the exported `analyse`
   result is covered by the theorem chain in sections 1, 4, 5, and 6.
-- **Every displayed CLI detail is verified**: not established. The
-  reachability-suppression filter (section 9) is the concrete counterexample
-  -- it can change what appears on screen without a covering theorem, and
-  the lexer/parser sit outside the proof entirely by design.
+- **Every displayed CLI detail is verified**: not fully established. The
+  lexer/parser sit outside the proof entirely by design. The
+  reachability-suppression flag (section 9), formerly a CLI-side
+  probe-and-prose heuristic, is now exported HOL proved exact all the way to
+  `ltr_collect`-level concrete unreachability (`analyse_sign_report_unreachable_sound_for`
+  and its Interval/Int_dom siblings) -- a genuine narrowing of this gap, not
+  merely the remaining lexer/parser boundary.
 
 ## 11. One constraint semantics, one solver-independent certificate
 
@@ -388,7 +437,7 @@ and issue #132 for the composite Int_dom domain's broader design.
 | 3 | The executable HOL mirror computes results corresponding to the mathematical analyzer | **YES** for Interval and Int_dom x3; **PARTIAL** for Sign (branch-collapse lemma, section 4); **NO** for Congruence's branch layer (does not exist) |
 | 4 | The functions exported with `export_code` are those executable HOL functions | **YES** for Sign and Interval; **NO** for Congruence/Parity/Int_dom (absent from every `export_code` list) |
 | 5 | The generated OCaml/Haskell analyzer implements the verified analysis, modulo code-generation and compiler/runtime trust | **YES** for Sign and Interval, contingent on the section-4 caveat; **N/A** elsewhere since level 4 already fails |
-| 6 | The entire CLI, including parsing and reporting, is end-to-end formally verified | **NO** -- lexer/parser and `is_unreachable` are hand-written OCaml with no covering theorem |
+| 6 | The entire CLI, including parsing and reporting, is end-to-end formally verified | **NO** -- lexer/parser are hand-written OCaml with no covering theorem. The unreachable-suppression flag is now exported and proved exact to `ltr_collect` (section 9), closing that one gap, but other presentation code (char/string decoding, formatting) remains unverified glue |
 
 ## What the thesis may claim today
 
@@ -412,7 +461,11 @@ and issue #132 for the composite Int_dom domain's broader design.
   any user-facing sense: their proofs exist but nothing in the shipped CLI
   can invoke them.
 - That every value shown by the CLI is verified: the reachability-suppression
-  filter (section 9) is unverified and can affect what a user sees.
+  flag (section 9) is now exported and proved exact all the way to
+  `ltr_collect`, but the *rest* of a report row (the check verdict's own
+  soundness, the rendered state text) has its own, separately-cited theorems
+  (sections 1/4/5/6) -- do not conflate "the unreachable flag is proved" with
+  "every field in a report entry is proved".
 - That Sign's branch alignment is verified with the same confidence as
   Interval's: the `branch_sign_st_for_eq` collapse (section 4) is a real,
   currently-unaudited mathematical claim, not settled record-projection
