@@ -95,7 +95,7 @@ text \<open>
 \<close>
 
 definition state_report_dot ::
-    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> vname list \<Rightarrow> String.literal" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> vname list \<Rightarrow> String.literal" where
   "state_report_dot kind p vars =
      raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (state_report_node_annotation vars
@@ -128,7 +128,7 @@ definition report_vars :: "('n \<times> exp \<times> 'r) list \<Rightarrow> vnam
   "report_vars report =
      sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames c) ` set report))"
 
-definition state_report_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+definition state_report_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_dot_auto kind p =
      (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
       in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
@@ -141,7 +141,7 @@ text \<open>
   a DOT-free regression representation of the same solved analysis.
 \<close>
 
-definition state_report_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_graph_snapshot_auto kind p =
      (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
@@ -189,7 +189,7 @@ text \<open>
   regardless of how many nodes it renders.
 \<close>
 
-definition analyse_env_for :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
+definition analyse_env_for :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
   "analyse_env_for kind p =
      (case kind of       Sign_Analysis \<Rightarrow>
          (let env = analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
@@ -215,7 +215,7 @@ definition full_state_node_annotation ::
      Some (Node_Annotation (join_gv_nl (map (state_line (env v)) vars))
              ''shape=box,style=filled,fillcolor=lightgreen'')"
 
-definition full_state_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+definition full_state_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_dot_auto kind p =
      raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
@@ -223,7 +223,7 @@ definition full_state_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Righta
 text \<open>Canonical-text sibling, the same DOT-free relationship
   \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
 
-definition full_state_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
@@ -231,7 +231,7 @@ definition full_state_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_pr
 text \<open>
   Entry-state siblings of \<open>state_report_dot_auto\<close>/\<open>full_state_dot_auto\<close>,
   Interval-only (\<^const>\<open>analyse_ctx\<close> has no Sign entry-state branch, so there
-  is no \<open>analysis_kind\<close> parameter here). Both read
+  is no \<open>analysis_domain\<close> parameter here). Both read
   \<^const>\<open>analyse_interval_entry_state_result\<close>, the canonical solved-result
   table, rather than the solver's own solution map. A \<^typ>\<open>pp\<close> may be covered
   by several entry-state contexts at once, and \<^const>\<open>lookup_joined_state\<close> is

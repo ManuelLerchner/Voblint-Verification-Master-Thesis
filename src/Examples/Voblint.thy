@@ -410,7 +410,7 @@ text \<open>
       theorems proved the same way one session later in @{theory
       Voblint_Examples.Example_Interval_Codegen}.
     \<^item> @{theory Voblint_Examples.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
-      dispatches on \<^verbatim>\<open>analysis_kind\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
+      dispatches on \<^verbatim>\<open>analysis_domain\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type
       (@{theory Voblint_Core.Abstract_Checks}), so the dispatcher adds no new

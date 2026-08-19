@@ -7549,67 +7549,73 @@ let rec analyse_interval_entry_state_result
 
 end;; (*struct Core*)
 
-module Analyse : sig
+module Analysis_Config : sig
   type context_mode = Ctx_None | Ctx_EntryState
-  type analysis_kind = Sign_Analysis | Interval_Analysis | Int_Analysis
+  type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
+end = struct
+
+type context_mode = Ctx_None | Ctx_EntryState;;
+
+type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis;;
+
+end;; (*struct Analysis_Config*)
+
+module Analyse : sig
   type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
     IntDomValue of unit Core.int_dom_ext
   val analyse :
-    analysis_kind ->
+    Analysis_Config.analysis_domain ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node * (Core.exp * Core.check_result)) list
   val analyse_ctx :
-    analysis_kind ->
-      context_mode ->
+    Analysis_Config.analysis_domain ->
+      Analysis_Config.context_mode ->
         unit Core.imp_prog_ext ->
           ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
   val analyse_with_state :
-    analysis_kind ->
+    Analysis_Config.analysis_domain ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node *
           (Core.exp *
             (Core.check_result * (bool * (string -> abstract_value))))) list
 end = struct
 
-type context_mode = Ctx_None | Ctx_EntryState;;
-
-type analysis_kind = Sign_Analysis | Interval_Analysis | Int_Analysis;;
-
 type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
   IntDomValue of unit Core.int_dom_ext;;
 
 let rec analyse
-  x0 p = match x0, p with Sign_Analysis, p -> Core.analyse_sign_report p
-    | Interval_Analysis, p -> Core.analyse_interval_td_report p
-    | Int_Analysis, p -> Core.analyse_int_report p;;
+  x0 p = match x0, p with
+    Analysis_Config.Sign_Analysis, p -> Core.analyse_sign_report p
+    | Analysis_Config.Interval_Analysis, p -> Core.analyse_interval_td_report p
+    | Analysis_Config.Int_Analysis, p -> Core.analyse_int_report p;;
 
 let rec analyse_ctx
   x0 x1 p = match x0, x1, p with
-    Sign_Analysis, Ctx_None, p ->
+    Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_None, p ->
       Some (Core.decided_report (Core.analyse_sign_report p))
-    | Interval_Analysis, Ctx_None, p ->
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_None, p ->
         Some (Core.decided_report (Core.analyse_interval_td_report p))
-    | Interval_Analysis, Ctx_EntryState, p ->
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_EntryState, p ->
         Some (Core.analyse_interval_entry_state p)
-    | Sign_Analysis, Ctx_EntryState, p -> None
-    | Int_Analysis, Ctx_None, p ->
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_None, p ->
         Some (Core.decided_report (Core.analyse_int_report p))
-    | Int_Analysis, Ctx_EntryState, p -> None;;
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p -> None;;
 
 let rec analyse_with_state
   x0 p = match x0, p with
-    Sign_Analysis, p ->
+    Analysis_Config.Sign_Analysis, p ->
       Core.map
         (fun (u, (c, (r, (unreachable, s)))) ->
           (u, (c, (r, (unreachable, Core.comp (fun a -> SignValue a) s)))))
         (Core.analyse_sign_report_with_state p)
-    | Interval_Analysis, p ->
+    | Analysis_Config.Interval_Analysis, p ->
         Core.map
           (fun (u, (c, (r, (unreachable, s)))) ->
             (u, (c, (r, (unreachable,
                           Core.comp (fun a -> IntervalValue a) s)))))
           (Core.analyse_interval_td_report_with_state p)
-    | Int_Analysis, p ->
+    | Analysis_Config.Int_Analysis, p ->
         Core.map
           (fun (u, (c, (r, (unreachable, s)))) ->
             (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))

@@ -203,7 +203,7 @@ text \<open>
   per-check \<open>int_dom\<close> environment attached to each report entry instead of discarded ---
   mirrors \<open>analyse_interval_td_report_for_with_state\<close>/\<open>analyse_interval_td_report_with_state\<close>,
   needed so \<open>Analyse_Dispatch.analyse_with_state\<close> can stay total once \<open>Int_Analysis\<close> joins
-  \<open>analysis_kind\<close>. The \<open>[code]\<close> rewrite mirrors the one above for the same
+  \<open>analysis_domain\<close>. The \<open>[code]\<close> rewrite mirrors the one above for the same
   single-solve-per-report reason.
 \<close>
 

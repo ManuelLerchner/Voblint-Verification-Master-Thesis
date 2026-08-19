@@ -186,6 +186,7 @@ module Core : sig
   val remdups : 'a equal -> 'a list -> 'a list
   val the_elem : 'a set -> 'a
   val distinct : 'a equal -> 'a list -> bool
+  val is_none : 'a option -> bool
   val implode : char list -> string
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val ret_var : string
@@ -8745,95 +8746,212 @@ let rec analyse_interval_entry_state_result
 
 end;; (*struct Core*)
 
-module Analyse : sig
+module Analysis_Config : sig
   type context_mode = Ctx_None | Ctx_EntryState
-  type analysis_kind = Sign_Analysis | Interval_Analysis | Int_Analysis
   type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
-  type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
-    IntDomValue of unit Core.int_dom_ext
-  val analyse :
-    analysis_kind ->
-      unit Core.imp_prog_ext ->
-        (Core.cfg_node * (Core.exp * Core.check_result)) list
-  val analyse_ctx :
-    analysis_kind ->
-      context_mode ->
-        unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
-  val analyse_with_state :
-    analysis_kind ->
-      unit Core.imp_prog_ext ->
-        (Core.cfg_node *
-          (Core.exp *
-            (Core.check_result * (bool * (string -> abstract_value))))) list
-  val analyse_with_solver :
-    analysis_kind ->
-      solver_choice ->
-        unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
+  type analysis_plan = Plan_Sign of solver_choice |
+    Plan_Interval of solver_choice | Plan_Interval_EntryState |
+    Plan_Int of solver_choice
+  type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
+  type 'a analysis_config_ext
+  val mk_analysis_config :
+    analysis_domain ->
+      solver_choice option -> context_mode -> unit analysis_config_ext
+  val resolve_analysis_config : unit analysis_config_ext -> analysis_plan option
+  val valid_analysis_config : unit analysis_config_ext -> bool
 end = struct
 
 type context_mode = Ctx_None | Ctx_EntryState;;
 
-type analysis_kind = Sign_Analysis | Interval_Analysis | Int_Analysis;;
-
 type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow;;
+
+type analysis_plan = Plan_Sign of solver_choice | Plan_Interval of solver_choice
+  | Plan_Interval_EntryState | Plan_Int of solver_choice;;
+
+type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis;;
+
+type 'a analysis_config_ext =
+  Analysis_config_ext of
+    analysis_domain * solver_choice option * context_mode * 'a;;
+
+let rec mk_analysis_config d s c = Analysis_config_ext (d, s, c, ());;
+
+let rec resolve_analysis_config
+  = function
+    Analysis_config_ext (Sign_Analysis, None, Ctx_None, ()) ->
+      Some (Plan_Sign Solver_Join)
+    | Analysis_config_ext (Sign_Analysis, Some Solver_Join, Ctx_None, ()) ->
+        Some (Plan_Sign Solver_Join)
+    | Analysis_config_ext (Sign_Analysis, Some Solver_PerOrigin, Ctx_None, ())
+        -> Some (Plan_Sign Solver_PerOrigin)
+    | Analysis_config_ext (Sign_Analysis, Some Solver_Warrow, Ctx_None, ()) ->
+        None
+    | Analysis_config_ext (Sign_Analysis, uu, Ctx_EntryState, ()) -> None
+    | Analysis_config_ext (Interval_Analysis, None, Ctx_None, ()) ->
+        Some (Plan_Interval Solver_Warrow)
+    | Analysis_config_ext (Interval_Analysis, Some s, Ctx_None, ()) ->
+        Some (Plan_Interval s)
+    | Analysis_config_ext (Interval_Analysis, None, Ctx_EntryState, ()) ->
+        Some Plan_Interval_EntryState
+    | Analysis_config_ext (Interval_Analysis, Some s, Ctx_EntryState, ()) ->
+        None
+    | Analysis_config_ext (Int_Analysis, None, Ctx_None, ()) ->
+        Some (Plan_Int Solver_Warrow)
+    | Analysis_config_ext (Int_Analysis, Some s, Ctx_None, ()) ->
+        Some (Plan_Int s)
+    | Analysis_config_ext (Int_Analysis, uv, Ctx_EntryState, ()) -> None;;
+
+let rec valid_analysis_config
+  cfg = not (Core.is_none (resolve_analysis_config cfg));;
+
+end;; (*struct Analysis_Config*)
+
+module Analyse : sig
+  type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
+    IntDomValue of unit Core.int_dom_ext
+  val analyse :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node * (Core.exp * Core.check_result)) list
+  val analyse_ctx :
+    Analysis_Config.analysis_domain ->
+      Analysis_Config.context_mode ->
+        unit Core.imp_prog_ext ->
+          ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
+  val analyse_with_solver :
+    Analysis_Config.analysis_domain ->
+      Analysis_Config.solver_choice ->
+        unit Core.imp_prog_ext ->
+          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
+  val analyse_config :
+    unit Analysis_Config.analysis_config_ext ->
+      unit Core.imp_prog_ext ->
+        ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
+  val analyse_config_ctx :
+    unit Analysis_Config.analysis_config_ext ->
+      unit Core.imp_prog_ext ->
+        ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
+  val analyse_with_state :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node *
+          (Core.exp *
+            (Core.check_result * (bool * (string -> abstract_value))))) list
+  val analyse_config_with_state :
+    unit Analysis_Config.analysis_config_ext ->
+      unit Core.imp_prog_ext ->
+        ((Core.cfg_node *
+           (Core.exp *
+             (Core.check_result *
+               (bool * (string -> abstract_value))))) list) option
+end = struct
 
 type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
   IntDomValue of unit Core.int_dom_ext;;
 
 let rec analyse
-  x0 p = match x0, p with Sign_Analysis, p -> Core.analyse_sign_report p
-    | Interval_Analysis, p -> Core.analyse_interval_td_report p
-    | Int_Analysis, p -> Core.analyse_int_report p;;
+  x0 p = match x0, p with
+    Analysis_Config.Sign_Analysis, p -> Core.analyse_sign_report p
+    | Analysis_Config.Interval_Analysis, p -> Core.analyse_interval_td_report p
+    | Analysis_Config.Int_Analysis, p -> Core.analyse_int_report p;;
 
 let rec analyse_ctx
   x0 x1 p = match x0, x1, p with
-    Sign_Analysis, Ctx_None, p ->
+    Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_None, p ->
       Some (Core.decided_report (Core.analyse_sign_report p))
-    | Interval_Analysis, Ctx_None, p ->
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_None, p ->
         Some (Core.decided_report (Core.analyse_interval_td_report p))
-    | Interval_Analysis, Ctx_EntryState, p ->
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_EntryState, p ->
         Some (Core.analyse_interval_entry_state p)
-    | Sign_Analysis, Ctx_EntryState, p -> None
-    | Int_Analysis, Ctx_None, p ->
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_None, p ->
         Some (Core.decided_report (Core.analyse_int_report p))
-    | Int_Analysis, Ctx_EntryState, p -> None;;
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p -> None;;
+
+let rec analyse_with_solver
+  x0 x1 p = match x0, x1, p with
+    Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Join, p ->
+      Some (Core.analyse_sign_report p)
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (Core.analyse_sign_report_per_origin p)
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Warrow, p -> None
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Join, p ->
+        Some (Core.analyse_interval_report p)
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (Core.analyse_interval_report_per_origin p)
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Warrow, p ->
+        Some (Core.analyse_interval_td_report p)
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_Join, p ->
+        Some (Core.analyse_int_report_join p)
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (Core.analyse_int_report_per_origin p)
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow, p ->
+        Some (Core.analyse_int_report p);;
+
+let rec analyse_config
+  cfg p =
+    (match Analysis_Config.resolve_analysis_config cfg with None -> None
+      | Some (Analysis_Config.Plan_Sign s) ->
+        analyse_with_solver Analysis_Config.Sign_Analysis s p
+      | Some (Analysis_Config.Plan_Interval s) ->
+        analyse_with_solver Analysis_Config.Interval_Analysis s p
+      | Some Analysis_Config.Plan_Interval_EntryState -> None
+      | Some (Analysis_Config.Plan_Int s) ->
+        analyse_with_solver Analysis_Config.Int_Analysis s p);;
+
+let rec analyse_config_ctx
+  cfg p =
+    (match Analysis_Config.resolve_analysis_config cfg with None -> None
+      | Some (Analysis_Config.Plan_Sign s) ->
+        Core.map_option Core.decided_report
+          (analyse_with_solver Analysis_Config.Sign_Analysis s p)
+      | Some (Analysis_Config.Plan_Interval s) ->
+        Core.map_option Core.decided_report
+          (analyse_with_solver Analysis_Config.Interval_Analysis s p)
+      | Some Analysis_Config.Plan_Interval_EntryState ->
+        analyse_ctx Analysis_Config.Interval_Analysis
+          Analysis_Config.Ctx_EntryState p
+      | Some (Analysis_Config.Plan_Int s) ->
+        Core.map_option Core.decided_report
+          (analyse_with_solver Analysis_Config.Int_Analysis s p));;
 
 let rec analyse_with_state
   x0 p = match x0, p with
-    Sign_Analysis, p ->
+    Analysis_Config.Sign_Analysis, p ->
       Core.map
         (fun (u, (c, (r, (unreachable, s)))) ->
           (u, (c, (r, (unreachable, Core.comp (fun a -> SignValue a) s)))))
         (Core.analyse_sign_report_with_state p)
-    | Interval_Analysis, p ->
+    | Analysis_Config.Interval_Analysis, p ->
         Core.map
           (fun (u, (c, (r, (unreachable, s)))) ->
             (u, (c, (r, (unreachable,
                           Core.comp (fun a -> IntervalValue a) s)))))
           (Core.analyse_interval_td_report_with_state p)
-    | Int_Analysis, p ->
+    | Analysis_Config.Int_Analysis, p ->
         Core.map
           (fun (u, (c, (r, (unreachable, s)))) ->
             (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))
           (Core.analyse_int_report_with_state p);;
 
-let rec analyse_with_solver
-  x0 x1 p = match x0, x1, p with
-    Sign_Analysis, Solver_Join, p -> Some (Core.analyse_sign_report p)
-    | Sign_Analysis, Solver_PerOrigin, p ->
-        Some (Core.analyse_sign_report_per_origin p)
-    | Sign_Analysis, Solver_Warrow, p -> None
-    | Interval_Analysis, Solver_Join, p -> Some (Core.analyse_interval_report p)
-    | Interval_Analysis, Solver_PerOrigin, p ->
-        Some (Core.analyse_interval_report_per_origin p)
-    | Interval_Analysis, Solver_Warrow, p ->
-        Some (Core.analyse_interval_td_report p)
-    | Int_Analysis, Solver_Join, p -> Some (Core.analyse_int_report_join p)
-    | Int_Analysis, Solver_PerOrigin, p ->
-        Some (Core.analyse_int_report_per_origin p)
-    | Int_Analysis, Solver_Warrow, p -> Some (Core.analyse_int_report p);;
+let rec analyse_config_with_state
+  cfg p =
+    (match Analysis_Config.resolve_analysis_config cfg with None -> None
+      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_Join) ->
+        Some (analyse_with_state Analysis_Config.Sign_Analysis p)
+      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_PerOrigin) ->
+        None
+      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_Warrow) -> None
+      | Some (Analysis_Config.Plan_Interval Analysis_Config.Solver_Join) -> None
+      | Some (Analysis_Config.Plan_Interval Analysis_Config.Solver_PerOrigin) ->
+        None
+      | Some (Analysis_Config.Plan_Interval Analysis_Config.Solver_Warrow) ->
+        Some (analyse_with_state Analysis_Config.Interval_Analysis p)
+      | Some Analysis_Config.Plan_Interval_EntryState -> None
+      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_Join) -> None
+      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_PerOrigin) -> None
+      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_Warrow) ->
+        Some (analyse_with_state Analysis_Config.Int_Analysis p));;
 
 end;; (*struct Analyse*)
 
@@ -10538,17 +10656,17 @@ module Example_State_Report_GraphViz : sig
   val program_vars : unit Core.imp_prog_ext -> string list
   val exp_vnames_list : Core.exp -> string list
   val full_state_dot_auto :
-    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val state_report_dot_auto :
-    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_ctx_dot_auto : unit Core.imp_prog_ext -> string
   val is_bottom_abstract_value : Analyse.abstract_value -> bool
   val entry_state_report_dot_auto : unit Core.imp_prog_ext -> string
   val full_state_graph_snapshot_auto :
-    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_full_state_dot_auto : unit Core.imp_prog_ext -> string
   val state_report_graph_snapshot_auto :
-    Analyse.analysis_kind -> unit Core.imp_prog_ext -> string
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_ctx_graph_snapshot_auto : unit Core.imp_prog_ext -> string
   val entry_state_report_graph_snapshot_auto : unit Core.imp_prog_ext -> string
   val entry_state_full_state_graph_snapshot_auto :
@@ -10583,7 +10701,7 @@ let rec check_cond_at
 let rec analyse_env_for
   kind p =
     (match kind
-      with Analyse.Sign_Analysis ->
+      with Analysis_Config.Sign_Analysis ->
         (let env =
            Core.analyse_sign_env_for
              (Core.resolved_st_q_is_bot_for Core.computable_domain_sign
@@ -10591,7 +10709,7 @@ let rec analyse_env_for
              (Core.declared_global p) p
            in
           (fun v -> Core.comp (fun a -> Analyse.SignValue a) (env v)))
-      | Analyse.Interval_Analysis ->
+      | Analysis_Config.Interval_Analysis ->
         (let env =
            Core.analyse_interval_dg_env_for
              (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl
@@ -10599,7 +10717,7 @@ let rec analyse_env_for
              (Core.declared_global p) p
            in
           (fun v -> Core.comp (fun a -> Analyse.IntervalValue a) (env v)))
-      | Analyse.Int_Analysis ->
+      | Analysis_Config.Int_Analysis ->
         (let env =
            Core.analyse_int_dg_env_for Core.Refine_Fixpoint
              (Core.resolved_st_q_is_bot_for

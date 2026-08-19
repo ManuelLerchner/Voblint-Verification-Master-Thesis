@@ -56,6 +56,10 @@ export_code
   string_of_exp
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
+  mk_analysis_config
+  Plan_Sign Plan_Interval Plan_Interval_EntryState Plan_Int
+  resolve_analysis_config valid_analysis_config
+  analyse_config analyse_config_ctx analyse_config_with_state
   analyse_sign_result analyse_interval_td_result analyse_int_result
   analyse_interval_entry_state_result analyse_interval_entry_state_result_for
   result_keys contexts_at lookup_context lookup_joined_state node_live_ex

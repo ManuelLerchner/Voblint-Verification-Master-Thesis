@@ -1,0 +1,221 @@
+theory Analysis_Config
+  imports Main
+begin
+
+section \<open>Semantic analysis configuration\<close>
+
+text \<open>
+  One canonical, executable representation of the choices that change
+  \<^emph>\<open>what gets solved\<close>: abstract domain, solver update-rule discipline, and
+  context sensitivity. Presentation choices (DOT vs. a textual snapshot,
+  collapsed vs. expanded context rendering) are deliberately absent -- they
+  select how an already-computed result is drawn, never what the solver
+  computes, and stay owned by the CLI layer instead (\<open>Analysis_GraphViz.thy\<close>).
+
+  This theory names \<open>Sign\<close>/\<open>Interval\<close>/\<open>Int\<close> explicitly by construction, so it
+  sits in \<open>Voblint_Analysis\<close> rather than \<open>Voblint_Core\<close>: \<open>Core\<close> carries no
+  domain-specific content, and a domain-naming enum is domain-specific
+  content even though it carries no analysis logic of its own.
+
+  Constructor names below reuse exactly what \<open>Analyse_Dispatch\<close>'s own
+  \<open>analysis_domain\<close>/\<open>context_mode\<close>/\<open>solver_choice\<close> already use
+  (\<open>Sign_Analysis\<close>, \<open>Ctx_EntryState\<close>, \<open>Solver_Warrow\<close>, ...): only the
+  \<open>analysis_domain \<Rightarrow> analysis_domain\<close> type rename is a real improvement
+  (it names what the type \<^emph>\<open>is\<close>, not the shape of its first constructor);
+  renaming already-public constructor names across every consumer -- the
+  CLI, every \<open>Analyse_Dispatch\<close> branch, every codegen export -- would be
+  pure churn this migration does not need.
+\<close>
+
+subsection \<open>Selection axes\<close>
+
+text \<open>
+  Every value below is a real, currently reachable public selection --
+  reachable from the CLI, from \<open>Analyse_Dispatch\<close>'s existing dispatchers, or
+  both. Refinement mode (\<open>Refine_Never\<close>/\<open>Refine_Once\<close>/\<open>Refine_Fixpoint\<close>,
+  \<open>Int_Refinement.thy\<close>) and call-string context length are
+  each real inside their own theories but reach neither the CLI nor
+  \<open>Analyse_Dispatch\<close> today -- \<open>Int_Analysis\<close> is fixed at \<open>Refine_Fixpoint\<close>,
+  and call-string depth 1/2 are two independently authored example
+  theories, not one runtime-parametric mode. Adding either axis here would
+  design a configuration space around behavior that does not yet exist
+  anywhere outside a proof; both stay out of this datatype until a later
+  task makes them genuinely public.
+\<close>
+
+datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
+
+datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
+
+datatype context_mode = Ctx_None | Ctx_EntryState
+
+text \<open>
+  \<open>cfg_solver\<close> is an \<^typ>\<open>solver_choice option\<close>, not a bare \<open>solver_choice\<close>,
+  because \<open>None\<close> and an explicit selection are observably different today:
+  \<open>--context entry-state\<close> alone resolves to the warrowing solver, but
+  \<open>--context entry-state --solver warrow\<close> is rejected even though the
+  resolved solver is the same value, because the CLI treats an explicit
+  \<open>--solver\<close> selection as incompatible with any \<open>--context\<close> other than
+  \<open>none\<close>, unconditionally. Collapsing \<open>None\<close> and \<open>Some\<close>-of-the-default into
+  one bare field would erase that distinction and could not reproduce this
+  behavior.
+\<close>
+
+record analysis_config =
+  cfg_domain :: analysis_domain
+  cfg_solver :: "solver_choice option"
+  cfg_context :: context_mode
+
+text \<open>
+  A plain, exportable constructor: OCaml code (the CLI) never sees the raw
+  record literal syntax underneath \<^type>\<open>analysis_config\<close>, only this
+  function -- the same pattern \<open>mk_program\<close> already gives \<open>imp_prog\<close>,
+  a record no other export ever exposes directly either.
+\<close>
+
+definition mk_analysis_config ::
+    "analysis_domain \<Rightarrow> solver_choice option \<Rightarrow> context_mode \<Rightarrow> analysis_config" where
+  "mk_analysis_config d s c = \<lparr> cfg_domain = d, cfg_solver = s, cfg_context = c \<rparr>"
+
+subsection \<open>Resolved plan\<close>
+
+text \<open>
+  What \<open>resolve_analysis_config\<close> below resolves a legal
+  \<^type>\<open>analysis_config\<close> to: exactly enough to pick the one existing,
+  already-typed report/result function a caller should run next
+  (\<open>Analyse_Dispatch\<close>'s own \<open>analyse\<close>/\<open>analyse_ctx\<close>/\<open>analyse_with_solver\<close>
+  branches, unchanged). \<open>Plan_Interval_EntryState\<close> carries no
+  \<^typ>\<open>solver_choice\<close>: entry-state analysis is fixed to the warrowing
+  solver internally (\<open>Interval_Exec_Ctx_Sound.thy\<close>),
+  the same reason an explicit \<open>--solver\<close> selection alongside
+  \<open>--context entry-state\<close> is rejected rather than silently accepted or
+  silently ignored.
+\<close>
+
+datatype analysis_plan =
+    Plan_Sign solver_choice
+  | Plan_Interval solver_choice
+  | Plan_Interval_EntryState
+  | Plan_Int solver_choice
+
+subsection \<open>Canonical resolver\<close>
+
+text \<open>
+  The one legality-and-defaults table this configuration has. Every other
+  question about an \<^type>\<open>analysis_config\<close> -- is it valid at all, what plan
+  does it resolve to -- is answered by consulting this function, never by a
+  second, independently maintained case split: \<open>valid_analysis_config\<close>
+  below is stated directly in terms of it, and any config-driven dispatch
+  wrapper built on top must go through \<open>resolve_analysis_config\<close>
+  rather than re-deciding legality itself.
+
+  Read by domain:
+
+  \<^item> \<open>Sign\<close>: \<open>Solver_Warrow\<close> is unsupported at every context (\<open>sign\<close> has no
+    \<open>widen\<close> instance, so nothing downstream of this resolver could execute
+    it even if accepted here); any context other than \<open>none\<close> is
+    unsupported (\<open>Analyse_Dispatch\<close> has no Sign entry-state branch).
+  \<^item> \<open>Interval\<close>: every solver is supported at \<open>Ctx_None\<close>, defaulting to
+    \<open>Solver_Warrow\<close>; at \<open>Ctx_EntryState\<close> only the implicit default
+    (\<open>cfg_solver = None\<close>) is supported, matching the CLI's unconditional
+    solver/context exclusion above.
+  \<^item> \<open>Int\<close>: every solver is supported at \<open>Ctx_None\<close>, defaulting to
+    \<open>Solver_Warrow\<close> (\<open>Int_Analysis\<close>'s own production default); no context
+    other than \<open>none\<close> is supported at all (\<open>Analyse_Dispatch\<close> has no Int
+    entry-state branch).
+\<close>
+
+fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan option" where
+  "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Sign Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Sign Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Sign Solver_PerOrigin)"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Interval Solver_Warrow)"
+| "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Interval s)"
+| "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_EntryState \<rparr>
+     = Some Plan_Interval_EntryState"
+| "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Int Solver_Warrow)"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Int s)"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+
+definition valid_analysis_config :: "analysis_config \<Rightarrow> bool" where
+  "valid_analysis_config cfg = (resolve_analysis_config cfg \<noteq> None)"
+
+subsection \<open>The resolver matrix, pinned\<close>
+
+text \<open>
+  Every currently-public combination and its resolution, as a regression
+  against the CLI's actual observable behavior rather than a restatement of
+  the equations above. \<open>Interval\<close> at \<open>Ctx_EntryState\<close> pins each of the
+  three explicit-solver rejections individually, not just one
+  representative: the CLI's solver/context exclusion is unconditional on
+  the solver value, and only pinning \<open>Solver_Join\<close> (say) would leave
+  \<open>Solver_Warrow\<close> -- the one value that happens to equal EntryState's own
+  internal default -- unpinned, exactly the case most likely to
+  accidentally become valid in a future edit.
+\<close>
+
+definition default_config :: "analysis_domain \<Rightarrow> context_mode \<Rightarrow> analysis_config" where
+  "default_config d c = mk_analysis_config d None c"
+
+lemma resolver_sign_default:
+  "resolve_analysis_config (default_config Sign_Analysis Ctx_None) = Some (Plan_Sign Solver_Join)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_interval_default:
+  "resolve_analysis_config (default_config Interval_Analysis Ctx_None) = Some (Plan_Interval Solver_Warrow)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_default:
+  "resolve_analysis_config (default_config Int_Analysis Ctx_None) = Some (Plan_Int Solver_Warrow)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_sign_warrow_invalid:
+  "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr> = None"
+  by simp
+
+lemma resolver_interval_entrystate_default_valid:
+  "resolve_analysis_config (default_config Interval_Analysis Ctx_EntryState) = Some Plan_Interval_EntryState"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_interval_entrystate_join_invalid:
+  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> = None"
+  by simp
+
+lemma resolver_interval_entrystate_per_origin_invalid:
+  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> = None"
+  by simp
+
+lemma resolver_interval_entrystate_warrow_invalid:
+  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> = None"
+  by simp
+
+lemma resolver_sign_entrystate_invalid:
+  "resolve_analysis_config (default_config Sign_Analysis Ctx_EntryState) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_entrystate_invalid:
+  "resolve_analysis_config (default_config Int_Analysis Ctx_EntryState) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+
+
+lemma valid_analysis_config_eq_resolver:
+  "valid_analysis_config cfg \<longleftrightarrow> resolve_analysis_config cfg \<noteq> None"
+  by (simp add: valid_analysis_config_def)
+
+end
+

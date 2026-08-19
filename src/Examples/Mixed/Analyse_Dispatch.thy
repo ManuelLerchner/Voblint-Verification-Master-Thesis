@@ -4,6 +4,7 @@ theory Analyse_Dispatch
     Example_Interval_Codegen
     Example_Int_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
+    Voblint_Analysis.Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
@@ -40,9 +41,7 @@ text \<open>
   swap for callers, not a precision or soundness downgrade.
 \<close>
 
-datatype analysis_kind = Sign_Analysis | Interval_Analysis | Int_Analysis
-
-fun analyse :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+fun analyse :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
 | "analyse Int_Analysis p = analyse_int_report p"
@@ -76,10 +75,8 @@ text \<open>
   unreachability flag, not from this dispatcher.
 \<close>
 
-datatype context_mode = Ctx_None | Ctx_EntryState
-
 fun analyse_ctx ::
-    "analysis_kind \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option"
+    "analysis_domain \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option"
 where
   "analyse_ctx Sign_Analysis Ctx_None p = Some (decided_report (analyse_sign_report p))"
 | "analyse_ctx Interval_Analysis Ctx_None p = Some (decided_report (analyse_interval_td_report p))"
@@ -120,7 +117,7 @@ text \<open>
   \<open>Solver_Warrow\<close> production route, so unlike Sign it has no type-level gap
   left on this axis: all three \<open>int_dom\<close> pairings are supported, leaving
   \<open>Sign_Analysis\<close>/\<open>Solver_Warrow\<close> the sole remaining \<open>None\<close> among the nine
-  \<open>analysis_kind \<times> solver_choice\<close> combinations.
+  \<open>analysis_domain \<times> solver_choice\<close> combinations.
 
   Each domain's own production default is exactly one of these pairings
   (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>,
@@ -144,10 +141,8 @@ text \<open>
   precision, is therefore the axis on which this choice is observable.
 \<close>
 
-datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
-
 fun analyse_with_solver ::
-    "analysis_kind \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
+    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
   "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse_sign_report p)"
 | "analyse_with_solver Sign_Analysis Solver_PerOrigin p = Some (analyse_sign_report_per_origin p)"
 | "analyse_with_solver Sign_Analysis Solver_Warrow p = None"
@@ -188,7 +183,7 @@ text \<open>
 datatype abstract_value = SignValue sign | IntervalValue ivl | IntDomValue int_dom
 
 fun analyse_with_state ::
-    "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
   "analyse_with_state Sign_Analysis p =
      map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
 | "analyse_with_state Interval_Analysis p =
@@ -369,6 +364,146 @@ text \<open>
   without decoding it --- both stay available, not a replacement report type.
 \<close>
 
+section \<open>Config-driven dispatch\<close>
+
+text \<open>
+  \<^const>\<open>analyse\<close>/\<^const>\<open>analyse_ctx\<close>/\<^const>\<open>analyse_with_solver\<close>/
+  \<^const>\<open>analyse_with_state\<close> above each decide legality over exactly two of
+  \<^type>\<open>analysis_config\<close>'s three axes at a time (domain+solver, domain+context,
+  ...) and stay the lower-level, typed entry points every consumer keeps
+  using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_Config\<close>)
+  is the one place all three axes' legality and defaults are decided
+  together; the three wrappers below each consume its \<^type>\<open>analysis_plan\<close>
+  result and pick the one existing dispatcher call that already produces
+  their report shape, rather than re-deciding legality or re-implementing
+  a domain/solver/context case split of their own. None of the three
+  existing report shapes below is replaced by a fourth, artificially
+  unified one: \<open>check_report_entry list\<close>, \<open>(pp \<times> exp \<times> contextual_verdict)
+  list\<close>, and the \<^typ>\<open>abstract_value abs_state\<close>-carrying report genuinely
+  differ, and forcing one shape on all three would either lose the
+  \<^const>\<open>Dead\<close> distinction the contextual report exists for, or fabricate a
+  per-variable state no flat report has ever carried.
+\<close>
+
+definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
+  "analyse_config cfg p =
+     (case resolve_analysis_config cfg of
+        None \<Rightarrow> None
+      | Some (Plan_Sign s) \<Rightarrow> analyse_with_solver Sign_Analysis s p
+      | Some (Plan_Interval s) \<Rightarrow> analyse_with_solver Interval_Analysis s p
+      | Some (Plan_Int s) \<Rightarrow> analyse_with_solver Int_Analysis s p
+      | Some Plan_Interval_EntryState \<Rightarrow> None)"
+
+text \<open>
+  \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
+  analysis has no flat, context-free \<open>check_report_entry list\<close> in the first
+  place (a check can be \<^const>\<open>Dead\<close> in one context and decided in another,
+  which \<^typ>\<open>check_result\<close> alone cannot express) -- \<open>analyse_config_ctx\<close>
+  below is the wrapper a caller with an \<^type>\<open>analysis_plan\<close> resolving there
+  should use instead, not a degraded flat view of the same result.
+\<close>
+
+definition analyse_config_ctx ::
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option" where
+  "analyse_config_ctx cfg p =
+     (case resolve_analysis_config cfg of
+        None \<Rightarrow> None
+      | Some Plan_Interval_EntryState \<Rightarrow> analyse_ctx Interval_Analysis Ctx_EntryState p
+      | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
+      | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
+      | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p))"
+
+text \<open>
+  \<^const>\<open>analyse_with_state\<close> carries no solver or context parameter of its own
+  -- every branch reads that domain's own hardcoded production solver, the
+  same one \<^const>\<open>resolve_analysis_config\<close> already picks as each domain's
+  default. This wrapper is therefore \<^const>\<open>Some\<close> exactly at the three
+  default-solver, context-free plans, and \<^const>\<open>None\<close> everywhere else --
+  an explicit non-default solver or \<open>Ctx_EntryState\<close> selection has no
+  state-carrying report to answer with, not a silently degraded one.
+\<close>
+
+fun analyse_config_with_state ::
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
+where
+  "analyse_config_with_state cfg p =
+     (case resolve_analysis_config cfg of
+        Some (Plan_Sign Solver_Join) \<Rightarrow> Some (analyse_with_state Sign_Analysis p)
+      | Some (Plan_Interval Solver_Warrow) \<Rightarrow> Some (analyse_with_state Interval_Analysis p)
+      | Some (Plan_Int Solver_Warrow) \<Rightarrow> Some (analyse_with_state Int_Analysis p)
+      | _ \<Rightarrow> None)"
+
+subsection \<open>Config-driven dispatch agrees with each existing typed entry point\<close>
+
+text \<open>
+  The regression pattern \<open>new_dispatch cfg p = old_entry_point p\<close> at every
+  currently-public configuration: config-driven dispatch is a routing
+  layer over the untouched existing dispatchers, never a reimplementation
+  that could silently drift from what the CLI already exercises.
+\<close>
+
+lemma analyse_config_sign_default:
+  "analyse_config (default_config Sign_Analysis Ctx_None) p = Some (analyse Sign_Analysis p)"
+  by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_interval_default:
+  "analyse_config (default_config Interval_Analysis Ctx_None) p = Some (analyse Interval_Analysis p)"
+  by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_int_default:
+  "analyse_config (default_config Int_Analysis Ctx_None) p = Some (analyse Int_Analysis p)"
+  by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_interval_entrystate:
+  "analyse_config_ctx (default_config Interval_Analysis Ctx_EntryState) p
+     = analyse_ctx Interval_Analysis Ctx_EntryState p"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_interval_entrystate_explicit_join_invalid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_interval_entrystate_explicit_per_origin_invalid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> p = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_interval_entrystate_explicit_warrow_invalid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_sign_entrystate_invalid:
+  "analyse_config_ctx (default_config Sign_Analysis Ctx_EntryState) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_int_entrystate_invalid:
+  "analyse_config_ctx (default_config Int_Analysis Ctx_EntryState) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_with_state_sign_default:
+  "analyse_config_with_state (default_config Sign_Analysis Ctx_None) p = Some (analyse_with_state Sign_Analysis p)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma analyse_config_with_state_interval_default:
+  "analyse_config_with_state (default_config Interval_Analysis Ctx_None) p = Some (analyse_with_state Interval_Analysis p)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma analyse_config_with_state_int_default:
+  "analyse_config_with_state (default_config Int_Analysis Ctx_None) p = Some (analyse_with_state Int_Analysis p)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+
+
+text \<open>
+  \<open>Some Solver_Warrow\<close> alongside \<open>Ctx_EntryState\<close> is the case this migration
+  is most likely to accidentally make valid: \<open>Solver_Warrow\<close> is the exact
+  solver entry-state analysis already uses internally, so a resolver bug
+  that special-cased "does the explicit solver already match the implicit
+  one" would silently start accepting a combination the CLI has always
+  rejected. Pinned above at the \<^const>\<open>resolve_analysis_config\<close> level
+  (\<open>Analysis_Config.thy\<close>'s \<open>resolver_interval_entrystate_warrow_invalid\<close>) and
+  again here through the wrapper actually reachable from the CLI.
+\<close>
+
 text \<open>
   The codegen session imports this theory and uses the following
   \<open>code_identifier\<close> declaration to organize the generated OCaml. Without a
@@ -384,7 +519,7 @@ text \<open>
   OCaml's serializer emits one file per export regardless of
   \<open>module_name\<close>/\<open>code_identifier\<close>, so the remapping instead organizes that
   one file into nested \<open>module ... = struct ... end\<close> blocks: \<open>Analyse\<close> for
-  this theory's public facade (\<open>analysis_kind\<close>, \<open>analyse\<close> itself), and
+  this theory's public facade (\<open>analysis_domain\<close>, \<open>analyse\<close> itself), and
   \<open>Core\<close> for everything it is built from --- VIMP source AST and printing,
   CFG representation and compiler, the executable state substrate
   (\<open>Exec_St\<close>/\<open>Exec_Bridge\<close>, the generic domain interface), the generic

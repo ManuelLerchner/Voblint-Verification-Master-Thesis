@@ -10,6 +10,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     "Instances/Mixed"
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
+    "Instances/Dispatch"
   theories
     Sign_Lattice
     Sign_Arithmetic
@@ -69,5 +70,6 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Exec_DG_Bridge
     Analysis_GraphViz
     Rel_Order_Domain
+    Analysis_Config
   document_files
     "root.bib"

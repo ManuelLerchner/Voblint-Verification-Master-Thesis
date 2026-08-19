@@ -5,7 +5,12 @@
           grammar/vimp.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Analyse.analyse_with_state (Isabelle-generated)
+       -> Voblint_CLI.Analysis_Config.mk_analysis_config (one config value)
+       -> Voblint_CLI.Analyse.analyse_config/analyse_config_ctx/
+          analyse_config_with_state (Isabelle-generated; each consults
+          Analysis_Config.resolve_analysis_config, the single domain/solver/
+          context legality-and-defaults table, then dispatches to the
+          matching typed report function)
        -> proved analysis results, subject to the Isabelle theorem
           assumptions (solver termination and check reachability -- see
           Example_Analysis_Dispatch.thy's soundness corollaries)
@@ -256,7 +261,7 @@ type context_graph_mode = Collapsed | Expanded
 
 let () =
   let analysis = ref None in
-  let context = ref Voblint_CLI.Analyse.Ctx_None in
+  let context = ref Voblint_CLI.Analysis_Config.Ctx_None in
   let context_graph = ref Collapsed in
   let solver = ref None in
   let dot = ref false in
@@ -270,15 +275,15 @@ let () =
     | "--help" :: _ -> print_endline usage; exit 0
     | "--analysis" :: v :: rest ->
       (match v with
-       | "sign" -> analysis := Some Voblint_CLI.Analyse.Sign_Analysis
-       | "interval" -> analysis := Some Voblint_CLI.Analyse.Interval_Analysis
-       | "int" -> analysis := Some Voblint_CLI.Analyse.Int_Analysis
+       | "sign" -> analysis := Some Voblint_CLI.Analysis_Config.Sign_Analysis
+       | "interval" -> analysis := Some Voblint_CLI.Analysis_Config.Interval_Analysis
+       | "int" -> analysis := Some Voblint_CLI.Analysis_Config.Int_Analysis
        | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
       parse_args rest
     | "--context" :: v :: rest ->
       (match v with
-       | "none" -> context := Voblint_CLI.Analyse.Ctx_None
-       | "entry-state" -> context := Voblint_CLI.Analyse.Ctx_EntryState
+       | "none" -> context := Voblint_CLI.Analysis_Config.Ctx_None
+       | "entry-state" -> context := Voblint_CLI.Analysis_Config.Ctx_EntryState
        | _ -> prerr_endline ("unknown --context value: " ^ v); exit 1);
       parse_args rest
     | "--context-graph" :: v :: rest ->
@@ -289,9 +294,9 @@ let () =
       parse_args rest
     | "--solver" :: v :: rest ->
       (match v with
-       | "join" -> solver := Some Voblint_CLI.Analyse.Solver_Join
-       | "per-origin" -> solver := Some Voblint_CLI.Analyse.Solver_PerOrigin
-       | "warrow" -> solver := Some Voblint_CLI.Analyse.Solver_Warrow
+       | "join" -> solver := Some Voblint_CLI.Analysis_Config.Solver_Join
+       | "per-origin" -> solver := Some Voblint_CLI.Analysis_Config.Solver_PerOrigin
+       | "warrow" -> solver := Some Voblint_CLI.Analysis_Config.Solver_Warrow
        | _ -> prerr_endline ("unknown --solver value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest
@@ -335,36 +340,32 @@ let () =
     | Some k -> k
     | None -> prerr_endline "missing --analysis sign|interval"; prerr_endline usage; exit 1
   in
-  (* entry_state_{full_state,report}_{dot,graph_snapshot}_auto take no
-     analysis_kind: they are Interval-only by construction, the same
-     restriction analyse_ctx encodes for the text-report path (Ctx_EntryState
-     has no Sign branch). Checked once, up front, for every mode -- not just
-     the text path -- so an unsupported combination is a clear, static error
-     before the timeout-guarded analysis runs, never a silent Interval
-     substitution for a requested Sign report. *)
-  if !context <> Voblint_CLI.Analyse.Ctx_None && kind <> Voblint_CLI.Analyse.Interval_Analysis then begin
-    prerr_endline "voblint: unsupported --analysis/--context combination";
+  (* One analysis_config value, one legality gate (Analysis_Config.thy's
+     valid_analysis_config/resolve_analysis_config): every domain/solver/
+     context combination the CLI accepts or rejects is decided there, not by
+     a second, hand-maintained OCaml compatibility table. This subsumes what
+     used to be two separate checks here -- Sign/Int have no entry-state
+     branch, and an explicit --solver is unconditionally incompatible with
+     any --context other than none, even --solver warrow under
+     --context entry-state, which happens to name the same solver
+     entry-state analysis already uses internally. *)
+  let cfg = Voblint_CLI.Analysis_Config.mk_analysis_config kind !solver !context in
+  if not (Voblint_CLI.Analysis_Config.valid_analysis_config cfg) then begin
+    prerr_endline "voblint: unsupported --analysis/--context/--solver combination";
     exit 1
   end;
   (* expanded is meaningless without a context to expand -- reject rather than
      silently rendering the collapsed graph a bare --context-graph expanded
      might otherwise appear to have requested. *)
-  if !context_graph = Expanded && !context = Voblint_CLI.Analyse.Ctx_None then begin
+  if !context_graph = Expanded && !context = Voblint_CLI.Analysis_Config.Ctx_None then begin
     prerr_endline "voblint: --context-graph expanded requires --context entry-state";
     exit 1
   end;
-  (* --solver picks the vendored solver's update-rule discipline directly
-     (analyse_with_solver, Analyse_Dispatch.thy -- experiments/regression
-     comparisons, issue #131), bypassing analyse/analyse_ctx entirely. It has
-     no context dimension and produces the same flat check_report_entry list
-     analyse_ctx does, not a per-node state map, so it can't drive
-     --context/--dot/--dot-full/--graph-snapshot -- reject those combinations
-     statically rather than silently ignoring --solver or a requested
-     rendering. *)
-  if !solver <> None && !context <> Voblint_CLI.Analyse.Ctx_None then begin
-    prerr_endline "voblint: unsupported --context/--solver combination";
-    exit 1
-  end;
+  (* --solver's flat check_report_entry list has no per-node state map to
+     render, and entry_state_{full_state,report}_{dot,graph_snapshot}_auto
+     are Interval-only regardless of --solver -- this compatibility is about
+     report *shape* versus presentation, not analysis semantics, so it stays
+     a CLI-level check rather than moving into analysis_config's scope. *)
   if !solver <> None && (!dot || !dot_full || !graph_snapshot) then begin
     prerr_endline "voblint: --solver only supports the plain text report";
     exit 1
@@ -375,43 +376,42 @@ let () =
         Ok_graph
           (if !context_graph = Expanded then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
-           else if !context <> Voblint_CLI.Analyse.Ctx_None then
+           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
       else if !graph_snapshot then
         Ok_graph
           (if !context_graph = Expanded then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
-           else if !context <> Voblint_CLI.Analyse.Ctx_None then
+           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
       else if !dot_full then
         Ok_dot
           (if !context_graph = Expanded then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_dot_auto prog
-           else if !context <> Voblint_CLI.Analyse.Ctx_None then
+           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_dot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then
         Ok_dot
           (if !context_graph = Expanded then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_dot_auto prog
-           else if !context <> Voblint_CLI.Analyse.Ctx_None then
+           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_dot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
-      else if !context <> Voblint_CLI.Analyse.Ctx_None then
-        (match Voblint_CLI.Analyse.analyse_ctx kind !context prog with
+      else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
+        (match Voblint_CLI.Analyse.analyse_config_ctx cfg prog with
          | Some report -> Ok_text (render_ctx_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--context combination")
       else if !solver <> None then
-        (match Voblint_CLI.Analyse.analyse_with_solver kind (Option.get !solver) prog with
+        (match Voblint_CLI.Analyse.analyse_config cfg prog with
          | Some report -> Ok_text (render_flat_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--solver combination")
       else
-        Ok_text
-          (render_text_report
-             (Voblint_CLI.Analyse.analyse_with_state kind prog)
-             check_positions))
+        (match Voblint_CLI.Analyse.analyse_config_with_state cfg prog with
+         | Some report -> Ok_text (render_text_report report check_positions)
+         | None -> Unsupported_combo "unsupported --analysis combination"))
   with
   | Ok (Ok_text s) -> print_string s
   | Ok (Ok_dot s) -> print_string s
