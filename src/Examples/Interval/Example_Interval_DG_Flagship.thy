@@ -351,7 +351,8 @@ definition flagship_graph_config ::
   "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "flagship_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         scope_locals (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
@@ -370,7 +371,7 @@ definition flagship_graph_config ::
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
       source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog) []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where

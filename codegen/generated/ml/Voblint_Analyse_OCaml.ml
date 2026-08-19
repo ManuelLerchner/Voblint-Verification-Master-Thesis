@@ -47,24 +47,31 @@ module Core : sig
   val integer_of_int : int -> Z.t
   type num
   type 'a set
+  type 'a equal
   val comp : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
   type nat
   val nat_of_integer : Z.t -> nat
   val integer_of_nat : nat -> Z.t
+  type ('a, 'b) sum
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
     Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
     And of exp * exp | Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
+  type 'a semilattice_sup
   type sign
+  type 'a computable_domain
   type call_action = CallEdge of string option * string list * exp list
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
     EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
     | EA_Ret of exp option * string | EA_Check of exp
   type ivl
+  type ('a, 'b) dg_state
   val map : ('a -> 'b) -> 'a list -> 'b list
-  type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type 'a resolved_st_q
+  type 'a lifted
+  type gk
   type 'a int_dom_ext
   type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
     If of exp * com * com | While of exp * com |
@@ -75,6 +82,10 @@ module Core : sig
   type 'a cfg_ext
   type special_desc
   type refine_mode
+  type 'a point_state
+  type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type ('a, 'b) analysis_result
+  type contextual_verdict = Dead | Decided of check_result
   type 'a imp_prog_ext
   val cfg_entry : 'a cfg_ext -> cfg_node
   val char_of_integer : Z.t -> char
@@ -88,27 +99,65 @@ module Core : sig
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
+  val check_dead : ('a * contextual_verdict) set -> bool
+  val result_keys : ('a, 'b) analysis_result -> (cfg_node * 'a) set
+  val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
+  val is_reachable_point : 'a point_state -> bool
+  val lookup_context :
+    'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
+  val node_live_ex : 'a equal -> ('a, 'b) analysis_result -> cfg_node -> bool
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val normalize_point :
+    'a computable_domain ->
+      string list ->
+        (string -> bool) ->
+          'a resolved_st_q lifted -> (string -> 'a) point_state
+  val analyse_int_result :
+    unit imp_prog_ext -> (unit, (string -> unit int_dom_ext)) analysis_result
+  val decided_report :
+    (cfg_node * (exp * check_result)) list ->
+      (cfg_node * (exp * contextual_verdict)) list
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val analyse_sign_result :
+    unit imp_prog_ext -> (unit, (string -> sign)) analysis_result
   val string_of_exp : nat -> exp -> char list
+  val aggregate_verdicts : contextual_verdict set -> contextual_verdict
   val compile_program : unit imp_prog_ext -> unit cfg_ext
+  val lookup_joined_state :
+    'a equal -> 'b semilattice_sup ->
+      ('a, (string -> 'b)) analysis_result ->
+        cfg_node -> (string -> 'b) point_state
+  val verdict_check_result : contextual_verdict -> check_result
   val analyse_int_report_with_state :
     unit imp_prog_ext ->
       (cfg_node *
         (exp * (check_result * (bool * (string -> unit int_dom_ext))))) list
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val analyse_interval_td_result :
+    unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
   val analyse_sign_report_with_state :
     unit imp_prog_ext ->
       (cfg_node * (exp * (check_result * (bool * (string -> sign))))) list
+  val map_point_state : ('a -> 'b) -> 'a point_state -> 'b point_state
   val wf_program_compile_input_exec : unit imp_prog_ext -> bool
+  val analyse_interval_entry_state_result_for :
+    (string -> bool) ->
+      string ->
+        unit imp_prog_ext -> ((ivl list), (string -> ivl)) analysis_result
+  val entry_state_check_projection :
+    string ->
+      unit imp_prog_ext ->
+        (cfg_node * (exp * (ivl list * contextual_verdict) set)) list
   val analyse_interval_entry_state :
-    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
       (cfg_node * (exp * (check_result * (bool * (string -> ivl))))) list
+  val analyse_interval_entry_state_result :
+    unit imp_prog_ext -> ((ivl list), (string -> ivl)) analysis_result
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -2309,45 +2358,6 @@ let rec equal_gka
 
 let equal_gk = ({equal = equal_gka} : gk equal);;
 
-type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
-
-let rec equal_check_result
-  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
-    | Check_Unknown, Check_Refuted -> false
-    | Check_Proved, Check_Unknown -> false
-    | Check_Unknown, Check_Proved -> false
-    | Check_Proved, Check_Refuted -> false
-    | Check_Refuted, Check_Proved -> false
-    | Check_Unknown, Check_Unknown -> true
-    | Check_Refuted, Check_Refuted -> true
-    | Check_Proved, Check_Proved -> true;;
-
-let rec sup_check_resulta
-  x y = (if equal_check_result x y then x else Check_Unknown);;
-
-let sup_check_result = ({sup = sup_check_resulta} : check_result sup);;
-
-let rec less_eq_check_result
-  x y = equal_check_result x y || equal_check_result y Check_Unknown;;
-
-let rec less_check_result
-  x y = less_eq_check_result x y && not (less_eq_check_result y x);;
-
-let ord_check_result =
-  ({less_eq = less_eq_check_result; less = less_check_result} :
-    check_result ord);;
-
-let preorder_check_result =
-  ({ord_preorder = ord_check_result} : check_result preorder);;
-
-let order_check_result =
-  ({preorder_order = preorder_check_result} : check_result order);;
-
-let semilattice_sup_check_result =
-  ({sup_semilattice_sup = sup_check_result;
-     order_semilattice_sup = order_check_result}
-    : check_result semilattice_sup);;
-
 type congruence = Abs_congruence of (int * int) option;;
 
 let rec rep_congruence (Abs_congruence x) = x;;
@@ -2903,6 +2913,13 @@ type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
 type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
 
+type 'a point_state = Unreachable | Reachable of 'a;;
+
+type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
+
+type ('a, 'b) analysis_result =
+  Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state);;
+
 type analysis_event = Check_Event of exp;;
 
 type ('a, 'b, 'c) dg_spec_ext =
@@ -2916,6 +2933,8 @@ type ('a, 'b, 'c) dg_spec_ext =
       (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
+
+type contextual_verdict = Dead | Decided of check_result;;
 
 type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
@@ -2950,6 +2969,11 @@ let one_nat : nat = Nat (Z.of_int 1);;
 
 let rec suc n = plus_nat n one_nat;;
 
+let rec list_ex p x1 = match p, x1 with p, [] -> false
+                  | p, x :: xs -> p x || list_ex p xs;;
+
+let rec bex (Set xs) p = list_ex p xs;;
+
 let rec minus_nat
   m n = Nat (max ord_integer Z.zero
               (Z.sub (integer_of_nat m) (integer_of_nat n)));;
@@ -2963,6 +2987,8 @@ let rec nth
 let rec zip xs ys = match xs, ys with [], ys -> []
               | xs, [] -> []
               | x :: xs, y :: ys -> (x, y) :: zip xs ys;;
+
+let rec ball (Set xs) p = list_all p xs;;
 
 let rec image f (Set xs) = Set (map f xs);;
 
@@ -3010,9 +3036,6 @@ let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
 
 let rec bind x0 f = match x0, f with None, f -> None
                | Some x, f -> f x;;
-
-let rec list_ex p x1 = match p, x1 with p, [] -> false
-                  | p, x :: xs -> p x || list_ex p xs;;
 
 let rec remdups _A
   = function [] -> []
@@ -5609,6 +5632,26 @@ let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
 
+let rec equal_check_result
+  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
+    | Check_Unknown, Check_Refuted -> false
+    | Check_Proved, Check_Unknown -> false
+    | Check_Unknown, Check_Proved -> false
+    | Check_Proved, Check_Refuted -> false
+    | Check_Refuted, Check_Proved -> false
+    | Check_Unknown, Check_Unknown -> true
+    | Check_Refuted, Check_Refuted -> true
+    | Check_Proved, Check_Proved -> true;;
+
+let rec equal_contextual_verdict
+  x0 x1 = match x0, x1 with Dead, Decided x2 -> false
+    | Decided x2, Dead -> false
+    | Decided x2, Decided y2 -> equal_check_result x2 y2
+    | Dead, Dead -> true;;
+
+let rec check_dead
+  vs = ball vs (fun (_, v) -> equal_contextual_verdict v Dead);;
+
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
 
@@ -5814,6 +5857,12 @@ let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
                    | And (vh, vi) -> nat_of_integer (Z.of_int 40)
                    | Or (vj, vk) -> nat_of_integer (Z.of_int 30);;
 
+let rec result_keys (Analysis_Result (x1, x2)) = x1;;
+
+let rec contexts_at
+  r v = image snd
+          (filter (fun (va, _) -> equal_cfg_nodea va v) (result_keys r));;
+
 let rec char_of_nat x = comp char_of_integer integer_of_nat x;;
 
 let rec ea_check_cond (EA_Check x7) = x7;;
@@ -6018,6 +6067,20 @@ let rec fold_rhs_trees _A
               (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                 acc res)
               ts);;
+
+let rec is_reachable_point = function Unreachable -> false
+                             | Reachable uu -> true;;
+
+let rec result_at (Analysis_Result (x1, x2)) = x2;;
+
+let rec lookup_context _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
+      then result_at r v ctx else Unreachable);;
+
+let rec node_live_ex _A
+  r v = bex (contexts_at r v)
+          (fun ctx -> is_reachable_point (lookup_context _A r v ctx));;
 
 let rec result_proc (FunctionResult x3) = x3;;
 
@@ -6720,6 +6783,35 @@ let rec analyse_int_report_for
 let rec analyse_int_report
   p = analyse_int_report_for Refine_Fixpoint (declared_global p) p;;
 
+let rec normalize_point _A
+  gl gs x2 = match gl, gs, x2 with gl, gs, Bot -> Unreachable
+    | gl, gs, Lifted s ->
+        (if resolved_st_q_is_bot_for _A gl s then Unreachable
+          else Reachable
+                 (fun_of_resolved_st_q_for
+                   _A.bounded_semilattice_sup_bot_computable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                   gs s));;
+
+let rec analyse_int_result_for
+  gs p =
+    (let sol =
+       analyse_int_dg_for Refine_Fixpoint
+         (resolved_st_q_is_bot_for
+           (computable_domain_int_dom_ext
+             (equal_unit, int_dom_record_lattice_unit))
+           (declared_global_vars p))
+         gs p
+       in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point
+              (computable_domain_int_dom_ext
+                (equal_unit, int_dom_record_lattice_unit))
+              (declared_global_vars p) gs (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec analyse_int_result p = analyse_int_result_for (declared_global p) p;;
+
 let rec routed_extra_g _C _D
   seed_key gk0 route ctx v =
     (match v with Statement _ -> []
@@ -6731,9 +6823,17 @@ let rec routed_extra_g _C _D
                      bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))]
       | FunctionResult _ -> []);;
 
+let rec classify_point
+  classify c x2 = match classify, c, x2 with classify, c, Unreachable -> Dead
+    | classify, c, Reachable st -> Decided (classify c st);;
+
+let rec decided_report x = map (fun (u, (cnd, r)) -> (u, (cnd, Decided r))) x;;
+
 let rec formals_context pars d = map d pars;;
 
-let rec fun_of_dg_st_gen floc fglob d = DG (floc (locals d), fglob (globs d));;
+let rec join_point_with j x1 y = match j, x1, y with j, Unreachable, y -> y
+                          | j, Reachable v, Unreachable -> Reachable v
+                          | j, Reachable a, Reachable b -> Reachable (j a b);;
 
 let rec update_global_always_join (_A1, _A2) _B _C
   da orig g d state =
@@ -6934,6 +7034,22 @@ let rec analyse_sign_report_for
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
+let rec analyse_sign_result_for
+  gs p =
+    (let sol =
+       analyse_sign_for
+         (resolved_st_q_is_bot_for computable_domain_sign
+           (declared_global_vars p))
+         gs p
+       in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point computable_domain_sign (declared_global_vars p) gs
+              (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec analyse_sign_result p = analyse_sign_result_for (declared_global p) p;;
+
 let rec modulo_nat
   m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));;
 
@@ -6983,6 +7099,15 @@ let rec string_of_exp
       (if less_nat (exp_prio e) min_prio then [char_0x28] @ body @ [char_0x29]
         else body));;
 
+let rec join_abs_state_with j a b = (fun x -> j (a x) (b x));;
+
+let rec join_states_over _B
+  g (Set cs) =
+    fold (fun ctx ->
+           join_point_with (join_abs_state_with (sup _B.sup_semilattice_sup))
+             (g ctx))
+      cs Unreachable;;
+
 let rec ectx_spec
   gs is_bot_pred =
     base_dg_spec_st_for_lifted bounded_semilattice_sup_bot_ivl
@@ -6990,8 +7115,35 @@ let rec ectx_spec
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
 
+let rec sup_check_result
+  x y = (if equal_check_result x y then x else Check_Unknown);;
+
+let rec sup_contextual_verdict
+  x0 y = match x0, y with Dead, y -> y
+    | Decided v, Dead -> Decided v
+    | Decided a, Decided b -> Decided (sup_check_result a b);;
+
+let rec aggregate_verdicts (Set vs) = fold sup_contextual_verdict vs Dead;;
+
 let rec compile_program
   p = compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p);;
+
+let rec classify_checks_ctx _A
+  g r classify =
+    map_filter
+      (fun x ->
+        (if (let (_, (a, _)) = x in is_EA_Check a)
+          then Some (let (u, (a, _)) = x in
+                      (u, (ea_check_cond a,
+                            image (fun ctx ->
+                                    (ctx, classify_point classify
+    (ea_check_cond a) (lookup_context _A r u ctx)))
+                              (contexts_at r u))))
+          else None))
+      (cfg_intra_list g);;
+
+let rec lookup_joined_state _A _B
+  r v = join_states_over _B (lookup_context _A r v) (contexts_at r v);;
 
 let rec interval_check_true
   x0 d = match x0, d with Not b, d -> interval_check_false b d
@@ -7024,6 +7176,9 @@ and interval_check_false
     | Times (v, va), d ->
         interval_eq_true (aval_ivl (Times (v, va)) d)
           (aval_ivl (N zero_inta) d);;
+
+let rec verdict_check_result = function Dead -> Check_Unknown
+                               | Decided r -> r;;
 
 let rec dg_edge_contribution_tree _A _B
   step u =
@@ -7282,6 +7437,23 @@ let rec analyse_interval_td_report_for
 let rec analyse_interval_td_report
   p = analyse_interval_td_report_for (declared_global p) p;;
 
+let rec analyse_interval_td_result_for
+  gs p =
+    (let sol =
+       analyse_interval_dg_for
+         (resolved_st_q_is_bot_for computable_domain_ivl
+           (declared_global_vars p))
+         gs p
+       in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point computable_domain_ivl (declared_global_vars p) gs
+              (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec analyse_interval_td_result
+  p = analyse_interval_td_result_for (declared_global p) p;;
+
 let rec analyse_sign_report_for_with_state
   gs p =
     (let sol =
@@ -7302,23 +7474,14 @@ let rec analyse_sign_report_for_with_state
 let rec analyse_sign_report_with_state
   p = analyse_sign_report_for_with_state (declared_global p) p;;
 
-let rec entry_state_classify_at
-  v cnd reachable_keys sg =
-    (let ctxs =
-       image snd (filter (fun (va, _) -> equal_cfg_nodea va v) reachable_keys)
-       in
-     let unlift =
-       comp (fun a ->
-              (match a with Bot -> bot_fun bot_ivl | Lifted sigma -> sigma))
-         sg
-       in
-      (if equal_set (equal_list equal_ivl) ctxs bot_set
-        then interval_classify_check cnd (unlift (Inl (v, [])))
-        else sup_fin semilattice_sup_check_result
-               (image
-                 (fun ctx ->
-                   interval_classify_check cnd (unlift (Inl (v, ctx))))
-                 ctxs)));;
+let rec map_point_state f x1 = match f, x1 with f, Unreachable -> Unreachable
+                          | f, Reachable x2 -> Reachable (f x2);;
+
+let rec entry_state_sol_prog
+  gs mnm p =
+    entry_state_sol gs
+      (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
+      (prog_table p) (prog_procs p) mnm (prog_main p);;
 
 let rec wf_program_compile_input_exec
   p = (let procs = proc_rep p in
@@ -7337,46 +7500,28 @@ let rec wf_program_compile_input_exec
                         list_all (fun (q, _) -> is_none (special_table q))
                           procs))))))));;
 
-let rec entry_state_sigma_abs_exec_from_sol
-  gs sol_sigma =
-    comp (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for bot_ivl gs))
-           (map_lift (fun_of_resolved_st_q_for bot_ivl gs)))
-      sol_sigma;;
+let rec analyse_interval_entry_state_result_for
+  gs mnm p =
+    (let sol = entry_state_sol_prog gs mnm p in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point computable_domain_ivl (declared_global_vars p) gs
+              (locals (snd sol (Inl (v, ctx)))))));;
 
-let rec entry_state_sg_exec_from_sol
-  gs sol k =
-    (match k
-      with Inl (v, ctx) ->
-        (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
-              (fst sol)
-          then locals
-                 (entry_state_sigma_abs_exec_from_sol gs (snd sol)
-                   (Inl (v, ctx)))
-          else Bot)
-      | Inr _ -> Bot);;
-
-let rec entry_state_check_report
-  gs is_bot_pred pi ps mnm main =
-    (let sol = entry_state_sol gs is_bot_pred pi ps mnm main in
-     let sg = entry_state_sg_exec_from_sol gs sol in
-      map_filter
-        (fun x ->
-          (if (let (_, (a, _)) = x in is_EA_Check a)
-            then Some (let (u, (a, _)) = x in
-                        (u, (ea_check_cond a,
-                              entry_state_classify_at u (ea_check_cond a)
-                                (fst sol) sg)))
-            else None))
-        (cfg_intra_list (compile_prog pi ps mnm main)));;
-
-let rec entry_state_check_report_prog
+let rec entry_state_check_projection
   mnm p =
-    entry_state_check_report (declared_global p)
-      (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+    classify_checks_ctx (equal_list equal_ivl) (prog_cfg mnm p)
+      (analyse_interval_entry_state_result_for (declared_global p) mnm p)
+      interval_classify_check;;
+
+let rec entry_state_verdict_report_prog
+  mnm p =
+    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+      (entry_state_check_projection mnm p);;
 
 let rec analyse_interval_entry_state
-  p = entry_state_check_report_prog prog_main_name p;;
+  p = entry_state_verdict_report_prog prog_main_name p;;
 
 let rec analyse_interval_td_report_for_with_state
   gs p =
@@ -7398,6 +7543,10 @@ let rec analyse_interval_td_report_for_with_state
 let rec analyse_interval_td_report_with_state
   p = analyse_interval_td_report_for_with_state (declared_global p) p;;
 
+let rec analyse_interval_entry_state_result
+  p = analyse_interval_entry_state_result_for (declared_global p) prog_main_name
+        p;;
+
 end;; (*struct Core*)
 
 module Analyse : sig
@@ -7413,7 +7562,7 @@ module Analyse : sig
     analysis_kind ->
       context_mode ->
         unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
+          ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
   val analyse_with_state :
     analysis_kind ->
       unit Core.imp_prog_ext ->
@@ -7436,12 +7585,15 @@ let rec analyse
 
 let rec analyse_ctx
   x0 x1 p = match x0, x1, p with
-    Sign_Analysis, Ctx_None, p -> Some (Core.analyse_sign_report p)
-    | Interval_Analysis, Ctx_None, p -> Some (Core.analyse_interval_td_report p)
+    Sign_Analysis, Ctx_None, p ->
+      Some (Core.decided_report (Core.analyse_sign_report p))
+    | Interval_Analysis, Ctx_None, p ->
+        Some (Core.decided_report (Core.analyse_interval_td_report p))
     | Interval_Analysis, Ctx_EntryState, p ->
         Some (Core.analyse_interval_entry_state p)
     | Sign_Analysis, Ctx_EntryState, p -> None
-    | Int_Analysis, Ctx_None, p -> Some (Core.analyse_int_report p)
+    | Int_Analysis, Ctx_None, p ->
+        Some (Core.decided_report (Core.analyse_int_report p))
     | Int_Analysis, Ctx_EntryState, p -> None;;
 
 let rec analyse_with_state

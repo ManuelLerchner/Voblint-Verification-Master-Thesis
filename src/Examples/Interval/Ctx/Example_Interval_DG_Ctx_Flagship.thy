@@ -161,7 +161,8 @@ definition twice_ctx_graph_config ::
      analysis_graph_config" where
   "twice_ctx_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ ctx action d. entry_state_route twice_gs twice_is_bot_pred d action),
+      route = (\<lambda>_ ctx action d. Some (entry_state_route twice_gs twice_is_bot_pred d action)),
+      context_key = String.implode o (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
@@ -185,7 +186,7 @@ definition twice_ctx_graph_config ::
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / context='' @ concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list list" where

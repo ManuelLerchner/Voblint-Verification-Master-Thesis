@@ -27,6 +27,7 @@ export_code
   N V Plus Minus Times
   exp.Not And Or Less exp.Eq
   Check_Proved Check_Refuted Check_Unknown
+  Dead Decided
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char

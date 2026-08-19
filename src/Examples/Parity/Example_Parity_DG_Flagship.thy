@@ -301,7 +301,8 @@ definition parity_graph_config ::
   "(unit, unit, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state, parity exec_dg_st lifted) analysis_graph_config" where
   "parity_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         scope_locals (compiled_procedure_scope parity_gs parity_pi [] (STR ''main'') parity_prog
@@ -321,7 +322,7 @@ definition parity_graph_config ::
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
       source_text = Some (pretty_string_of_program parity_pi [] parity_prog []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition parity_graph_domain :: "(pp \<times> unit + unit) list" where

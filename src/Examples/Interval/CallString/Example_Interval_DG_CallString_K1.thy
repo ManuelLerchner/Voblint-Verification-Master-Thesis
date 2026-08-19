@@ -692,7 +692,9 @@ definition nest_1_graph_config ::
      analysis_graph_config" where
   "nest_1_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>u ctx action d. cs_route 1 u ctx d action),
+      route = (\<lambda>u ctx action d. Some (cs_route 1 u ctx d action)),
+      context_key = String.implode o
+        (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
@@ -716,7 +718,7 @@ definition nest_1_graph_config ::
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       source_text = Some (pretty_string_of_program nest_pi nest_procs nest_main []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition nest_1_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where

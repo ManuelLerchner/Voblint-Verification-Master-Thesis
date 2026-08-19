@@ -1,6 +1,6 @@
 theory Interval_Checks
   imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
-    Interval_Exec_Sound
+    "Voblint_Core.Analysis_Result" Interval_Exec_Sound
 begin
 
 hide_const phase.N
@@ -339,5 +339,49 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 definition analyse_interval_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_per_origin p =
      analyse_interval_report_per_origin_for (declared_global p) p"
+
+subsection \<open>Solved-result table\<close>
+
+text \<open>
+  The same solved D/G system as \<^const>\<open>analyse_interval_td_report_for\<close>, read
+  as a \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close> instead of as a check
+  report, mirroring \<open>Sign_Checks\<close>'s own \<open>analyse_sign_result_for\<close>: the
+  covered local keys the solver already returns as the first component, and
+  \<^const>\<open>normalize_point\<close> applied to each local unknown. Monovariant, so the
+  context type is \<^typ>\<open>unit\<close>; only \<open>Inl\<close>-shaped local keys are covered, never
+  the solver's own \<open>Inr\<close> global unknown.
+
+  The \<open>[code]\<close> rewrite is the same single-solve fix as
+  \<open>analyse_interval_td_report_for_code\<close>: binding \<open>sol\<close> once outside the
+  per-key closure compiles to a single shared thunk, so a lookup never
+  re-solves.
+\<close>
+
+definition analyse_interval_td_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_td_result_for gs p =
+     Analysis_Result
+       (fst (analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p))
+       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                  (locals (snd (analyse_interval_dg_for
+                                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+                             (Inl (v, ctx)))))"
+
+declare analyse_interval_td_result_for_def [code del]
+
+lemma analyse_interval_td_result_for_code [code]:
+  "analyse_interval_td_result_for gs p =
+     (let sol = analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                      (locals (snd sol (Inl (v, ctx))))))"
+  unfolding analyse_interval_td_result_for_def Let_def by (rule refl)
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_interval_td_report\<close>'s shape.\<close>
+
+definition analyse_interval_td_result ::
+    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_td_result p = analyse_interval_td_result_for (declared_global p) p"
 
 end

@@ -121,10 +121,10 @@ text \<open>Final acceptance value: the production check-report pipeline end to 
   branch never leaking into \<open>FunctionResult\<close>'s join.\<close>
 lemma fact_analyse_interval_entry_state:
   "analyse_interval_entry_state fact_prog =
-     [(Statement 0, Less (exp.N 0) (V (STR ''n'')), Check_Proved),
-      (Statement 4, Less (exp.N 0) (V (STR ''r'')), Check_Proved),
-      (Statement 9, exp.Eq (V (STR ''a'')) (exp.N 6), Check_Proved),
-      (Statement 10, exp.Eq (V (STR ''b'')) (exp.N 24), Check_Proved)]"
+     [(Statement 0, Less (exp.N 0) (V (STR ''n'')), Decided Check_Proved),
+      (Statement 4, Less (exp.N 0) (V (STR ''r'')), Decided Check_Proved),
+      (Statement 9, exp.Eq (V (STR ''a'')) (exp.N 6), Decided Check_Proved),
+      (Statement 10, exp.Eq (V (STR ''b'')) (exp.N 24), Decided Check_Proved)]"
   by eval
 
 end

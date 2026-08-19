@@ -55,6 +55,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_DG_EntryState_Base
     Example_Interval_DG_EntryState_Ctx
     Example_Interval_DG_EntryState_Collect
+    Example_Interval_DG_EntryState_Result_Regression
+    Example_Interval_DG_EntryState_Dead_Check_Regression
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
     Call_String_Solver_Refinement_Seeded
@@ -86,6 +88,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Min_Max_Regression
     Example_Solver_Choice_Regression
     Example_Int_Refinement_Mode_Regression
+    Example_Analysis_Result_Regression
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo
@@ -95,6 +98,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Proc_GraphViz_Recursion
     Example_Mixed_Sign_Interval_GraphViz
     Example_State_Report_GraphViz
+    Example_EntryState_GraphViz_Regression
 
     Voblint
   document_files

@@ -114,7 +114,6 @@ module Core : sig
   val equal_prod : 'a equal -> 'b equal -> ('a * 'b) equal
   val equal_unit : unit equal
   type 'a sup
-  type 'a bot
   type 'a order_top
   type 'a semilattice_sup
   type 'a bounded_semilattice_sup_bot
@@ -135,7 +134,6 @@ module Core : sig
   type eint = MinInf | Fin of int | PlusInf
   type ivl = Ivl of eint * eint
   val equal_ivl : ivl equal
-  val bot_ivl : ivl bot
   val semilattice_sup_ivl : ivl semilattice_sup
   val is_bot_ivl : ivl -> bool
   val computable_domain_ivl : ivl computable_domain
@@ -143,9 +141,8 @@ module Core : sig
   val list_all : ('a -> bool) -> 'a list -> bool
   val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
-  type 'a lifted = Bot | Lifted of 'a
+  type 'a lifted
   type gk
-  type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type congruence
   val rep_congruence : congruence -> (int * int) option
   type parity = PBot | PEven | POdd | PTop
@@ -163,12 +160,16 @@ module Core : sig
     Unwind
   type 'a proc_decl_ext
   type 'a cfg_ext
-  type ('a, 'b, 'c) strategy_tree
   type special_desc
   type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint
+  type 'a point_state = Unreachable | Reachable of 'a
+  type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type ('a, 'b) analysis_result
+  type contextual_verdict = Dead | Decided of check_result
   type 'a imp_prog_ext
   val id : 'a -> 'a
   val suc : nat -> nat
+  val list_ex : ('a -> bool) -> 'a list -> bool
   val zero_nat : nat
   val rev : 'a list -> 'a list
   val find : ('a -> bool) -> 'a list -> 'a option
@@ -176,19 +177,15 @@ module Core : sig
   val null : 'a list -> bool
   val image : ('a -> 'b) -> 'a set -> 'b set
   val filtera : ('a -> bool) -> 'a list -> 'a list
-  val filter : ('a -> bool) -> 'a set -> 'a set
   val membera : 'a equal -> 'a list -> 'a -> bool
-  val list_ex : ('a -> bool) -> 'a list -> bool
   val remdups : 'a equal -> 'a list -> 'a list
   val distinct : 'a equal -> 'a list -> bool
   val implode : char list -> string
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val ret_var : string
   val cfg_entry : 'a cfg_ext -> cfg_node
-  val bot_set : 'a set
   val sup_seta : 'a equal -> 'a set set -> 'a set
   val exp_vnames : exp -> string set
-  val sup_fin : 'a semilattice_sup -> 'a set -> 'a
   val char_of_integer : Z.t -> char
   val explode : string -> char list
   val proc_decl_of : string list -> com -> unit proc_decl_ext
@@ -209,6 +206,9 @@ module Core : sig
   val prog_procs : unit imp_prog_ext -> string list
   val declared_global_vars : 'a imp_prog_ext -> string list
   val declared_global : unit imp_prog_ext -> string -> bool
+  val check_dead : ('a * contextual_verdict) set -> bool
+  val result_keys : ('a, 'b) analysis_result -> (cfg_node * 'a) set
+  val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
   val compile_proc :
     (string -> unit proc_decl_ext option) ->
       string ->
@@ -219,7 +219,12 @@ module Core : sig
   val compile_prog :
     (string -> unit proc_decl_ext option) ->
       string list -> string -> com -> unit cfg_ext
+  val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
   val char_0x0A : char
+  val is_reachable_point : 'a point_state -> bool
+  val lookup_context :
+    'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
+  val node_live_ex : 'a equal -> ('a, 'b) analysis_result -> cfg_node -> bool
   val char_0x20 : char
   val char_0x21 : char
   val char_0x22 : char
@@ -295,20 +300,36 @@ module Core : sig
   val char_0x7A : char
   val char_0x7B : char
   val char_0x7D : char
-  val equal_set : 'a equal -> 'a set -> 'a set -> bool
   val resolved_st_q_is_bot_for :
     'a computable_domain -> string list -> 'a resolved_st_q -> bool
-  val bot_fun : 'b bot -> 'a -> 'b
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val normalize_point :
+    'a computable_domain ->
+      string list ->
+        (string -> bool) ->
+          'a resolved_st_q lifted -> (string -> 'a) point_state
+  val analyse_int_result :
+    unit imp_prog_ext -> (unit, (string -> unit int_dom_ext)) analysis_result
   val join_source : char list -> (char list) list -> char list
+  val decided_report :
+    (cfg_node * (exp * check_result)) list ->
+      (cfg_node * (exp * contextual_verdict)) list
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val analyse_sign_result :
+    unit imp_prog_ext -> (unit, (string -> sign)) analysis_result
   val scope_vnames_list : unit imp_prog_ext -> string -> string list
   val string_of_nat : nat -> char list
   val string_of_exp : nat -> exp -> char list
+  val aggregate_verdicts : contextual_verdict set -> contextual_verdict
   val analyse_int_report_join :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val lookup_joined_state :
+    'a equal -> 'b semilattice_sup ->
+      ('a, (string -> 'b)) analysis_result ->
+        cfg_node -> (string -> 'b) point_state
+  val verdict_check_result : contextual_verdict -> check_result
   val analyse_sign_env_for :
     (sign resolved_st_q -> bool) ->
       (string -> bool) -> unit imp_prog_ext -> cfg_node -> string -> sign
@@ -317,19 +338,15 @@ module Core : sig
       (unit int_dom_ext resolved_st_q -> bool) ->
         (string -> bool) ->
           unit imp_prog_ext -> cfg_node -> string -> unit int_dom_ext
+  val interval_classify_check : exp -> (string -> ivl) -> check_result
   val analyse_interval_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
-  val entry_state_sol :
-    (string -> bool) ->
-      (ivl resolved_st_q -> bool) ->
-        (string -> unit proc_decl_ext option) ->
-          string list ->
-            string ->
-              com ->
-                (cfg_node * ivl list) set *
-                  (((cfg_node * ivl list), gk) sum ->
-                    (ivl resolved_st_q lifted, ivl resolved_st_q lifted)
-                      dg_state)
+  val classify_checks_verdicts :
+    'a equal ->
+      unit cfg_ext ->
+        ('a, 'b) analysis_result ->
+          (exp -> 'b -> check_result) ->
+            (cfg_node * (exp * contextual_verdict)) list
   val analyse_int_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_report_with_state :
@@ -338,6 +355,8 @@ module Core : sig
         (exp * (check_result * (bool * (string -> unit int_dom_ext))))) list
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val analyse_interval_td_result :
+    unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
   val analyse_sign_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_report_with_state :
@@ -346,25 +365,28 @@ module Core : sig
   val pretty_string_of_program :
     (string -> unit proc_decl_ext option) ->
       string list -> com -> string list -> char list
+  val map_point_state : ('a -> 'b) -> 'a point_state -> 'b point_state
   val analyse_interval_dg_env_for :
     (ivl resolved_st_q -> bool) ->
       (string -> bool) -> unit imp_prog_ext -> cfg_node -> string -> ivl
   val wf_program_compile_input_exec : unit imp_prog_ext -> bool
-  val entry_state_sg_exec_from_sol :
-    (string -> bool) ->
-      (cfg_node * ivl list) set *
-        (((cfg_node * ivl list), gk) sum ->
-          (ivl resolved_st_q lifted, ivl resolved_st_q lifted) dg_state) ->
-        ((cfg_node * ivl list), gk) sum -> (string -> ivl) lifted
   val analyse_interval_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
-  val entry_state_check_report_prog :
-    string -> unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val analyse_interval_entry_state_result_for :
+    (string -> bool) ->
+      string ->
+        unit imp_prog_ext -> ((ivl list), (string -> ivl)) analysis_result
+  val entry_state_check_projection :
+    string ->
+      unit imp_prog_ext ->
+        (cfg_node * (exp * (ivl list * contextual_verdict) set)) list
   val analyse_interval_entry_state :
-    unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+    unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
   val analyse_interval_td_report_with_state :
     unit imp_prog_ext ->
       (cfg_node * (exp * (check_result * (bool * (string -> ivl))))) list
+  val analyse_interval_entry_state_result :
+    unit imp_prog_ext -> ((ivl list), (string -> ivl)) analysis_result
 end = struct
 
 type int = Int_of_integer of Z.t;;
@@ -2573,45 +2595,6 @@ let rec equal_gka
 
 let equal_gk = ({equal = equal_gka} : gk equal);;
 
-type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
-
-let rec equal_check_result
-  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
-    | Check_Unknown, Check_Refuted -> false
-    | Check_Proved, Check_Unknown -> false
-    | Check_Unknown, Check_Proved -> false
-    | Check_Proved, Check_Refuted -> false
-    | Check_Refuted, Check_Proved -> false
-    | Check_Unknown, Check_Unknown -> true
-    | Check_Refuted, Check_Refuted -> true
-    | Check_Proved, Check_Proved -> true;;
-
-let rec sup_check_resulta
-  x y = (if equal_check_result x y then x else Check_Unknown);;
-
-let sup_check_result = ({sup = sup_check_resulta} : check_result sup);;
-
-let rec less_eq_check_result
-  x y = equal_check_result x y || equal_check_result y Check_Unknown;;
-
-let rec less_check_result
-  x y = less_eq_check_result x y && not (less_eq_check_result y x);;
-
-let ord_check_result =
-  ({less_eq = less_eq_check_result; less = less_check_result} :
-    check_result ord);;
-
-let preorder_check_result =
-  ({ord_preorder = ord_check_result} : check_result preorder);;
-
-let order_check_result =
-  ({preorder_order = preorder_check_result} : check_result order);;
-
-let semilattice_sup_check_result =
-  ({sup_semilattice_sup = sup_check_result;
-     order_semilattice_sup = order_check_result}
-    : check_result semilattice_sup);;
-
 type congruence = Abs_congruence of (int * int) option;;
 
 let rec rep_congruence (Abs_congruence x) = x;;
@@ -3165,6 +3148,13 @@ type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
 type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
 
+type 'a point_state = Unreachable | Reachable of 'a;;
+
+type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
+
+type ('a, 'b) analysis_result =
+  Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state);;
+
 type analysis_event = Check_Event of exp;;
 
 type ('a, 'b, 'c) dg_spec_ext =
@@ -3178,6 +3168,8 @@ type ('a, 'b, 'c) dg_spec_ext =
       (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
+
+type contextual_verdict = Dead | Decided of check_result;;
 
 type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
@@ -3212,6 +3204,11 @@ let one_nat : nat = Nat (Z.of_int 1);;
 
 let rec suc n = plus_nat n one_nat;;
 
+let rec list_ex p x1 = match p, x1 with p, [] -> false
+                  | p, x :: xs -> p x || list_ex p xs;;
+
+let rec bex (Set xs) p = list_ex p xs;;
+
 let rec minus_nat
   m n = Nat (max ord_integer Z.zero
               (Z.sub (integer_of_nat m) (integer_of_nat n)));;
@@ -3227,6 +3224,8 @@ let rec rev xs = fold (fun a b -> a :: b) xs [];;
 let rec zip xs ys = match xs, ys with [], ys -> []
               | xs, [] -> []
               | x :: xs, y :: ys -> (x, y) :: zip xs ys;;
+
+let rec ball (Set xs) p = list_all p xs;;
 
 let rec find uu x1 = match uu, x1 with uu, [] -> None
                | p, x :: xs -> (if p x then Some x else find p xs);;
@@ -3283,9 +3282,6 @@ let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
 
 let rec bind x0 f = match x0, f with None, f -> None
                | Some x, f -> f x;;
-
-let rec list_ex p x1 = match p, x1 with p, [] -> false
-                  | p, x :: xs -> p x || list_ex p xs;;
 
 let rec remdups _A
   = function [] -> []
@@ -5934,6 +5930,26 @@ let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
 
+let rec equal_check_result
+  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
+    | Check_Unknown, Check_Refuted -> false
+    | Check_Proved, Check_Unknown -> false
+    | Check_Unknown, Check_Proved -> false
+    | Check_Proved, Check_Refuted -> false
+    | Check_Refuted, Check_Proved -> false
+    | Check_Unknown, Check_Unknown -> true
+    | Check_Refuted, Check_Refuted -> true
+    | Check_Proved, Check_Proved -> true;;
+
+let rec equal_contextual_verdict
+  x0 x1 = match x0, x1 with Dead, Decided x2 -> false
+    | Decided x2, Dead -> false
+    | Decided x2, Decided y2 -> equal_check_result x2 y2
+    | Dead, Dead -> true;;
+
+let rec check_dead
+  vs = ball vs (fun (_, v) -> equal_contextual_verdict v Dead);;
+
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
 
@@ -6148,6 +6164,12 @@ let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
                    | And (vh, vi) -> nat_of_integer (Z.of_int 40)
                    | Or (vj, vk) -> nat_of_integer (Z.of_int 30);;
 
+let rec result_keys (Analysis_Result (x1, x2)) = x1;;
+
+let rec contexts_at
+  r v = image snd
+          (filter (fun (va, _) -> equal_cfg_nodea va v) (result_keys r));;
+
 let rec ea_check_cond (EA_Check x7) = x7;;
 
 let rec is_EA_Check = function EA_Nop -> false
@@ -6354,6 +6376,20 @@ let rec fold_rhs_trees _A
 let char_0x0A : char = Chr (Z.of_int 10);;
 
 let source_nl : char list = [char_0x0A];;
+
+let rec is_reachable_point = function Unreachable -> false
+                             | Reachable uu -> true;;
+
+let rec result_at (Analysis_Result (x1, x2)) = x2;;
+
+let rec lookup_context _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
+      then result_at r v ctx else Unreachable);;
+
+let rec node_live_ex _A
+  r v = bex (contexts_at r v)
+          (fun ctx -> is_reachable_point (lookup_context _A r v ctx));;
 
 let rec result_proc (FunctionResult x3) = x3;;
 
@@ -7190,6 +7226,35 @@ let rec analyse_int_report_for
 let rec analyse_int_report
   p = analyse_int_report_for Refine_Fixpoint (declared_global p) p;;
 
+let rec normalize_point _A
+  gl gs x2 = match gl, gs, x2 with gl, gs, Bot -> Unreachable
+    | gl, gs, Lifted s ->
+        (if resolved_st_q_is_bot_for _A gl s then Unreachable
+          else Reachable
+                 (fun_of_resolved_st_q_for
+                   _A.bounded_semilattice_sup_bot_computable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                   gs s));;
+
+let rec analyse_int_result_for
+  gs p =
+    (let sol =
+       analyse_int_dg_for Refine_Fixpoint
+         (resolved_st_q_is_bot_for
+           (computable_domain_int_dom_ext
+             (equal_unit, int_dom_record_lattice_unit))
+           (declared_global_vars p))
+         gs p
+       in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point
+              (computable_domain_int_dom_ext
+                (equal_unit, int_dom_record_lattice_unit))
+              (declared_global_vars p) gs (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec analyse_int_result p = analyse_int_result_for (declared_global p) p;;
+
 let rec routed_extra_g _C _D
   seed_key gk0 route ctx v =
     (match v with Statement _ -> []
@@ -7211,9 +7276,17 @@ let rec join_source
     | sep, [s] -> s
     | sep, s :: v :: va -> s @ sep @ join_source sep (v :: va);;
 
+let rec classify_point
+  classify c x2 = match classify, c, x2 with classify, c, Unreachable -> Dead
+    | classify, c, Reachable st -> Decided (classify c st);;
+
+let rec decided_report x = map (fun (u, (cnd, r)) -> (u, (cnd, Decided r))) x;;
+
 let rec formals_context pars d = map d pars;;
 
-let rec fun_of_dg_st_gen floc fglob d = DG (floc (locals d), fglob (globs d));;
+let rec join_point_with j x1 y = match j, x1, y with j, Unreachable, y -> y
+                          | j, Reachable v, Unreachable -> Reachable v
+                          | j, Reachable a, Reachable b -> Reachable (j a b);;
 
 let rec update_global_always_join (_A1, _A2) _B _C
   da orig g d state =
@@ -7414,6 +7487,22 @@ let rec analyse_sign_report_for
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
+let rec analyse_sign_result_for
+  gs p =
+    (let sol =
+       analyse_sign_for
+         (resolved_st_q_is_bot_for computable_domain_sign
+           (declared_global_vars p))
+         gs p
+       in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point computable_domain_sign (declared_global_vars p) gs
+              (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec analyse_sign_result p = analyse_sign_result_for (declared_global p) p;;
+
 let rec scope_vnames_list
   p owner =
     sorted_list_of_set (equal_literal, linorder_literal)
@@ -7525,12 +7614,31 @@ let rec string_of_com
         [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
           char_0x64; char_0x3E];;
 
+let rec join_abs_state_with j a b = (fun x -> j (a x) (b x));;
+
+let rec join_states_over _B
+  g (Set cs) =
+    fold (fun ctx ->
+           join_point_with (join_abs_state_with (sup _B.sup_semilattice_sup))
+             (g ctx))
+      cs Unreachable;;
+
 let rec ectx_spec
   gs is_bot_pred =
     base_dg_spec_st_for_lifted bounded_semilattice_sup_bot_ivl
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
+
+let rec sup_check_result
+  x y = (if equal_check_result x y then x else Check_Unknown);;
+
+let rec sup_contextual_verdict
+  x0 y = match x0, y with Dead, y -> y
+    | Decided v, Dead -> Decided v
+    | Decided a, Decided b -> Decided (sup_check_result a b);;
+
+let rec aggregate_verdicts (Set vs) = fold sup_contextual_verdict vs Dead;;
 
 let rec analyse_int_dg_join_for
   mode is_bot_pred gs p =
@@ -7590,6 +7698,23 @@ let rec analyse_int_report_join_for
 let rec analyse_int_report_join
   p = analyse_int_report_join_for Refine_Fixpoint (declared_global p) p;;
 
+let rec classify_checks_ctx _A
+  g r classify =
+    map_filter
+      (fun x ->
+        (if (let (_, (a, _)) = x in is_EA_Check a)
+          then Some (let (u, (a, _)) = x in
+                      (u, (ea_check_cond a,
+                            image (fun ctx ->
+                                    (ctx, classify_point classify
+    (ea_check_cond a) (lookup_context _A r u ctx)))
+                              (contexts_at r u))))
+          else None))
+      (cfg_intra_list g);;
+
+let rec lookup_joined_state _A _B
+  r v = join_states_over _B (lookup_context _A r v) (contexts_at r v);;
+
 let rec interval_check_true
   x0 d = match x0, d with Not b, d -> interval_check_false b d
     | And (b1, b2), d -> interval_check_true b1 d && interval_check_true b2 d
@@ -7621,6 +7746,9 @@ and interval_check_false
     | Times (v, va), d ->
         interval_eq_true (aval_ivl (Times (v, va)) d)
           (aval_ivl (N zero_inta) d);;
+
+let rec verdict_check_result = function Dead -> Check_Unknown
+                               | Decided r -> r;;
 
 let rec analyse_sign_env_for
   is_bot_pred gs p =
@@ -8027,6 +8155,11 @@ let rec analyse_sign_for_per_origin
         gs p)
       (cfg_exit (prog_cfg prog_main_name p), ());;
 
+let rec classify_checks_verdicts _A
+  g r classify =
+    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+      (classify_checks_ctx _A g r classify);;
+
 let rec analyse_int_dg_per_origin_for
   mode is_bot_pred gs p =
     tD_side_per_origin_Interp_solve (equal_prod equal_cfg_node equal_unit)
@@ -8215,6 +8348,23 @@ let rec analyse_interval_td_report_for
 let rec analyse_interval_td_report
   p = analyse_interval_td_report_for (declared_global p) p;;
 
+let rec analyse_interval_td_result_for
+  gs p =
+    (let sol =
+       analyse_interval_dg_for
+         (resolved_st_q_is_bot_for computable_domain_ivl
+           (declared_global_vars p))
+         gs p
+       in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point computable_domain_ivl (declared_global_vars p) gs
+              (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec analyse_interval_td_result
+  p = analyse_interval_td_result_for (declared_global p) p;;
+
 let rec analyse_sign_report_per_origin
   p = (let gs = declared_global p in
        let sol = snd (analyse_sign_for_per_origin gs p) in
@@ -8283,23 +8433,14 @@ let rec pretty_string_of_program
             pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
               [[char_0x7D]]);;
 
-let rec entry_state_classify_at
-  v cnd reachable_keys sg =
-    (let ctxs =
-       image snd (filter (fun (va, _) -> equal_cfg_nodea va v) reachable_keys)
-       in
-     let unlift =
-       comp (fun a ->
-              (match a with Bot -> bot_fun bot_ivl | Lifted sigma -> sigma))
-         sg
-       in
-      (if equal_set (equal_list equal_ivl) ctxs bot_set
-        then interval_classify_check cnd (unlift (Inl (v, [])))
-        else sup_fin semilattice_sup_check_result
-               (image
-                 (fun ctx ->
-                   interval_classify_check cnd (unlift (Inl (v, ctx))))
-                 ctxs)));;
+let rec map_point_state f x1 = match f, x1 with f, Unreachable -> Unreachable
+                          | f, Reachable x2 -> Reachable (f x2);;
+
+let rec entry_state_sol_prog
+  gs mnm p =
+    entry_state_sol gs
+      (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
+      (prog_table p) (prog_procs p) mnm (prog_main p);;
 
 let rec analyse_interval_dg_env_for
   is_bot_pred gs p =
@@ -8326,38 +8467,6 @@ let rec wf_program_compile_input_exec
                       (list_all (fun (_, a) -> wf_proc_decl gs pi a) procs &&
                         list_all (fun (q, _) -> is_none (special_table q))
                           procs))))))));;
-
-let rec entry_state_sigma_abs_exec_from_sol
-  gs sol_sigma =
-    comp (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for bot_ivl gs))
-           (map_lift (fun_of_resolved_st_q_for bot_ivl gs)))
-      sol_sigma;;
-
-let rec entry_state_sg_exec_from_sol
-  gs sol k =
-    (match k
-      with Inl (v, ctx) ->
-        (if member (equal_prod equal_cfg_node (equal_list equal_ivl)) (v, ctx)
-              (fst sol)
-          then locals
-                 (entry_state_sigma_abs_exec_from_sol gs (snd sol)
-                   (Inl (v, ctx)))
-          else Bot)
-      | Inr _ -> Bot);;
-
-let rec entry_state_check_report
-  gs is_bot_pred pi ps mnm main =
-    (let sol = entry_state_sol gs is_bot_pred pi ps mnm main in
-     let sg = entry_state_sg_exec_from_sol gs sol in
-      map_filter
-        (fun x ->
-          (if (let (_, (a, _)) = x in is_EA_Check a)
-            then Some (let (u, (a, _)) = x in
-                        (u, (ea_check_cond a,
-                              entry_state_classify_at u (ea_check_cond a)
-                                (fst sol) sg)))
-            else None))
-        (cfg_intra_list (compile_prog pi ps mnm main)));;
 
 let rec analyse_interval_dg_per_origin_for
   is_bot_pred gs p =
@@ -8406,14 +8515,28 @@ let rec analyse_interval_report_per_origin_for
 let rec analyse_interval_report_per_origin
   p = analyse_interval_report_per_origin_for (declared_global p) p;;
 
-let rec entry_state_check_report_prog
+let rec analyse_interval_entry_state_result_for
+  gs mnm p =
+    (let sol = entry_state_sol_prog gs mnm p in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point computable_domain_ivl (declared_global_vars p) gs
+              (locals (snd sol (Inl (v, ctx)))))));;
+
+let rec entry_state_check_projection
   mnm p =
-    entry_state_check_report (declared_global p)
-      (resolved_st_q_is_bot_for computable_domain_ivl (declared_global_vars p))
-      (prog_table p) (prog_procs p) mnm (prog_main p);;
+    classify_checks_ctx (equal_list equal_ivl) (prog_cfg mnm p)
+      (analyse_interval_entry_state_result_for (declared_global p) mnm p)
+      interval_classify_check;;
+
+let rec entry_state_verdict_report_prog
+  mnm p =
+    map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
+      (entry_state_check_projection mnm p);;
 
 let rec analyse_interval_entry_state
-  p = entry_state_check_report_prog prog_main_name p;;
+  p = entry_state_verdict_report_prog prog_main_name p;;
 
 let rec analyse_interval_td_report_for_with_state
   gs p =
@@ -8435,6 +8558,10 @@ let rec analyse_interval_td_report_for_with_state
 let rec analyse_interval_td_report_with_state
   p = analyse_interval_td_report_for_with_state (declared_global p) p;;
 
+let rec analyse_interval_entry_state_result
+  p = analyse_interval_entry_state_result_for (declared_global p) prog_main_name
+        p;;
+
 end;; (*struct Core*)
 
 module Analyse : sig
@@ -8451,7 +8578,7 @@ module Analyse : sig
     analysis_kind ->
       context_mode ->
         unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
+          ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
   val analyse_with_state :
     analysis_kind ->
       unit Core.imp_prog_ext ->
@@ -8481,12 +8608,15 @@ let rec analyse
 
 let rec analyse_ctx
   x0 x1 p = match x0, x1, p with
-    Sign_Analysis, Ctx_None, p -> Some (Core.analyse_sign_report p)
-    | Interval_Analysis, Ctx_None, p -> Some (Core.analyse_interval_td_report p)
+    Sign_Analysis, Ctx_None, p ->
+      Some (Core.decided_report (Core.analyse_sign_report p))
+    | Interval_Analysis, Ctx_None, p ->
+        Some (Core.decided_report (Core.analyse_interval_td_report p))
     | Interval_Analysis, Ctx_EntryState, p ->
         Some (Core.analyse_interval_entry_state p)
     | Sign_Analysis, Ctx_EntryState, p -> None
-    | Int_Analysis, Ctx_None, p -> Some (Core.analyse_int_report p)
+    | Int_Analysis, Ctx_None, p ->
+        Some (Core.decided_report (Core.analyse_int_report p))
     | Int_Analysis, Ctx_EntryState, p -> None;;
 
 let rec analyse_with_state
@@ -8748,8 +8878,8 @@ type graphviz_node_annotation =
 
 type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
   Analysis_graph_config_ext of
-    ('c -> 'd) * (Core.cfg_node -> 'a -> Core.call_action -> 'd -> 'a) *
-      ('a -> Core.char list) * (Core.cfg_node -> string list) *
+    ('c -> 'd) * (Core.cfg_node -> 'a -> Core.call_action -> 'd -> 'a option) *
+      ('a -> string) * ('a -> Core.char list) * (Core.cfg_node -> string list) *
       (Core.cfg_node -> string option) * string list *
       (Core.cfg_node -> 'a -> string list -> 'd -> (Core.char list) list) *
       (Core.cfg_node -> 'a -> string -> 'd -> (Core.char list) list) *
@@ -8757,7 +8887,7 @@ type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
       ('b -> Core.char list) * ('b -> bool) * bool *
       (Core.cfg_node -> Core.char list) *
       (Core.char list -> 'a -> Core.char list) * (Core.char list) option *
-      (Core.cfg_node -> graphviz_node_annotation option) * 'e;;
+      (Core.cfg_node -> 'a -> graphviz_node_annotation option) * 'e;;
 
 let dq : Core.char list = [Core.char_0x22];;
 
@@ -8791,10 +8921,10 @@ let rec contextual_graph_domain
 
 let rec owner_of
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = owner_of;;
 
 let rec analysis_node_position _A _B
@@ -8824,10 +8954,10 @@ let rec analysis_nodes_in_cluster _A _B
 
 let rec cluster_label
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = cluster_label;;
 
 let rec analysis_cluster_label
@@ -8846,74 +8976,74 @@ let rec annotation_label (Node_Annotation (x1, x2)) = x1;;
 
 let rec return_slot_for_pp
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = return_slot_for_pp;;
 
 let rec show_global_key
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = show_global_key;;
 
 let rec node_annotation
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = node_annotation;;
 
 let rec globals_to_show
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = globals_to_show;;
 
 let rec locals_for_pp
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = locals_for_pp;;
 
 let rec format_return
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = format_return;;
 
 let rec show_global
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = show_global;;
 
 let rec show_local
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = show_local;;
 
 let rec local_of
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = local_of;;
 
 let rec string_of_cfg_node
@@ -8961,7 +9091,7 @@ let rec contextual_node_label_lines
               | Some ret ->
                 format_return cfg p ctx ret
                   (local_of cfg (sol (Core.Inl (p, ctx))))) @
-              (match node_annotation cfg p with None -> []
+              (match node_annotation cfg p ctx with None -> []
                 | Some ann ->
                   (if Core.null (annotation_label ann) then []
                     else split_gv_nl (annotation_label ann)))
@@ -9000,8 +9130,8 @@ let rec graphviz_exit
 let rec analysis_node_attrs
   cfg g n =
     (match n
-      with LocalNode (p, _) ->
-        (match node_annotation cfg p
+      with LocalNode (p, ctx) ->
+        (match node_annotation cfg p ctx
           with None ->
             (if Core.equal_cfg_nodea p (Core.cfg_entry g)
               then [Core.char_0x73; Core.char_0x68; Core.char_0x61;
@@ -9674,10 +9804,10 @@ let rec analysis_global_cluster
 
 let rec route
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = route;;
 
 let rec analysis_combine_edges _A
@@ -9689,23 +9819,24 @@ let rec analysis_combine_edges _A
             (match a with (_, (_, (Core.Statement _, _))) -> []
               | (call, (ca, (Core.FunctionEntry p, cont))) ->
                 (if Core.equal_cfg_nodea (Core.fst src_ctx) call
-                  then (let callee_ctx =
-                          route cfg call (Core.snd src_ctx) ca
-                            (local_of cfg (sol (Core.Inl src_ctx)))
-                          in
-                        let result = Core.FunctionResult p in
-                         (if Core.membera
-                               (Core.equal_prod Core.equal_cfg_node _A) covered
-                               (result, callee_ctx) &&
-                               Core.membera
-                                 (Core.equal_prod Core.equal_cfg_node _A)
-                                 covered (cont, Core.snd src_ctx)
-                           then [(LocalNode (result, callee_ctx),
-                                   (CombineEdge
-                                      (call,
-(let Core.CallEdge (dst, _, _) = ca in dst), return_slot_for_pp cfg result),
-                                     LocalNode (cont, Core.snd src_ctx)))]
-                           else []))
+                  then (match
+                         route cfg call (Core.snd src_ctx) ca
+                           (local_of cfg (sol (Core.Inl src_ctx)))
+                         with None -> []
+                         | Some callee_ctx ->
+                           (let result = Core.FunctionResult p in
+                             (if Core.membera
+                                   (Core.equal_prod Core.equal_cfg_node _A)
+                                   covered (result, callee_ctx) &&
+                                   Core.membera
+                                     (Core.equal_prod Core.equal_cfg_node _A)
+                                     covered (cont, Core.snd src_ctx)
+                               then [(LocalNode (result, callee_ctx),
+                                       (CombineEdge
+  (call, (let Core.CallEdge (dst, _, _) = ca in dst),
+    return_slot_for_pp cfg result),
+ LocalNode (cont, Core.snd src_ctx)))]
+                               else [])))
                   else [])
               | (_, (_, (Core.FunctionResult _, _))) -> []))
           (Core.cfg_calls_list g))
@@ -9713,10 +9844,10 @@ let rec analysis_combine_edges _A
 
 let rec source_text
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = source_text;;
 
 let rec analysis_source_nodes
@@ -9724,18 +9855,18 @@ let rec analysis_source_nodes
 
 let rec show_internal_globals
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = show_internal_globals;;
 
 let rec is_shared_global
   (Analysis_graph_config_ext
-    (local_of, route, show_context, locals_for_pp, return_slot_for_pp,
-      globals_to_show, show_local, format_return, show_global, show_global_key,
-      is_shared_global, show_internal_globals, owner_of, cluster_label,
-      source_text, node_annotation, more))
+    (local_of, route, context_key, show_context, locals_for_pp,
+      return_slot_for_pp, globals_to_show, show_local, format_return,
+      show_global, show_global_key, is_shared_global, show_internal_globals,
+      owner_of, cluster_label, source_text, node_annotation, more))
     = is_shared_global;;
 
 let rec visible_global
@@ -9776,16 +9907,17 @@ let rec analysis_enter_edges _A
         Core.maps
           (fun (u, (ca, (entry, _))) ->
             (if Core.equal_cfg_nodea (Core.fst src_ctx) u
-              then (let callee_ctx =
-                      route cfg u (Core.snd src_ctx) ca
-                        (local_of cfg (sol (Core.Inl src_ctx)))
-                      in
-                     (if Core.membera (Core.equal_prod Core.equal_cfg_node _A)
-                           covered (entry, callee_ctx)
-                       then [(LocalNode (u, Core.snd src_ctx),
-                               (EnterEdge (owner_of cfg entry, ca),
-                                 LocalNode (entry, callee_ctx)))]
-                       else []))
+              then (match
+                     route cfg u (Core.snd src_ctx) ca
+                       (local_of cfg (sol (Core.Inl src_ctx)))
+                     with None -> []
+                     | Some callee_ctx ->
+                       (if Core.membera (Core.equal_prod Core.equal_cfg_node _A)
+                             covered (entry, callee_ctx)
+                         then [(LocalNode (u, Core.snd src_ctx),
+                                 (EnterEdge (owner_of cfg entry, ca),
+                                   LocalNode (entry, callee_ctx)))]
+                         else []))
               else []))
           (Core.cfg_calls_list g))
       covered;;
@@ -9853,12 +9985,13 @@ let rec compiled_owner_of
 let rec raw_cfg_graph_config
   pi ps mnm main annotate =
     Analysis_graph_config_ext
-      (Core.id, (fun _ _ _ _ -> ()), (fun _ -> []), (fun _ -> []),
-        (fun _ -> None), [], (fun _ _ _ _ -> []), (fun _ _ _ _ -> []),
-        (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false), false,
-        Core.comp Core.explode (compiled_owner_of pi ps mnm main),
+      (Core.id, (fun _ _ _ _ -> Some ()), (fun _ -> ""), (fun _ -> []),
+        (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
+        (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
+        false, Core.comp Core.explode (compiled_owner_of pi ps mnm main),
         (fun owner _ -> owner),
-        Some (Core.pretty_string_of_program pi ps main []), annotate, ());;
+        Some (Core.pretty_string_of_program pi ps main []),
+        (fun p _ -> annotate p), ());;
 
 let rec raw_cfg_dot
   pi ps mnm main annotate =
@@ -10087,8 +10220,7 @@ let rec report_vars
   report =
     Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
       (Core.sup_seta Core.equal_literal
-        (Core.image (fun (_, (c, (_, _))) -> Core.exp_vnames c)
-          (Core.Set report)));;
+        (Core.image (fun (_, (c, _)) -> Core.exp_vnames c) (Core.Set report)));;
 
 let rec program_vars
   p = Core.remdups Core.equal_literal
@@ -10129,32 +10261,6 @@ let rec exp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.exp_vnames b);;
 
-let rec entry_state_env_at
-  gs is_bot_pred pi ps mnm main =
-    (let sol = Core.entry_state_sol gs is_bot_pred pi ps mnm main in
-     let sg = Core.entry_state_sg_exec_from_sol gs sol in
-      (fun v x ->
-        (let ctxs =
-           Core.image Core.snd
-             (Core.filter (fun (va, _) -> Core.equal_cfg_nodea va v)
-               (Core.fst sol))
-           in
-          Analyse.IntervalValue
-            (if Core.equal_set (Core.equal_list Core.equal_ivl) ctxs
-                  Core.bot_set
-              then (match sg (Core.Inl (v, []))
-                     with Core.Bot -> Core.bot_fun Core.bot_ivl
-                     | Core.Lifted a -> Core.id a)
-                     x
-              else Core.sup_fin Core.semilattice_sup_ivl
-                     (Core.image
-                       (fun ctx ->
-                         (match sg (Core.Inl (v, ctx))
-                           with Core.Bot -> Core.bot_fun Core.bot_ivl
-                           | Core.Lifted a -> Core.id a)
-                           x)
-                       ctxs)))));;
-
 let rec full_state_node_annotation
   vars env v =
     Some (Analysis_GraphViz.Node_Annotation
@@ -10176,6 +10282,31 @@ let rec full_state_dot_auto
     Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
       Core.prog_main_name (Core.prog_main p)
       (full_state_node_annotation (program_vars p) (analyse_env_for kind p));;
+
+let unreachable_gv_style : Core.char list
+  = [Core.char_0x73; Core.char_0x68; Core.char_0x61; Core.char_0x70;
+      Core.char_0x65; Core.char_0x3D; Core.char_0x62; Core.char_0x6F;
+      Core.char_0x78; Core.char_0x2C; Core.char_0x73; Core.char_0x74;
+      Core.char_0x79; Core.char_0x6C; Core.char_0x65; Core.char_0x3D;
+      Core.char_0x66; Core.char_0x69; Core.char_0x6C; Core.char_0x6C;
+      Core.char_0x65; Core.char_0x64; Core.char_0x2C; Core.char_0x66;
+      Core.char_0x69; Core.char_0x6C; Core.char_0x6C; Core.char_0x63;
+      Core.char_0x6F; Core.char_0x6C; Core.char_0x6F; Core.char_0x72;
+      Core.char_0x3D; Core.char_0x67; Core.char_0x72; Core.char_0x61;
+      Core.char_0x79; Core.char_0x34; Core.char_0x30; Core.char_0x2C;
+      Core.char_0x66; Core.char_0x6F; Core.char_0x6E; Core.char_0x74;
+      Core.char_0x63; Core.char_0x6F; Core.char_0x6C; Core.char_0x6F;
+      Core.char_0x72; Core.char_0x3D; Core.char_0x77; Core.char_0x68;
+      Core.char_0x69; Core.char_0x74; Core.char_0x65];;
+
+let rec dead_check_annotation
+  cnd = Analysis_GraphViz.Node_Annotation
+          ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
+             Core.char_0x6B; Core.char_0x20] @
+             Core.string_of_exp Core.zero_nat cnd @
+               [Core.char_0x20; Core.char_0x5B; Core.char_0x64; Core.char_0x65;
+                 Core.char_0x61; Core.char_0x64; Core.char_0x5D],
+            unreachable_gv_style);;
 
 let rec state_report_node_annotation
   vars report v =
@@ -10200,28 +10331,77 @@ let rec state_report_dot_auto
         Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
 
+let rec entry_state_point_env_at
+  r v = Core.map_point_state (Core.comp (fun a -> Analyse.IntervalValue a))
+          (Core.lookup_joined_state (Core.equal_list Core.equal_ivl)
+            Core.semilattice_sup_ivl r v);;
+
 let rec is_bottom_abstract_value
   = function Analyse.SignValue s -> Core.is_bot_sign s
     | Analyse.IntervalValue i -> Core.is_bot_ivl i
     | Analyse.IntDomValue d ->
         Core.is_bot_int_dom_ext Core.int_dom_record_lattice_unit d;;
 
+let rec verdict_state_report_node_annotation
+  vars report v =
+    (match
+      Core.find (fun entry -> Core.equal_cfg_nodea (Core.fst entry) v) report
+      with None -> None
+      | Some (_, (cnd, (verdict, st))) ->
+        Some (match (verdict, st)
+               with (Core.Dead, _) -> dead_check_annotation cnd
+               | (Core.Decided _, Core.Unreachable) -> dead_check_annotation cnd
+               | (Core.Decided res, Core.Reachable f) ->
+                 (let Analysis_GraphViz.Node_Annotation (lbl, a) =
+                    Analysis_GraphViz.check_result_annotation res cnd in
+                   Analysis_GraphViz.Node_Annotation
+                     (Analysis_GraphViz.join_gv_nl
+                        (lbl :: Core.map (state_line f) vars),
+                       a))));;
+
 let rec entry_state_report_for_annotation
-  p = Core.map
-        (fun (v, (cnd, res)) ->
-          (v, (cnd, (res, entry_state_env_at (Core.declared_global p)
-                            (Core.resolved_st_q_is_bot_for
-                              Core.computable_domain_ivl
-                              (Core.declared_global_vars p))
-                            (Core.prog_table p) (Core.prog_procs p)
-                            Core.prog_main_name (Core.prog_main p) v))))
-        (Core.entry_state_check_report_prog Core.prog_main_name p);;
+  p = (let r = Core.analyse_interval_entry_state_result p in
+        Core.map
+          (fun (v, (cnd, verdict)) ->
+            (v, (cnd, (verdict, entry_state_point_env_at r v))))
+          (Core.classify_checks_verdicts (Core.equal_list Core.equal_ivl)
+            (Core.prog_cfg Core.prog_main_name p) r
+            Core.interval_classify_check));;
 
 let rec entry_state_report_dot_auto
   p = (let report = entry_state_report_for_annotation p in
         Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p)
           (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-          (state_report_node_annotation (report_vars report) report));;
+          (verdict_state_report_node_annotation (report_vars report) report));;
+
+let unreachable_state_annotation : Analysis_GraphViz.graphviz_node_annotation
+  = Analysis_GraphViz.Node_Annotation
+      ([Core.char_0x75; Core.char_0x6E; Core.char_0x72; Core.char_0x65;
+         Core.char_0x61; Core.char_0x63; Core.char_0x68; Core.char_0x61;
+         Core.char_0x62; Core.char_0x6C; Core.char_0x65],
+        unreachable_gv_style);;
+
+let rec point_state_node_annotation
+  vars env v =
+    (match env v with Core.Unreachable -> Some unreachable_state_annotation
+      | Core.Reachable st ->
+        Some (Analysis_GraphViz.Node_Annotation
+               (Analysis_GraphViz.join_gv_nl (Core.map (state_line st) vars),
+                 [Core.char_0x73; Core.char_0x68; Core.char_0x61;
+                   Core.char_0x70; Core.char_0x65; Core.char_0x3D;
+                   Core.char_0x62; Core.char_0x6F; Core.char_0x78;
+                   Core.char_0x2C; Core.char_0x73; Core.char_0x74;
+                   Core.char_0x79; Core.char_0x6C; Core.char_0x65;
+                   Core.char_0x3D; Core.char_0x66; Core.char_0x69;
+                   Core.char_0x6C; Core.char_0x6C; Core.char_0x65;
+                   Core.char_0x64; Core.char_0x2C; Core.char_0x66;
+                   Core.char_0x69; Core.char_0x6C; Core.char_0x6C;
+                   Core.char_0x63; Core.char_0x6F; Core.char_0x6C;
+                   Core.char_0x6F; Core.char_0x72; Core.char_0x3D;
+                   Core.char_0x6C; Core.char_0x69; Core.char_0x67;
+                   Core.char_0x68; Core.char_0x74; Core.char_0x67;
+                   Core.char_0x72; Core.char_0x65; Core.char_0x65;
+                   Core.char_0x6E])));;
 
 let rec full_state_graph_snapshot_auto
   kind p =
@@ -10230,14 +10410,11 @@ let rec full_state_graph_snapshot_auto
       (full_state_node_annotation (program_vars p) (analyse_env_for kind p));;
 
 let rec entry_state_full_state_dot_auto
-  p = Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
-        Core.prog_main_name (Core.prog_main p)
-        (full_state_node_annotation (program_vars p)
-          (entry_state_env_at (Core.declared_global p)
-            (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl
-              (Core.declared_global_vars p))
-            (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
-            (Core.prog_main p)));;
+  p = (let r = Core.analyse_interval_entry_state_result p in
+        Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p)
+          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+          (point_state_node_annotation (program_vars p)
+            (entry_state_point_env_at r)));;
 
 let rec state_report_graph_snapshot_auto
   kind p =
@@ -10253,16 +10430,13 @@ let rec entry_state_report_graph_snapshot_auto
   p = (let report = entry_state_report_for_annotation p in
         Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
           (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-          (state_report_node_annotation (report_vars report) report));;
+          (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_graph_snapshot_auto
-  p = Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-        (full_state_node_annotation (program_vars p)
-          (entry_state_env_at (Core.declared_global p)
-            (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl
-              (Core.declared_global_vars p))
-            (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
-            (Core.prog_main p)));;
+  p = (let r = Core.analyse_interval_entry_state_result p in
+        Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+          (point_state_node_annotation (program_vars p)
+            (entry_state_point_env_at r)));;
 
 end;; (*struct Example_State_Report_GraphViz*)

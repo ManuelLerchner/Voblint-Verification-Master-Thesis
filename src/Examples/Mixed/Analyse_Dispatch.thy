@@ -63,22 +63,36 @@ text \<open>
   \<open>None\<close> is a real, checkable unsupported-combination result -- todays's only
   unsupported pairing is \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close> -- not a silent
   fallback to context-insensitive behaviour.
+
+  The report's verdict is a \<^typ>\<open>contextual_verdict\<close>, not a bare
+  \<^typ>\<open>check_result\<close>, because a context-sensitive analysis genuinely has a
+  fourth answer: a check every covered context finds unreachable is
+  \<^const>\<open>Dead\<close>, and rendering it as any \<^typ>\<open>check_result\<close> either fabricates
+  a proof or invents an undecided execution. The \<open>Ctx_None\<close> branches lift
+  their existing reports through \<^const>\<open>decided_report\<close>: those reports carry
+  one observation per check and no deadness channel of their own, so the lift
+  adds no claim. The dead-code filter the context-insensitive text report
+  applies at the CLI comes from \<open>analyse_with_state\<close>'s separate
+  unreachability flag, not from this dispatcher.
 \<close>
 
 datatype context_mode = Ctx_None | Ctx_EntryState
 
-fun analyse_ctx :: "analysis_kind \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list option" where
-  "analyse_ctx Sign_Analysis Ctx_None p = Some (analyse_sign_report p)"
-| "analyse_ctx Interval_Analysis Ctx_None p = Some (analyse_interval_td_report p)"
+fun analyse_ctx ::
+    "analysis_kind \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option"
+where
+  "analyse_ctx Sign_Analysis Ctx_None p = Some (decided_report (analyse_sign_report p))"
+| "analyse_ctx Interval_Analysis Ctx_None p = Some (decided_report (analyse_interval_td_report p))"
 | "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
 | "analyse_ctx Sign_Analysis Ctx_EntryState p = None"
-| "analyse_ctx Int_Analysis Ctx_None p = Some (analyse_int_report p)"
+| "analyse_ctx Int_Analysis Ctx_None p = Some (decided_report (analyse_int_report p))"
 | "analyse_ctx Int_Analysis Ctx_EntryState p = None"
 
-text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for both domains: the new dispatcher
+text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for every domain: the new dispatcher
   cannot silently drift from the one CLI/regression already exercises.\<close>
 
-lemma analyse_ctx_none_eq_analyse: "analyse_ctx k Ctx_None p = Some (analyse k p)"
+lemma analyse_ctx_none_eq_analyse:
+  "analyse_ctx k Ctx_None p = Some (decided_report (analyse k p))"
   by (cases k) simp_all
 
 subsection \<open>Solver-choice dimension (experimental)\<close>
@@ -464,6 +478,7 @@ code_identifier
 | code_module Constraint_System \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
+| code_module Analysis_Result \<rightharpoonup> (OCaml) Core
 | code_module Exec_DG_Bridge \<rightharpoonup> (OCaml) Core
 | code_module DG_Base_Exec \<rightharpoonup> (OCaml) Core
 | code_module Sign_Arithmetic \<rightharpoonup> (OCaml) Core

@@ -91,6 +91,115 @@ definition entry_state_route_gen ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
   "entry_state_route_gen gs is_bot_pred u ctx d ca = entry_state_route gs is_bot_pred d ca"
 
+text \<open>
+  The same routing decision taken on a caller state that has already left the
+  executable substrate: the argument is the \<^typ>\<open>ivl abs_state\<close> a
+  \<^const>\<open>Reachable\<close> point of an \<^type>\<open>analysis_result\<close> hands out, so a
+  consumer of a solved table can recompute a call's callee context without
+  reopening the solver's own solution map.
+
+  The type is \<^typ>\<open>ivl abs_state\<close>, not \<^typ>\<open>ivl abs_state point_state\<close>, on
+  purpose: reachability is the caller's case split, decided once by
+  \<^const>\<open>normalize_point\<close> when the table was built, and an \<^const>\<open>Unreachable\<close>
+  point has no call edge to route at all.
+
+  A live caller can still enter a callee frame that is itself semantically
+  empty, e.g. an actual argument whose abstract value is already bottom. In
+  that case \<^const>\<open>entry_state_route\<close> does not skip routing: it reports the
+  all-\<^const>\<open>bot\<close> formal context the solver actually materialized a (dead)
+  callee activation under, and that all-\<^const>\<open>bot\<close> context is a real,
+  distinct context, never the empty list \<open>[]\<close>, which is a legitimate root
+  or zero-formal context in its own right and must not double as a sentinel
+  for "no route". So \<open>entry_state_callee_ctx\<close> answers \<^const>\<open>None\<close> exactly
+  on this case, restricting the bottom test that decides it to the finite
+  list of formals \<open>entered_is_bot_for\<close> below, rather than repeating the
+  non-executable whole-state test \<^const>\<open>is_bot_state\<close> quantifies over all
+  of \<^typ>\<open>vname\<close>, which is what keeps \<open>entry_state_route_abs\<close> non-executable.
+
+  It routes on the static \<^const>\<open>CallEdge\<close> and the entered caller state alone,
+  matching \<^const>\<open>entry_state_route_gen\<close>'s own independence of the caller's
+  identity, \<open>entry_state_route_gen_def\<close>: the callee context is a function of
+  what is passed, never of who passes it.
+\<close>
+
+definition entered_is_bot_for :: "vname list \<Rightarrow> ivl abs_state \<Rightarrow> bool" where
+  "entered_is_bot_for pars entered = list_ex (\<lambda>x. is_bot (entered x)) pars"
+
+text \<open>
+  Restricting \<^const>\<open>is_bot_state\<close>'s witness search to the formals is exact,
+  not merely a heuristic: \<^const>\<open>enter_frame_D\<close> resets every non-global
+  variable to \<^const>\<open>ivl_top\<close> and leaves every global at the caller's own
+  value, so no name outside the formals can ever witness bottomness once the
+  caller itself is not \<^const>\<open>is_bot_state\<close> -- \<open>entered_is_bot_for_correct\<close>
+  below states this precisely.
+\<close>
+
+lemma entered_is_bot_for_correct:
+  assumes not_bot: "\<not> is_bot_state st"
+  shows "entered_is_bot_for pars (enter\<^sup># (ivl_tf_for gs) pars args st)
+           = is_bot_state (enter\<^sup># (ivl_tf_for gs) pars args st)"
+proof -
+  define frame where "frame = enter_frame_D gs ivl_top st"
+  define entered where "entered = bind_formals_abs pars (map (\<lambda>e. aval_ivl e st) args) frame"
+  have unfold: "enter\<^sup># (ivl_tf_for gs) pars args st = entered"
+    by (simp add: ivl_tf_for_def enter_ivl_for_def enter_D_def entered_def frame_def)
+  have frame_not_bot: "\<not> is_bot (frame x)" for x
+  proof (cases "gs x")
+    case True
+    then have "frame x = st x" by (simp add: frame_def enter_frame_D_def)
+    with not_bot show ?thesis by (auto simp: is_bot_state_def)
+  next
+    case False
+    then have "frame x = ivl_top" by (simp add: frame_def enter_frame_D_def)
+    then show ?thesis by (simp add: ivl_top_def is_bottom_ivl_def)
+  qed
+
+  have off_pars_generic: "\<And>ps as (\<tau>::vname \<Rightarrow> ivl) x. x \<notin> set ps
+      \<Longrightarrow> fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (zip ps as) \<tau> x = \<tau> x"
+  proof -
+    fix ps show "\<And>as (\<tau>::vname \<Rightarrow> ivl) x. x \<notin> set ps
+        \<Longrightarrow> fold (\<lambda>(x, a) \<tau>. \<tau>(x := a)) (zip ps as) \<tau> x = \<tau> x"
+    proof (induction ps)
+      case Nil
+      then show ?case by simp
+    next
+      case (Cons p ps)
+      show ?case
+      proof (cases as)
+        case Nil
+        then show ?thesis by simp
+      next
+        case (Cons a as')
+        have neq: "x \<noteq> p" using Cons.prems by simp
+        have notin: "x \<notin> set ps" using Cons.prems by simp
+        show ?thesis
+          unfolding local.Cons
+          using Cons.IH[where as = as' and \<tau> = "\<tau>(p := a)" and x = x] notin neq
+          by simp
+      qed
+    qed
+  qed
+  have off_pars: "x \<notin> set pars \<Longrightarrow> entered x = frame x" for x
+    unfolding entered_def bind_formals_abs_def
+    using off_pars_generic by blast
+  have "is_bot_state entered \<longleftrightarrow> (\<exists>x. is_bot (entered x))"
+    by (simp add: is_bot_state_def)
+  also have "\<dots> \<longleftrightarrow> (\<exists>x \<in> set pars. is_bot (entered x))"
+    using off_pars frame_not_bot by metis
+  also have "\<dots> \<longleftrightarrow> list_ex (\<lambda>x. is_bot (entered x)) pars"
+    by (simp add: list_ex_iff)
+  finally show ?thesis
+    unfolding unfold entered_is_bot_for_def by (simp add: unfold)
+qed
+
+definition entry_state_callee_ctx ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> ivl abs_state \<Rightarrow> ivl list option" where
+  "entry_state_callee_ctx gs ca st =
+     (case ca of CallEdge dst pars args \<Rightarrow>
+        (let entered = enter\<^sup># (ivl_tf_for gs) pars args st
+         in if entered_is_bot_for pars entered then None
+            else Some (formals_context pars entered)))"
+
 subsection \<open>The routed equation system and its executable solution\<close>
 
 definition entry_state_eqs ::
@@ -318,6 +427,60 @@ lemma entry_state_route_commute_gen:
            = entry_state_route_abs_gen gs u ctx (map_lift (fun_of_resolved_st_q_for gs) s) ca"
   by (simp add: entry_state_route_gen_def entry_state_route_abs_gen_def entry_state_route_commute[OF exact])
 
+text \<open>
+  Presentation-side routing agrees with the routing that built the equation
+  system, on both outcomes. A caller point the table answers \<^const>\<open>Reachable\<close>
+  either routes to the same callee context the solved system was built with,
+  or is exactly the case that context is dead: \<open>entry_state_callee_ctx\<close>
+  answers \<^const>\<open>None\<close> iff the entered callee frame is itself
+  \<^const>\<open>is_bot_state\<close>, which is precisely when \<^const>\<open>entry_state_route_abs\<close>'s
+  own bottom collapse fires. There is no unaddressed case left over: unlike
+  the earlier single-outcome fact this replaces, this theorem needs no \<open>live\<close>
+  side condition, because it states what happens on both branches instead of
+  assuming the live one.
+
+  \<open>reach\<close> says the normalized state is the reader's image of the solved local
+  unknown -- the shape \<open>normalize_point_Reachable_map_lift\<close> supplies for any
+  point a result table answered \<^const>\<open>Reachable\<close>. \<open>not_bot\<close> says that
+  normalized state is not itself \<^const>\<open>is_bot_state\<close>, which
+  \<open>normalize_point\<close>'s own witness-bottom test already guarantees for every
+  \<^const>\<open>Reachable\<close> point a table built through it can produce.
+\<close>
+
+theorem entry_state_callee_ctx_eq_route_partial:
+  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and reach: "map_lift (fun_of_resolved_st_q_for gs) d = Lifted st"
+    and not_bot: "\<not> is_bot_state st"
+  shows "entry_state_callee_ctx gs ca st =
+    (if entered_state_abs gs (Lifted st) ca = Bot
+     then None
+     else Some (entry_state_route gs is_bot_pred d ca))"
+proof (cases ca)
+  case (CallEdge dst pars args)
+  define entered where "entered = enter\<^sup># (ivl_tf_for gs) pars args st"
+  have entered_state_eq: "entered_state_abs gs (Lifted st) ca =
+      (if entered_is_bot_for pars entered then Bot else Lifted entered)"
+    unfolding entered_state_abs_def CallEdge entered_def
+    by (simp add: normalize_lift_def entered_is_bot_for_correct[OF not_bot])
+  have callee_ctx_eq: "entry_state_callee_ctx gs ca st =
+      (if entered_is_bot_for pars entered then None else Some (formals_context pars entered))"
+    unfolding entry_state_callee_ctx_def CallEdge Let_def entered_def by simp
+  show ?thesis
+  proof (cases "entered_is_bot_for pars entered")
+    case True
+    with entered_state_eq callee_ctx_eq show ?thesis by simp
+  next
+    case False
+    have "entry_state_route gs is_bot_pred d ca = entry_state_route_abs gs (Lifted st) ca"
+      using entry_state_route_commute[OF exact, of d ca] reach by simp
+    also have "\<dots> = formals_context pars entered"
+      unfolding entry_state_route_abs_def
+      using entered_state_eq False CallEdge by simp
+    finally have "entry_state_route gs is_bot_pred d ca = formals_context pars entered" .
+    with False entered_state_eq callee_ctx_eq show ?thesis by simp
+  qed
+qed
+
 subsection \<open>Per-tree transport commutation\<close>
 
 text \<open>
@@ -542,52 +705,6 @@ definition entry_state_sg_exec ::
            then locals (entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (v, ctx)))
            else Bot)
       | Inr _ \<Rightarrow> Bot)"
-
-text \<open>
-  Solution-consuming siblings of \<^const>\<open>entry_state_sigma_abs_exec\<close>/
-  \<^const>\<open>entry_state_sg_exec\<close>, taking an already-computed \<^const>\<open>entry_state_sol\<close>
-  result instead of recomputing it. \<open>entry_state_sg_exec\<close> itself calls \<open>entry_state_sol\<close>
-  once directly plus once more through \<open>entry_state_sigma_abs_exec\<close>, so a
-  caller that queries several \<open>(v, x)\<close> pairs against the *same* solved analysis -- e.g. one
-  full-state GraphViz render walking every CFG node -- must not go through those definitions
-  directly: doing so re-runs the whole context-sensitive TD solve on every query. These
-  \<open>_from_sol\<close> variants let such a caller solve exactly once and reuse the result;
-  \<open>entry_state_sg_exec\<close> itself is unchanged, so the soundness proofs below still apply to it
-  unmodified.
-\<close>
-
-definition entry_state_sigma_abs_exec_from_sol ::
-    "(vname \<Rightarrow> bool)
-       \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
-  "entry_state_sigma_abs_exec_from_sol gs sol_sigma =
-     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       \<circ> sol_sigma"
-
-lemma entry_state_sigma_abs_exec_from_sol_eq:
-  "entry_state_sigma_abs_exec_from_sol gs (snd (entry_state_sol gs is_bot_pred Pi ps mnm main))
-     = entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main"
-  unfolding entry_state_sigma_abs_exec_from_sol_def entry_state_sigma_abs_exec_def
-  by (rule refl)
-
-definition entry_state_sg_exec_from_sol ::
-    "(vname \<Rightarrow> bool)
-       \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
-       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted" where
-  "entry_state_sg_exec_from_sol gs sol k =
-     (case k of
-        Inl (v, ctx) \<Rightarrow>
-          (if (v, ctx) \<in> fst sol
-           then locals (entry_state_sigma_abs_exec_from_sol gs (snd sol) (Inl (v, ctx)))
-           else Bot)
-      | Inr _ \<Rightarrow> Bot)"
-
-lemma entry_state_sg_exec_from_sol_eq:
-  "entry_state_sg_exec_from_sol gs (entry_state_sol gs is_bot_pred Pi ps mnm main)
-     = entry_state_sg_exec gs is_bot_pred Pi ps mnm main"
-  unfolding entry_state_sg_exec_from_sol_def entry_state_sg_exec_def
-    entry_state_sigma_abs_exec_from_sol_def entry_state_sigma_abs_exec_def
-  by (rule refl)
 
 context
   fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
@@ -834,95 +951,191 @@ qed
 end
 
 
-section \<open>Context-aggregated check report\<close>
+
+section \<open>Solved-result table\<close>
 
 text \<open>
-  For each check node, aggregates the verdict across every context the solver
-  actually covers there, using \<^class>\<open>semilattice_sup\<close>'s flat join on
-  \<^typ>\<open>check_result\<close> (\<open>Check_Unknown\<close> is the top: two contexts agreeing keep
-  that verdict, any disagreement collapses to \<open>Check_Unknown\<close>) rather than
-  joining the underlying interval states first. A node with no covered context
-  is classified directly against the uncovered reading of \<^const>\<open>entry_state_sg_exec\<close>
-  (\<open>bot\<close> at the seeded default context \<open>[]\<close>, since \<^const>\<open>entry_state_sg_exec\<close>
-  returns \<open>bot\<close> at every context for an uncovered node) -- the same \<open>bot\<close>
-  classification the flat, context-insensitive report already gives dead code,
-  not a fabricated new case. \<open>entry_state_sg_exec\<close> (not the context-scoped
-  \<open>entry_state_sg\<close> the soundness theorem above is stated about) is used here
-  directly because the two are the same function unconditionally, by
-  \<open>entry_state_sg_def\<close> inside that context, and only the top-level
-  definition carries an unconditional code equation -- the context's own
-  soundness obligations are not runtime-decidable side-conditions the code
-  generator could discharge.
+  The solved entry-state D/G system, read as a
+  \<^typ>\<open>(ivl list, ivl abs_state) analysis_result\<close>. This is the
+  context-sensitive counterpart of \<open>Interval_Checks\<close>'s monovariant
+  \<open>analyse_interval_td_result_for\<close>: the context type is \<^typ>\<open>ivl list\<close>, the
+  entered abstract value of the callee's declared formals, so a node covered
+  under several activations keeps one \<^type>\<open>point_state\<close> per activation.
 
-  Enumerating the contexts at a node reads \<^const>\<open>Set.filter\<close> over the
-  solver's own already-finite \<open>fst sol\<close>, never a raw set comprehension: since
-  \<^typ>\<open>ivl\<close>'s only order is the abstract-domain lattice (interval containment,
-  not total -- \<open>[0,5]\<close> and \<open>[3,10]\<close> are incomparable), \<^typ>\<open>ivl list\<close> has no
-  \<^class>\<open>enum\<close> instance, so a comprehension \<open>{ctx. ...}\<close> is not executable here;
-  filtering an already-finite set needs no such instance.
+  Construction is mechanical. \<^const>\<open>entry_state_sol\<close>'s own first component is
+  the key set verbatim -- the solver already knows exactly which
+  \<open>(node, context)\<close> pairs it reached, so nothing here rescans the solved map
+  or reconstructs coverage. Each local unknown goes through
+  \<^const>\<open>normalize_point\<close> exactly as it is stored, in its pre-conversion
+  \<^typ>\<open>ivl resolved_st_q lifted\<close> shape; no context is joined at construction
+  time, and an uncovered context is answered by \<^const>\<open>lookup_context\<close>'s
+  membership guard with \<^const>\<open>Unreachable\<close>, never by falling back to the
+  seeded default context \<open>[]\<close>.
+
+  The \<open>[code]\<close> rewrite is a single-solve fix: binding \<open>sol\<close> once, outside the
+  per-key closure, compiles to a single shared thunk, so neither building the
+  table nor querying it re-solves. \<^const>\<open>entry_state_sol_prog\<close> is fully
+  applied at that binding, so it is not the partially applied closure
+  \<^const>\<open>entry_state_sg_exec\<close> would produce, whose body -- including its own
+  internal \<^const>\<open>entry_state_sol\<close> calls -- would re-run at every key.
 \<close>
+
+definition analyse_interval_entry_state_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (ivl list, ivl abs_state) analysis_result" where
+  "analyse_interval_entry_state_result_for gs mnm p =
+     Analysis_Result
+       (fst (entry_state_sol_prog gs mnm p))
+       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                  (locals (snd (entry_state_sol_prog gs mnm p) (Inl (v, ctx)))))"
+
+declare analyse_interval_entry_state_result_for_def [code del]
+
+lemma analyse_interval_entry_state_result_for_code [code]:
+  "analyse_interval_entry_state_result_for gs mnm p =
+     (let sol = entry_state_sol_prog gs mnm p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                      (locals (snd sol (Inl (v, ctx))))))"
+  unfolding analyse_interval_entry_state_result_for_def Let_def by (rule refl)
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and
+  \<^const>\<open>prog_main_name\<close>, the instantiation the production entry points use.\<close>
+
+definition analyse_interval_entry_state_result ::
+    "imp_prog \<Rightarrow> (ivl list, ivl abs_state) analysis_result" where
+  "analyse_interval_entry_state_result p =
+     analyse_interval_entry_state_result_for (declared_global p) prog_main_name p"
 
 text \<open>
-  The third parameter is the solver's own covered \<open>(node, context)\<close> key set
-  (\<^const>\<open>entry_state_sol\<close>'s first component), not variables -- named
-  \<open>reachable_keys\<close> accordingly, not \<open>vars\<close>.
+  The route-consistency corollary at the table, on both outcomes: a caller
+  point the table answers \<^const>\<open>Reachable\<close> either routes to the same callee
+  context the solved system was built with, or is exactly the case that
+  context is dead. \<^const>\<open>lookup_context\<close>'s membership guard supplies \<open>reach\<close>
+  --- an uncovered key answers \<^const>\<open>Unreachable\<close>, so a \<^const>\<open>Reachable\<close>
+  answer already witnesses that the solver stored this point --- and
+  \<open>normalize_point\<close>'s own witness-bottom test supplies the \<open>not_bot\<close> premise
+  \<open>entry_state_callee_ctx_eq_route_partial\<close> needs: a \<^const>\<open>Reachable\<close> table
+  entry is never itself \<^const>\<open>is_bot_state\<close>. No \<open>live\<close> side condition survives
+  to this corollary either.
 \<close>
 
-definition entry_state_classify_at ::
-    "cfg_node \<Rightarrow> exp \<Rightarrow> (pp \<times> ivl list) set \<Rightarrow> (pp \<times> ivl list + gk \<Rightarrow> ivl abs_state lifted)
-       \<Rightarrow> check_result" where
-  "entry_state_classify_at v cnd reachable_keys sg =
-     (let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) reachable_keys;
-          unlift = case_lifted bot (\<lambda>\<sigma>. \<sigma>) \<circ> sg
-      in if ctxs = {} then interval_classify_check cnd (unlift (Inl (v, [])))
-         else Sup_fin ((\<lambda>ctx. interval_classify_check cnd (unlift (Inl (v, ctx)))) ` ctxs))"
+corollary entry_state_callee_ctx_at_result:
+  assumes reach: "lookup_context (analyse_interval_entry_state_result_for (declared_global p) mnm p)
+                    u ctx = Reachable st"
+  shows "entry_state_callee_ctx (declared_global p) ca st =
+    (if entered_state_abs (declared_global p) (Lifted st) ca = Bot
+     then None
+     else Some (entry_state_route (declared_global p)
+               (resolved_st_q_is_bot_for (declared_global_vars p))
+               (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx)))) ca))"
+proof -
+  have globals: "\<And>x. declared_global p x = (x \<in> set (declared_global_vars p))" by simp
+  have exact: "\<And>s. resolved_st_q_is_bot_for (declared_global_vars p) s
+                     = is_bot_state (fun_of_resolved_st_q_for (declared_global p) s)"
+    by (rule resolved_st_q_is_bot_for_iff[OF globals])
+  have norm: "normalize_point (declared_global_vars p) (declared_global p)
+                (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx))))
+              = Reachable st"
+    using reach
+    by (simp add: lookup_context_def analyse_interval_entry_state_result_for_def
+                  split: if_splits)
+  have not_bot: "\<not> is_bot_state st"
+  proof (cases "locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx)))")
+    case Bot
+    with norm show ?thesis by simp
+  next
+    case (Lifted s0)
+    with norm exact show ?thesis by (auto split: if_splits)
+  qed
+  show ?thesis
+    by (rule entry_state_callee_ctx_eq_route_partial
+          [OF exact normalize_point_Reachable_map_lift[OF norm] not_bot])
+qed
 
-definition entry_state_check_report ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> check_report_entry list" where
-  "entry_state_check_report gs is_bot_pred Pi ps mnm main =
-     (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main
-      in map (\<lambda>(u, a, v). (u, ea_check_cond a,
-                entry_state_classify_at u (ea_check_cond a) (fst sol)
-                  (entry_state_sg_exec gs is_bot_pred Pi ps mnm main)))
-           (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list (compile_prog Pi ps mnm main))))"
+
+section \<open>Contextual check report\<close>
 
 text \<open>
-  Same single-solve-per-report fix as \<open>interval_td_check_report_code\<close>: bind
-  \<open>entry_state_sol\<close> once, outside \<^const>\<open>map\<close>'s per-check closure, so the
-  generated code computes the solved system once per report regardless of
-  check count. Critically, \<open>sg\<close> below goes through
-  \<^const>\<open>entry_state_sg_exec_from_sol\<close>, not \<^const>\<open>entry_state_sg_exec\<close>: the
-  latter's own defining equation pattern-matches its key argument jointly with
-  \<open>gs is_bot_pred Pi ps mnm main\<close>, so a 6-arg partial application to those
-  produces an unevaluated closure whose body -- including its own three internal
-  \<open>entry_state_sol\<close> calls -- only runs once a key is supplied. Binding \<open>sg\<close> to
-  that partial application therefore does not share \<open>entry_state_sol\<close> across
-  the checks in this report at all, despite sitting outside \<open>map\<close>: every
-  \<open>entry_state_classify_at\<close> call underneath re-solves via \<open>sg\<close>'s own
-  internal calls, once per covered context per check. \<open>entry_state_sg_exec_from_sol\<close>
-  takes the already-computed \<open>sol\<close> above directly, so this report now solves
-  the entry-state analysis exactly once, full stop -- not once per report
-  modulo \<open>sg\<close>'s own hidden re-solving.
+  The check report is a projection of the result table above, not a second
+  reading of the solved system: \<^const>\<open>classify_checks_ctx\<close> takes only a
+  \<^type>\<open>cfg\<close>, an \<^type>\<open>analysis_result\<close>, and a classifier, so no solver
+  state, solved map, or per-key lookup reaches the classification step. The
+  entry-state specifics live here, in the one argument that supplies the
+  table.
+
+  This is what removes the fabricated verdict a solver-level reading gives
+  dead code. Querying an uncovered or dead \<open>(node, context)\<close> pair against the
+  solved map answers with a bottom abstract state, and a bottom state
+  satisfies \<^const>\<open>interval_less_true\<close> and \<open>check_true\<close> vacuously, so
+  the check classifies \<^const>\<open>Check_Proved\<close> even though no execution reaches
+  it. \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Unreachable\<close> for both cases
+  instead --- the membership guard for the uncovered one, \<^const>\<open>normalize_point\<close>'s
+  witness-bottom test for the covered-but-dead one --- and
+  \<^const>\<open>classify_point\<close> declines to classify against it at all.
+
+  Contexts stay separate in \<open>entry_state_check_projection\<close> and are
+  aggregated only in \<open>entry_state_verdict_report_prog\<close>, which is the
+  resolution the source level actually needs: one source check may be dead
+  in some activations and live in others, and only the dead ones must drop
+  out of the join.
+
+  \<^const>\<open>analyse_interval_entry_state_result_for\<close> occurs once here, and it
+  binds its own solve once, so a whole report costs exactly one solve
+  regardless of how many checks or contexts it covers.
 \<close>
 
-declare entry_state_check_report_def [code del]
+definition entry_state_check_projection ::
+    "pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (ivl list \<times> contextual_verdict) set) list" where
+  "entry_state_check_projection mnm p =
+     classify_checks_ctx (prog_cfg mnm p)
+       (analyse_interval_entry_state_result_for (declared_global p) mnm p)
+       interval_classify_check"
 
-lemma entry_state_check_report_code [code]:
-  "entry_state_check_report gs is_bot_pred Pi ps mnm main =
-     (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main;
-          sg = entry_state_sg_exec_from_sol gs sol
-      in map (\<lambda>(u, a, v). (u, ea_check_cond a, entry_state_classify_at u (ea_check_cond a) (fst sol) sg))
-           (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list (compile_prog Pi ps mnm main))))"
-  unfolding entry_state_check_report_def Let_def entry_state_sg_exec_from_sol_eq[symmetric]
-  by (rule refl)
+definition entry_state_verdict_report_prog ::
+    "pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "entry_state_verdict_report_prog mnm p =
+     map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
+       (entry_state_check_projection mnm p)"
+
+text \<open>Aggregating the projection is exactly \<^const>\<open>classify_checks_verdicts\<close>
+  over the same table; going through the projection is what keeps the two
+  reports to one shared solve.\<close>
+
+lemma entry_state_verdict_report_prog_eq:
+  "entry_state_verdict_report_prog mnm p =
+     classify_checks_verdicts (prog_cfg mnm p)
+       (analyse_interval_entry_state_result_for (declared_global p) mnm p)
+       interval_classify_check"
+  unfolding entry_state_verdict_report_prog_def entry_state_check_projection_def
+  by (rule classify_checks_verdicts_proj)
+
+definition analyse_interval_entry_state ::
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "analyse_interval_entry_state p = entry_state_verdict_report_prog prog_main_name p"
+
+text \<open>
+  A \<^typ>\<open>check_report_entry\<close> view for a consumer whose report type has no
+  dead case. Lossy by construction:
+  \<^const>\<open>verdict_check_result\<close> maps a dead check to \<^const>\<open>Check_Unknown\<close>, so
+  the fabricated \<^const>\<open>Check_Proved\<close> is gone but the distinction between
+  ``nothing reaches this check'' and ``something reaches it and the
+  abstraction could not decide'' is not recoverable from the result.
+  \<^const>\<open>entry_state_verdict_report_prog\<close> is the report that keeps it, and is
+  the one a consumer able to suppress dead checks should read.
+\<close>
 
 definition entry_state_check_report_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "entry_state_check_report_prog mnm p =
-     entry_state_check_report (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
-       (prog_table p) (prog_procs p) mnm (prog_main p)"
+     map (\<lambda>(u, c, v). (u, c, verdict_check_result v))
+       (entry_state_verdict_report_prog mnm p)"
 
-definition analyse_interval_entry_state :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_interval_entry_state p = entry_state_check_report_prog prog_main_name p"
+text \<open>Both reports are one \<^const>\<open>map\<close> off the same projection, so a
+  positional consumer pairing either with the source's own check list sees
+  the same length and the same order.\<close>
+
+lemma length_entry_state_check_report_prog:
+  "length (entry_state_check_report_prog mnm p)
+     = length (entry_state_verdict_report_prog mnm p)"
+  unfolding entry_state_check_report_prog_def by simp
 
 end

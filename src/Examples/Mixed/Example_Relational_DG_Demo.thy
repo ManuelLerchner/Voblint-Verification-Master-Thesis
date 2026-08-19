@@ -168,7 +168,8 @@ definition demo_rel_graph_config ::
   "(unit, unit, (relc, relc) dg_state, relc) analysis_graph_config" where
   "demo_rel_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         scope_locals (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
@@ -187,7 +188,7 @@ definition demo_rel_graph_config ::
       cluster_label = (\<lambda>_ _. ''main / relational''),
       source_text = Some (pretty_string_of_program demo_pi (prog_procs demo_program)
         (prog_main demo_program) []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition demo_graph_domain :: "(pp \<times> unit + unit) list" where

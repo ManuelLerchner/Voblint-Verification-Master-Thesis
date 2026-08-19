@@ -142,13 +142,16 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    solver output covers is `Finite_Set.fold1`/`Sup_fin` over that lattice,
    proved associative/commutative/idempotent by the typeclass laws, not a
    hand-rolled "all Proved -> PROVED, all Refuted -> REFUTED" reduction.
-   `entry_state_classify_at`/`entry_state_check_report`
-   (`Interval_Exec_Ctx_Sound.thy`) enumerate covered contexts via
-   `Set.filter` over the solver's own already-finite solution set, never a
-   raw comprehension (`ivl list` has no `enum` instance -- its only order
-   is the non-total abstract-domain lattice). A node with no covered
-   context falls back to the flat report's own dead-code `bot`
-   classification, not a fabricated new case.
+   `classify_checks_ctx`/`classify_checks_verdicts` (`Abstract_Checks.thy`)
+   read a solved `analysis_result` rather than a solver state, and enumerate
+   covered contexts via `contexts_at` over the solver's own already-finite
+   key set, never a raw comprehension (`ivl list` has no `enum` instance --
+   its only order is the non-total abstract-domain lattice). Deadness is a
+   fourth verdict, `contextual_verdict`'s `Dead`, not a `check_result`
+   value: a context whose stored state concretizes to nothing is excluded
+   from the join, and a check whose every covered context is dead reports
+   `Dead` and is suppressed at the CLI, instead of classifying vacuously
+   against `bot` and reporting a fabricated `Check_Proved`.
 5. **G5 -- CLI exposure + precision witness. Done, batch-green
    (2026-08-11).** `--analysis interval --context entry-state` (default
    `--context none`, byte-identical to prior behavior --

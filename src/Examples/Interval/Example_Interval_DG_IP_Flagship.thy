@@ -334,7 +334,8 @@ definition twice_graph_config ::
   "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "twice_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
@@ -356,7 +357,7 @@ definition twice_graph_config ::
       owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
       source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition twice_graph_domain :: "(pp \<times> unit + unit) list" where

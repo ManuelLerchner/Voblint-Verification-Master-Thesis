@@ -127,21 +127,48 @@ let render_text_report (report :
     report check_positions;
   Buffer.contents buf
 
-(* analyse_ctx's check_report_entry list carries no per-variable state
-   projection (unlike analyse_with_state's report), so there is no
-   is_unreachable dead-code filter or per-variable state column here --
-   only the check verdict itself. *)
+let report_row buf (line, col) node cond verdict =
+  Buffer.add_string buf
+    (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
+       (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+       (verdict_label verdict))
+
+(* analyse_with_solver's check_report_entry list carries no per-variable state
+   projection (unlike analyse_with_state's report) and no deadness channel, so
+   there is no dead-code filter or per-variable state column here -- only the
+   check verdict itself. *)
 let render_flat_report
     (report :
       (Voblint_CLI.Core.cfg_node * (Voblint_CLI.Core.exp * Voblint_CLI.Core.check_result)) list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
   List.iter2
+    (fun (node, (cond, verdict)) (line, col) -> report_row buf (line, col) node cond verdict)
+    report check_positions;
+  Buffer.contents buf
+
+(* analyse_ctx's report distinguishes Dead -- every context covering the check
+   is unreachable -- from a decided verdict (Abstract_Checks.thy's
+   contextual_verdict). Dead rows are suppressed entirely, matching what
+   render_text_report already does with analyse_with_state's unreachable flag
+   and Goblint's "__goblint_check(0); // NOWARN (unreachable)" convention,
+   rather than printing a verdict for code no execution reaches.
+
+   The filter happens inside the iter2 callback, never by pre-filtering either
+   list: report and check_positions must stay the same length and the same
+   order, one entry per __voblint_check the parser saw. *)
+let render_ctx_report
+    (report :
+      (Voblint_CLI.Core.cfg_node
+       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.contextual_verdict))
+      list)
+    (check_positions : (int * int) list) =
+  let buf = Buffer.create 256 in
+  List.iter2
     (fun (node, (cond, verdict)) (line, col) ->
-       Buffer.add_string buf
-         (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
-            (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
-            (verdict_label verdict)))
+       match verdict with
+       | Voblint_CLI.Core.Dead -> ()
+       | Voblint_CLI.Core.Decided v -> report_row buf (line, col) node cond v)
     report check_positions;
   Buffer.contents buf
 
@@ -336,7 +363,7 @@ let () =
            else Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
       else if !context <> Voblint_CLI.Analyse.Ctx_None then
         (match Voblint_CLI.Analyse.analyse_ctx kind !context prog with
-         | Some report -> Ok_text (render_flat_report report check_positions)
+         | Some report -> Ok_text (render_ctx_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--context combination")
       else if !solver <> None then
         (match Voblint_CLI.Analyse.analyse_with_solver kind (Option.get !solver) prog with

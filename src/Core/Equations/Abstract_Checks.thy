@@ -1,5 +1,5 @@
 theory Abstract_Checks
-  imports Checks CFG_Enumeration "Voblint_Core.Abstract_Numeric_Queries"
+  imports Checks CFG_Enumeration Analysis_Result "Voblint_Core.Abstract_Numeric_Queries"
 begin
 
 datatype check_result = Check_Proved | Check_Refuted | Check_Unknown
@@ -416,6 +416,274 @@ proof -
   then show ?thesis
     unfolding classify_checks_with_state_def by blast
 qed
+
+section \<open>Contextual check verdicts over a solved result table\<close>
+
+text \<open>
+  \<^const>\<open>classify_checks\<close> reads exactly one abstract state per checked node.
+  A context-sensitive result has one state per \<open>(node, context)\<close> pair
+  instead, and some of those pairs represent no concrete execution at all: a
+  branch that is dead inside one activation, or an activation a node is never
+  reached under. Classifying such a point against its stored state answers
+  vacuously --- at an empty concretization every condition is both
+  \<open>check_true\<close> and \<open>check_false\<close>, by \<open>check_true_false_vacuous\<close>
+  --- so a verdict read there is evidence of nothing, and reporting it as
+  \<^const>\<open>Check_Proved\<close> would fabricate a proof about executions that do not
+  exist.
+
+  \<open>contextual_verdict\<close> keeps that case outside \<^typ>\<open>check_result\<close> rather
+  than folding it into one of its three values. \<open>Dead\<close> means ``no concrete
+  execution is represented here''; it is neither \<^const>\<open>Check_Unknown\<close>, which
+  does assert that something reaches this point and the abstraction failed to
+  decide it, nor \<^const>\<open>Check_Proved\<close>.
+\<close>
+
+datatype contextual_verdict = Dead | Decided check_result
+
+text \<open>
+  The order mirrors \<^typ>\<open>'a point_state\<close>'s, for the same reason: \<open>Dead\<close> is
+  least and neutral for \<^const>\<open>sup\<close>, and two decided verdicts join through
+  \<^typ>\<open>check_result\<close>'s own flat join. Aggregating a node's contexts is then
+  just \<^const>\<open>sup\<close> over the observations, and every case the source-level
+  report needs falls out of that single operation: a node whose contexts are
+  all dead stays \<open>Dead\<close>, a dead context beside a live one contributes
+  nothing, and two live contexts that disagree collapse to
+  \<^term>\<open>Decided Check_Unknown\<close>.
+\<close>
+
+instantiation contextual_verdict :: order
+begin
+
+fun less_eq_contextual_verdict :: "contextual_verdict \<Rightarrow> contextual_verdict \<Rightarrow> bool" where
+  "less_eq_contextual_verdict Dead _ = True"
+| "less_eq_contextual_verdict (Decided _) Dead = False"
+| "less_eq_contextual_verdict (Decided a) (Decided b) = (a \<le> b)"
+
+definition less_contextual_verdict :: "contextual_verdict \<Rightarrow> contextual_verdict \<Rightarrow> bool" where
+  "less_contextual_verdict x y = (x \<le> y \<and> \<not> y \<le> x)"
+
+instance
+proof
+  fix x y z :: contextual_verdict
+  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)" unfolding less_contextual_verdict_def by (rule refl)
+  show "x \<le> x" by (cases x) simp_all
+  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z" by (cases x; cases y; cases z) simp_all
+  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y" by (cases x; cases y) simp_all
+qed
+
+end
+
+instantiation contextual_verdict :: bot
+begin
+definition bot_contextual_verdict :: contextual_verdict where
+  "bot_contextual_verdict = Dead"
+instance ..
+end
+
+lemma bot_contextual_verdict_eq [simp]: "(bot :: contextual_verdict) = Dead"
+  unfolding bot_contextual_verdict_def by (rule refl)
+
+instance contextual_verdict :: order_bot
+  by standard (simp add: bot_contextual_verdict_def)
+
+instantiation contextual_verdict :: semilattice_sup
+begin
+
+fun sup_contextual_verdict ::
+  "contextual_verdict \<Rightarrow> contextual_verdict \<Rightarrow> contextual_verdict"
+where
+  "sup_contextual_verdict Dead y = y"
+| "sup_contextual_verdict x Dead = x"
+| "sup_contextual_verdict (Decided a) (Decided b) = Decided (a \<squnion> b)"
+
+instance
+proof
+  fix x y z :: contextual_verdict
+  show "x \<le> x \<squnion> y" by (cases x; cases y) simp_all
+  show "y \<le> x \<squnion> y" by (cases x; cases y) simp_all
+  show "y \<le> x \<Longrightarrow> z \<le> x \<Longrightarrow> y \<squnion> z \<le> x" by (cases x; cases y; cases z) simp_all
+qed
+
+end
+
+subsection \<open>Classifying one contextual point\<close>
+
+text \<open>
+  The reachability decision is not remade here: it was already made when the
+  solved local unknown became a \<^typ>\<open>'a point_state\<close> through
+  \<^const>\<open>normalize_point\<close>, whose \<open>normalize_point_correct\<close> states that
+  \<^const>\<open>Unreachable\<close> is exactly the empty concretization. \<open>classify_point\<close>
+  only refuses to classify against a state that represents nothing.
+\<close>
+
+fun classify_point ::
+  "(exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> exp \<Rightarrow> 'a point_state \<Rightarrow> contextual_verdict"
+where
+  "classify_point classify c Unreachable = Dead"
+| "classify_point classify c (Reachable st) = Decided (classify c st)"
+
+subsection \<open>Aggregating the contexts observed at one check\<close>
+
+text \<open>
+  Folding \<^const>\<open>sup\<close> from \<open>Dead\<close> over a finite set of observations, exactly
+  as \<open>join_states_over\<close> folds the state join from \<^const>\<open>Unreachable\<close>. The
+  fold's unit is the empty-set answer, so a check with no covered context
+  needs no separate guard. The \<open>[code]\<close> equation is the usual
+  \<open>comp_fun_idem\<close> transfer to a list fold: over an unordered set the value is
+  well defined only because \<^const>\<open>sup\<close> is commutative, associative, and
+  idempotent.
+\<close>
+
+definition aggregate_verdicts :: "contextual_verdict set \<Rightarrow> contextual_verdict" where
+  "aggregate_verdicts vs = Finite_Set.fold sup Dead vs"
+
+declare aggregate_verdicts_def [code del]
+
+lemma aggregate_verdicts_code [code]:
+  "aggregate_verdicts (set vs) = List.fold sup vs Dead"
+proof -
+  interpret ci: comp_fun_idem "sup :: contextual_verdict \<Rightarrow> _"
+    by (rule comp_fun_idem_sup)
+  show ?thesis unfolding aggregate_verdicts_def by (rule ci.fold_set_fold)
+qed
+
+lemma aggregate_verdicts_empty [simp]: "aggregate_verdicts {} = Dead"
+  unfolding aggregate_verdicts_def by simp
+
+lemma aggregate_verdicts_insert [simp]:
+  "finite vs \<Longrightarrow> aggregate_verdicts (insert v vs) = v \<squnion> aggregate_verdicts vs"
+proof -
+  assume "finite vs"
+  interpret ci: comp_fun_idem "sup :: contextual_verdict \<Rightarrow> _"
+    by (rule comp_fun_idem_sup)
+  show ?thesis
+    unfolding aggregate_verdicts_def using \<open>finite vs\<close> by (simp add: ci.fold_insert_idem)
+qed
+
+text \<open>A check is dead exactly when every context observed at it is dead ---
+  vacuously so when none is observed. Stated over the observations themselves
+  rather than over the aggregate, and then shown to agree with it, so the two
+  readings cannot drift.\<close>
+
+lemma sup_contextual_verdict_eq_Dead_iff [simp]:
+  "(x \<squnion> y = Dead) \<longleftrightarrow> x = Dead \<and> y = Dead"
+  by (cases x; cases y) simp_all
+
+lemma aggregate_verdicts_eq_Dead_iff:
+  "finite vs \<Longrightarrow> aggregate_verdicts vs = Dead \<longleftrightarrow> (\<forall>v \<in> vs. v = Dead)"
+proof (induct rule: finite_induct)
+  case empty then show ?case by simp
+next
+  case (insert v vs) then show ?case by simp
+qed
+
+definition check_dead :: "('ctx \<times> contextual_verdict) set \<Rightarrow> bool" where
+  "check_dead vs = (\<forall>(c, v) \<in> vs. v = Dead)"
+
+lemma check_dead_empty [simp]: "check_dead {}"
+  unfolding check_dead_def by simp
+
+lemma check_dead_iff_aggregate:
+  assumes "finite vs"
+  shows "check_dead vs \<longleftrightarrow> aggregate_verdicts (snd ` vs) = Dead"
+  unfolding check_dead_def
+  using aggregate_verdicts_eq_Dead_iff[OF finite_imageI[OF assms, of snd]]
+  by auto
+
+text \<open>The lossy collapse back into \<^typ>\<open>check_result\<close>, for a consumer whose
+  report type has no dead case. \<open>Dead\<close> becomes \<^const>\<open>Check_Unknown\<close>: of the
+  three values it is the only one asserting nothing about the checked
+  condition, so collapsing this way weakens the report rather than
+  fabricating a verdict.\<close>
+
+fun verdict_check_result :: "contextual_verdict \<Rightarrow> check_result" where
+  "verdict_check_result Dead = Check_Unknown"
+| "verdict_check_result (Decided r) = r"
+
+text \<open>The opposite direction, for a report that has only one observation per
+  check and therefore no dead case to distinguish: every entry is
+  \<open>Decided\<close>. Deadness is not asserted either way --- such a report simply does
+  not carry the channel that would express it.\<close>
+
+definition decided_report ::
+  "check_report_entry list \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "decided_report = map (\<lambda>(u, cnd, r). (u, cnd, Decided r))"
+
+lemma length_decided_report [simp]: "length (decided_report rs) = length rs"
+  unfolding decided_report_def by simp
+
+subsection \<open>Whole-program contextual check report\<close>
+
+text \<open>
+  The context-sensitive sibling of \<^const>\<open>classify_checks\<close>: the same
+  \<^const>\<open>EA_Check\<close> traversal in the same \<^const>\<open>cfg_intra_list\<close> order, but
+  reading a \<^typ>\<open>('ctx, 'a) analysis_result\<close> instead of a single
+  \<^typ>\<open>pp \<Rightarrow> 's\<close> environment, and retaining one verdict per context covered
+  at the checked node rather than collapsing them at construction time.
+  \<open>classify_checks_ctx_positions\<close> below is the load-bearing consequence: the
+  node and condition columns coincide with \<^const>\<open>classify_checks\<close>'s, so a
+  positional consumer pairing this report with the source's own check list
+  stays aligned.
+
+  The per-check observations are a set, not a list. \<^typ>\<open>'ctx\<close> carries no
+  ordering constraint --- \<^const>\<open>contexts_at\<close> is a set for precisely that
+  reason, and real context types such as interval vectors have no total
+  order --- so no canonical list exists to produce. Nothing downstream needs
+  one: \<^const>\<open>aggregate_verdicts\<close> is order-independent by construction.
+\<close>
+
+definition classify_checks_ctx ::
+    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> exp \<times> ('ctx \<times> contextual_verdict) set) list" where
+  "classify_checks_ctx g r classify =
+     map (\<lambda>(u, a, v). (u, ea_check_cond a,
+            (\<lambda>ctx. (ctx, classify_point classify (ea_check_cond a) (lookup_context r u ctx)))
+              ` contexts_at r u))
+       (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
+
+definition classify_checks_verdicts ::
+    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "classify_checks_verdicts g r classify =
+     map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (classify_checks_ctx g r classify)"
+
+lemma classify_checks_verdicts_proj [simp]:
+  "map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (classify_checks_ctx g r classify)
+     = classify_checks_verdicts g r classify"
+  unfolding classify_checks_verdicts_def by (rule refl)
+
+lemma classify_checks_ctx_positions:
+  "map (\<lambda>(u, c, vs). (u, c)) (classify_checks_ctx g r classify)
+     = map (\<lambda>(u, c, res). (u, c)) (classify_checks g env classify')"
+  unfolding classify_checks_ctx_def classify_checks_def
+  by (simp add: comp_def case_prod_beta)
+
+lemma classify_checks_verdicts_positions:
+  "map (\<lambda>(u, c, v). (u, c)) (classify_checks_verdicts g r classify)
+     = map (\<lambda>(u, c, res). (u, c)) (classify_checks g env classify')"
+  unfolding classify_checks_verdicts_def classify_checks_ctx_def classify_checks_def
+  by (simp add: comp_def case_prod_beta)
+
+lemma length_classify_checks_ctx:
+  "length (classify_checks_ctx g r classify) = length (classify_checks g env classify')"
+  unfolding classify_checks_ctx_def classify_checks_def by simp
+
+lemma length_classify_checks_verdicts:
+  "length (classify_checks_verdicts g r classify) = length (classify_checks g env classify')"
+  unfolding classify_checks_verdicts_def classify_checks_ctx_def classify_checks_def by simp
+
+text \<open>Membership unfolds to an \<^const>\<open>EA_Check\<close> edge at the entry's own source
+  node, with that node's whole context fan-out attached --- the same shape
+  \<open>classify_checks_mem_iff\<close> gives the context-insensitive report.\<close>
+
+lemma classify_checks_ctx_mem_iff:
+  assumes "finite (intra g)"
+  shows "(v, c, vs) \<in> set (classify_checks_ctx g r classify)
+     \<longleftrightarrow> (\<exists>tgt. (v, EA_Check c, tgt) \<in> intra g)
+         \<and> vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_context r v ctx))) ` contexts_at r v"
+  unfolding classify_checks_ctx_def set_map set_filter
+  using set_cfg_intra_list[OF assms]
+  by (auto simp: image_iff split: edge_action.splits)
 
 end
 

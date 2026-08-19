@@ -26,6 +26,12 @@ export_code
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec
+  analyse_sign_result analyse_interval_td_result analyse_int_result
+  analyse_interval_entry_state_result analyse_interval_entry_state_result_for
+  result_keys contexts_at lookup_context lookup_joined_state node_live_ex
+  is_reachable_point map_point_state normalize_point
+  Dead Decided verdict_check_result aggregate_verdicts check_dead
+  entry_state_check_projection
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 
 export_code
@@ -49,6 +55,12 @@ export_code
   string_of_exp
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
+  analyse_sign_result analyse_interval_td_result analyse_int_result
+  analyse_interval_entry_state_result analyse_interval_entry_state_result_for
+  result_keys contexts_at lookup_context lookup_joined_state node_live_ex
+  is_reachable_point map_point_state normalize_point
+  Dead Decided verdict_check_result aggregate_verdicts check_dead
+  entry_state_check_projection
   in OCaml file_prefix "Voblint_CLI"
 
 end

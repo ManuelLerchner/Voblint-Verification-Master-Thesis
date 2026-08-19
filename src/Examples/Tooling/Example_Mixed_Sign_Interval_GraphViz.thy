@@ -69,7 +69,8 @@ definition mixed_graphviz_graph_config ::
     analysis_graph_config" where
   "mixed_graphviz_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope mixed_graphviz_gs (\<lambda>_. None) [] prog_main_name (prog_main mixed_graphviz_prog)
@@ -91,7 +92,7 @@ definition mixed_graphviz_graph_config ::
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''mixed Sign answers''),
       source_text = Some (pretty_string_of_program (\<lambda>_. None) [] (prog_main mixed_graphviz_prog) []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition mixed_graphviz_graph_domain :: "(pp \<times> unit + unit) list" where

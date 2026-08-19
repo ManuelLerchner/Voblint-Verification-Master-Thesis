@@ -1,5 +1,6 @@
 theory Sign_Checks
-  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks" Sign_Exec_Sound
+  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Analysis_Result" Sign_Exec_Sound
 begin
 
 hide_const phase.N
@@ -250,6 +251,50 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 definition analyse_sign_report_with_state ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_with_state p = analyse_sign_report_for_with_state (declared_global p) p"
+
+subsection \<open>Solved-result table\<close>
+
+text \<open>
+  The same solved D/G system as \<^const>\<open>analyse_sign_report_for\<close>, read as a
+  \<^typ>\<open>(unit, sign abs_state) analysis_result\<close> instead of as a check report:
+  the covered local keys the solver already returns as the first component,
+  and \<^const>\<open>normalize_point\<close> applied to each local unknown. Monovariant, so
+  the context type is \<^typ>\<open>unit\<close>; only \<open>Inl\<close>-shaped local keys are covered,
+  never the solver's own \<open>Inr\<close> global unknown.
+
+  The \<open>[code]\<close> rewrite is the same single-solve fix as
+  \<open>analyse_sign_report_for_code\<close>: the definitional equation names
+  \<^const>\<open>analyse_sign_for\<close> twice, once for the key set and once inside the
+  per-key closure, so naive code generation would solve the system afresh on
+  every lookup. Binding \<open>sol\<close> once outside the closure compiles to a single
+  shared thunk.
+\<close>
+
+definition analyse_sign_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result_for gs p =
+     Analysis_Result
+       (fst (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p))
+       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                  (locals (snd (analyse_sign_for
+                                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+                             (Inl (v, ctx)))))"
+
+declare analyse_sign_result_for_def [code del]
+
+lemma analyse_sign_result_for_code [code]:
+  "analyse_sign_result_for gs p =
+     (let sol = analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                      (locals (snd sol (Inl (v, ctx))))))"
+  unfolding analyse_sign_result_for_def Let_def by (rule refl)
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_sign_report\<close>'s shape.\<close>
+
+definition analyse_sign_result :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result p = analyse_sign_result_for (declared_global p) p"
 
 end
 

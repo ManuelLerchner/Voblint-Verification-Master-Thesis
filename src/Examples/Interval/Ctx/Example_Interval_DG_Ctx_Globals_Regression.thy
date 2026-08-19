@@ -145,16 +145,17 @@ lemma gcall_after_third_return:
      = Some (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
   by eval
 
-text \<open>The production check-report pipeline end to end: all five checks decide, so the
-  returned values and the surviving global update are both exact at the source level,
-  including the third call's global-valued argument and return.\<close>
+text \<open>The production check-report pipeline end to end: all five checks are live in every
+  context they are covered under and all five decide, so the returned values and the
+  surviving global update are both exact at the source level, including the third call's
+  global-valued argument and return.\<close>
 lemma gcall_analyse_interval_entry_state:
   "analyse_interval_entry_state gcall_prog =
-     [(Statement 6, exp.Eq (V (STR ''a'')) (exp.N 15), Check_Proved),
-      (Statement 7, exp.Eq (V (STR ''b'')) (exp.N 19), Check_Proved),
-      (Statement 8, exp.Eq (V (STR ''g'')) (exp.N 19), Check_Proved),
-      (Statement 10, exp.Eq (V (STR ''c'')) (exp.N 38), Check_Proved),
-      (Statement 11, exp.Eq (V (STR ''g'')) (exp.N 38), Check_Proved)]"
+     [(Statement 6, exp.Eq (V (STR ''a'')) (exp.N 15), Decided Check_Proved),
+      (Statement 7, exp.Eq (V (STR ''b'')) (exp.N 19), Decided Check_Proved),
+      (Statement 8, exp.Eq (V (STR ''g'')) (exp.N 19), Decided Check_Proved),
+      (Statement 10, exp.Eq (V (STR ''c'')) (exp.N 38), Decided Check_Proved),
+      (Statement 11, exp.Eq (V (STR ''g'')) (exp.N 38), Decided Check_Proved)]"
   by eval
 
 end

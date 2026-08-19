@@ -124,10 +124,9 @@ text \<open>
 definition exp_vnames_list :: "exp \<Rightarrow> vname list" where
   "exp_vnames_list b = sorted_list_of_set (exp_vnames b)"
 
-definition report_vars ::
-    "(pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list \<Rightarrow> vname list" where
+definition report_vars :: "('n \<times> exp \<times> 'r) list \<Rightarrow> vname list" where
   "report_vars report =
-     sorted_list_of_set (\<Union> ((\<lambda>(_, c, _, _). exp_vnames c) ` set report))"
+     sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames c) ` set report))"
 
 definition state_report_dot_auto :: "analysis_kind \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_dot_auto kind p =
@@ -230,82 +229,174 @@ definition full_state_graph_snapshot_auto :: "analysis_kind \<Rightarrow> imp_pr
        (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
 
 text \<open>
-  Entry-state siblings of \<open>state_report_dot_auto\<close>/\<open>full_state_dot_auto\<close>
-  (\<open>#108\<close>), Interval-only (\<^const>\<open>analyse_ctx\<close> has no Sign entry-state
-  branch, so there is no \<open>analysis_kind\<close> parameter here). A \<^typ>\<open>pp\<close> may be
-  covered by several entry-state contexts at once; \<open>entry_state_env_at\<close>
-  joins every covered context's reading of a variable through \<^typ>\<open>ivl\<close>'s
-  own \<^class>\<open>semilattice_sup\<close> (\<^const>\<open>Sup_fin\<close> over \<^const>\<open>Set.filter\<close> on the
-  solver's own already-finite solution set, the same non-comprehension
-  idiom \<open>entry_state_classify_at\<close> uses and for the same reason -- \<^typ>\<open>ivl
-  list\<close> has no \<^class>\<open>enum\<close> instance). An uncovered point falls back to the
-  seeded default context, mirroring \<open>entry_state_classify_at\<close>'s own
-  uncovered case.
+  Entry-state siblings of \<open>state_report_dot_auto\<close>/\<open>full_state_dot_auto\<close>,
+  Interval-only (\<^const>\<open>analyse_ctx\<close> has no Sign entry-state branch, so there
+  is no \<open>analysis_kind\<close> parameter here). Both read
+  \<^const>\<open>analyse_interval_entry_state_result\<close>, the canonical solved-result
+  table, rather than the solver's own solution map. A \<^typ>\<open>pp\<close> may be covered
+  by several entry-state contexts at once, and \<^const>\<open>lookup_joined_state\<close> is
+  the table's own per-node view: it joins exactly the covered contexts, each
+  read at its own key, through \<^typ>\<open>ivl\<close>'s \<^class>\<open>semilattice_sup\<close>.
+
+  That join answers with a \<^typ>\<open>'a point_state\<close>, and both of its cases are
+  rendered. A node the solver never covered and a node whose every covered
+  context concretizes to nothing are alike \<^const>\<open>Unreachable\<close>: no execution
+  arrives, so there is no store to print variable lines for. Printing the
+  underlying \<^const>\<open>bot\<close> reading instead would draw an ordinary live node for
+  code nothing reaches.
 \<close>
+
+definition entry_state_point_env_at ::
+    "(ivl list, ivl abs_state) analysis_result
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "entry_state_point_env_at r v =
+     map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)"
 
 text \<open>
-  Point-free in \<open>v\<close>/\<open>x\<close> so \<^const>\<open>entry_state_sol\<close> is solved exactly once per partial
-  application to \<open>gs is_bot_pred Pi ps mnm main\<close>, not once per \<open>(v, x)\<close> query. Every caller
-  already partially applies these six arguments once and reuses the result across every CFG node
-  (\<open>full_state_node_annotation\<close>'s \<open>env v\<close>/\<open>env v x\<close>), so this is a pure sharing fix, provably
-  the same function as the previous curried-all-the-way-through definition -- no lemma needed, the
-  \<open>let\<close>/lambda reordering is extensional equality, not a new fact about the analysis.
+  The unreachable styling draws from the palette \<^const>\<open>check_result_annotation\<close>
+  and \<^const>\<open>analysis_node_attrs\<close> already use: \<open>gray40\<close>, the grey the renderer
+  gives its own exit nodes, and deliberately not the \<open>gray70\<close> an undecided
+  check carries. ``Nothing reaches this node'' and ``something reaches it and
+  the abstraction could not decide'' are different findings and must not
+  render alike.
 \<close>
 
-definition entry_state_env_at ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-       \<Rightarrow> cfg_node \<Rightarrow> abstract_value abs_state" where
-  "entry_state_env_at gs is_bot_pred Pi ps mnm main =
-     (let sol = entry_state_sol gs is_bot_pred Pi ps mnm main;
-          sg = entry_state_sg_exec_from_sol gs sol
-      in (\<lambda>v x.
-            let ctxs = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (fst sol)
-            in IntervalValue
-                 (if ctxs = {} then case_lifted bot id (sg (Inl (v, []))) x
-                  else Sup_fin ((\<lambda>ctx. case_lifted bot id (sg (Inl (v, ctx))) x) ` ctxs))))"
+definition unreachable_gv_style :: string where
+  "unreachable_gv_style = ''shape=box,style=filled,fillcolor=gray40,fontcolor=white''"
+
+definition unreachable_state_annotation :: graphviz_node_annotation where
+  "unreachable_state_annotation = Node_Annotation ''unreachable'' unreachable_gv_style"
+
+definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation" where
+  "dead_check_annotation cnd =
+     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') unreachable_gv_style"
+
+text \<open>
+  The \<^typ>\<open>'a point_state\<close>-aware sibling of \<^const>\<open>full_state_node_annotation\<close>:
+  the same variable lines and the same default styling at a reachable node,
+  the shared unreachable annotation where there is no state to print.
+\<close>
+
+definition point_state_node_annotation ::
+    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state point_state)
+       \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+  "point_state_node_annotation vars env v =
+     (case env v of
+        Unreachable \<Rightarrow> Some unreachable_state_annotation
+      | Reachable st \<Rightarrow>
+          Some (Node_Annotation (join_gv_nl (map (state_line st) vars))
+                  ''shape=box,style=filled,fillcolor=lightgreen''))"
+
+text \<open>
+  One render is one solve. The \<open>[code]\<close> equations bind the result table once,
+  outside the per-node annotation closure, so the whole graph is annotated
+  from a single \<^const>\<open>entry_state_sol_prog\<close> run no matter how many nodes it
+  has; the defining equations stay in the shape that reads as the intended
+  meaning.
+\<close>
 
 definition entry_state_full_state_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_dot_auto p =
      raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (full_state_node_annotation (program_vars p)
-          (entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
-             (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
+       (point_state_node_annotation (program_vars p)
+          (entry_state_point_env_at (analyse_interval_entry_state_result p)))"
+
+declare entry_state_full_state_dot_auto_def [code del]
+
+lemma entry_state_full_state_dot_auto_code [code]:
+  "entry_state_full_state_dot_auto p =
+     (let r = analyse_interval_entry_state_result p
+      in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (point_state_node_annotation (program_vars p) (entry_state_point_env_at r)))"
+  unfolding entry_state_full_state_dot_auto_def Let_def by (rule refl)
 
 definition entry_state_full_state_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_graph_snapshot_auto p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (full_state_node_annotation (program_vars p)
-          (entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
-             (prog_table p) (prog_procs p) prog_main_name (prog_main p)))"
+       (point_state_node_annotation (program_vars p)
+          (entry_state_point_env_at (analyse_interval_entry_state_result p)))"
+
+declare entry_state_full_state_graph_snapshot_auto_def [code del]
+
+lemma entry_state_full_state_graph_snapshot_auto_code [code]:
+  "entry_state_full_state_graph_snapshot_auto p =
+     (let r = analyse_interval_entry_state_result p
+      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (point_state_node_annotation (program_vars p) (entry_state_point_env_at r)))"
+  unfolding entry_state_full_state_graph_snapshot_auto_def Let_def by (rule refl)
 
 text \<open>
-  \<open>entry_state_report_for_annotation\<close> is \<open>entry_state_check_report_prog\<close>
-  (already the context-aggregated verdict, \<^const>\<open>entry_state_classify_at\<close>)
-  paired with \<open>entry_state_env_at\<close>'s own, separately joined, per-variable
-  state reading, giving \<^const>\<open>state_report_node_annotation\<close> the same
-  \<open>(pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list\<close> shape
-  \<open>analyse_with_state\<close>'s report already has.
+  \<open>entry_state_report_for_annotation\<close> pairs
+  \<^const>\<open>entry_state_verdict_report_prog\<close>'s source-level verdicts with the same
+  table's per-node joined state. The verdict column is
+  \<^typ>\<open>contextual_verdict\<close>, not \<^typ>\<open>check_result\<close>: a check every covering
+  context finds unreachable stays \<^const>\<open>Dead\<close> all the way into the annotation,
+  which has a case for it, so nothing is collapsed into \<^const>\<open>Check_Unknown\<close>
+  on the way to the graph.
 \<close>
 
 definition entry_state_report_for_annotation ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list" where
+    "imp_prog
+       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list" where
   "entry_state_report_for_annotation p =
-     map (\<lambda>(v, cnd, res). (v, cnd, res,
-            entry_state_env_at (declared_global p) (resolved_st_q_is_bot_for (declared_global_vars p))
-              (prog_table p) (prog_procs p) prog_main_name (prog_main p) v))
-       (entry_state_check_report_prog prog_main_name p)"
+     map (\<lambda>(v, cnd, verdict).
+            (v, cnd, verdict,
+             entry_state_point_env_at (analyse_interval_entry_state_result p) v))
+       (entry_state_verdict_report_prog prog_main_name p)"
+
+declare entry_state_report_for_annotation_def [code del]
+
+text \<open>Both columns come off one table. The defining equation names
+  \<^const>\<open>entry_state_verdict_report_prog\<close>, which builds its own;
+  \<open>entry_state_verdict_report_prog_eq\<close> re-reads that report as
+  \<^const>\<open>classify_checks_verdicts\<close> over an already-bound table, which is what
+  lets verdicts and states share the single solve.\<close>
+
+lemma entry_state_report_for_annotation_code [code]:
+  "entry_state_report_for_annotation p =
+     (let r = analyse_interval_entry_state_result p
+      in map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, entry_state_point_env_at r v))
+           (classify_checks_verdicts (prog_cfg prog_main_name p) r interval_classify_check))"
+  unfolding entry_state_report_for_annotation_def Let_def
+    entry_state_verdict_report_prog_eq analyse_interval_entry_state_result_def
+  by (rule refl)
+
+text \<open>
+  The \<^typ>\<open>contextual_verdict\<close> sibling of \<^const>\<open>state_report_node_annotation\<close>.
+  A decided check at a reachable node renders exactly as before, through
+  \<^const>\<open>check_result_annotation\<close> plus the state lines. The remaining case is
+  the dead check, and it is one case, not two: a verdict is \<^const>\<open>Dead\<close>
+  exactly when every context covered at the node is \<^const>\<open>Unreachable\<close>, which
+  is also exactly when the joined state is, so the two columns cannot
+  disagree.
+\<close>
+
+definition verdict_state_report_node_annotation ::
+    "vname list
+       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list
+       \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+  "verdict_state_report_node_annotation vars report v =
+     (case find (\<lambda>entry. fst entry = v) report of
+        None \<Rightarrow> None
+      | Some (_, cnd, verdict, st) \<Rightarrow>
+          Some (case (verdict, st) of
+                  (Decided res, Reachable f) \<Rightarrow>
+                    (case check_result_annotation res cnd of
+                       Node_Annotation lbl style \<Rightarrow>
+                         Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)
+                | _ \<Rightarrow> dead_check_annotation cnd))"
 
 definition entry_state_report_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_report_dot_auto p =
      (let report = entry_state_report_for_annotation p
       in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (state_report_node_annotation (report_vars report) report))"
+           (verdict_state_report_node_annotation (report_vars report) report))"
 
 definition entry_state_report_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_report_graph_snapshot_auto p =
      (let report = entry_state_report_for_annotation p
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (state_report_node_annotation (report_vars report) report))"
+           (verdict_state_report_node_annotation (report_vars report) report))"
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,
@@ -317,6 +408,187 @@ text \<open>
   documents as an OCaml module-splitting limit, not fixable by regrouping ---
   only by folding the two together, exactly as done there for \<open>Sign\<close>/\<open>Interval\<close>.
 \<close>
+
+section \<open>The context-expanded entry-state graph\<close>
+
+text \<open>
+  Everything above renders one visual node per \<^typ>\<open>pp\<close> and shows
+  \<^const>\<open>lookup_joined_state\<close> there. That join is lossy in exactly the way the
+  entry-state analysis is precise: three activations of one callee collapse
+  into one box, and a point dead in one activation and live in another reads
+  as live.
+
+  The expanded rendering draws one node per covered \<^term>\<open>(v, ctx)\<close> instead
+  and annotates each through \<^const>\<open>lookup_context\<close>, so no join takes place at
+  all. The generic contextual builder already carries every part of this:
+  the node set is \<^const>\<open>contextual_result_domain\<close> over the same table, the
+  routing hook is \<^const>\<open>entry_state_callee_ctx\<close>, and intra, enter, combine and
+  call-to-return edges come from \<^const>\<open>build_analysis_graph\<close> unchanged.
+\<close>
+
+text \<open>
+  The state source is \<^const>\<open>lookup_context\<close> at the node's own key, so the
+  solution the builder is handed is already the result table, not the
+  solver's map. \<^const>\<open>Inr\<close> is answered \<^const>\<open>Unreachable\<close>: the entry-state
+  system carries every program variable in the local unknown, so its
+  solver-global slots hold no program state to draw, and
+  \<^const>\<open>contextual_result_domain\<close> contributes no \<^const>\<open>GlobalNode\<close> keys either.
+\<close>
+
+definition entry_state_ctx_sol ::
+    "(ivl list, ivl abs_state) analysis_result
+       \<Rightarrow> pp \<times> ivl list + gk \<Rightarrow> ivl abs_state point_state" where
+  "entry_state_ctx_sol r k =
+     (case k of Inl (v, ctx) \<Rightarrow> lookup_context r v ctx | Inr _ \<Rightarrow> Unreachable)"
+
+text \<open>
+  The routing hook ignores its call site and its caller context, matching
+  \<^const>\<open>entry_state_route_gen\<close>, and takes the caller's own reachability case
+  split before routing: an \<^const>\<open>Unreachable\<close> caller answers \<^const>\<open>None\<close>
+  directly, so \<^const>\<open>analysis_enter_edges\<close> and \<^const>\<open>analysis_combine_edges\<close>
+  draw no edge at all, and \<^const>\<open>entry_state_callee_ctx\<close> is never applied to a
+  state that represents nothing. This is a structural absence, not a
+  disguised sentinel context: an empty formal list is a legitimate context in
+  its own right (a zero-formal callee's own entry is genuinely keyed at
+  \<open>[]\<close>), so \<^const>\<open>None\<close> is the only value that can mean "no route" without
+  risking collision with a real one.
+\<close>
+
+definition entry_state_ctx_route ::
+    "imp_prog \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> call_action \<Rightarrow> ivl abs_state point_state \<Rightarrow> ivl list option" where
+  "entry_state_ctx_route p u ctx ca d =
+     (case d of Unreachable \<Rightarrow> None
+      | Reachable st \<Rightarrow> entry_state_callee_ctx (declared_global p) ca st)"
+
+definition entry_state_ctx_graph_config ::
+    "imp_prog \<Rightarrow> (ivl list, gk, ivl abs_state point_state, ivl abs_state point_state)
+       analysis_graph_config" where
+  "entry_state_ctx_graph_config p =
+    \<lparr> local_of = id,
+      route = entry_state_ctx_route p,
+      context_key = String.implode o (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
+      show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
+      locals_for_pp = (\<lambda>v.
+        let sc = compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+                   prog_main_name (prog_main p) (prog_cfg prog_main_name p) v
+        in scope_formals sc @ scope_locals sc),
+      return_slot_for_pp = (\<lambda>v.
+        scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+          prog_main_name (prog_main p) (prog_cfg prog_main_name p) v)),
+      globals_to_show = [],
+      show_local = (\<lambda>v ctx vars d.
+        case d of Unreachable \<Rightarrow> [''unreachable'']
+        | Reachable st \<Rightarrow> map (\<lambda>x. String.explode x @ ''='' @ string_of_ivl (st x)) vars),
+      format_return = (\<lambda>v ctx ret d.
+        case d of Unreachable \<Rightarrow> []
+        | Reachable st \<Rightarrow>
+            if st ret = ivl_top then [] else [''ret='' @ string_of_ivl (st ret)]),
+      show_global = (\<lambda>k vars s. []),
+      show_global_key = (\<lambda>k. ''Global''),
+      is_shared_global = (\<lambda>k. False),
+      show_internal_globals = False,
+      owner_of = String.explode o
+        compiled_owner_of (prog_table p) (prog_procs p) prog_main_name (prog_main p),
+      cluster_label = (\<lambda>owner ctx.
+        if ctx = [] then owner @ '' / root context''
+        else owner @ '' / context='' @ concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
+      source_text = Some (pretty_string_of_program (prog_table p) (prog_procs p) (prog_main p) []),
+      node_annotation = (\<lambda>_ _. None)
+    \<rparr>"
+
+subsection \<open>Per-context check verdicts\<close>
+
+text \<open>
+  A check's verdict is per activation, so the annotation hook takes the
+  context along with the point. Nothing classifies a second time:
+  \<^const>\<open>classify_point\<close> against \<^const>\<open>lookup_context\<close> at that key is exactly the
+  element \<^const>\<open>classify_checks_ctx\<close> would put in its own observation set for
+  the same key, at the same \<^const>\<open>interval_classify_check\<close>, over the same
+  table. Consulting the table directly keeps the annotation a lookup rather
+  than a scan of a report built beside it.
+\<close>
+
+definition check_cond_at :: "cfg \<Rightarrow> pp \<Rightarrow> exp option" where
+  "check_cond_at g v =
+     map_option (\<lambda>(u, a, w). ea_check_cond a)
+       (find (\<lambda>(u, a, w). u = v \<and> is_EA_Check a) (cfg_intra_list g))"
+
+definition entry_state_ctx_check_annotation ::
+    "cfg \<Rightarrow> (ivl list, ivl abs_state) analysis_result \<Rightarrow> pp \<Rightarrow> ivl list
+       \<Rightarrow> graphviz_node_annotation option" where
+  "entry_state_ctx_check_annotation g r v ctx =
+     (case check_cond_at g v of
+        None \<Rightarrow> None
+      | Some cnd \<Rightarrow>
+          Some (case classify_point interval_classify_check cnd (lookup_context r v ctx) of
+                  Dead \<Rightarrow> dead_check_annotation cnd
+                | Decided res \<Rightarrow> check_result_annotation res cnd))"
+
+text \<open>
+  One solve feeds the node set, every node's state, and every check verdict:
+  \<open>r\<close> is bound once and reaches all three. The defining equation names
+  \<^const>\<open>analyse_interval_entry_state_result\<close> repeatedly because that reads as
+  the intended meaning; the \<open>[code]\<close> equation binds it, the same fix
+  \<open>entry_state_full_state_dot_auto_code\<close> already applies one section up.
+\<close>
+
+definition entry_state_ctx_annotated_config ::
+    "imp_prog \<Rightarrow> (ivl list, gk, ivl abs_state point_state, ivl abs_state point_state)
+       analysis_graph_config" where
+  "entry_state_ctx_annotated_config p =
+     entry_state_ctx_graph_config p
+       \<lparr> node_annotation :=
+           entry_state_ctx_check_annotation (prog_cfg prog_main_name p)
+             (analyse_interval_entry_state_result p) \<rparr>"
+
+definition entry_state_ctx_graph :: "imp_prog \<Rightarrow> (ivl list, gk) analysis_graph" where
+  "entry_state_ctx_graph p =
+     build_analysis_graph (entry_state_ctx_annotated_config p) (prog_cfg prog_main_name p)
+       (contextual_result_domain (entry_state_ctx_graph_config p) (prog_cfg prog_main_name p)
+          (analyse_interval_entry_state_result p))
+       (entry_state_ctx_sol (analyse_interval_entry_state_result p))"
+
+declare entry_state_ctx_graph_def [code del]
+
+lemma entry_state_ctx_graph_code [code]:
+  "entry_state_ctx_graph p =
+     (let r = analyse_interval_entry_state_result p;
+          g = prog_cfg prog_main_name p;
+          base = entry_state_ctx_graph_config p
+      in build_analysis_graph (base \<lparr> node_annotation := entry_state_ctx_check_annotation g r \<rparr>)
+           g (contextual_result_domain base g r) (entry_state_ctx_sol r))"
+  unfolding entry_state_ctx_graph_def entry_state_ctx_annotated_config_def Let_def
+  by (rule refl)
+
+definition entry_state_ctx_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
+  "entry_state_ctx_dot_auto p =
+     String.implode
+       (analysis_graph_to_dot (entry_state_ctx_annotated_config p) (prog_cfg prog_main_name p)
+          (entry_state_ctx_sol (analyse_interval_entry_state_result p))
+          (entry_state_ctx_graph p))"
+
+declare entry_state_ctx_dot_auto_def [code del]
+
+text \<open>
+  The graph is inlined here rather than left as a call to
+  \<^const>\<open>entry_state_ctx_graph\<close>: that constant binds a solve of its own, so
+  naming it under an already-bound \<open>r\<close> would solve the program twice, once for
+  the rendering's own annotations and once inside the graph it renders.
+\<close>
+
+lemma entry_state_ctx_dot_auto_code [code]:
+  "entry_state_ctx_dot_auto p =
+     (let r = analyse_interval_entry_state_result p;
+          g = prog_cfg prog_main_name p;
+          base = entry_state_ctx_graph_config p;
+          cfg = base \<lparr> node_annotation := entry_state_ctx_check_annotation g r \<rparr>;
+          sol = entry_state_ctx_sol r
+      in String.implode
+           (analysis_graph_to_dot cfg g sol
+              (build_analysis_graph cfg g (contextual_result_domain base g r) sol)))"
+  unfolding entry_state_ctx_dot_auto_def entry_state_ctx_graph_def
+            entry_state_ctx_annotated_config_def Let_def
+  by (rule refl)
 
 code_identifier
   code_module Complete_Lattices \<rightharpoonup> (OCaml) Core

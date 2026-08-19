@@ -1,5 +1,6 @@
 theory Int_Checks
   imports Int_Exec_Sound "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Analysis_Result"
 begin
 
 hide_const phase.N
@@ -318,5 +319,52 @@ lemma analyse_int_report_per_origin_for_code [code]:
 definition analyse_int_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_per_origin p =
      analyse_int_report_per_origin_for Refine_Fixpoint (declared_global p) p"
+
+subsection \<open>Solved-result table\<close>
+
+text \<open>
+  The same solved D/G system as \<^const>\<open>analyse_int_report_for_with_state\<close>,
+  read as a \<^typ>\<open>(unit, int_dom abs_state) analysis_result\<close> instead of as a
+  check report, mirroring \<open>Interval_Checks\<close>'s own
+  \<open>analyse_interval_td_result_for\<close>: the covered local keys the solver already
+  returns as the first component, and \<^const>\<open>normalize_point\<close> applied to
+  each local unknown. Monovariant, so the context type is \<^typ>\<open>unit\<close>; only
+  \<open>Inl\<close>-shaped local keys are covered, never the solver's own \<open>Inr\<close> global
+  unknown. Pinned at \<^const>\<open>Refine_Fixpoint\<close> like
+  \<^const>\<open>analyse_int_report_for_with_state\<close>, the production refinement mode.
+
+  The \<open>[code]\<close> rewrite is the same single-solve fix as
+  \<open>analyse_int_report_for_code\<close>: binding \<open>sol\<close> once outside the per-key
+  closure compiles to a single shared thunk, so a lookup never re-solves.
+\<close>
+
+definition analyse_int_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_result_for gs p =
+     Analysis_Result
+       (fst (analyse_int_dg_for Refine_Fixpoint
+               (resolved_st_q_is_bot_for (declared_global_vars p)) gs p))
+       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                  (locals (snd (analyse_int_dg_for Refine_Fixpoint
+                                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+                             (Inl (v, ctx)))))"
+
+declare analyse_int_result_for_def [code del]
+
+lemma analyse_int_result_for_code [code]:
+  "analyse_int_result_for gs p =
+     (let sol = analyse_int_dg_for Refine_Fixpoint
+                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
+                      (locals (snd sol (Inl (v, ctx))))))"
+  unfolding analyse_int_result_for_def Let_def by (rule refl)
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_int_report\<close>'s shape.\<close>
+
+definition analyse_int_result ::
+    "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_result p = analyse_int_result_for (declared_global p) p"
 
 end
