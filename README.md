@@ -292,7 +292,7 @@ Each domain exposes a runtime-program entry point -- `analyse_sign_report`
 `analyse_interval_td_report` (`Voblint_Analysis.Interval_Checks`, the
 widening/warrowing-backed solver) -- reusing the exact functions the
 soundness theorems are proved about, not a parallel implementation. `analyse`
-(`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_kind`
+(`Voblint_Examples.Example_Analysis_Dispatch`) dispatches on `analysis_domain`
 (`Sign_Analysis`/`Interval_Analysis`) to either domain's check report. All
 three, plus the VIMP AST constructors, are exported to OCaml so
 external code can build a program and call `analyse` without touching
@@ -327,7 +327,7 @@ analysis plumbing/the vendored solver/both domains' lattices and transfer
 functions; these cannot be split further -- real mutual code-level
 dependencies, e.g. the executable state is generically instantiated at the
 solver's own `widening`/`narrowing` type classes) and `Analyse` (the public
-facade: `analysis_kind`, `analyse` itself, ~30 lines). OCaml's serializer
+facade: `analysis_domain`, `analyse` itself, ~30 lines). OCaml's serializer
 only ever emits one file regardless of `module_name`/`code_identifier`, so
 the grouping instead organizes that one file into nested
 `module ... = struct ... end` blocks. Splitting `Sign`/`Interval` out of
@@ -387,6 +387,35 @@ pixi run voblint --analysis interval --graph-snapshot tests/regression/02-contro
 # Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
 pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp
 ```
+
+The "Context-sensitive" claim from "Why Voblint?" above, made concrete --
+`--context` controls the analysis, `--context-graph` only how an
+`entry-state` result is *drawn* by `--dot`/`--dot-full`/`--graph-snapshot`
+(same computed result, never a second analysis or a second solve):
+
+| Flag | Values (default first) | Effect |
+| --- | --- | --- |
+| `--context` | `none`, `entry-state` | `entry-state` re-analyzes each callee once per distinct entered-argument context, instead of once, flow- and call-site-insensitively, for the whole program. Only `--analysis interval` supports it. |
+| `--context-graph` | `collapsed`, `expanded` | `collapsed` draws one node per program point, every context's state joined for rendering (same CFG shape as `--context none`). `expanded` draws one node per `(point, context)` pair with no join: a callee analyzed under three arguments renders as three clusters with their own state, and a check dead in one context but live in another is two distinct nodes, not one. Requires `--context entry-state` -- a configuration error otherwise, not a silent fallback. |
+
+```bash
+# Text report: one row per __voblint_check, verdicts aggregated across every
+# context that reaches it (a check dead in every covering context is
+# suppressed entirely, matching the default's NOWARN convention)
+pixi run voblint --analysis interval --context entry-state tests/regression/11-graph-snapshot/03-two_call_sites_entry_state.vimp
+```
+
+```bash
+# --context-graph expanded: bump's three call sites render as three
+# clusters with their own un-joined state, not one cluster with a joined
+# interval -- collapsed's default rendering for the same program
+pixi run voblint --analysis interval --context entry-state --context-graph expanded --dot-full \
+  tests/regression/11-graph-snapshot/04-expanded_three_contexts.vimp > cfg.dot
+dot -Tsvg cfg.dot -o cfg.svg
+```
+
+See `docs/CHECK_ARCHITECTURE.md`'s "Contextual result and GraphViz
+presentation" section for the full architecture.
 
 Run `pixi run voblint --help` for the full flag list, including `--timeout`
 (the Interval backend is sound but not proved total, so the analysis itself

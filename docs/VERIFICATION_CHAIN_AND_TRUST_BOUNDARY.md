@@ -24,7 +24,7 @@ not duplicated here.
    apply_tf commute per domain (sign_tf_st_for_commute, ivl_tf_st_for_commute, ...)
    branch_st, bfilter_st, afilter_st                  (Core/Domain/Exec_Backward.thy)
         |
-        | analyse :: analysis_kind => imp_prog => check_report_entry list
+        | analyse :: analysis_domain => imp_prog => check_report_entry list
         | (Sign_Analysis | Interval_Analysis only -- see coverage matrix)
         v
  verified TD solver (interpretation, not a mirror)
@@ -39,7 +39,8 @@ not duplicated here.
         v
  cli/main.ml  ->  Vimp_frontend.program (lexer/parser)
               ->  Voblint_CLI.Core.wf_program_compile_input_exec  (gate)
-              ->  Voblint_CLI.Analyse.analyse_with_state / analyse_ctx / analyse_with_solver
+              ->  Voblint_CLI.Analysis_Config.mk_analysis_config  (one config value)
+              ->  Voblint_CLI.Analyse.analyse_config_with_state / analyse_config_ctx / analyse_config
               ->  render_text_report  (hand-written OCaml; unreachable flag exported)
               ->  CLI output
 ```
