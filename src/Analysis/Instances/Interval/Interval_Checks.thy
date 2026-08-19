@@ -1,6 +1,7 @@
 theory Interval_Checks
   imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result" Interval_Exec_Sound
+    "Voblint_Analysis.Monovariant_Analysis_Result"
 begin
 
 hide_const phase.N
@@ -136,50 +137,165 @@ lemma interval_check_report_code [code]:
             side_env_lift_st_eq_side_env_lift
   by (rule refl)
 
+subsection \<open>Solved-result table\<close>
+
 text \<open>
-  \<open>analyse_interval_report_for\<close> mirrors \<open>analyse_interval_td_report_for\<close> exactly, reading through
-  \<^const>\<open>analyse_interval_dg_join_env_for\<close> (the native D/G pipeline under the always-join update
-  rule, \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) instead of \<^const>\<open>analyse_interval_dg_env_for\<close>
-  (Apinis warrowing) --- this is the report function the exported \<open>analyse_with_solver\<close> API
-  dispatches to for \<open>Interval_Analysis\<close>/\<open>Solver_Join\<close> (\<open>Analyse_Dispatch\<close>, downstream in
-  Examples), not Interval's production default (\<open>analyse\<close>/\<open>analyse_with_solver Interval_Analysis
-  Solver_Warrow\<close> both still dispatch to \<open>analyse_interval_td_report\<close>): plain join has no widening,
-  so it lacks warrowing's termination guarantee on a genuine local loop with unbounded growth.
-  This route exists so \<open>analyse_with_solver\<close> can compare update rules on the identical equation
-  system (issue #131), mirroring Sign's own always-join default (\<open>Sign_Checks.analyse_sign_report\<close>).
+  \<open>analyse_interval_td_result_for\<close> is the canonical solved D/G system under
+  the Apinis warrowing update rule (Interval's infinite-height local
+  lattice needs it for termination), read as a
+  \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close>: a one-line partial
+  application of \<open>monovariant_analysis_result_for\<close>
+  (\<open>Monovariant_Analysis_Result.thy\<close>), mirroring \<open>Sign_Checks\<close>'s own
+  \<open>analyse_sign_result_for\<close>. Every report below reads through a result
+  table via \<^const>\<open>lookup_context\<close> rather than a raw solver-environment
+  lookup.
+\<close>
+
+definition analyse_interval_td_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_td_result_for gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_interval_td_report\<close>'s shape.\<close>
+
+definition analyse_interval_td_result ::
+    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_td_result p = analyse_interval_td_result_for (declared_global p) p"
+
+subsection \<open>Solved-result table: always-join update rule\<close>
+
+text \<open>
+  \<open>analyse_interval_join_result\<close> is \<^const>\<open>analyse_interval_td_result\<close>'s
+  sibling under the always-join update rule: the same
+  \<open>monovariant_analysis_result_for\<close> partial application, reading
+  \<^const>\<open>analyse_interval_dg_join_for\<close> instead of \<^const>\<open>analyse_interval_dg_for\<close>.
+\<close>
+
+definition analyse_interval_join_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_join_result_for gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+definition analyse_interval_join_result ::
+    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_join_result p = analyse_interval_join_result_for (declared_global p) p"
+
+subsection \<open>Solved-result table: per-origin update rule\<close>
+
+text \<open>
+  \<open>analyse_interval_per_origin_result\<close> mirrors
+  \<open>analyse_interval_join_result\<close> exactly, reading
+  \<^const>\<open>analyse_interval_dg_per_origin_for\<close> instead of
+  \<^const>\<open>analyse_interval_dg_join_for\<close>.
+\<close>
+
+definition analyse_interval_per_origin_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_per_origin_result_for gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_interval_dg_per_origin_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+definition analyse_interval_per_origin_result ::
+    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_per_origin_result p = analyse_interval_per_origin_result_for (declared_global p) p"
+
+subsection \<open>Whole-program check report: the native D/G runtime API\<close>
+
+text \<open>
+  \<open>analyse_interval_td_report_for\<close> is the report function the exported
+  \<open>analyse\<close> API actually dispatches to for \<open>Interval_Analysis\<close> (see
+  \<open>Analyse_Dispatch\<close>, downstream in Examples), fixed at \<open>prog_main_name\<close>
+  since \<^const>\<open>analyse_interval_td_result_for\<close> already is. It reads its
+  per-node state through \<^const>\<open>analyse_interval_td_result_for\<close>'s
+  \<^type>\<open>analysis_result\<close> table via \<^const>\<open>lookup_context\<close>, mirroring
+  \<open>Sign_Checks\<close>'s \<open>analyse_sign_report_for\<close> exactly, including its choice to
+  classify an \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value
+  \<^const>\<open>classify_checks\<close> always fed such a node -- rather than introducing a
+  fourth, \<open>Dead\<close> outcome \<open>check_result\<close> does not carry. Reusing the exact
+  same warrowing/\<open>analyse_interval_td\<close> naming keeps the still-live
+  \<open>analyse_interval_td_at\<close>/\<open>analyse_interval_td_terminates\<close> family (the
+  entry-state context analysis, the GraphViz state-report tooling) fully
+  unchanged: only this report's own definition is repointed onto the
+  result table.
+
+  \<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so
+  the single D/G solve \<^const>\<open>analyse_interval_td_result_for\<close> performs is
+  shared across every check in the report.
+\<close>
+
+definition analyse_interval_td_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_td_report_for gs p =
+     (let r = analyse_interval_td_result_for gs p
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
+           interval_classify_check)"
+
+text \<open>
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_interval\<close>'s shape.
+\<close>
+
+definition analyse_interval_td_report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_td_report p = analyse_interval_td_report_for (declared_global p) p"
+
+subsection \<open>Whole-program check report with state: the native D/G runtime API\<close>
+
+text \<open>
+  State-carrying sibling of \<open>analyse_interval_td_report_for\<close>/
+  \<open>analyse_interval_td_report\<close>, via \<^const>\<open>classify_checks_with_state\<close>: same
+  result table, with the per-check Interval environment attached to each
+  report entry instead of discarded, and an exact \<open>unreachable\<close> flag read
+  straight off \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close>
+  case split -- exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
+  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
+  reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
+  test on the same raw local unknown, the same argument
+  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses.
+\<close>
+
+definition analyse_interval_td_report_for_with_state ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
+  "analyse_interval_td_report_for_with_state gs p =
+     (let r = analyse_interval_td_result_for gs p
+      in classify_checks_with_state (prog_cfg prog_main_name p)
+           (\<lambda>v. case lookup_context r v () of
+                  Unreachable \<Rightarrow> (True, bot)
+                | Reachable st \<Rightarrow> (False, st))
+           (\<lambda>c (_, s). interval_classify_check c s))"
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_interval_td_report\<close>'s shape.\<close>
+
+definition analyse_interval_td_report_with_state ::
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
+  "analyse_interval_td_report_with_state p = analyse_interval_td_report_for_with_state (declared_global p) p"
+
+subsection \<open>Solver-choice variant report: always-join update rule\<close>
+
+text \<open>
+  \<open>analyse_interval_report_for\<close>'s sibling relationship to
+  \<^const>\<open>analyse_interval_td_report\<close> mirrors \<^const>\<open>analyse_interval_join_result\<close>'s
+  to \<^const>\<open>analyse_interval_td_result\<close>: this route exists so
+  \<open>analyse_with_solver\<close> can compare update rules on the identical equation
+  system (issue #131), mirroring Sign's own always-join default
+  (\<open>Sign_Checks.analyse_sign_report\<close>). Plain join has no widening, so it
+  lacks warrowing's termination guarantee on a genuine local loop with
+  unbounded growth -- production still dispatches to
+  \<open>analyse_interval_td_report\<close>.
 \<close>
 
 definition analyse_interval_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_for gs p =
-     classify_checks (prog_cfg prog_main_name p)
-       (analyse_interval_dg_join_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       interval_classify_check"
-
-text \<open>
-  Same single-solve-per-report fix as \<open>analyse_interval_td_report_for_code\<close>: bind
-  \<^term>\<open>snd (analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)\<close>
-  once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the generated OCaml solves the
-  D/G equation system exactly once per report rather than once per check.
-\<close>
-
-declare analyse_interval_report_for_def [code del]
-
-lemma analyse_interval_report_for_code [code]:
-  "analyse_interval_report_for gs p =
-     (let sol = snd (analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let r = analyse_interval_join_result_for gs p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            interval_classify_check)"
-  unfolding analyse_interval_report_for_def analyse_interval_dg_join_env_for_def[abs_def] Let_def
-  by (rule refl)
 
 text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_td_report\<close>'s
-  shape. Soundness (\<open>analyse_interval_report_sound_proved\<close>/\<open>_refuted\<close>) needs the
-  \<open>base_dg_exec_analysis\<close> locale interpretation, one session later than Analysis in the locked
-  six-session chain, so it stays downstream in \<open>Example_Interval_Codegen\<close> (Examples), mirroring
-  the same split \<open>analyse_interval_td_report\<close> (below) and \<open>Sign_Checks\<close>/\<open>Example_Sign_Codegen\<close> use.
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_interval_td_report\<close>'s shape.
 \<close>
 
 definition analyse_interval_report :: "imp_prog \<Rightarrow> check_report_entry list" where
@@ -189,8 +305,8 @@ text \<open>
   \<open>gamma_state_case_lifted\<close> stays: it is still the per-node soundness bridge for the older
   \<^const>\<open>ivl_exec_prog_at\<close>/\<^const>\<open>interval_check_report\<close> pipeline, which remains load-bearing for
   the entry-state context analysis and \<open>Example_Interval_Checks_Store_Only\<close>'s own worked example
-  --- only \<open>analyse_interval_report\<close> itself moved off that pipeline, not
-  \<^const>\<open>interval_check_report\<close> or its callers.
+  --- only the reports above moved off that pipeline, not \<^const>\<open>interval_check_report\<close> or its
+  callers.
 \<close>
 
 lemma gamma_state_case_lifted:
@@ -198,190 +314,32 @@ lemma gamma_state_case_lifted:
   shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
   by (cases x) (simp_all add: gamma_state_bot)
 
-subsection \<open>Whole-program check report: the native D/G runtime API\<close>
+subsection \<open>Solver-choice variant report: per-origin update rule\<close>
 
 text \<open>
-  \<open>analyse_interval_td_report_for\<close> mirrors \<open>interval_check_report\<close> exactly, reading through
-  \<^const>\<open>analyse_interval_dg_env_for\<close> (the native D/G pipeline, warrowing-backed for
-  termination on Interval's infinite-height local lattice) instead of \<^const>\<open>ivl_exec_prog_at\<close>
-  (the always-join, VIMP-global-split \<open>side_cfg_T_eff_st\<close> pipeline) --- this is the report
-  function the exported \<open>analyse\<close> API actually dispatches to for \<open>Interval_Analysis\<close> (see
-  \<open>Analyse_Dispatch\<close>, downstream in Examples), fixed at \<open>prog_main_name\<close> rather than an
-  arbitrary \<open>mnm\<close> since \<^const>\<open>analyse_interval_dg_env_for\<close> already is, mirroring
-  \<open>Sign_Checks\<close>'s \<open>analyse_sign_report_for\<close>. Reusing the exact same warrowing/\<open>analyse_interval_td\<close>
-  naming keeps the still-live \<open>analyse_interval_td_at\<close>/\<open>analyse_interval_td_terminates\<close> family
-  (the entry-state context analysis, the GraphViz state-report tooling) fully unchanged: only
-  this report's own definition is repointed onto the new pipeline.
-\<close>
-
-definition analyse_interval_td_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_interval_td_report_for gs p =
-     classify_checks (prog_cfg prog_main_name p)
-       (analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       interval_classify_check"
-
-text \<open>
-  Same single-solve-per-report fix as \<open>analyse_sign_report_for_code\<close>: bind
-  \<^term>\<open>snd (analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)\<close>
-  once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the generated OCaml solves the
-  D/G equation system exactly once per report rather than once per check.
-\<close>
-
-declare analyse_interval_td_report_for_def [code del]
-
-lemma analyse_interval_td_report_for_code [code]:
-  "analyse_interval_td_report_for gs p =
-     (let sol = snd (analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
-           interval_classify_check)"
-  unfolding analyse_interval_td_report_for_def analyse_interval_dg_env_for_def[abs_def] Let_def
-  by (rule refl)
-
-text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_interval\<close>'s
-  shape. Soundness (\<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>) needs the
-  \<open>base_dg_exec_analysis\<close> locale interpretation, one session later than Analysis in the locked
-  six-session chain, so it stays downstream in \<open>Example_Interval_Codegen\<close> (Examples), mirroring
-  \<open>Sign_Checks\<close>/\<open>Example_Sign_Codegen\<close>.
-\<close>
-
-definition analyse_interval_td_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_interval_td_report p = analyse_interval_td_report_for (declared_global p) p"
-
-subsection \<open>Whole-program check report with state: the native D/G runtime API\<close>
-
-text \<open>
-  State-carrying sibling of \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>, via
-  \<^const>\<open>classify_checks_with_state\<close>: same native D/G pipeline, same environment, with the
-  per-check Interval environment attached to each report entry instead of discarded. The
-  \<open>[code]\<close> rewrite mirrors the one above for the same single-solve-per-report reason.
-\<close>
-
-text \<open>
-  Each entry also carries an exact \<open>unreachable\<close> flag,
-  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> read off the very same local unknown
-  \<^const>\<open>analyse_interval_dg_env_for\<close> collapses to \<^term>\<open>bot\<close> --
-  see \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart for the
-  argument (solver-level \<open>Bot\<close> and a componentwise-bottom \<open>Lifted\<close> state
-  both set it) and \<^theory>\<open>Voblint_Core.Exec_St\<close>'s
-  \<open>resolved_st_q_lifted_is_bot_for_iff\<close> for the exactness.
-\<close>
-
-definition analyse_interval_td_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
-  "analyse_interval_td_report_for_with_state gs p =
-     classify_checks_with_state (prog_cfg prog_main_name p)
-       (\<lambda>v. (resolved_st_q_lifted_is_bot_for (declared_global_vars p)
-               (locals (snd (analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-                          (Inl (v, ())))),
-             analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p v))
-       (\<lambda>c (_, s). interval_classify_check c s)"
-
-declare analyse_interval_td_report_for_with_state_def [code del]
-
-lemma analyse_interval_td_report_for_with_state_code [code]:
-  "analyse_interval_td_report_for_with_state gs p =
-     (let sol = snd (analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-      in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. let st = locals (sol (Inl (v, ())))
-                in (resolved_st_q_lifted_is_bot_for (declared_global_vars p) st,
-                    case map_lift (fun_of_exec_dg_st_for gs) st of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))
-           (\<lambda>c (_, s). interval_classify_check c s))"
-  unfolding analyse_interval_td_report_for_with_state_def analyse_interval_dg_env_for_def[abs_def] Let_def
-  by (rule refl)
-
-text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
-  \<open>analyse_interval_td_report\<close>'s shape.\<close>
-
-definition analyse_interval_td_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> ivl abs_state) list" where
-  "analyse_interval_td_report_with_state p = analyse_interval_td_report_for_with_state (declared_global p) p"
-
-subsection \<open>Solver-choice variant: per-origin update rule\<close>
-
-text \<open>
-  \<open>analyse_interval_report_per_origin_for\<close> mirrors \<open>analyse_interval_report_for\<close> exactly, reading
-  through \<^const>\<open>analyse_interval_dg_per_origin_env_for\<close> (the native D/G pipeline under the
-  per-origin update rule, \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) instead of
-  \<^const>\<open>analyse_interval_dg_join_env_for\<close> --- keeping each write origin's contribution separate
-  instead of folding every contribution into one join. Reuses
-  \<^const>\<open>analyse_interval_dg_eqs_for\<close> unchanged, only the solve call differs; this definition
-  exists so \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close> can compare update rules on the identical
-  equation system (issue #131), the same role Sign's \<open>analyse_sign_report_per_origin\<close> plays there.
+  \<open>analyse_interval_report_per_origin_for\<close>'s sibling relationship to
+  \<^const>\<open>analyse_interval_report\<close> mirrors
+  \<^const>\<open>analyse_interval_per_origin_result\<close>'s to
+  \<^const>\<open>analyse_interval_join_result\<close>: keeping each write origin's
+  contribution separate instead of folding every contribution into one
+  join, the same role Sign's \<open>analyse_sign_report_per_origin\<close> plays there.
 \<close>
 
 definition analyse_interval_report_per_origin_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_per_origin_for gs p =
-     classify_checks (prog_cfg prog_main_name p)
-       (analyse_interval_dg_per_origin_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       interval_classify_check"
-
-text \<open>Same single-solve-per-report fix as \<open>analyse_interval_report_for_code\<close>.\<close>
-
-declare analyse_interval_report_per_origin_for_def [code del]
-
-lemma analyse_interval_report_per_origin_for_code [code]:
-  "analyse_interval_report_per_origin_for gs p =
-     (let sol = snd (analyse_interval_dg_per_origin_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let r = analyse_interval_per_origin_result_for gs p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            interval_classify_check)"
-  unfolding analyse_interval_report_per_origin_for_def analyse_interval_dg_per_origin_env_for_def[abs_def] Let_def
-  by (rule refl)
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_report\<close>'s
-  shape; soundness (\<open>analyse_interval_report_per_origin_sound_proved\<close>/\<open>_refuted\<close>) stays downstream
-  in \<open>Example_Interval_Codegen\<close> (Examples) for the same locale-interpretation reason.\<close>
+  shape.\<close>
 
 definition analyse_interval_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_per_origin p =
      analyse_interval_report_per_origin_for (declared_global p) p"
 
-subsection \<open>Solved-result table\<close>
-
-text \<open>
-  The same solved D/G system as \<^const>\<open>analyse_interval_td_report_for\<close>, read
-  as a \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close> instead of as a check
-  report, mirroring \<open>Sign_Checks\<close>'s own \<open>analyse_sign_result_for\<close>: the
-  covered local keys the solver already returns as the first component, and
-  \<^const>\<open>normalize_point\<close> applied to each local unknown. Monovariant, so the
-  context type is \<^typ>\<open>unit\<close>; only \<open>Inl\<close>-shaped local keys are covered, never
-  the solver's own \<open>Inr\<close> global unknown.
-
-  The \<open>[code]\<close> rewrite is the same single-solve fix as
-  \<open>analyse_interval_td_report_for_code\<close>: binding \<open>sol\<close> once outside the
-  per-key closure compiles to a single shared thunk, so a lookup never
-  re-solves.
-\<close>
-
-definition analyse_interval_td_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_td_result_for gs p =
-     Analysis_Result
-       (fst (analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p))
-       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
-                  (locals (snd (analyse_interval_dg_for
-                                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-                             (Inl (v, ctx)))))"
-
-declare analyse_interval_td_result_for_def [code del]
-
-lemma analyse_interval_td_result_for_code [code]:
-  "analyse_interval_td_result_for gs p =
-     (let sol = analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
-                      (locals (snd sol (Inl (v, ctx))))))"
-  unfolding analyse_interval_td_result_for_def Let_def by (rule refl)
-
-text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
-  \<open>analyse_interval_td_report\<close>'s shape.\<close>
-
-definition analyse_interval_td_result ::
-    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_td_result p = analyse_interval_td_result_for (declared_global p) p"
-
 end
+
+
+

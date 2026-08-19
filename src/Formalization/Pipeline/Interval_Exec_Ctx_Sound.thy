@@ -985,17 +985,19 @@ definition analyse_interval_entry_state_result_for ::
   "analyse_interval_entry_state_result_for gs mnm p =
      Analysis_Result
        (fst (entry_state_sol_prog gs mnm p))
-       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
-                  (locals (snd (entry_state_sol_prog gs mnm p) (Inl (v, ctx)))))"
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (entry_state_sol_prog gs mnm p) (Inl (v, ctx))))))"
 
 declare analyse_interval_entry_state_result_for_def [code del]
 
 lemma analyse_interval_entry_state_result_for_code [code]:
   "analyse_interval_entry_state_result_for gs mnm p =
-     (let sol = entry_state_sol_prog gs mnm p
+     (let sol = entry_state_sol_prog gs mnm p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
-                      (locals (snd sol (Inl (v, ctx))))))"
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_interval_entry_state_result_for_def Let_def by (rule refl)
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close> and
@@ -1012,11 +1014,14 @@ text \<open>
   context the solved system was built with, or is exactly the case that
   context is dead. \<^const>\<open>lookup_context\<close>'s membership guard supplies \<open>reach\<close>
   --- an uncovered key answers \<^const>\<open>Unreachable\<close>, so a \<^const>\<open>Reachable\<close>
-  answer already witnesses that the solver stored this point --- and
-  \<open>normalize_point\<close>'s own witness-bottom test supplies the \<open>not_bot\<close> premise
-  \<open>entry_state_callee_ctx_eq_route_partial\<close> needs: a \<^const>\<open>Reachable\<close> table
-  entry is never itself \<^const>\<open>is_bot_state\<close>. No \<open>live\<close> side condition survives
-  to this corollary either.
+  answer already witnesses that the solver stored this point --- and the
+  \<open>not_bot\<close> premise \<open>entry_state_callee_ctx_eq_route_partial\<close> needs now
+  comes from \<^const>\<open>canonicalize_lift\<close>'s own case split at the result
+  boundary, not from \<open>normalize_point\<close> inspecting the raw value itself:
+  \<open>norm\<close> below is stated over \<open>canonicalize_lift (resolved_st_q_is_bot_for
+  (declared_global_vars p))\<close> applied to the raw solved local unknown,
+  matching exactly what \<open>analyse_interval_entry_state_result_for\<close> now
+  builds. No \<open>live\<close> side condition survives to this corollary either.
 \<close>
 
 corollary entry_state_callee_ctx_at_result:
@@ -1033,23 +1038,38 @@ proof -
   have exact: "\<And>s. resolved_st_q_is_bot_for (declared_global_vars p) s
                      = is_bot_state (fun_of_resolved_st_q_for (declared_global p) s)"
     by (rule resolved_st_q_is_bot_for_iff[OF globals])
-  have norm: "normalize_point (declared_global_vars p) (declared_global p)
-                (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx))))
+  have norm: "normalize_point (declared_global p)
+                (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                  (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx)))))
               = Reachable st"
     using reach
     by (simp add: lookup_context_def analyse_interval_entry_state_result_for_def
                   split: if_splits)
-  have not_bot: "\<not> is_bot_state st"
+  have key: "map_lift (fun_of_resolved_st_q_for (declared_global p))
+               (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx))))
+             = Lifted st
+           \<and> \<not> is_bot_state st"
   proof (cases "locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx)))")
     case Bot
     with norm show ?thesis by simp
   next
     case (Lifted s0)
-    with norm exact show ?thesis by (auto split: if_splits)
+    show ?thesis
+    proof (cases "resolved_st_q_is_bot_for (declared_global_vars p) s0")
+      case True
+      with norm Lifted show ?thesis by simp
+    next
+      case False
+      with norm Lifted exact show ?thesis by auto
+    qed
   qed
+  have reach_raw: "map_lift (fun_of_resolved_st_q_for (declared_global p))
+                      (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx))))
+                    = Lifted st"
+    and not_bot: "\<not> is_bot_state st"
+    using key by auto
   show ?thesis
-    by (rule entry_state_callee_ctx_eq_route_partial
-          [OF exact normalize_point_Reachable_map_lift[OF norm] not_bot])
+    by (rule entry_state_callee_ctx_eq_route_partial[OF exact reach_raw not_bot])
 qed
 
 

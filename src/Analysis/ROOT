@@ -68,6 +68,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Int_Checks
     Mixed_Sign_Interval
     Exec_DG_Bridge
+    Monovariant_Analysis_Result
     Analysis_GraphViz
     Rel_Order_Domain
     Analysis_Config

@@ -119,6 +119,42 @@ lemma dead_check_graph_uncovered_node:
           (Statement 99))"
   by eval+
 
+subsection \<open>The monovariant full-state graph reads the same result table\<close>
+
+text \<open>
+  \<^const>\<open>analyse_point_env_for\<close> gives the monovariant full-state renderer the
+  same \<^const>\<open>lookup_context\<close> reading \<^const>\<open>entry_state_point_env_at\<close> gives
+  the entry-state one, over \<^const>\<open>analyse_interval_td_result\<close> instead of
+  \<^const>\<open>analyse_interval_entry_state_result\<close>. \<open>dead_check_prog\<close>'s dead
+  branch exercises the same distinction here: the point renders through
+  \<^const>\<open>unreachable_state_annotation\<close>, not as an ordinary state box over a
+  witness-bottom store -- the deliberate rendering change this milestone
+  makes, replacing what used to be a live-looking \<open>lightgreen\<close> box with
+  every variable at \<^const>\<open>bot\<close>.
+\<close>
+
+lemma dead_check_full_state_unreachable:
+  "\<not> is_reachable_point (analyse_point_env_for Interval_Analysis dead_check_prog (Statement 2))"
+  by eval
+
+lemma dead_check_full_state_annotation_unreachable:
+  "point_state_node_annotation (program_vars dead_check_prog)
+     (analyse_point_env_for Interval_Analysis dead_check_prog)
+     (Statement 2)
+   = Some unreachable_state_annotation"
+  by eval
+
+text \<open>The live sibling branch in the same program still renders its state,
+  so the unreachable case is not swallowing live nodes here either.\<close>
+
+lemma dead_check_full_state_annotation_live_sibling:
+  "map_option (\<lambda>a. (split_gv_nl (annotation_label a), annotation_style a))
+     (point_state_node_annotation [STR ''x'']
+        (analyse_point_env_for Interval_Analysis dead_check_prog)
+        (Statement 3))
+   = Some ([''x=[5,5]''], ''shape=box,style=filled,fillcolor=lightgreen'')"
+  by eval
+
 subsection \<open>The check-report rendering keeps the dead case\<close>
 
 text \<open>

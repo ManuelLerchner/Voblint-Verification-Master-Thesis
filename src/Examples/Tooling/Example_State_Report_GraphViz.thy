@@ -169,64 +169,12 @@ text \<open>
   (\<^const>\<open>state_report_node_annotation\<close> looks a point up in
   \<^const>\<open>analyse_with_state\<close>'s report, which \<^const>\<open>classify_checks_with_state\<close>
   only ever populates at check nodes), so every non-check node renders with no
-  state at all. \<open>full_state_dot_auto\<close> instead queries the solved environment
-  directly at \<^emph>\<open>every\<close> \<^typ>\<open>pp\<close> via \<^const>\<open>analyse_sign_env_for\<close> /
-  \<^const>\<open>analyse_interval_dg_env_for\<close> -- the same per-point lookup
-  \<open>analyse_sign_report_for_code\<close>/\<open>analyse_interval_td_report_for_code\<close> already use
-  to build a check's own state -- so the annotation exists independently of
-  whether that point happens to carry a check.
+  state at all. \<open>full_state_dot_auto\<close> (defined below, once
+  \<open>point_state_node_annotation\<close> is in scope) instead queries the solved
+  \<^type>\<open>analysis_result\<close> table directly at \<^emph>\<open>every\<close> \<^typ>\<open>pp\<close>, so the
+  annotation exists independently of whether that point happens to carry a
+  check.
 \<close>
-
-text \<open>
-  Point-free in \<open>v\<close>, mirroring \<^const>\<open>analyse_sign_env_for\<close>/\<^const>\<open>analyse_interval_dg_env_for\<close>'s
-  own single-solve-per-report fix one layer down: a plain \<open>fun\<close> pattern-matching on \<open>kind, p, v\<close>
-  jointly would rebuild the \<open>analyse_sign_env_for (declared_global p) p\<close>/
-  \<open>analyse_interval_dg_env_for ... p\<close> partial application -- and therefore re-solve --
-  on every \<open>v\<close>, even though each of those is itself already solved exactly once per partial
-  application. Binding \<open>env\<close> here, outside the returned \<open>\<lambda>v\<close>, means a caller that partially
-  applies \<open>analyse_env_for kind p\<close> once (every current caller does: \<open>full_state_node_annotation\<close>
-  reuses the same closure across every CFG node) solves the selected analysis exactly once,
-  regardless of how many nodes it renders.
-\<close>
-
-definition analyse_env_for :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state" where
-  "analyse_env_for kind p =
-     (case kind of       Sign_Analysis \<Rightarrow>
-         (let env = analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
-          in (\<lambda>v. SignValue \<circ> env v))
-      | Interval_Analysis \<Rightarrow>
-          (let env = analyse_interval_dg_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
-           in (\<lambda>v. IntervalValue \<circ> env v))
-      | Int_Analysis \<Rightarrow>
-          (let env = analyse_int_dg_env_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p
-           in (\<lambda>v. IntDomValue \<circ> env v)))"
-
-text \<open>
-  Unlike \<^const>\<open>state_report_node_annotation\<close>, every \<^typ>\<open>pp\<close> gets an
-  annotation here (never \<open>None\<close>), so \<^const>\<open>raw_cfg_dot\<close>'s own default
-  styling never applies; the style string below is that same default
-  (\<open>lightgreen\<close>, unfilled by any check verdict) so a full-state rendering
-  looks like an ordinary node with extra lines, not a flagged one.
-\<close>
-
-definition full_state_node_annotation ::
-    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state) \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
-  "full_state_node_annotation vars env v =
-     Some (Node_Annotation (join_gv_nl (map (state_line (env v)) vars))
-             ''shape=box,style=filled,fillcolor=lightgreen'')"
-
-definition full_state_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "full_state_dot_auto kind p =
-     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
-
-text \<open>Canonical-text sibling, the same DOT-free relationship
-  \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
-
-definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "full_state_graph_snapshot_auto kind p =
-     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (full_state_node_annotation (program_vars p) (analyse_env_for kind p))"
 
 text \<open>
   Entry-state siblings of \<open>state_report_dot_auto\<close>/\<open>full_state_dot_auto\<close>,
@@ -272,9 +220,12 @@ definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation"
      Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') unreachable_gv_style"
 
 text \<open>
-  The \<^typ>\<open>'a point_state\<close>-aware sibling of \<^const>\<open>full_state_node_annotation\<close>:
-  the same variable lines and the same default styling at a reachable node,
-  the shared unreachable annotation where there is no state to print.
+  The shared full-state renderer for every \<^typ>\<open>'a point_state\<close>-valued
+  monovariant or entry-state env: the same variable lines and the same
+  default \<open>lightgreen\<close> styling at a \<^const>\<open>Reachable\<close> node, the shared
+  \<^const>\<open>unreachable_state_annotation\<close> where there is no state to print. A
+  point never gets its underlying \<^const>\<open>bot\<close> reading rendered as though it
+  were an ordinary live state.
 \<close>
 
 definition point_state_node_annotation ::
@@ -286,6 +237,55 @@ definition point_state_node_annotation ::
       | Reachable st \<Rightarrow>
           Some (Node_Annotation (join_gv_nl (map (state_line st) vars))
                   ''shape=box,style=filled,fillcolor=lightgreen''))"
+
+text \<open>
+  \<open>analyse_point_env_for\<close> is the monovariant sibling of
+  \<^const>\<open>entry_state_point_env_at\<close> below: the same \<^const>\<open>lookup_context\<close>
+  reading of a solved \<^type>\<open>analysis_result\<close> table, projected into
+  \<^type>\<open>abstract_value\<close> once per domain. Point-free in \<open>v\<close>, the same
+  single-solve-per-render discipline \<open>entry_state_point_env_at\<close> gives the
+  entry-state renderer: a plain \<open>fun\<close> pattern-matching on \<open>kind, p, v\<close>
+  jointly would rebuild \<open>analyse_sign_result p\<close>/\<open>analyse_interval_td_result p\<close>/
+  \<open>analyse_int_result p\<close> -- and therefore re-solve -- on every \<open>v\<close>, even
+  though each of those is itself already solved exactly once per partial
+  application. Binding \<open>r\<close> here, outside the returned \<open>\<lambda>v\<close>, means a caller
+  that partially applies \<open>analyse_point_env_for kind p\<close> once (every current
+  caller does: \<^const>\<open>point_state_node_annotation\<close> reuses the same closure
+  across every CFG node) solves the selected analysis exactly once,
+  regardless of how many nodes it renders. A node the solver's key domain
+  never covers and a node whose stored state is witness-bottom are alike
+  \<^const>\<open>Unreachable\<close> at the \<^const>\<open>lookup_context\<close> boundary, the same
+  distinction \<open>entry_state_point_env_at\<close> already reads for the entry-state
+  graph -- so this is that same reading applied to the monovariant tables,
+  not a second convention.
+\<close>
+
+definition analyse_point_env_for ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "analyse_point_env_for kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          (let r = analyse_sign_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ())))
+      | Interval_Analysis \<Rightarrow>
+          (let r = analyse_interval_td_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
+      | Int_Analysis \<Rightarrow>
+          (let r = analyse_int_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ()))))"
+
+definition full_state_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "full_state_dot_auto kind p =
+     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
+
+text \<open>Canonical-text sibling, the same DOT-free relationship
+  \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
+
+definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "full_state_graph_snapshot_auto kind p =
+     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
   One render is one solve. The \<open>[code]\<close> equations bind the result table once,

@@ -635,6 +635,91 @@ lemma transfer_lift2_Lifted [simp]:
   "transfer_lift2 is_bot_pred f (Lifted a) (Lifted b) = normalize_lift is_bot_pred (f a b)"
   unfolding transfer_lift2_def by simp
 
+subsection \<open>Canonical deadness: no \<^const>\<open>Lifted\<close> payload is ever witness-bottom\<close>
+
+text \<open>
+  \<open>normalized_lift\<close> names the discipline every solver-facing lifted value is meant to
+  keep: \<^const>\<open>Bot\<close> is the \<^emph>\<open>sole\<close> representation of "this program point denotes no
+  concrete store" -- a \<^const>\<open>Lifted\<close> payload \<open>is_bot_pred\<close> still calls bottom is a
+  representation the framework never lets escape a value-producing step, not a second,
+  competing way to say the same thing. \<open>normalize_lift\<close>'s own \<open>if\<close> makes every one of
+  its outputs self-normalized: the \<^const>\<open>Lifted\<close> branch only fires when \<open>is_bot_pred\<close>
+  already said no. \<open>transfer_lift\<close>/\<open>transfer_lift2\<close> route every domain transfer step
+  through exactly this \<open>if\<close>, so no transfer step can ever hand back a \<^const>\<open>Lifted\<close>
+  payload \<open>is_bot_pred\<close> still calls bottom, regardless of what the pre-lift inputs
+  looked like.
+
+  The lemmas below extend this from a single transfer step to every other value-producing
+  primitive a solver combines lifted values with: \<open>\<squnion>\<close> (joining several contributions at a
+  program point) and \<open>\<nabla>\<Delta>\<close> (the warrowing update rule). Both need only that \<open>is_bot_pred\<close>
+  itself is downward closed under the payload's order (\<open>mono\<close> below) -- exactly
+  \<open>is_bot_mono\<close>'s shape at \<^class>\<open>sound_domain\<close>, or \<open>resolved_st_q_is_bot_for\<close>'s own
+  monotonicity once bridged through \<open>fun_of_resolved_st_q_for_mono\<close> -- not any fact
+  specific to how \<open>is_bot_pred\<close> itself is computed.
+\<close>
+
+definition normalized_lift :: "('a \<Rightarrow> bool) \<Rightarrow> 'a lifted \<Rightarrow> bool" where
+  "normalized_lift is_bot_pred x = (case x of Bot \<Rightarrow> True | Lifted a \<Rightarrow> \<not> is_bot_pred a)"
+
+lemma normalized_lift_Bot [simp]: "normalized_lift is_bot_pred Bot"
+  unfolding normalized_lift_def by simp
+
+lemma normalized_lift_Lifted [simp]:
+  "normalized_lift is_bot_pred (Lifted a) \<longleftrightarrow> \<not> is_bot_pred a"
+  unfolding normalized_lift_def by simp
+
+lemma normalize_lift_normalized:
+  "normalized_lift is_bot_pred (normalize_lift is_bot_pred a)"
+  unfolding normalize_lift_def by (cases "is_bot_pred a") simp_all
+
+lemma transfer_lift_normalized:
+  "normalized_lift is_bot_pred (transfer_lift is_bot_pred f x)"
+  by (cases x) (simp_all add: transfer_lift_def normalize_lift_normalized)
+
+lemma transfer_lift2_normalized:
+  "normalized_lift is_bot_pred (transfer_lift2 is_bot_pred f x y)"
+  by (cases x; cases y) (simp_all add: transfer_lift2_def normalize_lift_normalized)
+
+text \<open>
+  \<open>canonicalize_lift\<close> re-normalizes an already-lifted value against \<open>is_bot_pred\<close>: a
+  \<^const>\<open>Lifted\<close> payload that has since become witness-bottom (e.g. read from a
+  representation that does not itself carry the \<open>transfer_lift\<close> discipline) collapses
+  to \<^const>\<open>Bot\<close>, exactly as if it had been produced by a transfer step in the first
+  place. It is \<open>transfer_lift is_bot_pred id\<close>, not a new bottom test: reusing
+  \<^const>\<open>transfer_lift\<close> at the identity function is what makes
+  \<open>canonicalize_lift_normalized\<close> immediate from \<open>transfer_lift_normalized\<close> rather than
+  a second proof of the same fact.
+\<close>
+
+definition canonicalize_lift :: "('a \<Rightarrow> bool) \<Rightarrow> 'a lifted \<Rightarrow> 'a lifted" where
+  "canonicalize_lift is_bot_pred = transfer_lift is_bot_pred id"
+
+lemma canonicalize_lift_Bot [simp]: "canonicalize_lift is_bot_pred Bot = Bot"
+  unfolding canonicalize_lift_def by simp
+
+lemma canonicalize_lift_Lifted [simp]:
+  "canonicalize_lift is_bot_pred (Lifted a) = normalize_lift is_bot_pred a"
+  unfolding canonicalize_lift_def by simp
+
+lemma canonicalize_lift_normalized:
+  "normalized_lift is_bot_pred (canonicalize_lift is_bot_pred x)"
+  unfolding canonicalize_lift_def by (rule transfer_lift_normalized)
+
+text \<open>
+  \<open>\<squnion>\<close> preserves \<open>normalized_lift\<close> from two already-normalized operands: \<^const>\<open>Bot\<close> is
+  \<open>\<squnion>\<close>'s identity on \<^typ>\<open>'a lifted\<close> (\<open>sup_lifted.simps\<close>), so the only case needing
+  \<open>mono\<close> at all is \<^const>\<open>Lifted\<close>/\<^const>\<open>Lifted\<close>, where \<open>sup_ge1\<close>/\<open>sup_ge2\<close> place each
+  operand below the join and \<open>mono\<close>'s contrapositive carries non-bottomness upward.
+\<close>
+
+lemma normalized_lift_sup:
+  fixes x y :: "'a::semilattice_sup lifted"
+  assumes mono: "\<And>a b::'a. a \<le> b \<Longrightarrow> is_bot_pred b \<Longrightarrow> is_bot_pred a"
+    and nx: "normalized_lift is_bot_pred x"
+    and ny: "normalized_lift is_bot_pred y"
+  shows "normalized_lift is_bot_pred (x \<squnion> y)"
+  using nx ny by (cases x; cases y) (auto dest: mono[OF sup_ge1] mono[OF sup_ge2])
+
 text \<open>
   \<open>map_lift\<close> is the reachability functor's map (\<open>Option.map\<close>'s analogue), used to push a
   total, never-re-collapsing operation such as a local/global split through the lift.

@@ -249,6 +249,72 @@ text \<open>
   together supplying the one per-node fact each needs.
 \<close>
 
+text \<open>
+  \<open>analyse_sign_report_for\<close> reads its per-node state through
+  \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table rather than
+  through \<open>analyse_sign_env_for\<close> directly. \<open>analyse_sign_result_node_sound_for\<close>
+  below is the node-soundness bridge across that boundary: the two envs'
+  concretizations agree at every genuine CFG node, not merely a
+  solver-covered one, because \<^const>\<open>analyse_sign_result_for\<close>'s key domain is
+  now \<^const>\<open>cfg_node_list\<close> itself (\<open>Monovariant_Analysis_Result.thy\<close>), and
+  \<open>gamma_point_normalize_point_canonicalize_lift\<close> transports the raw
+  concretization across \<^const>\<open>canonicalize_lift\<close>/\<open>normalize_point\<close>
+  unconditionally. No fact about solver support is needed anywhere in this
+  argument.
+\<close>
+
+lemma analyse_sign_result_node_sound_for:
+  assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
+      and wf: "wf_compile_input pgs (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      and cover_entry: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and cover_edge:
+        "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name p) \<Longrightarrow> (w, ()) \<in> fst (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and cover_enter:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and cover_combine:
+        "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
+           \<Longrightarrow> (k, ()) \<in> fst (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p)"
+      and finI: "finite (intra (prog_cfg prog_main_name p))"
+      and finC: "finite (calls (prog_cfg prog_main_name p))"
+      and node: "v \<in> cfg_nodes (prog_cfg prog_main_name p)"
+  shows "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+           \<subseteq> gamma_state (case lookup_context (analyse_sign_result_for pgs p) v () of
+                             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+proof -
+  have old_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+      \<subseteq> \<lbrakk>analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk>"
+    using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
+    unfolding analyse_sign_gamma_eq_env_for .
+  have mem_keys: "v \<in> set (cfg_node_list (prog_cfg prog_main_name p))"
+    using node finI finC by simp
+  have lookup_eq: "lookup_context (analyse_sign_result_for pgs p) v () =
+      normalize_point pgs (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+        (locals (snd (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p) (Inl (v, ())))))"
+    unfolding analyse_sign_result_for_def
+    by (simp add: lookup_context_monovariant_analysis_result_for mem_keys)
+  have bot_sound: "\<And>s. resolved_st_q_is_bot_for (declared_global_vars p) s
+      \<Longrightarrow> is_bot_state (fun_of_resolved_st_q_for pgs s)"
+    using resolved_st_q_is_bot_for_iff[OF declared_global_iff] by blast
+  have raw_eq: "gamma_point (lookup_context (analyse_sign_result_for pgs p) v ()) =
+      \<lbrakk>analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk>"
+  proof -
+    let ?q = "locals (snd (analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p) (Inl (v, ())))"
+    have step1: "gamma_point (lookup_context (analyse_sign_result_for pgs p) v ()) =
+        gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs) ?q)"
+      unfolding lookup_eq
+      by (rule gamma_point_normalize_point_canonicalize_lift[OF bot_sound])
+    have step2: "gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs) ?q) =
+        \<lbrakk>analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk>"
+      unfolding analyse_sign_env_for_def fun_of_exec_dg_st_for_def
+      by (cases ?q) (simp_all add: gamma_state_bot)
+    from step1 step2 show ?thesis by simp
+  qed
+  show ?thesis
+    unfolding gamma_state_of_reachable_env raw_eq
+    by (rule old_sound)
+qed
+
 theorem analyse_sign_report_sound_proved_for:
   fixes v :: pp and c :: exp
   assumes solve: "TD_side_always_join_Interp_solve_c (analyse_sign_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p) (cfg_exit (prog_cfg prog_main_name p), ()) \<noteq> None"
@@ -267,16 +333,26 @@ theorem analyse_sign_report_sound_proved_for:
       and mem: "(v, c, Check_Proved) \<in> set (analyse_sign_report_for pgs p)"
   shows "\<forall>s \<in> ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v. truthy (aval c s)"
 proof -
-  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v \<subseteq> \<lbrakk>analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk>"
-    using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
-    unfolding analyse_sign_gamma_eq_env_for .
+  obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg prog_main_name p)"
+    using mem[unfolded analyse_sign_report_for_def Let_def]
+          classify_checks_mem_iff[OF finI, of v c Check_Proved
+            "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
+            sign_classify_check]
+    by auto
+  have node: "v \<in> cfg_nodes (prog_cfg prog_main_name p)"
+    using intra_endpoints_in_nodes(1)[OF edge] .
+  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+      \<subseteq> gamma_state (case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+    by (rule analyse_sign_result_node_sound_for
+          [OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC node])
   show ?thesis
     by (rule classify_checks_proved_sound
-          [where g = "prog_cfg prog_main_name p" and env = "analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p"
+          [where g = "prog_cfg prog_main_name p"
+             and env = "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
              and classify = sign_classify_check
              and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: sign abs_state \<Rightarrow> store set",
-           OF finI mem[unfolded analyse_sign_report_for_def] sign_classify_check_proved node_sound])
+           OF finI mem[unfolded analyse_sign_report_for_def Let_def] sign_classify_check_proved node_sound])
 qed
 
 theorem analyse_sign_report_sound_refuted_for:
@@ -297,16 +373,26 @@ theorem analyse_sign_report_sound_refuted_for:
       and mem: "(v, c, Check_Refuted) \<in> set (analyse_sign_report_for pgs p)"
   shows "\<forall>s \<in> ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v. \<not> truthy (aval c s)"
 proof -
-  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v \<subseteq> \<lbrakk>analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p v\<rbrakk>"
-    using analyse_sign_collect_sound_for[OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC]
-    unfolding analyse_sign_gamma_eq_env_for .
+  obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg prog_main_name p)"
+    using mem[unfolded analyse_sign_report_for_def Let_def]
+          classify_checks_mem_iff[OF finI, of v c Check_Refuted
+            "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
+            sign_classify_check]
+    by auto
+  have node: "v \<in> cfg_nodes (prog_cfg prog_main_name p)"
+    using intra_endpoints_in_nodes(1)[OF edge] .
+  have node_sound: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
+      \<subseteq> gamma_state (case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+    by (rule analyse_sign_result_node_sound_for
+          [OF solve wf cover_entry cover_edge cover_enter cover_combine finI finC node])
   show ?thesis
     by (rule classify_checks_refuted_sound
-          [where g = "prog_cfg prog_main_name p" and env = "analyse_sign_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) pgs p"
+          [where g = "prog_cfg prog_main_name p"
+             and env = "\<lambda>v. case lookup_context (analyse_sign_result_for pgs p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
              and classify = sign_classify_check
              and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: sign abs_state \<Rightarrow> store set",
-           OF finI mem[unfolded analyse_sign_report_for_def] sign_classify_check_refuted node_sound])
+           OF finI mem[unfolded analyse_sign_report_for_def Let_def] sign_classify_check_refuted node_sound])
 qed
 
 end

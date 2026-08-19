@@ -58,9 +58,9 @@ module Core : sig
     And of exp * exp | Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
+  type 'a bot
   type 'a semilattice_sup
   type sign
-  type 'a computable_domain
   type call_action = CallEdge of string option * string list * exp list
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
@@ -106,13 +106,11 @@ module Core : sig
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val node_live_ex : 'a equal -> ('a, 'b) analysis_result -> cfg_node -> bool
+  val normalize_point :
+    'a bot ->
+      (string -> bool) -> 'a resolved_st_q lifted -> (string -> 'a) point_state
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
-  val normalize_point :
-    'a computable_domain ->
-      string list ->
-        (string -> bool) ->
-          'a resolved_st_q lifted -> (string -> 'a) point_state
   val analyse_int_result :
     unit imp_prog_ext -> (unit, (string -> unit int_dom_ext)) analysis_result
   val decided_report :
@@ -2990,6 +2988,9 @@ let rec zip xs ys = match xs, ys with [], ys -> []
 
 let rec ball (Set xs) p = list_all p xs;;
 
+let rec maps f x1 = match f, x1 with f, [] -> []
+               | f, x :: xs -> f x @ maps f xs;;
+
 let rec image f (Set xs) = Set (map f xs);;
 
 let rec foldr f x1 = match f, x1 with f, [] -> id
@@ -4450,11 +4451,6 @@ let rec prog_table p = map_of equal_literal (proc_rep p);;
 
 let rec prog_main p = body (the (prog_table p prog_main_name));;
 
-let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
-                    | Lifted a, f -> f a;;
-
-let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
-
 let rec dgs_combine_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
@@ -4970,6 +4966,9 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
+
+let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
+                    | Lifted a, f -> f a;;
 
 let rec location_is_local = function Local_Location x -> true
                             | Global_Location x -> false;;
@@ -6406,11 +6405,50 @@ let rec normalize_lift
 let rec transfer_lift
   is_bot_pred f x = bind_lift x (fun a -> normalize_lift is_bot_pred (f a));;
 
+let rec cfg_node_list
+  g = remdups equal_cfg_node
+        (maps (fun (u, (_, v)) -> [u; v]) (cfg_intra_list g) @
+          maps (fun (u, (_, (ce, after))) -> [u; ce; after])
+            (cfg_calls_list g) @
+            [cfg_entry g]);;
+
 let rec combine_resolved_st_q _A
   (Abs_resolved_st xa) (Abs_resolved_st x) =
     Abs_resolved_st (combine_resolved_st _A xa x);;
 
-let rec fun_of_exec_dg_st_for _A gs = fun_of_resolved_st_q_for _A gs;;
+let rec canonicalize_lift is_bot_pred = transfer_lift is_bot_pred id;;
+
+let rec resolved_st_is_bot_for _A
+  globals gs s =
+    list_ex
+      (fun x ->
+        is_bot _A
+          (lookup_resolved_st
+            _A.bounded_semilattice_sup_bot_computable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            s (location_of gs x)))
+      globals ||
+      resolved_st_is_bot _A gs s;;
+
+let rec resolved_st_q_is_bot_for _A
+  xb (Abs_resolved_st xa) =
+    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
+
+let rec normalize_point _A
+  gs x1 = match gs, x1 with gs, Bot -> Unreachable
+    | gs, Lifted s -> Reachable (fun_of_resolved_st_q_for _A gs s);;
+
+let rec monovariant_analysis_result_for _A
+  solve gs p =
+    (let sol = solve gs p in
+     let gl = declared_global_vars p in
+     let g = prog_cfg prog_main_name p in
+      Analysis_Result
+        (Set (map (fun v -> (v, ())) (cfg_node_list g)),
+          (fun v ctx ->
+            normalize_point
+              _A.bounded_semilattice_sup_bot_computable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+              gs (canonicalize_lift (resolved_st_q_is_bot_for _A gl)
+                   (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec warrow _A
   a b = (if less_eq
@@ -6727,21 +6765,6 @@ let rec analyse_int_dg_for
       (analyse_int_dg_eqs_for mode is_bot_pred gs p)
       (cfg_exit (prog_cfg prog_main_name p), ());;
 
-let rec resolved_st_is_bot_for _A
-  globals gs s =
-    list_ex
-      (fun x ->
-        is_bot _A
-          (lookup_resolved_st
-            _A.bounded_semilattice_sup_bot_computable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            s (location_of gs x)))
-      globals ||
-      resolved_st_is_bot _A gs s;;
-
-let rec resolved_st_q_is_bot_for _A
-  xb (Abs_resolved_st xa) =
-    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
-
 let rec classify_checks
   g env classify =
     map_filter
@@ -6761,54 +6784,42 @@ let rec int_classify_check
 
 let rec analyse_int_report_for
   mode gs p =
-    (let sol =
-       snd (analyse_int_dg_for mode
+    (let r =
+       monovariant_analysis_result_for
+         (computable_domain_int_dom_ext
+           (equal_unit, int_dom_record_lattice_unit))
+         (fun gsa pa ->
+           analyse_int_dg_for mode
              (resolved_st_q_is_bot_for
                (computable_domain_int_dom_ext
                  (equal_unit, int_dom_record_lattice_unit))
-               (declared_global_vars p))
-             gs p)
+               (declared_global_vars pa))
+             gsa pa)
+         gs p
        in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift
-              (fun_of_exec_dg_st_for
-                (bot_int_dom_ext int_dom_record_lattice_unit) gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Lifted s -> s))
+          (match lookup_context equal_unit r v ()
+            with Unreachable ->
+              bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
+            | Reachable st -> st))
         int_classify_check);;
 
 let rec analyse_int_report
   p = analyse_int_report_for Refine_Fixpoint (declared_global p) p;;
 
-let rec normalize_point _A
-  gl gs x2 = match gl, gs, x2 with gl, gs, Bot -> Unreachable
-    | gl, gs, Lifted s ->
-        (if resolved_st_q_is_bot_for _A gl s then Unreachable
-          else Reachable
-                 (fun_of_resolved_st_q_for
-                   _A.bounded_semilattice_sup_bot_computable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                   gs s));;
-
 let rec analyse_int_result_for
   gs p =
-    (let sol =
-       analyse_int_dg_for Refine_Fixpoint
-         (resolved_st_q_is_bot_for
-           (computable_domain_int_dom_ext
-             (equal_unit, int_dom_record_lattice_unit))
-           (declared_global_vars p))
-         gs p
-       in
-      Analysis_Result
-        (fst sol,
-          (fun v ctx ->
-            normalize_point
-              (computable_domain_int_dom_ext
-                (equal_unit, int_dom_record_lattice_unit))
-              (declared_global_vars p) gs (locals (snd sol (Inl (v, ctx)))))));;
+    monovariant_analysis_result_for
+      (computable_domain_int_dom_ext (equal_unit, int_dom_record_lattice_unit))
+      (fun gsa pa ->
+        analyse_int_dg_for Refine_Fixpoint
+          (resolved_st_q_is_bot_for
+            (computable_domain_int_dom_ext
+              (equal_unit, int_dom_record_lattice_unit))
+            (declared_global_vars pa))
+          gsa pa)
+      gs p;;
 
 let rec analyse_int_result p = analyse_int_result_for (declared_global p) p;;
 
@@ -7011,6 +7022,16 @@ let rec analyse_sign_for
       (analyse_sign_eqs_for is_bot_pred gs p)
       (cfg_exit (prog_cfg prog_main_name p), ());;
 
+let rec analyse_sign_result_for
+  gs p =
+    monovariant_analysis_result_for computable_domain_sign
+      (fun gsa pa ->
+        analyse_sign_for
+          (resolved_st_q_is_bot_for computable_domain_sign
+            (declared_global_vars pa))
+          gsa pa)
+      gs p;;
+
 let rec sign_classify_check
   c d = (if sign_check_true c d then Check_Proved
           else (if sign_check_false c d then Check_Refuted
@@ -7018,35 +7039,14 @@ let rec sign_classify_check
 
 let rec analyse_sign_report_for
   gs p =
-    (let sol =
-       snd (analyse_sign_for
-             (resolved_st_q_is_bot_for computable_domain_sign
-               (declared_global_vars p))
-             gs p)
-       in
+    (let r = analyse_sign_result_for gs p in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift (fun_of_exec_dg_st_for bot_sign gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun bot_sign | Lifted s -> s))
+          (match lookup_context equal_unit r v ()
+            with Unreachable -> bot_fun bot_sign | Reachable st -> st))
         sign_classify_check);;
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
-
-let rec analyse_sign_result_for
-  gs p =
-    (let sol =
-       analyse_sign_for
-         (resolved_st_q_is_bot_for computable_domain_sign
-           (declared_global_vars p))
-         gs p
-       in
-      Analysis_Result
-        (fst sol,
-          (fun v ctx ->
-            normalize_point computable_domain_sign (declared_global_vars p) gs
-              (locals (snd sol (Inl (v, ctx)))))));;
 
 let rec analyse_sign_result p = analyse_sign_result_for (declared_global p) p;;
 
@@ -7192,10 +7192,6 @@ let rec dg_edge_contribution_tree _A _B
 
 let rec apply_dg_spec_contribution _A _B
   s a u = dg_edge_contribution_tree _A _B (dg_spec_step s a) u;;
-
-let rec resolved_st_q_lifted_is_bot_for _A
-  globals x1 = match globals, x1 with globals, Bot -> true
-    | globals, Lifted s -> resolved_st_q_is_bot_for _A globals s;;
 
 let rec interval_classify_check
   c d = (if interval_check_true c d then Check_Proved
@@ -7348,29 +7344,13 @@ let rec classify_checks_with_state
 
 let rec analyse_int_report_for_with_state
   gs p =
-    (let sol =
-       snd (analyse_int_dg_for Refine_Fixpoint
-             (resolved_st_q_is_bot_for
-               (computable_domain_int_dom_ext
-                 (equal_unit, int_dom_record_lattice_unit))
-               (declared_global_vars p))
-             gs p)
-       in
+    (let r = analyse_int_result_for gs p in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (let st = locals (sol (Inl (v, ()))) in
-            (resolved_st_q_lifted_is_bot_for
-               (computable_domain_int_dom_ext
-                 (equal_unit, int_dom_record_lattice_unit))
-               (declared_global_vars p) st,
-              (match
-                map_lift
-                  (fun_of_exec_dg_st_for
-                    (bot_int_dom_ext int_dom_record_lattice_unit) gs)
-                  st
-                with Bot ->
-                  bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-                | Lifted s -> s))))
+          (match lookup_context equal_unit r v ()
+            with Unreachable ->
+              (true, bot_fun (bot_int_dom_ext int_dom_record_lattice_unit))
+            | Reachable a -> (false, a)))
         (fun c (_, a) -> int_classify_check c a));;
 
 let rec analyse_int_report_with_state
@@ -7418,57 +7398,39 @@ let rec analyse_interval_dg_for
       (analyse_interval_dg_eqs_for is_bot_pred gs p)
       (cfg_exit (prog_cfg prog_main_name p), ());;
 
+let rec analyse_interval_td_result_for
+  gs p =
+    monovariant_analysis_result_for computable_domain_ivl
+      (fun gsa pa ->
+        analyse_interval_dg_for
+          (resolved_st_q_is_bot_for computable_domain_ivl
+            (declared_global_vars pa))
+          gsa pa)
+      gs p;;
+
 let rec analyse_interval_td_report_for
   gs p =
-    (let sol =
-       snd (analyse_interval_dg_for
-             (resolved_st_q_is_bot_for computable_domain_ivl
-               (declared_global_vars p))
-             gs p)
-       in
+    (let r = analyse_interval_td_result_for gs p in
       classify_checks (prog_cfg prog_main_name p)
         (fun v ->
-          (match
-            map_lift (fun_of_exec_dg_st_for bot_ivl gs)
-              (locals (sol (Inl (v, ()))))
-            with Bot -> bot_fun bot_ivl | Lifted s -> s))
+          (match lookup_context equal_unit r v ()
+            with Unreachable -> bot_fun bot_ivl | Reachable st -> st))
         interval_classify_check);;
 
 let rec analyse_interval_td_report
   p = analyse_interval_td_report_for (declared_global p) p;;
-
-let rec analyse_interval_td_result_for
-  gs p =
-    (let sol =
-       analyse_interval_dg_for
-         (resolved_st_q_is_bot_for computable_domain_ivl
-           (declared_global_vars p))
-         gs p
-       in
-      Analysis_Result
-        (fst sol,
-          (fun v ctx ->
-            normalize_point computable_domain_ivl (declared_global_vars p) gs
-              (locals (snd sol (Inl (v, ctx)))))));;
 
 let rec analyse_interval_td_result
   p = analyse_interval_td_result_for (declared_global p) p;;
 
 let rec analyse_sign_report_for_with_state
   gs p =
-    (let sol =
-       snd (analyse_sign_for
-             (resolved_st_q_is_bot_for computable_domain_sign
-               (declared_global_vars p))
-             gs p)
-       in
+    (let r = analyse_sign_result_for gs p in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (let st = locals (sol (Inl (v, ()))) in
-            (resolved_st_q_lifted_is_bot_for computable_domain_sign
-               (declared_global_vars p) st,
-              (match map_lift (fun_of_exec_dg_st_for bot_sign gs) st
-                with Bot -> bot_fun bot_sign | Lifted s -> s))))
+          (match lookup_context equal_unit r v ()
+            with Unreachable -> (true, bot_fun bot_sign)
+            | Reachable a -> (false, a)))
         (fun c (_, a) -> sign_classify_check c a));;
 
 let rec analyse_sign_report_with_state
@@ -7503,11 +7465,14 @@ let rec wf_program_compile_input_exec
 let rec analyse_interval_entry_state_result_for
   gs mnm p =
     (let sol = entry_state_sol_prog gs mnm p in
+     let gl = declared_global_vars p in
       Analysis_Result
         (fst sol,
           (fun v ctx ->
-            normalize_point computable_domain_ivl (declared_global_vars p) gs
-              (locals (snd sol (Inl (v, ctx)))))));;
+            normalize_point bot_ivl gs
+              (canonicalize_lift
+                (resolved_st_q_is_bot_for computable_domain_ivl gl)
+                (locals (snd sol (Inl (v, ctx))))))));;
 
 let rec entry_state_check_projection
   mnm p =
@@ -7525,19 +7490,12 @@ let rec analyse_interval_entry_state
 
 let rec analyse_interval_td_report_for_with_state
   gs p =
-    (let sol =
-       snd (analyse_interval_dg_for
-             (resolved_st_q_is_bot_for computable_domain_ivl
-               (declared_global_vars p))
-             gs p)
-       in
+    (let r = analyse_interval_td_result_for gs p in
       classify_checks_with_state (prog_cfg prog_main_name p)
         (fun v ->
-          (let st = locals (sol (Inl (v, ()))) in
-            (resolved_st_q_lifted_is_bot_for computable_domain_ivl
-               (declared_global_vars p) st,
-              (match map_lift (fun_of_exec_dg_st_for bot_ivl gs) st
-                with Bot -> bot_fun bot_ivl | Lifted s -> s))))
+          (match lookup_context equal_unit r v ()
+            with Unreachable -> (true, bot_fun bot_ivl)
+            | Reachable a -> (false, a)))
         (fun c (_, a) -> interval_classify_check c a));;
 
 let rec analyse_interval_td_report_with_state

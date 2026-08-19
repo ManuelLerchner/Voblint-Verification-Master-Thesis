@@ -75,25 +75,30 @@ lemma result_demo_interval_stmt1_live:
   by eval
 
 text \<open>
-  Case B --- a covered key whose stored state is \<^const>\<open>Lifted\<close> and yet
+  Case B --- a covered key whose raw stored state is \<^const>\<open>Lifted\<close> and yet
   concretizes to nothing. The production pipeline never leaves such a state
   behind, because it threads \<^const>\<open>resolved_st_q_is_bot_for\<close> through the
   equation system and collapses a witness-bottom result to \<^const>\<open>Bot\<close> on the
   spot. Passing \<^term>\<open>\<lambda>_. False\<close> as that predicate instead is what makes the
   case observable: the very same solver run then stores the dead branch's
-  node as \<^const>\<open>Lifted\<close> over an empty (inverted-bound) interval.
-  \<^const>\<open>normalize_point\<close> must still report it \<^const>\<open>Unreachable\<close> --- a
-  reading off the outer constructor alone would call it live.
+  node as \<^const>\<open>Lifted\<close> over an empty (inverted-bound) interval. This is
+  exactly the raw, noncanonical value a result adapter's own
+  \<^const>\<open>canonicalize_lift\<close> step exists to catch, using the real
+  \<^const>\<open>resolved_st_q_is_bot_for\<close> test rather than the solver's own
+  (deliberately disabled, here) one: \<^const>\<open>lookup_context\<close> must still
+  report it \<^const>\<open>Unreachable\<close> --- reading off the raw outer constructor
+  alone would call it live.
 \<close>
 
 definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" where
   "result_demo_unnormalized =
      (let sol = analyse_interval_dg_for (\<lambda>_. False)
-                  (declared_global result_demo_prog) result_demo_prog
+                  (declared_global result_demo_prog) result_demo_prog;
+          gl = declared_global_vars result_demo_prog
       in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point (declared_global_vars result_demo_prog)
-                      (declared_global result_demo_prog)
-                      (locals (snd sol (Inl (v, ctx))))))"
+           (\<lambda>v ctx. normalize_point (declared_global result_demo_prog)
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
 
 lemma result_demo_unnormalized_stmt2_stored_lifted_bottom:
   "(case locals (snd (analyse_interval_dg_for (\<lambda>_. False)
@@ -180,6 +185,22 @@ lemma result_demo_interval_absent_joined:
 
 lemma result_demo_interval_absent_not_live:
   "\<not> node_live_ex (analyse_interval_td_result result_demo_prog) (Statement 99)"
+  by eval
+
+text \<open>
+  Case C's dead node is covered because it is a structural CFG node, not
+  because the solver happened to reach it: \<^const>\<open>cfg_node_list\<close> is
+  \<open>monovariant_analysis_result_for\<close>'s key domain (\<^theory>\<open>Voblint_Analysis.Monovariant_Analysis_Result\<close>),
+  independent of solver support. \<^const>\<open>Statement\<close> \<open>99\<close> (Case D) has no such
+  membership, which is exactly why it alone stays outside \<^const>\<open>result_keys\<close>.
+\<close>
+
+lemma result_demo_interval_stmt2_cfg_node:
+  "Statement 2 \<in> set (cfg_node_list (prog_cfg prog_main_name result_demo_prog))"
+  by eval
+
+lemma result_demo_interval_absent_not_cfg_node:
+  "Statement 99 \<notin> set (cfg_node_list (prog_cfg prog_main_name result_demo_prog))"
   by eval
 
 subsection \<open>Two contexts at one node\<close>
@@ -325,6 +346,117 @@ lemma result_demo_int_stmt2_not_reachable:
 
 lemma result_demo_int_absent_unreachable:
   "lookup_context (analyse_int_result result_demo_prog) (Statement 99) () = Unreachable"
+  by (rule lookup_context_absent) eval
+
+subsection \<open>Solver-choice variants: the same generic constructor, off a different solve\<close>
+
+text \<open>
+  \<open>analyse_sign_result_per_origin\<close>, \<open>analyse_interval_join_result\<close>,
+  \<open>analyse_interval_per_origin_result\<close>, \<open>analyse_int_join_result\<close>, and
+  \<open>analyse_int_per_origin_result\<close> all come from
+  \<^const>\<open>monovariant_analysis_result_for\<close>, the same generic constructor as
+  the default-solver adapters above, applied to a different native solve
+  function. \<open>result_demo_prog\<close> has no loop and no global feedback, so every
+  update-rule discipline agrees with the default solver on it; these pins
+  witness that each variant reaches the same generic
+  \<^const>\<open>normalize_point\<close>/\<^const>\<open>lookup_context\<close> surface with the same
+  values the default-solver adapters above already established, not a
+  second full reachability case analysis.
+\<close>
+
+lemma result_demo_sign_per_origin_stmt1_reachable:
+  "map_point_state (\<lambda>st. st (STR ''x''))
+     (lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 1) ())
+   = Reachable SPos"
+  by eval
+
+lemma result_demo_sign_per_origin_stmt2_not_reachable:
+  "\<not> is_reachable_point (lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 2) ())"
+  by eval
+
+lemma result_demo_sign_per_origin_stmt2_unreachable:
+  "lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 2) () = Unreachable"
+  using result_demo_sign_per_origin_stmt2_not_reachable
+  by (simp add: is_reachable_point_iff)
+
+lemma result_demo_sign_per_origin_absent_unreachable:
+  "lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 99) () = Unreachable"
+  by (rule lookup_context_absent) eval
+
+lemma result_demo_interval_join_stmt1_reachable:
+  "map_point_state (\<lambda>st. st (STR ''x''))
+     (lookup_context (analyse_interval_join_result result_demo_prog) (Statement 1) ())
+   = Reachable (Ivl (Fin 5) (Fin 5))"
+  by eval
+
+lemma result_demo_interval_join_stmt2_not_reachable:
+  "\<not> is_reachable_point (lookup_context (analyse_interval_join_result result_demo_prog) (Statement 2) ())"
+  by eval
+
+lemma result_demo_interval_join_stmt2_unreachable:
+  "lookup_context (analyse_interval_join_result result_demo_prog) (Statement 2) () = Unreachable"
+  using result_demo_interval_join_stmt2_not_reachable
+  by (simp add: is_reachable_point_iff)
+
+lemma result_demo_interval_join_absent_unreachable:
+  "lookup_context (analyse_interval_join_result result_demo_prog) (Statement 99) () = Unreachable"
+  by (rule lookup_context_absent) eval
+
+lemma result_demo_interval_per_origin_stmt1_reachable:
+  "map_point_state (\<lambda>st. st (STR ''x''))
+     (lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 1) ())
+   = Reachable (Ivl (Fin 5) (Fin 5))"
+  by eval
+
+lemma result_demo_interval_per_origin_stmt2_not_reachable:
+  "\<not> is_reachable_point (lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 2) ())"
+  by eval
+
+lemma result_demo_interval_per_origin_stmt2_unreachable:
+  "lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 2) () = Unreachable"
+  using result_demo_interval_per_origin_stmt2_not_reachable
+  by (simp add: is_reachable_point_iff)
+
+lemma result_demo_interval_per_origin_absent_unreachable:
+  "lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 99) () = Unreachable"
+  by (rule lookup_context_absent) eval
+
+lemma result_demo_int_join_stmt1_reachable:
+  "map_point_state (\<lambda>st. int_ivl (st (STR ''x'')))
+     (lookup_context (analyse_int_join_result result_demo_prog) (Statement 1) ())
+   = Reachable (Ivl (Fin 5) (Fin 5))"
+  by eval
+
+lemma result_demo_int_join_stmt2_not_reachable:
+  "\<not> is_reachable_point (lookup_context (analyse_int_join_result result_demo_prog) (Statement 2) ())"
+  by eval
+
+lemma result_demo_int_join_stmt2_unreachable:
+  "lookup_context (analyse_int_join_result result_demo_prog) (Statement 2) () = Unreachable"
+  using result_demo_int_join_stmt2_not_reachable
+  by (simp add: is_reachable_point_iff)
+
+lemma result_demo_int_join_absent_unreachable:
+  "lookup_context (analyse_int_join_result result_demo_prog) (Statement 99) () = Unreachable"
+  by (rule lookup_context_absent) eval
+
+lemma result_demo_int_per_origin_stmt1_reachable:
+  "map_point_state (\<lambda>st. int_ivl (st (STR ''x'')))
+     (lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 1) ())
+   = Reachable (Ivl (Fin 5) (Fin 5))"
+  by eval
+
+lemma result_demo_int_per_origin_stmt2_not_reachable:
+  "\<not> is_reachable_point (lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 2) ())"
+  by eval
+
+lemma result_demo_int_per_origin_stmt2_unreachable:
+  "lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 2) () = Unreachable"
+  using result_demo_int_per_origin_stmt2_not_reachable
+  by (simp add: is_reachable_point_iff)
+
+lemma result_demo_int_per_origin_absent_unreachable:
+  "lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 99) () = Unreachable"
   by (rule lookup_context_absent) eval
 
 end

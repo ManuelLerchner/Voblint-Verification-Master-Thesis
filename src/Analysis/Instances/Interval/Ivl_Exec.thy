@@ -95,6 +95,25 @@ lemma lookup_cinit_ivl_st [simp]:
   unfolding fun_of_resolved_st_q_for_def
   by transfer (auto simp: location_of_def split: if_splits)
 
+text \<open>
+  The entry-state solve's seed (\<open>Lifted cinit_ivl_st\<close>, in the entry-state
+  equation system) is canonical: neither
+  default (\<open>top\<close> for locals, the singleton \<open>{0}\<close> for globals) is witness-bottom,
+  and \<open>cinit_ivl_st\<close> carries no explicit override, so \<^const>\<open>resolved_st_q_is_bot_for\<close>
+  is false at every declared-globals list. This is the base case the entry-state
+  equation system's RHS closure induction needs.
+\<close>
+
+lemma cinit_ivl_st_not_bot_for:
+  assumes globals: "\<And>x. gs x = (x \<in> set gl)"
+  shows "\<not> resolved_st_q_is_bot_for gl cinit_ivl_st"
+proof -
+  have "\<not> is_bot_state (fun_of_resolved_st_q_for gs cinit_ivl_st)"
+    unfolding is_bot_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
+  then show ?thesis
+    by (simp add: resolved_st_q_is_bot_for_iff[OF globals])
+qed
+
 lemma fun_of_st_cinit_ivl_st:
   "fun_of_resolved_st_q_for is_global cinit_ivl_st =
    (\<lambda>x. if is_global x then Ivl (Fin 0) (Fin 0) else Ivl MinInf PlusInf)"

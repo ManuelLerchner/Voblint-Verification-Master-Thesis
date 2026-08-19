@@ -615,6 +615,7 @@ code_identifier
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core
 | code_module Analysis_Result \<rightharpoonup> (OCaml) Core
 | code_module Exec_DG_Bridge \<rightharpoonup> (OCaml) Core
+| code_module Monovariant_Analysis_Result \<rightharpoonup> (OCaml) Core
 | code_module DG_Base_Exec \<rightharpoonup> (OCaml) Core
 | code_module Sign_Arithmetic \<rightharpoonup> (OCaml) Core
 | code_module Sign_Special \<rightharpoonup> (OCaml) Core

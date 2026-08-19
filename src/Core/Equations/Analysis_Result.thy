@@ -10,15 +10,17 @@ text \<open>
   per-point abstract state. Checks, reports, and rendering are downstream
   consumers of this table, not siblings of it.
 
-  \<open>Unreachable\<close> means ``the represented concrete state set is empty'',
-  i.e. \<open>gamma = {}\<close> --- it does \<^emph>\<open>not\<close> mean ``the solver returned an outer
-  \<^const>\<open>Bot\<close>''. Both a solver-level \<^const>\<open>Bot\<close> local unknown \<^emph>\<open>and\<close> a
-  \<^const>\<open>Lifted\<close> one whose payload is already componentwise witness-bottom
-  normalize to \<open>Unreachable\<close>: the two are indistinguishable in the
-  concrete semantics, and \<open>normalize_point_correct\<close> below is exactly the
-  statement that this normalization loses nothing --- the normalized
-  \<open>point_state\<close> concretizes to the same store set as the raw lifted
-  state it came from.
+  \<open>Unreachable\<close> means ``the solver's canonical result at this key is an
+  outer \<^const>\<open>Bot\<close>'', or the key is absent from \<open>result_keys\<close> altogether;
+  \<open>Reachable a\<close> means ``the canonical result is \<^const>\<open>Lifted\<close>'', with the
+  local unknown projected to the abstract state \<open>a\<close>. This is a structural
+  reading, not a semantic-emptiness test: raw solver values are
+  canonicalized -- a witness-bottom \<^const>\<open>Lifted\<close> payload collapsed to
+  \<^const>\<open>Bot\<close> -- \<^emph>\<open>before\<close> they reach this boundary (every public result
+  adapter routes through \<open>canonicalize_lift\<close>), so by the time a value is
+  converted to \<open>point_state\<close> here, \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> already
+  agree with concrete emptiness and non-emptiness respectively, and
+  \<open>normalize_point\<close> itself needs only relabel them.
 \<close>
 
 subsection \<open>Per-point reachability\<close>
@@ -116,85 +118,134 @@ lemma gamma_point_Unreachable [simp]: "gamma_point Unreachable = {}"
 lemma gamma_point_Reachable [simp]: "gamma_point (Reachable st) = gamma_state st"
   unfolding gamma_point_def by simp
 
+text \<open>
+  The shape every migrated report's per-node environment reads a
+  \<^type>\<open>point_state\<close> through (\<open>Unreachable \<Rightarrow> bot\<close>, \<open>Reachable st \<Rightarrow> st\<close>)
+  concretizes to exactly \<^const>\<open>gamma_point\<close>, so a soundness proof against
+  that environment never needs to re-case-split the point state by hand.
+\<close>
+
+lemma gamma_state_of_reachable_env [simp]:
+  "gamma_state (case p of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st) = gamma_point p"
+  for p :: "'a::sound_domain abs_state point_state"
+  by (cases p) (simp_all add: gamma_state_bot)
+
 subsection \<open>Normalizing a solved local unknown\<close>
 
 text \<open>
   \<open>normalize_point\<close> is the sole entry point from the executable solver
-  substrate into the result boundary: it takes the local unknown exactly as
-  the solver stores it (an \<^typ>\<open>'a resolved_st_q lifted\<close>) and decides
-  reachability with \<^const>\<open>resolved_st_q_is_bot_for\<close>, the executable
-  witness-bottom test, rather than with the outer \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close>
-  constructor alone. Its two arguments are the declared globals in both
-  shapes the substrate uses --- as a list for the executable test, as a
-  predicate for \<^const>\<open>fun_of_resolved_st_q_for\<close>'s location split.
+  substrate into the result boundary: it relabels the local unknown exactly
+  as the solver stores it (an \<^typ>\<open>'a resolved_st_q lifted\<close>) into a
+  \<^typ>\<open>'a abs_state point_state\<close>, \<^const>\<open>Bot\<close> becoming \<^const>\<open>Unreachable\<close> and
+  \<^const>\<open>Lifted\<close> becoming \<^const>\<open>Reachable\<close> of the projected state. It is a
+  purely structural conversion with no bottom test of its own.
 
-  It is constrained at \<^class>\<open>computable_domain\<close>, not \<^class>\<open>sound_domain\<close>:
-  the stronger class carries \<^const>\<open>gamma\<close>, and code generation would then
-  have to materialize a dictionary field for a constant with no code
-  equation. \<open>normalize_point_correct\<close> below states the soundness at
-  \<^class>\<open>sound_domain\<close>, where \<^const>\<open>gamma\<close> is available, without the
-  executable definition ever depending on it.
+  Semantic deadness is normalized \<^emph>\<open>before\<close> this point, not here:
+  \<^const>\<open>canonicalize_lift\<close> is the boundary that collapses a witness-bottom
+  \<^const>\<open>Lifted\<close> payload to \<^const>\<open>Bot\<close>, and every public result adapter
+  routes its raw solver value through \<open>canonicalize_lift\<close> first, so
+  \<open>normalize_point\<close> itself never needs the declared globals as a list, nor
+  \<^class>\<open>computable_domain\<close>'s executable witness-bottom test -- both were
+  needed only for that test, which now lives one layer earlier.
 \<close>
 
 fun normalize_point ::
-  "vname list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> ('a::computable_domain) resolved_st_q lifted \<Rightarrow>
-   'a abs_state point_state"
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) resolved_st_q lifted \<Rightarrow> 'a abs_state point_state"
 where
-  "normalize_point gl gs Bot = Unreachable"
-| "normalize_point gl gs (Lifted s) =
-     (if resolved_st_q_is_bot_for gl s then Unreachable
-      else Reachable (fun_of_resolved_st_q_for gs s))"
+  "normalize_point gs Bot = Unreachable"
+| "normalize_point gs (Lifted s) = Reachable (fun_of_resolved_st_q_for gs s)"
 
 text \<open>
-  Normalization is exact, not merely sound: the concretization of the
-  normalized point is the concretization of the raw lifted state it came
-  from. Composing \<open>resolved_st_q_lifted_is_bot_for_iff\<close> (the executable
-  witness-bottom test agrees with \<^const>\<open>is_bot_state_lift\<close>) with
-  \<open>is_bot_state_lift_iff\<close> (\<^const>\<open>is_bot_state_lift\<close> agrees with emptiness of
-  \<^const>\<open>gamma_state_lift\<close>), both from \<^theory>\<open>Voblint_Core.Exec_St\<close> and
-  \<^theory>\<open>Voblint_Core.Abstract_Domain\<close>, is all it takes: collapsing a
-  witness-bottom \<^const>\<open>Lifted\<close> state to \<^const>\<open>Unreachable\<close> discards no
-  concrete store, because there was none.
+  \<open>normalize_point\<close> is exact for whatever the raw value already denotes,
+  unconditionally: no premise on \<open>gs\<close>/declared globals is needed, since the
+  conversion no longer inspects them to decide reachability, only to project
+  the payload \<^const>\<open>fun_of_resolved_st_q_for\<close> already needs.
 \<close>
 
 lemma normalize_point_correct:
-  assumes globals: "\<And>x. gs x = (x \<in> set gl)"
-  shows "gamma_point (normalize_point gl gs s) =
-         gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
-proof (cases s)
+  "gamma_point (normalize_point gs s) =
+     gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
+  by (cases s) simp_all
+
+text \<open>
+  The other direction of the same relabeling, in the shape a consumer of a
+  \<^const>\<open>Reachable\<close> point needs: the payload it hands out is literally the
+  reader's image of the solved local unknown, so a fact proved about the raw
+  lifted state transports to the normalized one without re-deciding
+  reachability.
+\<close>
+
+lemma normalize_point_Reachable_map_lift:
+  assumes "normalize_point gs s = Reachable st"
+  shows "map_lift (fun_of_resolved_st_q_for gs) s = Lifted st"
+  using assms by (cases s) auto
+
+text \<open>
+  The old, single-step reachability reading of a raw solver value (a
+  \<^const>\<open>Bot\<close>, a witness-bottom \<^const>\<open>Lifted\<close>, and a live \<^const>\<open>Lifted\<close> all
+  collapsed together) now factors into \<^const>\<open>canonicalize_lift\<close> followed by
+  \<open>normalize_point\<close>. The lemmas below pin all three cases of that
+  composition, with no premise on \<open>q\<close> beyond which case it is in: this is
+  the exact old/new behavior-preservation fact, true for every raw value a
+  solver could hand back, canonical or not.
+\<close>
+
+lemma normalize_point_canonicalize_lift_Bot:
+  "normalize_point gs (canonicalize_lift is_bot_pred Bot) = Unreachable"
+  by simp
+
+lemma normalize_point_canonicalize_lift_Lifted_bot:
+  assumes "is_bot_pred s"
+  shows "normalize_point gs (canonicalize_lift is_bot_pred (Lifted s)) = Unreachable"
+  using assms by simp
+
+lemma normalize_point_canonicalize_lift_Lifted_live:
+  assumes "\<not> is_bot_pred s"
+  shows "normalize_point gs (canonicalize_lift is_bot_pred (Lifted s)) =
+           Reachable (fun_of_resolved_st_q_for gs s)"
+  using assms by simp
+
+lemma normalize_point_canonicalize_lift_eq_old:
+  "normalize_point gs (canonicalize_lift is_bot_pred q) =
+     (case q of
+        Bot \<Rightarrow> Unreachable
+      | Lifted s \<Rightarrow> if is_bot_pred s then Unreachable
+                    else Reachable (fun_of_resolved_st_q_for gs s))"
+  by (cases q) simp_all
+
+text \<open>
+  The soundness-facing counterpart of \<open>normalize_point_canonicalize_lift_eq_old\<close>:
+  canonicalizing before normalizing never shrinks what a raw solved value
+  concretizes to, provided \<open>is_bot_pred\<close> only ever fires where the projected
+  state genuinely is witness-bottom (\<open>bot_sound\<close>, exactly what
+  \<open>resolved_st_q_is_bot_for_iff\<close> gives for \<open>resolved_st_q_is_bot_for gl\<close>).
+  This is the one fact a report soundness proof needs to transport an
+  existing raw-env node-soundness result across the
+  \<^const>\<open>canonicalize_lift\<close>/\<open>normalize_point\<close> boundary: no premise here
+  mentions solver support, so none of the three cases below needs one either.
+\<close>
+
+lemma gamma_point_normalize_point_canonicalize_lift:
+  fixes q :: "'a::sound_domain resolved_st_q lifted"
+  assumes bot_sound: "\<And>s. is_bot_pred s \<Longrightarrow> is_bot_state (fun_of_resolved_st_q_for gs s)"
+  shows "gamma_point (normalize_point gs (canonicalize_lift is_bot_pred q)) =
+           gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) q)"
+proof (cases q)
   case Bot
   then show ?thesis by simp
 next
-  case (Lifted t)
+  case (Lifted s)
   show ?thesis
-  proof (cases "resolved_st_q_lifted_is_bot_for gl s")
+  proof (cases "is_bot_pred s")
     case True
-    then have "is_bot_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
-      by (simp add: resolved_st_q_lifted_is_bot_for_iff[OF globals])
-    then have empty: "gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) s) = {}"
-      by (simp add: is_bot_state_lift_iff)
-    from True Lifted have "normalize_point gl gs s = Unreachable" by simp
-    with empty show ?thesis by simp
+    with bot_sound have "gamma_state (fun_of_resolved_st_q_for gs s) = {}"
+      using is_bot_state_gamma_state_empty by blast
+    with Lifted True show ?thesis by simp
   next
     case False
     with Lifted show ?thesis by simp
   qed
 qed
-
-text \<open>
-  The other direction of the same normalization, in the shape a consumer of a
-  \<^const>\<open>Reachable\<close> point needs: the payload it hands out is literally the
-  reader's image of the solved local unknown, so a fact proved about the raw
-  lifted state transports to the normalized one without re-deciding
-  reachability. \<^const>\<open>Unreachable\<close> carries no payload and so has no such
-  transport --- which is exactly why it is the caller's job to case-split
-  before using a normalized state.
-\<close>
-
-lemma normalize_point_Reachable_map_lift:
-  assumes "normalize_point gl gs s = Reachable st"
-  shows "map_lift (fun_of_resolved_st_q_for gs) s = Lifted st"
-  using assms by (cases s) (auto split: if_splits)
 
 subsection \<open>The result table\<close>
 

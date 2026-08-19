@@ -510,10 +510,19 @@ subsection \<open>Classifying one contextual point\<close>
 
 text \<open>
   The reachability decision is not remade here: it was already made when the
-  solved local unknown became a \<^typ>\<open>'a point_state\<close> through
-  \<^const>\<open>normalize_point\<close>, whose \<open>normalize_point_correct\<close> states that
-  \<^const>\<open>Unreachable\<close> is exactly the empty concretization. \<open>classify_point\<close>
-  only refuses to classify against a state that represents nothing.
+  raw solved local unknown crossed the result boundary, one layer before
+  \<^const>\<open>normalize_point\<close>'s own structural relabeling. A witness-bottom
+  \<^const>\<open>Lifted\<close> payload is collapsed to \<^const>\<open>Bot\<close> by
+  \<^const>\<open>canonicalize_lift\<close>, so by the time a value reaches
+  \<^const>\<open>normalize_point\<close> --- as every public result adapter's raw value
+  does --- \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> already agree with concrete
+  emptiness and non-emptiness respectively, and \<^const>\<open>Unreachable\<close> at the
+  \<open>point_state\<close> level means exactly that. \<open>classify_point\<close> only refuses to
+  classify against a state that represents nothing: a covered-but-dead
+  activation, whose raw stored state a solver run could otherwise leave as
+  a witness-bottom \<^const>\<open>Lifted\<close>, reaches \<open>classify_point\<close> as
+  \<^const>\<open>Unreachable\<close> rather than fabricating a vacuous
+  \<^const>\<open>Check_Proved\<close> off an empty state.
 \<close>
 
 fun classify_point ::

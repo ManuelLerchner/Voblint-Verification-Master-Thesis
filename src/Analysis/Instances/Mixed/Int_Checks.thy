@@ -1,6 +1,7 @@
 theory Int_Checks
   imports Int_Exec_Sound "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result"
+    "Voblint_Analysis.Monovariant_Analysis_Result"
 begin
 
 hide_const phase.N
@@ -147,49 +148,105 @@ lemma int_classify_eq_unknown:
   "int_classify_check (Eq (V (STR ''x'')) (N 5)) test_env_int_bounded = Check_Unknown"
   unfolding test_env_int_bounded_def by eval
 
+subsection \<open>Solved-result table\<close>
+
+text \<open>
+  \<open>analyse_int_result_for\<close> is the canonical solved D/G system under the
+  \<open>Refine_Fixpoint\<close> refinement mode, read as a
+  \<^typ>\<open>(unit, int_dom abs_state) analysis_result\<close>: a one-line partial
+  application of \<open>monovariant_analysis_result_for\<close>
+  (\<open>Monovariant_Analysis_Result.thy\<close>), mirroring \<open>Interval_Checks\<close>'s own
+  \<open>analyse_interval_td_result_for\<close>. Every report below reads through a
+  result table via \<^const>\<open>lookup_context\<close> rather than a raw
+  solver-environment lookup.
+\<close>
+
+definition analyse_int_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_result_for gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_int_dg_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_int_report\<close>'s shape.\<close>
+
+definition analyse_int_result ::
+    "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_result p = analyse_int_result_for (declared_global p) p"
+
+subsection \<open>Solved-result table: always-join update rule\<close>
+
+text \<open>
+  \<open>analyse_int_join_result\<close> is \<^const>\<open>analyse_int_result\<close>'s sibling under the
+  always-join update rule: the same \<open>monovariant_analysis_result_for\<close>
+  partial application, reading \<^const>\<open>analyse_int_dg_join_for\<close> instead of
+  \<open>analyse_int_dg_for\<close>, pinned at \<open>Refine_Fixpoint\<close> like every other exported
+  \<open>int_dom\<close> entry point (the CLI does not expose refinement mode as a
+  separate axis).
+\<close>
+
+definition analyse_int_join_result_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_join_result_for mode gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_int_dg_join_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+definition analyse_int_join_result ::
+    "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_join_result p = analyse_int_join_result_for Refine_Fixpoint (declared_global p) p"
+
+subsection \<open>Solved-result table: per-origin update rule\<close>
+
+text \<open>
+  \<open>analyse_int_per_origin_result\<close> mirrors \<open>analyse_int_join_result\<close> exactly,
+  reading \<^const>\<open>analyse_int_dg_per_origin_for\<close> instead of
+  \<^const>\<open>analyse_int_dg_join_for\<close>.
+\<close>
+
+definition analyse_int_per_origin_result_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_per_origin_result_for mode gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_int_dg_per_origin_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+definition analyse_int_per_origin_result ::
+    "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_per_origin_result p = analyse_int_per_origin_result_for Refine_Fixpoint (declared_global p) p"
+
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
 text \<open>
-  \<open>analyse_int_report_for\<close> mirrors \<open>analyse_interval_td_report_for\<close> exactly, reading
-  through \<^const>\<open>analyse_int_dg_env_for\<close> (the \<open>Refine_Fixpoint\<close>, warrowing-backed native D/G
-  pipeline, \<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>) instead of \<open>ivl_exec_prog_at\<close> --- this is
-  the report function the exported \<open>analyse\<close> API dispatches to for \<open>Int_Analysis\<close> (see
-  \<open>Analyse_Dispatch\<close>, Examples session, downstream), fixed at \<open>prog_main_name\<close> since
-  \<^const>\<open>analyse_int_dg_env_for\<close> already is, mirroring
-  \<open>analyse_sign_report_for\<close>/\<open>analyse_interval_td_report_for\<close>.
+  \<open>analyse_int_report_for\<close> is the report function the exported \<open>analyse\<close>
+  API dispatches to for \<open>Int_Analysis\<close> (see \<open>Analyse_Dispatch\<close>, Examples
+  session, downstream), fixed at \<open>prog_main_name\<close> since
+  \<^const>\<open>analyse_int_dg_for\<close> already is, but -- unlike
+  \<^const>\<open>analyse_int_result_for\<close>, which is pinned at \<^const>\<open>Refine_Fixpoint\<close>
+  -- keeping \<open>mode\<close> as a free parameter, matching the pre-migration
+  definition's own generality (\<open>Example_Int_Codegen\<close> exercises both
+  refinement modes through this same report function). It reads its
+  per-node state through a \<open>monovariant_analysis_result_for\<close> table at that
+  \<open>mode\<close> via \<^const>\<open>lookup_context\<close>, mirroring
+  \<open>Sign_Checks\<close>/\<open>Interval_Checks\<close>'s default reports exactly, including
+  classifying an \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value
+  \<^const>\<open>classify_checks\<close> always fed such a node -- rather than a fourth,
+  \<open>Dead\<close> outcome \<open>check_result\<close> does not carry.
+
+  \<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so
+  the single D/G solve performs is shared across every check in the report.
 \<close>
 
 definition analyse_int_report_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_for mode gs p =
-     classify_checks (prog_cfg prog_main_name p)
-       (analyse_int_dg_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       int_classify_check"
-
-text \<open>
-  Same single-solve-per-report fix as \<open>analyse_interval_td_report_for_code\<close>: bind
-  \<^term>\<open>snd (analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)\<close> once,
-  outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the generated OCaml solves the D/G
-  equation system exactly once per report rather than once per check.
-\<close>
-
-declare analyse_int_report_for_def [code del]
-
-lemma analyse_int_report_for_code [code]:
-  "analyse_int_report_for mode gs p =
-     (let sol = snd (analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let r = monovariant_analysis_result_for
+                (\<lambda>gs p. analyse_int_dg_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            int_classify_check)"
-  unfolding analyse_int_report_for_def analyse_int_dg_env_for_def[abs_def] Let_def
-  by (rule refl)
 
 text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_td_report\<close>'s
-  shape. Soundness (\<open>analyse_int_report_sound_proved\<close>/\<open>_refuted\<close>) needs the
-  \<open>base_dg_exec_analysis\<close> locale interpretation, one session later than Analysis in the locked
-  six-session chain, so it stays downstream in a new \<open>Example_Int_Codegen\<close> (Examples), mirroring
-  \<open>Sign_Checks\<close>/\<open>Interval_Checks\<close>.
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, pinned at \<open>Refine_Fixpoint\<close>
+  like \<^const>\<open>analyse_int_result\<close>: this is the report the production \<open>analyse\<close>
+  API reaches, matching \<open>analyse_interval_td_report\<close>'s shape.
 \<close>
 
 definition analyse_int_report :: "imp_prog \<Rightarrow> check_report_entry list" where
@@ -198,47 +255,29 @@ definition analyse_int_report :: "imp_prog \<Rightarrow> check_report_entry list
 subsection \<open>Whole-program check report with state: the native D/G runtime API\<close>
 
 text \<open>
-  State-carrying sibling of \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close>, via
-  \<^const>\<open>classify_checks_with_state\<close>: same native D/G pipeline, same environment, with the
-  per-check \<open>int_dom\<close> environment attached to each report entry instead of discarded ---
-  mirrors \<open>analyse_interval_td_report_for_with_state\<close>/\<open>analyse_interval_td_report_with_state\<close>,
-  needed so \<open>Analyse_Dispatch.analyse_with_state\<close> can stay total once \<open>Int_Analysis\<close> joins
-  \<open>analysis_domain\<close>. The \<open>[code]\<close> rewrite mirrors the one above for the same
-  single-solve-per-report reason.
-\<close>
-
-text \<open>
-  Each entry also carries an exact \<open>unreachable\<close> flag,
-  \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close> read off the very same local unknown
-  \<^const>\<open>analyse_int_dg_env_for\<close> collapses to \<^term>\<open>bot\<close> -- see
-  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart for the argument
-  (solver-level \<open>Bot\<close> and a componentwise-bottom \<open>Lifted\<close> state both set it)
-  and \<^theory>\<open>Voblint_Core.Exec_St\<close>'s \<open>resolved_st_q_lifted_is_bot_for_iff\<close> for
-  the exactness.
+  State-carrying sibling of \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close>,
+  via \<^const>\<open>classify_checks_with_state\<close>: same result table, with the
+  per-check \<open>int_dom\<close> environment attached to each report entry instead of
+  discarded -- needed so \<open>Analyse_Dispatch.analyse_with_state\<close> can stay
+  total once \<open>Int_Analysis\<close> joins \<open>analysis_domain\<close>. An exact
+  \<open>unreachable\<close> flag is read straight off \<^const>\<open>lookup_context\<close>'s
+  \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close> case split -- exact because
+  \<open>normalize_point_canonicalize_lift_eq_old\<close>
+  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
+  reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
+  test on the same raw local unknown, the same argument
+  \<open>analyse_sign_report_for_with_state\<close>'s Sign counterpart uses.
 \<close>
 
 definition analyse_int_report_for_with_state ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_for_with_state gs p =
-     classify_checks_with_state (prog_cfg prog_main_name p)
-       (\<lambda>v. (resolved_st_q_lifted_is_bot_for (declared_global_vars p)
-               (locals (snd (analyse_int_dg_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-                          (Inl (v, ())))),
-             analyse_int_dg_env_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p v))
-       (\<lambda>c (_, s). int_classify_check c s)"
-
-declare analyse_int_report_for_with_state_def [code del]
-
-lemma analyse_int_report_for_with_state_code [code]:
-  "analyse_int_report_for_with_state gs p =
-     (let sol = snd (analyse_int_dg_for Refine_Fixpoint (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let r = analyse_int_result_for gs p
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. let st = locals (sol (Inl (v, ())))
-                in (resolved_st_q_lifted_is_bot_for (declared_global_vars p) st,
-                    case map_lift (fun_of_exec_dg_st_for gs) st of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))
+           (\<lambda>v. case lookup_context r v () of
+                  Unreachable \<Rightarrow> (True, bot)
+                | Reachable st \<Rightarrow> (False, st))
            (\<lambda>c (_, s). int_classify_check c s))"
-  unfolding analyse_int_report_for_with_state_def analyse_int_dg_env_for_def[abs_def] Let_def
-  by (rule refl)
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_int_report\<close>'s shape.\<close>
@@ -250,121 +289,44 @@ definition analyse_int_report_with_state ::
 subsection \<open>Solver-choice variants: always-join and per-origin update rules\<close>
 
 text \<open>
-  \<open>analyse_int_report_join_for\<close> mirrors \<open>analyse_int_report_for\<close> exactly, reading through
-  \<^const>\<open>analyse_int_dg_join_env_for\<close> (the always-join update rule,
-  \<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>) instead of \<^const>\<open>analyse_int_dg_env_for\<close>
-  (Apinis warrowing) --- this is the report function the exported \<open>analyse_with_solver\<close> API
-  dispatches to for \<open>Int_Analysis\<close>/\<open>Solver_Join\<close> (\<open>Analyse_Dispatch\<close>, downstream in Examples),
-  not \<open>Int_Analysis\<close>'s production default (\<open>analyse\<close>/\<open>analyse_with_solver Int_Analysis
-  Solver_Warrow\<close> both still dispatch to \<open>analyse_int_report\<close>). Reuses
-  \<^const>\<open>analyse_int_dg_eqs_for\<close> unchanged (\<open>mode\<close> included), only the solve call differs,
-  mirroring \<open>Interval_Checks.analyse_interval_report_for\<close>/\<open>Sign_Checks.analyse_sign_report_for\<close>'s
-  own always-join default.
+  \<open>analyse_int_report_join_for\<close>'s sibling relationship to
+  \<^const>\<open>analyse_int_report\<close> mirrors \<^const>\<open>analyse_int_join_result\<close>'s to
+  \<^const>\<open>analyse_int_result\<close>: this route exists so \<open>analyse_with_solver\<close> can
+  compare update rules on the identical equation system (issue #131),
+  mirroring \<open>Interval_Checks.analyse_interval_report_for\<close>/
+  \<open>Sign_Checks.analyse_sign_report_for\<close>'s own always-join default. The CLI
+  does not expose refinement mode as a separate axis, so this convenience
+  instance stays pinned at \<open>Refine_Fixpoint\<close> like \<^const>\<open>analyse_int_report\<close>.
 \<close>
 
 definition analyse_int_report_join_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_join_for mode gs p =
-     classify_checks (prog_cfg prog_main_name p)
-       (analyse_int_dg_join_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       int_classify_check"
-
-declare analyse_int_report_join_for_def [code del]
-
-lemma analyse_int_report_join_for_code [code]:
-  "analyse_int_report_join_for mode gs p =
-     (let sol = snd (analyse_int_dg_join_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let r = analyse_int_join_result_for mode gs p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            int_classify_check)"
-  unfolding analyse_int_report_join_for_def analyse_int_dg_join_env_for_def[abs_def] Let_def
-  by (rule refl)
-
-text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, pinned at \<open>Refine_Fixpoint\<close> like
-  \<^const>\<open>analyse_int_report\<close>: this is the report the CLI's solver-choice axis reaches, and
-  the CLI does not yet expose refinement mode as a separate axis (that remains
-  \<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>'s own production default).
-\<close>
 
 definition analyse_int_report_join :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_join p = analyse_int_report_join_for Refine_Fixpoint (declared_global p) p"
 
 text \<open>
-  \<open>analyse_int_report_per_origin_for\<close> mirrors \<open>analyse_int_report_join_for\<close> exactly, reading
-  through \<^const>\<open>analyse_int_dg_per_origin_env_for\<close> instead of
-  \<^const>\<open>analyse_int_dg_join_env_for\<close> --- keeping each write origin's contribution separate
-  instead of folding every contribution into one join. Reuses \<^const>\<open>analyse_int_dg_eqs_for\<close>
-  unchanged, only the solve call differs.
+  \<open>analyse_int_report_per_origin_for\<close>'s sibling relationship to
+  \<^const>\<open>analyse_int_report_join\<close> mirrors
+  \<^const>\<open>analyse_int_per_origin_result\<close>'s to \<^const>\<open>analyse_int_join_result\<close>:
+  keeping each write origin's contribution separate instead of folding
+  every contribution into one join.
 \<close>
 
 definition analyse_int_report_per_origin_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_per_origin_for mode gs p =
-     classify_checks (prog_cfg prog_main_name p)
-       (analyse_int_dg_per_origin_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       int_classify_check"
-
-declare analyse_int_report_per_origin_for_def [code del]
-
-lemma analyse_int_report_per_origin_for_code [code]:
-  "analyse_int_report_per_origin_for mode gs p =
-     (let sol = snd (analyse_int_dg_per_origin_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
+     (let r = analyse_int_per_origin_result_for mode gs p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-                of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            int_classify_check)"
-  unfolding analyse_int_report_per_origin_for_def analyse_int_dg_per_origin_env_for_def[abs_def] Let_def
-  by (rule refl)
 
 definition analyse_int_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_per_origin p =
      analyse_int_report_per_origin_for Refine_Fixpoint (declared_global p) p"
 
-subsection \<open>Solved-result table\<close>
-
-text \<open>
-  The same solved D/G system as \<^const>\<open>analyse_int_report_for_with_state\<close>,
-  read as a \<^typ>\<open>(unit, int_dom abs_state) analysis_result\<close> instead of as a
-  check report, mirroring \<open>Interval_Checks\<close>'s own
-  \<open>analyse_interval_td_result_for\<close>: the covered local keys the solver already
-  returns as the first component, and \<^const>\<open>normalize_point\<close> applied to
-  each local unknown. Monovariant, so the context type is \<^typ>\<open>unit\<close>; only
-  \<open>Inl\<close>-shaped local keys are covered, never the solver's own \<open>Inr\<close> global
-  unknown. Pinned at \<^const>\<open>Refine_Fixpoint\<close> like
-  \<^const>\<open>analyse_int_report_for_with_state\<close>, the production refinement mode.
-
-  The \<open>[code]\<close> rewrite is the same single-solve fix as
-  \<open>analyse_int_report_for_code\<close>: binding \<open>sol\<close> once outside the per-key
-  closure compiles to a single shared thunk, so a lookup never re-solves.
-\<close>
-
-definition analyse_int_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_result_for gs p =
-     Analysis_Result
-       (fst (analyse_int_dg_for Refine_Fixpoint
-               (resolved_st_q_is_bot_for (declared_global_vars p)) gs p))
-       (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
-                  (locals (snd (analyse_int_dg_for Refine_Fixpoint
-                                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-                             (Inl (v, ctx)))))"
-
-declare analyse_int_result_for_def [code del]
-
-lemma analyse_int_result_for_code [code]:
-  "analyse_int_result_for gs p =
-     (let sol = analyse_int_dg_for Refine_Fixpoint
-                  (resolved_st_q_is_bot_for (declared_global_vars p)) gs p
-      in Analysis_Result (fst sol)
-           (\<lambda>v ctx. normalize_point (declared_global_vars p) gs
-                      (locals (snd sol (Inl (v, ctx))))))"
-  unfolding analyse_int_result_for_def Let_def by (rule refl)
-
-text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
-  \<open>analyse_int_report\<close>'s shape.\<close>
-
-definition analyse_int_result ::
-    "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
-  "analyse_int_result p = analyse_int_result_for (declared_global p) p"
-
 end
+
