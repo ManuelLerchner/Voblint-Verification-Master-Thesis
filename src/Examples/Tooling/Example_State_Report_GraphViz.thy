@@ -590,6 +590,29 @@ lemma entry_state_ctx_dot_auto_code [code]:
             entry_state_ctx_annotated_config_def Let_def
   by (rule refl)
 
+definition entry_state_ctx_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
+  "entry_state_ctx_graph_snapshot_auto p =
+     String.implode
+       (analysis_graph_to_canonical_text (entry_state_ctx_annotated_config p) (prog_cfg prog_main_name p)
+          (entry_state_ctx_sol (analyse_interval_entry_state_result p))
+          (entry_state_ctx_graph p))"
+
+declare entry_state_ctx_graph_snapshot_auto_def [code del]
+
+lemma entry_state_ctx_graph_snapshot_auto_code [code]:
+  "entry_state_ctx_graph_snapshot_auto p =
+     (let r = analyse_interval_entry_state_result p;
+          g = prog_cfg prog_main_name p;
+          base = entry_state_ctx_graph_config p;
+          cfg = base \<lparr> node_annotation := entry_state_ctx_check_annotation g r \<rparr>;
+          sol = entry_state_ctx_sol r
+      in String.implode
+           (analysis_graph_to_canonical_text cfg g sol
+              (build_analysis_graph cfg g (contextual_result_domain base g r) sol)))"
+  unfolding entry_state_ctx_graph_snapshot_auto_def entry_state_ctx_graph_def
+            entry_state_ctx_annotated_config_def Let_def
+  by (rule refl)
+
 code_identifier
   code_module Complete_Lattices \<rightharpoonup> (OCaml) Core
 

@@ -497,6 +497,7 @@ code_identifier
 | code_module Interval_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Interval_Lattice \<rightharpoonup> (OCaml) Core
 | code_module Interval_Numeric_Queries \<rightharpoonup> (OCaml) Core
+| code_module Interval_Transfer \<rightharpoonup> (OCaml) Core
 | code_module Interval_Warrowing \<rightharpoonup> (OCaml) Core
 | code_module Ivl_Exec \<rightharpoonup> (OCaml) Core
 | code_module Routed_Context \<rightharpoonup> (OCaml) Core

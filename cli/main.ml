@@ -19,8 +19,8 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int [--context none|entry-state] [--dot] \
-   [--timeout SECONDS] FILE.vimp\n\
+  "voblint --analysis sign|interval|int [--context none|entry-state] \
+   [--context-graph collapsed|expanded] [--dot] [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int\n\
@@ -36,10 +36,24 @@ let usage =
   \                             callee per distinct entered-argument context,\n\
   \                             including under --dot/--dot-full/\n\
   \                             --graph-snapshot (a node covered by several\n\
-  \                             contexts renders their joined state); only\n\
+  \                             contexts renders their joined state under\n\
+  \                             --context-graph collapsed, the default); only\n\
   \                             --analysis interval supports it -- any other\n\
   \                             combination is a clear configuration error,\n\
   \                             not a silent fallback to --context none.\n\
+  \  --context-graph collapsed|expanded\n\
+  \                             How --dot/--dot-full/--graph-snapshot render\n\
+  \                             --context entry-state (default: collapsed, one\n\
+  \                             node per program point with its contexts\n\
+  \                             joined). expanded instead draws one node per\n\
+  \                             (point, context) pair, annotated through the\n\
+  \                             same solved AnalysisResult with no join, so a\n\
+  \                             point dead in one activation and live in\n\
+  \                             another renders as two distinct nodes rather\n\
+  \                             than one live-looking join. Requires --context\n\
+  \                             entry-state -- expanded with --context none is\n\
+  \                             a clear configuration error, not a silent\n\
+  \                             fallback to collapsed.\n\
   \  --solver join|per-origin|warrow\n\
   \                             Pick the vendored solver's update-rule\n\
   \                             discipline directly, bypassing the domain's\n\
@@ -238,9 +252,12 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
          in
          wait_loop ())
 
+type context_graph_mode = Collapsed | Expanded
+
 let () =
   let analysis = ref None in
   let context = ref Voblint_CLI.Analyse.Ctx_None in
+  let context_graph = ref Collapsed in
   let solver = ref None in
   let dot = ref false in
   let dot_full = ref false in
@@ -263,6 +280,12 @@ let () =
        | "none" -> context := Voblint_CLI.Analyse.Ctx_None
        | "entry-state" -> context := Voblint_CLI.Analyse.Ctx_EntryState
        | _ -> prerr_endline ("unknown --context value: " ^ v); exit 1);
+      parse_args rest
+    | "--context-graph" :: v :: rest ->
+      (match v with
+       | "collapsed" -> context_graph := Collapsed
+       | "expanded" -> context_graph := Expanded
+       | _ -> prerr_endline ("unknown --context-graph value: " ^ v); exit 1);
       parse_args rest
     | "--solver" :: v :: rest ->
       (match v with
@@ -323,6 +346,13 @@ let () =
     prerr_endline "voblint: unsupported --analysis/--context combination";
     exit 1
   end;
+  (* expanded is meaningless without a context to expand -- reject rather than
+     silently rendering the collapsed graph a bare --context-graph expanded
+     might otherwise appear to have requested. *)
+  if !context_graph = Expanded && !context = Voblint_CLI.Analyse.Ctx_None then begin
+    prerr_endline "voblint: --context-graph expanded requires --context entry-state";
+    exit 1
+  end;
   (* --solver picks the vendored solver's update-rule discipline directly
      (analyse_with_solver, Analyse_Dispatch.thy -- experiments/regression
      comparisons, issue #131), bypassing analyse/analyse_ctx entirely. It has
@@ -343,22 +373,30 @@ let () =
     run_contained ~timeout:!timeout (fun () ->
       if !graph_snapshot && !dot_full then
         Ok_graph
-          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+          (if !context_graph = Expanded then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
+           else if !context <> Voblint_CLI.Analyse.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
       else if !graph_snapshot then
         Ok_graph
-          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+          (if !context_graph = Expanded then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
+           else if !context <> Voblint_CLI.Analyse.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
       else if !dot_full then
         Ok_dot
-          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+          (if !context_graph = Expanded then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_dot_auto prog
+           else if !context <> Voblint_CLI.Analyse.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_dot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then
         Ok_dot
-          (if !context <> Voblint_CLI.Analyse.Ctx_None then
+          (if !context_graph = Expanded then
+             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_dot_auto prog
+           else if !context <> Voblint_CLI.Analyse.Ctx_None then
              Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_dot_auto prog
            else Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
       else if !context <> Voblint_CLI.Analyse.Ctx_None then
