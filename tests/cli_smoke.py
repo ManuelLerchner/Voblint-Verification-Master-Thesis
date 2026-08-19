@@ -29,6 +29,18 @@ CASES = [
     ("missing FILE.vimp is rejected", ["--analysis", "sign"], 1, "missing FILE.vimp"),
     ("unrecognized argument is rejected", ["--analysis", "sign", "--bogus-flag", SANITY_FILE], 1, "unrecognized argument"),
     ("unreadable file is reported, not crashed", ["--analysis", "sign", MISSING_FILE], 1, "cannot read"),
+    (
+        "unknown --context-graph value is rejected",
+        ["--analysis", "interval", "--context", "entry-state", "--context-graph", "nonsense", SANITY_FILE],
+        1,
+        "unknown --context-graph value",
+    ),
+    (
+        "--context-graph expanded without entry-state context is rejected",
+        ["--analysis", "interval", "--context-graph", "expanded", SANITY_FILE],
+        1,
+        "--context-graph expanded requires --context entry-state",
+    ),
 ]
 
 
