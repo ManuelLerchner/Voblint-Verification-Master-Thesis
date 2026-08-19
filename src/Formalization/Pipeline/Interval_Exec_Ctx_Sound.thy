@@ -1113,29 +1113,5 @@ definition analyse_interval_entry_state ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_entry_state p = entry_state_verdict_report_prog prog_main_name p"
 
-text \<open>
-  A \<^typ>\<open>check_report_entry\<close> view for a consumer whose report type has no
-  dead case. Lossy by construction:
-  \<^const>\<open>verdict_check_result\<close> maps a dead check to \<^const>\<open>Check_Unknown\<close>, so
-  the fabricated \<^const>\<open>Check_Proved\<close> is gone but the distinction between
-  ``nothing reaches this check'' and ``something reaches it and the
-  abstraction could not decide'' is not recoverable from the result.
-  \<^const>\<open>entry_state_verdict_report_prog\<close> is the report that keeps it, and is
-  the one a consumer able to suppress dead checks should read.
-\<close>
-
-definition entry_state_check_report_prog :: "pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "entry_state_check_report_prog mnm p =
-     map (\<lambda>(u, c, v). (u, c, verdict_check_result v))
-       (entry_state_verdict_report_prog mnm p)"
-
-text \<open>Both reports are one \<^const>\<open>map\<close> off the same projection, so a
-  positional consumer pairing either with the source's own check list sees
-  the same length and the same order.\<close>
-
-lemma length_entry_state_check_report_prog:
-  "length (entry_state_check_report_prog mnm p)
-     = length (entry_state_verdict_report_prog mnm p)"
-  unfolding entry_state_check_report_prog_def by simp
 
 end

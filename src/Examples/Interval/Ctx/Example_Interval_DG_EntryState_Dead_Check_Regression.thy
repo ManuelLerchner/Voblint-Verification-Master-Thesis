@@ -115,16 +115,6 @@ lemma dead_check_analyse_interval_entry_state:
       (Statement 3, exp.Eq (V (STR ''x'')) (exp.N 5), Decided Check_Proved)]"
   by eval
 
-text \<open>The lossy \<^typ>\<open>check_report_entry\<close> view reports \<^const>\<open>Check_Unknown\<close>
-  for the dead check, never \<^const>\<open>Check_Proved\<close>: a consumer that cannot
-  render deadness still must not be handed a fabricated proof.\<close>
-
-lemma dead_check_report_prog_not_proved:
-  "entry_state_check_report_prog prog_main_name dead_check_prog =
-     [(Statement 2, exp.Eq (V (STR ''x'')) (exp.N 99), Check_Unknown),
-      (Statement 3, exp.Eq (V (STR ''x'')) (exp.N 5), Check_Proved)]"
-  by eval
-
 subsection \<open>A check dead in some activations and live in another\<close>
 
 text \<open>
