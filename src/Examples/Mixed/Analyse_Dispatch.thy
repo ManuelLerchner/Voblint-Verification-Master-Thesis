@@ -4,6 +4,7 @@ theory Analyse_Dispatch
     Example_Interval_Codegen
     Example_Int_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
+    Voblint_Formalization.Interval_Call_String_Ctx_Sound
     Voblint_Analysis.Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -82,8 +83,11 @@ where
 | "analyse_ctx Interval_Analysis Ctx_None p = Some (decided_report (analyse_interval_td_report p))"
 | "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
 | "analyse_ctx Sign_Analysis Ctx_EntryState p = None"
+| "analyse_ctx Interval_Analysis (Ctx_CallString k) p = Some (analyse_interval_call_string_report k p)"
+| "analyse_ctx Sign_Analysis (Ctx_CallString k) p = None"
 | "analyse_ctx Int_Analysis Ctx_None p = Some (decided_report (analyse_int_report p))"
 | "analyse_ctx Int_Analysis Ctx_EntryState p = None"
+| "analyse_ctx Int_Analysis (Ctx_CallString k) p = None"
 
 text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for every domain: the new dispatcher
   cannot silently drift from the one CLI/regression already exercises.\<close>
@@ -392,7 +396,8 @@ definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarro
       | Some (Plan_Sign s) \<Rightarrow> analyse_with_solver Sign_Analysis s p
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_solver Interval_Analysis s p
       | Some (Plan_Int s) \<Rightarrow> analyse_with_solver Int_Analysis s p
-      | Some Plan_Interval_EntryState \<Rightarrow> None)"
+      | Some Plan_Interval_EntryState \<Rightarrow> None
+      | Some (Plan_Interval_CallString _) \<Rightarrow> None)"
 
 text \<open>
   \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
@@ -409,6 +414,7 @@ definition analyse_config_ctx ::
      (case resolve_analysis_config cfg of
         None \<Rightarrow> None
       | Some Plan_Interval_EntryState \<Rightarrow> analyse_ctx Interval_Analysis Ctx_EntryState p
+      | Some (Plan_Interval_CallString k) \<Rightarrow> analyse_ctx Interval_Analysis (Ctx_CallString k) p
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p))"
@@ -478,6 +484,63 @@ lemma analyse_config_ctx_sign_entrystate_invalid:
 lemma analyse_config_ctx_int_entrystate_invalid:
   "analyse_config_ctx (default_config Int_Analysis Ctx_EntryState) p = None"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+text \<open>
+  Call-string, the same routing-layer-agrees-with-the-existing-dispatcher
+  pattern: \<open>analyse_config_ctx\<close> at \<open>Ctx_CallString k\<close> is exactly
+  \<open>analyse_ctx Interval_Analysis (Ctx_CallString k)\<close>, which is in turn
+  \<^const>\<open>analyse_interval_call_string_report\<close> \<open>k\<close> -- the same generic,
+  runtime-\<open>k\<close> pipeline CS1--CS3 already proved reproduces the fixed
+  \<open>k=1\<close>/\<open>k=2\<close> examples exactly, now reachable through the public
+  configuration path with no second implementation in between.
+\<close>
+
+lemma analyse_config_ctx_interval_callstring_eq_report:
+  assumes "k \<noteq> 0"
+  shows "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString k)) p
+           = Some (analyse_interval_call_string_report k p)"
+  using assms by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_interval_callstring_zero_invalid:
+  "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 0)) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_interval_callstring_explicit_solver_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_sign_callstring_invalid:
+  "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString k)) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_int_callstring_invalid:
+  "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString k)) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+subsubsection \<open>Dispatcher-path parity with the direct generic CallString core\<close>
+
+text \<open>
+  The public path (through \<^const>\<open>resolve_analysis_config\<close> and
+  \<^const>\<open>analyse_config_ctx\<close>) reaches the identical values the CS1--CS3
+  parity theory (\<open>Example_Interval_Call_String_Generic_Parity.thy\<close>)
+  already pinned against the fixed \<open>k=1\<close>/\<open>k=2\<close> examples -- restated here as
+  a report-level, not a solved-state-level, witness: the dispatcher does not
+  reimplement or re-derive anything, it only routes.
+\<close>
+
+lemma analyse_config_ctx_interval_callstring_k1_reaches_generic_core:
+  "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 1)) p
+     = Some (cs_call_string_verdict_report_prog 1 prog_main_name p)"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def
+                analyse_interval_call_string_report_def)
+
+lemma analyse_config_ctx_interval_callstring_k2_reaches_generic_core:
+  "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 2)) p
+     = Some (cs_call_string_verdict_report_prog 2 prog_main_name p)"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def
+                analyse_interval_call_string_report_def)
 
 lemma analyse_config_with_state_sign_default:
   "analyse_config_with_state (default_config Sign_Analysis Ctx_None) p = Some (analyse_with_state Sign_Analysis p)"

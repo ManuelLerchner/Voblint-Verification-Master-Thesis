@@ -1,0 +1,18 @@
+// PARAM: --analysis interval --context call-string --context-depth 1
+// At call-string depth 1, g's routed context remembers only its own
+// immediate call site (the call inside f's body), which is the same
+// source location regardless of which f activation reaches it. The two
+// activations of g -- one from f(3), one from f(10) -- therefore collapse
+// onto the same routed context and widen together, so g's result, and
+// everything downstream that reads it, loses precision: both x and y come
+// back as [6,+inf) instead of their exact values 6 and 20. See
+// src/Examples/Interval/CallString/Example_Interval_Call_String_Generic_Parity.thy
+// for the same separation pinned directly against the solved AnalysisResult.
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // UNKNOWN
+  __voblint_check(y == 20) // UNKNOWN
+}

@@ -24,8 +24,9 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int [--context none|entry-state] \
-   [--context-graph collapsed|expanded] [--dot] [--timeout SECONDS] FILE.vimp\n\
+  "voblint --analysis sign|interval|int [--context none|entry-state|call-string] \
+   [--context-depth K] [--context-graph collapsed|expanded] [--dot] \
+   [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int\n\
@@ -35,7 +36,8 @@ let usage =
   \                             fixed at its most precise refinement mode\n\
   \                             (Refine_Fixpoint) and the warrowing solver; it\n\
   \                             has no --context or --solver support yet.\n\
-  \  --context none|entry-state Context sensitivity (default: none, today's\n\
+  \  --context none|entry-state|call-string\n\
+  \                             Context sensitivity (default: none, today's\n\
   \                             flow-insensitive, call-site-insensitive\n\
   \                             behaviour). entry-state re-analyzes each\n\
   \                             callee per distinct entered-argument context,\n\
@@ -43,9 +45,22 @@ let usage =
   \                             --graph-snapshot (a node covered by several\n\
   \                             contexts renders their joined state under\n\
   \                             --context-graph collapsed, the default); only\n\
-  \                             --analysis interval supports it -- any other\n\
-  \                             combination is a clear configuration error,\n\
-  \                             not a silent fallback to --context none.\n\
+  \                             --analysis interval supports it. call-string\n\
+  \                             re-analyzes each callee per distinct bounded\n\
+  \                             call history (requires --context-depth K,\n\
+  \                             K >= 1); --analysis interval only, plain text\n\
+  \                             report only for now (no --dot/--dot-full/\n\
+  \                             --graph-snapshot support yet). Any other\n\
+  \                             --analysis/--context combination is a clear\n\
+  \                             configuration error, not a silent fallback to\n\
+  \                             --context none.\n\
+  \  --context-depth K          Call-string bound (only valid with --context\n\
+  \                             call-string; must be at least 1 -- a call\n\
+  \                             string needs to keep at least one call site\n\
+  \                             to separate anything, so a bound of 0 has no\n\
+  \                             positive use as a public value and is\n\
+  \                             rejected rather than silently treated as\n\
+  \                             --context none).\n\
   \  --context-graph collapsed|expanded\n\
   \                             How --dot/--dot-full/--graph-snapshot render\n\
   \                             --context entry-state (default: collapsed, one\n\
@@ -259,9 +274,17 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
 
 type context_graph_mode = Collapsed | Expanded
 
+(* --context/--context-depth are two independent flags that can arrive in
+   either order, but Ctx_CallString needs the depth at construction time --
+   so parsing collects an intermediate tag + optional depth, and the final
+   immutable Analysis_Config.context_mode value is assembled once, after
+   parse_args returns, from both together. *)
+type context_kind = CK_None | CK_EntryState | CK_CallString
+
 let () =
   let analysis = ref None in
-  let context = ref Voblint_CLI.Analysis_Config.Ctx_None in
+  let context_kind = ref CK_None in
+  let context_depth = ref None in
   let context_graph = ref Collapsed in
   let solver = ref None in
   let dot = ref false in
@@ -282,9 +305,14 @@ let () =
       parse_args rest
     | "--context" :: v :: rest ->
       (match v with
-       | "none" -> context := Voblint_CLI.Analysis_Config.Ctx_None
-       | "entry-state" -> context := Voblint_CLI.Analysis_Config.Ctx_EntryState
+       | "none" -> context_kind := CK_None
+       | "entry-state" -> context_kind := CK_EntryState
+       | "call-string" -> context_kind := CK_CallString
        | _ -> prerr_endline ("unknown --context value: " ^ v); exit 1);
+      parse_args rest
+    | "--context-depth" :: v :: rest ->
+      (try context_depth := Some (int_of_string v)
+       with _ -> prerr_endline ("--context-depth expects an integer: " ^ v); exit 1);
       parse_args rest
     | "--context-graph" :: v :: rest ->
       (match v with
@@ -310,6 +338,28 @@ let () =
     | arg :: _ -> prerr_endline ("unrecognized argument: " ^ arg); exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
+  (* --context-depth is only meaningful paired with --context call-string --
+     a shape mismatch between the two flags as typed by the user, not a
+     domain/solver/context legality question, so it is rejected here rather
+     than folded into Ctx_CallString's own construction or deferred to
+     Analysis_Config.resolve_analysis_config (which has no notion of
+     --context-depth at all, the same way it has no notion of
+     --context-graph). Once matched, the depth itself is handed to
+     Ctx_CallString unchecked (a negative --context-depth clamps to nat's
+     own zero via nat_of_integer, and k=0 is then rejected the ordinary way,
+     by valid_analysis_config below -- no second k >= 1 check here). *)
+  let context =
+    match !context_kind, !context_depth with
+    | CK_None, None -> Voblint_CLI.Analysis_Config.Ctx_None
+    | CK_EntryState, None -> Voblint_CLI.Analysis_Config.Ctx_EntryState
+    | CK_CallString, Some k ->
+      Voblint_CLI.Analysis_Config.Ctx_CallString (Voblint_CLI.Core.nat_of_integer (Z.of_int k))
+    | CK_CallString, None ->
+      prerr_endline "voblint: --context call-string requires --context-depth K"; exit 1
+    | (CK_None | CK_EntryState), Some _ ->
+      prerr_endline "voblint: --context-depth is only valid with --context call-string"; exit 1
+  in
+  let context = ref context in
   let path =
     match !file with
     | Some p -> p
@@ -352,6 +402,18 @@ let () =
   let cfg = Voblint_CLI.Analysis_Config.mk_analysis_config kind !solver !context in
   if not (Voblint_CLI.Analysis_Config.valid_analysis_config cfg) then begin
     prerr_endline "voblint: unsupported --analysis/--context/--solver combination";
+    exit 1
+  end;
+  (* --dot/--dot-full/--graph-snapshot for --context call-string would
+     otherwise silently fall through to the entry-state-specific renderers
+     below (the only ones a non-Ctx_None context currently routes to),
+     rendering EntryState's own result table regardless of what --context
+     actually selected. GraphViz support for call-string is real future
+     work, not something to approximate by reusing an unrelated renderer;
+     reject explicitly rather than emit a plausible-looking wrong graph. *)
+  if !context_kind = CK_CallString && (!dot || !dot_full || !graph_snapshot) then begin
+    prerr_endline
+      "voblint: --context call-string does not support --dot/--dot-full/--graph-snapshot yet";
     exit 1
   end;
   (* expanded is meaningless without a context to expand -- reject rather than

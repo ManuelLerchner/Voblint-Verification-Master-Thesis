@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Same program as 01-depth1_merges_shared_callee.vimp. At depth 2, g's
+// routed context additionally remembers which f activation called it --
+// distinguishing the call reached via f(3) from the one reached via
+// f(10), since each now carries its own two-frame call string instead of
+// collapsing onto g's single call site alone. The two g activations no
+// longer merge, so both results stay exact: x == 6 and y == 20, each
+// provable. This is the precision separation call-string depth exists to
+// buy, on the identical source depth 1 leaves imprecise.
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20) // PROVED
+}

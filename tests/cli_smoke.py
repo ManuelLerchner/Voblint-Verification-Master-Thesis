@@ -41,6 +41,54 @@ CASES = [
         1,
         "--context-graph expanded requires --context entry-state",
     ),
+    (
+        "--context call-string without --context-depth is rejected",
+        ["--analysis", "interval", "--context", "call-string", SANITY_FILE],
+        1,
+        "--context call-string requires --context-depth K",
+    ),
+    (
+        "--context-depth without --context call-string is rejected",
+        ["--analysis", "interval", "--context-depth", "2", SANITY_FILE],
+        1,
+        "--context-depth is only valid with --context call-string",
+    ),
+    (
+        "--context-depth with --context entry-state is rejected",
+        ["--analysis", "interval", "--context", "entry-state", "--context-depth", "2", SANITY_FILE],
+        1,
+        "--context-depth is only valid with --context call-string",
+    ),
+    (
+        "--context-depth 0 is rejected",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "0", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "sign + call-string is rejected",
+        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "int + call-string is rejected",
+        ["--analysis", "int", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "explicit --solver with --context call-string is rejected",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "warrow", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "--dot with --context call-string is rejected",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
+        1,
+        "--context call-string does not support --dot/--dot-full/--graph-snapshot yet",
+    ),
 ]
 
 

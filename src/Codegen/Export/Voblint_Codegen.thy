@@ -36,7 +36,7 @@ export_code
 
 export_code
   analyse Sign_Analysis Interval_Analysis Int_Analysis
-  analyse_ctx Ctx_None Ctx_EntryState
+  analyse_ctx Ctx_None Ctx_EntryState Ctx_CallString
   analyse_with_state SignValue IntervalValue IntDomValue
   state_report_dot_auto state_report_graph_snapshot_auto
   full_state_dot_auto full_state_graph_snapshot_auto
@@ -57,11 +57,13 @@ export_code
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
   mk_analysis_config
-  Plan_Sign Plan_Interval Plan_Interval_EntryState Plan_Int
+  Plan_Sign Plan_Interval Plan_Interval_EntryState Plan_Interval_CallString Plan_Int
   resolve_analysis_config valid_analysis_config
   analyse_config analyse_config_ctx analyse_config_with_state
   analyse_sign_result analyse_interval_td_result analyse_int_result
   analyse_interval_entry_state_result analyse_interval_entry_state_result_for
+  analyse_interval_call_string_result analyse_interval_call_string_result_for
+  analyse_interval_call_string_report
   result_keys contexts_at lookup_context lookup_joined_state node_live_ex
   is_reachable_point map_point_state normalize_point
   Dead Decided verdict_check_result aggregate_verdicts check_dead

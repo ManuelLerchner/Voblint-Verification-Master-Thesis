@@ -33,21 +33,25 @@ text \<open>
   Every value below is a real, currently reachable public selection --
   reachable from the CLI, from \<open>Analyse_Dispatch\<close>'s existing dispatchers, or
   both. Refinement mode (\<open>Refine_Never\<close>/\<open>Refine_Once\<close>/\<open>Refine_Fixpoint\<close>,
-  \<open>Int_Refinement.thy\<close>) and call-string context length are
-  each real inside their own theories but reach neither the CLI nor
-  \<open>Analyse_Dispatch\<close> today -- \<open>Int_Analysis\<close> is fixed at \<open>Refine_Fixpoint\<close>,
-  and call-string depth 1/2 are two independently authored example
-  theories, not one runtime-parametric mode. Adding either axis here would
-  design a configuration space around behavior that does not yet exist
-  anywhere outside a proof; both stay out of this datatype until a later
-  task makes them genuinely public.
+  \<open>Int_Refinement.thy\<close>) stays out of this datatype: \<open>Int_Analysis\<close> is
+  fixed at \<open>Refine_Fixpoint\<close> in production, and adding the axis here would
+  design a configuration space around behavior that does not yet reach the
+  CLI or \<open>Analyse_Dispatch\<close> at all.
+
+  Call-string context length, by contrast, is now genuinely public: unlike
+  the fixed \<open>k=1\<close>/\<open>k=2\<close> example theories this datatype once deferred to,
+  \<open>Interval_Call_String_Ctx_Sound.thy\<close> is one
+  runtime-\<open>k\<close>-parametric pipeline, proved to reproduce those two examples'
+  exact solved states and their precision separation. \<open>Ctx_CallString k\<close>
+  routes to it directly, the same way \<open>Ctx_EntryState\<close> routes to
+  \<open>Interval_Exec_Ctx_Sound.thy\<close>.
 \<close>
 
 datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
 
 datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
 
-datatype context_mode = Ctx_None | Ctx_EntryState
+datatype context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString nat
 
 text \<open>
   \<open>cfg_solver\<close> is an \<^typ>\<open>solver_choice option\<close>, not a bare \<open>solver_choice\<close>,
@@ -89,13 +93,19 @@ text \<open>
   solver internally (\<open>Interval_Exec_Ctx_Sound.thy\<close>),
   the same reason an explicit \<open>--solver\<close> selection alongside
   \<open>--context entry-state\<close> is rejected rather than silently accepted or
-  silently ignored.
+  silently ignored. \<open>Plan_Interval_CallString\<close> carries \<open>k\<close> but likewise no
+  \<^typ>\<open>solver_choice\<close>, for the identical reason: call-string analysis is
+  fixed to the warrowing solver internally
+  (\<open>Interval_Call_String_Ctx_Sound.thy\<close>'s \<open>cs_call_string_sol\<close>), so an
+  explicit \<open>--solver\<close> alongside \<open>--context call-string\<close> is rejected the
+  same way.
 \<close>
 
 datatype analysis_plan =
     Plan_Sign solver_choice
   | Plan_Interval solver_choice
   | Plan_Interval_EntryState
+  | Plan_Interval_CallString nat
   | Plan_Int solver_choice
 
 subsection \<open>Canonical resolver\<close>
@@ -136,6 +146,8 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
      = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = _, cfg_context = Ctx_CallString k \<rparr>
+     = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Interval Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
@@ -144,11 +156,17 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
      = Some Plan_Interval_EntryState"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_EntryState \<rparr>
      = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_CallString k \<rparr>
+     = (if k = 0 then None else Some (Plan_Interval_CallString k))"
+| "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_CallString k \<rparr>
+     = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Int Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Int s)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = _, cfg_context = Ctx_CallString k \<rparr>
      = None"
 
 definition valid_analysis_config :: "analysis_config \<Rightarrow> bool" where
@@ -209,6 +227,62 @@ lemma resolver_sign_entrystate_invalid:
 
 lemma resolver_int_entrystate_invalid:
   "resolve_analysis_config (default_config Int_Analysis Ctx_EntryState) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+text \<open>
+  Call-string, pinned the same way: \<open>k=1\<close>/\<open>k=2\<close> at the implicit default
+  solver resolve; \<open>k=0\<close> is rejected regardless of solver, even though
+  \<open>cs_route 0\<close> (\<open>Call_String_Context.thy\<close>) is itself a well-defined,
+  well-typed route (it collapses every activation's context to \<open>[]\<close>,
+  distinct from \<open>Ctx_None\<close>'s own, entirely separate flat equation system --
+  \<open>k=0\<close> is not \<open>Ctx_None\<close> in disguise). Exposing it anyway would only
+  invite exactly the confusion this decision avoids: a user who wants no
+  context sensitivity already has \<open>Ctx_None\<close>; a \<open>call-string\<close> selection
+  whose only well-typed positive-information use is separating at least two
+  call sites needs \<open>k \<ge> 1\<close> to do that at all, so \<open>k=0\<close> has no positive
+  reason to exist as a public value. Every explicit-solver pairing is
+  rejected the same unconditional way \<open>Ctx_EntryState\<close>'s already is, and
+  Sign/Int at any \<open>k\<close> stay rejected, matching \<open>Ctx_EntryState\<close>'s.
+\<close>
+
+lemma resolver_interval_callstring_k1_valid:
+  "resolve_analysis_config (default_config Interval_Analysis (Ctx_CallString 1))
+     = Some (Plan_Interval_CallString 1)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_interval_callstring_k2_valid:
+  "resolve_analysis_config (default_config Interval_Analysis (Ctx_CallString 2))
+     = Some (Plan_Interval_CallString 2)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_interval_callstring_zero_invalid:
+  "resolve_analysis_config (default_config Interval_Analysis (Ctx_CallString 0)) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_interval_callstring_join_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr>
+   = None"
+  by simp
+
+lemma resolver_interval_callstring_per_origin_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString 2 \<rparr>
+   = None"
+  by simp
+
+lemma resolver_interval_callstring_warrow_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr>
+   = None"
+  by simp
+
+lemma resolver_sign_callstring_invalid:
+  "resolve_analysis_config (default_config Sign_Analysis (Ctx_CallString 2)) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_callstring_invalid:
+  "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 2)) = None"
   by (simp add: default_config_def mk_analysis_config_def)
 
 

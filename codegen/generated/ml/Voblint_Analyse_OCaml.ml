@@ -46,31 +46,80 @@ module Core : sig
   type int = Int_of_integer of Z.t
   val integer_of_int : int -> Z.t
   type num
+  val fst : 'a * 'b -> 'a
   type 'a set
-  type 'a equal
+  type 'a equal = {equal : 'a -> 'a -> bool}
+  val equal : 'a equal -> 'a -> 'a -> bool
+  val snd : 'a * 'b -> 'b
+  type 'a ord
+  type 'a preorder
+  type 'a order
   val comp : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
   type nat
   val nat_of_integer : Z.t -> nat
   val integer_of_nat : nat -> Z.t
-  type ('a, 'b) sum
+  val equal_lista : 'a equal -> 'a list -> 'a list -> bool
+  val equal_list : 'a equal -> ('a list) equal
+  type ('a, 'b) sum = Inl of 'a | Inr of 'b
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
     Times of exp * exp | Less of exp * exp | Eq of exp * exp | Not of exp |
     And of exp * exp | Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
+  val equal_cfg_nodea : cfg_node -> cfg_node -> bool
+  val equal_cfg_node : cfg_node equal
+  type location
+  val equal_prod : 'a equal -> 'b equal -> ('a * 'b) equal
+  type 'a sup
   type 'a bot
+  type 'a order_bot = {bot_order_bot : 'a bot; order_order_bot : 'a order}
+  type 'a order_top
+  type 'a widening
+  type 'a narrowing
+  type 'a warrowing
   type 'a semilattice_sup
+  type 'a bounded_semilattice_sup_bot =
+    {semilattice_sup_bounded_semilattice_sup_bot : 'a semilattice_sup;
+      order_bot_bounded_semilattice_sup_bot : 'a order_bot}
   type sign
+  type 'a bounded_warrowing =
+    {bounded_semilattice_sup_bot_bounded_warrowing :
+       'a bounded_semilattice_sup_bot;
+      warrowing_bounded_warrowing : 'a warrowing}
+  type 'a computable_domain
   type call_action = CallEdge of string option * string list * exp list
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
     EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
     | EA_Ret of exp option * string | EA_Check of exp
+  type eint
   type ivl
+  val equal_ivl : ivl equal
+  val bot_ivl : ivl bot
+  val bounded_semilattice_sup_bot_ivl : ivl bounded_semilattice_sup_bot
+  val bounded_warrowing_ivl : ivl bounded_warrowing
+  val computable_domain_ivl : ivl computable_domain
   type ('a, 'b) dg_state
+  val equal_dg_state : 'a equal -> 'b equal -> ('a, 'b) dg_state equal
+  val locals : ('a, 'b) dg_state -> 'a
+  val warrowing_dg_state :
+    'a bounded_warrowing -> 'b bounded_warrowing -> ('a, 'b) dg_state warrowing
+  val bounded_semilattice_sup_bot_dg_state :
+    'a bounded_semilattice_sup_bot -> 'b bounded_semilattice_sup_bot ->
+      ('a, 'b) dg_state bounded_semilattice_sup_bot
   val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
-  type 'a lifted
+  val equal_resolved_st_q : 'a equal * 'a order_bot -> 'a resolved_st_q equal
+  val semilattice_sup_resolved_st_q :
+    'a bounded_semilattice_sup_bot -> 'a resolved_st_q semilattice_sup
+  val bounded_warrowing_resolved_st_q :
+    'a bounded_warrowing -> 'a resolved_st_q bounded_warrowing
+  type 'a lifted = Bot | Lifted of 'a
+  val equal_lifted : 'a equal -> 'a lifted equal
+  val bounded_semilattice_sup_bot_lifted :
+    'a semilattice_sup -> 'a lifted bounded_semilattice_sup_bot
+  val bounded_warrowing_lifted :
+    'a bounded_warrowing -> 'a lifted bounded_warrowing
   type gk
   type 'a int_dom_ext
   type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
@@ -80,39 +129,71 @@ module Core : sig
   type 'a proc_decl_ext
   type char
   type 'a cfg_ext
+  type ('a, 'b, 'c) strategy_tree
   type special_desc
   type refine_mode
   type 'a point_state
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
-  type ('a, 'b) analysis_result
+  type ('a, 'b) analysis_result =
+    Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state)
+  type ('a, 'b, 'c) dg_spec_ext
   type contextual_verdict = Dead | Decided of check_result
   type 'a imp_prog_ext
+  val take : nat -> 'a list -> 'a list
+  val image : ('a -> 'b) -> 'a set -> 'b set
   val cfg_entry : 'a cfg_ext -> cfg_node
+  val cfg_exit : unit cfg_ext -> cfg_node
+  val cinit_ivl_st : ivl resolved_st_q
   val char_of_integer : Z.t -> char
   val integer_of_char : char -> Z.t
   val proc_decl_of : string list -> com -> unit proc_decl_ext
   val prog_main_name : string
+  val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
+  val prog_main : unit imp_prog_ext -> com
   val cfg_calls_list :
     unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val cfg_intra_list :
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
+  val intra_predecessor_list :
+    unit cfg_ext -> cfg_node -> (cfg_node * edge_action) list
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
+  val prog_procs : unit imp_prog_ext -> string list
+  val declared_global_vars : 'a imp_prog_ext -> string list
+  val declared_global : unit imp_prog_ext -> string -> bool
   val check_dead : ('a * contextual_verdict) set -> bool
   val result_keys : ('a, 'b) analysis_result -> (cfg_node * 'a) set
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
+  val compile_prog :
+    (string -> unit proc_decl_ext option) ->
+      string list -> string -> com -> unit cfg_ext
+  val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
   val is_reachable_point : 'a point_state -> bool
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val node_live_ex : 'a equal -> ('a, 'b) analysis_result -> cfg_node -> bool
+  val canonicalize_lift : ('a -> bool) -> 'a lifted -> 'a lifted
+  val resolved_st_q_is_bot_for :
+    'a computable_domain -> string list -> 'a resolved_st_q -> bool
   val normalize_point :
     'a bot ->
       (string -> bool) -> 'a resolved_st_q lifted -> (string -> 'a) point_state
+  val tD_side_warrowing_apinis_Interp_solve :
+    'a equal -> 'b equal ->
+      'c equal * 'c bounded_semilattice_sup_bot * 'c warrowing ->
+      ('a -> ('a, 'b, 'c) strategy_tree) -> 'a -> 'a set * (('a, 'b) sum -> 'c)
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_result :
     unit imp_prog_ext -> (unit, (string -> unit int_dom_ext)) analysis_result
+  val routed_extra_g :
+    'c bounded_semilattice_sup_bot -> 'd bounded_semilattice_sup_bot ->
+      (cfg_node -> 'a -> 'b) ->
+        'b -> (cfg_node -> 'a -> 'c -> call_action -> 'a) ->
+                'a -> cfg_node ->
+                        ((cfg_node * 'a), 'b, ('c, 'd) dg_state)
+                          strategy_tree list
   val decided_report :
     (cfg_node * (exp * check_result)) list ->
       (cfg_node * (exp * contextual_verdict)) list
@@ -121,13 +202,53 @@ module Core : sig
   val analyse_sign_result :
     unit imp_prog_ext -> (unit, (string -> sign)) analysis_result
   val string_of_exp : nat -> exp -> char list
+  val ectx_spec :
+    (string -> bool) ->
+      (ivl resolved_st_q -> bool) ->
+        (ivl resolved_st_q lifted, ivl resolved_st_q lifted, unit) dg_spec_ext
   val aggregate_verdicts : contextual_verdict set -> contextual_verdict
   val compile_program : unit imp_prog_ext -> unit cfg_ext
+  val classify_checks_ctx :
+    'a equal ->
+      unit cfg_ext ->
+        ('a, 'b) analysis_result ->
+          (exp -> 'b -> check_result) ->
+            (cfg_node * (exp * ('a * contextual_verdict) set)) list
   val lookup_joined_state :
     'a equal -> 'b semilattice_sup ->
       ('a, (string -> 'b)) analysis_result ->
         cfg_node -> (string -> 'b) point_state
   val verdict_check_result : contextual_verdict -> check_result
+  val interval_classify_check : exp -> (string -> ivl) -> check_result
+  val side_cfg_T_eff_keyed_seed_dg_buffered :
+    'c bounded_semilattice_sup_bot -> 'd bounded_semilattice_sup_bot ->
+      (unit cfg_ext -> cfg_node -> (cfg_node * edge_action) list) ->
+        ('a -> 'b) ->
+          (cfg_node -> 'a -> 'c -> call_action -> 'a) ->
+            ((cfg_node -> 'a -> 'c -> call_action -> 'a) ->
+              'a -> call_action ->
+                      cfg_node ->
+                        cfg_node ->
+                          ((cfg_node * 'a), 'b, ('c, 'd) dg_state)
+                            strategy_tree) ->
+              ((cfg_node -> 'a -> 'c -> call_action -> 'a) ->
+                'a -> cfg_node ->
+                        ((cfg_node * 'a), 'b, ('c, 'd) dg_state)
+                          strategy_tree list) ->
+                unit cfg_ext ->
+                  ('c, 'd, unit) dg_spec_ext ->
+                    'c -> 'c -> 'd -> cfg_node * 'a ->
+((cfg_node * 'a), 'b, ('c, 'd) dg_state) strategy_tree
+  val routed_cmb_g_contribution :
+    'a bounded_semilattice_sup_bot -> 'b bounded_semilattice_sup_bot ->
+      ('a, 'b, unit) dg_spec_ext ->
+        'c -> (cfg_node -> 'd -> 'c) ->
+                (cfg_node -> 'd -> 'a -> call_action -> 'd) ->
+                  'd -> call_action ->
+                          cfg_node ->
+                            cfg_node ->
+                              ((cfg_node * 'd), 'c, ('a, 'b) dg_state)
+                                strategy_tree
   val analyse_int_report_with_state :
     unit imp_prog_ext ->
       (cfg_node *
@@ -2990,6 +3111,12 @@ let rec ball (Set xs) p = list_all p xs;;
 
 let rec maps f x1 = match f, x1 with f, [] -> []
                | f, x :: xs -> f x @ maps f xs;;
+
+let rec take
+  n x1 = match n, x1 with n, [] -> []
+    | n, x :: xs ->
+        (if equal_nata n zero_nat then []
+          else x :: take (minus_nat n one_nat) xs);;
 
 let rec image f (Set xs) = Set (map f xs);;
 
@@ -7507,12 +7634,144 @@ let rec analyse_interval_entry_state_result
 
 end;; (*struct Core*)
 
+module Call_String_Context : sig
+  type call_string_gk = Global | Seed of Core.cfg_node * Core.cfg_node list
+  val equal_call_string_gk : call_string_gk Core.equal
+  val cs_route :
+    Core.nat ->
+      Core.cfg_node ->
+        Core.cfg_node list -> 'a -> Core.call_action -> Core.cfg_node list
+end = struct
+
+type call_string_gk = Global | Seed of Core.cfg_node * Core.cfg_node list;;
+
+let rec equal_call_string_gka
+  x0 x1 = match x0, x1 with Global, Seed (x21, x22) -> false
+    | Seed (x21, x22), Global -> false
+    | Seed (x21, x22), Seed (y21, y22) ->
+        Core.equal_cfg_nodea x21 y21 &&
+          Core.equal_lista Core.equal_cfg_node x22 y22
+    | Global, Global -> true;;
+
+let equal_call_string_gk =
+  ({Core.equal = equal_call_string_gka} : call_string_gk Core.equal);;
+
+let rec cs_route k u ctx d ca = Core.take k (u :: ctx);;
+
+end;; (*struct Call_String_Context*)
+
+module Interval_Call_String_Ctx_Sound : sig
+  val analyse_interval_call_string_report :
+    Core.nat ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
+end = struct
+
+let rec cs_call_string_eqs
+  k gs is_bot_pred pi ps mnm main =
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_ivl))
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_ivl))
+      Core.intra_predecessor_list (fun _ -> Call_String_Context.Global)
+      (Call_String_Context.cs_route k)
+      (Core.routed_cmb_g_contribution
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_ivl))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_ivl))
+        (Core.ectx_spec gs is_bot_pred) Call_String_Context.Global
+        (fun a b -> Call_String_Context.Seed (a, b)))
+      (Core.routed_extra_g
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_ivl))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_ivl))
+        (fun a b -> Call_String_Context.Seed (a, b)) Call_String_Context.Global)
+      (Core.compile_prog pi ps mnm main) (Core.ectx_spec gs is_bot_pred)
+      Core.Bot (Core.Lifted Core.cinit_ivl_st) Core.Bot;;
+
+let rec cs_call_string_sol
+  k gs is_bot_pred pi ps mnm main =
+    Core.tD_side_warrowing_apinis_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node
+        (Core.equal_list Core.equal_cfg_node))
+      Call_String_Context.equal_call_string_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_ivl,
+               Core.bounded_warrowing_ivl.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_ivl,
+               Core.bounded_warrowing_ivl.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_ivl)).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_ivl)).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q Core.bounded_warrowing_ivl))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q Core.bounded_warrowing_ivl))))
+      (cs_call_string_eqs k gs is_bot_pred pi ps mnm main)
+      (Core.cfg_exit (Core.compile_prog pi ps mnm main), []);;
+
+let rec cs_call_string_sol_prog
+  k gs mnm p =
+    cs_call_string_sol k gs
+      (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl
+        (Core.declared_global_vars p))
+      (Core.prog_table p) (Core.prog_procs p) mnm (Core.prog_main p);;
+
+let rec analyse_interval_call_string_result_for
+  k gs mnm p =
+    (let sol = cs_call_string_sol_prog k gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point Core.bot_ivl gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for Core.computable_domain_ivl gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+let rec cs_call_string_check_projection
+  k mnm p =
+    Core.classify_checks_ctx (Core.equal_list Core.equal_cfg_node)
+      (Core.prog_cfg mnm p)
+      (analyse_interval_call_string_result_for k (Core.declared_global p) mnm p)
+      Core.interval_classify_check;;
+
+let rec cs_call_string_verdict_report_prog
+  k mnm p =
+    Core.map
+      (fun (u, (c, vs)) ->
+        (u, (c, Core.aggregate_verdicts (Core.image Core.snd vs))))
+      (cs_call_string_check_projection k mnm p);;
+
+let rec analyse_interval_call_string_report
+  k p = cs_call_string_verdict_report_prog k Core.prog_main_name p;;
+
+end;; (*struct Interval_Call_String_Ctx_Sound*)
+
 module Analysis_Config : sig
-  type context_mode = Ctx_None | Ctx_EntryState
+  type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat
   type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
 end = struct
 
-type context_mode = Ctx_None | Ctx_EntryState;;
+type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat;;
 
 type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis;;
 
@@ -7556,9 +7815,15 @@ let rec analyse_ctx
     | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_EntryState, p ->
         Some (Core.analyse_interval_entry_state p)
     | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_CallString k, p ->
+        Some (Interval_Call_String_Ctx_Sound.analyse_interval_call_string_report
+               k p)
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_CallString k, p -> None
     | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_None, p ->
         Some (Core.decided_report (Core.analyse_int_report p))
-    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p -> None;;
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_CallString k, p ->
+        None;;
 
 let rec analyse_with_state
   x0 p = match x0, p with
