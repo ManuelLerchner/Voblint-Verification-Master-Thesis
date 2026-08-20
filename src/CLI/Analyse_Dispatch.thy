@@ -396,8 +396,8 @@ definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarro
       | Some (Plan_Sign s) \<Rightarrow> analyse_with_solver Sign_Analysis s p
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_solver Interval_Analysis s p
       | Some (Plan_Int s) \<Rightarrow> analyse_with_solver Int_Analysis s p
-      | Some Plan_Interval_EntryState \<Rightarrow> None
-      | Some (Plan_Interval_CallString _) \<Rightarrow> None)"
+      | Some (Plan_Interval_EntryState _) \<Rightarrow> None
+      | Some (Plan_Interval_CallString _ _) \<Rightarrow> None)"
 
 text \<open>
   \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
@@ -413,8 +413,12 @@ definition analyse_config_ctx ::
   "analyse_config_ctx cfg p =
      (case resolve_analysis_config cfg of
         None \<Rightarrow> None
-      | Some Plan_Interval_EntryState \<Rightarrow> analyse_ctx Interval_Analysis Ctx_EntryState p
-      | Some (Plan_Interval_CallString k) \<Rightarrow> analyse_ctx Interval_Analysis (Ctx_CallString k) p
+      | Some (Plan_Interval_EntryState Solver_Warrow) \<Rightarrow> Some (analyse_interval_entry_state p)
+      | Some (Plan_Interval_EntryState Solver_Join) \<Rightarrow> Some (analyse_interval_entry_state_join p)
+      | Some (Plan_Interval_EntryState Solver_PerOrigin) \<Rightarrow> Some (analyse_interval_entry_state_per_origin p)
+      | Some (Plan_Interval_CallString Solver_Warrow k) \<Rightarrow> Some (analyse_interval_call_string_report k p)
+      | Some (Plan_Interval_CallString Solver_Join k) \<Rightarrow> Some (analyse_interval_call_string_report_join k p)
+      | Some (Plan_Interval_CallString Solver_PerOrigin k) \<Rightarrow> Some (analyse_interval_call_string_report_per_origin k p)
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p))"
@@ -465,16 +469,26 @@ lemma analyse_config_ctx_interval_entrystate:
      = analyse_ctx Interval_Analysis Ctx_EntryState p"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
-lemma analyse_config_ctx_interval_entrystate_explicit_join_invalid:
-  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p = None"
+text \<open>
+  An explicit solver alongside \<open>Ctx_EntryState\<close> is now a valid, routed
+  selection -- the routed equation system underneath is exactly as
+  solver-independent as the flat one -- rather than the unconditional
+  rejection this migration replaces.
+\<close>
+
+lemma analyse_config_ctx_interval_entrystate_explicit_join_valid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p
+     = Some (analyse_interval_entry_state_join p)"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_interval_entrystate_explicit_per_origin_invalid:
-  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> p = None"
+lemma analyse_config_ctx_interval_entrystate_explicit_per_origin_valid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> p
+     = Some (analyse_interval_entry_state_per_origin p)"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_interval_entrystate_explicit_warrow_invalid:
-  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p = None"
+lemma analyse_config_ctx_interval_entrystate_explicit_warrow_valid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
+     = Some (analyse_interval_entry_state p)"
   by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_sign_entrystate_invalid:
@@ -505,9 +519,36 @@ lemma analyse_config_ctx_interval_callstring_zero_invalid:
   "analyse_config_ctx (default_config Interval_Analysis (Ctx_CallString 0)) p = None"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
-lemma analyse_config_ctx_interval_callstring_explicit_solver_invalid:
+text \<open>
+  An explicit solver alongside \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) is likewise a
+  valid, routed selection now, mirroring \<open>Ctx_EntryState\<close>'s generalization
+  above.
+\<close>
+
+lemma analyse_config_ctx_interval_callstring_explicit_warrow_valid:
+  assumes "k \<noteq> 0"
+  shows "analyse_config_ctx
+           \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr> p
+         = Some (analyse_interval_call_string_report k p)"
+  using assms by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_interval_callstring_explicit_join_valid:
+  assumes "k \<noteq> 0"
+  shows "analyse_config_ctx
+           \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString k \<rparr> p
+         = Some (analyse_interval_call_string_report_join k p)"
+  using assms by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_interval_callstring_explicit_per_origin_valid:
+  assumes "k \<noteq> 0"
+  shows "analyse_config_ctx
+           \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString k \<rparr> p
+         = Some (analyse_interval_call_string_report_per_origin k p)"
+  using assms by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_interval_callstring_zero_explicit_solver_invalid:
   "analyse_config_ctx
-     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr> p
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 0 \<rparr> p
    = None"
   by (simp add: analyse_config_ctx_def)
 

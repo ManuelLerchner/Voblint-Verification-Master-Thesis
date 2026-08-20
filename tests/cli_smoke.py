@@ -78,8 +78,26 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
-        "explicit --solver with --context call-string is rejected",
+        "explicit --solver warrow with --context call-string is accepted",
         ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "warrow", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "explicit --solver join with --context call-string is accepted",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "explicit --solver per-origin with --context entry-state is accepted",
+        ["--analysis", "interval", "--context", "entry-state", "--solver", "per-origin", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "sign + explicit --solver with --context call-string is still rejected",
+        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
         1,
         "unsupported --analysis/--context/--solver combination",
     ),

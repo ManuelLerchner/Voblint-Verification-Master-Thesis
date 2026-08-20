@@ -393,12 +393,11 @@ let () =
   (* One analysis_config value, one legality gate (Analysis_Config.thy's
      valid_analysis_config/resolve_analysis_config): every domain/solver/
      context combination the CLI accepts or rejects is decided there, not by
-     a second, hand-maintained OCaml compatibility table. This subsumes what
-     used to be two separate checks here -- Sign/Int have no entry-state
-     branch, and an explicit --solver is unconditionally incompatible with
-     any --context other than none, even --solver warrow under
-     --context entry-state, which happens to name the same solver
-     entry-state analysis already uses internally. *)
+     a second, hand-maintained OCaml compatibility table. Sign/Int still have
+     no entry-state or call-string branch; Interval now accepts an explicit
+     --solver alongside --context entry-state or --context call-string, since
+     the routed equation system underneath either context is solved under
+     all three disciplines exactly like the flat one. *)
   let cfg = Voblint_CLI.Analysis_Config.mk_analysis_config kind !solver !context in
   if not (Voblint_CLI.Analysis_Config.valid_analysis_config cfg) then begin
     prerr_endline "voblint: unsupported --analysis/--context/--solver combination";

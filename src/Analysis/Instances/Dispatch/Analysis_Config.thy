@@ -88,24 +88,24 @@ text \<open>
   \<^type>\<open>analysis_config\<close> to: exactly enough to pick the one existing,
   already-typed report/result function a caller should run next
   (\<open>Analyse_Dispatch\<close>'s own \<open>analyse\<close>/\<open>analyse_ctx\<close>/\<open>analyse_with_solver\<close>
-  branches, unchanged). \<open>Plan_Interval_EntryState\<close> carries no
-  \<^typ>\<open>solver_choice\<close>: entry-state analysis is fixed to the warrowing
-  solver internally (\<open>Interval_Exec_Ctx_Sound.thy\<close>),
-  the same reason an explicit \<open>--solver\<close> selection alongside
-  \<open>--context entry-state\<close> is rejected rather than silently accepted or
-  silently ignored. \<open>Plan_Interval_CallString\<close> carries \<open>k\<close> but likewise no
-  \<^typ>\<open>solver_choice\<close>, for the identical reason: call-string analysis is
-  fixed to the warrowing solver internally
-  (\<open>Interval_Call_String_Ctx_Sound.thy\<close>'s \<open>cs_call_string_sol\<close>), so an
-  explicit \<open>--solver\<close> alongside \<open>--context call-string\<close> is rejected the
-  same way.
+  branches, unchanged). \<open>Plan_Interval_EntryState\<close> and
+  \<open>Plan_Interval_CallString\<close> both carry a \<^typ>\<open>solver_choice\<close>: the routed
+  equation system underneath either context (\<open>Interval_Exec_Ctx_Sound.thy\<close>'s
+  \<open>entry_state_eqs\<close>, \<open>Interval_Call_String_Ctx_Sound.thy\<close>'s
+  \<open>cs_call_string_eqs\<close>) names no solve function of its own -- only the
+  shared D/G spec and the routing policy -- so it is solved under all three
+  disciplines exactly as the flat \<open>Ctx_None\<close> equation system already is
+  (\<open>Interval_Exec_Sound.thy\<close>'s \<open>analyse_interval_dg_join_for\<close>/
+  \<open>_per_origin_for\<close>/default). Warrow stays each context's implicit default
+  (\<open>cfg_solver = None\<close>), matching the behavior already shipped before this
+  generalization.
 \<close>
 
 datatype analysis_plan =
     Plan_Sign solver_choice
   | Plan_Interval solver_choice
-  | Plan_Interval_EntryState
-  | Plan_Interval_CallString nat
+  | Plan_Interval_EntryState solver_choice
+  | Plan_Interval_CallString solver_choice nat
   | Plan_Int solver_choice
 
 subsection \<open>Canonical resolver\<close>
@@ -125,10 +125,10 @@ text \<open>
     \<open>widen\<close> instance, so nothing downstream of this resolver could execute
     it even if accepted here); any context other than \<open>none\<close> is
     unsupported (\<open>Analyse_Dispatch\<close> has no Sign entry-state branch).
-  \<^item> \<open>Interval\<close>: every solver is supported at \<open>Ctx_None\<close>, defaulting to
-    \<open>Solver_Warrow\<close>; at \<open>Ctx_EntryState\<close> only the implicit default
-    (\<open>cfg_solver = None\<close>) is supported, matching the CLI's unconditional
-    solver/context exclusion above.
+  \<^item> \<open>Interval\<close>: every solver is supported at \<open>Ctx_None\<close>, at \<open>Ctx_EntryState\<close>,
+    and at \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) alike, defaulting to \<open>Solver_Warrow\<close>
+    at each: the routed equation system underneath either context is exactly
+    as solver-independent as the flat one.
   \<^item> \<open>Int\<close>: every solver is supported at \<open>Ctx_None\<close>, defaulting to
     \<open>Solver_Warrow\<close> (\<open>Int_Analysis\<close>'s own production default); no context
     other than \<open>none\<close> is supported at all (\<open>Analyse_Dispatch\<close> has no Int
@@ -153,13 +153,13 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Interval s)"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_EntryState \<rparr>
-     = Some Plan_Interval_EntryState"
+     = Some (Plan_Interval_EntryState Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_EntryState \<rparr>
-     = None"
+     = Some (Plan_Interval_EntryState s)"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_CallString k \<rparr>
-     = (if k = 0 then None else Some (Plan_Interval_CallString k))"
+     = (if k = 0 then None else Some (Plan_Interval_CallString Solver_Warrow k))"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_CallString k \<rparr>
-     = None"
+     = (if k = 0 then None else Some (Plan_Interval_CallString s k))"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Int Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
@@ -206,19 +206,23 @@ lemma resolver_sign_warrow_invalid:
   by simp
 
 lemma resolver_interval_entrystate_default_valid:
-  "resolve_analysis_config (default_config Interval_Analysis Ctx_EntryState) = Some Plan_Interval_EntryState"
+  "resolve_analysis_config (default_config Interval_Analysis Ctx_EntryState)
+     = Some (Plan_Interval_EntryState Solver_Warrow)"
   by (simp add: default_config_def mk_analysis_config_def)
 
-lemma resolver_interval_entrystate_join_invalid:
-  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> = None"
+lemma resolver_interval_entrystate_join_valid:
+  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Interval_EntryState Solver_Join)"
   by simp
 
-lemma resolver_interval_entrystate_per_origin_invalid:
-  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> = None"
+lemma resolver_interval_entrystate_per_origin_valid:
+  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Interval_EntryState Solver_PerOrigin)"
   by simp
 
-lemma resolver_interval_entrystate_warrow_invalid:
-  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> = None"
+lemma resolver_interval_entrystate_warrow_valid:
+  "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Interval_EntryState Solver_Warrow)"
   by simp
 
 lemma resolver_sign_entrystate_invalid:
@@ -231,8 +235,8 @@ lemma resolver_int_entrystate_invalid:
 
 text \<open>
   Call-string, pinned the same way: \<open>k=1\<close>/\<open>k=2\<close> at the implicit default
-  solver resolve; \<open>k=0\<close> is rejected regardless of solver, even though
-  \<open>cs_route 0\<close> (\<open>Call_String_Context.thy\<close>) is itself a well-defined,
+  solver resolve to Warrow; \<open>k=0\<close> is rejected regardless of solver, even
+  though \<open>cs_route 0\<close> (\<open>Call_String_Context.thy\<close>) is itself a well-defined,
   well-typed route (it collapses every activation's context to \<open>[]\<close>,
   distinct from \<open>Ctx_None\<close>'s own, entirely separate flat equation system --
   \<open>k=0\<close> is not \<open>Ctx_None\<close> in disguise). Exposing it anyway would only
@@ -240,41 +244,47 @@ text \<open>
   context sensitivity already has \<open>Ctx_None\<close>; a \<open>call-string\<close> selection
   whose only well-typed positive-information use is separating at least two
   call sites needs \<open>k \<ge> 1\<close> to do that at all, so \<open>k=0\<close> has no positive
-  reason to exist as a public value. Every explicit-solver pairing is
-  rejected the same unconditional way \<open>Ctx_EntryState\<close>'s already is, and
-  Sign/Int at any \<open>k\<close> stay rejected, matching \<open>Ctx_EntryState\<close>'s.
+  reason to exist as a public value. Every explicit-solver pairing at \<open>k \<ge> 1\<close>
+  is valid, exactly as \<open>Ctx_EntryState\<close>'s now is; Sign/Int at any \<open>k\<close> stay
+  rejected, matching \<open>Ctx_EntryState\<close>'s.
 \<close>
 
 lemma resolver_interval_callstring_k1_valid:
   "resolve_analysis_config (default_config Interval_Analysis (Ctx_CallString 1))
-     = Some (Plan_Interval_CallString 1)"
+     = Some (Plan_Interval_CallString Solver_Warrow 1)"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma resolver_interval_callstring_k2_valid:
   "resolve_analysis_config (default_config Interval_Analysis (Ctx_CallString 2))
-     = Some (Plan_Interval_CallString 2)"
+     = Some (Plan_Interval_CallString Solver_Warrow 2)"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma resolver_interval_callstring_zero_invalid:
   "resolve_analysis_config (default_config Interval_Analysis (Ctx_CallString 0)) = None"
   by (simp add: default_config_def mk_analysis_config_def)
 
-lemma resolver_interval_callstring_join_invalid:
+lemma resolver_interval_callstring_zero_explicit_solver_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 0 \<rparr>
+   = None"
+  by simp
+
+lemma resolver_interval_callstring_join_valid:
   "resolve_analysis_config
      \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr>
-   = None"
+   = Some (Plan_Interval_CallString Solver_Join 2)"
   by simp
 
-lemma resolver_interval_callstring_per_origin_invalid:
+lemma resolver_interval_callstring_per_origin_valid:
   "resolve_analysis_config
      \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString 2 \<rparr>
-   = None"
+   = Some (Plan_Interval_CallString Solver_PerOrigin 2)"
   by simp
 
-lemma resolver_interval_callstring_warrow_invalid:
+lemma resolver_interval_callstring_warrow_valid:
   "resolve_analysis_config
      \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr>
-   = None"
+   = Some (Plan_Interval_CallString Solver_Warrow 2)"
   by simp
 
 lemma resolver_sign_callstring_invalid:

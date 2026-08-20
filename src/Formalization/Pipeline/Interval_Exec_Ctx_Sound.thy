@@ -1133,5 +1133,94 @@ definition analyse_interval_entry_state ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_entry_state p = entry_state_verdict_report_prog prog_main_name p"
 
+section \<open>Solver-choice generalization\<close>
+
+text \<open>
+  \<^const>\<open>entry_state_eqs\<close> names no solve function -- only \<open>ectx_spec\<close> and
+  the routing policy -- so it is exactly as solver-independent as
+  \<^const>\<open>ivl_exec_eqs\<close> at \<open>Ctx_None\<close>
+  (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
+  \<open>_per_origin_for\<close> alongside the Warrow default), and exactly as its own
+  \<open>Interval_Call_String_Ctx_Sound.thy\<close> sibling solves the routed call-string
+  system under all three disciplines. \<^const>\<open>entry_state_sol_prog\<close> (Warrow,
+  the shipped default) is untouched.
+\<close>
+
+definition entry_state_sol_prog_join ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "entry_state_sol_prog_join gs mnm p =
+     TD_side_always_join_Interp_solve (entry_state_eqs_prog gs mnm p)
+       (cfg_exit (prog_cfg mnm p), [])"
+
+definition entry_state_sol_prog_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "entry_state_sol_prog_per_origin gs mnm p =
+     TD_side_per_origin_Interp_solve (entry_state_eqs_prog gs mnm p)
+       (cfg_exit (prog_cfg mnm p), [])"
+
+definition analyse_interval_entry_state_result_for_join ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (ivl list, ivl abs_state) analysis_result" where
+  "analyse_interval_entry_state_result_for_join gs mnm p =
+     Analysis_Result
+       (fst (entry_state_sol_prog_join gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (entry_state_sol_prog_join gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_interval_entry_state_result_for_join_def [code del]
+
+lemma analyse_interval_entry_state_result_for_join_code [code]:
+  "analyse_interval_entry_state_result_for_join gs mnm p =
+     (let sol = entry_state_sol_prog_join gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_interval_entry_state_result_for_join_def Let_def by (rule refl)
+
+definition analyse_interval_entry_state_result_for_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (ivl list, ivl abs_state) analysis_result" where
+  "analyse_interval_entry_state_result_for_per_origin gs mnm p =
+     Analysis_Result
+       (fst (entry_state_sol_prog_per_origin gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (entry_state_sol_prog_per_origin gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_interval_entry_state_result_for_per_origin_def [code del]
+
+lemma analyse_interval_entry_state_result_for_per_origin_code [code]:
+  "analyse_interval_entry_state_result_for_per_origin gs mnm p =
+     (let sol = entry_state_sol_prog_per_origin gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_interval_entry_state_result_for_per_origin_def Let_def by (rule refl)
+
+definition entry_state_verdict_report_prog_join ::
+    "pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "entry_state_verdict_report_prog_join mnm p =
+     classify_checks_verdicts (prog_cfg mnm p)
+       (analyse_interval_entry_state_result_for_join (declared_global p) mnm p)
+       interval_classify_check"
+
+definition entry_state_verdict_report_prog_per_origin ::
+    "pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "entry_state_verdict_report_prog_per_origin mnm p =
+     classify_checks_verdicts (prog_cfg mnm p)
+       (analyse_interval_entry_state_result_for_per_origin (declared_global p) mnm p)
+       interval_classify_check"
+
+definition analyse_interval_entry_state_join ::
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "analyse_interval_entry_state_join p = entry_state_verdict_report_prog_join prog_main_name p"
+
+definition analyse_interval_entry_state_per_origin ::
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "analyse_interval_entry_state_per_origin p =
+     entry_state_verdict_report_prog_per_origin prog_main_name p"
 
 end
