@@ -7,7 +7,7 @@ theory Sign_Exec_Ctx_Sound
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"
     "Voblint_VIMP.VIMP_Notation"
-    Run_Analysis_Sound
+    "Voblint_Core.Activation_Backbone"
 begin
 
 section \<open>Sign at the routed spine, instantiated at the unit context\<close>
@@ -545,11 +545,14 @@ section \<open>Solved-result table\<close>
 
 text \<open>
   Whole-program convenience layer, mirroring Interval's own \<open>entry_state_eqs_prog\<close>/
-  \<open>entry_state_sol_prog\<close>/\<open>entry_state_terminates_prog\<close>. This is a temporary, minimal
-  adapter through the existing \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>normalize_point\<close> boundary
-  --- the mixed-analysis \<open>monovariant_analysis_result_for\<close> and Interval's own
-  \<open>analyse_interval_entry_state_result_for\<close> already use exactly this pattern --- and is
-  expected to be replaced once a common reporting adapter locale lands.
+  \<open>entry_state_sol_prog\<close>/\<open>entry_state_terminates_prog\<close>. The result tables below read
+  the raw executable solve through the same \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>normalize_point\<close>
+  boundary the mixed-analysis \<open>monovariant_analysis_result_for\<close> and Interval's own
+  \<open>analyse_interval_entry_state_result_for\<close> already use, and are the tables Sign's public
+  API (\<open>Sign_Checks.thy\<close>) redirects onto in production. Their soundness is established there
+  through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
+  context, bridged to these executable tables via \<open>normalize_point_canonicalize_lift_eq_old\<close>
+  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>).
 \<close>
 
 definition sctx_eqs_prog ::
@@ -564,6 +567,19 @@ definition sctx_sol_prog ::
        \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
   "sctx_sol_prog gs mnm p =
      TD_side_always_join_Interp_solve (sctx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ())"
+
+text \<open>
+  Solver-choice sibling of \<^const>\<open>sctx_sol_prog\<close>: the same \<^const>\<open>sctx_eqs_prog\<close> equation
+  system, solved under the per-origin update rule instead of the always-join rule production
+  uses, mirroring how \<open>analyse_sign_for_per_origin\<close> (\<open>Sign_Checks.thy\<close>) is \<open>analyse_sign_for\<close>'s
+  own per-origin sibling over the Base family's equation system.
+\<close>
+
+definition sctx_sol_prog_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
+  "sctx_sol_prog_per_origin gs mnm p =
+     TD_side_per_origin_Interp_solve (sctx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ())"
 
 definition sctx_terminates_prog :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
   "sctx_terminates_prog gs mnm p =
@@ -602,5 +618,32 @@ lemma analyse_sign_ctx_result_for_code [code]:
 definition analyse_sign_ctx_result :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
   "analyse_sign_ctx_result p =
      analyse_sign_ctx_result_for (declared_global p) prog_main_name p"
+
+text \<open>Per-origin sibling of \<^const>\<open>analyse_sign_ctx_result_for\<close>, reading
+  \<^const>\<open>sctx_sol_prog_per_origin\<close> instead of \<^const>\<open>sctx_sol_prog\<close>.\<close>
+
+definition analyse_sign_ctx_result_per_origin_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_ctx_result_per_origin_for gs mnm p =
+     Analysis_Result
+       (fst (sctx_sol_prog_per_origin gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (sctx_sol_prog_per_origin gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_sign_ctx_result_per_origin_for_def [code del]
+
+lemma analyse_sign_ctx_result_per_origin_for_code [code]:
+  "analyse_sign_ctx_result_per_origin_for gs mnm p =
+     (let sol = sctx_sol_prog_per_origin gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_sign_ctx_result_per_origin_for_def Let_def by (rule refl)
+
+definition analyse_sign_ctx_result_per_origin :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_ctx_result_per_origin p =
+     analyse_sign_ctx_result_per_origin_for (declared_global p) prog_main_name p"
 
 end

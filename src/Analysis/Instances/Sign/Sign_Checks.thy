@@ -2,6 +2,8 @@ theory Sign_Checks
   imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result" Sign_Exec_Sound
     "Voblint_Analysis.Monovariant_Analysis_Result"
+    "Voblint_Core.DG_Analysis_Adapter"
+    Sign_Exec_Ctx_Sound
 begin
 
 hide_const phase.N
@@ -54,6 +56,121 @@ lemmas sign_classify_check_proved = sign_check_domain.classify_check_proved
 lemmas sign_classify_check_refuted = sign_check_domain.classify_check_refuted
 lemmas sign_checks_provenI = sign_check_domain.abstract_checks_provenI
 lemmas sign_checks_proven_sound = sign_check_domain.abstract_checks_proven_sound
+
+subsection \<open>The generic report adapter, at the routed-unit context\<close>
+
+text \<open>
+  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Exec_Ctx_Sound\<close>'s own routed-unit
+  solved system reuses every obligation that theory's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
+  interpretations already discharge: the five \<^locale>\<open>dg_ctx_activation_base\<close> obligations
+  are exactly \<open>sctx_dg\<close>'s own (cited here via the exported \<open>sctx_pp_abs\<close>/\<open>sctx_sg_covered\<close>/
+  \<open>sctx_sg_uncovered_empty\<close>/\<open>sctx_fin\<close>), and the routed obligations collapse the same way
+  \<^locale>\<open>unit_routed_context\<close>'s did, at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>. Only
+  \<open>classify_proved\<close>/\<open>classify_refuted\<close> are genuinely new here, discharged by
+  \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close> above. This context re-opens
+  \<open>Sign_Exec_Ctx_Sound\<close>'s own six coverage hypotheses (\<open>solves\<close>/\<open>exact\<close>/\<open>entry_cov\<close>/
+  \<open>fwd_ok\<close>/\<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>) rather than reusing that theory's context directly,
+  since the classify obligations need \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close>,
+  which live in this theory, downstream of \<open>Sign_Exec_Ctx_Sound\<close>.
+\<close>
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
+  assumes solves: "sctx_terminates gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
+        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
+        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+begin
+
+interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
+  unfolding sctx_abs_spec_def
+  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+
+interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs
+    "compile_prog Pi ps mnm main" Global route_unit
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
+    "sctx_sigma_abs gs is_bot_pred Pi ps mnm main" "fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" "sctx_sg gs is_bot_pred Pi ps mnm main"
+    Seed sign_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+  case FinE show ?case
+    using compile_prog_finite by auto
+next
+  case PP show ?case
+    by (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+        sctx_sigma_abs_exec_def)
+      (rule sctx_pp_abs[OF solves exact])
+next
+  case (SgCov v c)
+  note mem = this
+  have eq1: "sctx_sg gs is_bot_pred Pi ps mnm main (Inl (v, c))
+               = locals (sctx_sigma_abs gs is_bot_pred Pi ps mnm main (Inl (v, c)))"
+    by (rule sctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
+  show ?case
+    using eq1 gamma_dg_base_def by auto
+next
+  case (SgUncov v c)
+  note nmem = this
+  show ?case
+    by (rule sctx_sg_uncovered_empty[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok nmem])
+next
+  case (Fwd u a v c)
+  thus ?case by (rule fwd_ok)
+next
+  case FinC show ?case
+    by (simp add: compile_prog_finite)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (RouteEnterc u ctx dst pars args p cont s)
+  show ?case by (simp add: route_unit_def enterc_unit_def)
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case
+    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) comb_fwd_ok by blast
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+next
+  case (ClProved c d s)
+  thus ?case by (rule sign_classify_check_proved)
+next
+  case (ClRefuted c d s)
+  thus ?case by (rule sign_classify_check_refuted)
+qed
+
+text \<open>
+  The two generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once and for
+  all, re-exported here so a caller cites them without naming the interpretation.
+\<close>
+
+lemmas sctx_report_ctx_proved_sound = sctx_adapter.analyse_report_ctx_proved_sound
+lemmas sctx_report_ctx_refuted_sound = sctx_adapter.analyse_report_ctx_refuted_sound
+
+end
 
 subsection \<open>Executable classification tests\<close>
 

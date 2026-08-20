@@ -1,6 +1,6 @@
 theory Example_Sign_Base_Vs_Routed_Migration
   imports
-    Voblint_Formalization.Sign_Exec_Ctx_Sound
+    Voblint_Analysis.Sign_Exec_Ctx_Sound
     Voblint_CLI.State_Report_GraphViz
     Example_Analysis_Dispatch_Regression
 begin
@@ -12,7 +12,7 @@ text \<open>
   evidence between Sign's production Base-family result
   (\<^const>\<open>analyse_sign_result\<close>/\<^const>\<open>analyse_sign_report\<close>,
   \<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>) and the routed-unit-context result proved
-  sound in \<^theory>\<open>Voblint_Formalization.Sign_Exec_Ctx_Sound\<close>
+  sound in \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>
   (\<^const>\<open>analyse_sign_ctx_result\<close>). No equality theorem between the two
   producers is attempted here: both are independently sound, and the
   production solver family proves soundness only, never canonicity, so exact

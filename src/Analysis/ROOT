@@ -38,6 +38,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_DG
     Interval_Point_Digest
     Interval_Exec_Sound
+    Interval_Ctx_None_Routed_Sound
     Congruence_Domain
     Congruence_Lattice
     Congruence_Warrowing
@@ -46,6 +47,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
+    Sign_Exec_Ctx_Sound
     Parity_Domain
     Parity_Print
     Parity_Transfer
@@ -66,6 +68,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Int_Base_DG
     Int_Exec_Sound
     Int_Checks
+    Int_Exec_Ctx_Sound
     Mixed_Sign_Interval
     Exec_DG_Bridge
     Monovariant_Analysis_Result
