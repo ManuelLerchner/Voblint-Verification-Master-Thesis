@@ -694,5 +694,195 @@ lemma classify_checks_ctx_mem_iff:
   using set_cfg_intra_list[OF assms]
   by (auto simp: image_iff split: edge_action.splits)
 
+subsection \<open>Contextual proved/refuted soundness\<close>
+
+text \<open>
+  The \<open>Decided Check_Proved\<close>/\<open>Decided Check_Refuted\<close> analogues of
+  \<open>classify_checks_proved_sound\<close>/\<open>classify_checks_refuted_sound\<close>: an
+  aggregated verdict of \<^term>\<open>Decided Check_Proved\<close> forces every observation
+  folded into it to be \<^const>\<open>Dead\<close> or \<^term>\<open>Decided Check_Proved\<close> --- never
+  a disagreeing \<^term>\<open>Decided Check_Refuted\<close> or \<^term>\<open>Decided Check_Unknown\<close>,
+  since either would collapse the join to \<^term>\<open>Decided Check_Unknown\<close>
+  instead. \<open>Dead\<close> observations contribute nothing and are filtered out at the
+  call site, not here.
+\<close>
+
+lemma sup_check_result_eq_Check_Proved_iff [simp]:
+  "(x \<squnion> y = Check_Proved) \<longleftrightarrow> x = Check_Proved \<and> y = Check_Proved"
+  by (cases x; cases y) (simp_all add: sup_check_result_def)
+
+lemma sup_check_result_eq_Check_Refuted_iff [simp]:
+  "(x \<squnion> y = Check_Refuted) \<longleftrightarrow> x = Check_Refuted \<and> y = Check_Refuted"
+  by (cases x; cases y) (simp_all add: sup_check_result_def)
+
+lemma aggregate_verdicts_proved_dest:
+  "finite vs \<Longrightarrow> aggregate_verdicts vs = Decided Check_Proved
+     \<Longrightarrow> (\<forall>d \<in> vs. d = Dead \<or> d = Decided Check_Proved)"
+proof (induct vs rule: finite_induct)
+  case empty
+  then show ?case by simp
+next
+  case (insert x F)
+  have agg_eq: "aggregate_verdicts (insert x F) = x \<squnion> aggregate_verdicts F"
+    using insert.hyps(1) by (rule aggregate_verdicts_insert)
+  with insert.prems have eq: "x \<squnion> aggregate_verdicts F = Decided Check_Proved" by simp
+  consider (xDead) "x = Dead" | (xDec) cr where "x = Decided cr" by (cases x) auto
+  then show ?case
+  proof cases
+    case xDead
+    with eq have aggF: "aggregate_verdicts F = Decided Check_Proved" by simp
+    show ?thesis
+      using aggF insert.hyps(3) xDead by auto
+  next
+    case xDec
+    consider (fDead) "aggregate_verdicts F = Dead"
+      | (fDec) cr2 where "aggregate_verdicts F = Decided cr2" by (cases "aggregate_verdicts F") auto
+    then show ?thesis
+    proof cases
+      case fDead
+      with eq xDec have "cr = Check_Proved" by simp
+      moreover have "\<forall>d \<in> F. d = Dead"
+        using fDead insert.hyps(1) aggregate_verdicts_eq_Dead_iff by blast
+      ultimately show ?thesis using xDec by auto
+    next
+      case fDec
+      with eq xDec have "cr = Check_Proved \<and> cr2 = Check_Proved" by simp
+      hence aggF: "aggregate_verdicts F = Decided Check_Proved" using fDec by simp
+      show ?thesis
+        using \<open>(cr::check_result) = Check_Proved \<and> (cr2::check_result) = Check_Proved\<close> fDec
+          insert.hyps(3) xDec by auto
+    qed
+  qed
+qed
+
+lemma aggregate_verdicts_refuted_dest:
+  "finite vs \<Longrightarrow> aggregate_verdicts vs = Decided Check_Refuted
+     \<Longrightarrow> (\<forall>d \<in> vs. d = Dead \<or> d = Decided Check_Refuted)"
+proof (induct vs rule: finite_induct)
+  case empty
+  then show ?case by simp
+next
+  case (insert x F)
+  have agg_eq: "aggregate_verdicts (insert x F) = x \<squnion> aggregate_verdicts F"
+    using insert.hyps(1) by (rule aggregate_verdicts_insert)
+  with insert.prems have eq: "x \<squnion> aggregate_verdicts F = Decided Check_Refuted" by simp
+  consider (xDead) "x = Dead" | (xDec) cr where "x = Decided cr" by (cases x) auto
+  then show ?case
+  proof cases
+    case xDead
+    with eq have aggF: "aggregate_verdicts F = Decided Check_Refuted" by simp
+    show ?thesis
+      using aggF insert.hyps(3) xDead by auto
+  next
+    case xDec
+    consider (fDead) "aggregate_verdicts F = Dead"
+      | (fDec) cr2 where "aggregate_verdicts F = Decided cr2" by (cases "aggregate_verdicts F") auto
+    then show ?thesis
+    proof cases
+      case fDead
+      with eq xDec have "cr = Check_Refuted" by simp
+      moreover have "\<forall>d \<in> F. d = Dead"
+        using fDead insert.hyps(1) aggregate_verdicts_eq_Dead_iff by blast
+      ultimately show ?thesis using xDec by auto
+    next
+      case fDec
+      with eq xDec have "cr = Check_Refuted \<and> cr2 = Check_Refuted" by simp
+      hence aggF: "aggregate_verdicts F = Decided Check_Refuted" using fDec by simp
+      show ?thesis
+        using \<open>(cr::check_result) = Check_Refuted \<and> (cr2::check_result) = Check_Refuted\<close>
+          aggF insert.hyps(3) xDec by auto
+    qed
+  qed
+qed
+
+text \<open>
+  The context-indexed report analogue of \<open>classify_checks_proved_sound\<close>/
+  \<open>classify_checks_refuted_sound\<close>: an aggregated \<^term>\<open>Decided Check_Proved\<close>/
+  \<^term>\<open>Decided Check_Refuted\<close> verdict at a check forces the classifier's own
+  reading at every \<^const>\<open>Reachable\<close> context to agree. The image set being
+  folded is shown finite from the aggregate equation itself
+  (\<open>Finite_Set.fold_infinite\<close>: an infinite carrier folds to the identity
+  \<open>Dead\<close>, which a \<^term>\<open>Decided Check_Proved\<close>/\<open>Decided Check_Refuted\<close> result
+  already rules out), so no separate finiteness assumption on the covered
+  contexts is needed.
+\<close>
+
+theorem classify_checks_ctx_proved_sound:
+  assumes fin: "finite (intra g)"
+    and mem: "(v, c, Decided Check_Proved) \<in> set (classify_checks_verdicts g r classify)"
+    and reach: "lookup_context r v ctx = Reachable st"
+  shows "classify c st = Check_Proved"
+proof -
+  obtain vs where mem_ctx: "(v, c, vs) \<in> set (classify_checks_ctx g r classify)"
+    and agg0: "aggregate_verdicts (snd ` vs) = Decided Check_Proved"
+    using mem unfolding classify_checks_verdicts_def set_map by (force simp: image_iff)
+  obtain tgt where vs_eq: "vs = (\<lambda>c'. (c', classify_point classify c (lookup_context r v c'))) ` contexts_at r v"
+    using mem_ctx classify_checks_ctx_mem_iff[OF fin] by blast
+  have agg: "aggregate_verdicts ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v)
+               = Decided Check_Proved"
+    using agg0 unfolding vs_eq by (simp add: image_comp comp_def)
+  have fin_img: "finite ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v)"
+  proof (rule ccontr)
+    assume "\<not> finite ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v)"
+    hence "aggregate_verdicts
+             ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v) = Dead"
+      unfolding aggregate_verdicts_def by (rule Finite_Set.fold_infinite)
+    with agg show False by simp
+  qed
+  have covctx: "ctx \<in> contexts_at r v"
+  proof (rule ccontr)
+    assume "ctx \<notin> contexts_at r v"
+    then have "(v, ctx) \<notin> result_keys r" by simp
+    then have "lookup_context r v ctx = Unreachable" by (rule lookup_context_absent)
+    with reach show False
+      by fastforce
+  qed
+  have mem_img: "classify_point classify c (lookup_context r v ctx)
+          \<in> (\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v"
+    using covctx by blast
+  have "classify_point classify c (lookup_context r v ctx) = Dead
+          \<or> classify_point classify c (lookup_context r v ctx) = Decided Check_Proved"
+    using aggregate_verdicts_proved_dest[OF fin_img agg] mem_img by blast
+  with reach show ?thesis by simp
+qed
+
+theorem classify_checks_ctx_refuted_sound:
+  assumes fin: "finite (intra g)"
+    and mem: "(v, c, Decided Check_Refuted) \<in> set (classify_checks_verdicts g r classify)"
+    and reach: "lookup_context r v ctx = Reachable st"
+  shows "classify c st = Check_Refuted"
+proof -
+  obtain vs where mem_ctx: "(v, c, vs) \<in> set (classify_checks_ctx g r classify)"
+    and agg0: "aggregate_verdicts (snd ` vs) = Decided Check_Refuted"
+    using mem unfolding classify_checks_verdicts_def set_map by (force simp: image_iff)
+  obtain tgt where vs_eq: "vs = (\<lambda>c'. (c', classify_point classify c (lookup_context r v c'))) ` contexts_at r v"
+    using mem_ctx classify_checks_ctx_mem_iff[OF fin] by blast
+  have agg: "aggregate_verdicts ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v)
+               = Decided Check_Refuted"
+    using agg0 unfolding vs_eq by (simp add: image_comp comp_def)
+  have fin_img: "finite ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v)"
+  proof (rule ccontr)
+    assume "\<not> finite ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v)"
+    hence "aggregate_verdicts
+             ((\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v) = Dead"
+      unfolding aggregate_verdicts_def by (rule Finite_Set.fold_infinite)
+    with agg show False by simp
+  qed
+  have covctx: "ctx \<in> contexts_at r v"
+  proof (rule ccontr)
+    assume "ctx \<notin> contexts_at r v"
+    then have "(v, ctx) \<notin> result_keys r" by simp
+    then have "lookup_context r v ctx = Unreachable" by (rule lookup_context_absent)
+    with reach show False by simp
+  qed
+  have mem_img: "classify_point classify c (lookup_context r v ctx)
+          \<in> (\<lambda>c'. classify_point classify c (lookup_context r v c')) ` contexts_at r v"
+    using covctx by blast
+  have "classify_point classify c (lookup_context r v ctx) = Dead
+          \<or> classify_point classify c (lookup_context r v ctx) = Decided Check_Refuted"
+    using aggregate_verdicts_refuted_dest[OF fin_img agg] mem_img by blast
+  with reach show ?thesis by simp
+qed
+
 end
 
