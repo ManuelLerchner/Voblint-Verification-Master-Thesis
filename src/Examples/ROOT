@@ -1,7 +1,8 @@
-session Voblint_Examples in "." = "Voblint_Formalization" +
+session Voblint_Examples in "." = "Voblint_CLI" +
   description "Executable witnesses, flagship demonstrations, and the project capstone index"
   sessions
     "HOL-Library"
+    "Voblint_Formalization"
   directories
     "Sign"
     "Sign/CallString"
@@ -27,7 +28,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
-    Example_Sign_Codegen
+    Example_Sign_Codegen_Exec_Consistency
     (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute
@@ -40,7 +41,6 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
 
     (* Interval *)
     Exec_Ivl_Run
-    Example_Interval_Codegen
     (* Interval analogue of G-A1: checks_proven/checks_proven_sound, store-only. *)
     Example_Interval_Checks_Store_Only
     Example_Interval_Placement
@@ -82,9 +82,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Int_Warrowing
     Example_Int_Transfer
     Exec_Int_DG_Run
-    Example_Int_Codegen
     Example_Relational_DG_Demo
-    Analyse_Dispatch
     Example_Analysis_Dispatch_Regression
     Example_Min_Max_Regression
     Example_Solver_Choice_Regression
@@ -98,7 +96,7 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Proc_GraphViz
     Example_Proc_GraphViz_Recursion
     Example_Mixed_Sign_Interval_GraphViz
-    Example_State_Report_GraphViz
+    Example_State_Report_GraphViz_Demo
     Example_EntryState_GraphViz_Regression
 
     Voblint

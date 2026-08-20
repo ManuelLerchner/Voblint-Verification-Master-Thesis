@@ -7634,6 +7634,17 @@ let rec analyse_interval_entry_state_result
 
 end;; (*struct Core*)
 
+module Analysis_Config : sig
+  type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat
+  type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
+end = struct
+
+type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat;;
+
+type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis;;
+
+end;; (*struct Analysis_Config*)
+
 module Call_String_Context : sig
   type call_string_gk = Global | Seed of Core.cfg_node * Core.cfg_node list
   val equal_call_string_gk : call_string_gk Core.equal
@@ -7766,18 +7777,7 @@ let rec analyse_interval_call_string_report
 
 end;; (*struct Interval_Call_String_Ctx_Sound*)
 
-module Analysis_Config : sig
-  type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat
-  type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
-end = struct
-
-type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat;;
-
-type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis;;
-
-end;; (*struct Analysis_Config*)
-
-module Analyse : sig
+module Analyse_Dispatch : sig
   type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
     IntDomValue of unit Core.int_dom_ext
   val analyse :
@@ -7844,4 +7844,4 @@ let rec analyse_with_state
             (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))
           (Core.analyse_int_report_with_state p);;
 
-end;; (*struct Analyse*)
+end;; (*struct Analyse_Dispatch*)

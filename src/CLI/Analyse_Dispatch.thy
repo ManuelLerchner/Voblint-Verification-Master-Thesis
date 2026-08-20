@@ -1,8 +1,8 @@
 theory Analyse_Dispatch
   imports
-    Example_Sign_Codegen
-    Example_Interval_Codegen
-    Example_Int_Codegen
+    Sign_Codegen
+    Interval_Codegen
+    Int_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     Voblint_Formalization.Interval_Call_String_Ctx_Sound
     Voblint_Analysis.Analysis_Config
@@ -15,7 +15,7 @@ hide_const phase.N
 section \<open>A unified, verified check-report API across domains\<close>
 
 text \<open>
-  \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_Examples.Example_Sign_Codegen\<close>) and
+  \<open>analyse_sign_report\<close> (\<^theory>\<open>Voblint_CLI.Sign_Codegen\<close>) and
   \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) already share one observable
   result type, \<open>check_report_entry list\<close>
@@ -36,7 +36,7 @@ text \<open>
   purely a loop-termination question now, not a global-specific one: a program whose global
   writes never occur inside a loop terminates identically under \<open>Solver_Join\<close> and
   \<open>Solver_Warrow\<close>, only a genuine unbounded loop still needs warrowing.
-  \<open>analyse_interval_td_report\<close>'s soundness theorems (\<^theory>\<open>Voblint_Examples.Example_Interval_Codegen\<close>'s
+  \<open>analyse_interval_td_report\<close>'s soundness theorems (\<^theory>\<open>Voblint_CLI.Interval_Codegen\<close>'s
   \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>, built on the \<open>base_dg_exec_analysis\<close>
   locale) make dispatching Interval's production default to the warrowing report a like-for-like
   swap for callers, not a precision or soundness downgrade.
@@ -200,7 +200,7 @@ subsection \<open>Public API: soundness corollaries stated over the runtime disp
 text \<open>
   \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) and \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close>
-  (\<^theory>\<open>Voblint_Examples.Example_Sign_Codegen\<close>) are proved about \<open>analyse_interval_td_report\<close> and
+  (\<^theory>\<open>Voblint_CLI.Sign_Codegen\<close>) are proved about \<open>analyse_interval_td_report\<close> and
   \<open>analyse_sign_report\<close> --- the exact constants \<open>analyse\<close> pattern-matches to, one \<open>analyse.simps\<close>
   equation away. The four corollaries below restate them directly over \<open>analyse\<close>, the constant
   \<open>export_code\<close> exports, so connecting a runtime verdict to its soundness theorem never requires
@@ -724,7 +724,7 @@ code_identifier
 | code_module Int_Exec \<rightharpoonup> (OCaml) Core
 | code_module Int_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Int_Checks \<rightharpoonup> (OCaml) Core
-| code_module Analyse_Dispatch \<rightharpoonup> (OCaml) Analyse
+| code_module "Voblint_CLI.Analyse_Dispatch" \<rightharpoonup> (OCaml) Analyse
 
 
 

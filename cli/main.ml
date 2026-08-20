@@ -6,7 +6,7 @@
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
        -> Voblint_CLI.Analysis_Config.mk_analysis_config (one config value)
-       -> Voblint_CLI.Analyse.analyse_config/analyse_config_ctx/
+       -> Voblint_CLI.Analyse_Dispatch.analyse_config/analyse_config_ctx/
           analyse_config_with_state (Isabelle-generated; each consults
           Analysis_Config.resolve_analysis_config, the single domain/solver/
           context legality-and-defaults table, then dispatches to the
@@ -135,7 +135,7 @@ let render_text_report (report :
       (Voblint_CLI.Core.cfg_node
        * (Voblint_CLI.Core.exp
           * (Voblint_CLI.Core.check_result
-             * (bool * (string -> Voblint_CLI.Analyse.abstract_value)))))
+             * (bool * (string -> Voblint_CLI.Analyse_Dispatch.abstract_value)))))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
@@ -146,11 +146,11 @@ let render_text_report (report :
   List.iter2
     (fun (node, (cond, (verdict, (unreachable, f)))) (line, col) ->
        if not unreachable then begin
-         let vars = Voblint_CLI.Example_State_Report_GraphViz.exp_vnames_list cond in
+         let vars = Voblint_CLI.State_Report_GraphViz.exp_vnames_list cond in
          let state =
            vars
            |> List.map (fun x ->
-             x ^ "=" ^ un_string (Voblint_CLI.Example_State_Report_GraphViz.string_of_abstract_value (f x)))
+             x ^ "=" ^ un_string (Voblint_CLI.State_Report_GraphViz.string_of_abstract_value (f x)))
            |> String.concat ", "
          in
          Buffer.add_string buf
@@ -437,41 +437,41 @@ let () =
       if !graph_snapshot && !dot_full then
         Ok_graph
           (if !context_graph = Expanded then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
-           else Voblint_CLI.Example_State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
+             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
+           else Voblint_CLI.State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
       else if !graph_snapshot then
         Ok_graph
           (if !context_graph = Expanded then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
-           else Voblint_CLI.Example_State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
+             Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
+           else Voblint_CLI.State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
       else if !dot_full then
         Ok_dot
           (if !context_graph = Expanded then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_dot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_full_state_dot_auto prog
-           else Voblint_CLI.Example_State_Report_GraphViz.full_state_dot_auto kind prog)
+             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_dot_auto prog
+           else Voblint_CLI.State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then
         Ok_dot
           (if !context_graph = Expanded then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_ctx_dot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.Example_State_Report_GraphViz.entry_state_report_dot_auto prog
-           else Voblint_CLI.Example_State_Report_GraphViz.state_report_dot_auto kind prog)
+             Voblint_CLI.State_Report_GraphViz.entry_state_report_dot_auto prog
+           else Voblint_CLI.State_Report_GraphViz.state_report_dot_auto kind prog)
       else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-        (match Voblint_CLI.Analyse.analyse_config_ctx cfg prog with
+        (match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
          | Some report -> Ok_text (render_ctx_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--context combination")
       else if !solver <> None then
-        (match Voblint_CLI.Analyse.analyse_config cfg prog with
+        (match Voblint_CLI.Analyse_Dispatch.analyse_config cfg prog with
          | Some report -> Ok_text (render_flat_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--solver combination")
       else
-        (match Voblint_CLI.Analyse.analyse_config_with_state cfg prog with
+        (match Voblint_CLI.Analyse_Dispatch.analyse_config_with_state cfg prog with
          | Some report -> Ok_text (render_text_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis combination"))
   with

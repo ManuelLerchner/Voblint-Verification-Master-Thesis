@@ -1,4 +1,4 @@
-session Voblint_Codegen in "." = "Voblint_Examples" +
+session Voblint_Codegen in "." = "Voblint_CLI" +
   description "Code export boundary for the Voblint CLI and GraphViz surfaces"
   directories
     "Export"

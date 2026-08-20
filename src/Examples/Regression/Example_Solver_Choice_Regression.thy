@@ -1,5 +1,5 @@
 theory Example_Solver_Choice_Regression
-  imports Analyse_Dispatch
+  imports "Voblint_CLI.Analyse_Dispatch"
 begin
 
 section \<open>Regression: solver-choice comparison via analyse_with_solver\<close>
@@ -20,7 +20,7 @@ text \<open>
 text \<open>
   A single constant write to a global, not a self-referential one (contrast
   \<open>total := total + n\<close>, the documented always-join non-termination
-  reproducer, \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>): this program
+  reproducer, \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>): this program
   terminates under every update rule, so it can genuinely compare all
   three without hitting that known divergence.
 \<close>

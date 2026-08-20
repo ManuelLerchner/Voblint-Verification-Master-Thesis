@@ -10,7 +10,7 @@
    it with `pixi run codegen` instead. *)
 
 open Voblint_Analyse_OCaml.Core
-open Voblint_Analyse_OCaml.Analyse
+open Voblint_Analyse_OCaml.Analyse_Dispatch
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native

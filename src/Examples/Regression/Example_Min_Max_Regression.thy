@@ -1,6 +1,6 @@
 theory Example_Min_Max_Regression
   imports
-    Analyse_Dispatch
+    "Voblint_CLI.Analyse_Dispatch"
     "Voblint_Analysis.Parity_Checks"
 begin
 
@@ -55,7 +55,7 @@ text \<open>
   a synthesized value, so when both arguments share a known parity the
   result provably shares it too. \<open>3\<close> and \<open>0 - 5\<close> are both odd; \<open>z\<close>/\<open>w\<close> stay
   \<open>POdd\<close> here, not \<open>PTop\<close>. Parity is not wired into the \<open>analyse\<close> runtime
-  dispatcher (\<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>), so this reads the
+  dispatcher (\<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>), so this reads the
   exit state directly through \<^const>\<open>parity_exec_prog\<close>, the same executable
   entry point \<^const>\<open>parity_check_report\<close> is built from.
 \<close>

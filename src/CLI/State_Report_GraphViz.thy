@@ -1,10 +1,10 @@
-theory Example_State_Report_GraphViz
+theory State_Report_GraphViz
   imports
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_Analysis.Sign_Print"
     "Voblint_Analysis.Interval_Print"
     "Voblint_Analysis.Int_Print"
-    "Voblint_Examples.Example_Analysis_Dispatch_Regression"
+    Analyse_Dispatch
 begin
 
 text \<open>
@@ -102,16 +102,6 @@ definition state_report_dot ::
           (map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)))"
 
 text \<open>
-  Reuses \<open>state_wiring_ex_prog\<close>
-  (\<^theory>\<open>Voblint_Examples.Example_Analysis_Dispatch_Regression\<close>) rather than a fresh
-  program: a single exact write with no widening, so \<^const>\<open>analyse\<close>
-  itself already classifies the check \<open>Check_Proved\<close> under
-  \<open>Interval_Analysis\<close>, and \<open>analyse_with_state\<close> reports the exact
-  \<open>[5,5]\<close> interval behind it --- the checked verdict and the rendered
-  state agree because both come from the same solved report.
-\<close>
-
-text \<open>
   \<open>report_vars\<close> and \<open>exp_vnames_list\<close> turn \<^const>\<open>exp_vnames\<close>'s set of
   variable occurrences into a sorted list, the same idiom
   \<^const>\<open>scope_vnames_list\<close> already uses over \<^typ>\<open>vname\<close> via
@@ -147,15 +137,9 @@ definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> im
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
-definition state_report_demo_dot :: String.literal where
-  "state_report_demo_dot =
-     state_report_dot Interval_Analysis state_wiring_ex_prog [STR ''x'']"
-
-ML_val \<open>writeln (@{code state_report_demo_dot})\<close>
-
 text \<open>
   The codegen session collects this theory's GraphViz surface with the
-  analysis facade from \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>.
+  analysis facade from \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>.
   That narrower facade has no reachable GraphViz-rendering constant, and it
   precedes this theory in the import order, so \<open>state_report_dot_auto\<close>
   belongs in the later export declaration. The GraphViz surface uses the
@@ -404,7 +388,7 @@ text \<open>
   \<^class>\<open>complete_lattice\<close> set instance for the first time. Left unmapped,
   OCaml's single-file serializer places \<open>Complete_Lattices\<close> in its own
   module, and the two end up needing each other, which
-  \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>'s own header already
+  \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>'s own header already
   documents as an OCaml module-splitting limit, not fixable by regrouping ---
   only by folding the two together, exactly as done there for \<open>Sign\<close>/\<open>Interval\<close>.
 \<close>

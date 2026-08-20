@@ -8,7 +8,7 @@ theory Example_Int_Refinement_Mode_Regression
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.Run_Analysis_Sound"
     Exec_Int_DG_Run
-    Analyse_Dispatch
+    "Voblint_CLI.Analyse_Dispatch"
 begin
 
 text \<open>

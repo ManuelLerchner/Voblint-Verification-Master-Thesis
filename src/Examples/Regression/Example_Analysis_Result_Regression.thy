@@ -1,5 +1,5 @@
 theory Example_Analysis_Result_Regression
-  imports Analyse_Dispatch
+  imports "Voblint_CLI.Analyse_Dispatch"
 begin
 
 section \<open>Regression: the solved-result table\<close>

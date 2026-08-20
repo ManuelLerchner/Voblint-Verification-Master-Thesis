@@ -67,8 +67,8 @@ theory Voblint
     Example_Proc_GraphViz
     Example_Relational_DG_Demo
     Example_Strategy_Tree_Demo
-    Example_Sign_Codegen
-    Analyse_Dispatch
+    "Voblint_CLI.Sign_Codegen"
+    "Voblint_CLI.Analyse_Dispatch"
 begin
 
 text \<open>
@@ -391,7 +391,7 @@ text \<open>
   \<^bold>\<open>9. Executable code generation.\<close> A runtime-program entry point per domain,
     reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a
     parallel one, exported to OCaml.
-    \<^item> @{theory Voblint_Examples.Example_Sign_Codegen} --- \<^verbatim>\<open>analyse_sign\<close>
+    \<^item> @{theory Voblint_CLI.Sign_Codegen} --- \<^verbatim>\<open>analyse_sign\<close>
       takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
       program) and reuses \<^verbatim>\<open>unit_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
       and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Formalization.Run_Analysis_Sound})
@@ -400,16 +400,16 @@ text \<open>
       post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
       \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
       computation, not two.
-    \<^item> @{theory Voblint_Examples.Example_Interval_Codegen} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
+    \<^item> @{theory Voblint_CLI.Interval_Codegen} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
       \<^verbatim>\<open>analyse_interval_td_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
       dispatches to, built the same way on \<^verbatim>\<open>base_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
       \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report\<close>/
       \<^verbatim>\<open>analyse_interval_report_per_origin\<close>, the always-join and per-origin update-rule siblings
-      \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_Examples.Analyse_Dispatch}) compares against this
+      \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this
       same production default on the identical equation system, each with its own soundness
-      theorems proved the same way one session later in @{theory
-      Voblint_Examples.Example_Interval_Codegen}.
-    \<^item> @{theory Voblint_Examples.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
+      theorems proved the same way, in @{theory
+      Voblint_CLI.Interval_Codegen}.
+    \<^item> @{theory Voblint_CLI.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
       dispatches on \<^verbatim>\<open>analysis_domain\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type

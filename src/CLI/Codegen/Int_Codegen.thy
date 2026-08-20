@@ -1,11 +1,11 @@
-theory Example_Int_Codegen
+theory Int_Codegen
   imports "Voblint_Analysis.Int_Checks" "Voblint_Formalization.Run_Analysis_Sound"
 begin
 
 section \<open>Int codegen API: an arbitrary VIMP program, and its production soundness\<close>
 
 text \<open>
-  Mirrors Interval's \<open>Example_Interval_Codegen\<close>: \<open>analyse_int_dg_eqs_for\<close>/
+  Mirrors Interval's \<open>Interval_Codegen\<close>: \<open>analyse_int_dg_eqs_for\<close>/
   \<open>analyse_int_dg_for\<close>/\<open>analyse_int_dg_env_for\<close> (\<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>)
   and \<open>analyse_int_report_for\<close>/\<open>analyse_int_report\<close> (\<^theory>\<open>Voblint_Analysis.Int_Checks\<close>)
   are pure computation, no dependence on the \<open>base_dg_exec_analysis\<close> locale interpreted
@@ -121,7 +121,7 @@ text \<open>
   Always-join and per-origin siblings of \<open>p_reg\<close>, same \<open>cases mode\<close> shape, same
   \<open>int_tf_for\<close>/\<open>int_tf_st_for\<close>/\<open>int_dom_enter_st_for\<close> dispatch, only the \<open>solve\<close>/\<open>solve_c\<close>
   parameters and the trailing \<open>part_post_solution_of_solve_c\<close> fact swapped --- mirroring
-  \<open>Example_Interval_Codegen\<close>'s own \<open>p_reg_join\<close>/\<open>p_reg_per_origin\<close> blocks.
+  \<open>Interval_Codegen\<close>'s own \<open>p_reg_join\<close>/\<open>p_reg_per_origin\<close> blocks.
 \<close>
 
 interpretation p_reg_join:

@@ -1,11 +1,11 @@
-theory Example_Interval_Codegen
-  imports Exec_Ivl_Run Voblint_Analysis.Interval_Checks "Voblint_Formalization.Run_Analysis_Sound"
+theory Interval_Codegen
+  imports Voblint_Analysis.Interval_Checks "Voblint_Formalization.Run_Analysis_Sound"
 begin
 
 section \<open>Interval codegen API: an arbitrary VIMP program, and its production soundness\<close>
 
 text \<open>
-  Mirrors Sign's \<open>Example_Sign_Codegen\<close>: \<open>analyse_interval_dg_eqs_for\<close>/
+  Mirrors Sign's \<open>Sign_Codegen\<close>: \<open>analyse_interval_dg_eqs_for\<close>/
   \<open>analyse_interval_dg_for\<close>/\<open>analyse_interval_dg_env_for\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>)
   and \<open>analyse_interval_td_report_for\<close>/\<open>analyse_interval_td_report\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) are pure computation, no dependence on the
@@ -415,7 +415,7 @@ text \<open>
   interpretation per update rule --- the locale is generic in \<open>solve\<close>/\<open>solve_c\<close>, so swapping
   \<^const>\<open>TD_side_warrowing_apinis_Interp.solve\<close> for \<^const>\<open>TD_side_always_join_Interp.solve\<close> (here)
   and \<^const>\<open>TD_side_per_origin_Interp.solve\<close> (below) is a like-for-like registration, not a
-  different proof shape. Sign's own soundness (\<open>Example_Sign_Codegen.analyse_sign_sound_for\<close>) is
+  different proof shape. Sign's own soundness (\<open>Sign_Codegen.analyse_sign_sound_for\<close>) is
   exactly this join interpretation already; Interval needed its own copy only because Interval's
   \<open>ivl_tf_for\<close>/\<open>ivl_tf_st_for\<close>/\<open>ivl_enter_st_for\<close> transfer facts differ from Sign's. Each block
   below writes \<^term>\<open>declared_global p\<close> out in full rather than reusing the \<open>pgs\<close> abbreviation:

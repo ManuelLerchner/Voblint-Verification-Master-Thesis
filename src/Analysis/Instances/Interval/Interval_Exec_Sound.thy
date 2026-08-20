@@ -594,7 +594,7 @@ text \<open>
   Only the raw computation lives here --- soundness needs the \<open>base_dg_exec_analysis\<close>
   locale (\<open>Run_Analysis_Sound\<close>, Formalization session), one session later than Analysis
   in the locked six-session chain, so that half stays downstream in
-  \<open>Example_Interval_Codegen\<close> (Examples), mirroring \<open>Example_Sign_Codegen\<close>.
+  \<open>Interval_Codegen\<close> (CLI), mirroring \<open>Sign_Codegen\<close>.
 
   \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>dg_gen_of\<close> needs; its
   content is never read, since every field of \<^const>\<open>base_dg_spec_st_for_lifted\<close>

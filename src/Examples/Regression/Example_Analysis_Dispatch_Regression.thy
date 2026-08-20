@@ -1,10 +1,10 @@
 theory Example_Analysis_Dispatch_Regression
   imports
-    Analyse_Dispatch
+    "Voblint_CLI.Analyse_Dispatch"
 begin
 
 text \<open>
-  Acceptance-regression witnesses for \<^theory>\<open>Voblint_Examples.Analyse_Dispatch\<close>'s
+  Acceptance-regression witnesses for \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>'s
   runtime dispatcher: concrete programs plus \<open>by eval\<close>/proved checks against
   their expected reports. This theory is a consumer of \<open>Analyse_Dispatch\<close>,
   not a source of any production constant it exports -- moving this content
@@ -314,7 +314,7 @@ text \<open>
   \<^const>\<open>analyse_interval_td_report\<close> (the warrowing, native-D/G variant, now what
   \<open>analyse Interval_Analysis\<close> dispatches to) has both the widening and a soundness theorem
   (\<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close>,
-  \<^theory>\<open>Voblint_Examples.Example_Interval_Codegen\<close>) --- and empirically terminates on every
+  \<^theory>\<open>Voblint_CLI.Interval_Codegen\<close>) --- and empirically terminates on every
   case above, including \<open>proc_demo_prog\<close> itself (\<open>proc_demo_interval_terminates\<close> below). Since
   the Base-style migration, globals also live in the same reachability-lifted local unknown as
   locals, so termination no longer costs the always-join backend's precision on the cases below

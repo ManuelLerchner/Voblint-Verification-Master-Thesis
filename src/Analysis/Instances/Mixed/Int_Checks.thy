@@ -217,12 +217,12 @@ subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
 text \<open>
   \<open>analyse_int_report_for\<close> is the report function the exported \<open>analyse\<close>
-  API dispatches to for \<open>Int_Analysis\<close> (see \<open>Analyse_Dispatch\<close>, Examples
+  API dispatches to for \<open>Int_Analysis\<close> (see \<open>Analyse_Dispatch\<close>, CLI
   session, downstream), fixed at \<open>prog_main_name\<close> since
   \<^const>\<open>analyse_int_dg_for\<close> already is, but -- unlike
   \<^const>\<open>analyse_int_result_for\<close>, which is pinned at \<^const>\<open>Refine_Fixpoint\<close>
   -- keeping \<open>mode\<close> as a free parameter, matching the pre-migration
-  definition's own generality (\<open>Example_Int_Codegen\<close> exercises both
+  definition's own generality (\<open>Int_Codegen\<close> exercises both
   refinement modes through this same report function). It reads its
   per-node state through a \<open>monovariant_analysis_result_for\<close> table at that
   \<open>mode\<close> via \<^const>\<open>lookup_context\<close>, mirroring

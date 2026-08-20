@@ -120,7 +120,7 @@ text \<open>
   generated OCaml computes the solved system exactly once per
   report, regardless of how many checks the program has. Mirrors the
   \<open>analyse_sign_report_for_code\<close> fix for the Sign counterpart of this
-  report (\<open>Example_Sign_Codegen\<close>, downstream of this theory).
+  report (\<open>Sign_Codegen\<close>, downstream of this theory).
 \<close>
 
 declare interval_check_report_def [code del]

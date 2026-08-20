@@ -286,7 +286,7 @@ section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
 text \<open>
   \<open>sign_exec_prog\<close> above is the older \<open>side_cfg_T_eff_st\<close> pipeline, mirroring
   \<open>Interval_Exec_Sound\<close>'s \<open>ivl_exec_prog\<close> exactly. The exported runtime API \<open>analyse\<close>
-  (\<open>Analyse_Dispatch\<close>, downstream in Examples) dispatches through a
+  (\<open>Analyse_Dispatch\<close>, downstream in CLI) dispatches through a
   different, newer pipeline instead: the native D/G equation system (\<open>dg_gen_of\<close>,
   \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>) over the Base-style construction
   \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>, so the local unknown is the whole reachability-lifted
@@ -294,7 +294,7 @@ text \<open>
   raw computation lives here --- \<open>analyse_sign_for\<close>'s soundness proof needs the
   \<open>base_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session), one session
   later than Analysis in the locked six-session chain, so that half cannot live in this file; it
-  stays in \<open>Example_Sign_Codegen\<close> (downstream in Examples), which references these definitions
+  stays in \<open>Sign_Codegen\<close> (downstream in CLI), which references these definitions
   with \<open>gs\<close>/\<open>p\<close> applied explicitly.
 
   \<open>G\<close> stays diagonal at \<open>sign exec_dg_st lifted\<close> too, matching what the current
