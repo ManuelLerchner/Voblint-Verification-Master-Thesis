@@ -100,24 +100,47 @@ lemma dispatch_demo_calls_eval:
   "calls (prog_cfg prog_main_name dispatch_demo_prog) = {}"
   unfolding prog_cfg_def by eval
 
+text \<open>
+  Routed-spine cover facts, mirroring the retired \<open>analyse_interval_dg\<close>-based
+  \<open>dispatch_demo_cover_edge_ball\<close>/\<open>dispatch_demo_cover_edge\<close>: \<open>dispatch_demo_prog\<close> is
+  straight-line, so every intra target is covered by the routed solve unconditionally,
+  the same way it was covered by the Base-family solve.
+\<close>
+
+lemma dispatch_demo_terminates:
+  "Interval_Ctx_None_Routed_Sound.ictx_terminates_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog"
+proof (rule Interval_Ctx_None_Routed_Sound.ictx_terminates_prog_warrow_via_solve_c)
+  show "TD_side_warrowing_apinis_Interp_solve_c
+          (Interval_Ctx_None_Routed_Sound.ictx_eqs (declared_global dispatch_demo_prog)
+             (resolved_st_q_is_bot_for (declared_global_vars dispatch_demo_prog))
+             (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog)
+             prog_main_name (prog_main dispatch_demo_prog))
+          (cfg_exit (compile_prog (prog_table dispatch_demo_prog) (prog_procs dispatch_demo_prog)
+                       prog_main_name (prog_main dispatch_demo_prog)), ()) \<noteq> None"
+    by eval
+qed
+
 lemma dispatch_demo_cover_edge_ball:
   "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog).
-     (w, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+     (w, ()) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
   by eval
 
 lemma dispatch_demo_cover_edge:
-  "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog)
-     \<Longrightarrow> (w, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+  "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)
+     \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog)
+     \<Longrightarrow> (w, ctx) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
   using dispatch_demo_cover_edge_ball by auto
+
+lemma dispatch_demo_entry_cov:
+  "(cfg_entry (prog_cfg prog_main_name dispatch_demo_prog), ())
+     \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
+  by eval
 
 theorem dispatch_demo_first_check_certified:
   "\<forall>s \<in> ltr_collect (declared_global dispatch_demo_prog) (prog_cfg prog_main_name dispatch_demo_prog)
            (cinit_stores (declared_global dispatch_demo_prog)) (Statement 1).
      truthy (aval (Less (N 0) (V (STR ''y''))) s)"
 proof (rule analyse_interval_proved_sound)
-  show "TD_side_warrowing_apinis_Interp_solve_c (analyse_interval_dg_eqs dispatch_demo_prog)
-          (cfg_exit (prog_cfg prog_main_name dispatch_demo_prog), ()) \<noteq> None"
-    by eval
   show "wf_compile_input (declared_global dispatch_demo_prog) (prog_table dispatch_demo_prog)
           (prog_procs dispatch_demo_prog) prog_main_name (prog_main dispatch_demo_prog)"
     unfolding wf_compile_input_simps dispatch_demo_prog_def
@@ -125,16 +148,22 @@ proof (rule analyse_interval_proved_sound)
         prog_main_name_def special_table_def special_pname_nondet_int_def
         special_pname_min_def special_pname_max_def
         split: if_splits)
-  show "(cfg_entry (prog_cfg prog_main_name dispatch_demo_prog), ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
-    by eval
-  show "\<And>u a w. (u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog)
-          \<Longrightarrow> (w, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+  show "Interval_Ctx_None_Routed_Sound.ictx_terminates_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog"
+    by (rule dispatch_demo_terminates)
+  show "(cfg_entry (prog_cfg prog_main_name dispatch_demo_prog), ())
+          \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
+    by (rule dispatch_demo_entry_cov)
+  show "\<And>u a w ctx. (u, ctx) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (u, a, w) \<in> intra (prog_cfg prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (w, ctx) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
     by (rule dispatch_demo_cover_edge)
-  show "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
-          \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+  show "\<And>u ctx dst fs as q k. (u, ctx) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (FunctionEntry q, ()) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
     by (simp add: dispatch_demo_calls_eval)
-  show "\<And>c dst fs as q k. (c, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
-          \<Longrightarrow> (k, ()) \<in> fst (analyse_interval_dg dispatch_demo_prog)"
+  show "\<And>cl c1 dst fs as q k. (cl, c1) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name dispatch_demo_prog)
+          \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Routed_Sound.ictx_sol_prog_warrow (declared_global dispatch_demo_prog) prog_main_name dispatch_demo_prog)"
     by (simp add: dispatch_demo_calls_eval)
   show "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved) \<in> set (analyse Interval_Analysis dispatch_demo_prog)"
     unfolding dispatch_demo_interval_precise by simp

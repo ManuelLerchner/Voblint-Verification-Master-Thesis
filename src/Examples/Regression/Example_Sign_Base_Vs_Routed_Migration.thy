@@ -9,19 +9,21 @@ hide_const phase.N
 
 text \<open>
   Scaffolding for the Base-to-routed-unit Sign migration: empirical parity
-  evidence between Sign's production Base-family result
-  (\<^const>\<open>analyse_sign_result\<close>/\<^const>\<open>analyse_sign_report\<close>,
-  \<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>) and the routed-unit-context result proved
-  sound in \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>
-  (\<^const>\<open>analyse_sign_ctx_result\<close>). No equality theorem between the two
-  producers is attempted here: both are independently sound, and the
-  production solver family proves soundness only, never canonicity, so exact
-  executable-result equality between them is not a reachable goal. This
-  theory instead runs concrete \<open>by eval\<close> parity checks across the existing
-  Sign regression corpus plus two new recursion/repeated-call-site programs,
-  to gather migration evidence. Delete this theory once Base/unit is
-  retired, after promoting anything interesting it found into permanent
-  regressions.
+  evidence between Sign's Base-family result (\<open>analyse_sign_base_result\<close>/
+  \<open>analyse_sign_base_report\<close>, defined locally below as exactly the partial
+  application \<^const>\<open>analyse_sign_result_for\<close> itself computed before production's
+  routed-unit cutover) and the routed-unit-context result proved sound in
+  \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close> (\<^const>\<open>analyse_sign_ctx_result\<close>).
+  \<open>Sign_Checks.thy\<close>'s own \<^const>\<open>analyse_sign_result\<close>/\<^const>\<open>analyse_sign_report\<close>
+  are production's public API and, since that cutover, already compute the routed-unit
+  side -- this theory intentionally does not compare against them, to avoid comparing
+  the routed producer against itself. No equality theorem between the two producers is
+  attempted here: both are independently sound, and the production solver family proves
+  soundness only, never canonicity, so exact executable-result equality between them is
+  not a reachable goal. This theory instead runs concrete \<open>by eval\<close> parity checks across
+  the existing Sign regression corpus plus two new recursion/repeated-call-site programs,
+  to gather migration evidence. Delete this theory once Base/unit is retired, after
+  promoting anything interesting it found into permanent regressions.
 \<close>
 
 section \<open>A minimal, comparable check report for the routed-unit producer\<close>
@@ -46,6 +48,35 @@ definition analyse_sign_ctx_report_for ::
 
 definition analyse_sign_ctx_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_ctx_report p = analyse_sign_ctx_report_for (declared_global p) prog_main_name p"
+
+text \<open>
+  \<open>analyse_sign_result\<close>/\<open>analyse_sign_report\<close> (\<open>Sign_Checks.thy\<close>) are production's public
+  API, and production now dispatches to the routed-unit producer, so a comparison needs its
+  own, locally-scoped genuine Base-family side: \<open>analyse_sign_base_result_for\<close> is exactly
+  the partial application \<^const>\<open>analyse_sign_result_for\<close> itself used before that redirect
+  (\<open>monovariant_analysis_result_for\<close> over \<^const>\<open>analyse_sign_for\<close>), so this side's
+  computation is unchanged by the migration, only its name.
+\<close>
+
+definition analyse_sign_base_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_base_result_for gs p =
+     monovariant_analysis_result_for
+       (\<lambda>gs p. analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+
+definition analyse_sign_base_result :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_base_result p = analyse_sign_base_result_for (declared_global p) p"
+
+definition analyse_sign_base_report_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_sign_base_report_for gs p =
+     (let r = analyse_sign_base_result_for gs p
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
+           sign_classify_check)"
+
+definition analyse_sign_base_report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_sign_base_report p = analyse_sign_base_report_for (declared_global p) p"
 
 section \<open>State-level classification machinery\<close>
 
@@ -107,7 +138,7 @@ definition classify_sign_point ::
 definition sign_state_parity_report :: "imp_prog \<Rightarrow> (pp \<times> sign_parity_bucket) list" where
   "sign_state_parity_report p =
      (let vars = program_vars p;
-          base = analyse_sign_result p;
+          base = analyse_sign_base_result p;
           routed = analyse_sign_ctx_result p
       in map (\<lambda>v. (v, classify_sign_point vars (lookup_context base v ()) (lookup_context routed v ())))
              (cfg_node_list (prog_cfg prog_main_name p)))"
@@ -131,7 +162,7 @@ definition sign_state_incomparable_detail ::
     "imp_prog \<Rightarrow> (pp \<times> (vname \<times> sign \<times> sign) list) list" where
   "sign_state_incomparable_detail p =
      (let vars = program_vars p;
-          base = analyse_sign_result p;
+          base = analyse_sign_base_result p;
           routed = analyse_sign_ctx_result p
       in [(v, per_var_diff vars b r).
             v \<leftarrow> cfg_node_list (prog_cfg prog_main_name p),
@@ -162,7 +193,7 @@ definition sign_verdict_parity_report ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> check_result \<times> verdict_parity_bucket) list" where
   "sign_verdict_parity_report p =
      map (\<lambda>((v, c, rb), (_, _, rr)). (v, c, rb, rr, classify_check_pair rb rr))
-       (zip (analyse_sign_report p) (analyse_sign_ctx_report p))"
+       (zip (analyse_sign_base_report p) (analyse_sign_ctx_report p))"
 
 text \<open>Sanity check that the zip above lines up check-for-check: both reports
   walk the identical compiled CFG (\<open>prog_cfg prog_main_name p\<close>) through the
@@ -173,7 +204,7 @@ text \<open>Sanity check that the zip above lines up check-for-check: both repor
 
 definition check_sites_agree :: "imp_prog \<Rightarrow> bool" where
   "check_sites_agree p =
-     (map (\<lambda>(v, c, _). (v, c)) (analyse_sign_report p) =
+     (map (\<lambda>(v, c, _). (v, c)) (analyse_sign_base_report p) =
       map (\<lambda>(v, c, _). (v, c)) (analyse_sign_ctx_report p))"
 
 section \<open>Two new corpus fixtures: recursion and a repeated call site\<close>

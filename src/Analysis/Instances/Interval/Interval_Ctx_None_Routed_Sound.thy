@@ -3,7 +3,7 @@ theory Interval_Ctx_None_Routed_Sound
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Interval_Exec_Sound"
-    "Voblint_Analysis.Interval_Checks"
+    "Voblint_Analysis.Interval_Classify"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.DG_Analysis_Adapter"
@@ -566,7 +566,7 @@ text \<open>
   \<^locale>\<open>unit_routed_context\<close>'s did, at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>.
   Only \<open>classify_proved\<close>/\<open>classify_refuted\<close> are genuinely new, discharged by
   Interval's own \<open>interval_classify_check_proved\<close>/\<open>interval_classify_check_refuted\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>).
+  (\<^theory>\<open>Voblint_Analysis.Interval_Classify\<close>).
 \<close>
 
 interpretation ictx_adapter: dg_analysis_adapter enterc_unit "ictx_abs_spec gs" gs
@@ -637,6 +637,937 @@ lemmas ictx_report_ctx_refuted_sound = ictx_adapter.analyse_report_ctx_refuted_s
 
 end
 
+section \<open>PerOrigin solver instantiation, at the same routed unit-context spec\<close>
+
+text \<open>
+  Mirrors the always-join instantiation above (\<open>ictx_eqs\<close>/\<open>ictx_sol\<close>/\<open>ictx_terminates\<close>)
+  under \<^const>\<open>TD_side_per_origin_Interp_solve\<close> instead, solving the exact same
+  \<open>ictx_eqs\<close> equation system -- mirroring how Interval's own Base family
+  (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) already solves
+  \<open>analyse_interval_dg_eqs_for\<close> under three interchangeable update rules. Genuinely
+  sound: \<^locale>\<open>TD_side_upd_rule\<close>'s \<open>solve_dom\<close>/\<open>partial_post_solution\<close> are
+  locale-generic over the update rule, so \<open>TD_side_per_origin_Interp\<close>'s own
+  \<open>partial_post_solution\<close> instance discharges the same obligation \<open>TD_side_always_join_Interp\<close>'s
+  \<open>partial_post_solution\<close> did above, with no extra premises.
+\<close>
+
+definition ictx_sol_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "ictx_sol_per_origin gs is_bot_pred Pi ps mnm main =
+     TD_side_per_origin_Interp_solve (ictx_eqs gs is_bot_pred Pi ps mnm main)
+       (cfg_exit (compile_prog Pi ps mnm main), ())"
+
+definition ictx_terminates_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "ictx_terminates_per_origin gs is_bot_pred Pi ps mnm main =
+     TD_side_per_origin_Interp.solve_dom TYPE(gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       (ictx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())"
+
+lemma ictx_terminates_per_origin_via_solve_c:
+  assumes "TD_side_per_origin_Interp_solve_c (ictx_eqs gs is_bot_pred Pi ps mnm main)
+             (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
+  shows "ictx_terminates_per_origin gs is_bot_pred Pi ps mnm main"
+  unfolding ictx_terminates_per_origin_def TD_side_per_origin_Interp.term_equivalence
+            TD_side_per_origin_Interp.solve_c_dom_def
+  using assms by simp
+
+subsection \<open>The certified executable post-solution, generic per compiled program\<close>
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
+  assumes solves: "ictx_terminates_per_origin gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+lemma ictx_solve_dom_per_origin:
+  "TD_side_per_origin_Interp.solve_dom TYPE(gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+     (ictx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())"
+  using solves
+  unfolding ictx_terminates_per_origin_def TD_side_per_origin_Interp.term_equivalence
+            TD_side_per_origin_Interp.solve_c_dom_def
+  by simp
+
+lemma ictx_pp_st_per_origin:
+  "part_post_solution (ictx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())
+     (snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))"
+  using TD_side_upd_rule.TD_side_per_origin_Interp.partial_post_solution
+          [OF ictx_solve_dom_per_origin, of "fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+             "snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"]
+  unfolding ictx_sol_per_origin_def by simp
+
+theorem ictx_pp_abs_per_origin:
+  "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+        (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+        (routed_extra_g Seed Global)
+        (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
+        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)))
+     (cfg_exit (compile_prog Pi ps mnm main), ())
+     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+        \<circ> snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))
+     (fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))"
+proof -
+  have pp'_buf: "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+          route_unit
+          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))"
+    using ictx_pp_st_per_origin unfolding ictx_eqs_def by simp
+  have seed_ne_global: "\<And>p c. Seed p c \<noteq> Global" by simp
+  have pp': "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+          (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))"
+  proof (rule part_post_solution_seed_dg_buffered_to_old
+      [where cmb_c = "routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed"])
+    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau>)
+           = locals (traverse_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau>)"
+      by (rule routed_cmb_g_contribution_matches_local)
+    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c'))) = bot"
+      by (rule routed_cmb_g_side_pure[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau>)
+           = globs (sides_of_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')))"
+      by (rule routed_cmb_g_contribution_matches_global[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')) = bot"
+      by (rule routed_cmb_g_contribution_free_at_key[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Global) c') \<Longrightarrow> sides_of_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> z
+           = sides_of_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> z"
+      by (rule routed_cmb_g_contribution_sides_off_key[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex)
+           = dep_aux \<tau>
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex)"
+      by (rule routed_cmb_g_contribution_dep)
+    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Seed Global route_unit c' w)
+           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
+      by (rule routed_extra_g_free)
+    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Seed Global route_unit c' w)
+           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
+      by (rule routed_extra_g_local_only)
+    show "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+          route_unit
+          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))"
+      by (rule pp'_buf)
+  qed
+  have ictx_Hstep_ctx:
+    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+       (dg_spec_step (ictx_spec gs is_bot_pred) a d g') =
+       dg_spec_step (ictx_abs_spec gs) a
+         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
+    unfolding ictx_spec_def ictx_abs_spec_def by (rule ictx_Hstep_lifted_for[OF exact])
+  show ?thesis
+    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
+          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
+             and route_st = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> unit"
+             and route_abs = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> unit"
+             and cmb_st = "routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed"
+             and cmb_abs = "routed_cmb_g (ictx_abs_spec gs) Global Seed"
+             and extra_st = "routed_extra_g Seed Global"
+             and extra_abs = "routed_extra_g Seed Global"
+             and g = "compile_prog Pi ps mnm main" and S_st = "ictx_spec gs is_bot_pred" and S_abs = "ictx_abs_spec gs"])
+        apply (rule ictx_Hstep_ctx)
+       apply (rule route_unit_commute)
+      apply (rule dg_tree_st_commute_routed_cmb_g_ictx[OF exact])
+     apply (rule hextra_commute_routed_ictx)
+    apply (rule pp')
+    done
+qed
+
+end
+
+section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
+
+text \<open>
+  Executable twins of the context's own \<open>ictx_sigma_abs_per_origin\<close>/\<open>ictx_sg_per_origin\<close> (below),
+  defined before that context so their equations are unconditional -- mirrors
+  Interval's \<open>entry_state_sigma_abs_exec\<close>/\<open>entry_state_sg_exec\<close> convention
+  exactly.
+\<close>
+
+definition ictx_sigma_abs_exec_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
+  "ictx_sigma_abs_exec_per_origin gs is_bot_pred Pi ps mnm main =
+     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+       \<circ> snd (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+
+definition ictx_sg_exec_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> ivl abs_state lifted" where
+  "ictx_sg_exec_per_origin gs is_bot_pred Pi ps mnm main k =
+     (case k of
+        Inl (v, ctx) \<Rightarrow>
+          (if (v, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)
+           then locals (ictx_sigma_abs_exec_per_origin gs is_bot_pred Pi ps mnm main (Inl (v, ctx)))
+           else Bot)
+      | Inr _ \<Rightarrow> Bot)"
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
+  assumes solves: "ictx_terminates_per_origin gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+                   \<Longrightarrow> (v, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
+        (u, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
+        (cl, c1) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (cont, c1) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+begin
+
+subsection \<open>The semantic solution projection\<close>
+
+definition ictx_sigma_abs_per_origin :: "pp \<times> unit + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
+  "ictx_sigma_abs_per_origin = ictx_sigma_abs_exec_per_origin gs is_bot_pred Pi ps mnm main"
+
+definition ictx_sg_per_origin :: "pp \<times> unit + gk \<Rightarrow> ivl abs_state lifted" where
+  "ictx_sg_per_origin = ictx_sg_exec_per_origin gs is_bot_pred Pi ps mnm main"
+
+lemma ictx_fin_per_origin: "finite (intra (compile_prog Pi ps mnm main))"
+  using compile_prog_finite by blast
+
+lemma ictx_finC_per_origin: "finite (calls (compile_prog Pi ps mnm main))"
+  using compile_prog_finite by blast
+
+lemma ictx_sg_covered_per_origin:
+  "(v, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)
+   \<Longrightarrow> ictx_sg_per_origin (Inl (v, ctx)) = locals (ictx_sigma_abs_per_origin (Inl (v, ctx)))"
+  by (simp add: ictx_sg_per_origin_def ictx_sg_exec_per_origin_def ictx_sigma_abs_per_origin_def ictx_sigma_abs_exec_per_origin_def)
+
+lemma ictx_sg_uncovered_empty_per_origin:
+  "(v, ctx) \<notin> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)
+     \<Longrightarrow> gamma_state_lift (ictx_sg_per_origin (Inl (v, ctx))) = {}"
+  by (simp add: ictx_sg_per_origin_def ictx_sg_exec_per_origin_def)
+
+subsection \<open>Instantiating the generic DG-native activation discharge\<close>
+
+interpretation ictx_dg_base_per_origin: sound_dg_spec "ictx_abs_spec gs" gamma_dg_base gs
+  unfolding ictx_abs_spec_def
+  by (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_bot_state_gamma_state_empty])
+
+interpretation ictx_dg_per_origin: dg_ctx_activation_base "ictx_abs_spec gs" gamma_dg_base gs
+    "compile_prog Pi ps mnm main" Global route_unit
+    "routed_cmb_g (ictx_abs_spec gs) Global Seed"
+    "routed_extra_g Seed Global"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    ictx_sigma_abs_per_origin "fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" ictx_sg_per_origin gamma_state_lift
+proof unfold_locales
+  show "finite (intra (compile_prog Pi ps mnm main))" by (rule ictx_fin_per_origin)
+next
+  show "part_post_solution
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+             (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+             (routed_extra_g Seed Global)
+             (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
+             (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
+             (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+             (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)))
+          (cfg_exit (compile_prog Pi ps mnm main), ()) ictx_sigma_abs_per_origin
+          (fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main))"
+    unfolding ictx_sigma_abs_per_origin_def ictx_sigma_abs_exec_per_origin_def
+    by (rule ictx_pp_abs_per_origin[OF solves exact])
+next
+  fix v ctx assume "(v, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+  thus "gamma_state_lift (ictx_sg_per_origin (Inl (v, ctx)))
+          = gamma_dg_base (locals (ictx_sigma_abs_per_origin (Inl (v, ctx)))) (globs (ictx_sigma_abs_per_origin (Inr Global)))"
+    by (simp add: ictx_sg_covered_per_origin gamma_dg_base_def)
+next
+  fix v ctx assume "(v, ctx) \<notin> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+  thus "gamma_state_lift (ictx_sg_per_origin (Inl (v, ctx))) = {}"
+    by (rule ictx_sg_uncovered_empty_per_origin)
+next
+  fix u a v ctx assume "(u, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    "(u, a, v) \<in> intra (compile_prog Pi ps mnm main)"
+  thus "(v, ctx) \<in> fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)" by (rule fwd_ok)
+qed
+
+subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
+
+interpretation ictx_routed_per_origin: unit_routed_context "ictx_abs_spec gs" gamma_dg_base gs
+    "compile_prog Pi ps mnm main" Global
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    ictx_sigma_abs_per_origin "fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" ictx_sg_per_origin
+    Seed gamma_state_lift
+proof (unfold_locales, goal_cases FinC SeedKey CallFwd CombFwd EnterAgree)
+  case FinC show ?case by (rule ictx_finC_per_origin)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case
+    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) comb_fwd_ok by blast
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+qed
+
+lemma ictx_sg_seed_per_origin:
+  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+    and "s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (u, ctx)))"
+  shows "call_enter gs (CallEdge dst xs es) s
+           \<in> gamma_state_lift (ictx_sg_per_origin (Inl (FunctionEntry p, ())))"
+  using ictx_routed_per_origin.routed_context_call[OF assms] by simp
+
+lemma ictx_sg_comb_per_origin:
+  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps mnm main)"
+    and "s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (cl, c1)))"
+    and "t \<in> gamma_state_lift (ictx_sg_per_origin (Inl (FunctionResult p, ())))"
+    and "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
+  shows "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg_per_origin (Inl (v, c1)))"
+  using ictx_routed_per_origin.routed_context_comb[OF assms(1,2) _ assms(4)] assms(3) by simp
+
+subsection \<open>Activation-indexed collecting soundness\<close>
+
+lemma ictx_cinit_le_cinit_ivl_st_per_origin:
+  "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def fun_of_st_cinit_ivl_st)
+
+lemma ictx_locals_ge_s0d_per_origin:
+  "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)
+     \<le> locals (ictx_sigma_abs_per_origin (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
+proof -
+  have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)
+      \<le> locals (eq ictx_dg_per_origin.Gen (cfg_entry (compile_prog Pi ps mnm main), ()) ictx_sigma_abs_per_origin)"
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
+  also have "\<dots> \<le> locals (ictx_sigma_abs_per_origin (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
+    using ictx_dg_per_origin.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+theorem ictx_activation_collect_sound_per_origin:
+  "activation_collect gs (admiss_exact enterc_unit) () (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
+     \<subseteq> gamma_state_lift (ictx_sg_per_origin (Inl (v, ctx)))"
+proof (rule activation_collect_sound_gen[where sg = ictx_sg_per_origin and gammaM = gamma_state_lift
+        and admiss = "admiss_exact enterc_unit"
+        and startcontext = "()" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+  \<comment> \<open>ENTRY_G\<close>
+  fix s assume "s \<in> cinit_stores gs"
+  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))"
+    using ictx_cinit_le_cinit_ivl_st_per_origin by blast
+  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+            (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))"
+    by (simp add: gamma_dg_base_def)
+  also have "\<dots> \<subseteq> gamma_dg_base (locals (ictx_sigma_abs_per_origin (Inl (cfg_entry (compile_prog Pi ps mnm main), ()))))
+                   (globs (ictx_sigma_abs_per_origin (Inr Global)))"
+    by (rule gamma_dg_base_mono[OF ictx_locals_ge_s0d_per_origin ictx_dg_per_origin.pp_entry_s0g_bound[OF entry_cov]])
+  also have "\<dots> = gamma_state_lift (ictx_sg_per_origin (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
+    unfolding ictx_sg_covered_per_origin[OF entry_cov] gamma_dg_base_def by (rule refl)
+  finally show "s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))" .
+next
+  \<comment> \<open>EDGE\<close>
+  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+        \<Longrightarrow> s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
+        \<Longrightarrow> s' \<in> gamma_state_lift (ictx_sg_per_origin (Inl (v, c)))"
+    by (rule ictx_dg_per_origin.dg_ctx_act_edge)
+next
+  \<comment> \<open>ADMISS_TOTAL\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact enterc_unit u c s c'"
+    by (simp add: admiss_exact_def)
+next
+  \<comment> \<open>CALL\<close>
+  fix u dst pars args p cont c s c'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+    and sm: "s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (u, c)))"
+    and adm: "admiss_exact enterc_unit u c (call_enter gs (CallEdge dst pars args) s) c'"
+  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (FunctionEntry p, c')))"
+    using adm ictx_sg_seed_per_origin[OF ce sm] by (simp add: admiss_exact_def)
+next
+  \<comment> \<open>COMB\<close>
+  fix cl dst pars args p cont c1 c2 s t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+    and sm: "s \<in> gamma_state_lift (ictx_sg_per_origin (Inl (cl, c1)))"
+    and adm: "admiss_exact enterc_unit cl c1 es c2"
+    and tm: "t \<in> gamma_state_lift (ictx_sg_per_origin (Inl (FunctionResult p, c2)))"
+    and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
+  show "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg_per_origin (Inl (cont, c1)))"
+    using adm tm ictx_sg_comb_per_origin[OF ce sm _ ces] by (simp add: admiss_exact_def)
+qed
+
+subsection \<open>The generic report adapter\<close>
+
+interpretation ictx_adapter_per_origin: dg_analysis_adapter enterc_unit "ictx_abs_spec gs" gs
+    "compile_prog Pi ps mnm main" Global route_unit
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    ictx_sigma_abs_per_origin "fst (ictx_sol_per_origin gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" ictx_sg_per_origin
+    Seed interval_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+  case FinE show ?case by (rule ictx_fin_per_origin)
+next
+  case PP show ?case
+    unfolding ictx_sigma_abs_per_origin_def ictx_sigma_abs_exec_per_origin_def by (rule ictx_pp_abs_per_origin[OF solves exact])
+next
+  case (SgCov v c)
+  thus ?case
+    by (simp add: ictx_sg_covered_per_origin gamma_dg_base_def)
+next
+  case (SgUncov v c)
+  thus ?case by (rule ictx_sg_uncovered_empty_per_origin)
+next
+  case (Fwd u a v c)
+  thus ?case by (rule fwd_ok)
+next
+  case FinC show ?case by (rule ictx_finC_per_origin)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (RouteEnterc u ctx dst pars args p cont s)
+  show ?case by simp
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case
+    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) comb_fwd_ok by blast
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+next
+  case (ClProved c d s)
+  thus ?case by (rule interval_classify_check_proved)
+next
+  case (ClRefuted c d s)
+  thus ?case by (rule interval_classify_check_refuted)
+qed
+
+lemmas ictx_report_ctx_proved_sound_per_origin = ictx_adapter_per_origin.analyse_report_ctx_proved_sound
+lemmas ictx_report_ctx_refuted_sound_per_origin = ictx_adapter_per_origin.analyse_report_ctx_refuted_sound
+
+end
+
+section \<open>Apinis warrowing solver instantiation, at the same routed unit-context spec\<close>
+
+text \<open>
+  Interval production's default solver: mirrors the always-join instantiation above under
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> instead, solving the exact same \<open>ictx_eqs\<close>
+  equation system -- exactly as Interval's own entry-state contextual mode
+  (\<open>Interval_Exec_Ctx_Sound\<close>) already does. That file's own soundness derivation needs no
+  \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close> bridging fact: those facts are needed only by the
+  Base family's separate \<open>restrict_global_resolved_q\<close> bookkeeping for its flow-insensitive
+  global slot (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>), which the routed spine's
+  keyed-seed \<open>Global\<close>/\<open>Seed\<close> globals replace outright. \<open>TD_side_upd_rule\<close>'s
+  \<open>solve_dom\<close>/\<open>partial_post_solution\<close> being locale-generic over the update rule (as for
+  PerOrigin above) is exactly what makes this a mechanical solver-call swap here too.
+\<close>
+
+definition ictx_sol_warrow ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "ictx_sol_warrow gs is_bot_pred Pi ps mnm main =
+     TD_side_warrowing_apinis_Interp_solve (ictx_eqs gs is_bot_pred Pi ps mnm main)
+       (cfg_exit (compile_prog Pi ps mnm main), ())"
+
+definition ictx_terminates_warrow ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "ictx_terminates_warrow gs is_bot_pred Pi ps mnm main =
+     TD_side_warrowing_apinis_Interp.solve_dom TYPE(gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       (ictx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())"
+
+lemma ictx_terminates_warrow_via_solve_c:
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (ictx_eqs gs is_bot_pred Pi ps mnm main)
+             (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
+  shows "ictx_terminates_warrow gs is_bot_pred Pi ps mnm main"
+  unfolding ictx_terminates_warrow_def TD_side_warrowing_apinis_Interp.term_equivalence
+            TD_side_warrowing_apinis_Interp.solve_c_dom_def
+  using assms by simp
+
+subsection \<open>The certified executable post-solution, generic per compiled program\<close>
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
+  assumes solves: "ictx_terminates_warrow gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+lemma ictx_solve_dom_warrow:
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(gk) TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+     (ictx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())"
+  using solves
+  unfolding ictx_terminates_warrow_def TD_side_warrowing_apinis_Interp.term_equivalence
+            TD_side_warrowing_apinis_Interp.solve_c_dom_def
+  by simp
+
+lemma ictx_pp_st_warrow:
+  "part_post_solution (ictx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())
+     (snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))"
+  using TD_side_upd_rule.TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF ictx_solve_dom_warrow, of "fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+             "snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"]
+  unfolding ictx_sol_warrow_def by simp
+
+theorem ictx_pp_abs_warrow:
+  "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+        (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+        (routed_extra_g Seed Global)
+        (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
+        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)))
+     (cfg_exit (compile_prog Pi ps mnm main), ())
+     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+        \<circ> snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))
+     (fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))"
+proof -
+  have pp'_buf: "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+          route_unit
+          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))"
+    using ictx_pp_st_warrow unfolding ictx_eqs_def by simp
+  have seed_ne_global: "\<And>p c. Seed p c \<noteq> Global" by simp
+  have pp': "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+          (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))"
+  proof (rule part_post_solution_seed_dg_buffered_to_old
+      [where cmb_c = "routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed"])
+    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau>)
+           = locals (traverse_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau>)"
+      by (rule routed_cmb_g_contribution_matches_local)
+    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c'))) = bot"
+      by (rule routed_cmb_g_side_pure[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau>)
+           = globs (sides_of_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')))"
+      by (rule routed_cmb_g_contribution_matches_global[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')) = bot"
+      by (rule routed_cmb_g_contribution_free_at_key[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Global) c') \<Longrightarrow> sides_of_rhs
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> z
+           = sides_of_rhs
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex) \<tau> z"
+      by (rule routed_cmb_g_contribution_sides_off_key[of Seed Global, OF seed_ne_global])
+    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
+             (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex)
+           = dep_aux \<tau>
+             (routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed
+               route_unit c' ca cc ex)"
+      by (rule routed_cmb_g_contribution_dep)
+    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Seed Global route_unit c' w)
+           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
+      by (rule routed_extra_g_free)
+    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Seed Global route_unit c' w)
+           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
+      by (rule routed_extra_g_local_only)
+    show "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+          route_unit
+          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)) (fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))"
+      by (rule pp'_buf)
+  qed
+  have ictx_Hstep_ctx:
+    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+       (dg_spec_step (ictx_spec gs is_bot_pred) a d g') =
+       dg_spec_step (ictx_abs_spec gs) a
+         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
+    unfolding ictx_spec_def ictx_abs_spec_def by (rule ictx_Hstep_lifted_for[OF exact])
+  show ?thesis
+    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
+          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
+             and route_st = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> unit"
+             and route_abs = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> unit"
+             and cmb_st = "routed_cmb_g (ictx_spec gs is_bot_pred) Global Seed"
+             and cmb_abs = "routed_cmb_g (ictx_abs_spec gs) Global Seed"
+             and extra_st = "routed_extra_g Seed Global"
+             and extra_abs = "routed_extra_g Seed Global"
+             and g = "compile_prog Pi ps mnm main" and S_st = "ictx_spec gs is_bot_pred" and S_abs = "ictx_abs_spec gs"])
+        apply (rule ictx_Hstep_ctx)
+       apply (rule route_unit_commute)
+      apply (rule dg_tree_st_commute_routed_cmb_g_ictx[OF exact])
+     apply (rule hextra_commute_routed_ictx)
+    apply (rule pp')
+    done
+qed
+
+end
+
+section \<open>Activation-indexed collecting soundness, generic per compiled program\<close>
+
+text \<open>
+  Executable twins of the context's own \<open>ictx_sigma_abs_warrow\<close>/\<open>ictx_sg_warrow\<close> (below),
+  defined before that context so their equations are unconditional -- mirrors
+  Interval's \<open>entry_state_sigma_abs_exec\<close>/\<open>entry_state_sg_exec\<close> convention
+  exactly.
+\<close>
+
+definition ictx_sigma_abs_exec_warrow ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
+  "ictx_sigma_abs_exec_warrow gs is_bot_pred Pi ps mnm main =
+     fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+       \<circ> snd (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+
+definition ictx_sg_exec_warrow ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> pp \<times> unit + gk \<Rightarrow> ivl abs_state lifted" where
+  "ictx_sg_exec_warrow gs is_bot_pred Pi ps mnm main k =
+     (case k of
+        Inl (v, ctx) \<Rightarrow>
+          (if (v, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)
+           then locals (ictx_sigma_abs_exec_warrow gs is_bot_pred Pi ps mnm main (Inl (v, ctx)))
+           else Bot)
+      | Inr _ \<Rightarrow> Bot)"
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
+  assumes solves: "ictx_terminates_warrow gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+                   \<Longrightarrow> (v, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
+        (u, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
+        (cl, c1) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (cont, c1) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+begin
+
+subsection \<open>The semantic solution projection\<close>
+
+definition ictx_sigma_abs_warrow :: "pp \<times> unit + gk \<Rightarrow> (ivl abs_state lifted, ivl abs_state lifted) dg_state" where
+  "ictx_sigma_abs_warrow = ictx_sigma_abs_exec_warrow gs is_bot_pred Pi ps mnm main"
+
+definition ictx_sg_warrow :: "pp \<times> unit + gk \<Rightarrow> ivl abs_state lifted" where
+  "ictx_sg_warrow = ictx_sg_exec_warrow gs is_bot_pred Pi ps mnm main"
+
+lemma ictx_fin_warrow: "finite (intra (compile_prog Pi ps mnm main))"
+  using compile_prog_finite by blast
+
+lemma ictx_finC_warrow: "finite (calls (compile_prog Pi ps mnm main))"
+  using compile_prog_finite by blast
+
+lemma ictx_sg_covered_warrow:
+  "(v, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)
+   \<Longrightarrow> ictx_sg_warrow (Inl (v, ctx)) = locals (ictx_sigma_abs_warrow (Inl (v, ctx)))"
+  by (simp add: ictx_sg_warrow_def ictx_sg_exec_warrow_def ictx_sigma_abs_warrow_def ictx_sigma_abs_exec_warrow_def)
+
+lemma ictx_sg_uncovered_empty_warrow:
+  "(v, ctx) \<notin> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)
+     \<Longrightarrow> gamma_state_lift (ictx_sg_warrow (Inl (v, ctx))) = {}"
+  by (simp add: ictx_sg_warrow_def ictx_sg_exec_warrow_def)
+
+subsection \<open>Instantiating the generic DG-native activation discharge\<close>
+
+interpretation ictx_dg_base_warrow: sound_dg_spec "ictx_abs_spec gs" gamma_dg_base gs
+  unfolding ictx_abs_spec_def
+  by (rule base_dg_spec_sound[OF ivl_is_sound_transfer_for is_bot_state_gamma_state_empty])
+
+interpretation ictx_dg_warrow: dg_ctx_activation_base "ictx_abs_spec gs" gamma_dg_base gs
+    "compile_prog Pi ps mnm main" Global route_unit
+    "routed_cmb_g (ictx_abs_spec gs) Global Seed"
+    "routed_extra_g Seed Global"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    ictx_sigma_abs_warrow "fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" ictx_sg_warrow gamma_state_lift
+proof unfold_locales
+  show "finite (intra (compile_prog Pi ps mnm main))" by (rule ictx_fin_warrow)
+next
+  show "part_post_solution
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+             (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+             (routed_extra_g Seed Global)
+             (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
+             (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
+             (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+             (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)))
+          (cfg_exit (compile_prog Pi ps mnm main), ()) ictx_sigma_abs_warrow
+          (fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main))"
+    unfolding ictx_sigma_abs_warrow_def ictx_sigma_abs_exec_warrow_def
+    by (rule ictx_pp_abs_warrow[OF solves exact])
+next
+  fix v ctx assume "(v, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+  thus "gamma_state_lift (ictx_sg_warrow (Inl (v, ctx)))
+          = gamma_dg_base (locals (ictx_sigma_abs_warrow (Inl (v, ctx)))) (globs (ictx_sigma_abs_warrow (Inr Global)))"
+    by (simp add: ictx_sg_covered_warrow gamma_dg_base_def)
+next
+  fix v ctx assume "(v, ctx) \<notin> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+  thus "gamma_state_lift (ictx_sg_warrow (Inl (v, ctx))) = {}"
+    by (rule ictx_sg_uncovered_empty_warrow)
+next
+  fix u a v ctx assume "(u, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    "(u, a, v) \<in> intra (compile_prog Pi ps mnm main)"
+  thus "(v, ctx) \<in> fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)" by (rule fwd_ok)
+qed
+
+subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
+
+interpretation ictx_routed_warrow: unit_routed_context "ictx_abs_spec gs" gamma_dg_base gs
+    "compile_prog Pi ps mnm main" Global
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    ictx_sigma_abs_warrow "fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" ictx_sg_warrow
+    Seed gamma_state_lift
+proof (unfold_locales, goal_cases FinC SeedKey CallFwd CombFwd EnterAgree)
+  case FinC show ?case by (rule ictx_finC_warrow)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case
+    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) comb_fwd_ok by blast
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+qed
+
+lemma ictx_sg_seed_warrow:
+  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+    and "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (u, ctx)))"
+  shows "call_enter gs (CallEdge dst xs es) s
+           \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionEntry p, ())))"
+  using ictx_routed_warrow.routed_context_call[OF assms] by simp
+
+lemma ictx_sg_comb_warrow:
+  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps mnm main)"
+    and "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (cl, c1)))"
+    and "t \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionResult p, ())))"
+    and "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
+  shows "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg_warrow (Inl (v, c1)))"
+  using ictx_routed_warrow.routed_context_comb[OF assms(1,2) _ assms(4)] assms(3) by simp
+
+subsection \<open>Activation-indexed collecting soundness\<close>
+
+lemma ictx_cinit_le_cinit_ivl_st_warrow:
+  "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))"
+  by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def fun_of_st_cinit_ivl_st)
+
+lemma ictx_locals_ge_s0d_warrow:
+  "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)
+     \<le> locals (ictx_sigma_abs_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
+proof -
+  have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)
+      \<le> locals (eq ictx_dg_warrow.Gen (cfg_entry (compile_prog Pi ps mnm main), ()) ictx_sigma_abs_warrow)"
+    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
+       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
+  also have "\<dots> \<le> locals (ictx_sigma_abs_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
+    using ictx_dg_warrow.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
+  finally show ?thesis .
+qed
+
+theorem ictx_activation_collect_sound_warrow:
+  "activation_collect gs (admiss_exact enterc_unit) () (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
+     \<subseteq> gamma_state_lift (ictx_sg_warrow (Inl (v, ctx)))"
+proof (rule activation_collect_sound_gen[where sg = ictx_sg_warrow and gammaM = gamma_state_lift
+        and admiss = "admiss_exact enterc_unit"
+        and startcontext = "()" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
+  \<comment> \<open>ENTRY_G\<close>
+  fix s assume "s \<in> cinit_stores gs"
+  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))"
+    using ictx_cinit_le_cinit_ivl_st_warrow by blast
+  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+            (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))"
+    by (simp add: gamma_dg_base_def)
+  also have "\<dots> \<subseteq> gamma_dg_base (locals (ictx_sigma_abs_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ()))))
+                   (globs (ictx_sigma_abs_warrow (Inr Global)))"
+    by (rule gamma_dg_base_mono[OF ictx_locals_ge_s0d_warrow ictx_dg_warrow.pp_entry_s0g_bound[OF entry_cov]])
+  also have "\<dots> = gamma_state_lift (ictx_sg_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
+    unfolding ictx_sg_covered_warrow[OF entry_cov] gamma_dg_base_def by (rule refl)
+  finally show "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))" .
+next
+  \<comment> \<open>EDGE\<close>
+  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+        \<Longrightarrow> s \<in> gamma_state_lift (ictx_sg_warrow (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
+        \<Longrightarrow> s' \<in> gamma_state_lift (ictx_sg_warrow (Inl (v, c)))"
+    by (rule ictx_dg_warrow.dg_ctx_act_edge)
+next
+  \<comment> \<open>ADMISS_TOTAL\<close>
+  show "\<And>u c s. \<exists>c'. admiss_exact enterc_unit u c s c'"
+    by (simp add: admiss_exact_def)
+next
+  \<comment> \<open>CALL\<close>
+  fix u dst pars args p cont c s c'
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+    and sm: "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (u, c)))"
+    and adm: "admiss_exact enterc_unit u c (call_enter gs (CallEdge dst pars args) s) c'"
+  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionEntry p, c')))"
+    using adm ictx_sg_seed_warrow[OF ce sm] by (simp add: admiss_exact_def)
+next
+  \<comment> \<open>COMB\<close>
+  fix cl dst pars args p cont c1 c2 s t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+    and sm: "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (cl, c1)))"
+    and adm: "admiss_exact enterc_unit cl c1 es c2"
+    and tm: "t \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionResult p, c2)))"
+    and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
+  show "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg_warrow (Inl (cont, c1)))"
+    using adm tm ictx_sg_comb_warrow[OF ce sm _ ces] by (simp add: admiss_exact_def)
+qed
+
+subsection \<open>The generic report adapter\<close>
+
+interpretation ictx_adapter_warrow: dg_analysis_adapter enterc_unit "ictx_abs_spec gs" gs
+    "compile_prog Pi ps mnm main" Global route_unit
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
+    ictx_sigma_abs_warrow "fst (ictx_sol_warrow gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" ictx_sg_warrow
+    Seed interval_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+  case FinE show ?case by (rule ictx_fin_warrow)
+next
+  case PP show ?case
+    unfolding ictx_sigma_abs_warrow_def ictx_sigma_abs_exec_warrow_def by (rule ictx_pp_abs_warrow[OF solves exact])
+next
+  case (SgCov v c)
+  thus ?case
+    by (simp add: ictx_sg_covered_warrow gamma_dg_base_def)
+next
+  case (SgUncov v c)
+  thus ?case by (rule ictx_sg_uncovered_empty_warrow)
+next
+  case (Fwd u a v c)
+  thus ?case by (rule fwd_ok)
+next
+  case FinC show ?case by (rule ictx_finC_warrow)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (RouteEnterc u ctx dst pars args p cont s)
+  show ?case by simp
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case
+    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) comb_fwd_ok by blast
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+next
+  case (ClProved c d s)
+  thus ?case by (rule interval_classify_check_proved)
+next
+  case (ClRefuted c d s)
+  thus ?case by (rule interval_classify_check_refuted)
+qed
+
+lemmas ictx_report_ctx_proved_sound_warrow = ictx_adapter_warrow.analyse_report_ctx_proved_sound
+lemmas ictx_report_ctx_refuted_sound_warrow = ictx_adapter_warrow.analyse_report_ctx_refuted_sound
+
+end
+
 section \<open>Solved-result table\<close>
 
 text \<open>
@@ -697,5 +1628,103 @@ lemma analyse_interval_ctx_result_for_code [code]:
 definition analyse_interval_ctx_result :: "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
   "analyse_interval_ctx_result p =
      analyse_interval_ctx_result_for (declared_global p) prog_main_name p"
+
+subsection \<open>Solved-result tables: PerOrigin and Apinis warrowing siblings\<close>
+
+text \<open>
+  Mirror \<open>ictx_sol_prog\<close>/\<open>ictx_terminates_prog\<close>/\<open>analyse_interval_ctx_result_for\<close> (the Join
+  table above) at the PerOrigin and Apinis warrowing solvers, reading the same
+  \<open>ictx_eqs_prog\<close> equation system: the three-solver orthogonality Interval's Base family
+  already has (\<open>analyse_interval_dg_for\<close>/\<open>_join_for\<close>/\<open>_per_origin_for\<close>,
+  \<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) now also holds at the routed spine.
+\<close>
+
+definition ictx_sol_prog_per_origin ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "ictx_sol_prog_per_origin gs mnm p =
+     TD_side_per_origin_Interp_solve (ictx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ())"
+
+definition ictx_terminates_prog_per_origin :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "ictx_terminates_prog_per_origin gs mnm p =
+     ictx_terminates_per_origin gs (resolved_st_q_is_bot_for (declared_global_vars p))
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+lemma ictx_terminates_prog_per_origin_via_solve_c:
+  assumes "TD_side_per_origin_Interp_solve_c
+             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+                (prog_table p) (prog_procs p) mnm (prog_main p))
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), ()) \<noteq> None"
+  shows "ictx_terminates_prog_per_origin gs mnm p"
+  unfolding ictx_terminates_prog_per_origin_def
+  using assms by (rule ictx_terminates_per_origin_via_solve_c)
+
+definition analyse_interval_ctx_result_per_origin_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_ctx_result_per_origin_for gs mnm p =
+     Analysis_Result
+       (fst (ictx_sol_prog_per_origin gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (ictx_sol_prog_per_origin gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_interval_ctx_result_per_origin_for_def [code del]
+
+lemma analyse_interval_ctx_result_per_origin_for_code [code]:
+  "analyse_interval_ctx_result_per_origin_for gs mnm p =
+     (let sol = ictx_sol_prog_per_origin gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_interval_ctx_result_per_origin_for_def Let_def by (rule refl)
+
+definition analyse_interval_ctx_result_per_origin :: "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_ctx_result_per_origin p =
+     analyse_interval_ctx_result_per_origin_for (declared_global p) prog_main_name p"
+
+definition ictx_sol_prog_warrow ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "ictx_sol_prog_warrow gs mnm p =
+     TD_side_warrowing_apinis_Interp_solve (ictx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ())"
+
+definition ictx_terminates_prog_warrow :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "ictx_terminates_prog_warrow gs mnm p =
+     ictx_terminates_warrow gs (resolved_st_q_is_bot_for (declared_global_vars p))
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+lemma ictx_terminates_prog_warrow_via_solve_c:
+  assumes "TD_side_warrowing_apinis_Interp_solve_c
+             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+                (prog_table p) (prog_procs p) mnm (prog_main p))
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), ()) \<noteq> None"
+  shows "ictx_terminates_prog_warrow gs mnm p"
+  unfolding ictx_terminates_prog_warrow_def
+  using assms by (rule ictx_terminates_warrow_via_solve_c)
+
+definition analyse_interval_ctx_result_warrow_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_ctx_result_warrow_for gs mnm p =
+     Analysis_Result
+       (fst (ictx_sol_prog_warrow gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (ictx_sol_prog_warrow gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_interval_ctx_result_warrow_for_def [code del]
+
+lemma analyse_interval_ctx_result_warrow_for_code [code]:
+  "analyse_interval_ctx_result_warrow_for gs mnm p =
+     (let sol = ictx_sol_prog_warrow gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_interval_ctx_result_warrow_for_def Let_def by (rule refl)
+
+definition analyse_interval_ctx_result_warrow :: "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_ctx_result_warrow p =
+     analyse_interval_ctx_result_warrow_for (declared_global p) prog_main_name p"
 
 end

@@ -247,19 +247,17 @@ subsection \<open>Solved-result table\<close>
 text \<open>
   \<open>analyse_sign_result_for\<close> is the canonical solved D/G system, read as a
   \<^typ>\<open>(unit, sign abs_state) analysis_result\<close>: a one-line partial
-  application of \<open>monovariant_analysis_result_for\<close>
-  (\<open>Monovariant_Analysis_Result.thy\<close>), which already binds the single
-  solve and canonicalizes/normalizes each local key -- see that theory for
-  why no separate \<open>[code]\<close> single-solve rewrite is needed here. Every
-  report below reads through this table via \<^const>\<open>lookup_context\<close> rather
-  than a raw solver-environment lookup.
+  application of \<^const>\<open>analyse_sign_ctx_result_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  which already binds the single routed-unit solve and
+  canonicalizes/normalizes each local key. Every report below reads
+  through this table via \<^const>\<open>lookup_context\<close> rather than a raw
+  solver-environment lookup.
 \<close>
 
 definition analyse_sign_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
-  "analyse_sign_result_for gs p =
-     monovariant_analysis_result_for
-       (\<lambda>gs p. analyse_sign_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+  "analyse_sign_result_for gs p = analyse_sign_ctx_result_for gs prog_main_name p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_sign_report\<close>'s shape.\<close>
@@ -270,32 +268,22 @@ definition analyse_sign_result :: "imp_prog \<Rightarrow> (unit, sign abs_state)
 subsection \<open>Solved-result table: per-origin update rule\<close>
 
 text \<open>
-  \<open>analyse_sign_for_per_origin\<close> solves under the per-origin update rule
-  (\<^const>\<open>TD_side_per_origin_Interp_solve\<close>, keeping each write origin's
-  contribution separate instead of folding every contribution into one
-  join) instead of the always-join rule production uses. Experimental: no
-  dedicated soundness theorem is proved for this combination here --
-  \<open>analyse\<close> and its soundness corollaries are unaffected, and this
-  definition exists solely so \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close>
-  can compare solver choices on the same equation system (issue #131).
-
-  \<open>analyse_sign_result_per_origin\<close> is \<^const>\<open>analyse_sign_result\<close>'s sibling
-  under this rule: the same \<open>monovariant_analysis_result_for\<close> partial
-  application, reading \<open>analyse_sign_for_per_origin\<close> instead of
-  \<^const>\<open>analyse_sign_for\<close>.
+  \<open>analyse_sign_result_per_origin_for\<close> is \<^const>\<open>analyse_sign_result_for\<close>'s
+  sibling under the per-origin rule: a one-line partial application of
+  \<^const>\<open>analyse_sign_ctx_result_per_origin_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  reading \<^const>\<open>sctx_sol_prog_per_origin\<close> instead of \<^const>\<open>sctx_sol_prog\<close>.
+  Experimental: no dedicated soundness theorem is proved for this
+  combination here -- \<open>analyse\<close> and its soundness corollaries are
+  unaffected, and this definition exists solely so \<open>Analyse_Dispatch\<close>'s
+  \<open>analyse_with_solver\<close> can compare solver choices on the routed-unit
+  equation system (issue #131).
 \<close>
-
-definition analyse_sign_for_per_origin ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-       (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "analyse_sign_for_per_origin gs p =
-     TD_side_per_origin_Interp_solve (analyse_sign_eqs_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p)
-       (cfg_exit (prog_cfg prog_main_name p), ())"
 
 definition analyse_sign_result_per_origin_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
   "analyse_sign_result_per_origin_for gs p =
-     monovariant_analysis_result_for analyse_sign_for_per_origin gs p"
+     analyse_sign_ctx_result_per_origin_for gs prog_main_name p"
 
 definition analyse_sign_result_per_origin :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
   "analyse_sign_result_per_origin p = analyse_sign_result_per_origin_for (declared_global p) p"

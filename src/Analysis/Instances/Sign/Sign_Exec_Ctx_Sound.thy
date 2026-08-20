@@ -571,8 +571,7 @@ definition sctx_sol_prog ::
 text \<open>
   Solver-choice sibling of \<^const>\<open>sctx_sol_prog\<close>: the same \<^const>\<open>sctx_eqs_prog\<close> equation
   system, solved under the per-origin update rule instead of the always-join rule production
-  uses, mirroring how \<open>analyse_sign_for_per_origin\<close> (\<open>Sign_Checks.thy\<close>) is \<open>analyse_sign_for\<close>'s
-  own per-origin sibling over the Base family's equation system.
+  uses. \<open>Sign_Checks.analyse_sign_result_per_origin_for\<close> reads this table.
 \<close>
 
 definition sctx_sol_prog_per_origin ::

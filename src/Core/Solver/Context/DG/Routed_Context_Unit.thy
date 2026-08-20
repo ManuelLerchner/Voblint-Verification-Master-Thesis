@@ -1,5 +1,5 @@
 theory Routed_Context_Unit
-  imports Routed_Context
+  imports Routed_Context "Voblint_CFG.LTR_Collect"
 begin
 
 section \<open>The monovariant context as a routed-context instance\<close>
@@ -152,5 +152,19 @@ lemmas routed_context_call = routed.routed_context_call
 lemmas routed_context_comb = routed.routed_context_comb
 
 end
+
+text \<open>
+  The unit context never filters a trace: \<open>admiss_exact enterc_unit\<close> is deterministic and
+  \<open>key\<close> at a \<^typ>\<open>unit\<close> result is trivially the one context \<^term>\<open>()\<close> (\<open>ctx_key_exact_iff\<close>),
+  so \<^const>\<open>activation_collect\<close>'s \<open>ctx_key\<close> conjunct holds for every trace reaching \<open>v\<close> and
+  the two collectors coincide. Domain-generic: no domain-specific fact is used, so every
+  \<^typ>\<open>unit\<close>-context routed producer (Sign, Interval, ...) cites this one lemma rather than
+  re-deriving it.
+\<close>
+
+lemma activation_collect_unit_eq_ltr_collect:
+  "activation_collect gs (admiss_exact enterc_unit) () g S v () = ltr_collect gs g S v"
+  unfolding activation_collect_def ltr_collect_def
+  by (auto simp: ctx_key_exact_iff)
 
 end

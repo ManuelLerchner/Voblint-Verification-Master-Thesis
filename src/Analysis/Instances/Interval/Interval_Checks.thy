@@ -1,7 +1,5 @@
 theory Interval_Checks
-  imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result" Interval_Exec_Sound
-    "Voblint_Analysis.Monovariant_Analysis_Result"
+  imports Interval_Classify Interval_Ctx_None_Routed_Sound
 begin
 
 hide_const phase.N
@@ -9,133 +7,13 @@ hide_const phase.N
 section \<open>Interval instance of the generic check-discharge interface\<close>
 
 text \<open>
-  Only composition lives here, mirroring \<open>Sign_Checks\<close>: the Interval bound
-  tables (\<open>interval_less_true\<close>/\<open>interval_less_false\<close>/\<open>interval_eq_true\<close>/
-  \<open>interval_eq_false\<close>) and their \<open>Interval_Numeric_Queries\<close> interpretation of
-  \<open>abstract_numeric_queries\<close> live in that theory. The Interval expression
-  evaluator \<open>aval_ivl\<close> lives in \<open>Interval_Backward\<close>. The Boolean recursion over
-  \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way classification, and the
-  node-indexed bridge to \<^const>\<open>checks_proven\<close> come from interpreting
-  \<open>abstract_check_domain\<close> once, below, reusing the numeric-query facts
-  already proved sound in \<open>interval_numeric_queries\<close> rather than re-deriving
-  the comparison tables --- the same way \<open>ivl_backward_domain\<close> in
-  \<open>Interval_Backward.thy\<close> interprets \<open>backward_domain\<close> for guard narrowing.
+  The check-classification machinery (\<open>interval_classify_check\<close> and its
+  soundness directions, \<open>interval_check_report\<close>) lives in \<open>Interval_Classify\<close>,
+  split out so the routed-spine producer below (\<open>Interval_Ctx_None_Routed_Sound\<close>)
+  can depend on it without a cycle through this theory's own solved-result
+  tables, which read that producer's routed output.
 \<close>
 
-global_interpretation interval_check_domain:
-  abstract_check_domain gamma_ivl interval_less_true interval_less_false interval_eq_true
-    interval_eq_false gamma_state aval_ivl
-  defines
-    interval_check_true = interval_check_domain.check_true
-    and interval_check_false = interval_check_domain.check_false
-    and interval_classify_check = interval_check_domain.classify_check
-    and interval_checks_proven = interval_check_domain.abstract_checks_proven
-proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "ivl abs_state"
-  assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
-  then have "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_ivl (aval_ivl e \<sigma>)" using aval_ivl_sound by blast
-qed
-
-text \<open>
-  Only the consumer-facing aliases get a short Interval-prefixed name, the
-  same choice \<open>Sign_Checks\<close> makes: \<open>classify_check\<close>'s two directions and the
-  \<open>checks_proven\<close> bridge, both exercised by the worked example. The lower-
-  level \<open>check_true_sound\<close>/\<open>check_false_sound\<close>/\<open>check_true_false_vacuous\<close>
-  facts \<open>classify_check\<close>'s own soundness is built from stay reachable under
-  the qualified \<open>interval_check_domain.\<close> name instead of a dedicated alias
-  here.
-\<close>
-
-lemmas interval_classify_check_proved = interval_check_domain.classify_check_proved
-lemmas interval_classify_check_refuted = interval_check_domain.classify_check_refuted
-lemmas interval_checks_provenI = interval_check_domain.abstract_checks_provenI
-lemmas interval_checks_proven_sound = interval_check_domain.abstract_checks_proven_sound
-
-subsection \<open>Executable classification tests\<close>
-
-text \<open>One state per test, built as an override of an otherwise-unconstrained
-  (\<open>ivl_top\<close>) environment, so each test exercises exactly the comparison it
-  names, and one showing the precision gain over Sign: a bounded range proves
-  both a wider upper bound and a tighter lower bound in one classification,
-  which Sign's four-value lattice cannot distinguish from \<open>STop\<close>.\<close>
-
-definition test_env_bounded :: "ivl abs_state" where
-  "test_env_bounded = (\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 4) (Fin 7))"
-
-lemma interval_classify_less_proved:
-  "interval_classify_check (Less (V (STR ''x'')) (N 11)) test_env_bounded = Check_Proved"
-  unfolding test_env_bounded_def by eval
-
-lemma interval_classify_less_refuted:
-  "interval_classify_check (Less (V (STR ''x'')) (N 0)) test_env_bounded = Check_Refuted"
-  unfolding test_env_bounded_def by eval
-
-lemma interval_classify_eq_unknown:
-  "interval_classify_check (Eq (V (STR ''x'')) (N 5)) test_env_bounded = Check_Unknown"
-  unfolding test_env_bounded_def by eval
-
-text \<open>The precision gain over Sign: \<open>0 < x\<close> and \<open>x < 8\<close> both hold outright
-  once \<open>x\<close> is known to lie strictly between \<open>3\<close> and \<open>8\<close> --- a fact only a
-  domain that tracks numeric bounds can prove; Sign's \<open>SPos\<close>/\<open>SNonNeg\<close> would
-  classify \<open>x < 8\<close> \<^term>\<open>Check_Unknown\<close> on the same information.\<close>
-
-definition test_env_precision :: "ivl abs_state" where
-  "test_env_precision = (\<lambda>_. ivl_top)((STR ''x'') := Ivl (Fin 4) (Fin 7))"
-
-lemma interval_classify_precision_lower_proved:
-  "interval_classify_check (Less (N 2) (V (STR ''x''))) test_env_precision = Check_Proved"
-  unfolding test_env_precision_def by eval
-
-lemma interval_classify_precision_upper_proved:
-  "interval_classify_check (Less (V (STR ''x'')) (N 9)) test_env_precision = Check_Proved"
-  unfolding test_env_precision_def by eval
-
-subsection \<open>Whole-program check report\<close>
-
-text \<open>Thin composition, mirroring \<open>sign_check_report\<close>: \<^const>\<open>classify_checks\<close>
-  owns the traversal and ordering, \<^const>\<open>ivl_exec_prog_at\<close> owns the
-  node-indexed Interval environment, and \<open>interval_classify_check\<close> owns the
-  per-check classification.\<close>
-
-definition interval_check_report ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "interval_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p)
-       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (ivl_exec_prog_at gs mnm p v))
-       interval_classify_check"
-
-text \<open>
-  The definitional equation above unfolds \<^const>\<open>ivl_exec_prog_at\<close> at every
-  check node, and that unfolding re-invokes \<^const>\<open>ivl_exec_raw\<close> (the
-  actual solver run) each time --- so naive code generation would re-run the
-  whole D/G solver once per check, for an \<open>N\<close>-check program, \<open>N\<close> solver
-  runs instead of one. The \<open>[code]\<close> equation below is provably equal (a
-  direct \<open>Let\<close>-unfold of the same definitions) but binds
-  \<^term>\<open>ivl_exec_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
-        (prog_table p) (prog_procs p) mnm (prog_main p)\<close>
-  once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the
-  target language compiles that \<open>let\<close> to a single shared thunk, so the
-  generated OCaml computes the solved system exactly once per
-  report, regardless of how many checks the program has. Mirrors the
-  \<open>analyse_sign_report_for_code\<close> fix for the Sign counterpart of this
-  report (\<open>Sign_Codegen\<close>, downstream of this theory).
-\<close>
-
-declare interval_check_report_def [code del]
-
-lemma interval_check_report_code [code]:
-  "interval_check_report gs mnm p =
-     (let raw = ivl_exec_raw (resolved_st_q_is_bot_for (declared_global_vars p)) gs
-                  (prog_table p) (prog_procs p) mnm (prog_main p)
-      in classify_checks (prog_cfg mnm p)
-           (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-                  (side_env_lift_st gs (raw (Inl v)) (raw (Inr ()))))
-           interval_classify_check)"
-  unfolding interval_check_report_def ivl_exec_prog_at_def[abs_def] ivl_exec_at_def[abs_def] Let_def
-            side_env_lift_st_eq_side_env_lift
-  by (rule refl)
 
 subsection \<open>Solved-result table\<close>
 
@@ -144,18 +22,17 @@ text \<open>
   the Apinis warrowing update rule (Interval's infinite-height local
   lattice needs it for termination), read as a
   \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close>: a one-line partial
-  application of \<open>monovariant_analysis_result_for\<close>
-  (\<open>Monovariant_Analysis_Result.thy\<close>), mirroring \<open>Sign_Checks\<close>'s own
-  \<open>analyse_sign_result_for\<close>. Every report below reads through a result
-  table via \<^const>\<open>lookup_context\<close> rather than a raw solver-environment
-  lookup.
+  application of \<^const>\<open>analyse_interval_ctx_result_warrow_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>), fixed at
+  \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve
+  and canonicalizes/normalizes each local key. Every report below reads
+  through a result table via \<^const>\<open>lookup_context\<close> rather than a raw
+  solver-environment lookup.
 \<close>
 
 definition analyse_interval_td_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_td_result_for gs p =
-     monovariant_analysis_result_for
-       (\<lambda>gs p. analyse_interval_dg_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+  "analyse_interval_td_result_for gs p = analyse_interval_ctx_result_warrow_for gs prog_main_name p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_interval_td_report\<close>'s shape.\<close>
@@ -168,16 +45,16 @@ subsection \<open>Solved-result table: always-join update rule\<close>
 
 text \<open>
   \<open>analyse_interval_join_result\<close> is \<^const>\<open>analyse_interval_td_result\<close>'s
-  sibling under the always-join update rule: the same
-  \<open>monovariant_analysis_result_for\<close> partial application, reading
-  \<^const>\<open>analyse_interval_dg_join_for\<close> instead of \<^const>\<open>analyse_interval_dg_for\<close>.
+  sibling under the always-join update rule: a one-line partial application
+  of \<^const>\<open>analyse_interval_ctx_result_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>), fixed at
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
+  \<^const>\<open>ictx_sol_prog_warrow\<close>.
 \<close>
 
 definition analyse_interval_join_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_join_result_for gs p =
-     monovariant_analysis_result_for
-       (\<lambda>gs p. analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+  "analyse_interval_join_result_for gs p = analyse_interval_ctx_result_for gs prog_main_name p"
 
 definition analyse_interval_join_result ::
     "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
@@ -187,16 +64,16 @@ subsection \<open>Solved-result table: per-origin update rule\<close>
 
 text \<open>
   \<open>analyse_interval_per_origin_result\<close> mirrors
-  \<open>analyse_interval_join_result\<close> exactly, reading
-  \<^const>\<open>analyse_interval_dg_per_origin_for\<close> instead of
-  \<^const>\<open>analyse_interval_dg_join_for\<close>.
+  \<open>analyse_interval_join_result\<close> exactly, a one-line partial application of
+  \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>), fixed at
+  \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog_per_origin\<close> instead
+  of \<^const>\<open>ictx_sol_prog\<close>.
 \<close>
 
 definition analyse_interval_per_origin_result_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
-  "analyse_interval_per_origin_result_for gs p =
-     monovariant_analysis_result_for
-       (\<lambda>gs p. analyse_interval_dg_per_origin_for (resolved_st_q_is_bot_for (declared_global_vars p)) gs p) gs p"
+  "analyse_interval_per_origin_result_for gs p = analyse_interval_ctx_result_per_origin_for gs prog_main_name p"
 
 definition analyse_interval_per_origin_result ::
     "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
