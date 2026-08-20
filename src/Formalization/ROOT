@@ -5,5 +5,6 @@ session Voblint_Formalization in "." = "Voblint_Analysis" +
   theories
     Source_Activation_Sound
     Run_Analysis_Sound
+    Sign_Exec_Ctx_Sound
     Interval_Exec_Ctx_Sound
     Interval_Call_String_Ctx_Sound
