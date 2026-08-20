@@ -149,6 +149,18 @@ closed, and the batch log is green.
 - Free variables can resolve to imported constants. The name `c` is risky
   because `Dijkstra_Shortest_Path` imports an edge-cost constant with that name.
   Bind variables explicitly or use names such as `ctx`, `cmd`, and `cost`.
+- A fact exported from `context fixes ... assumes A and B and C begin ... end`
+  carries every enclosing `assumes` as an extra premise, even when its own
+  proof or body used only some of them -- this applies to plain `definition`s
+  inside the block too, not only `lemma`/`theorem`. Citing such a fact from
+  outside with a partial premise list, e.g. `foo[OF A]`, does not error at the
+  `OF` application: it silently produces a still-conditional fact, so a later
+  `unfolding foo[OF A]` or `simp add: foo[OF A]` just fails to fire, and the
+  resulting diagnostic points at the rewrite site, not the missing premise.
+  When an `OF`-based rewrite unexpectedly does nothing, do not guess from the
+  enclosing `assumes` clause -- print the fact's actual exported statement
+  (`thm foo`, or an I/Q `get_command_info` probe on a scratch `thm foo` line)
+  to see every premise it carries, then supply all of them via `OF`.
 
 ### Isar syntax
 
