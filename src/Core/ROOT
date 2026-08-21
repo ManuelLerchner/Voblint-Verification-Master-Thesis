@@ -37,6 +37,9 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Strategy_Tree_Monad
     Strategy_Tree_Do
     Strategy_Tree_Combinators
+    (* Equation-level normalization: aggregates repeated side effects to one
+       key into a single write, so no right-hand side names a key twice. *)
+    Side_Buffering
     TD_Side_Tree
     Exec_Bridge
     Solver_Side_RG
