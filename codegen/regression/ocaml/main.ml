@@ -1,4 +1,4 @@
-(* Regression driver for the generated Voblint_Analyse OCaml module.
+(* Regression driver for the generated Voblint_CLI OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `analyse`
    dispatcher for both domains, and checks the result against the values
@@ -6,11 +6,17 @@
    src/Examples/Regression/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_sign_precise / dispatch_demo_interval_precise lemmas.
 
-   Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
-   it with `pixi run codegen` instead. *)
+   This reads the same generated module the CLI itself links against. It
+   used to read a second, separately exported one (Voblint_Analyse_OCaml),
+   which differed only by the CFG-inspection constants below -- those are
+   now named in the single export block, so there is one generated artifact
+   for one analysis rather than two near-copies of the same machinery.
 
-open Voblint_Analyse_OCaml.Core
-open Voblint_Analyse_OCaml.Analyse_Dispatch
+   Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
+   `pixi run codegen` instead. *)
+
+open Voblint_CLI.Core
+open Voblint_CLI.Analyse_Dispatch
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native
