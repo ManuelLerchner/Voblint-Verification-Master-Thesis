@@ -150,43 +150,28 @@ next
 qed
 
 text \<open>
-  Mirrors Sign's own \<open>sign_Hstep_lifted_for\<close>/\<open>sign_Henter_lifted_for\<close>/
-  \<open>sign_Hcomb_lifted_for\<close>, citing the same carrier-generic packaging theorems from
-  \<^theory>\<open>Voblint_Core.DG_Base\<close> at Int's own mode-generic commute facts just above.
+  \<^locale>\<open>routed_dg_domain_exec\<close> (\<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>) derives exactly
+  this shape once, generic in a domain: an interpretation at Int's own mode-generic commute
+  facts just above replaces what used to be Int's own copy of the derivation (mirroring
+  Sign's and Interval's own routed-unit-context instances, which interpret the same locale).
 \<close>
 
-lemma int_Hstep_lifted_for:
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool" and mode :: refine_mode
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)) a d g)
-         = dg_spec_step (base_dg_spec_for_lifted gs is_bot_state (int_tf_for mode gs)) a
-             (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dg_spec_step_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF int_tf_st_for_commute exact])
+begin
 
-lemma int_Henter_lifted_for:
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)) xs es d g)
-         = dgs_enter (base_dg_spec_for_lifted gs is_bot_state (int_tf_for mode gs)) xs es
-             (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF int_dom_enter_st_for_commute exact])
+interpretation int_domain: routed_dg_domain_exec
+  gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  by unfold_locales (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact)
 
-lemma int_Hcomb_lifted_for:
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred (int_tf_st_for mode gs) (int_dom_enter_st_for mode gs)) dst dc de g)
-         = dgs_combine (base_dg_spec_for_lifted gs is_bot_state (int_tf_for mode gs)) dst
-             (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) de)
-             (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
-        [where tf = "int_tf_for mode gs", unfolded fun_of_exec_dg_st_for_def, OF exact])
+lemmas int_Hstep_lifted_for = int_domain.Hstep_lifted_for
+lemmas int_Henter_lifted_for = int_domain.Henter_lifted_for
+lemmas int_Hcomb_lifted_for = int_domain.Hcomb_lifted_for
 
-lemma dg_reader_commute_gen_int_lifted:
-  "dg_reader_commute_gen
-     (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
-  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+end
+
+lemmas dg_reader_commute_gen_int_lifted = dg_reader_commute_gen_lifted_for
 
 lemma seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
   by simp

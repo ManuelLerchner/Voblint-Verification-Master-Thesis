@@ -105,45 +105,29 @@ lemma route_unit_commute: "route_unit u c' d ca = route_unit u c' (f d) ca"
 subsection \<open>Domain commute facts, at the routed unit spec\<close>
 
 text \<open>
-  Mirrors Interval's own \<open>ivl_Hstep_lifted_for\<close>/\<open>ivl_Henter_lifted_for\<close>/\<open>ivl_Hcomb_lifted_for\<close>,
-  citing the same carrier-generic packaging theorems from \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>
-  at Sign's own primitive commute facts \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close>
-  already prove (\<open>sign_tf_st_for_commute\<close>, \<open>sign_enter_st_for_commute\<close>,
-  \<^theory>\<open>Voblint_Analysis.Sign_Exec\<close>).
+  \<^locale>\<open>routed_dg_domain_exec\<close> (\<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>) derives exactly
+  this shape once, generic in a domain: an interpretation at Sign's own primitive commute
+  facts \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> already prove
+  (\<open>sign_tf_st_for_commute\<close>, \<open>sign_enter_st_for_commute\<close>, \<^theory>\<open>Voblint_Analysis.Sign_Exec\<close>)
+  replaces what used to be Sign's own copy of the derivation.
 \<close>
 
-lemma sign_Hstep_lifted_for:
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred (sign_tf_st_for gs) (sign_enter_st_for gs)) a d g)
-         = dg_spec_step (base_dg_spec_for_lifted gs is_bot_state (sign_tf_for gs)) a
-             (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dg_spec_step_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF sign_tf_st_for_commute exact])
+begin
 
-lemma sign_Henter_lifted_for:
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred (sign_tf_st_for gs) (sign_enter_st_for gs)) xs es d g)
-         = dgs_enter (base_dg_spec_for_lifted gs is_bot_state (sign_tf_for gs)) xs es
-             (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
-        [unfolded fun_of_exec_dg_st_for_def, OF sign_enter_st_for_commute exact])
+interpretation sign_domain: routed_dg_domain_exec
+  gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
+  by unfold_locales (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact)
 
-lemma sign_Hcomb_lifted_for:
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred (sign_tf_st_for gs) (sign_enter_st_for gs)) dst dc de g)
-         = dgs_combine (base_dg_spec_for_lifted gs is_bot_state (sign_tf_for gs)) dst
-             (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) de)
-             (map_lift (fun_of_resolved_st_q_for gs) g)"
-  by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
-        [where tf = "sign_tf_for gs", unfolded fun_of_exec_dg_st_for_def, OF exact])
+lemmas sign_Hstep_lifted_for = sign_domain.Hstep_lifted_for
+lemmas sign_Henter_lifted_for = sign_domain.Henter_lifted_for
+lemmas sign_Hcomb_lifted_for = sign_domain.Hcomb_lifted_for
 
-lemma dg_reader_commute_gen_sign_lifted:
-  "dg_reader_commute_gen
-     (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
-  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+end
+
+lemmas dg_reader_commute_gen_sign_lifted = dg_reader_commute_gen_lifted_for
 
 lemma seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
   by simp

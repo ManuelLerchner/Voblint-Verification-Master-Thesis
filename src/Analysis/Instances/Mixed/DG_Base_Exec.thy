@@ -115,5 +115,81 @@ theorem base_dg_spec_st_for_lifted_dgs_combine_commute:
      (auto simp add: transfer_lift2_def normalize_lift_def exact[unfolded fun_of_exec_dg_st_for_def]
        combine_collect_abs_def fun_of_resolved_st_q_for_def)
 
+subsection \<open>Routed-domain compatibility, independent of any routing context\<close>
+
+text \<open>
+  Every current routed instance (Sign, Interval, Int) reproves the same three
+  shapes -- \<open>dg_spec_step\<close>/\<open>dgs_enter\<close>/\<open>dgs_combine\<close> commuting under
+  \<^const>\<open>fun_of_resolved_st_q_for\<close>, plus \<^locale>\<open>dg_reader_commute_gen\<close> at that
+  same reader -- from its own executable/abstract transfer-commute facts,
+  citing this theory's packaging theorems verbatim. Nothing in that derivation
+  is domain-specific beyond the three primitive commute facts a domain's own
+  executable-transfer soundness development already proves (\<open>sign_tf_st_for_commute\<close>,
+  \<open>ivl_tf_st_for_commute\<close>, ...): this locale states the derivation once, so a
+  domain interprets it instead of restating it. The locale is deliberately free
+  of any routing context (\<open>route\<close>, \<open>Seed\<close>, \<open>Global\<close>, a solver): those are
+  context-owned and solver-owned respectively, not domain-owned.
+\<close>
+
+text \<open>
+  \<^locale>\<open>dg_reader_commute_gen\<close>'s instance at the same reader on both sides needs no
+  domain fact at all: \<^const>\<open>fun_of_resolved_st_q_for\<close> is already carrier-polymorphic and
+  \<open>sup\<close>-homomorphic (\<open>fun_of_resolved_st_q_for_sup\<close>, \<^theory>\<open>Voblint_Core.Exec_St\<close>), so this
+  is a free-standing fact, not part of the \<open>routed_dg_domain_exec\<close> locale below -- keeping it
+  outside means citing it never drags in that locale's \<open>is_bot_pred\<close>/transfer obligations.
+\<close>
+
+lemma dg_reader_commute_gen_lifted_for:
+  "dg_reader_commute_gen
+     (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
+  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+
+locale routed_dg_domain_exec =
+  fixes gs :: "vname \<Rightarrow> bool"
+    and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and tf :: "'a domain_transfer"
+  assumes tf_st_commute:
+      "\<And>a s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"
+    and enter_st_commute:
+      "\<And>xs es s. fun_of_resolved_st_q_for gs (enter_st xs es s)
+                   = enter\<^sup># tf xs es (fun_of_resolved_st_q_for gs s)"
+    and is_bot_pred_exact:
+      "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+lemma Hstep_lifted_for:
+  "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+     (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g)
+   = dg_spec_step (base_dg_spec_for_lifted gs is_bot_state tf) a
+       (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  by (rule base_dg_spec_st_for_lifted_dg_spec_step_commute
+        [unfolded fun_of_exec_dg_st_for_def, OF tf_st_commute is_bot_pred_exact])
+
+lemma Henter_lifted_for:
+  "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+     (dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) xs es d g)
+   = dgs_enter (base_dg_spec_for_lifted gs is_bot_state tf) xs es
+       (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  by (rule base_dg_spec_st_for_lifted_dgs_enter_commute
+        [unfolded fun_of_exec_dg_st_for_def, OF enter_st_commute is_bot_pred_exact])
+
+lemma Hcomb_lifted_for:
+  "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+     (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc de g)
+   = dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) dst
+       (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) de)
+       (map_lift (fun_of_resolved_st_q_for gs) g)"
+  by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
+        [unfolded fun_of_exec_dg_st_for_def, OF is_bot_pred_exact])
+
+lemma dg_reader_commute_gen_lifted:
+  "dg_reader_commute_gen
+     (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))"
+  by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+
+end
+
 end
 
