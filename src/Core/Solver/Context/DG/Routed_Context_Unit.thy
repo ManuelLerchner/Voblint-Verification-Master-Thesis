@@ -154,6 +154,71 @@ lemmas routed_context_comb = routed.routed_context_comb
 end
 
 text \<open>
+  The \<^typ>\<open>'a abs_state lifted\<close> specialization of \<open>unit_routed_context\<close>: the same
+  routing policy at the carrier every routed domain instance actually uses, with
+  \<open>gammaDG\<close> and \<open>gammaM\<close> fixed to \<^const>\<open>gamma_dg_base\<close> and \<^const>\<open>gamma_state_lift\<close>.
+  \<^locale>\<open>routed_context_hetero\<close> is \<^locale>\<open>routed_context_base_hetero\<close> at exactly those
+  instantiations --- the two assumption lists are otherwise identical, and
+  \<open>route_enterc_agree\<close>'s discharge never mentions \<open>gammaDG\<close> --- so the sublocale below
+  reuses \<open>unit_routed_context\<close>'s own obligations unchanged. A unit-context domain
+  instance reaches the adapter-facing CALL/COMB theorems by interpreting this locale
+  instead of re-deriving them per domain.
+\<close>
+
+locale unit_routed_context_hetero =
+  unit_routed_context S gamma_dg_base gs g gk0 bot0 s0d s0g sigma vars x0 sg
+    seed_key gamma_state_lift
+  for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
+    and gs :: "vname \<Rightarrow> bool"
+    and g :: cfg and gk0 :: 'k
+    and bot0 s0d :: "'a abs_state lifted" and s0g :: 'G
+    and sigma :: "pp \<times> unit + 'k \<Rightarrow> ('a abs_state lifted, 'G) dg_state"
+    and vars :: "(pp \<times> unit) set" and x0 :: "pp \<times> unit"
+    and sg :: "pp \<times> unit + 'k \<Rightarrow> 'a abs_state lifted"
+    and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
+begin
+
+sublocale hetero: routed_context_hetero S gs g gk0 route_unit
+  bot0 s0d s0g sigma vars x0 sg seed_key enterc_unit
+proof unfold_locales
+  show "finite (calls g)" by (rule finC)
+next
+  show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
+next
+  fix u ctx dst pars args p cont s
+  show "route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+          = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
+    by (rule route_unit_enterc_unit_agree)
+next
+  fix u ctx dst pars args p cont
+  assume "(u, ctx) \<in> vars"
+    and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "(FunctionEntry p,
+                route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+               \<in> vars"
+    by (rule call_fwd)
+next
+  fix cl c1 dst pars args p cont
+  assume "(cl, c1) \<in> vars"
+    and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "(cont, c1) \<in> vars" by (rule comb_fwd)
+next
+  fix cl s es dst pars args p cont
+  assume "call_enter_store gs g cl s es"
+    and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "es = call_enter gs (CallEdge dst pars args) s"
+    by (rule call_enter_store_agree)
+qed
+
+text \<open>CALL and COMB at the \<open>abs_state\<close> carrier, re-exported so a concrete instance cites
+  them without naming the sublocale, matching \<open>unit_routed_context\<close>'s own re-export.\<close>
+
+lemmas routed_context_call_hetero = hetero.routed_context_call
+lemmas routed_context_comb_hetero = hetero.routed_context_comb
+
+end
+
+text \<open>
   The unit context never filters a trace: \<open>admiss_exact enterc_unit\<close> is deterministic and
   \<open>key\<close> at a \<^typ>\<open>unit\<close> result is trivially the one context \<^term>\<open>()\<close> (\<open>ctx_key_exact_iff\<close>),
   so \<^const>\<open>activation_collect\<close>'s \<open>ctx_key\<close> conjunct holds for every trace reaching \<open>v\<close> and
