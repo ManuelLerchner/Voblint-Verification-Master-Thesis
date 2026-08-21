@@ -1,0 +1,11 @@
+// PARAM: --analysis sign
+// REFUTED counterpart of 01-straight_line_sign.vimp: an exact negative write
+// settles the same condition the other way. Sign carries no magnitude, but
+// the sign alone decides 0 < x in both directions, so the pair pins that
+// sign_lt refutes as precisely as it proves -- a one-sided fixture would let
+// a regression that collapses every comparison to PROVED go unnoticed.
+
+void main() {
+  x := 0 - 5;
+  __voblint_check(0 < x) // REFUTED
+}

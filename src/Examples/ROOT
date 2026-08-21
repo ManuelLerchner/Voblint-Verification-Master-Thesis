@@ -87,7 +87,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Relational_DG_Demo
     Example_Analysis_Dispatch_Regression
     Example_Min_Max_Regression
-    Example_Solver_Choice_Regression
     Example_Int_Refinement_Mode_Regression
     Example_Analysis_Result_Regression
 

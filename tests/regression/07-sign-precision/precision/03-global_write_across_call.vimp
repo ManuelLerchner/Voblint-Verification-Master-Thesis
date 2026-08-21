@@ -1,0 +1,29 @@
+// PARAM: --analysis sign
+// Sign precision across a call boundary, on all three kinds of name at once:
+// a caller local foo never touches (x), a declared global the callee writes
+// (g), and the callee's return value (y). All three must come back Positive.
+//
+// g is the one that used to fail. cinit_sign_st seeds every declared global
+// at SZero, and the old flow-INsensitive global summary folded that seed in
+// as a real contribution alongside every write, unable to tell "before this
+// write" from "after": join_sign SZero SPos = SNonNeg, and 0 < g was
+// genuinely undecided. With the whole abstract state carried in the
+// reachability-lifted local unknown there is no separate global summary to
+// join against, so g is exactly SPos after g := 5 -- the entry seed
+// contributes only at the CFG entry.
+//
+// See 04-intervening_write_preserves_local.vimp for the same routing
+// property isolated without any call machinery at all.
+
+global g;
+void foo() {
+  g := 5;
+  return 2
+}
+void main() {
+  x := 1;
+  y := foo();
+  __voblint_check(0 < x); // PROVED
+  __voblint_check(0 < g); // PROVED
+  __voblint_check(0 < y)  // PROVED
+}

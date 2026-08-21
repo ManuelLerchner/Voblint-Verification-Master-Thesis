@@ -108,6 +108,21 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
+        # Sign is a finite-height lattice with no widen instance, so warrowing
+        # has nothing to accelerate and the combination is refused up front
+        # rather than silently falling back to join.
+        "sign + --solver warrow is rejected",
+        ["--analysis", "sign", "--solver", "warrow", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "sign + --solver join is accepted",
+        ["--analysis", "sign", "--solver", "join", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
         "parity is a recognized --analysis value",
         ["--analysis", "parity", SANITY_FILE],
         0,

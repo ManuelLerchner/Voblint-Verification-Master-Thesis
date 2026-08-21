@@ -412,10 +412,11 @@ text \<open>
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type
       (@{theory Voblint_Core.Abstract_Checks}), so the dispatcher adds no new
-      proof. \<^verbatim>\<open>dispatch_demo_sign_precise\<close>/\<^verbatim>\<open>dispatch_demo_interval_precise\<close>
-      compute (\<^verbatim>\<open>by eval\<close>) the same program under both domains and show
-      both settling both checks precisely, Interval at numeric-bound
-      granularity and Sign at sign granularity. \<^verbatim>\<open>Interval_Analysis_TD\<close>
+      proof. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> computes
+      (\<^verbatim>\<open>by eval\<close>) that program's report, and the executable corpus under
+      \<^verbatim>\<open>tests/regression/\<close> runs the same analysis through the generated CLI
+      for both domains, each settling both checks precisely --- Interval at
+      numeric-bound granularity, Sign at sign granularity. \<^verbatim>\<open>Interval_Analysis_TD\<close>
       (warrowing) is deliberately not a
       branch here: it has no soundness theorem yet
       (@{theory Voblint_Analysis.Interval_Exec_Sound}).
@@ -429,9 +430,12 @@ text \<open>
       \<open>codegen/regression/\<close> (\<open>pixi run codegen-regression\<close>) constructs
       that same program purely through the exported constructors, calls
       \<open>analyse\<close>, and checks the result against the values
-      \<open>dispatch_demo_sign_precise\<close> and \<open>dispatch_demo_interval_precise\<close>
-      already proved --- so the generated OCaml is checked against the same
-      theorems as the Isabelle source, not merely assumed to match it.
+      \<open>dispatch_demo_interval_precise\<close> already proves --- so the generated
+      OCaml is checked against the same theorem as the Isabelle source, not
+      merely assumed to match it. That driver additionally pins the Sign
+      verdict and several call/global shapes for which no Isabelle-side
+      \<open>eval\<close> witness is kept, since the executable corpus under
+      \<open>tests/regression/\<close> covers the same programs far more cheaply.
 
 
       \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
