@@ -1,0 +1,19 @@
+// PARAM: --analysis interval --context entry-state
+// 09's program under entry-state context sensitivity. Both call sites enter f
+// with the same argument, so formals_context derives the same context for both
+// and the two routed seeds land on the same key -- the collision survives
+// context sensitivity precisely when the two calls agree on the entered
+// formals, which is the case a per-call-site keying would otherwise be assumed
+// to separate.
+void f(n) {
+  return n
+}
+void main() {
+  x := 5;
+  if (x < 2) {
+    a := f(1)
+  } else {
+    a := f(1)
+  };
+  __voblint_check(x == 5) // PROVED
+}

@@ -1,0 +1,20 @@
+// PARAM: --analysis interval --solver join
+// 09's program under --solver join, which folds every contribution into one
+// slot and therefore never dips: this case terminates with or without the
+// per-key aggregation. It is here as the control. Aggregating writes changes
+// when a key is published within one right-hand side, so it changes the order
+// the solver visits unknowns in, and narrowing is order-sensitive -- a mode
+// that was already healthy is exactly where an ordering-induced precision
+// regression would show up unexplained.
+void f(n) {
+  return n
+}
+void main() {
+  x := 5;
+  if (x < 2) {
+    a := f(1)
+  } else {
+    a := f(1)
+  };
+  __voblint_check(x == 5) // PROVED
+}

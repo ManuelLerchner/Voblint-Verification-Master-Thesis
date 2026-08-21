@@ -1,0 +1,24 @@
+// PARAM: --analysis interval
+// Two call sites sharing one resume node, but to different procedures, so the
+// node's two call actions carry two distinct seed keys rather than one key
+// twice. Aggregation must keep them apart: a per-key accumulator that collapsed
+// distinct keys would publish f's entered state into g's seed and vice versa,
+// which is unsound rather than merely imprecise.
+//
+// The complement of 09: 09 pins that two writes to one key become one write,
+// this pins that two writes to two keys stay two writes.
+void f(n) {
+  return n
+}
+void g(n) {
+  return n + 1
+}
+void main() {
+  x := 5;
+  if (x < 2) {
+    a := f(1)
+  } else {
+    a := g(1)
+  };
+  __voblint_check(x == 5) // PROVED
+}
