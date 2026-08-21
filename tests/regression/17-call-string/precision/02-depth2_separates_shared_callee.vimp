@@ -1,0 +1,138 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Same program as 01-depth1_merges_shared_callee.vimp. At depth 2, g's
+// routed context additionally remembers which f activation called it --
+// distinguishing the call reached via f(3) from the one reached via
+// f(10), since each now carries its own two-frame call string instead of
+// collapsing onto g's single call site alone. The two g activations no
+// longer merge, so both results stay exact: x == 6 and y == 20, each
+// provable. This is the precision separation call-string depth exists to
+// buy, on the identical source depth 1 leaves imprecise.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     g_pp0_ctx0
+//     g_entry_g_ctx0
+//     g_result_g_ctx0
+//   cluster_ctx_1:
+//     g_pp0_ctx1
+//     g_entry_g_ctx1
+//     g_result_g_ctx1
+//   cluster_ctx_2:
+//     main_pp8_ctx2
+//     main_pp9_ctx2
+//     main_result_main_ctx2
+//     main_entry_main_ctx2
+//     main_pp5_ctx2
+//     main_pp6_ctx2
+//     main_pp7_ctx2
+//   cluster_ctx_3:
+//     f_pp2_ctx3
+//     f_pp3_ctx3
+//     f_entry_f_ctx3
+//     f_result_f_ctx3
+//   cluster_ctx_4:
+//     f_pp2_ctx4
+//     f_pp3_ctx4
+//     f_entry_f_ctx4
+//     f_result_f_ctx4
+//
+// nodes:
+//   main_pp8_ctx2: pp8
+//       x=[6,6]
+//       y=[20,20]
+//       check y==20
+//   main_pp9_ctx2: pp9
+//       x=[6,6]
+//       y=[20,20]
+//   main_result_main_ctx2: exit_main
+//       x=[6,6]
+//       y=[20,20]
+//   g_pp0_ctx0: pp0
+//       p=[3,3]
+//   g_pp0_ctx1: pp0
+//       p=[10,10]
+//   main_entry_main_ctx2: entry_main
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   f_pp2_ctx3: pp2
+//       p=[3,3]
+//       t=[-inf,+inf]
+//   f_pp2_ctx4: pp2
+//       p=[10,10]
+//       t=[-inf,+inf]
+//   g_entry_g_ctx0: entry_g
+//       p=[3,3]
+//   g_entry_g_ctx1: entry_g
+//       p=[10,10]
+//   f_pp3_ctx3: pp3
+//       p=[3,3]
+//       t=[6,6]
+//   f_pp3_ctx4: pp3
+//       p=[10,10]
+//       t=[20,20]
+//   g_result_g_ctx0: exit_g
+//       p=[3,3]
+//       ret=[6,6]
+//   g_result_g_ctx1: exit_g
+//       p=[10,10]
+//       ret=[20,20]
+//   main_pp5_ctx2: pp5
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   main_pp6_ctx2: pp6
+//       x=[6,6]
+//       y=[-inf,+inf]
+//   f_entry_f_ctx3: entry_f
+//       p=[3,3]
+//       t=[-inf,+inf]
+//   f_entry_f_ctx4: entry_f
+//       p=[10,10]
+//       t=[-inf,+inf]
+//   main_pp7_ctx2: pp7
+//       x=[6,6]
+//       y=[20,20]
+//       check x==6
+//   f_result_f_ctx3: exit_f
+//       p=[3,3]
+//       t=[6,6]
+//       ret=[6,6]
+//   f_result_f_ctx4: exit_f
+//       p=[10,10]
+//       t=[20,20]
+//       ret=[20,20]
+//
+// edges:
+//   main_pp8_ctx2 -> main_pp9_ctx2: check(y==20)
+//   main_pp9_ctx2 -> main_result_main_ctx2: terminate
+//   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
+//   g_pp0_ctx1 -> g_result_g_ctx1: return p+p
+//   main_entry_main_ctx2 -> main_pp5_ctx2: nop
+//   g_entry_g_ctx0 -> g_pp0_ctx0: nop
+//   g_entry_g_ctx1 -> g_pp0_ctx1: nop
+//   f_pp3_ctx3 -> f_result_f_ctx3: return t
+//   f_pp3_ctx4 -> f_result_f_ctx4: return t
+//   f_entry_f_ctx3 -> f_pp2_ctx3: nop
+//   f_entry_f_ctx4 -> f_pp2_ctx4: nop
+//   main_pp7_ctx2 -> main_pp8_ctx2: check(x==6)
+//   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)
+//   f_pp2_ctx4 -> g_entry_g_ctx1: enter g(p)
+//   main_pp5_ctx2 -> f_entry_f_ctx3: enter f(3)
+//   main_pp6_ctx2 -> f_entry_f_ctx4: enter f(10)
+//   g_result_g_ctx0 -> f_pp3_ctx3: combine t := #ret
+//   g_result_g_ctx1 -> f_pp3_ctx4: combine t := #ret
+//   f_result_f_ctx3 -> main_pp6_ctx2: combine x := #ret
+//   f_result_f_ctx4 -> main_pp7_ctx2: combine y := #ret
+//   f_pp2_ctx3 -> f_pp3_ctx3: call-to-return g
+//   f_pp2_ctx4 -> f_pp3_ctx4: call-to-return g
+//   main_pp5_ctx2 -> main_pp6_ctx2: call-to-return f
+//   main_pp6_ctx2 -> main_pp7_ctx2: call-to-return f
+// EXPECT-GRAPH-END
+
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20) // PROVED
+}

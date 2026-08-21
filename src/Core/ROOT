@@ -26,10 +26,13 @@ session Voblint_Core in "." = "Voblint_CFG" +
     (* Ordinary __goblint_assert checks: store-only checks, with no
        ghost-domain or additional trace-projection dependency. *)
     Checks
+    (* Domain-generic solved-result table: per-point reachability and the
+       per-context/per-node lookup surface downstream consumers read. *)
+    Analysis_Result
     (* Domain-generic sound (incomplete) decision procedure discharging
-       compiled checks, parametric in an arbitrary abstract-state type. *)
+       compiled checks, parametric in an arbitrary abstract-state type,
+       both per node and per covered context of the result table above. *)
     Abstract_Checks
-    LTR_Analysis_Sound
     TD_Side_CFG
     Strategy_Tree_Monad
     Strategy_Tree_Do
@@ -56,5 +59,14 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Context_Refinement
     DG_Transfer_Combinators
     Routed_Context
+    Routed_Context_Unit
     Call_String_Context
+    Call_String_Context_Finite
     Call_String_Collecting_Refinement
+    Call_String_Routed_Context
+    Call_String_Solver_Projection
+    Entry_State_Routed_Context
+    (* Generic public AnalysisResult/check-report/soundness adapter for a
+       routed DG analysis, generic in a classify function and a
+       routed_context_hetero interpretation. *)
+    DG_Analysis_Adapter

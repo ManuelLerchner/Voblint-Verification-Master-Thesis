@@ -51,15 +51,15 @@ text \<open>
 
 datatype edge_action =
     EA_Nop
-  | EA_Assign   (ea_var: vname) (ea_rhs: aexp)
+  | EA_Assign   (ea_var: vname) (ea_rhs: exp)
   | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
-  | EA_Assume   (ea_cond: bexp)
-  | EA_AssumeNot (ea_cond: bexp)
-  | EA_Ret      (ea_ret_val: "aexp option") (ea_ret_proc: pname)
-  | EA_Check    (ea_check_cond: bexp)
+  | EA_Assume   (ea_cond: exp)
+  | EA_AssumeNot (ea_cond: exp)
+  | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname)
+  | EA_Check    (ea_check_cond: exp)
 
 datatype call_action =
-    CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "aexp list")
+    CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "exp list")
 
 instance edge_action :: countable
   by countable_datatype
@@ -80,7 +80,7 @@ record cfg =
   intra     :: "(cfg_node \<times> edge_action \<times> cfg_node) set"
   calls     :: "(cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
   cfg_entry :: cfg_node
-  checks    :: "(cfg_node \<times> bexp) set"
+  checks    :: "(cfg_node \<times> exp) set"
 
 subsection \<open>Intra edge execution\<close>
 
@@ -107,8 +107,8 @@ fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
   "edge_step EA_Nop s = {s}"
 | "edge_step (EA_Assign x a) s = {s(x := aval a s)}"
 | "edge_step (EA_Special sc x) s = special_step sc x s"
-| "edge_step (EA_Assume b) s = (if bval b s then {s} else {})"
-| "edge_step (EA_AssumeNot b) s = (if bval b s then {} else {s})"
+| "edge_step (EA_Assume b) s = (if truthy (aval b s) then {s} else {})"
+| "edge_step (EA_AssumeNot b) s = (if truthy (aval b s) then {} else {s})"
 | "edge_step (EA_Ret e p) s =
      {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))}"
 | "edge_step (EA_Check c) s = {s}"
@@ -251,6 +251,25 @@ text \<open>The distinguished graph entry is always part of the derived node set
 lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
   by (simp add: cfg_nodes_def)
 
+text \<open>A finite edge relation gives a finite node set: each of the five \<open>cfg_nodes\<close>
+  disjuncts is a projection of \<open>intra g\<close> or \<open>calls g\<close>, so it inherits their finiteness as a
+  finite image; the sixth is the singleton \<open>cfg_entry g\<close>.\<close>
+lemma cfg_nodes_finite:
+  assumes "finite (intra g)" and "finite (calls g)"
+  shows "finite (cfg_nodes g)"
+proof -
+  have "{u. \<exists>a v. (u, a, v) \<in> intra g} = (\<lambda>(u, a, v). u) ` intra g"
+    and "{v. \<exists>u a. (u, a, v) \<in> intra g} = (\<lambda>(u, a, v). v) ` intra g"
+    by force+
+  moreover
+  have "{u. \<exists>act ce after. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). u) ` calls g"
+    and "{ce. \<exists>u act after. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). ce) ` calls g"
+    and "{after. \<exists>u act ce. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). after) ` calls g"
+    by force+
+  ultimately show ?thesis
+    unfolding cfg_nodes_def using assms by simp
+qed
+
 text \<open>A flat CFG has only local-edge endpoints and the distinguished entry.\<close>
 lemma flat_cfg_iff: "flat_cfg g \<longleftrightarrow> calls g = {}"
   by (simp add: flat_cfg_def)
@@ -283,7 +302,7 @@ lemma wf_no_intra_call:
 text \<open>Every edge action has a transfer; only an unsatisfied guard returns \<open>None\<close>.\<close>
 lemma edge_step_fail_iff:
   "edge_step a s = {} \<longleftrightarrow>
-     (\<exists>b. a = EA_Assume b \<and> \<not> bval b s) \<or> (\<exists>b. a = EA_AssumeNot b \<and> bval b s)"
+     (\<exists>b. a = EA_Assume b \<and> \<not> truthy (aval b s)) \<or> (\<exists>b. a = EA_AssumeNot b \<and> truthy (aval b s))"
   by (cases a) auto
 
 lemma edge_step_ret_target:

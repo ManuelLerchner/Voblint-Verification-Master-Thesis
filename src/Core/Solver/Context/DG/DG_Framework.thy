@@ -487,12 +487,12 @@ text \<open>
 
 record ('dl, 'dg) dg_spec =
   dgs_skip       :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_body       :: "pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_event      :: "analysis_event \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_env    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_combine_assign :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"
@@ -1363,9 +1363,9 @@ subsection \<open>Buffered generator: fold Side-free contributions, publish once
 
 text \<open>
   \<open>side_cfg_T_eff_keyed_seed_dg\<close>'s own \<open>intra\<close> fold has the same issue #121-keyed
-  multiwrite as \<open>routed_cmb\<close> did: a merge node with several intra predecessors, or
+  multiwrite as \<open>routed_cmb_g\<close>: a merge node with several intra predecessors, or
   several return call actions, each independently publishes a \<open>Side (gkey c) ...\<close> via
-  \<^const>\<open>dg_edge_tree\<close>/\<open>routed_cmb\<close>'s own \<^const>\<open>depend_on\<close>, so several writes to the
+  \<^const>\<open>dg_edge_tree\<close>/\<open>routed_cmb_g\<close>'s own \<^const>\<open>depend_on\<close>, so several writes to the
   same \<open>gkey c\<close> land in one RHS evaluation. \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> folds
   Side-free contribution trees (\<^const>\<open>apply_dg_spec_contribution\<close> for \<open>intra\<close>; the
   caller's own Side-free \<open>cmb_c\<close> for \<open>comb\<close>; \<open>extra\<close> unchanged, since a routed
@@ -1612,10 +1612,10 @@ text \<open>
   \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close>'s declarative value matches
   \<open>side_cfg_T_eff_keyed_seed_dg\<close>'s, given that \<open>cmb_c\<close> is the Side-free contribution
   analogue of \<open>cmb\<close> at the SAME \<open>gkey ctx\<close> slot (\<open>comb_t\<close>/\<open>comb_s\<close>/\<open>comb_free\<close> --
-  \<open>routed_cmb_contribution\<close>/\<open>routed_cmb\<close> discharge these, per
-  \<open>routed_cmb_contribution_matches_local\<close>/\<open>_global\<close> in \<open>Routed_Context\<close>) and \<open>extra\<close> is
+  \<open>routed_cmb_g_contribution\<close>/\<open>routed_cmb_g\<close> discharge these, per
+  \<open>routed_cmb_g_contribution_matches_local\<close>/\<open>_global\<close> in \<open>Routed_Context\<close>) and \<open>extra\<close> is
   Side-free and answers only its local slot (\<open>extra_free\<close>/\<open>extra_local_only\<close> --
-  \<open>routed_extra\<close> discharges both by direct inspection, since it answers via
+  \<open>routed_extra_g\<close> discharges both by direct inspection, since it answers via
   \<open>answer_local\<close> and issues no \<open>Side\<close>). \<open>intra\<close> needs no hypothesis:
   \<^const>\<open>apply_dg_spec_contribution\<close> vs \<^const>\<open>apply_dg_spec\<close> match unconditionally, for
   any \<open>dg_spec\<close>.

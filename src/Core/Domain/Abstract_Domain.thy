@@ -552,6 +552,24 @@ lemma gamma_lift_mono:
   using le by (cases x; cases y) (auto simp: gam_mono)
 
 text \<open>
+  \<open>is_bot_state\<close>'s lifted counterpart: a solver-level \<open>Bot\<close> already means the
+  point itself is unreachable, while \<open>Lifted \<sigma>\<close> defers to \<open>is_bot_state \<sigma>\<close>'s
+  own product-emptiness witness -- one component of \<open>\<sigma>\<close> collapsing to bottom
+  empties the whole point's concretization exactly as it does for a plain,
+  unlifted \<^typ>\<open>'a abs_state\<close>. The iff below needs no new argument beyond
+  \<open>is_bot_state_iff_gamma_state_empty\<close> and \<^const>\<open>gamma_lift\<close>'s own case
+  split.
+\<close>
+
+fun is_bot_state_lift :: "'a::sound_domain abs_state lifted \<Rightarrow> bool" where
+  "is_bot_state_lift Bot = True"
+| "is_bot_state_lift (Lifted \<sigma>) = is_bot_state \<sigma>"
+
+lemma is_bot_state_lift_iff:
+  "is_bot_state_lift s \<longleftrightarrow> gamma_state_lift s = {}"
+  by (cases s) (simp_all add: is_bot_state_iff_gamma_state_empty)
+
+text \<open>
   \<open>bind_lift\<close> is the reachability monad's Kleisli bind, exactly \<^const>\<open>Option.bind\<close>'s
   shape with \<open>Bot\<close> for \<open>None\<close> and \<open>Lifted\<close> for \<open>Some\<close>: \<open>Bot\<close> in, \<open>Bot\<close> out, without ever
   calling \<open>f\<close> -- matching Goblint's \<open>unlift\<close> being called before dispatch rather than inside
@@ -616,6 +634,91 @@ lemma transfer_lift2_Bot_right [simp]: "transfer_lift2 is_bot_pred f (Lifted a) 
 lemma transfer_lift2_Lifted [simp]:
   "transfer_lift2 is_bot_pred f (Lifted a) (Lifted b) = normalize_lift is_bot_pred (f a b)"
   unfolding transfer_lift2_def by simp
+
+subsection \<open>Canonical deadness: no \<^const>\<open>Lifted\<close> payload is ever witness-bottom\<close>
+
+text \<open>
+  \<open>normalized_lift\<close> names the discipline every solver-facing lifted value is meant to
+  keep: \<^const>\<open>Bot\<close> is the \<^emph>\<open>sole\<close> representation of "this program point denotes no
+  concrete store" -- a \<^const>\<open>Lifted\<close> payload \<open>is_bot_pred\<close> still calls bottom is a
+  representation the framework never lets escape a value-producing step, not a second,
+  competing way to say the same thing. \<open>normalize_lift\<close>'s own \<open>if\<close> makes every one of
+  its outputs self-normalized: the \<^const>\<open>Lifted\<close> branch only fires when \<open>is_bot_pred\<close>
+  already said no. \<open>transfer_lift\<close>/\<open>transfer_lift2\<close> route every domain transfer step
+  through exactly this \<open>if\<close>, so no transfer step can ever hand back a \<^const>\<open>Lifted\<close>
+  payload \<open>is_bot_pred\<close> still calls bottom, regardless of what the pre-lift inputs
+  looked like.
+
+  The lemmas below extend this from a single transfer step to every other value-producing
+  primitive a solver combines lifted values with: \<open>\<squnion>\<close> (joining several contributions at a
+  program point) and \<open>\<nabla>\<Delta>\<close> (the warrowing update rule). Both need only that \<open>is_bot_pred\<close>
+  itself is downward closed under the payload's order (\<open>mono\<close> below) -- exactly
+  \<open>is_bot_mono\<close>'s shape at \<^class>\<open>sound_domain\<close>, or \<open>resolved_st_q_is_bot_for\<close>'s own
+  monotonicity once bridged through \<open>fun_of_resolved_st_q_for_mono\<close> -- not any fact
+  specific to how \<open>is_bot_pred\<close> itself is computed.
+\<close>
+
+definition normalized_lift :: "('a \<Rightarrow> bool) \<Rightarrow> 'a lifted \<Rightarrow> bool" where
+  "normalized_lift is_bot_pred x = (case x of Bot \<Rightarrow> True | Lifted a \<Rightarrow> \<not> is_bot_pred a)"
+
+lemma normalized_lift_Bot [simp]: "normalized_lift is_bot_pred Bot"
+  unfolding normalized_lift_def by simp
+
+lemma normalized_lift_Lifted [simp]:
+  "normalized_lift is_bot_pred (Lifted a) \<longleftrightarrow> \<not> is_bot_pred a"
+  unfolding normalized_lift_def by simp
+
+lemma normalize_lift_normalized:
+  "normalized_lift is_bot_pred (normalize_lift is_bot_pred a)"
+  unfolding normalize_lift_def by (cases "is_bot_pred a") simp_all
+
+lemma transfer_lift_normalized:
+  "normalized_lift is_bot_pred (transfer_lift is_bot_pred f x)"
+  by (cases x) (simp_all add: transfer_lift_def normalize_lift_normalized)
+
+lemma transfer_lift2_normalized:
+  "normalized_lift is_bot_pred (transfer_lift2 is_bot_pred f x y)"
+  by (cases x; cases y) (simp_all add: transfer_lift2_def normalize_lift_normalized)
+
+text \<open>
+  \<open>canonicalize_lift\<close> re-normalizes an already-lifted value against \<open>is_bot_pred\<close>: a
+  \<^const>\<open>Lifted\<close> payload that has since become witness-bottom (e.g. read from a
+  representation that does not itself carry the \<open>transfer_lift\<close> discipline) collapses
+  to \<^const>\<open>Bot\<close>, exactly as if it had been produced by a transfer step in the first
+  place. It is \<open>transfer_lift is_bot_pred id\<close>, not a new bottom test: reusing
+  \<^const>\<open>transfer_lift\<close> at the identity function is what makes
+  \<open>canonicalize_lift_normalized\<close> immediate from \<open>transfer_lift_normalized\<close> rather than
+  a second proof of the same fact.
+\<close>
+
+definition canonicalize_lift :: "('a \<Rightarrow> bool) \<Rightarrow> 'a lifted \<Rightarrow> 'a lifted" where
+  "canonicalize_lift is_bot_pred = transfer_lift is_bot_pred id"
+
+lemma canonicalize_lift_Bot [simp]: "canonicalize_lift is_bot_pred Bot = Bot"
+  unfolding canonicalize_lift_def by simp
+
+lemma canonicalize_lift_Lifted [simp]:
+  "canonicalize_lift is_bot_pred (Lifted a) = normalize_lift is_bot_pred a"
+  unfolding canonicalize_lift_def by simp
+
+lemma canonicalize_lift_normalized:
+  "normalized_lift is_bot_pred (canonicalize_lift is_bot_pred x)"
+  unfolding canonicalize_lift_def by (rule transfer_lift_normalized)
+
+text \<open>
+  \<open>\<squnion>\<close> preserves \<open>normalized_lift\<close> from two already-normalized operands: \<^const>\<open>Bot\<close> is
+  \<open>\<squnion>\<close>'s identity on \<^typ>\<open>'a lifted\<close> (\<open>sup_lifted.simps\<close>), so the only case needing
+  \<open>mono\<close> at all is \<^const>\<open>Lifted\<close>/\<^const>\<open>Lifted\<close>, where \<open>sup_ge1\<close>/\<open>sup_ge2\<close> place each
+  operand below the join and \<open>mono\<close>'s contrapositive carries non-bottomness upward.
+\<close>
+
+lemma normalized_lift_sup:
+  fixes x y :: "'a::semilattice_sup lifted"
+  assumes mono: "\<And>a b::'a. a \<le> b \<Longrightarrow> is_bot_pred b \<Longrightarrow> is_bot_pred a"
+    and nx: "normalized_lift is_bot_pred x"
+    and ny: "normalized_lift is_bot_pred y"
+  shows "normalized_lift is_bot_pred (x \<squnion> y)"
+  using nx ny by (cases x; cases y) (auto dest: mono[OF sup_ge1] mono[OF sup_ge2])
 
 text \<open>
   \<open>map_lift\<close> is the reachability functor's map (\<open>Option.map\<close>'s analogue), used to push a
@@ -842,7 +945,8 @@ locale backward_domain =
   semantic_intersection intersect
     for intersect :: "'a::sound_domain => 'a => 'a" +
   fixes
-    aval_abs  :: "aexp => 'a abs_state => 'a"
+    aval_abs  :: "exp => 'a abs_state => 'a"
+    and tobool :: "'a => bool option"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
     and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
@@ -866,9 +970,11 @@ locale backward_domain =
   and inv_times_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 * n2 \<in> gamma r
        \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
+  and tobool_sound:
+      "tobool p = Some b \<Longrightarrow> i \<in> gamma p \<Longrightarrow> truthy i = b"
 begin
 
-fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
+fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
     "afilter (V x) a \<sigma> = \<sigma>(x := intersect a (\<sigma> x))"
   | "afilter (Plus  e1 e2) a \<sigma> =
        (let (a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
@@ -881,7 +987,21 @@ fun afilter :: "aexp => 'a => 'a abs_state => 'a abs_state" where
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
   | "afilter _ a \<sigma> = \<sigma>"
 
-fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
+text \<open>
+  \<open>bfilter\<close> narrows a state under an assumed truth value of \<open>e\<close>: \<open>bfilter e
+  True\<close> is \<open>assume e\<close>, \<open>bfilter e False\<close> is \<open>assume-not e\<close>. \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>
+  distribute structurally (De Morgan, over \<open>\<squnion>\<close> for the disjunctive branch);
+  \<open>Less\<close>/\<open>Eq\<close> go straight through \<open>inv_less\<close>/\<open>inv_eq\<close> on their two operands.
+  Every other constructor -- \<open>N\<close>, \<open>V\<close>, \<open>Plus\<close>, \<open>Minus\<close>, \<open>Times\<close> -- has no
+  Boolean-shaped narrowing operator of its own, so the fallback case reduces
+  truthiness to the one comparison every domain already inverts: \<open>truthy
+  (aval e s) = res\<close> iff \<open>(aval e s = 0) = (\<not> res)\<close>, so \<open>inv_eq (\<not> res)\<close>
+  against the abstract constant \<open>0\<close> narrows \<open>e\<close>'s own target value, and
+  \<open>afilter\<close> propagates that target through \<open>e\<close>'s structure. This reuses
+  \<open>inv_eq\<close>/\<open>afilter\<close> rather than adding a new domain-author operator.
+\<close>
+
+fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
     "bfilter (Less e1 e2) res \<sigma> =
        (let (a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
@@ -893,7 +1013,9 @@ fun bfilter :: "bexp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter (Eq  e1 e2) res  \<sigma> =
        (let (a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "bfilter _ _ \<sigma> = \<sigma>"
+  | "bfilter e res \<sigma> =
+       (let (a1, a2) = inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)
+        in afilter e a1 \<sigma>)"
 
 lemma afilter_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
@@ -959,84 +1081,130 @@ next
   show ?case
     unfolding afilter.simps pair[symmetric] Let_def
     using Times.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+next
+  case (Less e1 e2) then show ?case by simp
+next
+  case (Eq e1 e2) then show ?case by simp
+next
+  case (Not e) then show ?case by simp
+next
+  case (And e1 e2) then show ?case by simp
+next
+  case (Or e1 e2) then show ?case by simp
+qed
+
+text \<open>
+  Every constructor without its own Boolean-shaped narrowing operator --
+  \<open>N\<close>, \<open>V\<close>, \<open>Plus\<close>, \<open>Minus\<close>, \<open>Times\<close> -- reduces \<open>bfilter\<close>'s target truth
+  value to an \<open>inv_eq\<close> narrowing against the abstract constant \<open>0\<close> (see
+  \<open>bfilter\<close>'s own comment), then propagates the narrowed target through
+  \<open>afilter\<close>. Proved once here, generically in \<open>e\<close>, so the induction below
+  cites it instead of repeating the same \<open>inv_eq\<close>/\<open>afilter_sound\<close> chain per
+  arithmetic constructor.
+\<close>
+lemma bfilter_default_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
+  shows "s \<in> \<lbrakk>afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma>\<rbrakk>"
+proof -
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e0: "aval (N 0) s \<in> gamma (aval_abs (N 0) \<sigma>)" by (rule aval_abs_sound[of s \<sigma> "N 0", OF gs])
+  have eq0: "(aval e s = aval (N 0) s) = (\<not> res)" using assms(2) by auto
+  have "aval e s \<in> gamma (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)))"
+    using inv_eq_sound[OF ea e0 eq0] by simp
+  then show ?thesis using afilter_sound[OF assms(1)] by simp
 qed
 
 lemma bfilter_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "bval b s = res"
-  shows "s \<in> \<lbrakk>bfilter b res \<sigma>\<rbrakk>"
-using assms proof (induction b arbitrary: res \<sigma>)
-  case (Bc b') thus ?case by simp
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
+  shows "s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>"
+using assms proof (induction e arbitrary: res \<sigma>)
+  case (N n) show ?case using bfilter_default_sound[OF N.prems(1) N.prems(2)] by simp
 next
-  case (Not b)
-  have bv': "bval b s = (\<not> res)" using Not.prems(2) by (auto)
+  case (V x) show ?case
+    using bfilter_default_sound[OF V.prems(1) V.prems(2)]
+    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+next
+  case (Plus e1 e2) show ?case
+    using bfilter_default_sound[OF Plus.prems(1) Plus.prems(2)] by (simp add: Let_def case_prod_beta)
+next
+  case (Minus e1 e2) show ?case
+    using bfilter_default_sound[OF Minus.prems(1) Minus.prems(2)] by (simp add: Let_def case_prod_beta)
+next
+  case (Times e1 e2) show ?case
+    using bfilter_default_sound[OF Times.prems(1) Times.prems(2)] by (simp add: Let_def case_prod_beta)
+next
+  case (Not e)
+  have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
   from Not.IH[OF Not.prems(1) bv'] show ?case by simp
 next
-  case (And b1 b2)
+  case (And e1 e2)
   show ?case proof (cases res)
     case True
-    have v1: "bval b1 s = True" and v2: "bval b2 s = True"
-      using And.prems(2) True by simp_all
-    have gs2: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
+    have v1: "truthy (aval e1 s) = True" and v2: "truthy (aval e2 s) = True"
+      using And.prems(2) True by (auto split: if_splits)
+    have gs2: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
       using And.IH(2)[OF And.prems(1) v2] by simp
     show ?thesis
       using And.IH(1)[OF gs2 v1] by (simp add: True)
   next
     case False
-    have disj: "\<not> bval b1 s \<or> \<not> bval b2 s"
-      using And.prems(2) False by auto
-    show ?thesis proof (cases "bval b1 s")
+    have disj: "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
+      using And.prems(2) False by (auto split: if_splits)
+    show ?thesis proof (cases "truthy (aval e1 s)")
       case b1F: False
-      have v1: "bval b1 s = False" using b1F by simp
-      have h: "s \<in> \<lbrakk>bfilter b1 False \<sigma>\<rbrakk>"
+      have v1: "truthy (aval e1 s) = False" using b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter e1 False \<sigma>\<rbrakk>"
         using And.IH(1)[OF And.prems(1) v1] by simp
-      have sup1: "s \<in> \<lbrakk>bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub1[of "bfilter b1 False \<sigma>" "bfilter b2 False \<sigma>"] h]
+      have sup1: "s \<in> \<lbrakk>bfilter e1 False \<sigma> \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1[of "bfilter e1 False \<sigma>" "bfilter e2 False \<sigma>"] h]
         by simp
       show ?thesis using False sup1
         using bfilter.simps(4) by presburger
     next
       case b1T: True
-      have v2: "bval b2 s = False" using disj b1T by simp
-      have h: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
+      have v2: "truthy (aval e2 s) = False" using disj b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
         using And.IH(2)[OF And.prems(1) v2] by simp
-      have sup2: "s \<in> \<lbrakk>bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub2[of "bfilter b2 False \<sigma>" "bfilter b1 False \<sigma>"] h]
+      have sup2: "s \<in> \<lbrakk>bfilter e1 False \<sigma> \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2[of "bfilter e2 False \<sigma>" "bfilter e1 False \<sigma>"] h]
         by simp
       show ?thesis using False sup2
         using bfilter.simps(4) by presburger 
     qed
   qed
 next
-  case (Or b1 b2)
+  case (Or e1 e2)
   show ?case proof (cases res)
     case True
-    have disj: "bval b1 s \<or> bval b2 s" using Or.prems(2) True by simp
-    show ?thesis proof (cases "bval b1 s")
+    have disj: "truthy (aval e1 s) \<or> truthy (aval e2 s)"
+      using Or.prems(2) True by (auto split: if_splits)
+    show ?thesis proof (cases "truthy (aval e1 s)")
       case b1T: True
-      have v1: "bval b1 s = True" using b1T by simp
-      have h: "s \<in> \<lbrakk>bfilter b1 True \<sigma>\<rbrakk>"
+      have v1: "truthy (aval e1 s) = True" using b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter e1 True \<sigma>\<rbrakk>"
         using Or.IH(1)[OF Or.prems(1) v1] by simp
-      have sup1: "s \<in> \<lbrakk>bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub1[of "bfilter b1 True \<sigma>" "bfilter b2 True \<sigma>"] h]
+      have sup1: "s \<in> \<lbrakk>bfilter e1 True \<sigma> \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1[of "bfilter e1 True \<sigma>" "bfilter e2 True \<sigma>"] h]
         by simp
       show ?thesis using True sup1
         using bfilter.simps(5) by presburger 
     next
       case b1F: False
-      have v2: "bval b2 s = True" using disj b1F by simp
-      have h: "s \<in> \<lbrakk>bfilter b2 True \<sigma>\<rbrakk>"
+      have v2: "truthy (aval e2 s) = True" using disj b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
         using Or.IH(2)[OF Or.prems(1) v2] by simp
-      have sup2: "s \<in> \<lbrakk>bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub2[of "bfilter b2 True \<sigma>" "bfilter b1 True \<sigma>"] h]
+      have sup2: "s \<in> \<lbrakk>bfilter e1 True \<sigma> \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2[of "bfilter e2 True \<sigma>" "bfilter e1 True \<sigma>"] h]
         by simp
       show ?thesis using True sup2
         using bfilter.simps(5) by presburger
     qed
   next
     case False
-    have v1: "bval b1 s = False" and v2: "bval b2 s = False"
-      using Or.prems(2) False by simp_all
-    have gs2: "s \<in> \<lbrakk>bfilter b2 False \<sigma>\<rbrakk>"
+    have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
+      using Or.prems(2) False by (auto split: if_splits)
+    have gs2: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
       using Or.IH(2)[OF Or.prems(1) v2] by simp
     show ?thesis
       using Or.IH(1)[OF gs2 v1] by (simp add: False)
@@ -1048,7 +1216,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Less.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by simp
+  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (auto split: if_splits)
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -1063,7 +1231,7 @@ next
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
   have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
   have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by simp
+  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by (auto split: if_splits)
   have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
     using inv_eq_sound[OF e1a e2a eq] pair[symmetric] by simp
   have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
@@ -1073,7 +1241,109 @@ next
     using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
 qed
 
+text \<open>
+  \<open>branch_lifted\<close> is the canonical Goblint-aligned branch semantics: a forward
+  \<open>tobool\<close> feasibility check ahead of \<open>bfilter\<close>, matching \<open>Base.branch\<close>'s
+  \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>. A definite
+  contradiction between \<open>tobool\<close>'s answer and \<open>pol\<close> denotes \<open>Bot\<close> -- no
+  concrete successor, matching Goblint's \<open>Deadcode\<close> as an outer control-flow
+  fact rather than a value of the domain -- while every other case narrows via
+  \<open>bfilter\<close> and returns \<open>Lifted\<close>. \<open>tobool\<close>'s definite answer, when present,
+  is exactly \<open>truthy\<close> of every concrete value \<open>aval_abs e \<sigma>\<close> represents;
+  \<open>truthy (aval e s) = pol\<close> for a represented \<open>s\<close> then forces that answer
+  to equal \<open>pol\<close>, so the \<open>Bot\<close> case below is exercised only when no
+  represented \<open>s\<close> exists at all.
+
+  The leading \<open>is_bot (aval_abs e \<sigma>)\<close> guard is not a separate soundness
+  case -- \<open>aval_abs_sound\<close> already makes it unreachable whenever \<open>\<sigma>\<close>
+  represents anything, so \<open>branch_lifted_sound\<close> discharges it the same way
+  as the \<open>tobool\<close> disagreement case. It exists for monotonicity: an
+  author's \<open>tobool\<close> is free to answer arbitrarily at its own domain's
+  bottom (every answer is vacuously sound there, since \<open>gamma bot = {}\<close>),
+  so \<open>tobool\<close> need not, and generally does not, agree across a
+  bottom/non-bottom pair \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Routing
+  \<open>is_bot\<close> itself to \<open>Bot\<close> directly, ahead of \<open>tobool\<close>, sidesteps that
+  disagreement instead of relying on it.
+
+  \<open>branch\<close> is the plain-\<open>abs_state\<close> projection of \<open>branch_lifted\<close>, used by
+  \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>) and the
+  executable mirror: it collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that
+  never needs to
+  distinguish "no successor" from "successor whose store is bottom" can keep
+  working with plain \<open>abs_state\<close>. The TD-side effectful pipeline instead
+  consumes \<open>branch_lifted\<close> directly (see \<open>local_branch_tree\<close> in
+  \<open>TD_Side_CFG.thy\<close>), so that a dead branch never has to be reconstructed
+  as a whole-state-bottom value indistinguishable from an ordinary
+  local/global-restricted result.
+\<close>
+
+definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
+  "branch_lifted e pol \<sigma> =
+     (if is_bot (aval_abs e \<sigma>) then Bot
+      else case tobool (aval_abs e \<sigma>) of
+        Some c \<Rightarrow> if c = pol then Lifted (bfilter e pol \<sigma>) else Bot
+      | None \<Rightarrow> Lifted (bfilter e pol \<sigma>))"
+
+definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
+  "branch e pol \<sigma> = (case branch_lifted e pol \<sigma> of Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>')"
+
+text \<open>
+  The original case-split shape, recovered as a lemma rather than the
+  primitive definition: callers reasoning about \<open>branch\<close> at the plain
+  \<open>abs_state\<close> level (\<open>domain_transfer\<close>'s \<open>tf_branch\<close> field, the executable
+  mirror) unfold through this instead of \<open>branch_lifted\<close>.
+\<close>
+
+lemma branch_unfold:
+  "branch e pol \<sigma> =
+     (if is_bot (aval_abs e \<sigma>) then bot
+      else case tobool (aval_abs e \<sigma>) of
+        Some c \<Rightarrow> if c = pol then bfilter e pol \<sigma> else bot
+      | None \<Rightarrow> bfilter e pol \<sigma>)"
+  unfolding branch_def branch_lifted_def by (simp split: option.splits)
+
+lemma branch_lifted_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
+  shows "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)"
+proof -
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have not_bot: "\<not> is_bot (aval_abs e \<sigma>)" using ea is_bot_correct by auto
+  show ?thesis
+  proof (cases "tobool (aval_abs e \<sigma>)")
+    case None
+    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_lifted_def)
+  next
+    case (Some c)
+    have "truthy (aval e s) = c" using tobool_sound[OF Some ea] .
+    with assms(2) have "c = pol" by simp
+    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_lifted_def Some)
+  qed
+qed
+
+lemma branch_sound:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
+  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
+proof -
+  have "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)" by (rule branch_lifted_sound[OF assms])
+  then show ?thesis
+    unfolding branch_def by (cases "branch_lifted e pol \<sigma>") simp_all
+qed
+
+text \<open>
+  \<open>branch\<close> only ever narrows further than \<open>bfilter\<close>: it either falls
+  through to \<open>bfilter\<close> unchanged, or short-circuits to \<open>bot\<close>, and \<open>bot\<close> is
+  least. Callers that only need an upper bound on \<open>branch\<close>'s result -- e.g.
+  post-fixpoint checks -- can reuse their existing \<open>bfilter\<close>-level
+  reasoning through this fact instead of re-deriving it against \<open>branch\<close>'s
+  case split.
+\<close>
+
+lemma branch_le_bfilter: "branch e pol \<sigma> \<le> bfilter e pol \<sigma>"
+  unfolding branch_unfold by (auto split: option.splits)
+
 end
+
 
 subsection \<open>Conservative inverse operator\<close>
 
@@ -1194,6 +1464,8 @@ locale backward_domain_refined = backward_domain +
   and inv_plus_reductive: "le_pair (inv_plus r a1 a2) (a1, a2)"
   and inv_minus_reductive: "le_pair (inv_minus r a1 a2) (a1, a2)"
   and inv_times_reductive: "le_pair (inv_times r a1 a2) (a1, a2)"
+  and tobool_mono:
+      "\<not> is_bot (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some (bv::bool) \<Longrightarrow> tobool p1 = Some bv"
 begin
 
 text \<open>Componentwise projections of each pair-shaped reductive assumption, used by the
@@ -1384,12 +1656,58 @@ next
     by (rule Times.IH(2)[OF conjunct2[OF iv] Times.prems(2)])
   show ?case unfolding afilter_Times_unfold
     by (rule Times.IH(1)[OF conjunct1[OF iv] step])
+next
+  case (Less e1 e2) then show ?case by simp
+next
+  case (Eq e1 e2) then show ?case by simp
+next
+  case (Not e) then show ?case by simp
+next
+  case (And e1 e2) then show ?case by simp
+next
+  case (Or e1 e2) then show ?case by simp
+qed
+
+text \<open>
+  Monotonicity companion to \<open>bfilter_default_sound\<close>: the same \<open>inv_eq\<close>-
+  against-\<open>0\<close> reduction is monotone in \<open>\<sigma>\<close>, following directly from
+  \<open>aval_abs_mono\<close>, \<open>inv_eq_mono\<close>, and \<open>afilter_mono\<close>.
+\<close>
+lemma bfilter_default_mono:
+  assumes "\<sigma>1 \<le> \<sigma>2"
+  shows "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))) \<sigma>1
+       \<le> afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))) \<sigma>2"
+proof -
+  have v1: "aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2" by (rule aval_abs_mono[OF assms])
+  have v0: "aval_abs (N 0) \<sigma>1 \<le> aval_abs (N 0) \<sigma>2" by (rule aval_abs_mono[OF assms])
+  have iv: "fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))
+              \<le> fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))"
+    using inv_eq_mono_conj[OF v1 v0] by simp
+  show ?thesis by (rule afilter_mono[OF iv assms])
 qed
 
 lemma bfilter_mono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
-  case (Bc b') thus ?case by simp
+  case (N n) show ?case
+    using bfilter_default_mono[where e = "N n" and res = res, OF N.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (V x) show ?case
+    using bfilter_default_mono[where e = "V x" and res = res, OF V.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+next
+  case (Plus e1 e2) show ?case
+    using bfilter_default_mono[where e = "Plus e1 e2" and res = res, OF Plus.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Minus e1 e2) show ?case
+    using bfilter_default_mono[where e = "Minus e1 e2" and res = res, OF Minus.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Times e1 e2) show ?case
+    using bfilter_default_mono[where e = "Times e1 e2" and res = res, OF Times.prems]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
 next
   case (Not b) show ?case unfolding bfilter.simps by (rule Not.IH[OF Not.prems])
 next
@@ -1463,6 +1781,78 @@ next
 qed
 
 text \<open>
+  \<open>branch_lifted\<close>'s forward gate rests on \<open>tobool\<close>, and \<open>tobool_mono\<close>
+  explicitly excludes bottom operands -- an author's \<open>tobool\<close> may answer
+  arbitrarily there, since \<open>gamma bot = {}\<close> makes every answer vacuously
+  sound. Routing \<open>is_bot (aval_abs e \<sigma>)\<close> to \<open>Bot\<close> directly
+  (\<open>branch_lifted\<close>'s own leading guard) is what keeps this total: whichever
+  of \<open>\<sigma>1\<close>/\<open>\<sigma>2\<close> has a bottom \<open>aval_abs\<close> value collapses to \<open>Bot\<close>
+  immediately, without needing \<open>tobool\<close> to say anything about it.
+  \<open>branch_mono\<close> is then a direct consequence: \<open>branch\<close>'s
+  \<open>Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>'\<close> projection is itself monotone (\<open>Bot\<close> is
+  least, so it can only project below whatever the \<open>Lifted\<close> side projects to).
+\<close>
+
+lemma branch_lifted_mono:
+  assumes "sigma1 \<le> sigma2"
+  shows "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
+proof (cases "is_bot (aval_abs e sigma2)")
+  case True
+  have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
+  from True have "is_bot (aval_abs e sigma1)" using is_bot_mono[OF v] by simp
+  with True show ?thesis by (simp add: branch_lifted_def)
+next
+  case not_bot2: False
+  have below_bfilter: "\<And>sigma. branch_lifted e pol sigma \<le> Lifted (bfilter e pol sigma)"
+    unfolding branch_lifted_def by (auto split: option.splits)
+  show ?thesis
+  proof (cases "tobool (aval_abs e sigma2)")
+    case None
+    have eq2: "branch_lifted e pol sigma2 = Lifted (bfilter e pol sigma2)"
+      using None not_bot2 by (simp add: branch_lifted_def)
+    show ?thesis
+      unfolding eq2
+      by (rule order_trans[OF below_bfilter[of sigma1]]) (simp add: bfilter_mono[OF assms])
+  next
+    case (Some c2)
+    show ?thesis
+    proof (cases "c2 = pol")
+      case True
+      have eq2: "branch_lifted e pol sigma2 = Lifted (bfilter e pol sigma2)"
+        using Some True not_bot2 by (simp add: branch_lifted_def)
+      show ?thesis
+        unfolding eq2
+        by (rule order_trans[OF below_bfilter[of sigma1]]) (simp add: bfilter_mono[OF assms])
+    next
+      case False
+      show ?thesis
+      proof (cases "is_bot (aval_abs e sigma1)")
+        case True
+        then show ?thesis by (simp add: branch_lifted_def)
+      next
+        case not_bot1: False
+        have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
+        have "tobool (aval_abs e sigma1) = Some c2"
+          using tobool_mono[OF not_bot1 v Some] .
+        with False not_bot1 show ?thesis by (simp add: branch_lifted_def)
+      qed
+    qed
+  qed
+qed
+
+lemma branch_mono:
+  assumes "sigma1 \<le> sigma2"
+  shows "branch e pol sigma1 \<le> branch e pol sigma2"
+proof -
+  have lm: "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
+    by (rule branch_lifted_mono[OF assms])
+  show ?thesis
+    unfolding branch_def
+    using lm by (cases "branch_lifted e pol sigma1"; cases "branch_lifted e pol sigma2") auto
+qed
+
+
+text \<open>
   Reductiveness of the whole recursion, not just its individual \<open>intersect\<close>/\<open>inv_*\<close>
   steps: @{term \<open>afilter e a \<sigma>\<close>}/@{term \<open>bfilter b res \<sigma>\<close>} are always \<le> their
   input state. This is what lets a compound expression's re-narrowing of an
@@ -1510,12 +1900,48 @@ next
             \<le> afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
     by (rule Times.IH(1))
   show ?case unfolding afilter_Times_unfold by (rule order_trans[OF h1 h2])
+next
+  case (Less e1 e2) show ?case by simp
+next
+  case (Eq e1 e2) show ?case by simp
+next
+  case (Not e) show ?case by simp
+next
+  case (And e1 e2) show ?case by simp
+next
+  case (Or e1 e2) show ?case by simp
 qed
+
+text \<open>
+  Reductiveness companion to \<open>bfilter_default_sound\<close>: the \<open>inv_eq\<close>-against-\<open>0\<close>
+  reduction is exactly an \<open>afilter\<close> call, so reductiveness falls straight out
+  of \<open>afilter_reductive\<close> with no further argument.
+\<close>
+lemma bfilter_default_reductive:
+  "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma> \<le> \<sigma>"
+  by (rule afilter_reductive)
 
 lemma bfilter_reductive: "bfilter b res \<sigma> \<le> \<sigma>"
 proof (induction b arbitrary: res \<sigma>)
-  case (Bc b')
-  then show ?case by simp
+  case (N n) show ?case
+    using bfilter_default_reductive[where e = "N n" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (V x) show ?case
+    using bfilter_default_reductive[where e = "V x" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
+next
+  case (Plus e1 e2) show ?case
+    using bfilter_default_reductive[where e = "Plus e1 e2" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Minus e1 e2) show ?case
+    using bfilter_default_reductive[where e = "Minus e1 e2" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
+next
+  case (Times e1 e2) show ?case
+    using bfilter_default_reductive[where e = "Times e1 e2" and res = res]
+    by (simp add: bfilter.simps Let_def case_prod_beta)
 next
   case (Not b)
   show ?case unfolding bfilter.simps by (rule Not.IH)

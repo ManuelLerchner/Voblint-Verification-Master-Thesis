@@ -14,6 +14,7 @@ theory Exec_DG_Bridge
     "Voblint_Core.DG_Soundness"
     "Voblint_Core.Exec_Bridge"
     "Voblint_Core.TD_Side_Eff_Keyed_Gen"
+    "Voblint_Core.Routed_Context"
 begin
 
 
@@ -172,9 +173,9 @@ lemma sides_placed_abs_dg_edge_tree_Inr:
 definition placed_abs_dg_enter_tree ::
   "(vname => bool) => (pp => pname) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => aexp list =>
+   (vname list => exp list =>
      ('a::bounded_semilattice_sup_bot) abs_state => 'a abs_state) =>
-   vname list => aexp list => pp => pp =>
+   vname list => exp list => pp => pp =>
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
@@ -501,8 +502,8 @@ definition completed_sigma_abs ::
    (pp \<times> 'c + unit \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow>
    pp \<times> 'c + unit \<Rightarrow> ('a abs_state, 'a abs_state) dg_state"
 where
-  "completed_sigma_abs gs locations_of outside exec_sigma key =
-    (case key of
+  "completed_sigma_abs gs locations_of outside exec_sigma k =
+    (case k of
        Inl (v, ctx) \<Rightarrow> DG
          (complete_abs_on gs (set (locations_of v)) (\<lambda>_. outside)
            (locals (exec_sigma (Inl (v, ctx)))))
@@ -907,7 +908,7 @@ text \<open>Generic diagonal executable D/G specification: the only classifier-d
 definition unit_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_spec"
 where
   "unit_dg_spec_st_for gs tf_st enter_st = \<lparr>
@@ -1038,7 +1039,7 @@ definition unit_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_spec"
 where
   "unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = \<lparr>
@@ -1428,9 +1429,9 @@ lemma dg_refines_on_placed_edge_strict:
 definition placed_dg_enter_tree ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => aexp list =>
+   (vname list => exp list =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   vname list => aexp list => pp => pp =>
+   vname list => exp list => pp => pp =>
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_enter_tree owner_of locations_of keep_local publish_side
@@ -1448,9 +1449,9 @@ lemma placed_dg_enter_tree_eq:
 definition placed_dg_enter_tree_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => aexp list =>
+   (vname list => exp list =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   vname list => aexp list => pp => pp =>
+   vname list => exp list => pp => pp =>
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
@@ -1515,10 +1516,10 @@ lemma dep_aux_placed_abs_dg_enter_tree:
 
 lemma dg_refines_on_placed_entry:
   fixes executable_enter ::
-    "vname list => aexp list =>
+    "vname list => exp list =>
       ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and abstract_enter ::
-      "vname list => aexp list => 'a abs_state => 'a abs_state"
+      "vname list => exp list => 'a abs_state => 'a abs_state"
   assumes raw:
     "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
       lookup_resolved_st_q
@@ -1588,10 +1589,10 @@ qed
 
 lemma dg_refines_on_placed_entry_strict:
   fixes executable_enter ::
-    "vname list => aexp list =>
+    "vname list => exp list =>
       ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and abstract_enter ::
-      "vname list => aexp list => 'a abs_state => 'a abs_state"
+      "vname list => exp list => 'a abs_state => 'a abs_state"
   assumes raw:
     "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
       lookup_resolved_st_q
@@ -2025,7 +2026,7 @@ proof -
 qed
 
 corollary placed_dg_enter_tree_local_support_bounded:
-  fixes enter :: "vname list => aexp list =>
+  fixes enter :: "vname list => exp list =>
     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
   assumes growth: "support_growth_bounded (enter parameters arguments) footprint"
@@ -2049,7 +2050,7 @@ corollary placed_dg_enter_tree_local_support_bounded:
      OF growth footprint_scope input_bounded])
 
 corollary placed_dg_enter_tree_side_support_bounded:
-  fixes enter :: "vname list => aexp list =>
+  fixes enter :: "vname list => exp list =>
     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
   assumes growth: "support_growth_bounded (enter parameters arguments) footprint"
@@ -2321,7 +2322,7 @@ where
 definition placed_dg_enter_of ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => aexp list =>
+   (vname list => exp list =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
    unit => pp => call_action => pp =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
@@ -2337,7 +2338,7 @@ definition placed_dg_gen_of ::
   "(vname => bool) => (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
    (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   (vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st) =>
+   (vname list => exp list => 'a exec_dg_st => 'a exec_dg_st) =>
    cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
 where
@@ -2387,7 +2388,7 @@ where
 definition placed_dg_enter_of_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => aexp list =>
+   (vname list => exp list =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
    unit => pp => call_action => pp =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
@@ -2487,7 +2488,7 @@ definition placed_dg_gen_of_strict ::
   "(vname => bool) => (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
    (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   (vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st) =>
+   (vname list => exp list => 'a exec_dg_st => 'a exec_dg_st) =>
    cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
 where
@@ -2537,7 +2538,7 @@ where
 definition placed_abs_dg_enter_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
-   (vname list \<Rightarrow> aexp list \<Rightarrow>
+   (vname list \<Rightarrow> exp list \<Rightarrow>
      ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
    unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
@@ -2633,7 +2634,7 @@ definition placed_abs_dg_gen_of ::
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
    (edge_action \<Rightarrow>
      ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
-   (vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   (vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
    cfg \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) eqsT"
 where
@@ -2884,8 +2885,8 @@ lemma placed_hook_se_edge:
     and keep_local publish_side :: "scoped_location => bool"
     and transfer_st :: "edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and transfer_abs :: "edge_action => 'a abs_state => 'a abs_state"
-    and enter_st :: "vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st"
-    and enter_abs :: "vname list => aexp list => 'a abs_state => 'a abs_state"
+    and enter_st :: "vname list => exp list => 'a exec_dg_st => 'a exec_dg_st"
+    and enter_abs :: "vname list => exp list => 'a abs_state => 'a abs_state"
     and g :: cfg and bot0 :: "'a exec_dg_st" and s0d s0g :: "'a exec_dg_st"
     and bot0_abs :: "'a abs_state" and s0d_abs s0g_abs :: "'a abs_state" and top_val :: 'a
     and sigma_exec :: "pp \<times> unit + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
@@ -3043,8 +3044,8 @@ lemma placed_hook_se_entry:
     and keep_local publish_side :: "scoped_location => bool"
     and transfer_st :: "edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and transfer_abs :: "edge_action => 'a abs_state => 'a abs_state"
-    and enter_st :: "vname list => aexp list => 'a exec_dg_st => 'a exec_dg_st"
-    and enter_abs :: "vname list => aexp list => 'a abs_state => 'a abs_state"
+    and enter_st :: "vname list => exp list => 'a exec_dg_st => 'a exec_dg_st"
+    and enter_abs :: "vname list => exp list => 'a abs_state => 'a abs_state"
     and g :: cfg and bot0 :: "'a exec_dg_st" and s0d s0g :: "'a exec_dg_st"
     and bot0_abs :: "'a abs_state" and s0d_abs s0g_abs :: "'a abs_state" and top_val :: 'a
     and sigma_exec :: "pp \<times> unit + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
@@ -3856,6 +3857,114 @@ lemma dg_tree_st_commute_wrapped_edge:
         sides_wrapped_edge_commute[where step_st=step_st and step_abs=step_abs, OF H]
         dep_aux_wrapped_edge_eq)
 
+subsubsection \<open>Combine-tree transport, generic in the reader\<close>
+
+text \<open>
+  The combine-tree analogue of \<open>traverse_dg_edge_tree_commute\<close>/\<open>sides_dg_edge_tree_commute\<close>
+  above, factored generically here rather than duplicated per reader: the diagonal
+  (\<open>fun_of_exec_dg_st_for gs\<close>) and lifted (\<open>map_lift (fun_of_exec_dg_st_for gs)\<close>) instances
+  both cite these directly, so only the \<open>dg_cmb_of\<close>-specific instantiation below is
+  reader-specific, not the tree-structure reasoning itself.
+\<close>
+
+lemma traverse_dg_combine_tree_commute:
+  assumes H: "\<And>dst dc de g. map_prod Fglob Floc (comb_st dst dc de g)
+                        = comb_abs dst (Floc dc) (Floc de) (Fglob g)"
+  shows "fun_of_dg_st_gen Floc Fglob (traverse_rhs (dg_combine_tree comb_st dst cc ex) \<sigma>_st)
+           = traverse_rhs (dg_combine_tree comb_abs dst cc ex) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
+proof -
+  have "snd (comb_abs dst (Floc (locals (\<sigma>_st (Inl cc)))) (Floc (locals (\<sigma>_st (Inl ex))))
+              (Fglob (globs (\<sigma>_st (Inr ())))))
+        = Floc (snd (comb_st dst (locals (\<sigma>_st (Inl cc))) (locals (\<sigma>_st (Inl ex)))
+              (globs (\<sigma>_st (Inr ())))))"
+    using H[of dst "locals (\<sigma>_st (Inl cc))" "locals (\<sigma>_st (Inl ex))" "globs (\<sigma>_st (Inr ()))"]
+    by (metis map_prod_simp snd_conv surj_pair)
+  thus ?thesis
+    by (simp add: traverse_dg_combine_tree Fglob_bot)
+qed
+
+lemma traverse_wrapped_combine_commute:
+  assumes H: "\<And>dst dc de g. map_prod Fglob Floc (comb_st dst dc de g)
+                        = comb_abs dst (Floc dc) (Floc de) (Fglob g)"
+  shows "fun_of_dg_st_gen Floc Fglob (traverse_rhs (map_gtree gk (map_ltree lk (dg_combine_tree comb_st dst cc ex))) \<sigma>_st)
+       = traverse_rhs (map_gtree gk (map_ltree lk (dg_combine_tree comb_abs dst cc ex))) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
+proof -
+  have "fun_of_dg_st_gen Floc Fglob (traverse_rhs (dg_combine_tree comb_st dst cc ex) (\<lambda>z. \<sigma>_st (map_sum lk gk z)))
+        = traverse_rhs (dg_combine_tree comb_abs dst cc ex) (fun_of_dg_st_gen Floc Fglob \<circ> (\<lambda>z. \<sigma>_st (map_sum lk gk z)))"
+    using H by (rule traverse_dg_combine_tree_commute)
+  thus ?thesis
+    by (simp add: traverse_rhs_map_gtree traverse_rhs_map_ltree sum.map_comp comp_def o_def)
+qed
+
+lemma sides_dg_combine_tree_commute:
+  assumes H: "\<And>dst dc de g. map_prod Fglob Floc (comb_st dst dc de g)
+                        = comb_abs dst (Floc dc) (Floc de) (Fglob g)"
+  shows "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (dg_combine_tree comb_st dst cc ex) \<tau>_st k)
+       = sides_of_rhs (dg_combine_tree comb_abs dst cc ex) (fun_of_dg_st_gen Floc Fglob \<circ> \<tau>_st) k"
+proof (cases k)
+  case (Inr b)
+  have hg: "fst (comb_abs dst (Floc (locals (\<tau>_st (Inl cc)))) (Floc (locals (\<tau>_st (Inl ex)))) (Fglob (globs (\<tau>_st (Inr ())))))
+        = Fglob (fst (comb_st dst (locals (\<tau>_st (Inl cc))) (locals (\<tau>_st (Inl ex))) (globs (\<tau>_st (Inr ())))))"
+    using H[of dst "locals (\<tau>_st (Inl cc))" "locals (\<tau>_st (Inl ex))" "globs (\<tau>_st (Inr ()))"]
+    by (metis map_prod_simp fst_conv surj_pair)
+  show ?thesis using Inr
+    by (simp add: sides_dg_combine_tree_Inr Floc_bot hg o_def)
+next
+  case (Inl a)
+  show ?thesis using Inl
+    by (simp add: dg_combine_tree_def fun_of_dg_st_gen_bot)
+qed
+
+lemma sides_wrapped_combine_commute:
+  assumes H: "\<And>dst dc de g. map_prod Fglob Floc (comb_st dst dc de g)
+                        = comb_abs dst (Floc dc) (Floc de) (Fglob g)"
+  shows "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex))) \<sigma>_st k)
+       = sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex))) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+proof (cases k)
+  case (Inl a)
+  show ?thesis by (simp add: Inl sides_of_rhs_Inl_bot)
+next
+  case (Inr b)
+  show ?thesis
+  proof (cases "b = gk")
+    case True
+    have "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (dg_combine_tree comb_st dst cc ex) (\<lambda>z. \<sigma>_st (map_sum lk (\<lambda>_. gk) z)) (Inr ()))
+        = sides_of_rhs (dg_combine_tree comb_abs dst cc ex) (fun_of_dg_st_gen Floc Fglob \<circ> (\<lambda>z. \<sigma>_st (map_sum lk (\<lambda>_. gk) z))) (Inr ())"
+      using H by (rule sides_dg_combine_tree_commute)
+    thus ?thesis by (simp add: Inr True sides_wrap_reduce o_def)
+  next
+    case False
+    hence nb: "b \<notin> range (\<lambda>_::unit. gk)" by simp
+    show ?thesis by (simp add: Inr sides_map_gtree_off[OF nb])
+  qed
+qed
+
+lemma dg_tree_st_commute_wrapped_combine:
+  assumes H: "\<And>dst dc de g. map_prod Fglob Floc (comb_st dst dc de g)
+                        = comb_abs dst (Floc dc) (Floc de) (Fglob g)"
+  shows "dg_tree_st_commute \<sigma>_st
+           (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex)))
+           (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex)))"
+  unfolding dg_tree_st_commute_def
+proof (intro conjI)
+  show "fun_of_dg_st_gen Floc Fglob (traverse_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex))) \<sigma>_st)
+          = traverse_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex))) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
+    by (rule traverse_wrapped_combine_commute[where comb_st=comb_st and comb_abs=comb_abs, OF H])
+next
+  show "\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex))) \<sigma>_st k)
+          = sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex))) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+  proof
+    fix k
+    show "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex))) \<sigma>_st k)
+            = sides_of_rhs (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex))) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+      by (rule sides_wrapped_combine_commute[where comb_st=comb_st and comb_abs=comb_abs, OF H])
+  qed
+next
+  show "dep_aux \<sigma>_st (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_st dst cc ex)))
+          = dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) (map_gtree (\<lambda>_. gk) (map_ltree lk (dg_combine_tree comb_abs dst cc ex)))"
+    by (rule dep_aux_wrapped_combine_eq)
+qed
+
 end
 
 context dg_reader_commute_gen
@@ -4095,6 +4204,100 @@ next
   qed
 qed
 
+subsubsection \<open>Routed heterogeneous CALL/COMB transport\<close>
+
+text \<open>
+  \<open>routed_cmb_g\<close>/\<open>routed_extra_g\<close> (\<^theory>\<open>Voblint_Core.Routed_Context\<close>) are the
+  canonical heterogeneous routing shape: parametric only in a routing function
+  \<open>route\<close> and a seed-key injection \<open>seed_key\<close>, with the seed payload carried
+  on the \<open>locals\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent.  The two lemmas below
+  feed this generic engine's \<open>Hcmb\<close>/\<open>Hextra\<close> obligations directly, so any
+  context-sensitive analysis instantiating \<open>cmb\<close>/\<open>extra\<close> at \<open>routed_cmb_g\<close>/
+  \<open>routed_extra_g\<close> discharges CALL/COMB transport once here rather than
+  re-deriving its own tree-commute reasoning.
+\<close>
+
+lemma dg_tree_st_commute_routed_cmb_g:
+  assumes seed_ne: "\<And>p c. seed_key p c \<noteq> gk0"
+    and Henter: "\<And>xs es d g'. map_prod Fglob Floc (dgs_enter S_st xs es d g')
+                      = dgs_enter S_abs xs es (Floc d) (Fglob g')"
+    and Hcomb:  "\<And>dst dc de g'. map_prod Fglob Floc (dgs_combine S_st dst dc de g')
+                      = dgs_combine S_abs dst (Floc dc) (Floc de) (Fglob g')"
+    and Hroute: "\<And>u c' d ca. route_st u c' d ca = route_abs u c' (Floc d) ca"
+  shows "dg_tree_st_commute \<sigma>_st
+           (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex)
+           (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)"
+proof -
+  obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
+  let ?caller = "locals (\<sigma>_st (Inl (cc, ctx)))"
+  let ?globals1 = "globs (\<sigma>_st (Inr gk0))"
+  let ?ctx' = "route_st cc ctx ?caller (CallEdge dst fs as)"
+  let ?eg = "enter_global S_st fs as ?caller ?globals1"
+  let ?callee = "locals (\<sigma>_st (Inl (ex, ?ctx')))"
+  let ?cg = "combine_global S_st dst ?caller ?callee ?globals1"
+  have Henter_g: "\<And>xs es d g'. Fglob (enter_global S_st xs es d g')
+                    = enter_global S_abs xs es (Floc d) (Fglob g')"
+    using Henter by (metis map_prod_simp fst_conv surj_pair)
+  have Henter_l: "\<And>xs es d g'. Floc (enter_local S_st xs es d g')
+                    = enter_local S_abs xs es (Floc d) (Fglob g')"
+    using Henter by (metis map_prod_simp snd_conv surj_pair)
+  have Hcomb_g: "\<And>dst dc de g'. Fglob (combine_global S_st dst dc de g')
+                    = combine_global S_abs dst (Floc dc) (Floc de) (Fglob g')"
+    using Hcomb by (metis map_prod_simp fst_conv surj_pair)
+  have Hcomb_l: "\<And>dst dc de g'. Floc (combine_local S_st dst dc de g')
+                    = combine_local S_abs dst (Floc dc) (Floc de) (Fglob g')"
+    using Hcomb by (metis map_prod_simp snd_conv surj_pair)
+  have route_eq: "route_abs cc ctx (Floc ?caller) (CallEdge dst fs as) = ?ctx'"
+    using Hroute[of cc ctx ?caller "CallEdge dst fs as"] by simp
+  have trav: "traverse_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st
+      = DG (combine_local S_st dst ?caller ?callee ?globals1) bot"
+    unfolding ca_eq routed_cmb_g_def Let_def by simp
+  have trav_abs: "traverse_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
+        (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
+      = DG (combine_local S_abs dst (Floc ?caller) (Floc ?callee) (Fglob ?globals1)) bot"
+    unfolding ca_eq routed_cmb_g_def Let_def by (simp add: route_eq)
+  have trav_commute: "fun_of_dg_st_gen Floc Fglob
+        (traverse_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st)
+      = traverse_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
+          (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
+    by (simp add: trav trav_abs Hcomb_l Fglob_bot)
+  have sides: "\<And>k. sides_of_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st k
+      = (if k = Inr gk0 then DG bot (?eg \<squnion> ?cg)
+         else if k = Inr (seed_key (FunctionEntry (result_proc ex)) ?ctx')
+           then DG (enter_local S_st fs as ?caller ?globals1) bot
+         else bot)"
+    unfolding ca_eq routed_cmb_g_def Let_def
+    by (simp add: seed_ne fun_upd_apply)
+  have sides_abs: "\<And>k. sides_of_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
+        (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k
+      = (if k = Inr gk0 then DG bot (Fglob ?eg \<squnion> Fglob ?cg)
+         else if k = Inr (seed_key (FunctionEntry (result_proc ex)) ?ctx')
+           then DG (Floc (enter_local S_st fs as ?caller ?globals1)) bot
+         else bot)"
+    unfolding ca_eq routed_cmb_g_def Let_def
+    by (simp add: route_eq seed_ne fun_upd_apply Henter_g Henter_l Hcomb_g)
+  have sides_commute: "\<And>k. fun_of_dg_st_gen Floc Fglob
+        (sides_of_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st k)
+      = sides_of_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
+          (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+    by (simp add: sides sides_abs Floc_bot Fglob_bot Fglob_sup)
+  have dep: "dep_aux \<sigma>_st (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex)
+      = {Inl (cc, ctx), Inr gk0, Inl (ex, ?ctx')}"
+    unfolding ca_eq routed_cmb_g_def Let_def by (simp add: insert_commute)
+  have dep_abs: "dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
+        (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
+      = {Inl (cc, ctx), Inr gk0, Inl (ex, ?ctx')}"
+    unfolding ca_eq routed_cmb_g_def Let_def by (simp add: route_eq insert_commute)
+  show ?thesis
+    unfolding dg_tree_st_commute_def
+    using trav_commute sides_commute dep dep_abs by auto
+qed
+
+lemma dg_tree_st_commute_routed_extra_g:
+  shows "list_all2 (dg_tree_st_commute \<sigma>_st)
+           (routed_extra_g seed_key gk0 route_st ctx v)
+           (routed_extra_g seed_key gk0 route_abs ctx v)"
+  by (cases v) (simp_all add: routed_extra_g_def dg_tree_st_commute_def Fglob_bot)
 end
 subsection \<open>Bundled per-tree transport relation\<close>
 
@@ -4503,6 +4706,102 @@ proof -
              and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",
            OF Hstep hr hc he pp'])
 qed
+
+subsection \<open>The monovariant (unit-context) specialisation, lifted\<close>
+
+text \<open>
+  The lifted analogues of the diagonal monovariant lemmas above. Each cites the
+  generic \<open>dg_reader_commute_gen\<close> facts at the lifted readback
+  \<open>map_lift (fun_of_resolved_st_q_for gs)\<close> instead of re-deriving the tree-commute
+  reasoning, mirroring the diagonal proofs at the reachability-lifted local carrier.
+\<close>
+
+lemma dg_tree_st_commute_dg_cmb_of_lifted_for:
+  assumes Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                            (dgs_combine S_st dst dc de g)
+                          = dgs_combine S_abs dst (map_lift (fun_of_resolved_st_q_for gs) dc)
+                              (map_lift (fun_of_resolved_st_q_for gs) de) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  shows "dg_reader_commute_gen.dg_tree_st_commute
+           (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
+           (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)
+           (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)"
+proof -
+  interpret R: dg_reader_commute_gen
+    "map_lift (fun_of_resolved_st_q_for gs)" "map_lift (fun_of_resolved_st_q_for gs)"
+    by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+  show ?thesis
+    unfolding dg_cmb_of_def dg_spec_combine_tree_def
+    apply simp
+    apply (rule R.dg_tree_st_commute_wrapped_combine[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb])
+    done
+qed
+
+lemma dg_extra_of_commute_lifted_for:
+  assumes Henter:
+    "\<And>xs es d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) (dgs_enter S_st xs es d g)
+      = dgs_enter S_abs xs es (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  shows "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
+             (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st)
+      (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
+proof -
+  interpret R: dg_reader_commute_gen
+    "map_lift (fun_of_resolved_st_q_for gs)" "map_lift (fun_of_resolved_st_q_for gs)"
+    by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+  show ?thesis
+    unfolding dg_extra_of_def
+    by (auto simp: list_all2_map1 list_all2_map2 Henter
+        split: call_action.splits
+        intro!: list_all2_refl R.dg_tree_st_commute_wrapped_edge)
+qed
+
+theorem part_post_solution_dg_st_to_abs_lifted_for:
+  assumes Hstep: "\<And>a d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                          (dg_spec_step S_st a d g)
+                        = dg_spec_step S_abs a (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+      and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                            (dgs_enter S_st xs es d g)
+                          = dgs_enter S_abs xs es (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
+      and Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                            (dgs_combine S_st dst dc de g)
+                          = dgs_combine S_abs dst (map_lift (fun_of_resolved_st_q_for gs) dc)
+                              (map_lift (fun_of_resolved_st_q_for gs) de) (map_lift (fun_of_resolved_st_q_for gs) g)"
+      and pp: "part_post_solution (dg_gen_of S_st g bot0 s0d s0g) x \<sigma>_st vars"
+  shows "part_post_solution (dg_gen_of S_abs g (map_lift (fun_of_resolved_st_q_for gs) bot0)
+                               (map_lift (fun_of_resolved_st_q_for gs) s0d) (map_lift (fun_of_resolved_st_q_for gs) s0g))
+           x (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<circ> \<sigma>_st) vars"
+proof -
+  have hr: "\<And>u c' d ca. (\<lambda>_ _ _ _. ()) u c' d ca = (\<lambda>_ _ _ _. ()) u c' (map_lift (fun_of_resolved_st_q_for gs) d) ca"
+    by simp
+  have hc: "\<And>c' ca cc ex. dg_reader_commute_gen.dg_tree_st_commute
+      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
+      (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
+  proof -
+    fix c' ca cc ex
+    obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
+    thus "dg_reader_commute_gen.dg_tree_st_commute
+        (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
+        (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
+      by (simp add: dg_tree_st_commute_dg_cmb_of_lifted_for[OF Hcomb])
+  qed
+  have he: "\<And>c' w. list_all2 (dg_reader_commute_gen.dg_tree_st_commute
+      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st)
+      (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
+    by (rule dg_extra_of_commute_lifted_for[OF Henter])
+  from pp have pp':
+    "part_post_solution
+      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+        (dg_cmb_of S_st) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
+    unfolding dg_gen_of_def .
+  show ?thesis
+    unfolding dg_gen_of_def
+    by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
+          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+             and route_st = "\<lambda>_ _ _ _. ()" and route_abs = "\<lambda>_ _ _ _. ()"
+             and cmb_st = "dg_cmb_of S_st" and cmb_abs = "dg_cmb_of S_abs"
+             and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",
+           OF Hstep hr hc he pp'])
+qed
+
 
 
 

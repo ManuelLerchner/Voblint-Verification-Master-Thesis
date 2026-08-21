@@ -343,13 +343,16 @@ text \<open>
 \<close>
 
 global_interpretation sign_backward_domain:
-    backward_domain_refined meet_sign aval_sign
+    backward_domain_refined meet_sign aval_sign sign_tobool
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
     and bfilter_sign = sign_backward_domain.bfilter
+    and branch_sign = sign_backward_domain.branch
+    and branch_lifted_sign = sign_backward_domain.branch_lifted
     and afilter_sign_st = sign_backward_domain.afilter_st
     and bfilter_sign_st = sign_backward_domain.bfilter_st
+    and branch_sign_st = sign_backward_domain.branch_st
     and sign_less_true_of_inv = sign_backward_domain.less_true
     and sign_less_false_of_inv = sign_backward_domain.less_false
     and sign_eq_true_of_less = sign_backward_domain.eq_true
@@ -360,7 +363,7 @@ proof unfold_locales
   show "n \<in> gamma (meet_sign a b)"
     using meet_sign_sound[of n a b] H1 H2 by simp
 next
-  fix s :: store and e :: aexp and \<sigma> :: "vname \<Rightarrow> sign"
+  fix s :: store and e :: exp and \<sigma> :: "vname \<Rightarrow> sign"
   assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
   show "aval e s \<in> gamma (aval_sign e \<sigma>)"
     using aval_sign_sound[of s \<sigma> e] H by simp
@@ -390,11 +393,15 @@ next
   show "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
     using inv_conservative_sound[OF H1 H2] .
 next
+  fix p :: sign and b :: bool and i :: int
+  assume "sign_tobool p = Some b" and "i \<in> gamma p"
+  then show "truthy i = b" using sign_tobool_sound by simp
+next
   fix a1 a2 b1 b2 :: sign
   assume "a1 \<le> a2" and "b1 \<le> b2"
   thus "meet_sign a1 b1 \<le> meet_sign a2 b2" using inf_mono[of a1 a2 b1 b2] by simp
 next
-  fix e :: aexp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
+  fix e :: exp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> sign"
   assume "\<sigma>1 \<le> \<sigma>2"
   thus "aval_sign e \<sigma>1 \<le> aval_sign e \<sigma>2" by (rule aval_sign_mono)
 next
@@ -430,6 +437,10 @@ next
   fix r a1 a2 :: sign
   show "le_pair (inv_conservative r a1 a2) (a1, a2)"
     by (simp add: inv_conservative_def le_pair_def)
+next
+  fix p1 p2 :: sign and bv :: bool
+  assume "\<not> is_bot p1" and "p1 \<le> p2" and "sign_tobool p2 = Some bv"
+  then show "sign_tobool p1 = Some bv" using sign_tobool_mono by simp
 qed
 
 text \<open>
@@ -443,6 +454,7 @@ text \<open>
 \<close>
 
 lemmas bfilter_sign_st_commute = sign_backward_domain.bfilter_st_commute
+lemmas branch_sign_st_commute = sign_backward_domain.branch_st_commute
 
 text \<open>
   \<open>sign_eq_true_of_less\<close> sits two \<open>sublocale\<close> layers below \<open>backward_domain\<close>
@@ -471,8 +483,19 @@ text \<open>
 \<close>
 
 lemma bfilter_sign_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>bfilter_sign b res \<sigma>\<rbrakk>"
   using sign_backward_domain.bfilter_sound by simp
+
+text \<open>
+  @{const branch_sign} is Sign's \<open>tf_branch\<close> instance: a forward
+  @{const sign_tobool} feasibility check ahead of @{const bfilter_sign},
+  matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
+  @{thm [source] backward_domain.branch_sound}.
+\<close>
+
+lemma branch_sign_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = res \<Longrightarrow> s \<in> \<lbrakk>branch_sign b res \<sigma>\<rbrakk>"
+  using sign_backward_domain.branch_sound by simp
 
 
 lemma afilter_sign_mono:
@@ -483,6 +506,10 @@ lemma afilter_sign_mono:
 lemma bfilter_sign_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_sign b res sigma1 \<le> bfilter_sign b res sigma2"
   using sign_backward_domain.bfilter_mono by (simp add: bfilter_sign_def)
+
+lemma branch_sign_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_sign b res sigma1 \<le> branch_sign b res sigma2"
+  using sign_backward_domain.branch_mono by (simp add: branch_sign_def)
 
 subsection \<open>Executable equality-narrowing tests\<close>
 

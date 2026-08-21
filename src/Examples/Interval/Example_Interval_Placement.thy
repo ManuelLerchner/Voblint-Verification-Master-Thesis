@@ -931,7 +931,7 @@ proof -
 qed
 
 lemma placement_edge_raw_assign:
-  fixes y :: vname and a :: aexp
+  fixes y :: vname and a :: exp
   assumes scope_eq: "set (placement_locations_of dest) = set (placement_locations_of source)"
     and val_agree:
       "aval_ivl a (fun_of_resolved_st_q_for (declared_global placement_prog)
@@ -1437,7 +1437,7 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
 qed
 
 lemma placement_dg_refines_edge_assign:
-  fixes y :: vname and a :: aexp
+  fixes y :: vname and a :: exp
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Assign y a)]"
     and no_combine: "return_call_action_list placement_cfg v = []"
@@ -1508,7 +1508,7 @@ proof (rule placement_dg_refines_edge[OF not_entry pred no_combine no_enter refl
 qed
 
 lemma placement_dg_refines_edge_ret_some:
-  fixes a :: aexp and p :: pname
+  fixes a :: exp and p :: pname
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and pred: "intra_predecessor_list placement_cfg v = [(u, EA_Ret (Some a) p)]"
     and no_combine: "return_call_action_list placement_cfg v = []"
@@ -2631,7 +2631,7 @@ qed
 
 lemma placement_se_enter:
   fixes v caller :: pp and dst :: "vname option"
-    and fs :: "vname list" and args :: "aexp list"
+    and fs :: "vname list" and args :: "exp list"
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and no_edge: "intra_predecessor_list placement_cfg v = []"
     and no_combine: "return_call_action_list placement_cfg v = []"
@@ -2668,7 +2668,7 @@ qed
 
 lemma placement_se_combine:
   fixes v caller callee_exit :: pp and destination :: "vname option"
-    and parameters :: "vname list" and arguments :: "aexp list"
+    and parameters :: "vname list" and arguments :: "exp list"
   assumes not_entry: "v \<noteq> cfg_entry placement_cfg"
     and no_edge: "intra_predecessor_list placement_cfg v = []"
     and pred: "return_call_action_list placement_cfg v =

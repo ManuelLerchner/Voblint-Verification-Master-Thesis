@@ -187,7 +187,7 @@ lemma forget_relc_sound[intro]:
 
 subsection \<open>The one precise transfer: recognizing a bare-variable strict order test\<close>
 
-definition assume_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
+definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_step b d =
      (case d of
         Bot \<Rightarrow> Bot
@@ -197,7 +197,7 @@ definition assume_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound[intro]:
-  assumes "s \<in> gamma_rel d" "bval b s"
+  assumes "s \<in> gamma_rel d" "truthy (aval b s)"
   shows "s \<in> gamma_rel (assume_step b d)"
 proof (cases d)
   case Bot
@@ -209,13 +209,13 @@ next
   proof (cases "\<exists>x y. b = Less (V x) (V y)")
     case True
     then obtain x y where xy: "b = Less (V x) (V y)" by blast
-    have "s x < s y" using assms(2) xy by simp
+    have "s x < s y" using assms(2) xy by (simp split: if_splits)
     then show ?thesis using assms(1) d_eq unfolding assume_step_def d_eq xy by auto
   next
     case False
     then show ?thesis
       using assms(1) d_eq unfolding assume_step_def d_eq
-      by (auto split: bexp.splits aexp.splits)
+      by (auto split: exp.splits exp.splits)
   qed
 qed
 
@@ -224,7 +224,7 @@ text \<open>The negated-guard counterpart: \<open>\<not>(x < y)\<close> is \<ope
   of discarded.  Every other shape falls back exactly as \<open>assume_step\<close>
   does.\<close>
 
-definition assume_not_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
+definition assume_not_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_not_step b d =
      (case d of
         Bot \<Rightarrow> Bot
@@ -234,7 +234,7 @@ definition assume_not_step :: "bexp \<Rightarrow> relc \<Rightarrow> relc" where
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_not_step_sound[intro]:
-  assumes "s \<in> gamma_rel d" "\<not> bval b s"
+  assumes "s \<in> gamma_rel d" "\<not> truthy (aval b s)"
   shows "s \<in> gamma_rel (assume_not_step b d)"
 proof (cases d)
   case Bot
@@ -246,13 +246,13 @@ next
   proof (cases "\<exists>x y. b = Less (V x) (V y)")
     case True
     then obtain x y where xy: "b = Less (V x) (V y)" by blast
-    have "\<not> s x < s y" using assms(2) xy by simp
+    have "\<not> s x < s y" using assms(2) xy by (simp split: if_splits)
     then show ?thesis using assms(1) d_eq unfolding assume_not_step_def d_eq xy by auto
   next
     case False
     then show ?thesis
       using assms(1) d_eq unfolding assume_not_step_def d_eq
-      by (auto split: bexp.splits aexp.splits)
+      by (auto split: exp.splits exp.splits)
   qed
 qed
 
@@ -265,7 +265,7 @@ text \<open>Every step except the two precise \<open>assume\<close>/\<open>assum
 definition dgs_skip_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_skip_rel d g = (g, d)"
 
-definition dgs_assign_rel :: "vname \<Rightarrow> aexp \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+definition dgs_assign_rel :: "vname \<Rightarrow> exp \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_assign_rel x e d g = (forget_relc x g, forget_relc x d)"
 
 definition dgs_body_rel :: "pname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
@@ -276,7 +276,7 @@ text \<open>
   applies to every ordinary assignment: with an expression, forget \<open>ret_var\<close>;
   without one, behave like \<open>skip\<close>.
 \<close>
-definition dgs_return_rel :: "aexp option \<Rightarrow> pname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+definition dgs_return_rel :: "exp option \<Rightarrow> pname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_return_rel e p d g = (case e of None \<Rightarrow> dgs_skip_rel d g | Some a \<Rightarrow> dgs_assign_rel ret_var a d g)"
 
 definition dgs_special_rel :: "special_call \<Rightarrow> vname \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
@@ -293,13 +293,13 @@ text \<open>
   the same formula under a polarity flag); only the interface-level dispatch
   consolidates into one @{text tf_branch}-shaped operation.
 \<close>
-definition branch_step_rel :: "bexp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc" where
+definition branch_step_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc" where
   "branch_step_rel b pol d = (if pol then assume_step b d else assume_not_step b d)"
 
-definition dgs_branch_rel :: "bexp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+definition dgs_branch_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_branch_rel b pol d g = (g, branch_step_rel b pol d)"
 
-definition dgs_enter_rel :: "vname list \<Rightarrow> aexp list \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+definition dgs_enter_rel :: "vname list \<Rightarrow> exp list \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_enter_rel xs es dc g = (top_relc, top_relc)"
 
 definition dgs_combine_env_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
@@ -376,7 +376,7 @@ lemma dgs_branch_rel_sound_True[intro]:
      (case dgs_branch_rel b True d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
   have "edge_collect (EA_Assume b) (gammaDG_rel d g)
-      = {s. s \<in> gammaDG_rel d g \<and> bval b s}"
+      = {s. s \<in> gammaDG_rel d g \<and> truthy (aval b s)}"
     by simp
   also have "... \<subseteq> gamma_rel (assume_step b d) \<inter> gamma_rel g"
     using assume_step_sound unfolding gammaDG_rel_def by blast
@@ -389,7 +389,7 @@ lemma dgs_branch_rel_sound_False[intro]:
      (case dgs_branch_rel b False d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof -
   have "edge_collect (EA_AssumeNot b) (gammaDG_rel d g)
-      = {s. s \<in> gammaDG_rel d g \<and> \<not> bval b s}"
+      = {s. s \<in> gammaDG_rel d g \<and> \<not> truthy (aval b s)}"
     by simp
   also have "... \<subseteq> gamma_rel (assume_not_step b d) \<inter> gamma_rel g"
     using assume_not_step_sound unfolding gammaDG_rel_def by blast

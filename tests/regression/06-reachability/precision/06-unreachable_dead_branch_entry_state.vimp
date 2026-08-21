@@ -1,0 +1,65 @@
+// PARAM: --analysis interval --context entry-state
+// Entry-state sibling of 05-unreachable_dead_branch_literal.vimp: the same
+// infeasible branch, analyzed with --context entry-state instead of the
+// context-insensitive default. The two paths reach the NOWARN suppression by
+// different routes and must agree.
+//
+// Context-insensitively, analyse_with_state carries one is-unreachable flag
+// per check and the CLI drops those rows. Context-sensitively there is no
+// single flag to carry: one check node has one verdict per covered calling
+// context, and a node can be dead in some and live in others. The verdict is
+// therefore a contextual_verdict (Abstract_Checks.thy) -- Dead when every
+// covered context is unreachable there, Decided otherwise -- and the CLI
+// suppresses exactly the Dead rows.
+//
+// Without that distinction the row is not merely imprecise, it is wrong:
+// an unreachable point's abstract state is bottom, bottom satisfies every
+// condition vacuously, and the check reports PROVED for a comparison no
+// execution ever performs.
+//
+// The graph block below is the same distinction at the rendering surface: the
+// dead check node carries "[dead]" and no state lines at all, where reading
+// the solved unknown directly would have drawn it as an undecided check over
+// an x=[+inf,-inf] store -- a live-looking node in the same grey a check the
+// abstraction genuinely could not settle carries.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp0_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//   main_pp2_ctx0: pp2
+//       check x==99 [dead]
+//   main_pp3_ctx0: pp3
+//       check x==5
+//       x=[5,5]
+//   main_pp4_ctx0: pp4
+//   main_result_main_ctx0: exit_main
+//   main_entry_main_ctx0: entry_main
+//   main_pp0_ctx0: pp0
+//
+// edges:
+//   main_pp1_ctx0 -> main_pp2_ctx0: x<2
+//   main_pp1_ctx0 -> main_pp3_ctx0: not (x<2)
+//   main_pp2_ctx0 -> main_pp4_ctx0: check(x==99)
+//   main_pp3_ctx0 -> main_pp4_ctx0: check(x==5)
+//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp0_ctx0: nop
+//   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+// EXPECT-GRAPH-END
+
+void main() {
+  x := 5;
+  if (x < 2) {
+    __voblint_check(x == 99) // NOWARN (unreachable)
+  } else {
+    __voblint_check(x == 5) // PROVED
+  }
+}

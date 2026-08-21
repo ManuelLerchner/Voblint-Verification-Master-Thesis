@@ -45,7 +45,7 @@ GRAMMAR = yaml.safe_load(GRAMMAR_PATH.read_text())
 # by a KeyError/IndexError here rather than by this test quietly checking
 # nothing.
 VARIABLE_ROLE_SLOTS = [
-    ("aexp_var", 0),        # expression use
+    ("exp_var", 0),         # expression use
     ("stmt_assign", 0),     # assignment target
     ("stmt_callret", 0),    # return-value target -- also covers special
                              # calls (e.g. __voblint_nondet_int()), which

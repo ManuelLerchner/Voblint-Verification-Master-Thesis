@@ -47,13 +47,17 @@
 #       {some: <arg>}    -- that arg wrapped in `Some`
 #       {none: true}     -- literal `None`
 #       {literal: true|false} -- a literal boolean
+#       {int: N}         -- a literal int (used by exp_true/exp_false to
+#         lower straight to N 1/N 0 -- exp has no separate Boolean literal
+#         constructor, so a keyword literal still needs a way to reach a
+#         fixed integer argument without going through a parsed rhs position)
 #     `{tuple: [i, j, ...]}` builds an OCaml tuple from those rhs positions
 #     instead of applying a constructor (function_decl's (name, formals,
 #     body), not an algebraic-datatype constructor).
 #
 #   passthrough: N
 #     Transparent syntax: the parsed value at rhs position N, unchanged --
-#     grouping parens (aexp_paren, bexp_paren) and a `global ...;` line's
+#     grouping parens (exp_paren) and a `global ...;` line's
 #     own name list (globals_decl), where the production exists only to
 #     constrain what can appear around a value, not to build a new one.
 #
@@ -71,7 +75,7 @@
 #     compositional, no algebraic simplification at parse time, so it
 #     deliberately does NOT special-case a nested uminus the way Isabelle's
 #     current parse_translation does (`_imp2_uminus (_imp2_uminus b) =>
-#     aexp_tr b`, cancelling `--x` to `x`) -- under this rule `--x` lowers
+#     exp_tr b`, cancelling `--x` to `x`) -- under this rule `--x` lowers
 #     to `Minus (N 0) (Minus (N 0) (V x))` instead, same integer semantics,
 #     just not re-simplified during parsing. When Isabelle generation lands
 #     (M6), that cancellation case should be deleted from parse_translation
@@ -133,52 +137,51 @@ precedence:
   - {assoc: right, tokens: ["NOT", "UMINUS"]}
 
 productions:
-  # -- aexp: flat, left-associative via precedence declarations, no term/atom split --
-  - {name: aexp_var,   result: aexp, rhs: [IDENT], lower: {ctor: V, args: [{rhs: 0}]}}
-  - {name: aexp_num,   result: aexp, rhs: [INT],   special: integer_literal}
-  - {name: aexp_uminus, result: aexp, rhs: [MINUS, aexp], special: unary_minus, precedence: UMINUS}
-  - {name: aexp_plus,  result: aexp, rhs: [aexp, PLUS, aexp],  precedence: PLUS,
+  # -- exp: flat, left-associative via precedence declarations, no term/atom
+  # split, and no separate Boolean AST -- comparisons/logical operators are
+  # ordinary exp productions that happen to yield 0/1 (see VIMP_Expr.thy's
+  # `aval`/`truthy`), not a parallel bexp nonterminal. --
+  - {name: exp_var,   result: exp, rhs: [IDENT], lower: {ctor: V, args: [{rhs: 0}]}}
+  - {name: exp_num,   result: exp, rhs: [INT],   special: integer_literal}
+  - {name: exp_uminus, result: exp, rhs: [MINUS, exp], special: unary_minus, precedence: UMINUS}
+  - {name: exp_plus,  result: exp, rhs: [exp, PLUS, exp],  precedence: PLUS,
      lower: {ctor: Plus, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: aexp_minus, result: aexp, rhs: [aexp, MINUS, aexp], precedence: MINUS,
+  - {name: exp_minus, result: exp, rhs: [exp, MINUS, exp], precedence: MINUS,
      lower: {ctor: Minus, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: aexp_times, result: aexp, rhs: [aexp, STAR, aexp],  precedence: STAR,
+  - {name: exp_times, result: exp, rhs: [exp, STAR, exp],  precedence: STAR,
      lower: {ctor: Times, args: [{rhs: 0}, {rhs: 2}]}}
-  # Transparent grouping (no AST constructor -- same `passthrough` shape as
-  # bexp_paren below), added so the precedence table alone determines both
-  # what a printer must parenthesize and what the property-test generator
-  # may produce: any aexp tree is now source-expressible, not just
-  # left-associated ones. Isabelle's own aexp grammar (VIMP_Notation.thy)
-  # and the shipped cli/vimp_parser.ml still have no such production --
-  # extending those is a real language-cutover decision (M6+), not part of
-  # this prototype.
-  - {name: aexp_paren,  result: aexp, rhs: [LPAREN, aexp, RPAREN],   passthrough: 1}
-
-  # -- bexp: flat, with an explicit paren escape hatch (unlike aexp) --
-  - {name: bexp_true,  result: bexp, rhs: [BOOL_TRUE],  lower: {ctor: Bc, args: [{literal: true}]}}
-  - {name: bexp_false, result: bexp, rhs: [BOOL_FALSE], lower: {ctor: Bc, args: [{literal: false}]}}
-  - {name: bexp_less,  result: bexp, rhs: [aexp, LT, aexp],   lower: {ctor: Less, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: bexp_eq,    result: bexp, rhs: [aexp, EQEQ, aexp], lower: {ctor: Eqa,  args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: bexp_paren, result: bexp, rhs: [LPAREN, bexp, RPAREN],     passthrough: 1}
-  - {name: bexp_not,   result: bexp, rhs: [NOT, bexp], precedence: NOT,
+  - {name: exp_true,  result: exp, rhs: [BOOL_TRUE],  lower: {ctor: N, args: [{int: 1}]}}
+  - {name: exp_false, result: exp, rhs: [BOOL_FALSE], lower: {ctor: N, args: [{int: 0}]}}
+  - {name: exp_less,  result: exp, rhs: [exp, LT, exp],   lower: {ctor: Less, args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_eq,    result: exp, rhs: [exp, EQEQ, exp], lower: {ctor: Eq,  args: [{rhs: 0}, {rhs: 2}]}}
+  - {name: exp_not,   result: exp, rhs: [NOT, exp], precedence: NOT,
      lower: {ctor: Not, args: [{rhs: 1}]}}
-  - {name: bexp_and,   result: bexp, rhs: [bexp, AND, bexp], precedence: AND,
+  - {name: exp_and,   result: exp, rhs: [exp, AND, exp], precedence: AND,
      lower: {ctor: And, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: bexp_or,    result: bexp, rhs: [bexp, OR, bexp], precedence: OR,
+  - {name: exp_or,    result: exp, rhs: [exp, OR, exp], precedence: OR,
      lower: {ctor: Or, args: [{rhs: 0}, {rhs: 2}]}}
+  # Transparent grouping (no AST constructor), so the precedence table alone
+  # determines both what a printer must parenthesize and what the
+  # property-test generator may produce: any exp tree is now
+  # source-expressible, not just left-associated ones. Isabelle's own exp
+  # grammar (VIMP_Notation.thy) and the shipped cli/vimp_parser.ml still have
+  # no such production -- extending those is a real language-cutover
+  # decision (M6+), not part of this prototype.
+  - {name: exp_paren,  result: exp, rhs: [LPAREN, exp, RPAREN],   passthrough: 1}
 
   # -- stmt --
   - {name: stmt_skip,     result: stmt, rhs: [SKIP], lower: {ctor: SKIP, args: []}}
-  - {name: stmt_assign,   result: stmt, rhs: [IDENT, ASSIGN, aexp],
+  - {name: stmt_assign,   result: stmt, rhs: [IDENT, ASSIGN, exp],
      lower: {ctor: Assign, args: [{rhs: 0}, {rhs: 2}]}}
-  - {name: stmt_return,   result: stmt, rhs: [RETURN, aexp],
+  - {name: stmt_return,   result: stmt, rhs: [RETURN, exp],
      lower: {ctor: Return, args: [{some: {rhs: 1}}]}}
   - {name: stmt_return0,  result: stmt, rhs: [RETURN],
      lower: {ctor: Return, args: [{none: true}]}}
-  - {name: stmt_check,    result: stmt, rhs: [CHECK, LPAREN, bexp, RPAREN],
+  - {name: stmt_check,    result: stmt, rhs: [CHECK, LPAREN, exp, RPAREN],
      lower: {ctor: Check, args: [{rhs: 2}]}}
-  - {name: stmt_if,       result: stmt, rhs: [IF, LPAREN, bexp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, LBRACE, stmts_opt, RBRACE],
+  - {name: stmt_if,       result: stmt, rhs: [IF, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE, ELSE, LBRACE, stmts_opt, RBRACE],
      lower: {ctor: If, args: [{rhs: 2}, {rhs: 5}, {rhs: 9}]}}
-  - {name: stmt_while,    result: stmt, rhs: [WHILE, LPAREN, bexp, RPAREN, LBRACE, stmts_opt, RBRACE],
+  - {name: stmt_while,    result: stmt, rhs: [WHILE, LPAREN, exp, RPAREN, LBRACE, stmts_opt, RBRACE],
      lower: {ctor: While, args: [{rhs: 2}, {rhs: 5}]}}
   # No separate call0/callret0 (zero-arg) productions: unlike Isabelle's
   # imp2_actuals (which has no empty derivation, forcing _imp2_call0 as a
@@ -195,7 +198,7 @@ productions:
   # -- statement sequences, actuals, formals, ids: standard left-recursive lists --
   - {name: stmts, result: stmts, list_of: stmt, separator: SEMI, constructor: Seq, min: 1}
   - {name: stmts_opt, result: stmts_opt, optional_list_of: stmt, separator: SEMI, constructor: Seq, empty: SKIP}
-  - {name: actuals, result: actuals, list_of: aexp, separator: COMMA, min: 0}
+  - {name: actuals, result: actuals, list_of: exp, separator: COMMA, min: 0}
   - {name: formals, result: formals, list_of: IDENT, separator: COMMA, min: 0}
   - {name: ids,      result: ids,     list_of: IDENT, separator: COMMA, min: 1}
 

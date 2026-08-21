@@ -184,7 +184,7 @@ lemma wf_compile_input_decl:
 subsection \<open>Syntactic occurrence predicates\<close>
 
 
-fun returns_in :: "aexp option \<Rightarrow> com \<Rightarrow> bool" where
+fun returns_in :: "exp option \<Rightarrow> com \<Rightarrow> bool" where
   "returns_in e (Return e') = (e = e')"
 | "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
 | "returns_in e (If _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"

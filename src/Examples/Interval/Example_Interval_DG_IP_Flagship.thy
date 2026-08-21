@@ -16,12 +16,11 @@ text \<open>
   This is the non-context IP baseline: every call to \<open>twice\<close> is analyzed
   under a single, shared abstract state at \<open>FunctionEntry (STR ''twice'')\<close>,
   regardless of which call site reached it. It is the flagship the
-  context-sensitive siblings sharpen -- \<open>Example_Interval_DG_Ctx_Flagship\<close>
-  routes by the entered argument's abstract value, \<open>Example_Interval_DG_CallString\<close>
-  routes by call site (a 1-CFA-style call string) -- so run this file first to
+  context-sensitive sibling \<open>Example_Interval_DG_Ctx_Flagship\<close> sharpens by
+  routing on the entered argument's abstract value -- so run this file first to
   see the precision loss two calls to the same procedure with different
   arguments incur when their entry states are forced to join, then compare
-  against the routed variants.
+  against the routed variant.
 \<close>
 
 definition twice_program :: imp_prog where
@@ -64,8 +63,8 @@ lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')" by eval
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
-  routed/context-sensitive siblings (\<open>Example_Interval_DG_Ctx_Collect\<close>,
-  \<open>Example_Interval_DG_CallString\<close>), which case-split on the same two call sites.\<close>
+  routed/context-sensitive sibling \<open>Example_Interval_DG_Ctx_Collect\<close>, which case-splits on
+  the same two call sites.\<close>
 lemma twice_calls_shape:
   "\<forall>(u, ca, ce, cont) \<in> calls twice_cfg.
      case ca of CallEdge dst pars args \<Rightarrow>
@@ -107,7 +106,7 @@ lemma twice_reserved: "reserved_ret_var twice_gs"
   unfolding wf_compile_input_simps
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_aexp_def ret_var_def
+      value_providing_def source_exp_def ret_var_def
       split: if_splits option.splits)
 
 interpretation twice_sds:
@@ -289,7 +288,7 @@ lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') t
   unfolding wf_compile_input_simps
     twice_pi_def twice_procs_def twice_main_def twice_program_def
   by (auto simp: proc_decl_of_def prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_aexp_def ret_var_def
+      value_providing_def source_exp_def ret_var_def
       special_table_def special_pname_nondet_int_def
       special_pname_min_def special_pname_max_def
       split: if_splits option.splits)
@@ -335,7 +334,8 @@ definition twice_graph_config ::
   "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "twice_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
@@ -357,7 +357,7 @@ definition twice_graph_config ::
       owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
       source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition twice_graph_domain :: "(pp \<times> unit + unit) list" where

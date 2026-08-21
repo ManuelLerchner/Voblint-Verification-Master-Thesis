@@ -49,7 +49,7 @@ Locked decisions:
 | Logic | Isabelle/HOL over HOL-IMP |
 | Source language | VIMP |
 | Solver | Vendored verified `TD` solver |
-| Solver interface | `rhs :: pp => (pp => abs_state) => abs_state` |
+| Solver interface | `part_post_solution` (vendored, generic over unknown/value types) |
 | Analysis path | Procedure-aware CFG and generic D/G pipeline |
 | Domains | Sign, Interval, then Octagon as a stretch goal |
 | Joins | `Finite_Set.fold` with finite edges, commutativity, and associativity |

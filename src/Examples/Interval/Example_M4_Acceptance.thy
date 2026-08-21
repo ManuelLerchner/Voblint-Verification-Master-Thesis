@@ -120,7 +120,7 @@ lemma a2_x_global [simp]: "a2_gs (STR ''x'')"
 definition a2_cfg :: cfg where
   "a2_cfg = compile_prog (prog_table a2_program) (prog_procs a2_program) prog_main_name (prog_main a2_program)"
 
-lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, bexp.Eq (V (STR ''x'')) (N 1))}"
+lemma a2_checks_eval: "checks a2_cfg = {(Statement 2, exp.Eq (V (STR ''x'')) (N 1))}"
   unfolding a2_cfg_def by eval
 
 fun a2_node_owner :: "pp \<Rightarrow> pname" where
@@ -198,14 +198,14 @@ text \<open>The check itself, discharged through \<^const>\<open>interval_classi
   force flow insensitivity -- placement, not storage class, decides it.\<close>
 
 lemma a2_classic_check_unknown:
-  "interval_classify_check (bexp.Eq (V (STR ''x'')) (N 1))
+  "interval_classify_check (exp.Eq (V (STR ''x'')) (N 1))
      (fun_of_exec_dg_st_for a2_gs
        (dg_hook_D (snd a2_sol_classic) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_classic)))
    = Check_Unknown"
   by eval
 
 lemma a2_flowsens_check_proved:
-  "interval_classify_check (bexp.Eq (V (STR ''x'')) (N 1))
+  "interval_classify_check (exp.Eq (V (STR ''x'')) (N 1))
      (fun_of_exec_dg_st_for a2_gs
        (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)))
    = Check_Proved"

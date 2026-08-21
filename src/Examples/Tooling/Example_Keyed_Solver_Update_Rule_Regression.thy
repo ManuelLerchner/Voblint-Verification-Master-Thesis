@@ -47,7 +47,7 @@ text \<open>Two predecessors of \<open>Statement 1\<close>, both from \<open>Sta
 definition keyed_pred_sel :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
   "keyed_pred_sel g v =
      (if v = Statement 1 then
-        [(Statement 0, EA_Nop), (Statement 0, EA_Assign (STR ''x'') (aexp.N 0))]
+        [(Statement 0, EA_Nop), (Statement 0, EA_Assign (STR ''x'') (exp.N 0))]
       else [])"
 
 text \<open>\<open>cmb\<close>/\<open>extra\<close> are never invoked: \<open>calls = {}\<close> makes
@@ -119,7 +119,7 @@ text \<open>Two real predecessors of \<open>Statement 2\<close>: \<open>Statemen
 definition merge_cfg :: cfg where
   "merge_cfg = \<lparr>
      intra = {(Statement 0, EA_Nop, Statement 2),
-              (Statement 1, EA_Assign (STR ''x'') (aexp.N 0), Statement 2)},
+              (Statement 1, EA_Assign (STR ''x'') (exp.N 0), Statement 2)},
      calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where

@@ -225,7 +225,7 @@ text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here a
 lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
   unfolding wf_compile_input_simps
     flagship_pi_def flagship_prog_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
+  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       split: if_splits)
 
 interpretation flagship_ex_reg:
@@ -263,7 +263,7 @@ lemma flagship_wf:
   "wf_compile_input flagship_gs flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
   unfolding wf_compile_input_simps
     flagship_pi_def flagship_prog_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def reserved_ret_var_def
+  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       prog_main_name_def special_table_def special_pname_nondet_int_def
       special_pname_min_def special_pname_max_def
       split: if_splits)
@@ -351,7 +351,8 @@ definition flagship_graph_config ::
   "(unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state, ivl exec_dg_st) analysis_graph_config" where
   "flagship_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
         scope_locals (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
@@ -370,7 +371,7 @@ definition flagship_graph_config ::
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
       source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog) []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 definition flagship_graph_domain :: "(pp \<times> unit + unit) list" where

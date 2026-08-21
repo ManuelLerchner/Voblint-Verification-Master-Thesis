@@ -37,17 +37,17 @@ text \<open>
 \<close>
 
 record 'a::bot numeric_ops =
-  n_aval    :: "aexp => (vname => 'a) => 'a"
-  n_bfilter :: "(vname => bool) => bexp => bool => 'a resolved_st_q => 'a resolved_st_q"
+  n_aval    :: "exp => (vname => 'a) => 'a"
+  n_bfilter :: "(vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
   n_top     :: "'a"
 
 definition generic_branch_st_for ::
-    "'a::bot numeric_ops => (vname => bool) => bexp => bool =>
+    "'a::bot numeric_ops => (vname => bool) => exp => bool =>
        'a resolved_st_q => 'a resolved_st_q" where
   "generic_branch_st_for ops source_global b pol s = n_bfilter ops source_global b pol s"
 
 definition generic_enter_st_for ::
-    "'a::bot numeric_ops => (vname => bool) => vname list => aexp list =>
+    "'a::bot numeric_ops => (vname => bool) => vname list => exp list =>
        'a resolved_st_q => 'a resolved_st_q" where
   "generic_enter_st_for ops source_global xs es s =
      bind_formals_resolved_q source_global xs

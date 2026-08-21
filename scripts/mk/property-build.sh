@@ -19,5 +19,3 @@ menhir vimp_parser.mly
 ocamllex vimp_lexer.mll
 ocamlfind ocamlopt -package str,zarith -linkpkg \
   Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml ast_driver.ml -o ast_driver
-ocamlfind ocamlopt -package str,zarith -linkpkg \
-  Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml paren_roundtrip.ml -o paren_roundtrip

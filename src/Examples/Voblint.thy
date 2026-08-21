@@ -31,7 +31,6 @@ theory Voblint
     "Voblint_Core.DG_Soundness"
     "Voblint_Analysis.Sign_DG"
     "Voblint_Analysis.Interval_DG"
-    "Voblint_Analysis.Mixed_Sign_Interval"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
     "Voblint_Core.Exec_St"
@@ -46,10 +45,9 @@ theory Voblint
     Example_Interval_Checks_Store_Only
     Example_Parity_Checks_Store_Only
     Example_Interval_DG_Flagship
-    "Voblint_Formalization.Mixed_Flow_Sound"
     "Voblint_Formalization.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
-    Example_Interval_DG_CallString
+    Example_Interval_DG_EntryState_Collect
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
     Example_Sign_DG_CallString_K1
@@ -61,7 +59,6 @@ theory Voblint
     Example_Side_Branch_Calls
     Example_Side_Proc_Global
     Example_Interval_Side_Proc_Global
-    Example_Mixed_Flow_Sign
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
@@ -69,8 +66,8 @@ theory Voblint
     Example_Proc_GraphViz
     Example_Relational_DG_Demo
     Example_Strategy_Tree_Demo
-    Example_Sign_Codegen
-    Analyse_Dispatch
+    "Voblint_CLI.Sign_Codegen"
+    "Voblint_CLI.Analyse_Dispatch"
 begin
 
 text \<open>
@@ -132,21 +129,34 @@ text \<open>
 subsection \<open>Context sensitivity: the axis issue \<open>#66\<close> is about\<close>
 
 text \<open>
-  Three routing policies for the same \<open>twice\<close> program (called from two sites), each
-  certified against the same activation-indexed semantics.
+  Three storage policies, each certified against the same activation-indexed semantics
+  and by the same soundness shape --- \<^const>\<open>activation_collect\<close> bounded at every
+  \<open>(node, context)\<close> pair.  They differ only in what a context \<^emph>\<open>is\<close>.
 
-  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect}\<close> --- context routed by
-    \<open>ivl_context\<close>: the entered formal's point abstraction (partial tabulation,
-    \<^cite>\<open>SeidlEtAl2026\<close> Example 8). \<^verbatim>\<open>twice_activation_collect_sound\<close> bounds
-    \<^const>\<open>activation_collect\<close> at every \<open>(node, context)\<close>.
-  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString}\<close> --- context routed by
-    \<open>route_cs\<close>: the call site itself (1-call-string, \<^cite>\<open>SeidlEtAl2026\<close> Example 7).
-    \<^verbatim>\<open>twice_cs_activation_collect_sound\<close> is the same soundness shape as \<open>Ctx_Collect\<close>, for a
-    routing policy that needed \<open>enterc\<close> widened to see the call site (issue \<open>#66\<close>, G1) to be
-    expressible at all.
-  \<^item> \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_Source_Ctx}\<close> --- the sharpest of the three:
-    bound against \<^emph>\<open>actual source runs\<close> at each activation's own context, not just the
-    collecting semantics, so it is the source-level counterpart of \<open>Ctx_Collect\<close>.
+  \<^item> \<^bold>\<open>Monovariant\<close> --- no context: one abstract state per program point.
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_IP_Flagship}\<close> analyses \<open>twice\<close>, whose
+    single procedure is called from two sites with different arguments, under one shared
+    entry state, and \<^verbatim>\<open>twice_collect_sound\<close> bounds the result.  This is the baseline the
+    two policies below sharpen.
+  \<^item> \<^bold>\<open>Entry state\<close> --- the context is the entered abstract value of the callee's declared
+    formals (partial tabulation, \<^cite>\<open>SeidlEtAl2026\<close> Example 8).
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_Ctx_Collect}\<close> instantiates the production
+    entry-state analysis on that same \<open>twice\<close> program: the two calls route to the distinct
+    contexts \<open>[3,3]\<close> and \<open>[10,10]\<close> and keep their entry and return values apart, where the
+    monovariant baseline joins them.  \<^verbatim>\<open>twice_activation_collect_sound\<close> is the bound.
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_EntryState_Collect}\<close> is the complementary
+    witness on an unconstrained argument, where one wide context covers infinitely many
+    concrete entries rather than separating two.
+  \<^item> \<^bold>\<open>Call string\<close> --- the context is a bounded record of the call sites traversed to reach
+    the activation (\<^cite>\<open>SeidlEtAl2026\<close> Example 7 at \<open>k = 1\<close>).
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString_K1}\<close> and
+    \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_DG_CallString_K2}\<close> run one \<open>nest\<close> program at
+    \<open>k = 1\<close> and \<open>k = 2\<close>, so the pair also measures what raising the bound buys.  This policy
+    needed \<open>enterc\<close> widened to see the call site (issue \<open>#66\<close>, G1) to be expressible at all.
+
+  \<^bold>\<open>@{theory Voblint_Examples.Example_Interval_Source_Ctx}\<close> is the sharpest statement of the
+  entry-state route: bound against \<^emph>\<open>actual source runs\<close> at each activation's own context,
+  not just the collecting semantics.
 \<close>
 
 subsection \<open>Activation-local concrete semantics\<close>
@@ -229,7 +239,7 @@ text \<open>
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Core.Abstract_Domain} --- \<^verbatim>\<open>sound_domain\<close>, lifted state concretization, display support.
     \<^item> @{theory Voblint_Core.Constraint_System} --- pure and effectful transfer interfaces, \<^verbatim>\<open>glob_env\<close>, \<^verbatim>\<open>sound_transfer\<close>, \<^verbatim>\<open>sound_effectful_transfer\<close>.
-    \<^item> @{theory Voblint_Core.Constraint_System_Sound} --- per-edge / per-combine transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>), the building blocks of the monovariant trace endpoint \<^verbatim>\<open>unified_ltr_post_fixpoint_sound\<close> (in \<^verbatim>\<open>LTR_Analysis_Sound\<close>, over \<^const>\<open>ltr_collect\<close>).
+    \<^item> @{theory Voblint_Core.Constraint_System_Sound} --- per-edge transfer soundness (\<^verbatim>\<open>edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>\<close>) and its \<^verbatim>\<open>EA_Check\<close> companion, the dispatch-point facts \<^theory>\<open>Voblint_Core.DG_Soundness\<close>'s \<^verbatim>\<open>step_sound\<close>/\<^verbatim>\<open>combine_sound\<close> obligations are discharged against.
     \<^item> @{theory Voblint_Core.TD_Side_CFG} --- mixed local/global abstraction: \<^verbatim>\<open>side_env\<close>, local/global restrictions, unit-global effectful tree constructors.
     \<^item> @{theory Voblint_Core.TD_Side_Eff_Cone_Lemmas} --- query-cone soundness for the
       effectful TD_side solver over \<^const>\<open>ltr_collect\<close>
@@ -251,7 +261,7 @@ text \<open>
       domain may override with sharper, hand-tuned predicates.
     \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
       and \<^locale>\<open>abstract_check_domain\<close>: mutually recursive
-      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>bexp\<close>, the three-way
+      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>exp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
       \<^const>\<open>checks_proven\<close>.
@@ -277,7 +287,6 @@ text \<open>
     \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>.
     \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance.
     \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>, over \<^const>\<open>ltr_collect\<close>).
-    \<^item> @{theory Voblint_Analysis.Mixed_Sign_Interval} --- the mixed flagship: Sign locals with Interval globals, both mixed-domain and context-sensitive.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
@@ -296,12 +305,11 @@ text \<open>
       Interval's own transfer facts instead of Sign's.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
-    \<^item> @{theory Voblint_Formalization.Mixed_Flow_Sound} --- mixed flow-sensitive soundness and optimality over \<^const>\<open>ltr_collect\<close> (\<^verbatim>\<open>mixed_flow_analysis_sound\<close> / \<^verbatim>\<open>mixed_flow_analysis_optimal\<close>).
     \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling --- the
     complete end-to-end analyses (\<open>Example_Interval_DG_Flagship\<close>, \<open>Exec_Sign_DG_Run\<close>,
-    \<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_CallString\<close>,
+    \<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_EntryState_Collect\<close>,
     \<open>Example_Interval_Source_Ctx\<close>) are indexed separately, above.
     \<^item> @{theory Voblint_Examples.Example_Checks_Store_Only} --- \<open>__voblint_check(...)\<close>
       discharged against a computed Sign post-solution, node-locally: one check
@@ -318,9 +326,8 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
     \<^item> @{theory Voblint_Examples.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the same.
-    \<^item> @{theory Voblint_Examples.Example_Mixed_Flow_Sign} --- the mixed-flow soundness/optimality theorem applied to Sign.
-    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- Interval analysis of \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global.
-    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- Interval analysis of a bounded loop.
+    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified interval analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global} / @{theory Voblint_Examples.Example_Interval_Side_Proc_Global}.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Ivl_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
       \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
@@ -331,9 +338,9 @@ text \<open>
       \<open>random_guard_run_42\<close> is a non-vacuity witness at the source semantics: fixing the
       random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close> derives an actual terminating run
       reaching \<open>y = 42\<close>.
-    \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the same \<open>nest\<close>
-      program as \<open>Example_Interval_DG_CallString\<close>, computed and certified at a 1-call-string
-      context (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
+    \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K1} --- the \<open>nest\<close> program,
+      computed and certified at a 1-call-string context
+      (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
       calls \<open>g\<close> from one, so a 1-call-string cannot separate \<open>g\<close>'s two activations.
     \<^item> @{theory Voblint_Examples.Example_Interval_DG_CallString_K2} --- the same program at a
       2-call-string context (\<^verbatim>\<open>nest_2_activation_collect_sound\<close>), which does separate them.
@@ -382,7 +389,7 @@ text \<open>
   \<^bold>\<open>9. Executable code generation.\<close> A runtime-program entry point per domain,
     reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a
     parallel one, exported to OCaml.
-    \<^item> @{theory Voblint_Examples.Example_Sign_Codegen} --- \<^verbatim>\<open>analyse_sign\<close>
+    \<^item> @{theory Voblint_CLI.Sign_Codegen} --- \<^verbatim>\<open>analyse_sign\<close>
       takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
       program) and reuses \<^verbatim>\<open>unit_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
       and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Formalization.Run_Analysis_Sound})
@@ -391,11 +398,17 @@ text \<open>
       post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
       \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
       computation, not two.
-    \<^item> @{theory Voblint_Analysis.Interval_Checks} --- \<^verbatim>\<open>analyse_interval_report\<close>,
-      the Interval counterpart, built the same way on
-      \<^verbatim>\<open>ivl_exec_prog_sound_collecting_at\<close>.
-    \<^item> @{theory Voblint_Examples.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
-      dispatches on \<^verbatim>\<open>analysis_kind\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
+    \<^item> @{theory Voblint_CLI.Interval_Codegen} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
+      \<^verbatim>\<open>analyse_interval_td_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
+      dispatches to, built the same way on \<^verbatim>\<open>base_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
+      \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report\<close>/
+      \<^verbatim>\<open>analyse_interval_report_per_origin\<close>, the always-join and per-origin update-rule siblings
+      \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this
+      same production default on the identical equation system, each with its own soundness
+      theorems proved the same way, in @{theory
+      Voblint_CLI.Interval_Codegen}.
+    \<^item> @{theory Voblint_CLI.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
+      dispatches on \<^verbatim>\<open>analysis_domain\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable
       \<^verbatim>\<open>check_report_entry list\<close> result type
       (@{theory Voblint_Core.Abstract_Checks}), so the dispatcher adds no new

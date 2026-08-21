@@ -25,8 +25,9 @@ export_code
   mk_program proc_decl_of
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
-  Bc bexp.Not And Or Less bexp.Eq
+  exp.Not And Or Less exp.Eq
   Check_Proved Check_Refuted Check_Unknown
+  Dead Decided
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char

@@ -17,8 +17,9 @@ procedure call.
 | --- | --- | --- |
 | `Sign/` | Sign | codegen probes, procedure-call soundness spines |
 | `Interval/` | Interval | codegen probes, flagship D/G runs, context-sensitive (call-string) D/G, procedure-call spines, backward-analysis trace soundness |
+| `Congruence/` | Congruence | executable standalone arithmetic and backward-filtering regressions |
 | `Parity/` | Parity | domain-registration validation flagship |
-| `Mixed/` | Relational (non-`abs_state`) | same generic pipeline/solver run against a non-`abs_state` carrier |
+| `Mixed/` | Composite and relational | composite-domain regressions and the generic pipeline/solver run against a non-`abs_state` carrier |
 | `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
 | `Tooling/` | domain-agnostic | Graphviz rendering demos, outside the proof spine |
 

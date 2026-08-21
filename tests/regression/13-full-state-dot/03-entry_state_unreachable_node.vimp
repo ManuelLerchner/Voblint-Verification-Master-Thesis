@@ -1,0 +1,138 @@
+// PARAM: --analysis interval --context entry-state --dot-full
+// Entry-state full-state rendering of a node no execution reaches, the
+// counterpart of 02-entry_state_context_join.vimp's join case. f is called
+// twice, so its body carries two entry-state contexts ([5,5] and [7,7]), and
+// its n < 2 branch is infeasible under both.
+//
+// A node whose every covered context is unreachable renders as "unreachable",
+// not as an ordinary state whose variables happen to read bottom. The
+// distinction is observable and not cosmetic: an empty interval prints as
+// [+inf,-inf], which is a perfectly ordinary-looking variable line, so a
+// bottom reading drawn as a state paints dead code as a live node in the same
+// lightgreen every reachable node carries.
+//
+// The sibling else branch in the same procedure still renders, and renders the
+// join of both contexts (n=[5,7]), so suppressing the dead node costs nothing
+// at the live ones. main's own nodes keep a=[5,5] and b=[7,7]: only the shared
+// callee region is drawn joined, exactly as in 02-entry_state_context_join.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp9_ctx0
+//     main_pp10_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp6_ctx0
+//     main_pp7_ctx0
+//     main_pp8_ctx0
+//   cluster_ctx_1:
+//     f_pp1_ctx1
+//     f_pp2_ctx1
+//     f_pp3_ctx1
+//     f_pp4_ctx1
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//
+// nodes:
+//   f_pp1_ctx1: pp1
+//       unreachable
+//   f_pp2_ctx1: pp2
+//       unreachable
+//   f_pp3_ctx1: pp3
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[5,7]
+//   f_pp4_ctx1: pp4
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[5,7]
+//   main_pp9_ctx0: pp9
+//       a=[5,5]
+//       b=[7,7]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_pp10_ctx0: pp10
+//       a=[5,5]
+//       b=[7,7]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_result_main_ctx0: exit_main
+//       a=[5,5]
+//       b=[7,7]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   f_pp0_ctx1: pp0
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[5,7]
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_pp6_ctx0: pp6
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   main_pp7_ctx0: pp7
+//       a=[5,5]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   f_entry_f_ctx1: entry_f
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[-inf,+inf]
+//       n=[5,7]
+//   main_pp8_ctx0: pp8
+//       a=[5,5]
+//       b=[7,7]
+//       #ret=[-inf,+inf]
+//       n=[-inf,+inf]
+//   f_result_f_ctx1: exit_f
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//       #ret=[5,7]
+//       n=[5,7]
+//
+// edges:
+//   f_pp1_ctx1 -> f_pp2_ctx1: check(n==99)
+//   f_pp2_ctx1 -> f_result_f_ctx1: return 0
+//   f_pp3_ctx1 -> f_pp4_ctx1: check(2<n)
+//   f_pp4_ctx1 -> f_result_f_ctx1: return n
+//   main_pp9_ctx0 -> main_pp10_ctx0: check(b==7)
+//   main_pp10_ctx0 -> main_result_main_ctx0: terminate
+//   f_pp0_ctx1 -> f_pp1_ctx1: n<2
+//   f_pp0_ctx1 -> f_pp3_ctx1: not (n<2)
+//   main_entry_main_ctx0 -> main_pp6_ctx0: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   main_pp8_ctx0 -> main_pp9_ctx0: check(a==5)
+//   main_pp6_ctx0 -> f_entry_f_ctx1: enter f(5)
+//   main_pp7_ctx0 -> f_entry_f_ctx1: enter f(7)
+//   f_result_f_ctx1 -> main_pp7_ctx0: combine a
+//   f_result_f_ctx1 -> main_pp8_ctx0: combine b
+//   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
+//   main_pp7_ctx0 -> main_pp8_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+void f(n) {
+  if (n < 2) {
+    __voblint_check(n == 99); // NOWARN (unreachable)
+    return 0
+  } else {
+    __voblint_check(2 < n); // PROVED
+    return n
+  }
+}
+
+void main() {
+  a := f(5);
+  b := f(7);
+  __voblint_check(a == 5); // PROVED
+  __voblint_check(b == 7)  // PROVED
+}

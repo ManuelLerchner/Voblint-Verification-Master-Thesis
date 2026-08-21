@@ -14,9 +14,18 @@ rm -rf codegen/generated
 mkdir -p codegen/generated
 
 # -e materializes the session's export_files declarations (ROOT) onto the
-# file system; -N builds a fresh log per session; the session itself is
-# rebuilt (or reused, if already up to date) as part of the same invocation.
-"$ISABELLE" build -v -j12 -o threads=12 -N -e -d "$AFP" -d "$TD_DIR" -D . Voblint_Codegen
+# file system; the session itself is rebuilt (or reused, if already up to
+# date) as part of the same invocation.
+#
+# -d for the repository root, not -D: -D would *select* every session it
+# finds there, which pulls Voblint_Examples into a run that only needs
+# Voblint_Codegen. The two are siblings on Voblint_CLI (neither imports the
+# other), so building Examples here contributes nothing to the exported code
+# and costs several minutes on every regeneration -- including every CLI-only
+# change, since Examples sits downstream of Voblint_CLI too. Naming
+# Voblint_Codegen alone still builds its own dependency chain
+# (Core -> Analysis -> Formalization -> CLI -> Codegen); it just stops there.
+"$ISABELLE" build -v -j12 -o threads=12 -e -d "$AFP" -d "$TD_DIR" -d . Voblint_Codegen
 
 # Isabelle's OCaml backend always names its export blob with a ".ocaml"
 # extension (fixed by the code generator, not by file_prefix), which is why

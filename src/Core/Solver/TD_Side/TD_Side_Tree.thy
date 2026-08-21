@@ -163,7 +163,7 @@ qed
 definition side_contribution_trees ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> (pp \<times> edge_action) list
-   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname list \<times> exp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree list"
 where
@@ -176,7 +176,7 @@ definition side_rhs_fold_eff ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state lifted
    \<Rightarrow> (pp \<times> edge_action) list
-   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname list \<times> exp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree"
 where
@@ -211,7 +211,7 @@ lemmas side_rhs_fold_eff_simps =
 
 text \<open>The callee-entry seed list: each incoming call at callee entry \<open>v\<close> contributes its
   formals/actuals so the fold can invoke \<^const>\<open>etf_enter\<close> on the caller state.\<close>
-definition entry_seed_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> vname list \<times> aexp list) list" where
+definition entry_seed_list :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> vname list \<times> exp list) list" where
   "entry_seed_list g v =
      map (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> (c, fs, as)) (entry_call_list g v)"
 
@@ -219,9 +219,9 @@ text \<open>
   The fold seed is the lifted bottom, not a lifted domain value: a program
   point with no live predecessor contribution is unreachable, not reachable
   at the domain's bottom -- \<^const>\<open>Bot\<close> is \<open>fold_rhs_trees\<close>' join identity, so
-  it never forces reachability the way embedding \<open>bot0\<close> (always instantiated
-  to literal \<open>bot\<close>, see \<open>Mixed_Flow_Sound.thy\<close>) as \<open>Lifted bot0\<close> would. Only
-  the entry point starts genuinely reachable, seeded at the initial store.
+  it never forces reachability the way embedding a genuine domain seed \<open>bot0\<close>
+  as \<open>Lifted bot0\<close> would. Only the entry point starts genuinely reachable,
+  seeded at the initial store.
 \<close>
 
 definition make_side_rhs_tree_eff ::
@@ -374,7 +374,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift (restrict_local_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
        (map (\<lambda>(cl,fs,as). etf_enter etf_new fs as cl) xs) seed
      = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cl,fs,as). etf_enter etf_old fs as cl) xs) seed"
-    for xs :: "(pp \<times> vname list \<times> aexp list) list" and seed
+    for xs :: "(pp \<times> vname list \<times> exp list) list" and seed
     by (induction xs arbitrary: seed) (auto simp: enter_t split: prod.splits)
   have comb_seg_t:
     "foldr (\<lambda>t acc'. map_lift (restrict_local_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
@@ -397,7 +397,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift (restrict_global_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
        (map (\<lambda>(cl,fs,as). etf_enter etf_new fs as cl) xs) seed
      = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cl,fs,as). etf_enter etf_old fs as cl) xs) seed"
-    for xs :: "(pp \<times> vname list \<times> aexp list) list" and seed
+    for xs :: "(pp \<times> vname list \<times> exp list) list" and seed
     by (induction xs arbitrary: seed) (auto simp: enter_s split: prod.splits)
   have comb_seg_s:
     "foldr (\<lambda>t acc'. map_lift (restrict_global_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
@@ -500,7 +500,7 @@ definition side_acc_eff ::
    \<Rightarrow> 'a abs_state lifted
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state lifted)
    \<Rightarrow> (pp \<times> edge_action) list
-   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname list \<times> exp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a abs_state lifted"
 where
   "side_acc_eff etf acc \<sigma> es ens cs =

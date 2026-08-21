@@ -136,7 +136,7 @@ lemma reserved_assignment_rejected:
 
 lemma reserved_read_rejected:
   "\<not> wf_source_com \<Pi> (Assign x (V ret_var))"
-  by (simp add: source_aexp_def)
+  by (simp add: source_exp_def)
 
 lemma root_return_rejected:
   "~ wf_compile_input cr_gs \<Pi> ps mnm (Return e)"
@@ -157,7 +157,7 @@ lemma value_call_accepted:
       and "x \<noteq> ret_var" and "special_table p = None"
   shows "wf_source_com \<Pi> (Call (Some x) p [])"
   using assms
-  by (simp add: proc_decl_of_def value_providing_def source_aexp_def)
+  by (simp add: proc_decl_of_def value_providing_def source_exp_def)
 
 lemma ignored_value_call_accepted:
   assumes "\<Pi> p = Some (proc_decl_of [] (Return (Some (N 0))))" and "special_table p = None"

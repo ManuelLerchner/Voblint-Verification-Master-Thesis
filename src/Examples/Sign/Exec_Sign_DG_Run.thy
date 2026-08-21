@@ -1,14 +1,16 @@
 section \<open>Running the verified solver on the native D/G spine (Sign)\<close>
 
 text \<open>
-  An end-to-end certified run on the carrier-opaque D/G equation system, registered
-  through the \<open>unit_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
-  this file's own storage classifier \<open>sign_ex_gs\<close>, from just \<open>sign_is_sound_transfer_for\<close>
-  and \<open>sign_tf_st_for_commute\<close>).
+  An end-to-end certified run on the Base-style D/G equation system, registered
+  through the \<open>base_dg_exec_analysis\<close> locale (interpreted as \<open>sign_ex_reg\<close> below, at
+  this file's own storage classifier \<open>sign_ex_gs\<close>, from \<open>sign_is_sound_transfer_for\<close>,
+  \<open>sign_tf_st_for_commute\<close>, and \<open>sign_enter_st_for_commute\<close>).
   A concrete call-free Sign program is compiled to a CFG; the executable D/G
-  generator (\<open>dg_gen_of (unit_dg_spec_st sign_tf_st)\<close>, values in
-  \<open>(sign exec_dg_st, sign exec_dg_st) dg_state\<close>) is handed to the vendored always-join TD-side
-  solver; the solver \<^emph>\<open>computes\<close> a partial post-solution.
+  generator (\<open>dg_gen_of (base_dg_spec_st_for_lifted sign_ex_gs \<dots> sign_tf_st_for sign_enter_st_for)\<close>,
+  values in \<open>(sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state\<close> --- the whole
+  abstract state routed through the local unknown, no separate global/side slot) is
+  handed to the vendored always-join TD-side solver; the solver \<^emph>\<open>computes\<close> a
+  partial post-solution.
 
   The final theorem \<open>dgEx_source_run_sound\<close> turns the single \<open>by eval\<close> solver success
   directly into a source-level guarantee, matching the pattern in
@@ -20,8 +22,8 @@ text \<open>
 theory Exec_Sign_DG_Run
   imports
     "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Analysis.DG_Base_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
-    "Voblint_Analysis.Sign_DG"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.Run_Analysis_Sound"
 begin
@@ -64,10 +66,13 @@ lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')" by eval
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
-definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
-  "dgEx_eqs = dg_gen_of (unit_dg_spec_st_for sign_ex_gs (sign_tf_st_for sign_ex_gs) (sign_enter_st_for sign_ex_gs)) gEx bot cinit_sign_st cinit_sign_st"
+definition dgEx_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) strategy_tree" where
+  "dgEx_eqs = dg_gen_of
+     (base_dg_spec_st_for_lifted sign_ex_gs (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
+       (sign_tf_st_for sign_ex_gs) (sign_enter_st_for sign_ex_gs))
+     gEx bot (Lifted cinit_sign_st) (Lifted cinit_sign_st)"
 
-definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+definition dgEx_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
   "dgEx_sol = TD_side_always_join_Interp_solve dgEx_eqs (cfg_exit gEx, ())"
 
 subsection \<open>The solver computes a partial post-solution\<close>
@@ -82,7 +87,7 @@ lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit 
   by eval
 
 lemma dgEx_solve_dom:
-  "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign exec_dg_st, sign exec_dg_st) dg_state) dgEx_eqs (cfg_exit gEx, ())"
+  "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) dgEx_eqs (cfg_exit gEx, ())"
   using dgEx_terminates_c
   unfolding TD_side_always_join_Interp.term_equivalence TD_side_always_join_Interp.solve_c_dom_def
   by simp
@@ -98,7 +103,7 @@ lemma dgEx_wf:
   "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
   unfolding wf_compile_input_simps
     sign_ex_pi_def sign_ex_prog_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def
       reserved_ret_var_def prog_main_name_def special_table_def special_pname_nondet_int_def
       special_pname_min_def special_pname_max_def
       split: if_splits)
@@ -122,32 +127,39 @@ lemma dgEx_cover_combine:
   by (simp add: gEx_calls)
 lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
   unfolding wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def
-  by (auto simp: source_aexp_def source_bexp_def proc_decl_of_def ret_var_def
+  by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def
       reserved_ret_var_def split: if_splits)
 
+lemma dgEx_is_bot_exact:
+  "\<And>s. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_bot_state (fun_of_exec_dg_st_for sign_ex_gs s)"
+  by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
+
 lemma dgEx_sound0:
-  "cinit_stores sign_ex_gs \<subseteq> \<lbrakk>combine_env_abs sign_ex_gs
-     (fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st) (fun_of_exec_dg_st_for sign_ex_gs cinit_sign_st)\<rbrakk>"
+  "cinit_stores sign_ex_gs \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for sign_ex_gs) (Lifted cinit_sign_st))
+                                (map_lift (fun_of_exec_dg_st_for sign_ex_gs) (Lifted cinit_sign_st))"
   by (simp add: fun_of_exec_dg_st_for_def fun_of_st_cinit_sign_st_for cinit_stores_def gamma_state_def
-      combine_env_abs_def)
+      gamma_dg_base_def)
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
 
-text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
-  with the classifier-parametric transfer/enter functions, matching the pattern in
-  \<open>Example_Parity_DG_Flagship\<close>.  The interpretation absorbs the sound-transfer and
-  primitive-commutation obligations once, so \<open>dgEx_source_run_sound\<close> below only
-  supplies the compiled-input and solver facts.\<close>
+text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here at \<^const>\<open>sign_ex_gs\<close>
+  with the classifier-parametric transfer/enter functions and \<^const>\<open>resolved_st_q_is_bot_for\<close>
+  at this program's own declared globals -- the same five domain facts
+  \<^locale>\<open>unit_dg_exec_analysis\<close> needed, plus the one new \<open>is_bot_pred\<close> exactness obligation. \<open>G\<close>
+  is instantiated at \<open>sign exec_dg_st lifted\<close> too (the plumbing constraint
+  \<^theory>\<open>Voblint_Formalization.Run_Analysis_Sound\<close>'s \<open>base_dg_exec_analysis\<close> documents), not because
+  \<open>G\<close>'s content matters here.\<close>
 
 interpretation sign_ex_reg:
-  unit_dg_exec_analysis sign_ex_gs
+  base_dg_exec_analysis sign_ex_gs
     "sign_tf_for sign_ex_gs" "sign_tf_st_for sign_ex_gs" "sign_enter_st_for sign_ex_gs"
+    "resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog)"
     "TD_side_always_join_Interp.solve" "TD_side_always_join_Interp.solve_c"
 proof -
   interpret sign_ex_transfer: sound_transfer_for sign_ex_gs "sign_tf_for sign_ex_gs"
     by (rule sign_is_sound_transfer_for)
-  show "unit_dg_exec_analysis sign_ex_gs (sign_tf_for sign_ex_gs) (sign_tf_st_for sign_ex_gs)
-          (sign_enter_st_for sign_ex_gs)
+  show "base_dg_exec_analysis sign_ex_gs (sign_tf_for sign_ex_gs) (sign_tf_st_for sign_ex_gs)
+          (sign_enter_st_for sign_ex_gs) (resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog))
           TD_side_always_join_Interp.solve TD_side_always_join_Interp.solve_c"
     by unfold_locales
        (rule dgEx_reserved
@@ -156,9 +168,7 @@ proof -
              sign_ex_transfer.tf_sound_enter_for sign_ex_transfer.tf_sound_combine_env_for
              sign_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
              sign_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             action_reduces.ret_none[OF sign_tf_st_for_reduces]
-             action_reduces.ret_some[OF sign_tf_st_for_reduces]
-             action_reduces.check[OF sign_tf_st_for_reduces]
+             dgEx_is_bot_exact
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 
@@ -179,22 +189,21 @@ proof -
                              dgEx_cover_combine[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]]
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
-              dgEx_sound0[folded gamma_unit_def]
+              dgEx_sound0
               init run[unfolded gEx_def]])
 qed
 
 subsection \<open>Inspecting the computed result\<close>
 
-text \<open>The diagonal Sign instance routes each name to the exec state that owns it
-  at every edge: the local answer stays exactly \<open>SPos\<close> at the exit, while the
-  global/side unknown's own value for \<open>x\<close> (a name no \<open>global\<close> declaration ever
-  makes it track) keeps its unrelated \<open>STop\<close> default -- expected, since nothing
-  ever queries that slot for a purely local name.\<close>
+text \<open>The Base instance routes the whole abstract state through the local unknown,
+  reachability-lifted: the local answer at the exit is exactly \<open>Lifted\<close> of a state
+  mapping \<open>x\<close> to \<open>SPos\<close>, with no separate global/side slot to inspect for a purely
+  local name.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. (sign_ex_lookup (locals (snd sol (Inl (Statement 2, ())))) (STR ''x''),
-                       sign_ex_lookup (globs (snd sol (Inr ()))) (STR ''x'')))
-     (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (SPos, STop)"
+  "map_option (\<lambda>sol. case map_lift (fun_of_exec_dg_st_for sign_ex_gs) (locals (snd sol (Inl (Statement 2, ()))))
+                      of Lifted s \<Rightarrow> Some (s (STR ''x'')) | Bot \<Rightarrow> None)
+     (TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit gEx, ())) = Some (Some SPos)"
   by eval
 
 end

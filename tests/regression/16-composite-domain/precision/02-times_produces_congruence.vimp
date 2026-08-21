@@ -1,0 +1,25 @@
+// PARAM: --analysis int
+// y := x * 2 gives y an even/mod-2-congruent-to-0 fact from Times' own
+// abstract transfer, for any x (x itself is left unconstrained). Two
+// nested guards then bound y to the interval [1,2] via real control flow
+// (0 < y, y < 3). Interval alone only knows y in {1,2} and cannot exclude
+// 1; Congruence/Sign alone know nothing about the bound at all. The
+// composite intersects [1,2] with "even" and gets the singleton {2}
+// exactly -- verified that neither --analysis interval nor --analysis
+// sign alone proves y == 2 on this identical source (both report
+// UNKNOWN), matching 01-refinement_beats_components.vimp's contrast but
+// driven by real multiplication instead of an equality guard, so the
+// congruence fact comes from arithmetic (Int_Arithmetic.thy's Times case)
+// rather than from a solved linear equation.
+void main() {
+  y := x * 2;
+  if (0 < y) {
+    if (y < 3) {
+      __voblint_check(y == 2) // PROVED
+    } else {
+      z := 0
+    }
+  } else {
+    z := 0
+  }
+}

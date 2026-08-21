@@ -18,8 +18,7 @@ subsection \<open>Executable orders\<close>
 
 text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
   enumeration of intra and call relations. They affect only solver representation, not
-  CFG semantics.\<close>
-derive linorder bexp
+  CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
 derive linorder special_call
 derive linorder edge_action
 derive linorder call_action
@@ -233,6 +232,27 @@ lemma return_call_action_list_dst:
      = return_call_list g v"
   unfolding return_call_action_list_def return_call_list_def
   by (induction "cfg_calls_list g") auto
+
+subsection \<open>Full node enumeration\<close>
+
+text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the intra endpoints, the call-site/
+  callee-entry/continuation triples, and the distinguished entry, deduplicated. This is the
+  canonical finite node enumeration a public per-node result table draws its key domain from,
+  distinct from \<^const>\<open>cfg_intra_list\<close>'s edge-indexed view.\<close>
+
+definition cfg_node_list :: "cfg \<Rightarrow> cfg_node list" where
+  "cfg_node_list g =
+     remdups
+       (concat (map (\<lambda>(u, a, v). [u, v]) (cfg_intra_list g)) @
+        concat (map (\<lambda>(u, act, ce, after). [u, ce, after]) (cfg_calls_list g)) @
+        [cfg_entry g])"
+
+lemma set_cfg_node_list [simp]:
+  assumes "finite (intra g)" and "finite (calls g)"
+  shows "set (cfg_node_list g) = cfg_nodes g"
+  unfolding cfg_node_list_def cfg_nodes_def
+  using set_cfg_intra_list[OF assms(1)] set_cfg_calls_list[OF assms(2)]
+  by force
 
 subsection \<open>Outgoing call enumeration (caller perspective)\<close>
 

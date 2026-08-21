@@ -19,10 +19,10 @@ text \<open>
   - arithmetic:
       +, -, * map to @{const Plus}, @{const Minus}, @{const Times}
       unary minus @{text "-n"} on numerals becomes @{const N} with a negative int
-  - boolean comparisons:
-      <, == map to @{const Less}, @{const Eq}
+  - comparisons:
+      <, == map to @{const Less}, @{const Eq}, evaluating to an @{typ int} 0/1
   - constants:
-      true/false map to @{const Bc}
+      true/false lower to @{const N} 1/@{const N} 0
 
   Example:
   @{verbatim [display]
@@ -228,7 +228,7 @@ text \<open>
   \<open>special: program_structure\<close> boundary: every other nonterminal, syntax
   production, and lowering function comes from \<^verbatim>\<open>VIMP_Grammar_Generated\<close>,
   imported above, whose \<open>Vimp_Grammar_Tr\<close> ML structure this theory calls
-  into directly (\<open>stmts_opt_tr\<close>, \<open>aexp_tr\<close>, \<open>formals_of\<close>, \<open>names_of\<close>).
+  into directly (\<open>stmts_opt_tr\<close>, \<open>exp_tr\<close>, \<open>formals_of\<close>, \<open>names_of\<close>).
 \<close>
 
 nonterminal imp2_funcs
@@ -310,9 +310,9 @@ parse_translation \<open>
        the procedure declaration carries no separate result field. *)
     fun mk_body_ret ctxt NONE NONE = K c_SKIP
       | mk_body_ret ctxt (SOME c) NONE = Vimp_Grammar_Tr.stmts_opt_tr ctxt c
-      | mk_body_ret ctxt NONE (SOME e) = K c_Return $ (K c_Some $ Vimp_Grammar_Tr.aexp_tr ctxt e)
+      | mk_body_ret ctxt NONE (SOME e) = K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e)
       | mk_body_ret ctxt (SOME c) (SOME e) =
-          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr ctxt c $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.aexp_tr ctxt e))
+          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr ctxt c $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e))
 
     fun mk_proc_rep ctxt [] = K c_Nil
       | mk_proc_rep ctxt ((p, formals, body, result) :: rest) =

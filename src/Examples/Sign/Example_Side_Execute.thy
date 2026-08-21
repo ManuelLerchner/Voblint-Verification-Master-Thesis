@@ -86,7 +86,7 @@ proof -
     by (simp add: x1_s0_def cinit_stores_def)
   have wf: "wf_compile_input x1_gs (prog_table x1_prog) (prog_procs x1_prog) (STR ''main'') (prog_main x1_prog)"
     unfolding wf_compile_input_def x1_prog_def
-    by (auto simp: wf_source_program_def wf_proc_decl_def source_aexp_def
+    by (auto simp: wf_source_program_def wf_proc_decl_def source_exp_def
           proc_decl_of_def prog_main_name_def ret_var_def reserved_ret_var_def
           declared_global_def special_table_def special_pname_nondet_int_def
           special_pname_min_def special_pname_max_def

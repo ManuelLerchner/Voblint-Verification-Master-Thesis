@@ -25,7 +25,7 @@ record 'a special_ops =
 
 locale sound_special_ops =
   fixes ops :: "'a::sound_domain special_ops"
-    and ev  :: "aexp => (vname => 'a) => 'a"
+    and ev  :: "exp => (vname => 'a) => 'a"
   assumes special_min_sound_for[intro]:
     "\<forall>i j p q. i \<in> gamma p \<longrightarrow> j \<in> gamma q \<longrightarrow> min i j \<in> gamma (special_min ops p q)"
   assumes special_max_sound_for[intro]:
@@ -35,9 +35,9 @@ locale sound_special_ops =
   assumes special_max_mono_for[intro]:
     "\<forall>p1 p2 q1 q2. p1 \<le> p2 \<longrightarrow> q1 \<le> q2 \<longrightarrow> special_max ops p1 q1 \<le> special_max ops p2 q2"
   assumes ev_sound_for[intro]:
-    "\<forall>(e::aexp) s \<sigma>. (\<forall>x. s x \<in> gamma (\<sigma> x)) \<longrightarrow> aval e s \<in> gamma (ev e \<sigma>)"
+    "\<forall>(e::exp) s \<sigma>. (\<forall>x. s x \<in> gamma (\<sigma> x)) \<longrightarrow> aval e s \<in> gamma (ev e \<sigma>)"
   assumes ev_mono_for[intro]:
-    "\<forall>(e::aexp) \<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
+    "\<forall>(e::exp) \<sigma>1 \<sigma>2. \<sigma>1 \<le> \<sigma>2 \<longrightarrow> ev e \<sigma>1 \<le> ev e \<sigma>2"
   assumes gamma_top:
     "gamma (top :: 'a) = UNIV"
 begin

@@ -1,0 +1,83 @@
+// PARAM: --analysis interval --context entry-state --context-graph expanded
+// Two live (not dead) entry-state contexts disagree on the same source
+// check: f/[1] proves n==1, f/[2] refutes it. Neither activation is
+// unreachable, so aggregate_verdicts (Abstract_Checks.thy) combines two
+// Decided verdicts via check_result's own semilattice_sup, and
+// Check_Proved != Check_Refuted forces sup_check_result to its Check_Unknown
+// case -- distinct from the Dead-suppression path 06-reachability/precision/
+// 06-unreachable_dead_branch_entry_state.vimp and 11-graph-snapshot/
+// 05-expanded_mixed_dead_live_check.vimp already cover, where one side
+// contributes Dead (the aggregation's identity element) rather than a
+// second, conflicting Decided verdict. The collapsed/text-report surface
+// can only print one verdict per source check, so UNKNOWN is not a failure
+// of precision here -- it is the sound answer once two live contexts
+// genuinely disagree. --context-graph expanded's per-context clusters
+// still show the individual PROVED/REFUTED verdicts underneath.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//   cluster_ctx_1:
+//     f_pp1_ctx1
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//   cluster_ctx_2:
+//     f_pp1_ctx2
+//     f_pp0_ctx2
+//     f_entry_f_ctx2
+//     f_result_f_ctx2
+//
+// nodes:
+//   f_pp1_ctx1: pp1
+//       n=[1,1]
+//   f_pp1_ctx2: pp1
+//       n=[2,2]
+//   main_result_main_ctx0: exit_main
+//   f_pp0_ctx1: pp0
+//       n=[1,1]
+//       check n==1
+//   f_pp0_ctx2: pp0
+//       n=[2,2]
+//       check n==1 [REFUTED]
+//   main_entry_main_ctx0: entry_main
+//   main_pp2_ctx0: pp2
+//   main_pp3_ctx0: pp3
+//   f_entry_f_ctx1: entry_f
+//       n=[1,1]
+//   f_entry_f_ctx2: entry_f
+//       n=[2,2]
+//   main_pp4_ctx0: pp4
+//   f_result_f_ctx1: exit_f
+//       n=[1,1]
+//   f_result_f_ctx2: exit_f
+//       n=[2,2]
+//
+// edges:
+//   f_pp1_ctx1 -> f_result_f_ctx1: return
+//   f_pp1_ctx2 -> f_result_f_ctx2: return
+//   f_pp0_ctx1 -> f_pp1_ctx1: check(n==1)
+//   f_pp0_ctx2 -> f_pp1_ctx2: check(n==1)
+//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   f_entry_f_ctx2 -> f_pp0_ctx2: nop
+//   main_pp4_ctx0 -> main_result_main_ctx0: terminate
+//   main_pp2_ctx0 -> f_entry_f_ctx1: enter f(1)
+//   main_pp3_ctx0 -> f_entry_f_ctx2: enter f(2)
+//   f_result_f_ctx1 -> main_pp3_ctx0: combine
+//   f_result_f_ctx2 -> main_pp4_ctx0: combine
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+void f(n) {
+  __voblint_check(n == 1) // UNKNOWN (ctx [1]: PROVED, ctx [2]: REFUTED)
+}
+void main() {
+  f(1);
+  f(2)
+}

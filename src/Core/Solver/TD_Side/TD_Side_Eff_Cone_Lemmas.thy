@@ -508,7 +508,7 @@ text \<open>
 lemma cone_compatible_etf_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
@@ -523,7 +523,7 @@ qed
 lemma threefold_mono_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
@@ -547,7 +547,7 @@ qed
 lemma cone_compatible_etf_local_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action gs a then local_edge_tree gs (F a) u
@@ -564,7 +564,7 @@ qed
 lemma threefold_mono_local_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action gs a then local_edge_tree gs (F a) u
@@ -583,6 +583,64 @@ proof -
     show "\<And>cc ex dst. etf_combine_collect etf dst cc ex = unit_combine_tree gs dst cc ex" by (rule comb)
     show "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2" by (rule mono)
     show "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2" by (rule mono_e)
+  qed
+  show ?thesis by (rule threefold_mono)
+qed
+
+subsection \<open>Unit-global effectful record contracts, lifted branch\<close>
+
+text \<open>
+  \<open>_local_unit_transfer\<close>'s counterpart for a domain whose branch edges route
+  through \<^const>\<open>local_branch_tree\<close> (against a lifted \<open>Fb\<close>) rather than
+  \<^const>\<open>local_edge_tree\<close> when local: the \<open>edge\<close> contract gains a third
+  disjunct, and monotonicity gains a matching \<open>Fb\<close>-monotonicity assumption.
+  Every other edge action is unaffected, still covered by \<open>F\<close>/\<^const>\<open>unit_edge_tree\<close>.
+\<close>
+
+lemma cone_compatible_etf_local_branch_unit_transfer:
+  fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fb :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state lifted"
+    and gs :: "vname \<Rightarrow> bool"
+  assumes edge: "\<And>a u. apply_etf etf a u = local_edge_tree gs (F a) u
+      \<or> apply_etf etf a u = unit_edge_tree gs (F a) u
+      \<or> apply_etf etf a u = local_branch_tree gs (Fb a) u"
+  assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
+  assumes comb: "\<And>cc ex dst. etf_combine_collect etf dst cc ex = unit_combine_tree gs dst cc ex"
+  shows "cone_compatible_etf gs etf"
+proof -
+  interpret mixed_branch_rhs_generator gs etf F Fe Fb
+    by (unfold_locales; simp add: edge enter comb)
+  show ?thesis by (rule cone_compatible)
+qed
+
+lemma threefold_mono_local_branch_unit_transfer:
+  fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fb :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state lifted"
+    and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
+  assumes edge: "\<And>a u. apply_etf etf a u = local_edge_tree gs (F a) u
+      \<or> apply_etf etf a u = unit_edge_tree gs (F a) u
+      \<or> apply_etf etf a u = local_branch_tree gs (Fb a) u"
+  assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
+  assumes comb: "\<And>cc ex dst. etf_combine_collect etf dst cc ex = unit_combine_tree gs dst cc ex"
+  assumes mono: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
+  assumes mono_e: "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2"
+  assumes mono_b: "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> Fb a s1 \<le> Fb a s2"
+  shows "threefold_mono (side_cfg_T_eff gs g etf bot0 s0 ())"
+proof -
+  interpret mixed_branch_rhs_generator_mono gs etf F Fe Fb
+  proof unfold_locales
+    show "\<And>a u. apply_etf etf a u = local_edge_tree gs (F a) u
+                \<or> apply_etf etf a u = unit_edge_tree gs (F a) u
+                \<or> apply_etf etf a u = local_branch_tree gs (Fb a) u" by (rule edge)
+    show "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl" by (rule enter)
+    show "\<And>cc ex dst. etf_combine_collect etf dst cc ex = unit_combine_tree gs dst cc ex" by (rule comb)
+    show "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2" by (rule mono)
+    show "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2" by (rule mono_e)
+    show "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> Fb a s1 \<le> Fb a s2" by (rule mono_b)
   qed
   show ?thesis by (rule threefold_mono)
 qed

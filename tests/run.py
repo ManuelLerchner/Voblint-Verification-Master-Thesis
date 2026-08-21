@@ -62,12 +62,15 @@ and its own expected verdict inline next to each check:
                                    not a vacuous PROVED.
 
 A case with no verdict annotations at all is a rejection case -- a parse
-error (see 00-sanity/02-malformed.vimp), a well-formedness error (e.g. a
-wrong-arity special call, rejected before compilation reaches the analyzer),
-or a solver that does not terminate on this program's fixpoint dependency
-structure (see 15-solver-choice/04-global_self_feedback_join_hangs.vimp,
-using --timeout to keep the case fast) -- and is checked for one of those
-structured error messages instead of a report.
+error (see 00-sanity/02-malformed.vimp) or a well-formedness error (e.g. a
+wrong-arity special call, rejected before compilation reaches the analyzer)
+-- and is checked for one of those structured error messages instead of a
+report. A case whose solver genuinely does not terminate on its fixpoint
+dependency structure is the same shape, with --timeout bounding the wait;
+no live fixture currently exercises that path for Interval's non-default
+solver choices (Solver_Join's own known non-terminator, a self-referential
+global write with no source-level loop, was fixed by the Base-style
+migration -- see 15-solver-choice/precision/05-global_self_feedback_join_terminates.vimp).
 
 A case may also carry a canonical CFG snapshot, checked independently of its
 verdicts:
@@ -156,6 +159,12 @@ from pathlib import Path
 # (NO_COLOR, https://no-color.org) -- piped/redirected output (CI logs, a
 # diff-review tool) stays plain ANSI-free text either way.
 COLOR = sys.stdout.isatty() and "NO_COLOR" not in os.environ
+
+# Piped stdout (a pixi task, `| tee`, CI) is block-buffered by default, so
+# per-case results would sit in the buffer instead of streaming as each case
+# finishes -- line-buffer unconditionally so progress is visible live, not
+# just flushed in one lump when the process exits.
+sys.stdout.reconfigure(line_buffering=True)
 
 
 def _sgr(code: str, text: str) -> str:
@@ -621,37 +630,48 @@ def main() -> int:
     start = time.monotonic()
     # Each case is an independent voblint subprocess (like Goblint's own
     # Parallel.map over test projects); check_case returns lines rather than
-    # printing (sys.stdout is process-global, unsafe to redirect per-thread),
-    # so output is replayed here in discovery order regardless of completion
-    # order, keeping it deterministic and diffable.
+    # printing (sys.stdout is process-global, unsafe to redirect per-thread).
+    # pool.map's iterator yields results in submission (= discovery) order as
+    # soon as each one is ready, blocking only on the next-in-order case --
+    # not on every case -- so printing straight from that iterator streams
+    # output live while keeping it deterministic and diffable. All cases
+    # still start running immediately (ThreadPoolExecutor submits eagerly);
+    # only the *printing* follows discovery order.
     if sequential or len(cases) == 1:
-        outcomes = [check_case(path) for path in cases]
+        outcome_iter = (check_case(path) for path in cases)
+        pool_cm = None
     else:
-        with ThreadPoolExecutor(max_workers=min(8, len(cases))) as pool:
-            outcomes = list(pool.map(check_case, cases))
-    elapsed = time.monotonic() - start
+        pool_cm = ThreadPoolExecutor(max_workers=min(8, len(cases)))
+        outcome_iter = pool_cm.map(check_case, cases)
 
+    outcomes = []
     results = []
     group = None
-    for path, (ok, lines, duration) in zip(cases, outcomes):
-        # cases is path-sorted, so its NN-group (the first path component
-        # under REGRESSION_DIR) only changes at a group boundary -- a cheap
-        # way to print one header per group without a second grouping pass.
-        case_group = path.relative_to(REGRESSION_DIR).parts[0]
-        if case_group != group:
-            if group is not None:
-                print()
-            print(bold(f"── {case_group} ──"))
-            group = case_group
-        # Duration goes on the case's last line (its summary line, e.g.
-        # "OK ... (N check(s))" or the terminal FAIL) -- earlier lines from
-        # the same case are intermediate detail (a graph-snapshot result,
-        # a DOT check), not separate wall-clock measurements.
-        for line in lines[:-1]:
-            print(render_line(line))
-        if lines:
-            print(render_line(lines[-1]) + dim(f"  {duration:.2f}s"))
-        results.append(ok)
+    try:
+        for path, (ok, lines, duration) in zip(cases, outcome_iter):
+            outcomes.append((ok, lines, duration))
+            # cases is path-sorted, so its NN-group (the first path component
+            # under REGRESSION_DIR) only changes at a group boundary -- a cheap
+            # way to print one header per group without a second grouping pass.
+            case_group = path.relative_to(REGRESSION_DIR).parts[0]
+            if case_group != group:
+                if group is not None:
+                    print()
+                print(bold(f"── {case_group} ──"))
+                group = case_group
+            # Duration goes on the case's last line (its summary line, e.g.
+            # "OK ... (N check(s))" or the terminal FAIL) -- earlier lines from
+            # the same case are intermediate detail (a graph-snapshot result,
+            # a DOT check), not separate wall-clock measurements.
+            for line in lines[:-1]:
+                print(render_line(line))
+            if lines:
+                print(render_line(lines[-1]) + dim(f"  {duration:.2f}s"))
+            results.append(ok)
+    finally:
+        if pool_cm is not None:
+            pool_cm.shutdown()
+    elapsed = time.monotonic() - start
 
     passed = sum(results)
     failed = len(results) - passed

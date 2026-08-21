@@ -150,7 +150,7 @@ text \<open>
   check-specific: it is the same question a backward/guard domain answers,
   phrased as a query instead of a narrowing. Kept as its own locale, separate
   from expression abstraction and separate from the Boolean layer, so a
-  domain that only has these four operations (no \<open>aexp\<close>/\<open>store\<close> concept at
+  domain that only has these four operations (no \<open>exp\<close>/\<open>store\<close> concept at
   all) could still interpret it. @{locale backward_domain}
   (\<^theory>\<open>Voblint_Core.Abstract_Domain\<close>) refines an abstract value under an
   assumed truth value; this locale instead classifies an already-fixed pair

@@ -1,0 +1,17 @@
+session Voblint_CLI in "." = "Voblint_Analysis" +
+  description
+    "Production CLI-facing surface: the runtime-program codegen/soundness
+     adapters, the AnalysisConfig-driven dispatcher, and the GraphViz render
+     entry points, independent of the demonstration and regression theories
+     in Voblint_Examples"
+  sessions
+    "Voblint_Formalization"
+    "HOL-Library"
+  directories
+    "Codegen"
+  theories
+    Sign_Codegen
+    Interval_Codegen
+    Int_Codegen
+    Analyse_Dispatch
+    State_Report_GraphViz

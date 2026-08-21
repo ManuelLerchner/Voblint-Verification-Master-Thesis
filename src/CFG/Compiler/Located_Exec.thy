@@ -57,14 +57,14 @@ lemma cstep_assign:
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
-  assumes "(u, EA_Assume b, v) \<in> intra g" and "bval b s"
+  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (aval b s)"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
-  by (rule cstep.Intra[OF assms(1)]) (simp add: assms(2))
+  by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
-  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> bval b s"
+  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (aval b s)"
   shows "cstep gs g (u, s, stk) (v, s, stk)"
-  by (rule cstep.Intra[OF assms(1)]) (simp add: assms(2))
+  by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_ret:
   assumes "(u, EA_Ret e q, v) \<in> intra g"

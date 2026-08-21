@@ -190,6 +190,66 @@ additionally demonstrates a precision gain: a bound Interval proves
 outright (`x < 11` after narrowing `x` to `[1,9]`) that Sign's `SPos`
 alone cannot.
 
+## Contextual result and GraphViz presentation (collapsed vs. expanded)
+
+The pipeline above is per-node and context-independent. A context-sensitive
+analysis (currently `--context entry-state`) produces a canonical,
+contextual `analysis_result` instead, and everything downstream of the
+solver -- checks, collapsed GraphViz, expanded GraphViz -- reads that one
+table, never the raw solver map:
+
+```text
+                       verified solver
+                             |
+                             v
+                      analysis_result
+               (pp, ctx) -> Reachable abs_state | Unreachable
+                             |
+           +-----------------+-----------------+
+           |                 |                 |
+           v                 v                 v
+     contextual        collapsed graph    expanded graph
+       checks         (Analysis_GraphViz)  (Analysis_GraphViz)
+  (analyse_ctx,      one node per pp,     one node per (pp, ctx),
+   aggregate_         contextual states    states never joined
+   verdicts)           joined for
+                        rendering
+           |                 |                 |
+           +-----------------+-----------------+
+                             |
+                             v
+                        CLI (voblint)
+```
+
+`lookup_context`/`contexts_at` are the only reads either graph mode
+performs against the result. Collapsed and expanded are **the same
+canonical `analysis_result`, rendered two ways** -- not two analyses, and
+not two solves: `analysis_graph_config.route` (partial -- `None` on an
+unreachable caller or an entered-bottom callee frame, never a real `'ctx`
+value doubling as a sentinel) decides what edges to draw, `context_key`
+decides presentation order, and `node_annotation` reads the context, but
+none of that changes what the solver computed.
+
+### CLI contract
+
+```text
+--context none|entry-state          context sensitivity (analysis-level)
+--context-graph collapsed|expanded  rendering mode (presentation-level)
+```
+
+`--context-graph` only selects how an already-computed contextual result
+is drawn under `--dot`/`--dot-full`/`--graph-snapshot`; it never affects
+analysis precision, the solver, or which contexts get computed.
+`collapsed` (the default) joins every context's state per CFG node for
+rendering. `expanded` draws one node per `(pp, ctx)` pair instead, so a
+check that is `Dead` in one context and `Decided` in another -- or two
+live contexts that disagree on the same check's verdict -- stays visible
+as distinct nodes rather than collapsing into one rendering. See
+`tests/regression/11-graph-snapshot/06-collapsed_three_contexts.vimp`
+through `09-expanded_dead_route.vimp` for worked collapsed/expanded pairs.
+`--context-graph expanded` without `--context entry-state` is a CLI
+error, not a silent fallback to collapsed.
+
 ## Known limitations (not yet addressed)
 
 - The three checks compiled from `Example_Interval_Checks_Store_Only.thy`

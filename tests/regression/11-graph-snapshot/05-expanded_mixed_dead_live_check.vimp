@@ -1,0 +1,99 @@
+// PARAM: --analysis interval --context entry-state --context-graph expanded --dot-full
+// The same source check renders differently in each of f's two entry-state
+// contexts: under n=[1,1] the guard n<2 is live and the check is decided
+// (PROVED); under n=[5,5] the same guard is false, so the check's own node is
+// unreachable and renders [dead] instead of a verdict. This is the case
+// --context-graph expanded exists for: collapsed mode has exactly one CFG
+// node for that check and can show only one verdict there, so the dead
+// activation would otherwise disappear into (or be shadowed by) the live
+// one -- expanded keeps both, one cluster per context.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//   cluster_ctx_1:
+//     f_pp1_ctx1
+//     f_pp2_ctx1
+//     f_pp3_ctx1
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//   cluster_ctx_2:
+//     f_pp1_ctx2
+//     f_pp2_ctx2
+//     f_pp3_ctx2
+//     f_pp0_ctx2
+//     f_entry_f_ctx2
+//     f_result_f_ctx2
+//
+// nodes:
+//   f_pp1_ctx1: pp1
+//       n=[1,1]
+//       check n==1
+//   f_pp1_ctx2: pp1
+//       unreachable
+//       check n==1 [dead]
+//   f_pp2_ctx1: pp2
+//       unreachable
+//   f_pp2_ctx2: pp2
+//       n=[5,5]
+//   f_pp3_ctx1: pp3
+//       n=[1,1]
+//   f_pp3_ctx2: pp3
+//       n=[5,5]
+//   main_result_main_ctx0: exit_main
+//   f_pp0_ctx1: pp0
+//       n=[1,1]
+//   f_pp0_ctx2: pp0
+//       n=[5,5]
+//   main_entry_main_ctx0: entry_main
+//   main_pp4_ctx0: pp4
+//   main_pp5_ctx0: pp5
+//   f_entry_f_ctx1: entry_f
+//       n=[1,1]
+//   f_entry_f_ctx2: entry_f
+//       n=[5,5]
+//   main_pp6_ctx0: pp6
+//   f_result_f_ctx1: exit_f
+//       n=[1,1]
+//   f_result_f_ctx2: exit_f
+//       n=[5,5]
+//
+// edges:
+//   f_pp1_ctx1 -> f_pp3_ctx1: check(n==1)
+//   f_pp1_ctx2 -> f_pp3_ctx2: check(n==1)
+//   f_pp2_ctx1 -> f_pp3_ctx1: nop
+//   f_pp2_ctx2 -> f_pp3_ctx2: nop
+//   f_pp3_ctx1 -> f_result_f_ctx1: return
+//   f_pp3_ctx2 -> f_result_f_ctx2: return
+//   f_pp0_ctx1 -> f_pp1_ctx1: n<2
+//   f_pp0_ctx1 -> f_pp2_ctx1: not (n<2)
+//   f_pp0_ctx2 -> f_pp1_ctx2: n<2
+//   f_pp0_ctx2 -> f_pp2_ctx2: not (n<2)
+//   main_entry_main_ctx0 -> main_pp4_ctx0: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   f_entry_f_ctx2 -> f_pp0_ctx2: nop
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   main_pp4_ctx0 -> f_entry_f_ctx1: enter f(1)
+//   main_pp5_ctx0 -> f_entry_f_ctx2: enter f(5)
+//   f_result_f_ctx1 -> main_pp5_ctx0: combine
+//   f_result_f_ctx2 -> main_pp6_ctx0: combine
+//   main_pp4_ctx0 -> main_pp5_ctx0: call-to-return f
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+void f(n) {
+  if (n < 2) {
+    __voblint_check(n == 1)
+  } else {
+    skip
+  }
+}
+void main() {
+  f(1);
+  f(5)
+}

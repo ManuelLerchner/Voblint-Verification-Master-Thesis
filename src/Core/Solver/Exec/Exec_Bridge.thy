@@ -180,10 +180,10 @@ type_synonym ('g, 'c) st_combine_tf_tree =
 
 record ('g, 'c) effectful_st_transfer =
   etf_st_nop        :: "('g, 'c) st_edge_tf_tree"
-  etf_st_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'c) st_edge_tf_tree"
+  etf_st_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('g, 'c) st_edge_tf_tree"
-  etf_st_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> ('g, 'c) st_edge_tf_tree"
-  etf_st_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'c) st_edge_tf_tree"
+  etf_st_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('g, 'c) st_edge_tf_tree"
+  etf_st_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_combine_env     :: "('g, 'c) st_combine_tf_tree"
   etf_st_combine_collect :: "vname option \<Rightarrow> ('g, 'c) st_combine_tf_tree"
 
@@ -454,7 +454,7 @@ definition unit_etf_st_of_transfer_placed ::
    => (scoped_location => bool)
    => (scoped_location => bool)
    => (edge_action => 'a::bounded_semilattice_sup_bot resolved_st_q => 'a resolved_st_q)
-   => (vname list => aexp list => 'a resolved_st_q => 'a resolved_st_q)
+   => (vname list => exp list => 'a resolved_st_q => 'a resolved_st_q)
    => (unit, 'a resolved_st_q lifted) effectful_st_transfer"
 where
   "unit_etf_st_of_transfer_placed source_global owner_of locations_of
@@ -697,7 +697,7 @@ proof -
 qed
 
 lemma entry_recombine_lookup:
-  fixes enter :: "vname list => aexp list =>
+  fixes enter :: "vname list => exp list =>
     ('a::bounded_semilattice_sup_bot) resolved_st_q => 'a resolved_st_q"
     and sigma :: "pp + unit => 'a resolved_st_q lifted"
   assumes relevant: "target \<in> set (locations_of node)"
@@ -755,7 +755,7 @@ definition unit_etf_st_of_transfer ::
   "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool)
    \<Rightarrow> (vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
-   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
    \<Rightarrow> (unit, 'a resolved_st_q lifted) effectful_st_transfer"
 where
   "unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st = \<lparr>
@@ -1053,7 +1053,7 @@ subsection \<open>Effectful executable fold\<close>
 definition side_contribution_trees_st ::
   "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer
    \<Rightarrow> (pp \<times> edge_action) list
-   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname list \<times> exp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a resolved_st_q lifted) strategy_tree list"
 where
@@ -1067,7 +1067,7 @@ definition side_acc_eff_st ::
    \<Rightarrow> 'a resolved_st_q lifted
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a resolved_st_q lifted)
    \<Rightarrow> (pp \<times> edge_action) list
-   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname list \<times> exp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a resolved_st_q lifted"
 where
   "side_acc_eff_st etf acc \<sigma> es ens cs =
@@ -1077,7 +1077,7 @@ definition side_rhs_fold_eff_st ::
   "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer
    \<Rightarrow> 'a resolved_st_q lifted
    \<Rightarrow> (pp \<times> edge_action) list
-   \<Rightarrow> (pp \<times> vname list \<times> aexp list) list
+   \<Rightarrow> (pp \<times> vname list \<times> exp list) list
    \<Rightarrow> (pp \<times> vname option \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a resolved_st_q lifted) strategy_tree"
 where
@@ -1242,7 +1242,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
        (map (\<lambda>(cl,fs,as). etf_st_enter etf_new fs as cl) xs) seed
      = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cl,fs,as). etf_st_enter etf_old fs as cl) xs) seed"
-    for xs :: "(pp \<times> vname list \<times> aexp list) list" and seed
+    for xs :: "(pp \<times> vname list \<times> exp list) list" and seed
     by (induction xs arbitrary: seed) (auto simp: enter_t split: prod.splits)
   have comb_seg_t:
     "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
@@ -1265,7 +1265,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
        (map (\<lambda>(cl,fs,as). etf_st_enter etf_new fs as cl) xs) seed
      = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cl,fs,as). etf_st_enter etf_old fs as cl) xs) seed"
-    for xs :: "(pp \<times> vname list \<times> aexp list) list" and seed
+    for xs :: "(pp \<times> vname list \<times> exp list) list" and seed
     by (induction xs arbitrary: seed) (auto simp: enter_s split: prod.splits)
   have comb_seg_s:
     "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
@@ -1397,7 +1397,7 @@ definition unit_etf_st_contribution_of_transfer ::
   "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool)
    \<Rightarrow> (vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
-   \<Rightarrow> (vname list \<Rightarrow> aexp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
+   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q)
    \<Rightarrow> (unit, 'a resolved_st_q lifted) effectful_st_transfer"
 where
   "unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st = \<lparr>
@@ -2168,8 +2168,8 @@ lemma part_post_solution_st_to_abs_eff_unit_transfer:
   fixes etf :: "(unit, 'a) effectful_domain_transfer"
   fixes F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
   fixes F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-  fixes Fe_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
-  fixes Fe :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  fixes Fe_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
+  fixes Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   fixes bot0_st s0_st :: "'a resolved_st_q"
   fixes is_bot_pred :: "'a resolved_st_q \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"

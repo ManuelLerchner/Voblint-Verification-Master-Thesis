@@ -5,10 +5,12 @@ session Voblint_Analysis in "." = "Voblint_Core" +
   directories
     "Instances/Sign"
     "Instances/Interval"
+    "Instances/Congruence"
     "Instances/Parity"
     "Instances/Mixed"
     "Instances/NamedGlobalSign"
     "Instances/Tooling"
+    "Instances/Dispatch"
   theories
     Sign_Lattice
     Sign_Arithmetic
@@ -19,6 +21,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_Bounds
     Interval_Lattice
     Interval_Numeric_Queries
+    Interval_Classify
     Interval_Checks
     Interval_Warrowing
     Interval_Arithmetic
@@ -36,9 +39,16 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_DG
     Interval_Point_Digest
     Interval_Exec_Sound
+    Interval_Ctx_None_Routed_Sound
+    Congruence_Domain
+    Congruence_Lattice
+    Congruence_Warrowing
+    Congruence_Arithmetic
+    Congruence_Backward
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
+    Sign_Exec_Ctx_Sound
     Parity_Domain
     Parity_Print
     Parity_Transfer
@@ -47,9 +57,25 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Parity_Exec_Sound
     Parity_Numeric_Queries
     Parity_Side_Soundness
-    Mixed_Sign_Interval
+    Parity_Base_DG
+    Parity_Exec_Ctx_Sound
+    Int_Domain
+    Int_Refinement
+    Int_Arithmetic
+    Int_Backward
+    Int_Warrowing
+    Int_Transfer
+    Int_DG
+    Int_Exec
+    Int_Base_DG
+    Int_Exec_Sound
+    Int_Classify
+    Int_Checks
+    Int_Exec_Ctx_Sound
     Exec_DG_Bridge
+    Monovariant_Analysis_Result
     Analysis_GraphViz
     Rel_Order_Domain
+    Analysis_Config
   document_files
     "root.bib"

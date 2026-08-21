@@ -6,6 +6,7 @@ theory Analysis_GraphViz
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain
     Voblint_Core.Abstract_Checks
+    Voblint_Core.Call_String_Context
 begin
 
 text \<open>
@@ -26,25 +27,25 @@ subsection \<open>CFG and DOT helpers\<close>
 
 fun string_of_action :: "edge_action \<Rightarrow> string" where
   "string_of_action EA_Nop = ''nop''"
-| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_aexp a"
+| "string_of_action (EA_Assign x a) = String.explode x @ '' := '' @ string_of_exp 0 a"
 | "string_of_action (EA_Special Nondet_Int x) =
     String.explode x @ '' := __voblint_nondet_int()''"
 | "string_of_action (EA_Special (Min a b) x) =
-    String.explode x @ '' := min('' @ string_of_aexp a @ '', '' @ string_of_aexp b @ '')''"
+    String.explode x @ '' := min('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
 | "string_of_action (EA_Special (Max a b) x) =
-    String.explode x @ '' := max('' @ string_of_aexp a @ '', '' @ string_of_aexp b @ '')''"
-| "string_of_action (EA_Assume b) = ''['' @ string_of_bexp b @ '']''"
-| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_bexp b @ '']''"
+    String.explode x @ '' := max('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
+| "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 b @ '']''"
+| "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 b @ '']''"
 | "string_of_action (EA_Ret None p) = ''return''"
 | "string_of_action (EA_Ret (Some e) p) =
-    ''return '' @ string_of_aexp e"
-| "string_of_action (EA_Check cnd) = ''check('' @ string_of_bexp cnd @ '')''"
+    ''return '' @ string_of_exp 0 e"
+| "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 cnd @ '')''"
 
 fun string_of_call_action :: "call_action \<Rightarrow> string" where
   "string_of_call_action (CallEdge None fs es) =
-    ''call('' @ concat (map string_of_aexp es) @ '')''"
+    ''call('' @ concat (map (string_of_exp 0) es) @ '')''"
 | "string_of_call_action (CallEdge (Some x) fs es) =
-    String.explode x @ '' := call('' @ concat (map string_of_aexp es) @ '')''"
+    String.explode x @ '' := call('' @ concat (map (string_of_exp 0) es) @ '')''"
 
 definition dq :: string where "dq = [CHR 0x22]"
 definition nl :: string where "nl = [CHR 0x0A]"
@@ -157,28 +158,41 @@ definition no_annotations :: "pp \<Rightarrow> graphviz_node_annotation option" 
 text \<open>
   Shared status-to-style mapping for a compiled \<^verbatim>\<open>__voblint_check(...)\<close>
   condition, given its executable \<^typ>\<open>check_result\<close> classification.
-  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>bexp\<close>), so every
+  Domain-independent (only \<^typ>\<open>check_result\<close> and \<^typ>\<open>exp\<close>), so every
   domain's check-discharge example renders proof status through this one
   mapping instead of restating it. \<^term>\<open>Check_Proved\<close> renders dark green,
   \<^term>\<open>Check_Refuted\<close> red, \<^term>\<open>Check_Unknown\<close> grey.
 \<close>
 
-definition check_result_annotation :: "check_result \<Rightarrow> bexp \<Rightarrow> graphviz_node_annotation" where
+definition check_result_annotation :: "check_result \<Rightarrow> exp \<Rightarrow> graphviz_node_annotation" where
   "check_result_annotation res cnd =
      (case res of
         Check_Proved \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd)
+          Node_Annotation (''check '' @ string_of_exp 0 cnd)
             ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white''
       | Check_Unknown \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [unknown]'')
+          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [unknown]'')
             ''shape=box,style=filled,fillcolor=gray70''
       | Check_Refuted \<Rightarrow>
-          Node_Annotation (''check '' @ string_of_bexp cnd @ '' [REFUTED]'')
+          Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [REFUTED]'')
             ''shape=box,style=filled,fillcolor=red,fontcolor=white'')"
+
+text \<open>
+  \<open>route\<close> answers \<^const>\<open>None\<close> exactly when a call transition does not exist ---
+  the caller is unreachable, or the callee frame it would enter is itself
+  semantically empty --- never by returning a distinguished \<open>'ctx\<close> value as a
+  sentinel. A real context can coincide with what a "no route" placeholder
+  might otherwise look like (the empty list is a genuine root or
+  zero-formal context for \<open>ivl list\<close>), so folding "no route" into the context
+  type itself would risk exactly the false edge this type is designed to
+  rule out: \<open>analysis_enter_edges\<close>/\<open>analysis_combine_edges\<close> below
+  draw an edge only on \<^const>\<open>Some\<close>.
+\<close>
 
 record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   local_of :: "'a \<Rightarrow> 'd"
-  route :: "pp \<Rightarrow> 'ctx \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> 'ctx"
+  route :: "pp \<Rightarrow> 'ctx \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> 'ctx option"
+  context_key :: "'ctx \<Rightarrow> String.literal"
   show_context :: "'ctx \<Rightarrow> string"
   locals_for_pp :: "pp \<Rightarrow> vname list"
   return_slot_for_pp :: "pp \<Rightarrow> vname option"
@@ -192,7 +206,7 @@ record ('ctx, 'g, 'a, 'd) analysis_graph_config =
   owner_of :: "pp \<Rightarrow> string"
   cluster_label :: "string \<Rightarrow> 'ctx \<Rightarrow> string"
   source_text :: "string option"
-  node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option"
+  node_annotation :: "pp \<Rightarrow> 'ctx \<Rightarrow> graphviz_node_annotation option"
 
 fun graphviz_owner_of :: "(string option \<times> pp list) list \<Rightarrow> pp \<Rightarrow> string" where
   "graphviz_owner_of [] p = ''unknown''"
@@ -234,6 +248,106 @@ definition contextual_graph_domain ::
   "contextual_graph_domain g contexts_for_pp =
     concat (map (\<lambda>p. map (\<lambda>ctx. Inl (p, ctx)) (contexts_for_pp p))
       (cfg_point_list g))"
+
+subsection \<open>Enumerating a context set for presentation\<close>
+
+text \<open>
+  A solved \<^type>\<open>analysis_result\<close> records its coverage as a set, and a set has
+  no order to read off: two lists backing the same set are the same value, so
+  any function whose result depended on which one a code-generation backend
+  happens to hold would not be a function of the result at all. A drawn graph
+  nevertheless needs one --- node sequence, cluster sequence, and the
+  \<open>_ctxN\<close> suffix \<open>analysis_node_id\<close> derives through \<open>context_position\<close> below
+  are all positional.
+
+  The order is therefore chosen, not read: contexts are sorted by the
+  config's own \<^const>\<open>context_key\<close>, kept a separate field from
+  \<^const>\<open>show_context\<close> so ordering and display cannot silently drift apart
+  by editing one and not the other. \<^typ>\<open>String.literal\<close> carries the
+  \<^class>\<open>linorder\<close> this needs; \<^typ>\<open>'ctx\<close> carries nothing. That distinction is
+  the point --- real context types do not have a linear order to borrow. An
+  interval-vector context is the standing example: the interval domain's own
+  \<^class>\<open>order\<close> instance is the abstraction order, under which \<open>[0,1]\<close> and
+  \<open>[2,3]\<close> are simply incomparable, so that slot is spoken for and no linear
+  one can occupy it. No such constraint is added to \<^typ>\<open>'ctx\<close> here: the
+  order lives entirely on the \<^typ>\<open>String.literal\<close> image, never on the
+  context type itself.
+
+  \<^const>\<open>the_elem\<close> maps a key back to its context, so the config's
+  \<^const>\<open>context_key\<close> must separate the contexts it is asked to order --- an
+  exactness requirement independent of, and stricter than, what
+  \<^const>\<open>show_context\<close>'s human-readable rendering owes a reader. Two
+  contexts sharing a key would produce two clusters with one label and two
+  indistinguishable node-id groups, so a diagram needs the same condition to
+  be readable at all. \<open>set_ordered_by_key\<close> states it, and a caller discharges
+  it by execution on its own program.
+\<close>
+
+definition ordered_by_key :: "('a \<Rightarrow> String.literal) \<Rightarrow> 'a set \<Rightarrow> 'a list" where
+  "ordered_by_key key S =
+    map (\<lambda>k. the_elem (Set.filter (\<lambda>x. key x = k) S))
+      (sorted_list_of_set (key ` S))"
+
+lemma set_ordered_by_key:
+  assumes fin: "finite S"
+    and inj: "inj_on key S"
+  shows "set (ordered_by_key key S) = S"
+proof -
+  have keys: "set (sorted_list_of_set (key ` S)) = key ` S"
+    using fin by simp
+  have pick: "the_elem (Set.filter (\<lambda>x. key x = key y) S) = y" if "y \<in> S" for y
+  proof -
+    have "Set.filter (\<lambda>x. key x = key y) S = {y}"
+      using that inj by (auto simp: inj_on_def)
+    then show ?thesis by simp
+  qed
+  have "set (ordered_by_key key S)
+      = (\<lambda>k. the_elem (Set.filter (\<lambda>x. key x = k) S)) ` (key ` S)"
+    unfolding ordered_by_key_def set_map keys by (rule refl)
+  also have "\<dots> = S" using pick by (auto simp: image_iff)
+  finally show ?thesis .
+qed
+
+text \<open>
+  An executable guard against exactly the collision \<^const>\<open>the_elem\<close> above
+  would otherwise resolve arbitrarily: \<^const>\<open>context_key\<close> must separate the
+  contexts it is handed, and this checks that on the actual, finite set a
+  render call supplies rather than assuming it. \<^const>\<open>card\<close> of an image
+  equalling \<^const>\<open>card\<close> of the source is the executable, finite-set form of
+  \<^const>\<open>inj_on\<close> --- \<open>context_keys_distinct_imp_inj_on\<close> below ties the two
+  together so a caller can discharge \<open>set_ordered_by_key\<close>'s premise this way.
+\<close>
+
+definition context_keys_distinct ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> 'ctx set \<Rightarrow> bool" where
+  "context_keys_distinct cfg S = (card (context_key cfg ` S) = card S)"
+
+lemma context_keys_distinct_imp_inj_on:
+  assumes fin: "finite S"
+    and distinct: "context_keys_distinct cfg S"
+  shows "inj_on (context_key cfg) S"
+proof (rule eq_card_imp_inj_on[OF fin])
+  show "card (context_key cfg ` S) = card S"
+    using distinct unfolding context_keys_distinct_def .
+qed
+
+text \<open>
+  The graph domain of a solved result: every \<^typ>\<open>pp\<close> the CFG has, paired with
+  exactly the contexts covered at it. Coverage stays the result's own
+  extensional key set --- \<^const>\<open>contexts_at\<close> is a membership question, never a
+  traversal --- and only the sequence the pairs are laid out in comes from the
+  ordering above.
+\<close>
+
+definition result_contexts_at ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> ('ctx, 'v) analysis_result
+    \<Rightarrow> pp \<Rightarrow> 'ctx list" where
+  "result_contexts_at cfg r p = ordered_by_key (context_key cfg) (contexts_at r p)"
+
+definition contextual_result_domain ::
+  "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> ('ctx, 'v) analysis_result
+    \<Rightarrow> ((pp \<times> 'ctx) + 'g) list" where
+  "contextual_result_domain cfg g r = contextual_graph_domain g (result_contexts_at cfg r)"
 
 record procedure_scope =
   scope_formals :: "vname list"
@@ -301,7 +415,8 @@ definition compiled_domain_graph_config ::
 where
   "compiled_domain_graph_config gs \<Pi> ps mnm main is_top_val =
     \<lparr> local_of = id,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''''),
       show_context = (\<lambda>_. ''''),
       locals_for_pp = (\<lambda>p.
         let sc = compiled_procedure_scope gs \<Pi> ps mnm main (compile_prog \<Pi> ps mnm main) p
@@ -322,7 +437,7 @@ where
       owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
       source_text = Some (pretty_string_of_program \<Pi> ps main []),
-      node_annotation = (\<lambda>_. None)
+      node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
 
@@ -392,12 +507,13 @@ definition analysis_enter_edges ::
     concat (map (\<lambda>src_ctx.
       concat (map (\<lambda>(u, ca, entry, _).
         if fst src_ctx = u then
-          let callee_ctx = route cfg u (snd src_ctx) ca
-              (local_of cfg (sol (Inl src_ctx)))
-          in if (entry, callee_ctx) \<in> set covered
-             then [(LocalNode u (snd src_ctx), EnterEdge (owner_of cfg entry) ca,
-                    LocalNode entry callee_ctx)]
-             else []
+          (case route cfg u (snd src_ctx) ca (local_of cfg (sol (Inl src_ctx))) of
+             None \<Rightarrow> []
+           | Some callee_ctx \<Rightarrow>
+               if (entry, callee_ctx) \<in> set covered
+               then [(LocalNode u (snd src_ctx), EnterEdge (owner_of cfg entry) ca,
+                      LocalNode entry callee_ctx)]
+               else [])
         else []) (cfg_calls_list g))) covered)"
 
 definition analysis_combine_edges ::
@@ -410,16 +526,17 @@ definition analysis_combine_edges ::
       concat (map (\<lambda>c. case c of (call, ca, entry, cont) \<Rightarrow>
         (case entry of FunctionEntry p \<Rightarrow>
           if fst src_ctx = call then
-            let callee_ctx = route cfg call (snd src_ctx) ca
-                (local_of cfg (sol (Inl src_ctx)));
-                result = FunctionResult p
-            in if (result, callee_ctx) \<in> set covered \<and>
-                  (cont, snd src_ctx) \<in> set covered
-               then [(LocalNode result callee_ctx,
-                      CombineEdge call (case ca of CallEdge dst _ _ \<Rightarrow> dst)
-                        (return_slot_for_pp cfg result),
-                      LocalNode cont (snd src_ctx))]
-               else []
+            (case route cfg call (snd src_ctx) ca (local_of cfg (sol (Inl src_ctx))) of
+               None \<Rightarrow> []
+             | Some callee_ctx \<Rightarrow>
+                 let result = FunctionResult p
+                 in if (result, callee_ctx) \<in> set covered \<and>
+                       (cont, snd src_ctx) \<in> set covered
+                    then [(LocalNode result callee_ctx,
+                           CombineEdge call (case ca of CallEdge dst _ _ \<Rightarrow> dst)
+                             (return_slot_for_pp cfg result),
+                           LocalNode cont (snd src_ctx))]
+                    else [])
           else []
         | _ \<Rightarrow> [])) (cfg_calls_list g))) covered)"
 
@@ -504,6 +621,39 @@ fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
   "string_of_cfg_node (Statement n) = ''pp'' @ string_of_nat n"
 | "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ String.explode p"
 | "string_of_cfg_node (FunctionResult p) = ''result_'' @ String.explode p"
+
+subsection \<open>Call-string context presentation\<close>
+
+text \<open>
+  A call-string context is a \<^typ>\<open>cfg_node list\<close> (\<^theory>\<open>Voblint_Core.Call_String_Context\<close>),
+  so unlike an entry-state context --- whose type is the analysed domain's own value list
+  (\<open>ivl list\<close>, \<open>sign list\<close>, ...) --- it carries no domain content at all. Every part of
+  presenting one is therefore shared by every domain that routes through
+  \<^const>\<open>cs_route\<close>: the key, the display text, and the routing hook below are stated once
+  here and instantiated unchanged by Sign, Interval, and Int alike.
+
+  \<open>cs_graph_route\<close> ignores the caller's rendered state exactly as \<^const>\<open>cs_route\<close> ignores
+  the entered abstract value, and answers \<^const>\<open>Some\<close> unconditionally: a call-string
+  context is defined by the call history alone, so there is no state the callee frame could
+  fail to have. That makes it the \<^emph>\<open>total\<close> case of \<open>route\<close>'s \<^typ>\<open>'ctx option\<close> contract, in
+  contrast to entry-state routing, which genuinely has no context to offer when the entered
+  frame is empty.
+\<close>
+
+definition cs_show_context :: "cfg_node list \<Rightarrow> string" where
+  "cs_show_context ctx = concat (map (\<lambda>u. string_of_cfg_node u @ '' '') ctx)"
+
+definition cs_context_key :: "cfg_node list \<Rightarrow> String.literal" where
+  "cs_context_key ctx = String.implode (cs_show_context ctx)"
+
+definition cs_graph_route ::
+  "nat \<Rightarrow> pp \<Rightarrow> cfg_node list \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> cfg_node list option" where
+  "cs_graph_route k u ctx ca d = Some (cs_route k u ctx d ca)"
+
+definition cs_cluster_label :: "string \<Rightarrow> cfg_node list \<Rightarrow> string" where
+  "cs_cluster_label owner ctx =
+     (if ctx = [] then owner @ '' / root context''
+      else owner @ '' / call-string='' @ cs_show_context ctx)"
 
 definition graphviz_exit :: "cfg \<Rightarrow> cfg_node" where
   "graphviz_exit g =
@@ -627,7 +777,7 @@ definition contextual_node_label_lines ::
           @ (case return_slot_for_pp cfg p of None \<Rightarrow> []
              | Some ret \<Rightarrow> format_return cfg p ctx ret
                  (local_of cfg (sol (Inl (p, ctx)))))
-          @ (case node_annotation cfg p of
+          @ (case node_annotation cfg p ctx of
               None \<Rightarrow> []
             | Some ann \<Rightarrow>
                 if annotation_label ann = '''' then [] else split_gv_nl (annotation_label ann))
@@ -644,8 +794,8 @@ definition analysis_node_attrs ::
   "('ctx, 'g, 'a, 'd) analysis_graph_config \<Rightarrow> cfg \<Rightarrow> ('ctx, 'g) analysis_node \<Rightarrow> string" where
   "analysis_node_attrs cfg g n =
     (case n of
-      LocalNode p _ \<Rightarrow>
-        (case node_annotation cfg p of
+      LocalNode p ctx \<Rightarrow>
+        (case node_annotation cfg p ctx of
           Some ann \<Rightarrow> annotation_style ann
         | None \<Rightarrow>
             if p = cfg_entry g then ''shape=doublecircle,color=green,style=filled,fillcolor=lightyellow''
@@ -656,11 +806,11 @@ definition analysis_node_attrs ::
     | GlobalNode _ \<Rightarrow> ''shape=note,width=2.2,fixedsize=false''
     | SourceNode _ \<Rightarrow> ''shape=plain'')" 
 
-fun enter_bindings :: "vname list \<Rightarrow> aexp list \<Rightarrow> string list" where
+fun enter_bindings :: "vname list \<Rightarrow> exp list \<Rightarrow> string list" where
   "enter_bindings [] _ = []"
 | "enter_bindings _ [] = []"
 | "enter_bindings (x # xs) (e # es) =
-    (String.explode x @ '' := '' @ string_of_aexp e) # enter_bindings xs es"
+    (String.explode x @ '' := '' @ string_of_exp 0 e) # enter_bindings xs es"
 
 definition enter_action_label :: "call_action \<Rightarrow> string" where
   "enter_action_label a = string_of_call_action a"
@@ -668,8 +818,8 @@ definition enter_action_label :: "call_action \<Rightarrow> string" where
 definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
   "source_action_label g a =
     (case a of EA_Assign x e \<Rightarrow>
-       if x = ret_var then ''ret := '' @ string_of_aexp e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_bexp b
-    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_bexp b @ '')''
+       if x = ret_var then ''ret := '' @ string_of_exp 0 e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_exp 0 b
+    | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_exp 0 b @ '')''
     | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
     | _ \<Rightarrow> string_of_action a)"
 
@@ -679,7 +829,7 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
       IntraEdge a \<Rightarrow> ''label='' @ dq @ source_action_label g a @ dq
     | EnterEdge callee a \<Rightarrow> ''color=purple,penwidth=2,weight=10,label='' @ dq
         @ ''call '' @ callee @ ''('' @
-          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')'' @ dq
+          (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')'' @ dq
     | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
              (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode x @ '' := '' @ String.explode r
@@ -703,7 +853,7 @@ definition canonical_edge_kind_text :: "cfg \<Rightarrow> analysis_edge_kind \<R
     (case kind of
       IntraEdge a \<Rightarrow> source_action_label g a
     | EnterEdge callee a \<Rightarrow> ''enter '' @ callee @ ''(''
-        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map string_of_aexp es)) @ '')''
+        @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (string_of_exp 0) es)) @ '')''
     | CombineEdge call dst ret \<Rightarrow> ''combine''
         @ (case (dst, ret) of
              (Some x, Some r) \<Rightarrow> '' '' @ String.explode x @ '' := '' @ String.explode r
@@ -835,7 +985,8 @@ definition raw_cfg_graph_config ::
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
   "raw_cfg_graph_config \<Pi> ps mnm main annotate =
     \<lparr> local_of = id,
-      route = (\<lambda>_ _ _ _. ()),
+      route = (\<lambda>_ _ _ _. Some ()),
+      context_key = (\<lambda>_. STR ''''),
       show_context = (\<lambda>_. ''''),
       locals_for_pp = (\<lambda>_. []),
       return_slot_for_pp = (\<lambda>_. None),
@@ -849,7 +1000,7 @@ definition raw_cfg_graph_config ::
       owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
       source_text = Some (pretty_string_of_program \<Pi> ps main []),
-      node_annotation = annotate
+      node_annotation = (\<lambda>p _. annotate p)
     \<rparr>"
 
 definition raw_cfg_dot ::
@@ -898,7 +1049,7 @@ fun string_of_check_result :: "check_result \<Rightarrow> string" where
 definition string_of_check_report_entry :: "check_report_entry \<Rightarrow> string" where
   "string_of_check_report_entry entry =
      (case entry of (v, cnd, res) \<Rightarrow>
-        string_of_cfg_node v @ '': '' @ string_of_bexp cnd @ ''  '' @ string_of_check_result res)"
+        string_of_cfg_node v @ '': '' @ string_of_exp 0 cnd @ ''  '' @ string_of_check_result res)"
 
 definition string_of_check_report :: "check_report_entry list \<Rightarrow> string" where
   "string_of_check_report report =
@@ -912,7 +1063,7 @@ text \<open>
   \<^const>\<open>check_result_annotation\<close>. This lets a caller's
   \<open>node_annotation\<close> hook consume a whole-program \<^const>\<open>classify_checks\<close>
   report directly instead of restating a manually maintained \<^typ>\<open>pp\<close>-to-
-  \<^typ>\<open>bexp\<close> table --- the report already names every checked node once.
+  \<^typ>\<open>exp\<close> table --- the report already names every checked node once.
 \<close>
 
 definition check_report_node_annotation ::

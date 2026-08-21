@@ -12,7 +12,7 @@ exports; the CI-only **Voblint_OCaml_Check** session compile-checks them.
 **Top level:** the interprocedural / side-effecting spine —
 `Mixed_Flow_Sound`, `TD_Side_Eff_Soundness`, `Sign_Side_Soundness`,
 `Analysis_Sound`, plus the native D/G interface (`DG_Soundness`, `Sign_DG`,
-`Interval_DG`, `Mixed_Sign_Interval`) and its executable transport
+`Interval_DG`) and its executable transport
 (`Exec_DG_Bridge`). An intra-procedural (classical) formulation is developed
 in the sibling repo `voblint-formalization-classical`.
 

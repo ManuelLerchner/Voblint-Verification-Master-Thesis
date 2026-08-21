@@ -1,41 +1,36 @@
 theory VIMP_Syntax
-  imports Main "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
+  imports VIMP_Settings "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
 begin
 
 section \<open>Source-language expressions\<close>
 
 text \<open>
-  Arithmetic and Boolean leaves (\<open>N\<close>, \<open>V\<close>, \<open>Bc\<close>) are native constructors
-  alongside the extended operators, rather than wrapping an imported base
-  language.
+  \<open>exp\<close> is one integer-valued expression language, matching C: there is no
+  separate Boolean AST.  \<open>N\<close> and \<open>V\<close> are the leaves; \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/
+  \<open>And\<close>/\<open>Or\<close> are ordinary constructors that happen to evaluate to \<open>0\<close>/\<open>1\<close>
+  (\<open>VIMP_Expr.thy\<close>'s \<open>aval\<close>/\<open>truthy\<close>), exactly as a C comparison or logical
+  operator yields an \<open>int\<close>.  There is no \<open>Bc\<close> constructor: source \<open>true\<close>/
+  \<open>false\<close> literals lower to \<open>N 1\<close>/\<open>N 0\<close> at the grammar level.
 \<close>
 
 type_synonym vname = String.literal
 type_synonym store = "vname => int"
 
-(* -- Arithmetic Expressions ---------------------------------------- *)
+(* -- Expressions ------------------------------------------------------ *)
 
-datatype aexp =
-    N (aexp_lit: int)
-  | V (aexp_var: vname)
-  | Plus  (aexp_lhs: aexp) (aexp_rhs: aexp)
-  | Minus (aexp_lhs: aexp) (aexp_rhs: aexp)
-  | Times (aexp_lhs: aexp) (aexp_rhs: aexp)
+datatype exp =
+    N (exp_lit: int)
+  | V (exp_var: vname)
+  | Plus  (exp_lhs: exp) (exp_rhs: exp)
+  | Minus (exp_lhs: exp) (exp_rhs: exp)
+  | Times (exp_lhs: exp) (exp_rhs: exp)
+  | Less (cmp_lhs: exp) (cmp_rhs: exp)
+  | Eq (cmp_lhs: exp) (cmp_rhs: exp)
+  | Not (exp_arg: exp)
+  | And (exp_lhs: exp) (exp_rhs: exp)
+  | Or (exp_lhs: exp) (exp_rhs: exp)
 
-(* -- Boolean Expressions -------------------------------------------- *)
-
-datatype bexp =
-    Bc (bexp_lit: bool)
-  | Not (bexp_arg: bexp)
-  | And (bexp_lhs: bexp) (bexp_rhs: bexp)
-  | Or (bexp_lhs: bexp) (bexp_rhs: bexp)
-  | Less (cmp_lhs: aexp) (cmp_rhs: aexp)
-  | Eq (cmp_lhs: aexp) (cmp_rhs: aexp)
-
-instance aexp :: countable
-  by countable_datatype
-
-instance bexp :: countable
+instance exp :: countable
   by countable_datatype
 
 text \<open>\<^typ>\<open>String.literal\<close> already carries a @{class linorder} instance
@@ -44,9 +39,8 @@ text \<open>\<^typ>\<open>String.literal\<close> already carries a @{class linor
 derive (linorder) compare_order String.literal
 
 text \<open>The executable linear order gives @{const sorted_list_of_set} a deterministic
-  representation of CFG edge sets. A @{typ bexp} order has no comparable consumer, and
-  deriving one adds duplicate simplification rules.\<close>
-derive linorder aexp
+  representation of CFG edge sets.\<close>
+derive linorder exp
 
 end
 

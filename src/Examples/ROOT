@@ -1,13 +1,15 @@
-session Voblint_Examples in "." = "Voblint_Formalization" +
+session Voblint_Examples in "." = "Voblint_CLI" +
   description "Executable witnesses, flagship demonstrations, and the project capstone index"
   sessions
     "HOL-Library"
+    "Voblint_Formalization"
   directories
     "Sign"
     "Sign/CallString"
     "Interval"
     "Interval/CallString"
     "Interval/Ctx"
+    "Congruence"
     "Parity"
     "Mixed"
     "CFG"
@@ -26,17 +28,17 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Sign *)
     Exec_Sign_Run
     Exec_Sign_DG_Run
-    Example_Sign_Codegen
+    Example_Sign_Codegen_Exec_Consistency
     (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
-    Example_Mixed_Flow_Sign
     Example_Sign_Placement
     Example_Placement_Regression
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
+    Example_Sign_DG_EntryState_Result_Regression
 
     (* Interval *)
     Exec_Ivl_Run
@@ -47,17 +49,18 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship
-    Example_Interval_DG_Ctx_Sound
     Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_Ctx_Multi_Call_Regression
+    Example_Interval_DG_Ctx_Factorial_Regression
+    Example_Interval_DG_Ctx_Globals_Regression
     Example_Interval_DG_EntryState_Base
     Example_Interval_DG_EntryState_Ctx
-    Example_Interval_DG_EntryState_Sound
     Example_Interval_DG_EntryState_Collect
-    Example_Interval_DG_CallString
+    Example_Interval_DG_EntryState_Result_Regression
+    Example_Interval_DG_EntryState_Dead_Check_Regression
     Example_Interval_DG_CallString_K1
     Example_Interval_DG_CallString_K2
-    Call_String_Solver_Projection
+    Example_Interval_Call_String_Generic_Parity
     Call_String_Solver_Refinement_Seeded
     Call_String_Solver_Regression
     Example_Interval_Source_Ctx
@@ -66,16 +69,26 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     Example_Guard_Refinement
     Example_Proc_Call
 
+    (* Congruence *)
+    Example_Congruence_Arithmetic
+    Example_Congruence_Backward
+
     (* Parity *)
     Example_Parity_DG_Flagship
     Example_Parity_Checks_Store_Only
 
-    (* Mixed (Sign x Interval, relational) *)
+    (* Composite and relational domains *)
+    Example_Int_Domain
+    Example_Int_Backward
+    Example_Int_Warrowing
+    Example_Int_Transfer
+    Exec_Int_DG_Run
     Example_Relational_DG_Demo
-    Analyse_Dispatch
     Example_Analysis_Dispatch_Regression
     Example_Min_Max_Regression
     Example_Solver_Choice_Regression
+    Example_Int_Refinement_Mode_Regression
+    Example_Analysis_Result_Regression
 
     (* Solver, domain-independent *)
     Example_Strategy_Tree_Demo
@@ -83,8 +96,8 @@ session Voblint_Examples in "." = "Voblint_Formalization" +
     (* Tooling *)
     Example_Proc_GraphViz
     Example_Proc_GraphViz_Recursion
-    Example_Mixed_Sign_Interval_GraphViz
-    Example_State_Report_GraphViz
+    Example_State_Report_GraphViz_Demo
+    Example_EntryState_GraphViz_Regression
 
     Voblint
   document_files

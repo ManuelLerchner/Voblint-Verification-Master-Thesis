@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// C-style unified expressions make a comparison an ordinary int-valued exp
+// (0 or 1), so it can itself be an operand of another comparison, not only
+// the top-level condition of if/assume. LT and EQEQ are both `assoc: none`
+// at the same precedence (grammar/vimp.yaml), so the outer comparison needs
+// explicit parens: `(x < 0) == 1`. x is a concrete negative literal, so the
+// inner comparison's value is exact and the outer one is decidable too --
+// this exercises aval's nested-boolean-as-value path independently of the
+// top-level branch/assume gate (branch_lifted's own case split, exercised
+// separately by the 06-reachability fixtures).
+void main() {
+  x := 0 - 1;
+  __voblint_check((x < 0) == 1) // PROVED
+}

@@ -1,0 +1,127 @@
+// PARAM: --analysis interval --context call-string --context-depth 1
+// Bounding witness for issue #77: a self-recursive procedure called at a
+// depth (50) far exceeding the call-string bound (1). cs_route truncates
+// every routed context to length <= 1 (cs_route_length,
+// Call_String_Context.thy), so fact's own recursive call site produces at
+// most 2 distinct call-string contexts (length 0 and length 1) no matter
+// how deep the concrete recursion runs -- proved in general for any
+// compiled program by compiled_call_strings_finite
+// (Call_String_Context_Finite.thy), not just observed here. The CLI
+// completes immediately rather than growing one context per recursion
+// level, which is exactly the context-explosion #77 is about. The
+// EXPECT-GRAPH block below now shows that directly: three clusters for a
+// 50-deep recursion, the bound's own arithmetic rather than the program's
+// call depth.
+// The check itself stays UNKNOWN, not PROVED: call-string depth bounds
+// *context* growth, not interval's own precision loss on an unbounded
+// recursive multiplication -- a different, known imprecision (see the
+// identical verdict on this same program under plain --analysis interval
+// in tests/regression/11-graph-snapshot/known-imprecision/03-recursion.vimp).
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp7_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//   cluster_ctx_1:
+//     fact_pp1_ctx1
+//     fact_pp0_ctx1
+//     fact_pp2_ctx1
+//     fact_pp3_ctx1
+//     fact_entry_fact_ctx1
+//     fact_result_fact_ctx1
+//   cluster_ctx_2:
+//     fact_pp1_ctx2
+//     fact_pp0_ctx2
+//     fact_pp2_ctx2
+//     fact_pp3_ctx2
+//     fact_entry_fact_ctx2
+//     fact_result_fact_ctx2
+//
+// nodes:
+//   fact_pp1_ctx1: pp1
+//       n=[1,1]
+//       tmp=[-inf,+inf]
+//   fact_pp1_ctx2: pp1
+//       unreachable
+//   main_pp7_ctx0: pp7
+//       r=[-inf,+inf]
+//   main_result_main_ctx0: exit_main
+//       r=[-inf,+inf]
+//   fact_pp0_ctx1: pp0
+//       n=[1,49]
+//       tmp=[-inf,+inf]
+//   fact_pp0_ctx2: pp0
+//       n=[50,50]
+//       tmp=[-inf,+inf]
+//   main_entry_main_ctx0: entry_main
+//       r=[-inf,+inf]
+//   fact_pp2_ctx1: pp2
+//       n=[2,49]
+//       tmp=[-inf,+inf]
+//   fact_pp2_ctx2: pp2
+//       n=[50,50]
+//       tmp=[-inf,+inf]
+//   fact_pp3_ctx1: pp3
+//       n=[2,49]
+//       tmp=[-inf,+inf]
+//   fact_pp3_ctx2: pp3
+//       n=[50,50]
+//       tmp=[-inf,+inf]
+//   main_pp5_ctx0: pp5
+//       r=[-inf,+inf]
+//   fact_entry_fact_ctx1: entry_fact
+//       n=[1,49]
+//       tmp=[-inf,+inf]
+//   fact_entry_fact_ctx2: entry_fact
+//       n=[50,50]
+//       tmp=[-inf,+inf]
+//   main_pp6_ctx0: pp6
+//       r=[-inf,+inf]
+//       check 0<r [unknown]
+//   fact_result_fact_ctx1: exit_fact
+//       n=[1,49]
+//       tmp=[-inf,+inf]
+//   fact_result_fact_ctx2: exit_fact
+//       n=[50,50]
+//       tmp=[-inf,+inf]
+//
+// edges:
+//   fact_pp1_ctx1 -> fact_result_fact_ctx1: return 1
+//   fact_pp1_ctx2 -> fact_result_fact_ctx2: return 1
+//   main_pp7_ctx0 -> main_result_main_ctx0: terminate
+//   fact_pp0_ctx1 -> fact_pp1_ctx1: n<2
+//   fact_pp0_ctx1 -> fact_pp2_ctx1: not (n<2)
+//   fact_pp0_ctx2 -> fact_pp1_ctx2: n<2
+//   fact_pp0_ctx2 -> fact_pp2_ctx2: not (n<2)
+//   main_entry_main_ctx0 -> main_pp5_ctx0: nop
+//   fact_pp3_ctx1 -> fact_result_fact_ctx1: return n*tmp
+//   fact_pp3_ctx2 -> fact_result_fact_ctx2: return n*tmp
+//   fact_entry_fact_ctx1 -> fact_pp0_ctx1: nop
+//   fact_entry_fact_ctx2 -> fact_pp0_ctx2: nop
+//   main_pp6_ctx0 -> main_pp7_ctx0: check(0<r)
+//   fact_pp2_ctx1 -> fact_entry_fact_ctx1: enter fact(n-1)
+//   fact_pp2_ctx2 -> fact_entry_fact_ctx1: enter fact(n-1)
+//   main_pp5_ctx0 -> fact_entry_fact_ctx2: enter fact(50)
+//   fact_result_fact_ctx1 -> fact_pp3_ctx1: combine tmp := #ret
+//   fact_result_fact_ctx1 -> fact_pp3_ctx2: combine tmp := #ret
+//   fact_result_fact_ctx2 -> main_pp6_ctx0: combine r := #ret
+//   fact_pp2_ctx1 -> fact_pp3_ctx1: call-to-return fact
+//   fact_pp2_ctx2 -> fact_pp3_ctx2: call-to-return fact
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
+// EXPECT-GRAPH-END
+
+void fact(n) {
+  if (n < 2) {
+    return 1
+  } else {
+    tmp := fact(n - 1);
+    return n * tmp
+  }
+}
+void main() {
+  r := fact(50);
+  __voblint_check(0 < r) // UNKNOWN
+}

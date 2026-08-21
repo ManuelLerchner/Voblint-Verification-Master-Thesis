@@ -218,13 +218,6 @@ lemma parity_times_sound:
   "i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> i * j \<in> gamma_parity (a * b)"
   by (cases a; cases b; auto simp: even_mult_iff)
 
-fun aval_parity :: "aexp => (vname => parity) => parity" where
-    "aval_parity (N n)       \<sigma> = parity_of_int n"
-  | "aval_parity (V v)       \<sigma> = \<sigma> v"
-  | "aval_parity (Plus  a b) \<sigma> = aval_parity a \<sigma> + aval_parity b \<sigma>"
-  | "aval_parity (Minus a b) \<sigma> = aval_parity a \<sigma> - aval_parity b \<sigma>"
-  | "aval_parity (Times a b) \<sigma> = aval_parity a \<sigma> * aval_parity b \<sigma>"
-
 subsection \<open>Monotonicity of arithmetic\<close>
 
 lemma parity_plus_mono1: "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::parity)"
@@ -278,10 +271,105 @@ end
 
 instance parity :: abstract_domain ..
 
-interpretation parity_arith: arith_domain_sound aval_parity parity_of_int
-  by unfold_locales
-     (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
-                     parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono)
+subsection \<open>Comparison and truthiness queries\<close>
+
+text \<open>
+  Parity carries no ordering information, so \<open>parity_lt\<close> is always \<open>None\<close>.
+  Equality is decidable exactly when the two operands have opposite parity --
+  an even value can never equal an odd one -- and truthiness is decidable
+  exactly for \<open>POdd\<close>, since every odd integer is nonzero.
+\<close>
+
+fun parity_lt :: "parity \<Rightarrow> parity \<Rightarrow> bool option" where
+  "parity_lt _ _ = None"
+
+fun parity_eqb :: "parity \<Rightarrow> parity \<Rightarrow> bool option" where
+    "parity_eqb PEven POdd = Some False"
+  | "parity_eqb POdd PEven = Some False"
+  | "parity_eqb _ _ = None"
+
+fun parity_tobool :: "parity \<Rightarrow> bool option" where
+    "parity_tobool POdd = Some True"
+  | "parity_tobool _ = None"
+
+lemma parity_lt_sound:
+  "parity_lt a b = Some c \<Longrightarrow> i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> (i < j) = c"
+  by simp
+
+lemma parity_eqb_sound:
+  "parity_eqb a b = Some c \<Longrightarrow> i \<in> gamma_parity a \<Longrightarrow> j \<in> gamma_parity b \<Longrightarrow> (i = j) = c"
+  by (cases a; cases b; auto)
+
+lemma parity_tobool_sound:
+  "parity_tobool a = Some c \<Longrightarrow> i \<in> gamma_parity a \<Longrightarrow> (i \<noteq> 0) = c"
+  by (cases a; auto)
+
+lemma parity_lt_mono:
+  "\<not> is_bot (a1::parity) \<Longrightarrow> \<not> is_bot b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
+   parity_lt a2 b2 = Some c \<Longrightarrow> parity_lt a1 b1 = Some c"
+  by simp
+
+lemma parity_eqb_mono:
+  "\<not> is_bot (a1::parity) \<Longrightarrow> \<not> is_bot b1 \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow>
+   parity_eqb a2 b2 = Some c \<Longrightarrow> parity_eqb a1 b1 = Some c"
+  unfolding is_bot_parity is_bottom_parity_def less_eq_parity_def
+  by (cases a1; cases a2; cases b1; cases b2; simp)
+
+lemma parity_tobool_mono:
+  "\<not> is_bot (a1::parity) \<Longrightarrow> a1 \<le> a2 \<Longrightarrow> parity_tobool a2 = Some c \<Longrightarrow> parity_tobool a1 = Some c"
+  unfolding is_bot_parity is_bottom_parity_def less_eq_parity_def
+  by (cases a1; cases a2; simp)
+
+subsection \<open>Abstract expression evaluation\<close>
+
+fun aval_parity :: "exp => (vname => parity) => parity" where
+    "aval_parity (N n)       \<sigma> = parity_of_int n"
+  | "aval_parity (V v)       \<sigma> = \<sigma> v"
+  | "aval_parity (Plus  a b) \<sigma> = aval_parity a \<sigma> + aval_parity b \<sigma>"
+  | "aval_parity (Minus a b) \<sigma> = aval_parity a \<sigma> - aval_parity b \<sigma>"
+  | "aval_parity (Times a b) \<sigma> = aval_parity a \<sigma> * aval_parity b \<sigma>"
+  | "aval_parity (Less a b)  \<sigma> =
+       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
+        else if parity_lt (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
+        else PTop)"
+  | "aval_parity (exp.Eq a b) \<sigma> =
+       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some True then POdd
+        else if parity_eqb (aval_parity a \<sigma>) (aval_parity b \<sigma>) = Some False then PEven
+        else PTop)"
+  | "aval_parity (exp.Not a)  \<sigma> =
+       (if is_bot (aval_parity a \<sigma>) then bot
+        else if parity_tobool (aval_parity a \<sigma>) = Some True then PEven
+        else if parity_tobool (aval_parity a \<sigma>) = Some False then POdd
+        else PTop)"
+  | "aval_parity (And a b)    \<sigma> =
+       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+        else if parity_tobool (aval_parity a \<sigma>) = Some False \<or> parity_tobool (aval_parity b \<sigma>) = Some False
+        then PEven
+        else if parity_tobool (aval_parity a \<sigma>) = Some True \<and> parity_tobool (aval_parity b \<sigma>) = Some True
+        then POdd
+        else PTop)"
+  | "aval_parity (Or a b)     \<sigma> =
+       (if is_bot (aval_parity a \<sigma>) \<or> is_bot (aval_parity b \<sigma>) then bot
+        else if parity_tobool (aval_parity a \<sigma>) = Some True \<or> parity_tobool (aval_parity b \<sigma>) = Some True
+        then POdd
+        else if parity_tobool (aval_parity a \<sigma>) = Some False \<and> parity_tobool (aval_parity b \<sigma>) = Some False
+        then PEven
+        else PTop)"
+
+interpretation parity_arith: expression_domain_sound
+    aval_parity parity_of_int parity_lt parity_eqb parity_tobool
+  apply unfold_locales
+  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
+                        parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono
+                        parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
+                        sup_parity_def join_parity.simps truthy_def
+                    del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
+  apply (blast intro: parity_lt_mono[unfolded is_bot_parity])
+  apply (blast intro: parity_eqb_mono[unfolded is_bot_parity])
+  apply (blast intro: parity_tobool_mono[unfolded is_bot_parity])
+  done
 
 lemmas aval_parity_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
 lemmas aval_parity_mono = parity_arith.aval_dom_mono

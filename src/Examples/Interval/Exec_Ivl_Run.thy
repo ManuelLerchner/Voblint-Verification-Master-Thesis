@@ -13,10 +13,11 @@ text \<open>
   \<^session>\<open>Voblint_Formalization\<close>:
   @{text "x := 0; while (x < 20) { x := x + 1 }"}.
 
-  The executable transfer \<open>ivl_tf_st_for\<close> applies the same backward guard
-  filters as @{const bfilter_ivl} (via \<open>branch_ivl_st_for\<close> / @{const bfilter_ivl_st})
-  on @{const EA_Assume} edges.  Node~2 therefore reads @{text "[0,19]"} because
-  @{text "x < 20"} refines @{text "x"} at the loop head --- not because of widening.
+  The executable transfer \<open>ivl_tf_st_for\<close> applies the same forward-gated
+  branch transfer as @{const branch_ivl} (via \<open>branch_ivl_st_for\<close> /
+  @{const branch_ivl_st}) on @{const EA_Assume} edges.  Node~2 therefore
+  reads @{text "[0,19]"} because @{text "x < 20"} refines @{text "x"} at the
+  loop head --- not because of widening.
 
   This theory evaluates two fixpoint engines on @{const side_cfg_T_eff_st}:
   bounded Kleene iteration on @{const eq}, and @{const TD_side_warrowing_apinis_Interp_solve}

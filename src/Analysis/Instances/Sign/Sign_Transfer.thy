@@ -8,7 +8,7 @@ section \<open>Sign transfer functions\<close>
 subsection \<open>Abstract assignment\<close>
 
 definition assign_sign ::
-    "vname => aexp => (vname => sign) => (vname => sign)"
+    "vname => exp => (vname => sign) => (vname => sign)"
 where
   "assign_sign x a \<sigma> = \<sigma>(x := aval_sign a \<sigma>)"
 
@@ -51,7 +51,7 @@ definition body_sign :: "pname => (vname => sign) => (vname => sign)" where
   "body_sign p \<sigma> = \<sigma>"
 
 definition return_sign ::
-    "aexp option => pname => (vname => sign) => (vname => sign)"
+    "exp option => pname => (vname => sign) => (vname => sign)"
 where
   "return_sign e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign_sign ret_var a \<sigma>)"
 
@@ -103,7 +103,7 @@ definition enter_frame_sign_for ::
   "enter_frame_sign_for gs = enter_frame_D gs STop"
 
 definition enter_sign_for ::
-    "(vname => bool) => vname list => aexp list =>
+    "(vname => bool) => vname list => exp list =>
       sign abs_state => sign abs_state" where
   "enter_sign_for gs = enter_D gs STop aval_sign"
 
@@ -133,7 +133,7 @@ qed
 definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
   "sign_tf_for gs = (| tf_assign  = assign_sign,
                        tf_special = special_sign,
-                       tf_branch  = bfilter_sign,
+                       tf_branch  = branch_sign,
                        tf_skip    = skip_sign,
                        tf_body    = body_sign,
                        tf_return  = return_sign,
@@ -146,7 +146,7 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   apply unfold_locales
   subgoal by (simp add: assign_sign_sound)
   subgoal by (simp add: special_sign_sound)
-  subgoal by (simp add: bfilter_sign_sound)
+  subgoal by (simp add: branch_sign_sound)
   subgoal by (simp add: skip_sign_sound)
   subgoal by (simp add: body_sign_sound)
   subgoal by (simp add: return_sign_sound)
@@ -173,7 +173,7 @@ qed
 lemma sign_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow> apply_tf (sign_tf_for gs) a s1 \<le> apply_tf (sign_tf_for gs) a s2"
   by (cases a)
-     (auto simp: sign_tf_for_def assign_sign_mono special_sign_mono bfilter_sign_mono
+     (auto simp: sign_tf_for_def assign_sign_mono special_sign_mono branch_sign_mono
                  skip_sign_mono body_sign_mono return_sign_mono enter_sign_for_mono
                  event_sign_mono)
 

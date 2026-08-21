@@ -3,5 +3,6 @@ src/CFG
 src/Core
 src/Analysis
 src/Formalization
+src/CLI
 src/Examples
 src/Codegen

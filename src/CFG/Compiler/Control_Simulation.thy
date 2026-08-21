@@ -526,8 +526,8 @@ inductive intra_step ::
 | ISeq1:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
 | ISeq2:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
             intra_step \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs)"
-| IIfTrue: "bval b s \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
-| IIfFalse:"\<not> bval b s \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
+| IIfTrue: "truthy (aval b s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
+| IIfFalse:"\<not> truthy (aval b s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
 | IWhile:  "intra_step \<Pi> (While b c, s, frs) (If b (Seq c (While b c)) SKIP, s, frs)"
 
 inductive_cases intra_SkipE:   "intra_step \<Pi> (SKIP, s, frs) y"
@@ -551,7 +551,8 @@ lemma intra_Seq_cases:
 
 lemma intra_If_cases:
   "intra_step \<Pi> (If b c1 c2, s, frs) (c', s', frs') \<Longrightarrow>
-   (bval b s \<and> c' = c1 \<and> s' = s \<and> frs' = frs) \<or> (\<not> bval b s \<and> c' = c2 \<and> s' = s \<and> frs' = frs)"
+   (truthy (aval b s) \<and> c' = c1 \<and> s' = s \<and> frs' = frs) \<or>
+   (\<not> truthy (aval b s) \<and> c' = c2 \<and> s' = s \<and> frs' = frs)"
   by (auto elim: intra_IfE)
 
 
@@ -662,8 +663,8 @@ next
        "(Statement j, EA_Assume b, en1) \<in> E" "(Statement j, EA_AssumeNot b, en2) \<in> E"
        "control_at \<Pi> p (If b c1 c2) k n0 c1 en1" "control_at \<Pi> p (If b c1 c2) k n0 c2 en2" by blast
   from intra_If_cases[OF IfHead.prems(1)] consider
-      (t) "bval b s" "c' = c1" "s' = s" "frs' = frs"
-    | (f) "\<not> bval b s" "c' = c2" "s' = s" "frs' = frs" by blast
+      (t) "truthy (aval b s)" "c' = c1" "s' = s" "frs' = frs"
+    | (f) "\<not> truthy (aval b s)" "c' = c2" "s' = s" "frs' = frs" by blast
   then show ?case
   proof cases
     case t
@@ -735,8 +736,8 @@ next
        "control_at \<Pi> p (While b cW) k n0 (Seq cW (While b cW)) en1"
        "control_at \<Pi> p (While b cW) k n0 SKIP en2" by blast
   from intra_If_cases[OF WhileUnfolded.prems(1)] consider
-      (t) "bval b s" "c' = Seq cW (While b cW)" "s' = s" "frs' = frs"
-    | (f) "\<not> bval b s" "c' = SKIP" "s' = s" "frs' = frs" by blast
+      (t) "truthy (aval b s)" "c' = Seq cW (While b cW)" "s' = s" "frs' = frs"
+    | (f) "\<not> truthy (aval b s)" "c' = SKIP" "s' = s" "frs' = frs" by blast
   then show ?case
   proof cases
     case t
@@ -853,7 +854,7 @@ subsection \<open>Return initiation\<close>
 text \<open>The store published by a return: the callee's \<^const>\<open>ret_var\<close> is set to the evaluated
   return value (\<^term>\<open>Some e\<close>) or left untouched (\<^term>\<open>None\<close>).  It is the common store reached
   by both the source \<^const>\<open>Return\<close> step and the compiled \<^term>\<open>EA_Ret\<close> edge.\<close>
-definition ret_store :: "aexp option \<Rightarrow> store \<Rightarrow> store" where
+definition ret_store :: "exp option \<Rightarrow> store \<Rightarrow> store" where
   "ret_store e s = s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))"
 
 lemma ret_store_None [simp]: "ret_store None s = s"

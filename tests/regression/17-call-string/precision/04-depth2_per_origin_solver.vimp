@@ -1,0 +1,13 @@
+// PARAM: --analysis interval --context call-string --context-depth 2 --solver per-origin
+// Same program as 02-depth2_separates_shared_callee.vimp, explicit --solver
+// per-origin instead of call-string's implicit Warrow default -- see
+// 03-depth2_join_solver.vimp for why the routed equation system underneath
+// accepts any solver the same way the flat one does.
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20) // PROVED
+}

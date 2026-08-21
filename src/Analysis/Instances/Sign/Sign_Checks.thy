@@ -1,5 +1,9 @@
 theory Sign_Checks
-  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks" Sign_Exec_Sound
+  imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
+    "Voblint_Core.Analysis_Result" Sign_Exec_Sound
+    "Voblint_Analysis.Monovariant_Analysis_Result"
+    "Voblint_Core.DG_Analysis_Adapter"
+    Sign_Exec_Ctx_Sound
 begin
 
 hide_const phase.N
@@ -12,7 +16,7 @@ text \<open>
   \<^theory>\<open>Voblint_Analysis.Sign_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Sign expression
   evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
-  Boolean recursion over \<^typ>\<open>bexp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
+  Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
   classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come
   from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
   once, below, reusing the numeric-query facts already proved sound in
@@ -30,7 +34,7 @@ global_interpretation sign_check_domain:
     and sign_classify_check = sign_check_domain.classify_check
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: aexp and \<sigma> :: "sign abs_state"
+  fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
   then have "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
@@ -52,6 +56,149 @@ lemmas sign_classify_check_proved = sign_check_domain.classify_check_proved
 lemmas sign_classify_check_refuted = sign_check_domain.classify_check_refuted
 lemmas sign_checks_provenI = sign_check_domain.abstract_checks_provenI
 lemmas sign_checks_proven_sound = sign_check_domain.abstract_checks_proven_sound
+
+subsection \<open>The generic report adapter, at the routed-unit context\<close>
+
+text \<open>
+  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Exec_Ctx_Sound\<close>'s own routed-unit
+  solved system reuses every obligation that theory's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
+  interpretations already discharge: the five \<^locale>\<open>dg_ctx_activation_base\<close> obligations
+  are exactly \<open>sctx_dg\<close>'s own (cited here via the exported \<open>sctx_pp_abs\<close>/\<open>sctx_sg_covered\<close>/
+  \<open>sctx_sg_uncovered_empty\<close>/\<open>sctx_fin\<close>), and the routed obligations collapse the same way
+  \<^locale>\<open>unit_routed_context\<close>'s did, at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>. Only
+  \<open>classify_proved\<close>/\<open>classify_refuted\<close> are genuinely new here, discharged by
+  \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close> above. This context re-opens
+  \<open>Sign_Exec_Ctx_Sound\<close>'s own six coverage hypotheses (\<open>solves\<close>/\<open>exact\<close>/\<open>entry_cov\<close>/
+  \<open>fwd_ok\<close>/\<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>) rather than reusing that theory's context directly,
+  since the classify obligations need \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close>,
+  which live in this theory, downstream of \<open>Sign_Exec_Ctx_Sound\<close>.
+\<close>
+
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
+  assumes solves: "sctx_terminates gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+                   \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and call_fwd_ok: "\<And>u ctx dst pars args p cont.
+        (u, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
+        (cl, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+begin
+
+interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
+  unfolding sctx_abs_spec_def
+  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
+
+interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs
+    "compile_prog Pi ps mnm main" Global route_unit
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
+    "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
+    "sctx_sigma_abs gs is_bot_pred Pi ps mnm main" "fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" "sctx_sg gs is_bot_pred Pi ps mnm main"
+    Seed sign_classify_check
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+  case FinE show ?case
+    using compile_prog_finite by auto
+next
+  case PP show ?case
+    by (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+        sctx_sigma_abs_exec_def)
+      (rule sctx_pp_abs[OF solves exact])
+next
+  case (SgCov v c)
+  note mem = this
+  have eq1: "sctx_sg gs is_bot_pred Pi ps mnm main (Inl (v, c))
+               = locals (sctx_sigma_abs gs is_bot_pred Pi ps mnm main (Inl (v, c)))"
+    by (rule sctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
+  show ?case
+    using eq1 gamma_dg_base_def by auto
+next
+  case (SgUncov v c)
+  note nmem = this
+  show ?case
+    by (rule sctx_sg_uncovered_empty[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok nmem])
+next
+  case (Fwd u a v c)
+  thus ?case by (rule fwd_ok)
+next
+  case FinC show ?case
+    by (simp add: compile_prog_finite)
+next
+  case (SeedKey p ctx) show ?case by simp
+next
+  case (RouteEnterc u ctx dst pars args p cont s)
+  show ?case by (simp add: route_unit_def enterc_unit_def)
+next
+  case (CallFwd u ctx dst pars args p cont)
+  show ?case
+    using CallFwd(1,2) call_fwd_ok unfolding route_unit_def by blast
+next
+  case (CombFwd cl c1 dst pars args p cont)
+  show ?case using CombFwd(1,2) comb_fwd_ok by blast
+next
+  case (EnterAgree cl s es dst pars args p cont)
+  note ces = EnterAgree(1) and ce = EnterAgree(2)
+  obtain dst' pars' args' p' cont' where
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    using ces unfolding call_enter_store_def by blast
+  have "CallEdge dst' pars' args' = CallEdge dst pars args"
+    using compile_prog_calls_source_unique[OF ce' ce] by simp
+  thus ?case using es_eq by simp
+next
+  case (ClProved c d s)
+  thus ?case by (rule sign_classify_check_proved)
+next
+  case (ClRefuted c d s)
+  thus ?case by (rule sign_classify_check_refuted)
+qed
+
+text \<open>
+  The two generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once and for
+  all, re-exported here so a caller cites them without naming the interpretation.
+\<close>
+
+lemmas sctx_report_ctx_proved_sound = sctx_adapter.analyse_report_ctx_proved_sound
+lemmas sctx_report_ctx_refuted_sound = sctx_adapter.analyse_report_ctx_refuted_sound
+
+text \<open>
+  \<open>sctx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
+  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
+  \<open>sctx_analyse_result_eq\<close> identifies that reading with the raw-tuple shape
+  \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Exec_Ctx_Sound\<close>) already builds by hand from
+  \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
+  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected local unknown, one via
+  \<open>is_bot_state\<close> after projecting (the adapter), the other via \<open>is_bot_pred\<close> before
+  projecting (\<open>analyse_sign_ctx_result_for\<close>) --- \<open>exact\<close> is exactly what identifies the
+  two orders. A caller composing \<open>sctx_result_node_sound\<close> with \<open>sctx_analyse_result_eq\<close>
+  gets \<^const>\<open>analyse_sign_ctx_result_for\<close>'s own node-soundness bridge without
+  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument by hand.
+\<close>
+
+lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
+
+lemma sctx_analyse_result_eq:
+  "lookup_context sctx_adapter.analyse_result v ctx =
+     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+      then normalize_point gs
+             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+      else Unreachable)"
+  unfolding sctx_adapter.lookup_context_analyse_result
+  apply (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+                     sctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
+  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+     (simp_all add: exact normalize_lift_def)
+
+end
 
 subsection \<open>Executable classification tests\<close>
 
@@ -123,44 +270,82 @@ definition sign_check_report ::
        (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog_at gs mnm p v))
        sign_classify_check"
 
+subsection \<open>Solved-result table\<close>
+
+text \<open>
+  \<open>analyse_sign_result_for\<close> is the canonical solved D/G system, read as a
+  \<^typ>\<open>(unit, sign abs_state) analysis_result\<close>: a one-line partial
+  application of \<^const>\<open>analyse_sign_ctx_result_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  which already binds the single routed-unit solve and
+  canonicalizes/normalizes each local key. Every report below reads
+  through this table via \<^const>\<open>lookup_context\<close> rather than a raw
+  solver-environment lookup.
+\<close>
+
+definition analyse_sign_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result_for gs p = analyse_sign_ctx_result_for gs prog_main_name p"
+
+text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
+  \<open>analyse_sign_report\<close>'s shape.\<close>
+
+definition analyse_sign_result :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result p = analyse_sign_result_for (declared_global p) p"
+
+subsection \<open>Solved-result table: per-origin update rule\<close>
+
+text \<open>
+  \<open>analyse_sign_result_per_origin_for\<close> is \<^const>\<open>analyse_sign_result_for\<close>'s
+  sibling under the per-origin rule: a one-line partial application of
+  \<^const>\<open>analyse_sign_ctx_result_per_origin_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  reading \<^const>\<open>sctx_sol_prog_per_origin\<close> instead of \<^const>\<open>sctx_sol_prog\<close>.
+  Experimental: no dedicated soundness theorem is proved for this
+  combination here -- \<open>analyse\<close> and its soundness corollaries are
+  unaffected, and this definition exists solely so \<open>Analyse_Dispatch\<close>'s
+  \<open>analyse_with_solver\<close> can compare solver choices on the routed-unit
+  equation system (issue #131).
+\<close>
+
+definition analyse_sign_result_per_origin_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result_per_origin_for gs p =
+     analyse_sign_ctx_result_per_origin_for gs prog_main_name p"
+
+definition analyse_sign_result_per_origin :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result_per_origin p = analyse_sign_result_per_origin_for (declared_global p) p"
+
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
 text \<open>
-  \<open>analyse_sign_report_for\<close> mirrors \<open>sign_check_report\<close> exactly, reading through
-  \<^const>\<open>analyse_sign_env_for\<close> (the native D/G pipeline \<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>
-  computes) instead of \<^const>\<open>sign_exec_prog_at\<close> (the older \<open>side_cfg_T_eff_st\<close> pipeline) ---
-  this is the report function the exported \<open>analyse\<close> API actually dispatches to (see
-  \<open>Analyse_Dispatch\<close>, downstream in Examples), fixed at \<open>prog_main_name\<close> rather than
-  an arbitrary \<open>mnm\<close> since \<open>analyse_sign_env_for\<close> already is.
+  \<open>analyse_sign_report_for\<close> is the report function the exported \<open>analyse\<close>
+  API actually dispatches to (see \<open>Analyse_Dispatch\<close>, downstream in
+  Examples), fixed at \<open>prog_main_name\<close> since \<^const>\<open>analyse_sign_result_for\<close>
+  already is. It reads its per-node state through
+  \<^const>\<open>analyse_sign_result_for\<close>'s \<^type>\<open>analysis_result\<close> table --
+  \<^const>\<open>lookup_context\<close>, not a raw solver-environment lookup -- so a
+  \<^const>\<open>Reachable\<close> point classifies at its projected state exactly as
+  before, and an \<^const>\<open>Unreachable\<close> one (dead or never covered; the two are
+  no longer distinguishable, matching \<^const>\<open>classify_checks\<close>'s original
+  \<^const>\<open>Bot\<close>-collapsing \<open>env\<close> reads) classifies at \<^const>\<open>bot\<close>, the same
+  value \<^const>\<open>classify_checks\<close> always fed it for such a node: this
+  preserves \<open>check_result\<close>'s existing three-way verdict exactly, rather
+  than introducing a fourth, \<open>Dead\<close> outcome the type does not carry (that
+  distinction belongs to \<^const>\<open>classify_checks_verdicts\<close>/\<open>contextual_verdict\<close>,
+  the shape the entry-state check report already uses).
+
+  \<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so
+  the single D/G solve \<^const>\<open>analyse_sign_result_for\<close> performs is shared
+  across every check in the report rather than repeated per check.
 \<close>
 
 definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report_for gs p =
-     classify_checks (prog_cfg prog_main_name p) (analyse_sign_env_for gs p) sign_classify_check"
-
-text \<open>
-  The definitional equation above unfolds \<^const>\<open>analyse_sign_env_for\<close> at every check node, and
-  that unfolding mentions \<^const>\<open>analyse_sign_for\<close> twice (once for \<open>locals\<close>, once for \<open>globs\<close>)
-  --- so naive code generation from it would re-run the whole D/G solver twice per check, for an
-  \<open>N\<close>-check program, \<open>2N\<close> solver runs instead of one. The \<open>[code]\<close> equation below is provably
-  equal (a direct \<open>Let\<close>-unfold of the same definitions) but binds \<^term>\<open>snd (analyse_sign_for gs
-  p)\<close> once, outside the per-check closure \<^const>\<open>classify_checks\<close> applies; the target language
-  compiles that \<open>let\<close> to a single shared thunk, so the generated OCaml computes the
-  solved system exactly once per report, regardless of how many checks the program has.
-\<close>
-
-declare analyse_sign_report_for_def [code del]
-
-lemma analyse_sign_report_for_code [code]:
-  "analyse_sign_report_for gs p =
-     (let sol = snd (analyse_sign_for gs p)
+     (let r = analyse_sign_result_for gs p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env_abs gs
-                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            sign_classify_check)"
-  unfolding analyse_sign_report_for_def analyse_sign_env_for_def[abs_def] Let_def
-  by (rule refl)
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_sign\<close>'s shape.
@@ -169,71 +354,51 @@ text \<open>
 definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report p = analyse_sign_report_for (declared_global p) p"
 
-subsection \<open>Solver-choice variant: per-origin update rule\<close>
+subsection \<open>Solver-choice variant report: per-origin update rule\<close>
 
 text \<open>
-  \<open>analyse_sign_report_per_origin\<close> is \<open>analyse_sign_report\<close>'s sibling under the
-  per-origin update rule (\<^const>\<open>TD_side_per_origin_Interp_solve\<close>, keeping
-  each write origin's contribution separate instead of folding every
-  contribution into one join) instead of the always-join rule production
-  uses. Experimental: unlike \<open>analyse_sign_report\<close>, no dedicated soundness
-  theorem is proved for this combination here -- \<open>analyse\<close> and its soundness
-  corollaries are unaffected, and this definition exists solely so
-  \<open>Analyse_Dispatch\<close>'s \<open>analyse_with_solver\<close> can compare solver choices on
-  the same equation system (issue #131).
+  \<open>analyse_sign_report_per_origin\<close>'s sibling relationship to
+  \<^const>\<open>analyse_sign_report\<close> mirrors \<^const>\<open>analyse_sign_result_per_origin\<close>'s
+  to \<^const>\<open>analyse_sign_result\<close>: same report shape, reading through the
+  per-origin result table instead of the default one.
 \<close>
-
-definition analyse_sign_for_per_origin ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
-       (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
-  "analyse_sign_for_per_origin gs p =
-     TD_side_per_origin_Interp_solve (analyse_sign_eqs_for gs p) (cfg_exit (prog_cfg prog_main_name p), ())"
 
 definition analyse_sign_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report_per_origin p =
-     (let gs = declared_global p;
-          sol = snd (analyse_sign_for_per_origin gs p)
+     (let r = analyse_sign_result_per_origin p
       in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env_abs gs
-                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
            sign_classify_check)"
 
 subsection \<open>Whole-program check report with state\<close>
 
 text \<open>
   State-carrying sibling of \<open>analyse_sign_report_for\<close>/\<open>analyse_sign_report\<close>,
-  via \<^const>\<open>classify_checks_with_state\<close>: same D/G pipeline, same environment,
-  with the per-check Sign environment attached to each report entry instead
-  of discarded. The \<open>[code]\<close> rewrite mirrors the one above for the same
-  reason: naive definitional unfolding would re-run the solver twice per
-  check.
+  via \<^const>\<open>classify_checks_with_state\<close>: same result table, with the
+  per-check Sign environment attached to each report entry instead of
+  discarded, and an exact \<open>unreachable\<close> flag read straight off
+  \<^const>\<open>lookup_context\<close>'s \<^const>\<open>Unreachable\<close>/\<^const>\<open>Reachable\<close> case split --
+  exact because \<open>normalize_point_canonicalize_lift_eq_old\<close>
+  (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>) is precisely the fact that this
+  reading agrees with the older \<^const>\<open>resolved_st_q_lifted_is_bot_for\<close>
+  test on the same raw local unknown.
 \<close>
 
 definition analyse_sign_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_for_with_state gs p =
-     classify_checks_with_state (prog_cfg prog_main_name p) (analyse_sign_env_for gs p)
-       sign_classify_check"
-
-declare analyse_sign_report_for_with_state_def [code del]
-
-lemma analyse_sign_report_for_with_state_code [code]:
-  "analyse_sign_report_for_with_state gs p =
-     (let sol = snd (analyse_sign_for gs p)
+     (let r = analyse_sign_result_for gs p
       in classify_checks_with_state (prog_cfg prog_main_name p)
-           (\<lambda>v. combine_env_abs gs
-                  (fun_of_exec_dg_st_for gs (locals (sol (Inl (v, ())))))
-                  (fun_of_exec_dg_st_for gs (globs (sol (Inr ())))))
-           sign_classify_check)"
-  unfolding analyse_sign_report_for_with_state_def analyse_sign_env_for_def[abs_def] Let_def
-  by (rule refl)
+           (\<lambda>v. case lookup_context r v () of
+                  Unreachable \<Rightarrow> (True, bot)
+                | Reachable st \<Rightarrow> (False, st))
+           (\<lambda>c (_, s). sign_classify_check c s))"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_sign_report\<close>'s shape.\<close>
 
 definition analyse_sign_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> bexp \<times> check_result \<times> (vname \<Rightarrow> sign)) list" where
+    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_with_state p = analyse_sign_report_for_with_state (declared_global p) p"
 
 end

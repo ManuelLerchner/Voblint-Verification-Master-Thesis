@@ -1,0 +1,21 @@
+// PARAM: --analysis interval --solver join --timeout 2
+// Direct contrast with ../04-global_self_feedback_warrow_terminates.vimp: the
+// identical self-referential global write, now under Solver_Join instead of
+// Interval's production Solver_Warrow.
+//
+// Base-style migration acceptance case: this program used to be the
+// canonical Solver_Join non-termination reproducer (the OLD flow-insensitive
+// global-summary route folded `total`'s write back into its own current
+// value, an unstable equation plain join alone could never reach a fixpoint
+// for). With the whole abstract state lifted into the local unknown, there
+// is no separate global summary left for the write to fold back into, so
+// Solver_Join now terminates and reaches the same exact answer Solver_Warrow
+// does -- termination and precision coincide here, since this program's
+// global write is not inside a loop and so needs no widening either.
+// --timeout keeps the case fast even though it no longer needs to.
+global total;
+void main() {
+  total := 0;
+  total := total + 3;
+  __voblint_check(0 < total) // PROVED
+}

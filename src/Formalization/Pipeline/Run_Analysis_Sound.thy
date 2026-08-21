@@ -1,6 +1,7 @@
 theory Run_Analysis_Sound
   imports
     "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Analysis.DG_Base_Exec"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Core.Solver_Menu"
     Source_Activation_Sound
@@ -231,7 +232,7 @@ locale unit_dg_exec_analysis =
   fixes gs :: "vname \<Rightarrow> bool"
     and tf :: "'a::sound_domain domain_transfer"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> aexp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and solve :: "(pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT
                    \<Rightarrow> pp \<times> unit
                    \<Rightarrow> (pp \<times> unit) set \<times>
@@ -332,6 +333,250 @@ proof -
 qed
 
 end
+
+section \<open>Registered executable D/G analyses, lifted Base-style local carrier\<close>
+
+subsection \<open>Executable-to-abstract transport for the lifted diagonal carrier\<close>
+
+text \<open>
+  Lifted siblings of \<open>dg_exec_run_source_sound_for\<close>/\<open>dg_exec_collect_sound_for\<close>,
+  reachability-lifted at the local carrier so a Base-style analysis (whole abstract
+  state as \<open>D\<close>, no VIMP-global split into a solver-global unknown) can supply its own
+  D and G types independently -- only their common \<open>exec_dg_st lifted\<close> wrapper shape,
+  read back through the same classifier \<open>gs\<close>, is fixed here.  Every step is a direct
+  citation of the already-proved generic transport
+  \<open>part_post_solution_dg_st_to_abs_lifted_for\<close> and the classifier-parametric semantic
+  core \<open>sound_dg_spec_ltr_for.dg_run_source_sound_abs_for\<close>; no trace or DG semantic
+  argument is re-derived.
+\<close>
+
+theorem dg_exec_run_source_sound_lifted_for:
+  fixes Pi :: proc_table and mnm :: pname and s0 t :: store
+    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st lifted,
+                   'g1::bounded_semilattice_sup_bot exec_dg_st lifted) dg_spec"
+    and S_abs :: "('d1 abs_state lifted, 'g1 abs_state lifted) dg_spec"
+    and gammaDG :: "'d1 abs_state lifted \<Rightarrow> 'g1 abs_state lifted \<Rightarrow> store set"
+    and bot0 s0d :: "'d1 exec_dg_st lifted" and s0g :: "'g1 exec_dg_st lifted"
+    and gs :: "vname \<Rightarrow> bool"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+    and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dg_spec_step S_st a d g)
+                      = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_enter S_st xs es d g)
+                      = dgs_enter S_abs xs es (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_combine S_st dst dc de g)
+                      = dgs_combine S_abs dst (map_lift (fun_of_exec_dg_st_for gs) dc)
+                          (map_lift (fun_of_exec_dg_st_for gs) de) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and pp_st: "part_post_solution
+                  (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) vars"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gammaDG (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
+    and s0mem: "s0 \<in> S0"
+    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+                 \<and> t \<in> sound_dg_spec.dg_gamma gammaDG
+                     (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
+proof -
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  have pp_abs: "part_post_solution
+      (dg_gen_of S_abs (compile_prog Pi ps mnm main)
+         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
+         (map_lift (fun_of_exec_dg_st_for gs) s0g))
+      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
+    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb pp_st])
+  have pp_gen: "part_post_solution
+      (sds.dg_gen (compile_prog Pi ps mnm main)
+         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
+         (map_lift (fun_of_exec_dg_st_for gs) s0g))
+      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
+    using pp_abs unfolding sds.dg_gen_of_eq_for .
+  show ?thesis
+    by (rule sds.dg_run_source_sound_abs_for[OF wf pp_gen cover finI finC sound0 s0mem run])
+qed
+
+theorem dg_exec_collect_sound_lifted_for:
+  fixes Pi :: proc_table and mnm :: pname and v :: pp
+    and S_st :: "('d1::bounded_semilattice_sup_bot exec_dg_st lifted,
+                   'g1::bounded_semilattice_sup_bot exec_dg_st lifted) dg_spec"
+    and S_abs :: "('d1 abs_state lifted, 'g1 abs_state lifted) dg_spec"
+    and gammaDG :: "'d1 abs_state lifted \<Rightarrow> 'g1 abs_state lifted \<Rightarrow> store set"
+    and bot0 s0d :: "'d1 exec_dg_st lifted" and s0g :: "'g1 exec_dg_st lifted"
+    and gs :: "vname \<Rightarrow> bool"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+    and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dg_spec_step S_st a d g)
+                      = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_enter S_st xs es d g)
+                      = dgs_enter S_abs xs es (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_combine S_st dst dc de g)
+                      = dgs_combine S_abs dst (map_lift (fun_of_exec_dg_st_for gs) dc)
+                          (map_lift (fun_of_exec_dg_st_for gs) de) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and pp_st: "part_post_solution
+                  (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) vars"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gammaDG (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
+  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v
+           \<subseteq> sound_dg_spec.dg_gamma gammaDG
+               (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
+proof -
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  have pp_abs: "part_post_solution
+      (dg_gen_of S_abs (compile_prog Pi ps mnm main)
+         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
+         (map_lift (fun_of_exec_dg_st_for gs) s0g))
+      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
+    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb pp_st])
+  have pp_gen: "part_post_solution
+      (sds.dg_gen (compile_prog Pi ps mnm main)
+         (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
+         (map_lift (fun_of_exec_dg_st_for gs) s0g))
+      x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
+    using pp_abs unfolding sds.dg_gen_of_eq_for .
+  show ?thesis
+    by (rule sds.dg_post_solution_collect_sound_ltr_for[OF pp_gen cover finI finC sound0])
+qed
+
+subsection \<open>Registration locale for the lifted Base-style diagonal analysis\<close>
+
+text \<open>
+  The canonical executable Base analysis: whole-state \<open>D\<close> lifted for reachability,
+  \<open>G\<close> left an independent, otherwise-unconstrained \<open>bounded_semilattice_sup_bot\<close> type
+  (never forced to equal \<open>D\<close>'s content type or to \<open>unit\<close>) so this locale does not
+  itself claim any particular \<open>G\<close> shape is fundamental -- only that the executable
+  solver route \<open>dg_gen_of\<close> needs a common \<open>exec_dg_st lifted\<close> wrapper for both sides,
+  the same plumbing constraint \<open>unit_dg_exec_analysis\<close> already carries.  A registered
+  domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>is_bot_pred\<close> and their three primitive
+  commute facts; the packaging-correspondence proof itself is \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>'s
+  \<open>base_dg_spec_st_for_lifted_dg_spec_step_commute\<close>/\<open>_dgs_enter_commute\<close>/\<open>_dgs_combine_commute\<close>,
+  cited directly -- unlike \<open>unit_dg_exec_analysis\<close>, no intermediate \<open>unit_dg_H*_for\<close>
+  layer is needed because the Base packaging proof already has exactly this shape.
+\<close>
+
+locale base_dg_exec_analysis =
+  fixes gs :: "vname \<Rightarrow> bool"
+    and tf :: "'a::sound_domain domain_transfer"
+    and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and is_bot_pred :: "'a exec_dg_st \<Rightarrow> bool"
+    and solve :: "(pp \<times> unit, unit,
+                    ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot exec_dg_st lifted) dg_state) eqsT
+                   \<Rightarrow> pp \<times> unit
+                   \<Rightarrow> (pp \<times> unit) set \<times>
+                       (pp \<times> unit + unit \<Rightarrow>
+                         ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state)"
+    and solve_c :: "(pp \<times> unit, unit, ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state) eqsT
+                   \<Rightarrow> pp \<times> unit
+                   \<Rightarrow> ((pp \<times> unit) set \<times>
+                       (pp \<times> unit + unit \<Rightarrow>
+                         ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state)) option"
+  assumes tf_sound:
+      "sound_transfer_for gs tf"
+    and reserved:
+      "reserved_ret_var gs"
+    and tf_commute[simp]:
+      "\<And>a s.
+        fun_of_exec_dg_st_for gs (tf_st a s) =
+        apply_tf tf a (fun_of_exec_dg_st_for gs s)"
+    and enter_commute[simp]:
+      "\<And>xs es s.
+        fun_of_exec_dg_st_for gs (enter_st xs es s) =
+        enter\<^sup># tf xs es (fun_of_exec_dg_st_for gs s)"
+    and is_bot_exact[simp]:
+      "\<And>s. is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+    and solver_pps:
+      "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow>
+        part_post_solution eqs x
+          (snd (solve eqs x)) (fst (solve eqs x))"
+begin
+
+text \<open>
+  \<open>gamma\<close> mirrors \<open>unit_dg_exec_analysis.gamma\<close> exactly, reading the lifted executable
+  post-solution back through \<open>fun_of_dg_st_gen\<close> at the diagonal lifted reader and
+  concretizing via \<open>gamma_dg_base\<close> -- the reachability stays lifted end-to-end from the
+  solver's raw \<open>exec_dg_st lifted\<close> value through to this concretization call; nothing
+  here converts a \<open>Bot\<close> solver value back to a plain \<open>abs_state\<close> bottom first.
+\<close>
+definition gamma ::
+  "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
+  where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_dg_base
+           (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
+
+lemma sds: "sound_dg_spec_ltr_for (base_dg_spec_for_lifted gs is_bot_state tf) gamma_dg_base gs"
+  unfolding sound_dg_spec_ltr_for_def
+  by (rule base_dg_spec_sound[OF tf_sound is_bot_state_gamma_state_empty])
+
+theorem run_source_sound:
+  fixes Pi :: proc_table and ps mnm main and s0 t :: store
+    and bot0 s0d :: "'a exec_dg_st lifted" and s0g :: "'g exec_dg_st lifted"
+  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st)
+                   (compile_prog Pi ps mnm main) bot0 s0d s0g"
+  assumes SOLVE: "solve_c eqs x \<noteq> None"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) (fst (solve eqs x))"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
+    and s0mem: "s0 \<in> S0"
+    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+                 \<and> t \<in> gamma (snd (solve eqs x)) v"
+proof -
+  have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
+    by (rule solver_pps[OF SOLVE])
+  show ?thesis
+    unfolding gamma_def eqs_def
+    by (rule dg_exec_run_source_sound_lifted_for
+          [OF sds base_dg_spec_st_for_lifted_dg_spec_step_commute[OF tf_commute is_bot_exact]
+              base_dg_spec_st_for_lifted_dgs_enter_commute[OF enter_commute is_bot_exact]
+              base_dg_spec_st_for_lifted_dgs_combine_commute[OF is_bot_exact]
+              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
+              finI finC sound0 s0mem run])
+qed
+
+text \<open>
+  The per-node collecting analogue of \<open>run_source_sound\<close>, dropping \<open>s0mem\<close>/\<open>run\<close>:
+  reusable by any consumer that wants collecting soundness at an arbitrary program
+  point for a computed lifted D/G post-solution, without going through a concrete
+  source run.
+\<close>
+
+theorem collect_sound:
+  fixes Pi :: proc_table and ps mnm main and v :: pp
+    and bot0 s0d :: "'a exec_dg_st lifted" and s0g :: "'g exec_dg_st lifted"
+  defines "eqs \<equiv> dg_gen_of (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st)
+                   (compile_prog Pi ps mnm main) bot0 s0d s0g"
+  assumes SOLVE: "solve_c eqs x \<noteq> None"
+    and wf: "wf_compile_input gs Pi ps mnm main"
+    and cover: "vars_cover (compile_prog Pi ps mnm main) (fst (solve eqs x))"
+    and finI: "finite (intra (compile_prog Pi ps mnm main))"
+    and finC: "finite (calls (compile_prog Pi ps mnm main))"
+    and sound0: "S0 \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
+  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
+proof -
+  have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
+    by (rule solver_pps[OF SOLVE])
+  show ?thesis
+    unfolding gamma_def eqs_def
+    by (rule dg_exec_collect_sound_lifted_for
+          [OF sds base_dg_spec_st_for_lifted_dg_spec_step_commute[OF tf_commute is_bot_exact]
+              base_dg_spec_st_for_lifted_dgs_enter_commute[OF enter_commute is_bot_exact]
+              base_dg_spec_st_for_lifted_dgs_combine_commute[OF is_bot_exact]
+              pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
+              finI finC sound0])
+qed
+
+end
+
 
 end
 

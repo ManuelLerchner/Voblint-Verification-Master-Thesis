@@ -12,20 +12,16 @@ text \<open>
     - An abstract domain  D  (instance of abstract_domain)
     - Per-domain transfer functions for each edge action
 
-  We construct an equation system (constraint system) where each
-  program point v has an equation:
-    \<sigma>(v) = join_over { tf(a)(\<sigma>(u)) | (u,a,v) in g }
-
-  plus the special base case at the entry:
-    \<sigma>(entry) includes the initial abstract state.
-
-  The equation system is represented as an RHS function:
-    rhs :: pp => (pp => D abs_state) => D abs_state
-
-  This is the format expected by the top-down solver locale.
+  this theory fixes the per-edge/per-domain transfer interface
+  (\<open>domain_transfer\<close>, \<open>apply_tf\<close>, \<open>glob_env\<close>) and its soundness contracts
+  (\<open>sound_transfer\<close>, \<open>sound_effectful_transfer\<close>) that every concrete
+  equation-system generator is built from. The generators themselves --
+  the side-effecting D/G equation system (\<open>DG_Framework.thy\<close>'s \<open>dg_gen\<close>)
+  solved by the verified top-down solver -- live downstream, in
+  \<open>Solver/Context/DG\<close> and \<open>Solver/TD_Side\<close>.
 
   All transfer functions are parameterised over the domain via a locale
-  so the same equation-system construction works for Sign, Interval, etc.
+  so the same interface works for Sign, Interval, etc.
 \<close>
 
 subsection \<open>Abstract transfer function record\<close>
@@ -57,16 +53,16 @@ text \<open>
   constructor here instead of a new domain-transfer field.
 \<close>
 datatype analysis_event =
-  Check_Event bexp
+  Check_Event exp
 
 record 'a domain_transfer =
-  tf_assign    :: "vname => aexp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
+  tf_assign    :: "vname => exp => ('a abs_state) => ('a abs_state)" ("assign\<^sup>#")
   tf_special   :: "special_call => vname => ('a abs_state) => ('a abs_state)" ("special\<^sup>#")
-  tf_branch    :: "bexp => bool => ('a abs_state) => ('a abs_state)" ("branch\<^sup>#")
+  tf_branch    :: "exp => bool => ('a abs_state) => ('a abs_state)" ("branch\<^sup>#")
   tf_skip      :: "('a abs_state) => ('a abs_state)" ("skip\<^sup>#")
   tf_body      :: "pname => ('a abs_state) => ('a abs_state)" ("body\<^sup>#")
-  tf_return    :: "aexp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
-  tf_enter     :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
+  tf_return    :: "exp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
+  tf_enter     :: "vname list \<Rightarrow> exp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
   tf_combine_env :: "('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
 
@@ -558,7 +554,7 @@ proof (rule le_funI)
 qed
 
 definition enter_D ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (aexp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> aexp list
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a) \<Rightarrow> vname list \<Rightarrow> exp list
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "enter_D gs top_val aval_abs xs es \<sigma> =
      bind_formals_abs xs (map (\<lambda>e. aval_abs e \<sigma>) es) (enter_frame_D gs top_val \<sigma>)"
@@ -698,138 +694,6 @@ proof -
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
-text \<open>
-  Each predecessor kind contributes a set of abstract states.  Keeping the
-  families separate gives downstream proofs precise introduction rules; their
-  union is the single source of truth used by the executable right-hand side.
-\<close>
-
-definition rhs_edge_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_edge_sources g tf env v =
-     (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v"
-
-text \<open>
-  \<^const>\<open>tf_body\<close> applies immediately after \<^const>\<open>tf_enter\<close>, at the actual
-  procedure-entry transition -- not somewhere merely near it: \<open>v\<close> here is always
-  the \<^const>\<open>FunctionEntry\<close> \<^const>\<open>entry_calls\<close> selects it for, so
-  \<^const>\<open>entry_proc\<close> \<open>v\<close> is the callee \<^const>\<open>tf_body\<close> fires for (the
-  \<open>CallEdge\<close>'s own \<open>dst\<close> is the call's assignment target, not the callee). This
-  is the one call site \<^const>\<open>tf_body\<close> is ever applied at.
-\<close>
-definition rhs_entry_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_entry_sources g tf env v =
-     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)))
-       ` entry_calls g v"
-
-definition rhs_combine_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_combine_sources g tf env v =
-     (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex)) ` return_calls g v"
-
-definition rhs_sources ::
-    "cfg \<Rightarrow> 'a domain_transfer \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp \<Rightarrow> 'a abs_state set" where
-  "rhs_sources g tf env v =
-     rhs_edge_sources g tf env v \<union>
-     rhs_entry_sources g tf env v \<union>
-     rhs_combine_sources g tf env v"
-
-lemma rhs_sources_characterization [simp]:
-  "rhs_sources g tf env v =
-     (\<lambda>(u, a). apply_tf tf a (env u)) ` intra_predecessors g v \<union>
-     (\<lambda>(c, ca). case ca of CallEdge dst fs as \<Rightarrow> body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)))
-       ` entry_calls g v \<union>
-     (\<lambda>(c, dst, ex). tf_combine_collect_abs tf dst (env c) (env ex))
-       ` return_calls g v"
-  unfolding rhs_sources_def rhs_edge_sources_def rhs_entry_sources_def
-    rhs_combine_sources_def by simp
-
-lemma rhs_edge_sources_iff:
-  "x \<in> rhs_edge_sources g tf env v \<longleftrightarrow>
-   (\<exists>u a. (u, a, v) \<in> intra g \<and> x = apply_tf tf a (env u))"
-  unfolding rhs_edge_sources_def intra_predecessors_def by auto
-
-lemma rhs_entry_sourcesI:
-  assumes "(c, CallEdge dst fs as, v, k) \<in> calls g"
-  shows "body\<^sup># tf (entry_proc v) (tf_enter tf fs as (env c)) \<in> rhs_entry_sources g tf env v"
-  unfolding rhs_entry_sources_def entry_calls_def
-  using assms by (force simp: image_iff)
-
-lemma rhs_combine_sourcesI:
-  assumes "(c, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
-  shows "tf_combine_collect_abs tf dst (env c) (env (FunctionResult p))
-         \<in> rhs_combine_sources g tf env v"
-  unfolding rhs_combine_sources_def return_calls_def
-  using assms by (force simp: image_iff)
-
-text \<open>
-  \<open>rhs\<close> is the equation system's right-hand side at \<open>v\<close>: the join over
-  \<^const>\<open>rhs_sources\<close>'s abstract predecessor contributions, plus the seed
-  \<open>s0\<close> exactly when \<open>v\<close> is the graph's entry --- the one node with no
-  predecessor edge to supply a starting value otherwise.
-\<close>
-definition rhs ::
-    "cfg
-     \<Rightarrow> 'a domain_transfer
-     \<Rightarrow> ('a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> pp
-     \<Rightarrow> 'a abs_state"
-where
-  "rhs g tf join_abs bot_abs s0 env v =
-     abs_join_set join_abs bot_abs
-       (if v = cfg_entry g then insert s0 (rhs_sources g tf env v)
-        else rhs_sources g tf env v)"
-
-definition is_post_fixpoint ::
-    "cfg
-     \<Rightarrow> ('a::ord domain_transfer)
-     \<Rightarrow> ('a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> 'a abs_state
-     \<Rightarrow> (pp \<Rightarrow> 'a abs_state)
-     \<Rightarrow> bool"
-where
-  "is_post_fixpoint g tf join_abs bot_abs s0 env =
-     (\<forall>v. rhs g tf join_abs bot_abs s0 env v \<le> env v)"
-
-(* The pointwise instance is_post_fixpoint_def unfolds to; downstream
-   proofs cite this instead of re-unfolding the quantified definition. *)
-lemma is_post_fixpointD [dest]:
-  "is_post_fixpoint g tf join_abs bot_abs s0 env
-   \<Longrightarrow> rhs g tf join_abs bot_abs s0 env v \<le> env v"
-  unfolding is_post_fixpoint_def by simp
-
-
-lemma sup_fold_ge_state:
-  assumes "finite (A :: 'd::bounded_semilattice_sup_bot set)"
-    and "x \<in> A"
-  shows "x \<le> Finite_Set.fold (\<squnion>) bot A"
-  using assms
-  by (metis Sup_fin.coboundedI Sup_fin.eq_fold finite_insert insertCI)
-
-lemma fold_bot_le_superset:
-  fixes X Y :: "'d::bounded_semilattice_sup_bot set"
-  assumes finY: "finite Y"
-  assumes sub: "X \<subseteq> Y"
-  shows "Finite_Set.fold (\<squnion>) bot X \<le> Finite_Set.fold (\<squnion>) bot Y"
-  by (metis (no_types, lifting) Sup_fin.eq_fold Sup_fin.insert Sup_fin.subset finY finite_subset
-      fold_empty sub sup.absorb_iff2 sup.commute sup_bot_left)
-
-lemma abs_join_set_le_superset:
-  fixes X Y :: "'d::bounded_semilattice_sup_bot set"
-  assumes finY: "finite Y"
-  assumes sub: "X \<subseteq> Y"
-  shows "abs_join_set (\<squnion>) bot X \<le> abs_join_set (\<squnion>) bot Y"
-  unfolding abs_join_set_def
-  by (simp add: finY fold_bot_le_superset sub)
-
 lemma abs_join_set_le:
   fixes X :: "'d::bounded_semilattice_sup_bot"
   assumes fin: "finite S" and le: "\<And>s. s \<in> S \<Longrightarrow> s \<le> X"
@@ -874,23 +738,23 @@ locale sound_transfer_for =
   fixes gs :: "vname => bool"
     and tf :: "'a::sound_domain domain_transfer"
   assumes tf_sound_assign_for[intro]:
-    "\<forall>x (a::aexp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+    "\<forall>x (a::exp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_special_for[intro]:
     "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
   assumes tf_sound_branch_for[intro]:
-    "\<forall>(b::bexp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol
+    "\<forall>(b::exp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol
        \<longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   assumes tf_sound_skip_for[intro]:
     "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
   assumes tf_sound_body_for[intro]:
     "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
   assumes tf_sound_return_for[intro]:
-    "\<forall>(e::aexp option) p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+    "\<forall>(e::exp option) p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
          \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
   assumes tf_sound_enter_for[intro]:
-    "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+    "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
        bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_event_for[intro]:
@@ -911,7 +775,7 @@ lemma tf_sound_special_forD[intro]:
   using tf_sound_special_for by blast
 
 lemma tf_sound_branch_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   using tf_sound_branch_for by blast
 
 lemma tf_sound_skip_forD[intro]:
@@ -955,7 +819,7 @@ lemma sound_transferI_for:
     "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow>
        s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     and branch[intro]:
-    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> bval b s = pol \<Longrightarrow>
+    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow>
        s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     and skip[intro]:
     "\<And>\<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
@@ -981,7 +845,7 @@ proof unfold_locales
   show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow>
       s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     using special by blast
-  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. bval b s = pol \<longrightarrow>
+  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol \<longrightarrow>
       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     using branch by blast
   show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
@@ -992,7 +856,7 @@ proof unfold_locales
       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
         \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
     using return by blast
-  show "\<forall>xs (es::aexp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+  show "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
@@ -1036,12 +900,12 @@ type_synonym ('g, 'd) combine_tf_tree =
 
 record ('g, 'd) effectful_domain_transfer =
   etf_skip       :: "('g, 'd) edge_tf_tree"
-  etf_assign     :: "vname \<Rightarrow> aexp \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_branch     :: "bexp \<Rightarrow> bool \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_body       :: "pname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_return     :: "aexp option \<Rightarrow> pname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_enter      :: "vname list \<Rightarrow> aexp list \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('g, 'd) edge_tf_tree"
+  etf_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_event      :: "analysis_event \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_combine_env     :: "('g, 'd) combine_tf_tree"
   etf_combine_collect :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
@@ -1067,13 +931,13 @@ where
 fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" where
   "local_edge_action gs EA_Nop = True"
 | "local_edge_action gs (EA_Assign x e) =
-    ((~ gs x) & (~ aexp_mentions_where gs e))"
+    ((~ gs x) & (~ exp_mentions_where gs e))"
 | "local_edge_action gs (EA_Special sc x) = ((~ gs x) & (~ special_mentions_global gs sc))"
-| "local_edge_action gs (EA_Assume b) = (~ bexp_mentions_where gs b)"
-| "local_edge_action gs (EA_AssumeNot b) = (~ bexp_mentions_where gs b)"
+| "local_edge_action gs (EA_Assume b) = (~ exp_mentions_where gs b)"
+| "local_edge_action gs (EA_AssumeNot b) = (~ exp_mentions_where gs b)"
 | "local_edge_action gs (EA_Ret e p) =
     (case e of None \<Rightarrow> True
-     | Some a \<Rightarrow> ((~ gs ret_var) & (~ aexp_mentions_where gs a)))"
+     | Some a \<Rightarrow> ((~ gs ret_var) & (~ exp_mentions_where gs a)))"
 | "local_edge_action gs (EA_Check c) = True"
 
 text \<open>
@@ -1081,6 +945,24 @@ text \<open>
   combine are separate).  A global assignment such as
   @{term \<open>EA_Assign (STR ''Gx'') e\<close>} is not local even when @{term e} mentions only
   locals.
+\<close>
+
+fun is_branch_action :: "edge_action \<Rightarrow> bool" where
+  "is_branch_action (EA_Assume _) = True"
+| "is_branch_action (EA_AssumeNot _) = True"
+| "is_branch_action _ = False"
+
+text \<open>
+  A local, but potentially-dead, branch guard is not a \<open>local_edge_invariant\<close>
+  instance: a domain's plain \<^const>\<open>tf_branch\<close> field may still collapse to
+  whole-state \<open>bot\<close> on a definite contradiction (M1's \<open>branch\<close> is only a
+  compatibility projection of \<open>branch_lifted\<close>, not itself frame-preserving), so
+  the ordinary local/global frame property genuinely fails for it even when the
+  guard mentions no global. \<^const>\<open>is_branch_action\<close> lets the generic effectful
+  soundness obligation (\<open>sound_effectful_transfer_mixed_of_transfer\<close>) exclude
+  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> from its plain-invariant premise, since those two
+  actions are covered separately by the lifted local-edge invariant on the
+  domain's own \<open>branch_lifted\<close> instead.
 \<close>
 
 subsection \<open>Reassembled full result and effectful soundness\<close>
@@ -1506,20 +1388,20 @@ locale sound_effectful_transfer =
          special_result sc s v \<longrightarrow>
          s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf sc x u) \<sigma>))"
   assumes etf_sound_branch[intro]:
-    "\<forall>(b::bexp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). bval b s = pol
+    "\<forall>(b::exp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). truthy (aval b s) = pol
        \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>))"
   assumes etf_sound_body[intro]:
     "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          s \<in> gamma_state_lift (etf_collecting_full_lift (etf_body etf p u) \<sigma>))"
   assumes etf_sound_return[intro]:
-    "\<forall>(e::aexp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    "\<forall>(e::exp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
            \<in> gamma_state_lift (etf_collecting_full_lift (etf_return etf e p u) \<sigma>))"
   assumes etf_sound_enter[intro]:
-    "\<forall>xs (es::aexp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    "\<forall>xs (es::exp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
            \<in> gamma_state_lift (etf_collecting_full_lift (etf_enter etf xs es u) \<sigma>))"
@@ -1592,7 +1474,7 @@ qed
 locale sound_effectful_transfer_framed = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
   assumes etf_enter_framed_le[intro]:
-    "\<forall>xs (es::aexp list) u \<sigma>.
+    "\<forall>xs (es::exp list) u \<sigma>.
        local_formals gs xs \<longrightarrow>
        inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_slot_globals_bot gs \<sigma> \<longrightarrow>
        etf_full (etf_enter etf xs es u) \<sigma> \<le> assemble_local_global (Lifted fresh_frame) (glob_env \<sigma>)"
@@ -1608,7 +1490,7 @@ text \<open>
 locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
   fixes fresh_frame :: "'a::sound_domain abs_state"
   assumes etf_enter_framed_glob_le[intro]:
-    "\<forall>xs (es::aexp list) u \<sigma>.
+    "\<forall>xs (es::exp list) u \<sigma>.
        local_formals gs xs \<longrightarrow>
        inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_glob_le_glob_env gs \<sigma> \<longrightarrow>
        etf_full (etf_enter etf xs es u) \<sigma> \<le> assemble_local_global (Lifted fresh_frame) (glob_env \<sigma>)"

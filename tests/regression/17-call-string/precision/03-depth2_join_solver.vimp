@@ -1,0 +1,15 @@
+// PARAM: --analysis interval --context call-string --context-depth 2 --solver join
+// Same program as 02-depth2_separates_shared_callee.vimp, explicit --solver
+// join instead of call-string's implicit Warrow default -- valid now that
+// the routed call-string equation system is solved under all three
+// disciplines exactly like the flat one (the CS7 solver-axis
+// generalization). This routing depth crosses no unbounded loop, so join
+// needs no widening to terminate and reproduces Warrow's exact k=2 result.
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20) // PROVED
+}

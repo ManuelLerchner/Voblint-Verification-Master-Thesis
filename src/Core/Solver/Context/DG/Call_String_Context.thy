@@ -6,10 +6,10 @@ section \<open>A reusable bounded call-string context\<close>
 
 text \<open>
   The call-string route/enter-context pair: this theory owns only the call-string
-  \<^emph>\<open>data\<close> and the one closed-term equality that makes \<open>routed_context\<close>'s
+  \<^emph>\<open>data\<close> and the one closed-term equality that makes \<open>routed_context_hetero\<close>'s
   \<open>route_enterc_agree\<close> obligation trivial for any bound \<open>k\<close> --- it deliberately does not
   import \<open>Routed_Context.thy\<close> or \<open>DG_Ctx_Activation.thy\<close>, and fixes no domain, no solver, and
-  no CFG. \<open>cs_route\<close>/\<open>cs_context\<close> (defined below) plug into \<open>routed_context\<close>'s
+  no CFG. \<open>cs_route\<close>/\<open>cs_context\<close> (defined below) plug into \<open>routed_context_hetero\<close>'s
   \<open>route\<close>/\<open>enterc\<close> parameters at whatever concrete instantiation a caller chooses; nothing
   here decides what that instantiation is.
 \<close>
@@ -30,7 +30,7 @@ text \<open>The equation-level route: push the call site, keep only the most rec
 definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> call_string" where
   "cs_route k u ctx d ca = take k (u # ctx)"
 
-text \<open>The trace-semantic context function \<open>routed_context\<close>'s \<open>enterc\<close> parameter needs
+text \<open>The trace-semantic context function \<open>routed_context_hetero\<close>'s \<open>enterc\<close> parameter needs
   (\<open>CFG_Local_Trace.thy\<close>'s \<open>key\<close>): same closed term as \<^const>\<open>cs_route\<close>, over the concrete
   \<^typ>\<open>store\<close> \<open>key\<close> supplies instead of an abstract/executable \<open>'d\<close>.\<close>
 
@@ -93,5 +93,23 @@ lemma cs_context_k_mono:
   assumes "k1 \<le> k2"
   shows "take k1 (cs_context k2 u ctx s) = cs_context k1 u ctx s"
   using assms by (simp add: cs_context_def)
+
+subsection \<open>The call-string-keyed global-key type\<close>
+
+text \<open>The global-key space a call-string-routed equation system publishes into: one
+  \<open>Global\<close> slot for the real globals, plus one \<open>Seed\<close> slot per (procedure entry,
+  call-string) pair for the routed callee entry states. The \<open>Seed\<close> payload carries the
+  call string itself, so the key shape does not depend on the bound \<open>k\<close> --- only the
+  payload's length does. Still pure data: no domain, no solver, no CFG.\<close>
+
+datatype call_string_gk = Global | Seed (seed_pp: pp) (seed_cs: "cfg_node list")
+
+text \<open>Truncating a call-string context inside a seed key: the counterpart of
+  \<open>cs_route_k_mono\<close>/\<open>cs_context_k_mono\<close> at the global-key level, which is what lets a
+  \<open>k1 \<le> k2\<close> solver-projection theorem be stated generically over the key type shared by
+  every call-string-keyed instance.\<close>
+
+definition cs_project_gk :: "nat \<Rightarrow> call_string_gk \<Rightarrow> call_string_gk" where
+  "cs_project_gk k x = (case x of Global \<Rightarrow> Global | Seed p cs \<Rightarrow> Seed p (take k cs))"
 
 end

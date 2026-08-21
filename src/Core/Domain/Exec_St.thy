@@ -17,6 +17,87 @@ text \<open>
 
 instance lifted :: (bounded_warrowing) bounded_warrowing ..
 
+text \<open>
+  \<open>\<nabla>\<Delta>\<close> preserves \<^const>\<open>normalized_lift\<close> from just its \<^emph>\<open>right\<close> operand being
+  normalized, matching \<open>warrowing_properties\<close>'s own asymmetry: \<open>b \<le> a \<nabla>\<Delta> b\<close> holds
+  unconditionally, on whichever branch (\<open>\<nabla>\<close> or \<open>\<Delta>\<close>) the \<open>b \<le> a\<close> test picks, so only
+  \<open>y\<close> -- the operand playing \<open>warrowing_properties\<close>'s \<open>b\<close> -- needs to already be
+  non-bottom. Stated here, not alongside \<^const>\<open>normalized_lift\<close>'s other closure lemmas
+  in \<^theory>\<open>Voblint_Core.Abstract_Domain\<close>, because \<open>\<nabla>\<Delta>\<close> on \<^typ>\<open>'a lifted\<close> only exists
+  once this file's \<open>bounded_warrowing\<close> instance above is in scope.
+\<close>
+
+lemma normalized_lift_warrow:
+  fixes x y :: "'a::bounded_warrowing lifted"
+  assumes mono: "\<And>a b::'a. a \<le> b \<Longrightarrow> is_bot_pred b \<Longrightarrow> is_bot_pred a"
+    and ny: "normalized_lift is_bot_pred y"
+  shows "normalized_lift is_bot_pred (x \<nabla>\<Delta> y)"
+proof (cases x)
+  case Bot
+  show ?thesis
+  proof (cases y)
+    case Bot
+    with \<open>x = Bot\<close> show ?thesis by (simp add: warrow_def)
+  next
+    case (Lifted b)
+    with \<open>x = Bot\<close> ny show ?thesis by (simp add: warrow_def)
+  qed
+next
+  case (Lifted a)
+  show ?thesis
+  proof (cases y)
+    case Bot
+    with \<open>x = Lifted a\<close> show ?thesis by (simp add: warrow_def)
+  next
+    case (Lifted b)
+    with ny have not_bot_b: "\<not> is_bot_pred b" by simp
+    show ?thesis
+    proof (cases "y \<le> x")
+      case True
+      then have "b \<le> a" using \<open>x = Lifted a\<close> \<open>y = Lifted b\<close> by simp
+      then have "b \<le> a \<Delta> b" by (rule narrow_ge)
+      with mono not_bot_b have "\<not> is_bot_pred (a \<Delta> b)" by blast
+      with True \<open>x = Lifted a\<close> \<open>y = Lifted b\<close> show ?thesis by (simp add: warrow_def)
+    next
+      case False
+      have "b \<le> a \<nabla> b" by (rule widen_ge2)
+      with mono not_bot_b have "\<not> is_bot_pred (a \<nabla> b)" by blast
+      with False \<open>x = Lifted a\<close> \<open>y = Lifted b\<close> show ?thesis by (simp add: warrow_def)
+    qed
+  qed
+qed
+
+text \<open>
+  \<open>sup_over_origins\<close> (vendored, \<^theory>\<open>TD.Update_rules\<close>) is PerOrigin's own read of a
+  global: the join, across every write origin, of that origin's own contribution. Its
+  closure under \<^const>\<open>normalized_lift\<close> needs no new induction over
+  \<^const>\<open>Finite_Set.fold\<close>/\<open>Sup_fin\<close>: \<open>sup_over_origins_upper\<close> already gives every
+  contributing origin's own value as a lower bound on the joined read, the same shape
+  \<open>sup_ge1\<close>/\<open>sup_ge2\<close> gave \<open>normalized_lift_sup\<close> above, so one live origin keeps the
+  joined read live by the identical \<open>mono\<close> argument -- a corollary, not a fresh proof.
+\<close>
+
+lemma normalized_lift_sup_over_origins:
+  fixes a :: "'a::bounded_warrowing"
+  assumes mono: "\<And>p q::'a. p \<le> q \<Longrightarrow> is_bot_pred q \<Longrightarrow> is_bot_pred p"
+    and contrib: "rho_lookup (\<rho> state) g orig = Lifted a"
+    and not_bot_a: "\<not> is_bot_pred a"
+  shows "normalized_lift is_bot_pred (sup_over_origins state g)"
+proof -
+  have le: "Lifted a \<le> sup_over_origins state g"
+    using contrib by (rule sup_over_origins_upper)
+  show ?thesis
+  proof (cases "sup_over_origins state g")
+    case Bot
+    then show ?thesis by simp
+  next
+    case (Lifted c)
+    from le Lifted have "a \<le> c" by simp
+    with mono not_bot_a have "\<not> is_bot_pred c" by blast
+    with Lifted show ?thesis by simp
+  qed
+qed
+
 section \<open>Classifier-independent executable abstract state\<close>
 
 text \<open>
@@ -687,8 +768,8 @@ lemma bind_formals_resolved_q_singleton:
   by transfer (simp add: bind_formals_resolved_def eq_resolved_st_def)
 
 definition enter_resolved_for ::
-  "(vname => bool) => 'a => (aexp => 'a abs_state => 'a)
-   => vname list => aexp list => ('a::bot) resolved_st => 'a resolved_st"
+  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
+   => vname list => exp list => ('a::bot) resolved_st => 'a resolved_st"
 where
   "enter_resolved_for gs top_val aval_abs xs es s =
      bind_formals_resolved gs xs
@@ -1147,8 +1228,8 @@ proof -
 qed
 
 lift_definition enter_resolved_for_q ::
-  "(vname => bool) => 'a => (aexp => 'a abs_state => 'a)
-   => vname list => aexp list => ('a::bot) resolved_st_q
+  "(vname => bool) => 'a => (exp => 'a abs_state => 'a)
+   => vname list => exp list => ('a::bot) resolved_st_q
    => 'a resolved_st_q"
   is enter_resolved_for
   by (rule eq_resolved_st_enter_resolved_for)
@@ -1603,6 +1684,24 @@ proof -
     using step1 step2 step3 fun_of_resolved_st_q_for_rep[of gs s] by simp
 qed
 
+text \<open>
+  \<open>resolved_st_q_is_bot_for\<close>'s lifted counterpart: a solver-level \<open>Bot\<close> local
+  unknown is \<open>True\<close> outright, without inspecting any \<open>resolved_st_q\<close> payload at
+  all, matching \<^const>\<open>is_bot_state_lift\<close>'s own \<open>Bot\<close> case. This is the
+  executable predicate the report layer needs at the point where it currently
+  case-splits \<open>Bot\<close>/\<open>Lifted\<close> and discards which branch fired.
+\<close>
+
+fun resolved_st_q_lifted_is_bot_for ::
+  "vname list \<Rightarrow> ('a::computable_domain) resolved_st_q lifted \<Rightarrow> bool" where
+  "resolved_st_q_lifted_is_bot_for globals Bot = True"
+| "resolved_st_q_lifted_is_bot_for globals (Lifted s) = resolved_st_q_is_bot_for globals s"
+
+lemma resolved_st_q_lifted_is_bot_for_iff:
+  assumes globals: "\<And>x. gs x = (x \<in> set globals)"
+  shows "resolved_st_q_lifted_is_bot_for globals s
+       \<longleftrightarrow> is_bot_state_lift (map_lift (fun_of_resolved_st_q_for gs) s)"
+  by (cases s) (simp_all add: resolved_st_q_is_bot_for_iff[OF globals])
 
 
 

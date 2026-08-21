@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --context entry-state --solver join
+// Same program as 04-two_call_sites_entry_state.vimp, explicit --solver
+// join instead of entry-state's implicit Warrow default. The routed
+// entry-state equation system names no solve function of its own -- only
+// the shared D/G spec and the routing policy -- so it is exactly as
+// solver-independent as the flat Ctx_None equation system already is, and
+// this program crosses no loop under either context, so join needs no
+// widening to terminate and reproduces the exact per-context result.
+void square(n) {
+  return n * n
+}
+void main() {
+  a := square(3);
+  b := square(4);
+  __voblint_check(a == 9); // PROVED
+  __voblint_check(b == 16) // PROVED
+}

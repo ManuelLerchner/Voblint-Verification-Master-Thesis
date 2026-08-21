@@ -1,5 +1,5 @@
 theory Call_String_Solver_Refinement_Seeded
-  imports Example_Interval_DG_CallString_K2 Call_String_Solver_Projection
+  imports Example_Interval_DG_CallString_K2 "Voblint_Core.Call_String_Solver_Projection"
 begin
 
 section \<open>Probing the fine solution's variable set\<close>
@@ -25,12 +25,13 @@ lemma nest_2_vars_lst_set: "set nest_2_vars_lst = fst nest_2_sol"
 
 section \<open>The seeded k=1 equation system and its solution\<close>
 
-text \<open>A thin instantiation of \<^theory>\<open>Voblint_Examples.Call_String_Solver_Projection\<close>'s
+text \<open>A thin instantiation of \<^theory>\<open>Voblint_Core.Call_String_Solver_Projection\<close>'s
   fully generic construction at \<open>k1 = 1\<close>, this program's own \<open>nest_1_eqs\<close>, and the fine
   solution/variable list defined above. Nothing CallString-specific is proved here: the
   projection, the seeding, and the closure argument are all inherited.\<close>
 definition nest_1_seeded_eqs ::
-  "(pp \<times> cfg_node list, call_string_gk, (ivl exec_dg_st, ivl exec_dg_st) dg_state) eqsT" where
+  "(pp \<times> cfg_node list, call_string_gk,
+     (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_seeded_eqs =
      project_seeded_eqs 1 nest_2_vars_lst (snd nest_2_sol) nest_1_eqs (cfg_exit nest_cfg, [])"
 
@@ -39,12 +40,15 @@ lemma nest_1_seeded_terminates:
   by eval
 
 definition nest_1_seeded_sol ::
-  "(pp \<times> cfg_node list) set \<times> (pp \<times> cfg_node list + call_string_gk \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
+  "(pp \<times> cfg_node list) set
+     \<times> (pp \<times> cfg_node list + call_string_gk
+          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "nest_1_seeded_sol = TD_side_warrowing_apinis_Interp_solve nest_1_seeded_eqs
                           (cfg_exit nest_cfg, [])"
 
 lemma nest_1_seeded_solve_dom:
-  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
+     TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
      nest_1_seeded_eqs (cfg_exit nest_cfg, [])"
   using nest_1_seeded_terminates
   unfolding TD_side_warrowing_apinis_Interp.term_equivalence
@@ -61,7 +65,7 @@ lemma nest_1_seeded_pp_st:
 section \<open>The refinement theorem\<close>
 
 text \<open>The replacement for \<open>project_sigma_part_post_solution\<close>: a short corollary of
-  \<^theory>\<open>Voblint_Examples.Call_String_Solver_Projection\<close>'s fully generic
+  \<^theory>\<open>Voblint_Core.Call_String_Solver_Projection\<close>'s fully generic
   \<open>call_string_projection_refinement\<close>, instantiated at this program's own data. No
   per-node case analysis (\<open>statement3_val\<close>, \<open>result_f_val\<close>, \<open>statement6_val\<close>,
   \<open>statement7_val\<close>, \<open>result_main_val\<close>, or the ensuing \<open>project_sigma_eq/sides/dep\<close>

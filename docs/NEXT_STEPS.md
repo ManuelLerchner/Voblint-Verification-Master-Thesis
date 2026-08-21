@@ -142,13 +142,16 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    solver output covers is `Finite_Set.fold1`/`Sup_fin` over that lattice,
    proved associative/commutative/idempotent by the typeclass laws, not a
    hand-rolled "all Proved -> PROVED, all Refuted -> REFUTED" reduction.
-   `entry_state_classify_at`/`entry_state_check_report`
-   (`Interval_Exec_Ctx_Sound.thy`) enumerate covered contexts via
-   `Set.filter` over the solver's own already-finite solution set, never a
-   raw comprehension (`ivl list` has no `enum` instance -- its only order
-   is the non-total abstract-domain lattice). A node with no covered
-   context falls back to the flat report's own dead-code `bot`
-   classification, not a fabricated new case.
+   `classify_checks_ctx`/`classify_checks_verdicts` (`Abstract_Checks.thy`)
+   read a solved `analysis_result` rather than a solver state, and enumerate
+   covered contexts via `contexts_at` over the solver's own already-finite
+   key set, never a raw comprehension (`ivl list` has no `enum` instance --
+   its only order is the non-total abstract-domain lattice). Deadness is a
+   fourth verdict, `contextual_verdict`'s `Dead`, not a `check_result`
+   value: a context whose stored state concretizes to nothing is excluded
+   from the join, and a check whose every covered context is dead reports
+   `Dead` and is suppressed at the CLI, instead of classifying vacuously
+   against `bot` and reporting a fabricated `Check_Proved`.
 5. **G5 -- CLI exposure + precision witness. Done, batch-green
    (2026-08-11).** `--analysis interval --context entry-state` (default
    `--context none`, byte-identical to prior behavior --
@@ -195,6 +198,70 @@ Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
 #66's M4 / `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
 stays invariant across whatever this lands as.
 
+6. **G6 -- #77 scoping audit and call-string finiteness. Done, batch-green
+   (2026-08-21).** #77 ("Context-bounding lifters: Context Gas / Loopfree
+   Callstring / Context Widening") asks to make context-space bounding "a
+   first-class, terminating mechanism instead of relying on the ambient
+   finiteness assumption," but the issue itself flags that it isn't yet
+   actionable ("missing grounding," "recommend scoping this the way #66 is
+   scoped... before starting"). This entry is that scoping pass, done
+   directly against current source rather than the issue's own now-stale
+   premise (`'c::finite` is not a sort constraint anywhere in
+   `routed_context`/`dg_ctx_activation`/the TD solver interface -- see G1's
+   finiteness-dependency note above, still true).
+
+   The routed-domain migration (`docs/PROOF_PHASES.md`) put both context
+   instances behind one architecture, so auditing them together settles
+   which one #77 is actually about:
+
+   - **Call-string contexts are already fully bounded, and now provably
+     so.** `cs_route k` truncates every context to length `<= k`
+     (`cs_route_length`, pre-existing); a compiled program's CFG has
+     finitely many nodes (`cfg_nodes_finite`, new, `CFG_Def.thy`); combined
+     with the standard library's own `finite_lists_length_le`, the entire
+     call-string-keyed context space any `k`-bounded call-string routing
+     over a compiled program could ever produce is finite --
+     `compiled_call_strings_finite`/`compiled_call_string_vars_finite`/
+     `compiled_call_string_gk_finite` (new, `Call_String_Context_Finite
+     .thy`, Core). This is a genuine strengthening over the `solve_dom`
+     contract every routed instance otherwise relies on (a per-run,
+     empirical termination check): finiteness holds for the whole context
+     space before any solve is attempted, for every domain that
+     instantiates `call_string_routed_context` alike, not just the one a
+     particular run happens to explore. Empirical companion:
+     `tests/regression/17-call-string/known-imprecision
+     /01-deep_recursion_bounded_context.vimp` runs a self-recursive
+     procedure 50 levels deep under `--context-depth 1` and completes
+     immediately -- one context per recursion level never materializes,
+     confirming the finiteness bound is not merely a paper fact.
+   - **Entry-state contexts are the genuinely open half, and #77's "gas /
+     widening" language is about them, not call-strings.** An entry-state
+     context is a domain value (`ivl list`, `sign list`, ...), not a
+     bounded-length list over a finite alphabet; for an infinite-height
+     domain such as `ivl` the context space is genuinely unbounded, and
+     today's contract is the same empirical `solve_dom` guarantee the flat
+     (`Ctx_None`) analysis already ships with (G1's finiteness-dependency
+     note above). That is a deliberate, already-accepted design choice, not
+     a bug -- but it is exactly what #77 would need to change to be
+     "first-class" there.
+
+   **What's still missing before entry-state bounding is actionable:** a
+   concrete policy decision with real, user-visible precision consequences
+   that nothing in the codebase or #77 specifies -- e.g., a gas budget that
+   widens overflow entries into one shared per-callee context, versus a
+   loop-detecting variant, versus something else, and in either case what
+   the routed seed-key type and the `admiss`/`ctx_key` instance
+   (`docs/NEXT_STEPS.md` G2, `LTR_Abstract.thy`) look like for a
+   non-deterministic bounding relation. G2's `admiss` generalization
+   already covers this abstractly (any sound relation works, not just
+   `admiss_exact`), so no new Core soundness machinery is anticipated to be
+   needed -- only the concrete policy choice and its own instance. Do not
+   start implementation here without first picking one policy and writing
+   it up the way M1-M4/G1-G5 above are written up; reading Erhard,
+   Schinabeck, Schwarz, Seidl, "Context gas and friends: taming
+   context-sensitivity on the fly" first (the issue's own cited source) is
+   worthwhile before choosing.
+
 ## D/G communication
 
 Improve analysis-defined shared-state reads and publications where a concrete
@@ -231,6 +298,15 @@ instance against the unmodified framework; see
 `docs/RELATIONAL_DOMAIN_ARCHITECTURE_DECISION.md` (Option 4) for the settled
 architecture. New heterogeneous or relational analyses are added directly
 against `sound_dg_spec`, not through a shared product/reduction layer.
+
+## Cross-analysis query composition
+
+Not yet modeled: Goblint's MCP-style `EvalInt` query channel, where every
+activated analysis can answer an expression query and a requester meets the
+answers, recursively into subexpressions and callee-side `combine`. Voblint's
+composite `int_dom` only reduces internally among its own scalar components.
+Design investigation tracked in #70; alignment inventory and staging (Phase 3)
+in #141.
 
 ## Numeric precision
 

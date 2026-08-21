@@ -1,14 +1,20 @@
 // PARAM: --analysis interval
 // Two call sites to the same procedure share ONE activation context
 // (--graph-snapshot shows both "enter square(...)" edges landing on the
-// same cluster_ctx_1): square's summary is the join over every call site,
-// not resolved per call site. So each combine reads back join([9,9],
-// [16,16]) = [9,16], not its own call's exact argument -- a is really 9 and
-// b is really 16, but both checks see the same widened [9,16] range. This
-// is call-site (in)sensitivity, the same flow-insensitive-summary
-// discipline the D/G global path uses (see 04-globals/known-imprecision/
-// 01-global_var.vimp), applied here to procedure activations instead of
-// globals.
+// same cluster_ctx_1): square's entry is one CFG node, revisited once per
+// call site, not resolved per call site. This is call-site (in)sensitivity
+// -- a context-sensitivity gap distinct from (and not fixed by) the
+// Base-style D/G migration that resolved 04-globals/precision/
+// 02-global_var.vimp's flow-insensitive global summary: even with the
+// whole abstract state lifted into the local unknown, the entry node
+// itself is still keyed on the unit context, so the D/G solver evaluates
+// it once against both incoming edges. Under the warrowing update rule
+// this repeated evaluation widens the entered parameter's bound on the
+// second visit, so neither call's own exact argument (9 or 16) survives
+// -- both checks come back UNKNOWN, not a narrower sound join. A
+// call-string- or entry-state-context-sensitive analysis (see
+// Interval_Exec_Ctx_Sound, out of scope here) would key the entry per
+// call site instead.
 void square(n) {
   return n * n
 }

@@ -237,7 +237,7 @@ where
            (dg_spec_combine_tree S dst cc ex)))"
 
 definition dg_enter ::
-  "unit \<Rightarrow> vname list \<Rightarrow> aexp list \<Rightarrow> pp
+  "unit \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
   "dg_enter ctx fs as cl =
