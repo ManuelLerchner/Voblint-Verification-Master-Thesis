@@ -1,6 +1,7 @@
 theory Parity_Exec_Ctx_Sound
   imports
     "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Analysis.Routed_Unit_Domain"
     "Voblint_Analysis.Parity_Base_DG"
     "Voblint_Analysis.Parity_Exec_Sound"
     "Voblint_Core.Routed_Context"
@@ -123,6 +124,24 @@ interpretation parity_domain: routed_dg_domain_exec
 lemmas parity_Hstep_lifted_for = parity_domain.Hstep_lifted_for
 lemmas parity_Henter_lifted_for = parity_domain.Henter_lifted_for
 lemmas parity_Hcomb_lifted_for = parity_domain.Hcomb_lifted_for
+
+text \<open>
+  The routing layer on top of those three facts. \<^locale>\<open>routed_unit_domain_exec\<close> adds
+  only the seed-key pair and its distinctness, so the interpretation carries no Parity
+  mathematics: the first three obligations are the ones \<open>parity_domain\<close> already
+  discharged, and the fourth is datatype distinctness for \<^type>\<open>gk\<close>.
+\<close>
+
+interpretation parity_unit: routed_unit_domain_exec
+  gs is_bot_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  Global Seed
+  by unfold_locales
+     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp)
+
+lemmas parity_route_unit_commute_gen = parity_unit.route_unit_commute
+lemmas parity_dg_tree_st_commute_routed_cmb_g = parity_unit.dg_tree_st_commute_routed_cmb_g
+lemmas parity_hextra_commute_routed = parity_unit.hextra_commute_routed
+lemmas parity_pp_abs_gen = parity_unit.pp_abs
 
 end
 

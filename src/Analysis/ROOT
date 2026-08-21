@@ -73,6 +73,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Int_Checks
     Int_Exec_Ctx_Sound
     Exec_DG_Bridge
+    Routed_Unit_Domain
     Monovariant_Analysis_Result
     Analysis_GraphViz
     Rel_Order_Domain
