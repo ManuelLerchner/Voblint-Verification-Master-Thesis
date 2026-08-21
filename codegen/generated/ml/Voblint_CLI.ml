@@ -132,8 +132,10 @@ module Core : sig
   type 'a int_dom_record_warrowing
   val int_dom_record_warrowing_unit : unit int_dom_record_warrowing
   type sign = SBot | SNeg | SNonPos | SZero | SNonNeg | SPos | STop
+  val equal_signa : sign -> sign -> bool
   val equal_sign : sign equal
   val bot_sign : sign bot
+  val top_signa : sign
   type 'a bounded_warrowing =
     {bounded_semilattice_sup_bot_bounded_warrowing :
        'a bounded_semilattice_sup_bot;
@@ -157,6 +159,7 @@ module Core : sig
   val equal_ivl : ivl equal
   val bot_ivl : ivl bot
   val ivl_top : ivl
+  val top_ivla : ivl
   val semilattice_sup_ivl : ivl semilattice_sup
   val bounded_semilattice_sup_bot_ivl : ivl bounded_semilattice_sup_bot
   val bounded_warrowing_ivl : ivl bounded_warrowing
@@ -190,12 +193,14 @@ module Core : sig
   val rep_congruence : congruence -> (int * int) option
   type parity = PBot | PEven | POdd | PTop
   type 'a int_dom_ext
+  val equal_int_dom_exta : 'a equal -> 'a int_dom_ext -> 'a int_dom_ext -> bool
   val equal_int_dom_ext : 'a equal -> 'a int_dom_ext equal
   val int_congruence : 'a int_dom_ext -> congruence
   val int_parity : 'a int_dom_ext -> parity
   val int_sign : 'a int_dom_ext -> sign
   val int_ivl : 'a int_dom_ext -> ivl
   val bot_int_dom_ext : 'a int_dom_record_lattice -> 'a int_dom_ext bot
+  val top_int_dom_exta : 'a int_dom_record_lattice -> 'a int_dom_ext
   val bounded_semilattice_sup_bot_int_dom_ext :
     'a int_dom_record_lattice -> 'a int_dom_ext bounded_semilattice_sup_bot
   val bounded_warrowing_int_dom_ext :
@@ -10284,12 +10289,20 @@ module Analysis_GraphViz : sig
   val compiled_owner_of :
     (string -> unit Core.proc_decl_ext option) ->
       string list -> string -> Core.com -> Core.cfg_node -> string
+  val cs_show_context : Core.cfg_node list -> Core.char list
+  val cs_context_key : Core.cfg_node list -> string
+  val cs_graph_route :
+    Core.nat ->
+      Core.cfg_node ->
+        Core.cfg_node list ->
+          Core.call_action -> 'a -> (Core.cfg_node list) option
   val raw_cfg_dot_lit :
     (string -> unit Core.proc_decl_ext option) ->
       string list ->
         string ->
           Core.com ->
             (Core.cfg_node -> graphviz_node_annotation option) -> string
+  val cs_cluster_label : Core.char list -> Core.cfg_node list -> Core.char list
   val analysis_graph_to_canonical_text :
     'a Core.equal -> 'b Core.equal ->
       ('a, 'b, 'c, 'd, unit) analysis_graph_config_ext ->
@@ -11550,6 +11563,14 @@ let rec raw_cfg_dot
       contextual_analysis_dot Core.equal_unit Core.equal_unit cfg g domain
         (fun _ -> ()));;
 
+let rec cs_show_context
+  ctx = Core.maps (fun u -> string_of_cfg_node u @ [Core.char_0x20]) ctx;;
+
+let rec cs_context_key ctx = Core.implode (cs_show_context ctx);;
+
+let rec cs_graph_route
+  k u ctx ca d = Some (Call_String_Context.cs_route k u ctx d ca);;
+
 let rec ordered_by_key
   key s =
     Core.map
@@ -11560,6 +11581,21 @@ let rec ordered_by_key
 
 let rec raw_cfg_dot_lit
   pi ps mnm main annotate = Core.implode (raw_cfg_dot pi ps mnm main annotate);;
+
+let rec cs_cluster_label
+  owner ctx =
+    (if Core.null ctx
+      then owner @
+             [Core.char_0x20; Core.char_0x2F; Core.char_0x20; Core.char_0x72;
+               Core.char_0x6F; Core.char_0x6F; Core.char_0x74; Core.char_0x20;
+               Core.char_0x63; Core.char_0x6F; Core.char_0x6E; Core.char_0x74;
+               Core.char_0x65; Core.char_0x78; Core.char_0x74]
+      else owner @
+             [Core.char_0x20; Core.char_0x2F; Core.char_0x20; Core.char_0x63;
+               Core.char_0x61; Core.char_0x6C; Core.char_0x6C; Core.char_0x2D;
+               Core.char_0x73; Core.char_0x74; Core.char_0x72; Core.char_0x69;
+               Core.char_0x6E; Core.char_0x67; Core.char_0x3D] @
+               cs_show_context ctx);;
 
 let rec context_key
   (Analysis_graph_config_ext
@@ -11831,6 +11867,10 @@ module State_Report_GraphViz : sig
   val string_of_abstract_value :
     Analyse_Dispatch.abstract_value -> Core.char list
   val program_vars : unit Core.imp_prog_ext -> string list
+  val is_top_abstract_value : Analyse_Dispatch.abstract_value -> bool
+  val cs_ctx_dot_auto :
+    Analysis_Config.analysis_domain ->
+      Core.nat -> unit Core.imp_prog_ext -> string
   val exp_vnames_list : Core.exp -> string list
   val full_state_dot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
@@ -11838,6 +11878,9 @@ module State_Report_GraphViz : sig
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_ctx_dot_auto : unit Core.imp_prog_ext -> string
   val is_bottom_abstract_value : Analyse_Dispatch.abstract_value -> bool
+  val cs_ctx_graph_snapshot_auto :
+    Analysis_Config.analysis_domain ->
+      Core.nat -> unit Core.imp_prog_ext -> string
   val entry_state_report_dot_auto : unit Core.imp_prog_ext -> string
   val full_state_graph_snapshot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
@@ -11875,15 +11918,43 @@ let rec check_cond_at
             (fun (u, (a, _)) -> Core.equal_cfg_nodea u v && Core.is_EA_Check a)
             (Core.cfg_intra_list g));;
 
-let rec exp_vnames_list
-  b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
-        (Core.exp_vnames b);;
-
-let rec entry_state_ctx_sol
-  r k = (match k
-          with Core.Inl (a, b) ->
-            Core.lookup_context (Core.equal_list Core.equal_ivl) r a b
-          | Core.Inr _ -> Core.Unreachable);;
+let rec cs_ctx_sol_for
+  kind k p =
+    (match kind
+      with Analysis_Config.Sign_Analysis ->
+        (let r = Sign_Call_String_Ctx_Sound.analyse_sign_call_string_result k p
+           in
+          (fun a ->
+            (match a
+              with Core.Inl (v, ctx) ->
+                Core.map_point_state
+                  (Core.comp (fun aa -> Analyse_Dispatch.SignValue aa))
+                  (Core.lookup_context (Core.equal_list Core.equal_cfg_node) r v
+                    ctx)
+              | Core.Inr _ -> Core.Unreachable)))
+      | Analysis_Config.Interval_Analysis ->
+        (let r =
+           Interval_Call_String_Ctx_Sound.analyse_interval_call_string_result k
+             p
+           in
+          (fun a ->
+            (match a
+              with Core.Inl (v, ctx) ->
+                Core.map_point_state
+                  (Core.comp (fun aa -> Analyse_Dispatch.IntervalValue aa))
+                  (Core.lookup_context (Core.equal_list Core.equal_cfg_node) r v
+                    ctx)
+              | Core.Inr _ -> Core.Unreachable)))
+      | Analysis_Config.Int_Analysis ->
+        (let r = Int_Call_String_Ctx_Sound.analyse_int_call_string_result k p in
+          (fun a ->
+            (match a
+              with Core.Inl (v, ctx) ->
+                Core.map_point_state
+                  (Core.comp (fun aa -> Analyse_Dispatch.IntDomValue aa))
+                  (Core.lookup_context (Core.equal_list Core.equal_cfg_node) r v
+                    ctx)
+              | Core.Inr _ -> Core.Unreachable))));;
 
 let unreachable_gv_style : Core.char list
   = [Core.char_0x73; Core.char_0x68; Core.char_0x61; Core.char_0x70;
@@ -11900,6 +11971,151 @@ let unreachable_gv_style : Core.char list
       Core.char_0x63; Core.char_0x6F; Core.char_0x6C; Core.char_0x6F;
       Core.char_0x72; Core.char_0x3D; Core.char_0x77; Core.char_0x68;
       Core.char_0x69; Core.char_0x74; Core.char_0x65];;
+
+let rec dead_check_annotation
+  cnd = Analysis_GraphViz.Node_Annotation
+          ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
+             Core.char_0x6B; Core.char_0x20] @
+             Core.string_of_exp Core.zero_nat cnd @
+               [Core.char_0x20; Core.char_0x5B; Core.char_0x64; Core.char_0x65;
+                 Core.char_0x61; Core.char_0x64; Core.char_0x5D],
+            unreachable_gv_style);;
+
+let rec cs_ctx_check_annotation
+  kind k p g v ctx =
+    (match check_cond_at g v with None -> None
+      | Some cnd ->
+        Some (match
+               (match kind
+                 with Analysis_Config.Sign_Analysis ->
+                   Core.classify_point Core.sign_classify_check cnd
+                     (Core.lookup_context (Core.equal_list Core.equal_cfg_node)
+                       (Sign_Call_String_Ctx_Sound.analyse_sign_call_string_result
+                         k p)
+                       v ctx)
+                 | Analysis_Config.Interval_Analysis ->
+                   Core.classify_point Core.interval_classify_check cnd
+                     (Core.lookup_context (Core.equal_list Core.equal_cfg_node)
+                       (Interval_Call_String_Ctx_Sound.analyse_interval_call_string_result
+                         k p)
+                       v ctx)
+                 | Analysis_Config.Int_Analysis ->
+                   Core.classify_point Core.int_classify_check cnd
+                     (Core.lookup_context (Core.equal_list Core.equal_cfg_node)
+                       (Int_Call_String_Ctx_Sound.analyse_int_call_string_result
+                         k p)
+                       v ctx))
+               with Core.Dead -> dead_check_annotation cnd
+               | Core.Decided res ->
+                 Analysis_GraphViz.check_result_annotation res cnd));;
+
+let rec is_top_abstract_value
+  = function Analyse_Dispatch.SignValue s -> Core.equal_signa s Core.top_signa
+    | Analyse_Dispatch.IntervalValue i -> Core.equal_ivla i Core.top_ivla
+    | Analyse_Dispatch.IntDomValue d ->
+        Core.equal_int_dom_exta Core.equal_unit d
+          (Core.top_int_dom_exta Core.int_dom_record_lattice_unit);;
+
+let rec cs_ctx_graph_config
+  p k = Analysis_GraphViz.Analysis_graph_config_ext
+          (Core.id, Analysis_GraphViz.cs_graph_route k,
+            Analysis_GraphViz.cs_context_key, Analysis_GraphViz.cs_show_context,
+            (fun v ->
+              (let sc =
+                 Analysis_GraphViz.compiled_procedure_scope
+                   (Core.declared_global p) (Core.prog_table p)
+                   (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+                   (Core.prog_cfg Core.prog_main_name p) v
+                 in
+                Analysis_GraphViz.scope_formals sc @
+                  Analysis_GraphViz.scope_locals sc)),
+            (fun v ->
+              Analysis_GraphViz.scope_return_slot
+                (Analysis_GraphViz.compiled_procedure_scope
+                  (Core.declared_global p) (Core.prog_table p)
+                  (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+                  (Core.prog_cfg Core.prog_main_name p) v)),
+            [], (fun _ _ vars a ->
+                  (match a
+                    with Core.Unreachable ->
+                      [[Core.char_0x75; Core.char_0x6E; Core.char_0x72;
+                         Core.char_0x65; Core.char_0x61; Core.char_0x63;
+                         Core.char_0x68; Core.char_0x61; Core.char_0x62;
+                         Core.char_0x6C; Core.char_0x65]]
+                    | Core.Reachable st ->
+                      Core.map
+                        (fun x ->
+                          Core.explode x @
+                            [Core.char_0x3D] @ string_of_abstract_value (st x))
+                        vars)),
+            (fun _ _ ret a ->
+              (match a with Core.Unreachable -> []
+                | Core.Reachable st ->
+                  (if is_top_abstract_value (st ret) then []
+                    else [[Core.char_0x72; Core.char_0x65; Core.char_0x74;
+                            Core.char_0x3D] @
+                            string_of_abstract_value (st ret)]))),
+            (fun _ _ _ -> []),
+            (fun _ ->
+              [Core.char_0x47; Core.char_0x6C; Core.char_0x6F; Core.char_0x62;
+                Core.char_0x61; Core.char_0x6C]),
+            (fun _ -> false), false,
+            Core.comp Core.explode
+              (Analysis_GraphViz.compiled_owner_of (Core.prog_table p)
+                (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)),
+            Analysis_GraphViz.cs_cluster_label,
+            Some (Core.pretty_string_of_program (Core.prog_table p)
+                   (Core.prog_procs p) (Core.prog_main p) []),
+            (fun _ _ -> None), ());;
+
+let rec cs_ctx_annotated_config
+  kind k p =
+    Analysis_GraphViz.node_annotation_update
+      (fun _ ->
+        cs_ctx_check_annotation kind k p (Core.prog_cfg Core.prog_main_name p))
+      (cs_ctx_graph_config p k);;
+
+let rec cs_ctx_domain_for
+  kind k p base =
+    (match kind
+      with Analysis_Config.Sign_Analysis ->
+        Analysis_GraphViz.contextual_result_domain base
+          (Core.prog_cfg Core.prog_main_name p)
+          (Sign_Call_String_Ctx_Sound.analyse_sign_call_string_result k p)
+      | Analysis_Config.Interval_Analysis ->
+        Analysis_GraphViz.contextual_result_domain base
+          (Core.prog_cfg Core.prog_main_name p)
+          (Interval_Call_String_Ctx_Sound.analyse_interval_call_string_result k
+            p)
+      | Analysis_Config.Int_Analysis ->
+        Analysis_GraphViz.contextual_result_domain base
+          (Core.prog_cfg Core.prog_main_name p)
+          (Int_Call_String_Ctx_Sound.analyse_int_call_string_result k p));;
+
+let rec cs_ctx_dot_auto
+  kind k p =
+    (let g = Core.prog_cfg Core.prog_main_name p in
+     let base = cs_ctx_graph_config p k in
+     let cfg = cs_ctx_annotated_config kind k p in
+     let sol = cs_ctx_sol_for kind k p in
+      Core.implode
+        (Analysis_GraphViz.analysis_graph_to_dot
+          (Core.equal_list Core.equal_cfg_node)
+          Call_String_Context.equal_call_string_gk cfg g sol
+          (Analysis_GraphViz.build_analysis_graph
+            (Core.equal_list Core.equal_cfg_node)
+            Call_String_Context.equal_call_string_gk cfg g
+            (cs_ctx_domain_for kind k p base) sol)));;
+
+let rec exp_vnames_list
+  b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
+        (Core.exp_vnames b);;
+
+let rec entry_state_ctx_sol
+  r k = (match k
+          with Core.Inl (a, b) ->
+            Core.lookup_context (Core.equal_list Core.equal_ivl) r a b
+          | Core.Inr _ -> Core.Unreachable);;
 
 let unreachable_state_annotation : Analysis_GraphViz.graphviz_node_annotation
   = Analysis_GraphViz.Node_Annotation
@@ -11958,15 +12174,6 @@ let rec full_state_dot_auto
       Core.prog_main_name (Core.prog_main p)
       (point_state_node_annotation (program_vars p)
         (analyse_point_env_for kind p));;
-
-let rec dead_check_annotation
-  cnd = Analysis_GraphViz.Node_Annotation
-          ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
-             Core.char_0x6B; Core.char_0x20] @
-             Core.string_of_exp Core.zero_nat cnd @
-               [Core.char_0x20; Core.char_0x5B; Core.char_0x64; Core.char_0x65;
-                 Core.char_0x61; Core.char_0x64; Core.char_0x5D],
-            unreachable_gv_style);;
 
 let rec entry_state_ctx_route
   p u ctx ca d =
@@ -12110,6 +12317,21 @@ let rec is_bottom_abstract_value
     | Analyse_Dispatch.IntervalValue i -> Core.is_bot_ivl i
     | Analyse_Dispatch.IntDomValue d ->
         Core.is_bot_int_dom_ext Core.int_dom_record_lattice_unit d;;
+
+let rec cs_ctx_graph_snapshot_auto
+  kind k p =
+    (let g = Core.prog_cfg Core.prog_main_name p in
+     let base = cs_ctx_graph_config p k in
+     let cfg = cs_ctx_annotated_config kind k p in
+     let sol = cs_ctx_sol_for kind k p in
+      Core.implode
+        (Analysis_GraphViz.analysis_graph_to_canonical_text
+          (Core.equal_list Core.equal_cfg_node)
+          Call_String_Context.equal_call_string_gk cfg g sol
+          (Analysis_GraphViz.build_analysis_graph
+            (Core.equal_list Core.equal_cfg_node)
+            Call_String_Context.equal_call_string_gk cfg g
+            (cs_ctx_domain_for kind k p base) sol)));;
 
 let rec verdict_state_report_node_annotation
   vars report v =

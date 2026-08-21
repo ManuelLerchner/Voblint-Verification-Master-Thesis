@@ -1,0 +1,137 @@
+// PARAM: --analysis int --context call-string --context-depth 2
+// The same shared call-string renderer at the composite Int domain, the
+// third and last domain routed through cs_ctx_graph_config. Together with
+// 05-callstring_graph_sign.vimp (Sign) and the entry-state graph fixtures
+// (Interval), this covers every domain the one configuration serves without
+// duplicating a snapshot per domain-solver pair: the renderer is shared, so
+// what varies between these fixtures is only which abstract_value the node
+// labels carry, not any rendering logic.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     g_pp0_ctx0
+//     g_entry_g_ctx0
+//     g_result_g_ctx0
+//   cluster_ctx_1:
+//     g_pp0_ctx1
+//     g_entry_g_ctx1
+//     g_result_g_ctx1
+//   cluster_ctx_2:
+//     main_pp8_ctx2
+//     main_pp9_ctx2
+//     main_result_main_ctx2
+//     main_entry_main_ctx2
+//     main_pp5_ctx2
+//     main_pp6_ctx2
+//     main_pp7_ctx2
+//   cluster_ctx_3:
+//     f_pp2_ctx3
+//     f_pp3_ctx3
+//     f_entry_f_ctx3
+//     f_result_f_ctx3
+//   cluster_ctx_4:
+//     f_pp2_ctx4
+//     f_pp3_ctx4
+//     f_entry_f_ctx4
+//     f_result_f_ctx4
+//
+// nodes:
+//   main_pp8_ctx2: pp8
+//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       check y==20
+//   main_pp9_ctx2: pp9
+//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//   main_result_main_ctx2: exit_main
+//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//   g_pp0_ctx0: pp0
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//   g_pp0_ctx1: pp0
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//   main_entry_main_ctx2: entry_main
+//       x=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       y=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   f_pp2_ctx3: pp2
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   f_pp2_ctx4: pp2
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   g_entry_g_ctx0: entry_g
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//   g_entry_g_ctx1: entry_g
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//   f_pp3_ctx3: pp3
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       t=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//   f_pp3_ctx4: pp3
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       t=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//   g_result_g_ctx0: exit_g
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       ret=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//   g_result_g_ctx1: exit_g
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       ret=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//   main_pp5_ctx2: pp5
+//       x=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//       y=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   main_pp6_ctx2: pp6
+//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       y=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   f_entry_f_ctx3: entry_f
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   f_entry_f_ctx4: entry_f
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       t=sign=Top, ivl=[-inf,+inf], parity=Top, congruence==0 (mod 1)
+//   main_pp7_ctx2: pp7
+//       x=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       y=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       check x==6
+//   f_result_f_ctx3: exit_f
+//       p=sign=Positive, ivl=[3,3], parity=Odd, congruence==3
+//       t=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//       ret=sign=Positive, ivl=[6,6], parity=Even, congruence==6
+//   f_result_f_ctx4: exit_f
+//       p=sign=Positive, ivl=[10,10], parity=Even, congruence==10
+//       t=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//       ret=sign=Positive, ivl=[20,20], parity=Even, congruence==20
+//
+// edges:
+//   main_pp8_ctx2 -> main_pp9_ctx2: check(y==20)
+//   main_pp9_ctx2 -> main_result_main_ctx2: terminate
+//   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
+//   g_pp0_ctx1 -> g_result_g_ctx1: return p+p
+//   main_entry_main_ctx2 -> main_pp5_ctx2: nop
+//   g_entry_g_ctx0 -> g_pp0_ctx0: nop
+//   g_entry_g_ctx1 -> g_pp0_ctx1: nop
+//   f_pp3_ctx3 -> f_result_f_ctx3: return t
+//   f_pp3_ctx4 -> f_result_f_ctx4: return t
+//   f_entry_f_ctx3 -> f_pp2_ctx3: nop
+//   f_entry_f_ctx4 -> f_pp2_ctx4: nop
+//   main_pp7_ctx2 -> main_pp8_ctx2: check(x==6)
+//   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)
+//   f_pp2_ctx4 -> g_entry_g_ctx1: enter g(p)
+//   main_pp5_ctx2 -> f_entry_f_ctx3: enter f(3)
+//   main_pp6_ctx2 -> f_entry_f_ctx4: enter f(10)
+//   g_result_g_ctx0 -> f_pp3_ctx3: combine t := #ret
+//   g_result_g_ctx1 -> f_pp3_ctx4: combine t := #ret
+//   f_result_f_ctx3 -> main_pp6_ctx2: combine x := #ret
+//   f_result_f_ctx4 -> main_pp7_ctx2: combine y := #ret
+//   f_pp2_ctx3 -> f_pp3_ctx3: call-to-return g
+//   f_pp2_ctx4 -> f_pp3_ctx4: call-to-return g
+//   main_pp5_ctx2 -> main_pp6_ctx2: call-to-return f
+//   main_pp6_ctx2 -> main_pp7_ctx2: call-to-return f
+// EXPECT-GRAPH-END
+
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20) // PROVED
+}

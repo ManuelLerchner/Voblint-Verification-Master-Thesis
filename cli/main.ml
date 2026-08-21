@@ -393,28 +393,27 @@ let () =
   (* One analysis_config value, one legality gate (Analysis_Config.thy's
      valid_analysis_config/resolve_analysis_config): every domain/solver/
      context combination the CLI accepts or rejects is decided there, not by
-     a second, hand-maintained OCaml compatibility table. Sign/Int still have
-     no entry-state or call-string branch; Interval now accepts an explicit
-     --solver alongside --context entry-state or --context call-string, since
-     the routed equation system underneath either context is solved under
-     all three disciplines exactly like the flat one. *)
+     a second, hand-maintained OCaml compatibility table. Every domain now has
+     both an entry-state and a call-string branch; Interval accepts an explicit
+     --solver alongside either context, since the routed equation system
+     underneath either one is solved under all three disciplines exactly like
+     the flat one, while Sign/Int are proved at Solver_Join only. *)
   let cfg = Voblint_CLI.Analysis_Config.mk_analysis_config kind !solver !context in
   if not (Voblint_CLI.Analysis_Config.valid_analysis_config cfg) then begin
     prerr_endline "voblint: unsupported --analysis/--context/--solver combination";
     exit 1
   end;
-  (* --dot/--dot-full/--graph-snapshot for --context call-string would
-     otherwise silently fall through to the entry-state-specific renderers
-     below (the only ones a non-Ctx_None context currently routes to),
-     rendering EntryState's own result table regardless of what --context
-     actually selected. GraphViz support for call-string is real future
-     work, not something to approximate by reusing an unrelated renderer;
-     reject explicitly rather than emit a plausible-looking wrong graph. *)
-  if !context_kind = CK_CallString && (!dot || !dot_full || !graph_snapshot) then begin
-    prerr_endline
-      "voblint: --context call-string does not support --dot/--dot-full/--graph-snapshot yet";
-    exit 1
-  end;
+  (* The call-string depth as a nat, for the contextual renderers below.
+     cs_ctx_dot_auto/cs_ctx_graph_snapshot_auto take k directly rather than
+     re-deriving it from cfg's Ctx_CallString payload: the config value is a
+     legality question (already settled by valid_analysis_config above), the
+     renderer argument is a routing-policy one, and keeping them separate
+     avoids a second unwrapping of the same datatype at the call site. *)
+  let cs_depth () =
+    match !context_depth with
+    | Some k -> Voblint_CLI.Core.nat_of_integer (Z.of_int k)
+    | None -> Voblint_CLI.Core.nat_of_integer Z.zero
+  in
   (* expanded is meaningless without a context to expand -- reject rather than
      silently rendering the collapsed graph a bare --context-graph expanded
      might otherwise appear to have requested. *)
@@ -435,28 +434,36 @@ let () =
     run_contained ~timeout:!timeout (fun () ->
       if !graph_snapshot && !dot_full then
         Ok_graph
-          (if !context_graph = Expanded then
+          (if !context_kind = CK_CallString then
+             Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
+           else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
            else Voblint_CLI.State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
       else if !graph_snapshot then
         Ok_graph
-          (if !context_graph = Expanded then
+          (if !context_kind = CK_CallString then
+             Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
+           else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
            else Voblint_CLI.State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
       else if !dot_full then
         Ok_dot
-          (if !context_graph = Expanded then
+          (if !context_kind = CK_CallString then
+             Voblint_CLI.State_Report_GraphViz.cs_ctx_dot_auto kind (cs_depth ()) prog
+           else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.State_Report_GraphViz.entry_state_full_state_dot_auto prog
            else Voblint_CLI.State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then
         Ok_dot
-          (if !context_graph = Expanded then
+          (if !context_kind = CK_CallString then
+             Voblint_CLI.State_Report_GraphViz.cs_ctx_dot_auto kind (cs_depth ()) prog
+           else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
              Voblint_CLI.State_Report_GraphViz.entry_state_report_dot_auto prog

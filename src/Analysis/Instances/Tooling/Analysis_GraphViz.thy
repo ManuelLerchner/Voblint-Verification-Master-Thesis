@@ -6,6 +6,7 @@ theory Analysis_GraphViz
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain
     Voblint_Core.Abstract_Checks
+    Voblint_Core.Call_String_Context
 begin
 
 text \<open>
@@ -620,6 +621,39 @@ fun string_of_cfg_node :: "cfg_node \<Rightarrow> string" where
   "string_of_cfg_node (Statement n) = ''pp'' @ string_of_nat n"
 | "string_of_cfg_node (FunctionEntry p) = ''entry_'' @ String.explode p"
 | "string_of_cfg_node (FunctionResult p) = ''result_'' @ String.explode p"
+
+subsection \<open>Call-string context presentation\<close>
+
+text \<open>
+  A call-string context is a \<^typ>\<open>cfg_node list\<close> (\<^theory>\<open>Voblint_Core.Call_String_Context\<close>),
+  so unlike an entry-state context --- whose type is the analysed domain's own value list
+  (\<open>ivl list\<close>, \<open>sign list\<close>, ...) --- it carries no domain content at all. Every part of
+  presenting one is therefore shared by every domain that routes through
+  \<^const>\<open>cs_route\<close>: the key, the display text, and the routing hook below are stated once
+  here and instantiated unchanged by Sign, Interval, and Int alike.
+
+  \<open>cs_graph_route\<close> ignores the caller's rendered state exactly as \<^const>\<open>cs_route\<close> ignores
+  the entered abstract value, and answers \<^const>\<open>Some\<close> unconditionally: a call-string
+  context is defined by the call history alone, so there is no state the callee frame could
+  fail to have. That makes it the \<^emph>\<open>total\<close> case of \<open>route\<close>'s \<^typ>\<open>'ctx option\<close> contract, in
+  contrast to entry-state routing, which genuinely has no context to offer when the entered
+  frame is empty.
+\<close>
+
+definition cs_show_context :: "cfg_node list \<Rightarrow> string" where
+  "cs_show_context ctx = concat (map (\<lambda>u. string_of_cfg_node u @ '' '') ctx)"
+
+definition cs_context_key :: "cfg_node list \<Rightarrow> String.literal" where
+  "cs_context_key ctx = String.implode (cs_show_context ctx)"
+
+definition cs_graph_route ::
+  "nat \<Rightarrow> pp \<Rightarrow> cfg_node list \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> cfg_node list option" where
+  "cs_graph_route k u ctx ca d = Some (cs_route k u ctx d ca)"
+
+definition cs_cluster_label :: "string \<Rightarrow> cfg_node list \<Rightarrow> string" where
+  "cs_cluster_label owner ctx =
+     (if ctx = [] then owner @ '' / root context''
+      else owner @ '' / call-string='' @ cs_show_context ctx)"
 
 definition graphviz_exit :: "cfg \<Rightarrow> cfg_node" where
   "graphviz_exit g =

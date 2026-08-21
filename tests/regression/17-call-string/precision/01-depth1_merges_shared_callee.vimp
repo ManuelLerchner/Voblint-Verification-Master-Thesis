@@ -8,6 +8,114 @@
 // back as [6,+inf) instead of their exact values 6 and 20. See
 // src/Examples/Interval/CallString/Example_Interval_Call_String_Generic_Parity.thy
 // for the same separation pinned directly against the solved AnalysisResult.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     g_pp0_ctx0
+//     g_entry_g_ctx0
+//     g_result_g_ctx0
+//   cluster_ctx_1:
+//     main_pp8_ctx1
+//     main_pp9_ctx1
+//     main_result_main_ctx1
+//     main_entry_main_ctx1
+//     main_pp5_ctx1
+//     main_pp6_ctx1
+//     main_pp7_ctx1
+//   cluster_ctx_2:
+//     f_pp2_ctx2
+//     f_pp3_ctx2
+//     f_entry_f_ctx2
+//     f_result_f_ctx2
+//   cluster_ctx_3:
+//     f_pp2_ctx3
+//     f_pp3_ctx3
+//     f_entry_f_ctx3
+//     f_result_f_ctx3
+//
+// nodes:
+//   main_pp8_ctx1: pp8
+//       x=[6,+inf]
+//       y=[6,+inf]
+//       check y==20 [unknown]
+//   main_pp9_ctx1: pp9
+//       x=[6,+inf]
+//       y=[6,+inf]
+//   main_result_main_ctx1: exit_main
+//       x=[6,+inf]
+//       y=[6,+inf]
+//   g_pp0_ctx0: pp0
+//       p=[3,+inf]
+//   main_entry_main_ctx1: entry_main
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   f_pp2_ctx2: pp2
+//       p=[3,3]
+//       t=[-inf,+inf]
+//   f_pp2_ctx3: pp2
+//       p=[10,10]
+//       t=[-inf,+inf]
+//   g_entry_g_ctx0: entry_g
+//       p=[3,+inf]
+//   f_pp3_ctx2: pp3
+//       p=[3,3]
+//       t=[6,+inf]
+//   f_pp3_ctx3: pp3
+//       p=[10,10]
+//       t=[6,+inf]
+//   g_result_g_ctx0: exit_g
+//       p=[3,+inf]
+//       ret=[6,+inf]
+//   main_pp5_ctx1: pp5
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   main_pp6_ctx1: pp6
+//       x=[6,+inf]
+//       y=[-inf,+inf]
+//   f_entry_f_ctx2: entry_f
+//       p=[3,3]
+//       t=[-inf,+inf]
+//   f_entry_f_ctx3: entry_f
+//       p=[10,10]
+//       t=[-inf,+inf]
+//   main_pp7_ctx1: pp7
+//       x=[6,+inf]
+//       y=[6,+inf]
+//       check x==6 [unknown]
+//   f_result_f_ctx2: exit_f
+//       p=[3,3]
+//       t=[6,+inf]
+//       ret=[6,+inf]
+//   f_result_f_ctx3: exit_f
+//       p=[10,10]
+//       t=[6,+inf]
+//       ret=[6,+inf]
+//
+// edges:
+//   main_pp8_ctx1 -> main_pp9_ctx1: check(y==20)
+//   main_pp9_ctx1 -> main_result_main_ctx1: terminate
+//   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
+//   main_entry_main_ctx1 -> main_pp5_ctx1: nop
+//   g_entry_g_ctx0 -> g_pp0_ctx0: nop
+//   f_pp3_ctx2 -> f_result_f_ctx2: return t
+//   f_pp3_ctx3 -> f_result_f_ctx3: return t
+//   f_entry_f_ctx2 -> f_pp2_ctx2: nop
+//   f_entry_f_ctx3 -> f_pp2_ctx3: nop
+//   main_pp7_ctx1 -> main_pp8_ctx1: check(x==6)
+//   f_pp2_ctx2 -> g_entry_g_ctx0: enter g(p)
+//   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)
+//   main_pp5_ctx1 -> f_entry_f_ctx2: enter f(3)
+//   main_pp6_ctx1 -> f_entry_f_ctx3: enter f(10)
+//   g_result_g_ctx0 -> f_pp3_ctx2: combine t := #ret
+//   g_result_g_ctx0 -> f_pp3_ctx3: combine t := #ret
+//   f_result_f_ctx2 -> main_pp6_ctx1: combine x := #ret
+//   f_result_f_ctx3 -> main_pp7_ctx1: combine y := #ret
+//   f_pp2_ctx2 -> f_pp3_ctx2: call-to-return g
+//   f_pp2_ctx3 -> f_pp3_ctx3: call-to-return g
+//   main_pp5_ctx1 -> main_pp6_ctx1: call-to-return f
+//   main_pp6_ctx1 -> main_pp7_ctx1: call-to-return f
+// EXPECT-GRAPH-END
+
 void g(p) { return p + p }
 void f(p) { t := g(p); return t }
 void main() {

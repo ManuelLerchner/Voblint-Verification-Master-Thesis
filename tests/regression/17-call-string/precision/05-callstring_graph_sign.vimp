@@ -1,12 +1,18 @@
-// PARAM: --analysis interval --context call-string --context-depth 2
-// Same program as 01-depth1_merges_shared_callee.vimp. At depth 2, g's
-// routed context additionally remembers which f activation called it --
-// distinguishing the call reached via f(3) from the one reached via
-// f(10), since each now carries its own two-frame call string instead of
-// collapsing onto g's single call site alone. The two g activations no
-// longer merge, so both results stay exact: x == 6 and y == 20, each
-// provable. This is the precision separation call-string depth exists to
-// buy, on the identical source depth 1 leaves imprecise.
+// PARAM: --analysis sign --context call-string --context-depth 2
+// Call-string GraphViz coverage at a non-Interval domain. Until the shared
+// contextual renderer landed, --dot/--graph-snapshot with --context
+// call-string was rejected outright at the CLI, and the only contextual
+// graph that existed was entry-state's, written for Interval alone.
+// A call-string context is a cfg_node list -- pure call history, no domain
+// content -- and every state here renders through abstract_value, so one
+// configuration (cs_ctx_graph_config, State_Report_GraphViz.thy) serves
+// Sign, Interval and Int alike. This fixture pins that shared renderer at
+// Sign specifically: g is entered under two distinct call strings (via
+// f(3) and via f(-10)), so it gets two separate clusters whose enter and
+// combine edges route to their own context rather than joining, and the
+// two clusters carry genuinely different states (Positive vs Negative).
+// The checks are Sign's own business, not the graph's: doubling preserves
+// sign, so both are PROVED.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -38,71 +44,71 @@
 //
 // nodes:
 //   main_pp8_ctx2: pp8
-//       x=[6,6]
-//       y=[20,20]
-//       check y==20
+//       x=Positive
+//       y=Negative
+//       check y<0
 //   main_pp9_ctx2: pp9
-//       x=[6,6]
-//       y=[20,20]
+//       x=Positive
+//       y=Negative
 //   main_result_main_ctx2: exit_main
-//       x=[6,6]
-//       y=[20,20]
+//       x=Positive
+//       y=Negative
 //   g_pp0_ctx0: pp0
-//       p=[3,3]
+//       p=Positive
 //   g_pp0_ctx1: pp0
-//       p=[10,10]
+//       p=Negative
 //   main_entry_main_ctx2: entry_main
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=Top
+//       y=Top
 //   f_pp2_ctx3: pp2
-//       p=[3,3]
-//       t=[-inf,+inf]
+//       p=Positive
+//       t=Top
 //   f_pp2_ctx4: pp2
-//       p=[10,10]
-//       t=[-inf,+inf]
+//       p=Negative
+//       t=Top
 //   g_entry_g_ctx0: entry_g
-//       p=[3,3]
+//       p=Positive
 //   g_entry_g_ctx1: entry_g
-//       p=[10,10]
+//       p=Negative
 //   f_pp3_ctx3: pp3
-//       p=[3,3]
-//       t=[6,6]
+//       p=Positive
+//       t=Positive
 //   f_pp3_ctx4: pp3
-//       p=[10,10]
-//       t=[20,20]
+//       p=Negative
+//       t=Negative
 //   g_result_g_ctx0: exit_g
-//       p=[3,3]
-//       ret=[6,6]
+//       p=Positive
+//       ret=Positive
 //   g_result_g_ctx1: exit_g
-//       p=[10,10]
-//       ret=[20,20]
+//       p=Negative
+//       ret=Negative
 //   main_pp5_ctx2: pp5
-//       x=[-inf,+inf]
-//       y=[-inf,+inf]
+//       x=Top
+//       y=Top
 //   main_pp6_ctx2: pp6
-//       x=[6,6]
-//       y=[-inf,+inf]
+//       x=Positive
+//       y=Top
 //   f_entry_f_ctx3: entry_f
-//       p=[3,3]
-//       t=[-inf,+inf]
+//       p=Positive
+//       t=Top
 //   f_entry_f_ctx4: entry_f
-//       p=[10,10]
-//       t=[-inf,+inf]
+//       p=Negative
+//       t=Top
 //   main_pp7_ctx2: pp7
-//       x=[6,6]
-//       y=[20,20]
-//       check x==6
+//       x=Positive
+//       y=Negative
+//       check 0<x
 //   f_result_f_ctx3: exit_f
-//       p=[3,3]
-//       t=[6,6]
-//       ret=[6,6]
+//       p=Positive
+//       t=Positive
+//       ret=Positive
 //   f_result_f_ctx4: exit_f
-//       p=[10,10]
-//       t=[20,20]
-//       ret=[20,20]
+//       p=Negative
+//       t=Negative
+//       ret=Negative
 //
 // edges:
-//   main_pp8_ctx2 -> main_pp9_ctx2: check(y==20)
+//   main_pp8_ctx2 -> main_pp9_ctx2: check(y<0)
 //   main_pp9_ctx2 -> main_result_main_ctx2: terminate
 //   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
 //   g_pp0_ctx1 -> g_result_g_ctx1: return p+p
@@ -113,11 +119,11 @@
 //   f_pp3_ctx4 -> f_result_f_ctx4: return t
 //   f_entry_f_ctx3 -> f_pp2_ctx3: nop
 //   f_entry_f_ctx4 -> f_pp2_ctx4: nop
-//   main_pp7_ctx2 -> main_pp8_ctx2: check(x==6)
+//   main_pp7_ctx2 -> main_pp8_ctx2: check(0<x)
 //   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)
 //   f_pp2_ctx4 -> g_entry_g_ctx1: enter g(p)
 //   main_pp5_ctx2 -> f_entry_f_ctx3: enter f(3)
-//   main_pp6_ctx2 -> f_entry_f_ctx4: enter f(10)
+//   main_pp6_ctx2 -> f_entry_f_ctx4: enter f(-10)
 //   g_result_g_ctx0 -> f_pp3_ctx3: combine t := #ret
 //   g_result_g_ctx1 -> f_pp3_ctx4: combine t := #ret
 //   f_result_f_ctx3 -> main_pp6_ctx2: combine x := #ret
@@ -132,7 +138,7 @@ void g(p) { return p + p }
 void f(p) { t := g(p); return t }
 void main() {
   x := f(3);
-  y := f(10);
-  __voblint_check(x == 6); // PROVED
-  __voblint_check(y == 20) // PROVED
+  y := f(-10);
+  __voblint_check(0 < x); // PROVED
+  __voblint_check(y < 0) // PROVED
 }

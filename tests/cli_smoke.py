@@ -108,10 +108,22 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
-        "--dot with --context call-string is rejected",
+        "--dot with --context call-string is accepted",
         ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
-        1,
-        "--context call-string does not support --dot/--dot-full/--graph-snapshot yet",
+        0,
+        "digraph",
+    ),
+    (
+        "--graph-snapshot with --context call-string is accepted",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--graph-snapshot", SANITY_FILE],
+        0,
+        "clusters:",
+    ),
+    (
+        "sign --dot with --context call-string is accepted",
+        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
+        0,
+        "digraph",
     ),
 ]
 

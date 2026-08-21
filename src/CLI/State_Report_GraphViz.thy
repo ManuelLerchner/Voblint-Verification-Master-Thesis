@@ -49,6 +49,21 @@ fun is_bottom_abstract_value :: "abstract_value \<Rightarrow> bool" where
 | "is_bottom_abstract_value (IntDomValue d) = is_bot d"
 
 text \<open>
+  The \<open>top\<close> counterpart, used only to suppress an uninformative return-slot line: a
+  \<^const>\<open>top\<close> return value says nothing the reader did not already know, and printing it
+  at every node crowds out the variables that do carry information. Each domain's own
+  \<^class>\<open>order_top\<close> instance decides, so this dispatches exactly as
+  \<^const>\<open>is_bottom_abstract_value\<close> does and needs no new instance either. Purely a
+  presentation filter --- nothing downstream reads it, and a suppressed line is not a claim
+  that the slot is unset.
+\<close>
+
+fun is_top_abstract_value :: "abstract_value \<Rightarrow> bool" where
+  "is_top_abstract_value (SignValue s) = (s = top)"
+| "is_top_abstract_value (IntervalValue i) = (i = top)"
+| "is_top_abstract_value (IntDomValue d) = (d = top)"
+
+text \<open>
   \<open>program_vars\<close> is the union of \<^const>\<open>scope_vnames_list\<close> over every
   procedure in the program (including \<open>main\<close>), a safe program-wide
   superset of any single activation's scope. Querying a variable outside a
@@ -596,6 +611,179 @@ lemma entry_state_ctx_graph_snapshot_auto_code [code]:
   unfolding entry_state_ctx_graph_snapshot_auto_def entry_state_ctx_graph_def
             entry_state_ctx_annotated_config_def Let_def
   by (rule refl)
+
+section \<open>The context-expanded call-string graph\<close>
+
+text \<open>
+  The call-string counterpart of the entry-state section above, and the point at which the
+  contextual renderer stops being per-domain. An entry-state context is the analysed
+  domain's own value list (\<^typ>\<open>ivl list\<close>), so its graph configuration can only ever be
+  written for one domain at a time. A call-string context is a \<^typ>\<open>cfg_node list\<close>
+  (\<^theory>\<open>Voblint_Core.Call_String_Context\<close>) --- pure call history, no domain content ---
+  and every rendered state here is projected into \<^typ>\<open>abstract_value\<close> exactly as
+  \<^const>\<open>analyse_point_env_for\<close> already projects the monovariant tables. Both axes of
+  domain-dependence are therefore removed, and Sign, Interval and Int share \<^emph>\<open>one\<close>
+  configuration, one solution reader, and one annotation hook, selected by an ordinary
+  \<^typ>\<open>analysis_domain\<close> argument rather than by three parallel renderers.
+\<close>
+
+text \<open>
+  The solution reader: \<^const>\<open>lookup_context\<close> at the node's own \<^term>\<open>(v, ctx)\<close> key over
+  that domain's own call-string result table, projected once into \<^typ>\<open>abstract_value\<close>.
+  \<open>r\<close> is bound outside the returned \<open>\<lambda>\<close> for the same single-solve reason
+  \<^const>\<open>analyse_point_env_for\<close> documents: a caller that partially applies this once
+  solves the program once, however many nodes it then renders. \<^const>\<open>Inr\<close> is
+  \<^const>\<open>Unreachable\<close> --- the routed call-string system carries every program variable in
+  the local unknown, so its solver-global slots hold no program state to draw.
+\<close>
+
+definition cs_ctx_sol_for ::
+    "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
+       \<Rightarrow> pp \<times> call_string + call_string_gk \<Rightarrow> abstract_value abs_state point_state" where
+  "cs_ctx_sol_for kind k p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          (let r = analyse_sign_call_string_result k p
+           in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
+                     map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ctx)
+                   | Inr _ \<Rightarrow> Unreachable))
+      | Interval_Analysis \<Rightarrow>
+          (let r = analyse_interval_call_string_result k p
+           in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
+                     map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ctx)
+                   | Inr _ \<Rightarrow> Unreachable))
+      | Int_Analysis \<Rightarrow>
+          (let r = analyse_int_call_string_result k p
+           in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
+                     map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ctx)
+                   | Inr _ \<Rightarrow> Unreachable)))"
+
+text \<open>
+  The covered \<^term>\<open>(v, ctx)\<close> pairs, again read off whichever domain's table was selected.
+  Coverage is the result's own extensional key set throughout ---
+  \<^const>\<open>contextual_result_domain\<close> asks \<^const>\<open>contexts_at\<close>, never a traversal --- so a
+  context the solver did not cover contributes no node, exactly as in the entry-state graph.
+\<close>
+
+definition cs_ctx_domain_for ::
+    "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
+       \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state point_state,
+            abstract_value abs_state point_state) analysis_graph_config
+       \<Rightarrow> ((pp \<times> call_string) + call_string_gk) list" where
+  "cs_ctx_domain_for kind k p base =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          contextual_result_domain base (prog_cfg prog_main_name p)
+            (analyse_sign_call_string_result k p)
+      | Interval_Analysis \<Rightarrow>
+          contextual_result_domain base (prog_cfg prog_main_name p)
+            (analyse_interval_call_string_result k p)
+      | Int_Analysis \<Rightarrow>
+          contextual_result_domain base (prog_cfg prog_main_name p)
+            (analyse_int_call_string_result k p))"
+
+text \<open>
+  Per-context check verdicts. The classification stays each domain's own
+  (\<^const>\<open>sign_classify_check\<close>, \<^const>\<open>interval_classify_check\<close>,
+  \<^const>\<open>int_classify_check\<close> read their own \<open>abs_state\<close>, not the projected
+  \<^typ>\<open>abstract_value\<close> one the renderer draws), so this hook dispatches while the graph
+  structure above does not: nothing classifies a second time, and each branch is exactly the
+  observation \<^const>\<open>classify_checks_ctx\<close> would record for the same key.
+\<close>
+
+definition cs_ctx_check_annotation ::
+    "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> call_string
+       \<Rightarrow> graphviz_node_annotation option" where
+  "cs_ctx_check_annotation kind k p g v ctx =
+     (case check_cond_at g v of
+        None \<Rightarrow> None
+      | Some cnd \<Rightarrow>
+          Some (case (case kind of
+                        Sign_Analysis \<Rightarrow>
+                          classify_point sign_classify_check cnd
+                            (lookup_context (analyse_sign_call_string_result k p) v ctx)
+                      | Interval_Analysis \<Rightarrow>
+                          classify_point interval_classify_check cnd
+                            (lookup_context (analyse_interval_call_string_result k p) v ctx)
+                      | Int_Analysis \<Rightarrow>
+                          classify_point int_classify_check cnd
+                            (lookup_context (analyse_int_call_string_result k p) v ctx)) of
+                  Dead \<Rightarrow> dead_check_annotation cnd
+                | Decided res \<Rightarrow> check_result_annotation res cnd))"
+
+text \<open>
+  The configuration itself: every context-specific field comes from
+  \<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>'s own call-string presentation constants
+  (\<^const>\<open>cs_graph_route\<close>, \<^const>\<open>cs_context_key\<close>, \<^const>\<open>cs_show_context\<close>,
+  \<^const>\<open>cs_cluster_label\<close>), and every state-rendering field is the \<^typ>\<open>abstract_value\<close>
+  reading shared with \<^const>\<open>point_state_node_annotation\<close>. Nothing here mentions a domain,
+  so adding call-string rendering for a fourth domain would extend the two dispatch
+  constants above and leave this configuration untouched.
+\<close>
+
+definition cs_ctx_graph_config ::
+    "imp_prog \<Rightarrow> nat \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state point_state,
+        abstract_value abs_state point_state) analysis_graph_config" where
+  "cs_ctx_graph_config p k =
+    \<lparr> local_of = id,
+      route = (\<lambda>u ctx ca d. cs_graph_route k u ctx ca d),
+      context_key = cs_context_key,
+      show_context = cs_show_context,
+      locals_for_pp = (\<lambda>v.
+        let sc = compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+                   prog_main_name (prog_main p) (prog_cfg prog_main_name p) v
+        in scope_formals sc @ scope_locals sc),
+      return_slot_for_pp = (\<lambda>v.
+        scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+          prog_main_name (prog_main p) (prog_cfg prog_main_name p) v)),
+      globals_to_show = [],
+      show_local = (\<lambda>v ctx vars d.
+        case d of Unreachable \<Rightarrow> [''unreachable'']
+        | Reachable st \<Rightarrow> map (\<lambda>x. String.explode x @ ''='' @ string_of_abstract_value (st x)) vars),
+      format_return = (\<lambda>v ctx ret d.
+        case d of Unreachable \<Rightarrow> []
+        | Reachable st \<Rightarrow>
+            if is_top_abstract_value (st ret) then []
+            else [''ret='' @ string_of_abstract_value (st ret)]),
+      show_global = (\<lambda>x vars s. []),
+      show_global_key = (\<lambda>x. ''Global''),
+      is_shared_global = (\<lambda>x. False),
+      show_internal_globals = False,
+      owner_of = String.explode o
+        compiled_owner_of (prog_table p) (prog_procs p) prog_main_name (prog_main p),
+      cluster_label = cs_cluster_label,
+      source_text = Some (pretty_string_of_program (prog_table p) (prog_procs p) (prog_main p) []),
+      node_annotation = (\<lambda>_ _. None)
+    \<rparr>"
+
+definition cs_ctx_annotated_config ::
+    "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
+       \<Rightarrow> (call_string, call_string_gk, abstract_value abs_state point_state,
+            abstract_value abs_state point_state) analysis_graph_config" where
+  "cs_ctx_annotated_config kind k p =
+     cs_ctx_graph_config p k
+       \<lparr> node_annotation :=
+           cs_ctx_check_annotation kind k p (prog_cfg prog_main_name p) \<rparr>"
+
+definition cs_ctx_dot_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "cs_ctx_dot_auto kind k p =
+     (let g = prog_cfg prog_main_name p;
+          base = cs_ctx_graph_config p k;
+          cfg = cs_ctx_annotated_config kind k p;
+          sol = cs_ctx_sol_for kind k p
+      in String.implode
+           (analysis_graph_to_dot cfg g sol
+              (build_analysis_graph cfg g (cs_ctx_domain_for kind k p base) sol)))"
+
+definition cs_ctx_graph_snapshot_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "cs_ctx_graph_snapshot_auto kind k p =
+     (let g = prog_cfg prog_main_name p;
+          base = cs_ctx_graph_config p k;
+          cfg = cs_ctx_annotated_config kind k p;
+          sol = cs_ctx_sol_for kind k p
+      in String.implode
+           (analysis_graph_to_canonical_text cfg g sol
+              (build_analysis_graph cfg g (cs_ctx_domain_for kind k p base) sol)))"
 
 code_identifier
   code_module Complete_Lattices \<rightharpoonup> (OCaml) Core

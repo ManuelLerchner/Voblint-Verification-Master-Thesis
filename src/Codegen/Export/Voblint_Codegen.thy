@@ -43,8 +43,9 @@ export_code
   entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
   entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
   entry_state_ctx_dot_auto entry_state_ctx_graph_snapshot_auto
+  cs_ctx_dot_auto cs_ctx_graph_snapshot_auto
   exp_vnames_list string_of_abstract_value
-  is_bottom_abstract_value program_vars
+  is_bottom_abstract_value is_top_abstract_value program_vars
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
