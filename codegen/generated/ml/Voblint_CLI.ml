@@ -240,6 +240,7 @@ module Core : sig
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type ('a, 'b) analysis_result =
     Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state)
+  type 'a call_info_ext
   type analysis_event
   type ('a, 'b, 'c) dg_spec_ext
   type contextual_verdict = Dead | Decided of check_result
@@ -3456,8 +3457,10 @@ type ('a, 'b, 'c) dg_spec_ext =
       (exp -> bool -> 'a -> 'b -> 'b * 'a) * (string -> 'a -> 'b -> 'b * 'a) *
       (exp option -> string -> 'a -> 'b -> 'b * 'a) *
       (string list -> exp list -> 'a -> 'b -> 'b * 'a) *
-      (analysis_event -> 'a -> 'b -> 'b * 'a) * ('a -> 'a -> 'b -> 'b * 'a) *
-      (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
+      (analysis_event -> 'a -> 'b -> 'b * 'a) *
+      (unit call_info_ext -> 'a -> 'b -> 'a) *
+      (unit call_info_ext -> 'a -> 'a -> 'b -> 'b * 'a) *
+      (unit call_info_ext -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
@@ -4395,6 +4398,15 @@ let rec fmlookup_default _A
 let rec fminsert _A
   infl x y = fmupd _A x (y :: fmlookup_default _A infl [] x) infl;;
 
+let rec ce_formals (CallEdge (x1, x2, x3)) = x2;;
+
+let rec ce_args (CallEdge (x1, x2, x3)) = x3;;
+
+let rec ce_dst (CallEdge (x1, x2, x3)) = x1;;
+
+let rec call_info_of
+  ca p = Call_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
+
 let abort_empty_set _ = failwith "List.abort_empty_set";;
 
 let rec sup_set _A
@@ -4954,20 +4966,26 @@ let rec show_int
   i = (if less_int i zero_inta then [char_0x2D] @ show_nat (nat (uminus_inta i))
         else show_nat (nat i));;
 
+let rec ci_dst
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
+
 let rec dgs_combine_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_combine_assign;;
 
 let rec dgs_combine_env
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_combine_env;;
 
 let rec dgs_combine
-  s dst dc de g = dgs_combine_assign s dst de g (dgs_combine_env s dc de g);;
+  s ci dcont de g =
+    dgs_combine_assign s ci de g (dgs_combine_env s ci dcont de g);;
 
 let rec inv_less_congruence result a b = (a, b);;
 
@@ -5273,37 +5291,43 @@ let rec enter_D
 let rec dgs_special
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_special;;
 
 let rec dgs_return
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_return;;
 
 let rec dgs_branch
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_branch;;
 
 let rec dgs_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_assign;;
 
 let rec dgs_event
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_event;;
 
 let rec dgs_skip
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_skip;;
 
 let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
@@ -6649,24 +6673,34 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
                        (DG (locals res,
                              bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
 
+let rec dgs_caller_cont
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
+    = dgs_caller_cont;;
+
 let rec dgs_enter
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_enter;;
 
 let rec result_proc (FunctionResult x3) = x3;;
 
 let rec routed_cmb_g_contribution _A _B
   s gk0 seed_key route ctx ca cc ex =
-    (let CallEdge (dst, fs, asa) = ca in
+    (let CallEdge (_, fs, asa) = ca in
       seqcomp_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
         (fun caller_state ->
           seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
             (fun globals_state1 ->
               (let caller = locals caller_state in
                let globals1 = globs globals_state1 in
+               let ci = call_info_of ca (result_proc ex) in
                let ctxa = route cc ctx caller ca in
+               let dcont = dgs_caller_cont s ci caller globals1 in
                let eg = fst (dgs_enter s fs asa caller globals1) in
                 seqcomp_tree
                   (Side (seed_key (FunctionEntry (result_proc ex)) ctxa,
@@ -6683,9 +6717,9 @@ let rec routed_cmb_g_contribution _A _B
                             (let callee = locals callee_state in
                              let globals2 = globs globals_state2 in
                              let cg =
-                               fst (dgs_combine s dst caller callee globals2) in
+                               fst (dgs_combine s ci dcont callee globals2) in
                               Answer
-                                (DG (snd (dgs_combine s dst caller callee
+                                (DG (snd (dgs_combine s ci dcont callee
    globals2),
                                       sup
 _B.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup eg
@@ -6761,7 +6795,8 @@ let rec base_dg_spec_st_for_lifted _A _B
         (fun ev d g ->
           (g, (let Check_Event bc = ev in
                 transfer_lift is_bot_pred (tf_st (EA_Check bc)) d))),
-        (fun dc de g ->
+        (fun _ dc _ -> dc),
+        (fun _ dc de g ->
           (g, (match dc with Bot -> Bot
                 | Lifted x ->
                   (match de with Bot -> Bot
@@ -6770,14 +6805,15 @@ let rec base_dg_spec_st_for_lifted _A _B
                         (combine_resolved_st_q
                           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                           x y))))),
-        (fun dst de g merged ->
+        (fun ci de g merged ->
           (g, transfer_lift2 is_bot_pred
                 (fun env0 de0 ->
                   combine_assign_resolved_q
                     _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs
-                    dst (lookup_resolved_st_q
-                          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                          de0 (location_of gs ret_var))
+                    (ci_dst ci)
+                    (lookup_resolved_st_q
+                      _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de0
+                      (location_of gs ret_var))
                     env0)
                 (snd merged) de)),
         ());;

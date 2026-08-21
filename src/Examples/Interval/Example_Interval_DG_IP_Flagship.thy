@@ -98,6 +98,7 @@ lemmas ivl_Henter_for =
   unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 
 lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
+lemmas ivl_Hcont_for = unit_dg_Hcont_for
 
 text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>, generic in the
   storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
@@ -155,7 +156,7 @@ lemma twice_pp_abs:
         (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
      (cfg_exit twice_cfg, ()) (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) (fst twice_sol)"
-  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for twice_pp_st[unfolded twice_eqs_def]]
+  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for ivl_Hcont_for twice_pp_st[unfolded twice_eqs_def]]
   unfolding twice_sds.dg_gen_of_eq_for .
 
 subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>

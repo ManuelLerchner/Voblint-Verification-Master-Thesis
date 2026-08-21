@@ -839,7 +839,7 @@ qed
 lemma unit_combine_step_st_env_lifted_fun_of_resolved_st_q_for:
   "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
      (unit_combine_step_st_env_lifted d g) =
-   unit_combine_step_env_for_lifted gs (map_lift (fun_of_resolved_st_q_for gs) d)
+   unit_combine_step_env_for_lifted gs ci (map_lift (fun_of_resolved_st_q_for gs) d)
      (map_lift (fun_of_resolved_st_q_for gs) g)"
 proof -
   have asm: "map_lift (fun_of_resolved_st_q_for gs) (assemble_resolved_env d g) =
@@ -867,8 +867,8 @@ qed
 lemma unit_combine_step_st_assign_for_lifted_fun_of_resolved_st_q_for:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de merged) =
-         unit_combine_step_assign_for_lifted gs dst is_bot_state
+           (unit_combine_step_st_assign_for_lifted gs (ci_dst ci) is_bot_pred de merged) =
+         unit_combine_step_assign_for_lifted gs ci is_bot_state
            (map_lift (fun_of_resolved_st_q_for gs) de)
            (map_lift (fun_of_resolved_st_q_for gs) (fst merged), map_lift (fun_of_resolved_st_q_for gs) (snd merged))"
 proof (cases de)
@@ -920,8 +920,9 @@ where
     dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
     dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st (tf_st (EA_Check bc))),
-    dgs_combine_env    = unit_combine_step_st_env,
-    dgs_combine_assign = unit_combine_step_st_assign_for gs
+    dgs_caller_cont    = (\<lambda>ci d g. d),
+    dgs_combine_env    = (\<lambda>ci. unit_combine_step_st_env),
+    dgs_combine_assign = (\<lambda>ci. unit_combine_step_st_assign_for gs (ci_dst ci))
   \<rparr>"
 
 text \<open>
@@ -970,25 +971,35 @@ lemma snd_dgs_enter_for:
      = restrict_local_resolved_q (enter_st xs es (combine_resolved_st_q d g))"
   unfolding unit_dg_spec_st_for_def by simp
 
+text \<open>The caller half of \<open>enter\<close> is the identity on a diagonal executable carrier:
+  a \<^typ>\<open>'a exec_dg_st\<close> holds one tagged value per location and no relation
+  between locations, so a call has nothing to invalidate in it.  It is a field
+  like any other, and the correspondence theorem below covers it explicitly
+  rather than leaving it as an unstated structural assumption.\<close>
+
+lemma dgs_caller_cont_unit_dg_spec_st_for [simp]:
+  "dgs_caller_cont (unit_dg_spec_st_for gs tf_st enter_st) ci d g = d"
+  unfolding unit_dg_spec_st_for_def by simp
+
 lemma fst_dgs_combine_env_for:
-  "fst (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) dc de g)
+  "fst (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
      = restrict_global_resolved_q (combine_resolved_st_q dc g)"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_env_def Let_def by simp
 
 lemma snd_dgs_combine_env_for:
-  "snd (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) dc de g)
+  "snd (dgs_combine_env (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
      = restrict_local_resolved_q (combine_resolved_st_q dc g)"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_env_def Let_def by simp
 
 lemma fst_dgs_combine_assign_for:
-  "fst (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) dst de g merged)
-     = restrict_global_resolved_q (combine_assign_resolved_q gs dst
+  "fst (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) ci de g merged)
+     = restrict_global_resolved_q (combine_assign_resolved_q gs (ci_dst ci)
          (lookup_resolved_st_q de (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_assign_for_def Let_def by simp
 
 lemma snd_dgs_combine_assign_for:
-  "snd (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) dst de g merged)
-     = restrict_local_resolved_q (combine_assign_resolved_q gs dst
+  "snd (dgs_combine_assign (unit_dg_spec_st_for gs tf_st enter_st) ci de g merged)
+     = restrict_local_resolved_q (combine_assign_resolved_q gs (ci_dst ci)
          (lookup_resolved_st_q de (location_of gs ret_var)) (fst merged \<squnion> snd merged))"
   unfolding unit_dg_spec_st_for_def unit_combine_step_st_assign_for_def Let_def by simp
 
@@ -1006,8 +1017,8 @@ lemma fun_of_resolved_st_q_for_restrict_global_for:
 
 lemma unit_combine_step_st_commute_for:
   "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
-       (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec_for gs tf) dst
+       (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
+     = dgs_combine (unit_dg_spec_for gs tf) ci
          (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
   unfolding dgs_combine_unit_dg_spec_for
   unfolding dgs_combine_def
@@ -1052,8 +1063,10 @@ where
     dgs_return     = (\<lambda>e p. unit_step_st_lifted is_bot_pred (tf_st (EA_Ret e p))),
     dgs_enter      = (\<lambda>xs es. unit_step_st_lifted is_bot_pred (enter_st xs es)),
     dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st_lifted is_bot_pred (tf_st (EA_Check bc))),
-    dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_st_env_lifted dc g),
-    dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de merged)
+    dgs_caller_cont    = (\<lambda>ci dc g. dc),
+    dgs_combine_env    = (\<lambda>ci dc de g. unit_combine_step_st_env_lifted dc g),
+    dgs_combine_assign = (\<lambda>ci de g merged.
+      unit_combine_step_st_assign_for_lifted gs (ci_dst ci) is_bot_pred de merged)
   \<rparr>"
 
 text \<open>Gate 1 -- record-level type sanity.\<close>
@@ -1074,9 +1087,13 @@ lemma dgs_enter_unit_dg_spec_st_for_lifted:
      unit_step_st_lifted is_bot_pred (enter_st xs es)"
   unfolding unit_dg_spec_st_for_lifted_def by simp
 
+lemma dgs_caller_cont_unit_dg_spec_st_for_lifted [simp]:
+  "dgs_caller_cont (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g = dc"
+  unfolding unit_dg_spec_st_for_lifted_def by simp
+
 lemma dgs_combine_unit_dg_spec_st_for_lifted:
-  "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc de g =
-     unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de
+  "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g =
+     unit_combine_step_st_assign_for_lifted gs (ci_dst ci) is_bot_pred de
        (unit_combine_step_st_env_lifted dc g)"
   unfolding dgs_combine_def unit_dg_spec_st_for_lifted_def by simp
 
@@ -1094,11 +1111,11 @@ lemma dg_spec_step_unit_st_for_lifted_agrees:
   by (rule unit_step_st_lifted_agrees)
 
 lemma dgs_combine_unit_dg_spec_st_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (combine_assign_resolved_q gs dst
+  assumes "\<not> is_bot_pred (combine_assign_resolved_q gs (ci_dst ci)
               (lookup_resolved_st_q de (location_of gs ret_var)) (combine_resolved_st_q dc g))"
-  shows "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst (Lifted dc) (Lifted de) (Lifted g) =
-           (Lifted (fst (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) dst dc de g)),
-            Lifted (snd (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) dst dc de g)))"
+  shows "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci (Lifted dc) (Lifted de) (Lifted g) =
+           (Lifted (fst (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)),
+            Lifted (snd (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)))"
 proof -
   have eq: "restrict_global_resolved_q g \<squnion> restrict_local_resolved_q dc = combine_resolved_st_q dc g"
     by (simp add: combine_resolved_st_q_eq_restrict_sup sup_commute)
@@ -1121,11 +1138,11 @@ lemma dg_spec_step_unit_st_for_lifted_collapses_bot:
   by (rule unit_step_st_lifted_collapses_bot)
 
 lemma dgs_combine_unit_dg_spec_st_for_lifted_de_bot:
-  "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc Bot g = (Bot, Bot)"
+  "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc Bot g = (Bot, Bot)"
   unfolding dgs_combine_unit_dg_spec_st_for_lifted by simp
 
 lemma dgs_combine_unit_dg_spec_st_for_lifted_dc_bot:
-  "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst Bot (Lifted de) g = (Bot, Bot)"
+  "dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci Bot (Lifted de) g = (Bot, Bot)"
   unfolding dgs_combine_unit_dg_spec_st_for_lifted by simp
 
 subsection \<open>Layer 3 -- whole-record executable/abstract correspondence (issue #123)\<close>
@@ -1162,30 +1179,45 @@ theorem unit_dg_spec_st_for_lifted_dgs_enter_commute:
   by (rule unit_step_st_lifted_fun_of_resolved_st_q_for
         [where f = "enter_st xs es" and F = "enter\<^sup># tf xs es", OF commute exact])
 
+text \<open>
+  The caller half of \<open>enter\<close> gets its own correspondence, alongside the ones for
+  \<open>dg_spec_step\<close>, \<open>dgs_enter\<close> and \<open>dgs_combine\<close>.  Stating it explicitly is what
+  keeps the executable continuation an ordinary field of the bridge: an
+  executable specification with a nontrivial continuation discharges this same
+  obligation, rather than the bridge silently assuming the identity.
+\<close>
+
+theorem unit_dg_spec_st_for_lifted_dgs_caller_cont_commute:
+  "map_lift (fun_of_resolved_st_q_for gs)
+     (dgs_caller_cont (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g) =
+   dgs_caller_cont (unit_dg_spec_for_lifted gs is_bot_state tf) ci
+     (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  unfolding unit_dg_spec_st_for_lifted_def unit_dg_spec_for_lifted_def by simp
+
 theorem unit_dg_spec_st_for_lifted_dgs_combine_commute:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-           (dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc de g) =
-         dgs_combine (unit_dg_spec_for_lifted gs is_bot_state tf) dst
+           (dgs_combine (unit_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g) =
+         dgs_combine (unit_dg_spec_for_lifted gs is_bot_state tf) ci
            (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) de)
            (map_lift (fun_of_resolved_st_q_for gs) g)"
 proof -
   have step1: "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-                 (unit_combine_step_st_assign_for_lifted gs dst is_bot_pred de (unit_combine_step_st_env_lifted dc g)) =
-               unit_combine_step_assign_for_lifted gs dst is_bot_state (map_lift (fun_of_resolved_st_q_for gs) de)
+                 (unit_combine_step_st_assign_for_lifted gs (ci_dst ci) is_bot_pred de (unit_combine_step_st_env_lifted dc g)) =
+               unit_combine_step_assign_for_lifted gs ci is_bot_state (map_lift (fun_of_resolved_st_q_for gs) de)
                  (map_lift (fun_of_resolved_st_q_for gs) (fst (unit_combine_step_st_env_lifted dc g)),
                   map_lift (fun_of_resolved_st_q_for gs) (snd (unit_combine_step_st_env_lifted dc g)))"
     by (rule unit_combine_step_st_assign_for_lifted_fun_of_resolved_st_q_for[OF exact])
   have step2: "(map_lift (fun_of_resolved_st_q_for gs) (fst (unit_combine_step_st_env_lifted dc g)),
                  map_lift (fun_of_resolved_st_q_for gs) (snd (unit_combine_step_st_env_lifted dc g))) =
-               unit_combine_step_env_for_lifted gs (map_lift (fun_of_resolved_st_q_for gs) dc)
+               unit_combine_step_env_for_lifted gs ci (map_lift (fun_of_resolved_st_q_for gs) dc)
                  (map_lift (fun_of_resolved_st_q_for gs) g)"
   proof -
     obtain A B where AB: "unit_combine_step_st_env_lifted dc g = (A, B)"
       by (cases "unit_combine_step_st_env_lifted dc g") auto
     show ?thesis
       unfolding AB
-      using unit_combine_step_st_env_lifted_fun_of_resolved_st_q_for[where d = dc and g = g and gs = gs]
+      using unit_combine_step_st_env_lifted_fun_of_resolved_st_q_for[where d = dc and g = g and gs = gs and ci = ci]
       by (simp add: AB map_prod_def)
   qed
   show ?thesis
@@ -2749,8 +2781,9 @@ definition dg_cmb_of ::
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) strategy_tree"
 where
   "dg_cmb_of S route ctx ca cc ex =
-     (case ca of CallEdge dst _ _ \<Rightarrow>
-       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx)) (dg_spec_combine_tree S dst cc ex)))"
+     (case ca of CallEdge _ _ _ \<Rightarrow>
+       map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>w. (w, ctx))
+         (dg_spec_combine_tree S (call_info_of ca (result_proc ex)) cc ex)))"
 
 definition dg_extra_of ::
   "(('d::bounded_semilattice_sup_bot), ('h::bounded_semilattice_sup_bot)) dg_spec \<Rightarrow> cfg
@@ -4221,8 +4254,10 @@ lemma dg_tree_st_commute_routed_cmb_g:
   assumes seed_ne: "\<And>p c. seed_key p c \<noteq> gk0"
     and Henter: "\<And>xs es d g'. map_prod Fglob Floc (dgs_enter S_st xs es d g')
                       = dgs_enter S_abs xs es (Floc d) (Fglob g')"
-    and Hcomb:  "\<And>dst dc de g'. map_prod Fglob Floc (dgs_combine S_st dst dc de g')
-                      = dgs_combine S_abs dst (Floc dc) (Floc de) (Fglob g')"
+    and Hcomb:  "\<And>ci dc de g'. map_prod Fglob Floc (dgs_combine S_st ci dc de g')
+                      = dgs_combine S_abs ci (Floc dc) (Floc de) (Fglob g')"
+    and Hcont:  "\<And>ci d g'. Floc (caller_cont S_st ci d g')
+                      = caller_cont S_abs ci (Floc d) (Fglob g')"
     and Hroute: "\<And>u c' d ca. route_st u c' d ca = route_abs u c' (Floc d) ca"
   shows "dg_tree_st_commute \<sigma>_st
            (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex)
@@ -4234,33 +4269,37 @@ proof -
   let ?ctx' = "route_st cc ctx ?caller (CallEdge dst fs as)"
   let ?eg = "enter_global S_st fs as ?caller ?globals1"
   let ?callee = "locals (\<sigma>_st (Inl (ex, ?ctx')))"
-  let ?cg = "combine_global S_st dst ?caller ?callee ?globals1"
+  let ?ci = "call_info_of (CallEdge dst fs as) (result_proc ex)"
+  let ?dcont = "caller_cont S_st ?ci ?caller ?globals1"
+  let ?cg = "combine_global S_st ?ci ?dcont ?callee ?globals1"
   have Henter_g: "\<And>xs es d g'. Fglob (enter_global S_st xs es d g')
                     = enter_global S_abs xs es (Floc d) (Fglob g')"
     using Henter by (metis map_prod_simp fst_conv surj_pair)
   have Henter_l: "\<And>xs es d g'. Floc (enter_local S_st xs es d g')
                     = enter_local S_abs xs es (Floc d) (Fglob g')"
     using Henter by (metis map_prod_simp snd_conv surj_pair)
-  have Hcomb_g: "\<And>dst dc de g'. Fglob (combine_global S_st dst dc de g')
-                    = combine_global S_abs dst (Floc dc) (Floc de) (Fglob g')"
+  have Hcomb_g: "\<And>ci dc de g'. Fglob (combine_global S_st ci dc de g')
+                    = combine_global S_abs ci (Floc dc) (Floc de) (Fglob g')"
     using Hcomb by (metis map_prod_simp fst_conv surj_pair)
-  have Hcomb_l: "\<And>dst dc de g'. Floc (combine_local S_st dst dc de g')
-                    = combine_local S_abs dst (Floc dc) (Floc de) (Fglob g')"
+  have Hcomb_l: "\<And>ci dc de g'. Floc (combine_local S_st ci dc de g')
+                    = combine_local S_abs ci (Floc dc) (Floc de) (Fglob g')"
     using Hcomb by (metis map_prod_simp snd_conv surj_pair)
   have route_eq: "route_abs cc ctx (Floc ?caller) (CallEdge dst fs as) = ?ctx'"
     using Hroute[of cc ctx ?caller "CallEdge dst fs as"] by simp
   have trav: "traverse_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st
-      = DG (combine_local S_st dst ?caller ?callee ?globals1) bot"
+      = DG (combine_local S_st ?ci ?dcont ?callee ?globals1) bot"
     unfolding ca_eq routed_cmb_g_def Let_def by simp
   have trav_abs: "traverse_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
         (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
-      = DG (combine_local S_abs dst (Floc ?caller) (Floc ?callee) (Fglob ?globals1)) bot"
+      = DG (combine_local S_abs ?ci
+              (caller_cont S_abs ?ci (Floc ?caller) (Fglob ?globals1))
+              (Floc ?callee) (Fglob ?globals1)) bot"
     unfolding ca_eq routed_cmb_g_def Let_def by (simp add: route_eq)
   have trav_commute: "fun_of_dg_st_gen Floc Fglob
         (traverse_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st)
       = traverse_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
           (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
-    by (simp add: trav trav_abs Hcomb_l Fglob_bot)
+    by (simp add: trav trav_abs Hcont Hcomb_l Fglob_bot)
   have sides: "\<And>k. sides_of_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st k
       = (if k = Inr gk0 then DG bot (?eg \<squnion> ?cg)
          else if k = Inr (seed_key (FunctionEntry (result_proc ex)) ?ctx')
@@ -4275,7 +4314,7 @@ proof -
            then DG (Floc (enter_local S_st fs as ?caller ?globals1)) bot
          else bot)"
     unfolding ca_eq routed_cmb_g_def Let_def
-    by (simp add: route_eq seed_ne fun_upd_apply Henter_g Henter_l Hcomb_g)
+    by (simp add: route_eq seed_ne fun_upd_apply Henter_g Henter_l Hcont Hcomb_g)
   have sides_commute: "\<And>k. fun_of_dg_st_gen Floc Fglob
         (sides_of_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st k)
       = sides_of_rhs (routed_cmb_g S_abs gk0 seed_key route_abs ctx ca cc ex)
@@ -4643,18 +4682,39 @@ qed
 
 subsection \<open>The monovariant (unit-context) specialisation\<close>
 
+text \<open>\<^const>\<open>dg_spec_combine_tree\<close> applies the caller continuation itself, so the
+  operator whose commutation these proofs need is \<open>combine\<close> after \<open>caller_cont\<close>,
+  not \<open>combine\<close> alone.  \<open>Hcont\<close> is the executable/abstract commute for that
+  caller half; the two hypotheses compose into \<open>Hcomb'\<close> below.\<close>
+
 lemma dg_tree_st_commute_dg_cmb_of_for:
-  assumes Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
-                            = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+  assumes Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
+                            = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
+                            = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
   shows "dg_tree_st_commute_for gs \<sigma>_st (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)
                                   (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)"
-  unfolding dg_tree_st_commute_for_def dg_cmb_of_def dg_spec_combine_tree_def
-  apply simp
-  apply (intro conjI allI
-        traverse_wrapped_combine_commute_for[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb]
-        sides_wrapped_combine_commute_for[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb]
-        dep_aux_wrapped_combine_eq)
-  done
+proof -
+  have Hcomb': "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+        (dgs_combine S_st ci (caller_cont S_st ci dc g) de g)
+      = dgs_combine S_abs ci (caller_cont S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs g))
+          (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    by (simp add: Hcomb Hcont)
+  show ?thesis
+    unfolding dg_tree_st_commute_for_def dg_cmb_of_def dg_spec_combine_tree_def
+    apply simp
+    apply (intro conjI allI
+          traverse_wrapped_combine_commute_for
+            [where comb_st = "\<lambda>ci' dc de g. dgs_combine S_st ci' (caller_cont S_st ci' dc g) de g"
+               and comb_abs = "\<lambda>ci' dc de g. dgs_combine S_abs ci' (caller_cont S_abs ci' dc g) de g",
+             OF Hcomb']
+          sides_wrapped_combine_commute_for
+            [where comb_st = "\<lambda>ci' dc de g. dgs_combine S_st ci' (caller_cont S_st ci' dc g) de g"
+               and comb_abs = "\<lambda>ci' dc de g. dgs_combine S_abs ci' (caller_cont S_abs ci' dc g) de g",
+             OF Hcomb']
+          dep_aux_wrapped_combine_eq)
+    done
+qed
 
 lemma dg_extra_of_commute_for:
   assumes Henter:
@@ -4672,8 +4732,10 @@ theorem part_post_solution_dg_st_to_abs_for:
                           = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
       and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
                             = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-      and Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
-                            = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+      and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
+                            = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+      and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
+                            = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
       and pp: "part_post_solution (dg_gen_of S_st g bot0 s0d s0g) x \<sigma>_st vars"
   shows "part_post_solution (dg_gen_of S_abs g (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
            x (fun_of_dg_st_for gs \<circ> \<sigma>_st) vars"
@@ -4687,7 +4749,7 @@ proof -
     obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
     thus "dg_tree_st_commute_for gs \<sigma>_st
         (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
-      by (simp add: dg_tree_st_commute_dg_cmb_of_for[OF Hcomb])
+      by (simp add: dg_tree_st_commute_dg_cmb_of_for[OF Hcomb Hcont])
   qed
   have he: "\<And>c' w. list_all2 (dg_tree_st_commute_for gs \<sigma>_st)
       (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
@@ -4717,10 +4779,13 @@ text \<open>
 \<close>
 
 lemma dg_tree_st_commute_dg_cmb_of_lifted_for:
-  assumes Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-                            (dgs_combine S_st dst dc de g)
-                          = dgs_combine S_abs dst (map_lift (fun_of_resolved_st_q_for gs) dc)
+  assumes Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                            (dgs_combine S_st ci dc de g)
+                          = dgs_combine S_abs ci (map_lift (fun_of_resolved_st_q_for gs) dc)
                               (map_lift (fun_of_resolved_st_q_for gs) de) (map_lift (fun_of_resolved_st_q_for gs) g)"
+    and Hcont: "\<And>ci d g. map_lift (fun_of_resolved_st_q_for gs) (caller_cont S_st ci d g)
+                          = caller_cont S_abs ci (map_lift (fun_of_resolved_st_q_for gs) d)
+                              (map_lift (fun_of_resolved_st_q_for gs) g)"
   shows "dg_reader_commute_gen.dg_tree_st_commute
            (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
            (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)
@@ -4729,10 +4794,19 @@ proof -
   interpret R: dg_reader_commute_gen
     "map_lift (fun_of_resolved_st_q_for gs)" "map_lift (fun_of_resolved_st_q_for gs)"
     by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+  have Hcomb': "\<And>ci dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+        (dgs_combine S_st ci (caller_cont S_st ci dc g) de g)
+      = dgs_combine S_abs ci
+          (caller_cont S_abs ci (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) g))
+          (map_lift (fun_of_resolved_st_q_for gs) de) (map_lift (fun_of_resolved_st_q_for gs) g)"
+    by (simp add: Hcomb Hcont)
   show ?thesis
     unfolding dg_cmb_of_def dg_spec_combine_tree_def
     apply simp
-    apply (rule R.dg_tree_st_commute_wrapped_combine[where comb_st="dgs_combine S_st" and comb_abs="dgs_combine S_abs", OF Hcomb])
+    apply (rule R.dg_tree_st_commute_wrapped_combine
+            [where comb_st = "\<lambda>ci' dc de g. dgs_combine S_st ci' (caller_cont S_st ci' dc g) de g"
+               and comb_abs = "\<lambda>ci' dc de g. dgs_combine S_abs ci' (caller_cont S_abs ci' dc g) de g",
+             OF Hcomb'])
     done
 qed
 
@@ -4761,10 +4835,13 @@ theorem part_post_solution_dg_st_to_abs_lifted_for:
       and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
                             (dgs_enter S_st xs es d g)
                           = dgs_enter S_abs xs es (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g)"
-      and Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-                            (dgs_combine S_st dst dc de g)
-                          = dgs_combine S_abs dst (map_lift (fun_of_resolved_st_q_for gs) dc)
+      and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+                            (dgs_combine S_st ci dc de g)
+                          = dgs_combine S_abs ci (map_lift (fun_of_resolved_st_q_for gs) dc)
                               (map_lift (fun_of_resolved_st_q_for gs) de) (map_lift (fun_of_resolved_st_q_for gs) g)"
+      and Hcont: "\<And>ci d g. map_lift (fun_of_resolved_st_q_for gs) (caller_cont S_st ci d g)
+                          = caller_cont S_abs ci (map_lift (fun_of_resolved_st_q_for gs) d)
+                              (map_lift (fun_of_resolved_st_q_for gs) g)"
       and pp: "part_post_solution (dg_gen_of S_st g bot0 s0d s0g) x \<sigma>_st vars"
   shows "part_post_solution (dg_gen_of S_abs g (map_lift (fun_of_resolved_st_q_for gs) bot0)
                                (map_lift (fun_of_resolved_st_q_for gs) s0d) (map_lift (fun_of_resolved_st_q_for gs) s0g))
@@ -4781,7 +4858,7 @@ proof -
     thus "dg_reader_commute_gen.dg_tree_st_commute
         (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
         (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
-      by (simp add: dg_tree_st_commute_dg_cmb_of_lifted_for[OF Hcomb])
+      by (simp add: dg_tree_st_commute_dg_cmb_of_lifted_for[OF Hcomb Hcont])
   qed
   have he: "\<And>c' w. list_all2 (dg_reader_commute_gen.dg_tree_st_commute
       (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st)

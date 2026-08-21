@@ -124,6 +124,7 @@ interpretation parity_domain: routed_dg_domain_exec
 lemmas parity_Hstep_lifted_for = parity_domain.Hstep_lifted_for
 lemmas parity_Henter_lifted_for = parity_domain.Henter_lifted_for
 lemmas parity_Hcomb_lifted_for = parity_domain.Hcomb_lifted_for
+lemmas parity_Hcont_lifted_for = parity_domain.Hcont_lifted_for
 
 text \<open>
   The routing layer on top of those three facts. \<^locale>\<open>routed_unit_domain_exec\<close> adds
@@ -164,6 +165,7 @@ lemma dg_tree_st_commute_routed_cmb_g_parity:
      apply (rule parity_seed_ne_global)
     apply (rule parity_Henter_lifted_for[OF exact])
    apply (rule parity_Hcomb_lifted_for[OF exact])
+  apply (rule parity_Hcont_lifted_for[OF exact])
   apply (rule parity_route_unit_commute)
   done
 

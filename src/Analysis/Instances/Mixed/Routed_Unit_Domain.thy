@@ -76,6 +76,7 @@ lemma dg_tree_st_commute_routed_cmb_g:
      apply (rule seed_key_ne_gk0)
     apply (rule Henter_lifted_for)
    apply (rule Hcomb_lifted_for)
+  apply (rule Hcont_lifted_for)
   apply (rule route_unit_commute)
   done
 

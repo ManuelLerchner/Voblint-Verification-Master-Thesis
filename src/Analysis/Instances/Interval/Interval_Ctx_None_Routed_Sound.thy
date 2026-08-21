@@ -139,6 +139,7 @@ interpretation ivl_domain: routed_dg_domain_exec
 lemmas ictx_Hstep_lifted_for = ivl_domain.Hstep_lifted_for
 lemmas ictx_Henter_lifted_for = ivl_domain.Henter_lifted_for
 lemmas ictx_Hcomb_lifted_for = ivl_domain.Hcomb_lifted_for
+lemmas ictx_Hcont_lifted_for = ivl_domain.Hcont_lifted_for
 
 end
 
@@ -161,6 +162,7 @@ lemma dg_tree_st_commute_routed_cmb_g_ictx:
      apply (rule seed_ne_global)
     apply (rule ictx_Henter_lifted_for[OF exact])
    apply (rule ictx_Hcomb_lifted_for[OF exact])
+  apply (rule ictx_Hcont_lifted_for[OF exact])
   apply (rule route_unit_commute)
   done
 

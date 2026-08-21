@@ -355,16 +355,16 @@ lemma dg_edge_contribution_tree_matches_global:
 text \<open>Procedure-return combine: two \<open>D\<close> inputs (caller, callee exit), one \<open>G\<close>.\<close>
 
 definition dg_combine_tree ::
-  "(vname option \<Rightarrow> 'dl::bounded_semilattice_sup_bot \<Rightarrow> 'dl \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
-   \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
+  "(call_info \<Rightarrow> 'dl::bounded_semilattice_sup_bot \<Rightarrow> 'dl \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> call_info \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
-  "dg_combine_tree comb dst cc ex =
+  "dg_combine_tree comb ci cc ex =
      do {
        dc <- read_local cc;
        de <- read_local ex;
        g <- read_global ();
-       depend_on () (DG bot (fst (comb dst (locals dc) (locals de) (globs g))))
-         (answer (DG (snd (comb dst (locals dc) (locals de) (globs g))) bot))
+       depend_on () (DG bot (fst (comb ci (locals dc) (locals de) (globs g))))
+         (answer (DG (snd (comb ci (locals dc) (locals de) (globs g))) bot))
      }"
 
 lemma traverse_dg_combine_tree:
@@ -494,17 +494,43 @@ record ('dl, 'dg) dg_spec =
   dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_event      :: "analysis_event \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_combine_env    :: "'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_combine_assign :: "vname option \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"
+  dgs_caller_cont    :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
+  dgs_combine_env    :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_combine_assign :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl \<Rightarrow> 'dg \<times> 'dl"
 
 text \<open>The composed combine, in the pre-split curried shape every existing
   caller already uses fully applied (\<open>dgs_combine S dst dc de g\<close>).  Kept as
   a plain definition, not a record field, so the split above is the single
   source of truth and this cannot drift out of sync with it.\<close>
 definition dgs_combine ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname option \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
 where
-  "dgs_combine S dst dc de g = dgs_combine_assign S dst de g (dgs_combine_env S dc de g)"
+  "dgs_combine S ci dcont de g = dgs_combine_assign S ci de g (dgs_combine_env S ci dcont de g)"
+
+text \<open>
+  The caller half of Goblint's \<open>enter\<close>, which returns a pair: the state the caller
+  resumes from and the state the callee starts in.  \<open>dgs_caller_cont\<close> over-approximates
+  the pre-call concrete caller store, retaining only information intended to remain
+  usable when the call returns; it may forget abstract facts invalidated by potential
+  callee effects, which is what lets a relational carrier drop relations the callee
+  can break.  It reads the global carrier because every other \<^typ>\<open>('dl, 'dg) dg_spec\<close>
+  operation does, but it publishes no globals: \<open>dgs_enter\<close> already owns the call's
+  global side effect.
+\<close>
+definition dgs_enter_pair ::
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl \<times> ('dg \<times> 'dl)"
+where
+  "dgs_enter_pair S ci dc g =
+     (dgs_caller_cont S ci dc g,
+      dgs_enter S (ci_formals ci) (ci_args ci) dc g)"
+
+lemma fst_dgs_enter_pair [simp]:
+  "fst (dgs_enter_pair S ci dc g) = dgs_caller_cont S ci dc g"
+  by (simp add: dgs_enter_pair_def)
+
+lemma snd_dgs_enter_pair [simp]:
+  "snd (dgs_enter_pair S ci dc g) = dgs_enter S (ci_formals ci) (ci_args ci) dc g"
+  by (simp add: dgs_enter_pair_def)
 
 text \<open>
   \<open>EA_Check\<close> routes through \<^const>\<open>dgs_event\<close> here, matching \<^const>\<open>apply_tf\<close>'s
@@ -561,9 +587,19 @@ lemma apply_dg_spec_contribution_dep_aux_matches:
 
 definition dg_spec_combine_tree ::
   "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
-   \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
+   \<Rightarrow> call_info \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp, unit, ('dl, 'dg) dg_state) strategy_tree"
 where
-  "dg_spec_combine_tree S dst cc ex = dg_combine_tree (dgs_combine S) dst cc ex"
+  "dg_spec_combine_tree S ci cc ex =
+     dg_combine_tree
+       (\<lambda>ci' dc de g. dgs_combine S ci' (dgs_caller_cont S ci' dc g) de g) ci cc ex"
+
+text \<open>
+  \<^const>\<open>dg_combine_tree\<close> reads the caller unknown, which holds the raw pre-call
+  state; the continuation is reconstructed here, at the boundary standing in for
+  \<open>enter\<close>, so \<^const>\<open>dgs_combine\<close> still receives a continuation and never the raw
+  caller.  This is the non-routed counterpart of what \<open>routed_cmb_g\<close> does, and
+  \<open>combine_sound_at_call\<close> is what licenses both.
+\<close>
 
 subsection \<open>The homogeneous unit analysis\<close>
 
@@ -582,21 +618,21 @@ text \<open>The unit env-merge/assign split (defined below as \<open>unit_combin
   composed.\<close>
 definition unit_combine_step_assign_for ::
   "(vname => bool) =>
-   vname option => 'a::bounded_semilattice_sup_bot abs_state
+   call_info => 'a::bounded_semilattice_sup_bot abs_state
    => 'a abs_state => 'a abs_state \<times> 'a abs_state
    => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step_assign_for gs dst de g merged =
-     (let res = combine_assign\<^sup># dst (de ret_var)
+  "unit_combine_step_assign_for gs ci de g merged =
+     (let res = combine_assign\<^sup># (ci_dst ci) (de ret_var)
          (fst merged \<squnion> snd merged)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 
 
 definition unit_combine_step_env_for ::
-  "(vname => bool) =>
+  "(vname => bool) => call_info =>
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state
    => 'a abs_state => 'a abs_state \<times> 'a abs_state" where
-  "unit_combine_step_env_for gs dc de g =
+  "unit_combine_step_env_for gs ci dc de g =
      (let m = combine_env_abs gs dc g
       in (restrict_global_for gs m, restrict_local_for gs m))"
 
@@ -628,65 +664,65 @@ text \<open>
 \<close>
 
 definition unit_combine_step_env_for_lifted ::
-  "(vname => bool)
+  "(vname => bool) => call_info
    => 'a::bounded_semilattice_sup_bot abs_state lifted => 'a abs_state lifted
    => 'a abs_state lifted \<times> 'a abs_state lifted"
 where
-  "unit_combine_step_env_for_lifted gs d g =
+  "unit_combine_step_env_for_lifted gs ci d g =
      (let m = assemble_env_abs gs d g
       in (map_lift (restrict_global_for gs) m, map_lift (restrict_local_for gs) m))"
 
 lemma unit_combine_step_env_for_lifted_Bot_dominates_local [simp]:
-  "unit_combine_step_env_for_lifted gs Bot g = (Bot, Bot)"
+  "unit_combine_step_env_for_lifted gs ci Bot g = (Bot, Bot)"
   unfolding unit_combine_step_env_for_lifted_def by simp
 
 lemma unit_combine_step_env_for_lifted_global_bot:
-  "unit_combine_step_env_for_lifted gs (Lifted d) Bot =
+  "unit_combine_step_env_for_lifted gs ci (Lifted d) Bot =
      (Lifted (restrict_global_for gs (combine_env_abs gs d bot)),
       Lifted (restrict_local_for gs (combine_env_abs gs d bot)))"
   unfolding unit_combine_step_env_for_lifted_def by simp
 
 lemma unit_combine_step_env_for_lifted_agrees:
-  "unit_combine_step_env_for_lifted gs (Lifted d) (Lifted g) =
-     (Lifted (fst (unit_combine_step_env_for gs d de g)),
-      Lifted (snd (unit_combine_step_env_for gs d de g)))"
+  "unit_combine_step_env_for_lifted gs ci (Lifted d) (Lifted g) =
+     (Lifted (fst (unit_combine_step_env_for gs ci d de g)),
+      Lifted (snd (unit_combine_step_env_for gs ci d de g)))"
   unfolding unit_combine_step_env_for_lifted_def unit_combine_step_env_for_def
   by (simp add: Let_def)
 
 definition unit_combine_step_assign_for_lifted ::
   "(vname => bool)
-   => vname option
+   => call_info
    => ('a::bounded_semilattice_sup_bot abs_state => bool)
    => 'a abs_state lifted
    => 'a abs_state lifted \<times> 'a abs_state lifted
    => 'a abs_state lifted \<times> 'a abs_state lifted"
 where
-  "unit_combine_step_assign_for_lifted gs dst is_bot_pred de merged =
+  "unit_combine_step_assign_for_lifted gs ci is_bot_pred de merged =
      (let joined = fst merged \<squnion> snd merged;
           res = transfer_lift2 is_bot_pred
-                  (\<lambda>de0 env0. combine_assign\<^sup># dst (de0 ret_var) env0) de joined
+                  (\<lambda>de0 env0. combine_assign\<^sup># (ci_dst ci) (de0 ret_var) env0) de joined
       in (map_lift (restrict_global_for gs) res, map_lift (restrict_local_for gs) res))"
 
 lemma unit_combine_step_assign_for_lifted_de_bot [simp]:
-  "unit_combine_step_assign_for_lifted gs dst is_bot_pred Bot merged = (Bot, Bot)"
+  "unit_combine_step_assign_for_lifted gs ci is_bot_pred Bot merged = (Bot, Bot)"
   unfolding unit_combine_step_assign_for_lifted_def by simp
 
 lemma unit_combine_step_assign_for_lifted_merged_bot [simp]:
-  "unit_combine_step_assign_for_lifted gs dst is_bot_pred (Lifted de0) (Bot, Bot) = (Bot, Bot)"
+  "unit_combine_step_assign_for_lifted gs ci is_bot_pred (Lifted de0) (Bot, Bot) = (Bot, Bot)"
   unfolding unit_combine_step_assign_for_lifted_def by simp
 
 lemma unit_combine_step_assign_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (combine_assign\<^sup># dst (de0 ret_var) (env0a \<squnion> env0b))"
-  shows "unit_combine_step_assign_for_lifted gs dst is_bot_pred (Lifted de0) (Lifted env0a, Lifted env0b) =
-           (Lifted (fst (unit_combine_step_assign_for gs dst de0 g (env0a, env0b))),
-            Lifted (snd (unit_combine_step_assign_for gs dst de0 g (env0a, env0b))))"
+  assumes "\<not> is_bot_pred (combine_assign\<^sup># (ci_dst ci) (de0 ret_var) (env0a \<squnion> env0b))"
+  shows "unit_combine_step_assign_for_lifted gs ci is_bot_pred (Lifted de0) (Lifted env0a, Lifted env0b) =
+           (Lifted (fst (unit_combine_step_assign_for gs ci de0 g (env0a, env0b))),
+            Lifted (snd (unit_combine_step_assign_for gs ci de0 g (env0a, env0b))))"
   using assms
   unfolding unit_combine_step_assign_for_lifted_def unit_combine_step_assign_for_def
   by (simp add: Let_def)
 
 lemma unit_combine_step_assign_for_lifted_collapses_bot:
-  assumes "is_bot_pred (combine_assign\<^sup># dst (de0 ret_var) (env0a \<squnion> env0b))"
-  shows "unit_combine_step_assign_for_lifted gs dst is_bot_pred (Lifted de0) (Lifted env0a, Lifted env0b) = (Bot, Bot)"
+  assumes "is_bot_pred (combine_assign\<^sup># (ci_dst ci) (de0 ret_var) (env0a \<squnion> env0b))"
+  shows "unit_combine_step_assign_for_lifted gs ci is_bot_pred (Lifted de0) (Lifted env0a, Lifted env0b) = (Bot, Bot)"
   using assms
   unfolding unit_combine_step_assign_for_lifted_def
   by simp
@@ -694,22 +730,22 @@ lemma unit_combine_step_assign_for_lifted_collapses_bot:
 
 
 definition unit_combine_step_env_placed ::
-  "(vname => bool) => (vname => bool) => (vname => bool) =>
+  "(vname => bool) => (vname => bool) => (vname => bool) => call_info =>
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
    'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step_env_placed source_global keep_local publish_side dc de g =
+  "unit_combine_step_env_placed source_global keep_local publish_side ci dc de g =
      (let res = combine_env_abs source_global (dc \<squnion> g) (de \<squnion> g) in
       (project_component publish_side res, project_component keep_local res))"
 
 
 definition unit_combine_step_assign_placed ::
-  "(vname => bool) => (vname => bool) => vname option =>
+  "(vname => bool) => (vname => bool) => call_info =>
    'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
    'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
-  "unit_combine_step_assign_placed keep_local publish_side dst de g merged =
-     (let res = combine_assign\<^sup># dst ((de \<squnion> g) ret_var)
+  "unit_combine_step_assign_placed keep_local publish_side ci de g merged =
+     (let res = combine_assign\<^sup># (ci_dst ci) ((de \<squnion> g) ret_var)
          (fst merged \<squnion> snd merged)
       in (project_component publish_side res, project_component keep_local res))"
 
@@ -734,6 +770,7 @@ where
       (enter\<^sup># tf xs es)),
     dgs_event      = (\<lambda>ev. unit_step_placed keep_local publish_side
       (event\<^sup># tf ev)),
+    dgs_caller_cont = (\<lambda>_ d _. d),
     dgs_combine_env = unit_combine_step_env_placed source_global keep_local publish_side,
     dgs_combine_assign = unit_combine_step_assign_placed keep_local publish_side
   \<rparr>"
@@ -766,6 +803,7 @@ where
     dgs_return     = (\<lambda>e p. unit_step_for gs (return\<^sup># tf e p)),
     dgs_enter      = (\<lambda>xs es. unit_step_for gs (enter\<^sup># tf xs es)),
     dgs_event      = (\<lambda>ev. unit_step_for gs (event\<^sup># tf ev)),
+    dgs_caller_cont    = (\<lambda>_ d _. d),
     dgs_combine_env    = unit_combine_step_env_for gs,
     dgs_combine_assign = unit_combine_step_assign_for gs
   \<rparr>"
@@ -778,14 +816,14 @@ text \<open>Unlike the plain collecting semantics' \<^const>\<open>combine_colle
   supplies the ownership routing for the non-return names; \<open>de ret_var\<close> is
   read directly instead of routing it through that same combine.\<close>
 lemma dgs_combine_unit_dg_spec_for:
-  "dgs_combine (unit_dg_spec_for gs tf) dst dc de g =
-     (let res = combine_assign\<^sup># dst (de ret_var) (combine_env_abs gs dc g)
+  "dgs_combine (unit_dg_spec_for gs tf) ci dcont de g =
+     (let res = combine_assign\<^sup># (ci_dst ci) (de ret_var) (combine_env_abs gs dcont g)
       in (restrict_global_for gs res, restrict_local_for gs res))"
 proof -
   have env:
-    "fst (unit_combine_step_env_for gs dc de g) \<squnion>
-       snd (unit_combine_step_env_for gs dc de g) =
-     combine_env_abs gs dc g"
+    "fst (unit_combine_step_env_for gs ci dcont de g) \<squnion>
+       snd (unit_combine_step_env_for gs ci dcont de g) =
+     combine_env_abs gs dcont g"
     unfolding unit_combine_step_env_for_def
     by (simp add: Let_def restrict_global_for_local_join)
   show ?thesis
@@ -831,8 +869,9 @@ where
     dgs_return     = (\<lambda>e p. unit_step_for_lifted gs is_bot_pred (return\<^sup># tf e p)),
     dgs_enter      = (\<lambda>xs es. unit_step_for_lifted gs is_bot_pred (enter\<^sup># tf xs es)),
     dgs_event      = (\<lambda>ev. unit_step_for_lifted gs is_bot_pred (event\<^sup># tf ev)),
-    dgs_combine_env    = (\<lambda>dc de g. unit_combine_step_env_for_lifted gs dc g),
-    dgs_combine_assign = (\<lambda>dst de g merged. unit_combine_step_assign_for_lifted gs dst is_bot_pred de merged)
+    dgs_caller_cont    = (\<lambda>_ d _. d),
+    dgs_combine_env    = (\<lambda>ci dc de g. unit_combine_step_env_for_lifted gs ci dc g),
+    dgs_combine_assign = (\<lambda>ci de g merged. unit_combine_step_assign_for_lifted gs ci is_bot_pred de merged)
   \<rparr>"
 
 text \<open>Gate 1 -- record-level type sanity: the generic \<^const>\<open>dg_spec_step\<close>/\<^const>\<open>dgs_combine\<close>
@@ -851,9 +890,9 @@ lemma dgs_enter_unit_dg_spec_for_lifted:
   unfolding unit_dg_spec_for_lifted_def by simp
 
 lemma dgs_combine_unit_dg_spec_for_lifted:
-  "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g =
-     unit_combine_step_assign_for_lifted gs dst is_bot_pred de
-       (unit_combine_step_env_for_lifted gs dc g)"
+  "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) ci dc de g =
+     unit_combine_step_assign_for_lifted gs ci is_bot_pred de
+       (unit_combine_step_env_for_lifted gs ci dc g)"
   unfolding dgs_combine_def unit_dg_spec_for_lifted_def by simp
 
 text \<open>Gate 2 -- whole-record agreement on reachable inputs whose transfer result is not itself
@@ -870,10 +909,10 @@ lemma dg_spec_step_unit_for_lifted_agrees:
   by (rule unit_step_for_lifted_agrees)
 
 lemma dgs_combine_unit_dg_spec_for_lifted_agrees:
-  assumes "\<not> is_bot_pred (combine_assign\<^sup># dst (de ret_var) (combine_env_abs gs dc g))"
-  shows "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst (Lifted dc) (Lifted de) (Lifted g) =
-           (Lifted (fst (dgs_combine (unit_dg_spec_for gs tf) dst dc de g)),
-            Lifted (snd (dgs_combine (unit_dg_spec_for gs tf) dst dc de g)))"
+  assumes "\<not> is_bot_pred (combine_assign\<^sup># (ci_dst ci) (de ret_var) (combine_env_abs gs dc g))"
+  shows "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) ci (Lifted dc) (Lifted de) (Lifted g) =
+           (Lifted (fst (dgs_combine (unit_dg_spec_for gs tf) ci dc de g)),
+            Lifted (snd (dgs_combine (unit_dg_spec_for gs tf) ci dc de g)))"
 proof -
   have joined: "restrict_global_for gs (combine_env_abs gs dc g) \<squnion> restrict_local_for gs (combine_env_abs gs dc g)
                   = combine_env_abs gs dc g"
@@ -899,11 +938,11 @@ lemma dg_spec_step_unit_for_lifted_collapses_bot:
   by (rule unit_step_for_lifted_collapses_bot)
 
 lemma dgs_combine_unit_dg_spec_for_lifted_de_bot:
-  "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst dc Bot g = (Bot, Bot)"
+  "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) ci dc Bot g = (Bot, Bot)"
   unfolding dgs_combine_unit_dg_spec_for_lifted by simp
 
 lemma dgs_combine_unit_dg_spec_for_lifted_dc_bot:
-  "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) dst Bot (Lifted de) g = (Bot, Bot)"
+  "dgs_combine (unit_dg_spec_for_lifted gs is_bot_pred tf) ci Bot (Lifted de) g = (Bot, Bot)"
   unfolding dgs_combine_unit_dg_spec_for_lifted by simp
 
 

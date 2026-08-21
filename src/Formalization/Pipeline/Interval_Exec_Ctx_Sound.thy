@@ -350,6 +350,14 @@ lemma ivl_Hcomb_lifted_for:
   by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
         [where tf = "ivl_tf_for gs", unfolded fun_of_exec_dg_st_for_def, OF exact])
 
+lemma ivl_Hcont_lifted_for:
+  "map_lift (fun_of_resolved_st_q_for gs)
+     (caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)) ci dc g)
+   = caller_cont (base_dg_spec_for_lifted gs is_bot_state (ivl_tf_for gs)) ci
+       (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
+        [where tf = "ivl_tf_for gs", unfolded fun_of_exec_dg_st_for_def])
+
 text \<open>
   Registers \<open>dg_reader_commute_gen\<close> (issue #123, Layer 3.5,
   \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>) at the one reader this whole section needs --
@@ -535,6 +543,7 @@ lemma dg_tree_st_commute_routed_cmb_g_ivl:
            and route_abs = "entry_state_route_abs_gen gs",
          OF dg_reader_commute_gen_ivl_lifted seed_ne_global
             ivl_Henter_lifted_for[OF exact] ivl_Hcomb_lifted_for[OF exact]
+            ivl_Hcont_lifted_for
             entry_state_route_commute_gen[OF exact]])
 
 lemma hextra_commute_routed:

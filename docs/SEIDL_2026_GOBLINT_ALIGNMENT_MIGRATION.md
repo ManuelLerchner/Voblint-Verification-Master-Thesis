@@ -576,6 +576,67 @@ The structural merge is recovered as one instance.
 This is the most important semantic alignment step for Goblint's `enter` and
 `combine` interface.
 
+### Deferred: the relational call-protocol witness
+
+`Rel_Order_Domain.thy`'s `relc` cannot serve as the custom-combine regression.
+Its carrier is genuinely relational -- a finite set of pairs `(x, y)` meaning
+`x <= y`, with no `vname => 'a` function anywhere -- but its call path is
+deliberately maximally imprecise: `dgs_enter_rel` and `dgs_combine_env_rel`
+both return `top_relc`, discarding every relation. There is no call-side
+invalidation to relocate into a caller continuation, so `relc` keeps
+`dgs_caller_cont = (\<lambda>_ d _. d)` and its semantics are left unchanged.
+
+The witness is instead a separate instance over the same carrier shape:
+
+- conservative callee may-write information, keyed by `ci_callee`;
+- `caller_cont ci dc g` drops only caller relations mentioning a variable the
+  callee may write;
+- `combine_env ci dcont de g` meets the surviving caller relations with the
+  *caller-visible* callee-exit relations -- not the whole exit set, since the
+  callee's own locals and formals do not survive the boundary;
+- `combine_assign` stays the second phase.
+
+The regression must exercise both operands, not just the continuation: a
+caller fact (`x <= y`, with the callee writing only `z`) and a callee fact
+(`g <= h`) must both survive the return, which neither the havoc behaviour nor
+a componentwise reconstruction can achieve.
+
+Prefer deriving may-write from the VIMP procedure body. If transitive or
+recursive computation would balloon the scope, an explicit conservative
+procedure summary is acceptable, documented as the analysis-side stand-in for
+Goblint's `Queries.ask` -- which VIMP's `dg_spec` has no counterpart for.
+
+### Next: retire the TD/etf spine
+
+The call/return protocol now lives on the D/G route only. Voblint still
+carries a second, independent interprocedural spine -- `TD_Side` with
+`domain_transfer`/`effectful_domain_transfer` -- which is not a specification
+layer above D/G and not a refinement of it: no proved relation connects the
+two, and the exported CLI never reaches it.
+
+The end state is one of each:
+
+```text
+transfer interface      dg_spec
+call/return protocol    D/G
+context routing         D/G
+RHS generator family    D/G
+executable path         D/G
+soundness chain         D/G -> ltr_collect
+CLI/codegen path        D/G
+```
+
+Removal covers `domain_transfer`/`effectful_domain_transfer`,
+`unit_etf_of_transfer`/`mixed_etf_of_transfer`, `side_cfg_T_eff*`,
+`make_side_rhs_tree_eff*`, the `_st` TD-side execution path, the
+`Exec_Bridge` pieces specific to that spine, and `LTR_TD_Side_Eff_Sound*`.
+The strategy-tree monad, the vendored TD solver, `resolved_st_q` and
+`ltr_collect` are shared substrate and stay.
+
+The gate is deletion, not deprecation: no compatibility shadow spine and no
+internal wrapper that keeps both architectures alive. A temporary public API
+alias is the only acceptable exception.
+
 ### Slice 7 - update-rule abstraction
 
 Goal: model the solver-level hook discussed in paper Section 5.3.

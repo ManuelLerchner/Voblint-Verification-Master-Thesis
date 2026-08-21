@@ -107,6 +107,7 @@ lemma dg_tree_st_commute_routed_cmb_g_sign_cs:
      apply (rule cs_seed_ne_global)
     apply (rule sign_Henter_lifted_for[OF exact])
    apply (rule sign_Hcomb_lifted_for[OF exact])
+  apply (rule sign_Hcont_lifted_for[OF exact])
   apply (rule cs_route_commute)
   done
 

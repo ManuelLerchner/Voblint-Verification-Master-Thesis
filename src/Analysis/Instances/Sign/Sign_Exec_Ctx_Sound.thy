@@ -124,6 +124,7 @@ interpretation sign_domain: routed_dg_domain_exec
 lemmas sign_Hstep_lifted_for = sign_domain.Hstep_lifted_for
 lemmas sign_Henter_lifted_for = sign_domain.Henter_lifted_for
 lemmas sign_Hcomb_lifted_for = sign_domain.Hcomb_lifted_for
+lemmas sign_Hcont_lifted_for = sign_domain.Hcont_lifted_for
 
 end
 
@@ -146,6 +147,7 @@ lemma dg_tree_st_commute_routed_cmb_g_sign:
      apply (rule seed_ne_global)
     apply (rule sign_Henter_lifted_for[OF exact])
    apply (rule sign_Hcomb_lifted_for[OF exact])
+  apply (rule sign_Hcont_lifted_for[OF exact])
   apply (rule route_unit_commute)
   done
 

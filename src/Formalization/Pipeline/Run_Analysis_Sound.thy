@@ -98,8 +98,10 @@ theorem dg_exec_run_source_sound_for:
                         = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
                         = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
-                        = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
+                        = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
+                        = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input gs Pi ps mnm main"
@@ -117,7 +119,7 @@ proof -
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
       x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb pp_st])
+    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb Hcont pp_st])
   have pp_gen: "part_post_solution
       (sds.dg_gen (compile_prog Pi ps mnm main)
          (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
@@ -149,8 +151,10 @@ theorem dg_exec_collect_sound_for:
                         = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
                         = dgs_enter S_abs xs es (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-    and Hcomb: "\<And>dst dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st dst dc de g)
-                        = dgs_combine S_abs dst (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
+                        = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
+    and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
+                        = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input gs Pi ps mnm main"
@@ -166,7 +170,7 @@ proof -
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
       x (fun_of_dg_st_for gs \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb pp_st])
+    by (rule part_post_solution_dg_st_to_abs_for[OF Hstep Henter Hcomb Hcont pp_st])
   have pp_gen: "part_post_solution
       (sds.dg_gen (compile_prog Pi ps mnm main)
          (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
@@ -211,10 +215,21 @@ lemma unit_dg_Henter_for:
 
 lemma unit_dg_Hcomb_for:
   "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
-       (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) dst dc de g)
-     = dgs_combine (unit_dg_spec_for gs tf) dst
+       (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
+     = dgs_combine (unit_dg_spec_for gs tf) ci
          (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
   by (rule unit_combine_step_st_commute_for)
+
+text \<open>The caller half of \<open>enter\<close> is the identity on both sides of the diagonal
+  correspondence, so its commute obligation holds by unfolding the two records ---
+  but it is discharged here rather than assumed, so a future executable spec with
+  a nontrivial continuation has to supply its own.\<close>
+
+lemma unit_dg_Hcont_for:
+  "fun_of_exec_dg_st_for gs (caller_cont (unit_dg_spec_st_for gs tf_st enter_st) ci d g)
+     = caller_cont (unit_dg_spec_for gs tf) ci
+         (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
+  by (simp add: unit_dg_spec_st_for_def unit_dg_spec_for_def)
 
 subsection \<open>Registration locale for diagonal executable D/G analyses\<close>
 
@@ -298,7 +313,7 @@ proof -
     unfolding gamma_def eqs_def
     by (rule dg_exec_run_source_sound_for
           [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
-              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for
+              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for unit_dg_Hcont_for
               pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0 s0mem run])
 qed
@@ -327,7 +342,7 @@ proof -
     unfolding gamma_def eqs_def
     by (rule dg_exec_collect_sound_for
           [OF sds unit_dg_Hstep_for[OF tf_commute reduces]
-              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for
+              unit_dg_Henter_for[OF enter_commute] unit_dg_Hcomb_for unit_dg_Hcont_for
               pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0])
 qed
@@ -365,10 +380,13 @@ theorem dg_exec_run_source_sound_lifted_for:
     and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dgs_enter S_st xs es d g)
                       = dgs_enter S_abs xs es (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_combine S_st dst dc de g)
-                      = dgs_combine S_abs dst (map_lift (fun_of_exec_dg_st_for gs) dc)
+    and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_combine S_st ci dc de g)
+                      = dgs_combine S_abs ci (map_lift (fun_of_exec_dg_st_for gs) dc)
                           (map_lift (fun_of_exec_dg_st_for gs) de) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Hcont: "\<And>ci d g. map_lift (fun_of_exec_dg_st_for gs) (caller_cont S_st ci d g)
+                      = caller_cont S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d)
+                          (map_lift (fun_of_exec_dg_st_for gs) g)"
     and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input gs Pi ps mnm main"
@@ -388,7 +406,7 @@ proof -
          (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
          (map_lift (fun_of_exec_dg_st_for gs) s0g))
       x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb pp_st])
+    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb Hcont pp_st])
   have pp_gen: "part_post_solution
       (sds.dg_gen (compile_prog Pi ps mnm main)
          (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
@@ -414,10 +432,13 @@ theorem dg_exec_collect_sound_lifted_for:
     and Henter: "\<And>xs es d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dgs_enter S_st xs es d g)
                       = dgs_enter S_abs xs es (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-    and Hcomb: "\<And>dst dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-                        (dgs_combine S_st dst dc de g)
-                      = dgs_combine S_abs dst (map_lift (fun_of_exec_dg_st_for gs) dc)
+    and Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
+                        (dgs_combine S_st ci dc de g)
+                      = dgs_combine S_abs ci (map_lift (fun_of_exec_dg_st_for gs) dc)
                           (map_lift (fun_of_exec_dg_st_for gs) de) (map_lift (fun_of_exec_dg_st_for gs) g)"
+    and Hcont: "\<And>ci d g. map_lift (fun_of_exec_dg_st_for gs) (caller_cont S_st ci d g)
+                      = caller_cont S_abs ci (map_lift (fun_of_exec_dg_st_for gs) d)
+                          (map_lift (fun_of_exec_dg_st_for gs) g)"
     and pp_st: "part_post_solution
                   (dg_gen_of S_st (compile_prog Pi ps mnm main) bot0 s0d s0g) x sigma_st vars"
     and wf: "wf_compile_input gs Pi ps mnm main"
@@ -435,7 +456,7 @@ proof -
          (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
          (map_lift (fun_of_exec_dg_st_for gs) s0g))
       x (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) vars"
-    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb pp_st])
+    by (rule part_post_solution_dg_st_to_abs_lifted_for[folded fun_of_exec_dg_st_for_def, OF Hstep Henter Hcomb Hcont pp_st])
   have pp_gen: "part_post_solution
       (sds.dg_gen (compile_prog Pi ps mnm main)
          (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
@@ -539,6 +560,7 @@ proof -
           [OF sds base_dg_spec_st_for_lifted_dg_spec_step_commute[OF tf_commute is_bot_exact]
               base_dg_spec_st_for_lifted_dgs_enter_commute[OF enter_commute is_bot_exact]
               base_dg_spec_st_for_lifted_dgs_combine_commute[OF is_bot_exact]
+              base_dg_spec_st_for_lifted_dgs_caller_cont_commute
               pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0 s0mem run])
 qed
@@ -571,6 +593,7 @@ proof -
           [OF sds base_dg_spec_st_for_lifted_dg_spec_step_commute[OF tf_commute is_bot_exact]
               base_dg_spec_st_for_lifted_dgs_enter_commute[OF enter_commute is_bot_exact]
               base_dg_spec_st_for_lifted_dgs_combine_commute[OF is_bot_exact]
+              base_dg_spec_st_for_lifted_dgs_caller_cont_commute
               pp_st[unfolded eqs_def] wf cover[unfolded eqs_def]
               finI finC sound0])
 qed

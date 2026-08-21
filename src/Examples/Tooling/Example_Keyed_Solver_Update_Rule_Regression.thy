@@ -36,8 +36,9 @@ definition keyed_spec :: "(ivl, ivl) dg_spec" where
        dgs_return = \<lambda>e p d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
        dgs_event = \<lambda>ev d g. (g, d),
-       dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
-       dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"
+       dgs_caller_cont = \<lambda>ci dc g. dc,
+       dgs_combine_env = \<lambda>ci dc de g. (g, dc \<squnion> de),
+       dgs_combine_assign = \<lambda>ci de g p. p \<rparr>"
 
 definition keyed_dummy_cfg :: cfg where
   "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
@@ -110,8 +111,9 @@ definition merge_spec :: "(ivl, ivl) dg_spec" where
        dgs_return = \<lambda>e p d g. (g, d),
        dgs_enter = \<lambda>fs as d g. (g, d),
        dgs_event = \<lambda>ev d g. (g, d),
-       dgs_combine_env = \<lambda>dc de g. (g, dc \<squnion> de),
-       dgs_combine_assign = \<lambda>dst de g p. p \<rparr>"
+       dgs_caller_cont = \<lambda>ci dc g. dc,
+       dgs_combine_env = \<lambda>ci dc de g. (g, dc \<squnion> de),
+       dgs_combine_assign = \<lambda>ci de g p. p \<rparr>"
 
 text \<open>Two real predecessors of \<open>Statement 2\<close>: \<open>Statement 0\<close> via \<open>EA_Nop\<close>,
   \<open>Statement 1\<close> via \<open>EA_Assign\<close>. \<open>calls = {}\<close> keeps \<open>cmb\<close>/\<open>extra\<close> unused, as

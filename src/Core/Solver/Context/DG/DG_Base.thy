@@ -18,10 +18,15 @@ text \<open>
   \<^const>\<open>combine_env_abs\<close>-style reconstruction against \<open>'g\<close> occurs anywhere
   in this record.
 
-  \<open>dgs_combine_env\<close> is the identity on the caller's pre-call value: with no
-  separate global accumulator to reconcile \<open>dc\<close> against, the two-stage
-  \<^const>\<open>dgs_combine\<close> split degenerates to passing \<open>dc\<close> through unchanged and
-  letting \<open>dgs_combine_assign\<close> do the entire combine once \<open>de\<close> is available.
+  \<open>dgs_caller_cont\<close> is the identity: the Base carrier holds no relation between
+  the caller's locals and anything the callee could invalidate, so there is
+  nothing for the caller half of \<open>enter\<close> to drop, and the value \<open>combine\<close>
+  receives is the raw call-site one.  \<open>dgs_combine_env\<close> is likewise the identity
+  on that value: with no separate global accumulator to reconcile \<open>dc\<close> against,
+  the two-stage \<^const>\<open>dgs_combine\<close> split degenerates to passing \<open>dc\<close> through
+  unchanged and letting \<open>dgs_combine_assign\<close> do the entire combine once \<open>de\<close> is
+  available.  Only \<open>ci_dst\<close> of the call metadata is consumed, by the return
+  assignment.
 \<close>
 
 definition base_dg_spec_for_lifted ::
@@ -39,8 +44,10 @@ where
     dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (return\<^sup># tf e p) d)),
     dgs_enter      = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter\<^sup># tf xs es) d)),
     dgs_event      = (\<lambda>ev d g. (g, transfer_lift is_bot_pred (event\<^sup># tf ev) d)),
-    dgs_combine_env    = (\<lambda>dc de g. (g, dc)),
-    dgs_combine_assign = (\<lambda>dst de g merged. (g, transfer_lift2 is_bot_pred (combine\<^sup># gs dst) (snd merged) de))
+    dgs_caller_cont    = (\<lambda>ci dc g. dc),
+    dgs_combine_env    = (\<lambda>ci dc de g. (g, dc)),
+    dgs_combine_assign = (\<lambda>ci de g merged.
+      (g, transfer_lift2 is_bot_pred (combine\<^sup># gs (ci_dst ci)) (snd merged) de))
   |)"
 
 subsection \<open>Basic equations\<close>
@@ -63,9 +70,17 @@ lemma dgs_enter_base_for_lifted:
      (g, transfer_lift is_bot_pred (enter\<^sup># tf xs es) d)"
   unfolding base_dg_spec_for_lifted_def by simp
 
+text \<open>The caller half of \<open>enter\<close> hands \<open>combine\<close> the raw call-site value, so
+  every Base equation below reads exactly as it did before the call/return
+  protocol split the two halves apart.\<close>
+
+lemma dgs_caller_cont_base_for_lifted [simp]:
+  "dgs_caller_cont (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc g = dc"
+  unfolding base_dg_spec_for_lifted_def by simp
+
 lemma dgs_combine_base_for_lifted:
-  "dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g =
-     (g, transfer_lift2 is_bot_pred (combine\<^sup># gs dst) dc de)"
+  "dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc de g =
+     (g, transfer_lift2 is_bot_pred (combine\<^sup># gs (ci_dst ci)) dc de)"
   unfolding dgs_combine_def base_dg_spec_for_lifted_def by simp
 
 subsection \<open>Bot propagation\<close>
@@ -174,20 +189,21 @@ lemma gamma_dg_base_combine_sound:
   assumes tf_sound: "sound_transfer_for gs tf"
     and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
     and sc: "s \<in> gamma_dg_base dc g" and tc: "t \<in> gamma_dg_base de g"
-  shows "combine_collect gs dst s t \<in>
-           (case dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) dst dc de g of
+  shows "combine_collect gs (ci_dst ci) s t \<in>
+           (case dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc de g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof -
   obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
     using sc unfolding gamma_dg_base_def by (cases dc) auto
   obtain sigma_e where de_eq: "de = Lifted sigma_e" and tc': "t \<in> \<lbrakk>sigma_e\<rbrakk>"
     using tc unfolding gamma_dg_base_def by (cases de) auto
-  have base: "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst sigma_c sigma_e\<rbrakk>"
+  have base: "combine_collect gs (ci_dst ci) s t
+                \<in> \<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk>"
     by (rule combine_collect_sound[OF sc' tc'])
   show ?thesis
-  proof (cases "is_bot_pred (combine\<^sup># gs dst sigma_c sigma_e)")
+  proof (cases "is_bot_pred (combine\<^sup># gs (ci_dst ci) sigma_c sigma_e)")
     case True
-    then have "\<lbrakk>combine\<^sup># gs dst sigma_c sigma_e\<rbrakk> = {}"
+    then have "\<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk> = {}"
       by (rule is_bot_pred_sound)
     with base show ?thesis by simp
   next
@@ -241,6 +257,7 @@ theorem base_dg_spec_sound:
   apply unfold_locales
   subgoal for d d' g g' by (rule gamma_dg_base_mono)
   subgoal for a d g by (rule gamma_dg_base_step_sound[OF tf_sound is_bot_pred_sound])
+  subgoal premises prems using prems by simp
   subgoal premises prems by (rule gamma_dg_base_combine_sound[OF tf_sound is_bot_pred_sound prems])
   subgoal premises prems by (rule gamma_dg_base_enter_sound[OF tf_sound is_bot_pred_sound prems])
   done

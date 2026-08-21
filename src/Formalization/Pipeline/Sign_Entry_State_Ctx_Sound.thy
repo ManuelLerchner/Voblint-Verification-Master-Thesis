@@ -152,6 +152,7 @@ lemma dg_tree_st_commute_routed_cmb_g_sign_es:
      apply (rule sctx_seed_ne_global)
     apply (rule sign_Henter_lifted_for[OF exact])
    apply (rule sign_Hcomb_lifted_for[OF exact])
+  apply (rule sign_Hcont_lifted_for[OF exact])
   apply (rule sctx_entry_route_gen_commute[OF exact, unfolded sctx_abs_spec_def, symmetric])
   done
 

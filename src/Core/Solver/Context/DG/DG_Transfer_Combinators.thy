@@ -26,14 +26,23 @@ where
   "enter_local S fs as d g \<equiv> snd (dgs_enter S fs as d g)"
 
 abbreviation combine_global ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname option \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg"
 where
-  "combine_global S dst dc de g \<equiv> fst (dgs_combine S dst dc de g)"
+  "combine_global S ci dcont de g \<equiv> fst (dgs_combine S ci dcont de g)"
 
 abbreviation combine_local ::
-  "('dl, 'dg) dg_spec \<Rightarrow> vname option \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
 where
-  "combine_local S dst dc de g \<equiv> snd (dgs_combine S dst dc de g)"
+  "combine_local S ci dcont de g \<equiv> snd (dgs_combine S ci dcont de g)"
+
+text \<open>
+  The caller half of \<open>enter\<close>.  Named so the call sites read as the pair Goblint's
+  \<open>enter\<close> returns, rather than as a second operation performed at return.
+\<close>
+abbreviation caller_cont ::
+  "('dl, 'dg) dg_spec \<Rightarrow> call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
+where
+  "caller_cont S ci d g \<equiv> dgs_caller_cont S ci d g"
 
 text \<open>
   Every value a DG equation reads or publishes is a \<open>('d, 'd) dg_state\<close> pair

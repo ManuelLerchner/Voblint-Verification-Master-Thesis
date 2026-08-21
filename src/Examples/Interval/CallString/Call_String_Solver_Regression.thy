@@ -25,6 +25,15 @@ lemma statement3_comb:
 lemma statement3_no_calls: "call_successor_list nest_cfg (Statement 3) = []"
   by eval
 
+text \<open>The call metadata the continuation is pinned to: built from the call edge
+  and the callee that \<^const>\<open>routed_cmb_g\<close> reads off the exit node, not from a
+  destination guessed at the return.\<close>
+
+abbreviation nest_ci :: call_info where
+  "nest_ci \<equiv>
+     call_info_of (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])
+       (STR ''g'')"
+
 lemma nest_2_eqs_statement3:
   "nest_2_eqs (Statement 3, ctx)
      = read_local_cont (Statement 2, ctx) (\<lambda>caller_state.
@@ -41,11 +50,12 @@ lemma nest_2_eqs_statement3:
                read_global_cont Global (\<lambda>globals_state2.
                  depend_on Global
                    (DG Bot (enter_global nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
-                         (locals caller_state) (globs globals_state1)
-                       \<squnion> combine_global nest_S_st (Some (STR ''t''))
-                           (locals caller_state) (locals callee_state) (globs globals_state2)))
-                   (answer (DG (combine_local nest_S_st (Some (STR ''t''))
-                         (locals caller_state) (locals callee_state) (globs globals_state2)) Bot)))))))"
+                         (locals caller_state) (globs globals_state1)                      \<squnion> combine_global nest_S_st nest_ci
+                          (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                          (locals callee_state) (globs globals_state2)))
+                  (answer (DG (combine_local nest_S_st nest_ci
+                        (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                        (locals callee_state) (globs globals_state2)) Bot)))))))"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def routed_cmb_g_def
   by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def)
 
@@ -65,11 +75,12 @@ lemma nest_1_eqs_statement3:
                read_global_cont Global (\<lambda>globals_state2.
                  depend_on Global
                    (DG Bot (enter_global nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
-                         (locals caller_state) (globs globals_state1)
-                       \<squnion> combine_global nest_S_st (Some (STR ''t''))
-                           (locals caller_state) (locals callee_state) (globs globals_state2)))
-                   (answer (DG (combine_local nest_S_st (Some (STR ''t''))
-                         (locals caller_state) (locals callee_state) (globs globals_state2)) Bot)))))))"
+                         (locals caller_state) (globs globals_state1)                      \<squnion> combine_global nest_S_st nest_ci
+                          (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                          (locals callee_state) (globs globals_state2)))
+                  (answer (DG (combine_local nest_S_st nest_ci
+                        (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
+                        (locals callee_state) (globs globals_state2)) Bot)))))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def routed_cmb_g_def
   by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def)
 

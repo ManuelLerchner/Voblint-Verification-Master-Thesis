@@ -302,13 +302,24 @@ definition dgs_branch_rel :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Righta
 definition dgs_enter_rel :: "vname list \<Rightarrow> exp list \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
   "dgs_enter_rel xs es dc g = (top_relc, top_relc)"
 
-definition dgs_combine_env_rel :: "relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
-  "dgs_combine_env_rel dc de g = (top_relc, top_relc)"
+text \<open>
+  The caller continuation is the identity.  This carrier discards every caller
+  relation at its environment merge anyway, so there is no call-side
+  invalidation for a continuation to express: filtering before a merge that
+  already returns \<^const>\<open>top_relc\<close> would be indistinguishable from not filtering.
+  Keeping it identity leaves this instance the least interesting sound one, which
+  is its purpose.
+\<close>
+definition dgs_caller_cont_rel :: "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc" where
+  "dgs_caller_cont_rel ci dc g = dc"
+
+definition dgs_combine_env_rel :: "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
+  "dgs_combine_env_rel ci dc de g = (top_relc, top_relc)"
 
 definition dgs_combine_assign_rel ::
-  "vname option \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc \<Rightarrow> relc \<times> relc"
+  "call_info \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc \<Rightarrow> relc \<times> relc"
 where
-  "dgs_combine_assign_rel dst de g merged = merged"
+  "dgs_combine_assign_rel ci de g merged = merged"
 
 definition rel_order_spec :: "(relc, relc) dg_spec" where
   "rel_order_spec = \<lparr>
@@ -320,6 +331,7 @@ definition rel_order_spec :: "(relc, relc) dg_spec" where
      dgs_return = dgs_return_rel,
      dgs_enter = dgs_enter_rel,
      dgs_event = dgs_event_rel,
+     dgs_caller_cont = dgs_caller_cont_rel,
      dgs_combine_env = dgs_combine_env_rel,
      dgs_combine_assign = dgs_combine_assign_rel
    \<rparr>"
@@ -430,10 +442,15 @@ lemma dgs_enter_rel_sound:
        (case dgs_enter rel_order_spec pars args dc g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   unfolding rel_order_spec_def dgs_enter_rel_def by simp
 
+lemma dgs_caller_cont_rel_sound:
+  "s \<in> gammaDG_rel dc g \<Longrightarrow>
+     s \<in> gammaDG_rel (dgs_caller_cont rel_order_spec ci dc g) g"
+  unfolding rel_order_spec_def dgs_caller_cont_rel_def by simp
+
 lemma dgs_combine_rel_sound:
-  "\<lbrakk>s \<in> gammaDG_rel dc g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
-     combine_collect is_global dst s t \<in>
-       (case dgs_combine rel_order_spec dst dc de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+  "\<lbrakk>s \<in> gammaDG_rel dcont g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
+     combine_collect is_global (ci_dst ci) s t \<in>
+       (case dgs_combine rel_order_spec ci dcont de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
   unfolding dgs_combine_def rel_order_spec_def
     dgs_combine_env_rel_def dgs_combine_assign_rel_def
   by simp
@@ -451,10 +468,15 @@ next
           (case dg_spec_step rel_order_spec a d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
     by (rule step_sound_rel)
 next
-  fix dst s g dc t de
-  show "\<lbrakk>s \<in> gammaDG_rel dc g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
-          combine_collect is_global dst s t \<in>
-            (case dgs_combine rel_order_spec dst dc de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+  fix s dc g ci
+  show "s \<in> gammaDG_rel dc g \<Longrightarrow>
+          s \<in> gammaDG_rel (dgs_caller_cont rel_order_spec ci dc g) g"
+    by (rule dgs_caller_cont_rel_sound)
+next
+  fix ci s g dcont t de
+  show "\<lbrakk>s \<in> gammaDG_rel dcont g; t \<in> gammaDG_rel de g\<rbrakk> \<Longrightarrow>
+          combine_collect is_global (ci_dst ci) s t \<in>
+            (case dgs_combine rel_order_spec ci dcont de g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
     by (rule dgs_combine_rel_sound)
 next
   fix dst pars args dc g s

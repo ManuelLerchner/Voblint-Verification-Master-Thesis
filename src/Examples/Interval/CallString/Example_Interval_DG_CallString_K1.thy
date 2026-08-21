@@ -146,6 +146,14 @@ lemma nest_Hcomb:
   by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
         [where tf = "ivl_tf_for nest_gs", unfolded fun_of_exec_dg_st_for_def, OF nest_exact])
 
+lemma nest_Hcont:
+  "map_lift (fun_of_resolved_st_q_for nest_gs) (caller_cont nest_S_st ci dc g)
+   = caller_cont nest_S_abs ci (map_lift (fun_of_resolved_st_q_for nest_gs) dc)
+       (map_lift (fun_of_resolved_st_q_for nest_gs) g)"
+  unfolding nest_S_st_def nest_S_abs_def
+  by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
+        [where tf = "ivl_tf_for nest_gs", unfolded fun_of_exec_dg_st_for_def])
+
 lemma nest_seed_ne_global: "Seed p ctx \<noteq> Global" by simp
 
 text \<open>\<^const>\<open>cs_route\<close> never reads its data argument, so the routed combine and the routed
@@ -158,7 +166,8 @@ lemma nest_Hcmb_routed:
      (routed_cmb_g nest_S_st Global Seed (cs_route k) ctx ca cc ex)
      (routed_cmb_g nest_S_abs Global Seed (cs_route k) ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [OF nest_dg_reader nest_seed_ne_global nest_Henter nest_Hcomb cs_route_indep_of_data])
+        [OF nest_dg_reader nest_seed_ne_global nest_Henter nest_Hcomb nest_Hcont
+            cs_route_indep_of_data])
 
 lemma nest_Hextra_routed:
   "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
