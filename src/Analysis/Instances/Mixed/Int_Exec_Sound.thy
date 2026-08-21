@@ -185,27 +185,4 @@ lemma analyse_int_dg_per_origin_env_for_code [code]:
               of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
   unfolding analyse_int_dg_per_origin_env_for_def Let_def by (rule refl)
 
-text \<open>
-  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_int_dg\<close>/
-  \<^const>\<open>analyse_int_dg_env\<close>'s own shape.
-\<close>
-
-definition analyse_int_dg_join :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "analyse_int_dg_join mode p =
-     analyse_int_dg_join_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
-definition analyse_int_dg_join_env :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_join_env mode p =
-     analyse_int_dg_join_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
-definition analyse_int_dg_per_origin :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
-  "analyse_int_dg_per_origin mode p =
-     analyse_int_dg_per_origin_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
-definition analyse_int_dg_per_origin_env :: "refine_mode \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> int_dom abs_state" where
-  "analyse_int_dg_per_origin_env mode p =
-     analyse_int_dg_per_origin_env_for mode (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
 end

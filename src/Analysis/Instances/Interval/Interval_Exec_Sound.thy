@@ -683,57 +683,10 @@ definition analyse_interval_dg_join_for :: "(ivl exec_dg_st \<Rightarrow> bool) 
      TD_side_always_join_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
        (cfg_exit (prog_cfg prog_main_name p), ())"
 
-definition analyse_interval_dg_join_env_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_join_env_for is_bot_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_interval_dg_join_for is_bot_pred gs p) (Inl (v, ()))))
-      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-declare analyse_interval_dg_join_env_for_def [code del]
-
-lemma analyse_interval_dg_join_env_for_code [code]:
-  "analyse_interval_dg_join_env_for is_bot_pred gs p =
-     (let sol = snd (analyse_interval_dg_join_for is_bot_pred gs p)
-      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
-  unfolding analyse_interval_dg_join_env_for_def Let_def by (rule refl)
-
 definition analyse_interval_dg_per_origin_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
     (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "analyse_interval_dg_per_origin_for is_bot_pred gs p =
      TD_side_per_origin_Interp_solve (analyse_interval_dg_eqs_for is_bot_pred gs p)
        (cfg_exit (prog_cfg prog_main_name p), ())"
-
-definition analyse_interval_dg_per_origin_env_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_per_origin_env_for is_bot_pred gs p v =
-     (case map_lift (fun_of_exec_dg_st_for gs) (locals (snd (analyse_interval_dg_per_origin_for is_bot_pred gs p) (Inl (v, ()))))
-      of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s)"
-
-declare analyse_interval_dg_per_origin_env_for_def [code del]
-
-lemma analyse_interval_dg_per_origin_env_for_code [code]:
-  "analyse_interval_dg_per_origin_env_for is_bot_pred gs p =
-     (let sol = snd (analyse_interval_dg_per_origin_for is_bot_pred gs p)
-      in (\<lambda>v. case map_lift (fun_of_exec_dg_st_for gs) (locals (sol (Inl (v, ()))))
-              of Bot \<Rightarrow> bot | Lifted s \<Rightarrow> s))"
-  unfolding analyse_interval_dg_per_origin_env_for_def Let_def by (rule refl)
-
-text \<open>
-  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_interval_dg\<close>/
-  \<^const>\<open>analyse_interval_dg_env\<close>'s own shape.
-\<close>
-
-definition analyse_interval_dg_join :: "imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "analyse_interval_dg_join p = analyse_interval_dg_join_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
-definition analyse_interval_dg_join_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_join_env p = analyse_interval_dg_join_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
-definition analyse_interval_dg_per_origin :: "imp_prog \<Rightarrow>
-    (pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "analyse_interval_dg_per_origin p = analyse_interval_dg_per_origin_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
-
-definition analyse_interval_dg_per_origin_env :: "imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
-  "analyse_interval_dg_per_origin_env p = analyse_interval_dg_per_origin_env_for (resolved_st_q_is_bot_for (declared_global_vars p)) (declared_global p) p"
 
 end

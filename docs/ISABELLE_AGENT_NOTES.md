@@ -161,6 +161,58 @@ closed, and the batch log is green.
   enclosing `assumes` clause -- print the fact's actual exported statement
   (`thm foo`, or an I/Q `get_command_info` probe on a scratch `thm foo` line)
   to see every premise it carries, then supply all of them via `OF`.
+- A `lemmas foo = interp.bar` re-export of an *interpreted* locale fact is not
+  exempt from the trap above: if establishing `interp` itself needed the
+  context's `assumes` (a typical `interpretation ... proof (unfold_locales,
+  ...)` block citing them), `foo` carries those same premises, because the
+  interpretation genuinely depends on them, not merely by textual proximity.
+  Whether a given re-export needs zero, some, or every enclosing premise is
+  not predictable from the block structure alone; check per-instance with a
+  scratch `thm foo` rather than assuming a `lemmas` re-export is always
+  premise-free just because it is not a hand-written `lemma`.
+- A closely related, differently-shaped failure: citing `X[OF a1 ... an]`
+  with *fewer* facts than `X` has premises does not error at the `OF`
+  application either -- it produces a still-conditional fact, and `by (rule
+  X[OF a1 ... an])` then reports "Failed to apply initial proof method" with
+  the *unsupplied premises* listed as the remaining subgoals in the
+  diagnostic. This is a louder, more legible failure than the silent-no-op
+  case above (which manifests through a rewrite that just does nothing), but
+  both stem from the same root cause: undercounting a fact's true premise
+  list. Read the diagnostic's leftover-subgoal list to see exactly which
+  premises are still missing, rather than re-deriving the count from the
+  locale/context signature by hand.
+- When a bridging `have` states an equation whose RHS mixes a local
+  abbreviation (e.g. a `define is_bot_pred where "is_bot_pred = ..."`) used
+  in two syntactically identical but semantically different roles -- once as
+  an *index* argument threaded through unrelated locale parameters, once as
+  the *predicate* argument to a function like `canonicalize_lift` -- keep the
+  abbreviation folded (`is_bot_pred`, not its spelled-out RHS) in the `have`
+  statement itself, matching whatever sibling fact it must compose with. A
+  later `[unfolded is_bot_pred_def]`/`[folded is_bot_pred_def]` rewrites
+  *every* occurrence of that one Free variable uniformly; Isabelle cannot
+  tell "the index occurrence" from "the predicate occurrence" apart once both
+  are the same syntactic term, so partially unfolding one but not the other
+  is not expressible after the fact -- decide the folded/unfolded shape when
+  writing the `have`'s statement, not by post-hoc `unfolded`/`folded`
+  attributes on the derived fact.
+
+### I/Q buffer sync
+
+- `open_file` on a file I/Q already tracks does **not** force a reload from
+  disk -- it can return `"opened": true` while jEdit's in-memory buffer still
+  holds stale (pre-edit) content. This matters most after any edit that
+  bypassed I/Q (an accidental host `Edit`/`Write` on a tracked `.thy`, or a
+  `git checkout`/`stash` that changed disk underneath an open buffer):
+  `get_diagnostics` run right after such an `open_file` can report a clean
+  zero-error result that is checking the *old* text, not the one just
+  written to disk, producing false confidence.
+- Recover by re-applying the same edit through I/Q `write_file` (never
+  `save_file` first, which would flush the stale buffer back over the clean
+  disk content) so jEdit's buffer and disk agree again. Before trusting a
+  suspiciously-clean `get_diagnostics` result after any out-of-band disk
+  change, confirm the buffer actually contains the expected text with
+  `read_file` on the specific changed lines -- a passing diagnostic is not
+  evidence the buffer was ever resynced.
 
 ### Isar syntax
 
