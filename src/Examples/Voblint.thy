@@ -66,6 +66,7 @@ theory Voblint
     Example_Strategy_Tree_Demo
     "Voblint_CLI.Sign_Codegen"
     "Voblint_CLI.Analyse_Dispatch"
+    "Voblint_CLI.State_Report_GraphViz"
 begin
 
 text \<open>
