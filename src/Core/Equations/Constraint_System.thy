@@ -64,7 +64,8 @@ record 'a domain_transfer =
   tf_return    :: "exp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
   tf_enter     :: "vname list \<Rightarrow> exp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
-  tf_combine_env :: "('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
+  tf_caller_cont :: "call_info => ('a abs_state) => ('a abs_state)" ("caller'_cont\<^sup>#")
+  tf_combine_env :: "call_info => ('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
 
 subsection \<open>Apply transfer function to one edge\<close>
 
@@ -642,28 +643,64 @@ text \<open>
   \<open>combine\<close>, only the domain-supplied \<open>combine_env\<^sup>#\<close> followed by the generic
   \<open>combine_assign\<^sup>#\<close>.
 \<close>
+text \<open>
+  \<open>caller_cont\<^sup>#\<close> is logically an \<^emph>\<open>output of enter\<close>, not a step of the combine:
+  Goblint's \<open>Spec.enter\<close> returns \<open>(D.t * D.t) list\<close> and \<open>constraints.ml\<close> hands the first
+  component -- the caller continuation -- to \<open>combine_env\<close> as \<open>cd\<close>, while the second seeds
+  the callee entry.  \<open>tf_enter_pair\<close> below is that protocol, stated as one function
+  from the call-site state to the pair.  The combine operations accordingly take the
+  \<^emph>\<open>continuation\<close> as their caller operand, never the raw call-site state: nothing in
+  \<open>combine_env\<^sup>#\<close> or \<open>tf_combine_collect_abs\<close> reapplies \<open>caller_cont\<^sup>#\<close>.
+
+  Its contract is continuation-specific rather than a preservation law: \<open>caller_cont\<^sup># ci\<close>
+  over-approximates the pre-call concrete caller store, retaining only the information meant
+  to stay usable once the call returns, and may forget abstract facts a callee could
+  invalidate -- exactly Goblint's \<open>varEq\<close>, whose \<open>combine_env\<close> meets the callee exit with a
+  taint-filtered caller state.  Forgetting is sound because it moves up the abstract order,
+  where \<open>gamma\<close> only grows.  The obligation is stated against the same concrete store because
+  VIMP has no concrete caller-side transition at a call; a language that gained one would
+  generalize the obligation's concrete side, not this field's role.
+\<close>
+definition tf_enter_pair ::
+    "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state" where
+  "tf_enter_pair tf ci \<sigma> =
+     (caller_cont\<^sup># tf ci \<sigma>, enter\<^sup># tf (ci_formals ci) (ci_args ci) \<sigma>)"
+
+lemma fst_tf_enter_pair [simp]: "fst (tf_enter_pair tf ci \<sigma>) = caller_cont\<^sup># tf ci \<sigma>"
+  by (simp add: tf_enter_pair_def)
+
+lemma snd_tf_enter_pair [simp]:
+  "snd (tf_enter_pair tf ci \<sigma>) = enter\<^sup># tf (ci_formals ci) (ci_args ci) \<sigma>"
+  by (simp add: tf_enter_pair_def)
+
+text \<open>The whole return operation: \<open>combine_env\<^sup>#\<close> on the continuation and the callee exit,
+  then the generic \<^const>\<open>combine_assign_abs\<close> writing the callee's @{const ret_var} into the
+  destination.  \<open>\<sigma>cont\<close> is \<^emph>\<open>already\<close> \<^const>\<open>tf_enter_pair\<close>'s first component.\<close>
 definition tf_combine_collect_abs ::
-    "'a domain_transfer \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (tf_combine_env tf \<sigma>c \<sigma>e)"
+    "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e =
+     combine_assign\<^sup># (ci_dst ci) (\<sigma>e ret_var) (combine_env\<^sup># tf ci \<sigma>cont \<sigma>e)"
 
 text \<open>The fixed structural merge is the special case where \<open>tf_combine_env\<close> is
   \<^const>\<open>combine_env_abs\<close>: the general definition specializes to the old one by
   instantiation, rather than duplicating it.\<close>
 lemma tf_combine_collect_abs_combine_env_abs:
-  assumes "tf_combine_env tf = combine_env_abs gs"
-  shows "tf_combine_collect_abs tf dst = combine\<^sup># gs dst"
+  assumes "tf_combine_env tf = (\<lambda>_. combine_env_abs gs)"
+  shows "tf_combine_collect_abs tf ci = combine\<^sup># gs (ci_dst ci)"
   unfolding tf_combine_collect_abs_def combine_collect_abs_def assms ..
 
 text \<open>Monotonicity of the analysis-supplied combine reduces to monotonicity of its
   merge: the return-value write is \<^const>\<open>combine_assign_abs\<close>, monotone in both the
-  written value and the state it updates.\<close>
+  written value and the state it updates.  The caller operand here is already the
+  continuation, so no \<open>caller_cont\<^sup>#\<close> monotonicity enters: that obligation belongs to
+  whatever supplies the continuation.\<close>
 lemma tf_combine_collect_abs_mono:
   fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
   assumes merge: "\<And>a1 a2 b1 b2 :: 'a abs_state.
-      a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> tf_combine_env tf a1 b1 \<le> tf_combine_env tf a2 b2"
+      a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> combine_env\<^sup># tf ci a1 b1 \<le> combine_env\<^sup># tf ci a2 b2"
     and c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
-  shows "tf_combine_collect_abs tf dst \<sigma>c1 \<sigma>e1 \<le> tf_combine_collect_abs tf dst \<sigma>c2 \<sigma>e2"
-proof (cases dst)
+  shows "tf_combine_collect_abs tf ci \<sigma>c1 \<sigma>e1 \<le> tf_combine_collect_abs tf ci \<sigma>c2 \<sigma>e2"
+proof (cases "ci_dst ci")
   case None
   then show ?thesis
     using merge[OF c e] by (simp add: tf_combine_collect_abs_def)
@@ -785,9 +822,11 @@ locale sound_transfer_for =
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_event_for[intro]:
     "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+  assumes tf_sound_caller_cont_for[intro]:
+    "\<forall>ci \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
   assumes tf_sound_combine_env_for[intro]:
-    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-       combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+    "\<forall>ci \<sigma>cont \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>cont\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+       combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
 
 context sound_transfer_for
 begin
@@ -828,25 +867,39 @@ lemma tf_sound_event_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
   using tf_sound_event_for by blast
 
+lemma tf_sound_caller_cont_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+  using tf_sound_caller_cont_for by blast
+
 lemma tf_sound_combine_env_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-     combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+     combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
   using tf_sound_combine_env_for by blast
+
+text \<open>The two halves composed at a call site: the caller's own state goes through
+  \<open>caller_cont\<^sup>#\<close> first, exactly as \<^const>\<open>tf_enter_pair\<close> produces it, and the merge is then
+  sound at that continuation.  This is the form a combine tree needs, since the tree
+  reconstructs the raw call-site state rather than a stored continuation.\<close>
+lemma tf_sound_combine_env_at_call_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+     combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
+  by (rule tf_sound_combine_env_forD[OF tf_sound_caller_cont_forD])
 
 text \<open>Soundness of the analysis-supplied whole combine.  The merge obligation is the
   locale's own \<open>tf_sound_combine_env_for\<close>; the destination slot is sound because the
   callee's @{const ret_var} slot is.  No extra assumption on the analysis is needed:
   a sound \<open>combine_env\<^sup>#\<close> already makes \<^const>\<open>tf_combine_collect_abs\<close> sound.\<close>
 lemma tf_sound_combine_collect_forD[intro]:
-  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect gs dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst \<sigma>c \<sigma>e\<rbrakk>"
+  assumes sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_collect gs (ci_dst ci) s t
+           \<in> \<lbrakk>tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e\<rbrakk>"
 proof -
-  have base: "combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  have base: "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
     by (rule tf_sound_combine_env_forD[OF sc se])
   have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
     using se unfolding gamma_state_def by auto
   show ?thesis
-  proof (cases dst)
+  proof (cases "ci_dst ci")
     case None
     then show ?thesis
       using base by (simp add: combine_collect_def tf_combine_collect_abs_def)
@@ -858,6 +911,14 @@ proof -
       by auto
   qed
 qed
+
+text \<open>The same statement at a call site, where the caller operand is the raw call-site
+  state and the continuation is produced on the spot by \<open>caller_cont\<^sup>#\<close>.\<close>
+lemma tf_sound_combine_collect_at_call_forD[intro]:
+  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_collect gs (ci_dst ci) s t
+           \<in> \<lbrakk>tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
+  by (rule tf_sound_combine_collect_forD[OF tf_sound_caller_cont_forD[OF sc] se])
 
 end
 
@@ -887,9 +948,11 @@ lemma sound_transferI_for:
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     and event[intro]:
     "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+    and caller_cont[intro]:
+    "\<And>ci \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
     and combine[intro]:
-    "\<And>\<sigma>c \<sigma>e s t. s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-       combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+    "\<And>ci \<sigma>cont \<sigma>e s t. s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+       combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
@@ -915,19 +978,27 @@ proof unfold_locales
     using enter by blast
   show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
     using event by blast
-  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-      combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  show "\<forall>ci \<sigma> . \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+    using caller_cont by blast
+  show "\<forall>ci \<sigma>cont \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>cont\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+      combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
     using combine by blast
 qed
 
-text \<open>The structural merge discharges the combine obligation of
-  @{thm [source] sound_transferI_for} outright, so an analysis that keeps
-  \<^const>\<open>combine_env_abs\<close> proves nothing extra.\<close>
+text \<open>The structural instance discharges both call-boundary obligations of
+  @{thm [source] sound_transferI_for} outright: an identity continuation keeps the caller
+  state, and \<^const>\<open>combine_env_abs\<close> is sound by @{thm [source] combine_env_sound}.\<close>
+lemma sound_transfer_caller_cont_idI:
+  fixes \<sigma> :: "'a::sound_domain abs_state"
+  assumes eq: "tf_caller_cont tf = (\<lambda>_ \<sigma>. \<sigma>)" and sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+  unfolding eq using sv by simp
+
 lemma sound_transfer_combine_env_absI:
-  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
-  assumes eq: "tf_combine_env tf = combine_env_abs gs"
-    and sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  fixes \<sigma>cont \<sigma>e :: "'a::sound_domain abs_state"
+  assumes eq: "tf_combine_env tf = (\<lambda>_. combine_env_abs gs)"
+    and sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
   unfolding eq by (rule combine_env_sound[OF sc se])
 
 
@@ -970,8 +1041,8 @@ record ('g, 'd) effectful_domain_transfer =
   etf_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> ('g, 'd) edge_tf_tree"
   etf_event      :: "analysis_event \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_combine_env     :: "('g, 'd) combine_tf_tree"
-  etf_combine_collect :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
+  etf_combine_env     :: "call_info \<Rightarrow> ('g, 'd) combine_tf_tree"
+  etf_combine_collect :: "call_info \<Rightarrow> ('g, 'd) combine_tf_tree"
 
 text \<open>
   \<open>EA_Check\<close> routes through \<^const>\<open>etf_event\<close> here, matching \<^const>\<open>apply_tf\<close>'s
@@ -1473,15 +1544,16 @@ locale sound_effectful_transfer =
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
          s \<in> gamma_state_lift (etf_collecting_full_lift (etf_event etf ev u) \<sigma>))"
   assumes etf_sound_combine_env[intro]:
-    "\<forall>cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    "\<forall>ci cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
        \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
-         combine_env gs s t \<in> gamma_state_lift (etf_full (etf_combine_env etf cc ex) \<sigma>))"
+         combine_env gs s t \<in> gamma_state_lift (etf_full (etf_combine_env etf ci cc ex) \<sigma>))"
   assumes etf_sound_combine_collect[intro]:
-    "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    "\<forall>ci cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
        (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
        \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
-         combine_collect gs dst s t \<in> gamma_state_lift (etf_full (etf_combine_collect etf dst cc ex) \<sigma>))"
+         combine_collect gs (ci_dst ci) s t
+           \<in> gamma_state_lift (etf_full (etf_combine_collect etf ci cc ex) \<sigma>))"
 
 text \<open>
   The keyed generator filters call-enter edges out of the intra predecessor fold

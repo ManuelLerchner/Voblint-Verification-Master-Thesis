@@ -150,7 +150,8 @@ definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
                        tf_return  = return_ivl,
                        tf_enter   = enter_ivl_for gs,
                        tf_event   = event_ivl,
-                       tf_combine_env = combine_env_abs gs |)"
+                       tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
+                       tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
 lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
@@ -163,6 +164,7 @@ lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs)"
   subgoal by (simp add: return_ivl_sound)
   subgoal by (simp add: enter_ivl_for_sound)
   subgoal by (simp add: event_ivl_sound)
+  subgoal by simp
   subgoal by (simp add: combine_env_sound)
   done
 

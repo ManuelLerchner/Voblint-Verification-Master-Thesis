@@ -81,16 +81,22 @@ text \<open>The call tuples whose continuation is the queried node \<open>v\<clo
   \<open>combine\<^sup>#\<close>.  The final component is returned directly so clients need not
   rebuild the result node.\<close>
 
+text \<open>The middle component is the call's own @{typ call_info}, not just its destination: an
+  interprocedural transfer sees the callee, its formals and the actual arguments at the return
+  point, matching what Goblint's \<open>combine_env\<close>/\<open>combine_assign\<close> receive.  The enumeration is the
+  only layer holding the \<^const>\<open>calls\<close> relation, so the metadata is projected here; a combine
+  tree never sees the CFG, and \<^const>\<open>wf_cfg\<close> does not force a call site's outgoing call edge
+  to be unique, so there is no well-defined downstream lookup that could recover it instead.\<close>
 definition return_calls ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> vname option \<times> cfg_node) set" where
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) set" where
   "return_calls g v =
-     {(c, dst, FunctionResult p) | c dst formals actuals p.
-        (c, CallEdge dst formals actuals, FunctionEntry p, v) \<in> calls g}"
+     {(c, call_info_of ca p, FunctionResult p) | c ca p.
+        (c, ca, FunctionEntry p, v) \<in> calls g}"
 
 lemma return_calls_iff:
-  "(c, dst, r) \<in> return_calls g v
-     \<longleftrightarrow> (\<exists>formals actuals p. r = FunctionResult p
-             \<and> (c, CallEdge dst formals actuals, FunctionEntry p, v) \<in> calls g)"
+  "(c, ci, r) \<in> return_calls g v
+     \<longleftrightarrow> (\<exists>ca p. r = FunctionResult p \<and> ci = call_info_of ca p
+             \<and> (c, ca, FunctionEntry p, v) \<in> calls g)"
   by (auto simp: return_calls_def)
 
 lemma finite_return_calls:
@@ -99,7 +105,7 @@ lemma finite_return_calls:
 proof -
   have "return_calls g v
           \<subseteq> (\<lambda>(c, ca, ce, k).
-                (c, case ca of CallEdge dst _ _ \<Rightarrow> dst,
+                (c, call_info_of ca (case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined),
                     case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce)) ` calls g"
     unfolding return_calls_def by (force split: prod.splits)
   then show ?thesis using assms finite_subset finite_imageI by blast
@@ -157,9 +163,10 @@ lemma set_entry_call_list [simp]:
   using set_cfg_calls_list[OF assms] by (force simp: image_iff)
 
 definition return_call_list ::
-    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> vname option \<times> cfg_node) list" where
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_info \<times> cfg_node) list" where
   "return_call_list g v =
-     map (\<lambda>(c, ca, ce, k). (c, case ca of CallEdge dst _ _ \<Rightarrow> dst,
+     map (\<lambda>(c, ca, ce, k).
+            (c, call_info_of ca (case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined),
                               case ce of FunctionEntry p \<Rightarrow> FunctionResult p | _ \<Rightarrow> ce))
        (filter (\<lambda>(c, ca, ce, k).
           k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
@@ -222,16 +229,18 @@ lemma set_return_call_action_list [simp]:
   using set_cfg_calls_list[OF assms]
   by (auto simp: image_iff split: cfg_node.splits)
 
-text \<open>The two enumerations agree on the destination they can both see: projecting the call
-  action out of the DG-side list recovers the flat-side list exactly.  This is the fact that
-  justifies calling both "the return enumeration for the same edge" rather than two
-  unrelated relations.\<close>
+text \<open>The two enumerations agree on the call metadata they can both see: packaging the call
+  action together with the callee read off the result node recovers the flat-side list exactly.
+  This is the fact that justifies calling both "the return enumeration for the same edge" rather
+  than two unrelated relations.\<close>
 
-lemma return_call_action_list_dst:
-  "map (\<lambda>(c, ca, ce). (c, case ca of CallEdge dst _ _ \<Rightarrow> dst, ce)) (return_call_action_list g v)
+lemma return_call_action_list_call_info:
+  "map (\<lambda>(c, ca, ce).
+          (c, call_info_of ca (case ce of FunctionResult p \<Rightarrow> p | _ \<Rightarrow> undefined), ce))
+       (return_call_action_list g v)
      = return_call_list g v"
   unfolding return_call_action_list_def return_call_list_def
-  by (induction "cfg_calls_list g") auto
+  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
 
 subsection \<open>Full node enumeration\<close>
 

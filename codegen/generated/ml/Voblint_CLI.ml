@@ -3443,6 +3443,9 @@ type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
 type ('a, 'b) analysis_result =
   Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state);;
 
+type 'a call_info_ext =
+  Call_info_ext of string option * string * string list * exp list * 'a;;
+
 type analysis_event = Check_Event of exp;;
 
 type ('a, 'b, 'c) dg_spec_ext =
@@ -3494,7 +3497,9 @@ type ('a, 'b) domain_transfer_ext =
       (exp option -> string -> (string -> 'a) -> string -> 'a) *
       (string list -> exp list -> (string -> 'a) -> string -> 'a) *
       (analysis_event -> (string -> 'a) -> string -> 'a) *
-      ((string -> 'a) -> (string -> 'a) -> string -> 'a) * 'b;;
+      (unit call_info_ext -> (string -> 'a) -> string -> 'a) *
+      (unit call_info_ext -> (string -> 'a) -> (string -> 'a) -> string -> 'a) *
+      'b;;
 
 let rec id x = (fun xa -> xa) x;;
 
@@ -7425,7 +7430,8 @@ let rec return_ivl
 let rec ivl_tf_for
   gs = Domain_transfer_ext
          (assign_ivl, special_ivl, branch_ivl, skip_ivl, body_ivl, return_ivl,
-           enter_ivl_for gs, event_ivl, combine_env_abs gs, ());;
+           enter_ivl_for gs, event_ivl, (fun _ sigma -> sigma),
+           (fun _ -> combine_env_abs gs), ());;
 
 let rec less_eq_set _A
   a b = match a, b with Set xs, b -> list_all (fun x -> member _A x b) xs
@@ -8705,7 +8711,7 @@ let rec pretty_source_lines_com
 let rec tf_enter
   (Domain_transfer_ext
     (tf_assign, tf_special, tf_branch, tf_skip, tf_body, tf_return, tf_enter,
-      tf_event, tf_combine_env, more))
+      tf_event, tf_caller_cont, tf_combine_env, more))
     = tf_enter;;
 
 let rec ictx_sol_prog_warrowa

@@ -278,7 +278,7 @@ lemma dep_side_rhs_tree_eff_combine:
   fixes etf :: "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer"
     and gseed :: 'g and gs :: "vname => bool"
   assumes finC: "finite (calls g)"
-  assumes call: "(cl, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
+  assumes call: "(cl, ca, FunctionEntry p, k) \<in> calls g"
   assumes comb_dep1: "\<And>c2 e2 d2 \<sigma>'. Inl c2 \<in> dep_aux \<sigma>' (etf_combine_collect etf d2 c2 e2)"
   assumes comb_dep2: "\<And>c2 e2 d2 \<sigma>'. Inl e2 \<in> dep_aux \<sigma>' (etf_combine_collect etf d2 c2 e2)"
   assumes edge_static: "\<And>a u. static_deps (apply_etf etf a u)"
@@ -287,7 +287,7 @@ lemma dep_side_rhs_tree_eff_combine:
   shows "cl \<in> dep\<^sub>L (side_cfg_T_eff gs g etf bot0 s0 gseed) \<sigma> k
        \<and> FunctionResult p \<in> dep\<^sub>L (side_cfg_T_eff gs g etf bot0 s0 gseed) \<sigma> k"
 proof -
-  have mem: "(cl, dst, FunctionResult p) \<in> set (return_call_list g k)"
+  have mem: "(cl, call_info_of ca p, FunctionResult p) \<in> set (return_call_list g k)"
     using call by (force simp: set_return_call_list[OF finC] return_calls_def)
   have dc: "Inl cl \<in> dep_aux \<sigma> (make_side_rhs_tree_eff gs g etf bot0 s0 gseed k)"
     unfolding dep_aux_make_side_rhs_tree_eff
@@ -509,7 +509,7 @@ lemma cone_compatible_etf_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
@@ -525,7 +525,7 @@ lemma threefold_mono_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
@@ -554,7 +554,7 @@ lemma cone_compatible_etf_local_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action gs a then local_edge_tree gs (F a) u
@@ -572,7 +572,7 @@ lemma threefold_mono_local_unit_transfer:
   fixes etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u =
     (if local_edge_action gs a then local_edge_tree gs (F a) u
@@ -614,7 +614,7 @@ lemma cone_compatible_etf_local_branch_unit_transfer:
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fb :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state lifted"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and gs :: "vname \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = local_edge_tree gs (F a) u
       \<or> apply_etf etf a u = unit_edge_tree gs (F a) u
@@ -633,7 +633,7 @@ lemma threefold_mono_local_branch_unit_transfer:
     and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fe :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and Fb :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state lifted"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and g :: cfg and bot0 s0 :: "'a abs_state" and gs :: "vname => bool"
   assumes edge: "\<And>a u. apply_etf etf a u = local_edge_tree gs (F a) u
       \<or> apply_etf etf a u = unit_edge_tree gs (F a) u

@@ -16,27 +16,27 @@ subsection \<open>Shared combine-tree infrastructure\<close>
 locale sound_rhs_generator_base =
   fixes gs :: "vname \<Rightarrow> bool"
     and etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
-    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+    and Fc :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes comb[simp]:
-    "\<And>cc ex dst.
-       etf_combine_collect etf dst cc ex =
-       unit_combine_tree gs (Fc dst) cc ex"
+    "\<And>cc ex ci.
+       etf_combine_collect etf ci cc ex =
+       unit_combine_tree gs (Fc ci) cc ex"
 begin
 
 lemma dep_aux_comb_call:
-  "Inl cc \<in> dep_aux \<sigma> (etf_combine_collect etf dst cc ex)"
+  "Inl cc \<in> dep_aux \<sigma> (etf_combine_collect etf ci cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
 lemma dep_aux_comb_exit:
-  "Inl ex \<in> dep_aux \<sigma> (etf_combine_collect etf dst cc ex)"
+  "Inl ex \<in> dep_aux \<sigma> (etf_combine_collect etf ci cc ex)"
   by (simp add: comb unit_combine_tree_def)
 
 lemma comb_inr:
-  "\<And>cc ex dst \<sigma> g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine_collect etf dst cc ex) \<sigma> (Inr g))"
+  "\<And>cc ex ci \<sigma> g. local_bot_on_locals_lift gs (sides_of_rhs (etf_combine_collect etf ci cc ex) \<sigma> (Inr g))"
   unfolding comb by (rule sides_inr_local_bot_unit_combine_tree)
 
 lemma comb_coherent:
-  "\<And>cc ex dst \<sigma>. reachability_coherent_tree (etf_combine_collect etf dst cc ex) \<sigma>"
+  "\<And>cc ex ci \<sigma>. reachability_coherent_tree (etf_combine_collect etf ci cc ex) \<sigma>"
   unfolding comb by (rule reachability_coherent_unit_combine_tree)
 
 end

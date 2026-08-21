@@ -185,7 +185,7 @@ record ('g, 'c) effectful_st_transfer =
   etf_st_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> ('g, 'c) st_edge_tf_tree"
   etf_st_combine_env     :: "('g, 'c) st_combine_tf_tree"
-  etf_st_combine_collect :: "vname option \<Rightarrow> ('g, 'c) st_combine_tf_tree"
+  etf_st_combine_collect :: "call_info \<Rightarrow> ('g, 'c) st_combine_tf_tree"
 
 fun apply_etf_st ::
   "('g, 'c) effectful_st_transfer \<Rightarrow> edge_action \<Rightarrow> pp
@@ -207,10 +207,10 @@ where
   "etf_combine_env_st etf cc ex = etf_st_combine_env etf cc ex"
 
 fun etf_combine_collect_st ::
-  "('g, 'c) effectful_st_transfer \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+  "('g, 'c) effectful_st_transfer \<Rightarrow> call_info \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp, 'g, 'c) strategy_tree"
 where
-  "etf_combine_collect_st etf dst cc ex = etf_st_combine_collect etf dst cc ex"
+  "etf_combine_collect_st etf ci cc ex = etf_st_combine_collect etf ci cc ex"
 
 subsection \<open>Unit-global executable effectful trees\<close>
 
@@ -478,8 +478,8 @@ where
         unit_combine_env_tree_st_placed owner_of locations_of
           keep_local publish_side,
       etf_st_combine_collect =
-        unit_combine_tree_st_placed source_global owner_of locations_of
-          keep_local publish_side \<rparr>"
+        (\<lambda>ci. unit_combine_tree_st_placed source_global owner_of locations_of
+          keep_local publish_side (ci_dst ci)) \<rparr>"
 
 lemma apply_etf_st_unit_of_transfer_placed:
   assumes reduces: "action_reduces tf_st"
@@ -515,9 +515,9 @@ lemma etf_combine_env_st_unit_of_transfer_placed:
 lemma etf_combine_collect_st_unit_of_transfer_placed:
   "etf_combine_collect_st
     (unit_etf_st_of_transfer_placed source_global owner_of locations_of
-      keep_local publish_side tf_st enter_st) dst cc ex =
+      keep_local publish_side tf_st enter_st) ci cc ex =
     unit_combine_tree_st_placed source_global owner_of locations_of
-      keep_local publish_side dst cc ex"
+      keep_local publish_side (ci_dst ci) cc ex"
   unfolding unit_etf_st_of_transfer_placed_def by simp
 
 lemma traverse_unit_edge_tree_st_placed:
@@ -766,7 +766,7 @@ where
                             (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     etf_st_enter      = (\<lambda>xs es. unit_edge_tree_st is_bot_pred (enter_st xs es)),
     etf_st_combine_env     = unit_combine_env_tree_st is_bot_pred,
-    etf_st_combine_collect = unit_combine_tree_st is_bot_pred gs
+    etf_st_combine_collect = (\<lambda>ci. unit_combine_tree_st is_bot_pred gs (ci_dst ci))
   \<rparr>"
 
 lemma apply_etf_st_unit_of_transfer:
@@ -781,8 +781,8 @@ proof -
 qed
 
 lemma etf_combine_collect_st_unit_of_transfer:
-  "etf_combine_collect_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex
-     = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  "etf_combine_collect_st (unit_etf_st_of_transfer is_bot_pred gs tf_st enter_st) ci cc ex
+     = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   unfolding unit_etf_st_of_transfer_def by simp
 
 lemma etf_st_enter_unit_of_transfer:
@@ -1005,11 +1005,13 @@ locale sound_rhs_generator_exec =
     and edge_st[simp]:
       "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st is_bot_pred (F_st a) u"
     and comb[simp]:
-      "\<And>cc ex dst.
-         etf_combine_collect etf dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+      "\<And>cc ex ci.
+         etf_combine_collect etf ci cc ex
+           = unit_combine_tree gs (combine\<^sup># gs (ci_dst ci)) cc ex"
     and comb_st[simp]:
-      "\<And>cc ex dst.
-         etf_combine_collect_st etf_st dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+      "\<And>cc ex ci.
+         etf_combine_collect_st etf_st ci cc ex
+           = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
     and commute[simp]:
       "\<And>a s.
          fun_of_resolved_st_q_for gs (F_st a s) =
@@ -1067,7 +1069,7 @@ definition side_contribution_trees_st ::
   "('g, ('a::bounded_semilattice_sup_bot) resolved_st_q lifted) effectful_st_transfer
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> exp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list
+   \<Rightarrow> (pp \<times> call_info \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a resolved_st_q lifted) strategy_tree list"
 where
   "side_contribution_trees_st etf es ens cs =
@@ -1081,7 +1083,7 @@ definition side_acc_eff_st ::
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a resolved_st_q lifted)
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> exp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a resolved_st_q lifted"
+   \<Rightarrow> (pp \<times> call_info \<times> pp) list \<Rightarrow> 'a resolved_st_q lifted"
 where
   "side_acc_eff_st etf acc \<sigma> es ens cs =
      fold_rhs_values acc \<sigma> (side_contribution_trees_st etf es ens cs)"
@@ -1091,7 +1093,7 @@ definition side_rhs_fold_eff_st ::
    \<Rightarrow> 'a resolved_st_q lifted
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> exp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list
+   \<Rightarrow> (pp \<times> call_info \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a resolved_st_q lifted) strategy_tree"
 where
   "side_rhs_fold_eff_st etf acc es ens cs =
@@ -1261,7 +1263,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
       (map (\<lambda>(cc,dst,ex). etf_combine_collect_st etf_new dst cc ex) xs) seed
      = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_collect_st etf_old dst cc ex) xs) seed"
-    for xs :: "(pp \<times> vname option \<times> pp) list" and seed
+    for xs :: "(pp \<times> call_info \<times> pp) list" and seed
     by (induction xs arbitrary: seed) (auto simp del: etf_combine_collect_st.simps simp: comb_t split: prod.splits)
   have elem_local: "foldr (\<lambda>t acc'. map_lift restrict_local_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
        = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc')
@@ -1284,7 +1286,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc')
       (map (\<lambda>(cc,dst,ex). etf_combine_collect_st etf_new dst cc ex) xs) seed
      = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_collect_st etf_old dst cc ex) xs) seed"
-    for xs :: "(pp \<times> vname option \<times> pp) list" and seed
+    for xs :: "(pp \<times> call_info \<times> pp) list" and seed
     by (induction xs arbitrary: seed) (auto simp del: etf_combine_collect_st.simps simp: comb_s split: prod.splits)
   have elem_global: "foldr (\<lambda>t acc'. map_lift restrict_global_resolved_q (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
        = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc')
@@ -1421,7 +1423,7 @@ where
                             (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     etf_st_enter      = (\<lambda>xs es. unit_edge_contribution_st is_bot_pred (enter_st xs es)),
     etf_st_combine_env     = unit_combine_env_contribution_st is_bot_pred,
-    etf_st_combine_collect = unit_combine_contribution_st is_bot_pred gs
+    etf_st_combine_collect = (\<lambda>ci. unit_combine_contribution_st is_bot_pred gs (ci_dst ci))
   \<rparr>"
 
 lemma apply_etf_st_unit_of_transfer_contribution:
@@ -1436,8 +1438,8 @@ proof -
 qed
 
 lemma etf_combine_collect_st_unit_of_transfer_contribution:
-  "etf_combine_collect_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) dst cc ex
-     = unit_combine_contribution_st is_bot_pred gs dst cc ex"
+  "etf_combine_collect_st (unit_etf_st_contribution_of_transfer is_bot_pred gs tf_st enter_st) ci cc ex
+     = unit_combine_contribution_st is_bot_pred gs (ci_dst ci) cc ex"
   unfolding unit_etf_st_contribution_of_transfer_def by simp
 
 lemma etf_st_enter_unit_of_transfer_contribution:
@@ -2186,10 +2188,12 @@ lemma part_post_solution_st_to_abs_eff_unit_transfer:
   fixes bot0_st s0_st :: "'a resolved_st_q"
   fixes is_bot_pred :: "'a resolved_st_q \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
-  assumes comb: "\<And>cc ex dst.
-    etf_combine_collect etf dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  assumes comb: "\<And>cc ex ci.
+    etf_combine_collect etf ci cc ex
+      = unit_combine_tree gs (combine\<^sup># gs (ci_dst ci)) cc ex"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st is_bot_pred (F_st a) u"
-  assumes comb_st: "\<And>cc ex dst. etf_combine_collect_st etf_st dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  assumes comb_st: "\<And>cc ex ci. etf_combine_collect_st etf_st ci cc ex
+      = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   assumes commute: "\<And>a s. fun_of_resolved_st_q_for gs (F_st a s) = F a (fun_of_resolved_st_q_for gs s)"
   assumes enter: "\<And>cl fs as. etf_enter etf fs as cl = unit_edge_tree gs (Fe fs as) cl"
   assumes enter_st: "\<And>cl fs as. etf_st_enter etf_st fs as cl = unit_edge_tree_st is_bot_pred (Fe_st fs as) cl"
@@ -2318,7 +2322,8 @@ lemma side_rg_side_cfg_T_eff_st_unit:
   fixes is_bot_pred :: "'a resolved_st_q \<Rightarrow> bool"
   assumes edge_st: "\<And>a u. \<exists>f. apply_etf_st etf_st a u = unit_edge_tree_st is_bot_pred f u"
   assumes enter_st: "\<And>cl fs as. \<exists>f. etf_st_enter etf_st fs as cl = unit_edge_tree_st is_bot_pred f cl"
-  assumes comb_st: "\<And>cc ex dst. etf_combine_collect_st etf_st dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  assumes comb_st: "\<And>cc ex ci. etf_combine_collect_st etf_st ci cc ex
+      = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   shows "side_rg (side_cfg_T_eff_st g etf_st bot0_st s0_st gseed v)"
   unfolding side_cfg_T_eff_st_def
 proof (rule side_rg_make_side_rhs_tree_eff_st)
@@ -2328,8 +2333,8 @@ next
   fix cl fs as show "side_rg (etf_st_enter etf_st fs as cl)"
     using enter_st side_rg_unit_edge_tree_st by metis
 next
-  fix cc ex dst show "side_rg (etf_combine_collect_st etf_st dst cc ex)"
-    using comb_st[where cc=cc and ex=ex and dst=dst] side_rg_unit_combine_tree_st by auto
+  fix cc ex ci show "side_rg (etf_combine_collect_st etf_st ci cc ex)"
+    using comb_st[where cc=cc and ex=ex and ci=ci] side_rg_unit_combine_tree_st by auto
 qed
 
 end

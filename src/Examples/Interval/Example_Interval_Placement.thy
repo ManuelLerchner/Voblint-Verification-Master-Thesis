@@ -200,10 +200,10 @@ lemma placement_factory_enter:
   by (rule etf_st_enter_unit_of_transfer_placed)
 
 lemma placement_factory_combine:
-  "etf_combine_collect_st placement_ivl_etf_st dst caller callee =
+  "etf_combine_collect_st placement_ivl_etf_st ci caller callee =
     unit_combine_tree_st_placed (declared_global placement_prog)
       placement_node_owner placement_locations_of
-      placement_keep_local placement_publish_side dst caller callee"
+      placement_keep_local placement_publish_side (ci_dst ci) caller callee"
   unfolding placement_ivl_etf_st_def
   by (rule etf_combine_collect_st_unit_of_transfer_placed)
 
@@ -241,12 +241,12 @@ lemma placement_factory_combine_recombine_lookup:
   shows
     "case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
       (traverse_rhs
-        (etf_combine_collect_st placement_ivl_etf_st destination caller callee) sigma \<squnion>
+        (etf_combine_collect_st placement_ivl_etf_st ci caller callee) sigma \<squnion>
        sides_of_rhs
-        (etf_combine_collect_st placement_ivl_etf_st destination caller callee) sigma
+        (etf_combine_collect_st placement_ivl_etf_st ci caller callee) sigma
           (Inr ())) =
      case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-       (Lifted (combine_collect_resolved_for_q (declared_global placement_prog) destination
+       (Lifted (combine_collect_resolved_for_q (declared_global placement_prog) (ci_dst ci)
          (case_lifted bot id (sigma (Inl caller)) \<squnion> case_lifted bot id (sigma (Inr ())))
          (case_lifted bot id (sigma (Inl callee)) \<squnion> case_lifted bot id (sigma (Inr ())))))"
   unfolding placement_factory_combine

@@ -27,7 +27,7 @@ lemma ivl_tf_for_enter_mono:
   by (simp add: ivl_tf_for_def enter_ivl_for_mono)
 
 lemma ivl_etf_combine_tree:
-  "etf_combine_collect (ivl_etf gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  "etf_combine_collect (ivl_etf gs) ci cc ex = unit_combine_tree gs (combine\<^sup># gs (ci_dst ci)) cc ex"
   unfolding ivl_etf_def etf_combine_collect_unit_of_transfer
   by (simp add: tf_combine_collect_abs_combine_env_abs ivl_tf_for_def)
 

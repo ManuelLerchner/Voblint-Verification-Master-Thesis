@@ -1123,8 +1123,10 @@ where
     etf_return     = (\<lambda>e p u. unit_edge_tree gs (return\<^sup># tf e p) u),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_event      = (\<lambda>ev u. unit_edge_tree gs (event\<^sup># tf ev) u),
-    etf_combine_env     = unit_combine_tree gs (combine_env\<^sup># tf),
-    etf_combine_collect = (\<lambda>dst. unit_combine_tree gs (tf_combine_collect_abs tf dst))
+    etf_combine_env     =
+      (\<lambda>ci. unit_combine_tree gs (\<lambda>\<sigma>c. combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c))),
+    etf_combine_collect =
+      (\<lambda>ci. unit_combine_tree gs (\<lambda>\<sigma>c. tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c)))
   \<rparr>"
 
 definition mixed_etf_edge_tree ::
@@ -1164,8 +1166,10 @@ where
     etf_return     = (\<lambda>e p. mixed_etf_edge_tree gs tf (EA_Ret e p)),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_event      = (\<lambda>ev u. local_edge_tree gs (event\<^sup># tf ev) u),
-    etf_combine_env     = unit_combine_tree gs (combine_env\<^sup># tf),
-    etf_combine_collect = (\<lambda>dst. unit_combine_tree gs (tf_combine_collect_abs tf dst))
+    etf_combine_env     =
+      (\<lambda>ci. unit_combine_tree gs (\<lambda>\<sigma>c. combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c))),
+    etf_combine_collect =
+      (\<lambda>ci. unit_combine_tree gs (\<lambda>\<sigma>c. tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c)))
   \<rparr>"
 
 lemma apply_etf_unit_of_transfer:
@@ -1173,14 +1177,19 @@ lemma apply_etf_unit_of_transfer:
   unfolding unit_etf_of_transfer_def
   by (cases a) simp_all
 
+text \<open>Both builders hand the combine tree the \<^emph>\<open>continuation\<close>: the tree reconstructs the
+  raw call-site state, so \<open>caller_cont\<^sup>#\<close> is applied here, at the boundary that stands in for
+  \<open>enter\<close>.  The combine operations themselves never reapply it.\<close>
+
 lemma etf_combine_env_unit_of_transfer:
-  "etf_combine_env (unit_etf_of_transfer gs tf) cc ex
-     = unit_combine_tree gs (combine_env\<^sup># tf) cc ex"
+  "etf_combine_env (unit_etf_of_transfer gs tf) ci cc ex
+     = unit_combine_tree gs (\<lambda>\<sigma>c. combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c)) cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
 lemma etf_combine_collect_unit_of_transfer:
-  "etf_combine_collect (unit_etf_of_transfer gs tf) dst cc ex
-     = unit_combine_tree gs (tf_combine_collect_abs tf dst) cc ex"
+  "etf_combine_collect (unit_etf_of_transfer gs tf) ci cc ex
+     = unit_combine_tree gs
+         (\<lambda>\<sigma>c. tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c)) cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
 text \<open>\<open>EA_Check\<close> routes through \<^const>\<open>local_edge_tree\<close> here, not
@@ -1208,13 +1217,14 @@ lemma apply_etf_mixed_of_transfer:
   by (cases a) simp_all
 
 lemma etf_combine_env_mixed_of_transfer:
-  "etf_combine_env (mixed_etf_of_transfer gs tf bl) cc ex
-     = unit_combine_tree gs (combine_env\<^sup># tf) cc ex"
+  "etf_combine_env (mixed_etf_of_transfer gs tf bl) ci cc ex
+     = unit_combine_tree gs (\<lambda>\<sigma>c. combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c)) cc ex"
   unfolding mixed_etf_of_transfer_def by simp
 
 lemma etf_combine_collect_mixed_of_transfer:
-  "etf_combine_collect (mixed_etf_of_transfer gs tf bl) dst cc ex
-     = unit_combine_tree gs (tf_combine_collect_abs tf dst) cc ex"
+  "etf_combine_collect (mixed_etf_of_transfer gs tf bl) ci cc ex
+     = unit_combine_tree gs
+         (\<lambda>\<sigma>c. tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c)) cc ex"
   unfolding mixed_etf_of_transfer_def by simp
 
 lemma mixed_etf_edge_tree_local:
@@ -1536,21 +1546,21 @@ proof -
                     (etf_event (unit_etf_of_transfer gs tf) ev u) \<sigma>))"
       unfolding unit_etf_of_transfer_def by (auto intro: in_gamma_unit_edge_tree)
   next
-    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>ci cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_env gs s t
-                \<in> gamma_state_lift (etf_full (etf_combine_env (unit_etf_of_transfer gs tf) cc ex) \<sigma>))"
+                \<in> gamma_state_lift (etf_full (etf_combine_env (unit_etf_of_transfer gs tf) ci cc ex) \<sigma>))"
       by (auto simp add: etf_combine_env_unit_of_transfer
-               intro: in_gamma_unit_combine_tree tf_sound_combine_env_forD)
+               intro: in_gamma_unit_combine_tree tf_sound_combine_env_at_call_forD)
   next
-    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>ci cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
-              combine_collect gs dst s t
-                \<in> gamma_state_lift (etf_full (etf_combine_collect (unit_etf_of_transfer gs tf) dst cc ex) \<sigma>))"
+              combine_collect gs (ci_dst ci) s t
+                \<in> gamma_state_lift (etf_full (etf_combine_collect (unit_etf_of_transfer gs tf) ci cc ex) \<sigma>))"
       by (auto simp add: etf_combine_collect_unit_of_transfer
-               intro: in_gamma_unit_combine_tree tf_sound_combine_collect_forD)
+               intro: in_gamma_unit_combine_tree tf_sound_combine_collect_at_call_forD)
   qed
 qed
 
@@ -1745,21 +1755,21 @@ proof -
         by (simp add: mixed_etf_of_transfer_def)
     qed
   next
-    show "\<forall>cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>ci cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_env gs s t
-                \<in> gamma_state_lift (etf_full (etf_combine_env (mixed_etf_of_transfer gs tf bl) cc ex) \<sigma>))"
+                \<in> gamma_state_lift (etf_full (etf_combine_env (mixed_etf_of_transfer gs tf bl) ci cc ex) \<sigma>))"
       by (auto simp add: etf_combine_env_mixed_of_transfer
-               intro: in_gamma_unit_combine_tree tf_sound_combine_env_forD)
+               intro: in_gamma_unit_combine_tree tf_sound_combine_env_at_call_forD)
   next
-    show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
+    show "\<forall>ci cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
-              combine_collect gs dst s t
-                \<in> gamma_state_lift (etf_full (etf_combine_collect (mixed_etf_of_transfer gs tf bl) dst cc ex) \<sigma>))"
+              combine_collect gs (ci_dst ci) s t
+                \<in> gamma_state_lift (etf_full (etf_combine_collect (mixed_etf_of_transfer gs tf bl) ci cc ex) \<sigma>))"
       by (auto simp add: etf_combine_collect_mixed_of_transfer
-               intro: in_gamma_unit_combine_tree tf_sound_combine_collect_forD)
+               intro: in_gamma_unit_combine_tree tf_sound_combine_collect_at_call_forD)
   qed
 qed
 

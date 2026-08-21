@@ -510,6 +510,45 @@ Key lemmas:
 > still names `combine#` outright: `combine_collect_resolved_for_q` is the
 > resolved-store realization of the structural merge, so an analysis with its own
 > merge has no code-generated counterpart yet.
+>
+> **Call metadata and the caller continuation.** The combine operations are
+> indexed by a `call_info` record (`ci_dst`, `ci_callee`, `ci_formals`,
+> `ci_args`) built by `call_info_of` from the CFG's `CallEdge` and the callee
+> name, rather than by a bare destination. `return_calls` / `return_call_list`
+> carry that record, so every combine site on the `abs_state` route -- solver
+> trees, RHS generator, cone and monotonicity lemmas, executable trees -- sees
+> the same call metadata Goblint's `Analyses.Spec` passes to `combine_env` and
+> `combine_assign`. Goblint's `fexp`, callee context `fc` and `Queries.ask` have
+> no VIMP counterpart and are deliberately absent.
+>
+> `tf_caller_cont` is the caller half of Goblint's `enter`, which returns a
+> *pair*: `tf_enter_pair tf ci sigma = (caller_cont# tf ci sigma, enter# tf ...)`.
+> `caller_cont#` over-approximates the pre-call concrete caller store, retaining
+> only information intended to remain usable when the call returns; it may forget
+> abstract facts invalidated by potential callee effects. The concrete caller
+> store itself is unchanged at call entry, so the soundness statement keeps the
+> same concrete `s` on both sides; generalizing the concrete side would only be
+> warranted once a concrete caller-side transition at call entry is modelled.
+>
+> The continuation belongs to `enter`, not to combine: `combine_env#` and
+> `tf_combine_collect_abs` take the continuation as their first *state* argument
+> and never recompute it. Applying `caller_cont#` is the job of the tree builders
+> in `unit_etf_of_transfer` / `mixed_etf_of_transfer`, which stand in for `enter`
+> at the call-return boundary, and `tf_sound_combine_env_at_call_forD` /
+> `tf_sound_combine_collect_at_call_forD` are the bridge lemmas that compose the
+> two. It is applied exactly once per call-return path.
+>
+> The routed D/G family (`Sign_Named_Global_Eff`) fixes its own structural return
+> operation, so it takes the same `call_info` but projects `ci_dst ci` into the
+> destination-only `combine#`, keeps environment-merge-then-assignment ordering,
+> and applies no `caller_cont#` -- the continuation protocol belongs to the
+> `abs_state` route.
+>
+> Threading `call_info` turned out to be an interface change, not a
+> solver-architecture rewrite: most `dst` occurrences are plain binders whose
+> type is inferred, so the whole migration is roughly 25 edited sites. Large
+> downstream cascades (`TD_Side_RHS_Generator`, `Exec_Bridge`) went green with no
+> edits of their own once the upstream types changed.
 
 Goal: replace hardwired structural return combine with a Goblint-style
 analysis-provided `combine`.

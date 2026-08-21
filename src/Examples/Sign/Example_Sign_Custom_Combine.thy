@@ -70,7 +70,7 @@ subsection \<open>The Sign instance that uses it\<close>
 
 definition sign_tf_caller_join :: "(vname \<Rightarrow> bool) \<Rightarrow> sign domain_transfer" where
   "sign_tf_caller_join gs =
-     (sign_tf_for gs)\<lparr> tf_combine_env := combine_env_caller_join gs \<rparr>"
+     (sign_tf_for gs)\<lparr> tf_combine_env := (\<lambda>_. combine_env_caller_join gs) \<rparr>"
 
 text \<open>Only the merge field differs, so every edge transfer is the stock Sign one.\<close>
 
@@ -83,8 +83,15 @@ lemma enter_sign_tf_caller_join [simp]:
   by (simp add: sign_tf_caller_join_def)
 
 lemma tf_combine_env_sign_tf_caller_join [simp]:
-  "tf_combine_env (sign_tf_caller_join gs) = combine_env_caller_join gs"
+  "tf_combine_env (sign_tf_caller_join gs) = (\<lambda>_. combine_env_caller_join gs)"
   by (simp add: sign_tf_caller_join_def)
+
+text \<open>The caller continuation is the identity here, so the tree hands the merge the
+  raw call-site state and the instance differs from the stock one only in the merge.\<close>
+
+lemma tf_caller_cont_sign_tf_caller_join [simp]:
+  "caller_cont\<^sup># (sign_tf_caller_join gs) = (\<lambda>_ \<sigma>. \<sigma>)"
+  by (simp add: sign_tf_caller_join_def sign_tf_for_def)
 
 lemma sign_tf_caller_join_is_sound_transfer_for:
   "sound_transfer_for gs (sign_tf_caller_join gs)"
@@ -98,6 +105,7 @@ lemma sign_tf_caller_join_is_sound_transfer_for:
   subgoal by (simp add: return_sign_sound)
   subgoal by (simp add: enter_sign_for_sound)
   subgoal by (simp add: event_sign_sound)
+  subgoal by simp
   subgoal by (simp add: combine_env_caller_join_sound)
   done
 
@@ -116,8 +124,8 @@ lemma sign_etf_caller_join_enter_tree:
   unfolding sign_etf_caller_join_def unit_etf_of_transfer_def by simp
 
 lemma sign_etf_caller_join_combine_tree:
-  "etf_combine_collect (sign_etf_caller_join gs) dst cc ex
-     = unit_combine_tree gs (tf_combine_collect_abs (sign_tf_caller_join gs) dst) cc ex"
+  "etf_combine_collect (sign_etf_caller_join gs) ci cc ex
+     = unit_combine_tree gs (tf_combine_collect_abs (sign_tf_caller_join gs) ci) cc ex"
   unfolding sign_etf_caller_join_def etf_combine_collect_unit_of_transfer by simp
 
 text \<open>
@@ -143,8 +151,8 @@ lemma sign_etf_caller_join_cone_compatible:
 
 lemma sign_tf_caller_join_combine_mono:
   "s1 \<le> s2 \<Longrightarrow> t1 \<le> t2 \<Longrightarrow>
-     tf_combine_collect_abs (sign_tf_caller_join gs) dst s1 t1
-       \<le> tf_combine_collect_abs (sign_tf_caller_join gs) dst s2 t2"
+     tf_combine_collect_abs (sign_tf_caller_join gs) ci s1 t1
+       \<le> tf_combine_collect_abs (sign_tf_caller_join gs) ci s2 t2"
   by (rule tf_combine_collect_abs_mono) (simp_all add: combine_env_caller_join_mono)
 
 lemma sign_etf_caller_join_threefold_mono:
@@ -165,6 +173,12 @@ text \<open>
 
 abbreviation g_only :: "vname \<Rightarrow> bool" where
   "g_only \<equiv> (\<lambda>x. x = STR ''g'')"
+
+text \<open>A call site with no destination: the two operations disagree about the
+  environment merge itself, not about the return-value write that follows it.\<close>
+
+abbreviation ci_none :: call_info where
+  "ci_none \<equiv> \<lparr> ci_dst = None, ci_callee = STR ''p'', ci_formals = [], ci_args = [] \<rparr>"
 
 lemma caller_join_publishes_top:
   "combine_env_caller_join g_only (\<lambda>_. SPos) (\<lambda>_. SNeg) (STR ''g'') = STop"
@@ -193,10 +207,10 @@ text \<open>
 \<close>
 
 lemma tf_combine_collect_abs_caller_join_neq_structural:
-  "tf_combine_collect_abs (sign_tf_caller_join g_only) None
+  "tf_combine_collect_abs (sign_tf_caller_join g_only) ci_none
      \<noteq> combine\<^sup># g_only None"
 proof
-  assume eq: "tf_combine_collect_abs (sign_tf_caller_join g_only) None
+  assume eq: "tf_combine_collect_abs (sign_tf_caller_join g_only) ci_none
                 = combine\<^sup># g_only None"
   have "combine_env_caller_join g_only (\<lambda>_. SPos) (\<lambda>_. SNeg) (STR ''g'')
           = combine_env_abs g_only (\<lambda>_. SPos) (\<lambda>_. SNeg) (STR ''g'')"

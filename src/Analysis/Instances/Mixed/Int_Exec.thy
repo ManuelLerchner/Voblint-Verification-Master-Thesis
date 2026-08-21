@@ -176,8 +176,8 @@ lemma int_dom_etf_st_never_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF int_tf_st_never_for_reduces])
 
 lemma int_dom_etf_st_never_for_combine_tree:
-  "etf_combine_collect_st (int_dom_etf_st_never_for is_bot_pred gs) dst cc ex =
-   unit_combine_tree_st is_bot_pred gs dst cc ex"
+  "etf_combine_collect_st (int_dom_etf_st_never_for is_bot_pred gs) ci cc ex =
+   unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   unfolding int_dom_etf_st_never_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma int_dom_etf_st_never_for_enter_tree:
@@ -319,8 +319,8 @@ lemma int_dom_etf_st_once_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF int_tf_st_once_for_reduces])
 
 lemma int_dom_etf_st_once_for_combine_tree:
-  "etf_combine_collect_st (int_dom_etf_st_once_for is_bot_pred gs) dst cc ex =
-   unit_combine_tree_st is_bot_pred gs dst cc ex"
+  "etf_combine_collect_st (int_dom_etf_st_once_for is_bot_pred gs) ci cc ex =
+   unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   unfolding int_dom_etf_st_once_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma int_dom_etf_st_once_for_enter_tree:
@@ -462,8 +462,8 @@ lemma int_dom_etf_st_fixpoint_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF int_tf_st_fixpoint_for_reduces])
 
 lemma int_dom_etf_st_fixpoint_for_combine_tree:
-  "etf_combine_collect_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) dst cc ex =
-   unit_combine_tree_st is_bot_pred gs dst cc ex"
+  "etf_combine_collect_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) ci cc ex =
+   unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   unfolding int_dom_etf_st_fixpoint_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma int_dom_etf_st_fixpoint_for_enter_tree:

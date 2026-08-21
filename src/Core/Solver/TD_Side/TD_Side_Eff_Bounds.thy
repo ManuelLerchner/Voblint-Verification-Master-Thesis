@@ -539,26 +539,32 @@ lemma etf_combine_combined_le_eff:
     and gseed :: 'g
   assumes pp:   "part_post_solution (side_cfg_T_eff gs g etf bot0 s0 gseed) x \<sigma> vars"
       and v:    "v \<in> vars"
-      and e:    "(cc, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
+      and e:    "(cc, ca, FunctionEntry p, v) \<in> calls g"
       and finC: "finite (calls g)"
-      and coh:  "reachability_coherent_tree (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma>"
-  shows "etf_full (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma> \<le> side_env_lift \<sigma> v"
+      and coh:  "reachability_coherent_tree
+                   (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>"
+  shows "etf_full (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>
+           \<le> side_env_lift \<sigma> v"
 proof -
-  have mem: "(cc, dst, FunctionResult p) \<in> set (return_call_list g v)"
+  have mem: "(cc, call_info_of ca p, FunctionResult p) \<in> set (return_call_list g v)"
     using e by (force simp: set_return_call_list[OF finC] return_calls_def)
-  have loc: "traverse_rhs (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma> \<le> \<sigma> (Inl v)"
+  have loc: "traverse_rhs (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>
+               \<le> \<sigma> (Inl v)"
     using side_acc_eff_combine_contributes[OF mem]
           side_post_solution_le_local_eff[OF pp v]
     by (rule order_trans)
-  have glob_name: "\<And>gg. sides_of_rhs (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma> (Inr gg) \<le> \<sigma> (Inr gg)"
+  have glob_name: "\<And>gg. sides_of_rhs
+      (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma> (Inr gg) \<le> \<sigma> (Inr gg)"
     using sides_le_side_rhs_fold_eff_combine[OF mem]
           sides_fold_le_side_cfg_T_eff
           side_post_solution_le_global_eff[OF pp v]
     by (meson order_trans)
-  have glob: "all_sides (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma> \<le> glob_env \<sigma>"
+  have glob: "all_sides (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>
+                \<le> glob_env \<sigma>"
   proof -
-    have "all_sides (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma>
-          \<le> glob_env (sides_of_rhs (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma>)"
+    have "all_sides (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>
+          \<le> glob_env (sides_of_rhs
+                (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>)"
       by (rule all_sides_le_glob_env_sides)
     also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono_Inr) (rule glob_name)
     finally show ?thesis .

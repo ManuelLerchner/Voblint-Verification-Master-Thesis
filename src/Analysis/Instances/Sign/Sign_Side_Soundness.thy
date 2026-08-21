@@ -42,7 +42,7 @@ lemma sign_etf_edge_tree_branch:
   unfolding sign_etf_def apply_etf_mixed_of_transfer sign_tf_for_def by simp_all
 
 lemma sign_etf_combine_tree:
-  "etf_combine_collect (sign_etf gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  "etf_combine_collect (sign_etf gs) ci cc ex = unit_combine_tree gs (combine\<^sup># gs (ci_dst ci)) cc ex"
   unfolding sign_etf_def etf_combine_collect_mixed_of_transfer
   by (simp add: tf_combine_collect_abs_combine_env_abs sign_tf_for_def)
 
@@ -161,7 +161,7 @@ lemma sign_etf_unit_edge_tree:
   unfolding sign_etf_unit_def apply_etf_unit_of_transfer by simp
 
 lemma sign_etf_unit_combine_tree:
-  "etf_combine_collect (sign_etf_unit gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  "etf_combine_collect (sign_etf_unit gs) ci cc ex = unit_combine_tree gs (combine\<^sup># gs (ci_dst ci)) cc ex"
   unfolding sign_etf_unit_def etf_combine_collect_unit_of_transfer
   by (simp add: tf_combine_collect_abs_combine_env_abs sign_tf_for_def)
 

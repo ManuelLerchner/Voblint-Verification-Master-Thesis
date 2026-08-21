@@ -164,7 +164,7 @@ definition side_contribution_trees ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> exp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list
+   \<Rightarrow> (pp \<times> call_info \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree list"
 where
   "side_contribution_trees etf es ens cs =
@@ -177,7 +177,7 @@ definition side_rhs_fold_eff ::
    \<Rightarrow> 'a abs_state lifted
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> exp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list
+   \<Rightarrow> (pp \<times> call_info \<times> pp) list
    \<Rightarrow> (pp, 'g, 'a abs_state lifted) strategy_tree"
 where
   "side_rhs_fold_eff etf acc es ens cs =
@@ -380,7 +380,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift (restrict_local_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
        (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_new dst cc ex) xs) seed
      = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_old dst cc ex) xs) seed"
-    for xs :: "(pp \<times> vname option \<times> pp) list" and seed
+    for xs :: "(pp \<times> call_info \<times> pp) list" and seed
     by (induction xs arbitrary: seed) (auto simp: comb_t split: prod.splits)
   have elem_local: "foldr (\<lambda>t acc'. map_lift (restrict_local_for gs) (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
        = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc')
@@ -403,7 +403,7 @@ proof -
     "foldr (\<lambda>t acc'. map_lift (restrict_global_for gs) (traverse_rhs t \<sigma>) \<squnion> acc')
        (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_new dst cc ex) xs) seed
      = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc') (map (\<lambda>(cc,dst,ex). etf_combine_collect etf_old dst cc ex) xs) seed"
-    for xs :: "(pp \<times> vname option \<times> pp) list" and seed
+    for xs :: "(pp \<times> call_info \<times> pp) list" and seed
     by (induction xs arbitrary: seed) (auto simp: comb_s split: prod.splits)
   have elem_global: "foldr (\<lambda>t acc'. map_lift (restrict_global_for gs) (traverse_rhs t \<sigma>) \<squnion> acc') cs \<bottom>
        = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> (Inr ()) \<squnion> acc')
@@ -501,7 +501,7 @@ definition side_acc_eff ::
    \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state lifted)
    \<Rightarrow> (pp \<times> edge_action) list
    \<Rightarrow> (pp \<times> vname list \<times> exp list) list
-   \<Rightarrow> (pp \<times> vname option \<times> pp) list \<Rightarrow> 'a abs_state lifted"
+   \<Rightarrow> (pp \<times> call_info \<times> pp) list \<Rightarrow> 'a abs_state lifted"
 where
   "side_acc_eff etf acc \<sigma> es ens cs =
      fold_rhs_values acc \<sigma> (side_contribution_trees etf es ens cs)"
@@ -732,11 +732,11 @@ qed
 
 lemma cfg_combine_contributes_to_eq:
   fixes g :: cfg
-  assumes "finite (calls g)" and "(cc, CallEdge dst fs as, FunctionEntry p, v) \<in> calls g"
-  shows "traverse_rhs (etf_combine_collect etf dst cc (FunctionResult p)) \<sigma>
+  assumes "finite (calls g)" and "(cc, ca, FunctionEntry p, v) \<in> calls g"
+  shows "traverse_rhs (etf_combine_collect etf (call_info_of ca p) cc (FunctionResult p)) \<sigma>
          \<le> eq (side_cfg_T_eff gs g etf bot0 s0 gseed) v \<sigma>"
 proof -
-  have "(cc, dst, FunctionResult p) \<in> set (return_call_list g v)"
+  have "(cc, call_info_of ca p, FunctionResult p) \<in> set (return_call_list g v)"
     using assms(2) by (force simp: set_return_call_list[OF assms(1)] return_calls_def)
   then show ?thesis
     unfolding eq_side_cfg_T_eff
@@ -804,7 +804,7 @@ text \<open>
 
 definition side_cfg_T_eff_ctx ::
   "(vname => bool)
-   \<Rightarrow> ('c \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> ('c \<Rightarrow> call_info \<Rightarrow> pp \<Rightarrow> pp
      \<Rightarrow> (pp \<times> 'c, 'g, 'a abs_state lifted) strategy_tree)
    \<Rightarrow> cfg \<Rightarrow> ('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
    \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'g

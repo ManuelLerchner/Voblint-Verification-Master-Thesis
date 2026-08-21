@@ -139,7 +139,8 @@ definition sign_tf_for :: "(vname => bool) => sign domain_transfer" where
                        tf_return  = return_sign,
                        tf_enter   = enter_sign_for gs,
                        tf_event   = event_sign,
-                       tf_combine_env = combine_env_abs gs |)"
+                       tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
+                       tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
 lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   unfolding sign_tf_for_def
@@ -152,6 +153,7 @@ lemma sign_is_sound_transfer_for: "sound_transfer_for gs (sign_tf_for gs)"
   subgoal by (simp add: return_sign_sound)
   subgoal by (simp add: enter_sign_for_sound)
   subgoal by (simp add: event_sign_sound)
+  subgoal by simp
   subgoal by (simp add: combine_env_sound)
   done
 

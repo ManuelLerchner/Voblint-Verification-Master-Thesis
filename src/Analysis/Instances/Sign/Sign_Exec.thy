@@ -255,7 +255,7 @@ lemma sign_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_for_reduces])
 
 lemma sign_etf_st_for_combine_tree:
-  "etf_combine_collect_st (sign_etf_st_for is_bot_pred gs) dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
+  "etf_combine_collect_st (sign_etf_st_for is_bot_pred gs) ci cc ex = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
   unfolding sign_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
 
 lemma sign_etf_st_for_enter_tree:
