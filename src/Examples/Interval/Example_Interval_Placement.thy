@@ -48,9 +48,6 @@ definition placement_cfg :: cfg where
     compile_prog (prog_table placement_prog) (prog_procs placement_prog)
       prog_main_name (prog_main placement_prog)"
 
-value "intra placement_cfg"
-value "calls placement_cfg"
-
 definition placement_owner :: pname where
   "placement_owner = (STR ''add'')"
 
@@ -90,7 +87,8 @@ definition placement_ivl_etf_st ::
       placement_node_owner placement_locations_of
       placement_keep_local placement_publish_side
       (ivl_tf_st_for (declared_global placement_prog))
-      (ivl_enter_st_for (declared_global placement_prog))"
+      (ivl_enter_st_for (declared_global placement_prog))
+      (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 
 lemma placement_cfg_edges:
@@ -201,11 +199,13 @@ lemma placement_factory_enter:
 
 lemma placement_factory_combine:
   "etf_combine_collect_st placement_ivl_etf_st ci caller callee =
-    unit_combine_tree_st_placed (declared_global placement_prog)
+    unit_combine_tree_st_placed
       placement_node_owner placement_locations_of
-      placement_keep_local placement_publish_side (ci_dst ci) caller callee"
+      placement_keep_local placement_publish_side
+      (combine_collect_resolved_for_q (declared_global placement_prog) (ci_dst ci))
+      caller callee"
   unfolding placement_ivl_etf_st_def
-  by (rule etf_combine_collect_st_unit_of_transfer_placed)
+  by (simp add: unit_etf_st_of_transfer_placed_def st_combine_collect_structural)
 
 lemma placement_factory_edge_recombine_lookup:
   fixes sigma :: "pp + unit => ivl resolved_st_q lifted"
@@ -3105,27 +3105,6 @@ lemma placement_td_values:
   "case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Local_Location (STR ''answer'')))
     (snd placement_td_sol (Inl (Statement 6))) = Ivl (Fin 0) (Fin 3)"
   by eval+
-
-value "map (\<lambda>node.
-  (string_of_ivl (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''balance'')))
-     (snd placement_td_sol (Inl node))),
-   string_of_ivl (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''request_count'')))
-     (snd placement_td_sol (Inl node)))))
-  [Statement 0, Statement 1, Statement 2, Statement 3, Statement 5, Statement 6]"
-
-value "string_of_ivl
-  (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''request_count'')))
-    (snd placement_td_sol (Inr ())))"
-
-value "map (\<lambda>loc. string_of_ivl
-  (case_lifted bot (\<lambda>s. lookup_resolved_st_q s loc) (snd placement_td_sol (Inl (Statement 0)))))
-  [Local_Location (STR ''x''), Local_Location (STR ''tmp'')]"
-
-value "string_of_ivl
-  (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Local_Location (STR ''answer'')))
-    (snd placement_td_sol (Inl (Statement 6))))"
-
-
 
 end
 

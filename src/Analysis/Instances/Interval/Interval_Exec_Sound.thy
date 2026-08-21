@@ -151,6 +151,7 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF ivl_etf_edge_tree ivl_etf_combine_tree
                 ivl_etf_st_for_edge_tree ivl_etf_st_for_combine_tree ivl_tf_st_for_commute
+                fun_of_resolved_st_q_for_combine_collect
                 ivl_etf_enter_tree ivl_etf_st_for_enter_tree ivl_enter_st_for_commute
                 exact pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_ivl_st_for bot_fun_def)
@@ -431,6 +432,7 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF ivl_etf_edge_tree ivl_etf_combine_tree
                 ivl_etf_st_for_edge_tree ivl_etf_st_for_combine_tree ivl_tf_st_for_commute
+                fun_of_resolved_st_q_for_combine_collect
                 ivl_etf_enter_tree ivl_etf_st_for_enter_tree ivl_enter_st_for_commute
                 exact pp_st]
     by (simp add: sigma_def fun_of_st_cinit_ivl_st_for bot_fun_def)

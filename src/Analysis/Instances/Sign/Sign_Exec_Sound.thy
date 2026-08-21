@@ -161,6 +161,7 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF sign_etf_unit_edge_tree sign_etf_unit_combine_tree
                 sign_etf_st_for_edge_tree sign_etf_st_for_combine_tree sign_tf_st_for_commute
+                fun_of_resolved_st_q_for_combine_collect
                 sign_etf_unit_enter_tree_tf sign_etf_st_for_enter_tree sign_enter_st_for_commute
                 exact pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_sign_st_for bot_fun_def)

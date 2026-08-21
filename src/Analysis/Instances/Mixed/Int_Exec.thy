@@ -167,7 +167,7 @@ definition int_dom_etf_st_never_for ::
   "(int_dom resolved_st_q => bool) => (vname => bool)
    => (unit, int_dom resolved_st_q lifted) effectful_st_transfer" where
   "int_dom_etf_st_never_for is_bot_pred gs =
-     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_never_for gs) (int_dom_enter_never_st_for gs)"
+     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_never_for gs) (int_dom_enter_never_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma int_dom_etf_st_never_for_edge_tree:
   "apply_etf_st (int_dom_etf_st_never_for is_bot_pred gs) a u =
@@ -177,8 +177,9 @@ lemma int_dom_etf_st_never_for_edge_tree:
 
 lemma int_dom_etf_st_never_for_combine_tree:
   "etf_combine_collect_st (int_dom_etf_st_never_for is_bot_pred gs) ci cc ex =
-   unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
-  unfolding int_dom_etf_st_never_for_def by (rule etf_combine_collect_st_unit_of_transfer)
+   unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
+  unfolding int_dom_etf_st_never_for_def
+  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
 
 lemma int_dom_etf_st_never_for_enter_tree:
   "etf_st_enter (int_dom_etf_st_never_for is_bot_pred gs) xs es u =
@@ -310,7 +311,7 @@ definition int_dom_etf_st_once_for ::
   "(int_dom resolved_st_q => bool) => (vname => bool)
    => (unit, int_dom resolved_st_q lifted) effectful_st_transfer" where
   "int_dom_etf_st_once_for is_bot_pred gs =
-     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_once_for gs) (int_dom_enter_once_st_for gs)"
+     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_once_for gs) (int_dom_enter_once_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma int_dom_etf_st_once_for_edge_tree:
   "apply_etf_st (int_dom_etf_st_once_for is_bot_pred gs) a u =
@@ -320,8 +321,9 @@ lemma int_dom_etf_st_once_for_edge_tree:
 
 lemma int_dom_etf_st_once_for_combine_tree:
   "etf_combine_collect_st (int_dom_etf_st_once_for is_bot_pred gs) ci cc ex =
-   unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
-  unfolding int_dom_etf_st_once_for_def by (rule etf_combine_collect_st_unit_of_transfer)
+   unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
+  unfolding int_dom_etf_st_once_for_def
+  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
 
 lemma int_dom_etf_st_once_for_enter_tree:
   "etf_st_enter (int_dom_etf_st_once_for is_bot_pred gs) xs es u =
@@ -453,7 +455,7 @@ definition int_dom_etf_st_fixpoint_for ::
   "(int_dom resolved_st_q => bool) => (vname => bool)
    => (unit, int_dom resolved_st_q lifted) effectful_st_transfer" where
   "int_dom_etf_st_fixpoint_for is_bot_pred gs =
-     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_fixpoint_for gs) (int_dom_enter_fixpoint_st_for gs)"
+     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_fixpoint_for gs) (int_dom_enter_fixpoint_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma int_dom_etf_st_fixpoint_for_edge_tree:
   "apply_etf_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) a u =
@@ -463,8 +465,9 @@ lemma int_dom_etf_st_fixpoint_for_edge_tree:
 
 lemma int_dom_etf_st_fixpoint_for_combine_tree:
   "etf_combine_collect_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) ci cc ex =
-   unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
-  unfolding int_dom_etf_st_fixpoint_for_def by (rule etf_combine_collect_st_unit_of_transfer)
+   unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
+  unfolding int_dom_etf_st_fixpoint_for_def
+  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
 
 lemma int_dom_etf_st_fixpoint_for_enter_tree:
   "etf_st_enter (int_dom_etf_st_fixpoint_for is_bot_pred gs) xs es u =

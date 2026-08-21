@@ -141,6 +141,7 @@ proof -
     using part_post_solution_st_to_abs_eff_unit_transfer
             [OF parity_etf_edge_tree parity_etf_combine_tree
                 parity_etf_st_for_edge_tree parity_etf_st_for_combine_tree parity_tf_st_for_commute
+                fun_of_resolved_st_q_for_combine_collect
                 parity_etf_enter_tree parity_etf_st_for_enter_tree parity_enter_st_for_commute
                 exact pp_st]
     by (simp add: \<sigma>_def fun_of_st_cinit_parity_st_for bot_fun_def)

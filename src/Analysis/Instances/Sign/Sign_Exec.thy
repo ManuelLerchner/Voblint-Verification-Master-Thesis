@@ -247,7 +247,7 @@ text \<open>
 definition sign_etf_st_for ::
   "(sign resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
    \<Rightarrow> (unit, sign resolved_st_q lifted) effectful_st_transfer" where
-  "sign_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (sign_tf_st_for gs) (sign_enter_st_for gs)"
+  "sign_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (sign_tf_st_for gs) (sign_enter_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma sign_etf_st_for_edge_tree:
   "apply_etf_st (sign_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred (sign_tf_st_for gs a) u"
@@ -255,8 +255,9 @@ lemma sign_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_for_reduces])
 
 lemma sign_etf_st_for_combine_tree:
-  "etf_combine_collect_st (sign_etf_st_for is_bot_pred gs) ci cc ex = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
-  unfolding sign_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
+  "etf_combine_collect_st (sign_etf_st_for is_bot_pred gs) ci cc ex = unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
+  unfolding sign_etf_st_for_def
+  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
 
 lemma sign_etf_st_for_enter_tree:
   "etf_st_enter (sign_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (sign_enter_st_for gs xs es) u"
@@ -283,7 +284,7 @@ definition sign_etf_st_contribution_for ::
   "(sign resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
    \<Rightarrow> (unit, sign resolved_st_q lifted) effectful_st_transfer" where
   "sign_etf_st_contribution_for is_bot_pred gs
-     = unit_etf_st_contribution_of_transfer is_bot_pred gs (sign_tf_st_for gs) (sign_enter_st_for gs)"
+     = unit_etf_st_contribution_of_transfer is_bot_pred gs (sign_tf_st_for gs) (sign_enter_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma sign_buffered_correspondence:
   shows "traverse_rhs (make_side_rhs_tree_eff_st_buffered g

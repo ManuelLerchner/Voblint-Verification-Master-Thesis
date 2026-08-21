@@ -253,7 +253,7 @@ text \<open>Mirrors \<open>ivl_etf_st_for\<close> \<open>Voblint_Analysis.Ivl_Ex
 definition parity_etf_st_for ::
   "(parity resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
    \<Rightarrow> (unit, parity resolved_st_q lifted) effectful_st_transfer" where
-  "parity_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (parity_tf_st_for gs) (parity_enter_st_for gs)"
+  "parity_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (parity_tf_st_for gs) (parity_enter_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma parity_etf_st_for_edge_tree:
   "apply_etf_st (parity_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred (parity_tf_st_for gs a) u"
@@ -261,8 +261,9 @@ lemma parity_etf_st_for_edge_tree:
   by (rule apply_etf_st_unit_of_transfer[OF parity_tf_st_for_reduces])
 
 lemma parity_etf_st_for_combine_tree:
-  "etf_combine_collect_st (parity_etf_st_for is_bot_pred gs) ci cc ex = unit_combine_tree_st is_bot_pred gs (ci_dst ci) cc ex"
-  unfolding parity_etf_st_for_def by (rule etf_combine_collect_st_unit_of_transfer)
+  "etf_combine_collect_st (parity_etf_st_for is_bot_pred gs) ci cc ex = unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
+  unfolding parity_etf_st_for_def
+  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
 
 lemma parity_etf_st_for_enter_tree:
   "etf_st_enter (parity_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (parity_enter_st_for gs xs es) u"
@@ -289,7 +290,7 @@ definition parity_etf_st_contribution_for ::
   "(parity resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
    \<Rightarrow> (unit, parity resolved_st_q lifted) effectful_st_transfer" where
   "parity_etf_st_contribution_for is_bot_pred gs
-     = unit_etf_st_contribution_of_transfer is_bot_pred gs (parity_tf_st_for gs) (parity_enter_st_for gs)"
+     = unit_etf_st_contribution_of_transfer is_bot_pred gs (parity_tf_st_for gs) (parity_enter_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
 
 lemma parity_buffered_correspondence:
   shows "traverse_rhs (make_side_rhs_tree_eff_st_buffered g
