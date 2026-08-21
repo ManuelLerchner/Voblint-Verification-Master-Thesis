@@ -64,6 +64,7 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Call_String_Collecting_Refinement
     Call_String_Routed_Context
     Call_String_Solver_Projection
+    Entry_State_Routed_Context
     (* Generic public AnalysisResult/check-report/soundness adapter for a
        routed DG analysis, generic in a classify function and a
        routed_context_hetero interpretation. *)

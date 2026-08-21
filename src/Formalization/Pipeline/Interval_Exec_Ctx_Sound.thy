@@ -5,6 +5,7 @@ theory Interval_Exec_Ctx_Sound
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Core.Routed_Context"
+    "Voblint_Core.Entry_State_Routed_Context"
     "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
@@ -380,6 +381,30 @@ definition entry_state_route_abs ::
 definition entry_state_route_abs_gen ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
   "entry_state_route_abs_gen gs u ctx d ca = entry_state_route_abs gs d ca"
+
+text \<open>
+  \<open>entry_state_route_abs\<close>/\<open>entry_state_route_abs_gen\<close> are exactly
+  \<^theory>\<open>Voblint_Core.Routed_Context\<close>'s \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close>,
+  generalized so any domain interprets them instead of restating them: both case-split
+  the same \<^const>\<open>CallEdge\<close> and read the same entered-frame Bot/Lifted collapse, and
+  \<^const>\<open>entered_state_abs\<close>'s own \<open>enter#\<close> application is exactly \<open>enter_local\<close> applied
+  to \<^const>\<open>ectx_abs_spec\<close> (\<open>dgs_enter_base_for_lifted\<close>). Kept as their own named
+  definitions -- rather than replaced outright -- because both are cited by name from the
+  regression examples
+  (\<open>Example_Interval_DG_Ctx_Collect.thy\<close>, \<open>Example_Interval_DG_EntryState_Collect.thy\<close>); this
+  identity is what lets the routed interpretation below use the generic Core locale while
+  every existing citation of these two names keeps working unchanged.
+\<close>
+
+lemma entry_state_route_abs_gen_eq_formals_route_lifted_gen:
+  "entry_state_route_abs_gen gs = formals_route_lifted_gen (ectx_abs_spec gs)"
+proof (intro ext)
+  fix u ctx d ca
+  show "entry_state_route_abs_gen gs u ctx d ca = formals_route_lifted_gen (ectx_abs_spec gs) u ctx d ca"
+    unfolding entry_state_route_abs_gen_def formals_route_lifted_gen_def
+      entry_state_route_abs_def formals_route_lifted_def entered_state_abs_def ectx_abs_spec_def
+    by (cases ca) (simp_all add: dgs_enter_base_for_lifted)
+qed
 
 subsection \<open>The route-consistency core\<close>
 
@@ -782,22 +807,37 @@ lemma entry_state_sg_uncovered_empty:
      \<Longrightarrow> gamma_state_lift (entry_state_sg (Inl (v, ctx))) = {}"
   by (simp add: entry_state_sg_def entry_state_sg_exec_def)
 
-subsection \<open>Instantiating the generic DG-native activation discharge\<close>
+subsection \<open>Instantiating the generic routed-context locale\<close>
 
-interpretation entry_state_dg: dg_ctx_activation_base "ectx_abs_spec gs" gamma_dg_base gs
-    "compile_prog Pi ps mnm main" Global
-    "entry_state_route_abs_gen gs" "routed_cmb_g (ectx_abs_spec gs) Global Seed"
-    "routed_extra_g Seed Global"
+text \<open>
+  \<^locale>\<open>entry_state_routed_context\<close> (\<^theory>\<open>Voblint_Core.Entry_State_Routed_Context\<close>)
+  packages the two interpretations this section previously proved separately
+  (\<^locale>\<open>dg_ctx_activation_base\<close>, then \<^locale>\<open>routed_context_hetero\<close>) into one: \<open>FinC\<close>,
+  \<open>RouteAgree\<close>, and \<open>EnterAgree\<close> -- previously reproved here from \<open>compile_prog_finite\<close>/
+  \<open>call_action_at_call_site_eq\<close>/\<open>compile_prog_calls_source_unique\<close> -- are now discharged
+  once, generically, inside that locale. Only the five genuine
+  \<^locale>\<open>dg_ctx_activation_base\<close> obligations, \<open>seed_key_ne_gk0\<close> (datatype distinctness
+  for \<open>gk\<close>), and the two solver-coverage facts \<open>call_fwd\<close>/\<open>comb_fwd\<close> remain premises here.
+  \<^const>\<open>entry_state_context\<close> keeps its own name and definition (both \<open>Example_Interval_DG_Ctx_Collect.thy\<close>
+  and \<open>Example_Interval_DG_EntryState_Collect.thy\<close> cite it by name); \<open>entry_state_context_eq_route_enterc_of_sigma\<close>
+  below identifies it with the locale's own \<open>enterc\<close>, so \<open>entry_state_sg_seed\<close>/\<open>entry_state_sg_comb\<close>
+  can still be stated against \<^const>\<open>entry_state_context\<close> while citing the generic \<open>routed_context_call\<close>/\<open>_comb\<close>.
+\<close>
+
+interpretation entry_state_routed: entry_state_routed_context "ectx_abs_spec gs" gs
+    Pi ps mnm main Global
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     entry_state_sigma_abs "fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
-    "(cfg_exit (compile_prog Pi ps mnm main), [])" entry_state_sg gamma_state_lift
+    "(cfg_exit (compile_prog Pi ps mnm main), [])" entry_state_sg
+    Seed
 proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule entry_state_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+             (formals_route_lifted_gen (ectx_abs_spec gs))
              (routed_cmb_g (ectx_abs_spec gs) Global Seed)
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
@@ -806,7 +846,8 @@ next
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)))
           (cfg_exit (compile_prog Pi ps mnm main), []) entry_state_sigma_abs
           (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
-    unfolding entry_state_sigma_abs_def entry_state_sigma_abs_exec_def
+    unfolding entry_state_route_abs_gen_eq_formals_route_lifted_gen[symmetric]
+      entry_state_sigma_abs_def entry_state_sigma_abs_exec_def
     by (rule entry_state_pp_abs[OF solves exact])
 next
   fix v ctx assume "(v, ctx) \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
@@ -820,47 +861,45 @@ next
 next
   fix u a v ctx assume "(u, ctx) \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)" "(u, a, v) \<in> intra (compile_prog Pi ps mnm main)"
   thus "(v, ctx) \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)" by (rule fwd_ok)
-qed
-
-
-subsection \<open>The routed interpretation and its CALL/COMB corollaries\<close>
-
-interpretation entry_state_routed: routed_context_hetero "ectx_abs_spec gs" gs
-    "compile_prog Pi ps mnm main" Global "entry_state_route_abs_gen gs"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
-    "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
-    entry_state_sigma_abs "fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
-    "(cfg_exit (compile_prog Pi ps mnm main), [])" entry_state_sg
-    Seed entry_state_context
-proof (unfold_locales, goal_cases FinC SeedKey RouteAgree CallFwd CombFwd EnterAgree)
-  case FinC show ?case by (rule entry_state_finC)
 next
-  case (SeedKey p ctx) show ?case by simp
+  show "\<And>p ctx. Seed p ctx \<noteq> Global" by simp
 next
-  case (RouteAgree u ctx dst pars args p cont s)
-  note ce = RouteAgree(2)
-  have "call_action_at_call_site (compile_prog Pi ps mnm main) u = CallEdge dst pars args"
-    by (rule call_action_at_call_site_eq[OF entry_state_finC compile_prog_calls_source_unique ce])
-  thus ?case unfolding entry_state_context_def by simp
-next
-  case (CallFwd u ctx dst pars args p cont)
-  show ?case using CallFwd(1,2) call_fwd_ok
+  fix u ctx dst pars args p cont
+  assume mem: "(u, ctx) \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+  show "(FunctionEntry p,
+           formals_route_lifted_gen (ectx_abs_spec gs) u ctx
+             (locals (entry_state_sigma_abs (Inl (u, ctx)))) (CallEdge dst pars args))
+          \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
+    unfolding entry_state_route_abs_gen_eq_formals_route_lifted_gen[symmetric]
+    using mem ce call_fwd_ok
     unfolding entry_state_sigma_abs_def entry_state_sigma_abs_exec_def by blast
 next
-  case (CombFwd cl c1 dst pars args p cont)
-  show ?case using CombFwd(1,2) comb_fwd_ok by blast
-next
-  case (EnterAgree cl s es dst pars args p cont)
-  note ces = EnterAgree(1) and ce = EnterAgree(2)
-  obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
-    using ces unfolding call_enter_store_def by blast
-  have "CallEdge dst' pars' args' = CallEdge dst pars args"
-    using compile_prog_calls_source_unique[OF ce' ce] by simp
-  thus ?case using es_eq by simp
+  fix cl c1 dst pars args p cont
+  assume mem: "(cl, c1) \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
+    and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
+  show "(cont, c1) \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
+    using mem ce by (rule comb_fwd_ok)
 qed
+
+text \<open>
+  \<^const>\<open>entry_state_context\<close> -- ignore the store, recompute \<open>route\<close> from \<open>sigma\<close> at
+  \<^const>\<open>call_action_at_call_site\<close> -- is exactly \<^locale>\<open>entry_state_routed_context\<close>'s
+  own \<open>enterc\<close> (\<open>route_enterc_of_sigma\<close>), once \<open>entry_state_route_abs_gen\<close>'s identity with
+  \<^const>\<open>formals_route_lifted_gen\<close> is unfolded.
+\<close>
+
+lemma entry_state_context_eq_route_enterc_of_sigma:
+  "entry_state_context = route_enterc_of_sigma
+     (formals_route_lifted_gen (ectx_abs_spec gs)) entry_state_sigma_abs (compile_prog Pi ps mnm main)"
+  unfolding entry_state_context_def route_enterc_of_sigma_def
+    entry_state_route_abs_gen_eq_formals_route_lifted_gen[symmetric]
+  by (rule refl)
+
+lemmas entry_state_routed_context_call =
+  entry_state_routed.routed_context_call[folded entry_state_context_eq_route_enterc_of_sigma]
+lemmas entry_state_routed_context_comb =
+  entry_state_routed.routed_context_comb[folded entry_state_context_eq_route_enterc_of_sigma]
 
 lemma entry_state_sg_seed:
   assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
@@ -868,7 +907,7 @@ lemma entry_state_sg_seed:
   shows "call_enter gs (CallEdge dst xs es) s
            \<in> gamma_state_lift (entry_state_sg
                (Inl (FunctionEntry p, entry_state_context u ctx (call_enter gs (CallEdge dst xs es) s))))"
-  by (rule entry_state_routed.routed_context_call[OF assms])
+  by (rule entry_state_routed_context_call[OF assms])
 
 lemma entry_state_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps mnm main)"
@@ -876,7 +915,7 @@ lemma entry_state_sg_comb:
     and "t \<in> gamma_state_lift (entry_state_sg (Inl (FunctionResult p, entry_state_context cl c1 es)))"
     and "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
   shows "combine_collect gs dst s t \<in> gamma_state_lift (entry_state_sg (Inl (v, c1)))"
-  by (rule entry_state_routed.routed_context_comb[OF assms])
+  by (rule entry_state_routed_context_comb[OF assms])
 
 subsection \<open>Activation-indexed collecting soundness\<close>
 
@@ -889,11 +928,11 @@ lemma entry_state_locals_ge_s0d:
      \<le> locals (entry_state_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), [])))"
 proof -
   have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)
-      \<le> locals (eq entry_state_dg.Gen (cfg_entry (compile_prog Pi ps mnm main), []) entry_state_sigma_abs)"
+      \<le> locals (eq entry_state_routed.Gen (cfg_entry (compile_prog Pi ps mnm main), []) entry_state_sigma_abs)"
     by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
        (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
   also have "\<dots> \<le> locals (entry_state_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), [])))"
-    using entry_state_dg.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
+    using entry_state_routed.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed
 
@@ -913,7 +952,7 @@ proof (rule activation_collect_sound_gen[where sg = entry_state_sg and gammaM = 
     by (simp add: gamma_dg_base_def)
   also have "\<dots> \<subseteq> gamma_dg_base (locals (entry_state_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), []))))
                    (globs (entry_state_sigma_abs (Inr Global)))"
-    by (rule gamma_dg_base_mono[OF entry_state_locals_ge_s0d entry_state_dg.pp_entry_s0g_bound[OF entry_cov]])
+    by (rule gamma_dg_base_mono[OF entry_state_locals_ge_s0d entry_state_routed.pp_entry_s0g_bound[OF entry_cov]])
   also have "\<dots> = gamma_state_lift (entry_state_sg (Inl (cfg_entry (compile_prog Pi ps mnm main), [])))"
     unfolding entry_state_sg_covered[OF entry_cov] gamma_dg_base_def by (rule refl)
   finally show "s \<in> gamma_state_lift (entry_state_sg (Inl (cfg_entry (compile_prog Pi ps mnm main), [])))" .
@@ -923,7 +962,7 @@ next
   show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
         \<Longrightarrow> s \<in> gamma_state_lift (entry_state_sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
         \<Longrightarrow> s' \<in> gamma_state_lift (entry_state_sg (Inl (v, c)))"
-    by (rule entry_state_dg.dg_ctx_act_edge)
+    by (rule entry_state_routed.dg_ctx_act_edge)
 next
   \<comment> \<open>ADMISS_TOTAL\<close>
   show "\<And>u c s. \<exists>c'. admiss_exact entry_state_context u c s c'"

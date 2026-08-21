@@ -704,4 +704,70 @@ proof -
   thus ?thesis unfolding call_action_at_call_site_def by simp
 qed
 
+subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<close>
+
+text \<open>
+  \<^const>\<open>formals_route\<close>/\<^const>\<open>formals_route_gen\<close> above operate on the unlifted
+  \<^typ>\<open>'a abs_state\<close>, the shape a plain \<^locale>\<open>routed_context_hetero\<close> caller state
+  has. The routed executable spine (\<^locale>\<open>dg_ctx_activation_base\<close>, every current
+  instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
+  activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
+  \<open>formals_route_lifted_gen\<close> are the same formal-entry projection at that carrier:
+  a caller point that is \<^const>\<open>Bot\<close> routes to the all-\<open>bot\<close> formal context (the
+  entered callee frame is then \<^const>\<open>Bot\<close> too), the same collapse an EntryState
+  routed instance needs for its own executable/abstract route, generalized to any
+  domain's own lifted-carrier \<open>dg_spec\<close> instead of restated per domain.
+\<close>
+
+definition formals_route_lifted ::
+  "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec
+     \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
+where
+  "formals_route_lifted S d ca =
+     (case ca of CallEdge dst pars args \<Rightarrow>
+        formals_context pars (case enter_local S pars args d bot of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
+
+definition formals_route_lifted_gen ::
+  "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec
+     \<Rightarrow> pp \<Rightarrow> 'a list \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
+where
+  "formals_route_lifted_gen S u ctx d ca = formals_route_lifted S d ca"
+
+subsection \<open>A solved-table \<open>enterc\<close> agrees with any \<open>route\<close> reading the same table\<close>
+
+text \<open>
+  \<open>route_enterc_agree\<close> (\<^locale>\<open>routed_context_hetero\<close>) asks for a trace-semantic
+  \<open>enterc\<close> agreeing with the executable \<open>route\<close> on every matched call. When \<open>route\<close>
+  is state-dependent (unlike \<open>route_unit\<close> or \<open>cs_route\<close>, both of which ignore their
+  state argument outright and so satisfy this for any \<open>enterc\<close> built the
+  same way), the natural \<open>enterc\<close> recomputes \<open>route\<close> from the caller's own solved
+  table instead of decoding the concrete entered store: \<open>route_enterc_of_sigma\<close>
+  ignores its store argument \<open>s\<close> entirely and reads \<open>route\<close> at the caller's own
+  \<open>sigma\<close>-recorded local value and the one \<^const>\<open>call_action_at_call_site\<close> a
+  well-formed compiled program's own call-site uniqueness (\<open>compile_prog_calls_source_unique\<close>)
+  guarantees. \<open>route_enterc_of_sigma_agree\<close> then discharges \<open>route_enterc_agree\<close> for
+  \<^emph>\<open>any\<close> \<open>route\<close>, generically: the two sides differ only in which \<^type>\<open>call_action\<close>
+  they pass to \<open>route\<close> (the matched call edge vs. \<^const>\<open>call_action_at_call_site\<close>'s own
+  read), and \<open>call_action_at_call_site_eq\<close> identifies those under the same
+  uniqueness premise.
+\<close>
+
+definition route_enterc_of_sigma ::
+  "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> cfg
+     \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+where
+  "route_enterc_of_sigma route sigma g u ctx s =
+     route u ctx (locals (sigma (Inl (u, ctx)))) (call_action_at_call_site g u)"
+
+lemma route_enterc_of_sigma_agree:
+  assumes fin: "finite (calls g)"
+    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
+                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
+                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  shows "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+       = route_enterc_of_sigma route sigma g u ctx s"
+  unfolding route_enterc_of_sigma_def
+  using call_action_at_call_site_eq[OF fin uniq ce] by simp
+
 end
