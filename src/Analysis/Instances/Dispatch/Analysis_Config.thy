@@ -47,7 +47,7 @@ text \<open>
   \<open>Interval_Exec_Ctx_Sound.thy\<close>.
 \<close>
 
-datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
+datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis | Parity_Analysis
 
 datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
 
@@ -111,6 +111,7 @@ datatype analysis_plan =
   | Plan_Int solver_choice
   | Plan_Int_EntryState solver_choice
   | Plan_Int_CallString solver_choice nat
+  | Plan_Parity solver_choice
 
 subsection \<open>Canonical resolver\<close>
 
@@ -143,6 +144,14 @@ text \<open>
     and \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) are both supported at the one solver Int's
     own routed soundness proves at each, \<open>Solver_Join\<close>, mirroring Sign's own
     posture at both contexts.
+  \<^item> \<open>Parity\<close>: \<open>Ctx_None\<close> only, at \<open>Solver_Join\<close> (the default) and
+    \<open>Solver_PerOrigin\<close> --- the two solved tables Parity's own routed-unit
+    instance builds. \<open>Solver_Warrow\<close> is mechanically available (\<open>parity\<close> is a
+    finite lattice with \<open>widen = sup\<close>) but has no solved table or soundness
+    corollary yet, so it stays unsupported rather than being exposed on the
+    strength of the instance alone. \<open>Ctx_EntryState\<close>/\<open>Ctx_CallString\<close> likewise
+    await their own routed instances; neither is a framework gap, only
+    unwritten instantiation.
 \<close>
 
 fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan option" where
@@ -201,6 +210,18 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString k \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Parity Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Parity Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_None \<rparr>
+     = Some (Plan_Parity Solver_PerOrigin)"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = _, cfg_context = Ctx_CallString k \<rparr>
      = None"
 
 definition valid_analysis_config :: "analysis_config \<Rightarrow> bool" where
@@ -452,6 +473,44 @@ lemma resolver_int_callstring_warrow_invalid:
   by simp
 
 
+
+text \<open>
+  Parity, the fourth domain: supported at \<open>Ctx_None\<close> under the two solvers its own
+  routed-unit instance builds tables for, unsupported at every context it has no routed
+  instance for. Pinned individually rather than as one blanket lemma, so a later
+  \<open>Ctx_EntryState\<close>/\<open>Ctx_CallString\<close> instantiation has to update the specific line it
+  actually makes valid.
+\<close>
+
+lemma resolver_parity_default_valid:
+  "resolve_analysis_config (default_config Parity_Analysis Ctx_None) = Some (Plan_Parity Solver_Join)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_parity_join_valid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_None \<rparr>
+   = Some (Plan_Parity Solver_Join)"
+  by simp
+
+lemma resolver_parity_per_origin_valid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_None \<rparr>
+   = Some (Plan_Parity Solver_PerOrigin)"
+  by simp
+
+lemma resolver_parity_warrow_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr>
+   = None"
+  by simp
+
+lemma resolver_parity_entrystate_invalid:
+  "resolve_analysis_config (default_config Parity_Analysis Ctx_EntryState) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_parity_callstring_invalid:
+  "resolve_analysis_config (default_config Parity_Analysis (Ctx_CallString k)) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
 
 lemma valid_analysis_config_eq_resolver:
   "valid_analysis_config cfg \<longleftrightarrow> resolve_analysis_config cfg \<noteq> None"

@@ -24,12 +24,12 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "voblint --analysis sign|interval|int [--context none|entry-state|call-string] \
+  "voblint --analysis sign|interval|int|parity [--context none|entry-state|call-string] \
    [--context-depth K] [--context-graph collapsed|expanded] [--dot] \
    [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
-  \  --analysis sign|interval|int\n\
+  \  --analysis sign|interval|int|parity\n\
   \                             Abstract domain to run (required, unless\n\
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
@@ -44,13 +44,14 @@ let usage =
   \                             including under --dot/--dot-full/\n\
   \                             --graph-snapshot (a node covered by several\n\
   \                             contexts renders their joined state under\n\
-  \                             --context-graph collapsed, the default); only\n\
-  \                             --analysis interval supports it. call-string\n\
-  \                             re-analyzes each callee per distinct bounded\n\
-  \                             call history (requires --context-depth K,\n\
-  \                             K >= 1); --analysis interval only, plain text\n\
-  \                             report only for now (no --dot/--dot-full/\n\
-  \                             --graph-snapshot support yet). Any other\n\
+  \                             --context-graph collapsed, the default);\n\
+  \                             supported by sign, interval and int.\n\
+  \                             call-string re-analyzes each callee per\n\
+  \                             distinct bounded call history (requires\n\
+  \                             --context-depth K, K >= 1), supported by\n\
+  \                             sign, interval and int, including under\n\
+  \                             --dot/--dot-full/--graph-snapshot. parity is\n\
+  \                             context-insensitive for now. Any other\n\
   \                             --analysis/--context combination is a clear\n\
   \                             configuration error, not a silent fallback to\n\
   \                             --context none.\n\
@@ -301,6 +302,7 @@ let () =
        | "sign" -> analysis := Some Voblint_CLI.Analysis_Config.Sign_Analysis
        | "interval" -> analysis := Some Voblint_CLI.Analysis_Config.Interval_Analysis
        | "int" -> analysis := Some Voblint_CLI.Analysis_Config.Int_Analysis
+       | "parity" -> analysis := Some Voblint_CLI.Analysis_Config.Parity_Analysis
        | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
       parse_args rest
     | "--context" :: v :: rest ->

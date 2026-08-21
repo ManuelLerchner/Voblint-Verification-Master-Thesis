@@ -83,7 +83,9 @@ module Core : sig
   type 'a equal = {equal : 'a -> 'a -> bool}
   val equal : 'a equal -> 'a -> 'a -> bool
   val snd : 'a * 'b -> 'b
-  type 'a ord
+  type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool}
+  val less_eq : 'a ord -> 'a -> 'a -> bool
+  val less : 'a ord -> 'a -> 'a -> bool
   type 'a preorder
   type 'a order
   type 'a linorder
@@ -115,13 +117,18 @@ module Core : sig
   val equal_cfg_node : cfg_node equal
   type location
   val equal_prod : 'a equal -> 'b equal -> ('a * 'b) equal
+  val equal_unita : unit -> unit -> bool
   val equal_unit : unit equal
-  type 'a sup
-  type 'a bot
+  type 'a sup = {sup : 'a -> 'a -> 'a}
+  val sup : 'a sup -> 'a -> 'a -> 'a
+  type 'a bot = {bot : 'a}
+  val bot : 'a bot -> 'a
   type 'a order_bot = {bot_order_bot : 'a bot; order_order_bot : 'a order}
   type 'a order_top
-  type 'a widening
-  type 'a narrowing
+  type 'a widening = {order_widening : 'a order; widen : 'a -> 'a -> 'a}
+  val widen : 'a widening -> 'a -> 'a -> 'a
+  type 'a narrowing = {order_narrowing : 'a order; narrow : 'a -> 'a -> 'a}
+  val narrow : 'a narrowing -> 'a -> 'a -> 'a
   type 'a warrowing
   type 'a semilattice_sup
   type 'a bounded_semilattice_sup_bot =
@@ -165,6 +172,21 @@ module Core : sig
   val bounded_warrowing_ivl : ivl bounded_warrowing
   val is_bot_ivl : ivl -> bool
   val computable_domain_ivl : ivl computable_domain
+  type parity = PBot | PEven | POdd | PTop
+  val equal_paritya : parity -> parity -> bool
+  val equal_parity : parity equal
+  val sup_paritya : parity -> parity -> parity
+  val bot_paritya : parity
+  val bot_parity : parity bot
+  val less_eq_parity : parity -> parity -> bool
+  val less_parity : parity -> parity -> bool
+  val top_paritya : parity
+  val widen_parity : parity -> parity -> parity
+  val narrow_parity : parity -> parity -> parity
+  val warrowing_parity : parity warrowing
+  val is_bot_parity : parity -> bool
+  val bounded_semilattice_sup_bot_parity : parity bounded_semilattice_sup_bot
+  val computable_domain_parity : parity computable_domain
   type ('a, 'b) dg_state
   val equal_dg_state : 'a equal -> 'b equal -> ('a, 'b) dg_state equal
   val locals : ('a, 'b) dg_state -> 'a
@@ -175,7 +197,7 @@ module Core : sig
       ('a, 'b) dg_state bounded_semilattice_sup_bot
   val list_all : ('a -> bool) -> 'a list -> bool
   val map : ('a -> 'b) -> 'a list -> 'b list
-  type 'a resolved_st_q
+  type 'a resolved_st_q = Abs_resolved_st of ('a * ('a * (location * 'a) list))
   val equal_resolved_st_q : 'a equal * 'a order_bot -> 'a resolved_st_q equal
   val bot_resolved_st_qa : 'a bot -> 'a resolved_st_q
   val semilattice_sup_resolved_st_q :
@@ -191,7 +213,6 @@ module Core : sig
   type gkb
   type congruence
   val rep_congruence : congruence -> (int * int) option
-  type parity = PBot | PEven | POdd | PTop
   type 'a int_dom_ext
   val equal_int_dom_exta : 'a equal -> 'a int_dom_ext -> 'a int_dom_ext -> bool
   val equal_int_dom_ext : 'a equal -> 'a int_dom_ext equal
@@ -221,10 +242,16 @@ module Core : sig
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type ('a, 'b) analysis_result =
     Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state)
+  type analysis_event
   type ('a, 'b, 'c) dg_spec_ext
   type contextual_verdict = Dead | Decided of check_result
   type 'a imp_prog_ext
-  type ('a, 'b) numeric_ops_ext
+  type ('a, 'b) numeric_ops_ext =
+    Numeric_ops_ext of
+      (exp -> (string -> 'a) -> 'a) *
+        ((string -> bool) ->
+          exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
+        'a * 'b
   type ('a, 'b) domain_transfer_ext
   val id : 'a -> 'a
   val suc : nat -> nat
@@ -245,8 +272,11 @@ module Core : sig
   val is_none : 'a option -> bool
   val implode : char list -> string
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
+  val location_of : (string -> bool) -> string -> location
   val fun_of_resolved_st_q_for :
     'a bot -> (string -> bool) -> 'a resolved_st_q -> string -> 'a
+  val update_resolved_st_q :
+    'a bot -> 'a resolved_st_q -> location -> 'a -> 'a resolved_st_q
   val ret_var : string
   val cfg_entry : 'a cfg_ext -> cfg_node
   val cfg_exit : unit cfg_ext -> cfg_node
@@ -263,6 +293,8 @@ module Core : sig
   val prog_main : unit imp_prog_ext -> com
   val char_0x2D : char
   val show_int : int -> char list
+  val parity_max : parity -> parity -> parity
+  val parity_min : parity -> parity -> parity
   val map_option : ('a -> 'b) -> 'a option -> 'b option
   val mk_program :
     (string * unit proc_decl_ext) list ->
@@ -271,6 +303,12 @@ module Core : sig
   val declared_global_vars : 'a imp_prog_ext -> string list
   val declared_global : unit imp_prog_ext -> string -> bool
   val cinit_int_dom_st : unit int_dom_ext resolved_st_q
+  val generic_enter_st_for :
+    'a bot ->
+      ('a, unit) numeric_ops_ext ->
+        (string -> bool) ->
+          string list -> exp list -> 'a resolved_st_q -> 'a resolved_st_q
+  val aval_parity : exp -> (string -> parity) -> parity
   val check_dead : ('a * contextual_verdict) set -> bool
   val result_keys : ('a, 'b) analysis_result -> (cfg_node * 'a) set
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
@@ -324,6 +362,7 @@ module Core : sig
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
   val intra_predecessor_list :
     unit cfg_ext -> cfg_node -> (cfg_node * edge_action) list
+  val route_unit : cfg_node -> unit -> 'a -> call_action -> unit
   val routed_extra_g :
     'c bounded_semilattice_sup_bot -> 'd bounded_semilattice_sup_bot ->
       (cfg_node -> 'a -> 'b) ->
@@ -332,6 +371,13 @@ module Core : sig
                         ((cfg_node * 'a), 'b, ('c, 'd) dg_state)
                           strategy_tree list
   val transfer_lift : ('a -> bool) -> ('b -> 'a) -> 'b lifted -> 'a lifted
+  val base_dg_spec_st_for_lifted :
+    'a bounded_semilattice_sup_bot -> 'b bounded_semilattice_sup_bot ->
+      (string -> bool) ->
+        ('a resolved_st_q -> bool) ->
+          (edge_action -> 'a resolved_st_q -> 'a resolved_st_q) ->
+            (string list -> exp list -> 'a resolved_st_q -> 'a resolved_st_q) ->
+              ('a resolved_st_q lifted, 'b, unit) dg_spec_ext
   val int_dom_enter_st_for :
     refine_mode ->
       (string -> bool) ->
@@ -428,6 +474,7 @@ module Core : sig
   val char_0x7A : char
   val char_0x7B : char
   val char_0x7D : char
+  val bot_fun : 'b bot -> 'a -> 'b
   val sctx_spec :
     (string -> bool) ->
       (sign resolved_st_q -> bool) ->
@@ -443,6 +490,10 @@ module Core : sig
     'a bot ->
       (string -> bool) -> 'a resolved_st_q lifted -> (string -> 'a) point_state
   val int_classify_check : exp -> (string -> unit int_dom_ext) -> check_result
+  val classify_checks :
+    unit cfg_ext ->
+      (cfg_node -> 'a) ->
+        (exp -> 'a -> check_result) -> (cfg_node * (exp * check_result)) list
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_result :
@@ -499,6 +550,11 @@ module Core : sig
       ('a -> ('a, 'b, 'c) strategy_tree) -> 'a -> 'a set * (('a, 'b) sum -> 'c)
   val analyse_int_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val classify_checks_with_state :
+    unit cfg_ext ->
+      (cfg_node -> 'a) ->
+        (exp -> 'a -> check_result) ->
+          (cfg_node * (exp * (check_result * 'a))) list
   val analyse_int_report_with_state :
     unit imp_prog_ext ->
       (cfg_node *
@@ -2391,6 +2447,125 @@ let computable_domain_ivl =
      is_top = is_top_ivla}
     : ivl computable_domain);;
 
+type parity = PBot | PEven | POdd | PTop;;
+
+let rec equal_paritya x0 x1 = match x0, x1 with POdd, PTop -> false
+                        | PTop, POdd -> false
+                        | PEven, PTop -> false
+                        | PTop, PEven -> false
+                        | PEven, POdd -> false
+                        | POdd, PEven -> false
+                        | PBot, PTop -> false
+                        | PTop, PBot -> false
+                        | PBot, POdd -> false
+                        | POdd, PBot -> false
+                        | PBot, PEven -> false
+                        | PEven, PBot -> false
+                        | PTop, PTop -> true
+                        | POdd, POdd -> true
+                        | PEven, PEven -> true
+                        | PBot, PBot -> true;;
+
+let equal_parity = ({equal = equal_paritya} : parity equal);;
+
+let rec join_parity x0 b = match x0, b with PBot, b -> b
+                      | PEven, PBot -> PEven
+                      | POdd, PBot -> POdd
+                      | PTop, PBot -> PTop
+                      | PTop, PEven -> PTop
+                      | PTop, POdd -> PTop
+                      | PTop, PTop -> PTop
+                      | PEven, PTop -> PTop
+                      | POdd, PTop -> PTop
+                      | PEven, PEven -> PEven
+                      | POdd, POdd -> POdd
+                      | PEven, POdd -> PTop
+                      | POdd, PEven -> PTop;;
+
+let rec sup_paritya x = join_parity x;;
+
+let sup_parity = ({sup = sup_paritya} : parity sup);;
+
+let bot_paritya : parity = PBot;;
+
+let bot_parity = ({bot = bot_paritya} : parity bot);;
+
+let rec parity_le x0 uu = match x0, uu with PBot, uu -> true
+                    | PEven, PTop -> true
+                    | POdd, PTop -> true
+                    | PTop, PTop -> true
+                    | PEven, PEven -> true
+                    | POdd, POdd -> true
+                    | PEven, PBot -> false
+                    | PEven, POdd -> false
+                    | POdd, PBot -> false
+                    | POdd, PEven -> false
+                    | PTop, PBot -> false
+                    | PTop, PEven -> false
+                    | PTop, POdd -> false;;
+
+let rec less_eq_parity a b = parity_le a b;;
+
+let rec less_parity a b = parity_le a b && not (parity_le b a);;
+
+let ord_parity = ({less_eq = less_eq_parity; less = less_parity} : parity ord);;
+
+let top_paritya : parity = PTop;;
+
+let top_parity = ({top = top_paritya} : parity top);;
+
+let preorder_parity = ({ord_preorder = ord_parity} : parity preorder);;
+
+let order_parity = ({preorder_order = preorder_parity} : parity order);;
+
+let order_bot_parity =
+  ({bot_order_bot = bot_parity; order_order_bot = order_parity} :
+    parity order_bot);;
+
+let order_top_parity =
+  ({order_order_top = order_parity; top_order_top = top_parity} :
+    parity order_top);;
+
+let rec widen_parity a b = join_parity a b;;
+
+let widening_parity =
+  ({order_widening = order_parity; widen = widen_parity} : parity widening);;
+
+let rec narrow_parity a b = a;;
+
+let narrowing_parity =
+  ({order_narrowing = order_parity; narrow = narrow_parity} :
+    parity narrowing);;
+
+let warrowing_parity =
+  ({narrowing_warrowing = narrowing_parity;
+     widening_warrowing = widening_parity}
+    : parity warrowing);;
+
+let semilattice_sup_parity =
+  ({sup_semilattice_sup = sup_parity; order_semilattice_sup = order_parity} :
+    parity semilattice_sup);;
+
+let rec is_top_parity p = equal_paritya p PTop;;
+
+let rec is_top_paritya a = is_top_parity a;;
+
+let rec is_bottom_parity p = equal_paritya p PBot;;
+
+let rec is_bot_parity a = is_bottom_parity a;;
+
+let bounded_semilattice_sup_bot_parity =
+  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_parity;
+     order_bot_bounded_semilattice_sup_bot = order_bot_parity}
+    : parity bounded_semilattice_sup_bot);;
+
+let computable_domain_parity =
+  ({bounded_semilattice_sup_bot_computable_domain =
+      bounded_semilattice_sup_bot_parity;
+     order_top_computable_domain = order_top_parity; is_bot = is_bot_parity;
+     is_top = is_top_paritya}
+    : parity computable_domain);;
+
 type ('a, 'b) dg_state = DG of 'a * 'b;;
 
 let rec equal_dg_statea _A _B
@@ -2778,25 +2953,6 @@ let rec equal_congruence
   a b = equal_option (equal_prod equal_int equal_int) (rep_congruence a)
           (rep_congruence b);;
 
-type parity = PBot | PEven | POdd | PTop;;
-
-let rec equal_parity x0 x1 = match x0, x1 with POdd, PTop -> false
-                       | PTop, POdd -> false
-                       | PEven, PTop -> false
-                       | PTop, PEven -> false
-                       | PEven, POdd -> false
-                       | POdd, PEven -> false
-                       | PBot, PTop -> false
-                       | PTop, PBot -> false
-                       | PBot, POdd -> false
-                       | POdd, PBot -> false
-                       | PBot, PEven -> false
-                       | PEven, PBot -> false
-                       | PTop, PTop -> true
-                       | POdd, POdd -> true
-                       | PEven, PEven -> true
-                       | PBot, PBot -> true;;
-
 type 'a int_dom_ext = Int_dom_ext of sign * ivl * parity * congruence * 'a;;
 
 let rec equal_int_dom_exta _A
@@ -2804,7 +2960,7 @@ let rec equal_int_dom_exta _A
     (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
     equal_signa int_signa int_sign &&
       (equal_ivla int_ivla int_ivl &&
-        (equal_parity int_paritya int_parity &&
+        (equal_paritya int_paritya int_parity &&
           (equal_congruence int_congruencea int_congruence &&
             eq _A morea more)));;
 
@@ -2833,22 +2989,6 @@ let rec join_congruence
 
 let rec sup_congruence x = join_congruence x;;
 
-let rec join_parity x0 b = match x0, b with PBot, b -> b
-                      | PEven, PBot -> PEven
-                      | POdd, PBot -> POdd
-                      | PTop, PBot -> PTop
-                      | PTop, PEven -> PTop
-                      | PTop, POdd -> PTop
-                      | PTop, PTop -> PTop
-                      | PEven, PTop -> PTop
-                      | POdd, PTop -> PTop
-                      | PEven, PEven -> PEven
-                      | POdd, POdd -> POdd
-                      | PEven, POdd -> PTop
-                      | POdd, PEven -> PTop;;
-
-let rec sup_parity x = join_parity x;;
-
 let rec int_congruence
   (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
     int_congruence;;
@@ -2872,7 +3012,7 @@ let rec sup_int_dom_exta _A
   a b = Int_dom_ext
           (sup_signa (int_sign a) (int_sign b),
             sup_ivla (int_ivl a) (int_ivl b),
-            sup_parity (int_parity a) (int_parity b),
+            sup_paritya (int_parity a) (int_parity b),
             sup_congruence (int_congruence a) (int_congruence b),
             sup _A.bounded_semilattice_sup_bot_int_dom_record_lattice.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
               (more a) (more b));;
@@ -2884,11 +3024,9 @@ let bottom_congruence : congruence = Abs_congruence None;;
 
 let bot_congruence : congruence = bottom_congruence;;
 
-let bot_parity : parity = PBot;;
-
 let rec bot_int_dom_exta _A
   = Int_dom_ext
-      (bot_signa, bot_ivla, bot_parity, bot_congruence,
+      (bot_signa, bot_ivla, bot_paritya, bot_congruence,
         bot _A.bounded_semilattice_sup_bot_int_dom_record_lattice.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
 
 let rec bot_int_dom_ext _A =
@@ -2913,22 +3051,6 @@ let rec congruence_le
 
 let rec less_eq_congruence a b = congruence_le a b;;
 
-let rec parity_le x0 uu = match x0, uu with PBot, uu -> true
-                    | PEven, PTop -> true
-                    | POdd, PTop -> true
-                    | PTop, PTop -> true
-                    | PEven, PEven -> true
-                    | POdd, POdd -> true
-                    | PEven, PBot -> false
-                    | PEven, POdd -> false
-                    | POdd, PBot -> false
-                    | POdd, PEven -> false
-                    | PTop, PBot -> false
-                    | PTop, PEven -> false
-                    | PTop, POdd -> false;;
-
-let rec less_eq_parity a b = parity_le a b;;
-
 let rec less_eq_int_dom_ext _A
   a b = less_eq_sign (int_sign a) (int_sign b) &&
           (less_eq_ivl (int_ivl a) (int_ivl b) &&
@@ -2950,11 +3072,9 @@ let rec mk_congruence
 
 let top_congruence : congruence = mk_congruence zero_inta one_inta;;
 
-let top_parity : parity = PTop;;
-
 let rec top_int_dom_exta _A
   = Int_dom_ext
-      (top_signa, top_ivla, top_parity, top_congruence,
+      (top_signa, top_ivla, top_paritya, top_congruence,
         top _A.order_top_int_dom_record_lattice.top_order_top);;
 
 let rec top_int_dom_ext _A =
@@ -2977,8 +3097,6 @@ let rec order_top_int_dom_ext _A =
     : 'a int_dom_ext order_top);;
 
 let rec widen_congruence a b = join_congruence a b;;
-
-let rec widen_parity a b = join_parity a b;;
 
 let rec int_congruence_update
   int_congruencea
@@ -3030,8 +3148,6 @@ let rec widening_int_dom_ext _A =
 let rec narrow_congruence_td a b = a;;
 
 let rec narrow_congruence a b = narrow_congruence_td a b;;
-
-let rec narrow_parity a b = a;;
 
 let rec narrow_int_dom_ext _A
   a b = extend
@@ -5900,6 +6016,79 @@ let rec generic_enter_st_for _A
       (enter_frame_D_resolved_q _A (n_top _A ops) s);;
 
 let rec ivl_enter_st_for x = generic_enter_st_for bot_ivl ivl_ops x;;
+
+let rec aval_parity
+  x0 sigma = match x0, sigma with N n, sigma -> parity_of_int n
+    | V v, sigma -> sigma v
+    | Plus (a, b), sigma ->
+        plus_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Minus (a, b), sigma ->
+        minus_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Times (a, b), sigma ->
+        times_parity (aval_parity a sigma) (aval_parity b sigma)
+    | Less (a, b), sigma ->
+        (if is_bot_parity (aval_parity a sigma) ||
+              is_bot_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_lt (aval_parity a sigma) (aval_parity b sigma))
+                     (Some true)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_lt (aval_parity a sigma)
+                              (aval_parity b sigma))
+                            (Some false)
+                        then PEven else PTop)))
+    | Eq (a, b), sigma ->
+        (if is_bot_parity (aval_parity a sigma) ||
+              is_bot_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool
+                     (parity_eqb (aval_parity a sigma) (aval_parity b sigma))
+                     (Some true)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_eqb (aval_parity a sigma)
+                              (aval_parity b sigma))
+                            (Some false)
+                        then PEven else PTop)))
+    | Not a, sigma ->
+        (if is_bot_parity (aval_parity a sigma) then bot_paritya
+          else (if equal_option equal_bool (parity_tobool (aval_parity a sigma))
+                     (Some true)
+                 then PEven
+                 else (if equal_option equal_bool
+                            (parity_tobool (aval_parity a sigma)) (Some false)
+                        then POdd else PTop)))
+    | And (a, b), sigma ->
+        (if is_bot_parity (aval_parity a sigma) ||
+              is_bot_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool (parity_tobool (aval_parity a sigma))
+                     (Some false) ||
+                     equal_option equal_bool
+                       (parity_tobool (aval_parity b sigma)) (Some false)
+                 then PEven
+                 else (if equal_option equal_bool
+                            (parity_tobool (aval_parity a sigma)) (Some true) &&
+                            equal_option equal_bool
+                              (parity_tobool (aval_parity b sigma)) (Some true)
+                        then POdd else PTop)))
+    | Or (a, b), sigma ->
+        (if is_bot_parity (aval_parity a sigma) ||
+              is_bot_parity (aval_parity b sigma)
+          then bot_paritya
+          else (if equal_option equal_bool (parity_tobool (aval_parity a sigma))
+                     (Some true) ||
+                     equal_option equal_bool
+                       (parity_tobool (aval_parity b sigma)) (Some true)
+                 then POdd
+                 else (if equal_option equal_bool
+                            (parity_tobool (aval_parity a sigma))
+                            (Some false) &&
+                            equal_option equal_bool
+                              (parity_tobool (aval_parity b sigma)) (Some false)
+                        then PEven else PTop)));;
 
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
@@ -9059,6 +9248,409 @@ let rec string_of_int_dom
 
 end;; (*struct Int_Print*)
 
+module Parity_Exec : sig
+  val bounded_warrowing_parity : Core.parity Core.bounded_warrowing
+  val cinit_parity_st : Core.parity Core.resolved_st_q
+  val parity_tf_st_for :
+    (string -> bool) ->
+      Core.edge_action ->
+        Core.parity Core.resolved_st_q -> Core.parity Core.resolved_st_q
+  val parity_enter_st_for :
+    (string -> bool) ->
+      string list ->
+        Core.exp list ->
+          Core.parity Core.resolved_st_q -> Core.parity Core.resolved_st_q
+end = struct
+
+let bounded_warrowing_parity =
+  ({Core.bounded_semilattice_sup_bot_bounded_warrowing =
+      Core.bounded_semilattice_sup_bot_parity;
+     Core.warrowing_bounded_warrowing = Core.warrowing_parity}
+    : Core.parity Core.bounded_warrowing);;
+
+let parity_ops : (Core.parity, unit) Core.numeric_ops_ext
+  = Core.Numeric_ops_ext (Core.aval_parity, (fun _ _ _ s -> s), Core.PTop, ());;
+
+let cinit_parity_st : Core.parity Core.resolved_st_q
+  = Core.Abs_resolved_st (Core.PTop, (Core.PEven, []));;
+
+let rec parity_tf_st_for
+  source_global x1 s = match source_global, x1, s with
+    source_global, Core.EA_Nop, s -> s
+    | source_global, Core.EA_Assign (x, a), s ->
+        Core.update_resolved_st_q Core.bot_parity s
+          (Core.location_of source_global x)
+          (Core.aval_parity a
+            (Core.fun_of_resolved_st_q_for Core.bot_parity source_global s))
+    | source_global, Core.EA_Special (sc, x), s ->
+        Core.update_resolved_st_q Core.bot_parity s
+          (Core.location_of source_global x)
+          (match sc with Core.Nondet_Int -> Core.PTop
+            | Core.Min (a, b) ->
+              Core.parity_min
+                (Core.aval_parity a
+                  (Core.fun_of_resolved_st_q_for Core.bot_parity source_global
+                    s))
+                (Core.aval_parity b
+                  (Core.fun_of_resolved_st_q_for Core.bot_parity source_global
+                    s))
+            | Core.Max (a, b) ->
+              Core.parity_max
+                (Core.aval_parity a
+                  (Core.fun_of_resolved_st_q_for Core.bot_parity source_global
+                    s))
+                (Core.aval_parity b
+                  (Core.fun_of_resolved_st_q_for Core.bot_parity source_global
+                    s)))
+    | source_global, Core.EA_Assume b, s -> s
+    | source_global, Core.EA_AssumeNot b, s -> s
+    | source_global, Core.EA_Ret (None, p), s -> s
+    | source_global, Core.EA_Ret (Some a, p), s ->
+        Core.update_resolved_st_q Core.bot_parity s
+          (Core.location_of source_global Core.ret_var)
+          (Core.aval_parity a
+            (Core.fun_of_resolved_st_q_for Core.bot_parity source_global s))
+    | source_global, Core.EA_Check cnd, s -> s;;
+
+let rec parity_enter_st_for
+  x = Core.generic_enter_st_for Core.bot_parity parity_ops x;;
+
+end;; (*struct Parity_Exec*)
+
+module Parity_Numeric_Queries : sig
+  val parity_eq_true : Core.parity -> Core.parity -> bool
+  val parity_eq_false : Core.parity -> Core.parity -> bool
+  val parity_less_true : Core.parity -> Core.parity -> bool
+  val parity_less_false : Core.parity -> Core.parity -> bool
+end = struct
+
+let rec parity_vacuous
+  a b = Core.equal_paritya a Core.PBot || Core.equal_paritya b Core.PBot;;
+
+let rec parity_eq_true x = parity_vacuous x;;
+
+let rec parity_eq_false
+  a b = match a, b with Core.PEven, Core.POdd -> true
+    | Core.POdd, Core.PEven -> true
+    | Core.PBot, b ->
+        Core.equal_paritya Core.PBot Core.PBot || Core.equal_paritya b Core.PBot
+    | Core.POdd, Core.PBot ->
+        Core.equal_paritya Core.POdd Core.PBot ||
+          Core.equal_paritya Core.PBot Core.PBot
+    | Core.POdd, Core.POdd ->
+        Core.equal_paritya Core.POdd Core.PBot ||
+          Core.equal_paritya Core.POdd Core.PBot
+    | Core.POdd, Core.PTop ->
+        Core.equal_paritya Core.POdd Core.PBot ||
+          Core.equal_paritya Core.PTop Core.PBot
+    | Core.PTop, b ->
+        Core.equal_paritya Core.PTop Core.PBot || Core.equal_paritya b Core.PBot
+    | a, Core.PBot ->
+        Core.equal_paritya a Core.PBot || Core.equal_paritya Core.PBot Core.PBot
+    | Core.PEven, Core.PEven ->
+        Core.equal_paritya Core.PEven Core.PBot ||
+          Core.equal_paritya Core.PEven Core.PBot
+    | a, Core.PTop ->
+        Core.equal_paritya a Core.PBot ||
+          Core.equal_paritya Core.PTop Core.PBot;;
+
+let rec parity_less_true x = parity_vacuous x;;
+
+let rec parity_less_false x = parity_vacuous x;;
+
+end;; (*struct Parity_Numeric_Queries*)
+
+module Parity_Exec_Ctx_Sound : sig
+  type gk
+  val analyse_parity_ctx_result_for :
+    (string -> bool) ->
+      string ->
+        unit Core.imp_prog_ext ->
+          (unit, (string -> Core.parity)) Core.analysis_result
+  val analyse_parity_ctx_result_per_origin_for :
+    (string -> bool) ->
+      string ->
+        unit Core.imp_prog_ext ->
+          (unit, (string -> Core.parity)) Core.analysis_result
+end = struct
+
+type gk = Global | Seed of Core.cfg_node * unit;;
+
+let rec equal_gka
+  x0 x1 = match x0, x1 with Global, Seed (x21, x22) -> false
+    | Seed (x21, x22), Global -> false
+    | Seed (x21, x22), Seed (y21, y22) ->
+        Core.equal_cfg_nodea x21 y21 && Core.equal_unita x22 y22
+    | Global, Global -> true;;
+
+let equal_gk = ({Core.equal = equal_gka} : gk Core.equal);;
+
+let rec pctx_spec
+  gs is_bot_pred =
+    Core.base_dg_spec_st_for_lifted Core.bounded_semilattice_sup_bot_parity
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_parity))
+      gs is_bot_pred (Parity_Exec.parity_tf_st_for gs)
+      (Parity_Exec.parity_enter_st_for gs);;
+
+let rec pctx_eqs
+  gs is_bot_pred pi ps mnm main =
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_parity))
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_parity))
+      Core.intra_predecessor_list (fun _ -> Global) Core.route_unit
+      (Core.routed_cmb_g_contribution
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_parity))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_parity))
+        (pctx_spec gs is_bot_pred) Global (fun a b -> Seed (a, b)))
+      (Core.routed_extra_g
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_parity))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_parity))
+        (fun a b -> Seed (a, b)) Global)
+      (Core.compile_prog pi ps mnm main) (pctx_spec gs is_bot_pred) Core.Bot
+      (Core.Lifted Parity_Exec.cinit_parity_st) Core.Bot;;
+
+let rec pctx_eqs_prog
+  gs mnm p =
+    pctx_eqs gs
+      (Core.resolved_st_q_is_bot_for Core.computable_domain_parity
+        (Core.declared_global_vars p))
+      (Core.prog_table p) (Core.prog_procs p) mnm (Core.prog_main p);;
+
+let rec pctx_sol_prog
+  gs mnm p =
+    Core.tD_side_always_join_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node Core.equal_unit) equal_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_parity,
+               Parity_Exec.bounded_warrowing_parity.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_parity,
+               Parity_Exec.bounded_warrowing_parity.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity)).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity)).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity))))
+      (pctx_eqs_prog gs mnm p) (Core.cfg_exit (Core.prog_cfg mnm p), ());;
+
+let rec pctx_sol_prog_per_origin
+  gs mnm p =
+    Core.tD_side_per_origin_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node Core.equal_unit) equal_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_parity,
+               Parity_Exec.bounded_warrowing_parity.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_parity,
+               Parity_Exec.bounded_warrowing_parity.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity)).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity)).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Parity_Exec.bounded_warrowing_parity))))
+      (pctx_eqs_prog gs mnm p) (Core.cfg_exit (Core.prog_cfg mnm p), ());;
+
+let rec analyse_parity_ctx_result_for
+  gs mnm p =
+    (let sol = pctx_sol_prog gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point Core.bot_parity gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for Core.computable_domain_parity gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+let rec analyse_parity_ctx_result_per_origin_for
+  gs mnm p =
+    (let sol = pctx_sol_prog_per_origin gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point Core.bot_parity gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for Core.computable_domain_parity gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+end;; (*struct Parity_Exec_Ctx_Sound*)
+
+module Parity_Checks : sig
+  val analyse_parity_result_for :
+    (string -> bool) ->
+      unit Core.imp_prog_ext ->
+        (unit, (string -> Core.parity)) Core.analysis_result
+  val analyse_parity_report :
+    unit Core.imp_prog_ext ->
+      (Core.cfg_node * (Core.exp * Core.check_result)) list
+  val analyse_parity_result :
+    unit Core.imp_prog_ext ->
+      (unit, (string -> Core.parity)) Core.analysis_result
+  val analyse_parity_report_per_origin :
+    unit Core.imp_prog_ext ->
+      (Core.cfg_node * (Core.exp * Core.check_result)) list
+  val analyse_parity_report_with_state :
+    unit Core.imp_prog_ext ->
+      (Core.cfg_node *
+        (Core.exp *
+          (Core.check_result * (bool * (string -> Core.parity))))) list
+end = struct
+
+let rec parity_check_true
+  x0 d = match x0, d with Core.Not b, d -> parity_check_false b d
+    | Core.And (b1, b2), d -> parity_check_true b1 d && parity_check_true b2 d
+    | Core.Or (b1, b2), d -> parity_check_true b1 d || parity_check_true b2 d
+    | Core.Less (a, b), d ->
+        Parity_Numeric_Queries.parity_less_true (Core.aval_parity a d)
+          (Core.aval_parity b d)
+    | Core.Eq (a, b), d ->
+        Parity_Numeric_Queries.parity_eq_true (Core.aval_parity a d)
+          (Core.aval_parity b d)
+    | Core.N v, d ->
+        Parity_Numeric_Queries.parity_eq_false (Core.aval_parity (Core.N v) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.V v, d ->
+        Parity_Numeric_Queries.parity_eq_false (Core.aval_parity (Core.V v) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.Plus (v, va), d ->
+        Parity_Numeric_Queries.parity_eq_false
+          (Core.aval_parity (Core.Plus (v, va)) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.Minus (v, va), d ->
+        Parity_Numeric_Queries.parity_eq_false
+          (Core.aval_parity (Core.Minus (v, va)) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.Times (v, va), d ->
+        Parity_Numeric_Queries.parity_eq_false
+          (Core.aval_parity (Core.Times (v, va)) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+and parity_check_false
+  x0 d = match x0, d with Core.Not b, d -> parity_check_true b d
+    | Core.And (b1, b2), d -> parity_check_false b1 d || parity_check_false b2 d
+    | Core.Or (b1, b2), d -> parity_check_false b1 d && parity_check_false b2 d
+    | Core.Less (a, b), d ->
+        Parity_Numeric_Queries.parity_less_false (Core.aval_parity a d)
+          (Core.aval_parity b d)
+    | Core.Eq (a, b), d ->
+        Parity_Numeric_Queries.parity_eq_false (Core.aval_parity a d)
+          (Core.aval_parity b d)
+    | Core.N v, d ->
+        Parity_Numeric_Queries.parity_eq_true (Core.aval_parity (Core.N v) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.V v, d ->
+        Parity_Numeric_Queries.parity_eq_true (Core.aval_parity (Core.V v) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.Plus (v, va), d ->
+        Parity_Numeric_Queries.parity_eq_true
+          (Core.aval_parity (Core.Plus (v, va)) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.Minus (v, va), d ->
+        Parity_Numeric_Queries.parity_eq_true
+          (Core.aval_parity (Core.Minus (v, va)) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d)
+    | Core.Times (v, va), d ->
+        Parity_Numeric_Queries.parity_eq_true
+          (Core.aval_parity (Core.Times (v, va)) d)
+          (Core.aval_parity (Core.N Core.zero_inta) d);;
+
+let rec analyse_parity_result_for
+  gs p =
+    Parity_Exec_Ctx_Sound.analyse_parity_ctx_result_for gs Core.prog_main_name
+      p;;
+
+let rec parity_classify_check
+  c d = (if parity_check_true c d then Core.Check_Proved
+          else (if parity_check_false c d then Core.Check_Refuted
+                 else Core.Check_Unknown));;
+
+let rec analyse_parity_report_for
+  gs p =
+    (let r = analyse_parity_result_for gs p in
+      Core.classify_checks (Core.prog_cfg Core.prog_main_name p)
+        (fun v ->
+          (match Core.lookup_context Core.equal_unit r v ()
+            with Core.Unreachable -> Core.bot_fun Core.bot_parity
+            | Core.Reachable st -> st))
+        parity_classify_check);;
+
+let rec analyse_parity_report
+  p = analyse_parity_report_for (Core.declared_global p) p;;
+
+let rec analyse_parity_result
+  p = analyse_parity_result_for (Core.declared_global p) p;;
+
+let rec analyse_parity_result_per_origin_for
+  gs p =
+    Parity_Exec_Ctx_Sound.analyse_parity_ctx_result_per_origin_for gs
+      Core.prog_main_name p;;
+
+let rec analyse_parity_report_per_origin_for
+  gs p =
+    (let r = analyse_parity_result_per_origin_for gs p in
+      Core.classify_checks (Core.prog_cfg Core.prog_main_name p)
+        (fun v ->
+          (match Core.lookup_context Core.equal_unit r v ()
+            with Core.Unreachable -> Core.bot_fun Core.bot_parity
+            | Core.Reachable st -> st))
+        parity_classify_check);;
+
+let rec analyse_parity_report_per_origin
+  p = analyse_parity_report_per_origin_for (Core.declared_global p) p;;
+
+let rec analyse_parity_report_for_with_state
+  gs p =
+    (let r = analyse_parity_result_for gs p in
+      Core.classify_checks_with_state (Core.prog_cfg Core.prog_main_name p)
+        (fun v ->
+          (match Core.lookup_context Core.equal_unit r v ()
+            with Core.Unreachable -> (true, Core.bot_fun Core.bot_parity)
+            | Core.Reachable a -> (false, a)))
+        (fun c (_, a) -> parity_classify_check c a));;
+
+let rec analyse_parity_report_with_state
+  p = analyse_parity_report_for_with_state (Core.declared_global p) p;;
+
+end;; (*struct Parity_Checks*)
+
 module Analysis_Config : sig
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of Core.nat
   type solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
@@ -9068,8 +9660,10 @@ module Analysis_Config : sig
     Plan_Interval of solver_choice | Plan_Interval_EntryState of solver_choice |
     Plan_Interval_CallString of solver_choice * Core.nat |
     Plan_Int of solver_choice | Plan_Int_EntryState of solver_choice |
-    Plan_Int_CallString of solver_choice * Core.nat
-  type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis
+    Plan_Int_CallString of solver_choice * Core.nat |
+    Plan_Parity of solver_choice
+  type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis |
+    Parity_Analysis
   type 'a analysis_config_ext
   val mk_analysis_config :
     analysis_domain ->
@@ -9088,9 +9682,11 @@ type analysis_plan = Plan_Sign of solver_choice |
   Plan_Interval of solver_choice | Plan_Interval_EntryState of solver_choice |
   Plan_Interval_CallString of solver_choice * Core.nat |
   Plan_Int of solver_choice | Plan_Int_EntryState of solver_choice |
-  Plan_Int_CallString of solver_choice * Core.nat;;
+  Plan_Int_CallString of solver_choice * Core.nat |
+  Plan_Parity of solver_choice;;
 
-type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis;;
+type analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis |
+  Parity_Analysis;;
 
 type 'a analysis_config_ext =
   Analysis_config_ext of
@@ -9169,7 +9765,17 @@ let rec resolve_analysis_config
         -> None
     | Analysis_config_ext
         (Int_Analysis, Some Solver_Warrow, Ctx_CallString k, ())
-        -> None;;
+        -> None
+    | Analysis_config_ext (Parity_Analysis, None, Ctx_None, ()) ->
+        Some (Plan_Parity Solver_Join)
+    | Analysis_config_ext (Parity_Analysis, Some Solver_Join, Ctx_None, ()) ->
+        Some (Plan_Parity Solver_Join)
+    | Analysis_config_ext (Parity_Analysis, Some Solver_PerOrigin, Ctx_None, ())
+        -> Some (Plan_Parity Solver_PerOrigin)
+    | Analysis_config_ext (Parity_Analysis, Some Solver_Warrow, Ctx_None, ()) ->
+        None
+    | Analysis_config_ext (Parity_Analysis, uu, Ctx_EntryState, ()) -> None
+    | Analysis_config_ext (Parity_Analysis, uv, Ctx_CallString k, ()) -> None;;
 
 let rec valid_analysis_config
   cfg = not (Core.is_none (resolve_analysis_config cfg));;
@@ -10027,7 +10633,7 @@ end;; (*struct Int_Call_String_Ctx_Sound*)
 
 module Analyse_Dispatch : sig
   type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
-    IntDomValue of unit Core.int_dom_ext
+    IntDomValue of unit Core.int_dom_ext | ParityValue of Core.parity
   val analyse :
     Analysis_Config.analysis_domain ->
       unit Core.imp_prog_ext ->
@@ -10066,13 +10672,15 @@ module Analyse_Dispatch : sig
 end = struct
 
 type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
-  IntDomValue of unit Core.int_dom_ext;;
+  IntDomValue of unit Core.int_dom_ext | ParityValue of Core.parity;;
 
 let rec analyse
   x0 p = match x0, p with
     Analysis_Config.Sign_Analysis, p -> Core.analyse_sign_report p
     | Analysis_Config.Interval_Analysis, p -> Core.analyse_interval_td_report p
-    | Analysis_Config.Int_Analysis, p -> Core.analyse_int_report p;;
+    | Analysis_Config.Int_Analysis, p -> Core.analyse_int_report p
+    | Analysis_Config.Parity_Analysis, p ->
+        Parity_Checks.analyse_parity_report p;;
 
 let rec analyse_ctx
   x0 x1 p = match x0, x1, p with
@@ -10094,7 +10702,12 @@ let rec analyse_ctx
     | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p ->
         Some (Int_Entry_State_Ctx_Sound.analyse_int_entry_state_report p)
     | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_CallString k, p ->
-        Some (Int_Call_String_Ctx_Sound.analyse_int_call_string_report k p);;
+        Some (Int_Call_String_Ctx_Sound.analyse_int_call_string_report k p)
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Ctx_None, p ->
+        Some (Core.decided_report (Parity_Checks.analyse_parity_report p))
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Ctx_CallString k, p ->
+        None;;
 
 let rec analyse_with_solver
   x0 x1 p = match x0, x1, p with
@@ -10114,7 +10727,13 @@ let rec analyse_with_solver
     | Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin, p ->
         Some (Core.analyse_int_report_per_origin p)
     | Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow, p ->
-        Some (Core.analyse_int_report p);;
+        Some (Core.analyse_int_report p)
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Join, p ->
+        Some (Parity_Checks.analyse_parity_report p)
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (Parity_Checks.analyse_parity_report_per_origin p)
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Warrow, p ->
+        None;;
 
 let rec analyse_config
   cfg p =
@@ -10130,7 +10749,9 @@ let rec analyse_config
       | Some (Analysis_Config.Plan_Int s) ->
         analyse_with_solver Analysis_Config.Int_Analysis s p
       | Some (Analysis_Config.Plan_Int_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None);;
+      | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
+      | Some (Analysis_Config.Plan_Parity s) ->
+        analyse_with_solver Analysis_Config.Parity_Analysis s p);;
 
 let rec analyse_config_ctx
   cfg p =
@@ -10197,7 +10818,10 @@ let rec analyse_config_ctx
         -> None
       | Some (Analysis_Config.Plan_Int_CallString
                (Analysis_Config.Solver_Warrow, _))
-        -> None);;
+        -> None
+      | Some (Analysis_Config.Plan_Parity s) ->
+        Core.map_option Core.decided_report
+          (analyse_with_solver Analysis_Config.Parity_Analysis s p));;
 
 let rec analyse_with_state
   x0 p = match x0, p with
@@ -10216,7 +10840,12 @@ let rec analyse_with_state
         Core.map
           (fun (u, (c, (r, (unreachable, s)))) ->
             (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))
-          (Core.analyse_int_report_with_state p);;
+          (Core.analyse_int_report_with_state p)
+    | Analysis_Config.Parity_Analysis, p ->
+        Core.map
+          (fun (u, (c, (r, (unreachable, s)))) ->
+            (u, (c, (r, (unreachable, Core.comp (fun a -> ParityValue a) s)))))
+          (Parity_Checks.analyse_parity_report_with_state p);;
 
 let rec analyse_config_with_state
   cfg p =
@@ -10240,7 +10869,13 @@ let rec analyse_config_with_state
       | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_Warrow) ->
         Some (analyse_with_state Analysis_Config.Int_Analysis p)
       | Some (Analysis_Config.Plan_Int_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None);;
+      | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
+      | Some (Analysis_Config.Plan_Parity Analysis_Config.Solver_Join) ->
+        Some (analyse_with_state Analysis_Config.Parity_Analysis p)
+      | Some (Analysis_Config.Plan_Parity Analysis_Config.Solver_PerOrigin) ->
+        None
+      | Some (Analysis_Config.Plan_Parity Analysis_Config.Solver_Warrow) ->
+        None);;
 
 end;; (*struct Analyse_Dispatch*)
 
@@ -11896,7 +12531,8 @@ end = struct
 let rec string_of_abstract_value
   = function Analyse_Dispatch.SignValue s -> Sign_Print.string_of_sign s
     | Analyse_Dispatch.IntervalValue i -> Interval_Print.string_of_ivl i
-    | Analyse_Dispatch.IntDomValue d -> Int_Print.string_of_int_dom d;;
+    | Analyse_Dispatch.IntDomValue d -> Int_Print.string_of_int_dom d
+    | Analyse_Dispatch.ParityValue v -> Parity_Print.string_of_parity v;;
 
 let rec state_line
   f x = Core.explode x @ [Core.char_0x3D] @ string_of_abstract_value (f x);;
@@ -11954,7 +12590,8 @@ let rec cs_ctx_sol_for
                   (Core.comp (fun aa -> Analyse_Dispatch.IntDomValue aa))
                   (Core.lookup_context (Core.equal_list Core.equal_cfg_node) r v
                     ctx)
-              | Core.Inr _ -> Core.Unreachable))));;
+              | Core.Inr _ -> Core.Unreachable)))
+      | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
 let unreachable_gv_style : Core.char list
   = [Core.char_0x73; Core.char_0x68; Core.char_0x61; Core.char_0x70;
@@ -12004,7 +12641,8 @@ let rec cs_ctx_check_annotation
                      (Core.lookup_context (Core.equal_list Core.equal_cfg_node)
                        (Int_Call_String_Ctx_Sound.analyse_int_call_string_result
                          k p)
-                       v ctx))
+                       v ctx)
+                 | Analysis_Config.Parity_Analysis -> Core.Dead)
                with Core.Dead -> dead_check_annotation cnd
                | Core.Decided res ->
                  Analysis_GraphViz.check_result_annotation res cnd));;
@@ -12014,7 +12652,8 @@ let rec is_top_abstract_value
     | Analyse_Dispatch.IntervalValue i -> Core.equal_ivla i Core.top_ivla
     | Analyse_Dispatch.IntDomValue d ->
         Core.equal_int_dom_exta Core.equal_unit d
-          (Core.top_int_dom_exta Core.int_dom_record_lattice_unit);;
+          (Core.top_int_dom_exta Core.int_dom_record_lattice_unit)
+    | Analyse_Dispatch.ParityValue v -> Core.equal_paritya v Core.top_paritya;;
 
 let rec cs_ctx_graph_config
   p k = Analysis_GraphViz.Analysis_graph_config_ext
@@ -12090,7 +12729,8 @@ let rec cs_ctx_domain_for
       | Analysis_Config.Int_Analysis ->
         Analysis_GraphViz.contextual_result_domain base
           (Core.prog_cfg Core.prog_main_name p)
-          (Int_Call_String_Ctx_Sound.analyse_int_call_string_result k p));;
+          (Int_Call_String_Ctx_Sound.analyse_int_call_string_result k p)
+      | Analysis_Config.Parity_Analysis -> []);;
 
 let rec cs_ctx_dot_auto
   kind k p =
@@ -12166,6 +12806,12 @@ let rec analyse_point_env_for
           (fun v ->
             Core.map_point_state
               (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
+              (Core.lookup_context Core.equal_unit r v ())))
+      | Analysis_Config.Parity_Analysis ->
+        (let r = Parity_Checks.analyse_parity_result p in
+          (fun v ->
+            Core.map_point_state
+              (Core.comp (fun a -> Analyse_Dispatch.ParityValue a))
               (Core.lookup_context Core.equal_unit r v ()))));;
 
 let rec full_state_dot_auto
@@ -12316,7 +12962,8 @@ let rec is_bottom_abstract_value
   = function Analyse_Dispatch.SignValue s -> Core.is_bot_sign s
     | Analyse_Dispatch.IntervalValue i -> Core.is_bot_ivl i
     | Analyse_Dispatch.IntDomValue d ->
-        Core.is_bot_int_dom_ext Core.int_dom_record_lattice_unit d;;
+        Core.is_bot_int_dom_ext Core.int_dom_record_lattice_unit d
+    | Analyse_Dispatch.ParityValue v -> Core.is_bot_parity v;;
 
 let rec cs_ctx_graph_snapshot_auto
   kind k p =

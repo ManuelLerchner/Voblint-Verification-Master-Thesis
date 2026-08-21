@@ -1,0 +1,16 @@
+// PARAM: --analysis parity
+// The boundary of what Parity can say, kept as an explicit witness so the
+// PROVED cases next door are not mistaken for general-purpose precision.
+// x is Even here and the concrete value is genuinely fixed (4), but the
+// parity lattice has exactly four elements -- Bot, Even, Odd, Top -- and
+// carries no magnitude information whatsoever, so "x is Even" is the most
+// it can conclude and x == 4 stays UNKNOWN.
+// The concrete mechanism: parity_classify_check decides an equality only
+// when the two sides' parities are disjoint (Even vs Odd), which refutes;
+// it can never confirm one, since equal parity is necessary but nowhere
+// near sufficient for equal values. --analysis interval proves this same
+// check outright.
+void main() {
+  x := 2 + 2;
+  __voblint_check(x == 4) // UNKNOWN
+}

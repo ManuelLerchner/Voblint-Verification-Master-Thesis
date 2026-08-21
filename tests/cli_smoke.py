@@ -108,6 +108,36 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
+        "parity is a recognized --analysis value",
+        ["--analysis", "parity", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "parity + explicit --solver per-origin is accepted",
+        ["--analysis", "parity", "--solver", "per-origin", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "parity + --solver warrow is rejected",
+        ["--analysis", "parity", "--solver", "warrow", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "parity + entry-state is rejected",
+        ["--analysis", "parity", "--context", "entry-state", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
+        "parity + call-string is rejected",
+        ["--analysis", "parity", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
+        1,
+        "unsupported --analysis/--context/--solver combination",
+    ),
+    (
         "--dot with --context call-string is accepted",
         ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
         0,

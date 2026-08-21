@@ -3,6 +3,7 @@ theory Analyse_Dispatch
     Sign_Codegen
     Interval_Codegen
     Int_Codegen
+    Voblint_Analysis.Parity_Checks
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     Voblint_Formalization.Interval_Call_String_Ctx_Sound
     Voblint_Formalization.Sign_Call_String_Ctx_Sound
@@ -51,6 +52,7 @@ fun analyse :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> check_repor
   "analyse Sign_Analysis p = analyse_sign_report p"
 | "analyse Interval_Analysis p = analyse_interval_td_report p"
 | "analyse Int_Analysis p = analyse_int_report p"
+| "analyse Parity_Analysis p = analyse_parity_report p"
 
 subsection \<open>Context-sensitivity dimension\<close>
 
@@ -94,6 +96,9 @@ where
 | "analyse_ctx Int_Analysis Ctx_None p = Some (decided_report (analyse_int_report p))"
 | "analyse_ctx Int_Analysis Ctx_EntryState p = Some (analyse_int_entry_state_report p)"
 | "analyse_ctx Int_Analysis (Ctx_CallString k) p = Some (analyse_int_call_string_report k p)"
+| "analyse_ctx Parity_Analysis Ctx_None p = Some (decided_report (analyse_parity_report p))"
+| "analyse_ctx Parity_Analysis Ctx_EntryState p = None"
+| "analyse_ctx Parity_Analysis (Ctx_CallString k) p = None"
 
 text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for every domain: the new dispatcher
   cannot silently drift from the one CLI/regression already exercises.\<close>
@@ -162,6 +167,9 @@ fun analyse_with_solver ::
 | "analyse_with_solver Int_Analysis Solver_Join p = Some (analyse_int_report_join p)"
 | "analyse_with_solver Int_Analysis Solver_PerOrigin p = Some (analyse_int_report_per_origin p)"
 | "analyse_with_solver Int_Analysis Solver_Warrow p = Some (analyse_int_report p)"
+| "analyse_with_solver Parity_Analysis Solver_Join p = Some (analyse_parity_report p)"
+| "analyse_with_solver Parity_Analysis Solver_PerOrigin p = Some (analyse_parity_report_per_origin p)"
+| "analyse_with_solver Parity_Analysis Solver_Warrow p = None"
 
 lemma analyse_with_solver_sign_default:
   "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse Sign_Analysis p)"
@@ -190,7 +198,8 @@ text \<open>
   their state-free counterparts.
 \<close>
 
-datatype abstract_value = SignValue sign | IntervalValue ivl | IntDomValue int_dom
+datatype abstract_value =
+  SignValue sign | IntervalValue ivl | IntDomValue int_dom | ParityValue parity
 
 fun analyse_with_state ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
@@ -200,6 +209,8 @@ fun analyse_with_state ::
      map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
 | "analyse_with_state Int_Analysis p =
      map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, IntDomValue \<circ> s)) (analyse_int_report_with_state p)"
+| "analyse_with_state Parity_Analysis p =
+     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, ParityValue \<circ> s)) (analyse_parity_report_with_state p)"
 
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 
@@ -461,7 +472,8 @@ definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarro
       | Some (Plan_Interval_CallString _ _) \<Rightarrow> None
       | Some (Plan_Sign_CallString _ _) \<Rightarrow> None
       | Some (Plan_Int_CallString _ _) \<Rightarrow> None
-      | Some (Plan_Int_EntryState _) \<Rightarrow> None)"
+      | Some (Plan_Int_EntryState _) \<Rightarrow> None
+      | Some (Plan_Parity s) \<Rightarrow> analyse_with_solver Parity_Analysis s p)"
 
 text \<open>
   \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
@@ -497,7 +509,8 @@ definition analyse_config_ctx ::
       | Some (Plan_Int_EntryState Solver_Warrow) \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
-      | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p))"
+      | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p)
+      | Some (Plan_Parity s) \<Rightarrow> map_option decided_report (analyse_with_solver Parity_Analysis s p))"
 
 text \<open>
   \<^const>\<open>analyse_with_state\<close> carries no solver or context parameter of its own
@@ -517,6 +530,7 @@ where
         Some (Plan_Sign Solver_Join) \<Rightarrow> Some (analyse_with_state Sign_Analysis p)
       | Some (Plan_Interval Solver_Warrow) \<Rightarrow> Some (analyse_with_state Interval_Analysis p)
       | Some (Plan_Int Solver_Warrow) \<Rightarrow> Some (analyse_with_state Int_Analysis p)
+      | Some (Plan_Parity Solver_Join) \<Rightarrow> Some (analyse_with_state Parity_Analysis p)
       | _ \<Rightarrow> None)"
 
 subsection \<open>Config-driven dispatch agrees with each existing typed entry point\<close>
@@ -595,6 +609,36 @@ lemma analyse_config_ctx_sign_entrystate_warrow_invalid:
      \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
    = None"
   by (simp add: analyse_config_ctx_def)
+
+text \<open>
+  Parity, the fourth domain, on the config-driven path: supported at \<open>Ctx_None\<close> under the
+  two solvers it has tables for, and genuinely \<^const>\<open>None\<close> at the contexts it has no
+  routed instance for -- the config resolver decides both, with no CLI-side table.
+\<close>
+
+lemma analyse_config_parity_default:
+  "analyse_config (default_config Parity_Analysis Ctx_None) p = Some (analyse Parity_Analysis p)"
+  by (simp add: analyse_config_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_parity_per_origin_valid:
+  "analyse_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_None \<rparr> p
+   = Some (analyse_parity_report_per_origin p)"
+  by (simp add: analyse_config_def)
+
+lemma analyse_config_parity_warrow_invalid:
+  "analyse_config
+     \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr> p
+   = None"
+  by (simp add: analyse_config_def)
+
+lemma analyse_config_ctx_parity_entrystate_invalid:
+  "analyse_config_ctx (default_config Parity_Analysis Ctx_EntryState) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_parity_callstring_invalid:
+  "analyse_config_ctx (default_config Parity_Analysis (Ctx_CallString k)) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 text \<open>
   Int at \<open>Ctx_EntryState\<close>, pinned the same way Sign's own regressions are: valid at

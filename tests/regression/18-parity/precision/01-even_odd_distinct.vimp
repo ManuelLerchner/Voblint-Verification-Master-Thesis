@@ -1,0 +1,23 @@
+// PARAM: --analysis parity
+// The acceptance case for Parity as a public analysis: a property provable
+// from parity information alone. n is completely unconstrained, so no
+// interval or sign reasoning bounds x or y at all -- but times_parity has
+// PEven * _ = PEven, so 2*n is Even whatever n is, and 2*n+1 is then Odd.
+// Even and Odd are disjoint, so x and y can never be equal; parity refutes
+// the equality and therefore proves its negation.
+// Multiplication by the literal 2 is what makes this non-relational: the
+// domain evaluates each operand independently, so n+n would be Top+Top=Top
+// (it cannot see the two operands are the same value), while 2*n is Even
+// from the literal's own parity alone.
+// This exercises the full public path: AnalysisConfig resolves
+// --analysis parity to Plan_Parity Solver_Join, Analyse_Dispatch routes it
+// to analyse_parity_report, and that report reads the routed-unit solved
+// AnalysisResult through lookup_context -- the same generic pipeline the
+// other three domains use, with no Parity-specific result or report
+// construction anywhere in it.
+void main() {
+  n := __voblint_nondet_int();
+  x := 2 * n;
+  y := 2 * n + 1;
+  __voblint_check(!(x == y)) // PROVED
+}

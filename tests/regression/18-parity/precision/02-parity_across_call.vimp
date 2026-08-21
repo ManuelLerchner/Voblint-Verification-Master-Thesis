@@ -1,0 +1,17 @@
+// PARAM: --analysis parity
+// Parity through a procedure call and return, so the routed spine's own
+// enter and combine edges carry the fact rather than just intra-procedural
+// transfer. double's return is Even for any argument (PEven * _ = PEven),
+// and the caller reads that back across the combine edge, so b+1 is Odd
+// while a is Even and the two can never be equal -- provable at the call
+// site even though the original argument is unconstrained.
+// Context-insensitive by construction: Parity is Ctx_None only today, and
+// one shared callee context suffices here, since both calls agree on the
+// callee's parity result.
+void double(p) { return 2 * p }
+void main() {
+  n := __voblint_nondet_int();
+  a := double(n);
+  b := double(a);
+  __voblint_check(!(a == b + 1)) // PROVED
+}

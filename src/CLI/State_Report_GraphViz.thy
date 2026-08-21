@@ -21,6 +21,7 @@ fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
   "string_of_abstract_value (SignValue s) = string_of_sign s"
 | "string_of_abstract_value (IntervalValue i) = string_of_ivl i"
 | "string_of_abstract_value (IntDomValue d) = string_of_int_dom d"
+| "string_of_abstract_value (ParityValue v) = string_of_parity v"
 
 text \<open>
   \<open>is_bottom_abstract_value\<close> tests each domain's own \<^class>\<open>order_bot\<close>
@@ -47,6 +48,7 @@ fun is_bottom_abstract_value :: "abstract_value \<Rightarrow> bool" where
   "is_bottom_abstract_value (SignValue s) = is_bot s"
 | "is_bottom_abstract_value (IntervalValue i) = is_bot i"
 | "is_bottom_abstract_value (IntDomValue d) = is_bot d"
+| "is_bottom_abstract_value (ParityValue v) = is_bot v"
 
 text \<open>
   The \<open>top\<close> counterpart, used only to suppress an uninformative return-slot line: a
@@ -62,6 +64,7 @@ fun is_top_abstract_value :: "abstract_value \<Rightarrow> bool" where
   "is_top_abstract_value (SignValue s) = (s = top)"
 | "is_top_abstract_value (IntervalValue i) = (i = top)"
 | "is_top_abstract_value (IntDomValue d) = (d = top)"
+| "is_top_abstract_value (ParityValue v) = (v = top)"
 
 text \<open>
   \<open>program_vars\<close> is the union of \<^const>\<open>scope_vnames_list\<close> over every
@@ -271,7 +274,10 @@ definition analyse_point_env_for ::
            in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
       | Int_Analysis \<Rightarrow>
           (let r = analyse_int_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ()))))"
+           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
+      | Parity_Analysis \<Rightarrow>
+          (let r = analyse_parity_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. ParityValue \<circ> st) (lookup_context r v ()))))"
 
 definition full_state_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_dot_auto kind p =
@@ -656,7 +662,8 @@ definition cs_ctx_sol_for ::
           (let r = analyse_int_call_string_result k p
            in (\<lambda>x. case x of Inl (v, ctx) \<Rightarrow>
                      map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ctx)
-                   | Inr _ \<Rightarrow> Unreachable)))"
+                   | Inr _ \<Rightarrow> Unreachable))
+      | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
 
 text \<open>
   The covered \<^term>\<open>(v, ctx)\<close> pairs, again read off whichever domain's table was selected.
@@ -680,7 +687,8 @@ definition cs_ctx_domain_for ::
             (analyse_interval_call_string_result k p)
       | Int_Analysis \<Rightarrow>
           contextual_result_domain base (prog_cfg prog_main_name p)
-            (analyse_int_call_string_result k p))"
+            (analyse_int_call_string_result k p)
+      | Parity_Analysis \<Rightarrow> [])"
 
 text \<open>
   Per-context check verdicts. The classification stays each domain's own
@@ -707,7 +715,8 @@ definition cs_ctx_check_annotation ::
                             (lookup_context (analyse_interval_call_string_result k p) v ctx)
                       | Int_Analysis \<Rightarrow>
                           classify_point int_classify_check cnd
-                            (lookup_context (analyse_int_call_string_result k p) v ctx)) of
+                            (lookup_context (analyse_int_call_string_result k p) v ctx)
+                      | Parity_Analysis \<Rightarrow> Dead) of
                   Dead \<Rightarrow> dead_check_annotation cnd
                 | Decided res \<Rightarrow> check_result_annotation res cnd))"
 

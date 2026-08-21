@@ -35,9 +35,9 @@ export_code
   in OCaml file_prefix "Voblint_Analyse_OCaml"
 
 export_code
-  analyse Sign_Analysis Interval_Analysis Int_Analysis
+  analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
   analyse_ctx Ctx_None Ctx_EntryState Ctx_CallString
-  analyse_with_state SignValue IntervalValue IntDomValue
+  analyse_with_state SignValue IntervalValue IntDomValue ParityValue
   state_report_dot_auto state_report_graph_snapshot_auto
   full_state_dot_auto full_state_graph_snapshot_auto
   entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
@@ -58,7 +58,7 @@ export_code
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
   mk_analysis_config
-  Plan_Sign Plan_Sign_EntryState Plan_Sign_CallString Plan_Interval Plan_Interval_EntryState Plan_Interval_CallString Plan_Int Plan_Int_EntryState Plan_Int_CallString
+  Plan_Sign Plan_Sign_EntryState Plan_Sign_CallString Plan_Interval Plan_Interval_EntryState Plan_Interval_CallString Plan_Int Plan_Int_EntryState Plan_Int_CallString Plan_Parity
   resolve_analysis_config valid_analysis_config
   analyse_config analyse_config_ctx analyse_config_with_state
   analyse_sign_result analyse_interval_td_result analyse_int_result
@@ -73,6 +73,8 @@ export_code
   analyse_int_call_string_report
   analyse_int_entry_state_result analyse_int_entry_state_result_for
   analyse_int_entry_state_report
+  analyse_parity_result analyse_parity_result_for
+  analyse_parity_report analyse_parity_report_per_origin
   result_keys contexts_at lookup_context lookup_joined_state node_live_ex
   is_reachable_point map_point_state normalize_point
   Dead Decided verdict_check_result aggregate_verdicts check_dead
