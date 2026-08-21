@@ -1,0 +1,64 @@
+// PARAM: --analysis int --context entry-state
+// The Int sibling of 10-entry_state_sign_own_domain.vimp, and the clearest
+// witness that the collapsed entry-state renderer now reads the selected
+// domain: Int's composite states print as a reduced tuple
+// (sign=..., ivl=..., parity=..., congruence==...), which no other domain
+// produces, so a regression back to the hard-wired Interval table would be
+// immediately visible in the labels below rather than merely plausible.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//   cluster_ctx_1:
+//     square_pp0_ctx1
+//     square_entry_square_ctx1
+//     square_result_square_ctx1
+//
+// nodes:
+//   main_pp5_ctx0: pp5
+//       check b==16
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//   main_pp6_ctx0: pp6
+//   main_result_main_ctx0: exit_main
+//   main_entry_main_ctx0: entry_main
+//   square_pp0_ctx1: pp0
+//   main_pp2_ctx0: pp2
+//   main_pp3_ctx0: pp3
+//   square_entry_square_ctx1: entry_square
+//   main_pp4_ctx0: pp4
+//       check a==9
+//       a=sign=Positive, ivl=[9,9], parity=Odd, congruence==9
+//       b=sign=Positive, ivl=[16,16], parity=Even, congruence==16
+//   square_result_square_ctx1: exit_square
+//
+// edges:
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(b==16)
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   square_pp0_ctx1 -> square_result_square_ctx1: return n*n
+//   square_entry_square_ctx1 -> square_pp0_ctx1: nop
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(a==9)
+//   main_pp2_ctx0 -> square_entry_square_ctx1: enter square(3)
+//   main_pp3_ctx0 -> square_entry_square_ctx1: enter square(4)
+//   square_result_square_ctx1 -> main_pp3_ctx0: combine a
+//   square_result_square_ctx1 -> main_pp4_ctx0: combine b
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return square
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
+// EXPECT-GRAPH-END
+
+void square(n) {
+  return n * n
+}
+void main() {
+  a := square(3);
+  b := square(4);
+  __voblint_check(a == 9); // PROVED
+  __voblint_check(b == 16) // PROVED
+}

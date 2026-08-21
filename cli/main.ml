@@ -34,8 +34,11 @@ let usage =
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
   \                             fixed at its most precise refinement mode\n\
-  \                             (Refine_Fixpoint) and the warrowing solver; it\n\
-  \                             has no --context or --solver support yet.\n\
+  \                             (Refine_Fixpoint) and the warrowing solver.\n\
+  \                             parity is the four-element Bot/Even/Odd/Top\n\
+  \                             lattice; it decides equalities only by\n\
+  \                             refuting them across differing parities, and\n\
+  \                             is context-insensitive.\n\
   \  --context none|entry-state|call-string\n\
   \                             Context sensitivity (default: none, today's\n\
   \                             flow-insensitive, call-site-insensitive\n\
@@ -72,15 +75,21 @@ let usage =
   \                             point dead in one activation and live in\n\
   \                             another renders as two distinct nodes rather\n\
   \                             than one live-looking join. Requires --context\n\
-  \                             entry-state -- expanded with --context none is\n\
-  \                             a clear configuration error, not a silent\n\
-  \                             fallback to collapsed.\n\
+  \                             entry-state and --analysis interval: the\n\
+  \                             expanded renderer is typed in the context type\n\
+  \                             itself, and only interval has that\n\
+  \                             configuration today, whereas the collapsed\n\
+  \                             renderings join contexts away and work for\n\
+  \                             every domain. expanded with --context none, or\n\
+  \                             with a non-interval domain, is a clear\n\
+  \                             configuration error, not a silent fallback.\n\
   \  --solver join|per-origin|warrow\n\
   \                             Pick the vendored solver's update-rule\n\
   \                             discipline directly, bypassing the domain's\n\
   \                             production default (experimental; issue\n\
-  \                             #131). warrow only type-checks against\n\
-  \                             interval (sign has no widen instance).\n\
+  \                             #131). warrow is supported by interval and\n\
+  \                             int; sign has no widen instance, and parity\n\
+  \                             has one but no solved table behind it yet.\n\
   \                             Plain text report only -- incompatible with\n\
   \                             --context/--dot/--dot-full/--graph-snapshot.\n\
   \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
@@ -423,6 +432,29 @@ let () =
     prerr_endline "voblint: --context-graph expanded requires --context entry-state";
     exit 1
   end;
+  (* The expanded entry-state graph draws one node per (point, context) pair, so
+     its renderer is typed in the context type itself -- ivl list -- unlike the
+     collapsed renderings, which join contexts away and share one abstract_value
+     projection across every domain. Only Interval has that expanded
+     configuration today. Reject the other domains explicitly rather than fall
+     through to Interval's renderer and emit a graph labelled with a different
+     analysis's states, which is exactly the silent wrong output this check
+     exists to prevent. *)
+  if !context_graph = Expanded
+     && !context = Voblint_CLI.Analysis_Config.Ctx_EntryState
+     && kind <> Voblint_CLI.Analysis_Config.Interval_Analysis then begin
+    prerr_endline
+      "voblint: --context-graph expanded is only supported by --analysis interval";
+    exit 1
+  end;
+  (* --context-graph has no effect on a call-string graph: that renderer is
+     always per-context (it has no collapsed mode), so accepting the flag here
+     would silently ignore it. *)
+  if !context_graph = Expanded && !context_kind = CK_CallString then begin
+    prerr_endline
+      "voblint: --context-graph is not supported with --context call-string";
+    exit 1
+  end;
   (* --solver's flat check_report_entry list has no per-node state map to
      render, and entry_state_{full_state,report}_{dot,graph_snapshot}_auto
      are Interval-only regardless of --solver -- this compatibility is about
@@ -441,7 +473,7 @@ let () =
            else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto kind prog
            else Voblint_CLI.State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
       else if !graph_snapshot then
         Ok_graph
@@ -450,7 +482,7 @@ let () =
            else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto kind prog
            else Voblint_CLI.State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
       else if !dot_full then
         Ok_dot
@@ -459,7 +491,7 @@ let () =
            else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_dot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_dot_auto kind prog
            else Voblint_CLI.State_Report_GraphViz.full_state_dot_auto kind prog)
       else if !dot then
         Ok_dot
@@ -468,7 +500,7 @@ let () =
            else if !context_graph = Expanded then
              Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_report_dot_auto prog
+             Voblint_CLI.State_Report_GraphViz.entry_state_report_dot_auto kind prog
            else Voblint_CLI.State_Report_GraphViz.state_report_dot_auto kind prog)
       else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
         (match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with

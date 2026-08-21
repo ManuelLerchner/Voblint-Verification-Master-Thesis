@@ -138,6 +138,25 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
+        "sign + entry-state + --dot renders sign, not interval",
+        ["--analysis", "sign", "--context", "entry-state", "--dot-full", SANITY_FILE],
+        0,
+        "digraph",
+    ),
+    (
+        "--context-graph expanded with a non-interval domain is rejected",
+        ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", "--dot", SANITY_FILE],
+        1,
+        "--context-graph expanded is only supported by --analysis interval",
+    ),
+    (
+        "--context-graph with --context call-string is rejected",
+        ["--analysis", "interval", "--context", "call-string", "--context-depth", "2",
+         "--context-graph", "expanded", "--dot", SANITY_FILE],
+        1,
+        "--context-graph is not supported with --context call-string",
+    ),
+    (
         "--dot with --context call-string is accepted",
         ["--analysis", "interval", "--context", "call-string", "--context-depth", "2", "--dot", SANITY_FILE],
         0,

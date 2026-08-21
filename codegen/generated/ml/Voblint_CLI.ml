@@ -143,6 +143,7 @@ module Core : sig
   val equal_sign : sign equal
   val bot_sign : sign bot
   val top_signa : sign
+  val semilattice_sup_sign : sign semilattice_sup
   type 'a bounded_warrowing =
     {bounded_semilattice_sup_bot_bounded_warrowing :
        'a bounded_semilattice_sup_bot;
@@ -222,6 +223,8 @@ module Core : sig
   val int_ivl : 'a int_dom_ext -> ivl
   val bot_int_dom_ext : 'a int_dom_record_lattice -> 'a int_dom_ext bot
   val top_int_dom_exta : 'a int_dom_record_lattice -> 'a int_dom_ext
+  val semilattice_sup_int_dom_ext :
+    'a int_dom_record_lattice -> 'a int_dom_ext semilattice_sup
   val bounded_semilattice_sup_bot_int_dom_ext :
     'a int_dom_record_lattice -> 'a int_dom_ext bounded_semilattice_sup_bot
   val bounded_warrowing_int_dom_ext :
@@ -12516,16 +12519,19 @@ module State_Report_GraphViz : sig
   val cs_ctx_graph_snapshot_auto :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> string
-  val entry_state_report_dot_auto : unit Core.imp_prog_ext -> string
+  val entry_state_report_dot_auto :
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val full_state_graph_snapshot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
-  val entry_state_full_state_dot_auto : unit Core.imp_prog_ext -> string
+  val entry_state_full_state_dot_auto :
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val state_report_graph_snapshot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_ctx_graph_snapshot_auto : unit Core.imp_prog_ext -> string
-  val entry_state_report_graph_snapshot_auto : unit Core.imp_prog_ext -> string
+  val entry_state_report_graph_snapshot_auto :
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_full_state_graph_snapshot_auto :
-    unit Core.imp_prog_ext -> string
+    Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
 end = struct
 
 let rec string_of_abstract_value
@@ -12952,11 +12958,15 @@ let rec entry_state_ctx_dot_auto
               Int_Entry_State_Ctx_Sound.equal_gk cfg g
               (Analysis_GraphViz.contextual_result_domain base g r) sol)));;
 
-let rec entry_state_point_env_at
-  r v = Core.map_point_state
-          (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-          (Core.lookup_joined_state (Core.equal_list Core.equal_ivl)
-            Core.semilattice_sup_ivl r v);;
+let rec entry_state_verdicts_for
+  kind p =
+    (match kind
+      with Analysis_Config.Sign_Analysis ->
+        Sign_Entry_State_Ctx_Sound.analyse_sign_entry_state_report p
+      | Analysis_Config.Interval_Analysis -> Core.analyse_interval_entry_state p
+      | Analysis_Config.Int_Analysis ->
+        Int_Entry_State_Ctx_Sound.analyse_int_entry_state_report p
+      | Analysis_Config.Parity_Analysis -> []);;
 
 let rec is_bottom_abstract_value
   = function Analyse_Dispatch.SignValue s -> Core.is_bot_sign s
@@ -12964,6 +12974,35 @@ let rec is_bottom_abstract_value
     | Analyse_Dispatch.IntDomValue d ->
         Core.is_bot_int_dom_ext Core.int_dom_record_lattice_unit d
     | Analyse_Dispatch.ParityValue v -> Core.is_bot_parity v;;
+
+let rec entry_state_point_env_for
+  kind p =
+    (match kind
+      with Analysis_Config.Sign_Analysis ->
+        (let r = Sign_Entry_State_Ctx_Sound.analyse_sign_entry_state_result p in
+          (fun v ->
+            Core.map_point_state
+              (Core.comp (fun a -> Analyse_Dispatch.SignValue a))
+              (Core.lookup_joined_state (Core.equal_list Core.equal_sign)
+                Core.semilattice_sup_sign r v)))
+      | Analysis_Config.Interval_Analysis ->
+        (let r = Core.analyse_interval_entry_state_result p in
+          (fun v ->
+            Core.map_point_state
+              (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
+              (Core.lookup_joined_state (Core.equal_list Core.equal_ivl)
+                Core.semilattice_sup_ivl r v)))
+      | Analysis_Config.Int_Analysis ->
+        (let r = Int_Entry_State_Ctx_Sound.analyse_int_entry_state_result p in
+          (fun v ->
+            Core.map_point_state
+              (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
+              (Core.lookup_joined_state
+                (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit))
+                (Core.semilattice_sup_int_dom_ext
+                  Core.int_dom_record_lattice_unit)
+                r v)))
+      | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
 let rec cs_ctx_graph_snapshot_auto
   kind k p =
@@ -12998,19 +13037,17 @@ let rec verdict_state_report_node_annotation
                        a))));;
 
 let rec entry_state_report_for_annotation
-  p = (let r = Core.analyse_interval_entry_state_result p in
-        Core.map
-          (fun (v, (cnd, verdict)) ->
-            (v, (cnd, (verdict, entry_state_point_env_at r v))))
-          (Core.classify_checks_verdicts (Core.equal_list Core.equal_ivl)
-            (Core.prog_cfg Core.prog_main_name p) r
-            Core.interval_classify_check));;
+  kind p =
+    (let env = entry_state_point_env_for kind p in
+      Core.map (fun (v, (cnd, verdict)) -> (v, (cnd, (verdict, env v))))
+        (entry_state_verdicts_for kind p));;
 
 let rec entry_state_report_dot_auto
-  p = (let report = entry_state_report_for_annotation p in
-        Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p)
-          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-          (verdict_state_report_node_annotation (report_vars report) report));;
+  kind p =
+    (let report = entry_state_report_for_annotation kind p in
+      Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
+        (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec full_state_graph_snapshot_auto
   kind p =
@@ -13020,11 +13057,11 @@ let rec full_state_graph_snapshot_auto
         (analyse_point_env_for kind p));;
 
 let rec entry_state_full_state_dot_auto
-  p = (let r = Core.analyse_interval_entry_state_result p in
-        Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p)
-          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-          (point_state_node_annotation (program_vars p)
-            (entry_state_point_env_at r)));;
+  kind p =
+    Analysis_GraphViz.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
+      Core.prog_main_name (Core.prog_main p)
+      (point_state_node_annotation (program_vars p)
+        (entry_state_point_env_for kind p));;
 
 let rec state_report_graph_snapshot_auto
   kind p =
@@ -13055,16 +13092,17 @@ let rec entry_state_ctx_graph_snapshot_auto
               (Analysis_GraphViz.contextual_result_domain base g r) sol)));;
 
 let rec entry_state_report_graph_snapshot_auto
-  p = (let report = entry_state_report_for_annotation p in
-        Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
-          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-          (verdict_state_report_node_annotation (report_vars report) report));;
+  kind p =
+    (let report = entry_state_report_for_annotation kind p in
+      Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_graph_snapshot_auto
-  p = (let r = Core.analyse_interval_entry_state_result p in
-        Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
-          (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-          (point_state_node_annotation (program_vars p)
-            (entry_state_point_env_at r)));;
+  kind p =
+    Analysis_GraphViz.raw_cfg_canonical_text_lit (Core.prog_table p)
+      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      (point_state_node_annotation (program_vars p)
+        (entry_state_point_env_for kind p));;
 
 end;; (*struct State_Report_GraphViz*)

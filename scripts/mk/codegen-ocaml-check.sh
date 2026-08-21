@@ -11,4 +11,8 @@
 set -euo pipefail
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 
-"$ISABELLE" build -v -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" -d "$REPO_ROOT/src/CodegenCheck" Voblint_OCaml_Check
+# -d for the repository root, not -D, for the same reason
+# scripts/regenerate-codegen.sh gives: -D selects every session it finds
+# there, so this check would drag Voblint_Examples in behind it. Naming
+# Voblint_OCaml_Check alone still builds its own dependency chain.
+"$ISABELLE" build -v -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT" -d "$REPO_ROOT/src/CodegenCheck" Voblint_OCaml_Check

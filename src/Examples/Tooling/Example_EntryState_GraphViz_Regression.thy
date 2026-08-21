@@ -166,20 +166,20 @@ text \<open>
 
 lemma dead_check_graph_report_verdicts:
   "map (\<lambda>(v, cnd, verdict, st). (v, verdict))
-     (entry_state_report_for_annotation dead_check_prog)
+     (entry_state_report_for_annotation Interval_Analysis dead_check_prog)
    = [(Statement 2, Dead), (Statement 3, Decided Check_Proved)]"
   by eval
 
 lemma dead_check_graph_report_annotation_dead:
   "verdict_state_report_node_annotation [STR ''x'']
-     (entry_state_report_for_annotation dead_check_prog) (Statement 2)
+     (entry_state_report_for_annotation Interval_Analysis dead_check_prog) (Statement 2)
    = Some (dead_check_annotation (exp.Eq (V (STR ''x'')) (exp.N 99)))"
   by eval
 
 lemma dead_check_graph_report_annotation_live:
   "map_option (\<lambda>a. (split_gv_nl (annotation_label a), annotation_style a))
      (verdict_state_report_node_annotation [STR ''x'']
-        (entry_state_report_for_annotation dead_check_prog) (Statement 3))
+        (entry_state_report_for_annotation Interval_Analysis dead_check_prog) (Statement 3))
    = Some ([''check x==5'', ''x=[5,5]''],
            ''shape=box,style=filled,fillcolor=darkgreen,fontcolor=white'')"
   by eval
@@ -189,7 +189,7 @@ text \<open>A node carrying no check still gets no annotation at all, so the
 
 lemma dead_check_graph_report_annotation_absent:
   "verdict_state_report_node_annotation [STR ''x'']
-     (entry_state_report_for_annotation dead_check_prog) (Statement 0) = None"
+     (entry_state_report_for_annotation Interval_Analysis dead_check_prog) (Statement 0) = None"
   by eval
 
 section \<open>Regression: the context-expanded graph keeps activations apart\<close>

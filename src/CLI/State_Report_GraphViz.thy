@@ -203,6 +203,36 @@ definition entry_state_point_env_at ::
      map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)"
 
 text \<open>
+  The domain-dispatching sibling, and the reason the collapsed entry-state renderings can
+  be shared at all: \<^const>\<open>lookup_joined_state\<close> joins a point's covered contexts away, so
+  what reaches the renderer is an ordinary per-node \<^typ>\<open>'a abs_state point_state\<close> with no
+  context type left in it. Projecting that into \<^typ>\<open>abstract_value\<close> --- exactly as
+  \<open>analyse_point_env_for\<close> already does for the monovariant tables --- removes the
+  last domain-dependence, so Sign, Interval and Int share one renderer here.
+
+  \<open>r\<close> is bound outside the returned \<open>\<lambda>\<close> for the usual single-solve reason: a caller that
+  partially applies this once solves the program once, however many nodes it renders.
+  \<^const>\<open>Parity_Analysis\<close> has no entry-state instance, so it answers
+  \<^const>\<open>Unreachable\<close> --- unreachable in practice, since \<^const>\<open>resolve_analysis_config\<close>
+  rejects that combination before any renderer is called.
+\<close>
+
+definition entry_state_point_env_for ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "entry_state_point_env_for kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          (let r = analyse_sign_entry_state_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_joined_state r v)))
+      | Interval_Analysis \<Rightarrow>
+          (let r = analyse_interval_entry_state_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)))
+      | Int_Analysis \<Rightarrow>
+          (let r = analyse_int_entry_state_result p
+           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_joined_state r v)))
+      | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
+
+text \<open>
   The unreachable styling draws from the palette \<^const>\<open>check_result_annotation\<close>
   and \<^const>\<open>analysis_node_attrs\<close> already use: \<open>gray40\<close>, the grey the renderer
   gives its own exit nodes, and deliberately not the \<open>gray70\<close> an undecided
@@ -300,71 +330,50 @@ text \<open>
   meaning.
 \<close>
 
-definition entry_state_full_state_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
-  "entry_state_full_state_dot_auto p =
+definition entry_state_full_state_dot_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "entry_state_full_state_dot_auto kind p =
      raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (point_state_node_annotation (program_vars p)
-          (entry_state_point_env_at (analyse_interval_entry_state_result p)))"
+       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
-declare entry_state_full_state_dot_auto_def [code del]
-
-lemma entry_state_full_state_dot_auto_code [code]:
-  "entry_state_full_state_dot_auto p =
-     (let r = analyse_interval_entry_state_result p
-      in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (point_state_node_annotation (program_vars p) (entry_state_point_env_at r)))"
-  unfolding entry_state_full_state_dot_auto_def Let_def by (rule refl)
-
-definition entry_state_full_state_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
-  "entry_state_full_state_graph_snapshot_auto p =
+definition entry_state_full_state_graph_snapshot_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "entry_state_full_state_graph_snapshot_auto kind p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (point_state_node_annotation (program_vars p)
-          (entry_state_point_env_at (analyse_interval_entry_state_result p)))"
-
-declare entry_state_full_state_graph_snapshot_auto_def [code del]
-
-lemma entry_state_full_state_graph_snapshot_auto_code [code]:
-  "entry_state_full_state_graph_snapshot_auto p =
-     (let r = analyse_interval_entry_state_result p
-      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (point_state_node_annotation (program_vars p) (entry_state_point_env_at r)))"
-  unfolding entry_state_full_state_graph_snapshot_auto_def Let_def by (rule refl)
+       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
-  \<open>entry_state_report_for_annotation\<close> pairs
-  \<^const>\<open>entry_state_verdict_report_prog\<close>'s source-level verdicts with the same
-  table's per-node joined state. The verdict column is
+  \<open>entry_state_report_for_annotation\<close> pairs each domain's own source-level verdicts with
+  the same table's per-node joined state. The verdict column is
   \<^typ>\<open>contextual_verdict\<close>, not \<^typ>\<open>check_result\<close>: a check every covering
   context finds unreachable stays \<^const>\<open>Dead\<close> all the way into the annotation,
   which has a case for it, so nothing is collapsed into \<^const>\<open>Check_Unknown\<close>
   on the way to the graph.
 \<close>
 
+text \<open>
+  The verdict column, dispatched per domain: each domain's own entry-state contextual
+  report, all three of which already share the \<^typ>\<open>contextual_verdict\<close> shape.
+  \<^const>\<open>Parity_Analysis\<close> has no entry-state instance and answers the empty report;
+  \<^const>\<open>resolve_analysis_config\<close> rejects that combination before any renderer runs.
+\<close>
+
+definition entry_state_verdicts_for ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "entry_state_verdicts_for kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow> analyse_sign_entry_state_report p
+      | Interval_Analysis \<Rightarrow> analyse_interval_entry_state p
+      | Int_Analysis \<Rightarrow> analyse_int_entry_state_report p
+      | Parity_Analysis \<Rightarrow> [])"
+
 definition entry_state_report_for_annotation ::
-    "imp_prog
+    "analysis_domain \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list" where
-  "entry_state_report_for_annotation p =
-     map (\<lambda>(v, cnd, verdict).
-            (v, cnd, verdict,
-             entry_state_point_env_at (analyse_interval_entry_state_result p) v))
-       (entry_state_verdict_report_prog prog_main_name p)"
-
-declare entry_state_report_for_annotation_def [code del]
-
-text \<open>Both columns come off one table. The defining equation names
-  \<^const>\<open>entry_state_verdict_report_prog\<close>, which builds its own;
-  \<open>entry_state_verdict_report_prog_eq\<close> re-reads that report as
-  \<^const>\<open>classify_checks_verdicts\<close> over an already-bound table, which is what
-  lets verdicts and states share the single solve.\<close>
-
-lemma entry_state_report_for_annotation_code [code]:
-  "entry_state_report_for_annotation p =
-     (let r = analyse_interval_entry_state_result p
-      in map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, entry_state_point_env_at r v))
-           (classify_checks_verdicts (prog_cfg prog_main_name p) r interval_classify_check))"
-  unfolding entry_state_report_for_annotation_def Let_def
-    entry_state_verdict_report_prog_eq analyse_interval_entry_state_result_def
-  by (rule refl)
+  "entry_state_report_for_annotation kind p =
+     (let env = entry_state_point_env_for kind p
+      in map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, env v))
+           (entry_state_verdicts_for kind p))"
 
 text \<open>
   The \<^typ>\<open>contextual_verdict\<close> sibling of \<^const>\<open>state_report_node_annotation\<close>.
@@ -391,15 +400,17 @@ definition verdict_state_report_node_annotation ::
                          Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)
                 | _ \<Rightarrow> dead_check_annotation cnd))"
 
-definition entry_state_report_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
-  "entry_state_report_dot_auto p =
-     (let report = entry_state_report_for_annotation p
+definition entry_state_report_dot_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "entry_state_report_dot_auto kind p =
+     (let report = entry_state_report_for_annotation kind p
       in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (verdict_state_report_node_annotation (report_vars report) report))"
 
-definition entry_state_report_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
-  "entry_state_report_graph_snapshot_auto p =
-     (let report = entry_state_report_for_annotation p
+definition entry_state_report_graph_snapshot_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
+  "entry_state_report_graph_snapshot_auto kind p =
+     (let report = entry_state_report_for_annotation kind p
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (verdict_state_report_node_annotation (report_vars report) report))"
 
