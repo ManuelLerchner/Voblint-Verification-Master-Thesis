@@ -3,36 +3,26 @@ theory Voblint_Codegen
     "Voblint_CLI.State_Report_GraphViz"
 begin
 
-section "Code export surfaces"
+section "Code export surface"
 
-text "
-  This session owns executable exports. The examples session proves and
-  demonstrates the exported definitions without materializing generated code.
-"
+text \<open>
+  This session owns executable exports; the examples session proves and demonstrates the
+  exported definitions without materializing generated code.
 
-export_code
-  analyse Sign_Analysis Interval_Analysis Int_Analysis
-  analyse_with_state SignValue IntervalValue IntDomValue
-  analyse_ctx Ctx_None Ctx_EntryState
-  mk_program proc_decl_of
-  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
-  N V Plus Minus Times
-  exp.Not And Or Less exp.Eq
-  Check_Proved Check_Refuted Check_Unknown
-  int_of_integer nat_of_integer integer_of_int integer_of_nat
-  Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
-  compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
-  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
-  string_of_exp
-  wf_program_compile_input_exec
-  analyse_sign_result analyse_interval_td_result analyse_int_result
-  analyse_interval_entry_state_result analyse_interval_entry_state_result_for
-  result_keys contexts_at lookup_context lookup_joined_state node_live_ex
-  is_reachable_point map_point_state normalize_point
-  Dead Decided verdict_check_result aggregate_verdicts check_dead
-  entry_state_check_projection
-  in OCaml file_prefix "Voblint_Analyse_OCaml"
+  One export block, deliberately. There used to be a second, narrower one
+  (\<open>Voblint_Analyse_OCaml\<close>) whose only consumer was the external OCaml regression driver
+  under \<open>codegen/regression/ocaml/\<close>, which needs a handful of CFG-inspection constants
+  the CLI itself never calls. Two blocks did not make that surface any narrower: Isabelle
+  emits the reachable transitive closure of whatever is named, so both files carried
+  essentially the same machinery, differing by exactly those CFG constants and costing
+  around 8,400 duplicated generated lines. Naming the constants here instead and pointing
+  the driver at this module keeps one generated artifact for one analysis.
+
+  This is emphatically not the project's public API boundary. \<^emph>\<open>Nothing\<close> about an
+  \<open>export_code\<close> list makes the emitted module narrow --- the serializer decides what comes
+  along --- so a supported external surface, if one is wanted, belongs in a hand-written
+  OCaml facade over this module rather than in the shape of this list.
+\<close>
 
 export_code
   analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
@@ -54,6 +44,8 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
+  compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
+  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow

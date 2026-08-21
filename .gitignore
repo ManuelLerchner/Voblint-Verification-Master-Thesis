@@ -24,3 +24,10 @@ __pycache__/
 
 # Local tool settings
 .claude/settings.local.json
+
+# codegen regression driver: build products and the generated module it
+# copies in from codegen/generated/ (the copy is a build step, not a source)
+codegen/regression/ocaml/Voblint_CLI.ml
+codegen/regression/ocaml/*.cm*
+codegen/regression/ocaml/*.o
+codegen/regression/ocaml/regression-ml

@@ -525,6 +525,7 @@ module Core : sig
       (ivl resolved_st_q -> bool) ->
         (ivl resolved_st_q lifted, ivl resolved_st_q lifted, unit) dg_spec_ext
   val aggregate_verdicts : contextual_verdict set -> contextual_verdict
+  val compile_program : unit imp_prog_ext -> unit cfg_ext
   val analyse_int_report_join :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val classify_checks_ctx :
@@ -8221,6 +8222,9 @@ let rec sup_contextual_verdict
     | Decided a, Decided b -> Decided (sup_check_result a b);;
 
 let rec aggregate_verdicts (Set vs) = fold sup_contextual_verdict vs Dead;;
+
+let rec compile_program
+  p = compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p);;
 
 let rec analyse_int_ctx_result_for
   mode gs mnm p =

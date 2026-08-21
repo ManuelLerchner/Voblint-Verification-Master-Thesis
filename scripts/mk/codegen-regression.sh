@@ -12,10 +12,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 cd "$REPO_ROOT/codegen/regression/ocaml"
-cp ../../generated/ml/Voblint_Analyse_OCaml.ml ./Voblint_Analyse_OCaml.ml
+cp ../../generated/ml/Voblint_CLI.ml ./Voblint_CLI.ml
 # -8/-11/-20: routine artifacts of Isabelle's OCaml serializer (partial
 # matches Isabelle's own type discipline already rules out, e.g. Set's
 # unreachable Coset case here; unused dictionary-passing arguments), not
 # signs of a real problem in the generated code.
-ocamlfind ocamlopt -w -8-11-20 -package str,zarith -linkpkg Voblint_Analyse_OCaml.ml main.ml -o regression-ml
+ocamlfind ocamlopt -w -8-11-20 -package str,zarith -linkpkg Voblint_CLI.ml main.ml -o regression-ml
 ./regression-ml
