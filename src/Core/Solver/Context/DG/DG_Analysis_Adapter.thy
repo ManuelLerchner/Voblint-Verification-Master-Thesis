@@ -144,6 +144,100 @@ proof -
   finally show ?thesis .
 qed
 
+subsection \<open>Activation-collect soundness against the routed local unknown\<close>
+
+text \<open>
+  The shared soundness step both report-soundness theorems below need: every
+  activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the
+  solved local unknown's own \<^const>\<open>gamma_state_lift\<close>, independent of
+  \<open>classify\<close>. Factored out once so both theorems cite it instead of
+  re-deriving the same six-obligation \<open>activation_collect_sound_gen\<close>
+  argument twice within this locale.
+\<close>
+
+lemma activation_collect_dg_sound:
+  fixes S0 :: "store set" and startcontext :: 'c
+  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
+  shows "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+           \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
+proof (rule activation_collect_sound_gen)
+  fix s0 assume s0mem: "s0 \<in> S0"
+  have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, startcontext)))"
+    by (rule locals_ge_s0d[OF entry_cov])
+  have le_global: "s0g \<le> globs (sigma (Inr gk0))"
+    by (rule pp_entry_s0g_bound[OF entry_cov])
+  have "gamma_dg_base s0d s0g
+        \<subseteq> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext)))) (globs (sigma (Inr gk0)))"
+    by (rule gamma_dg_base_mono[OF le_local le_global])
+  with s0mem s0_sound have "s0 \<in> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext))))
+                                   (globs (sigma (Inr gk0)))" by blast
+  thus "s0 \<in> gamma_state_lift (sg (Inl (cfg_entry g, startcontext)))"
+    using entry_cov by (simp add: sg_cov)
+next
+  fix u a v' c' s' s''
+  assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
+  thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
+next
+  fix u c' s'
+  show "\<exists>c''. admiss_exact enterc u c' s' c''" by (simp add: admiss_exact_def)
+next
+  fix u dst pars args p cont c' s' c''
+  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
+    and adm: "admiss_exact enterc u c' (call_enter gs (CallEdge dst pars args) s') c''"
+  show "call_enter gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
+    using adm routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
+next
+  fix cl dst pars args p cont c1 c2 s' t es
+  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and sm: "s' \<in> gamma_state_lift (sg (Inl (cl, c1)))"
+    and adm: "admiss_exact enterc cl c1 es c2"
+    and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, c2)))"
+    and ces: "call_enter_store gs g cl s' es"
+  show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
+    using adm tm routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
+qed
+
+text \<open>
+  The node-soundness bridge a concrete instance's own report-soundness proof
+  needs, phrased directly against \<^const>\<open>analyse_result\<close> rather than against
+  \<open>analyse_report_ctx\<close> (defined below): every activation-collected store at \<open>v\<close> is
+  concretized by \<^const>\<open>analyse_result\<close>'s own reading, \<^const>\<open>bot\<close> when
+  uncovered or witness-bottom, its \<^const>\<open>Reachable\<close> payload otherwise ---
+  composing \<open>activation_collect_dg_sound\<close> with \<open>gammaM_sg_eq_lookup_context\<close>,
+  case-split on coverage. A concrete instance whose own public result reads
+  through this same \<open>analyse_result\<close> (up to a proved value equality) gets its
+  own node-soundness bridge from this lemma directly, instead of re-deriving
+  it from \<open>routed_context_hetero\<close>'s primitives by hand.
+\<close>
+
+lemma analyse_result_node_sound:
+  fixes S0 :: "store set" and startcontext :: 'c
+  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+    and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
+  shows "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+           \<subseteq> gamma_state (case lookup_context analyse_result v ctx of
+                             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+proof -
+  have "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+          \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
+    by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
+  also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
+  proof (cases "(v, ctx) \<in> vars")
+    case True
+    show ?thesis
+      unfolding gamma_point_def by (rule gammaM_sg_eq_lookup_context[OF True])
+  next
+    case False
+    hence "gamma_state_lift (sg (Inl (v, ctx))) = {}" by (simp add: sg_uncov)
+    moreover from False have "lookup_context analyse_result v ctx = Unreachable"
+      unfolding lookup_context_analyse_result by simp
+    ultimately show ?thesis by simp
+  qed
+  finally show ?thesis by simp
+qed
+
 subsection \<open>The context-indexed and source-level check reports\<close>
 
 definition analyse_report_ctx :: "(pp \<times> exp \<times> contextual_verdict) list" where
@@ -177,66 +271,17 @@ theorem analyse_report_ctx_proved_sound:
 proof -
   fix ctx s
   assume smem: "s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx"
-  have collect_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
-        \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
-  proof (rule activation_collect_sound_gen)
-    fix s0 assume s0mem: "s0 \<in> S0"
-    have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, startcontext)))"
-      by (rule locals_ge_s0d[OF entry_cov])
-    have le_global: "s0g \<le> globs (sigma (Inr gk0))"
-      by (rule pp_entry_s0g_bound[OF entry_cov])
-    have "gamma_dg_base s0d s0g
-          \<subseteq> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext)))) (globs (sigma (Inr gk0)))"
-      by (rule gamma_dg_base_mono[OF le_local le_global])
-    with s0mem s0_sound have "s0 \<in> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext))))
-                                     (globs (sigma (Inr gk0)))" by blast
-    thus "s0 \<in> gamma_state_lift (sg (Inl (cfg_entry g, startcontext)))"
-      using entry_cov by (simp add: sg_cov)
-  next
-    fix u a v' c' s' s''
-    assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
-    thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
-  next
-    fix u c' s'
-    show "\<exists>c''. admiss_exact enterc u c' s' c''" by (simp add: admiss_exact_def)
-  next
-    fix u dst pars args p cont c' s' c''
-    assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-      and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
-      and adm: "admiss_exact enterc u c' (call_enter gs (CallEdge dst pars args) s') c''"
-    show "call_enter gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
-      using adm routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
-  next
-    fix cl dst pars args p cont c1 c2 s' t es
-    assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-      and sm: "s' \<in> gamma_state_lift (sg (Inl (cl, c1)))"
-      and adm: "admiss_exact enterc cl c1 es c2"
-      and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, c2)))"
-      and ces: "call_enter_store gs g cl s' es"
-    show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
-      using adm tm routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
-  qed
-  from smem collect_sound have smem': "s \<in> gamma_state_lift (sg (Inl (v, ctx)))" by blast
-  show "truthy (aval c s)"
-  proof (cases "(v, ctx) \<in> vars")
-    case False
-    hence "gamma_state_lift (sg (Inl (v, ctx))) = {}" by (simp add: sg_uncov)
-    with smem' show ?thesis by simp
-  next
-    case True
-    have eq: "gamma_state_lift (sg (Inl (v, ctx))) =
-                (case lookup_context analyse_result v ctx of
-                   Unreachable \<Rightarrow> {} | Reachable st \<Rightarrow> gamma_state st)"
-      by (rule gammaM_sg_eq_lookup_context[OF True])
-    obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
-      and sst: "s \<in> gamma_state st"
-      using smem' eq by (cases "lookup_context analyse_result v ctx") auto
-    have mem_unfold: "(v, c, Decided Check_Proved) \<in> set (classify_checks_verdicts g analyse_result classify)"
-      using mem unfolding analyse_report_ctx_def .
-    have "classify c st = Check_Proved"
-      using classify_checks_ctx_proved_sound[OF finE mem_unfold reach] .
-    thus ?thesis using classify_proved[OF _ sst] by blast
-  qed
+  have node_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+      \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+    by (rule analyse_result_node_sound[OF entry_cov s0_sound])
+  obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
+    and sst: "s \<in> gamma_state st"
+    using smem node_sound by (cases "lookup_context analyse_result v ctx") (auto simp: gamma_state_bot)
+  have mem_unfold: "(v, c, Decided Check_Proved) \<in> set (classify_checks_verdicts g analyse_result classify)"
+    using mem unfolding analyse_report_ctx_def .
+  have "classify c st = Check_Proved"
+    using classify_checks_ctx_proved_sound[OF finE mem_unfold reach] .
+  thus "truthy (aval c s)" using classify_proved[OF _ sst] by blast
 qed
 
 theorem analyse_report_ctx_refuted_sound:
@@ -249,66 +294,17 @@ theorem analyse_report_ctx_refuted_sound:
 proof -
   fix ctx s
   assume smem: "s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx"
-  have collect_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
-        \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
-  proof (rule activation_collect_sound_gen)
-    fix s0 assume s0mem: "s0 \<in> S0"
-    have le_local: "s0d \<le> locals (sigma (Inl (cfg_entry g, startcontext)))"
-      by (rule locals_ge_s0d[OF entry_cov])
-    have le_global: "s0g \<le> globs (sigma (Inr gk0))"
-      by (rule pp_entry_s0g_bound[OF entry_cov])
-    have "gamma_dg_base s0d s0g
-          \<subseteq> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext)))) (globs (sigma (Inr gk0)))"
-      by (rule gamma_dg_base_mono[OF le_local le_global])
-    with s0mem s0_sound have "s0 \<in> gamma_dg_base (locals (sigma (Inl (cfg_entry g, startcontext))))
-                                     (globs (sigma (Inr gk0)))" by blast
-    thus "s0 \<in> gamma_state_lift (sg (Inl (cfg_entry g, startcontext)))"
-      using entry_cov by (simp add: sg_cov)
-  next
-    fix u a v' c' s' s''
-    assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
-    thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
-  next
-    fix u c' s'
-    show "\<exists>c''. admiss_exact enterc u c' s' c''" by (simp add: admiss_exact_def)
-  next
-    fix u dst pars args p cont c' s' c''
-    assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-      and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
-      and adm: "admiss_exact enterc u c' (call_enter gs (CallEdge dst pars args) s') c''"
-    show "call_enter gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
-      using adm routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
-  next
-    fix cl dst pars args p cont c1 c2 s' t es
-    assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-      and sm: "s' \<in> gamma_state_lift (sg (Inl (cl, c1)))"
-      and adm: "admiss_exact enterc cl c1 es c2"
-      and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, c2)))"
-      and ces: "call_enter_store gs g cl s' es"
-    show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
-      using adm tm routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
-  qed
-  from smem collect_sound have smem': "s \<in> gamma_state_lift (sg (Inl (v, ctx)))" by blast
-  show "\<not> truthy (aval c s)"
-  proof (cases "(v, ctx) \<in> vars")
-    case False
-    hence "gamma_state_lift (sg (Inl (v, ctx))) = {}" by (simp add: sg_uncov)
-    with smem' show ?thesis by simp
-  next
-    case True
-    have eq: "gamma_state_lift (sg (Inl (v, ctx))) =
-                (case lookup_context analyse_result v ctx of
-                   Unreachable \<Rightarrow> {} | Reachable st \<Rightarrow> gamma_state st)"
-      by (rule gammaM_sg_eq_lookup_context[OF True])
-    obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
-      and sst: "s \<in> gamma_state st"
-      using smem' eq by (cases "lookup_context analyse_result v ctx") auto
-    have mem_unfold: "(v, c, Decided Check_Refuted) \<in> set (classify_checks_verdicts g analyse_result classify)"
-      using mem unfolding analyse_report_ctx_def .
-    have "classify c st = Check_Refuted"
-      using classify_checks_ctx_refuted_sound[OF finE mem_unfold reach] .
-    thus ?thesis using classify_refuted[OF _ sst] by blast
-  qed
+  have node_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+      \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+    by (rule analyse_result_node_sound[OF entry_cov s0_sound])
+  obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
+    and sst: "s \<in> gamma_state st"
+    using smem node_sound by (cases "lookup_context analyse_result v ctx") (auto simp: gamma_state_bot)
+  have mem_unfold: "(v, c, Decided Check_Refuted) \<in> set (classify_checks_verdicts g analyse_result classify)"
+    using mem unfolding analyse_report_ctx_def .
+  have "classify c st = Check_Refuted"
+    using classify_checks_ctx_refuted_sound[OF finE mem_unfold reach] .
+  thus "\<not> truthy (aval c s)" using classify_refuted[OF _ sst] by blast
 qed
 
 end

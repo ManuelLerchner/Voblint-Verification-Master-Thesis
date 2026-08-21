@@ -29,10 +29,13 @@ text \<open>
   now \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>):
   the  routed-unit producer's own solved table, at \<open>prog_main_name\<close>.
   \<open>analyse_sign_result_node_sound_for\<close> below is the node-soundness bridge for
-  that table, built from \<open>sctx_activation_collect_sound\<close> (the routed
-  spine's own activation-indexed collecting soundness) composed with
-  \<open>activation_collect_unit_eq_ltr_collect\<close> (the unit-context collapse
-  to \<^const>\<open>ltr_collect\<close>) rather than from \<open>p_reg\<close>/\<open>analyse_sign_for\<close> --- the
+  that table, built from \<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>'s generic
+  \<open>analyse_result_node_sound\<close> (\<open>Sign_Checks.sctx_result_node_sound\<close>), composed
+  with \<open>activation_collect_unit_eq_ltr_collect\<close> (the unit-context collapse to
+  \<^const>\<open>ltr_collect\<close>) and \<open>Sign_Checks.sctx_analyse_result_eq\<close> (identifying the
+  adapter's own result reading with \<^const>\<open>analyse_sign_ctx_result_for\<close>'s
+  \<open>normalize_point\<close>/\<open>canonicalize_lift\<close> construction) rather than re-deriving
+  \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument by hand --- the
   routed spine needs no \<open>wf_compile_input\<close>/finiteness/node-membership premise,
   so this bridge only takes the four coverage-and-termination facts the
   routed solve genuinely turns on.
@@ -84,54 +87,108 @@ proof -
       \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
       \<Longrightarrow> (k, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
     using comb_fwd_ok unfolding sol_eq[symmetric] cfg_eq[symmetric] .
-  have sg_eq0: "sctx_sg pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-      = sctx_sg_exec pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
-    by (rule sctx_sg_def[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok'])
-  have act_sound: "activation_collect pgs (admiss_exact enterc_unit) ()
-        (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()
-      \<subseteq> gamma_state_lift
-          (sctx_sg_exec pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p) (Inl (v, ())))"
-    using sctx_activation_collect_sound[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
-    unfolding sg_eq0 .
   have ltr_eq: "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs) v
       = activation_collect pgs (admiss_exact enterc_unit) ()
           (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()"
     unfolding cfg_eq by (rule activation_collect_unit_eq_ltr_collect[symmetric])
-  have bot_sound2: "\<And>s::sign resolved_st_q. resolved_st_q_is_bot_for (declared_global_vars p) s
-      \<Longrightarrow> is_bot_state (fun_of_resolved_st_q_for pgs s)"
-    using exact unfolding is_bot_pred_def by blast
-  have final: "gamma_state_lift
-        (sctx_sg_exec pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p) (Inl (v, ())))
-      \<subseteq> gamma_point (lookup_context (analyse_sign_result_for pgs p) v ())"
-  proof (cases "(v, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)")
-    case True
-    let ?q = "locals (snd (sctx_sol_prog pgs prog_main_name p) (Inl (v, ())))"
-    have lookup_eq: "lookup_context (analyse_sign_result_for pgs p) v ()
-        = normalize_point pgs (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p)) ?q)"
-      unfolding analyse_sign_result_for_def analyse_sign_ctx_result_for_def lookup_context_def
-      using True by simp
-    have sg_exec_eq: "sctx_sg_exec pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p) (Inl (v, ()))
-        = map_lift (fun_of_resolved_st_q_for pgs) ?q"
-      unfolding sctx_sg_exec_def sctx_sigma_abs_exec_def sol_eq[symmetric]
-      using True by simp
-    have gpeq: "gamma_point (normalize_point pgs (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p)) ?q))
-        = gamma_state_lift (map_lift (fun_of_resolved_st_q_for pgs) ?q)"
-      by (rule gamma_point_normalize_point_canonicalize_lift[OF bot_sound2])
-    show ?thesis
-      unfolding sg_exec_eq lookup_eq gpeq by (rule order_refl)
-  next
-    case False
-    have uncovered: "(v, ())
-        \<notin> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
-      using False unfolding sol_eq[symmetric] .
-    have lhs_empty: "gamma_state_lift
-          (sctx_sg_exec pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p) (Inl (v, ())))
-        = {}"
-      unfolding sctx_sg_exec_def using uncovered by simp
-    show ?thesis unfolding lhs_empty by simp
+  have s0_sound: "cinit_stores pgs \<subseteq> gamma_dg_base
+        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_sign_st))
+        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::sign exec_dg_st lifted))"
+    using sctx_cinit_le_cinit_sign_st[OF solves' exact entry_cov' fwd_ok' call_fwd_ok' comb_fwd_ok']
+    by (simp add: gamma_dg_base_def)
+  have node_sound: "activation_collect pgs (admiss_exact enterc_unit) ()
+        (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)) (cinit_stores pgs) v ()
+      \<subseteq> \<lbrakk>case lookup_context
+              (dg_analysis_adapter.analyse_result
+                 (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+                 (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))))
+              v () of
+            Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+  proof (rule sctx_result_node_sound)
+    show "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      by (rule solves')
+    show "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for pgs s)"
+      by (rule exact)
+    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
+        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule entry_cov')
+    show "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule fwd_ok')
+    show "\<And>u ctx dst pars args pa cont.
+        (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (FunctionEntry pa, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule call_fwd_ok')
+    show "\<And>cl c1 dst pars args pa cont.
+        (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule comb_fwd_ok')
+    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
+        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule entry_cov')
+    show "cinit_stores pgs \<subseteq> gamma_dg_base
+        (map_lift (fun_of_resolved_st_q_for pgs) (Lifted cinit_sign_st))
+        (map_lift (fun_of_resolved_st_q_for pgs) (Bot::sign exec_dg_st lifted))"
+      by (rule s0_sound)
   qed
+  have result_eq: "lookup_context (analyse_sign_result_for pgs p) v ()
+      = (if (v, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)
+         then normalize_point pgs
+                (canonicalize_lift is_bot_pred (locals (snd (sctx_sol_prog pgs prog_main_name p) (Inl (v, ())))))
+         else Unreachable)"
+    unfolding analyse_sign_result_for_def analyse_sign_ctx_result_for_def lookup_context_def is_bot_pred_def
+    by simp
+  have adapter_eq0: "lookup_context
+          (dg_analysis_adapter.analyse_result
+             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+             (fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))))
+          v ()
+      = (if (v, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+         then normalize_point pgs
+                (canonicalize_lift is_bot_pred
+                  (locals (snd (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+                    (Inl (v, ())))))
+         else Unreachable)"
+  proof (rule sctx_analyse_result_eq)
+    show "sctx_terminates pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+      by (rule solves')
+    show "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for pgs s)"
+      by (rule exact)
+    show "(cfg_entry (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)), ())
+        \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule entry_cov')
+    show "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (u, a, v) \<in> intra (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule fwd_ok')
+    show "\<And>u ctx dst pars args pa cont.
+        (u, ctx) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (FunctionEntry pa, ()) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule call_fwd_ok')
+    show "\<And>cl c1 dst pars args pa cont.
+        (cl, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry pa, cont) \<in> calls (compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+        \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))"
+      by (rule comb_fwd_ok')
+  qed
+  have adapter_eq: "(if (v, ()) \<in> fst (sctx_sol_prog pgs prog_main_name p)
+         then normalize_point pgs
+                (canonicalize_lift is_bot_pred (locals (snd (sctx_sol_prog pgs prog_main_name p) (Inl (v, ())))))
+         else Unreachable)
+      = lookup_context
+          (dg_analysis_adapter.analyse_result
+             (sctx_sigma_abs pgs is_bot_pred (prog_table p) (prog_procs p) prog_main_name (prog_main p))
+             (fst (sctx_sol_prog pgs prog_main_name p)))
+          v ()"
+    using adapter_eq0[unfolded sol_eq[symmetric]]
+    by (rule sym)
   show ?thesis
-    unfolding ltr_eq gamma_state_of_reachable_env using act_sound final by (rule subset_trans)
+    unfolding ltr_eq result_eq adapter_eq
+    using node_sound[unfolded sol_eq[symmetric]] by simp
 qed
 
 theorem analyse_sign_report_sound_proved_for:

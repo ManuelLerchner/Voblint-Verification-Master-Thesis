@@ -677,6 +677,26 @@ lemmas ictx_analyse_report_def = ictx_adapter.analyse_report_def
 lemmas ictx_analyse_report_ctx_proved_sound = ictx_adapter.analyse_report_ctx_proved_sound
 lemmas ictx_analyse_report_ctx_refuted_sound = ictx_adapter.analyse_report_ctx_refuted_sound
 
+text \<open>
+  \<open>ictx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
+  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>). \<open>ictx_analyse_result_eq\<close> identifies that
+  reading with the raw-tuple shape \<open>analyse_int_ctx_result_for\<close> (defined below)
+  already builds by hand, mirroring \<open>Interval_Ctx_None_Routed_Sound.ictx_analyse_result_eq\<close>.
+\<close>
+
+lemmas ictx_result_node_sound = ictx_adapter.analyse_result_node_sound
+
+lemma ictx_analyse_result_eq:
+  "lookup_context ictx_adapter.analyse_result v ctx =
+     (if (v, ctx) \<in> fst (ictx_sol mode is_bot_pred gs Pi ps mnm main)
+      then normalize_point gs
+             (canonicalize_lift is_bot_pred (locals (snd (ictx_sol mode is_bot_pred gs Pi ps mnm main) (Inl (v, ctx)))))
+      else Unreachable)"
+  unfolding ictx_adapter.lookup_context_analyse_result
+  apply (simp only: ictx_sigma_abs_def ictx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
+  by (cases "locals (snd (ictx_sol mode is_bot_pred gs Pi ps mnm main) (Inl (v, ctx)))")
+     (simp_all add: exact normalize_lift_def)
+
 end
 
 section \<open>PerOrigin solver instantiation, at the same routed unit-context spec\<close>
@@ -1436,90 +1456,12 @@ next
   thus ?case using es_eq by simp
 qed
 
-lemma ictx_sg_seed_warrow:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
-    and "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (u, ctx)))"
-  shows "call_enter gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionEntry p, ())))"
-  using ictx_routed_warrow.routed_context_call[OF assms] by simp
-
-lemma ictx_sg_comb_warrow:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps mnm main)"
-    and "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (cl, c1)))"
-    and "t \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionResult p, ())))"
-    and "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
-  shows "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg_warrow (Inl (v, c1)))"
-  using ictx_routed_warrow.routed_context_comb[OF assms(1,2) _ assms(4)] assms(3) by simp
-
 subsection \<open>Activation-indexed collecting soundness\<close>
 
 lemma ictx_cinit_le_cinit_int_dom_st_warrow:
   "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def fun_of_st_cinit_int_dom_st_for
                  gamma_int_dom_top)
-
-lemma ictx_locals_ge_s0d_warrow:
-  "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)
-     \<le> locals (ictx_sigma_abs_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
-proof -
-  have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)
-      \<le> locals (eq ictx_dg_warrow.Gen (cfg_entry (compile_prog Pi ps mnm main), ()) ictx_sigma_abs_warrow)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
-       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (ictx_sigma_abs_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
-    using ictx_dg_warrow.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
-
-theorem ictx_activation_collect_sound_warrow:
-  "activation_collect gs (admiss_exact enterc_unit) () (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
-     \<subseteq> gamma_state_lift (ictx_sg_warrow (Inl (v, ctx)))"
-proof (rule activation_collect_sound_gen[where sg = ictx_sg_warrow and gammaM = gamma_state_lift
-        and admiss = "admiss_exact enterc_unit"
-        and startcontext = "()" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
-  \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores gs"
-  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))"
-    using ictx_cinit_le_cinit_int_dom_st_warrow by blast
-  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
-            (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))"
-    by (simp add: gamma_dg_base_def)
-  also have "\<dots> \<subseteq> gamma_dg_base (locals (ictx_sigma_abs_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ()))))
-                   (globs (ictx_sigma_abs_warrow (Inr Global)))"
-    by (rule gamma_dg_base_mono[OF ictx_locals_ge_s0d_warrow ictx_dg_warrow.pp_entry_s0g_bound[OF entry_cov]])
-  also have "\<dots> = gamma_state_lift (ictx_sg_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
-    unfolding ictx_sg_covered_warrow[OF entry_cov] gamma_dg_base_def by (rule refl)
-  finally show "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))" .
-next
-  \<comment> \<open>EDGE\<close>
-  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-        \<Longrightarrow> s \<in> gamma_state_lift (ictx_sg_warrow (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> gamma_state_lift (ictx_sg_warrow (Inl (v, c)))"
-    by (rule ictx_dg_warrow.dg_ctx_act_edge)
-next
-  \<comment> \<open>ADMISS_TOTAL\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact enterc_unit u c s c'"
-    by (simp add: admiss_exact_def)
-next
-  \<comment> \<open>CALL\<close>
-  fix u dst pars args p cont c s c'
-  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
-    and sm: "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (u, c)))"
-    and adm: "admiss_exact enterc_unit u c (call_enter gs (CallEdge dst pars args) s) c'"
-  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionEntry p, c')))"
-    using adm ictx_sg_seed_warrow[OF ce sm] by (simp add: admiss_exact_def)
-next
-  \<comment> \<open>COMB\<close>
-  fix cl dst pars args p cont c1 c2 s t es
-  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
-    and sm: "s \<in> gamma_state_lift (ictx_sg_warrow (Inl (cl, c1)))"
-    and adm: "admiss_exact enterc_unit cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (ictx_sg_warrow (Inl (FunctionResult p, c2)))"
-    and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
-  show "combine_collect gs dst s t \<in> gamma_state_lift (ictx_sg_warrow (Inl (cont, c1)))"
-    using adm tm ictx_sg_comb_warrow[OF ce sm _ ces] by (simp add: admiss_exact_def)
-qed
 
 subsection \<open>The public result/report table, via the generic adapter locale\<close>
 
@@ -1570,6 +1512,26 @@ lemmas ictx_analyse_report_ctx_warrow_def = ictx_adapter_warrow.analyse_report_c
 lemmas ictx_analyse_report_warrow_def = ictx_adapter_warrow.analyse_report_def
 lemmas ictx_analyse_report_ctx_proved_sound_warrow = ictx_adapter_warrow.analyse_report_ctx_proved_sound
 lemmas ictx_analyse_report_ctx_refuted_sound_warrow = ictx_adapter_warrow.analyse_report_ctx_refuted_sound
+
+text \<open>
+  \<open>ictx_result_node_sound_warrow\<close> re-exports the adapter's generic node-soundness bridge
+  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>). \<open>ictx_analyse_result_eq_warrow\<close> identifies that
+  reading with the raw-tuple shape \<open>analyse_int_ctx_result_warrow_for\<close> (defined below)
+  already builds by hand, mirroring \<open>Interval_Ctx_None_Routed_Sound.ictx_analyse_result_eq_warrow\<close>.
+\<close>
+
+lemmas ictx_result_node_sound_warrow = ictx_adapter_warrow.analyse_result_node_sound
+
+lemma ictx_analyse_result_eq_warrow:
+  "lookup_context ictx_adapter_warrow.analyse_result v ctx =
+     (if (v, ctx) \<in> fst (ictx_sol_warrow mode is_bot_pred gs Pi ps mnm main)
+      then normalize_point gs
+             (canonicalize_lift is_bot_pred (locals (snd (ictx_sol_warrow mode is_bot_pred gs Pi ps mnm main) (Inl (v, ctx)))))
+      else Unreachable)"
+  unfolding ictx_adapter_warrow.lookup_context_analyse_result
+  apply (simp only: ictx_sigma_abs_warrow_def ictx_sigma_abs_exec_warrow_def o_apply fun_of_dg_st_gen_simps(1))
+  by (cases "locals (snd (ictx_sol_warrow mode is_bot_pred gs Pi ps mnm main) (Inl (v, ctx)))")
+     (simp_all add: exact normalize_lift_def)
 
 end
 

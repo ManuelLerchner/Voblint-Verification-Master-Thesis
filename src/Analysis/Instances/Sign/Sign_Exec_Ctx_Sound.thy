@@ -455,89 +455,11 @@ next
   thus ?case using es_eq by simp
 qed
 
-lemma sctx_sg_seed:
-  assumes "(u, CallEdge dst xs es, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
-    and "s \<in> gamma_state_lift (sctx_sg (Inl (u, ctx)))"
-  shows "call_enter gs (CallEdge dst xs es) s
-           \<in> gamma_state_lift (sctx_sg (Inl (FunctionEntry p, ())))"
-  using sctx_routed.routed_context_call[OF assms] by simp
-
-lemma sctx_sg_comb:
-  assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls (compile_prog Pi ps mnm main)"
-    and "s \<in> gamma_state_lift (sctx_sg (Inl (cl, c1)))"
-    and "t \<in> gamma_state_lift (sctx_sg (Inl (FunctionResult p, ())))"
-    and "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
-  shows "combine_collect gs dst s t \<in> gamma_state_lift (sctx_sg (Inl (v, c1)))"
-  using sctx_routed.routed_context_comb[OF assms(1,2) _ assms(4)] assms(3) by simp
-
 subsection \<open>Activation-indexed collecting soundness\<close>
 
 lemma sctx_cinit_le_cinit_sign_st:
   "cinit_stores gs \<subseteq> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))"
   by (auto simp: cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def fun_of_st_cinit_sign_st_for)
-
-lemma sctx_locals_ge_s0d:
-  "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)
-     \<le> locals (sctx_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
-proof -
-  have "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)
-      \<le> locals (eq sctx_dg.Gen (cfg_entry (compile_prog Pi ps mnm main), ()) sctx_sigma_abs)"
-    by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
-       (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
-  also have "\<dots> \<le> locals (sctx_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
-    using sctx_dg.pp_eq_bound[OF entry_cov] by (simp add: less_eq_dg_state_def)
-  finally show ?thesis .
-qed
-
-theorem sctx_activation_collect_sound:
-  "activation_collect gs (admiss_exact enterc_unit) () (compile_prog Pi ps mnm main) (cinit_stores gs) v ctx
-     \<subseteq> gamma_state_lift (sctx_sg (Inl (v, ctx)))"
-proof (rule activation_collect_sound_gen[where sg = sctx_sg and gammaM = gamma_state_lift
-        and admiss = "admiss_exact enterc_unit"
-        and startcontext = "()" and S = "cinit_stores gs" and g = "compile_prog Pi ps mnm main" and gs = gs])
-  \<comment> \<open>ENTRY_G\<close>
-  fix s assume "s \<in> cinit_stores gs"
-  hence "s \<in> gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))"
-    using sctx_cinit_le_cinit_sign_st by blast
-  also have "gamma_state_lift (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
-        = gamma_dg_base (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
-            (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))"
-    by (simp add: gamma_dg_base_def)
-  also have "\<dots> \<subseteq> gamma_dg_base (locals (sctx_sigma_abs (Inl (cfg_entry (compile_prog Pi ps mnm main), ()))))
-                   (globs (sctx_sigma_abs (Inr Global)))"
-    by (rule gamma_dg_base_mono[OF sctx_locals_ge_s0d sctx_dg.pp_entry_s0g_bound[OF entry_cov]])
-  also have "\<dots> = gamma_state_lift (sctx_sg (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))"
-    unfolding sctx_sg_covered[OF entry_cov] gamma_dg_base_def by (rule refl)
-  finally show "s \<in> gamma_state_lift (sctx_sg (Inl (cfg_entry (compile_prog Pi ps mnm main), ())))" .
-next
-  \<comment> \<open>EDGE\<close>
-  show "\<And>u a v c s s'. (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-        \<Longrightarrow> s \<in> gamma_state_lift (sctx_sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
-        \<Longrightarrow> s' \<in> gamma_state_lift (sctx_sg (Inl (v, c)))"
-    by (rule sctx_dg.dg_ctx_act_edge)
-next
-  \<comment> \<open>ADMISS_TOTAL\<close>
-  show "\<And>u c s. \<exists>c'. admiss_exact enterc_unit u c s c'"
-    by (simp add: admiss_exact_def)
-next
-  \<comment> \<open>CALL\<close>
-  fix u dst pars args p cont c s c'
-  assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
-    and sm: "s \<in> gamma_state_lift (sctx_sg (Inl (u, c)))"
-    and adm: "admiss_exact enterc_unit u c (call_enter gs (CallEdge dst pars args) s) c'"
-  show "call_enter gs (CallEdge dst pars args) s \<in> gamma_state_lift (sctx_sg (Inl (FunctionEntry p, c')))"
-    using adm sctx_sg_seed[OF ce sm] by (simp add: admiss_exact_def)
-next
-  \<comment> \<open>COMB\<close>
-  fix cl dst pars args p cont c1 c2 s t es
-  assume ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
-    and sm: "s \<in> gamma_state_lift (sctx_sg (Inl (cl, c1)))"
-    and adm: "admiss_exact enterc_unit cl c1 es c2"
-    and tm: "t \<in> gamma_state_lift (sctx_sg (Inl (FunctionResult p, c2)))"
-    and ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
-  show "combine_collect gs dst s t \<in> gamma_state_lift (sctx_sg (Inl (cont, c1)))"
-    using adm tm sctx_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
-qed
 
 end
 

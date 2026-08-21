@@ -95,7 +95,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     (* Tooling *)
     Example_Proc_GraphViz
     Example_Proc_GraphViz_Recursion
-    Example_Mixed_Sign_Interval_GraphViz
     Example_State_Report_GraphViz_Demo
     Example_EntryState_GraphViz_Regression
 

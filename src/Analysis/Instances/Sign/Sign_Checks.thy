@@ -170,6 +170,34 @@ text \<open>
 lemmas sctx_report_ctx_proved_sound = sctx_adapter.analyse_report_ctx_proved_sound
 lemmas sctx_report_ctx_refuted_sound = sctx_adapter.analyse_report_ctx_refuted_sound
 
+text \<open>
+  \<open>sctx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
+  (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
+  \<open>sctx_analyse_result_eq\<close> identifies that reading with the raw-tuple shape
+  \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Exec_Ctx_Sound\<close>) already builds by hand from
+  \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
+  \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected local unknown, one via
+  \<open>is_bot_state\<close> after projecting (the adapter), the other via \<open>is_bot_pred\<close> before
+  projecting (\<open>analyse_sign_ctx_result_for\<close>) --- \<open>exact\<close> is exactly what identifies the
+  two orders. A caller composing \<open>sctx_result_node_sound\<close> with \<open>sctx_analyse_result_eq\<close>
+  gets \<^const>\<open>analyse_sign_ctx_result_for\<close>'s own node-soundness bridge without
+  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument by hand.
+\<close>
+
+lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound
+
+lemma sctx_analyse_result_eq:
+  "lookup_context sctx_adapter.analyse_result v ctx =
+     (if (v, ctx) \<in> fst (sctx_sol gs is_bot_pred Pi ps mnm main)
+      then normalize_point gs
+             (canonicalize_lift is_bot_pred (locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+      else Unreachable)"
+  unfolding sctx_adapter.lookup_context_analyse_result
+  apply (simp only: sctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+                     sctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
+  by (cases "locals (snd (sctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+     (simp_all add: exact normalize_lift_def)
+
 end
 
 subsection \<open>Executable classification tests\<close>
