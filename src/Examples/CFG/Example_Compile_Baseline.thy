@@ -183,43 +183,4 @@ lemma p15_unwind_body_rejected:
   "~ wf_compile_input is_global \<Pi> ps mnm Unwind"
   by (simp add: wf_compile_input_def wf_source_program_def)
 
-subsection \<open>Recorded baseline\<close>
-
-text \<open>Rows are \<open>(nodes, dead, intra, nops, calls)\<close>.  These are the numbers the
-  continuation-passing compiler must be compared against; the \<open>dead\<close> column is the one the
-  redesign is meant to drive to zero.\<close>
-
-value "map cfg_report
-  [prog_cfg p01_skip, prog_cfg p02_assign, prog_cfg p03_return,
-   prog_cfg p04_return_then_dead, prog_cfg p05_if_both_return,
-   prog_cfg p06_if_one_returns, prog_cfg p07_while_body_returns,
-   prog_cfg p08_nested_if]"
-
-value "map cfg_report
-  [prog_cfg p09_one_call, factorial_cfg, prog_cfg p11_nested_calls,
-   prog_cfg p12_two_call_sites, prog_cfg p13_after_guaranteed_return,
-   prog_cfg p14_main_only]"
-
-subsection \<open>Dead nodes, per program\<close>
-
-value "map dead_list
-  [prog_cfg p01_skip, prog_cfg p02_assign, prog_cfg p03_return,
-   prog_cfg p04_return_then_dead, prog_cfg p05_if_both_return,
-   prog_cfg p06_if_one_returns, prog_cfg p07_while_body_returns,
-   prog_cfg p08_nested_if]"
-
-value "map dead_list
-  [prog_cfg p09_one_call, factorial_cfg, prog_cfg p11_nested_calls,
-   prog_cfg p12_two_call_sites, prog_cfg p13_after_guaranteed_return,
-   prog_cfg p14_main_only]"
-
-
-subsection \<open>Factorial detail\<close>
-
-value "all_nodes_list factorial_cfg"
-
-value "dead_list factorial_cfg"
-
-value "nop_edge_list factorial_cfg"
-
 end

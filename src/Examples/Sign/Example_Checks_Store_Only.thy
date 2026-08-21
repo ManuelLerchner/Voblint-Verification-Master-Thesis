@@ -425,9 +425,5 @@ definition checks_ex_dot_lit :: String.literal where
        (STR ''main'') (prog_main checks_ex_program) checks_ex_node_annotation
        (sign_check_report checks_ex_gs (STR ''main'') checks_ex_program)"
 
-ML_val \<open>
-  writeln (@{code checks_ex_dot_lit})
-\<close>
-
 end
 

@@ -178,23 +178,5 @@ lemma dispatch_demo_check_cond_rendered:
   "string_of_exp 0 (Less (N 0) (V (STR ''y''))) = ''0<y''"
   by eval
 
-subsection \<open>The state-carrying report surface\<close>
-
-text \<open>
-  \<open>state_wiring_ex_prog\<close> is the program
-  \<^theory>\<open>Voblint_Examples.Example_State_Report_GraphViz_Demo\<close> renders: a single
-  exact assignment with no widening or narrowing in play, so the state reported
-  at the check is independently known.
-\<close>
-
-definition state_wiring_ex_prog :: imp_prog where
-  "state_wiring_ex_prog =
-     program {
-       void main() {
-         x := 5;
-         __voblint_check(0 < x)
-       }
-     }"
-
 end
 

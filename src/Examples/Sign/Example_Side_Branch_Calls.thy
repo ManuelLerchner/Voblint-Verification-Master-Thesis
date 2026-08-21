@@ -35,7 +35,6 @@ text \<open>
   \<open>branch_prog_glocal_not_global\<close> below).
 \<close>
 
-definition branch_prog_mnm :: pname where "branch_prog_mnm = (STR ''main'')"
 
 definition branch_prog :: imp_prog where
   "branch_prog = program {
@@ -90,9 +89,6 @@ text \<open>
 definition branch_prog_env :: "vname \<Rightarrow> sign" where
   "branch_prog_env = case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
 
-value "branch_prog_env (STR ''result_val'')"
-value "branch_prog_env (STR ''out_val'')"
-
 lemma ec_result_nonnneg:
   "branch_prog_env (STR ''result_val'') = SNonNeg"
   by (simp add: branch_prog_env_def) eval
@@ -133,8 +129,6 @@ text \<open>
   C-faithful initialisation seed (\<open>SZero\<close> for globals).
 \<close>
 
-value "branch_prog_env (STR ''input_val'')"
-
 text \<open>
   \<open>input_val\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
   writes are joined: \<open>SZero \<squnion> SPos \<squnion> SNeg = SZero \<squnion> STop = STop\<close>.
@@ -145,8 +139,6 @@ lemma ec_ginput_top:
   "branch_prog_env (STR ''input_val'') = STop"
   by (simp add: branch_prog_env_def) eval
 
-value "branch_prog_env (STR ''out_val'')"
-
 text \<open>
   \<open>out_val\<close> is computed as \<open>100 * result_val\<close>.  With \<open>result_val = SNonNeg\<close>
   (see @{thm ec_result_nonnneg}), the product \<open>SPos * SNonNeg = SNonNeg\<close>
@@ -156,8 +148,6 @@ text \<open>
 lemma ec_gout_nonnneg:
   "branch_prog_env (STR ''out_val'') = SNonNeg"
   by (simp add: branch_prog_env_def) eval
-
-value "branch_prog_env (STR ''r'')"
 
 lemma ec_r_pos:
   "branch_prog_env (STR ''r'') = SPos"
@@ -194,17 +184,6 @@ text \<open>
   else-branch @{text "Glocal = 1 + 2 = 3"}; both are @{term SPos}.  In
   @{text "main"}, @{text "r"} counts procedure calls
   (@{text "r := 0"} then two @{text "r := r + 1"}); at exit @{thm ec_r_pos}.
-\<close>
-
-subsection \<open>Annotated CFG visualisation\<close>
-
-text \<open>
-  The branching multi-call program rendered with sign annotations at every
-  program point via @{const sign_annotated_dot_prog_lit}.
-\<close>
-
-ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code branch_prog}) @{code branch_prog_mnm} @{code branch_prog})
 \<close>
 
 end

@@ -409,8 +409,4 @@ definition parity_ex_dot_lit :: String.literal where
        (STR ''main'') (prog_main parity_ex_program) parity_ex_node_annotation
        (parity_check_report parity_ex_gs (STR ''main'') parity_ex_program)"
 
-ML_val \<open>
-  writeln (@{code parity_ex_dot_lit})
-\<close>
-
 end

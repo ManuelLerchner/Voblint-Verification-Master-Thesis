@@ -264,7 +264,6 @@ lemma twice_ctx_graph_combine_edges:
 lemma twice_ctx_dot_has_context_clusters:
   "String.explode twice_ctx_dot \<noteq> []" by eval
 
-ML_val \<open>writeln (@{code twice_ctx_dot})\<close>
 
 end
 

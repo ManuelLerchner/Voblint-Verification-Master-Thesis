@@ -131,20 +131,6 @@ definition twice_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "twice_sol = TD_side_warrowing_apinis_Interp_solve twice_eqs (cfg_exit twice_cfg, ())"
 
-text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<open>p in [3,10]\<close> at the shared
-  callee entry, \<open>#ret in [6,20]\<close> at the callee exit, and \<open>x = y in [6,20]\<close> at the
-  return sites.\<close>
-
-value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''p'')),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''#ret'')),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''x'')),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''y''))))
-            ([FunctionEntry (STR ''twice''), FunctionResult (STR ''twice''),
-              FunctionEntry (STR ''main''), FunctionResult (STR ''main'')]
-             @ map Statement [0,2,3,4]))
-   (TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()))"
-
 subsection \<open>Certified solution (reusing solver correctness)\<close>
 
 lemma twice_solve_dom:
@@ -371,8 +357,6 @@ definition twice_dot :: String.literal where
           None \<Rightarrow> ''solver did not terminate''
         | Some sol \<Rightarrow> contextual_analysis_dot twice_graph_config twice_cfg
             twice_graph_domain (snd sol))"
-
-ML_val \<open>writeln (@{code twice_dot})\<close>
 
 
 

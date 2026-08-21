@@ -41,8 +41,6 @@ text \<open>Reuses @{const inc_program} (\<open>Example_Inc_Proc\<close>) direct
 abbreviation inc_gs :: "vname \<Rightarrow> bool" where
   "inc_gs \<equiv> declared_global inc_program"
 
-value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog inc_gs (STR ''main'') inc_program) (STR ''counter'')"
-
 lemma inc_counter_nonneg:
   "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog inc_gs (STR ''main'') inc_program) (STR ''counter'') = SNonNeg"
   by eval
@@ -54,20 +52,6 @@ corollary inc_certified_sound:
   "ltr_collect inc_gs (prog_cfg (STR ''main'') inc_program) (cinit_stores inc_gs) (cfg_exit (prog_cfg (STR ''main'') inc_program))
    \<le> gamma_state_lift (sign_exec_prog inc_gs (STR ''main'') inc_program)"
   by (rule sign_exec_prog_sound_collecting[OF refl inc_terminates])
-
-subsection \<open>Annotated CFG visualisation\<close>
-
-text \<open>
-  @{const sign_annotated_dot_prog_lit} on the same witness: CFG nodes labelled
-  with sign abstract states from @{const sign_exec_raw} (exit @{thm [source] inc_counter_nonneg}).
-\<close>
-
-
-definition inc_prog_mnm :: pname where "inc_prog_mnm = (STR ''main'')"
-
-ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code inc_program}) @{code inc_prog_mnm} @{code inc_program})
-\<close>
 
 end
 

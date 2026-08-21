@@ -26,16 +26,8 @@ lemma x1_prog_declared_global_vars [simp]:
   "declared_global_vars x1_prog = []"
   by (simp add: x1_prog_def)
 
-text \<open>
-  Querying the computed abstract state at the exit (these @{command value} calls
-  evaluate at build time): \<open>x\<close> is \<open>SPos\<close>, an untouched \<open>y\<close> stays \<open>STop\<close>.
-\<close>
-
-value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''x'')"
-value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''y'')"
-
-text \<open>The solver computes \<open>x \<mapsto> SPos\<close> at the exit, captured as a theorem
-  by code reflection.\<close>
+text \<open>The solver computes the abstract state at the exit, captured as theorems
+  by code reflection: \<open>x\<close> is \<open>SPos\<close>, an untouched \<open>y\<close> stays \<open>STop\<close>.\<close>
 
 lemma x1_computes_x_pos:
   "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog x1_gs (STR ''main'') x1_prog) (STR ''x'') = SPos"
@@ -117,19 +109,6 @@ next
   show "x1_s0((STR ''x'') := 1) \<in> gamma_state_lift (sign_exec_prog x1_gs (STR ''main'') x1_prog)"
     using x1_certified_sound collect by blast
 qed
-
-subsection \<open>Annotated CFG visualisation\<close>
-
-text \<open>
-  One-command DOT export via @{const sign_annotated_dot_prog_lit}: the CFG
-  with per-program-point sign abstract states on each node label.
-\<close>
-
-definition x1_mnm :: pname where "x1_mnm = (STR ''main'')"
-
-ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code x1_prog}) @{code x1_mnm} @{code x1_prog})
-\<close>
 
 end
 

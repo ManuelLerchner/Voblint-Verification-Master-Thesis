@@ -25,9 +25,6 @@ definition sign_placement_cfg :: cfg where
     compile_prog (prog_table sign_placement_prog) (prog_procs sign_placement_prog)
       prog_main_name (prog_main sign_placement_prog)"
 
-value "intra sign_placement_cfg"
-value "calls sign_placement_cfg"
-
 text \<open>
   The placement policy is the simplest non-classic instance possible: every
   location, local or global, is kept in the flow-sensitive local answer;

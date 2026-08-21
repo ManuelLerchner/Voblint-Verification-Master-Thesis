@@ -2,6 +2,7 @@ theory Exec_Ivl_Run
   imports Voblint_Analysis.Ivl_Exec Voblint_Analysis.Interval_Exec_Sound
             Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
+            Example_Interval_Loop_Coverage
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -9,9 +10,11 @@ hide_const phase.N
 section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
 
 text \<open>
-  Same program as @{text "Example_Interval_Loop_Coverage"} in session
-  \<^session>\<open>Voblint_Formalization\<close>:
-  @{text "x := 0; while (x < 20) { x := x + 1 }"}.
+  The executable counterpart of
+  \<^theory>\<open>Voblint_Examples.Example_Interval_Loop_Coverage\<close>, whose
+  \<^const>\<open>loop_prog\<close> (@{text "x := 0; while (x < 20) { x := x + 1 }"}) and
+  compiled \<open>loop_cfg\<close> this theory imports rather than restates: there it is
+  carried to trace-native soundness, here through three fixpoint engines.
 
   The executable transfer \<open>ivl_tf_st_for\<close> applies the same forward-gated
   branch transfer as @{const branch_ivl} (via \<open>branch_ivl_st_for\<close> /
@@ -25,13 +28,13 @@ text \<open>
   The example uses the trace-native post-fixpoint soundness theorem.
 \<close>
 
-definition loop_prog :: imp_prog where
-  "loop_prog = program {
-     void main() { x := 0; while (x < 20) { x := x + 1 } }
-   }"
+text \<open>\<^const>\<open>loop_prog\<close> and its compiled \<open>loop_cfg\<close> come from
+  \<^theory>\<open>Voblint_Examples.Example_Interval_Loop_Coverage\<close>, which also carries the
+  edge-set literal (\<open>loop_cfg_full\<close>) and the trace-native soundness this theory's
+  computed bounds are the executable counterpart of. No \<open>global\<close> declarations,
+  so the classifier this program's own source gives is trivially false
+  everywhere.\<close>
 
-text \<open>No \<open>global\<close> declarations, so the classifier this program's own source
-  gives is trivially false everywhere.\<close>
 abbreviation loop_gs :: "vname \<Rightarrow> bool" where
   "loop_gs \<equiv> declared_global loop_prog"
 
@@ -39,28 +42,10 @@ lemma loop_prog_declared_global_vars [simp]:
   "declared_global_vars loop_prog = []"
   by (simp add: loop_prog_def)
 
-definition loop_cfg :: cfg where
-  "loop_cfg =
-     \<lparr> intra =
-         {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-          (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
-          (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
-          (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
-          (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
-          (Statement 3, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
-       calls = {},
-       cfg_entry = FunctionEntry (STR ''main''),
-       checks = {} \<rparr>"
-
-lemma loop_cfg_compiles:
-  "loop_cfg = compile_prog (prog_table loop_prog) (prog_procs loop_prog) prog_main_name (prog_main loop_prog)"
-  by eval
-
-lemma loop_cfg_entry [simp]: "cfg_entry loop_cfg = FunctionEntry (STR ''main'')"
-  by (simp add: loop_cfg_def)
+declare loop_cfg_entry [simp]
 
 lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
-  by (simp add: loop_cfg_def cfg_exit_def)
+  by (simp add: loop_cfg_full cfg_exit_def)
 
 definition loop_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "loop_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars loop_prog)"
@@ -94,10 +79,6 @@ definition loop_ivl_at :: "pp \<Rightarrow> ivl" where
 
 text \<open>Loop head (node 1): @{text "[0,20]"}.  Body entry (node 2): @{text "[0,19]"} from
   @{const EA_Assume} backward refinement on @{text "x < 20"}.\<close>
-value "string_of_ivl (loop_ivl_at (Statement 1))"
-value "string_of_ivl (loop_ivl_at (Statement 2))"
-value "string_of_ivl (loop_ivl_at (Statement 3))"
-
 lemma loop_head_ivl:
   "loop_ivl_at (Statement 1) = Ivl (Fin 0) (Fin 20)"
   by eval
@@ -115,9 +96,6 @@ definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
 
 text \<open>Widening TD (Apinis warrowing): same intervals as bounded Kleene --- backward
   filters carry the precision; widening is solver infrastructure only on this program.\<close>
-value "string_of_ivl (loop_ivl_td_at (Statement 1))"
-value "string_of_ivl (loop_ivl_td_at (Statement 2))"
-
 lemma loop_head_ivl_td:
   "loop_ivl_td_at (Statement 1) = Ivl (Fin 0) (Fin 20)"
   by eval
@@ -134,8 +112,6 @@ text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open
   filter on \<open>x < 20\<close> recovers the bound whether the global rule widens (\<open>warrow\<close>) or not
   (\<open>join\<close>, \<open>per_origin\<close>).  Contrast a flow-insensitive \<^emph>\<open>global\<close> counter, where the same
   machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
-value "run_menu loop_gs loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) (STR ''x'')"
-
 lemma loop_head_across_update_rules:
   "run_menu loop_gs loop_ivl_eqs (cfg_exit loop_cfg) (Inl (Statement 1)) (STR ''x'')
      = [(STR ''join'',       Ivl (Fin 0) (Fin 20)),

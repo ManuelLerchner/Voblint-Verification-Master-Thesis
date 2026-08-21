@@ -760,7 +760,6 @@ lemma nest_1_graph_domain_is_covered:
 
 lemma nest_1_dot_nonempty: "String.explode nest_1_dot \<noteq> []" by eval
 
-ML_val \<open>writeln (@{code nest_1_dot})\<close>
 
 end
 

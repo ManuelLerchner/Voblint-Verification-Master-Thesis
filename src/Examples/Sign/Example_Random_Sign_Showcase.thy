@@ -114,16 +114,6 @@ text \<open>
   proof unfolds to establish soundness.
 \<close>
 
-value "sign_exec_eqs (resolved_st_q_is_bot_for (declared_global_vars random_guard_program))
-         random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
-         (STR ''main'') (prog_main random_guard_program)"
-
-value "sign_exec_raw (resolved_st_q_is_bot_for (declared_global_vars random_guard_program))
-         random_guard_gs (prog_table random_guard_program) (prog_procs random_guard_program)
-         (STR ''main'') (prog_main random_guard_program)"
-
-value "sign_exec_prog random_guard_gs (STR ''main'') random_guard_program"
-
 lemma random_guard_exec_y:
   "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog random_guard_gs (STR ''main'') random_guard_program) (STR ''y'')
      = SNonNeg"
@@ -166,20 +156,5 @@ proof -
     using gamma_stateD[OF t_in] by simp
   then show ?thesis using random_guard_exec_y by simp
 qed
-
-subsection \<open>Annotated CFG\<close>
-
-text \<open>
-  \<^const>\<open>sign_annotated_dot_prog_lit\<close> renders the compiled CFG with every node
-  labelled by its computed sign abstract state, confirming visually that
-  \<open>x\<close> shows \<open>STop\<close> right after the nondeterministic call, narrows to \<open>SPos\<close>/\<open>SNonPos\<close> on
-  each branch, and that \<open>y\<close> is \<open>SNonNeg\<close> at the exit.
-\<close>
-
-definition random_guard_mnm :: pname where "random_guard_mnm = (STR ''main'')"
-
-ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code random_guard_program}) @{code random_guard_mnm} @{code random_guard_program})
-\<close>
 
 end

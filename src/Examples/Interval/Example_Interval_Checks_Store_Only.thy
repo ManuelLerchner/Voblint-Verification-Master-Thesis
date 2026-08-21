@@ -365,26 +365,4 @@ definition checks_ivl_ex_dot_lit :: String.literal where
        (STR ''main'') (prog_main checks_ivl_ex_program) checks_ivl_ex_node_annotation
        (interval_check_report checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program)"
 
-ML_val \<open>
-  writeln (@{code checks_ivl_ex_dot_lit})
-\<close>
-
-subsection \<open>Fully annotated CFG: computed Interval value at every node\<close>
-
-text \<open>
-  \<^const>\<open>ivl_annotated_dot_prog_lit\<close> renders the same compiled CFG with every
-  node labelled by its own computed \<^const>\<open>ivl_exec_prog_at\<close> value --- the
-  full per-node abstract environment, not only the three check nodes above.
-  \<open>x\<close> shows \<^term>\<open>ivl_top\<close> before \<open>__voblint_nondet_int()\<close> runs, then \<open>[1,9]\<close> on the
-  guarded branch and its unconstrained complement on the \<open>else\<close> branch,
-  visibly rejoining at \<open>Statement 6\<close>.
-\<close>
-
-definition checks_ivl_ex_mnm :: pname where
-  "checks_ivl_ex_mnm = (STR ''main'')"
-
-ML_val \<open>
-  writeln (@{code ivl_annotated_dot_prog_lit} (@{code declared_global} @{code checks_ivl_ex_program}) @{code checks_ivl_ex_mnm} @{code checks_ivl_ex_program})
-\<close>
-
 end

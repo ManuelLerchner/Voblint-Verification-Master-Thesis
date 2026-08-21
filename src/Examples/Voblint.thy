@@ -39,7 +39,6 @@ theory Voblint
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_Analysis.Sign_Named_Global_Eff"
-    Exec_Sign_Run
     Exec_Sign_DG_Run
     Example_Checks_Store_Only
     Example_Interval_Checks_Store_Only
@@ -63,7 +62,6 @@ theory Voblint
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Random_Sign_Showcase
-    Example_Proc_GraphViz
     Example_Relational_DG_Demo
     Example_Strategy_Tree_Demo
     "Voblint_CLI.Sign_Codegen"
@@ -368,7 +366,6 @@ text \<open>
       seeded solution is a \<^verbatim>\<open>part_post_solution\<close> of the plain 1-call-string equations and
       that it dominates the projected 2-call-string information on every local and
       global/seed key (\<^verbatim>\<open>nest_1_seeded_refinement\<close>).
-    \<^item> @{theory Voblint_Examples.Example_Proc_GraphViz} --- plain procedural CFG DOT export examples.
     \<^item> @{theory Voblint_Examples.Example_Relational_DG_Demo} --- an execution
       witness, not a soundness-certified result: a compiled full-program
       `if (x < y) { z := 1 } else { z := 0 }` runs through the *same*
@@ -379,8 +376,15 @@ text \<open>
       analysis-annotated, via GraphViz.
 
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
-    \<^item> @{theory Voblint_Examples.Exec_Sign_Run} --- code-generation probe on a hand-written Sign equation system.
     \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; the solver-compatible constant route and the conditional-route monotonicity boundary.
+    \<^item> \<^bold>\<open>DOT rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and \<^const>\<open>state_report_dot\<close>
+      (@{theory Voblint_CLI.State_Report_GraphViz}) have no Isabelle-side witness of
+      their own: rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
+      fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
+      \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node state labels, and
+      \<^verbatim>\<open>11-graph-snapshot\<close> for golden cluster/node/edge snapshots including a
+      recursive procedure. Those compare output; a build-time render only proves
+      it did not crash.
     \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples.Example_Strategy_Tree_Demo} ---
       \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
       independent of any abstract domain: a Fibonacci equation tree built with

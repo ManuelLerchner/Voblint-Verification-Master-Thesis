@@ -26,7 +26,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_VIMP_Proc_Regression
 
     (* Sign *)
-    Exec_Sign_Run
     Exec_Sign_DG_Run
     Example_Sign_Codegen_Exec_Consistency
     (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
@@ -94,10 +93,11 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Strategy_Tree_Demo
 
     (* Tooling *)
-    Example_Proc_GraphViz
-    Example_Proc_GraphViz_Recursion
-    Example_State_Report_GraphViz_Demo
     Example_EntryState_GraphViz_Regression
+    (* Generator-layer Side buffering: the buffered RHS generator terminates
+       where issuing two Side writes per evaluation livelocks the solver. *)
+    Example_Solver_Update_Rule_Regression
+    Example_Keyed_Solver_Update_Rule_Regression
 
     Voblint
   document_files
