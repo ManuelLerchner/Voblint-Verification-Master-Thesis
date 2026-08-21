@@ -185,6 +185,26 @@ closed, and the batch log is green.
 - For existential executions, introduce the witness before applying `Assign` or
   `Seq`.
 
+### Codegen module cycles
+
+- Splitting `export_code` targets by session/theory boundary can produce an
+  OCaml module dependency cycle (`Exec_St`'s executable state is generically
+  instantiated at the solver's own `widening`/`narrowing` type classes, and
+  the CFG-specific solver instantiation needs `cfg_node` back -- a real,
+  mutual code-level dependency, not an arbitrary grouping choice) or, even
+  when `export_code` itself is clean, a rejection from `ocamlfind ocamlopt`
+  over an unbound type-class dictionary record field once `code_identifier`
+  introduces module boundaries the unsplit default did not have.
+- The project's fix is `code_identifier`/`code_module` remapping, already
+  used at scale in `Analyse_Dispatch.thy` (see the `code_module ... =>
+  (OCaml) Core` block and its preceding comment for the full case history).
+  Extend that existing two-way `Core`/`Analyse` split when a new dependency
+  edge reproduces the cycle; do not invent a separate remapping scheme.
+- Diagnose with the actual `export_code`/`codegen-check` output, not by
+  guessing from theory imports: a clean `export_code` does not guarantee a
+  clean `ocamlfind` link, and the two failure modes need different fixes
+  (regrouping the cycle vs. accepting the two-way split as final).
+
 ### CFG shapes
 
 - Local edges are triples `(source, action, target)`. Calls are quadruples
