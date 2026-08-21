@@ -412,6 +412,12 @@ definition combine_env_abs ::
 where
   "combine_env_abs gs sc se = (\<lambda>x. if gs x then se x else sc x)"
 
+lemma combine_env_abs_mono:
+  fixes sc1 sc2 se1 se2 :: "'a::order abs_state"
+  assumes "sc1 \<le> sc2" and "se1 \<le> se2"
+  shows "combine_env_abs gs sc1 se1 \<le> combine_env_abs gs sc2 se2"
+  using assms by (auto simp: combine_env_abs_def le_fun_def)
+
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
   a callee-exit store (sound for se) yields a store sound for \<open>combine_env_abs gs sc se\<close>.
@@ -645,8 +651,28 @@ text \<open>The fixed structural merge is the special case where \<open>tf_combi
   instantiation, rather than duplicating it.\<close>
 lemma tf_combine_collect_abs_combine_env_abs:
   assumes "tf_combine_env tf = combine_env_abs gs"
-  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine\<^sup># gs dst \<sigma>c \<sigma>e"
-  using assms unfolding tf_combine_collect_abs_def combine_collect_abs_def by simp
+  shows "tf_combine_collect_abs tf dst = combine\<^sup># gs dst"
+  unfolding tf_combine_collect_abs_def combine_collect_abs_def assms ..
+
+text \<open>Monotonicity of the analysis-supplied combine reduces to monotonicity of its
+  merge: the return-value write is \<^const>\<open>combine_assign_abs\<close>, monotone in both the
+  written value and the state it updates.\<close>
+lemma tf_combine_collect_abs_mono:
+  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
+  assumes merge: "\<And>a1 a2 b1 b2 :: 'a abs_state.
+      a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> tf_combine_env tf a1 b1 \<le> tf_combine_env tf a2 b2"
+    and c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
+  shows "tf_combine_collect_abs tf dst \<sigma>c1 \<sigma>e1 \<le> tf_combine_collect_abs tf dst \<sigma>c2 \<sigma>e2"
+proof (cases dst)
+  case None
+  then show ?thesis
+    using merge[OF c e] by (simp add: tf_combine_collect_abs_def)
+next
+  case (Some x)
+  then show ?thesis
+    using merge[OF c e] e
+    by (simp add: tf_combine_collect_abs_def le_fun_def)
+qed
 
 text \<open>
   Soundness of the abstract combine including result publication.  A pure
@@ -807,6 +833,32 @@ lemma tf_sound_combine_env_forD[intro]:
      combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
   using tf_sound_combine_env_for by blast
 
+text \<open>Soundness of the analysis-supplied whole combine.  The merge obligation is the
+  locale's own \<open>tf_sound_combine_env_for\<close>; the destination slot is sound because the
+  callee's @{const ret_var} slot is.  No extra assumption on the analysis is needed:
+  a sound \<open>combine_env\<^sup>#\<close> already makes \<^const>\<open>tf_combine_collect_abs\<close> sound.\<close>
+lemma tf_sound_combine_collect_forD[intro]:
+  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_collect gs dst s t \<in> \<lbrakk>tf_combine_collect_abs tf dst \<sigma>c \<sigma>e\<rbrakk>"
+proof -
+  have base: "combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+    by (rule tf_sound_combine_env_forD[OF sc se])
+  have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
+    using se unfolding gamma_state_def by auto
+  show ?thesis
+  proof (cases dst)
+    case None
+    then show ?thesis
+      using base by (simp add: combine_collect_def tf_combine_collect_abs_def)
+  next
+    case (Some x)
+    then show ?thesis
+      using base ret
+      unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
+      by auto
+  qed
+qed
+
 end
 
 lemma sound_transferI_for:
@@ -836,7 +888,8 @@ lemma sound_transferI_for:
     and event[intro]:
     "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
     and combine[intro]:
-    "tf_combine_env tf = combine_env_abs gs"
+    "\<And>\<sigma>c \<sigma>e s t. s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+       combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
@@ -864,8 +917,18 @@ proof unfold_locales
     using event by blast
   show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
       combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
-    unfolding combine using combine_env_sound by blast
+    using combine by blast
 qed
+
+text \<open>The structural merge discharges the combine obligation of
+  @{thm [source] sound_transferI_for} outright, so an analysis that keeps
+  \<^const>\<open>combine_env_abs\<close> proves nothing extra.\<close>
+lemma sound_transfer_combine_env_absI:
+  fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
+  assumes eq: "tf_combine_env tf = combine_env_abs gs"
+    and sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  unfolding eq by (rule combine_env_sound[OF sc se])
 
 
 subsection \<open>Effectful transfer function record\<close>

@@ -260,40 +260,29 @@ where
    }"
 
 (* Procedure-return combine: query the caller local cc, the callee-exit local
-   ex, and the global; reassemble locals-from-caller + globals-from-callee
-   (= combine_env_abs) and split into a local Answer and a global Side.  Either
-   reconstructed operand being Bot means no concrete predecessor reaches the
-   combine (an unreachable call site, or a callee exit reached only from dead
-   code), so the combine as a whole is dead too -- assemble_local_global's Bot
-   dominance on both operands, threaded through transfer_lift2, gives this for
-   free without a separate is_bot_state test. *)
+   ex, and the global; reassemble both operands and split the result of the
+   supplied combine operation cmb into a local Answer and a global Side.  cmb is
+   a parameter rather than the structural locals-from-caller/globals-from-callee
+   formula: an analysis provides its own sound over-approximation of the concrete
+   return combination, and one builder then serves both roles of Goblint's
+   combine interface -- the destination-free environment merge (combine_env\<^sup>#)
+   and the destination-aware whole combine (combine_env\<^sup># followed by
+   combine_assign\<^sup>#).  Either reconstructed operand being Bot means no concrete
+   predecessor reaches the combine (an unreachable call site, or a callee exit
+   reached only from dead code), so the combine as a whole is dead too --
+   assemble_local_global's Bot dominance on both operands, threaded through
+   transfer_lift2, gives this for free without a separate is_bot_state test. *)
 definition unit_combine_tree ::
-  "(vname => bool) => vname option => pp => pp
-   => (pp, unit, 'a::sound_domain abs_state lifted) strategy_tree"
+  "(vname => bool)
+   => ('a::sound_domain abs_state => 'a abs_state => 'a abs_state)
+   => pp => pp
+   => (pp, unit, 'a abs_state lifted) strategy_tree"
 where
-  "unit_combine_tree gs dst cc ex = do {
+  "unit_combine_tree gs cmb cc ex = do {
      sc <- read_local cc;
      se <- read_local ex;
      g <- read_global ();
-     let res = transfer_lift2 is_bot_state (combine\<^sup># gs dst)
-                 (assemble_local_global sc g) (assemble_local_global se g);
-     depend_on () (map_lift (restrict_global_for gs) res)
-       (answer (map_lift (restrict_local_for gs) res))
-   }"
-
-(* The destination-free environment merge alone -- Goblint's combine_env, not the
-   whole combine.  unit_combine_tree's own res is combine\<^sup># gs dst, which is
-   combine_assign\<^sup># dst applied to exactly this merge's result, so the two trees
-   share the same underlying formula rather than one calling the other. *)
-definition unit_combine_env_tree ::
-  "(vname => bool) => pp => pp
-   => (pp, unit, 'a::sound_domain abs_state lifted) strategy_tree"
-where
-  "unit_combine_env_tree gs cc ex = do {
-     sc <- read_local cc;
-     se <- read_local ex;
-     g <- read_global ();
-     let res = transfer_lift2 is_bot_state (combine_env_abs gs)
+     let res = transfer_lift2 is_bot_state cmb
                  (assemble_local_global sc g) (assemble_local_global se g);
      depend_on () (map_lift (restrict_global_for gs) res)
        (answer (map_lift (restrict_local_for gs) res))
@@ -410,13 +399,13 @@ qed
 
 (* res_combine mirrors res_edge for the two-input combine tree: Bot when either
    reconstructed operand is Bot or the combine itself lands on witness-bottom,
-   the fixed abstract combine otherwise -- via transfer_lift2 rather than a
+   the supplied combine's result otherwise -- via transfer_lift2 rather than a
    separate is_bot_state test, same as res_edge. *)
 definition res_combine ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> pp \<Rightarrow> pp
-   \<Rightarrow> (pp + unit \<Rightarrow> ('a::sound_domain) abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
-  "res_combine gs dst cc ex \<sigma> =
-     transfer_lift2 is_bot_state (combine\<^sup># gs dst)
+  "('a::sound_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> (pp + unit \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
+  "res_combine cmb cc ex \<sigma> =
+     transfer_lift2 is_bot_state cmb
        (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ())))
        (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
 
@@ -427,9 +416,9 @@ text \<open>
 lemma res_combine_mono:
   fixes \<sigma>1 \<sigma>2 :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted"
   assumes combine_mono: "\<And>t1 t2 u1 u2. t1 \<le> t2 \<Longrightarrow> u1 \<le> u2 \<Longrightarrow>
-             combine\<^sup># gs dst t1 u1 \<le> combine\<^sup># gs dst t2 u2"
+             cmb t1 u1 \<le> cmb t2 u2"
     and le: "\<sigma>1 \<le> \<sigma>2"
-  shows "res_combine gs dst cc ex \<sigma>1 \<le> res_combine gs dst cc ex \<sigma>2"
+  shows "res_combine cmb cc ex \<sigma>1 \<le> res_combine cmb cc ex \<sigma>2"
 proof -
   have cc_le: "assemble_local_global (\<sigma>1 (Inl cc)) (\<sigma>1 (Inr ()))
                  \<le> assemble_local_global (\<sigma>2 (Inl cc)) (\<sigma>2 (Inr ()))"
@@ -441,8 +430,7 @@ proof -
   proof (rule transfer_lift2_mono)
     fix t1 t2 u1 u2 :: "'a abs_state"
     assume "t1 \<le> t2" "u1 \<le> u2"
-    then show "combine\<^sup># gs dst t1 u1 \<le> combine\<^sup># gs dst t2 u2" using combine_mono
-      by (simp add: combine_collect_abs_mono)
+    then show "cmb t1 u1 \<le> cmb t2 u2" by (rule combine_mono)
   next
     fix a b :: "'a abs_state"
     assume "a \<le> b" "is_bot_state b"
@@ -456,27 +444,27 @@ proof -
   qed
 qed
 
-(* The unit-global combine tree returns the combined locals as its Answer; unlike
-   a plain combine_env these include the destination when the call assigns one. *)
+(* The unit-global combine tree returns the combined locals as its Answer; with a
+   destination-aware cmb these include the destination the call assigns to. *)
 lemma traverse_unit_combine_tree:
-  "traverse_rhs (unit_combine_tree gs dst cc ex) \<sigma>
-     = map_lift (restrict_local_for gs) (res_combine gs dst cc ex \<sigma>)"
+  "traverse_rhs (unit_combine_tree gs cmb cc ex) \<sigma>
+     = map_lift (restrict_local_for gs) (res_combine cmb cc ex \<sigma>)"
   unfolding unit_combine_tree_def res_combine_def
   by (simp add: Let_def)
 
 (* The unit-global combine tree contributes the combined globals to the global slot. *)
 lemma sides_unit_combine_tree_Inr:
-  "sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr ()) =
-   map_lift (restrict_global_for gs) (res_combine gs dst cc ex \<sigma>)"
+  "sides_of_rhs (unit_combine_tree gs cmb cc ex) \<sigma> (Inr ()) =
+   map_lift (restrict_global_for gs) (res_combine cmb cc ex \<sigma>)"
   unfolding unit_combine_tree_def res_combine_def
   by (simp add: Let_def)
 
-(* The unit-global combine tree reassembles to the fixed abstract combine. *)
+(* The unit-global combine tree reassembles to the supplied combine's result. *)
 lemma etf_full_unit_combine_tree:
-  "etf_full (unit_combine_tree gs dst cc ex) \<sigma> = res_combine gs dst cc ex \<sigma>"
+  "etf_full (unit_combine_tree gs cmb cc ex) \<sigma> = res_combine cmb cc ex \<sigma>"
   unfolding etf_full_def
   apply (simp add: all_sides_eq_sides_Inr_unit traverse_unit_combine_tree sides_unit_combine_tree_Inr)
-  apply (cases "res_combine gs dst cc ex \<sigma>")
+  apply (cases "res_combine cmb cc ex \<sigma>")
    apply simp
   apply (simp add: restrict_local_for_global_join)
   done
@@ -484,9 +472,9 @@ lemma etf_full_unit_combine_tree:
 (* Both traverse_rhs and its single Side are map_lift of the same res_combine,
    so they collapse together exactly as in the unit_edge_tree case. *)
 lemma reachability_coherent_unit_combine_tree:
-  "reachability_coherent_tree (unit_combine_tree gs dst cc ex) \<sigma>"
+  "reachability_coherent_tree (unit_combine_tree gs cmb cc ex) \<sigma>"
   unfolding reachability_coherent_tree_def
-  by (cases "res_combine gs dst cc ex \<sigma>")
+  by (cases "res_combine cmb cc ex \<sigma>")
      (simp_all add: traverse_unit_combine_tree all_sides_eq_sides_Inr_unit
        sides_unit_combine_tree_Inr)
 
@@ -494,27 +482,27 @@ text \<open>Side-free counterpart of \<^const>\<open>unit_combine_tree\<close>, 
   \<^const>\<open>unit_edge_contribution\<close> (\<open>issue #121\<close>).\<close>
 
 definition unit_combine_contribution ::
-  "(vname => bool) => vname option => pp => pp
-   => (pp, unit, 'a::sound_domain abs_state lifted) strategy_tree"
+  "('a::sound_domain abs_state => 'a abs_state => 'a abs_state) => pp => pp
+   => (pp, unit, 'a abs_state lifted) strategy_tree"
 where
-  "unit_combine_contribution gs dst cc ex = do {
+  "unit_combine_contribution cmb cc ex = do {
      sc <- read_local cc;
      se <- read_local ex;
      g <- read_global ();
-     answer (transfer_lift2 is_bot_state (combine\<^sup># gs dst)
+     answer (transfer_lift2 is_bot_state cmb
                (assemble_local_global sc g) (assemble_local_global se g))
    }"
 
 lemma traverse_unit_combine_contribution:
-  "traverse_rhs (unit_combine_contribution gs dst cc ex) \<sigma> = res_combine gs dst cc ex \<sigma>"
+  "traverse_rhs (unit_combine_contribution cmb cc ex) \<sigma> = res_combine cmb cc ex \<sigma>"
   unfolding unit_combine_contribution_def res_combine_def by simp
 
 lemma sides_of_rhs_unit_combine_contribution [simp]:
-  "sides_of_rhs (unit_combine_contribution gs dst cc ex) \<sigma> = \<bottom>"
+  "sides_of_rhs (unit_combine_contribution cmb cc ex) \<sigma> = \<bottom>"
   unfolding unit_combine_contribution_def by (simp add: bot_fun_def)
 
 lemma dep_aux_unit_combine_contribution_eq_unit_combine_tree:
-  "dep_aux \<sigma> (unit_combine_contribution gs dst cc ex) = dep_aux \<sigma> (unit_combine_tree gs dst cc ex)"
+  "dep_aux \<sigma> (unit_combine_contribution cmb cc ex) = dep_aux \<sigma> (unit_combine_tree gs cmb cc ex)"
   unfolding unit_combine_contribution_def unit_combine_tree_def by (simp add: Let_def)
 
 
@@ -789,7 +777,7 @@ lemma sides_inr_local_bot_local_edge_tree:
   unfolding local_edge_tree_def by (simp add: seqcomp_tree.simps split: lifted.splits)
 
 lemma sides_inr_local_bot_unit_combine_tree:
-  "local_bot_on_locals_lift gs (sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inr g))"
+  "local_bot_on_locals_lift gs (sides_of_rhs (unit_combine_tree gs cmb cc ex) \<sigma> (Inr g))"
 proof (cases "g = ()")
   case True
   show ?thesis unfolding True sides_unit_combine_tree_Inr
@@ -1135,8 +1123,8 @@ where
     etf_return     = (\<lambda>e p u. unit_edge_tree gs (return\<^sup># tf e p) u),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_event      = (\<lambda>ev u. unit_edge_tree gs (event\<^sup># tf ev) u),
-    etf_combine_env     = unit_combine_env_tree gs,
-    etf_combine_collect = unit_combine_tree gs
+    etf_combine_env     = unit_combine_tree gs (combine_env\<^sup># tf),
+    etf_combine_collect = (\<lambda>dst. unit_combine_tree gs (tf_combine_collect_abs tf dst))
   \<rparr>"
 
 definition mixed_etf_edge_tree ::
@@ -1176,8 +1164,8 @@ where
     etf_return     = (\<lambda>e p. mixed_etf_edge_tree gs tf (EA_Ret e p)),
     etf_enter      = (\<lambda>xs es u. unit_edge_tree gs (enter\<^sup># tf xs es) u),
     etf_event      = (\<lambda>ev u. local_edge_tree gs (event\<^sup># tf ev) u),
-    etf_combine_env     = unit_combine_env_tree gs,
-    etf_combine_collect = unit_combine_tree gs
+    etf_combine_env     = unit_combine_tree gs (combine_env\<^sup># tf),
+    etf_combine_collect = (\<lambda>dst. unit_combine_tree gs (tf_combine_collect_abs tf dst))
   \<rparr>"
 
 lemma apply_etf_unit_of_transfer:
@@ -1186,11 +1174,13 @@ lemma apply_etf_unit_of_transfer:
   by (cases a) simp_all
 
 lemma etf_combine_env_unit_of_transfer:
-  "etf_combine_env (unit_etf_of_transfer gs tf) cc ex = unit_combine_env_tree gs cc ex"
+  "etf_combine_env (unit_etf_of_transfer gs tf) cc ex
+     = unit_combine_tree gs (combine_env\<^sup># tf) cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
 lemma etf_combine_collect_unit_of_transfer:
-  "etf_combine_collect (unit_etf_of_transfer gs tf) dst cc ex = unit_combine_tree gs dst cc ex"
+  "etf_combine_collect (unit_etf_of_transfer gs tf) dst cc ex
+     = unit_combine_tree gs (tf_combine_collect_abs tf dst) cc ex"
   unfolding unit_etf_of_transfer_def by simp
 
 text \<open>\<open>EA_Check\<close> routes through \<^const>\<open>local_edge_tree\<close> here, not
@@ -1218,11 +1208,13 @@ lemma apply_etf_mixed_of_transfer:
   by (cases a) simp_all
 
 lemma etf_combine_env_mixed_of_transfer:
-  "etf_combine_env (mixed_etf_of_transfer gs tf bl) cc ex = unit_combine_env_tree gs cc ex"
+  "etf_combine_env (mixed_etf_of_transfer gs tf bl) cc ex
+     = unit_combine_tree gs (combine_env\<^sup># tf) cc ex"
   unfolding mixed_etf_of_transfer_def by simp
 
 lemma etf_combine_collect_mixed_of_transfer:
-  "etf_combine_collect (mixed_etf_of_transfer gs tf bl) dst cc ex = unit_combine_tree gs dst cc ex"
+  "etf_combine_collect (mixed_etf_of_transfer gs tf bl) dst cc ex
+     = unit_combine_tree gs (tf_combine_collect_abs tf dst) cc ex"
   unfolding mixed_etf_of_transfer_def by simp
 
 lemma mixed_etf_edge_tree_local:
@@ -1439,80 +1431,28 @@ subsection \<open>Generic effectful soundness from domain transfer\<close>
 
 text \<open>
   Both @{const unit_etf_of_transfer} and @{const mixed_etf_of_transfer} route
-  \<open>etf_combine_env\<close>/\<open>etf_combine_collect\<close> through the same
-  @{const unit_combine_env_tree}/@{const unit_combine_tree} (calls never take
-  the local-restriction branch), so the combine obligation is proved once here,
-  independent of \<open>tf\<close>, and reused by both instance proofs below.
+  \<open>etf_combine_env\<close>/\<open>etf_combine_collect\<close> through @{const unit_combine_tree}
+  (calls never take the local-restriction branch), differing only in which
+  combine operation they hand it, so the combine obligation is proved once here
+  against an arbitrary sound operation and reused by both instance proofs below.
 \<close>
 
-(* res_combine_env mirrors res_combine for the destination-free environment
-   merge alone -- Goblint's combine_env, not the whole combine. *)
-definition res_combine_env ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> pp
-   \<Rightarrow> (pp + unit \<Rightarrow> ('a::sound_domain) abs_state lifted) \<Rightarrow> 'a abs_state lifted" where
-  "res_combine_env gs cc ex \<sigma> =
-     transfer_lift2 is_bot_state (combine_env_abs gs)
-       (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ())))
-       (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
-
-lemma traverse_unit_combine_env_tree:
-  "traverse_rhs (unit_combine_env_tree gs cc ex) \<sigma>
-     = map_lift (restrict_local_for gs) (res_combine_env gs cc ex \<sigma>)"
-  unfolding unit_combine_env_tree_def res_combine_env_def
-  by (simp add: Let_def)
-
-lemma sides_unit_combine_env_tree_Inr:
-  "sides_of_rhs (unit_combine_env_tree gs cc ex) \<sigma> (Inr ()) =
-   map_lift (restrict_global_for gs) (res_combine_env gs cc ex \<sigma>)"
-  unfolding unit_combine_env_tree_def res_combine_env_def
-  by (simp add: Let_def)
-
-lemma etf_full_unit_combine_env_tree:
-  "etf_full (unit_combine_env_tree gs cc ex) \<sigma> = res_combine_env gs cc ex \<sigma>"
-  unfolding etf_full_def
-  apply (simp add: all_sides_eq_sides_Inr_unit traverse_unit_combine_env_tree
-    sides_unit_combine_env_tree_Inr)
-  apply (cases "res_combine_env gs cc ex \<sigma>")
-   apply simp
-  apply (simp add: restrict_local_for_global_join)
-  done
-
+text \<open>
+  Tree-level soundness of an arbitrary combine operation: whenever \<open>cmb\<close>
+  over-approximates the concrete two-input operation \<open>r\<close>, the tree built from it
+  is sound at the reassembled inputs.  Both roles of Goblint's combine interface
+  instantiate this -- \<open>r\<close> is @{const combine_env} against \<open>combine_env\<^sup>#\<close>, or
+  @{const combine_collect} against @{const tf_combine_collect_abs} -- so neither
+  needs its own witness argument.
+\<close>
 lemma in_gamma_unit_combine_tree:
-  fixes dst :: "vname option" and cc ex :: pp
-    and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted" and s t :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
-  assumes s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ())))"
-  assumes t: "t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
-  shows "combine_collect gs dst s t \<in> gamma_state_lift (etf_full (unit_combine_tree gs dst cc ex) \<sigma>)"
-proof -
-  obtain sc where hc: "\<sigma> (Inl cc) = Lifted sc"
-    and hsc: "s \<in> \<lbrakk>sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
-    using local_input_witness[OF s] .
-  obtain se where he: "\<sigma> (Inl ex) = Lifted se"
-    and hse: "t \<in> \<lbrakk>se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
-    using local_input_witness[OF t] .
-  have not_bot: "\<not> is_bot_state (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
-                   \<and> \<not> is_bot_state (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))"
-    using is_bot_state_witnessI[OF hsc] is_bot_state_witnessI[OF hse] by simp
-  have eq: "etf_full (unit_combine_tree gs dst cc ex) \<sigma> =
-            Lifted (combine\<^sup># gs dst (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
-                                     (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
-    unfolding etf_full_unit_combine_tree res_combine_def hc he
-    using not_bot
-    by (smt (verit) assemble_local_global_Lifted combine_collect_sound hsc
-        hse is_bot_state_witnessI normalize_lift_not_bot
-        transfer_lift2_Lifted)
-  show ?thesis
-    using combine_collect_sound[OF hsc hse] unfolding eq by simp
-qed
-
-lemma in_gamma_unit_combine_env_tree:
   fixes cc ex :: pp
     and \<sigma> :: "pp + unit \<Rightarrow> 'a::sound_domain abs_state lifted" and s t :: store
-  assumes inr: "inr_slot_locals_bot gs \<sigma>"
+    and cmb :: "'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
+  assumes cmb_sound: "\<And>\<sigma>c \<sigma>e. s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow> r \<in> \<lbrakk>cmb \<sigma>c \<sigma>e\<rbrakk>"
   assumes s: "s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ())))"
   assumes t: "t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ())))"
-  shows "combine_env gs s t \<in> gamma_state_lift (etf_full (unit_combine_env_tree gs cc ex) \<sigma>)"
+  shows "r \<in> gamma_state_lift (etf_full (unit_combine_tree gs cmb cc ex) \<sigma>)"
 proof -
   obtain sc where hc: "\<sigma> (Inl cc) = Lifted sc"
     and hsc: "s \<in> \<lbrakk>sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
@@ -1520,20 +1460,21 @@ proof -
   obtain se where he: "\<sigma> (Inl ex) = Lifted se"
     and hse: "t \<in> \<lbrakk>se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)\<rbrakk>"
     using local_input_witness[OF t] .
-  have not_bot: "\<not> is_bot_state (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
-                   \<and> \<not> is_bot_state (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))"
-    using is_bot_state_witnessI[OF hsc] is_bot_state_witnessI[OF hse] by simp
-  have eq: "etf_full (unit_combine_env_tree gs cc ex) \<sigma> =
-            Lifted (combine_env_abs gs (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
-                                     (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
-    unfolding etf_full_unit_combine_env_tree res_combine_env_def hc he
-    using not_bot
-    by (smt (verit) assemble_local_global_Lifted combine_env_sound hsc
-        hse is_bot_state_witnessI normalize_lift_not_bot
-        transfer_lift2_Lifted)
-  show ?thesis
-    using combine_env_sound[OF hsc hse] unfolding eq by simp
+  have res: "r \<in> \<lbrakk>cmb (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
+                     (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))\<rbrakk>"
+    by (rule cmb_sound[OF hsc hse])
+  have not_bot: "\<not> is_bot_state (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))"
+    and not_bot_e: "\<not> is_bot_state (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))"
+    using is_bot_state_witnessI[OF hsc] is_bot_state_witnessI[OF hse] by simp_all
+  have eq: "etf_full (unit_combine_tree gs cmb cc ex) \<sigma> =
+            Lifted (cmb (sc \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg))
+                        (se \<squnion> (case \<sigma> (Inr ()) of Bot \<Rightarrow> bot | Lifted sg \<Rightarrow> sg)))"
+    unfolding etf_full_unit_combine_tree res_combine_def hc he
+    using not_bot not_bot_e is_bot_state_witnessI[OF res]
+    by (simp add: assemble_local_global_Lifted transfer_lift2_Lifted normalize_lift_not_bot)
+  show ?thesis using res unfolding eq by simp
 qed
+
 
 lemma sound_effectful_transfer_unit_of_transfer:
   fixes tf :: "'a::sound_domain domain_transfer"
@@ -1600,14 +1541,16 @@ proof -
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_env gs s t
                 \<in> gamma_state_lift (etf_full (etf_combine_env (unit_etf_of_transfer gs tf) cc ex) \<sigma>))"
-      by (auto simp add: etf_combine_env_unit_of_transfer intro: in_gamma_unit_combine_env_tree)
+      by (auto simp add: etf_combine_env_unit_of_transfer
+               intro: in_gamma_unit_combine_tree tf_sound_combine_env_forD)
   next
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_collect gs dst s t
                 \<in> gamma_state_lift (etf_full (etf_combine_collect (unit_etf_of_transfer gs tf) dst cc ex) \<sigma>))"
-      by (auto simp add: etf_combine_collect_unit_of_transfer intro: in_gamma_unit_combine_tree)
+      by (auto simp add: etf_combine_collect_unit_of_transfer
+               intro: in_gamma_unit_combine_tree tf_sound_combine_collect_forD)
   qed
 qed
 
@@ -1807,14 +1750,16 @@ proof -
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_env gs s t
                 \<in> gamma_state_lift (etf_full (etf_combine_env (mixed_etf_of_transfer gs tf bl) cc ex) \<sigma>))"
-      by (auto simp add: etf_combine_env_mixed_of_transfer intro: in_gamma_unit_combine_env_tree)
+      by (auto simp add: etf_combine_env_mixed_of_transfer
+               intro: in_gamma_unit_combine_tree tf_sound_combine_env_forD)
   next
     show "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
             (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (\<sigma> (Inr ()))).
             \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (\<sigma> (Inr ()))).
               combine_collect gs dst s t
                 \<in> gamma_state_lift (etf_full (etf_combine_collect (mixed_etf_of_transfer gs tf bl) dst cc ex) \<sigma>))"
-      by (auto simp add: etf_combine_collect_mixed_of_transfer intro: in_gamma_unit_combine_tree)
+      by (auto simp add: etf_combine_collect_mixed_of_transfer
+               intro: in_gamma_unit_combine_tree tf_sound_combine_collect_forD)
   qed
 qed
 

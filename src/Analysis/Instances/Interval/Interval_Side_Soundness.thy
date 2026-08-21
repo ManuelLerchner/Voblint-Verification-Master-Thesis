@@ -27,8 +27,9 @@ lemma ivl_tf_for_enter_mono:
   by (simp add: ivl_tf_for_def enter_ivl_for_mono)
 
 lemma ivl_etf_combine_tree:
-  "etf_combine_collect (ivl_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding ivl_etf_def etf_combine_collect_unit_of_transfer by simp
+  "etf_combine_collect (ivl_etf gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  unfolding ivl_etf_def etf_combine_collect_unit_of_transfer
+  by (simp add: tf_combine_collect_abs_combine_env_abs ivl_tf_for_def)
 
 lemma ivl_sound_etf:
   "sound_effectful_transfer gs (ivl_etf gs)"
@@ -40,7 +41,8 @@ lemma ivl_etf_cone_compatible: "cone_compatible_etf gs (ivl_etf gs)"
 
 lemma ivl_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff gs g (ivl_etf gs) bot0 s0 ())"
-  by (rule threefold_mono_unit_transfer[OF ivl_etf_edge_tree ivl_etf_enter_tree ivl_etf_combine_tree ivl_tf_for_mono ivl_tf_for_enter_mono])
+  by (rule threefold_mono_unit_transfer[OF ivl_etf_edge_tree ivl_etf_enter_tree ivl_etf_combine_tree
+        ivl_tf_for_mono ivl_tf_for_enter_mono combine_collect_abs_mono])
 
 section \<open>Interval domain: standalone effectful interprocedural soundness\<close>
 

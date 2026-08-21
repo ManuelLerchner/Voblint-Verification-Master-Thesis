@@ -852,7 +852,7 @@ lemma dep_aux_unit_edge_tree_st:
 
 
 lemma dep_aux_unit_combine_tree_st:
-  "dep_aux \<sigma>1 (unit_combine_tree_st is_bot_pred gs dst cc ex) = dep_aux \<sigma>2 (unit_combine_tree gs dst' cc ex)"
+  "dep_aux \<sigma>1 (unit_combine_tree_st is_bot_pred gs dst cc ex) = dep_aux \<sigma>2 (unit_combine_tree gs cmb cc ex)"
   unfolding unit_combine_tree_st_def unit_combine_tree_def Let_def by simp
 
 lemma traverse_unit_edge_contribution_st:
@@ -939,7 +939,7 @@ lemma sides_unit_edge_tree_Inl:
   unfolding unit_edge_tree_def Let_def by simp
 
 lemma sides_unit_combine_tree_Inl:
-  "sides_of_rhs (unit_combine_tree gs dst cc ex) \<sigma> (Inl u') = bot"
+  "sides_of_rhs (unit_combine_tree gs cmb cc ex) \<sigma> (Inl u') = bot"
   unfolding unit_combine_tree_def Let_def by simp
 
 lemma sides_unit_edge_tree_st_Inl:
@@ -977,7 +977,7 @@ lemma res_edge_st_fun_of_resolved_st_q_for:
 lemma res_combine_st_fun_of_resolved_st_q_for:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "map_lift (fun_of_resolved_st_q_for gs) (res_combine_st is_bot_pred gs dst cc ex \<sigma>_st) =
-   res_combine gs dst cc ex (map_lift (fun_of_resolved_st_q_for gs) \<circ> \<sigma>_st)"
+   res_combine (combine\<^sup># gs dst) cc ex (map_lift (fun_of_resolved_st_q_for gs) \<circ> \<sigma>_st)"
   unfolding res_combine_st_def res_combine_def o_def
   by (cases "\<sigma>_st (Inl cc)"; cases "\<sigma>_st (Inl ex)"; cases "\<sigma>_st (Inr ())";
       simp add: exact normalize_lift_def split: if_splits)
@@ -985,8 +985,18 @@ lemma res_combine_st_fun_of_resolved_st_q_for:
 
 
 
-locale sound_rhs_generator_exec = sound_rhs_generator_static +
-  fixes F :: "edge_action \<Rightarrow> 'a::sound_domain abs_state \<Rightarrow> 'a abs_state"
+text \<open>
+  The executable bridge is stated against the structural combine specifically:
+  \<^const>\<open>combine_collect_resolved_for_q\<close> is the resolved-store realization of
+  \<open>combine\<^sup>#\<close>, so an analysis that supplies a different \<open>combine_env\<^sup>#\<close> has no
+  executable counterpart here.  Hence \<open>comb\<close> below names \<open>combine\<^sup>#\<close> outright
+  rather than inheriting \<^locale>\<open>sound_rhs_generator_static\<close>'s free combine
+  parameter.
+\<close>
+locale sound_rhs_generator_exec =
+  fixes gs :: "vname \<Rightarrow> bool"
+    and etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
+    and F :: "edge_action \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and etf_st :: "(unit, 'a resolved_st_q lifted) effectful_st_transfer"
     and F_st :: "edge_action \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q"
     and is_bot_pred :: "'a resolved_st_q \<Rightarrow> bool"
@@ -994,6 +1004,9 @@ locale sound_rhs_generator_exec = sound_rhs_generator_static +
       "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
     and edge_st[simp]:
       "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st is_bot_pred (F_st a) u"
+    and comb[simp]:
+      "\<And>cc ex dst.
+         etf_combine_collect etf dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
     and comb_st[simp]:
       "\<And>cc ex dst.
          etf_combine_collect_st etf_st dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
@@ -2173,7 +2186,8 @@ lemma part_post_solution_st_to_abs_eff_unit_transfer:
   fixes bot0_st s0_st :: "'a resolved_st_q"
   fixes is_bot_pred :: "'a resolved_st_q \<Rightarrow> bool"
   assumes edge: "\<And>a u. apply_etf etf a u = unit_edge_tree gs (F a) u"
-  assumes comb: "\<And>cc ex dst. etf_combine_collect etf dst cc ex = unit_combine_tree gs dst cc ex"
+  assumes comb: "\<And>cc ex dst.
+    etf_combine_collect etf dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
   assumes edge_st: "\<And>a u. apply_etf_st etf_st a u = unit_edge_tree_st is_bot_pred (F_st a) u"
   assumes comb_st: "\<And>cc ex dst. etf_combine_collect_st etf_st dst cc ex = unit_combine_tree_st is_bot_pred gs dst cc ex"
   assumes commute: "\<And>a s. fun_of_resolved_st_q_for gs (F_st a s) = F a (fun_of_resolved_st_q_for gs s)"
@@ -2205,8 +2219,8 @@ proof -
     "\<And>cc ex dst \<sigma>_st. map_lift (fun_of_resolved_st_q_for gs) (traverse_rhs (etf_combine_collect_st etf_st dst cc ex) \<sigma>_st)
      = traverse_rhs (etf_combine_collect etf dst cc ex) (map_lift (fun_of_resolved_st_q_for gs) \<circ> \<sigma>_st)"
     unfolding comb_st comb traverse_unit_combine_tree_st traverse_unit_combine_tree
-    by (simp add: map_lift_fun_of_resolved_st_q_for_map_lift_restrict_local_resolved_q
-                  res_combine_st_fun_of_resolved_st_q_for[OF is_bot_pred_exact])
+    by (simp only: map_lift_fun_of_resolved_st_q_for_map_lift_restrict_local_resolved_q
+                   res_combine_st_fun_of_resolved_st_q_for[OF is_bot_pred_exact])
   have sd_edge:
     "\<And>a u \<sigma>_st gg. map_lift (fun_of_resolved_st_q_for gs) (sides_of_rhs (apply_etf_st etf_st a u) \<sigma>_st gg)
      = sides_of_rhs (apply_etf etf a u) (map_lift (fun_of_resolved_st_q_for gs) \<circ> \<sigma>_st) gg"

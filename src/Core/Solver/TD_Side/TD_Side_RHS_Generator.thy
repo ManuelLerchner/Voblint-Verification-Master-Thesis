@@ -16,10 +16,11 @@ subsection \<open>Shared combine-tree infrastructure\<close>
 locale sound_rhs_generator_base =
   fixes gs :: "vname \<Rightarrow> bool"
     and etf :: "(unit, 'a::sound_domain) effectful_domain_transfer"
+    and Fc :: "vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes comb[simp]:
     "\<And>cc ex dst.
        etf_combine_collect etf dst cc ex =
-       unit_combine_tree gs dst cc ex"
+       unit_combine_tree gs (Fc dst) cc ex"
 begin
 
 lemma dep_aux_comb_call:
@@ -137,6 +138,8 @@ locale mixed_rhs_generator_mono = mixed_rhs_generator +
       "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> F a s1 \<le> F a s2"
     and Fe_mono:
       "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2"
+    and Fc_mono:
+      "\<And>dst s1 s2 t1 t2. s1 \<le> s2 \<Longrightarrow> t1 \<le> t2 \<Longrightarrow> Fc dst s1 t1 \<le> Fc dst s2 t2"
 begin
 
 lemma is_mono_eq:
@@ -165,7 +168,7 @@ lemma is_mono_eq:
        (auto intro: map_lift_mono restrict_local_for_mono res_edge_mono[OF Fe_mono])
   subgoal for cc ex dst s1 s2
     by (simp add: comb traverse_unit_combine_tree)
-       (auto intro: map_lift_mono restrict_local_for_mono res_combine_mono[OF combine_collect_abs_mono])
+       (auto intro: map_lift_mono restrict_local_for_mono res_combine_mono[OF Fc_mono])
   done
 
 lemma mono_sides:
@@ -241,7 +244,7 @@ lemma mono_sides:
           by (cases y)
              (simp add: comb sides_unit_combine_tree_Inr,
               rule map_lift_mono[OF restrict_global_for_mono
-                res_combine_mono[OF combine_collect_abs_mono le]])
+                res_combine_mono[OF Fc_mono le]])
       qed
     qed
   qed
@@ -368,6 +371,8 @@ locale mixed_branch_rhs_generator_mono = mixed_branch_rhs_generator +
       "\<And>fs as s1 s2. s1 \<le> s2 \<Longrightarrow> Fe fs as s1 \<le> Fe fs as s2"
     and Fb_mono:
       "\<And>a s1 s2. s1 \<le> s2 \<Longrightarrow> Fb a s1 \<le> Fb a s2"
+    and Fc_mono:
+      "\<And>dst s1 s2 t1 t2. s1 \<le> s2 \<Longrightarrow> t1 \<le> t2 \<Longrightarrow> Fc dst s1 t1 \<le> Fc dst s2 t2"
 begin
 
 lemma is_mono_eq:
@@ -404,7 +409,7 @@ lemma is_mono_eq:
        (auto intro: map_lift_mono restrict_local_for_mono res_edge_mono[OF Fe_mono])
   subgoal for cc ex dst s1 s2
     by (simp add: comb traverse_unit_combine_tree)
-       (auto intro: map_lift_mono restrict_local_for_mono res_combine_mono[OF combine_collect_abs_mono])
+       (auto intro: map_lift_mono restrict_local_for_mono res_combine_mono[OF Fc_mono])
   done
 
 lemma mono_sides:
@@ -490,7 +495,7 @@ lemma mono_sides:
           by (cases y)
              (simp add: comb sides_unit_combine_tree_Inr,
               rule map_lift_mono[OF restrict_global_for_mono
-                res_combine_mono[OF combine_collect_abs_mono le]])
+                res_combine_mono[OF Fc_mono le]])
       qed
     qed
   qed

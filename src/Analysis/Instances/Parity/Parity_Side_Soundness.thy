@@ -27,8 +27,9 @@ lemma parity_tf_for_enter_mono:
   by (simp add: parity_tf_for_def enter_parity_for_mono)
 
 lemma parity_etf_combine_tree:
-  "etf_combine_collect (parity_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding parity_etf_def etf_combine_collect_unit_of_transfer by simp
+  "etf_combine_collect (parity_etf gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  unfolding parity_etf_def etf_combine_collect_unit_of_transfer
+  by (simp add: tf_combine_collect_abs_combine_env_abs parity_tf_for_def)
 
 lemma parity_sound_etf:
   "sound_effectful_transfer gs (parity_etf gs)"
@@ -43,7 +44,7 @@ lemma parity_etf_threefold_mono:
   "threefold_mono (side_cfg_T_eff gs g (parity_etf gs) bot0 s0 ())"
   by (rule threefold_mono_unit_transfer
         [OF parity_etf_edge_tree parity_etf_enter_tree parity_etf_combine_tree
-            parity_tf_for_mono parity_tf_for_enter_mono])
+            parity_tf_for_mono parity_tf_for_enter_mono combine_collect_abs_mono])
 
 section \<open>Parity domain: standalone effectful interprocedural soundness\<close>
 

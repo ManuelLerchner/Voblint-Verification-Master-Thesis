@@ -42,8 +42,9 @@ lemma sign_etf_edge_tree_branch:
   unfolding sign_etf_def apply_etf_mixed_of_transfer sign_tf_for_def by simp_all
 
 lemma sign_etf_combine_tree:
-  "etf_combine_collect (sign_etf gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding sign_etf_def etf_combine_collect_mixed_of_transfer by simp
+  "etf_combine_collect (sign_etf gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  unfolding sign_etf_def etf_combine_collect_mixed_of_transfer
+  by (simp add: tf_combine_collect_abs_combine_env_abs sign_tf_for_def)
 
 lemma sign_etf_enter_tree:
   "etf_enter (sign_etf gs) fs as cl = unit_edge_tree gs (enter\<^sup># (sign_tf_for gs) fs as) cl"
@@ -141,7 +142,8 @@ lemma sign_etf_threefold_mono:
   by (rule threefold_mono_local_branch_unit_transfer
        [OF sign_etf_edge_tree_disj sign_etf_enter_tree sign_etf_combine_tree
            sign_tf_for_mono sign_tf_for_enter_mono])
-     (auto simp: sign_backward_domain.branch_lifted_mono split: edge_action.splits)
+     (auto simp: sign_backward_domain.branch_lifted_mono
+           intro: combine_collect_abs_mono split: edge_action.splits)
 
 subsection \<open>Unit-only sign ETF (executable transport)\<close>
 
@@ -159,8 +161,9 @@ lemma sign_etf_unit_edge_tree:
   unfolding sign_etf_unit_def apply_etf_unit_of_transfer by simp
 
 lemma sign_etf_unit_combine_tree:
-  "etf_combine_collect (sign_etf_unit gs) dst cc ex = unit_combine_tree gs dst cc ex"
-  unfolding sign_etf_unit_def etf_combine_collect_unit_of_transfer by simp
+  "etf_combine_collect (sign_etf_unit gs) dst cc ex = unit_combine_tree gs (combine\<^sup># gs dst) cc ex"
+  unfolding sign_etf_unit_def etf_combine_collect_unit_of_transfer
+  by (simp add: tf_combine_collect_abs_combine_env_abs sign_tf_for_def)
 
 lemma sign_etf_unit_enter_tree_tf:
   "etf_enter (sign_etf_unit gs) fs as cl = unit_edge_tree gs (enter\<^sup># (sign_tf_for gs) fs as) cl"
@@ -194,7 +197,7 @@ lemma sign_etf_unit_threefold_mono:
   "threefold_mono (side_cfg_T_eff gs g (sign_etf_unit gs) bot0 s0 ())"
   by (rule threefold_mono_unit_transfer
        [OF sign_etf_unit_edge_tree sign_etf_unit_enter_tree_tf sign_etf_unit_combine_tree
-           sign_tf_for_mono sign_tf_for_enter_mono])
+           sign_tf_for_mono sign_tf_for_enter_mono combine_collect_abs_mono])
 
 section \<open>Sign domain: standalone effectful interprocedural soundness\<close>
 

@@ -1,7 +1,8 @@
 # Migration - Seidl 2026 mixed-flow Goblint alignment
 
-Status: **IN PROGRESS**. Phase A (Slices 1-3, structural exposure) landed; see the
-per-slice "Landed" notes below. Slices 4-8 remain.
+Status: **IN PROGRESS**. Phase A (Slices 1-3, structural exposure) and Slice 6
+(analysis-specific combine) landed; see the per-slice "Landed" notes below.
+Slices 4, 5, 7 and 8 remain.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis: Engineering
 Modularity", FM 2026, LNCS 16557, pp. 446-470.
@@ -486,27 +487,43 @@ Key lemmas:
 
 ### Slice 6 - analysis-specific combine
 
+> **Landed.** `unit_combine_tree gs cmb cc ex` takes the combine operation as a
+> parameter instead of computing `combine# gs dst` itself, and
+> `unit_etf_of_transfer` / `mixed_etf_of_transfer` feed it the transfer record's
+> own `combine_env#` (for `etf_combine_env`) and `tf_combine_collect_abs`
+> (for `etf_combine_collect`). `in_gamma_unit_combine_tree` is stated against an
+> arbitrary combine operation sound for an arbitrary concrete two-input
+> operation, so it discharges both roles of Goblint's interface; the
+> destination-free `unit_combine_env_tree` and its four lemmas collapsed into
+> instances of the general builder. `sound_transferI_for` now takes the merge's
+> soundness as an obligation rather than pinning `tf_combine_env` to
+> `combine_env_abs`, and `sound_rhs_generator_base` / the `*_transfer` cone and
+> monotonicity lemmas carry the combine as a parameter `Fc` with its own
+> monotonicity assumption. Sign, Interval and Parity keep `combine_env_abs` and
+> so instantiate at `combine# gs`.
+> `src/Examples/Sign/Example_Sign_Custom_Combine.thy` is the witness that the
+> parameter is free: a Sign instance whose merge joins the caller's view of a
+> global into the callee's, proved sound, cone-compatible and monotone through
+> the unchanged generic infrastructure, plus disequality witnesses against
+> `combine_env_abs` and `combine#`. The executable bridge
+> (`sound_rhs_generator_exec`, `part_post_solution_st_to_abs_eff_unit_transfer`)
+> still names `combine#` outright: `combine_collect_resolved_for_q` is the
+> resolved-store realization of the structural merge, so an analysis with its own
+> merge has no code-generated counterpart yet.
+
 Goal: replace hardwired structural return combine with a Goblint-style
 analysis-provided `combine`.
 
-Current `unit_combine_tree` implements:
+The former `unit_combine_tree` implemented:
 
 ```text
 locals from caller, globals from callee exit
 ```
 
-This is sound for product-style Sign/Interval states, but it bakes in a
-non-Goblint API decision and blocks relational domains.
+That is sound for product-style Sign/Interval states, but it baked in a
+non-Goblint API decision and blocked relational domains.
 
-Add an abstract combine tree builder:
-
-```isabelle
-record ('g,'a) call_transfer =
-  enter_tree   :: ...
-  combine_tree :: "pp => pp => (pp,'g,'a abs_state) strategy_tree"
-```
-
-Assumption:
+Assumption discharged by each analysis:
 
 ```text
 combine_tree_sound:
@@ -515,7 +532,7 @@ combine_tree_sound:
   implies restored concrete in gamma (etf_full combine_tree sigma)
 ```
 
-Then recover `unit_combine_tree` as one instance using `combine_states_sound`.
+The structural merge is recovered as one instance.
 
 This is the most important semantic alignment step for Goblint's `enter` and
 `combine` interface.
