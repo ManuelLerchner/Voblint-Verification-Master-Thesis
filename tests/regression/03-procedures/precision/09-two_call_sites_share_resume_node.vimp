@@ -1,0 +1,32 @@
+// PARAM: --analysis interval
+// Both branches of the if end in a call to the same procedure, so both calls
+// resume at the same CFG node: the compiler emits pp4 --call-to-return f--> pp6
+// and pp5 --call-to-return f--> pp6. That node's equation therefore carries two
+// call actions to f, both routing to the same context, so one right-hand-side
+// evaluation performs two side effects to the same callee-entry seed key.
+//
+// The vendored solver applies its per-origin update eagerly per side effect,
+// with the running accumulate rather than the completed one, and
+// update_global_per_origin overwrites the origin's slot. The dead branch's
+// write lands first carrying bottom, dropping the seed below what the live
+// branch established, which destabilizes the callee and re-solves it at
+// bottom; the live write restores it and destabilizes again, forever. The
+// livelock is a fixed 10-step cycle over 11 distinct solver states, not an
+// ascending chain -- the lattice this program reaches is finite.
+//
+// Reversing the branch polarity hides it: the live write then lands first and
+// the running accumulate never dips. So this case pins the polarity that
+// exposes the defect, and pins it under --context none, where the default
+// Interval configuration hits it.
+void f(n) {
+  return n
+}
+void main() {
+  x := 5;
+  if (x < 2) {
+    a := f(1)
+  } else {
+    a := f(1)
+  };
+  __voblint_check(x == 5) // PROVED
+}
