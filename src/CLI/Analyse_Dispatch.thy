@@ -1010,7 +1010,22 @@ code_identifier
 | code_module Int_Classify \<rightharpoonup> (OCaml) Core
 | code_module Int_Checks \<rightharpoonup> (OCaml) Core
 | code_module Int_Exec_Ctx_Sound \<rightharpoonup> (OCaml) Core
-| code_module "Voblint_CLI.Analyse_Dispatch" \<rightharpoonup> (OCaml) Analyse
+
+text \<open>
+  There is deliberately no mapping for this theory's own module. A
+  \<open>code_module "Voblint_CLI.Analyse_Dispatch" \<rightharpoonup> (OCaml) Analyse\<close> line used to sit here and
+  did nothing: the serializer keys these on the bare theory name, so the session-qualified
+  form never matched, and the emitted module has always been \<open>Analyse_Dispatch\<close>. Handwritten
+  callers accordingly say \<open>Voblint_CLI.Analyse_Dispatch.analyse_config\<close>, and renaming it now
+  would break them for no gain.
+
+  The mappings above are the ones that do fire, and they exist for one reason: OCaml's
+  single-file serializer emits modules in dependency order and cannot express a cycle, so
+  any two theory modules that end up mutually dependent must be folded into one. Folding
+  them all into \<open>Core\<close> is the blunt but stable answer. Add a mapping here only in response
+  to an actual serializer failure, and re-run \<open>export_code\<close> immediately after --- regrouping
+  speculatively is how cycles get introduced rather than avoided.
+\<close>
 
 
 

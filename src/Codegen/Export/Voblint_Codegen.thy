@@ -24,10 +24,28 @@ text \<open>
   OCaml facade over this module rather than in the shape of this list.
 \<close>
 
+text \<open>
+  The roots below are the \<^emph>\<open>intended callable surface\<close>: what handwritten OCaml under
+  \<open>cli/\<close>, \<open>codegen/regression/ocaml/\<close> and \<open>tests/property/\<close> actually calls. Everything else
+  in the emitted module is serializer-reachable implementation detail --- naming fewer
+  roots would not remove it, since Isabelle emits the transitive closure regardless. That
+  distinction is a documentation matter here, not one this project enforces at the type
+  level: the generated module \<^emph>\<open>is\<close> the API, with no handwritten re-export layer in
+  between that could reinterpret a constructor or a conversion.
+
+  Analysis entry goes through \<^const>\<open>analyse_config\<close>/\<^const>\<open>analyse_config_ctx\<close>/
+  \<^const>\<open>analyse_config_with_state\<close>, which consult
+  \<^const>\<open>resolve_analysis_config\<close> internally, so the CLI never re-decides legality. The
+  pre-configuration entry points \<open>analyse_ctx\<close>/\<open>analyse_with_state\<close>/\<open>analyse_with_solver\<close>
+  are no longer roots: nothing handwritten calls them, and the configuration path
+  supersedes them. \<^const>\<open>analyse\<close> stays, because the external regression oracle calls it
+  directly as its domain-dispatch check.
+\<close>
+
 export_code
   analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
-  analyse_ctx Ctx_None Ctx_EntryState Ctx_CallString
-  analyse_with_state SignValue IntervalValue IntDomValue ParityValue
+  Ctx_None Ctx_EntryState Ctx_CallString
+  SignValue IntervalValue IntDomValue ParityValue
   state_report_dot_auto state_report_graph_snapshot_auto
   full_state_dot_auto full_state_graph_snapshot_auto
   entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
@@ -35,7 +53,6 @@ export_code
   entry_state_ctx_dot_auto entry_state_ctx_graph_snapshot_auto
   cs_ctx_dot_auto cs_ctx_graph_snapshot_auto
   exp_vnames_list string_of_abstract_value
-  is_bottom_abstract_value is_top_abstract_value program_vars
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
   N V Plus Minus Times
@@ -44,33 +61,14 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
-  compile_program prog_main_name cfg_intra_list cfg_calls_list cfg_entry
+  compile_program cfg_intra_list cfg_calls_list
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec
-  analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
-  mk_analysis_config
-  Plan_Sign Plan_Sign_EntryState Plan_Sign_CallString Plan_Interval Plan_Interval_EntryState Plan_Interval_CallString Plan_Int Plan_Int_EntryState Plan_Int_CallString Plan_Parity
-  resolve_analysis_config valid_analysis_config
+  Solver_Join Solver_PerOrigin Solver_Warrow
+  mk_analysis_config valid_analysis_config
   analyse_config analyse_config_ctx analyse_config_with_state
-  analyse_sign_result analyse_interval_td_result analyse_int_result
-  analyse_interval_entry_state_result analyse_interval_entry_state_result_for
-  analyse_interval_call_string_result analyse_interval_call_string_result_for
-  analyse_interval_call_string_report
-  analyse_sign_call_string_result analyse_sign_call_string_result_for
-  analyse_sign_call_string_report
-  analyse_sign_entry_state_result analyse_sign_entry_state_result_for
-  analyse_sign_entry_state_report
-  analyse_int_call_string_result analyse_int_call_string_result_for
-  analyse_int_call_string_report
-  analyse_int_entry_state_result analyse_int_entry_state_result_for
-  analyse_int_entry_state_report
-  analyse_parity_result analyse_parity_result_for
-  analyse_parity_report analyse_parity_report_per_origin
-  result_keys contexts_at lookup_context lookup_joined_state node_live_ex
-  is_reachable_point map_point_state normalize_point
-  Dead Decided verdict_check_result aggregate_verdicts check_dead
-  entry_state_check_projection
+  Dead Decided
   in OCaml file_prefix "Voblint_CLI"
 
 end
