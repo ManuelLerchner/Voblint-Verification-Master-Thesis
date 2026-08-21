@@ -358,5 +358,77 @@ lemma sign_dead_branch_bot_result:
   "(Statement 6, Less (N 0) (V (STR ''Gx'')), Check_Proved) \<in> set (analyse_sign_report sign_dead_branch_bot_prog)"
   by eval
 
+subsection \<open>Recursion and repeated call sites\<close>
+
+text \<open>
+  Sign otherwise has no regression fixture exercising recursion or a procedure called
+  from two call sites -- the mechanism that separates how callee-entry values thread
+  through the equation system (a flow-sensitive local unknown revisited per predecessor
+  vs. a keyed-seed slot per callee entry). \<open>sign_factorial_prog\<close> mirrors Interval's own
+  recursive-factorial regression at Sign's coarser granularity; Sign has no
+  \<open>--context\<close> flag, so there is no CLI parameter to fix here, only the program shape.
+  The entry check \<open>0 < n\<close> stays \<open>UNKNOWN\<close>: Sign has no context-sensitivity feature, so
+  the callee entry joins over every call site's argument (here \<open>3\<close> and \<open>4\<close>).
+\<close>
+
+definition sign_factorial_prog :: imp_prog where
+  "sign_factorial_prog =
+     program {
+       void factorial(n) {
+         __voblint_check(0 < n);
+         if (n < 2) {
+           return 1
+         } else {
+           r := factorial(n - 1);
+           __voblint_check(0 < r);
+           return n * r
+         }
+       }
+       void main() {
+         a := factorial(3);
+         b := factorial(4);
+         __voblint_check(0 < a);
+         __voblint_check(0 < b)
+       }
+     }"
+
+lemma sign_factorial_result:
+  "set (analyse_sign_report sign_factorial_prog) =
+     {(Statement 0, Less (N 0) (V (STR ''n'')), Check_Unknown),
+      (Statement 4, Less (N 0) (V (STR ''r'')), Check_Proved),
+      (Statement 9, Less (N 0) (V (STR ''a'')), Check_Proved),
+      (Statement 10, Less (N 0) (V (STR ''b'')), Check_Proved)}"
+  by eval
+
+text \<open>
+  \<open>sign_two_call_sites_prog\<close> mirrors
+  \<open>tests/regression/03-procedures/known-imprecision/01-two_call_sites_same_procedure.vimp\<close>:
+  one non-recursive procedure, two call sites, isolating repeated-entry-node evaluation
+  without recursion's added complexity. Unlike Interval's analogue, which genuinely loses
+  precision at a repeated call site under Interval's infinite-height carrier and its
+  warrowing solver, both checks here stay \<open>PROVED\<close>: Sign's finite height and its
+  always-join solver rule never separate the two call sites' contributions here.
+\<close>
+
+definition sign_two_call_sites_prog :: imp_prog where
+  "sign_two_call_sites_prog =
+     program {
+       void square(n) {
+         return n * n
+       }
+       void main() {
+         a := square(3);
+         b := square(4);
+         __voblint_check(0 < a);
+         __voblint_check(0 < b)
+       }
+     }"
+
+lemma sign_two_call_sites_result:
+  "set (analyse_sign_report sign_two_call_sites_prog) =
+     {(Statement 4, Less (N 0) (V (STR ''a'')), Check_Proved),
+      (Statement 5, Less (N 0) (V (STR ''b'')), Check_Proved)}"
+  by eval
+
 end
 
