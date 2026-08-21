@@ -6,6 +6,9 @@ theory Analyse_Dispatch
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     Voblint_Formalization.Interval_Call_String_Ctx_Sound
     Voblint_Formalization.Sign_Call_String_Ctx_Sound
+    Voblint_Formalization.Sign_Entry_State_Ctx_Sound
+    Voblint_Formalization.Int_Call_String_Ctx_Sound
+    Voblint_Formalization.Int_Entry_State_Ctx_Sound
     Voblint_Analysis.Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -58,13 +61,14 @@ text \<open>
   a wider \<open>analyse\<close>: \<open>analyse\<close>/\<open>analyse_with_state\<close> stay untouched (the CLI's
   no-\<open>--context\<close> path, the GraphViz report, and every existing
   \<open>codegen/regression\<close> consumer already pin their exact two-argument shape as a
-  trust boundary), and Sign has no context-sensitive branch to route to yet, so
-  widening \<open>analyse\<close> itself would force a fabricated Sign case. \<open>analyse_ctx\<close>
+  trust boundary). \<open>analyse_ctx\<close>
   is the additional export for this one new dimension, reusing \<open>analyse\<close>'s own
   branches unchanged at \<open>Ctx_None\<close> rather than duplicating their logic.
-  \<open>None\<close> is a real, checkable unsupported-combination result -- todays's only
-  unsupported pairing is \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close> -- not a silent
-  fallback to context-insensitive behaviour.
+  Every \<open>analysis_domain\<close>/\<open>context_mode\<close> pairing now resolves to some report here
+  (\<open>analyse_ctx\<close> is total); an unsupported combination shows up one layer down, at
+  \<open>analyse_config_ctx\<close>, where an explicit non-\<open>Solver_Join\<close> selection genuinely
+  answers \<open>None\<close> for Sign or Int at either \<open>Ctx_EntryState\<close> or \<open>Ctx_CallString k\<close> --
+  not a silent fallback to context-insensitive behaviour.
 
   The report's verdict is a \<^typ>\<open>contextual_verdict\<close>, not a bare
   \<^typ>\<open>check_result\<close>, because a context-sensitive analysis genuinely has a
@@ -84,12 +88,12 @@ where
   "analyse_ctx Sign_Analysis Ctx_None p = Some (decided_report (analyse_sign_report p))"
 | "analyse_ctx Interval_Analysis Ctx_None p = Some (decided_report (analyse_interval_td_report p))"
 | "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
-| "analyse_ctx Sign_Analysis Ctx_EntryState p = None"
+| "analyse_ctx Sign_Analysis Ctx_EntryState p = Some (analyse_sign_entry_state_report p)"
 | "analyse_ctx Interval_Analysis (Ctx_CallString k) p = Some (analyse_interval_call_string_report k p)"
 | "analyse_ctx Sign_Analysis (Ctx_CallString k) p = Some (analyse_sign_call_string_report k p)"
 | "analyse_ctx Int_Analysis Ctx_None p = Some (decided_report (analyse_int_report p))"
-| "analyse_ctx Int_Analysis Ctx_EntryState p = None"
-| "analyse_ctx Int_Analysis (Ctx_CallString k) p = None"
+| "analyse_ctx Int_Analysis Ctx_EntryState p = Some (analyse_int_entry_state_report p)"
+| "analyse_ctx Int_Analysis (Ctx_CallString k) p = Some (analyse_int_call_string_report k p)"
 
 text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for every domain: the new dispatcher
   cannot silently drift from the one CLI/regression already exercises.\<close>
@@ -453,8 +457,11 @@ definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarro
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_solver Interval_Analysis s p
       | Some (Plan_Int s) \<Rightarrow> analyse_with_solver Int_Analysis s p
       | Some (Plan_Interval_EntryState _) \<Rightarrow> None
+      | Some (Plan_Sign_EntryState _) \<Rightarrow> None
       | Some (Plan_Interval_CallString _ _) \<Rightarrow> None
-      | Some (Plan_Sign_CallString _ _) \<Rightarrow> None)"
+      | Some (Plan_Sign_CallString _ _) \<Rightarrow> None
+      | Some (Plan_Int_CallString _ _) \<Rightarrow> None
+      | Some (Plan_Int_EntryState _) \<Rightarrow> None)"
 
 text \<open>
   \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
@@ -479,6 +486,15 @@ definition analyse_config_ctx ::
       | Some (Plan_Sign_CallString Solver_Join k) \<Rightarrow> Some (analyse_sign_call_string_report k p)
       | Some (Plan_Sign_CallString Solver_PerOrigin _) \<Rightarrow> None
       | Some (Plan_Sign_CallString Solver_Warrow _) \<Rightarrow> None
+      | Some (Plan_Sign_EntryState Solver_Join) \<Rightarrow> Some (analyse_sign_entry_state_report p)
+      | Some (Plan_Sign_EntryState Solver_PerOrigin) \<Rightarrow> None
+      | Some (Plan_Sign_EntryState Solver_Warrow) \<Rightarrow> None
+      | Some (Plan_Int_CallString Solver_Join k) \<Rightarrow> Some (analyse_int_call_string_report k p)
+      | Some (Plan_Int_CallString Solver_PerOrigin _) \<Rightarrow> None
+      | Some (Plan_Int_CallString Solver_Warrow _) \<Rightarrow> None
+      | Some (Plan_Int_EntryState Solver_Join) \<Rightarrow> Some (analyse_int_entry_state_report p)
+      | Some (Plan_Int_EntryState Solver_PerOrigin) \<Rightarrow> None
+      | Some (Plan_Int_EntryState Solver_Warrow) \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p))"
@@ -551,13 +567,63 @@ lemma analyse_config_ctx_interval_entrystate_explicit_warrow_valid:
      = Some (analyse_interval_entry_state p)"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_sign_entrystate_invalid:
-  "analyse_config_ctx (default_config Sign_Analysis Ctx_EntryState) p = None"
+text \<open>
+  Sign at \<open>Ctx_EntryState\<close>, pinned the same way \<open>Ctx_CallString\<close>'s own regressions are:
+  valid at the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid at the
+  two solvers Sign's entry-state soundness does not prove.
+\<close>
+
+lemma analyse_config_ctx_sign_entrystate_default_valid:
+  "analyse_config_ctx (default_config Sign_Analysis Ctx_EntryState) p
+     = Some (analyse_sign_entry_state_report p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
-lemma analyse_config_ctx_int_entrystate_invalid:
-  "analyse_config_ctx (default_config Int_Analysis Ctx_EntryState) p = None"
+lemma analyse_config_ctx_sign_entrystate_explicit_join_valid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p
+   = Some (analyse_sign_entry_state_report p)"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_sign_entrystate_per_origin_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_sign_entrystate_warrow_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
+
+text \<open>
+  Int at \<open>Ctx_EntryState\<close>, pinned the same way Sign's own regressions are: valid at
+  the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid at the two
+  solvers Int's own entry-state soundness does not prove.
+\<close>
+
+lemma analyse_config_ctx_int_entrystate_default_valid:
+  "analyse_config_ctx (default_config Int_Analysis Ctx_EntryState) p
+     = Some (analyse_int_entry_state_report p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_int_entrystate_explicit_join_valid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr> p
+   = Some (analyse_int_entry_state_report p)"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_int_entrystate_per_origin_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_int_entrystate_warrow_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
 
 text \<open>
   Call-string, the same routing-layer-agrees-with-the-existing-dispatcher
@@ -651,9 +717,43 @@ lemma analyse_config_ctx_sign_callstring_warrow_invalid:
    = None"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_int_callstring_invalid:
-  "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString k)) p = None"
+text \<open>
+  Int at \<open>Ctx_CallString\<close>, pinned the same way Sign's own regressions are: valid at
+  \<open>k \<ge> 1\<close> under the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid
+  at \<open>k = 0\<close> and at the two solvers Int's own call-string soundness does not prove.
+\<close>
+
+lemma analyse_config_ctx_int_callstring_k1_valid:
+  "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 1)) p
+     = Some (analyse_int_call_string_report 1 p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_int_callstring_k2_valid:
+  "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 2)) p
+     = Some (analyse_int_call_string_report 2 p)"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_int_callstring_zero_invalid:
+  "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 0)) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_int_callstring_explicit_join_valid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr> p
+   = Some (analyse_int_call_string_report 2 p)"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_int_callstring_per_origin_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString 2 \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_int_callstring_warrow_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
 
 subsubsection \<open>Dispatcher-path parity with the direct generic CallString core\<close>
 

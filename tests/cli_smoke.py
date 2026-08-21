@@ -66,16 +66,16 @@ CASES = [
         "unsupported --analysis/--context/--solver combination",
     ),
     (
-        "sign + call-string is rejected",
+        "sign + call-string is accepted",
         ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        0,
+        "",
     ),
     (
-        "int + call-string is rejected",
+        "int + call-string is accepted",
         ["--analysis", "int", "--context", "call-string", "--context-depth", "2", SANITY_FILE],
-        1,
-        "unsupported --analysis/--context/--solver combination",
+        0,
+        "",
     ),
     (
         "explicit --solver warrow with --context call-string is accepted",
@@ -96,8 +96,14 @@ CASES = [
         "",
     ),
     (
-        "sign + explicit --solver with --context call-string is still rejected",
+        "sign + explicit --solver join with --context call-string is accepted",
         ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "join", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "sign + explicit --solver per-origin with --context call-string is still rejected",
+        ["--analysis", "sign", "--context", "call-string", "--context-depth", "2", "--solver", "per-origin", SANITY_FILE],
         1,
         "unsupported --analysis/--context/--solver combination",
     ),

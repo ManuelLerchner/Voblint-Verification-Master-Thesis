@@ -61,6 +61,7 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Routed_Context
     Routed_Context_Unit
     Call_String_Context
+    Call_String_Context_Finite
     Call_String_Collecting_Refinement
     Call_String_Routed_Context
     Call_String_Solver_Projection

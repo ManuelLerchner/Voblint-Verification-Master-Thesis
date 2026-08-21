@@ -38,6 +38,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Placement_Regression
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
+    Example_Sign_DG_EntryState_Result_Regression
 
     (* Interval *)
     Exec_Ivl_Run

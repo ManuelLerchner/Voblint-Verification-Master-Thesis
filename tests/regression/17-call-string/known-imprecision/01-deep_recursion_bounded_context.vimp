@@ -1,0 +1,28 @@
+// PARAM: --analysis interval --context call-string --context-depth 1
+// Bounding witness for issue #77: a self-recursive procedure called at a
+// depth (50) far exceeding the call-string bound (1). cs_route truncates
+// every routed context to length <= 1 (cs_route_length,
+// Call_String_Context.thy), so fact's own recursive call site produces at
+// most 2 distinct call-string contexts (length 0 and length 1) no matter
+// how deep the concrete recursion runs -- proved in general for any
+// compiled program by compiled_call_strings_finite
+// (Call_String_Context_Finite.thy), not just observed here. The CLI
+// completes immediately rather than growing one context per recursion
+// level, which is exactly the context-explosion #77 is about.
+// The check itself stays UNKNOWN, not PROVED: call-string depth bounds
+// *context* growth, not interval's own precision loss on an unbounded
+// recursive multiplication -- a different, known imprecision (see the
+// identical verdict on this same program under plain --analysis interval
+// in tests/regression/11-graph-snapshot/known-imprecision/03-recursion.vimp).
+void fact(n) {
+  if (n < 2) {
+    return 1
+  } else {
+    tmp := fact(n - 1);
+    return n * tmp
+  }
+}
+void main() {
+  r := fact(50);
+  __voblint_check(0 < r) // UNKNOWN
+}

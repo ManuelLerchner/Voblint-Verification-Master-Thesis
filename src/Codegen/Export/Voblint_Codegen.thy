@@ -57,7 +57,7 @@ export_code
   wf_program_compile_input_exec
   analyse_with_solver Solver_Join Solver_PerOrigin Solver_Warrow
   mk_analysis_config
-  Plan_Sign Plan_Sign_CallString Plan_Interval Plan_Interval_EntryState Plan_Interval_CallString Plan_Int
+  Plan_Sign Plan_Sign_EntryState Plan_Sign_CallString Plan_Interval Plan_Interval_EntryState Plan_Interval_CallString Plan_Int Plan_Int_EntryState Plan_Int_CallString
   resolve_analysis_config valid_analysis_config
   analyse_config analyse_config_ctx analyse_config_with_state
   analyse_sign_result analyse_interval_td_result analyse_int_result
@@ -66,6 +66,12 @@ export_code
   analyse_interval_call_string_report
   analyse_sign_call_string_result analyse_sign_call_string_result_for
   analyse_sign_call_string_report
+  analyse_sign_entry_state_result analyse_sign_entry_state_result_for
+  analyse_sign_entry_state_report
+  analyse_int_call_string_result analyse_int_call_string_result_for
+  analyse_int_call_string_report
+  analyse_int_entry_state_result analyse_int_entry_state_result_for
+  analyse_int_entry_state_report
   result_keys contexts_at lookup_context lookup_joined_state node_live_ex
   is_reachable_point map_point_state normalize_point
   Dead Decided verdict_check_result aggregate_verdicts check_dead

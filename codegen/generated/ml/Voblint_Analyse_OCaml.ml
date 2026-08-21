@@ -70,6 +70,7 @@ module Core : sig
   val equal_cfg_node : cfg_node equal
   type location
   val equal_prod : 'a equal -> 'b equal -> ('a * 'b) equal
+  val equal_unit : unit equal
   type 'a sup
   type 'a bot
   type 'a order_bot = {bot_order_bot : 'a bot; order_order_bot : 'a order}
@@ -81,12 +82,21 @@ module Core : sig
   type 'a bounded_semilattice_sup_bot =
     {semilattice_sup_bounded_semilattice_sup_bot : 'a semilattice_sup;
       order_bot_bounded_semilattice_sup_bot : 'a order_bot}
+  type 'a int_dom_record_lattice
+  val int_dom_record_lattice_unit : unit int_dom_record_lattice
+  type 'a int_dom_record_warrowing
+  val int_dom_record_warrowing_unit : unit int_dom_record_warrowing
   type sign
+  val equal_sign : sign equal
+  val bot_sign : sign bot
   type 'a bounded_warrowing =
     {bounded_semilattice_sup_bot_bounded_warrowing :
        'a bounded_semilattice_sup_bot;
       warrowing_bounded_warrowing : 'a warrowing}
+  val bounded_semilattice_sup_bot_sign : sign bounded_semilattice_sup_bot
+  val bounded_warrowing_sign : sign bounded_warrowing
   type 'a computable_domain
+  val computable_domain_sign : sign computable_domain
   type call_action = CallEdge of string option * string list * exp list
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
@@ -110,6 +120,7 @@ module Core : sig
   val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
   val equal_resolved_st_q : 'a equal * 'a order_bot -> 'a resolved_st_q equal
+  val bot_resolved_st_qa : 'a bot -> 'a resolved_st_q
   val semilattice_sup_resolved_st_q :
     'a bounded_semilattice_sup_bot -> 'a resolved_st_q semilattice_sup
   val bounded_warrowing_resolved_st_q :
@@ -122,6 +133,14 @@ module Core : sig
     'a bounded_warrowing -> 'a lifted bounded_warrowing
   type gkb
   type 'a int_dom_ext
+  val equal_int_dom_ext : 'a equal -> 'a int_dom_ext equal
+  val bot_int_dom_ext : 'a int_dom_record_lattice -> 'a int_dom_ext bot
+  val bounded_semilattice_sup_bot_int_dom_ext :
+    'a int_dom_record_lattice -> 'a int_dom_ext bounded_semilattice_sup_bot
+  val bounded_warrowing_int_dom_ext :
+    'a int_dom_record_warrowing -> 'a int_dom_ext bounded_warrowing
+  val computable_domain_int_dom_ext :
+    'a equal * 'a int_dom_record_lattice -> 'a int_dom_ext computable_domain
   type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
     If of exp * com * com | While of exp * com |
     Call of string option * string * exp list | Return of exp option | Restore |
@@ -131,7 +150,7 @@ module Core : sig
   type 'a cfg_ext
   type ('a, 'b, 'c) strategy_tree
   type special_desc
-  type refine_mode
+  type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint
   type 'a point_state
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type ('a, 'b) analysis_result =
@@ -139,14 +158,18 @@ module Core : sig
   type ('a, 'b, 'c) dg_spec_ext
   type contextual_verdict = Dead | Decided of check_result
   type 'a imp_prog_ext
+  type ('a, 'b) numeric_ops_ext
   val take : nat -> 'a list -> 'a list
   val image : ('a -> 'b) -> 'a set -> 'b set
+  val fun_of_resolved_st_q_for :
+    'a bot -> (string -> bool) -> 'a resolved_st_q -> string -> 'a
   val cfg_entry : 'a cfg_ext -> cfg_node
   val cfg_exit : unit cfg_ext -> cfg_node
   val cinit_ivl_st : ivl resolved_st_q
   val char_of_integer : Z.t -> char
   val integer_of_char : char -> Z.t
   val proc_decl_of : string list -> com -> unit proc_decl_ext
+  val cinit_sign_st : sign resolved_st_q
   val prog_main_name : string
   val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
   val prog_main : unit imp_prog_ext -> com
@@ -156,6 +179,7 @@ module Core : sig
   val prog_procs : unit imp_prog_ext -> string list
   val declared_global_vars : 'a imp_prog_ext -> string list
   val declared_global : unit imp_prog_ext -> string -> bool
+  val cinit_int_dom_st : unit int_dom_ext resolved_st_q
   val check_dead : ('a * contextual_verdict) set -> bool
   val result_keys : ('a, 'b) analysis_result -> (cfg_node * 'a) set
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
@@ -205,10 +229,31 @@ module Core : sig
                 'a -> cfg_node ->
                         ((cfg_node * 'a), 'b, ('c, 'd) dg_state)
                           strategy_tree list
+  val transfer_lift : ('a -> bool) -> ('b -> 'a) -> 'b lifted -> 'a lifted
+  val int_dom_enter_st_for :
+    refine_mode ->
+      (string -> bool) ->
+        string list ->
+          exp list ->
+            unit int_dom_ext resolved_st_q -> unit int_dom_ext resolved_st_q
+  val ictx_spec :
+    refine_mode ->
+      (unit int_dom_ext resolved_st_q -> bool) ->
+        (string -> bool) ->
+          (unit int_dom_ext resolved_st_q lifted,
+            unit int_dom_ext resolved_st_q lifted, unit)
+            dg_spec_ext
+  val sign_enter_st_for :
+    (string -> bool) ->
+      string list -> exp list -> sign resolved_st_q -> sign resolved_st_q
   val is_reachable_point : 'a point_state -> bool
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val node_live_ex : 'a equal -> ('a, 'b) analysis_result -> cfg_node -> bool
+  val sctx_spec :
+    (string -> bool) ->
+      (sign resolved_st_q -> bool) ->
+        (sign resolved_st_q lifted, sign resolved_st_q lifted, unit) dg_spec_ext
   val tD_side_warrowing_apinis_Interp_solve :
     'a equal -> 'b equal ->
       'c equal * 'c bounded_semilattice_sup_bot * 'c warrowing ->
@@ -219,6 +264,7 @@ module Core : sig
   val normalize_point :
     'a bot ->
       (string -> bool) -> 'a resolved_st_q lifted -> (string -> 'a) point_state
+  val int_classify_check : exp -> (string -> unit int_dom_ext) -> check_result
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_result :
@@ -226,6 +272,12 @@ module Core : sig
   val decided_report :
     (cfg_node * (exp * check_result)) list ->
       (cfg_node * (exp * contextual_verdict)) list
+  val formals_context : string list -> (string -> 'a) -> 'a list
+  val tD_side_always_join_Interp_solve :
+    'a equal -> 'b equal ->
+      'c equal * 'c bounded_semilattice_sup_bot * 'c warrowing ->
+      ('a -> ('a, 'b, 'c) strategy_tree) -> 'a -> 'a set * (('a, 'b) sum -> 'c)
+  val sign_classify_check : exp -> (string -> sign) -> check_result
   val analyse_sign_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_sign_result :
@@ -7766,6 +7818,529 @@ let rec analyse_interval_call_string_report
 
 end;; (*struct Interval_Call_String_Ctx_Sound*)
 
+module Sign_Entry_State_Ctx_Sound : sig
+  val analyse_sign_entry_state_report :
+    unit Core.imp_prog_ext ->
+      (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
+end = struct
+
+type gk = Global | Seed of Core.cfg_node * Core.sign list;;
+
+let rec equal_gka
+  x0 x1 = match x0, x1 with Global, Seed (x21, x22) -> false
+    | Seed (x21, x22), Global -> false
+    | Seed (x21, x22), Seed (y21, y22) ->
+        Core.equal_cfg_nodea x21 y21 && Core.equal_lista Core.equal_sign x22 y22
+    | Global, Global -> true;;
+
+let equal_gk = ({Core.equal = equal_gka} : gk Core.equal);;
+
+let rec sctx_entry_entered
+  gs is_bot_pred d ca =
+    (let Core.CallEdge (_, fs, asa) = ca in
+      Core.transfer_lift is_bot_pred (Core.sign_enter_st_for gs fs asa) d);;
+
+let rec sctx_entry_route
+  gs is_bot_pred d ca =
+    (let Core.CallEdge (_, pars, _) = ca in
+      Core.formals_context pars
+        (Core.fun_of_resolved_st_q_for Core.bot_sign gs
+          (match sctx_entry_entered gs is_bot_pred d ca
+            with Core.Bot -> Core.bot_resolved_st_qa Core.bot_sign
+            | Core.Lifted d0 -> d0)));;
+
+let rec sctx_entry_route_gen
+  gs is_bot_pred u ctx d ca = sctx_entry_route gs is_bot_pred d ca;;
+
+let rec sctx_entry_eqs
+  gs is_bot_pred pi ps mnm main =
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_sign))
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_sign))
+      Core.intra_predecessor_list (fun _ -> Global)
+      (sctx_entry_route_gen gs is_bot_pred)
+      (Core.routed_cmb_g_contribution
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (Core.sctx_spec gs is_bot_pred) Global (fun a b -> Seed (a, b)))
+      (Core.routed_extra_g
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (fun a b -> Seed (a, b)) Global)
+      (Core.compile_prog pi ps mnm main) (Core.sctx_spec gs is_bot_pred)
+      Core.Bot (Core.Lifted Core.cinit_sign_st) Core.Bot;;
+
+let rec sctx_entry_sol
+  gs is_bot_pred pi ps mnm main =
+    Core.tD_side_always_join_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node (Core.equal_list Core.equal_sign))
+      equal_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_sign,
+               Core.bounded_warrowing_sign.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_sign,
+               Core.bounded_warrowing_sign.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_sign)).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_sign)).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q Core.bounded_warrowing_sign))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_sign))))
+      (sctx_entry_eqs gs is_bot_pred pi ps mnm main)
+      (Core.cfg_exit (Core.compile_prog pi ps mnm main), []);;
+
+let rec sctx_entry_sol_prog
+  gs mnm p =
+    sctx_entry_sol gs
+      (Core.resolved_st_q_is_bot_for Core.computable_domain_sign
+        (Core.declared_global_vars p))
+      (Core.prog_table p) (Core.prog_procs p) mnm (Core.prog_main p);;
+
+let rec analyse_sign_entry_state_result_for
+  gs mnm p =
+    (let sol = sctx_entry_sol_prog gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point Core.bot_sign gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for Core.computable_domain_sign gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+let rec sctx_entry_check_projection
+  mnm p =
+    Core.classify_checks_ctx (Core.equal_list Core.equal_sign)
+      (Core.prog_cfg mnm p)
+      (analyse_sign_entry_state_result_for (Core.declared_global p) mnm p)
+      Core.sign_classify_check;;
+
+let rec sctx_entry_verdict_report_prog
+  mnm p =
+    Core.map
+      (fun (u, (c, vs)) ->
+        (u, (c, Core.aggregate_verdicts (Core.image Core.snd vs))))
+      (sctx_entry_check_projection mnm p);;
+
+let rec analyse_sign_entry_state_report
+  p = sctx_entry_verdict_report_prog Core.prog_main_name p;;
+
+end;; (*struct Sign_Entry_State_Ctx_Sound*)
+
+module Sign_Call_String_Ctx_Sound : sig
+  val analyse_sign_call_string_report :
+    Core.nat ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
+end = struct
+
+let rec scs_eqs
+  k gs is_bot_pred pi ps mnm main =
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_sign))
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          Core.bounded_semilattice_sup_bot_sign))
+      Core.intra_predecessor_list (fun _ -> Call_String_Context.Global)
+      (Call_String_Context.cs_route k)
+      (Core.routed_cmb_g_contribution
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (Core.sctx_spec gs is_bot_pred) Call_String_Context.Global
+        (fun a b -> Call_String_Context.Seed (a, b)))
+      (Core.routed_extra_g
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            Core.bounded_semilattice_sup_bot_sign))
+        (fun a b -> Call_String_Context.Seed (a, b)) Call_String_Context.Global)
+      (Core.compile_prog pi ps mnm main) (Core.sctx_spec gs is_bot_pred)
+      Core.Bot (Core.Lifted Core.cinit_sign_st) Core.Bot;;
+
+let rec scs_sol
+  k gs is_bot_pred pi ps mnm main =
+    Core.tD_side_always_join_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node
+        (Core.equal_list Core.equal_cfg_node))
+      Call_String_Context.equal_call_string_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_sign,
+               Core.bounded_warrowing_sign.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             (Core.equal_sign,
+               Core.bounded_warrowing_sign.Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_sign)).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_sign)).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q Core.bounded_warrowing_sign))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              Core.bounded_warrowing_sign))))
+      (scs_eqs k gs is_bot_pred pi ps mnm main)
+      (Core.cfg_exit (Core.compile_prog pi ps mnm main), []);;
+
+let rec scs_sol_prog
+  k gs mnm p =
+    scs_sol k gs
+      (Core.resolved_st_q_is_bot_for Core.computable_domain_sign
+        (Core.declared_global_vars p))
+      (Core.prog_table p) (Core.prog_procs p) mnm (Core.prog_main p);;
+
+let rec analyse_sign_call_string_result_for
+  k gs mnm p =
+    (let sol = scs_sol_prog k gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point Core.bot_sign gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for Core.computable_domain_sign gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+let rec scs_check_projection
+  k mnm p =
+    Core.classify_checks_ctx (Core.equal_list Core.equal_cfg_node)
+      (Core.prog_cfg mnm p)
+      (analyse_sign_call_string_result_for k (Core.declared_global p) mnm p)
+      Core.sign_classify_check;;
+
+let rec scs_verdict_report_prog
+  k mnm p =
+    Core.map
+      (fun (u, (c, vs)) ->
+        (u, (c, Core.aggregate_verdicts (Core.image Core.snd vs))))
+      (scs_check_projection k mnm p);;
+
+let rec analyse_sign_call_string_report
+  k p = scs_verdict_report_prog k Core.prog_main_name p;;
+
+end;; (*struct Sign_Call_String_Ctx_Sound*)
+
+module Int_Entry_State_Ctx_Sound : sig
+  val analyse_int_entry_state_report :
+    unit Core.imp_prog_ext ->
+      (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
+end = struct
+
+type gk = Global | Seed of Core.cfg_node * unit Core.int_dom_ext list;;
+
+let rec equal_gka
+  x0 x1 = match x0, x1 with Global, Seed (x21, x22) -> false
+    | Seed (x21, x22), Global -> false
+    | Seed (x21, x22), Seed (y21, y22) ->
+        Core.equal_cfg_nodea x21 y21 &&
+          Core.equal_lista (Core.equal_int_dom_ext Core.equal_unit) x22 y22
+    | Global, Global -> true;;
+
+let equal_gk = ({Core.equal = equal_gka} : gk Core.equal);;
+
+let rec ictx_entry_entered
+  mode gs is_bot_pred d ca =
+    (let Core.CallEdge (_, fs, asa) = ca in
+      Core.transfer_lift is_bot_pred (Core.int_dom_enter_st_for mode gs fs asa)
+        d);;
+
+let rec ictx_entry_route
+  mode gs is_bot_pred d ca =
+    (let Core.CallEdge (_, pars, _) = ca in
+      Core.formals_context pars
+        (Core.fun_of_resolved_st_q_for
+          (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit) gs
+          (match ictx_entry_entered mode gs is_bot_pred d ca
+            with Core.Bot ->
+              Core.bot_resolved_st_qa
+                (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit)
+            | Core.Lifted d0 -> d0)));;
+
+let rec ictx_entry_route_gen
+  mode gs is_bot_pred u ctx d ca = ictx_entry_route mode gs is_bot_pred d ca;;
+
+let rec ictx_entry_eqs
+  mode gs is_bot_pred pi ps mnm main =
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          (Core.bounded_semilattice_sup_bot_int_dom_ext
+            Core.int_dom_record_lattice_unit)))
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          (Core.bounded_semilattice_sup_bot_int_dom_ext
+            Core.int_dom_record_lattice_unit)))
+      Core.intra_predecessor_list (fun _ -> Global)
+      (ictx_entry_route_gen mode gs is_bot_pred)
+      (Core.routed_cmb_g_contribution
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (Core.ictx_spec mode is_bot_pred gs) Global (fun a b -> Seed (a, b)))
+      (Core.routed_extra_g
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (fun a b -> Seed (a, b)) Global)
+      (Core.compile_prog pi ps mnm main) (Core.ictx_spec mode is_bot_pred gs)
+      Core.Bot (Core.Lifted Core.cinit_int_dom_st) Core.Bot;;
+
+let rec ictx_entry_sol
+  mode gs is_bot_pred pi ps mnm main =
+    Core.tD_side_always_join_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node
+        (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit)))
+      equal_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             ((Core.equal_int_dom_ext Core.equal_unit),
+               (Core.bounded_warrowing_int_dom_ext
+                 Core.int_dom_record_warrowing_unit).Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             ((Core.equal_int_dom_ext Core.equal_unit),
+               (Core.bounded_warrowing_int_dom_ext
+                 Core.int_dom_record_warrowing_unit).Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit))).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit))).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit)))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit)))))
+      (ictx_entry_eqs mode gs is_bot_pred pi ps mnm main)
+      (Core.cfg_exit (Core.compile_prog pi ps mnm main), []);;
+
+let rec ictx_entry_sol_prog
+  gs mnm p =
+    ictx_entry_sol Core.Refine_Fixpoint gs
+      (Core.resolved_st_q_is_bot_for
+        (Core.computable_domain_int_dom_ext
+          (Core.equal_unit, Core.int_dom_record_lattice_unit))
+        (Core.declared_global_vars p))
+      (Core.prog_table p) (Core.prog_procs p) mnm (Core.prog_main p);;
+
+let rec analyse_int_entry_state_result_for
+  gs mnm p =
+    (let sol = ictx_entry_sol_prog gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point
+              (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit) gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for
+                  (Core.computable_domain_int_dom_ext
+                    (Core.equal_unit, Core.int_dom_record_lattice_unit))
+                  gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+let rec ictx_entry_check_projection
+  mnm p =
+    Core.classify_checks_ctx
+      (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit))
+      (Core.prog_cfg mnm p)
+      (analyse_int_entry_state_result_for (Core.declared_global p) mnm p)
+      Core.int_classify_check;;
+
+let rec ictx_entry_verdict_report_prog
+  mnm p =
+    Core.map
+      (fun (u, (c, vs)) ->
+        (u, (c, Core.aggregate_verdicts (Core.image Core.snd vs))))
+      (ictx_entry_check_projection mnm p);;
+
+let rec analyse_int_entry_state_report
+  p = ictx_entry_verdict_report_prog Core.prog_main_name p;;
+
+end;; (*struct Int_Entry_State_Ctx_Sound*)
+
+module Int_Call_String_Ctx_Sound : sig
+  val analyse_int_call_string_report :
+    Core.nat ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
+end = struct
+
+let rec ics_eqs
+  k mode gs is_bot_pred pi ps mnm main =
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          (Core.bounded_semilattice_sup_bot_int_dom_ext
+            Core.int_dom_record_lattice_unit)))
+      (Core.bounded_semilattice_sup_bot_lifted
+        (Core.semilattice_sup_resolved_st_q
+          (Core.bounded_semilattice_sup_bot_int_dom_ext
+            Core.int_dom_record_lattice_unit)))
+      Core.intra_predecessor_list (fun _ -> Call_String_Context.Global)
+      (Call_String_Context.cs_route k)
+      (Core.routed_cmb_g_contribution
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (Core.ictx_spec mode is_bot_pred gs) Call_String_Context.Global
+        (fun a b -> Call_String_Context.Seed (a, b)))
+      (Core.routed_extra_g
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (Core.bounded_semilattice_sup_bot_lifted
+          (Core.semilattice_sup_resolved_st_q
+            (Core.bounded_semilattice_sup_bot_int_dom_ext
+              Core.int_dom_record_lattice_unit)))
+        (fun a b -> Call_String_Context.Seed (a, b)) Call_String_Context.Global)
+      (Core.compile_prog pi ps mnm main) (Core.ictx_spec mode is_bot_pred gs)
+      Core.Bot (Core.Lifted Core.cinit_int_dom_st) Core.Bot;;
+
+let rec ics_sol
+  k mode gs is_bot_pred pi ps mnm main =
+    Core.tD_side_always_join_Interp_solve
+      (Core.equal_prod Core.equal_cfg_node
+        (Core.equal_list Core.equal_cfg_node))
+      Call_String_Context.equal_call_string_gk
+      ((Core.equal_dg_state
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             ((Core.equal_int_dom_ext Core.equal_unit),
+               (Core.bounded_warrowing_int_dom_ext
+                 Core.int_dom_record_warrowing_unit).Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))
+         (Core.equal_lifted
+           (Core.equal_resolved_st_q
+             ((Core.equal_int_dom_ext Core.equal_unit),
+               (Core.bounded_warrowing_int_dom_ext
+                 Core.int_dom_record_warrowing_unit).Core.bounded_semilattice_sup_bot_bounded_warrowing.Core.order_bot_bounded_semilattice_sup_bot)))),
+        (Core.bounded_semilattice_sup_bot_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit))).Core.bounded_semilattice_sup_bot_bounded_warrowing
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit))).Core.bounded_semilattice_sup_bot_bounded_warrowing),
+        (Core.warrowing_dg_state
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit)))
+          (Core.bounded_warrowing_lifted
+            (Core.bounded_warrowing_resolved_st_q
+              (Core.bounded_warrowing_int_dom_ext
+                Core.int_dom_record_warrowing_unit)))))
+      (ics_eqs k mode gs is_bot_pred pi ps mnm main)
+      (Core.cfg_exit (Core.compile_prog pi ps mnm main), []);;
+
+let rec ics_sol_prog
+  k gs mnm p =
+    ics_sol k Core.Refine_Fixpoint gs
+      (Core.resolved_st_q_is_bot_for
+        (Core.computable_domain_int_dom_ext
+          (Core.equal_unit, Core.int_dom_record_lattice_unit))
+        (Core.declared_global_vars p))
+      (Core.prog_table p) (Core.prog_procs p) mnm (Core.prog_main p);;
+
+let rec analyse_int_call_string_result_for
+  k gs mnm p =
+    (let sol = ics_sol_prog k gs mnm p in
+     let gl = Core.declared_global_vars p in
+      Core.Analysis_Result
+        (Core.fst sol,
+          (fun v ctx ->
+            Core.normalize_point
+              (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit) gs
+              (Core.canonicalize_lift
+                (Core.resolved_st_q_is_bot_for
+                  (Core.computable_domain_int_dom_ext
+                    (Core.equal_unit, Core.int_dom_record_lattice_unit))
+                  gl)
+                (Core.locals (Core.snd sol (Core.Inl (v, ctx))))))));;
+
+let rec ics_check_projection
+  k mnm p =
+    Core.classify_checks_ctx (Core.equal_list Core.equal_cfg_node)
+      (Core.prog_cfg mnm p)
+      (analyse_int_call_string_result_for k (Core.declared_global p) mnm p)
+      Core.int_classify_check;;
+
+let rec ics_verdict_report_prog
+  k mnm p =
+    Core.map
+      (fun (u, (c, vs)) ->
+        (u, (c, Core.aggregate_verdicts (Core.image Core.snd vs))))
+      (ics_check_projection k mnm p);;
+
+let rec analyse_int_call_string_report
+  k p = ics_verdict_report_prog k Core.prog_main_name p;;
+
+end;; (*struct Int_Call_String_Ctx_Sound*)
+
 module Analyse_Dispatch : sig
   type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
     IntDomValue of unit Core.int_dom_ext
@@ -7803,16 +8378,19 @@ let rec analyse_ctx
         Some (Core.decided_report (Core.analyse_interval_td_report p))
     | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_EntryState, p ->
         Some (Core.analyse_interval_entry_state p)
-    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_EntryState, p ->
+        Some (Sign_Entry_State_Ctx_Sound.analyse_sign_entry_state_report p)
     | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_CallString k, p ->
         Some (Interval_Call_String_Ctx_Sound.analyse_interval_call_string_report
                k p)
-    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_CallString k, p -> None
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_CallString k, p ->
+        Some (Sign_Call_String_Ctx_Sound.analyse_sign_call_string_report k p)
     | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_None, p ->
         Some (Core.decided_report (Core.analyse_int_report p))
-    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p -> None
+    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p ->
+        Some (Int_Entry_State_Ctx_Sound.analyse_int_entry_state_report p)
     | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_CallString k, p ->
-        None;;
+        Some (Int_Call_String_Ctx_Sound.analyse_int_call_string_report k p);;
 
 let rec analyse_with_state
   x0 p = match x0, p with

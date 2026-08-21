@@ -251,6 +251,25 @@ text \<open>The distinguished graph entry is always part of the derived node set
 lemma cfg_entry_in_nodes: "cfg_entry g \<in> cfg_nodes g"
   by (simp add: cfg_nodes_def)
 
+text \<open>A finite edge relation gives a finite node set: each of the five \<open>cfg_nodes\<close>
+  disjuncts is a projection of \<open>intra g\<close> or \<open>calls g\<close>, so it inherits their finiteness as a
+  finite image; the sixth is the singleton \<open>cfg_entry g\<close>.\<close>
+lemma cfg_nodes_finite:
+  assumes "finite (intra g)" and "finite (calls g)"
+  shows "finite (cfg_nodes g)"
+proof -
+  have "{u. \<exists>a v. (u, a, v) \<in> intra g} = (\<lambda>(u, a, v). u) ` intra g"
+    and "{v. \<exists>u a. (u, a, v) \<in> intra g} = (\<lambda>(u, a, v). v) ` intra g"
+    by force+
+  moreover
+  have "{u. \<exists>act ce after. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). u) ` calls g"
+    and "{ce. \<exists>u act after. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). ce) ` calls g"
+    and "{after. \<exists>u act ce. (u, act, ce, after) \<in> calls g} = (\<lambda>(u, act, ce, after). after) ` calls g"
+    by force+
+  ultimately show ?thesis
+    unfolding cfg_nodes_def using assms by simp
+qed
+
 text \<open>A flat CFG has only local-edge endpoints and the distinguished entry.\<close>
 lemma flat_cfg_iff: "flat_cfg g \<longleftrightarrow> calls g = {}"
   by (simp add: flat_cfg_def)

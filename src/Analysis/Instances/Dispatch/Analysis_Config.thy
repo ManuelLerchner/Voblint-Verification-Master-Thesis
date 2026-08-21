@@ -103,11 +103,14 @@ text \<open>
 
 datatype analysis_plan =
     Plan_Sign solver_choice
+  | Plan_Sign_EntryState solver_choice
   | Plan_Sign_CallString solver_choice nat
   | Plan_Interval solver_choice
   | Plan_Interval_EntryState solver_choice
   | Plan_Interval_CallString solver_choice nat
   | Plan_Int solver_choice
+  | Plan_Int_EntryState solver_choice
+  | Plan_Int_CallString solver_choice nat
 
 subsection \<open>Canonical resolver\<close>
 
@@ -124,21 +127,22 @@ text \<open>
 
   \<^item> \<open>Sign\<close>: \<open>Solver_Warrow\<close> is unsupported at every context (\<open>sign\<close> has no
     \<open>widen\<close> instance, so nothing downstream of this resolver could execute
-    it even if accepted here). \<open>Ctx_EntryState\<close> stays unsupported (no Sign
-    entry-state branch exists). \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) is supported at
-    the one solver Sign's own routed call-string soundness proves,
-    \<open>Solver_Join\<close>; \<open>Solver_PerOrigin\<close> is genuinely unproven at this context
-    (unlike at \<open>Ctx_None\<close>, where it already is) and stays unsupported until
-    that proof exists, matching this resolver's stated discipline of
-    following proved capability rather than solver symmetry.
+    it even if accepted here). \<open>Ctx_EntryState\<close> and \<open>Ctx_CallString k\<close>
+    (\<open>k \<ge> 1\<close>) are both supported at the one solver Sign's own routed
+    soundness proves at each, \<open>Solver_Join\<close>; \<open>Solver_PerOrigin\<close> is
+    genuinely unproven at either context (unlike at \<open>Ctx_None\<close>, where it
+    already is) and stays unsupported until that proof exists, matching
+    this resolver's stated discipline of following proved capability
+    rather than solver symmetry.
   \<^item> \<open>Interval\<close>: every solver is supported at \<open>Ctx_None\<close>, at \<open>Ctx_EntryState\<close>,
     and at \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) alike, defaulting to \<open>Solver_Warrow\<close>
     at each: the routed equation system underneath either context is exactly
     as solver-independent as the flat one.
   \<^item> \<open>Int\<close>: every solver is supported at \<open>Ctx_None\<close>, defaulting to
-    \<open>Solver_Warrow\<close> (\<open>Int_Analysis\<close>'s own production default); no context
-    other than \<open>none\<close> is supported at all (\<open>Analyse_Dispatch\<close> has no Int
-    entry-state branch).
+    \<open>Solver_Warrow\<close> (\<open>Int_Analysis\<close>'s own production default). \<open>Ctx_EntryState\<close>
+    and \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) are both supported at the one solver Int's
+    own routed soundness proves at each, \<open>Solver_Join\<close>, mirroring Sign's own
+    posture at both contexts.
 \<close>
 
 fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan option" where
@@ -150,7 +154,13 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
      = Some (Plan_Sign Solver_PerOrigin)"
 | "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr>
      = None"
-| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = None, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Sign_EntryState Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Sign_EntryState Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = None, cfg_context = Ctx_CallString k \<rparr>
      = (if k = 0 then None else Some (Plan_Sign_CallString Solver_Join k))"
@@ -176,9 +186,21 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
      = Some (Plan_Int Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Int s)"
-| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Int_EntryState Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
+     = Some (Plan_Int_EntryState Solver_Join)"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr>
      = None"
-| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = _, cfg_context = Ctx_CallString k \<rparr>
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_CallString k \<rparr>
+     = (if k = 0 then None else Some (Plan_Int_CallString Solver_Join k))"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString k \<rparr>
+     = (if k = 0 then None else Some (Plan_Int_CallString Solver_Join k))"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString k \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr>
      = None"
 
 definition valid_analysis_config :: "analysis_config \<Rightarrow> bool" where
@@ -237,13 +259,63 @@ lemma resolver_interval_entrystate_warrow_valid:
      = Some (Plan_Interval_EntryState Solver_Warrow)"
   by simp
 
-lemma resolver_sign_entrystate_invalid:
-  "resolve_analysis_config (default_config Sign_Analysis Ctx_EntryState) = None"
+text \<open>
+  Sign at \<open>Ctx_EntryState\<close>, pinned the same way \<open>Ctx_CallString\<close>'s own regressions are:
+  valid at the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid at the
+  two solvers Sign's entry-state soundness does not prove.
+\<close>
+
+lemma resolver_sign_entrystate_default_valid:
+  "resolve_analysis_config (default_config Sign_Analysis Ctx_EntryState)
+     = Some (Plan_Sign_EntryState Solver_Join)"
   by (simp add: default_config_def mk_analysis_config_def)
 
-lemma resolver_int_entrystate_invalid:
-  "resolve_analysis_config (default_config Int_Analysis Ctx_EntryState) = None"
+lemma resolver_sign_entrystate_explicit_join_valid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
+   = Some (Plan_Sign_EntryState Solver_Join)"
+  by simp
+
+lemma resolver_sign_entrystate_per_origin_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr>
+   = None"
+  by simp
+
+lemma resolver_sign_entrystate_warrow_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
+   = None"
+  by simp
+
+text \<open>
+  Int at \<open>Ctx_EntryState\<close>, pinned the same way Sign's own resolver regressions are:
+  valid at the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid at the
+  two solvers Int's own entry-state soundness does not prove.
+\<close>
+
+lemma resolver_int_entrystate_default_valid:
+  "resolve_analysis_config (default_config Int_Analysis Ctx_EntryState)
+     = Some (Plan_Int_EntryState Solver_Join)"
   by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_entrystate_explicit_join_valid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
+   = Some (Plan_Int_EntryState Solver_Join)"
+  by simp
+
+lemma resolver_int_entrystate_per_origin_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr>
+   = None"
+  by simp
+
+lemma resolver_int_entrystate_warrow_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
+   = None"
+  by simp
 
 text \<open>
   Call-string, pinned the same way: \<open>k=1\<close>/\<open>k=2\<close> at the implicit default
@@ -340,9 +412,44 @@ lemma resolver_sign_callstring_warrow_invalid:
    = None"
   by simp
 
-lemma resolver_int_callstring_invalid:
-  "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 2)) = None"
+text \<open>
+  Int at \<open>Ctx_CallString\<close>, pinned the same way Sign's own resolver regressions are:
+  valid at \<open>k \<ge> 1\<close> under the implicit-default and explicit \<open>Solver_Join\<close> selections,
+  invalid at \<open>k = 0\<close> and at the two solvers Int's own call-string soundness does not
+  prove.
+\<close>
+
+lemma resolver_int_callstring_k1_valid:
+  "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 1))
+     = Some (Plan_Int_CallString Solver_Join 1)"
   by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_callstring_k2_valid:
+  "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 2))
+     = Some (Plan_Int_CallString Solver_Join 2)"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_callstring_zero_invalid:
+  "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 0)) = None"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+lemma resolver_int_callstring_explicit_join_valid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr>
+   = Some (Plan_Int_CallString Solver_Join 2)"
+  by simp
+
+lemma resolver_int_callstring_per_origin_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString 2 \<rparr>
+   = None"
+  by simp
+
+lemma resolver_int_callstring_warrow_invalid:
+  "resolve_analysis_config
+     \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr>
+   = None"
+  by simp
 
 
 
