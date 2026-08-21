@@ -5,6 +5,7 @@ theory Analyse_Dispatch
     Int_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     Voblint_Formalization.Interval_Call_String_Ctx_Sound
+    Voblint_Formalization.Sign_Call_String_Ctx_Sound
     Voblint_Analysis.Analysis_Config
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -85,7 +86,7 @@ where
 | "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
 | "analyse_ctx Sign_Analysis Ctx_EntryState p = None"
 | "analyse_ctx Interval_Analysis (Ctx_CallString k) p = Some (analyse_interval_call_string_report k p)"
-| "analyse_ctx Sign_Analysis (Ctx_CallString k) p = None"
+| "analyse_ctx Sign_Analysis (Ctx_CallString k) p = Some (analyse_sign_call_string_report k p)"
 | "analyse_ctx Int_Analysis Ctx_None p = Some (decided_report (analyse_int_report p))"
 | "analyse_ctx Int_Analysis Ctx_EntryState p = None"
 | "analyse_ctx Int_Analysis (Ctx_CallString k) p = None"
@@ -452,7 +453,8 @@ definition analyse_config :: "analysis_config \<Rightarrow> imp_prog \<Rightarro
       | Some (Plan_Interval s) \<Rightarrow> analyse_with_solver Interval_Analysis s p
       | Some (Plan_Int s) \<Rightarrow> analyse_with_solver Int_Analysis s p
       | Some (Plan_Interval_EntryState _) \<Rightarrow> None
-      | Some (Plan_Interval_CallString _ _) \<Rightarrow> None)"
+      | Some (Plan_Interval_CallString _ _) \<Rightarrow> None
+      | Some (Plan_Sign_CallString _ _) \<Rightarrow> None)"
 
 text \<open>
   \<open>Plan_Interval_EntryState\<close> answers \<^const>\<open>None\<close> here on purpose: entry-state
@@ -474,6 +476,9 @@ definition analyse_config_ctx ::
       | Some (Plan_Interval_CallString Solver_Warrow k) \<Rightarrow> Some (analyse_interval_call_string_report k p)
       | Some (Plan_Interval_CallString Solver_Join k) \<Rightarrow> Some (analyse_interval_call_string_report_join k p)
       | Some (Plan_Interval_CallString Solver_PerOrigin k) \<Rightarrow> Some (analyse_interval_call_string_report_per_origin k p)
+      | Some (Plan_Sign_CallString Solver_Join k) \<Rightarrow> Some (analyse_sign_call_string_report k p)
+      | Some (Plan_Sign_CallString Solver_PerOrigin _) \<Rightarrow> None
+      | Some (Plan_Sign_CallString Solver_Warrow _) \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p))"
@@ -607,9 +612,44 @@ lemma analyse_config_ctx_interval_callstring_zero_explicit_solver_invalid:
    = None"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_sign_callstring_invalid:
-  "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString k)) p = None"
+text \<open>
+  Sign at \<open>Ctx_CallString\<close>, pinned the same way \<open>Analysis_Config.thy\<close>'s own
+  resolver regressions are: valid at \<open>k \<ge> 1\<close> under the implicit-default and
+  explicit \<open>Solver_Join\<close> selections, invalid at \<open>k = 0\<close> and at the two
+  solvers Sign's call-string soundness does not prove.
+\<close>
+
+lemma analyse_config_ctx_sign_callstring_k1_valid:
+  "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString 1)) p
+     = Some (analyse_sign_call_string_report 1 p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_sign_callstring_k2_valid:
+  "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString 2)) p
+     = Some (analyse_sign_call_string_report 2 p)"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_sign_callstring_zero_invalid:
+  "analyse_config_ctx (default_config Sign_Analysis (Ctx_CallString 0)) p = None"
+  by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
+
+lemma analyse_config_ctx_sign_callstring_explicit_join_valid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString 2 \<rparr> p
+   = Some (analyse_sign_call_string_report 2 p)"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_sign_callstring_per_origin_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString 2 \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_sign_callstring_warrow_invalid:
+  "analyse_config_ctx
+     \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr> p
+   = None"
+  by (simp add: analyse_config_ctx_def)
 
 lemma analyse_config_ctx_int_callstring_invalid:
   "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString k)) p = None"
