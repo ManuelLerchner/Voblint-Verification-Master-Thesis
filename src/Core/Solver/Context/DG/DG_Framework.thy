@@ -1,5 +1,5 @@
 theory DG_Framework
-  imports Exec_Bridge TD_Side_Eff_Keyed_Gen
+  imports Exec_Bridge TD_Side_Eff_Keyed_Gen Side_Buffering
     TD_Side_Eff_Pipeline
 begin
 
@@ -1362,19 +1362,24 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg:
 subsection \<open>Buffered generator: fold Side-free contributions, publish once\<close>
 
 text \<open>
-  \<open>side_cfg_T_eff_keyed_seed_dg\<close>'s own \<open>intra\<close> fold has the same issue #121-keyed
-  multiwrite as \<open>routed_cmb_g\<close>: a merge node with several intra predecessors, or
-  several return call actions, each independently publishes a \<open>Side (gkey c) ...\<close> via
-  \<^const>\<open>dg_edge_tree\<close>/\<open>routed_cmb_g\<close>'s own \<^const>\<open>depend_on\<close>, so several writes to the
-  same \<open>gkey c\<close> land in one RHS evaluation. \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> folds
-  Side-free contribution trees (\<^const>\<open>apply_dg_spec_contribution\<close> for \<open>intra\<close>; the
-  caller's own Side-free \<open>cmb_c\<close> for \<open>comb\<close>; \<open>extra\<close> unchanged, since a routed
-  entry-seed readback already answers no \<open>Side\<close>) with \<^const>\<open>fold_rhs_trees\<close> and
-  publishes \<open>gkey c\<close> once,
-  after every contribution has been read -- reproducing the original generator's
-  declarative \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close> value
-  (\<open>side_cfg_T_eff_keyed_seed_dg_buffered_correspondence\<close> below) while emitting at most
-  one \<open>Side\<close> per key per RHS evaluation.
+  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> writes a node's own key once per contribution: a
+  merge node with several intra predecessors, or several return call actions, each
+  independently publishes a \<open>Side (gkey c) ...\<close> via \<^const>\<open>dg_edge_tree\<close>/\<open>routed_cmb_g\<close>'s
+  own \<^const>\<open>depend_on\<close>, so several writes to the same \<open>gkey c\<close> land in one RHS
+  evaluation. \<open>side_cfg_T_eff_keyed_seed_dg_buffered\<close> folds Side-free contribution trees
+  (\<^const>\<open>apply_dg_spec_contribution\<close> for \<open>intra\<close>; the caller's own Side-free \<open>cmb_c\<close> for
+  \<open>comb\<close>) with \<^const>\<open>fold_rhs_trees\<close> and publishes \<open>gkey c\<close> once, after every
+  contribution has been read.
+
+  That fold shapes the node's \<^emph>\<open>own\<close> key, but \<open>extra route c v\<close> stays a list of
+  independent trees, and a caller node's extras publish one routed callee seed per call
+  action. Two call sites resuming at the same node therefore still name one seed key
+  twice. \<^const>\<open>buffer_sides\<close> closes that case for every key uniformly, so
+  \<open>distinct_side_path_buffer_sides\<close> --- not an argument about which keys the hooks
+  happen to choose --- is what establishes at most one \<^const>\<open>Side\<close> per key per RHS
+  evaluation. It preserves the declarative
+  \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close> value, so the correspondence with the
+  unbuffered generator below is unaffected.
 \<close>
 
 definition side_cfg_T_eff_keyed_seed_dg_buffered ::
@@ -1398,10 +1403,10 @@ where
                         (pred_sel g v);
             comb = map (\<lambda>(cc, ca, ex). cmb_c route c ca cc ex) (return_call_action_list g v);
             t = fold_rhs_trees acc0 (intra @ comb @ extra route c v)
-        in do {
+        in buffer_sides (do {
           res \<leftarrow> t;
           depend_on (gkey c) (DG bot (globs res)) (answer (DG (locals res) bot))
-        })"
+        }))"
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg_buffered:
   "eq (side_cfg_T_eff_keyed_seed_dg_buffered pred_sel gkey route cmb_c extra g S bot0 s0d s0g)
