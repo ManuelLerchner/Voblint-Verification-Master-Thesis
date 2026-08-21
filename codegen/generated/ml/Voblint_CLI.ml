@@ -326,7 +326,8 @@ module Core : sig
   val cfg_calls_list :
     unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val side_cfg_T_eff_keyed_seed_dg_buffered :
-    'c bounded_semilattice_sup_bot -> 'd bounded_semilattice_sup_bot ->
+    'b equal -> 'c bounded_semilattice_sup_bot ->
+      'd bounded_semilattice_sup_bot ->
       (unit cfg_ext -> cfg_node -> (cfg_node * edge_action) list) ->
         ('a -> 'b) ->
           (cfg_node -> 'a -> 'c -> call_action -> 'a) ->
@@ -4764,6 +4765,15 @@ let rec ivl_tf_st_for
           (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
+let rec acc_add _A _B
+  k d x2 = match k, d, x2 with k, d, [] -> [(k, d)]
+    | ka, da, (k, d) :: kvs ->
+        (if eq _A k ka
+          then (k, sup _B.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                     d da) ::
+                 kvs
+          else (k, d) :: acc_add _A _B ka da kvs);;
+
 let rec char_of_integer
   k = Chr (if Z.leq Z.zero k && Z.lt k (Z.of_int 256) then k
             else modulo_integer k (Z.of_int 256));;
@@ -6077,6 +6087,16 @@ let rec aval_parity
                               (parity_tobool (aval_parity b sigma)) (Some false)
                         then PEven else PTop)));;
 
+let rec flush_sides
+  x0 t = match x0, t with [], t -> t
+    | kv :: kvs, t -> Side (fst kv, snd kv, flush_sides kvs t);;
+
+let rec buffer_aux _A _B
+  acc x1 = match acc, x1 with acc, Answer d -> flush_sides acc (Answer d)
+    | acc, QueryL (y, g) -> QueryL (y, (fun v -> buffer_aux _A _B acc (g v)))
+    | acc, QueryG (y, g) -> QueryG (y, (fun v -> buffer_aux _A _B acc (g v)))
+    | acc, Side (y, d, t) -> buffer_aux _A _B (acc_add _A _B y d acc) t;;
+
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
@@ -6591,7 +6611,9 @@ let rec fold_rhs_trees _A
                 acc res)
               ts);;
 
-let rec side_cfg_T_eff_keyed_seed_dg_buffered _C _D
+let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
+
+let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
   pred_sel gkey route cmb_c extra g s bot0 s0d s0g =
     (fun (v, c) ->
       (let acc0 =
@@ -6617,14 +6639,15 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _C _D
          fold_rhs_trees (bounded_semilattice_sup_bot_dg_state _C _D) acc0
            (intra @ comb @ extra route c v)
          in
-        seqcomp_tree t
-          (fun res ->
-            Side (gkey c,
-                   DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-                        globs res),
-                   Answer
-                     (DG (locals res,
-                           bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))));;
+        buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
+          (seqcomp_tree t
+            (fun res ->
+              Side (gkey c,
+                     DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                          globs res),
+                     Answer
+                       (DG (locals res,
+                             bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
 
 let rec dgs_enter
   (Dg_spec_ext
@@ -7068,7 +7091,7 @@ let rec ictx_spec
 
 let rec ictx_eqs
   mode is_bot_pred gs pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
@@ -7449,7 +7472,7 @@ let rec sctx_spec
 
 let rec sctx_eqs
   gs is_bot_pred pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gka
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
@@ -8294,7 +8317,7 @@ let rec ictx_speca
 
 let rec ictx_eqsa
   gs is_bot_pred pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gkc
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -8400,7 +8423,7 @@ let rec entry_state_route_gen
 
 let rec entry_state_eqs
   gs is_bot_pred pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gkb
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -9368,7 +9391,7 @@ let rec pctx_spec
 
 let rec pctx_eqs
   gs is_bot_pred pi ps mnm main =
-    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_parity))
@@ -9798,6 +9821,7 @@ end = struct
 let rec cs_call_string_eqs
   k gs is_bot_pred pi ps mnm main =
     Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      Call_String_Context.equal_call_string_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_ivl))
@@ -10050,7 +10074,7 @@ let rec sctx_entry_route_gen
 
 let rec sctx_entry_eqs
   gs is_bot_pred pi ps mnm main =
-    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_sign))
@@ -10164,6 +10188,7 @@ end = struct
 let rec scs_eqs
   k gs is_bot_pred pi ps mnm main =
     Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      Call_String_Context.equal_call_string_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_sign))
@@ -10312,7 +10337,7 @@ let rec ictx_entry_route_gen
 
 let rec ictx_entry_eqs
   mode gs is_bot_pred pi ps mnm main =
-    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           (Core.bounded_semilattice_sup_bot_int_dom_ext
@@ -10448,6 +10473,7 @@ end = struct
 let rec ics_eqs
   k mode gs is_bot_pred pi ps mnm main =
     Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      Call_String_Context.equal_call_string_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           (Core.bounded_semilattice_sup_bot_int_dom_ext

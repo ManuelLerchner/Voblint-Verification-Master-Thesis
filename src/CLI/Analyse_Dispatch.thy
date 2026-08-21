@@ -950,6 +950,7 @@ code_identifier
 | code_module TD_side_upd_rule \<rightharpoonup> (OCaml) Core
 | code_module Update_rules \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Monad \<rightharpoonup> (OCaml) Core
+| code_module Side_Buffering \<rightharpoonup> (OCaml) Core
 | code_module TD_Side_CFG \<rightharpoonup> (OCaml) Core
 | code_module TD_Side_Eff_Keyed_Gen \<rightharpoonup> (OCaml) Core
 | code_module TD_Side_Tree \<rightharpoonup> (OCaml) Core
