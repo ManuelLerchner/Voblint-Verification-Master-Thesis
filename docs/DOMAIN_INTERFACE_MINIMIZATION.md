@@ -163,7 +163,7 @@ becomes
 Gate: full `isabelle build` green (not I/Q alone), per repo policy:
 
 ```bash
-isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
+isabelle build -v -N -d ~/afp/thys -d vendor/td-verification -D . Voblint_Soundness
 ```
 
 ## New-domain author contract (target end state)

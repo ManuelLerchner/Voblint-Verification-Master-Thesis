@@ -1,5 +1,5 @@
 // PARAM: --analysis interval --context entry-state --context-graph expanded
-// CLI-level sibling of Interval_Exec_Ctx_Sound's dead_route_prog
+// CLI-level sibling of Interval_Ctx_Entry_State_Sound's dead_route_prog
 // (Example_EntryState_GraphViz_Regression.thy): two calls to the same
 // callee, one from a dead branch, one live. The dead call's own entered
 // context ([3,3]) is a real, distinct context -- not the empty list, not

@@ -278,7 +278,7 @@ Concrete, independently actionable:
    documents that `trace_witness` is `valid_ltr`'s flat shadow and de-risks a
    later Option B.
 4. **README drift.** `src/CFG/Collecting/README.md` and
-   `src/Formalization/Pipeline/README.md` describe the trace layers as peers;
+   `src/Soundness/README.md` describe the trace layers as peers;
    state the dominance relation explicitly.
 5. **Public-API annotation.** Mark `trace_witness` / `cfg_collect_trace` as
    *internal to the flat digest world* and `cfg_collect_ctx_act` /

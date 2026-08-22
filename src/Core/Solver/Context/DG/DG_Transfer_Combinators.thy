@@ -88,7 +88,7 @@ abbreviation answer_local where
   "answer_local x \<equiv> answer (DG x bot)"
 
 text \<open>
-  \<^typ>\<open>call_action\<close> (\<open>CFG_Def.thy\<close>) has one constructor, so matching it
+  \<^typ>\<open>call_action\<close> (\<open>CFG_Def\<close>) has one constructor, so matching it
   is a total destructure, not a partial case split. \<open>with_call\<close> names that
   destructure once per call site instead of repeating \<open>case ca of CallEdge
   dst fs as \<Rightarrow> ...\<close> at every \<^const>\<open>dgs_enter\<close>/\<^const>\<open>dgs_combine\<close> call

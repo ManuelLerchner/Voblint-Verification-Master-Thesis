@@ -1,13 +1,13 @@
 theory Example_Interval_DG_Ctx_Factorial_Regression
   imports
-    "Voblint_Formalization.Interval_Exec_Ctx_Sound"
+    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Recursive factorial under entry-state context sensitivity\<close>
 
 text \<open>
-  Acceptance regression for issue #123's structural-reachability lift together with the
+  Acceptance regression for the structural-reachability lift together with the
   keyed D/G generator's buffered same-key \<^const>\<open>Side\<close> publication: recursive
   \<open>factorial\<close>, called at \<open>n=3\<close> and \<open>n=4\<close> from \<open>main\<close>, exercises four distinct entry-state
   contexts (\<open>n=[1,1]\<close>, \<open>[2,2]\<close>, \<open>[3,3]\<close>, \<open>[4,4]\<close>). Before the buffering fix,

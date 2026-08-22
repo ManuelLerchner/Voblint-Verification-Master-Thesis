@@ -1,7 +1,7 @@
 section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 
 theory Example_Parity_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Parity_Codegen"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Parity_Entry"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -356,7 +356,7 @@ corollary parity_ex_report_agrees_with_node_classification:
 
 text \<open>The proved entry, discharged against the collecting semantics rather
   than against the computed table: \<open>analyse_parity_report_sound_proved_for\<close>
-  (\<^theory>\<open>Voblint_CLI.Parity_Codegen\<close>) turns a \<^term>\<open>Check_Proved\<close> report
+  (\<^theory>\<open>Voblint_CLI.Parity_Entry\<close>) turns a \<^term>\<open>Check_Proved\<close> report
   entry into a statement about every store \<^const>\<open>ltr_collect\<close> admits at that
   node, from the same four coverage facts the node-soundness bridge uses.\<close>
 

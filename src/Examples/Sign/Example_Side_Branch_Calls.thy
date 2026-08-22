@@ -1,5 +1,5 @@
 theory Example_Side_Branch_Calls
-  imports "Voblint_CLI.Sign_Codegen" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_CLI.Sign_Entry" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Certified sign analyzer on a branching, repeatedly-called procedure\<close>

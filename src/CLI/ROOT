@@ -5,14 +5,14 @@ session Voblint_CLI in "." = "Voblint_Analysis" +
      entry points, independent of the demonstration and regression theories
      in Voblint_Examples"
   sessions
-    "Voblint_Formalization"
+    "Voblint_Soundness"
     "HOL-Library"
   directories
-    "Codegen"
+    "Entry"
   theories
-    Sign_Codegen
-    Interval_Codegen
-    Int_Codegen
-    Parity_Codegen
+    Sign_Entry
+    Interval_Entry
+    Int_Entry
+    Parity_Entry
     Analyse_Dispatch
     State_Report_GraphViz

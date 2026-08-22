@@ -28,15 +28,15 @@ text \<open>
 
 theory Example_Parity_DG_Flagship
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.DG_Base_Exec"
+    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Core.DG_Base_Exec"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Analysis.Parity_Print"
     "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 hide_const (open) Update_rules.N

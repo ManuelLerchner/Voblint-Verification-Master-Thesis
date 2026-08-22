@@ -161,7 +161,7 @@ Doing it standalone now = pure cost.
 ### Phase 0 — preflight (½ hr)
 
 - [ ] Confirm `HOL-IMP` is in our session deps (`ROOT`); if not, add.
-- [ ] Snapshot baseline build: `isabelle build -d . Voblint_Formalization`.
+- [ ] Snapshot baseline build: `isabelle build -d . Voblint_Soundness`.
 
 ### Phase 1 — provenance comments + `to_hol_imp_aexp` projection (½ day)
 
@@ -236,7 +236,7 @@ Recorded for the day this becomes worth doing.
 
 | Risk | Likelihood | Mitigation |
 | --- | --- | --- |
-| `HOL-IMP` not in session deps | Low | Add to `ROOT` `Voblint_Formalization` session. |
+| `HOL-IMP` not in session deps | Low | Add to `ROOT` `Voblint_Soundness` session. |
 | Name clash with `HOL_IMP.N` / `HOL_IMP.V` / etc. via import | Medium | Use qualified names `HOL_IMP.N`; check `VIMP_Syntax.thy` constructors are not accidentally shadowed. |
 | `aval_agrees_on_hol_imp` ends up vacuous (no caller cares) | Medium | Documented as provenance check; not load-bearing. The point is the formal correspondence record. |
 | Approach 2 perceived as "not real AFP-reuse" | Medium | Document trigger conditions for Approach 1 (above) so the deferral is principled, not lazy. |

@@ -1,9 +1,10 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/evilmartians/lefthook/master/schema.json
 #
-# Install with `pixi run lefthook-install`. Guards two invariants documented
-# in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"),
-# and the two generated VIMP grammar frontends stay in sync with
-# grammar/vimp.yaml ("VIMP grammar pipeline"). The generator jobs are
+# Install with `pixi run lefthook-install`. Guards three invariants documented
+# in AGENTS.md: .thy sources stay ASCII-only ("ASCII-only .thy sources"), the
+# two generated VIMP grammar frontends stay in sync with grammar/vimp.yaml
+# ("VIMP grammar pipeline"), and the OCaml export emits only the modules the
+# handwritten CLI names ("New theories and the code-export module map"). The generator jobs are
 # allowed to rewrite their generated file in place -- fail_on_changes then
 # blocks the commit so a real drift gets reviewed and re-staged rather than
 # silently committed stale.
@@ -15,6 +16,12 @@ pre-commit:
     - name: isabelle-ascii
       glob: "*.thy"
       run: pixi run python3 scripts/check_isabelle_ascii.py {staged_files}
+
+    - name: codegen-module-map
+      glob:
+        - "codegen/generated/ml/Voblint_CLI.ml"
+        - "src/CLI/Analyse_Dispatch.thy"
+      run: pixi run python3 scripts/check_codegen_modules.py
 
     - name: vimp-isabelle-grammar-drift
       glob:

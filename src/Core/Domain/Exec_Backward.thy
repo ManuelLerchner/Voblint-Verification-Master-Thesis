@@ -224,7 +224,7 @@ text \<open>
   \<open>branch_st\<close> is \<open>branch\<close>'s executable \<open>resolved_st_q\<close> mirror: the same
   forward \<open>tobool\<close> feasibility gate ahead of \<open>bfilter_st\<close>, short-circuiting
   to the global \<open>bot\<close> \<open>resolved_st_q\<close> exactly where \<open>branch\<close> short-circuits
-  to \<open>bot\<close>. \<open>fun_of_resolved_st_q_for_bot\<close> (\<open>Exec_St.thy\<close>) is what makes this
+  to \<open>bot\<close>. \<open>fun_of_resolved_st_q_for_bot\<close> (\<open>Exec_St\<close>) is what makes this
   land on the right value: reading back the \<open>resolved_st_q\<close> \<open>bot\<close> instance
   gives exactly the pointwise-\<open>bot\<close> function \<open>branch\<close>'s own \<open>bot\<close> case
     produces, so \<open>branch_st_commute\<close> follows directly from \<open>branch_unfold\<close> --

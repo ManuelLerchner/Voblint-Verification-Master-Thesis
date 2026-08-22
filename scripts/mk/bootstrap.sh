@@ -9,4 +9,4 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/require-afp.sh"
 "$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" Voblint_CFG
 "$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" -d "$REPO_ROOT/src/Core" Voblint_Core
 "$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -d "$REPO_ROOT/src/VIMP" -d "$REPO_ROOT/src/CFG" -d "$REPO_ROOT/src/Core" -d "$REPO_ROOT/src/Analysis" Voblint_Analysis
-"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Formalization
+"$ISABELLE" build -v -N -d "$AFP" -d "$TD_DIR" -D "$REPO_ROOT" Voblint_Soundness

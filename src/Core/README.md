@@ -5,7 +5,7 @@ Has no domain-specific content; it defines the shared interfaces every concrete
 domain instance (`src/Analysis/Instances/`) consumes.
 
 **Session graph position:** `Voblint_CFG` -> `Voblint_Core` -> `Voblint_Analysis`
--> `Voblint_Formalization`. Downstream consumers are in `src/Analysis/Instances/`,
+-> `Voblint_Soundness`. Downstream consumers are in `src/Analysis/Instances/`,
 `src/Formalization/Pipeline/`, and `src/Examples/`.
 
 ## Sub-folders

@@ -19,12 +19,21 @@ text \<open>
     solver knowing about digests.
   \<^item> \<open>warrow\<close> --- \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>: widen globals for
     termination (narrow/warrow locals).  Terminates on unbounded loops; over-approximates
-    globals (collapses digest partitions).
+    globals, because it widens the value already joined across every origin.
+  \<^item> \<open>warrow_per_origin\<close> --- \<^const>\<open>TD_side_warrowing_per_origin_Interp_solve\<close>: widen each
+    origin's own contribution against that origin's previous contribution, and join the
+    widened contributions only when reading the target.  Keeps the termination guarantee
+    while stopping one producer's growth from driving another producer's widening.
 
-  The menu omits \<^const>\<open>TD_side_warrowing_per_origin_Interp_solve\<close> because that
-  interpretation does not code-generate for these equation systems.  It also omits
-  \<^const>\<open>TD_side_bounded_narrowing_Interp_solve\<close>, whose executable contract is not
-  established here.
+  \<open>warrow\<close> and \<open>warrow_per_origin\<close> are the two halves of the same choice: both widen, and
+  they differ only in whether the join happens before or after the widening.  \<open>join\<close> and
+  \<open>per_origin\<close> agree on every terminating run of a monotone system --- storing a
+  contribution per origin and then taking \<^const>\<open>sup_over_origins\<close> reconstructs exactly the
+  value accumulating them into one slot produces --- so the origin split is only observable
+  once an update rule is non-monotone in the stored value, which is what widening is.
+
+  The menu omits \<^const>\<open>TD_side_bounded_narrowing_Interp_solve\<close>, whose executable contract
+  is not established here.
 \<close>
 
 subsection \<open>Generic: executable termination yields a post-solution, for every update rule\<close>
@@ -52,9 +61,10 @@ type_synonym ('x, 'g, 'd) side_solver =
 
 definition solver_menu where
   "solver_menu =
-     [(STR ''join'',       TD_side_always_join_Interp_solve),
-      (STR ''per_origin'', TD_side_per_origin_Interp_solve),
-      (STR ''warrow'',     TD_side_warrowing_apinis_Interp_solve)]"
+     [(STR ''join'',              TD_side_always_join_Interp_solve),
+      (STR ''per_origin'',        TD_side_per_origin_Interp_solve),
+      (STR ''warrow'',            TD_side_warrowing_apinis_Interp_solve),
+      (STR ''warrow_per_origin'', TD_side_warrowing_per_origin_Interp_solve)]"
 
 text \<open>Read one slot under every solver on the menu, in one call. \<open>rd\<close> projects the
   solver's value at that slot down to whatever the caller wants to compare (a single

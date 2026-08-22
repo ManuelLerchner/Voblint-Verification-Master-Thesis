@@ -140,7 +140,7 @@ wired into `step'` on `acom`. We match **Voblint edge kinds** (`EA_Assign`,
 | **Representation mismatch**              | Nipkow’s `st` and `acom` do not match `cfg` + `pp => 'a abs_state` without a substantial adapter layer.                                                             |
 | **Stronger axioms than soundness needs** | Proving full lattice laws for every new domain is more work than `sound_domain` + transfers.                                                                        |
 | **Two parallel proof styles**            | Mixing `step'` on `acom` with `rhs` on CFG risks duplicate maintenance unless one is derived from the other.                                                        |
-| **Session / import weight**              | Pulling `HOL-IMP.Abs_Int2_ivl` into `Voblint_Formalization` adds dependencies and notation clashes (`top`, `bot`, `dom` are hidden in `Abs_Int_init` for a reason). |
+| **Session / import weight**              | Pulling `HOL-IMP.Abs_Int2_ivl` into `Voblint_Soundness` adds dependencies and notation clashes (`top`, `bot`, `dom` are hidden in `Abs_Int_init` for a reason). |
 
 ### Pragmatic recommendation
 
@@ -188,4 +188,4 @@ wired into `step'` on `acom`. We match **Voblint edge kinds** (`EA_Assign`,
 | Sign instantiation      | `Domains/Sign_Domain.thy`                                        |
 | Interval + HOL-IMP note | `Domains/Interval_Domain.thy` (comment on `Abs_Int2_ivl`)        |
 | Generic pipeline        | `Pipeline/Pipeline.thy`                                          |
-| Sign end-to-end         | `Voblint_Formalization.thy` (`voblint_sign_sound`)               |
+| Sign end-to-end         | `Voblint_Soundness.thy` (`voblint_sign_sound`)               |

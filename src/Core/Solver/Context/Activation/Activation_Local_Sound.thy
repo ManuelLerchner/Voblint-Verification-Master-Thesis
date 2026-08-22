@@ -76,7 +76,7 @@ text \<open>
   \<open>cfg_node \<Rightarrow> 'c \<Rightarrow> store set\<close> reader -- the \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close> carrier
   above is an accidental specialization, not something the proof needs. \<open>_gen\<close> below
   makes that reader (\<open>gammaM\<close>) an explicit parameter instead, so a reachability-lifted
-  carrier (issue #123) can instantiate it at \<open>gamma_state_lift\<close> without a parallel proof.
+  carrier can instantiate it at \<open>gamma_state_lift\<close> without a parallel proof.
 \<close>
 
 theorem valid_ltr_ctx_sound_gen:

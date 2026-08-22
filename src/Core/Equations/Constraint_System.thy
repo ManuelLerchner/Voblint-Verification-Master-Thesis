@@ -16,7 +16,7 @@ text \<open>
   (\<open>domain_transfer\<close>, \<open>apply_tf\<close>) and its soundness contract
   (\<open>sound_transfer\<close>) that every concrete
   equation-system generator is built from. The generators themselves --
-  the side-effecting D/G equation system (\<open>DG_Framework.thy\<close>'s \<open>dg_gen\<close>)
+  the side-effecting D/G equation system (\<open>DG_Framework\<close>'s \<open>dg_gen\<close>)
   solved by the verified top-down solver -- live downstream, in
   \<open>Solver/Context/DG\<close>.
 

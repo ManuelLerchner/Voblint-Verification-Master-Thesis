@@ -1,0 +1,5 @@
+session Voblint_Soundness in "." = "Voblint_Analysis" +
+  description "The two end-to-end soundness endpoints"
+  theories
+    Source_Activation_Sound
+    Run_Analysis_Sound

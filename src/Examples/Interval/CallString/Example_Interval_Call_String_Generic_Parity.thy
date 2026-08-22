@@ -1,6 +1,6 @@
 theory Example_Interval_Call_String_Generic_Parity
   imports
-    "Voblint_Formalization.Interval_Call_String_Ctx_Sound"
+    "Voblint_Analysis.Interval_Ctx_Call_String_Sound"
     Example_Interval_DG_CallString_K2
 begin
 

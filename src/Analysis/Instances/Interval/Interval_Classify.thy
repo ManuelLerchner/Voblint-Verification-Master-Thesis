@@ -1,7 +1,7 @@
 theory Interval_Classify
   imports Interval_Numeric_Queries Interval_Backward "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result" Interval_Exec_Sound
-    "Voblint_Analysis.Monovariant_Analysis_Result"
+    "Voblint_Core.Monovariant_Analysis_Result"
 begin
 
 hide_const phase.N
@@ -19,10 +19,10 @@ text \<open>
   \<open>abstract_check_domain\<close> once, below, reusing the numeric-query facts
   already proved sound in \<open>interval_numeric_queries\<close> rather than re-deriving
   the comparison tables --- the same way \<open>ivl_backward_domain\<close> in
-  \<open>Interval_Backward.thy\<close> interprets \<open>backward_domain\<close> for guard narrowing.
+  \<open>Interval_Backward\<close> interprets \<open>backward_domain\<close> for guard narrowing.
 
   Split out of \<open>Interval_Checks\<close> as its own theory: the routed-spine
-  producer (\<open>Interval_Ctx_None_Routed_Sound\<close>) interprets the generic report
+  producer (\<open>Interval_Ctx_None_Sound\<close>) interprets the generic report
   adapter locale and needs \<open>interval_classify_check\<close>'s soundness directions
   for its \<open>ClProved\<close>/\<open>ClRefuted\<close> obligations, while \<open>Interval_Checks\<close>'s own
   solved-result tables read that producer's routed output -- so this

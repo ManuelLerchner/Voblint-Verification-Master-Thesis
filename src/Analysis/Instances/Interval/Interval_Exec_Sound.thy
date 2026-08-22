@@ -5,8 +5,8 @@ theory Interval_Exec_Sound
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_CFG.Compile_Invariants"
-          "Voblint_Analysis.Exec_DG_Bridge"
-          "Voblint_Analysis.DG_Base_Exec"
+          "Voblint_Core.Exec_DG_Bridge"
+          "Voblint_Core.DG_Base_Exec"
 begin
 
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
@@ -27,7 +27,7 @@ text \<open>
   Only the raw computation lives here: soundness needs the
   \<open>base_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session),
   one session later than Analysis in the locked six-session chain, so that half
-  stays downstream in \<open>Interval_Codegen\<close> (CLI), mirroring \<open>Sign_Codegen\<close>.
+  stays downstream in \<open>Interval_Entry\<close> (CLI), mirroring \<open>Sign_Entry\<close>.
 
   \<open>G\<close> stays diagonal at \<open>ivl exec_dg_st lifted\<close>, matching what \<open>dg_gen_of\<close>
   needs; its content is never read, since every field of

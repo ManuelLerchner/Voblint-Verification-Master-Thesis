@@ -83,7 +83,7 @@ let usage =
   \                             every domain. expanded with --context none, or\n\
   \                             with a non-interval domain, is a clear\n\
   \                             configuration error, not a silent fallback.\n\
-  \  --solver join|per-origin|warrow\n\
+  \  --solver join|per-origin|warrow|warrow-per-origin\n\
   \                             Pick the vendored solver's update-rule\n\
   \                             discipline directly, bypassing the domain's\n\
   \                             production default (experimental; issue\n\
@@ -336,6 +336,8 @@ let () =
        | "join" -> solver := Some Voblint_CLI.Analysis_Config.Solver_Join
        | "per-origin" -> solver := Some Voblint_CLI.Analysis_Config.Solver_PerOrigin
        | "warrow" -> solver := Some Voblint_CLI.Analysis_Config.Solver_Warrow
+       | "warrow-per-origin" ->
+         solver := Some Voblint_CLI.Analysis_Config.Solver_WarrowPerOrigin
        | _ -> prerr_endline ("unknown --solver value: " ^ v); exit 1);
       parse_args rest
     | "--dot" :: rest -> dot := true; parse_args rest

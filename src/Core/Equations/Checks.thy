@@ -17,7 +17,7 @@ text \<open>
 
   The table's shape, \<open>(pp \<times> exp) set\<close>, matches \<^const>\<open>checks\<close> --- the
   \<^type>\<open>cfg\<close> record field a real compiler populates (\<open>collect_checks_prog\<close>,
-  \<open>VIMP_Proc_to_CFG.thy\<close>) --- directly: a caller instantiates \<open>ck\<close> with
+  \<open>VIMP_Proc_to_CFG\<close>) --- directly: a caller instantiates \<open>ck\<close> with
   \<open>checks g\<close> for a compiled \<open>g\<close>, not with a hand-built table.
 \<close>
 

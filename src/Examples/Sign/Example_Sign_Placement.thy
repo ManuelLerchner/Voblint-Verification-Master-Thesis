@@ -1,5 +1,5 @@
 theory Example_Sign_Placement
-  imports "Voblint_Analysis.Sign_Exec" "Voblint_Analysis.Exec_DG_Bridge"
+  imports "Voblint_Analysis.Sign_Exec" "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Solver_Menu" "Voblint_CFG.CFG_Prune" "Voblint_Core.DG_LTR_Sound"
 begin
 

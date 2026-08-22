@@ -1,7 +1,7 @@
 # Context architecture: the `context_domain` locale
 
 > **Status (2026-07-02):** landed, batch-green on `Voblint_Analysis` /
-> `Voblint_Formalization`, no `sorry`. Pure architecture cleanup — the
+> `Voblint_Soundness`, no `sorry`. Pure architecture cleanup — the
 > context-sensitivity operations are now packaged in one Goblint-shaped locale and
 > the soundness kernel routes callee reads through it. **No precision change and no
 > attempt at the flow-insensitive-global obstruction** (that stays A7.4 / the A-vs-C
@@ -198,7 +198,7 @@ richer `D` to a call-only selector, and is not Goblint's mechanism.
 
 The slice is a **pure refactoring**: the routing shape the kernel proves is now named
 by the locale, but the mathematics of every existing soundness theorem is unchanged.
-Batch-green on `Voblint_Analysis` and `Voblint_Formalization`, no `sorry`.
+Batch-green on `Voblint_Analysis` and `Voblint_Soundness`, no `sorry`.
 
 ### Changed mechanically (signature widening, no proof-content change)
 

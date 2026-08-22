@@ -152,7 +152,7 @@ qed
 end
 
 text \<open>\<open>sound_dg_hooks_ltr\<close> re-packages \<open>sound_dg_hooks\<close> with no further
-  obligations, so the base-locale reduction (\<open>DG_Soundness.thy\<close>,
+  obligations, so the base-locale reduction (\<open>DG_Soundness\<close>,
   \<open>sublocale sound_dg_spec \<subseteq> sound_dg_hooks ...\<close>) already discharges this one
   too: every \<open>sound_dg_spec\<close> interpretation is a \<open>sound_dg_hooks_ltr\<close>
   interpretation for free, so \<open>sound_dg_spec_ltr\<close>/\<open>sound_dg_spec_ltr_for\<close>
@@ -161,7 +161,7 @@ text \<open>\<open>sound_dg_hooks_ltr\<close> re-packages \<open>sound_dg_hooks\
   soundness argument.\<close>
 
 text \<open>A distinct qualifier from the base \<open>hooks\<close> sublocale in
-  \<open>DG_Soundness.thy\<close>: \<open>sound_dg_hooks_ltr\<close> re-exports every \<open>sound_dg_hooks\<close>
+  \<open>DG_Soundness\<close>: \<open>sound_dg_hooks_ltr\<close> re-exports every \<open>sound_dg_hooks\<close>
   fact (including \<open>gammaDG_mono\<close>) under its own interpretation, so reusing
   \<open>hooks\<close> here would collide with itself at every concrete \<open>sound_dg_spec\<close>
   instance the same way the unqualified sublocale did.\<close>

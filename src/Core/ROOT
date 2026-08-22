@@ -65,3 +65,14 @@ session Voblint_Core in "." = "Voblint_CFG" +
        routed DG analysis, generic in a classify function and a
        routed_context_hetero interpretation. *)
     DG_Analysis_Adapter
+    (* Executable mirror of the abstract D/G spine: the transport between the
+       solver's association-list carrier and the function-valued abstract
+       states, the executable Base-style spec, and the routing layer every
+       domain instantiates. Domain-generic throughout. *)
+    Exec_DG_Refines
+    Exec_DG_Trees
+    Exec_DG_Generator
+    Exec_DG_Bridge
+    DG_Base_Exec
+    Routed_Domain_Exec
+    Monovariant_Analysis_Result

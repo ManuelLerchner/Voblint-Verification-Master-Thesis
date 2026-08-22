@@ -2,7 +2,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
   description "Executable witnesses, flagship demonstrations, and the project capstone index"
   sessions
     "HOL-Library"
-    "Voblint_Formalization"
+    "Voblint_Soundness"
   directories
     "Sign"
     "Sign/CallString"
@@ -11,7 +11,8 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     "Interval/Ctx"
     "Congruence"
     "Parity"
-    "Mixed"
+    "Product"
+    "Relational"
     "CFG"
     "Tooling"
     "Regression"
@@ -41,7 +42,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Sign_DG_EntryState_Result_Regression
 
     (* Interval *)
-    Exec_Ivl_Run
+    Exec_Interval_Run
     (* The Interval analogue, inside a two-sided bound guard. *)
     Example_Interval_Checks_Store_Only
     Example_Interval_Placement
@@ -96,6 +97,9 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     (* Generator-layer Side buffering: the buffered RHS generator terminates
        where issuing two Side writes per evaluation livelocks the solver. *)
     Example_Keyed_Solver_Update_Rule_Regression
+    (* Two producers, one global: warrowing after the join loses the upper
+       bound that warrowing per origin keeps. *)
+    Example_Per_Origin_Widening_Precision
 
     Voblint
   document_files

@@ -1,5 +1,5 @@
 theory Interval_Checks
-  imports Interval_Classify Interval_Ctx_None_Routed_Sound
+  imports Interval_Classify Interval_Ctx_None_Sound
 begin
 
 hide_const phase.N
@@ -9,7 +9,7 @@ section \<open>Interval instance of the generic check-discharge interface\<close
 text \<open>
   The check-classification machinery (\<open>interval_classify_check\<close> and its
   soundness directions) lives in \<open>Interval_Classify\<close>, split out so the
-  routed-spine producer below (\<open>Interval_Ctx_None_Routed_Sound\<close>) can depend
+  routed-spine producer below (\<open>Interval_Ctx_None_Sound\<close>) can depend
   on it without a cycle through this theory's own solved-result tables,
   which read that producer's routed output.
 \<close>
@@ -23,7 +23,7 @@ text \<open>
   lattice needs it for termination), read as a
   \<^typ>\<open>(unit, ivl abs_state) analysis_result\<close>: a one-line partial
   application of \<^const>\<open>analyse_interval_ctx_result_warrow_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve
   and canonicalizes/normalizes each local key. Every report below reads
   through a result table via \<^const>\<open>lookup_context\<close> rather than a raw
@@ -47,7 +47,7 @@ text \<open>
   \<open>analyse_interval_join_result\<close> is \<^const>\<open>analyse_interval_td_result\<close>'s
   sibling under the always-join update rule: a one-line partial application
   of \<^const>\<open>analyse_interval_ctx_result_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
   \<^const>\<open>ictx_sol_prog_warrow\<close>.
 \<close>
@@ -66,7 +66,7 @@ text \<open>
   \<open>analyse_interval_per_origin_result\<close> mirrors
   \<open>analyse_interval_join_result\<close> exactly, a one-line partial application of
   \<^const>\<open>analyse_interval_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>), fixed at
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog_per_origin\<close> instead
   of \<^const>\<open>ictx_sol_prog\<close>.
 \<close>
@@ -203,6 +203,30 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 definition analyse_interval_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_per_origin p =
      analyse_interval_report_per_origin_for (declared_global p) p"
+
+subsection \<open>Solver-choice variant report: warrowing per origin\<close>
+
+text \<open>
+  The fourth update rule's report.  Unlike the \<open>join\<close>/\<open>per_origin\<close> pair, this one is not
+  interchangeable with \<open>analyse_interval_td_report\<close>'s Apinis warrowing on every
+  program: both widen, but this rule widens each origin's own contribution and joins
+  afterwards, so a global with two producers can end up strictly more precise here.
+\<close>
+
+definition analyse_interval_wpo_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_wpo_result_for gs p = analyse_interval_ctx_result_wpo_for gs prog_main_name p"
+
+definition analyse_interval_report_wpo_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_wpo_for gs p =
+     (let r = analyse_interval_wpo_result_for gs p
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
+           interval_classify_check)"
+
+definition analyse_interval_report_wpo :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_wpo p =
+     analyse_interval_report_wpo_for (declared_global p) p"
 
 end
 

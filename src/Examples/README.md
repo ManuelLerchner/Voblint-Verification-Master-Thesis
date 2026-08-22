@@ -20,13 +20,14 @@ procedure call.
 | `Interval/` | Interval | codegen probes, flagship D/G runs, context-sensitive (call-string) D/G, procedure-call spines, backward-analysis trace soundness |
 | `Congruence/` | Congruence | executable standalone arithmetic and backward-filtering regressions |
 | `Parity/` | Parity | domain-registration validation flagship |
-| `Mixed/` | Composite and relational | composite-domain regressions and the generic pipeline/solver run against a non-`abs_state` carrier |
+| `Product/` | Sign x Interval x Parity x Congruence | composite-domain regressions and refinement-mode witnesses |
+| `Relational/` | relational | the generic pipeline and solver run against a non-`abs_state` order carrier |
 | `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
-| `Regression/` | domain-agnostic | dispatcher, result-table, compile and min/max acceptance witnesses |
+| `Regression/` | domain-agnostic | dispatcher, result-table, compile and min/max acceptance witnesses. A regression that names a domain belongs with that domain, not here. |
 | `Tooling/` | domain-agnostic | contextual GraphViz regression, solver buffering regressions, the strategy-tree demo |
 
 Regressions live in this session, not upstream, on purpose: `VIMP` -> `CFG` ->
-`Analysis` -> `Formalization` stay soundness-only, and concrete witness
+`Analysis` -> `Soundness` stay soundness-only, and concrete witness
 programs remain at the proof chain's leaf. The codegen session consumes their
 executable definitions without moving code export into the soundness chain.
 

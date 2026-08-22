@@ -1,7 +1,7 @@
 theory Example_Interval_Source_Ctx
   imports
     Example_Interval_DG_Ctx_Collect
-    "Voblint_Formalization.Source_Activation_Sound"
+    "Voblint_Soundness.Source_Activation_Sound"
 begin
 
 section \<open>Source-level context-sensitive certification for repeated calls\<close>

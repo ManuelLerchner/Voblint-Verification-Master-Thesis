@@ -27,7 +27,7 @@ if [[ ! -f "$JAR" ]]; then
 fi
 
 # Session "TD" lives in the vendored td-verification submodule; jEdit must
-# see it to load Voblint_Formalization. Matches start-ir.sh.
+# see it to load Voblint_Soundness. Matches start-ir.sh.
 TD_COMPONENT_DIR="${TD_COMPONENT_DIR:-$REPO_ROOT/vendor/td-verification}"
 if [[ ! -f "$TD_COMPONENT_DIR/ROOT" ]]; then
   echo "ERROR: TD solver component not found at '$TD_COMPONENT_DIR' (expected ROOT)." >&2

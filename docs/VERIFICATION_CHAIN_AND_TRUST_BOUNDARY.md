@@ -40,7 +40,7 @@ not duplicated here.
  cli/main.ml  ->  Vimp_frontend.program (lexer/parser)
               ->  Voblint_CLI.Core.wf_program_compile_input_exec  (gate)
               ->  Voblint_CLI.Analysis_Config.mk_analysis_config  (one config value)
-              ->  Voblint_CLI.Analyse.analyse_config_with_state / analyse_config_ctx / analyse_config
+              ->  Voblint_CLI.Analyse_Dispatch.analyse_config_with_state / analyse_config_ctx / analyse_config
               ->  render_text_report  (hand-written OCaml; unreachable flag exported)
               ->  CLI output
 ```
@@ -54,7 +54,7 @@ instance:
 - `sign_is_sound_transfer_for` (`Analysis/Instances/Sign/Sign_Transfer.thy:144`)
 - `ivl_is_sound_transfer_for` (`Analysis/Instances/Interval/Interval_Transfer.thy:155`)
 - `parity_is_sound_transfer_for` (`Analysis/Instances/Parity/Parity_Transfer.thy:159`)
-- `int_{never,once,fixpoint}_is_sound_transfer_for` (`Analysis/Instances/Mixed/Int_Transfer.thy:403,417,431`)
+- `int_{never,once,fixpoint}_is_sound_transfer_for` (`Analysis/Instances/Product/Int_Transfer.thy:403,417,431`)
 
 `apply_tf` dispatches an `edge_action` to the matching transfer-record field
 (`fun apply_tf`, `Core/Equations/Constraint_System.thy:89-99`); in particular
@@ -192,7 +192,7 @@ that domain's operation-level lemmas:
 
 - `sign_tf_st_for_commute` (`Sign_Exec.thy:178-222`)
 - `ivl_tf_st_for_commute` (`Analysis/Instances/Interval/Ivl_Exec.thy:381-425`)
-- `int_tf_st_{never,once,fixpoint}_for_commute` (`Analysis/Instances/Mixed/Int_Exec.thy:108,258,401`)
+- `int_tf_st_{never,once,fixpoint}_for_commute` (`Analysis/Instances/Product/Int_Exec.thy:108,258,401`)
 - `parity_tf_st_for_commute` (`Analysis/Instances/Parity/Parity_Exec.thy:104`)
 
 each of the shape `fun_of_resolved_st_q_for gs (X_tf_st_for gs a s) = apply_tf (X_tf_for gs) a (fun_of_resolved_st_q_for gs s)`.
@@ -322,7 +322,7 @@ the older `side_cfg_T_eff_st` equation system `sign_exec_sound_collecting_at`/
 `ivl_exec_sound_collecting_at` are stated over, and not the mathematical
 `abs_state` generator the DG-native capstones `sign_dg_post_solution_collect_sound`/
 `ivl_dg_post_solution_collect_sound` are stated over). The connection reuses
-`base_dg_exec_analysis.collect_sound` (`Formalization/Pipeline/Run_Analysis_Sound.thy`)
+`base_dg_exec_analysis.collect_sound` (`Soundness/Run_Analysis_Sound.thy`)
 -- the same generic locale fact `analyse_sign_collect_sound_for`/
 `analyse_interval_dg_collect_sound_for` already cite to prove
 `analyse_sign_report_sound_proved_for`/`analyse_interval_td_report_sound_proved_for`
@@ -397,7 +397,7 @@ maintained as a parallel architecture; its two example consumers
 (`Examples/Interval/Example_Interval_Loop_Coverage.thy`,
 `Examples/Interval/Example_Proc_Call.thy`) were trimmed to their concrete-semantics and
 CFG-compilation content, pointing to the real production analyses of the same or
-equivalent programs (`Exec_Ivl_Run.thy`, `Example_Side_Proc_Global.thy`) where a
+equivalent programs (`Exec_Interval_Run.thy`, `Example_Side_Proc_Global.thy`) where a
 certified bound is wanted.
 
 `domain_transfer`'s shared `tf_branch` field stays plain-state-valued (`branch`, not

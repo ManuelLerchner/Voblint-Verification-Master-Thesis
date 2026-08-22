@@ -1,5 +1,5 @@
 theory Example_Sign_Codegen_Exec_Consistency
-  imports Exec_Sign_DG_Run "Voblint_CLI.Sign_Codegen"
+  imports Exec_Sign_DG_Run "Voblint_CLI.Sign_Entry"
 begin
 
 text \<open>

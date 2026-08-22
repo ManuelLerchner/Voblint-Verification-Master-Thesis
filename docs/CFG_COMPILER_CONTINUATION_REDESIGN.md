@@ -69,7 +69,7 @@ src/CFG/Compiler/Compile_Invariants.thy   11
 src/CFG/CFG_Prune.thy                      6
 src/CFG/Compiler/Compile_Certificate.thy   2
 src/CFG/Compiler/Located_LTR.thy           2
-src/Formalization/Pipeline/Source_Activation_Sound.thy   1 (line 191)
+src/Soundness/Source_Activation_Sound.thy   1 (line 191)
 ```
 
 plus two example theories (`Example_Compile_Regression`,
@@ -79,7 +79,7 @@ Everything downstream — the equation system, the TD solver, the D/G framework,
 the Sign/Interval/Mixed instances, the GraphViz renderer — consumes only
 `compile_prog` / `compile_proc` and the `cfg` record. A grep for dense-index
 assumptions (`{0..<n}`, `Statement `` ` ``, `upt`) over `src/Analysis` and
-`src/Formalization` returns nothing: every consumer is edge-set driven.
+`src/Soundness` returns nothing: every consumer is edge-set driven.
 
 **Consequence, stated precisely: no analysis *framework definition* appears to
 require changes under any of the options below — but examples and
@@ -620,8 +620,8 @@ src/Analysis/Generic/Solver/Exec/Exec_Bridge.thy       apply_etf_st
 src/Analysis/Generic/Solver/Core/TD_Side_CFG.thy       two etf record literals
 src/Analysis/Instances/Sign/Sign_Exec.thy              sign_tf_st + etf_st literal
 src/Analysis/Instances/Interval/Ivl_Exec.thy           ivl_tf_st + etf_st literal
-src/Analysis/Instances/Mixed/Mixed_Sign_Interval.thy   dgs literal
-src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy        dgs literal
+src/Analysis/Instances/Product/Mixed_Sign_Interval.thy   dgs literal
+src/Analysis/Instances/Product/Exec_DG_Bridge.thy        dgs literal
 src/Analysis/Instances/NamedGlobalSign/…               etf literal
 src/CFG/CFG_Def.thy, src/CFG/CFG_Transfer.thy          edge_step, edge_collect
 src/Analysis/Instances/Tooling/Analysis_GraphViz.thy   string_of_action (two sites)
@@ -1050,8 +1050,8 @@ dominate the migration effort. Nothing in it looks conceptually threatened.
 | `src/CFG/Collecting/*` (`CFG_Local_Trace`, `LTR_Abstract`, `LTR_Collect`) | unchanged | defined over `cfg`, not over `compile` |
 | `src/Analysis/**` (equations, TD solver, DG, Sign, Interval, Mixed) | unchanged | consume `compile_prog` and the `cfg` record only; no dense-index assumptions found |
 | `src/Analysis/Instances/Tooling/Analysis_GraphViz.thy` | unchanged | `compiled_proc_owner` recomputes `compile_proc` ranges; the shape of that recursion is preserved |
-| `src/Formalization/Pipeline/Run_Analysis_Sound.thy`, `Mixed_Flow_Sound.thy`, `DG_Domain_Registration.thy` | unchanged | |
-| `src/Formalization/Pipeline/Source_Activation_Sound.thy` | local repair | one `compiled_atE` destructuring at line 191; the `compile_control_at_SKIP_exit_path` + epilogue-edge composition still closes the same way |
+| `src/Soundness/Run_Analysis_Sound.thy`, `Mixed_Flow_Sound.thy`, `DG_Domain_Registration.thy` | unchanged | |
+| `src/Soundness/Source_Activation_Sound.thy` | local repair | one `compiled_atE` destructuring at line 191; the `compile_control_at_SKIP_exit_path` + epilogue-edge composition still closes the same way |
 | `src/Examples/Interprocedural/Example_Compile_Regression.thy` | local repair | `ex_nested_calls`, `compile_seq_call_edge`, `example_nested_call_preserves_outer`, `example_normal_fallthrough` hardcode `Statement (Suc n)`; regenerate |
 | `src/Examples/Interprocedural/Example_Control_Simulation_Regression.thy` | local repair | |
 | `src/Examples/Interprocedural/Example_Proc_Recursion_CFG.thy` | local repair | hardcoded indices 0–17; regenerate |
@@ -1665,11 +1665,11 @@ Confirmations:
 Phases 2, 4, and the `VIMP_Proc_to_CFG.thy` half of Phase 3 needed edits to
 theories the PIDE MCP server treated as read-only (`Cannot edit base session
 theory Voblint_CFG.VIMP_Proc_to_CFG`), because `.mcp.json` launched the server
-with `-l Voblint_Formalization` and every repo theory sat inside the prebuilt
+with `-l Voblint_Soundness` and every repo theory sat inside the prebuilt
 base heap.
 
 Fix: base logic changed to `Voblint_VIMP`, which keeps the `Voblint_VIMP` heap
-warm while making `src/CFG`, `src/Analysis`, `src/Formalization` and
+warm while making `src/CFG`, `src/Analysis`, `src/Soundness` and
 `src/Examples` load dynamically. After the server restart the compiler theory is
 editable and Phase 4 proceeds.
 
@@ -1678,7 +1678,7 @@ editable and Phase 4 proceeds.
 The continuation-passing `compile` / `compile_proc` are landed in
 `VIMP_Proc_to_CFG.thy` together with the arithmetic and shape lemmas the
 dependent files consume. Repair order followed §8; every file below is clean
-and the batch build (`Voblint_Formalization` and `Voblint_Examples`) is green.
+and the batch build (`Voblint_Soundness` and `Voblint_Examples`) is green.
 
 | File | State |
 | --- | --- |

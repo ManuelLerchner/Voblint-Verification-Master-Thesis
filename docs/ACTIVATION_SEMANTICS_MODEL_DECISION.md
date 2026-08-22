@@ -369,7 +369,7 @@ Buildable, independently green commits:
    risk — the induction assembly.)*
 3. `feat(dgc): sign seeded activation-collecting soundness` — Sign `SEED_G` witness
    (from `Exec_Sign_Seed_EnterMono`) + `point_digest` interpretation; corollary
-   `sign_seeded_cfg_collect_ctx_act ⊆ γ`. Build `Voblint_Formalization`.
+   `sign_seeded_cfg_collect_ctx_act ⊆ γ`. Build `Voblint_Soundness`.
 4. `feat(dgc): interval recursion activation-collecting soundness` — interval
    `SEED_G` witness (from `Exec_Ivl_Seed_EnterMono` / `point_ivl_gamma_exact`) +
    `rdiv` return-node `cfg_collect_ctx_act ⊆ γ`, retiring `rdiv_rehyd_rhs_dominated`

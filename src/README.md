@@ -2,7 +2,7 @@
 
 The six-session Isabelle/HOL proof chain comprises **Voblint_VIMP**,
 **Voblint_CFG**, **Voblint_Core**, **Voblint_Analysis**,
-**Voblint_Formalization**, and **Voblint_Examples**. It formalizes sound static
+**Voblint_Soundness**, and **Voblint_Examples**. It formalizes sound static
 analysis from VIMP source with procedures through interprocedural CFG
 collecting semantics, abstract equations, and the vendored **TD side** solver
 (`vendor/td-verification`, session `TD`) to pipeline soundness theorems.

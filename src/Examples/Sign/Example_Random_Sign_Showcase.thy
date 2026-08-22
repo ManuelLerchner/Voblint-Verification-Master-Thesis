@@ -1,7 +1,7 @@
 section \<open>Example: nondeterministic input recovers precision through branching\<close>
 
 theory Example_Random_Sign_Showcase
-  imports "Voblint_CLI.Sign_Codegen" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_CLI.Sign_Entry" "Voblint_VIMP.VIMP_Notation"
 begin
 
 

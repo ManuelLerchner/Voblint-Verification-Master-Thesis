@@ -13,7 +13,7 @@ unified the *math*; this doc planned the *retirement* of the intra spine.
 - **Deletion from main** (branch `refactor/drop-classical-spine`). Removed the 16+1
   intra-*only* leaf theories: `TD_Soundness`, `Sign_Soundness`,
   `Interval_Soundness`, `Interval_Domain`, `Pipeline`, `Trace_Soundness`,
-  `TD_Widen_Interface`, `TD_WN_Interface`, `Voblint_Formalization`,
+  `TD_Widen_Interface`, `TD_WN_Interface`, `Voblint_Soundness`,
   `CFG_Exit_Reachable`, and the 7 intra examples. Main went 58 -> 41 theories and
   still builds green (IP / Side / unified untouched).
 - **Key structural finding — there is no separable "classical core" to delete.**
@@ -154,7 +154,7 @@ Each slice exits sorry-free with **no example regression** (handoff §8 gate).
 ## 5. Build gate
 
 ```bash
-isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Soundness
 ```
 
 Sorry-free, no example regression, per slice. I/Q inner loop, batch as the gate

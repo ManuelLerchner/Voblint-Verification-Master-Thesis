@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --solver warrow-per-origin
+// Two call sites write p's FunctionEntry seed from distinct origins.
+// warrow-per-origin widens each origin's own contribution and joins
+// afterwards, so each site's value stays exact and the entry slot reads
+// [1,2] -- enough to decide n < 10.
+//
+// The same program under --solver warrow is the paired known-imprecision
+// case (03-warrow_joins_before_widening.vimp): widening the already-joined
+// value loses the upper bound. This is the one axis on which the update-rule
+// choice is observable as precision rather than only as termination.
+void p(n) {
+  __voblint_check(n < 10) // PROVED
+}
+void main() {
+  p(1);
+  p(2)
+}

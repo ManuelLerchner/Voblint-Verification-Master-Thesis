@@ -8,7 +8,7 @@ text \<open>
   \<open>exp\<close> is one integer-valued expression language, matching C: there is no
   separate Boolean AST.  \<open>N\<close> and \<open>V\<close> are the leaves; \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/
   \<open>And\<close>/\<open>Or\<close> are ordinary constructors that happen to evaluate to \<open>0\<close>/\<open>1\<close>
-  (\<open>VIMP_Expr.thy\<close>'s \<open>aval\<close>/\<open>truthy\<close>), exactly as a C comparison or logical
+  (\<open>VIMP_Expr\<close>'s \<open>aval\<close>/\<open>truthy\<close>), exactly as a C comparison or logical
   operator yields an \<open>int\<close>.  There is no \<open>Bc\<close> constructor: source \<open>true\<close>/
   \<open>false\<close> literals lower to \<open>N 1\<close>/\<open>N 0\<close> at the grammar level.
 \<close>

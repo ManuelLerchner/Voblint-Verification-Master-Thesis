@@ -1,6 +1,6 @@
 theory Example_Side_Execute
-  imports "Voblint_CLI.Sign_Codegen"
-    "Voblint_Formalization.Source_Activation_Sound"
+  imports "Voblint_CLI.Sign_Entry"
+    "Voblint_Soundness.Source_Activation_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -10,7 +10,7 @@ text \<open>
   The smallest end-to-end witness: compile \<open>x := 1\<close>, run the actual vendored
   solver behind \<^const>\<open>analyse_sign_result_for\<close>, and read the certified
   soundness off the program-parametric bridge in
-  @{theory Voblint_CLI.Sign_Codegen}.  The @{command value} / \<open>eval\<close> evaluates
+  @{theory Voblint_CLI.Sign_Entry}.  The @{command value} / \<open>eval\<close> evaluates
   at build time, so a green build is the execution proof.
 \<close>
 

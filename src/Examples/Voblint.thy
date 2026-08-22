@@ -19,10 +19,10 @@ theory Voblint
     "Voblint_Core.Abstract_Numeric_Queries"
     "Voblint_Core.Abstract_Checks"
     "Voblint_Analysis.Sign_Domain"
-    "Voblint_Analysis.Sign_Exec_Ctx_Sound"
+    "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Analysis.Interval_Domain"
-    "Voblint_Analysis.Interval_Ctx_None_Routed_Sound"
+    "Voblint_Analysis.Interval_Ctx_None_Sound"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Core.DG_Framework"
@@ -32,7 +32,7 @@ theory Voblint
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
     "Voblint_Core.Exec_St"
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     Exec_Sign_DG_Run
@@ -40,7 +40,7 @@ theory Voblint
     Example_Interval_Checks_Store_Only
     Example_Parity_Checks_Store_Only
     Example_Interval_DG_Flagship
-    "Voblint_Formalization.Source_Activation_Sound"
+    "Voblint_Soundness.Source_Activation_Sound"
     Example_Interval_DG_Ctx_Collect
     Example_Interval_DG_EntryState_Collect
     Example_Interval_DG_CallString_K1
@@ -59,7 +59,7 @@ theory Voblint
     Example_Random_Sign_Showcase
     Example_Relational_DG_Demo
     Example_Strategy_Tree_Demo
-    "Voblint_CLI.Sign_Codegen"
+    "Voblint_CLI.Sign_Entry"
     "Voblint_CLI.Analyse_Dispatch"
     "Voblint_CLI.State_Report_GraphViz"
 begin
@@ -266,9 +266,9 @@ text \<open>
 
   \<^bold>\<open>4. Concrete domains.\<close> Domain instances used by the proof spine and examples.
     \<^item> @{theory Voblint_Analysis.Sign_Domain} --- Sign lattice, transfer functions, soundness, monotonicity, display instance.
-    \<^item> @{theory Voblint_Analysis.Sign_Exec_Ctx_Sound} --- Sign at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
+    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- Sign at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
     \<^item> @{theory Voblint_Analysis.Interval_Domain} --- interval lattice, widening, transfer functions, soundness, monotonicity.
-    \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Routed_Sound} --- Interval at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
+    \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- Interval at the routed D/G spine, over \<^const>\<open>ltr_collect\<close>.
 
   \<^bold>\<open>4b. The D/G interface spine.\<close> The native, carrier-opaque Goblint-\<^verbatim>\<open>Spec\<close> interface
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
@@ -286,7 +286,7 @@ text \<open>
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Core.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Core.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Analysis.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- the native D/G runtime API for Sign: \<open>analyse_sign_eqs\<close>, \<open>analyse_sign\<close>, \<open>analyse_sign_env\<close>.
     \<^item> @{theory Voblint_Analysis.Interval_Exec_Sound} --- the Interval counterpart:
@@ -294,7 +294,7 @@ text \<open>
       plus the join and per-origin solver-choice siblings.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
-    \<^item> @{theory Voblint_Formalization.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
+    \<^item> @{theory Voblint_Soundness.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision witnesses, tooling --- the
     complete end-to-end analyses (\<open>Example_Interval_DG_Flagship\<close>, \<open>Exec_Sign_DG_Run\<close>,
@@ -315,7 +315,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
     \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified Sign analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global}.
-    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Ivl_Run"}'s.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Interval_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
       \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
@@ -386,16 +386,16 @@ text \<open>
   \<^bold>\<open>9. Executable code generation.\<close> A runtime-program entry point per domain,
     reusing the exact native D/G pipeline behind \<open>4b\<close>/\<open>5\<close> above rather than a
     parallel one, exported to OCaml.
-    \<^item> @{theory Voblint_CLI.Sign_Codegen} --- \<^verbatim>\<open>analyse_sign\<close>
+    \<^item> @{theory Voblint_CLI.Sign_Entry} --- \<^verbatim>\<open>analyse_sign\<close>
       takes an arbitrary \<^typ>\<open>imp_prog\<close> at runtime (not a fixed example
       program) and reuses \<^verbatim>\<open>unit_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>
-      and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Formalization.Run_Analysis_Sound})
+      and \<^verbatim>\<open>collect_sound\<close> (@{theory Voblint_Soundness.Run_Analysis_Sound})
       for its soundness theorems. \<^verbatim>\<open>analyse_sign_report\<close> classifies every
       compiled \<^verbatim>\<open>__voblint_check(...)\<close> against that same computed
       post-solution via \<^locale>\<open>abstract_check_domain\<close>'s
       \<^verbatim>\<open>classify_checks\<close>, so the report and the soundness theorem share one
       computation, not two.
-    \<^item> @{theory Voblint_CLI.Interval_Codegen} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
+    \<^item> @{theory Voblint_CLI.Interval_Entry} --- \<^verbatim>\<open>analyse_interval_dg\<close>/
       \<^verbatim>\<open>analyse_interval_td_report\<close>, the Interval counterpart production \<^verbatim>\<open>analyse\<close> actually
       dispatches to, built the same way on \<^verbatim>\<open>base_dg_exec_analysis\<close>'s own \<^verbatim>\<open>run_source_sound\<close>/
       \<^verbatim>\<open>collect_sound\<close>. \<^verbatim>\<open>Interval_Checks\<close> additionally carries \<^verbatim>\<open>analyse_interval_report\<close>/
@@ -403,7 +403,7 @@ text \<open>
       \<^verbatim>\<open>analyse_with_solver\<close> (@{theory Voblint_CLI.Analyse_Dispatch}) compares against this
       same production default on the identical equation system, each with its own soundness
       theorems proved the same way, in @{theory
-      Voblint_CLI.Interval_Codegen}.
+      Voblint_CLI.Interval_Entry}.
     \<^item> @{theory Voblint_CLI.Analyse_Dispatch} --- \<^verbatim>\<open>analyse\<close>
       dispatches on \<^verbatim>\<open>analysis_domain\<close> (\<^verbatim>\<open>Sign_Analysis\<close>/\<^verbatim>\<open>Interval_Analysis\<close>)
       to the two domains' report functions; both already share the observable
@@ -475,7 +475,7 @@ text \<open>
     \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the registered endpoint \<open>flagship_ex_reg.run_source_sound\<close>
-      (@{theory Voblint_Formalization.Run_Analysis_Sound}'s \<^verbatim>\<open>unit_dg_exec_analysis\<close>
+      (@{theory Voblint_Soundness.Run_Analysis_Sound}'s \<^verbatim>\<open>unit_dg_exec_analysis\<close>
       locale) bundles solver correctness, executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one
       application, bounding \<open>ltr_collect g S v\<close> at every program point.

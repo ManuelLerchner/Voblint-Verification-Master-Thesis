@@ -1,7 +1,7 @@
 # From global witnesses to canonical activation-local semantics
 
 Status: **implemented and batch-green.** Stages 1–5 plus the concrete instantiation are landed
-(`Voblint_CFG` → `Voblint_Formalization` clean, no `sorry`). The activation-local trace semantics
+(`Voblint_CFG` → `Voblint_Soundness` clean, no `sorry`). The activation-local trace semantics
 `valid_ltr` is the concrete foundation, `cfg_collect_ctx_act` is its sink/`key` projection,
 `activation_collect_sound` rides the four generic obligations, and the recursive source bridge
 `source_activation_sound` closes `source pstep → cstep → valid_ltr → cfg_collect_ctx_act → γ`
@@ -487,7 +487,7 @@ downstream result depended on behaviour present only in the old semantics. See t
 
 ### Stage 1 landed (`CFG_Local_Trace.thy`)
 
-Stage 1 is implemented and builds green through `Voblint_Formalization`. The design
+Stage 1 is implemented and builds green through `Voblint_Soundness`. The design
 invariants are theorems of `valid_ltr`, not comments:
 
 - `valid_ltr_Call_caller_valid` — a valid `Call` has a valid caller (survives the callee's

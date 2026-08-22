@@ -3,7 +3,7 @@ section \<open>Placement and storage are independent axes\<close>
 theory Example_Placement_Regression
   imports
     "Voblint_Analysis.Sign_DG"
-    "Voblint_CLI.Sign_Codegen"
+    "Voblint_CLI.Sign_Entry"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

@@ -3,7 +3,7 @@
 > Companion to `VALUE_CARRIED_DIGEST_MIGRATION.md` (the design). This file records
 > what is **built and machine-checked**. Stages 0–2, the read-integration keystone,
 > and an executable end-to-end example are complete and **batch-green** (`isabelle
-> build Voblint_Analysis` + downstream `Voblint_Formalization`, no `sorry`). Claims
+> build Voblint_Analysis` + downstream `Voblint_Soundness`, no `sorry`). Claims
 > tagged **[verified]** were checked against the Isabelle sources (`file:line`);
 > **[batch-green]** = passes the full `isabelle build`, not only the I/Q checker.
 
@@ -223,7 +223,7 @@ halves of the digest run on the real solver: the read side (`mode_obs`, keystone
 the new write side (`side_cfg_T_eff_digest_st` + `switching_combine_digest_st`). On a
 compiled IMP program the two writes separate into distinct finite-mode partitions
 (`digest_separates_the_modes`, `by eval`) where the context/site generators merge. All
-in `isabelle build Voblint_Analysis` + `Voblint_Formalization`, no `sorry`. The write
+in `isabelle build Voblint_Analysis` + `Voblint_Soundness`, no `sorry`. The write
 side is now transported to its abstract image and the solver invariants discharged
 (`part_post_solution_digest_st_to_abs_eff`, `mode_INR_BOT`, `mode_LOCAL_POST`, §5.1);
 the read side and kernel were already proven. The remaining premise, `MODE_AGREE`, is

@@ -2,7 +2,7 @@ section \<open>Example: Sign analysis of a single global-increment call\<close>
 
 theory Example_Side_Proc_Global
   imports
-    "Voblint_CLI.Sign_Codegen"
+    "Voblint_CLI.Sign_Entry"
     "Voblint_VIMP.VIMP_Notation"
     Example_Inc_Proc
 begin

@@ -4,142 +4,87 @@ Picked up once Slice C/D (obsolete TD/etf spine deletion) is complete and the
 full gates are green. Section 0 below is the measured post-deletion baseline;
 every count in P3-P12 is stated against it.
 
-## 0. Post-deletion baseline (measured)
+## 0. Where this stands
 
-Measured on the branch after Slice D, against the pre-deletion audit.
+Measured after the TD/etf deletion and the consolidation that followed.
 
-| metric | before | after |
-| --- | --- | --- |
-| `src` theories | 227 | 212 |
-| `src` `.thy` lines | ~96k | 85.8k |
-| `Core` | 55 thy / 27.6k | 44 thy / 19.6k |
-| `Analysis` | 71 thy / 32.0k | 66 thy / 29.2k |
-| `analyse_*` constants | 134 | 128 |
-| suffix families with >=4 variants | 19 fams / 89 consts | 9 fams / 38 consts |
-| `code_identifier` entries | 122 | 119 |
-| theories escaping the map | 20 | 19 |
+| metric | pre-deletion | after deletion | now |
+| --- | --- | --- | --- |
+| `src` theories | 227 | 212 | 212 |
+| `src` `.thy` lines | ~96k | 85.8k | 83.8k |
+| `analyse_*` constants | 134 | 128 | 128 |
+| suffix families with >=4 variants | 19 | 9 | 9 |
+| `docs/` markdown files (live) | 142 | 142 | 70 |
+| staged-migration phrases in `.thy` | many | 9 | 0 |
 
-Sessions and their ROOT graph:
+Session graph, and why `Formalization` is not a leaf, are in the project
+contract; `ROOTS` lists eight directories and omits `src/CodegenCheck`
+deliberately.
 
-```text
-VIMP -> CFG -> Core -> Analysis -+-> Formalization -+
-                                 |                  v
-                                 +----------------> CLI -> Codegen
-                                                     +---> Examples
-```
+### Done
 
-`Voblint_Formalization` is not an endpoint: `CLI/Analyse_Dispatch.thy` imports
-it, so the soundness session sits inside the export chain. `ROOTS` lists eight
-directories; `src/CodegenCheck` is not among them and builds only when CI
-names it.
+- **P3** Exec_DG_Bridge's duplicate transport family, then the file itself.
+  The carrier-generic engine now proves the raw readback's post-solution
+  transport as it already did the lifted one, and the eleven private `_for`
+  support lemmas and the unadopted exec-side lifted spec island are gone.
+  What was left split along its four layers: `Exec_DG_Refines` (769),
+  `Exec_DG_Trees` (1553), `Exec_DG_Generator` (1588), `Exec_DG_Bridge` (370).
+- **P4** the domain x context clone matrix. `routed_unit_domain_exec` became
+  `routed_domain_exec` by taking the routing functions and their agreement as
+  parameters, which is the only thing the eleven copies differed in. All
+  eleven post-solution transports are now that one derivation instantiated.
+- **P5** the four domain-generic theories moved from
+  `Analysis/Instances/Mixed` into `Core/Solver/Context/DG`, where the session
+  boundary enforces what their comments only asserted.
+- **P6** `CLI/Codegen` -> `CLI/Entry` (it contains no `export_code`),
+  `Instances/Mixed` -> `Product` with `Rel_Order_Domain` to
+  `Instances/Relational`, the ten context cells into
+  `Instances/<Domain>/Ctx/<Domain>_Ctx_<Policy>_Sound`, and
+  `Voblint_Formalization` -> `Voblint_Soundness` holding only its two
+  endpoints.
+- **P8** sixteen escaped modules folded into `Core`, leaving the four `cli/`
+  names; `scripts/check_codegen_modules.py` fails on any new escapee, in the
+  pre-commit hook and `pixi run codegen-modules`.
+- **P12, in part** `docs/history/` separates the completed migration record
+  from the live documentation; no theory comment describes itself as staged
+  ahead of a migration; the session graph in the project contract is correct.
 
-What the deletion did and did not change:
+### Remaining
 
-- `side_cfg_T_eff*` as a suffix family is gone; so are `make_side_rhs_tree_eff*`,
-  and `unit_step` / `unit_dg_spec` / `unit_combine_step` fell below four
-  variants. The remaining nine families are the domain x mode axes of
-  `analyse_*_ctx_result`, `analyse_*_report`, `analyse_*_result`, and
-  `formals_route`.
-- The `Exec_DG_Bridge` duplicate families, the `pp_abs` clone matrix, the
-  generic framework under `Instances/Mixed`, the `CLI/Codegen` misnomer, the
-  hand-curated `code_identifier` map and the docs sprawl are untouched by it.
-- `Rel_Order_Domain` is no longer dead: `Examples/Mixed/Example_Relational_DG_Demo.thy`
-  (202 lines) consumes it. It is a relational witness, not removable code.
+`P9`, `P10` and `P11` are judgement work rather than mechanism, and all three
+touch `Analysis` and `Examples`. Check for concurrent work there before
+starting.
 
-## P3 - Finish the `Exec_DG_Bridge` migration
+## P3 - Split `Exec_DG_Bridge`
 
-`src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy`, 4885 lines, carries two
-transport families. The carrier-generic one lives under the single
-`Carrier-generic whole-CFG commute` section (lines 3719-4339, 33 declarations);
-the superseded specialized one is split across lines 2687-3718 (37) and
-4340-4885 (20). Six subsection titles appear in both:
-
-```text
-Per-tree traversal commutation                     2687   3770
-Bundled per-tree transport relation                4340   3838
-Classifier-parametric fold transport               3333   4005
-Per-node tree-list transport for the generator     4420   4051
-Equation-system transport for the generic generator 4457  4077
-The post-solution transport theorem                4559   4164
-```
-
-The migration stalled at adoption, not at construction. The generic
-`part_post_solution_seed_dg_st_to_abs` (4166) has zero external users, while
-its specialized `_for` counterparts carry every downstream call site:
-`part_post_solution_seed_dg_st_to_abs_lifted_for` in six `Formalization/Pipeline`
-theories and two call-string examples, `part_post_solution_dg_st_to_abs_for` and
-`part_post_solution_dg_st_to_abs_lifted_for` in `Run_Analysis_Sound` and the
-interval flagship. Eleven external declarations in total keep the old family
-alive; the generic family exports six.
-
-Repoint those call sites at the generic theorems, delete the superseded family
-outright (no abstraction that keeps both), then split by responsibility if the
-dependency structure justifies it, roughly `Core/Exec/Exec_DG_Refines`,
-`_Trees`, `_Generator`, `_Monovariant`. Five subsections (610, 710, 796, 1040,
-1147) still carry `issue #123` staging language that the comment rules forbid;
-they go with the migration.
-
-Gate: no duplicate family; all consumers on the carrier-generic one; no
-theorem lost to renaming; I/Q clean; build and regressions green; own commit.
-
-## P4 - Collapse the domain x context clone matrix
-
-Twenty-one `pp_abs` theorems exist. One is generic
-(`Routed_Unit_Domain.pp_abs`, 108); fourteen are production clones and six are
-in `Examples`. Only two files outside `Routed_Unit_Domain` cite it at all
-(`Run_Analysis_Sound`, `Parity_Exec_Ctx_Sound`), which is why the adopters are
-the small cells and the non-adopters are the large ones:
-
-| cell | lines |
-| --- | --- |
-| `Analysis/.../Sign_Exec_Ctx_Sound` | 557 |
-| `Analysis/.../Parity_Exec_Ctx_Sound` | 571 |
-| `Analysis/.../Interval_Ctx_None_Routed_Sound` | 1544 |
-| `Analysis/.../Int_Exec_Ctx_Sound` | 1682 |
-| `Formalization/Pipeline/Interval_Exec_Ctx_Sound` | 1274 |
-| `Formalization/Pipeline/Int_Entry_State_Ctx_Sound` | 628 |
-| `Formalization/Pipeline/Sign_Entry_State_Ctx_Sound` | 614 |
-| `Formalization/Pipeline/Int_Call_String_Ctx_Sound` | 369 |
-| `Formalization/Pipeline/Sign_Call_String_Ctx_Sound` | 361 |
-| `Formalization/Pipeline/Interval_Call_String_Ctx_Sound` | 263 |
-| `CLI/Codegen/{Sign,Interval,Int,Parity}_Codegen` | 491 / 783 / 289 / 246 |
-
-9672 lines across fourteen files, split between two sessions on no principle,
-with four names for the same cell role (`_Exec_Ctx_Sound`,
-`_Ctx_None_Routed_Sound`, `_Entry_State_Ctx_Sound`, `_Call_String_Ctx_Sound`).
-`Interval` and `Int` each carry the solver-mode axis inline as three separate
-theorems (`ictx_pp_abs`, `_per_origin`, `_warrow`), which is the same axis
-`Routed_Unit_Domain` already parameterizes.
-
-Hoist the generic `ctx_sound` locale into `Core`, adopt
-`Routed_Unit_Domain.pp_abs`, and re-instantiate every cell. Nothing may lose a
-theorem statement; each cell keeps its named public corollary.
+Done, after the move to Core so the import churn was one pass. The cuts are
+where the file already changed subject, so no proof moved relative to another,
+and `Exec_DG_Bridge` keeps its name because it is still the bridge theorem --
+importing it pulls the whole stack, so no consumer changed.
 
 ## P5 - Rehome generic D/G framework into Core
 
-`Analysis/Instances/Mixed/` holds 5464 lines that are domain-generic and only
-live there by accident:
+Done. The four domain-generic theories that lived in
+`Analysis/Instances/Product/` by accident now sit in `Core/Solver/Context/DG/`,
+next to the abstract framework they mirror:
 
 ```text
-4885  Exec_DG_Bridge.thy               carrier-generic executable/abstract transport
- 293  DG_Base_Exec.thy                 executable mirror of Core's DG_Base
- 197  Routed_Unit_Domain.thy           unit-context routed execution, per domain
-  89  Monovariant_Analysis_Result.thy  one executable AnalysisResult constructor
+Exec_DG_Bridge               carrier-generic executable/abstract transport
+DG_Base_Exec                 executable mirror of Core's DG_Base
+Routed_Domain_Exec           the routing layer, renamed with the locale
+Monovariant_Analysis_Result  one executable AnalysisResult constructor
 ```
 
-The rest of the directory is the `Int_*` product domain (Sign x Interval), which
-is the only thing the name `Mixed` describes, plus `Rel_Order_Domain` (489
-lines), a relational instance that belongs with the domains, not here.
+What remains of the directory is the `Int_*` product domain (Sign x Interval),
+which is the only thing the name `Mixed` describes, plus `Rel_Order_Domain`, a
+relational instance that belongs with the domains. Both are P6's problem.
 
-Move the four generic files into `Core/Exec/` and the generic context/result
-pipeline into `Core/Pipeline/`. Real moves, not wrapper theories.
-`Core/.../DG/DG_Base.thy` and `Mixed/DG_Base_Exec.thy` are two halves of one
-concept and should end up adjacent.
-
-Invariant to verify mechanically: Core imports no domain-specific Analysis
-theory. Own commit.
+Invariant now enforced by the build: Core imports no Analysis theory, because
+Core is built before Analysis exists.
 
 ## P6 - Normalize the source/session layout
+
+Done; what follows records what the names now mean.
 
 Only after P4/P5. `Formalization` is not an endpoint session: most of it is
 domain x context executable instantiation used by CLI/codegen. Normalize
@@ -147,7 +92,7 @@ toward `Core/{Domain,Equations,Exec,Solver,Pipeline}`, per-domain directories
 with a `Ctx/` subdirectory, `Soundness/`, `CLI/{Entry,Report}`, `Export/`,
 `Examples/`. Pick one naming convention for the context-matrix role, which
 currently appears as `*_Exec_Ctx_Sound`, `*_Ctx_None_Routed_Sound`,
-`*_Entry_State_Ctx_Sound`, `*_Call_String_Ctx_Sound`. Rename `CLI/Codegen/*`,
+`*_Entry_State_Ctx_Sound`, `*_Call_String_Ctx_Sound`. Rename `CLI/Entry/*`,
 which holds analysis entry/soundness bridges rather than the `export_code`
 layer. Update ROOT, ROOTS, imports, docs and the module map atomically.
 
@@ -177,101 +122,116 @@ only one. It must run through the canonical D/G generator and solver, not by
 evaluating the combine directly. Prove `sound_dg_spec` for the instance. Own
 commit.
 
-## P8 - Generate the `code_identifier` module map
+## P8 - Guard the `code_identifier` module map
 
-`CLI/Analyse_Dispatch.thy` carries 119 hand-written `code_module` entries and
-nineteen theories still escape them, emitting their own OCaml module:
+Done. Generating the list from the export closure turned out to be the wrong
+shape: 43 of its entries map HOL and AFP library modules that no repository
+source mentions, so the closure cannot be derived from the tree. Checking the
+emitted output can, and catches the same failure one edit earlier.
 
-```text
-Analysis_Config  Analysis_GraphViz  Call_String_Context  State_Report_GraphViz
-Congruence_Print  Interval_Print  Parity_Print  Sign_Print  Int_Print
-Parity_Exec  Parity_Checks  Parity_Numeric_Queries  Parity_Exec_Ctx_Sound
-Sign_Call_String_Ctx_Sound  Sign_Entry_State_Ctx_Sound
-Int_Call_String_Ctx_Sound   Int_Entry_State_Ctx_Sound
-Interval_Call_String_Ctx_Sound
-```
+The map now names 135 theories and four modules survive: `Core`, plus the
+three the handwritten OCaml calls into -- `Analysis_Config`,
+`Analyse_Dispatch`, `State_Report_GraphViz`. Folding cannot introduce a cycle
+(a cycle needs two modules), so those three are a deliberate API surface
+rather than the residue of which edit happened to fail first.
 
-The split is unprincipled: `Sign_Exec_Ctx_Sound` is remapped,
-`Sign_Call_String_Ctx_Sound` is not. Each unmapped theory is a latent module
-dependency cycle waiting on the next edit.
-
-Derive the mapping from the actual export closure: deterministic, stably
-ordered, generated artifact checked in, CI/lint failing when stale, and a new
-exported dependency never silently emitting an unexpected module. Remap the
-export closure only, not every theory in the repository. Verify the generated
-`Voblint_CLI.ml` module structure and the absence of cycles.
+`scripts/check_codegen_modules.py` reads the checked-in export and fails on
+any module outside that set, naming the theory to add. It needs no Isabelle,
+so it runs in the pre-commit hook beside the ASCII and grammar-drift guards,
+and as `pixi run codegen-modules`.
 
 ## P9 - Dead-code sweep
 
-Re-run after the refactors; the current measurement is 296 constants defined,
-never referenced outside their own theory, and absent from the generated
-OCaml (excluding `Examples`, where file-local witness constants are expected).
-Concentrations:
+Done, and the answer is: there is nothing to delete. Three successive audits
+reported 177, then 288, then 942 dead constants. Every one of those figures was
+an artefact of a criterion that does not model how Isabelle names are used.
 
-```text
-26  Mixed/Exec_DG_Bridge.thy       expected to fall out of P3
-22  Mixed/Rel_Order_Domain.thy     NOT dead - Example_Relational_DG_Demo uses it
-21  Mixed/Int_Backward.thy         the never/once/fixpoint dispatch family
-18  Tooling/Analysis_GraphViz.thy  unused report/cluster renderers
-13  VIMP/VIMP_Notation.thy         mostly syntax scaffolding
-```
+- "unreferenced outside its own file" is not deadness. A type class
+  instantiation body defines `gamma`, `is_bot`, `is_top` and `(<)` for a type;
+  the definition's *name* is never used again because callers use the class
+  operation. All seven strictly-unreferenced definitions in the tree --
+  `gamma_abs_congruence`, `less_congruence`, `gamma_abs_int_dom_ext` and four
+  `is_top_*'` -- are exactly that, and deleting any of them breaks its
+  instance.
+- Counting lemmas at all inflates the figure past usefulness. A `[simp]` fact
+  is consumed by automation without ever being named, so textual reachability
+  says nothing about whether a proof depends on it. That is where 942 comes
+  from.
+- `Rel_Order_Domain` was called "entirely dead, 489 lines" by the first audit.
+  `Example_Relational_DG_Demo` consumes it.
 
-Two theories in `Core/Solver/Context/DG/` build via `Core/ROOT` but nothing
-imports them and nothing they prove is cited:
-`Call_String_Collecting_Refinement.thy` (86) and `Call_String_Context_Finite.thy`
-(76). The finiteness results look like a termination argument that was proved
-and then bypassed; decide deliberately rather than deleting.
+Two theories in `Core/Solver/Context/DG/` still build without being imported,
+and both stay. `Call_String_Collecting_Refinement` proves that a coarser
+call-string bound never sees more activations than a finer one.
+`Call_String_Context_Finite` proves the whole call-string context space finite
+before any solve is attempted -- a genuine strengthening over the per-run
+`solve_dom` contract, and the answer to the bounding question in #77. Neither
+is dead; they are results nothing has needed to cite yet, which the queue's own
+classification says to retain.
 
-Classify each candidate as dead implementation (delete), useful but
-unreferenced theorem (retain/document/integrate), regression or history only
-(move to Examples/docs), or public API compatibility (deliberate call).
-Re-run reachability after each tranche; commit coherent groups.
+If a future sweep is wanted, the only defensible criterion is: a `definition`
+outside a class instantiation, never mentioned again anywhere, absent from the
+generated OCaml. That set is currently empty.
 
 ## P10 - Simplify the API name cross-product
 
-Only now look at `_for`, `_lifted`, `_placed`, `_buffered`, `_st`, `_ctx`,
-`_per_origin`, `_warrow`. For each axis decide whether it is a runtime/config
-parameter, a type-level representation distinction, a proof specialization
-worth keeping, or obsolete migration scaffolding. Prefer `analysis_config`,
-`solver_mode`, `context_policy` and generic locale parameters where they
-genuinely replace orthogonal named families; keep separate constants where
-that makes theorem statements clearer. Do not optimize for constant count, and
-do not change stable public CLI behaviour unnecessarily.
+Deferred, deliberately. Nine families and 38 constants remain, down from
+nineteen and 89: the rest went with the TD/etf spine. What survives is the
+genuine domain x solver-mode axis -- `analyse_*_ctx_result` and its
+`_per_origin`/`_warrow` siblings -- and that axis is exactly what the
+update-rule parameterization is reshaping. Collapsing it first would be work
+done twice, in the wrong order.
+
+Revisit once the routed spine is parameterized over the update rule. For each
+remaining axis decide whether it is a runtime/config parameter, a type-level
+representation distinction, a proof specialization worth keeping, or leftover
+scaffolding. Do not optimize for constant count, and do not change stable
+public CLI behaviour unnecessarily.
 
 ## P11 - Examples and witness organization
 
-After the semantic refactors: runnable/regression material primarily under
-`Examples`; domain example structure mirroring domain source structure where
-useful; normalize `Ivl_Exec` to `Interval_*` if low risk; stray `*Regression*`
-files into regression subfolders. Leave small `by eval` sanity facts in core
-theories where they serve as local executable lemmas. Avoid churn for its own
-sake.
+Done. `Examples/` now mirrors `Analysis/Instances/`: `Mixed` became `Product`
+and the relational demo moved to a `Relational` folder of its own, matching the
+domain-side split. `Exec_Ivl_Run` became `Exec_Interval_Run`, so no runnable
+demo abbreviates a domain the others spell out.
+
+The "eight stray `*Regression*` files outside `Examples/Regression/`" from the
+earlier audit was a misreading: the session README states the convention
+explicitly -- folders group by abstract domain, not by capability, and
+`Regression/` is for the domain-agnostic witnesses. Those eight are filed
+correctly. The two that were genuinely misfiled ran the other way,
+domain-specific regressions sitting in the domain-agnostic folder, and are now
+with their domains. The README says so, so the next reader does not re-derive
+it.
 
 ## P12 - Docs and hygiene
 
-`docs/` holds 142 markdown files and 49.6k lines. Of those, 69 files and 27.0k
-lines are `*_MIGRATION.md` / `*_HANDOFF.md` / `*_AUDIT.md` / `*_PLAN.md`:
-completed work-in-progress notes. Only `docs/architecture/history/` is
-structured. Archive them under `docs/history/`, keeping live architecture and
-decision docs in place. Fix CLAUDE.md's dependency chain, which still shows
-`Formalization` as an endpoint (see section 0).
+Done. `docs/history/` holds the 70 completed migration notes, handoffs, audits
+and plans; 70 live documents remain, and the index points at the archive
+rather than saying such material is merely "kept in version control". Theory
+comments no longer describe themselves as staged ahead of a migration, and the
+88 file-path citations across 37 theories are now theory names, as the comment
+rules ask. Editor debris and the empty directory are gone.
 
-Current hygiene counts:
+### The metis/smt audit
+
+The contract keeps `metis` and `smt` only where reconstruction is fast in
+batch, and names them the leading cause of build hangs. Measured on a full
+verbose build: 84 `metis` and 4 `smt` call sites across 24 theories, and
+**not one of them is slow**. The build emits a slow-command warning for
+exactly one command in the whole tree, and it is not a `metis`:
 
 ```text
-105  untracked .thy~ jEdit backups under src/
-  1  src/Analysis/ROOT~
-  1  emacs autosave under src/Examples/Tooling/
-  1  empty directory under src/
-  0  sorry / oops
- 84  metis + 4 smt call sites          batch-hang risk per CLAUDE.md
-  6  staging/migration phrases in .thy comments
+command "by" running for 32.048s (line 856 of VIMP_Proc_to_CFG)
 ```
 
-Remove the backups, autosaves and empty directories; extend `.gitignore` for
-the untracked OCaml build outputs under `cli/` and `tests/property/`; do not
-commit generated HTML or fonts. The six staging phrases are the `issue #123`
-subsections in `Exec_DG_Bridge` and go with P3.
+That is the terminal `qed (auto simp: frag_stmts_def split: option.splits)`
+closing the residual cases of the `frag_stmts` induction -- cause 2 on the
+slow-build list, unbounded automation over inductive cases, not tactic
+reconstruction. It is 32 seconds inside a six-minute build, bounded and
+reproducible, in a compiler-correctness proof that nothing else in the tree
+would benefit from destabilising. Recorded rather than changed; if it ever
+grows, the fix is to name the residual cases rather than widen the `auto`.
 
 ## Verification and commit discipline
 

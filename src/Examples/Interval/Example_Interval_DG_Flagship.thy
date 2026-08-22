@@ -42,14 +42,14 @@ text \<open>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)

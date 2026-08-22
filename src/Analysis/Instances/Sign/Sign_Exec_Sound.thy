@@ -5,8 +5,8 @@ theory Sign_Exec_Sound
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_CFG.Compile_Invariants"
-          "Voblint_Analysis.Exec_DG_Bridge"
-          "Voblint_Analysis.DG_Base_Exec"
+          "Voblint_Core.Exec_DG_Bridge"
+          "Voblint_Core.DG_Base_Exec"
 begin
 
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
@@ -14,14 +14,14 @@ section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
 text \<open>
   The exported runtime API \<open>analyse\<close> (\<open>Analyse_Dispatch\<close>, downstream in CLI)
   dispatches through the native D/G equation system (\<open>dg_gen_of\<close>,
-  \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>) over the Base-style construction
-  \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>, so the local unknown is the whole
+  \<^theory>\<open>Voblint_Core.Exec_DG_Bridge\<close>) over the Base-style construction
+  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>, so the local unknown is the whole
   reachability-lifted abstract state -- no VIMP-global split into a separate
   solver-global unknown. Only the raw computation lives here:
   \<open>analyse_sign_for\<close>'s soundness proof needs the \<open>base_dg_exec_analysis\<close> locale
   (\<open>Run_Analysis_Sound\<close>, Formalization session), one session later than Analysis
   in the locked six-session chain, so that half cannot live in this file; it
-  stays in \<open>Sign_Codegen\<close> (downstream in CLI), which references these
+  stays in \<open>Sign_Entry\<close> (downstream in CLI), which references these
   definitions with \<open>gs\<close>/\<open>p\<close> applied explicitly.
 
   \<open>G\<close> stays diagonal at \<open>sign exec_dg_st lifted\<close>, matching what the

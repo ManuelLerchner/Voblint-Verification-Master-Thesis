@@ -3,7 +3,7 @@
 Status: **complete (E1–E4).** The side-effecting analysis is sound from an
 *arbitrary* initial state `s0`; the `restrict_global s0 = bot` hypothesis is
 gone from both the interprocedural and the intra side stacks. Full
-`Voblint_Formalization` session builds sorry-free (`isabelle build`, ~44s warm).
+`Voblint_Soundness` session builds sorry-free (`isabelle build`, ~44s warm).
 
 Goal: make the side-effecting analysis sound from an *arbitrary* initial state
 `s0`, not only one whose globals are `bot`.
@@ -111,7 +111,7 @@ globals-free hypothesis.
 ## 4. Build gate
 
 ```bash
-isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Formalization
+isabelle build -v -d ~/afp/thys -d vendor/td-verification -D . Voblint_Soundness
 ```
 
 I/Q for development; each slice exits sorry-free.

@@ -1863,7 +1863,7 @@ lemma sound_dg_spec_unit_for:
   done
 
 subsection \<open>The homogeneous analysis as a lifted diagonal interpretation, generic over the
-  transfer (issue #123)\<close>
+  transfer\<close>
 
 text \<open>
   \<open>gamma_unit_lifted\<close> concretizes the reachability-aware pair exactly the way

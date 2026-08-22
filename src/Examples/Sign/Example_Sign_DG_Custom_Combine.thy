@@ -1,6 +1,6 @@
 theory Example_Sign_DG_Custom_Combine
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_DG"
     "Voblint_Core.Solver_Menu"

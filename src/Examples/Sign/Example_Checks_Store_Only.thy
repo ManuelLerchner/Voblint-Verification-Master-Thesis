@@ -1,7 +1,7 @@
 section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<close>
 
 theory Example_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Codegen" "Voblint_Analysis.Sign_Checks"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -10,7 +10,7 @@ text \<open>
   post-solution, discharged node-locally through the generic
   \<^theory>\<open>Voblint_Analysis.Sign_Checks\<close> interface rather than by forwarding each
   check node's stores to the procedure exit. The compiled \<^const>\<open>checks\<close> field
-  comes from a real compiler run (\<open>collect_checks_prog\<close>, \<open>VIMP_Proc_to_CFG.thy\<close>);
+  comes from a real compiler run (\<open>collect_checks_prog\<close>, \<open>VIMP_Proc_to_CFG\<close>);
   \<open>y\<close> is overwritten (\<open>y := 0\<close>) between the first and second check, and \<open>z\<close> is
   set by a nondeterministic \<open>__voblint_nondet_int()\<close> read, so the three checks land in each
   of the three possible outcomes: the first is \<^term>\<open>Check_Proved\<close>, the second

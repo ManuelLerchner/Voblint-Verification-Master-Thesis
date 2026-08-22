@@ -9,7 +9,7 @@ text \<open>Regression coverage for the shape \<^const>\<open>DG_Framework.side_
   in that the routed context (\<open>cs_route k\<close>), the seed publication, and the callee-exit read
   all still live in \<open>Statement 3\<close>'s own equation, not in the call site's, and that the seed
   payload rides the \<^const>\<open>locals\<close> half of the published \<^type>\<open>dg_state\<close> while the shared
-  \<open>Global\<close> slot keeps its own \<^const>\<open>globs\<close> half. \<open>Call_String_Solver_Refinement_Seeded.thy\<close>'s
+  \<open>Global\<close> slot keeps its own \<^const>\<open>globs\<close> half. \<open>Call_String_Solver_Refinement_Seeded\<close>'s
   generic refinement proof never needs these closed forms -- they only guard against silent
   regressions in \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> generation
   itself.\<close>

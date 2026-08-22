@@ -11,7 +11,7 @@ rough **savings**, and **risk**.
 ## Execution status (2026-07-06)
 
 Worked through on branch `cleanup/migration-proof-cleanup`, one commit per item,
-each gated on a green `isabelle build … Voblint_Formalization`.
+each gated on a green `isabelle build … Voblint_Soundness`.
 
 | Item | Outcome |
 | --- | --- |
@@ -20,7 +20,7 @@ each gated on a green `isabelle build … Voblint_Formalization`.
 | G — `rd_glob_read_singleton` | **Done.** Reduced to the generic `glob_env_cmp_singleton`. |
 | I — Interval README drift | **Done.** |
 | J — on-disk cruft | **Done** (local `git clean`; nothing tracked). |
-| K — folder structure | **Superseded.** `Generic/Solver/` remains split into Core/Context/ReachingDefs/Exec. Executable run witnesses moved from `Instances/*/Runs/` to `src/Formalization/Examples/Executable/`, grouped by domain and theme. |
+| K — folder structure | **Superseded.** `Generic/Solver/` remains split into Core/Context/ReachingDefs/Exec. Executable run witnesses moved from `Instances/*/Runs/` to `src/Soundness/Examples/Executable/`, grouped by domain and theme. |
 | L.2 — `Value_Digest_Read` wiring | **Verified, no action.** The mode runs import it directly; the audit's "zero importers" was an artifact of first-token-only import parsing. No parallel copy. |
 | L.3 — doc history split | **Done as index** (`docs/INDEX.md`) instead of a move — physically relocating the heavily cross-referenced migration docs would have rotted ~100 links and forced CLAUDE.md edits. |
 | H — RD soundness variants | **Audited, no change.** Five variants have live consumers; three (`_sem`, `_paths`, `_paths_mustwrite`) are terminal capability theorems (distinct premise shapes cited as migration milestones), not accidental duplication. |
@@ -493,5 +493,5 @@ correct for a `by eval` witness. They demonstrate the converged design; they sta
    check against the in-progress digest-discharge work before any edit.
 
 Gate every step on a green `isabelle build -v -N -d ~/afp/thys -d
-vendor/td-verification -D . Voblint_Formalization`, per the workflow rules — the
+vendor/td-verification -D . Voblint_Soundness`, per the workflow rules — the
 I/Q checker is not the gate.
