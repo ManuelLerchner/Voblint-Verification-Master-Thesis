@@ -489,21 +489,27 @@ let () =
       else if !dot_full then
         Ok_dot
           (if !context_kind = CK_CallString then
-             Voblint_CLI.State_Report_GraphViz.cs_ctx_dot_auto kind (cs_depth ()) prog
+             Dot_render.render
+               (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto kind (cs_depth ()) prog)
            else if !context_graph = Expanded then
-             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
+             Dot_render.render
+               (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog)
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_dot_auto kind prog
-           else Voblint_CLI.State_Report_GraphViz.full_state_dot_auto kind prog)
+             Dot_render.render
+               (Voblint_CLI.State_Report_GraphViz.entry_state_full_state_export_auto kind prog)
+           else Dot_render.render (Voblint_CLI.State_Report_GraphViz.full_state_export_auto kind prog))
       else if !dot then
         Ok_dot
           (if !context_kind = CK_CallString then
-             Voblint_CLI.State_Report_GraphViz.cs_ctx_dot_auto kind (cs_depth ()) prog
+             Dot_render.render
+               (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto kind (cs_depth ()) prog)
            else if !context_graph = Expanded then
-             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_dot_auto prog
+             Dot_render.render
+               (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog)
            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_report_dot_auto kind prog
-           else Voblint_CLI.State_Report_GraphViz.state_report_dot_auto kind prog)
+             Dot_render.render
+               (Voblint_CLI.State_Report_GraphViz.entry_state_report_export_auto kind prog)
+           else Dot_render.render (Voblint_CLI.State_Report_GraphViz.state_report_export_auto kind prog))
       else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
         (match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
          | Some report -> Ok_text (render_ctx_report report check_positions)
