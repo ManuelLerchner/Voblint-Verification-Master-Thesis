@@ -135,6 +135,81 @@ end
 lemma seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
   by simp
 
+section \<open>The solver-generic instantiation\<close>
+
+text \<open>
+  Everything downstream of the executable post-solution reaches the solver through exactly one
+  fact: that the solved pair is a \<^const>\<open>part_post_solution\<close> of \<^const>\<open>ictx_eqs\<close>.  The update
+  rule itself never appears again.  \<open>ictx_solved\<close> therefore fixes the solved pair and its
+  termination predicate and assumes that single fact, so each update rule contributes an
+  interpretation rather than a copy of the development.
+
+  The obligation is cheap at every instance because \<^locale>\<open>TD_side_upd_rule\<close> proves
+  \<open>partial_post_solution\<close> once, inside the locale, for every update rule.
+\<close>
+
+locale ictx_solved =
+  fixes sol :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname
+                  \<Rightarrow> com \<Rightarrow> (pp \<times> unit) set
+                     \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+    and terminates :: "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
+                         \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool"
+  assumes pp_st:
+    "terminates gs is_bot_pred Pi ps mnm main
+       \<Longrightarrow> part_post_solution (ictx_eqs gs is_bot_pred Pi ps mnm main)
+             (cfg_exit (compile_prog Pi ps mnm main), ())
+             (snd (sol gs is_bot_pred Pi ps mnm main))
+             (fst (sol gs is_bot_pred Pi ps mnm main))"
+begin
+
+theorem pp_abs:
+  assumes solves: "terminates gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+  shows
+  "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+        (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+        (routed_extra_g Seed Global)
+        (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
+        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st))
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)))
+     (cfg_exit (compile_prog Pi ps mnm main), ())
+     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+        \<circ> snd (sol gs is_bot_pred Pi ps mnm main))
+     (fst (sol gs is_bot_pred Pi ps mnm main))"
+proof -
+  have pp_buf: "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+          route_unit
+          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_extra_g Seed Global)
+          (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), ())
+       (snd (sol gs is_bot_pred Pi ps mnm main)) (fst (sol gs is_bot_pred Pi ps mnm main))"
+    using pp_st[OF solves] unfolding ictx_eqs_def by simp
+  show ?thesis
+    unfolding ictx_abs_spec_def
+    using pp_buf unfolding ictx_spec_def by (rule ivl_pp_abs_gen[OF exact])
+qed
+
+end
+
+text \<open>The always-join rule as an instance.  \<open>partial_post_solution\<close> is the whole obligation,
+  and \<^locale>\<open>TD_side_upd_rule\<close> already carries it.\<close>
+
+global_interpretation ictx_join: ictx_solved
+  "\<lambda>gs is_bot_pred Pi ps mnm main.
+     TD_side_always_join_Interp_solve (ictx_eqs gs is_bot_pred Pi ps mnm main)
+       (cfg_exit (compile_prog Pi ps mnm main), ())"
+  "\<lambda>gs is_bot_pred Pi ps mnm main.
+     TD_side_always_join_Interp.solve_dom TYPE(gk)
+       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+       (ictx_eqs gs is_bot_pred Pi ps mnm main)
+       (cfg_exit (compile_prog Pi ps mnm main), ())"
+  by unfold_locales
+     (rule TD_side_always_join_Interp.partial_post_solution[OF _ surjective_pairing])
+
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
 context
