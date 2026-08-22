@@ -3,7 +3,7 @@ theory Analyse_Dispatch
     Sign_Codegen
     Interval_Codegen
     Int_Codegen
-    Voblint_Analysis.Parity_Checks
+    Parity_Codegen
     Voblint_Formalization.Interval_Exec_Ctx_Sound
     Voblint_Formalization.Interval_Call_String_Ctx_Sound
     Voblint_Formalization.Sign_Call_String_Ctx_Sound

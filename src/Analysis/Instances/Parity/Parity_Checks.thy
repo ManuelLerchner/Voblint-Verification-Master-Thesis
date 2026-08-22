@@ -233,6 +233,30 @@ lemmas pctx_report_ctx_proved_sound = pctx_adapter.analyse_report_ctx_proved_sou
 lemmas pctx_report_ctx_refuted_sound = pctx_adapter.analyse_report_ctx_refuted_sound
 lemmas pctx_result_node_sound = pctx_adapter.analyse_result_node_sound
 
+text \<open>
+  \<open>pctx_analyse_result_eq\<close> identifies the adapter's own result reading with the
+  raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Exec_Ctx_Sound\<close>)
+  builds directly from \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>: both
+  collapse the same \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected
+  local unknown, one via \<open>is_bot_state\<close> after projecting, the other via
+  \<open>is_bot_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
+  Composing it with \<open>pctx_result_node_sound\<close> gives
+  \<^const>\<open>analyse_parity_ctx_result_for\<close>'s node-soundness bridge without
+  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument.
+\<close>
+
+lemma pctx_analyse_result_eq:
+  "lookup_context pctx_adapter.analyse_result v ctx =
+     (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)
+      then normalize_point gs
+             (canonicalize_lift is_bot_pred (locals (snd (pctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+      else Unreachable)"
+  unfolding pctx_adapter.lookup_context_analyse_result
+  apply (simp only: pctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+                     pctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
+  by (cases "locals (snd (pctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+     (simp_all add: exact normalize_lift_def)
+
 end
 
 section \<open>Solved-result table and whole-program check report\<close>
