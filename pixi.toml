@@ -60,6 +60,9 @@ html-report-check = { cmd = "python3 -m pytest tests/test_html_report.py", depen
 # Sweeps the whole fixture corpus, each under its own PARAM line, for the
 # faults that only show up on particular programs -- see the script's docstring.
 html-report-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = ["cli-build"] }
+# Sweeps the domain/solver/context space rather than the corpus: a
+# configuration the legality table accepts must have a surface behind it.
+html-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = ["cli-build"] }
 
 # Git hooks (.lefthook.yaml).
 [feature.lint.dependencies]
@@ -143,6 +146,7 @@ ci = { depends-on = [
   "cli-smoke",
   "html-report-check",
   "html-report-audit",
+  "html-config-audit",
   "codegen-regression",
   "property",
 ] }

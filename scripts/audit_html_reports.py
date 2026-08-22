@@ -166,15 +166,90 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
     return problems
 
 
+DOMAINS = ["sign", "interval", "int", "parity"]
+SOLVERS = [None, "join", "per-origin", "warrow", "warrow-per-origin"]
+CONTEXTS = [None, "entry-state", "call-string"]
+
+COMBO_FIXTURE = "03-procedures/precision/01-call_return.vimp"
+
+
+def combination_args(domain, solver, context):
+    args = ["--analysis", domain]
+    if solver:
+        args += ["--solver", solver]
+    if context:
+        args += ["--context", context]
+        if context == "call-string":
+            args += ["--context-depth", "2"]
+    return args
+
+
+def audit_combinations(verbose: bool) -> int:
+    """Sweep the configuration space, not the corpus.
+
+    A configuration the CLI accepts must produce a report with per-node states
+    in it. Accepting a run and then showing nothing is the failure that let a
+    whole solver discipline go unpublished: the legality table said yes, and
+    nothing checked that a surface existed behind the yes.
+
+    This is behavioural on purpose. The surface names are not regular enough to
+    match on -- analyse_interval_td_result beside analyse_interval_wpo_result --
+    so asking the binary is more robust than pattern-matching the theory.
+    """
+    fixture = CORPUS / COMBO_FIXTURE
+    failures = 0
+    accepted = 0
+    with tempfile.TemporaryDirectory() as tmp:
+        for domain in DOMAINS:
+            for solver in SOLVERS:
+                for context in CONTEXTS:
+                    args = combination_args(domain, solver, context)
+                    label = " ".join(args)
+                    out = Path(tmp) / f"c{abs(hash(label))}"
+                    proc = subprocess.run(
+                        [str(VOBLINT), *args, "--html-out", str(out), str(fixture)],
+                        capture_output=True, text=True,
+                    )
+                    if proc.returncode != 0:
+                        # A rejected combination is a decision, not a defect;
+                        # the legality table owns which ones those are.
+                        if verbose:
+                            print(f"rejected {label}")
+                        continue
+                    accepted += 1
+                    docs = list((out / "nodes").glob("main_*.xml"))
+                    stated = [
+                        d for d in docs
+                        if ET.parse(d).getroot().findall("./call/path/analysis")
+                        and any(
+                            a.findall("./value/map/key")
+                            for a in ET.parse(d).getroot().findall("./call/path/analysis")
+                        )
+                    ]
+                    if not stated:
+                        failures += 1
+                        print(f"FAIL {label}: accepted, but no node carries a state")
+                    elif verbose:
+                        print(f"ok   {label} ({len(stated)}/{len(docs)} nodes with state)")
+                    shutil.rmtree(out, ignore_errors=True)
+    print(f"\n{accepted} accepted configuration(s), {failures} producing no state")
+    return 1 if failures else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("-k", dest="filter", default="", help="only fixtures matching this")
     ap.add_argument("--verbose", action="store_true", help="list every fixture")
+    ap.add_argument("--combinations", action="store_true",
+                    help="sweep the domain/solver/context space instead of the corpus")
     args = ap.parse_args()
 
     if not VOBLINT.exists():
         print("cli/voblint not built -- run `pixi run cli-build`", file=sys.stderr)
         return 2
+
+    if args.combinations:
+        return audit_combinations(args.verbose)
 
     fixtures = sorted(
         f for f in CORPUS.rglob("*.vimp") if args.filter in str(f.relative_to(CORPUS))
