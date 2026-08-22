@@ -1,0 +1,108 @@
+// PARAM: --analysis interval
+// Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
+// Engineering Modularity" (FM 2026), Fig. 1 -- the running example behind
+// the paper's Examples 1, 3 and 5. Transcribed as closely as VIMP allows:
+// C's file-scope initializers `int g = 1; int h = 0;` become main's first
+// two statements (VIMP globals have no initializer syntax and default to
+// zero), and `if (g > 42) error();` becomes the equivalent check g < 43.
+//
+//   Example 1 asks whether a flow-INSENSITIVE summary of g suffices to
+//   falsify the error condition. Its three contributions to g are 1 (the
+//   initializer), -17 (main) and 42 (f).
+//   Example 3 makes the same point for h: a flow-insensitive analysis
+//   cannot tell whether line 4 runs once or many times, so it infers
+//   h = [0,+inf].
+//
+// Both losses follow from a choice the paper states as one: "In principle,
+// the values of g and h could be analyzed flow-sensitively. For efficiency,
+// we may choose to analyze the values of one or both of them
+// flow-insensitively."
+//
+// The CLI makes the other choice, as Goblint does on single-threaded code:
+// a declared global lives in the same reachability-lifted local unknown as
+// every other variable and is analyzed flow-sensitively through calls (see
+// 04-globals/precision/02-global_var.vimp). So g == 42 and h == 1 exactly,
+// and the paper's imprecision has no occasion to arise. This program also
+// answers identically under all four of --solver
+// join|per-origin|warrow|warrow-per-origin: nothing about a `global` here
+// exercises the update rule at all. The unknown that does is a procedure's
+// FunctionEntry seed, written once per call site, and on it the paper's
+// widening loss reproduces exactly -- this group's 02- and 03- cases.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp8_ctx0
+//     main_pp9_ctx0
+//     main_pp10_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp3_ctx0
+//     main_pp6_ctx0
+//     main_pp7_ctx0
+//   cluster_ctx_1:
+//     f_pp1_ctx1
+//     f_pp2_ctx1
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//
+// nodes:
+//   f_pp1_ctx1: pp1
+//   f_pp2_ctx1: pp2
+//   main_pp4_ctx0: pp4
+//   main_pp5_ctx0: pp5
+//   main_pp8_ctx0: pp8
+//       check h==1
+//       g=[42,42]
+//       h=[1,1]
+//   main_pp9_ctx0: pp9
+//       check g<43
+//       g=[42,42]
+//       h=[1,1]
+//   main_pp10_ctx0: pp10
+//   main_result_main_ctx0: exit_main
+//   f_pp0_ctx1: pp0
+//   main_entry_main_ctx0: entry_main
+//   main_pp3_ctx0: pp3
+//   main_pp6_ctx0: pp6
+//   f_entry_f_ctx1: entry_f
+//   main_pp7_ctx0: pp7
+//       check g==42
+//       g=[42,42]
+//       h=[1,1]
+//   f_result_f_ctx1: exit_f
+//
+// edges:
+//   f_pp1_ctx1 -> f_pp2_ctx1: g := 42
+//   f_pp2_ctx1 -> f_result_f_ctx1: return
+//   main_pp4_ctx0 -> main_pp5_ctx0: h := 0
+//   main_pp5_ctx0 -> main_pp6_ctx0: g := -17
+//   main_pp8_ctx0 -> main_pp9_ctx0: check(h==1)
+//   main_pp9_ctx0 -> main_pp10_ctx0: check(g<43)
+//   main_pp10_ctx0 -> main_result_main_ctx0: terminate
+//   f_pp0_ctx1 -> f_pp1_ctx1: h := h+1
+//   main_entry_main_ctx0 -> main_pp3_ctx0: nop
+//   main_pp3_ctx0 -> main_pp4_ctx0: g := 1
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   main_pp7_ctx0 -> main_pp8_ctx0: check(g==42)
+//   main_pp6_ctx0 -> f_entry_f_ctx1: enter f()
+//   f_result_f_ctx1 -> main_pp7_ctx0: combine
+//   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+global g, h;
+void f() {
+  h := h + 1;
+  g := 42
+}
+void main() {
+  g := 1;
+  h := 0;
+  g := -17;
+  f();
+  __voblint_check(g == 42);   // PROVED
+  __voblint_check(h == 1);    // PROVED
+  __voblint_check(g < 43)     // PROVED
+}

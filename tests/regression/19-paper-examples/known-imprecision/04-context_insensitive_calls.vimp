@@ -1,0 +1,71 @@
+// PARAM: --analysis interval --context none
+// Baseline for FM 2026 Examples 7 and 8, both of which are definitions of
+// a context C rather than precision claims of their own. Sect. 3's closing
+// remark is the claim they serve: "distinguishing function calls by
+// contexts, be it via callstrings or partial tabulation, has been shown to
+// considerably increase analysis precision."
+//
+// This is the same source under no context at all, so there is one unknown
+// per program point of f shared by both call sites. Mechanism: f's
+// FunctionEntry seed receives 3 from one site and 10 from the other, and
+// the single copy of f's body is analyzed under their join -- so f returns
+// [6,+inf] to both callers and neither x == 6 nor y == 20 survives, though
+// each is concretely exact.
+//
+// precision/05- and precision/06- are this program under the paper's two
+// context choices; both recover the exact values.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//   cluster_ctx_1:
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//
+// nodes:
+//   main_pp5_ctx0: pp5
+//       check y==20 [unknown]
+//       x=[6,+inf]
+//       y=[6,+inf]
+//   main_pp6_ctx0: pp6
+//   main_result_main_ctx0: exit_main
+//   f_pp0_ctx1: pp0
+//   main_entry_main_ctx0: entry_main
+//   main_pp2_ctx0: pp2
+//   main_pp3_ctx0: pp3
+//   f_entry_f_ctx1: entry_f
+//   main_pp4_ctx0: pp4
+//       check x==6 [unknown]
+//       x=[6,+inf]
+//       y=[6,+inf]
+//   f_result_f_ctx1: exit_f
+//
+// edges:
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(y==20)
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   f_pp0_ctx1 -> f_result_f_ctx1: return p+p
+//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(x==6)
+//   main_pp2_ctx0 -> f_entry_f_ctx1: enter f(3)
+//   main_pp3_ctx0 -> f_entry_f_ctx1: enter f(10)
+//   f_result_f_ctx1 -> main_pp3_ctx0: combine x
+//   f_result_f_ctx1 -> main_pp4_ctx0: combine y
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+void f(p) { return p + p }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6);  // UNKNOWN
+  __voblint_check(y == 20)  // UNKNOWN
+}

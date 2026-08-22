@@ -1,86 +1,99 @@
-# Per-origin widening (executable, as a domain lift)
+# Per-origin widening
 
-A sibling solver discipline that stores one abstract value **per write origin** and widens
-those cells independently, reading their join. Built to test whether per-origin widening
-recovers precision on the recursive interval example — executably and mechanically checked.
+An update rule that stores one abstract value **per write origin** and widens
+those cells independently, reading their join. FM 2026 Sect. 5.3 proposes it as
+the first improvement over widening a global's accumulated value, and states it
+is "sufficient to recover a precise result in Example 1".
 
-**Result up front:** it does **not**, and the origin split is not the deciding factor. The
-dominant precision loss on globals was the missing widening bot-law (fixed separately); the
-residual loss is the flow-insensitive global side slot. See *Evaluation* below.
+Voblint uses the vendored `TD` solver's own `update_global_warrowing_per_origin`
+rule. It is one of four update rules the solver menu offers, reachable from the
+CLI as `--solver warrow-per-origin` and from `Analysis_Config`'s
+`Solver_WarrowPerOrigin`. There is no domain lift and no separate solver.
 
-## Why not the vendored rule
+## Where it helps, and why that is narrow
 
-The vendored `TD` solver already has a `warrowing_per_origin` update rule, but it does **not
-code-generate**: `by eval` raises `Interrupt_Breakdown` inside
-`update_global_warrowing_per_origin` (`vendor/td-verification/Update_rules.thy`). That is the
-whole of OPEN_PROBLEMS **P11**. So per-origin widening had to be realised another way.
+Per-origin widening only pays where a **flow-insensitively** analyzed unknown
+receives contributions from **several distinct origins**. The place where that
+is observable in Voblint is a procedure's `FunctionEntry` seed, side-effected
+once per call site.
 
-## The construction (domain lift, not a new solver)
+Declared globals are not such a place **under the placement the CLI runs**. There
+a `global` lives in the same reachability-lifted local unknown as every other
+variable and is analyzed flow-sensitively through calls, so its writes never
+accumulate into a shared slot to begin with. Measured: the paper's Fig. 1
+answers `g == 42` and `h == 1` identically under all four update rules.
 
-Per-origin widening is realised as a **thin adapter** that lifts an existing equation
-system's value domain, then runs the *ordinary* Apinis warrowing solver. No new solver, no
-new code generator.
+That is not a missing feature, and it is not a divergence from Goblint. The
+paper introduces flow-insensitive globals as a choice -- "In principle, the
+values of g and h could be analyzed flow-sensitively. For efficiency, we may
+choose to analyze the values of one or both of them flow-insensitively" --
+and Goblint's own single-threaded path makes the same choice Voblint's CLI
+does: `base.ml` reads globals from local state without publication at all
+(`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
+source-checked 2026-08-10).
 
-| Layer | File | Content |
-| --- | --- | --- |
-| domain | `src/Analysis/Generic/Domain/Origin_State.thy` | `('a,'b) origin_st`: value-per-origin map, implicit `⊥` default, assoc-list rep. Full lattice + warrowing instance stack. `collapse_origins` = join over all origins. Widening is per-origin pointwise, **guarded** so an all-`⊥` cell stays `⊥` (needed for quotient well-definedness). |
-| adapter | `src/Analysis/Generic/Solver/Exec/Origin_Lift.thy` | `lift_tree` rewrites a strategy tree: reads (`QueryL`/`QueryG`) `collapse_origins` the origin map, writes (`Answer`/`Side`) `inject_origin` at the evaluated unknown's origin, transfers unchanged. `origin_lift_eqs`, `TD_side_per_origin_widen_solve`, `read_per_origin`. |
-| example | `src/Soundness/Examples/Digest/Example_Interval_Recursion_Origin.thy` | Runs it on the recursive interval program; compares to monovariant warrowing; GraphViz. |
+The other choice is already formalized. `unit_dg_spec_placed` takes a
+per-variable `keep_local`/`publish_side` placement and is proved sound via
+`gamma_join`, and `Example_Interval_Placement.thy` runs a program with one
+global on each side: `balance`, kept local, reads `[3,3]`; `request_count`,
+published to the side, reads `[0,+inf]` in the globals slot -- the paper's
+Example 3 result for `h`, by `eval`, for the paper's reason. What is missing
+is only a way to select a placement from VIMP source or a CLI flag; the CLI
+hardwires the exclusive local routing. That flag, not any solver or domain
+work, is what a source-level reproduction of Examples 2 and 3 needs.
 
-The solver's own pointwise widening on `origin_st` **is** per-origin widening, and with
-finitely many origins it terminates — so `by eval` runs it directly.
+That single site is enough to reproduce the paper's own chain. With the paper's
+three contributions to `g` arriving in the paper's order:
 
-## Soundness status
+```text
+[1,1]                                the first contribution
+[1,1]     \/ [-17,1]   -> [-inf,1]   lower bound grew downwards, widening drops it
+[-inf,1]  \/ [-inf,42] -> [-inf,+inf]  upper bound grew, widening drops that too
+```
 
-The reduction carrying ordinary warrowing soundness through the lift is proved for the
-**local right-hand side**:
+Apinis warrowing reaches `[-inf,+inf]`, the paper's Example 2 result. Per origin
+each cell holds one constant, nothing widens, and the join is `[-17,42]` --
+the paper's Sect. 5.3 figure. Both are machine-checked at the CLI by
+`tests/regression/19-paper-examples/`, whose 02/03 pair pins both bounds, and at
+the solver level by `two_writer_slot_across_update_rules` in
+`src/Examples/Tooling/Example_Per_Origin_Widening_Precision.thy`, which evaluates
+one slot under all four update rules at once.
 
-- `traverse_lift_tree`: `traverse_rhs (lift_tree org t) σ' = inject_origin org (traverse_rhs t (collapse_origins ∘ σ'))`.
-- `collapse_eq_origin_lift`: collapsing a lifted equation's result recovers the original
-  transfer on collapsed reads verbatim.
+Voblint answers the paper's Fig. 1 itself exactly -- `g == 42`, `h == 1` --
+because it never widens a global. That beats both the paper's Example 2 result
+and its recovered `[-17,42]`, and it is a difference in what is analyzed
+flow-insensitively, not a better widening operator.
 
-The remaining half of the `part_post_solution` transport (`sides_of_rhs`, `dep_L`) follows
-the same shape and is the open mechanization noted in P11.
+## Where it does not help: recursive globals
 
-## Evaluation — evidence, not expectation
+An earlier experiment tested whether per-origin widening recovers precision on a
+recursive interval program, `void p(){ if (G<3){ G:=G+1; p() } else { G:=G } }`,
+with origin = program point. It does not, and the origin split is not the
+deciding factor. The mechanized breakdown, in order of impact:
 
-On the recursive interval program (`void p(){ if (G<3){ G:=G+1; p() } else { G:=G } }`), with
-origin = program point (`org_of = id`, the finest split that code-generates):
+- **Lower bound -- fixed by the widening bot-law, unrelated to origins.** Interval
+  widening carries the bot-law `widen bot x = x`. Without it `bot` is the empty interval
+  `[+inf,-inf]`, so an unguarded widen from `bot` jumps straight to the top
+  interval, topping **every** global on its first write: `G := 5` with no loop
+  gave `[-inf,+inf]`. That was the dominant loss and had nothing to do with
+  per-origin widening. With the bot-law the lower bound is exact for both solves.
+- **Upper bound -- lost to the recursion, not to the update rule.** The guard
+  `G < 3` refines the read, but the increment's write-back is unguarded, so
+  `F([0,+inf]) = [0,+inf]` is a genuine fixpoint. No value-domain machinery
+  shrinks it.
+- **Per-origin widening is orthogonal here.** It separates the recursion's writes
+  into their own cells, but every cell tops the same way, so the join equals the
+  monovariant value. Origin-separated *reads* would not help under a
+  per-program-point origin either: the increment must read its own origin,
+  because the previous recursion depth shares its program point, so no reader
+  breaks the self-loop.
+- **Narrowing is real and helps locals, not this global.** Interval narrowing
+  fills an infinite bound of the widened value from the guard-refined value. It
+  recovers locals (`while(x<20){x:=x+1}` reaches `[0,20]` under every update
+  rule) via the guard filter. On a self-referential global there is nothing to
+  descend to.
 
-- **Terminates and `eval`s** — unlike the value-digest solve (P12), which breaks down.
-- **`G` = `[0,+inf]`** — machine-checked: `rec_per_origin_still_widens_to_top` and
-  `rec_per_origin_matches_monovariant` (`by eval`) prove the observable `G` equals monovariant
-  warrowing's `[0,+inf]`. Per-origin widening is **no more precise** than the monovariant solve.
-
-**Where the precision is (and is not) lost.** The barrier is **not** primarily `collapse_origins`.
-The mechanized breakdown, in order of impact:
-
-- **Lower bound — fixed by the widening bot-law, unrelated to origins.** Interval widening now
-  carries `⊥ ▽ x = x`. Without it, `⊥` is the empty interval `[+inf,-inf]`, so an unguarded widen
-  from `⊥` jumped straight to the top interval, topping **every** global on its first write —
-  `G := 5` with no loop gave `[-inf,+inf]`. That was the dominant loss and had nothing to do with
-  per-origin widening. With the bot-law the lower bound is exact (`0`) for both solves.
-- **Upper bound — lost because the global side slot is flow-insensitive.** `G` is a single
-  flow-insensitive side slot. The guard `G < 3` refines the *read* flow-sensitively, but the
-  increment's write-back to the slot is unguarded, so `F([0,+inf]) = [0,+inf]` is a genuine
-  fixpoint. No value-domain machinery shrinks it.
-- **Per-origin widening is orthogonal.** It separates the recursion's *writes* into their own
-  cells (that terminates and works), but the observable is `collapse_origins` and every cell tops
-  the same way, so the collapse equals the monovariant value. Origin-separated *reads* would not
-  help under a per-program-point origin either: the increment must read its own origin, because the
-  previous recursion depth shares its program point — so no reader breaks the self-loop. Per-origin
-  becomes relevant only if the **side semantics** changes (flow-/context-sensitive slots).
-- **Real narrowing is enabled and helps locals, but not this global.** Interval narrowing (fill an
-  infinite bound of the widened value from the guard-refined value) is a real operator, not the
-  identity. It recovers *locals* (`while(x<20){x:=x+1}` → `[0,20]` under *every* update rule) via the
-  guard filter. On the flow-insensitive global there is nothing to descend to, so `G` stays `[0,+inf]`.
-  It does **not** cause divergence: the full build is green with it on. (An earlier note blamed
-  narrowing for the `rec_digest` breakdown — that was wrong; the breakdown is the bot-law keeping `G`
-  precise so the value-keyed digest churns a bucket per depth, and it happens with narrowing on or off.)
-
-This is the honest, executable conclusion: **per-origin widening, as a value-domain lift, does not
-recover precision on recursive globals — and neither does narrowing (though narrowing does sharpen
-locals).** The real barrier is the **flow-insensitive global side slot**; a finite upper bound needs
-context/origin-sensitive **reads** of the slot (a side-semantics change). A gas-bounded narrowing
-solver (`update_global_bounded_narrowing`, TD Listing 9) was probed and, even with real narrowing,
-still yields `[0,+inf]` on this global, so it is not the missing piece either.
+The two findings are consistent: per-origin widening fixes the loss that comes
+from **joining several origins before widening**, and only that. A single origin
+whose own contribution genuinely grows -- a recursive global feeding itself --
+widens exactly as before, because separating one origin from itself is a no-op.

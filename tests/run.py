@@ -285,8 +285,20 @@ def graph_snapshot_args(args: list[str]) -> list[str]:
     return out
 
 
-def run_graph_snapshot(args: list[str], path: Path) -> str:
-    return run_voblint(graph_snapshot_args(args), path).stdout
+def run_graph_snapshot(args: list[str], path: Path) -> tuple[str, str]:
+    """Returns (snapshot, error) for a --graph-snapshot run under args.
+
+    A non-zero exit means this case's PARAM flags have no snapshot to render
+    at all -- --solver is plain-text-report only, and rejects
+    --graph-snapshot -- and leaves stdout empty. Reporting that as an error
+    rather than returning the empty stdout is what stops --update-graphs
+    from recording an empty EXPECT-GRAPH block, which every later run would
+    then trivially "match"."""
+    proc = run_voblint(graph_snapshot_args(args), path)
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip() or f"exit {proc.returncode}"
+        return "", detail
+    return proc.stdout, ""
 
 
 def update_graph_block(path: Path, lines: list[str], block: tuple[int, int] | None, snapshot: str) -> None:
@@ -350,12 +362,22 @@ def check_graph_block(path: Path, args: list[str]) -> tuple[bool, list[str]]:
     graph_block = find_graph_block(fixture_lines)
     graph_cmd = voblint_cmd(graph_snapshot_args(args), path)
     if UPDATE_GRAPHS:
-        update_graph_block(path, fixture_lines, graph_block, run_graph_snapshot(args, path))
+        snapshot, error = run_graph_snapshot(args, path)
+        if error:
+            # Not a failure: --update-graphs is routinely pointed at a whole
+            # group, and a group may hold cases whose flags render no graph.
+            lines.append(f"OK   {graph_cmd}: no graph to render, block left alone ({error})")
+            return True, lines
+        update_graph_block(path, fixture_lines, graph_block, snapshot)
         lines.append(f"OK   {graph_cmd}: EXPECT-GRAPH block {'updated' if graph_block else 'created'}")
         return True, lines
     if graph_block is None:
         return True, lines
-    snapshot = run_graph_snapshot(args, path).rstrip("\n")
+    snapshot, error = run_graph_snapshot(args, path)
+    if error:
+        lines.append(f"FAIL {graph_cmd}: graph snapshot run failed ({error})")
+        return False, lines
+    snapshot = snapshot.rstrip("\n")
     expected_snapshot = expected_graph(fixture_lines, graph_block)
     if snapshot == expected_snapshot:
         lines.append(f"OK   {graph_cmd}: graph snapshot matches")
@@ -550,6 +572,13 @@ def matches_selector(path: Path, sel: str) -> bool:
 
 def discover(selectors: list[str]) -> list[Path]:
     all_cases = sorted(REGRESSION_DIR.rglob("*.vimp"))
+
+    # A .vimp selector naming no existing file matches neither list below,
+    # so it would otherwise leave both empty and silently select the WHOLE
+    # corpus -- which under --update-graphs rewrites every fixture in it.
+    missing = [s for s in selectors if s.endswith(".vimp") and not Path(s).exists()]
+    if missing:
+        sys.exit(f"no such case file: {', '.join(missing)}")
 
     file_selectors = [s for s in selectors if s.endswith(".vimp") and Path(s).exists()]
     includes = [s for s in selectors if not s.endswith(".vimp") and not s.startswith("-")]

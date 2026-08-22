@@ -1,0 +1,39 @@
+// PARAM: --analysis interval --solver warrow
+// FM 2026 Example 2: the paper's Fig. 1 analyzed with intervals and
+// widening, where the three contributions to the global g are accumulated
+// into one value that is widened on every update.
+//
+//   [1,1]                       the initializer's contribution
+//   [1,1]    \/  [-17,1]        joined with main's -17; the lower bound
+//                               grew downwards, so widening drops it
+//            ->  [-inf,1]
+//   [-inf,1] \/  [-inf,42]      joined with f's 42; the upper bound grew,
+//            ->  [-inf,+inf]    so widening drops that too
+//
+// so the paper fails to deduce g <= 42 and cannot rule out the error call.
+//
+// Voblint analyzes declared globals flow-sensitively (19-paper-examples/
+// precision/01-fig1_sequential_globals.vimp answers Fig. 1 exactly), so the
+// loss cannot be staged on a `global`. It is reproduced here on the one
+// unknown Voblint does treat flow-insensitively with several contributing
+// origins: a procedure's FunctionEntry seed, side-effected once per call
+// site. Three call sites contribute the paper's own three values, in the
+// paper's order, and Apinis warrowing walks the identical chain to
+// [-inf,+inf] -- so x < 43 comes back UNKNOWN even though x is concretely
+// one of 1, -17, 42.
+//
+// Mechanism, stated as the convention requires: the update rule widens the
+// slot's already-joined value against each new contribution. No single
+// origin's own contribution ever moves -- each call site passes one
+// constant -- so both bounds are lost purely to joining across origins
+// before widening. 03-per_origin_widening.vimp is the same program under
+// the update rule that fixes exactly this.
+
+void f(x) {
+  __voblint_check(x < 43) // UNKNOWN
+}
+void main() {
+  f(1);
+  f(-17);
+  f(42)
+}

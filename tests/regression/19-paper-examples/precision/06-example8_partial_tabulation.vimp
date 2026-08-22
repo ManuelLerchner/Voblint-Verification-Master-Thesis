@@ -1,0 +1,72 @@
+// PARAM: --analysis interval --context entry-state
+// FM 2026 Example 8, partial tabulation of summary functions: "we use the
+// abstract states at start points of functions to distinguish function
+// calls and set C = D[start_f], c0 = d0, context_{u,f,args} d _ =
+// enter_{f,args} d." The context is the entered state itself, so two
+// activations share a copy of the callee exactly when they enter it in the
+// same abstract state -- unlike Example 7, where the call site alone
+// decides, whatever state it enters with.
+//
+// Same source as known-imprecision/04-context_insensitive_calls.vimp and
+// as precision/05-example7_one_callstring.vimp. The two calls enter f with
+// p = [3,3] and p = [10,10], two distinct entry states, so tabulation
+// separates them here just as 1-callstring does, and both exact values
+// survive. The paper draws no precision ordering between the two choices,
+// and this pair does not claim one either: they agree on this program and
+// are separated by which activations they merge, not by how precise they
+// are.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//   cluster_ctx_1:
+//     f_pp0_ctx1
+//     f_entry_f_ctx1
+//     f_result_f_ctx1
+//
+// nodes:
+//   main_pp5_ctx0: pp5
+//       check y==20
+//       x=[6,6]
+//       y=[20,20]
+//   main_pp6_ctx0: pp6
+//   main_result_main_ctx0: exit_main
+//   f_pp0_ctx1: pp0
+//   main_entry_main_ctx0: entry_main
+//   main_pp2_ctx0: pp2
+//   main_pp3_ctx0: pp3
+//   f_entry_f_ctx1: entry_f
+//   main_pp4_ctx0: pp4
+//       check x==6
+//       x=[6,6]
+//       y=[20,20]
+//   f_result_f_ctx1: exit_f
+//
+// edges:
+//   main_pp5_ctx0 -> main_pp6_ctx0: check(y==20)
+//   main_pp6_ctx0 -> main_result_main_ctx0: terminate
+//   f_pp0_ctx1 -> f_result_f_ctx1: return p+p
+//   main_entry_main_ctx0 -> main_pp2_ctx0: nop
+//   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(x==6)
+//   main_pp2_ctx0 -> f_entry_f_ctx1: enter f(3)
+//   main_pp3_ctx0 -> f_entry_f_ctx1: enter f(10)
+//   f_result_f_ctx1 -> main_pp3_ctx0: combine x
+//   f_result_f_ctx1 -> main_pp4_ctx0: combine y
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
+// EXPECT-GRAPH-END
+
+void f(p) { return p + p }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6);  // PROVED
+  __voblint_check(y == 20)  // PROVED
+}

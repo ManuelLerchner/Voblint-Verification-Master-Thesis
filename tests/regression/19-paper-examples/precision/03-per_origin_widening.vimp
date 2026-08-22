@@ -1,0 +1,28 @@
+// PARAM: --analysis interval --solver warrow-per-origin
+// FM 2026 Sect. 5.3, "Recovering Precision at Globals: Update Rules" --
+// the paper's first improvement over widening a global's accumulated
+// value: keep the contributions separate by origin (the local that
+// supplied them), widen per origin, and take the join of all origins as
+// the global's value. The paper states this is "sufficient to recover a
+// precise result in Example 1", since there each origin contributes at
+// most one value and so no widening is needed.
+//
+// Same program as known-imprecision/02-whole_global_widening.vimp, which
+// is that same slot under plain Apinis warrowing. Each of the three call
+// sites is its own origin holding one constant, so nothing widens and the
+// slot reads the join of the three -- the paper's [-17,42] for g.
+//
+// Both bounds are pinned, not just the paper's error condition: -18 < x
+// fails under warrowing for the same reason x < 43 does, so proving the
+// two together is what distinguishes the recovered [-17,42] from any
+// interval merely narrow enough to decide the error condition.
+
+void f(x) {
+  __voblint_check(x < 43);      // PROVED
+  __voblint_check(-18 < x)      // PROVED
+}
+void main() {
+  f(1);
+  f(-17);
+  f(42)
+}

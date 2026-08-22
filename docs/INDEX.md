@@ -14,6 +14,8 @@ These documents describe the supported architecture and its verification.
   and how a contextual `analysis_result` feeds checks, collapsed GraphViz, and
   expanded GraphViz from one canonical table.
 - [CLI](CLI_DESIGN.md) — `voblint`'s flags, architecture, and trust boundary.
+- [Per-origin widening](PER_ORIGIN_WIDENING.md) — what the solver's per-origin
+  update rules recover, on which unknowns, and where they make no difference.
 - [Glossary](GLOSSARY.md) — current terms and defining layers.
 - [Non-goals](NON_GOALS.md) — claims deliberately outside the framework.
 
