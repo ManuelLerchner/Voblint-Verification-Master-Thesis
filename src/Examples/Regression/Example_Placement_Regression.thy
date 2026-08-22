@@ -3,7 +3,7 @@ section \<open>Placement and storage are independent axes\<close>
 theory Example_Placement_Regression
   imports
     "Voblint_Analysis.Sign_DG"
-    "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_CLI.Sign_Codegen"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -35,12 +35,20 @@ text \<open>Case 2: a \<open>G\<close>-spelled local, correctly classified as no
 lemma storage_glocal_not_global [simp]: "\<not> storage_gs (STR ''Glocal'')"
   by (simp add: storage_program_def)
 
-text \<open>Case 3: the mixed program computes a real, non-trivial result: \<open>total\<close>
-  starts at the \<open>SZero\<close> global seed, \<open>Glocal\<close> is locally \<open>1\<close> (\<open>SPos\<close>), and
-  \<open>SZero \<squnion> SPos = SNonNeg\<close>.\<close>
+text \<open>Case 3: the mixed program computes a real, non-trivial result, read out
+  of the routed solved table the production report also reads. \<open>Glocal\<close> is
+  locally \<open>1\<close> (\<open>SPos\<close>), and at the exit \<open>total\<close> holds \<open>0 + 1\<close>, so the routed
+  result is exactly \<open>SPos\<close> -- the \<open>SZero\<close> seed is no longer live there.\<close>
+
+definition storage_total_env :: "vname \<Rightarrow> sign" where
+  "storage_total_env =
+     (case lookup_context (analyse_sign_result_for storage_gs storage_program)
+             (cfg_exit (prog_cfg prog_main_name storage_program)) () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+
 lemma storage_total_result:
-  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog storage_gs (STR ''main'') storage_program) (STR ''total'') = SNonNeg"
-  by eval
+  "storage_total_env (STR ''total'') = SPos"
+  by (simp add: storage_total_env_def) eval
 
 subsection \<open>4. Classic exclusive placement\<close>
 

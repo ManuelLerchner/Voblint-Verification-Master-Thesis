@@ -2,7 +2,8 @@ section \<open>Example: checks_proven/checks_proven_sound alone, store-only, Int
 
 theory Example_Interval_Checks_Store_Only
   imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Codegen" "Voblint_Analysis.Interval_Checks"
-          "Voblint_Analysis.Sign_Checks" "Voblint_VIMP.VIMP_Notation"
+          "Voblint_Analysis.Sign_Checks" "Voblint_Analysis.Analysis_GraphViz"
+          "Voblint_VIMP.VIMP_Notation"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -334,7 +335,7 @@ text \<open>
   here, confirming the mapping is analysis-independent: no Interval-specific
   rendering code was needed. There is no manually maintained \<^typ>\<open>pp\<close>-to-
   \<^typ>\<open>exp\<close> table either: \<^const>\<open>check_report_node_annotation\<close> looks each
-  node up directly in the computed \<^const>\<open>interval_check_report\<close>.
+  node up directly in the computed \<^const>\<open>analyse_interval_report_for\<close>.
 \<close>
 
 definition checks_ivl_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where

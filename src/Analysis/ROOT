@@ -30,10 +30,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_Domain
     Ivl_Exec
     Sign_Transfer
-    Sign_Local_Effects
     Sign_Domain
-    Sign_Side_Soundness
-    Interval_Side_Soundness
     Interval_DG
     Interval_Point_Digest
     Interval_Exec_Sound
@@ -52,9 +49,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Parity_Transfer
     Parity_Exec
     Parity_Checks
-    Parity_Exec_Sound
     Parity_Numeric_Queries
-    Parity_Side_Soundness
     Parity_Base_DG
     Parity_Exec_Ctx_Sound
     Int_Domain

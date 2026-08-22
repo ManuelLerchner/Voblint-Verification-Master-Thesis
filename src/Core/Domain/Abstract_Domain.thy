@@ -1270,11 +1270,10 @@ text \<open>
   executable mirror: it collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that
   never needs to
   distinguish "no successor" from "successor whose store is bottom" can keep
-  working with plain \<open>abs_state\<close>. The TD-side effectful pipeline instead
-  consumes \<open>branch_lifted\<close> directly (see \<open>local_branch_tree\<close> in
-  \<open>TD_Side_CFG.thy\<close>), so that a dead branch never has to be reconstructed
-  as a whole-state-bottom value indistinguishable from an ordinary
-  local/global-restricted result.
+  working with plain \<open>abs_state\<close>. The routed D/G pipeline instead consumes
+  \<open>branch_lifted\<close> directly, so that a dead branch never has to be
+  reconstructed as a whole-state-bottom value indistinguishable from an
+  ordinary local/global-restricted result.
 \<close>
 
 definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where

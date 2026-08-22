@@ -16,4 +16,3 @@ The interval domain threaded through the four layers of the
 | `Interval_Domain.thy` | `abstract_domain` instantiation; `backward_domain_mono` interpretation |
 | `Ivl_Exec.thy` | executable transfer mirror + commutation |
 | `Interval_DG.thy` | `sound_dg_spec` interpretation (`unit_dg_spec` diagonal); `ivl_dg_post_solution_collect_sound`; `ivl_dg_two_context_sound` |
-| `Interval_Side_Soundness.thy` | effectful transfer instance; end-to-end `side_ivl_analysis_sound` |

@@ -865,8 +865,8 @@ text \<open>
   this theory's public facade (\<open>analysis_domain\<close>, \<open>analyse\<close> itself), and
   \<open>Core\<close> for everything it is built from --- VIMP source AST and printing,
   CFG representation and compiler, the executable state substrate
-  (\<open>Exec_St\<close>/\<open>Exec_Bridge\<close>, the generic domain interface), the generic
-  D/G/effectful analysis plumbing (equation systems, the D/G spec framework,
+  (\<open>Exec_St\<close>/\<open>Exec_Refinement\<close>, the generic domain interface), the generic
+  D/G analysis plumbing (equation systems, the D/G spec framework,
   generic check classification), the vendored TD/TD_side solver, both
   domains' lattices, transfer functions, and check classification
   (\<open>Sign\<close>, \<open>Interval\<close>), and the underlying HOL-library data structures
@@ -907,7 +907,6 @@ code_identifier
 | code_module Abstract_Domain \<rightharpoonup> (OCaml) Core
 | code_module Numeric_Ops \<rightharpoonup> (OCaml) Core
 | code_module Exec_St \<rightharpoonup> (OCaml) Core
-| code_module Exec_Bridge \<rightharpoonup> (OCaml) Core
 | code_module AList \<rightharpoonup> (OCaml) Core
 | code_module Nat \<rightharpoonup> (OCaml) Core
 | code_module Int \<rightharpoonup> (OCaml) Core
@@ -951,13 +950,11 @@ code_identifier
 | code_module Update_rules \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Monad \<rightharpoonup> (OCaml) Core
 | code_module Side_Buffering \<rightharpoonup> (OCaml) Core
-| code_module TD_Side_CFG \<rightharpoonup> (OCaml) Core
 | code_module State_Restriction \<rightharpoonup> (OCaml) Core
 | code_module Exec_Refinement \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Rhs \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Relabel \<rightharpoonup> (OCaml) Core
 | code_module Solver_Mono \<rightharpoonup> (OCaml) Core
-| code_module TD_Side_Tree \<rightharpoonup> (OCaml) Core
 | code_module Constraint_System \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core
 | code_module Abstract_Checks \<rightharpoonup> (OCaml) Core

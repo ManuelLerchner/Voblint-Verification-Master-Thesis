@@ -1,29 +1,21 @@
 # End-to-end pipeline
 
-**Main contribution:** Mixed flow-sensitive soundness and optimality for the
-TD_side solver, stated directly over the plain collecting semantics
-(`cfg_collect`).
+**Main contribution:** the registered analysis endpoints that turn a computed
+D/G post-solution into a source-level soundness statement, and the
+context-sensitive routed instances built on them.
 
-**Theories:** `Mixed_Flow_Sound.thy`, `Source_Activation_Sound.thy`,
-`Compiler_Correctness.thy`
+**Theories**
 
-**Main theorems**
-
-| Theorem | Meaning |
+| Theory | Concern |
 | --- | --- |
-| `mixed_flow_analysis_sound` | Plain `cfg_collect g S (cfg_exit g) ⊆ γ(side_env σ)` soundness for any effectful transfer record, given a partial post-solution |
-| `mixed_flow_analysis_optimal` | Soundness plus least-partial-post-solution optimality for TD_side on an effectful equation system |
+| `Run_Analysis_Sound.thy` | `base_dg_exec_analysis`/`unit_dg_exec_analysis`: `run_source_sound` and `collect_sound` from one executable solve |
+| `Source_Activation_Sound.thy` | source adequacy: a reachable VIMP configuration yields a `valid_ltr` trace, bounded at its activation context and monovariantly |
+| `Sign_Exec_Ctx_Sound` siblings | per-domain routed instances at the entry-state and call-string contexts |
 
-**Context:** `Mixed_Flow_Sound.thy` is stated directly over
-`sound_effectful_transfer`, `threefold_mono`, and the TD_side post-solution
-interface. Domain theories provide native `effectful_domain_transfer` records
-(`sign_etf`, `ivl_etf`) and discharge their structural contracts from the record
-shape.
+**Context:** every endpoint concludes over `ltr_collect` (monovariant) or
+`activation_collect` (context-sensitive); both come from `sound_dg_spec` via
+`dg_post_solution_collect_sound_ltr` and `activation_collect_sound`.
 
-**Proof structure:** the `cfg_collect ⊆ γ(env)` bound comes from
-`side_collect_sound_exit_pruned_eff_cone` /
-`side_analyse_eff_collect_sound_exit_pruned` (TD_side collecting soundness); the
-optimality half comes from the solver's least-post-solution guarantee.
-
-**Downstream:** Examples import these theories directly when they need mixed-flow
-statements.
+**Downstream:** `Voblint_CLI` packages these as the per-domain
+`analyse_*_result_node_sound_for` and `analyse_*_report_sound_proved/_refuted`
+wrappers the exported `analyse` API is proved against.

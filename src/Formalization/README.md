@@ -8,6 +8,6 @@ so this session builds without the slow codegen/`value` runs.
 
 | Entry | Role |
 | --- | --- |
-| `Pipeline/Mixed_Flow_Sound.thy` | mixed flow-sensitive soundness and optimality |
-| `Pipeline/Compiler_Correctness.thy` | source-to-CFG compiler simulation lifting collecting soundness to VIMP source runs |
+| `Pipeline/Run_Analysis_Sound.thy` | the registered analysis endpoints: `run_source_sound` and `collect_sound` from one executable D/G solve |
 | `Pipeline/Source_Activation_Sound.thy` | source-adequacy bridge into activation-indexed collecting semantics |
+| `Pipeline/*_Ctx_Sound.thy` | per-domain routed instances at the entry-state and call-string contexts |

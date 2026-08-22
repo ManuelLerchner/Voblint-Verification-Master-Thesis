@@ -51,7 +51,7 @@ text \<open>
   \<open>Inr Global\<close> is never read back to reconstruct program state.
 
   \<open>ectx_spec\<close> carries an explicit executable bottom predicate and solves over the lifted
-  carrier, mirroring \<^const>\<open>ivl_exec_eqs\<close>'s convention
+  carrier, mirroring \<open>ictx_eqs\<close>'s convention
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>) of taking \<open>is_bot_pred\<close> as a
   caller-supplied parameter rather than deriving it internally. Callers with a concrete
   program supply \<open>resolved_st_q_is_bot_for (declared_global_vars p)\<close>, exact for
@@ -228,8 +228,8 @@ definition entry_state_terminates ::
 
 text \<open>
   Discharging termination by execution, exactly as
-  \<open>analyse_interval_td_terminates_via_solve_c\<close> discharges
-  \<^const>\<open>analyse_interval_td_terminates\<close>.
+  \<open>ictx_terminates_prog_via_solve_c\<close> discharges
+  \<open>ictx_terminates_prog\<close>.
 \<close>
 
 lemma entry_state_terminates_via_solve_c:
@@ -245,9 +245,9 @@ subsection \<open>Whole-program convenience layer\<close>
 text \<open>
   \<open>Pi ps mnm main\<close> alone give no @{type imp_prog} to read a declared-global list off of, so
   \<open>entry_state_eqs\<close> and friends keep \<open>is_bot_pred\<close> as an explicit parameter, mirroring
-  \<^const>\<open>ivl_exec_eqs\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>). The \<open>_prog\<close> wrappers do
+  \<open>ictx_eqs\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>). The \<open>_prog\<close> wrappers do
   have a program and instantiate \<open>is_bot_pred\<close> to \<^const>\<open>resolved_st_q_is_bot_for\<close> at its own
-  \<^const>\<open>declared_global_vars\<close>, mirroring \<^const>\<open>ivl_exec_prog_at\<close>.
+  \<^const>\<open>declared_global_vars\<close>, mirroring \<open>ictx_sol_prog\<close>.
 \<close>
 
 definition entry_state_eqs_prog ::
@@ -1186,7 +1186,7 @@ section \<open>Solver-choice generalization\<close>
 text \<open>
   \<^const>\<open>entry_state_eqs\<close> names no solve function -- only \<open>ectx_spec\<close> and
   the routing policy -- so it is exactly as solver-independent as
-  \<^const>\<open>ivl_exec_eqs\<close> at \<open>Ctx_None\<close>
+  \<open>ictx_eqs\<close> at \<open>Ctx_None\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
   \<open>_per_origin_for\<close> alongside the Warrow default), and exactly as its own
   \<open>Interval_Call_String_Ctx_Sound.thy\<close> sibling solves the routed call-string

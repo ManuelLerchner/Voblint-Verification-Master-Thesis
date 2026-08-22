@@ -8,6 +8,7 @@ theory Sign_Exec_Ctx_Sound
     "Voblint_Core.Solver_Menu"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Core.Activation_Backbone"
+    "Voblint_Core.Analysis_Result"
 begin
 
 section \<open>Sign at the routed spine, instantiated at the unit context\<close>

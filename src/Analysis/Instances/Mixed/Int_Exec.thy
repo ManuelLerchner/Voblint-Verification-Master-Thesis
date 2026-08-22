@@ -1,5 +1,5 @@
 theory Int_Exec
-  imports Voblint_Core.Exec_Bridge Voblint_Core.Numeric_Ops Int_DG
+  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Int_DG
 begin
 
 section \<open>Composite integer domain: executable transfer mirror\<close>
@@ -156,46 +156,6 @@ lemma int_dom_enter_never_st_for_commute:
   by (simp add: int_tf_never_for_def enter_int_dom_for_def enter_D_def
                 enter_frame_int_dom_for_def enter_frame_D_def)
 
-text \<open>
-  Executable effectful transfer record, generic in the classifier and in
-  \<open>is_bot_pred\<close> (the executable witness-bottom test
-  \<open>unit_edge_tree_st\<close>/\<open>unit_combine_tree_st\<close> need): mirrors
-  \<open>sign_etf_st_for\<close>.
-\<close>
-
-definition int_dom_etf_st_never_for ::
-  "(int_dom resolved_st_q => bool) => (vname => bool)
-   => (unit, int_dom resolved_st_q lifted) effectful_st_transfer" where
-  "int_dom_etf_st_never_for is_bot_pred gs =
-     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_never_for gs) (int_dom_enter_never_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
-
-lemma int_dom_etf_st_never_for_edge_tree:
-  "apply_etf_st (int_dom_etf_st_never_for is_bot_pred gs) a u =
-   unit_edge_tree_st is_bot_pred (int_tf_st_never_for gs a) u"
-  unfolding int_dom_etf_st_never_for_def
-  by (rule apply_etf_st_unit_of_transfer[OF int_tf_st_never_for_reduces])
-
-lemma int_dom_etf_st_never_for_combine_tree:
-  "etf_combine_collect_st (int_dom_etf_st_never_for is_bot_pred gs) ci cc ex =
-   unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
-  unfolding int_dom_etf_st_never_for_def
-  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
-
-lemma int_dom_etf_st_never_for_enter_tree:
-  "etf_st_enter (int_dom_etf_st_never_for is_bot_pred gs) xs es u =
-   unit_edge_tree_st is_bot_pred (int_dom_enter_never_st_for gs xs es) u"
-  unfolding int_dom_etf_st_never_for_def by (rule etf_st_enter_unit_of_transfer)
-
-lemma int_dom_etf_st_never_for_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter (int_dom_etf_st_never_for is_bot_pred gs) xs es u
-     = unit_edge_tree_st is_bot_pred f u"
-  using int_dom_etf_st_never_for_enter_tree by blast
-
-lemma int_dom_etf_st_never_for_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st (int_dom_etf_st_never_for is_bot_pred gs) a u
-     = unit_edge_tree_st is_bot_pred f u"
-  using int_dom_etf_st_never_for_edge_tree by blast
-
 subsection \<open>Refine_Once\<close>
 
 definition int_dom_ops_once :: "int_dom numeric_ops" where
@@ -307,39 +267,6 @@ lemma int_dom_enter_once_st_for_commute:
   by (simp add: int_tf_once_for_def enter_int_dom_for_def enter_D_def
                 enter_frame_int_dom_for_def enter_frame_D_def)
 
-definition int_dom_etf_st_once_for ::
-  "(int_dom resolved_st_q => bool) => (vname => bool)
-   => (unit, int_dom resolved_st_q lifted) effectful_st_transfer" where
-  "int_dom_etf_st_once_for is_bot_pred gs =
-     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_once_for gs) (int_dom_enter_once_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
-
-lemma int_dom_etf_st_once_for_edge_tree:
-  "apply_etf_st (int_dom_etf_st_once_for is_bot_pred gs) a u =
-   unit_edge_tree_st is_bot_pred (int_tf_st_once_for gs a) u"
-  unfolding int_dom_etf_st_once_for_def
-  by (rule apply_etf_st_unit_of_transfer[OF int_tf_st_once_for_reduces])
-
-lemma int_dom_etf_st_once_for_combine_tree:
-  "etf_combine_collect_st (int_dom_etf_st_once_for is_bot_pred gs) ci cc ex =
-   unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
-  unfolding int_dom_etf_st_once_for_def
-  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
-
-lemma int_dom_etf_st_once_for_enter_tree:
-  "etf_st_enter (int_dom_etf_st_once_for is_bot_pred gs) xs es u =
-   unit_edge_tree_st is_bot_pred (int_dom_enter_once_st_for gs xs es) u"
-  unfolding int_dom_etf_st_once_for_def by (rule etf_st_enter_unit_of_transfer)
-
-lemma int_dom_etf_st_once_for_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter (int_dom_etf_st_once_for is_bot_pred gs) xs es u
-     = unit_edge_tree_st is_bot_pred f u"
-  using int_dom_etf_st_once_for_enter_tree by blast
-
-lemma int_dom_etf_st_once_for_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st (int_dom_etf_st_once_for is_bot_pred gs) a u
-     = unit_edge_tree_st is_bot_pred f u"
-  using int_dom_etf_st_once_for_edge_tree by blast
-
 subsection \<open>Refine_Fixpoint\<close>
 
 definition int_dom_ops_fixpoint :: "int_dom numeric_ops" where
@@ -450,38 +377,5 @@ lemma int_dom_enter_fixpoint_st_for_commute:
    tf_enter (int_tf_fixpoint_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: int_tf_fixpoint_for_def enter_int_dom_for_def enter_D_def
                 enter_frame_int_dom_for_def enter_frame_D_def)
-
-definition int_dom_etf_st_fixpoint_for ::
-  "(int_dom resolved_st_q => bool) => (vname => bool)
-   => (unit, int_dom resolved_st_q lifted) effectful_st_transfer" where
-  "int_dom_etf_st_fixpoint_for is_bot_pred gs =
-     unit_etf_st_of_transfer is_bot_pred gs (int_tf_st_fixpoint_for gs) (int_dom_enter_fixpoint_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
-
-lemma int_dom_etf_st_fixpoint_for_edge_tree:
-  "apply_etf_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) a u =
-   unit_edge_tree_st is_bot_pred (int_tf_st_fixpoint_for gs a) u"
-  unfolding int_dom_etf_st_fixpoint_for_def
-  by (rule apply_etf_st_unit_of_transfer[OF int_tf_st_fixpoint_for_reduces])
-
-lemma int_dom_etf_st_fixpoint_for_combine_tree:
-  "etf_combine_collect_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) ci cc ex =
-   unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
-  unfolding int_dom_etf_st_fixpoint_for_def
-  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
-
-lemma int_dom_etf_st_fixpoint_for_enter_tree:
-  "etf_st_enter (int_dom_etf_st_fixpoint_for is_bot_pred gs) xs es u =
-   unit_edge_tree_st is_bot_pred (int_dom_enter_fixpoint_st_for gs xs es) u"
-  unfolding int_dom_etf_st_fixpoint_for_def by (rule etf_st_enter_unit_of_transfer)
-
-lemma int_dom_etf_st_fixpoint_for_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter (int_dom_etf_st_fixpoint_for is_bot_pred gs) xs es u
-     = unit_edge_tree_st is_bot_pred f u"
-  using int_dom_etf_st_fixpoint_for_enter_tree by blast
-
-lemma int_dom_etf_st_fixpoint_for_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st (int_dom_etf_st_fixpoint_for is_bot_pred gs) a u
-     = unit_edge_tree_st is_bot_pred f u"
-  using int_dom_etf_st_fixpoint_for_edge_tree by blast
 
 end

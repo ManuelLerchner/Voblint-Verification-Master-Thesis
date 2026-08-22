@@ -948,3 +948,63 @@ what constrains them. State the coverage lemmas themselves with
 Keep `hide_const phase.N` wherever an import chain that used to provide it is
 replaced. Namespace changes caused by swapping an import are real migration
 effects even when nothing semantic moves.
+
+### Slice C, completed
+
+The transitive block-taint closure over the old flat-spine constants reached
+zero across `src/Analysis`, `src/Examples`, `src/CLI`, `src/Formalization` and
+`src/Codegen`:
+
+| step | tainted blocks | files |
+| --- | --- | --- |
+| start | 249 | 23 |
+| example witnesses moved onto `analyse_*_result_for` | 149 | 13 |
+| superseded `*_check_report` deleted | 145 | 10 |
+| Parity flat spine deleted | 112 | 7 |
+| Sign flat spine deleted | 67 | 4 |
+| Interval and Int flat spines deleted | 0 | 0 |
+
+Deleted whole: `Sign_Side_Soundness`, `Sign_Local_Effects`,
+`Interval_Side_Soundness`, `Parity_Side_Soundness`, `Parity_Exec_Sound`.
+Stripped to their D/G halves: `Sign_Exec_Sound`, `Interval_Exec_Sound`.
+Stripped of their etf factories: `Sign_Exec`, `Ivl_Exec`, `Parity_Exec`,
+`Int_Exec`.
+
+#### The Parity soundness gap, closed
+
+`analyse_parity_report` is a shipping dispatcher branch that had no soundness
+wrapper: `Parity_Checks` stopped at `pctx_result_node_sound`, inside a
+six-assumption adapter context. `Voblint_CLI.Parity_Codegen` now carries
+`analyse_parity_result_node_sound_for`,
+`analyse_parity_report_sound_proved_for`/`_refuted_for` and their
+`declared_global` corollaries, mirroring Sign exactly. The bridge needed
+`Parity_Checks.pctx_analyse_result_eq`, the Sign analogue Parity was missing.
+
+#### Behaviour differences, all in the same direction
+
+| witness | old flat result | canonical D/G | classification |
+| --- | --- | --- | --- |
+| `Example_Side_Proc_Global`, `counter` at exit | `SNonNeg` | `SPos` | precision improvement |
+| `Example_Side_Branch_Calls`, `result_val` at exit | `SNonNeg` | `SPos` | precision improvement |
+| `Example_Side_Branch_Calls`, `out_val` at exit | `SNonNeg` | `SPos` | precision improvement |
+| `Example_Placement_Regression`, `total` at exit | `SNonNeg` | `SPos` | precision improvement |
+
+Every other computed value is unchanged, including all three interval-loop
+engines, the whole `run_menu` comparison, and every check classification.
+
+#### One generalization, no wrappers
+
+`run_menu` (`Solver_Menu`) took `gs` and a variable name and hardcoded a
+lifted-carrier read, which cannot type against a routed `dg_state`. It now
+takes the slot projection as a parameter, so the one menu serves both carriers.
+That is the whole change: no `run_menu_dg`, no shim.
+
+#### Import hygiene
+
+Deleting a theory removes whatever it happened to re-export. Four theories had
+to start naming what they actually use rather than inheriting it:
+`Sign_Exec_Sound` and `Parity_Exec_Ctx_Sound` (`Solver_Side_RG`,
+`TD_side_upd_rule`, `CFG_Prune`, `Compile_Invariants`), `Sign_Exec_Ctx_Sound`
+(`Analysis_Result`), and three examples (`Analysis_GraphViz`,
+`VIMP_Source_Print`). None of these are new dependencies; they were always
+there, just unnamed.

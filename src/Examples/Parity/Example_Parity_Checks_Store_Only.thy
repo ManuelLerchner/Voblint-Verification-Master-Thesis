@@ -1,7 +1,7 @@
 section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 
 theory Example_Parity_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_Analysis.Parity_Exec_Sound" "Voblint_Analysis.Parity_Checks"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Parity_Codegen"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -55,18 +55,63 @@ lemma parity_ex_program_declared_global_vars [simp]:
   "declared_global_vars parity_ex_program = []"
   by (simp add: parity_ex_program_def)
 
-lemma parity_ex_solver_terminates: "parity_terminates_prog parity_ex_gs (STR ''main'') parity_ex_program"
-  by (rule parity_terminates_prog_via_solve_c) eval
+lemma parity_ex_reserved: "reserved_ret_var parity_ex_gs"
+  unfolding reserved_ret_var_def by simp
+
+text \<open>The compiled graph has no call edges: the nondeterministic reads compile
+  to \<^const>\<open>EA_Special\<close> intra edges, not \<^const>\<open>CallEdge\<close>s.\<close>
+
+lemma parity_ex_calls_eval: "calls (prog_cfg prog_main_name parity_ex_program) = {}"
+  unfolding prog_cfg_def by eval
+
+text \<open>The routed-unit solve terminates, and its solved key set is closed under
+  the compiled graph -- the four coverage facts the D/G node-soundness bridge
+  turns on, each computed rather than argued.\<close>
+
+lemma parity_ex_solver_terminates:
+  "pctx_terminates_prog parity_ex_gs prog_main_name parity_ex_program"
+  by (rule pctx_terminates_prog_via_solve_c) eval
+
+lemma parity_ex_entry_cov:
+  "(cfg_entry (prog_cfg prog_main_name parity_ex_program), ())
+     \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+  by eval
+
+lemma parity_ex_fwd_ok_ball:
+  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name parity_ex_program).
+     (u, ()) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+  by eval
+
+lemma parity_ex_fwd_ok:
+  assumes "(u, ctx) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+    and "(u, a, w) \<in> intra (prog_cfg prog_main_name parity_ex_program)"
+  shows "(w, ctx) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+  using assms parity_ex_fwd_ok_ball by (cases ctx) auto
+
+lemma parity_ex_call_fwd_ok:
+  assumes "(u, ctx) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name parity_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+  using assms by (simp add: parity_ex_calls_eval)
+
+lemma parity_ex_comb_fwd_ok:
+  assumes "(cl, c1) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name parity_ex_program)"
+  shows "(k, c1) \<in> fst (pctx_sol_prog parity_ex_gs prog_main_name parity_ex_program)"
+  using assms by (simp add: parity_ex_calls_eval)
 
 definition parity_ex_reach :: "pp \<Rightarrow> store set" where
   "parity_ex_reach v = ltr_collect parity_ex_gs (prog_cfg (STR ''main'') parity_ex_program) (cinit_stores parity_ex_gs) v"
 
-text \<open>The computed Parity environment at an arbitrary node, not fixed to the
-  exit: \<^const>\<open>parity_exec_prog_at\<close> queries the same solver result
-  \<^const>\<open>parity_exec_prog\<close> reads only at the exit.\<close>
+text \<open>The computed Parity environment at an arbitrary node, read out of the
+  routed-unit solved table \<^const>\<open>analyse_parity_result_for\<close> the production
+  report also reads -- one solve, queried per node, with an unreachable node
+  concretizing to \<^term>\<open>bot\<close>.\<close>
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
-  "parity_ex_env v = case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-     (parity_exec_prog_at parity_ex_gs (STR ''main'') parity_ex_program v)"
+  "parity_ex_env v =
+     (case lookup_context (analyse_parity_result_for parity_ex_gs parity_ex_program) v () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 0\<close> (\<open>x := __voblint_nondet_int()\<close>) reaches \<open>Statement 1\<close>
@@ -94,82 +139,32 @@ lemma parity_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') parity_ex_program)
 lemma parity_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') parity_ex_program) = FunctionEntry (STR ''main'')"
   unfolding prog_cfg_def by (simp add: inv16_entry_is_main)
 
-text \<open>Structural reachability to the exit, for each check node --- the
-  premise \<open>parity_exec_prog_sound_collecting_at\<close> needs to bound
-  \<^const>\<open>ltr_collect\<close> at that node against the solver's query seed
-  (\<open>cfg_exit\<close>). This is a fact about the CFG's shape, not about any concrete
-  store.\<close>
-lemma parity_ex_statement3_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 3)
-     (cfg_exit (prog_cfg (STR ''main'') parity_ex_program))"
-proof -
-  have r3: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 3) (Statement 4)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 4) (Statement 5)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r5: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 5) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 6) (Statement 7)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r7: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 7) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  show ?thesis
-    unfolding parity_ex_exit_eval
-    using r3 r4 r5 r6 r7 cfg_reaches_trans by blast
-qed
+text \<open>Node-local collecting soundness at each check node, from the routed D/G
+  node-soundness bridge and the four computed coverage facts --- no store is
+  forwarded to the exit, and no reachability-to-exit premise is needed: the
+  routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
-lemma parity_ex_statement4_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 4)
-     (cfg_exit (prog_cfg (STR ''main'') parity_ex_program))"
-proof -
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 4) (Statement 5)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r5: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 5) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 6) (Statement 7)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r7: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 7) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  show ?thesis
-    unfolding parity_ex_exit_eval
-    using r4 r5 r6 r7 cfg_reaches_trans by blast
-qed
-
-lemma parity_ex_statement6_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 6)
-     (cfg_exit (prog_cfg (STR ''main'') parity_ex_program))"
-proof -
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 6) (Statement 7)"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  have r7: "cfg_reaches (prog_cfg (STR ''main'') parity_ex_program) (Statement 7) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: parity_ex_intra_eval)
-  show ?thesis
-    unfolding parity_ex_exit_eval
-    using r6 r7 cfg_reaches_trans by blast
-qed
-
-text \<open>Node-local collecting soundness at each check node, via
-  \<open>parity_exec_prog_sound_collecting_at\<close> and the reachability facts above ---
-  no store is forwarded to the exit.\<close>
-lemma gamma_state_case_lifted:
-  fixes x :: "'a::sound_domain abs_state lifted"
-  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
-  by (cases x) (simp_all add: gamma_state_bot)
+lemmas parity_ex_node_sound =
+  analyse_parity_result_node_sound_for[OF parity_ex_reserved parity_ex_solver_terminates
+    parity_ex_entry_cov parity_ex_fwd_ok parity_ex_call_fwd_ok parity_ex_comb_fwd_ok]
 
 lemma parity_ex_node_sound_3:
   "parity_ex_reach (Statement 3) \<le> \<lbrakk>parity_ex_env (Statement 3)\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def gamma_state_case_lifted
-  by (rule parity_exec_prog_sound_collecting_at[OF refl parity_ex_solver_terminates parity_ex_statement3_reaches_exit])
+  unfolding parity_ex_reach_def parity_ex_env_def
+  using parity_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 lemma parity_ex_node_sound_4:
   "parity_ex_reach (Statement 4) \<le> \<lbrakk>parity_ex_env (Statement 4)\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def gamma_state_case_lifted
-  by (rule parity_exec_prog_sound_collecting_at[OF refl parity_ex_solver_terminates parity_ex_statement4_reaches_exit])
+  unfolding parity_ex_reach_def parity_ex_env_def
+  using parity_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 lemma parity_ex_node_sound_6:
   "parity_ex_reach (Statement 6) \<le> \<lbrakk>parity_ex_env (Statement 6)\<rbrakk>"
-  unfolding parity_ex_reach_def parity_ex_env_def gamma_state_case_lifted
-  by (rule parity_exec_prog_sound_collecting_at[OF refl parity_ex_solver_terminates parity_ex_statement6_reaches_exit])
+  unfolding parity_ex_reach_def parity_ex_env_def
+  using parity_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>PEven\<close>
   and \<open>z\<close> is \<open>POdd\<close> at both \<open>Statement 3\<close> and \<open>Statement 4\<close> (checks do not
@@ -329,7 +324,7 @@ text \<open>
 \<close>
 
 lemma parity_ex_report_eval:
-  "parity_check_report parity_ex_gs (STR ''main'') parity_ex_program =
+  "analyse_parity_report_for parity_ex_gs parity_ex_program =
      [(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))), Check_Proved),
       (Statement 4, Eq (V (STR ''y'')) (V (STR ''z'')), Check_Refuted),
       (Statement 6, Eq (V (STR ''y'')) (V (STR ''w'')), Check_Unknown)]"
@@ -340,9 +335,9 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
   representation to drift from the per-node facts above.\<close>
 
 lemma parity_ex_report_unfold:
-  "parity_check_report parity_ex_gs (STR ''main'') parity_ex_program
+  "analyse_parity_report_for parity_ex_gs parity_ex_program
      = classify_checks (prog_cfg (STR ''main'') parity_ex_program) parity_ex_env parity_classify_check"
-  unfolding parity_check_report_def parity_ex_env_def by simp
+  unfolding analyse_parity_report_for_def Let_def parity_ex_env_def prog_main_name_def by simp
 
 text \<open>Agreement with the existing per-node classification: the first report
   entry is derivable directly from \<open>classify_checks_mem_iff\<close> together with
@@ -352,12 +347,27 @@ text \<open>Agreement with the existing per-node classification: the first repor
 
 corollary parity_ex_report_agrees_with_node_classification:
   "(Statement 3, Not (Eq (V (STR ''y'')) (V (STR ''z''))), Check_Proved)
-     \<in> set (parity_check_report parity_ex_gs (STR ''main'') parity_ex_program)"
+     \<in> set (analyse_parity_report_for parity_ex_gs parity_ex_program)"
   unfolding parity_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg (STR ''main'') parity_ex_program"
       "Statement 3" "Not (Eq (V (STR ''y'')) (V (STR ''z'')))" Check_Proved parity_ex_env parity_classify_check]
   using parity_ex_intra_eval parity_ex_classify_3
   by (auto simp: parity_ex_intra_eval)
+
+text \<open>The proved entry, discharged against the collecting semantics rather
+  than against the computed table: \<open>analyse_parity_report_sound_proved_for\<close>
+  (\<^theory>\<open>Voblint_CLI.Parity_Codegen\<close>) turns a \<^term>\<open>Check_Proved\<close> report
+  entry into a statement about every store \<^const>\<open>ltr_collect\<close> admits at that
+  node, from the same four coverage facts the node-soundness bridge uses.\<close>
+
+corollary parity_ex_report_proved_entry_sound:
+  "\<forall>t \<in> parity_ex_reach (Statement 3). truthy (aval (Not (Eq (V (STR ''y'')) (V (STR ''z'')))) t)"
+  unfolding parity_ex_reach_def
+  using analyse_parity_report_sound_proved_for
+          [OF parity_ex_reserved parity_ex_solver_terminates parity_ex_entry_cov
+              parity_ex_fwd_ok parity_ex_call_fwd_ok parity_ex_comb_fwd_ok
+              parity_ex_report_agrees_with_node_classification]
+  by (simp add: prog_main_name_def)
 
 subsection \<open>CFG rendering, checks colored by executable classification\<close>
 
@@ -367,7 +377,7 @@ text \<open>
   (\<^const>\<open>raw_cfg_dot_lit\<close>), through the same check-agnostic
   \<^type>\<open>graphviz_node_annotation\<close> hook. There is no manually maintained
   \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table: \<^const>\<open>check_report_node_annotation\<close> looks
-  each node up directly in the computed \<^const>\<open>parity_check_report\<close>.
+  each node up directly in the computed \<^const>\<open>analyse_parity_report_for\<close>.
   \<^term>\<open>Check_Proved\<close> renders dark green, \<^term>\<open>Check_Refuted\<close> red,
   \<^term>\<open>Check_Unknown\<close> grey. The unrelated \<open>FunctionResult (STR ''main'')\<close> exit
   node gets its own neutral-grey annotation through the same hook.
@@ -376,7 +386,7 @@ text \<open>
 definition parity_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "parity_ex_node_annotation v =
      (case check_report_node_annotation
-             (parity_check_report parity_ex_gs (STR ''main'') parity_ex_program) v of
+             (analyse_parity_report_for parity_ex_gs parity_ex_program) v of
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then
@@ -407,6 +417,6 @@ definition parity_ex_dot_lit :: String.literal where
   "parity_ex_dot_lit =
      raw_cfg_dot_with_report_lit (prog_table parity_ex_program) (prog_procs parity_ex_program)
        (STR ''main'') (prog_main parity_ex_program) parity_ex_node_annotation
-       (parity_check_report parity_ex_gs (STR ''main'') parity_ex_program)"
+       (analyse_parity_report_for parity_ex_gs parity_ex_program)"
 
 end

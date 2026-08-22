@@ -19,10 +19,10 @@ proof (cases a)
   then show ?thesis by (cases sc) auto
 qed auto
 
-text \<open>A \<open>dg_spec\<close>/executable-mirror instance dispatches its own \<open>EA_Check\<close> case
-  through its own \<open>dgs_event\<close>/\<^const>\<open>etf_event\<close> field, matching \<^const>\<open>apply_tf\<close>'s
-  own \<open>event\<^sup>#\<close> dispatch: this is the per-domain soundness bound each such
-  instance needs at that dispatch point.\<close>
+text \<open>A \<open>dg_spec\<close> instance dispatches its own \<open>EA_Check\<close> case through its own
+  \<open>dgs_event\<close> field, matching \<^const>\<open>apply_tf\<close>'s own \<open>event\<^sup>#\<close>
+  dispatch: this is the per-domain soundness bound each such instance needs at
+  that dispatch point.\<close>
 lemma edge_collect_check_sound_for:
   "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>event\<^sup># tf (Check_Event c) \<sigma>\<rbrakk>"
   by auto

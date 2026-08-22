@@ -56,13 +56,18 @@ definition solver_menu where
       (STR ''per_origin'', TD_side_per_origin_Interp_solve),
       (STR ''warrow'',     TD_side_warrowing_apinis_Interp_solve)]"
 
-text \<open>Read one global/local slot's variable under every solver on the menu, in one call.
-  \<open>eqs\<close> the equation system, \<open>entry\<close> the solver entry unknown, \<open>k\<close> the slot to read
-  (e.g. \<^term>\<open>Inr ctx\<close> for a keyed global), \<open>var\<close> the program variable.\<close>
+text \<open>Read one slot under every solver on the menu, in one call. \<open>rd\<close> projects the
+  solver's value at that slot down to whatever the caller wants to compare (a single
+  variable's abstract value, say); \<open>eqs\<close> is the equation system, \<open>entry\<close> the solver
+  entry unknown, and \<open>k\<close> the slot to read (e.g. \<^term>\<open>Inr ctx\<close> for a keyed global).
+
+  The projection is a parameter for a layering reason, not a convenience one:
+  this theory sits below the D/G framework, so it cannot name that framework's
+  \<open>locals\<close>/\<open>globs\<close> without inverting the dependency. Taking \<open>rd\<close> from the
+  caller is what keeps the menu generic in the solver's value type at its own
+  level.\<close>
 definition run_menu where
-  "run_menu gs eqs entry k var =
-     map (\<lambda>(nm, solve).
-       (nm, case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of gs var)) (snd (solve eqs entry) k)))
-       solver_menu"
+  "run_menu rd eqs entry k =
+     map (\<lambda>(nm, solve). (nm, rd (snd (solve eqs entry) k))) solver_menu"
 
 end

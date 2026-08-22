@@ -1,5 +1,5 @@
 theory Numeric_Ops
-  imports Exec_Bridge
+  imports Exec_Refinement
 begin
 
 section \<open>Generic executable branch/enter construction\<close>

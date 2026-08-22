@@ -1,6 +1,7 @@
 theory Example_Analysis_Dispatch_Regression
   imports
     "Voblint_CLI.Analyse_Dispatch"
+    "Voblint_VIMP.VIMP_Source_Print"
 begin
 
 text \<open>
@@ -168,10 +169,10 @@ proof (rule analyse_interval_proved_sound)
 qed
 
 text \<open>
-  \<^const>\<open>string_of_exp\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_GraphViz\<close>, already an
-  ancestor) renders the \<open>exp\<close> half of a \<open>check_report_entry\<close> as a native
-  string, so an external consumer of \<open>analyse\<close>'s report can print a check's
-  condition without decoding the \<open>exp\<close> AST itself.
+  \<^const>\<open>string_of_exp\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Source_Print\<close>) renders the
+  \<open>exp\<close> half of a \<open>check_report_entry\<close> as a native string, so an external
+  consumer of \<open>analyse\<close>'s report can print a check's condition without decoding
+  the \<open>exp\<close> AST itself.
 \<close>
 
 lemma dispatch_demo_check_cond_rendered:

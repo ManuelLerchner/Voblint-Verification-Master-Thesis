@@ -1,16 +1,15 @@
 # TD solver bridge (side-effecting, interprocedural)
 
 Connect the vendored **TD side** solver (`vendor/td-verification`, session `TD`, theory `TD_side`)
-to the procedure-aware CFG and effectful equation format. Solver post-solutions
-are connected to activation-local collecting semantics at nodes covered by the
-query dependency cone.
+to the procedure-aware CFG and the D/G equation format. Solver post-solutions
+are connected to activation-local collecting semantics through
+`sound_dg_spec`.
 
-The layer is split into four concerns, one subfolder each:
+The layer is split into three concerns, one subfolder each:
 
 | Subfolder | Concern |
 | --- | --- |
-| `TD_Side/` | the TD-side solver interface: generator, monotonicity, base collecting soundness |
-| `Strategy_Tree/` | the domain-agnostic strategy-tree monad and its combinators |
+| `Strategy_Tree/` | the domain-agnostic strategy-tree monad, its combinators, and `threefold_mono` |
 | `Context/` | context-sensitive solver spine: `Context/Activation`, `Context/DG` |
 | `Exec/` | executable witnesses and DG-native example support |
 
@@ -18,13 +17,9 @@ The layer is split into four concerns, one subfolder each:
 This layer wires `part_post_solution` to `is_post_fixpoint` via
 `src/Core/Equations/Constraint_System_Sound.thy`.
 
-**Downstream:** `src/Analysis/Instances/Sign/Sign_Side_Soundness.thy` — `side_sign_analysis_sound`;
-`src/Analysis/Instances/Interval/Interval_Side_Soundness.thy`; `src/Formalization/Pipeline/Mixed_Flow_Sound.thy`.
-
-## `TD_Side/`
-
-`TD_Side/README.md` has the file inventory: the TD-side solver interface built
-directly on the strategy-tree monad.
+**Downstream:** each domain's routed instance (`Sign_Exec_Ctx_Sound`,
+`Interval_Ctx_None_Routed_Sound`, `Parity_Exec_Ctx_Sound`, `Int_Exec_Ctx_Sound`)
+and `src/Formalization/Pipeline/Run_Analysis_Sound.thy`.
 
 ## `Strategy_Tree/`
 
@@ -40,13 +35,13 @@ solver-agnostic — reused directly by `Context/DG/Context_Refinement.thy` and b
 
 ## `Exec/`
 
-`Exec_Bridge` (`'a st` fold mirror + `fun_of_st` simulation + the generic
-`part_post_solution_st_to_abs_transport`) and `Solver_Side_RG` (reach-global
-lemmas). The D/G product carrier is executable through `Exec_DG_Bridge`
+`Solver_Side_RG` (reach-global lemmas). The D/G product carrier is executable
+through `Exec_DG_Bridge`
 (`fun_of_dg_st`, `dg_gen_of`, `part_post_solution_dg_st_to_abs`), which lets the
 verified solver run on D/G equations; executable examples use it directly.
 
 `Solver_Menu` bundles the vendored update-rule solvers (`join`, `per_origin`,
-`warrow`) behind one `side_solver` signature. `run_menu eqs entry k var` reads
-one slot under every discipline. A rule participates in a certified endpoint
+`warrow`) behind one `side_solver` signature. `run_menu rd eqs entry k` reads
+one slot under every discipline, projecting it with the caller's `rd` so the
+same menu serves any solver carrier. A rule participates in a certified endpoint
 only when its solver adapter yields the required partial post-solution theorem.

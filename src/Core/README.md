@@ -14,9 +14,9 @@ domain instance (`src/Analysis/Instances/`) consumes.
 | --- | --- |
 | `Domain/` | `sound_domain` / `abstract_domain` locales; `'a st` state type |
 | `Equations/` | Constraint-system definition + post-fixpoint soundness |
-| `Solver/` | TD side-effecting solver bridge; effectful strategy trees |
+| `Solver/` | TD side-effecting solver bridge; D/G strategy trees |
 
-`Solver/README.md` documents its own four-way split (`TD_Side/`, `Strategy_Tree/`,
+`Solver/README.md` documents its own three-way split (`Strategy_Tree/`,
 `Context/`, `Exec/`).
 
 ## ROOT

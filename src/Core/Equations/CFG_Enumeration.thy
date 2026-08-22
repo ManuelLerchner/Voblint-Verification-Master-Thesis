@@ -189,8 +189,8 @@ text \<open>\<^const>\<open>return_call_list\<close> keeps only the caller desti
   \<^const>\<open>entry_call_list\<close> already keeps \<open>ca\<close> whole on the entry side.  This is the return-side
   counterpart that does the same --- kept as a separate enumeration rather than widening
   \<^const>\<open>return_call_list\<close> itself, since that function and its \<^typ>\<open>vname option\<close> shape are
-  also relied on by the flat constraint system and the homogeneous effectful-transfer solver
-  core (\<open>TD_Side_Tree.thy\<close>), which are out of scope for context routing.\<close>
+  also relied on by the context-free constraint system, which is out of scope for context
+  routing.\<close>
 
 definition return_call_actions ::
     "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node) set" where

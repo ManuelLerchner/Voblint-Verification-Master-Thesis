@@ -3,7 +3,11 @@ theory Parity_Exec_Ctx_Sound
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Routed_Unit_Domain"
     "Voblint_Analysis.Parity_Base_DG"
-    "Voblint_Analysis.Parity_Exec_Sound"
+    "Voblint_Analysis.Parity_Exec"
+    "Voblint_CFG.Compile_Invariants"
+    "Voblint_CFG.CFG_Prune"
+    "Voblint_Core.Solver_Side_RG"
+    "TD.TD_side_upd_rule"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"
@@ -39,11 +43,11 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: unit)
 subsection \<open>The routed unit-context D/G spec\<close>
 
 text \<open>
-  The same Base-style whole-state specification Parity's own executable analysis already
-  solves over (\<^theory>\<open>Voblint_Analysis.Parity_Exec_Sound\<close>), at the same
-  \<^const>\<open>parity_tf_st_for\<close>/\<^const>\<open>parity_enter_st_for\<close> primitives. Only the
-  equation generator wrapped around the spec changes; the spec itself, and every
-  domain-transfer soundness fact about it, is untouched.
+  A Base-style whole-state specification over
+  \<^const>\<open>parity_tf_st_for\<close>/\<^const>\<open>parity_enter_st_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Parity_Exec\<close>): the routed generator wraps around the
+  spec, and every domain-transfer soundness fact about the spec is untouched by
+  that wrapping.
 \<close>
 
 definition pctx_spec ::

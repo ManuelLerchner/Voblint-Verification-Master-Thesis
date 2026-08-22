@@ -1,5 +1,5 @@
 theory Sign_Exec
-  imports Voblint_Core.Exec_Bridge Voblint_Core.Numeric_Ops Sign_Domain
+  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Sign_Domain
 begin
 
 section \<open>Sign per-domain seam: executable transfer mirror and commutation\<close>
@@ -231,105 +231,6 @@ lemma sign_enter_st_for_commute:
    enter\<^sup># (sign_tf_for gs) xs es (fun_of_resolved_st_q_for gs s)"
   by (simp add: sign_tf_for_def enter_sign_for_def enter_D_def
                 enter_frame_sign_for_def enter_frame_sign_st_for_commute)
-
-subsection \<open>Executable effectful transfer record, generic in the classifier\<close>
-
-text \<open>
-  \<open>is_bot_pred\<close> is the executable witness-bottom check
-  \<^const>\<open>unit_edge_tree_st\<close>/\<^const>\<open>unit_combine_tree_st\<close> take -- see
-  @{theory Voblint_Core.Exec_Bridge}. Callers with a concrete program supply
-  \<^const>\<open>resolved_st_q_is_bot_for\<close> at that program's own declared-global list,
-  which is exact for @{const is_bot_state}
-  (@{thm resolved_st_q_is_bot_for_iff}); this layer stays generic in it so it
-  does not itself need to know that a program exists yet.
-\<close>
-
-definition sign_etf_st_for ::
-  "(sign resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
-   \<Rightarrow> (unit, sign resolved_st_q lifted) effectful_st_transfer" where
-  "sign_etf_st_for is_bot_pred gs = unit_etf_st_of_transfer is_bot_pred gs (sign_tf_st_for gs) (sign_enter_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
-
-lemma sign_etf_st_for_edge_tree:
-  "apply_etf_st (sign_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred (sign_tf_st_for gs a) u"
-  unfolding sign_etf_st_for_def
-  by (rule apply_etf_st_unit_of_transfer[OF sign_tf_st_for_reduces])
-
-lemma sign_etf_st_for_combine_tree:
-  "etf_combine_collect_st (sign_etf_st_for is_bot_pred gs) ci cc ex = unit_combine_tree_st is_bot_pred (combine_collect_resolved_for_q gs (ci_dst ci)) cc ex"
-  unfolding sign_etf_st_for_def
-  by (simp add: unit_etf_st_of_transfer_def st_combine_collect_structural)
-
-lemma sign_etf_st_for_enter_tree:
-  "etf_st_enter (sign_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred (sign_enter_st_for gs xs es) u"
-  unfolding sign_etf_st_for_def by (rule etf_st_enter_unit_of_transfer)
-
-lemma sign_etf_st_for_enter_exists_unit:
-  "\<And>u xs es. \<exists>f. etf_st_enter (sign_etf_st_for is_bot_pred gs) xs es u = unit_edge_tree_st is_bot_pred f u"
-  using sign_etf_st_for_enter_tree by blast
-
-lemma sign_etf_st_for_exists_unit:
-  "\<And>a u. \<exists>f. apply_etf_st (sign_etf_st_for is_bot_pred gs) a u = unit_edge_tree_st is_bot_pred f u"
-  using sign_etf_st_for_edge_tree by blast
-
-text \<open>
-  Side-free counterpart of \<^const>\<open>sign_etf_st_for\<close>, built from the same
-  \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> domain-transfer functions via the
-  generic \<^const>\<open>unit_etf_st_contribution_of_transfer\<close> factory. The buffered
-  generator's correspondence with the original \<^const>\<open>sign_etf_st_for\<close>-driven
-  generator follows directly from the generic
-  \<open>unit_etf_st_of_transfer_buffered_correspondence\<close> theorem, reusing
-  \<open>sign_tf_st_for_reduces\<close> -- no Sign-specific correspondence proof.
-\<close>
-definition sign_etf_st_contribution_for ::
-  "(sign resolved_st_q \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool)
-   \<Rightarrow> (unit, sign resolved_st_q lifted) effectful_st_transfer" where
-  "sign_etf_st_contribution_for is_bot_pred gs
-     = unit_etf_st_contribution_of_transfer is_bot_pred gs (sign_tf_st_for gs) (sign_enter_st_for gs) (\<lambda>_ s. s) (\<lambda>_. combine_resolved_st_q)"
-
-lemma sign_buffered_correspondence:
-  shows "traverse_rhs (make_side_rhs_tree_eff_st_buffered g
-      (sign_etf_st_contribution_for is_bot_pred gs) bot s0_st () v) \<sigma>
-    = traverse_rhs (make_side_rhs_tree_eff_st g (sign_etf_st_for is_bot_pred gs) bot s0_st () v) \<sigma>"
-    (is ?T)
-    and "sides_of_rhs (make_side_rhs_tree_eff_st_buffered g
-      (sign_etf_st_contribution_for is_bot_pred gs) bot s0_st () v) \<sigma> (Inr ())
-    = sides_of_rhs (make_side_rhs_tree_eff_st g (sign_etf_st_for is_bot_pred gs) bot s0_st () v) \<sigma> (Inr ())"
-    (is ?S)
-  unfolding sign_etf_st_contribution_for_def sign_etf_st_for_def
-  by (rule unit_etf_st_of_transfer_buffered_correspondence[OF sign_tf_st_for_reduces])+
-
-lemma sign_buffered_dep_aux:
-  "dep_aux \<sigma> (make_side_rhs_tree_eff_st_buffered g (sign_etf_st_contribution_for is_bot_pred gs) bot s0_st () v)
-     = dep_aux \<sigma> (make_side_rhs_tree_eff_st g (sign_etf_st_for is_bot_pred gs) bot s0_st () v)"
-  unfolding sign_etf_st_contribution_for_def sign_etf_st_for_def
-  by (rule unit_etf_st_of_transfer_buffered_dep_aux[OF sign_tf_st_for_reduces])
-
-lemma sides_of_rhs_sign_st_Inl_bot:
-  "sides_of_rhs (t :: (pp, unit, 'a::bounded_semilattice_sup_bot) strategy_tree) \<sigma> (Inl a) = bot"
-  by (induction t) (auto simp: Let_def)
-
-text \<open>
-  Full-function \<^const>\<open>sides_of_rhs\<close> form of \<open>sign_buffered_correspondence\<close>,
-  needed to transport \<open>part_post_solution\<close>-style facts (which compare
-  \<^const>\<open>sides_of_rhs\<close> as a whole function, not only at the single unit global
-  key): \<open>sides_of_rhs_sign_st_Inl_bot\<close> closes the \<open>Inl\<close> branch generically
-  for either generator, and \<open>sign_buffered_correspondence\<close> closes \<open>Inr ()\<close>.
-\<close>
-lemma sign_buffered_sides_full:
-  "sides_of_rhs (make_side_rhs_tree_eff_st_buffered g
-      (sign_etf_st_contribution_for is_bot_pred gs) bot s0_st () v) \<sigma>
-    = sides_of_rhs (make_side_rhs_tree_eff_st g (sign_etf_st_for is_bot_pred gs) bot s0_st () v) \<sigma>"
-proof (rule ext)
-  fix y
-  show "sides_of_rhs (make_side_rhs_tree_eff_st_buffered g
-          (sign_etf_st_contribution_for is_bot_pred gs) bot s0_st () v) \<sigma> y
-       = sides_of_rhs (make_side_rhs_tree_eff_st g (sign_etf_st_for is_bot_pred gs) bot s0_st () v) \<sigma> y"
-  proof (cases y)
-    case (Inl a) then show ?thesis by (simp add: sides_of_rhs_sign_st_Inl_bot)
-  next
-    case (Inr b) then show ?thesis using sign_buffered_correspondence by simp
-  qed
-qed
 
 end
 

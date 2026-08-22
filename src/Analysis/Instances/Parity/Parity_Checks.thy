@@ -1,5 +1,5 @@
 theory Parity_Checks
-  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec_Sound
+  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
     Parity_Exec_Ctx_Sound
@@ -107,20 +107,7 @@ lemma parity_classify_nested_unknown:
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 
-subsection \<open>Whole-program check report\<close>
-
-text \<open>Thin composition, mirroring \<open>sign_check_report\<close>/\<open>interval_check_report\<close>:
-  \<^const>\<open>classify_checks\<close> owns the traversal and ordering,
-  \<^const>\<open>parity_exec_prog_at\<close> owns the node-indexed Parity environment, and
-  \<open>parity_classify_check\<close> owns the per-check classification.\<close>
-
-definition parity_check_report ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "parity_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p)
-       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (parity_exec_prog_at gs mnm p v))
-       parity_classify_check"
-
+section \<open>The generic report adapter, at the routed-unit context\<close>
 section \<open>The generic report adapter, at the routed-unit context\<close>
 
 text \<open>

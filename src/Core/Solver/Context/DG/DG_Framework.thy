@@ -2316,13 +2316,10 @@ lemma least_part_post_at:
 end
 
 text \<open>
-  The homogeneous interfaces \\\<^typ>\<open>('g, 'd) edge_tf_tree\<close>,
-  \\\<^typ>\<open>('g, 'd) combine_tf_tree\<close>, and
-  \\\<^typ>\<open>('g, 'd) effectful_domain_transfer\<close> remain for the homogeneous
-  soundness and executable spines.  The heterogeneous generator consumes
-  \\\<^typ>\<open>('d, 'h) dg_spec\<close> directly: Answers carry \<open>D\<close>, Side
-  publications carry \<open>G\<close>, and only \\\<^typ>\<open>('d, 'h) dg_state\<close> packs
-  them for the vendor solver's single value parameter.
+  The generator consumes \\\<^typ>\<open>('d, 'h) dg_spec\<close> directly: Answers carry
+  \<open>D\<close>, Side publications carry \<open>G\<close>, and only
+  \\\<^typ>\<open>('d, 'h) dg_state\<close> packs them for the vendor solver's single
+  value parameter.
 \<close>
 
 end

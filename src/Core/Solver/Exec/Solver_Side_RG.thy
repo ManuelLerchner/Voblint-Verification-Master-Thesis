@@ -1,6 +1,47 @@
 theory Solver_Side_RG
-  imports Exec_Bridge "TD.TD_side_upd_rule"
+  imports Exec_Refinement "TD.TD_side_upd_rule"
 begin
+
+section \<open>Globally-restricted side values\<close>
+
+text \<open>
+  \<^const>\<open>restrict_global_resolved_q\<close> is the idempotent projection onto global
+  variables. A strategy tree is \<open>side_rg\<close> when every \<open>Side\<close> node it can reach
+  (under any query answer) carries a value already fixed by that projection.
+  The side-effecting solver then keeps every \<open>Inr\<close> slot
+  \<open>restrict_global_resolved_q\<close>-shaped, since the running join of such values
+  stays shaped -- that invariant is what the theorems below propagate through
+  the solver's iteration.
+\<close>
+
+lemma restrict_global_resolved_q_idem [simp]:
+  "restrict_global_resolved_q (restrict_global_resolved_q s) =
+     restrict_global_resolved_q s"
+proof (rule resolved_st_q_eq_iff[THEN iffD2])
+  show "lookup_resolved_st_q (restrict_global_resolved_q
+      (restrict_global_resolved_q s)) =
+      lookup_resolved_st_q (restrict_global_resolved_q s)"
+  proof (rule ext)
+    fix loc
+    show "lookup_resolved_st_q (restrict_global_resolved_q
+        (restrict_global_resolved_q s)) loc =
+        lookup_resolved_st_q (restrict_global_resolved_q s) loc"
+      by (cases loc; simp)
+  qed
+qed
+
+primrec side_rg ::
+  "('x, 'g, ('a::bot) resolved_st_q lifted) strategy_tree \<Rightarrow> bool"
+where
+  "side_rg (Answer d) = True"
+| "side_rg (QueryL y f) = (\<forall>v. side_rg (f v))"
+| "side_rg (QueryG y f) = (\<forall>v. side_rg (f v))"
+| "side_rg (Side y d t) = (map_lift restrict_global_resolved_q d = d \<and> side_rg t)"
+
+lemma map_lift_restrict_global_resolved_q_idem [simp]:
+  "map_lift restrict_global_resolved_q (map_lift restrict_global_resolved_q x) =
+     map_lift restrict_global_resolved_q x"
+  by (cases x) simp_all
 
 section \<open>Generic: an executable termination check yields solver-domain membership\<close>
 
@@ -358,7 +399,7 @@ qed
 text \<open>
   Lifted counterparts of \<open>rg_val_warrow\<close>/\<open>rg_val_sup_fset\<close>: the warrowing solver's own
   \<open>state\<close>/\<open>ug_state\<close> now carry \<^typ>\<open>'a resolved_st_q lifted\<close> throughout (matching the
-  executable trees @{theory_text \<open>Exec_Bridge\<close>} feeds it), so both closure facts are needed at
+  executable trees the D/G generator feeds it), so both closure facts are needed at
   the lifted level too. \<^const>\<open>Bot\<close> is unconditionally warrow-stable on both sides
   (\<open>widen_lifted Bot Bot = Bot\<close>, \<open>narrow_lifted Bot Bot = Bot\<close>): no \<open>Wbb\<close>/\<open>Nbb\<close>-style
   hypothesis is needed for the structural \<open>Bot\<close> case, only for the \<^const>\<open>Lifted\<close>/
