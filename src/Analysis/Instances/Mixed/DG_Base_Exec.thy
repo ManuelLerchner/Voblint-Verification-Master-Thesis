@@ -37,11 +37,12 @@ where
     dgs_enter      = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter_st xs es) d)),
     dgs_event      = (\<lambda>ev d g. (g, case ev of Check_Event bc \<Rightarrow>
                                       transfer_lift is_bot_pred (tf_st (EA_Check bc)) d)),
-    dgs_combine_env    = (\<lambda>dc de g. (g, case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
+    dgs_caller_cont    = (\<lambda>ci dc g. dc),
+    dgs_combine_env    = (\<lambda>ci dc de g. (g, case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
                                             (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))),
-    dgs_combine_assign = (\<lambda>dst de g merged.
+    dgs_combine_assign = (\<lambda>ci de g merged.
       (g, transfer_lift2 is_bot_pred
-            (\<lambda>env0 de0. combine_assign_resolved_q gs dst
+            (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
                 (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
             (snd merged) de))
   |)"
@@ -59,10 +60,18 @@ lemma dgs_enter_base_st_for_lifted:
      (g, transfer_lift is_bot_pred (enter_st xs es) d)"
   unfolding base_dg_spec_st_for_lifted_def by simp
 
+text \<open>The caller half of \<open>enter\<close> is the identity here for the same reason as in the
+  abstract Base record: the carrier relates no two locations, so a call has
+  nothing in it to invalidate.\<close>
+
+lemma dgs_caller_cont_base_st_for_lifted [simp]:
+  "dgs_caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g = dc"
+  unfolding base_dg_spec_st_for_lifted_def by simp
+
 lemma dgs_combine_base_st_for_lifted:
-  "dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc de g =
+  "dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g =
      (g, transfer_lift2 is_bot_pred
-           (\<lambda>env0 de0. combine_assign_resolved_q gs dst
+           (\<lambda>env0 de0. combine_assign_resolved_q gs (ci_dst ci)
                (lookup_resolved_st_q de0 (location_of gs ret_var)) env0)
            (case dc of Bot \<Rightarrow> Bot | Lifted x \<Rightarrow>
               (case de of Bot \<Rightarrow> Bot | Lifted y \<Rightarrow> Lifted (combine_resolved_st_q x y)))
@@ -102,11 +111,23 @@ theorem base_dg_spec_st_for_lifted_dgs_enter_commute:
   unfolding dgs_enter_base_st_for_lifted dgs_enter_base_for_lifted map_prod_def
   by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
 
+text \<open>The caller half of \<open>enter\<close> carries its own correspondence, alongside the
+  ones for \<open>dg_spec_step\<close>, \<open>dgs_enter\<close> and \<open>dgs_combine\<close>; a Base-style executable
+  spec with a nontrivial continuation discharges this same obligation instead of
+  the bridge assuming an identity.\<close>
+
+theorem base_dg_spec_st_for_lifted_dgs_caller_cont_commute:
+  "map_lift (fun_of_exec_dg_st_for gs)
+     (dgs_caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g) =
+   dgs_caller_cont (base_dg_spec_for_lifted gs is_bot_state tf) ci
+     (map_lift (fun_of_exec_dg_st_for gs) dc) (map_lift (fun_of_exec_dg_st_for gs) g)"
+  unfolding base_dg_spec_st_for_lifted_def base_dg_spec_for_lifted_def by simp
+
 theorem base_dg_spec_st_for_lifted_dgs_combine_commute:
   assumes exact: "\<And>(s::'a::sound_domain resolved_st_q). is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
-           (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) dst dc de g) =
-         dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) dst
+           (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g) =
+         dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) ci
            (map_lift (fun_of_exec_dg_st_for gs) dc) (map_lift (fun_of_exec_dg_st_for gs) de)
            (map_lift (fun_of_exec_dg_st_for gs) g)"
   unfolding dgs_combine_base_st_for_lifted dgs_combine_base_for_lifted map_prod_def
@@ -183,6 +204,14 @@ lemma Hcomb_lifted_for:
        (map_lift (fun_of_resolved_st_q_for gs) g)"
   by (rule base_dg_spec_st_for_lifted_dgs_combine_commute
         [unfolded fun_of_exec_dg_st_for_def, OF is_bot_pred_exact])
+
+lemma Hcont_lifted_for:
+  "map_lift (fun_of_resolved_st_q_for gs)
+     (caller_cont (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc g)
+   = caller_cont (base_dg_spec_for_lifted gs is_bot_state tf) ci
+       (map_lift (fun_of_resolved_st_q_for gs) dc) (map_lift (fun_of_resolved_st_q_for gs) g)"
+  by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
+        [unfolded fun_of_exec_dg_st_for_def])
 
 lemma dg_reader_commute_gen_lifted:
   "dg_reader_commute_gen

@@ -154,7 +154,8 @@ definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
                          tf_return  = return_parity,
                          tf_enter   = enter_parity_for gs,
                          tf_event   = event_parity,
-                         tf_combine_env = combine_env_abs gs |)"
+                         tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
+                         tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
 lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
@@ -167,6 +168,7 @@ lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   subgoal by (simp add: return_parity_sound)
   subgoal by (simp add: enter_parity_for_sound)
   subgoal by (simp add: event_parity_sound)
+  subgoal by simp
   subgoal by (simp add: combine_env_sound)
   done
 

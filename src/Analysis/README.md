@@ -16,7 +16,6 @@ Downstream consumers are in `src/Formalization/Pipeline/` and `src/Examples/`.
 | `Instances/Congruence/` | Normalized congruence domain with executable lattice, arithmetic, backward filtering, and `sound_domain` |
 | `Instances/Parity/` | Parity domain, executable bridge |
 | `Instances/Mixed/` | Composite Sign/Interval/Parity/Congruence facts, verified progressive and structural-fixpoint refinement, heterogeneous D/G instances, and relational domains |
-| `Instances/NamedGlobalSign/` | Named-global sign analysis (side-effecting, mixed-flow) |
 | `Instances/Tooling/` | GraphViz output for CFG/analysis visualisation |
 
 ## ROOT

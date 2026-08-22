@@ -1,0 +1,25 @@
+// PARAM: --analysis interval
+// The concrete value of total here is fixed at 7, so total < 100 genuinely
+// holds -- but the analysis cannot establish it. Mechanism: inc's single
+// FunctionEntry node is reached by two distinct call sites (inc(3) then
+// inc(4)), so the D/G solver revisits it, and Apinis warrowing widens the
+// entered formal's upper bound to +inf on that second visit to guarantee
+// termination. The following narrowing phase recovers the lower bound
+// (total is [3,+inf], not [-inf,+inf]) but not the upper one, so a bound
+// like < 100 stays undecided. Widening's precision cost at a repeated call
+// site, not a lost fact.
+//
+// 04-globals/precision/02-global_var.vimp is the same program's decidable
+// half (0 < total, PROVED from the recovered lower bound); only the check
+// that the widening actually costs lives here.
+
+global total;
+void inc(n) {
+  total := total + n
+}
+void main() {
+  total := 0;
+  inc(3);
+  inc(4);
+  __voblint_check(total < 100) // UNKNOWN
+}

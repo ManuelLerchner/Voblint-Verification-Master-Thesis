@@ -8,10 +8,10 @@ section \<open>Interval instance of the generic check-discharge interface\<close
 
 text \<open>
   The check-classification machinery (\<open>interval_classify_check\<close> and its
-  soundness directions, \<open>interval_check_report\<close>) lives in \<open>Interval_Classify\<close>,
-  split out so the routed-spine producer below (\<open>Interval_Ctx_None_Routed_Sound\<close>)
-  can depend on it without a cycle through this theory's own solved-result
-  tables, which read that producer's routed output.
+  soundness directions) lives in \<open>Interval_Classify\<close>, split out so the
+  routed-spine producer below (\<open>Interval_Ctx_None_Routed_Sound\<close>) can depend
+  on it without a cycle through this theory's own solved-result tables,
+  which read that producer's routed output.
 \<close>
 
 
@@ -111,7 +111,7 @@ definition analyse_interval_td_report_for :: "(vname \<Rightarrow> bool) \<Right
            interval_classify_check)"
 
 text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_interval\<close>'s shape.
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>.
 \<close>
 
 definition analyse_interval_td_report :: "imp_prog \<Rightarrow> check_report_entry list" where
@@ -178,19 +178,7 @@ text \<open>
 definition analyse_interval_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report p = analyse_interval_report_for (declared_global p) p"
 
-text \<open>
-  \<open>gamma_state_case_lifted\<close> stays: it is still the per-node soundness bridge for the older
-  \<^const>\<open>ivl_exec_prog_at\<close>/\<^const>\<open>interval_check_report\<close> pipeline, which remains load-bearing for
-  the entry-state context analysis and \<open>Example_Interval_Checks_Store_Only\<close>'s own worked example
-  --- only the reports above moved off that pipeline, not \<^const>\<open>interval_check_report\<close> or its
-  callers.
-\<close>
-
-lemma gamma_state_case_lifted:
-  fixes x :: "'a::sound_domain abs_state lifted"
-  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
-  by (cases x) (simp_all add: gamma_state_bot)
-
+subsection \<open>Solver-choice variant report: per-origin update rule\<close>
 subsection \<open>Solver-choice variant report: per-origin update rule\<close>
 
 text \<open>

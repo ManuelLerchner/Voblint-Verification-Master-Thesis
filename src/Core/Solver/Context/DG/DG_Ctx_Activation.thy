@@ -227,14 +227,18 @@ lemma dg_ctx_act_comb_covered:
     and s: "s \<in> gammaM (sg (Inl (cl, c1)))"
     and t: "t \<in> gammaM (sg (Inl (ex, c2)))"
     and bound_local:
-      "snd (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
+      "snd (dgs_combine S ci
+              (dgs_caller_cont S ci (locals (sigma (Inl (cl, c1)))) (globs (sigma (Inr gk0))))
+              (locals (sigma (Inl (ex, c2))))
               (globs (sigma (Inr gk0))))
        \<le> locals (sigma (Inl (v, cv)))"
     and bound_global:
-      "fst (dgs_combine S dst (locals (sigma (Inl (cl, c1)))) (locals (sigma (Inl (ex, c2))))
+      "fst (dgs_combine S ci
+              (dgs_caller_cont S ci (locals (sigma (Inl (cl, c1)))) (globs (sigma (Inr gk0))))
+              (locals (sigma (Inl (ex, c2))))
               (globs (sigma (Inr gk0))))
        \<le> globs (sigma (Inr gk0))"
-  shows "combine_collect gs dst s t \<in> gammaM (sg (Inl (v, cv)))"
+  shows "combine_collect gs (ci_dst ci) s t \<in> gammaM (sg (Inl (v, cv)))"
 proof -
   let ?Dc = "locals (sigma (Inl (cl, c1)))"
   let ?De = "locals (sigma (Inl (ex, c2)))"
@@ -243,9 +247,10 @@ proof -
     using s covCl by (simp add: sg_cov)
   have tin: "t \<in> gammaDG ?De ?G"
     using t covEx by (simp add: sg_cov)
-  have "combine_collect gs dst s t
-        \<in> gammaDG (snd (dgs_combine S dst ?Dc ?De ?G)) (fst (dgs_combine S dst ?Dc ?De ?G))"
-    using combine_sound_fs[OF sin tin] .
+  have "combine_collect gs (ci_dst ci) s t
+        \<in> gammaDG (snd (dgs_combine S ci (dgs_caller_cont S ci ?Dc ?G) ?De ?G))
+                   (fst (dgs_combine S ci (dgs_caller_cont S ci ?Dc ?G) ?De ?G))"
+    using combine_sound_at_call_fs[where ci = ci, OF sin tin order_refl] .
   also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, cv)))) ?G"
     by (rule gammaDG_mono[OF bound_local bound_global])
   also have "\<dots> = gammaM (sg (Inl (v, cv)))"

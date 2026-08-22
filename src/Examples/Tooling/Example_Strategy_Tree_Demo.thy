@@ -48,8 +48,6 @@ text \<open>
   API -- pure sequencing -- since \<^const>\<open>seqcomp_tree\<close> needs no solver at all.
 \<close>
 
-value "traverse_rhs (fib_tree 5) ((\<lambda>_. 0) :: nat + nat \<Rightarrow> nat)"
-            
 lemma fib_tree_correct: "traverse_rhs (fib_tree n) \<sigma> = fib n"
   by (induct n rule: fib.induct) auto
 

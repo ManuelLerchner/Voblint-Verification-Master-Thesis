@@ -164,6 +164,35 @@ If an actual I/Q or I/R call fails, report it and request
 `rtk ./scripts/start-both.sh` or `rtk ./scripts/start-ir.sh`. Do not substitute
 a batch build for contextual proof development.
 
+## New theories and the code-export module map
+
+`export_code` in `src/Codegen/Export/Voblint_Codegen.thy` names no
+`module_name`, so the OCaml serializer distributes output one module per
+contributing theory. `src/CLI/Analyse_Dispatch.thy` remaps every contributing
+theory onto `Core` (or `Analyse`) through one `code_identifier` block, because
+the unsplit theories have real mutual code-level dependencies.
+
+Adding a theory whose constants are reachable from an export root therefore
+requires adding it to that `code_identifier` list. Forget it and the new
+theory keeps its own generated module, which the already-merged `Core` both
+depends on and is depended on by, and `export_code` fails with:
+
+```text
+Dependency "<some_core_constant>" -> "<your_constant>" would result in module
+dependency cycle
+```
+
+The error names two constants and no theory, so it reads like a layering bug
+in the new theory. It usually is not: check the `code_identifier` list first.
+The fix is one line there, not a `module_name` on the export -- that would
+collapse the whole export into a single module and change the API `cli/`
+links against.
+
+Sessions and `pixi run build` do not catch this: only `Voblint_Codegen` runs
+the export, and it is the last session built. A change that lands a new
+theory without regenerating `codegen/generated/` leaves the breakage for
+whoever next runs a full build.
+
 ## Regression discipline
 
 Whenever a change fixes a bug, changes semantics, or introduces a feature,

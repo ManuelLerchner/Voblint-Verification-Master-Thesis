@@ -252,24 +252,7 @@ lemma sign_classify_nested_unknown:
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 
-subsection \<open>Whole-program check report\<close>
-
-text \<open>
-  Thin composition, not a restatement: \<^const>\<open>classify_checks\<close> already owns
-  the executable traversal and ordering, \<^const>\<open>sign_exec_prog_at\<close> already
-  owns the node-indexed Sign environment, and \<open>sign_classify_check\<close> above
-  already owns the per-check classification. This wrapper only feeds a
-  compiled program's own three projections through them, the same way
-  \<^const>\<open>sign_exec_prog\<close> feeds them through \<^const>\<open>sign_exec_at\<close>.
-\<close>
-
-definition sign_check_report ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "sign_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p)
-       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog_at gs mnm p v))
-       sign_classify_check"
-
+subsection \<open>Solved-result table\<close>
 subsection \<open>Solved-result table\<close>
 
 text \<open>

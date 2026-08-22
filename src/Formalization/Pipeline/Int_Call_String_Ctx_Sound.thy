@@ -108,6 +108,7 @@ lemma dg_tree_st_commute_routed_cmb_g_int_cs:
      apply (rule ics_seed_ne_global)
     apply (rule int_Henter_lifted_for[OF exact])
    apply (rule int_Hcomb_lifted_for[OF exact])
+  apply (rule int_Hcont_lifted_for[OF exact])
   apply (rule ics_route_commute)
   done
 

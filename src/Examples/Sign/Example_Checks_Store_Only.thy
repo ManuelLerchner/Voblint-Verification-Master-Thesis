@@ -1,8 +1,8 @@
 section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<close>
 
 theory Example_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_Analysis.Sign_Exec_Sound" "Voblint_Analysis.Sign_Checks"
-          "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Codegen" "Voblint_Analysis.Sign_Checks"
+          "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
 begin
 
 text \<open>
@@ -52,18 +52,63 @@ lemma checks_ex_program_declared_global_vars [simp]:
   "declared_global_vars checks_ex_program = []"
   by (simp add: checks_ex_program_def)
 
-lemma checks_ex_solver_terminates: "sign_terminates_prog checks_ex_gs (STR ''main'') checks_ex_program"
-  by (rule sign_terminates_prog_via_solve_c) eval
+lemma checks_ex_reserved: "reserved_ret_var checks_ex_gs"
+  unfolding reserved_ret_var_def checks_ex_program_def by (simp add: ret_var_def)
+
+text \<open>The compiled graph has no call edges: the nondeterministic read compiles
+  to an \<^const>\<open>EA_Special\<close> intra edge, not a \<^const>\<open>CallEdge\<close>.\<close>
+
+lemma checks_ex_calls_eval: "calls (prog_cfg prog_main_name checks_ex_program) = {}"
+  unfolding prog_cfg_def by eval
+
+text \<open>The routed-unit solve terminates, and its solved key set is closed under
+  the compiled graph -- the four coverage facts the D/G node-soundness bridge
+  turns on, each computed rather than argued.\<close>
+
+lemma checks_ex_solver_terminates:
+  "sctx_terminates_prog checks_ex_gs prog_main_name checks_ex_program"
+  by (rule sctx_terminates_prog_via_solve_c) eval
+
+lemma checks_ex_entry_cov:
+  "(cfg_entry (prog_cfg prog_main_name checks_ex_program), ())
+     \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  by eval
+
+lemma checks_ex_fwd_ok_ball:
+  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name checks_ex_program).
+     (u, ()) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  by eval
+
+lemma checks_ex_fwd_ok:
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+    and "(u, a, w) \<in> intra (prog_cfg prog_main_name checks_ex_program)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  using assms checks_ex_fwd_ok_ball by (cases ctx) auto
+
+lemma checks_ex_call_fwd_ok:
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name checks_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  using assms by (simp add: checks_ex_calls_eval)
+
+lemma checks_ex_comb_fwd_ok:
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name checks_ex_program)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog checks_ex_gs prog_main_name checks_ex_program)"
+  using assms by (simp add: checks_ex_calls_eval)
 
 definition checks_ex_reach :: "pp \<Rightarrow> store set" where
   "checks_ex_reach v = ltr_collect checks_ex_gs (prog_cfg (STR ''main'') checks_ex_program) (cinit_stores checks_ex_gs) v"
 
-text \<open>The computed Sign environment at an arbitrary node, not fixed to the
-  exit: \<^const>\<open>sign_exec_prog_at\<close> queries the same solver result
-  \<^const>\<open>sign_exec_prog\<close> reads only at the exit.\<close>
+text \<open>The computed Sign environment at an arbitrary node, read out of the
+  routed-unit solved table \<^const>\<open>analyse_sign_result_for\<close> the production
+  report also reads -- one solve, queried per node, with an unreachable node
+  concretizing to \<^term>\<open>bot\<close>.\<close>
 definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
-  "checks_ex_env v = case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-     (sign_exec_prog_at checks_ex_gs (STR ''main'') checks_ex_program v)"
+  "checks_ex_env v =
+     (case lookup_context (analyse_sign_result_for checks_ex_gs checks_ex_program) v () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>__voblint_check(0 < y)\<close>, proved) reaches \<open>Statement 2\<close> reaches
@@ -89,84 +134,32 @@ lemma checks_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ex_program)
 lemma checks_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ex_program) = FunctionEntry (STR ''main'')"
   unfolding prog_cfg_def by eval
 
-text \<open>Structural reachability to the exit, for each check node --- the
-  premise \<open>sign_exec_prog_sound_collecting_at\<close> needs to bound
-  \<^const>\<open>ltr_collect\<close> at that node against the solver's query seed
-  (\<open>cfg_exit\<close>). This is a fact about the CFG's shape, not about any concrete
-  store: it does not forward stores.\<close>
-lemma checks_ex_statement1_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 1)
-     (cfg_exit (prog_cfg (STR ''main'') checks_ex_program))"
-proof -
-  have r1: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 1) (Statement 2)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r2: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 2) (Statement 3)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r3: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 3) (Statement 4)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 4) (Statement 5)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r5: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 5) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 6) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  show ?thesis
-    unfolding checks_ex_exit_eval
-    using r1 r2 r3 r4 r5 r6 cfg_reaches_trans by blast
-qed
+text \<open>Node-local collecting soundness at each check node, from the routed D/G
+  node-soundness bridge and the four computed coverage facts --- no store is
+  forwarded to the exit, and no reachability-to-exit premise is needed: the
+  routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
-lemma checks_ex_statement3_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 3)
-     (cfg_exit (prog_cfg (STR ''main'') checks_ex_program))"
-proof -
-  have r3: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 3) (Statement 4)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 4) (Statement 5)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r5: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 5) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 6) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  show ?thesis
-    unfolding checks_ex_exit_eval
-    using r3 r4 r5 r6 cfg_reaches_trans by blast
-qed
-
-lemma checks_ex_statement5_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 5)
-     (cfg_exit (prog_cfg (STR ''main'') checks_ex_program))"
-proof -
-  have r5: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 5) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') checks_ex_program) (Statement 6) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: checks_ex_intra_eval)
-  show ?thesis
-    unfolding checks_ex_exit_eval
-    using r5 r6 cfg_reaches_trans by blast
-qed
-
-text \<open>Node-local collecting soundness at each check node, via
-  \<open>sign_exec_prog_sound_collecting_at\<close> and the reachability facts above ---
-  no store is forwarded to the exit.\<close>
-lemma gamma_state_case_lifted:
-  fixes x :: "'a::sound_domain abs_state lifted"
-  shows "gamma_state (case_lifted bot (\<lambda>\<sigma>. \<sigma>) x) = gamma_state_lift x"
-  by (cases x) (simp_all add: gamma_state_bot)
+lemmas checks_ex_node_sound =
+  analyse_sign_result_node_sound_for[OF checks_ex_reserved checks_ex_solver_terminates
+    checks_ex_entry_cov checks_ex_fwd_ok checks_ex_call_fwd_ok checks_ex_comb_fwd_ok]
 
 lemma checks_ex_node_sound_1:
   "checks_ex_reach (Statement 1) \<le> \<lbrakk>checks_ex_env (Statement 1)\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def gamma_state_case_lifted
-  by (rule sign_exec_prog_sound_collecting_at[OF refl checks_ex_solver_terminates checks_ex_statement1_reaches_exit])
+  unfolding checks_ex_reach_def checks_ex_env_def
+  using checks_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 lemma checks_ex_node_sound_3:
   "checks_ex_reach (Statement 3) \<le> \<lbrakk>checks_ex_env (Statement 3)\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def gamma_state_case_lifted
-  by (rule sign_exec_prog_sound_collecting_at[OF refl checks_ex_solver_terminates checks_ex_statement3_reaches_exit])
+  unfolding checks_ex_reach_def checks_ex_env_def
+  using checks_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 lemma checks_ex_node_sound_5:
   "checks_ex_reach (Statement 5) \<le> \<lbrakk>checks_ex_env (Statement 5)\<rbrakk>"
-  unfolding checks_ex_reach_def checks_ex_env_def gamma_state_case_lifted
-  by (rule sign_exec_prog_sound_collecting_at[OF refl checks_ex_solver_terminates checks_ex_statement5_reaches_exit])
+  unfolding checks_ex_reach_def checks_ex_env_def
+  using checks_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 text \<open>Executable classification at each check's own node --- \<open>y\<close> is \<open>SPos\<close>
   right after \<open>y := 5\<close> at \<open>Statement 1\<close>, \<open>SZero\<close> right after \<open>y := 0\<close> at
@@ -329,7 +322,7 @@ text \<open>
 \<close>
 
 lemma checks_ex_report_eval:
-  "sign_check_report checks_ex_gs (STR ''main'') checks_ex_program =
+  "analyse_sign_report_for checks_ex_gs checks_ex_program =
      [(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved),
       (Statement 3, Less (N 0) (V (STR ''y'')), Check_Refuted),
       (Statement 5, Eq (V (STR ''z'')) (N 1), Check_Unknown)]"
@@ -340,9 +333,10 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
   representation to drift from the per-node facts above.\<close>
 
 lemma checks_ex_report_unfold:
-  "sign_check_report checks_ex_gs (STR ''main'') checks_ex_program
+  "analyse_sign_report_for checks_ex_gs checks_ex_program
      = classify_checks (prog_cfg (STR ''main'') checks_ex_program) checks_ex_env sign_classify_check"
-  unfolding sign_check_report_def checks_ex_env_def by simp
+  unfolding analyse_sign_report_for_def checks_ex_env_def
+  by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report
   entry is derivable directly from \<open>classify_checks_mem_iff\<close> together
@@ -352,7 +346,7 @@ text \<open>Agreement with the existing per-node classification: the first repor
 
 corollary checks_ex_report_agrees_with_node_classification:
   "(Statement 1, Less (N 0) (V (STR ''y'')), Check_Proved)
-     \<in> set (sign_check_report checks_ex_gs (STR ''main'') checks_ex_program)"
+     \<in> set (analyse_sign_report_for checks_ex_gs checks_ex_program)"
   unfolding checks_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg (STR ''main'') checks_ex_program"
       "Statement 1" "Less (N 0) (V (STR ''y''))" Check_Proved checks_ex_env sign_classify_check]
@@ -364,7 +358,7 @@ text \<open>The textual renderer applied to this program's own report --- render
   it produces the expected lines for a real computed report.\<close>
 
 lemma checks_ex_report_rendered:
-  "map string_of_check_report_entry (sign_check_report checks_ex_gs (STR ''main'') checks_ex_program) =
+  "map string_of_check_report_entry (analyse_sign_report_for checks_ex_gs checks_ex_program) =
      [''pp1: 0<y  PROVED'', ''pp3: 0<y  REFUTED'', ''pp5: z==1  UNKNOWN'']"
   by eval
 
@@ -377,7 +371,7 @@ text \<open>
   check-agnostic \<^type>\<open>graphviz_node_annotation\<close> hook every other annotated
   example uses. There is no manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table:
   \<^const>\<open>check_report_node_annotation\<close> looks each node up directly in the
-  computed \<^const>\<open>sign_check_report\<close>, so a change to the program or the
+  computed \<^const>\<open>analyse_sign_report_for\<close>, so a change to the program or the
   solver result changes the rendered color automatically.
   \<^term>\<open>Check_Proved\<close> renders dark green, \<^term>\<open>Check_Refuted\<close> red,
   \<^term>\<open>Check_Unknown\<close> grey. The unrelated \<open>FunctionResult (STR ''main'')\<close> exit node
@@ -385,14 +379,10 @@ text \<open>
   end-of-procedure node is not visually confused with a refuted check.
 \<close>
 
-text \<open>No manually maintained \<^typ>\<open>pp\<close>-to-\<^typ>\<open>exp\<close> table: the check nodes
-  and their conditions are read off \<^const>\<open>sign_check_report\<close>'s own computed
-  report through \<^const>\<open>check_report_node_annotation\<close>.\<close>
-
 definition checks_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "checks_ex_node_annotation v =
      (case check_report_node_annotation
-             (sign_check_report checks_ex_gs (STR ''main'') checks_ex_program) v of
+             (analyse_sign_report_for checks_ex_gs checks_ex_program) v of
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then
@@ -423,11 +413,7 @@ definition checks_ex_dot_lit :: String.literal where
   "checks_ex_dot_lit =
      raw_cfg_dot_with_report_lit (prog_table checks_ex_program) (prog_procs checks_ex_program)
        (STR ''main'') (prog_main checks_ex_program) checks_ex_node_annotation
-       (sign_check_report checks_ex_gs (STR ''main'') checks_ex_program)"
-
-ML_val \<open>
-  writeln (@{code checks_ex_dot_lit})
-\<close>
+       (analyse_sign_report_for checks_ex_gs checks_ex_program)"
 
 end
 

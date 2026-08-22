@@ -1,5 +1,5 @@
 theory Sign_Domain
-  imports Sign_Local_Effects Sign_Print
+  imports Sign_Transfer Sign_Print
 begin
 
 hide_const (open) Update_rules.N

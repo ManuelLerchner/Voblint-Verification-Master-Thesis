@@ -1,0 +1,17 @@
+// PARAM: --analysis sign
+// An assignment to an unrelated name must not perturb what is already known
+// about another: y := 1 sits between x := 5 and the check on x, and x stays
+// exactly SPos. No call, no global, no widening -- so this pins the transfer
+// layer itself rather than a report readback. unit_step_st computes
+// f (combine_resolved_st_q d g) and only then splits the result back into
+// local/global halves, routing each name to the exec state that owns it
+// instead of joining it against the other half's unrelated Top default.
+//
+// 03-global_write_across_call.vimp is the same property with real
+// interprocedural machinery in play; this is the isolated version.
+
+void main() {
+  x := 5;
+  y := 1;
+  __voblint_check(0 < x) // PROVED
+}

@@ -1,0 +1,29 @@
+// PARAM: --analysis interval
+// The sibling of 09 with no dead branch: an unconstrained condition leaves both
+// call sites reachable, and they enter f with different values, so the two side
+// effects to the shared callee-entry seed key carry two genuinely different
+// states rather than bottom and a state.
+//
+// This is why guarding the callee-entry side effect on a bottom entered state
+// -- Goblint's `if not (S.D.is_bot v) then sidel (FunctionEntry f, fc) v` --
+// does not by itself settle the shared-resume-node case: whichever of the two
+// live writes the solver evaluates first is still a partial accumulate, and the
+// per-origin slot still dips when it lands. The contract that does settle it is
+// that one right-hand-side evaluation contributes one aggregated value per
+// target key.
+//
+// x is unconstrained, so nothing here claims a value for a -- the check is on
+// the caller's own local, which the call cannot touch.
+void f(n) {
+  return n
+}
+void main() {
+  x := __voblint_nondet_int();
+  y := 7;
+  if (x < 2) {
+    a := f(1)
+  } else {
+    a := f(2)
+  };
+  __voblint_check(y == 7) // PROVED
+}

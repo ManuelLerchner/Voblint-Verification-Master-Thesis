@@ -98,6 +98,7 @@ lemmas ivl_Henter_for =
   unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
 
 lemmas ivl_Hcomb_for = unit_dg_Hcomb_for
+lemmas ivl_Hcont_for = unit_dg_Hcont_for
 
 text \<open>The abstract D/G soundness interpretation at \<open>twice_gs\<close>, generic in the
   storage classifier: gives access to this instantiation's own \<open>dg_gen\<close>/\<open>dg_gamma\<close>
@@ -131,20 +132,6 @@ definition twice_sol ::
   "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "twice_sol = TD_side_warrowing_apinis_Interp_solve twice_eqs (cfg_exit twice_cfg, ())"
 
-text \<open>The computed local intervals, \<^emph>\<open>evaluated\<close>: \<open>p in [3,10]\<close> at the shared
-  callee entry, \<open>#ret in [6,20]\<close> at the callee exit, and \<open>x = y in [6,20]\<close> at the
-  return sites.\<close>
-
-value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''p'')),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''#ret'')),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''x'')),
-                       string_of_ivl (twice_lookup (locals (snd sol (Inl (p, ())))) (STR ''y''))))
-            ([FunctionEntry (STR ''twice''), FunctionResult (STR ''twice''),
-              FunctionEntry (STR ''main''), FunctionResult (STR ''main'')]
-             @ map Statement [0,2,3,4]))
-   (TD_side_warrowing_apinis_Interp_solve_c twice_eqs (cfg_exit twice_cfg, ()))"
-
 subsection \<open>Certified solution (reusing solver correctness)\<close>
 
 lemma twice_solve_dom:
@@ -169,7 +156,7 @@ lemma twice_pp_abs:
         (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
         (fun_of_exec_dg_st_for twice_gs (restrict_global_resolved_q cinit_ivl_st)))
      (cfg_exit twice_cfg, ()) (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) (fst twice_sol)"
-  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for twice_pp_st[unfolded twice_eqs_def]]
+  using part_post_solution_dg_st_to_abs_for[OF ivl_Hstep_for ivl_Henter_for ivl_Hcomb_for ivl_Hcont_for twice_pp_st[unfolded twice_eqs_def]]
   unfolding twice_sds.dg_gen_of_eq_for .
 
 subsection \<open>Soundness: the computed analysis over-approximates the collecting semantics\<close>
@@ -371,8 +358,6 @@ definition twice_dot :: String.literal where
           None \<Rightarrow> ''solver did not terminate''
         | Some sol \<Rightarrow> contextual_analysis_dot twice_graph_config twice_cfg
             twice_graph_domain (snd sol))"
-
-ML_val \<open>writeln (@{code twice_dot})\<close>
 
 
 

@@ -149,13 +149,6 @@ lemma flagship_terminates_c:
 definition flagship_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (ivl exec_dg_st, ivl exec_dg_st) dg_state)" where
   "flagship_sol = TD_side_warrowing_apinis_Interp_solve flagship_eqs (cfg_exit flagship_cfg, ())"
 
-text \<open>The computed local interval for \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
-
-value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, string_of_ivl (flagship_lookup (locals (snd sol (Inl (p, ())))) (STR ''x''))))
-            (map Statement [0,1,2,3]))
-   (TD_side_warrowing_apinis_Interp_solve_c flagship_eqs (cfg_exit flagship_cfg, ()))"
-
 subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
@@ -385,8 +378,6 @@ definition flagship_dot :: String.literal where
           None \<Rightarrow> ''solver did not terminate''
         | Some sol \<Rightarrow> contextual_analysis_dot flagship_graph_config flagship_cfg
             flagship_graph_domain (snd sol))"
-
-ML_val \<open>writeln (@{code flagship_dot})\<close>
 
 
 end

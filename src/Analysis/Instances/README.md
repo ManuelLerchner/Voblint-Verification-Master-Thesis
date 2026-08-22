@@ -10,7 +10,6 @@ equation and D/G layers.
 | `Interval/` | Interval lattice, backward guards, widening, executable maps, and D/G registration |
 | `Congruence/` | Normalized congruence carrier, executable lattice and arithmetic, backward filtering, warrowing, and `sound_domain` |
 | `Parity/` | Parity lattice, transfers, executable maps, and D/G registration |
-| `NamedGlobalSign/` | Sign analysis with named shared-state routing |
 | `Mixed/` | Composite Sign/Interval/Parity/Congruence arithmetic, backward filtering, refinement, componentwise widening/narrowing, mode-registered `domain_transfer` bundles, and their abstract (non-executable) D/G registration; heterogeneous D/G instances; relational domains |
 | `Tooling/` | CFG and analysis GraphViz renderers |
 

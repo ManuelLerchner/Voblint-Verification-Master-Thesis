@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// A declared global written with a constant, then read at a check in the same
+// procedure -- no call, no self-reference. Distinct from
+// 01-global_default_zero.vimp (a global read before any write, at its
+// zero-initialized default) and from 12-widening/precision/01-global_self_feedback
+// .vimp (a write that reads the global's own prior value): this is the plain
+// case that has neither, and it pins that having a global at all costs no
+// precision.
+
+global g;
+void main() {
+  g := 1;
+  __voblint_check(0 < g) // PROVED
+}

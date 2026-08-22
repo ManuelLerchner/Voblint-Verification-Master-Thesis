@@ -1,16 +1,23 @@
-(* Regression driver for the generated Voblint_Analyse OCaml module.
+(* Regression driver for the generated Voblint_CLI OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `analyse`
    dispatcher for both domains, and checks the result against the values
-   already proved inside Isabelle by
    src/Examples/Regression/Example_Analysis_Dispatch_Regression.thy's
-   dispatch_demo_sign_precise / dispatch_demo_interval_precise lemmas.
+   dispatch_demo_interval_precise proves and
+   tests/regression/ carries as CLI fixtures. This driver is the layer that
+   pins the *generated* module's agreement with both.
 
-   Do not hand-edit codegen/generated/Voblint_Analyse_OCaml.ml; regenerate
-   it with `pixi run codegen` instead. *)
+   This reads the same generated module the CLI itself links against. It
+   used to read a second, separately exported one (Voblint_Analyse_OCaml),
+   which differed only by the CFG-inspection constants below -- those are
+   now named in the single export block, so there is one generated artifact
+   for one analysis rather than two near-copies of the same machinery.
 
-open Voblint_Analyse_OCaml.Core
-open Voblint_Analyse_OCaml.Analyse_Dispatch
+   Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
+   `pixi run codegen` instead. *)
+
+open Voblint_CLI.Core
+open Voblint_CLI.Analyse_Dispatch
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Example_Analysis_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native
@@ -59,12 +66,12 @@ let expected_interval =
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
    together -- not just straight-line assignment/check.
-   Same program as proc_demo_prog in Example_Analysis_Dispatch_Regression.thy; checked
-   against proc_demo_sign_result / proc_demo_cfg_intra / proc_demo_cfg_calls.
+   Same program as tests/regression/04-globals/precision/02-global_var.vimp and its
+   known-imprecision sibling 01-repeated_call_site_widening.vimp; the CFG-shape
+   expectations below have no fixture counterpart and live only here.
    Interval_Analysis on this program used to hang/segfault under the always-join backend (a
    flow-insensitive global read-and-grow has no widening there); the exported `analyse`
-   dispatcher now routes Interval through the warrowing backend, which terminates -- see
-   Example_Analysis_Dispatch_Regression.thy's proc_demo_interval_terminates. Since the
+   dispatcher now routes Interval through the warrowing backend, which terminates. Since the
    Base-style migration, total lives in the reachability-lifted local unknown flow-sensitively
    through both calls, so the first check (0 < total) is Check_Proved; the second
    (total < 100) stays Check_Unknown -- inc's entry is reached by two call sites, so warrowing
@@ -92,9 +99,9 @@ let expected_proc_demo_interval =
     (Statement (mk_nat 6), (Less (V "total", N (mk_int 100)), Check_Unknown)) ]
 
 (* Acceptance regression A (no-call global self-feedback): no procedure, no call, just a
-   global write that reads its own prior value. Same program as no_call_global_self_ref_prog in
-   Example_Analysis_Dispatch_Regression.thy; checked against
-   no_call_global_self_ref_interval_terminates. Isolates that the call/return summary was never
+   global write that reads its own prior value. Same program as
+   tests/regression/12-widening/precision/01-global_self_feedback.vimp.
+   Isolates that the call/return summary was never
    the actual hazard -- a single self-referential global write reproduces it alone. Under the
    Base-style pipeline there is no separate flow-insensitive global summary for total to read
    back through, so the result is Check_Proved. *)
@@ -109,9 +116,9 @@ let expected_no_call_global_self_ref_interval =
   [ (Statement (mk_nat 2), (Less (N (mk_int 0), V "total"), Check_Proved)) ]
 
 (* Acceptance regression B (interprocedural global self-feedback): a single call to a
-   procedure that reads and grows the same global. Same program as one_call_prog in
-   Example_Analysis_Dispatch_Regression.thy; checked against one_call_interval_terminates --
-   confirms the fix also survives entry/combine (call/return) handling, not just a
+   procedure that reads and grows the same global. Same program as
+   tests/regression/12-widening/precision/02-global_self_feedback_call.vimp.
+   Confirms the fix also survives entry/combine (call/return) handling, not just a
    straight-line write. inc's single call site reaches its entry node once, so no
    repeated-visit widening applies, and total's exact value survives the combine step. *)
 let one_call_prog =

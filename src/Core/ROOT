@@ -5,7 +5,6 @@ session Voblint_Core in "." = "Voblint_CFG" +
   directories
     "Domain"
     "Equations"
-    "Solver/TD_Side"
     "Solver/Strategy_Tree"
     "Solver/Context"
     "Solver/Context/Activation"
@@ -33,25 +32,21 @@ session Voblint_Core in "." = "Voblint_CFG" +
        compiled checks, parametric in an arbitrary abstract-state type,
        both per node and per covered context of the result table above. *)
     Abstract_Checks
-    TD_Side_CFG
+    State_Restriction
+    Exec_Refinement
     Strategy_Tree_Monad
+    Strategy_Tree_Rhs
+    Strategy_Tree_Relabel
+    Solver_Mono
     Strategy_Tree_Do
     Strategy_Tree_Combinators
-    TD_Side_Tree
-    Exec_Bridge
+    (* Equation-level normalization: aggregates repeated side effects to one
+       key into a single write, so no right-hand side names a key twice. *)
+    Side_Buffering
     Solver_Side_RG
     Solver_Menu
-    TD_Side_Eff_Sound
-    TD_Side_Eff_Bounds
-    TD_Side_Eff_Interface
-    TD_Side_Eff_Pipeline
-    TD_Side_RHS_Generator
-    TD_Side_Eff_Cone_Lemmas
-    LTR_TD_Side_Eff_Sound
-    LTR_TD_Side_Eff_Exit
     Activation_Local_Sound
     Activation_Backbone
-    TD_Side_Eff_Keyed_Gen
     DG_Framework
     DG_Soundness
     DG_LTR_Sound

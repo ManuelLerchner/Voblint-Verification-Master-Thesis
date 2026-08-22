@@ -48,9 +48,6 @@ definition placement_cfg :: cfg where
     compile_prog (prog_table placement_prog) (prog_procs placement_prog)
       prog_main_name (prog_main placement_prog)"
 
-value "intra placement_cfg"
-value "calls placement_cfg"
-
 definition placement_owner :: pname where
   "placement_owner = (STR ''add'')"
 
@@ -81,16 +78,6 @@ fun placement_node_owner :: "pp => pname" where
 definition placement_locations_of :: "pp => location list" where
   "placement_locations_of node =
     scope_locations placement_prog (placement_node_owner node)"
-
-definition placement_ivl_etf_st ::
-  "(unit, ivl resolved_st_q lifted) effectful_st_transfer" where
-  "placement_ivl_etf_st =
-    unit_etf_st_of_transfer_placed
-      (declared_global placement_prog)
-      placement_node_owner placement_locations_of
-      placement_keep_local placement_publish_side
-      (ivl_tf_st_for (declared_global placement_prog))
-      (ivl_enter_st_for (declared_global placement_prog))"
 
 
 lemma placement_cfg_edges:
@@ -159,99 +146,6 @@ next
   with Global_Location show ?thesis by simp
 qed
 
-interpretation placement_exec_bridge:
-  placed_exec_bridge
-    "declared_global placement_prog"
-    placement_node_owner placement_locations_of
-    placement_keep_local placement_publish_side
-proof
-  show "placement_global_invariant placement_keep_local"
-    by (rule placement_keep_local_global_invariant)
-next
-  show "placement_global_invariant placement_publish_side"
-    by (rule placement_publish_side_global_invariant)
-next
-  fix node loc
-  assume coverage: "loc \<in> set (placement_locations_of node)"
-  show
-    "placement_keep_local (placement_node_owner node, loc) \<or>
-     placement_publish_side (placement_node_owner node, loc)"
-    by (rule placement_node_coverage[OF coverage])
-qed
-
-lemma placement_ivl_tf_st_reduces:
-  "action_reduces (ivl_tf_st_for (declared_global placement_prog))"
-  by unfold_locales (rule ext, simp)+
-
-lemma placement_factory_edge:
-  "apply_etf_st placement_ivl_etf_st action node =
-    unit_edge_tree_st_placed placement_node_owner placement_locations_of
-      placement_keep_local placement_publish_side
-      (ivl_tf_st_for (declared_global placement_prog) action) node"
-  unfolding placement_ivl_etf_st_def
-  by (rule apply_etf_st_unit_of_transfer_placed[OF placement_ivl_tf_st_reduces])
-
-lemma placement_factory_enter:
-  "etf_st_enter placement_ivl_etf_st xs es node =
-    unit_edge_tree_st_placed placement_node_owner placement_locations_of
-      placement_keep_local placement_publish_side
-      (ivl_enter_st_for (declared_global placement_prog) xs es) node"
-  unfolding placement_ivl_etf_st_def
-  by (rule etf_st_enter_unit_of_transfer_placed)
-
-lemma placement_factory_combine:
-  "etf_combine_collect_st placement_ivl_etf_st dst caller callee =
-    unit_combine_tree_st_placed (declared_global placement_prog)
-      placement_node_owner placement_locations_of
-      placement_keep_local placement_publish_side dst caller callee"
-  unfolding placement_ivl_etf_st_def
-  by (rule etf_combine_collect_st_unit_of_transfer_placed)
-
-lemma placement_factory_edge_recombine_lookup:
-  fixes sigma :: "pp + unit => ivl resolved_st_q lifted"
-  assumes relevant: "target \<in> set (placement_locations_of node)"
-  shows
-    "case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-      (traverse_rhs (apply_etf_st placement_ivl_etf_st action node) sigma \<squnion>
-       sides_of_rhs (apply_etf_st placement_ivl_etf_st action node) sigma (Inr ())) =
-     case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-       (Lifted (ivl_tf_st_for (declared_global placement_prog) action
-         (case_lifted bot id (sigma (Inl node)) \<squnion> case_lifted bot id (sigma (Inr ())))))"
-  unfolding placement_factory_edge
-  by (rule placement_exec_bridge.edge_recombine_lookup[OF relevant])
-
-lemma placement_factory_entry_recombine_lookup:
-  fixes sigma :: "pp + unit => ivl resolved_st_q lifted"
-  assumes relevant: "target \<in> set (placement_locations_of node)"
-  shows
-    "case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-      (traverse_rhs
-        (etf_st_enter placement_ivl_etf_st parameters arguments node) sigma \<squnion>
-       sides_of_rhs
-        (etf_st_enter placement_ivl_etf_st parameters arguments node) sigma (Inr ())) =
-     case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-       (Lifted (ivl_enter_st_for (declared_global placement_prog) parameters arguments
-         (case_lifted bot id (sigma (Inl node)) \<squnion> case_lifted bot id (sigma (Inr ())))))"
-  unfolding placement_factory_enter
-  by (rule placement_exec_bridge.entry_recombine_lookup[OF relevant])
-
-lemma placement_factory_combine_recombine_lookup:
-  fixes sigma :: "pp + unit => ivl resolved_st_q lifted"
-  assumes relevant: "target \<in> set (placement_locations_of caller)"
-  shows
-    "case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-      (traverse_rhs
-        (etf_combine_collect_st placement_ivl_etf_st destination caller callee) sigma \<squnion>
-       sides_of_rhs
-        (etf_combine_collect_st placement_ivl_etf_st destination caller callee) sigma
-          (Inr ())) =
-     case_lifted bot (\<lambda>s. lookup_resolved_st_q s target)
-       (Lifted (combine_collect_resolved_for_q (declared_global placement_prog) destination
-         (case_lifted bot id (sigma (Inl caller)) \<squnion> case_lifted bot id (sigma (Inr ())))
-         (case_lifted bot id (sigma (Inl callee)) \<squnion> case_lifted bot id (sigma (Inr ())))))"
-  unfolding placement_factory_combine
-
-  by (rule placement_exec_bridge.combine_recombine_lookup[OF relevant])
 
 
 definition placement_state :: "ivl resolved_st_q" where
@@ -3006,126 +2900,4 @@ theorem placement_dg_td_collect_sound:
         placement_cover_enter placement_cover_combine placement_finI placement_finC
         placement_sound0])
 
-subsection \<open>Flat vs. D/G split: a controlled precision comparison\<close>
-
-text \<open>
-  \<open>placement_eqs\<close> below compiles the same source program under the
-  same placement policy (\<^const>\<open>placement_keep_local\<close>/
-  \<^const>\<open>placement_publish_side\<close>) as \<^const>\<open>placement_dg_eqs\<close> above, but
-  through the flat, single-tree route (\<open>side_cfg_T_eff_st\<close> over one
-  executable transfer function per edge) instead of the D/G split route
-  (\<open>placed_dg_gen_of_strict\<close>, separate local/side unknowns per node). Both
-  routes instantiate the identical policy; only the equation-system
-  architecture differs.
-
-  \<open>placement_td_values\<close> reads \<open>answer = Ivl (Fin 0) (Fin 3)\<close> from
-  the flat route, against \<open>placement_dg_td_values\<close>'s exact
-  \<open>answer = Ivl (Fin 3) (Fin 3)\<close> from the D/G route. The precision
-  difference is associated with the D/G split itself -- the separate,
-  per-node local unknown that the flat route's single shared unknown does
-  not have -- not with the placement policy, which is held fixed across
-  both computations. This comparison does not by itself attribute the gap
-  to any one lower-level mechanism inside the D/G route (for instance,
-  strict projection alone, or scoped combine alone); isolating a single
-  mechanism would need a further controlled experiment that varies that
-  mechanism independently of the others. \<open>balance = Ivl (Fin 3) (Fin 3)\<close>
-  and \<open>answer = Ivl (Fin 3) (Fin 3)\<close> are the observed end-to-end results
-  of the full D/G pipeline for this example.
-\<close>
-
-text \<open>
-  \<open>cinit_ivl_st\<close> seeds the CFG entry's local slot, not only its raw
-  restriction \<open>restrict_local_resolved_q cinit_ivl_st\<close>: placement's own
-  \<open>placement_keep_local\<close> policy routes some VIMP-declared globals (e.g.
-  \<open>balance\<close>) into the local slot, a reclassification the generic
-  \<open>side_cfg_T_eff_st\<close> routing layer -- keyed on VIMP's own \<open>declared_global\<close>
-  split -- knows nothing about. Passing the full state as both arguments
-  is exact, not a widening: \<open>restrict_local_resolved_q cinit_ivl_st \<le>
-  cinit_ivl_st\<close>, so the \<open>\<squnion>\<close> is idempotent and the seed is unchanged for any
-  location the generic split already classifies correctly.
-\<close>
-definition placement_eqs :: "(pp, unit, ivl resolved_st_q lifted) eqsT" where
-  "placement_eqs =
-    side_cfg_T_eff_st placement_cfg placement_ivl_etf_st cinit_ivl_st cinit_ivl_st ()"
-
-definition placement_sig0 ::
-  "pp + unit => ivl resolved_st_q lifted" where
-  "placement_sig0 key =
-    (case key of
-      Inl node => Bot
-    | Inr () =>
-        Lifted (project_resolved_on prog_main_name
-          (scope_locations placement_prog prog_main_name)
-          placement_publish_side cinit_ivl_st))"
-
-definition placement_kleene_step ::
-  "(pp + unit => ivl resolved_st_q lifted) => pp + unit => ivl resolved_st_q lifted" where
-  "placement_kleene_step sig key =
-    (case key of
-      Inl node => eq placement_eqs node sig
-    | Inr () => sig (Inr ()))"
-
-fun placement_iter_sig ::
-  "nat => (pp + unit => ivl resolved_st_q lifted) =>
-   pp + unit => ivl resolved_st_q lifted" where
-  "placement_iter_sig 0 sig = sig"
-| "placement_iter_sig (Suc n) sig =
-    placement_iter_sig n (placement_kleene_step sig)"
-
-definition placement_sol ::
-  "pp set * (pp + unit => ivl resolved_st_q lifted)" where
-  "placement_sol =
-    ({FunctionEntry (STR ''add''), FunctionResult (STR ''add''),
-      FunctionEntry prog_main_name, FunctionResult prog_main_name}
-      \<union> Statement ` {0, 1, 2, 3, 5, 6},
-     placement_iter_sig 20 placement_sig0)"
-
-definition placement_td_sol ::
-  "pp set * (pp + unit => ivl resolved_st_q lifted)" where
-  "placement_td_sol =
-    TD_side_warrowing_apinis_Interp_solve placement_eqs (cfg_exit placement_cfg)"
-
-lemma placement_td_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c placement_eqs
-    (cfg_exit placement_cfg) \<noteq> None"
-  by eval
-
-
-
-
-
-
-lemma placement_td_values:
-  "case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Local_Location (STR ''x'')))
-    (snd placement_td_sol (Inl (Statement 0))) = Ivl (Fin 3) (Fin 3)"
-  "case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''balance'')))
-    (snd placement_td_sol (Inl (Statement 2))) = Ivl (Fin 3) (Fin 3)"
-  "case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''request_count'')))
-    (snd placement_td_sol (Inr ())) = Ivl (Fin 0) PlusInf"
-  "case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Local_Location (STR ''answer'')))
-    (snd placement_td_sol (Inl (Statement 6))) = Ivl (Fin 0) (Fin 3)"
-  by eval+
-
-value "map (\<lambda>node.
-  (string_of_ivl (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''balance'')))
-     (snd placement_td_sol (Inl node))),
-   string_of_ivl (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''request_count'')))
-     (snd placement_td_sol (Inl node)))))
-  [Statement 0, Statement 1, Statement 2, Statement 3, Statement 5, Statement 6]"
-
-value "string_of_ivl
-  (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Global_Location (STR ''request_count'')))
-    (snd placement_td_sol (Inr ())))"
-
-value "map (\<lambda>loc. string_of_ivl
-  (case_lifted bot (\<lambda>s. lookup_resolved_st_q s loc) (snd placement_td_sol (Inl (Statement 0)))))
-  [Local_Location (STR ''x''), Local_Location (STR ''tmp'')]"
-
-value "string_of_ivl
-  (case_lifted bot (\<lambda>s. lookup_resolved_st_q s (Local_Location (STR ''answer'')))
-    (snd placement_td_sol (Inl (Statement 6))))"
-
-
-
 end
-

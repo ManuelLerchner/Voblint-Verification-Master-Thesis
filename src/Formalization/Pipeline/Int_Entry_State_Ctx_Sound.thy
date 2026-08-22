@@ -160,6 +160,7 @@ lemma dg_tree_st_commute_routed_cmb_g_int_es:
      apply (rule ictx_entry_seed_ne_global)
     apply (rule int_Henter_lifted_for[OF exact])
    apply (rule int_Hcomb_lifted_for[OF exact])
+  apply (rule int_Hcont_lifted_for[OF exact])
   apply (rule ictx_entry_route_gen_commute[OF exact, unfolded ictx_abs_spec_def, symmetric])
   done
 

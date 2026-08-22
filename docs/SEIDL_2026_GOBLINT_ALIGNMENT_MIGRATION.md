@@ -1,7 +1,8 @@
 # Migration - Seidl 2026 mixed-flow Goblint alignment
 
-Status: **IN PROGRESS**. Phase A (Slices 1-3, structural exposure) landed; see the
-per-slice "Landed" notes below. Slices 4-8 remain.
+Status: **IN PROGRESS**. Phase A (Slices 1-3, structural exposure) and Slice 6
+(analysis-specific combine) landed; see the per-slice "Landed" notes below.
+Slices 4, 5, 7 and 8 remain.
 
 Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis: Engineering
 Modularity", FM 2026, LNCS 16557, pp. 446-470.
@@ -486,27 +487,82 @@ Key lemmas:
 
 ### Slice 6 - analysis-specific combine
 
+> **Landed.** `unit_combine_tree gs cmb cc ex` takes the combine operation as a
+> parameter instead of computing `combine# gs dst` itself, and
+> `unit_etf_of_transfer` / `mixed_etf_of_transfer` feed it the transfer record's
+> own `combine_env#` (for `etf_combine_env`) and `tf_combine_collect_abs`
+> (for `etf_combine_collect`). `in_gamma_unit_combine_tree` is stated against an
+> arbitrary combine operation sound for an arbitrary concrete two-input
+> operation, so it discharges both roles of Goblint's interface; the
+> destination-free `unit_combine_env_tree` and its four lemmas collapsed into
+> instances of the general builder. `sound_transferI_for` now takes the merge's
+> soundness as an obligation rather than pinning `tf_combine_env` to
+> `combine_env_abs`, and `sound_rhs_generator_base` / the `*_transfer` cone and
+> monotonicity lemmas carry the combine as a parameter `Fc` with its own
+> monotonicity assumption. Sign, Interval and Parity keep `combine_env_abs` and
+> so instantiate at `combine# gs`.
+> `src/Examples/Sign/Example_Sign_Custom_Combine.thy` is the witness that the
+> parameter is free: a Sign instance whose merge joins the caller's view of a
+> global into the callee's, proved sound, cone-compatible and monotone through
+> the unchanged generic infrastructure, plus disequality witnesses against
+> `combine_env_abs` and `combine#`. The executable bridge
+> (`sound_rhs_generator_exec`, `part_post_solution_st_to_abs_eff_unit_transfer`)
+> still names `combine#` outright: `combine_collect_resolved_for_q` is the
+> resolved-store realization of the structural merge, so an analysis with its own
+> merge has no code-generated counterpart yet.
+>
+> **Call metadata and the caller continuation.** The combine operations are
+> indexed by a `call_info` record (`ci_dst`, `ci_callee`, `ci_formals`,
+> `ci_args`) built by `call_info_of` from the CFG's `CallEdge` and the callee
+> name, rather than by a bare destination. `return_calls` / `return_call_list`
+> carry that record, so every combine site on the `abs_state` route -- solver
+> trees, RHS generator, cone and monotonicity lemmas, executable trees -- sees
+> the same call metadata Goblint's `Analyses.Spec` passes to `combine_env` and
+> `combine_assign`. Goblint's `fexp`, callee context `fc` and `Queries.ask` have
+> no VIMP counterpart and are deliberately absent.
+>
+> `tf_caller_cont` is the caller half of Goblint's `enter`, which returns a
+> *pair*: `tf_enter_pair tf ci sigma = (caller_cont# tf ci sigma, enter# tf ...)`.
+> `caller_cont#` over-approximates the pre-call concrete caller store, retaining
+> only information intended to remain usable when the call returns; it may forget
+> abstract facts invalidated by potential callee effects. The concrete caller
+> store itself is unchanged at call entry, so the soundness statement keeps the
+> same concrete `s` on both sides; generalizing the concrete side would only be
+> warranted once a concrete caller-side transition at call entry is modelled.
+>
+> The continuation belongs to `enter`, not to combine: `combine_env#` and
+> `tf_combine_collect_abs` take the continuation as their first *state* argument
+> and never recompute it. Applying `caller_cont#` is the job of the tree builders
+> in `unit_etf_of_transfer` / `mixed_etf_of_transfer`, which stand in for `enter`
+> at the call-return boundary, and `tf_sound_combine_env_at_call_forD` /
+> `tf_sound_combine_collect_at_call_forD` are the bridge lemmas that compose the
+> two. It is applied exactly once per call-return path.
+>
+> The routed D/G family (`Sign_Named_Global_Eff`) fixes its own structural return
+> operation, so it takes the same `call_info` but projects `ci_dst ci` into the
+> destination-only `combine#`, keeps environment-merge-then-assignment ordering,
+> and applies no `caller_cont#` -- the continuation protocol belongs to the
+> `abs_state` route.
+>
+> Threading `call_info` turned out to be an interface change, not a
+> solver-architecture rewrite: most `dst` occurrences are plain binders whose
+> type is inferred, so the whole migration is roughly 25 edited sites. Large
+> downstream cascades (`TD_Side_RHS_Generator`, `Exec_Bridge`) went green with no
+> edits of their own once the upstream types changed.
+
 Goal: replace hardwired structural return combine with a Goblint-style
 analysis-provided `combine`.
 
-Current `unit_combine_tree` implements:
+The former `unit_combine_tree` implemented:
 
 ```text
 locals from caller, globals from callee exit
 ```
 
-This is sound for product-style Sign/Interval states, but it bakes in a
-non-Goblint API decision and blocks relational domains.
+That is sound for product-style Sign/Interval states, but it baked in a
+non-Goblint API decision and blocked relational domains.
 
-Add an abstract combine tree builder:
-
-```isabelle
-record ('g,'a) call_transfer =
-  enter_tree   :: ...
-  combine_tree :: "pp => pp => (pp,'g,'a abs_state) strategy_tree"
-```
-
-Assumption:
+Assumption discharged by each analysis:
 
 ```text
 combine_tree_sound:
@@ -515,10 +571,71 @@ combine_tree_sound:
   implies restored concrete in gamma (etf_full combine_tree sigma)
 ```
 
-Then recover `unit_combine_tree` as one instance using `combine_states_sound`.
+The structural merge is recovered as one instance.
 
 This is the most important semantic alignment step for Goblint's `enter` and
 `combine` interface.
+
+### Deferred: the relational call-protocol witness
+
+`Rel_Order_Domain.thy`'s `relc` cannot serve as the custom-combine regression.
+Its carrier is genuinely relational -- a finite set of pairs `(x, y)` meaning
+`x <= y`, with no `vname => 'a` function anywhere -- but its call path is
+deliberately maximally imprecise: `dgs_enter_rel` and `dgs_combine_env_rel`
+both return `top_relc`, discarding every relation. There is no call-side
+invalidation to relocate into a caller continuation, so `relc` keeps
+`dgs_caller_cont = (\<lambda>_ d _. d)` and its semantics are left unchanged.
+
+The witness is instead a separate instance over the same carrier shape:
+
+- conservative callee may-write information, keyed by `ci_callee`;
+- `caller_cont ci dc g` drops only caller relations mentioning a variable the
+  callee may write;
+- `combine_env ci dcont de g` meets the surviving caller relations with the
+  *caller-visible* callee-exit relations -- not the whole exit set, since the
+  callee's own locals and formals do not survive the boundary;
+- `combine_assign` stays the second phase.
+
+The regression must exercise both operands, not just the continuation: a
+caller fact (`x <= y`, with the callee writing only `z`) and a callee fact
+(`g <= h`) must both survive the return, which neither the havoc behaviour nor
+a componentwise reconstruction can achieve.
+
+Prefer deriving may-write from the VIMP procedure body. If transitive or
+recursive computation would balloon the scope, an explicit conservative
+procedure summary is acceptable, documented as the analysis-side stand-in for
+Goblint's `Queries.ask` -- which VIMP's `dg_spec` has no counterpart for.
+
+### Next: retire the TD/etf spine
+
+The call/return protocol now lives on the D/G route only. Voblint still
+carries a second, independent interprocedural spine -- `TD_Side` with
+`domain_transfer`/`effectful_domain_transfer` -- which is not a specification
+layer above D/G and not a refinement of it: no proved relation connects the
+two, and the exported CLI never reaches it.
+
+The end state is one of each:
+
+```text
+transfer interface      dg_spec
+call/return protocol    D/G
+context routing         D/G
+RHS generator family    D/G
+executable path         D/G
+soundness chain         D/G -> ltr_collect
+CLI/codegen path        D/G
+```
+
+Removal covers `domain_transfer`/`effectful_domain_transfer`,
+`unit_etf_of_transfer`/`mixed_etf_of_transfer`, `side_cfg_T_eff*`,
+`make_side_rhs_tree_eff*`, the `_st` TD-side execution path, the
+`Exec_Bridge` pieces specific to that spine, and `LTR_TD_Side_Eff_Sound*`.
+The strategy-tree monad, the vendored TD solver, `resolved_st_q` and
+`ltr_collect` are shared substrate and stay.
+
+The gate is deletion, not deprecation: no compatibility shadow spine and no
+internal wrapper that keeps both architectures alive. A temporary public API
+alias is the only acceptable exception.
 
 ### Slice 7 - update-rule abstraction
 
@@ -661,3 +778,233 @@ state both the executable result and the semantic soundness property it witnesse
 - Structural combine is an instance of an abstract `combine`, not the only API.
 - The docs consistently describe the system as a side-effecting constraint
   system with local unknowns `L`, global unknowns `G`, and valuation `sigma`.
+
+### Slice A: shared primitives rehomed off the TD/etf spine
+
+The canonical D/G spine no longer imports a theory merely because a shared
+primitive happened to live inside the old one. Ownership is reversed: both
+spines now depend on the same neutral theories.
+
+| new theory | content moved in |
+| --- | --- |
+| `src/Core/Equations/State_Restriction.thy` | `restrict_local_for` / `restrict_global_for` and their algebra, `combine_env_abs_for_eq_restrict`, the split-state bridge, `res_edge` / `res_combine` and their monotonicity (from `TD_Side_CFG`) |
+| `src/Core/Domain/Exec_Refinement.thy` | the `fun_of_resolved_st_q_for` homomorphisms, the executable projection identities, `res_edge_st` / `res_combine_st` and their transport (from `Exec_Bridge`) |
+| `src/Core/Solver/Strategy_Tree/Strategy_Tree_Rhs.thy` | `fold_rhs_trees` and its `traverse_rhs` / `sides_of_rhs` / `dep_aux` characterizations (from `TD_Side_Tree`) |
+| `src/Core/Solver/Strategy_Tree/Strategy_Tree_Relabel.thy` | `map_ltree` (from `TD_Side_Tree`) joined with `map_gtree` (the former `TD_Side_Eff_Keyed_Gen`, which is gone) |
+| `src/Core/Solver/Strategy_Tree/Solver_Mono.thy` | `threefold_mono` (from `TD_Side_Eff_Pipeline`), `fun_upd_sup_mono` (from `TD_Side_Eff_Bounds`) |
+
+`is_mono_eq`, `mono_sides` and `mono_deps` needed no rehoming: they are vendored
+(`Basics_side`). `domain_transfer` is not part of the spine at all -- it is the
+per-domain transfer record `DG_Base` and `DG_Soundness` consume.
+
+`DG_Framework`, `DG_Soundness`, `DG_LTR_Sound`, `DG_Base`,
+`DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`,
+`DG_Ctx_Activation`, `Entry_State_Routed_Context`, `Call_String_Routed_Context`,
+`DG_Analysis_Adapter`, `Exec_DG_Bridge` and `DG_Base_Exec` now have zero
+transitive imports of `TD_Side_*`, `LTR_TD_Side_*` or `Exec_Bridge`.
+
+No compatibility aliases were introduced. The generated OCaml changed only by
+`map_ltree` and `map_gtree` moving position; their bodies are byte-identical.
+
+### Slice B: witnesses on the canonical spine
+
+**The custom-combine witness moved to D/G.**
+`src/Examples/Sign/Example_Sign_DG_Custom_Combine.thy` replaces the TD/etf
+`Example_Sign_Custom_Combine.thy`, which is deleted. It takes the ordinary
+executable Sign specification `unit_dg_spec_st_for`, overrides only
+`dgs_combine_env` with a merge that joins the callee-exit locals into the
+caller's, and runs both specifications through the same `dg_gen_of` generator
+and the same vendored solver. Every other field -- the caller continuation, the
+edge transfers, `dgs_enter`, `dgs_combine_assign` -- is the stock one, so the
+observed difference isolates exactly the degree of freedom issue #143
+introduced.
+
+The two solved systems agree at the call site (`r = SPos` at `Statement 4`) and
+disagree at the resume point: the stock merge keeps `SPos`, the callee-joining
+merge publishes `STop`. The destination `z` is `SPos` under both, because the
+return assignment is `dgs_combine_assign`'s job and that field is unchanged.
+
+**The flat-vs-D/G placement comparison is retired, its numbers recorded here.**
+
+```text
+Historical flat-vs-D/G regression (Example_Interval_Placement, one placement
+policy held fixed across both routes):
+
+  flat TD/etf route (side_cfg_T_eff_st over one tree per edge):
+      answer = Ivl (Fin 0) (Fin 3)
+  D/G route (placed_dg_gen_of_strict, separate local/side unknowns per node):
+      answer = Ivl (Fin 3) (Fin 3)   balance = Ivl (Fin 3) (Fin 3)
+
+The gap is associated with the D/G split itself -- the per-node local unknown
+the flat route's single shared unknown does not have -- not with the placement
+policy. It does not attribute the gap to any one lower-level mechanism inside
+the D/G route; isolating one would need a further controlled experiment.
+```
+
+This regression motivated the consolidation onto D/G and is intentionally not
+preserved as an executable comparison after removal of the inferior spine.
+`Example_Interval_Placement.thy` keeps its D/G half in full -- the placed
+generator, the per-node bounds, the abstract post-solution and the trace-native
+collecting soundness -- and loses only the `effectful_st_transfer` factory, its
+six recombination lemmas, and the comparison subsection.
+
+**The custom combine is proved sound, not only executed.**
+`sound_dg_spec_sign_dg_spec_env_join` interprets `sound_dg_spec` for the same
+merge at the abstract representation, reusing `sound_dg_spec_unit_for` for the
+four obligations the override does not touch. `combine_sound` follows from two
+new generic lemmas, added next to the definitions they are about rather than
+inside the example:
+
+```text
+combine_assign_abs_mono          (Constraint_System)  the return-value write is
+                                                      a single-slot update
+unit_combine_step_assign_for_mono (DG_Framework)      dgs_combine_assign is
+                                                      monotone in fst m ⊔ snd m
+```
+
+Any analysis whose `dgs_combine_env` sits above the stock one now inherits
+soundness from `sound_dg_spec_unit_for` through those two lemmas; no second
+soundness chain exists.
+
+**`Sign_Named_Global_Eff` retired.** The former named-global TD witness is
+deleted, with its `Instances/NamedGlobalSign` directory and its capstone bullet.
+Its sound instance used only constant global routes -- every `route` in
+`named_etf` was `(λ_. Gpos)` or `(λ_. Gneg)` -- and the theory itself recorded
+why: a route depending on the reassembled state is not σ-monotone and fails the
+TD solver's `mono_sides` precondition. It demonstrated that boundary, not a
+capability the analyzer has. Canonical D/G supplies keyed global unknowns
+through its context/seed machinery (`gkey :: 'c ⇒ 'k`, with the context itself
+computed at call boundaries), and `dep_aux_dg_edge_tree` already pins the
+"reads exactly the source local unknown and one global slot" contract that
+`dep_aux_sideg_tree` carried.
+
+### Slice C in progress: consumers of the flat spine
+
+Taint gate (transitive closure of flat-spine constant use, per definition
+block, canonical `side_cfg_T_eff_keyed_*` generators excluded):
+
+```text
+249 blocks / 23 files   start of Slice C
+228 blocks / 22 files   after Example_Checks_Store_Only
+208 blocks / 21 files   after Example_Interval_Checks_Store_Only
+```
+
+The recipe for a check-discharge example is fixed:
+
+```text
+*_exec_prog_at            ->  lookup_context (analyse_*_result_for gs p) v ()
+*_check_report            ->  analyse_*_report_for gs p
+*_exec_prog_sound_..._at  ->  analyse_*_result_node_sound_for
+three cfg_reaches chains  ->  four computed coverage facts
+```
+
+Two traps this exposed, both silent until the proof fails:
+
+- the coverage lemmas must be stated with `assumes`/`shows`; in the
+  meta-quantified form `OF` leaves higher-order schematics unsolved against the
+  bridge's own premises and the whole chain fails to unify;
+- the node-soundness bridge exports `reserved_ret_var` as its *first* premise
+  once you leave its context, and the flat import chain hid `phase.N` while the
+  codegen one does not.
+
+**Parity has no soundness theorem for its D/G report.** `analyse_parity_report`
+is what `analyse` dispatches to for `Parity_Analysis`, but unlike
+`analyse_sign_report` and `analyse_interval_td_report` there is no
+`analyse_parity_report_sound_proved`/`_refuted`, and no packaged
+`analyse_parity_result_node_sound_for`. `Parity_Checks` stops at
+`pctx_result_node_sound`, the adapter's raw export inside a context with six
+assumptions. Porting `Example_Parity_Checks_Store_Only` off the flat spine
+therefore needs that wrapper written first -- which closes a real gap in the
+Parity CLI branch rather than just moving an example.
+
+#### Behaviour differences observed while migrating consumers
+
+Each is classified rather than silently normalized away.
+
+| witness | flat result | canonical D/G | classification |
+| --- | --- | --- | --- |
+| `Example_Side_Proc_Global`, `counter` at exit | `SNonNeg` | `SPos` | precision improvement |
+
+`cinit_stores` starts every global at zero and the single call increments it
+once, so `SPos` is the exact answer and the old assertion was the imprecise
+one. The regression now pins the exact value; the old result is not preserved
+for parity.
+
+#### Proof patterns to reuse when migrating the remaining domains
+
+```isabelle
+lemma foo
+  assumes ...
+  shows ...
+  by (rule bridge[OF ...])
+```
+
+rather than `lemmas foo = bridge[OF ...]`. When the bridge's premises bind
+variables that also occur in its conclusion, `OF` against a meta-quantified
+lemma leaves higher-order schematics unsolved; stating the conclusion first is
+what constrains them. State the coverage lemmas themselves with
+`assumes`/`shows` for the same reason.
+
+Keep `hide_const phase.N` wherever an import chain that used to provide it is
+replaced. Namespace changes caused by swapping an import are real migration
+effects even when nothing semantic moves.
+
+### Slice C, completed
+
+The transitive block-taint closure over the old flat-spine constants reached
+zero across `src/Analysis`, `src/Examples`, `src/CLI`, `src/Formalization` and
+`src/Codegen`:
+
+| step | tainted blocks | files |
+| --- | --- | --- |
+| start | 249 | 23 |
+| example witnesses moved onto `analyse_*_result_for` | 149 | 13 |
+| superseded `*_check_report` deleted | 145 | 10 |
+| Parity flat spine deleted | 112 | 7 |
+| Sign flat spine deleted | 67 | 4 |
+| Interval and Int flat spines deleted | 0 | 0 |
+
+Deleted whole: `Sign_Side_Soundness`, `Sign_Local_Effects`,
+`Interval_Side_Soundness`, `Parity_Side_Soundness`, `Parity_Exec_Sound`.
+Stripped to their D/G halves: `Sign_Exec_Sound`, `Interval_Exec_Sound`.
+Stripped of their etf factories: `Sign_Exec`, `Ivl_Exec`, `Parity_Exec`,
+`Int_Exec`.
+
+#### The Parity soundness gap, closed
+
+`analyse_parity_report` is a shipping dispatcher branch that had no soundness
+wrapper: `Parity_Checks` stopped at `pctx_result_node_sound`, inside a
+six-assumption adapter context. `Voblint_CLI.Parity_Codegen` now carries
+`analyse_parity_result_node_sound_for`,
+`analyse_parity_report_sound_proved_for`/`_refuted_for` and their
+`declared_global` corollaries, mirroring Sign exactly. The bridge needed
+`Parity_Checks.pctx_analyse_result_eq`, the Sign analogue Parity was missing.
+
+#### Behaviour differences, all in the same direction
+
+| witness | old flat result | canonical D/G | classification |
+| --- | --- | --- | --- |
+| `Example_Side_Proc_Global`, `counter` at exit | `SNonNeg` | `SPos` | precision improvement |
+| `Example_Side_Branch_Calls`, `result_val` at exit | `SNonNeg` | `SPos` | precision improvement |
+| `Example_Side_Branch_Calls`, `out_val` at exit | `SNonNeg` | `SPos` | precision improvement |
+| `Example_Placement_Regression`, `total` at exit | `SNonNeg` | `SPos` | precision improvement |
+
+Every other computed value is unchanged, including all three interval-loop
+engines, the whole `run_menu` comparison, and every check classification.
+
+#### One generalization, no wrappers
+
+`run_menu` (`Solver_Menu`) took `gs` and a variable name and hardcoded a
+lifted-carrier read, which cannot type against a routed `dg_state`. It now
+takes the slot projection as a parameter, so the one menu serves both carriers.
+That is the whole change: no `run_menu_dg`, no shim.
+
+#### Import hygiene
+
+Deleting a theory removes whatever it happened to re-export. Four theories had
+to start naming what they actually use rather than inheriting it:
+`Sign_Exec_Sound` and `Parity_Exec_Ctx_Sound` (`Solver_Side_RG`,
+`TD_side_upd_rule`, `CFG_Prune`, `Compile_Invariants`), `Sign_Exec_Ctx_Sound`
+(`Analysis_Result`), and three examples (`Analysis_GraphViz`,
+`VIMP_Source_Print`). None of these are new dependencies; they were always
+there, just unnamed.

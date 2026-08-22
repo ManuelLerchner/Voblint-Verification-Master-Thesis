@@ -145,13 +145,6 @@ lemma parity_terminates_c:
 definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + unit \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
   "parity_sol = TD_side_always_join_Interp_solve parity_eqs (cfg_exit parity_cfg, ())"
 
-text \<open>The computed parity of \<open>x\<close> at every node --- \<^emph>\<open>evaluated\<close>.\<close>
-
-value "map_option
-   (\<lambda>sol. map (\<lambda>p. (p, parity_lookup (locals (snd sol (Inl (p, ())))) (STR ''x'')))
-            (map Statement [0,1,2,3]))
-   (TD_side_always_join_Interp_solve_c parity_eqs (cfg_exit parity_cfg, ()))"
-
 subsection \<open>6. Soundness premises for the registered endpoint\<close>
 
 lemma parity_cover_all:
@@ -337,8 +330,6 @@ definition parity_dot :: String.literal where
           None \<Rightarrow> ''solver did not terminate''
         | Some sol \<Rightarrow> contextual_analysis_dot parity_graph_config parity_cfg
             parity_graph_domain (snd sol))"
-
-ML_val \<open>writeln (@{code parity_dot})\<close>
 
 end
 

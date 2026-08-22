@@ -45,9 +45,6 @@ lemma refine_excludes_20:
   "20 \<notin> gamma_ivl (Ivl (Fin 0) (Fin 19))"
   by simp_all
 
-value "bfilter_ivl (Less (V (STR ''x'')) (N 20)) True sigma_loop_head (STR ''x'')"
-value "assume_ivl_identity (Less (V (STR ''x'')) (N 20)) sigma_loop_head (STR ''x'')"
-
 subsection \<open>One body step: @{text "x := x + 1"} after the guard\<close>
 
 definition body_after_refined :: "ivl abs_state" where
@@ -89,9 +86,6 @@ lemma backward_analysis_strictly_tighter:
   "Ivl (Fin 0) (Fin 20) \<le> Ivl (Fin 0) (Fin 21)"
   "Ivl (Fin 0) (Fin 21) \<le> Ivl (Fin 0) (Fin 20) \<longleftrightarrow> False"
   by (simp_all add: less_eq_ivl_def)
-
-value "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_refined (STR ''x'')"
-value "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'')"
 
 subsection \<open>An infeasible guard refines to canonical bottom\<close>
 

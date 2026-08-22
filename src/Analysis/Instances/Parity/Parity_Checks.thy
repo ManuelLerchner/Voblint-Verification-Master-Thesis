@@ -1,5 +1,5 @@
 theory Parity_Checks
-  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec_Sound
+  imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
     Parity_Exec_Ctx_Sound
@@ -107,20 +107,7 @@ lemma parity_classify_nested_unknown:
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 
-subsection \<open>Whole-program check report\<close>
-
-text \<open>Thin composition, mirroring \<open>sign_check_report\<close>/\<open>interval_check_report\<close>:
-  \<^const>\<open>classify_checks\<close> owns the traversal and ordering,
-  \<^const>\<open>parity_exec_prog_at\<close> owns the node-indexed Parity environment, and
-  \<open>parity_classify_check\<close> owns the per-check classification.\<close>
-
-definition parity_check_report ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "parity_check_report gs mnm p =
-     classify_checks (prog_cfg mnm p)
-       (\<lambda>v. case_lifted bot (\<lambda>\<sigma>. \<sigma>) (parity_exec_prog_at gs mnm p v))
-       parity_classify_check"
-
+section \<open>The generic report adapter, at the routed-unit context\<close>
 section \<open>The generic report adapter, at the routed-unit context\<close>
 
 text \<open>
@@ -232,6 +219,30 @@ text \<open>
 lemmas pctx_report_ctx_proved_sound = pctx_adapter.analyse_report_ctx_proved_sound
 lemmas pctx_report_ctx_refuted_sound = pctx_adapter.analyse_report_ctx_refuted_sound
 lemmas pctx_result_node_sound = pctx_adapter.analyse_result_node_sound
+
+text \<open>
+  \<open>pctx_analyse_result_eq\<close> identifies the adapter's own result reading with the
+  raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Exec_Ctx_Sound\<close>)
+  builds directly from \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>: both
+  collapse the same \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected
+  local unknown, one via \<open>is_bot_state\<close> after projecting, the other via
+  \<open>is_bot_pred\<close> before projecting -- \<open>exact\<close> is what identifies the two orders.
+  Composing it with \<open>pctx_result_node_sound\<close> gives
+  \<^const>\<open>analyse_parity_ctx_result_for\<close>'s node-soundness bridge without
+  re-deriving \<open>routed_context_hetero\<close>'s coverage/sigma-projection argument.
+\<close>
+
+lemma pctx_analyse_result_eq:
+  "lookup_context pctx_adapter.analyse_result v ctx =
+     (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)
+      then normalize_point gs
+             (canonicalize_lift is_bot_pred (locals (snd (pctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+      else Unreachable)"
+  unfolding pctx_adapter.lookup_context_analyse_result
+  apply (simp only: pctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
+                     pctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
+  by (cases "locals (snd (pctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+     (simp_all add: exact normalize_lift_def)
 
 end
 

@@ -150,7 +150,6 @@ module Core : sig
       warrowing_bounded_warrowing : 'a warrowing}
   val bounded_semilattice_sup_bot_sign : sign bounded_semilattice_sup_bot
   val bounded_warrowing_sign : sign bounded_warrowing
-  val is_bot_sign : sign -> bool
   type 'a computable_domain
   val computable_domain_sign : sign computable_domain
   val equal_option : 'a equal -> 'a option -> 'a option -> bool
@@ -171,7 +170,6 @@ module Core : sig
   val semilattice_sup_ivl : ivl semilattice_sup
   val bounded_semilattice_sup_bot_ivl : ivl bounded_semilattice_sup_bot
   val bounded_warrowing_ivl : ivl bounded_warrowing
-  val is_bot_ivl : ivl -> bool
   val computable_domain_ivl : ivl computable_domain
   type parity = PBot | PEven | POdd | PTop
   val equal_paritya : parity -> parity -> bool
@@ -185,7 +183,6 @@ module Core : sig
   val widen_parity : parity -> parity -> parity
   val narrow_parity : parity -> parity -> parity
   val warrowing_parity : parity warrowing
-  val is_bot_parity : parity -> bool
   val bounded_semilattice_sup_bot_parity : parity bounded_semilattice_sup_bot
   val computable_domain_parity : parity computable_domain
   type ('a, 'b) dg_state
@@ -211,7 +208,6 @@ module Core : sig
     'a semilattice_sup -> 'a lifted bounded_semilattice_sup_bot
   val bounded_warrowing_lifted :
     'a bounded_warrowing -> 'a lifted bounded_warrowing
-  type gkb
   type congruence
   val rep_congruence : congruence -> (int * int) option
   type 'a int_dom_ext
@@ -229,7 +225,6 @@ module Core : sig
     'a int_dom_record_lattice -> 'a int_dom_ext bounded_semilattice_sup_bot
   val bounded_warrowing_int_dom_ext :
     'a int_dom_record_warrowing -> 'a int_dom_ext bounded_warrowing
-  val is_bot_int_dom_ext : 'a int_dom_record_lattice -> 'a int_dom_ext -> bool
   val computable_domain_int_dom_ext :
     'a equal * 'a int_dom_record_lattice -> 'a int_dom_ext computable_domain
   type com = SKIP | Assign of string * exp | Check of exp | Seq of com * com |
@@ -245,6 +240,7 @@ module Core : sig
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type ('a, 'b) analysis_result =
     Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state)
+  type 'a call_info_ext
   type analysis_event
   type ('a, 'b, 'c) dg_spec_ext
   type contextual_verdict = Dead | Decided of check_result
@@ -258,7 +254,6 @@ module Core : sig
   type ('a, 'b) domain_transfer_ext
   val id : 'a -> 'a
   val suc : nat -> nat
-  val list_ex : ('a -> bool) -> 'a list -> bool
   val zero_nat : nat
   val rev : 'a list -> 'a list
   val find : ('a -> bool) -> 'a list -> 'a option
@@ -269,6 +264,7 @@ module Core : sig
   val filtera : ('a -> bool) -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a set -> 'a set
   val membera : 'a equal -> 'a list -> 'a -> bool
+  val list_ex : ('a -> bool) -> 'a list -> bool
   val remdups : 'a equal -> 'a list -> 'a list
   val the_elem : 'a set -> 'a
   val distinct : 'a equal -> 'a list -> bool
@@ -312,8 +308,6 @@ module Core : sig
         (string -> bool) ->
           string list -> exp list -> 'a resolved_st_q -> 'a resolved_st_q
   val aval_parity : exp -> (string -> parity) -> parity
-  val check_dead : ('a * contextual_verdict) set -> bool
-  val result_keys : ('a, 'b) analysis_result -> (cfg_node * 'a) set
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
   val ea_check_cond : edge_action -> exp
   val is_EA_Check : edge_action -> bool
@@ -333,7 +327,8 @@ module Core : sig
   val cfg_calls_list :
     unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val side_cfg_T_eff_keyed_seed_dg_buffered :
-    'c bounded_semilattice_sup_bot -> 'd bounded_semilattice_sup_bot ->
+    'b equal -> 'c bounded_semilattice_sup_bot ->
+      'd bounded_semilattice_sup_bot ->
       (unit cfg_ext -> cfg_node -> (cfg_node * edge_action) list) ->
         ('a -> 'b) ->
           (cfg_node -> 'a -> 'c -> call_action -> 'a) ->
@@ -398,10 +393,6 @@ module Core : sig
     (string -> bool) ->
       string list -> exp list -> sign resolved_st_q -> sign resolved_st_q
   val char_0x0A : char
-  val is_reachable_point : 'a point_state -> bool
-  val lookup_context :
-    'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
-  val node_live_ex : 'a equal -> ('a, 'b) analysis_result -> cfg_node -> bool
   val char_0x20 : char
   val char_0x21 : char
   val char_0x22 : char
@@ -497,6 +488,8 @@ module Core : sig
     unit cfg_ext ->
       (cfg_node -> 'a) ->
         (exp -> 'a -> check_result) -> (cfg_node * (exp * check_result)) list
+  val lookup_context :
+    'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_result :
@@ -525,6 +518,7 @@ module Core : sig
       (ivl resolved_st_q -> bool) ->
         (ivl resolved_st_q lifted, ivl resolved_st_q lifted, unit) dg_spec_ext
   val aggregate_verdicts : contextual_verdict set -> contextual_verdict
+  val compile_program : unit imp_prog_ext -> unit cfg_ext
   val analyse_int_report_join :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val classify_checks_ctx :
@@ -537,7 +531,6 @@ module Core : sig
     'a equal -> 'b semilattice_sup ->
       ('a, (string -> 'b)) analysis_result ->
         cfg_node -> (string -> 'b) point_state
-  val verdict_check_result : contextual_verdict -> check_result
   val interval_classify_check : exp -> (string -> ivl) -> check_result
   val analyse_interval_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
@@ -580,14 +573,6 @@ module Core : sig
   val wf_program_compile_input_exec : unit imp_prog_ext -> bool
   val analyse_interval_report_per_origin :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
-  val analyse_interval_entry_state_result_for :
-    (string -> bool) ->
-      string ->
-        unit imp_prog_ext -> ((ivl list), (string -> ivl)) analysis_result
-  val entry_state_check_projection :
-    string ->
-      unit imp_prog_ext ->
-        (cfg_node * (exp * (ivl list * contextual_verdict) set)) list
   val analyse_interval_entry_state :
     unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
   val analyse_interval_td_report_with_state :
@@ -3460,6 +3445,9 @@ type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
 type ('a, 'b) analysis_result =
   Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state);;
 
+type 'a call_info_ext =
+  Call_info_ext of string option * string * string list * exp list * 'a;;
+
 type analysis_event = Check_Event of exp;;
 
 type ('a, 'b, 'c) dg_spec_ext =
@@ -3469,8 +3457,10 @@ type ('a, 'b, 'c) dg_spec_ext =
       (exp -> bool -> 'a -> 'b -> 'b * 'a) * (string -> 'a -> 'b -> 'b * 'a) *
       (exp option -> string -> 'a -> 'b -> 'b * 'a) *
       (string list -> exp list -> 'a -> 'b -> 'b * 'a) *
-      (analysis_event -> 'a -> 'b -> 'b * 'a) * ('a -> 'a -> 'b -> 'b * 'a) *
-      (string option -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
+      (analysis_event -> 'a -> 'b -> 'b * 'a) *
+      (unit call_info_ext -> 'a -> 'b -> 'a) *
+      (unit call_info_ext -> 'a -> 'a -> 'b -> 'b * 'a) *
+      (unit call_info_ext -> 'a -> 'b -> 'b * 'a -> 'b * 'a) * 'c;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
@@ -3511,7 +3501,9 @@ type ('a, 'b) domain_transfer_ext =
       (exp option -> string -> (string -> 'a) -> string -> 'a) *
       (string list -> exp list -> (string -> 'a) -> string -> 'a) *
       (analysis_event -> (string -> 'a) -> string -> 'a) *
-      ((string -> 'a) -> (string -> 'a) -> string -> 'a) * 'b;;
+      (unit call_info_ext -> (string -> 'a) -> string -> 'a) *
+      (unit call_info_ext -> (string -> 'a) -> (string -> 'a) -> string -> 'a) *
+      'b;;
 
 let rec id x = (fun xa -> xa) x;;
 
@@ -3520,11 +3512,6 @@ let rec plus_nat m n = Nat (Z.add (integer_of_nat m) (integer_of_nat n));;
 let one_nat : nat = Nat (Z.of_int 1);;
 
 let rec suc n = plus_nat n one_nat;;
-
-let rec list_ex p x1 = match p, x1 with p, [] -> false
-                  | p, x :: xs -> p x || list_ex p xs;;
-
-let rec bex (Set xs) p = list_ex p xs;;
 
 let rec minus_nat
   m n = Nat (max ord_integer Z.zero
@@ -3541,8 +3528,6 @@ let rec rev xs = fold (fun a b -> a :: b) xs [];;
 let rec zip xs ys = match xs, ys with [], ys -> []
               | xs, [] -> []
               | x :: xs, y :: ys -> (x, y) :: zip xs ys;;
-
-let rec ball (Set xs) p = list_all p xs;;
 
 let rec find uu x1 = match uu, x1 with uu, [] -> None
                | p, x :: xs -> (if p x then Some x else find p xs);;
@@ -3605,6 +3590,9 @@ let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
 
 let rec bind x0 f = match x0, f with None, f -> None
                | Some x, f -> f x;;
+
+let rec list_ex p x1 = match p, x1 with p, [] -> false
+                  | p, x :: xs -> p x || list_ex p xs;;
 
 let rec remdups _A
   = function [] -> []
@@ -4410,6 +4398,15 @@ let rec fmlookup_default _A
 let rec fminsert _A
   infl x y = fmupd _A x (y :: fmlookup_default _A infl [] x) infl;;
 
+let rec ce_formals (CallEdge (x1, x2, x3)) = x2;;
+
+let rec ce_args (CallEdge (x1, x2, x3)) = x3;;
+
+let rec ce_dst (CallEdge (x1, x2, x3)) = x1;;
+
+let rec call_info_of
+  ca p = Call_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
+
 let abort_empty_set _ = failwith "List.abort_empty_set";;
 
 let rec sup_set _A
@@ -4780,17 +4777,20 @@ let rec ivl_tf_st_for
           (aval_ivl a (fun_of_resolved_st_q_for bot_ivl source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
+let rec acc_add _A _B
+  k d x2 = match k, d, x2 with k, d, [] -> [(k, d)]
+    | ka, da, (k, d) :: kvs ->
+        (if eq _A k ka
+          then (k, sup _B.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                     d da) ::
+                 kvs
+          else (k, d) :: acc_add _A _B ka da kvs);;
+
 let rec char_of_integer
   k = Chr (if Z.leq Z.zero k && Z.lt k (Z.of_int 256) then k
             else modulo_integer k (Z.of_int 256));;
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
-
-let rec map_ltree
-  h x1 = match h, x1 with h, Answer d -> Answer d
-    | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
-    | h, QueryG (y, f) -> QueryG (y, (fun d -> map_ltree h (f d)))
-    | h, Side (y, d, t) -> Side (y, d, map_ltree h t);;
 
 let rec sigma (State_ext (c, infl, stabl, sigma, more)) = sigma;;
 
@@ -4960,20 +4960,26 @@ let rec show_int
   i = (if less_int i zero_inta then [char_0x2D] @ show_nat (nat (uminus_inta i))
         else show_nat (nat i));;
 
+let rec ci_dst
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
+
 let rec dgs_combine_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_combine_assign;;
 
 let rec dgs_combine_env
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_combine_env;;
 
 let rec dgs_combine
-  s dst dc de g = dgs_combine_assign s dst de g (dgs_combine_env s dc de g);;
+  s ci dcont de g =
+    dgs_combine_assign s ci de g (dgs_combine_env s ci dcont de g);;
 
 let rec inv_less_congruence result a b = (a, b);;
 
@@ -5279,37 +5285,43 @@ let rec enter_D
 let rec dgs_special
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_special;;
 
 let rec dgs_return
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_return;;
 
 let rec dgs_branch
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_branch;;
 
 let rec dgs_assign
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_assign;;
 
 let rec dgs_event
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_event;;
 
 let rec dgs_skip
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_skip;;
 
 let rec dg_spec_step s x1 = match s, x1 with s, EA_Nop -> dgs_skip s
@@ -6093,29 +6105,19 @@ let rec aval_parity
                               (parity_tobool (aval_parity b sigma)) (Some false)
                         then PEven else PTop)));;
 
+let rec flush_sides
+  x0 t = match x0, t with [], t -> t
+    | kv :: kvs, t -> Side (fst kv, snd kv, flush_sides kvs t);;
+
+let rec buffer_aux _A _B
+  acc x1 = match acc, x1 with acc, Answer d -> flush_sides acc (Answer d)
+    | acc, QueryL (y, g) -> QueryL (y, (fun v -> buffer_aux _A _B acc (g v)))
+    | acc, QueryG (y, g) -> QueryG (y, (fun v -> buffer_aux _A _B acc (g v)))
+    | acc, Side (y, d, t) -> buffer_aux _A _B (acc_add _A _B y d acc) t;;
+
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
-
-let rec equal_check_result
-  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
-    | Check_Unknown, Check_Refuted -> false
-    | Check_Proved, Check_Unknown -> false
-    | Check_Unknown, Check_Proved -> false
-    | Check_Proved, Check_Refuted -> false
-    | Check_Refuted, Check_Proved -> false
-    | Check_Unknown, Check_Unknown -> true
-    | Check_Refuted, Check_Refuted -> true
-    | Check_Proved, Check_Proved -> true;;
-
-let rec equal_contextual_verdict
-  x0 x1 = match x0, x1 with Dead, Decided x2 -> false
-    | Decided x2, Dead -> false
-    | Decided x2, Decided y2 -> equal_check_result x2 y2
-    | Dead, Dead -> true;;
-
-let rec check_dead
-  vs = ball vs (fun (_, v) -> equal_contextual_verdict v Dead);;
 
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
@@ -6611,12 +6613,6 @@ let rec return_call_action_list
               else None))
           (cfg_calls_list g);;
 
-let rec map_gtree
-  r x1 = match r, x1 with r, Answer d -> Answer d
-    | r, QueryL (y, f) -> QueryL (y, (fun d -> map_gtree r (f d)))
-    | r, QueryG (y, f) -> QueryG (r y, (fun d -> map_gtree r (f d)))
-    | r, Side (y, d, t) -> Side (r y, d, map_gtree r t);;
-
 let rec fold_rhs_trees _A
   acc x1 = match acc, x1 with acc, [] -> Answer acc
     | acc, t :: ts ->
@@ -6627,7 +6623,21 @@ let rec fold_rhs_trees _A
                 acc res)
               ts);;
 
-let rec side_cfg_T_eff_keyed_seed_dg_buffered _C _D
+let rec map_ltree
+  h x1 = match h, x1 with h, Answer d -> Answer d
+    | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
+    | h, QueryG (y, f) -> QueryG (y, (fun d -> map_ltree h (f d)))
+    | h, Side (y, d, t) -> Side (y, d, map_ltree h t);;
+
+let rec map_gtree
+  r x1 = match r, x1 with r, Answer d -> Answer d
+    | r, QueryL (y, f) -> QueryL (y, (fun d -> map_gtree r (f d)))
+    | r, QueryG (y, f) -> QueryG (r y, (fun d -> map_gtree r (f d)))
+    | r, Side (y, d, t) -> Side (r y, d, map_gtree r t);;
+
+let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
+
+let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
   pred_sel gkey route cmb_c extra g s bot0 s0d s0g =
     (fun (v, c) ->
       (let acc0 =
@@ -6653,33 +6663,44 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _C _D
          fold_rhs_trees (bounded_semilattice_sup_bot_dg_state _C _D) acc0
            (intra @ comb @ extra route c v)
          in
-        seqcomp_tree t
-          (fun res ->
-            Side (gkey c,
-                   DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
-                        globs res),
-                   Answer
-                     (DG (locals res,
-                           bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))))));;
+        buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
+          (seqcomp_tree t
+            (fun res ->
+              Side (gkey c,
+                     DG (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
+                          globs res),
+                     Answer
+                       (DG (locals res,
+                             bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))))));;
+
+let rec dgs_caller_cont
+  (Dg_spec_ext
+    (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
+    = dgs_caller_cont;;
 
 let rec dgs_enter
   (Dg_spec_ext
     (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-      dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, more))
+      dgs_enter, dgs_event, dgs_caller_cont, dgs_combine_env,
+      dgs_combine_assign, more))
     = dgs_enter;;
 
 let rec result_proc (FunctionResult x3) = x3;;
 
 let rec routed_cmb_g_contribution _A _B
   s gk0 seed_key route ctx ca cc ex =
-    (let CallEdge (dst, fs, asa) = ca in
+    (let CallEdge (_, fs, asa) = ca in
       seqcomp_tree (QueryL ((cc, ctx), (fun a -> Answer a)))
         (fun caller_state ->
           seqcomp_tree (QueryG (gk0, (fun a -> Answer a)))
             (fun globals_state1 ->
               (let caller = locals caller_state in
                let globals1 = globs globals_state1 in
+               let ci = call_info_of ca (result_proc ex) in
                let ctxa = route cc ctx caller ca in
+               let dcont = dgs_caller_cont s ci caller globals1 in
                let eg = fst (dgs_enter s fs asa caller globals1) in
                 seqcomp_tree
                   (Side (seed_key (FunctionEntry (result_proc ex)) ctxa,
@@ -6696,9 +6717,9 @@ let rec routed_cmb_g_contribution _A _B
                             (let callee = locals callee_state in
                              let globals2 = globs globals_state2 in
                              let cg =
-                               fst (dgs_combine s dst caller callee globals2) in
+                               fst (dgs_combine s ci dcont callee globals2) in
                               Answer
-                                (DG (snd (dgs_combine s dst caller callee
+                                (DG (snd (dgs_combine s ci dcont callee
    globals2),
                                       sup
 _B.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup eg
@@ -6774,7 +6795,8 @@ let rec base_dg_spec_st_for_lifted _A _B
         (fun ev d g ->
           (g, (let Check_Event bc = ev in
                 transfer_lift is_bot_pred (tf_st (EA_Check bc)) d))),
-        (fun dc de g ->
+        (fun _ dc _ -> dc),
+        (fun _ dc de g ->
           (g, (match dc with Bot -> Bot
                 | Lifted x ->
                   (match de with Bot -> Bot
@@ -6783,14 +6805,15 @@ let rec base_dg_spec_st_for_lifted _A _B
                         (combine_resolved_st_q
                           _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                           x y))))),
-        (fun dst de g merged ->
+        (fun ci de g merged ->
           (g, transfer_lift2 is_bot_pred
                 (fun env0 de0 ->
                   combine_assign_resolved_q
                     _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot gs
-                    dst (lookup_resolved_st_q
-                          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                          de0 (location_of gs ret_var))
+                    (ci_dst ci)
+                    (lookup_resolved_st_q
+                      _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de0
+                      (location_of gs ret_var))
                     env0)
                 (snd merged) de)),
         ());;
@@ -7104,7 +7127,7 @@ let rec ictx_spec
 
 let rec ictx_eqs
   mode is_bot_pred gs pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
@@ -7195,20 +7218,6 @@ let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 let char_0x0A : char = Chr (Z.of_int 10);;
 
 let source_nl : char list = [char_0x0A];;
-
-let rec is_reachable_point = function Unreachable -> false
-                             | Reachable uu -> true;;
-
-let rec result_at (Analysis_Result (x1, x2)) = x2;;
-
-let rec lookup_context _A
-  r v ctx =
-    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
-      then result_at r v ctx else Unreachable);;
-
-let rec node_live_ex _A
-  r v = bex (contexts_at r v)
-          (fun ctx -> is_reachable_point (lookup_context _A r v ctx));;
 
 let char_0x20 : char = Chr (Z.of_int 32);;
 
@@ -7480,7 +7489,8 @@ let rec return_ivl
 let rec ivl_tf_for
   gs = Domain_transfer_ext
          (assign_ivl, special_ivl, branch_ivl, skip_ivl, body_ivl, return_ivl,
-           enter_ivl_for gs, event_ivl, combine_env_abs gs, ());;
+           enter_ivl_for gs, event_ivl, (fun _ sigma -> sigma),
+           (fun _ -> combine_env_abs gs), ());;
 
 let rec less_eq_set _A
   a b = match a, b with Set xs, b -> list_all (fun x -> member _A x b) xs
@@ -7498,7 +7508,7 @@ let rec sctx_spec
 
 let rec sctx_eqs
   gs is_bot_pred pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gka
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
@@ -7810,6 +7820,13 @@ let rec classify_checks
                             classify (ea_check_cond a) (env u))))
           else None))
       (cfg_intra_list g);;
+
+let rec result_at (Analysis_Result (x1, x2)) = x2;;
+
+let rec lookup_context _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
+      then result_at r v ctx else Unreachable);;
 
 let rec analyse_int_report_for
   mode gs p =
@@ -8212,6 +8229,17 @@ let rec ectx_spec
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs);;
 
+let rec equal_check_result
+  x0 x1 = match x0, x1 with Check_Refuted, Check_Unknown -> false
+    | Check_Unknown, Check_Refuted -> false
+    | Check_Proved, Check_Unknown -> false
+    | Check_Unknown, Check_Proved -> false
+    | Check_Proved, Check_Refuted -> false
+    | Check_Refuted, Check_Proved -> false
+    | Check_Unknown, Check_Unknown -> true
+    | Check_Refuted, Check_Refuted -> true
+    | Check_Proved, Check_Proved -> true;;
+
 let rec sup_check_result
   x y = (if equal_check_result x y then x else Check_Unknown);;
 
@@ -8221,6 +8249,9 @@ let rec sup_contextual_verdict
     | Decided a, Decided b -> Decided (sup_check_result a b);;
 
 let rec aggregate_verdicts (Set vs) = fold sup_contextual_verdict vs Dead;;
+
+let rec compile_program
+  p = compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p);;
 
 let rec analyse_int_ctx_result_for
   mode gs mnm p =
@@ -8270,9 +8301,6 @@ let rec classify_checks_ctx _A
 
 let rec lookup_joined_state _A _B
   r v = join_states_over _B (lookup_context _A r v) (contexts_at r v);;
-
-let rec verdict_check_result = function Dead -> Check_Unknown
-                               | Decided r -> r;;
 
 let rec interval_check_true
   x0 d = match x0, d with Not b, d -> interval_check_false b d
@@ -8325,7 +8353,7 @@ let rec ictx_speca
 
 let rec ictx_eqsa
   gs is_bot_pred pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gkc
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -8431,7 +8459,7 @@ let rec entry_state_route_gen
 
 let rec entry_state_eqs
   gs is_bot_pred pi ps mnm main =
-    side_cfg_T_eff_keyed_seed_dg_buffered
+    side_cfg_T_eff_keyed_seed_dg_buffered equal_gkb
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
@@ -8742,7 +8770,7 @@ let rec pretty_source_lines_com
 let rec tf_enter
   (Domain_transfer_ext
     (tf_assign, tf_special, tf_branch, tf_skip, tf_body, tf_return, tf_enter,
-      tf_event, tf_combine_env, more))
+      tf_event, tf_caller_cont, tf_combine_env, more))
     = tf_enter;;
 
 let rec ictx_sol_prog_warrowa
@@ -9399,7 +9427,7 @@ let rec pctx_spec
 
 let rec pctx_eqs
   gs is_bot_pred pi ps mnm main =
-    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_parity))
@@ -9518,10 +9546,6 @@ let rec analyse_parity_ctx_result_per_origin_for
 end;; (*struct Parity_Exec_Ctx_Sound*)
 
 module Parity_Checks : sig
-  val analyse_parity_result_for :
-    (string -> bool) ->
-      unit Core.imp_prog_ext ->
-        (unit, (string -> Core.parity)) Core.analysis_result
   val analyse_parity_report :
     unit Core.imp_prog_ext ->
       (Core.cfg_node * (Core.exp * Core.check_result)) list
@@ -9812,12 +9836,6 @@ let rec cs_route k u ctx d ca = Core.take k (u :: ctx);;
 end;; (*struct Call_String_Context*)
 
 module Interval_Call_String_Ctx_Sound : sig
-  val analyse_interval_call_string_result_for :
-    Core.nat ->
-      (string -> bool) ->
-        string ->
-          unit Core.imp_prog_ext ->
-            ((Core.cfg_node list), (string -> Core.ivl)) Core.analysis_result
   val analyse_interval_call_string_report :
     Core.nat ->
       unit Core.imp_prog_ext ->
@@ -9839,6 +9857,7 @@ end = struct
 let rec cs_call_string_eqs
   k gs is_bot_pred pi ps mnm main =
     Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      Call_String_Context.equal_call_string_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_ivl))
@@ -10053,12 +10072,6 @@ let rec analyse_interval_call_string_report_per_origin
 end;; (*struct Interval_Call_String_Ctx_Sound*)
 
 module Sign_Entry_State_Ctx_Sound : sig
-  type gk
-  val analyse_sign_entry_state_result_for :
-    (string -> bool) ->
-      string ->
-        unit Core.imp_prog_ext ->
-          ((Core.sign list), (string -> Core.sign)) Core.analysis_result
   val analyse_sign_entry_state_report :
     unit Core.imp_prog_ext ->
       (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
@@ -10097,7 +10110,7 @@ let rec sctx_entry_route_gen
 
 let rec sctx_entry_eqs
   gs is_bot_pred pi ps mnm main =
-    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_sign))
@@ -10198,12 +10211,6 @@ let rec analyse_sign_entry_state_result
 end;; (*struct Sign_Entry_State_Ctx_Sound*)
 
 module Sign_Call_String_Ctx_Sound : sig
-  val analyse_sign_call_string_result_for :
-    Core.nat ->
-      (string -> bool) ->
-        string ->
-          unit Core.imp_prog_ext ->
-            ((Core.cfg_node list), (string -> Core.sign)) Core.analysis_result
   val analyse_sign_call_string_report :
     Core.nat ->
       unit Core.imp_prog_ext ->
@@ -10217,6 +10224,7 @@ end = struct
 let rec scs_eqs
   k gs is_bot_pred pi ps mnm main =
     Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      Call_String_Context.equal_call_string_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           Core.bounded_semilattice_sup_bot_sign))
@@ -10321,12 +10329,6 @@ end;; (*struct Sign_Call_String_Ctx_Sound*)
 module Int_Entry_State_Ctx_Sound : sig
   type gk
   val equal_gk : gk Core.equal
-  val analyse_int_entry_state_result_for :
-    (string -> bool) ->
-      string ->
-        unit Core.imp_prog_ext ->
-          ((unit Core.int_dom_ext list), (string -> unit Core.int_dom_ext))
-            Core.analysis_result
   val analyse_int_entry_state_report :
     unit Core.imp_prog_ext ->
       (Core.cfg_node * (Core.exp * Core.contextual_verdict)) list
@@ -10371,7 +10373,7 @@ let rec ictx_entry_route_gen
 
 let rec ictx_entry_eqs
   mode gs is_bot_pred pi ps mnm main =
-    Core.side_cfg_T_eff_keyed_seed_dg_buffered
+    Core.side_cfg_T_eff_keyed_seed_dg_buffered equal_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           (Core.bounded_semilattice_sup_bot_int_dom_ext
@@ -10493,13 +10495,6 @@ let rec analyse_int_entry_state_result
 end;; (*struct Int_Entry_State_Ctx_Sound*)
 
 module Int_Call_String_Ctx_Sound : sig
-  val analyse_int_call_string_result_for :
-    Core.nat ->
-      (string -> bool) ->
-        string ->
-          unit Core.imp_prog_ext ->
-            ((Core.cfg_node list), (string -> unit Core.int_dom_ext))
-              Core.analysis_result
   val analyse_int_call_string_report :
     Core.nat ->
       unit Core.imp_prog_ext ->
@@ -10514,6 +10509,7 @@ end = struct
 let rec ics_eqs
   k mode gs is_bot_pred pi ps mnm main =
     Core.side_cfg_T_eff_keyed_seed_dg_buffered
+      Call_String_Context.equal_call_string_gk
       (Core.bounded_semilattice_sup_bot_lifted
         (Core.semilattice_sup_resolved_st_q
           (Core.bounded_semilattice_sup_bot_int_dom_ext
@@ -10641,16 +10637,6 @@ module Analyse_Dispatch : sig
     Analysis_Config.analysis_domain ->
       unit Core.imp_prog_ext ->
         (Core.cfg_node * (Core.exp * Core.check_result)) list
-  val analyse_ctx :
-    Analysis_Config.analysis_domain ->
-      Analysis_Config.context_mode ->
-        unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
-  val analyse_with_solver :
-    Analysis_Config.analysis_domain ->
-      Analysis_Config.solver_choice ->
-        unit Core.imp_prog_ext ->
-          ((Core.cfg_node * (Core.exp * Core.check_result)) list) option
   val analyse_config :
     unit Analysis_Config.analysis_config_ext ->
       unit Core.imp_prog_ext ->
@@ -10684,33 +10670,6 @@ let rec analyse
     | Analysis_Config.Int_Analysis, p -> Core.analyse_int_report p
     | Analysis_Config.Parity_Analysis, p ->
         Parity_Checks.analyse_parity_report p;;
-
-let rec analyse_ctx
-  x0 x1 p = match x0, x1, p with
-    Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_None, p ->
-      Some (Core.decided_report (Core.analyse_sign_report p))
-    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_None, p ->
-        Some (Core.decided_report (Core.analyse_interval_td_report p))
-    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_EntryState, p ->
-        Some (Core.analyse_interval_entry_state p)
-    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_EntryState, p ->
-        Some (Sign_Entry_State_Ctx_Sound.analyse_sign_entry_state_report p)
-    | Analysis_Config.Interval_Analysis, Analysis_Config.Ctx_CallString k, p ->
-        Some (Interval_Call_String_Ctx_Sound.analyse_interval_call_string_report
-               k p)
-    | Analysis_Config.Sign_Analysis, Analysis_Config.Ctx_CallString k, p ->
-        Some (Sign_Call_String_Ctx_Sound.analyse_sign_call_string_report k p)
-    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_None, p ->
-        Some (Core.decided_report (Core.analyse_int_report p))
-    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_EntryState, p ->
-        Some (Int_Entry_State_Ctx_Sound.analyse_int_entry_state_report p)
-    | Analysis_Config.Int_Analysis, Analysis_Config.Ctx_CallString k, p ->
-        Some (Int_Call_String_Ctx_Sound.analyse_int_call_string_report k p)
-    | Analysis_Config.Parity_Analysis, Analysis_Config.Ctx_None, p ->
-        Some (Core.decided_report (Parity_Checks.analyse_parity_report p))
-    | Analysis_Config.Parity_Analysis, Analysis_Config.Ctx_EntryState, p -> None
-    | Analysis_Config.Parity_Analysis, Analysis_Config.Ctx_CallString k, p ->
-        None;;
 
 let rec analyse_with_solver
   x0 x1 p = match x0, x1, p with
@@ -12504,8 +12463,6 @@ end;; (*struct Analysis_GraphViz*)
 module State_Report_GraphViz : sig
   val string_of_abstract_value :
     Analyse_Dispatch.abstract_value -> Core.char list
-  val program_vars : unit Core.imp_prog_ext -> string list
-  val is_top_abstract_value : Analyse_Dispatch.abstract_value -> bool
   val cs_ctx_dot_auto :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> string
@@ -12515,7 +12472,6 @@ module State_Report_GraphViz : sig
   val state_report_dot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_ctx_dot_auto : unit Core.imp_prog_ext -> string
-  val is_bottom_abstract_value : Analyse_Dispatch.abstract_value -> bool
   val cs_ctx_graph_snapshot_auto :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> string
@@ -12967,13 +12923,6 @@ let rec entry_state_verdicts_for
       | Analysis_Config.Int_Analysis ->
         Int_Entry_State_Ctx_Sound.analyse_int_entry_state_report p
       | Analysis_Config.Parity_Analysis -> []);;
-
-let rec is_bottom_abstract_value
-  = function Analyse_Dispatch.SignValue s -> Core.is_bot_sign s
-    | Analyse_Dispatch.IntervalValue i -> Core.is_bot_ivl i
-    | Analyse_Dispatch.IntDomValue d ->
-        Core.is_bot_int_dom_ext Core.int_dom_record_lattice_unit d
-    | Analyse_Dispatch.ParityValue v -> Core.is_bot_parity v;;
 
 let rec entry_state_point_env_for
   kind p =

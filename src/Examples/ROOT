@@ -26,26 +26,26 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_VIMP_Proc_Regression
 
     (* Sign *)
-    Exec_Sign_Run
     Exec_Sign_DG_Run
     Example_Sign_Codegen_Exec_Consistency
-    (* G-A1 acceptance case: checks_proven/checks_proven_sound, store-only. *)
+    (* Check discharge against a computed post-solution, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute
     Example_Side_Proc_Global
     Example_Side_Branch_Calls
     Example_Sign_Placement
     Example_Placement_Regression
+    Example_Sign_DG_Custom_Combine
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
     Example_Sign_DG_EntryState_Result_Regression
 
     (* Interval *)
     Exec_Ivl_Run
-    (* Interval analogue of G-A1: checks_proven/checks_proven_sound, store-only. *)
+    (* The Interval analogue, inside a two-sided bound guard. *)
     Example_Interval_Checks_Store_Only
     Example_Interval_Placement
-    Example_M4_Acceptance
+    Example_Interval_Global_Flow_Sensitivity
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
     Example_Interval_DG_Ctx_Flagship
@@ -64,7 +64,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Call_String_Solver_Refinement_Seeded
     Call_String_Solver_Regression
     Example_Interval_Source_Ctx
-    Example_Interval_Side_Proc_Global
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
@@ -86,7 +85,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Relational_DG_Demo
     Example_Analysis_Dispatch_Regression
     Example_Min_Max_Regression
-    Example_Solver_Choice_Regression
     Example_Int_Refinement_Mode_Regression
     Example_Analysis_Result_Regression
 
@@ -94,10 +92,10 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Strategy_Tree_Demo
 
     (* Tooling *)
-    Example_Proc_GraphViz
-    Example_Proc_GraphViz_Recursion
-    Example_State_Report_GraphViz_Demo
     Example_EntryState_GraphViz_Regression
+    (* Generator-layer Side buffering: the buffered RHS generator terminates
+       where issuing two Side writes per evaluation livelocks the solver. *)
+    Example_Keyed_Solver_Update_Rule_Regression
 
     Voblint
   document_files

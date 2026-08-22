@@ -1,0 +1,23 @@
+// PARAM: --analysis sign
+// The concrete value of total is fixed at 7, so total < 100 genuinely holds.
+// Sign cannot establish it, and unlike the Interval sibling
+// (04-globals/known-imprecision/01-repeated_call_site_widening.vimp) the
+// reason is not widening: the sign lattice has no magnitude at all. total is
+// Positive here, exactly and without loss, and sign_lt has no
+// comparison-against-a-nonzero-constant case -- Positive < 100 is undecidable
+// in a lattice whose only facts are Neg/Zero/Pos. Adding contexts, a finer
+// solver, or no widening at all would not change this answer.
+//
+// Kept next to the PROVED cases so they are not mistaken for general-purpose
+// numeric precision.
+
+global total;
+void inc(n) {
+  total := total + n
+}
+void main() {
+  total := 0;
+  inc(3);
+  inc(4);
+  __voblint_check(total < 100) // UNKNOWN
+}

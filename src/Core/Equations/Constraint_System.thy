@@ -13,12 +13,12 @@ text \<open>
     - Per-domain transfer functions for each edge action
 
   this theory fixes the per-edge/per-domain transfer interface
-  (\<open>domain_transfer\<close>, \<open>apply_tf\<close>, \<open>glob_env\<close>) and its soundness contracts
-  (\<open>sound_transfer\<close>, \<open>sound_effectful_transfer\<close>) that every concrete
+  (\<open>domain_transfer\<close>, \<open>apply_tf\<close>) and its soundness contract
+  (\<open>sound_transfer\<close>) that every concrete
   equation-system generator is built from. The generators themselves --
   the side-effecting D/G equation system (\<open>DG_Framework.thy\<close>'s \<open>dg_gen\<close>)
   solved by the verified top-down solver -- live downstream, in
-  \<open>Solver/Context/DG\<close> and \<open>Solver/TD_Side\<close>.
+  \<open>Solver/Context/DG\<close>.
 
   All transfer functions are parameterised over the domain via a locale
   so the same interface works for Sign, Interval, etc.
@@ -64,7 +64,8 @@ record 'a domain_transfer =
   tf_return    :: "exp option => pname => ('a abs_state) => ('a abs_state)" ("return\<^sup>#")
   tf_enter     :: "vname list \<Rightarrow> exp list \<Rightarrow> ('a abs_state) \<Rightarrow> ('a abs_state)" ("enter\<^sup>#")
   tf_event     :: "analysis_event => ('a abs_state) => ('a abs_state)" ("event\<^sup>#")
-  tf_combine_env :: "('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
+  tf_caller_cont :: "call_info => ('a abs_state) => ('a abs_state)" ("caller'_cont\<^sup>#")
+  tf_combine_env :: "call_info => ('a abs_state) => ('a abs_state) => ('a abs_state)" ("combine'_env\<^sup>#")
 
 subsection \<open>Apply transfer function to one edge\<close>
 
@@ -412,6 +413,12 @@ definition combine_env_abs ::
 where
   "combine_env_abs gs sc se = (\<lambda>x. if gs x then se x else sc x)"
 
+lemma combine_env_abs_mono:
+  fixes sc1 sc2 se1 se2 :: "'a::order abs_state"
+  assumes "sc1 \<le> sc2" and "se1 \<le> se2"
+  shows "combine_env_abs gs sc1 se1 \<le> combine_env_abs gs sc2 se2"
+  using assms by (auto simp: combine_env_abs_def le_fun_def)
+
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
   a callee-exit store (sound for se) yields a store sound for \<open>combine_env_abs gs sc se\<close>.
@@ -592,6 +599,16 @@ fun combine_assign_abs ::
     "combine_assign_abs None _ \<sigma> = \<sigma>"
   | "combine_assign_abs (Some x) v \<sigma> = \<sigma>(x := v)"
 
+text \<open>The return-value write is a single-slot update, hence monotone in both the
+  written value and the state it writes into.  Any combine built over it inherits
+  monotonicity from this one fact.\<close>
+
+lemma combine_assign_abs_mono:
+  fixes s1 s2 :: "'a::order abs_state"
+  assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
+  shows "combine_assign\<^sup># dst v1 s1 \<le> combine_assign\<^sup># dst v2 s2"
+  using assms by (cases dst) (auto simp: le_fun_def)
+
 text \<open>
   Return combination joins caller locals with callee globals and then assigns the
   callee's @{const ret_var} to the optional destination.  The ordinary abstract
@@ -636,17 +653,73 @@ text \<open>
   \<open>combine\<close>, only the domain-supplied \<open>combine_env\<^sup>#\<close> followed by the generic
   \<open>combine_assign\<^sup>#\<close>.
 \<close>
+text \<open>
+  \<open>caller_cont\<^sup>#\<close> is logically an \<^emph>\<open>output of enter\<close>, not a step of the combine:
+  Goblint's \<open>Spec.enter\<close> returns \<open>(D.t * D.t) list\<close> and \<open>constraints.ml\<close> hands the first
+  component -- the caller continuation -- to \<open>combine_env\<close> as \<open>cd\<close>, while the second seeds
+  the callee entry.  \<open>tf_enter_pair\<close> below is that protocol, stated as one function
+  from the call-site state to the pair.  The combine operations accordingly take the
+  \<^emph>\<open>continuation\<close> as their caller operand, never the raw call-site state: nothing in
+  \<open>combine_env\<^sup>#\<close> or \<open>tf_combine_collect_abs\<close> reapplies \<open>caller_cont\<^sup>#\<close>.
+
+  Its contract is continuation-specific rather than a preservation law: \<open>caller_cont\<^sup># ci\<close>
+  over-approximates the pre-call concrete caller store, retaining only the information meant
+  to stay usable once the call returns, and may forget abstract facts a callee could
+  invalidate -- exactly Goblint's \<open>varEq\<close>, whose \<open>combine_env\<close> meets the callee exit with a
+  taint-filtered caller state.  Forgetting is sound because it moves up the abstract order,
+  where \<open>gamma\<close> only grows.  The obligation is stated against the same concrete store because
+  VIMP has no concrete caller-side transition at a call; a language that gained one would
+  generalize the obligation's concrete side, not this field's role.
+\<close>
+definition tf_enter_pair ::
+    "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<times> 'a abs_state" where
+  "tf_enter_pair tf ci \<sigma> =
+     (caller_cont\<^sup># tf ci \<sigma>, enter\<^sup># tf (ci_formals ci) (ci_args ci) \<sigma>)"
+
+lemma fst_tf_enter_pair [simp]: "fst (tf_enter_pair tf ci \<sigma>) = caller_cont\<^sup># tf ci \<sigma>"
+  by (simp add: tf_enter_pair_def)
+
+lemma snd_tf_enter_pair [simp]:
+  "snd (tf_enter_pair tf ci \<sigma>) = enter\<^sup># tf (ci_formals ci) (ci_args ci) \<sigma>"
+  by (simp add: tf_enter_pair_def)
+
+text \<open>The whole return operation: \<open>combine_env\<^sup>#\<close> on the continuation and the callee exit,
+  then the generic \<^const>\<open>combine_assign_abs\<close> writing the callee's @{const ret_var} into the
+  destination.  \<open>\<sigma>cont\<close> is \<^emph>\<open>already\<close> \<^const>\<open>tf_enter_pair\<close>'s first component.\<close>
 definition tf_combine_collect_abs ::
-    "'a domain_transfer \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine_assign\<^sup># dst (\<sigma>e ret_var) (tf_combine_env tf \<sigma>c \<sigma>e)"
+    "'a domain_transfer \<Rightarrow> call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e =
+     combine_assign\<^sup># (ci_dst ci) (\<sigma>e ret_var) (combine_env\<^sup># tf ci \<sigma>cont \<sigma>e)"
 
 text \<open>The fixed structural merge is the special case where \<open>tf_combine_env\<close> is
   \<^const>\<open>combine_env_abs\<close>: the general definition specializes to the old one by
   instantiation, rather than duplicating it.\<close>
 lemma tf_combine_collect_abs_combine_env_abs:
-  assumes "tf_combine_env tf = combine_env_abs gs"
-  shows "tf_combine_collect_abs tf dst \<sigma>c \<sigma>e = combine\<^sup># gs dst \<sigma>c \<sigma>e"
-  using assms unfolding tf_combine_collect_abs_def combine_collect_abs_def by simp
+  assumes "tf_combine_env tf = (\<lambda>_. combine_env_abs gs)"
+  shows "tf_combine_collect_abs tf ci = combine\<^sup># gs (ci_dst ci)"
+  unfolding tf_combine_collect_abs_def combine_collect_abs_def assms ..
+
+text \<open>Monotonicity of the analysis-supplied combine reduces to monotonicity of its
+  merge: the return-value write is \<^const>\<open>combine_assign_abs\<close>, monotone in both the
+  written value and the state it updates.  The caller operand here is already the
+  continuation, so no \<open>caller_cont\<^sup>#\<close> monotonicity enters: that obligation belongs to
+  whatever supplies the continuation.\<close>
+lemma tf_combine_collect_abs_mono:
+  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
+  assumes merge: "\<And>a1 a2 b1 b2 :: 'a abs_state.
+      a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> combine_env\<^sup># tf ci a1 b1 \<le> combine_env\<^sup># tf ci a2 b2"
+    and c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
+  shows "tf_combine_collect_abs tf ci \<sigma>c1 \<sigma>e1 \<le> tf_combine_collect_abs tf ci \<sigma>c2 \<sigma>e2"
+proof (cases "ci_dst ci")
+  case None
+  then show ?thesis
+    using merge[OF c e] by (simp add: tf_combine_collect_abs_def)
+next
+  case (Some x)
+  then show ?thesis
+    using merge[OF c e] e
+    by (simp add: tf_combine_collect_abs_def le_fun_def)
+qed
 
 text \<open>
   Soundness of the abstract combine including result publication.  A pure
@@ -759,9 +832,11 @@ locale sound_transfer_for =
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_event_for[intro]:
     "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+  assumes tf_sound_caller_cont_for[intro]:
+    "\<forall>ci \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
   assumes tf_sound_combine_env_for[intro]:
-    "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-       combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+    "\<forall>ci \<sigma>cont \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>cont\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+       combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
 
 context sound_transfer_for
 begin
@@ -802,10 +877,58 @@ lemma tf_sound_event_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
   using tf_sound_event_for by blast
 
+lemma tf_sound_caller_cont_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+  using tf_sound_caller_cont_for by blast
+
 lemma tf_sound_combine_env_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
-     combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+     combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
   using tf_sound_combine_env_for by blast
+
+text \<open>The two halves composed at a call site: the caller's own state goes through
+  \<open>caller_cont\<^sup>#\<close> first, exactly as \<^const>\<open>tf_enter_pair\<close> produces it, and the merge is then
+  sound at that continuation.  This is the form a combine tree needs, since the tree
+  reconstructs the raw call-site state rather than a stored continuation.\<close>
+lemma tf_sound_combine_env_at_call_forD[intro]:
+  "s \<in> \<lbrakk>\<sigma>c\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+     combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
+  by (rule tf_sound_combine_env_forD[OF tf_sound_caller_cont_forD])
+
+text \<open>Soundness of the analysis-supplied whole combine.  The merge obligation is the
+  locale's own \<open>tf_sound_combine_env_for\<close>; the destination slot is sound because the
+  callee's @{const ret_var} slot is.  No extra assumption on the analysis is needed:
+  a sound \<open>combine_env\<^sup>#\<close> already makes \<^const>\<open>tf_combine_collect_abs\<close> sound.\<close>
+lemma tf_sound_combine_collect_forD[intro]:
+  assumes sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_collect gs (ci_dst ci) s t
+           \<in> \<lbrakk>tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e\<rbrakk>"
+proof -
+  have base: "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
+    by (rule tf_sound_combine_env_forD[OF sc se])
+  have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
+    using se unfolding gamma_state_def by auto
+  show ?thesis
+  proof (cases "ci_dst ci")
+    case None
+    then show ?thesis
+      using base by (simp add: combine_collect_def tf_combine_collect_abs_def)
+  next
+    case (Some x)
+    then show ?thesis
+      using base ret
+      unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
+      by auto
+  qed
+qed
+
+text \<open>The same statement at a call site, where the caller operand is the raw call-site
+  state and the continuation is produced on the spot by \<open>caller_cont\<^sup>#\<close>.\<close>
+lemma tf_sound_combine_collect_at_call_forD[intro]:
+  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_collect gs (ci_dst ci) s t
+           \<in> \<lbrakk>tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
+  by (rule tf_sound_combine_collect_forD[OF tf_sound_caller_cont_forD[OF sc] se])
 
 end
 
@@ -835,8 +958,11 @@ lemma sound_transferI_for:
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     and event[intro]:
     "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
+    and caller_cont[intro]:
+    "\<And>ci \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
     and combine[intro]:
-    "tf_combine_env tf = combine_env_abs gs"
+    "\<And>ci \<sigma>cont \<sigma>e s t. s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
+       combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
   shows "sound_transfer_for gs tf"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
@@ -862,392 +988,30 @@ proof unfold_locales
     using enter by blast
   show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
     using event by blast
-  show "\<forall>\<sigma>c \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>c\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
-      combine_env gs s t \<in> \<lbrakk>tf_combine_env tf \<sigma>c \<sigma>e\<rbrakk>"
-    unfolding combine using combine_env_sound by blast
+  show "\<forall>ci \<sigma> . \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+    using caller_cont by blast
+  show "\<forall>ci \<sigma>cont \<sigma>e. \<forall>s \<in> \<lbrakk>\<sigma>cont\<rbrakk>. \<forall>t \<in> \<lbrakk>\<sigma>e\<rbrakk>.
+      combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
+    using combine by blast
 qed
 
+text \<open>The structural instance discharges both call-boundary obligations of
+  @{thm [source] sound_transferI_for} outright: an identity continuation keeps the caller
+  state, and \<^const>\<open>combine_env_abs\<close> is sound by @{thm [source] combine_env_sound}.\<close>
+lemma sound_transfer_caller_cont_idI:
+  fixes \<sigma> :: "'a::sound_domain abs_state"
+  assumes eq: "tf_caller_cont tf = (\<lambda>_ \<sigma>. \<sigma>)" and sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  shows "s \<in> \<lbrakk>caller_cont\<^sup># tf ci \<sigma>\<rbrakk>"
+  unfolding eq using sv by simp
 
-subsection \<open>Effectful transfer function record\<close>
+lemma sound_transfer_combine_env_absI:
+  fixes \<sigma>cont \<sigma>e :: "'a::sound_domain abs_state"
+  assumes eq: "tf_combine_env tf = (\<lambda>_. combine_env_abs gs)"
+    and sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
+  shows "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
+  unfolding eq by (rule combine_env_sound[OF sc se])
 
-text \<open>
-  An effectful_domain_transfer bundles per-action strategy tree producers.
-  Each field takes the edge-action parameters plus the source program point u and
-  returns a strategy tree that may QueryL/QueryG arbitrary unknowns, emit Side
-  contributions to named globals, and ends with Answer carrying the local result.
 
-  apply_etf dispatches on edge_action to the matching field.
-
-  Unit-global effectful tree constructors live in TD_Side_CFG where
-  restrict_local / restrict_global are defined.
-\<close>
-
-type_synonym ('g, 'd) edge_tf_tree =
-  "pp \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
-
-text \<open>
-  A combine (procedure return) tree producer takes the caller program point and
-  the callee-exit program point and builds a tree that queries both their local
-  unknowns (and any globals), emits Side contributions, and ends with the
-  combined local result.  Unlike an edge, it has two local inputs.  Mirroring
-  Goblint's \<open>Spec.combine_env\<close>/\<open>Spec.combine_assign\<close> split, this record exposes
-  the destination-free environment merge as \<open>etf_combine_env\<close> and the
-  destination-aware whole operation as \<open>etf_combine_collect\<close>; there is no
-  primitive one-phase \<open>etf_combine\<close>.
-\<close>
-type_synonym ('g, 'd) combine_tf_tree =
-  "pp \<Rightarrow> pp \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
-
-record ('g, 'd) effectful_domain_transfer =
-  etf_skip       :: "('g, 'd) edge_tf_tree"
-  etf_assign     :: "vname \<Rightarrow> exp \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_special    :: "special_call \<Rightarrow> vname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_branch     :: "exp \<Rightarrow> bool \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_body       :: "pname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_return     :: "exp option \<Rightarrow> pname \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_event      :: "analysis_event \<Rightarrow> ('g, 'd) edge_tf_tree"
-  etf_combine_env     :: "('g, 'd) combine_tf_tree"
-  etf_combine_collect :: "vname option \<Rightarrow> ('g, 'd) combine_tf_tree"
-
-text \<open>
-  \<open>EA_Check\<close> routes through \<^const>\<open>etf_event\<close> here, matching \<^const>\<open>apply_tf\<close>'s
-  own \<open>event\<^sup>#\<close> dispatch: a family built over this record supplies the concrete
-  tree (with whatever \<^typ>\<open>vname \<Rightarrow> bool\<close> classifier it closed over when it was
-  built), the same way it already supplies \<^const>\<open>etf_skip\<close>/\<^const>\<open>etf_body\<close>.
-\<close>
-fun apply_etf ::
-  "('g, 'd) effectful_domain_transfer \<Rightarrow> edge_action \<Rightarrow> pp
-   \<Rightarrow> (pp, 'g, 'd abs_state lifted) strategy_tree"
-where
-  "apply_etf etf EA_Nop           u = etf_skip etf u"
-| "apply_etf etf (EA_Assign x a)  u = etf_assign etf x a u"
-| "apply_etf etf (EA_Special sc x) u = etf_special etf sc x u"
-| "apply_etf etf (EA_Assume b)    u = etf_branch etf b True u"
-| "apply_etf etf (EA_AssumeNot b) u = etf_branch etf b False u"
-| "apply_etf etf (EA_Ret e p)     u = etf_return etf e p u"
-| "apply_etf etf (EA_Check c)     u = etf_event etf (Check_Event c) u"
-
-fun local_edge_action :: "(vname => bool) => edge_action \<Rightarrow> bool" where
-  "local_edge_action gs EA_Nop = True"
-| "local_edge_action gs (EA_Assign x e) =
-    ((~ gs x) & (~ exp_mentions_where gs e))"
-| "local_edge_action gs (EA_Special sc x) = ((~ gs x) & (~ special_mentions_global gs sc))"
-| "local_edge_action gs (EA_Assume b) = (~ exp_mentions_where gs b)"
-| "local_edge_action gs (EA_AssumeNot b) = (~ exp_mentions_where gs b)"
-| "local_edge_action gs (EA_Ret e p) =
-    (case e of None \<Rightarrow> True
-     | Some a \<Rightarrow> ((~ gs ret_var) & (~ exp_mentions_where gs a)))"
-| "local_edge_action gs (EA_Check c) = True"
-
-text \<open>
-  @{const local_edge_action}: the edge neither reads nor writes globals (enter and
-  combine are separate).  A global assignment such as
-  @{term \<open>EA_Assign (STR ''Gx'') e\<close>} is not local even when @{term e} mentions only
-  locals.
-\<close>
-
-fun is_branch_action :: "edge_action \<Rightarrow> bool" where
-  "is_branch_action (EA_Assume _) = True"
-| "is_branch_action (EA_AssumeNot _) = True"
-| "is_branch_action _ = False"
-
-text \<open>
-  A local, but potentially-dead, branch guard is not a \<open>local_edge_invariant\<close>
-  instance: a domain's plain \<^const>\<open>tf_branch\<close> field may still collapse to
-  whole-state \<open>bot\<close> on a definite contradiction (M1's \<open>branch\<close> is only a
-  compatibility projection of \<open>branch_lifted\<close>, not itself frame-preserving), so
-  the ordinary local/global frame property genuinely fails for it even when the
-  guard mentions no global. \<^const>\<open>is_branch_action\<close> lets the generic effectful
-  soundness obligation (\<open>sound_effectful_transfer_mixed_of_transfer\<close>) exclude
-  \<open>EA_Assume\<close>/\<open>EA_AssumeNot\<close> from its plain-invariant premise, since those two
-  actions are covered separately by the lifted local-edge invariant on the
-  domain's own \<open>branch_lifted\<close> instead.
-\<close>
-
-subsection \<open>Reassembled full result and effectful soundness\<close>
-
-text \<open>
-  An effectful edge tree splits its outcome between a local Answer (the value of
-  the source unknown after the edge) and Side contributions to the named globals.
-  etf_full reassembles the complete abstract post-state: the local result joined
-  with the contribution to the global unknowns. For unit-global records built
-  from apply_tf, this recovers the domain transfer's full abstract post-state on
-  the combined input.
-
-  Stating soundness against etf_full -- rather than against the local Answer
-  alone -- is essential: the local restriction sends globals to bot, and
-  gamma_state of a bot global is empty (gamma_bot), so the local Answer in
-  isolation never over-approximates a concrete post-state that touches globals.
-  The contributions must be put back together first.
-\<close>
-
-text \<open>
-  all_sides totals every Side contribution of a tree, regardless of the named
-  global it targets.  Unlike sides_of_rhs (which keeps a per-name map), this is a
-  single finite join over the tree's Side nodes -- the data needed to reassemble
-  the full post-state across arbitrarily many named globals without an infinite
-  Sup.  At 'g = unit every Side targets (), so all_sides coincides with
-  sides_of_rhs _ (Inr ()) (all_sides_eq_sides_Inr_unit below).
-\<close>
-
-primrec all_sides ::
-  "(pp, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
-where
-  "all_sides (Answer d) \<sigma> = \<bottom>"
-| "all_sides (QueryL y f) \<sigma> = all_sides (f (\<sigma> (Inl y))) \<sigma>"
-| "all_sides (QueryG y f) \<sigma> = all_sides (f (\<sigma> (Inr y))) \<sigma>"
-| "all_sides (Side y d t) \<sigma> = d \<squnion> all_sides t \<sigma>"
-
-lemma all_sides_eq_sides_Inr_unit:
-  fixes t :: "(pp, unit, 'd::bounded_semilattice_sup_bot) strategy_tree"
-  shows "all_sides t \<sigma> = sides_of_rhs t \<sigma> (Inr ())"
-  by (induction t) (auto simp: Let_def sup_commute)
-
-definition etf_full ::
-  "(pp, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
-where
-  "etf_full t \<sigma> = traverse_rhs t \<sigma> \<squnion> all_sides t \<sigma>"
-
-subsection \<open>The named-global environment\<close>
-
-text \<open>
-  glob_env joins all named-global unknowns of sigma into a single abstract
-  state: the full flow-insensitive global value seen at any point.  With a
-  finite global-name type the join is a finite fold (abs_join_set over the image
-  of UNIV), so it is well defined in a non-complete bounded_semilattice_sup_bot.
-  At 'g = unit it is the single pot sigma (Inr ()) (glob_env_unit), so it
-  generalises the unit pipeline's read of the global unknown.
-
-  Generic in the folded payload (\<open>'d::bounded_semilattice_sup_bot\<close>): several
-  global-slot contributions are always same-role accumulation, joined with
-  ordinary \<open>\<squnion>\<close> whether the payload is a raw \<open>abs_state\<close> or an
-  \<open>abs_state lifted\<close> reconstruction (AD-52) -- \<open>Bot\<close> here means only "no
-  contribution published yet" and is \<open>\<squnion>\<close>'s identity, never a control-flow claim.
-\<close>
-
-definition glob_env ::
-  "(pp + 'g::finite \<Rightarrow> 'd::bounded_semilattice_sup_bot) \<Rightarrow> 'd"
-where
-  "glob_env \<sigma> = abs_join_set (\<squnion>) \<bottom> ((\<lambda>g. \<sigma> (Inr g)) ` UNIV)"
-
-lemma glob_env_upper: "\<sigma> (Inr g) \<le> glob_env \<sigma>"
-  unfolding glob_env_def abs_join_set_def
-  by (rule mem_image_le_fold[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2]) blast
-
-lemma glob_env_unit:
-  fixes \<sigma> :: "pp + unit \<Rightarrow> 'd::bounded_semilattice_sup_bot"
-  shows "glob_env \<sigma> = \<sigma> (Inr ())"
-proof (rule order_antisym)
-  show "glob_env \<sigma> \<le> \<sigma> (Inr ())"
-    unfolding glob_env_def by (rule abs_join_set_le) auto
-  show "\<sigma> (Inr ()) \<le> glob_env \<sigma>" by (rule glob_env_upper)
-qed
-
-lemma glob_env_mono:
-  assumes "\<sigma>1 \<le> \<sigma>2" shows "glob_env \<sigma>1 \<le> glob_env \<sigma>2"
-proof -
-  have le: "\<And>p. \<sigma>1 (Inr p) \<le> \<sigma>2 (Inr p)" by (rule le_funD[OF assms])
-  show ?thesis
-    unfolding glob_env_def abs_join_set_def
-    by (rule fold_join_image_mono[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2
-          sup_least sup_mono le])
-qed
-
-text \<open>
-  @{const glob_env} reads only named-global slots.  A pointwise bound on those
-  components therefore lifts every per-name side bound to the joined global
-  environment.
-\<close>
-lemma glob_env_mono_Inr:
-  assumes "\<And>p. \<sigma>1 (Inr p) \<le> \<sigma>2 (Inr p)"
-  shows "glob_env \<sigma>1 \<le> glob_env \<sigma>2"
-  unfolding glob_env_def abs_join_set_def
-  by (rule fold_join_image_mono[OF finite_UNIV comp_fun_commute_sup sup_ge1 sup_ge2
-        sup_least sup_mono assms])
-
-text \<open>
-  Collecting soundness for local-only trees: @{const etf_full} carries locals;
-  globals are restored by combining in @{const glob_env}. Unlike @{const glob_env}
-  itself, this combination is cross-role (a local result against the accumulated
-  globals), so it is parametric in the combinator rather than hardwired to
-  \<open>\<squnion>\<close>: the raw \<open>abs_state\<close> pipeline instantiates it at ordinary \<open>\<squnion>\<close>
-  (\<open>etf_collecting_full\<close> below, unchanged), while the lifted
-  \<open>abs_state lifted\<close> pipeline instantiates it at
-  \<^const>\<open>assemble_local_global\<close> (\<open>etf_collecting_full_lift\<close>), so that a
-  \<open>Bot\<close> local result is never resurrected by a live \<open>glob_env\<close> contribution --
-  exactly the resurrection AD-52 identifies in the raw split representation.
-\<close>
-
-definition etf_collecting_full_with ::
-  "('d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd)
-   \<Rightarrow> (pp, 'g::finite, 'd) strategy_tree \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> 'd"
-where
-  "etf_collecting_full_with assemble t \<sigma> = assemble (etf_full t \<sigma>) (glob_env \<sigma>)"
-
-definition etf_collecting_full ::
-  "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state) \<Rightarrow> 'a abs_state"
-where
-  "etf_collecting_full = etf_collecting_full_with (\<squnion>)"
-
-definition etf_collecting_full_lift ::
-  "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree
-   \<Rightarrow> (pp + 'g \<Rightarrow> 'a abs_state lifted) \<Rightarrow> 'a abs_state lifted"
-where
-  "etf_collecting_full_lift = etf_collecting_full_with assemble_local_global"
-
-lemma etf_full_le_etf_collecting_full_with:
-  fixes assemble :: "'d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd"
-  assumes "\<And>l g. l \<le> assemble l g"
-  shows "etf_full t \<sigma> \<le> etf_collecting_full_with assemble t \<sigma>"
-  unfolding etf_collecting_full_with_def using assms .
-
-lemma etf_full_le_etf_collecting_full:
-  "etf_full t \<sigma> \<le> etf_collecting_full t \<sigma>"
-  unfolding etf_collecting_full_def
-  by (rule etf_full_le_etf_collecting_full_with) (rule sup_ge1)
-
-lemma etf_full_le_etf_collecting_full_lift:
-  fixes t :: "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree"
-  shows "etf_full t \<sigma> \<le> etf_collecting_full_lift t \<sigma>"
-  unfolding etf_collecting_full_lift_def
-  by (rule etf_full_le_etf_collecting_full_with) (rule assemble_local_global_ge_local)
-
-lemma in_gamma_etf_collecting_full:
-  "s \<in> \<lbrakk>etf_full t \<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>etf_collecting_full t \<sigma>\<rbrakk>"
-  using gamma_state_mono[OF etf_full_le_etf_collecting_full] by blast
-
-lemma in_gamma_etf_collecting_full_lift:
-  fixes t :: "(pp, 'g::finite, 'a::sound_domain abs_state lifted) strategy_tree"
-  shows "s \<in> gamma_state_lift (etf_full t \<sigma>) \<Longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift t \<sigma>)"
-  using gamma_lift_mono[OF gamma_state_mono etf_full_le_etf_collecting_full_lift] by fastforce
-
-text \<open>
-  A tree's own local Answer and its own Side contribution can, for an
-  arbitrary \<^typ>\<open>(pp, 'g, 'd) strategy_tree\<close>, disagree on reachability: a
-  \<open>bot\<close> local Answer says ``this edge is dead'', but nothing in the
-  strategy_tree type itself forces the Side write emitted by the same tree to
-  also be \<open>bot\<close>. \<open>reachability_coherent_tree\<close> names exactly the missing
-  constraint -- the two must agree -- so that \<^const>\<open>etf_full\<close>'s plain-sup
-  combination cannot resurrect a dead local Answer through a live Side value.
-  \<open>unit_edge_tree\<close>, \<open>local_edge_tree\<close>, and \<open>unit_combine_tree\<close> each discharge
-  it because both halves are computed from one witness-checked reconstruction.
-\<close>
-definition reachability_coherent_tree ::
-  "(pp, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree \<Rightarrow> (pp + 'g \<Rightarrow> 'd) \<Rightarrow> bool"
-where
-  "reachability_coherent_tree t \<sigma> \<longleftrightarrow> (traverse_rhs t \<sigma> = bot \<longrightarrow> all_sides t \<sigma> = bot)"
-
-text \<open>
-  The algebraic kernel every \<open>_combined_le_eff\<close>-style bound reduces to:
-  separate bounds on a tree's local Answer and its Side contribution recombine
-  through \<^const>\<open>assemble_local_global\<close> exactly when the tree is
-  reachability-coherent. Without coherence a \<open>bot\<close> local bound \<open>l\<close> forces
-  \<^term>\<open>traverse_rhs t \<sigma> = bot\<close> but not \<^term>\<open>all_sides t \<sigma> = bot\<close>, and
-  \<^term>\<open>assemble_local_global bot g = bot\<close> cannot dominate a live \<open>all_sides\<close>
-  contribution the way plain \<open>\<squnion>\<close> would -- exactly AD-52's resurrection, one
-  layer up.
-\<close>
-lemma etf_full_le_assemble_local_global:
-  fixes t :: "(pp, 'g, 'a::sound_domain abs_state lifted) strategy_tree"
-    and \<sigma> :: "pp + 'g \<Rightarrow> 'a abs_state lifted"
-  assumes loc: "traverse_rhs t \<sigma> \<le> l"
-    and glob: "all_sides t \<sigma> \<le> g"
-    and coh: "reachability_coherent_tree t \<sigma>"
-  shows "etf_full t \<sigma> \<le> assemble_local_global l g"
-proof (cases "traverse_rhs t \<sigma>")
-  case Bot
-  then have "all_sides t \<sigma> = Bot"
-    using coh unfolding reachability_coherent_tree_def by simp
-  with Bot show ?thesis unfolding etf_full_def by simp
-next
-  case (Lifted la')
-  note tr_eq = this
-  then obtain la where l_eq: "l = Lifted la" and la': "la' \<le> la"
-    using loc by (cases l) auto
-  show ?thesis
-  proof (cases "all_sides t \<sigma>")
-    case Bot
-    have "Lifted la' \<le> Lifted la" using la' by simp
-    also have "\<dots> \<le> assemble_local_global (Lifted la) g" by simp
-    finally show ?thesis unfolding etf_full_def tr_eq Bot l_eq by simp
-  next
-    case (Lifted lg')
-    then obtain lg where g_eq: "g = Lifted lg" and lg': "lg' \<le> lg"
-      using glob by (cases g) auto
-    show ?thesis
-      unfolding etf_full_def tr_eq Lifted l_eq g_eq
-      using sup_mono[OF la' lg'] by simp
-  qed
-qed
-
-text \<open>
-  Executable form: when the global-name type additionally enumerates (Enum),
-  fold over the enumeration's image rather than over UNIV.  Used by the unit
-  pipeline's value-evaluation (unit is enum); the abstract development keeps the
-  UNIV definition.
-\<close>
-
-lemma glob_env_code [code]:
-  "glob_env (\<sigma> :: pp + 'g::enum \<Rightarrow> 'a::bounded_semilattice_sup_bot abs_state)
-   = List.fold (\<squnion>) (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum) \<bottom>"
-proof -
-  interpret ci: comp_fun_idem "(\<squnion>) :: 'a abs_state \<Rightarrow> _ \<Rightarrow> _"
-    by unfold_locales (auto simp: sup_left_commute)
-  have "glob_env \<sigma> = Finite_Set.fold (\<squnion>) \<bottom> (set (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum))"
-    unfolding glob_env_def abs_join_set_def by (simp add: UNIV_enum)
-  also have "\<dots> = List.fold (\<squnion>) (map (\<lambda>g. \<sigma> (Inr g)) Enum.enum) \<bottom>"
-    by (rule ci.fold_set_fold)
-  finally show ?thesis .
-qed
-
-text \<open>
-  @{thm glob_env_code} supplies the executable equation by folding over the finite
-  enumeration.  The set-based definition remains the mathematical interface.
-\<close>
-declare glob_env_def [code del]
-
-text \<open>
-  Bridge between the two side aggregations: the total of a tree's Side
-  contributions is below the join of the per-name side map.  This routes the
-  full-state reassembly (all_sides, in etf_full) through the per-name post-fixpoint
-  bounds (sides_of_rhs (Inr g) <= sigma (Inr g)) used by the solver: composed with
-  glob_env_mono it gives all_sides t sigma <= glob_env sigma for any post-solution.
-\<close>
-
-lemma all_sides_le_glob_env_sides:
-  fixes t :: "(pp, 'g::finite, 'd::bounded_semilattice_sup_bot) strategy_tree"
-  shows "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
-proof (induction t)
-  case (Answer d) show ?case by (simp add: le_fun_def)
-next
-  case (QueryL y f)
-  have "all_sides (f (\<sigma> (Inl y))) \<sigma> \<le> glob_env (sides_of_rhs (f (\<sigma> (Inl y))) \<sigma>)"
-    using QueryL.IH by blast
-  then show ?case by simp
-next
-  case (QueryG y f)
-  have "all_sides (f (\<sigma> (Inr y))) \<sigma> \<le> glob_env (sides_of_rhs (f (\<sigma> (Inr y))) \<sigma>)"
-    using QueryG.IH by blast
-  then show ?case by simp
-next
-  case (Side y d t)
-  have mono: "sides_of_rhs t \<sigma> \<le> sides_of_rhs (Side y d t) \<sigma>"
-    by (auto simp: le_fun_def Let_def)
-  have d_le: "d \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)"
-  proof -
-    have "d \<le> sides_of_rhs (Side y d t) \<sigma> (Inr y)" by (simp add: Let_def)
-    also have "\<dots> \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)" by (rule glob_env_upper)
-    finally show ?thesis .
-  qed
-  have rest_le: "all_sides t \<sigma> \<le> glob_env (sides_of_rhs (Side y d t) \<sigma>)"
-    using Side.IH glob_env_mono[OF mono] by (rule order_trans)
-  from d_le rest_le show ?case
-    unfolding all_sides.simps(4) by (rule sup_least)
-qed
 
 subsection \<open>Side-effecting constraint for a strategy tree\<close>
 
@@ -1292,213 +1056,6 @@ lemma part_post_solution_iff_se_constraint_holds:
   "part_post_solution T x \<sigma> vars \<longleftrightarrow>
      x \<in> vars \<and> (\<forall>u \<in> vars. dep\<^sub>L T \<sigma> u \<subseteq> vars \<and> se_constraint_holds (T u) \<sigma> u)"
   unfolding se_constraint_holds_def by auto
-
-text \<open>
-  Once the side map is subsumed, the reassembled post-state @{const etf_full} is
-  bounded by the local unknown joined with @{const glob_env}.  The latter collects
-  the flow-insensitive global contributions visible to the traversal.
-\<close>
-lemma se_constraint_holds_imp_etf_full_le_env:
-  fixes t :: "(pp, 'g::finite, 'a::bounded_semilattice_sup_bot abs_state) strategy_tree"
-  assumes "se_constraint_holds t \<sigma> u"
-  shows "etf_full t \<sigma> \<le> \<sigma> (Inl u) \<squnion> glob_env \<sigma>"
-proof -
-  have loc: "traverse_rhs t \<sigma> \<le> \<sigma> (Inl u)" using assms by (rule se_constraint_holds_local)
-  have sid: "sides_of_rhs t \<sigma> \<le> \<sigma>" using assms by (rule se_constraint_holds_sides)
-  have "all_sides t \<sigma> \<le> glob_env (sides_of_rhs t \<sigma>)"
-    by (rule all_sides_le_glob_env_sides)
-  also have "\<dots> \<le> glob_env \<sigma>" by (rule glob_env_mono[OF sid])
-  finally have g: "all_sides t \<sigma> \<le> glob_env \<sigma>" .
-  show ?thesis
-    unfolding etf_full_def by (rule sup_mono[OF loc g])
-qed
-
-text \<open>
-  Lifted: a \<open>Bot\<close> global slot trivially satisfies "carries bot in its local
-  components" (there is no reconstructed state to check), so only \<open>Lifted \<tau>\<close>
-  constrains \<open>\<tau>\<close> pointwise as before.
-\<close>
-
-definition inr_slot_locals_bot ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted) \<Rightarrow> bool"
-where
-  "inr_slot_locals_bot gs \<sigma> =
-     (\<forall>g. \<forall>x. \<not> gs x \<longrightarrow> (case \<sigma> (Inr g) of Bot \<Rightarrow> True | Lifted \<tau> \<Rightarrow> \<tau> x = bot))"
-
-text \<open>
-  Dual of @{const inr_slot_locals_bot}: every local program-point unknown carries
-  bot in its global components.  Holds for the effectful generator's solutions
-  because each edge tree ends in a local-restricted Answer, so the local
-  unknowns never accumulate globals.  The keyed enter bound uses it to discard the
-  caller's (bot) global part of a callee-entry frame.
-\<close>
-
-definition inl_slot_globals_bot ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted) \<Rightarrow> bool"
-where
-  "inl_slot_globals_bot gs \<sigma> =
-     (\<forall>v. \<forall>x. gs x \<longrightarrow> (case \<sigma> (Inl v) of Bot \<Rightarrow> True | Lifted \<tau> \<Rightarrow> \<tau> x = bot))"
-
-text \<open>
-  The snapshot relaxation of @{const inl_slot_globals_bot}: a local unknown may
-  carry globals, but each is bounded by the global environment.  An analysis
-  whose local Answers keep written globals @{emph \<open>and\<close>} publish the same values
-  to the global slot satisfies it at any solution: every local-slot global sits
-  below @{const glob_env}.  This is exactly what the keyed enter bound needs:
-  the caller's global part of a callee-entry frame is already covered by the
-  globals.
-\<close>
-definition inl_glob_le_glob_env ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (pp + 'g::finite \<Rightarrow> 'a::sound_domain abs_state lifted) \<Rightarrow> bool"
-where
-  "inl_glob_le_glob_env gs \<sigma> =
-     (\<forall>v. \<forall>x. gs x \<longrightarrow> (case \<sigma> (Inl v) of Bot \<Rightarrow> True
-                        | Lifted \<tau> \<Rightarrow> \<tau> x \<le> (case glob_env \<sigma> of Bot \<Rightarrow> bot | Lifted g \<Rightarrow> g x)))"
-
-lemma inl_slot_globals_bot_le_glob_env:
-  "inl_slot_globals_bot gs \<sigma> \<Longrightarrow> inl_glob_le_glob_env gs \<sigma>"
-  by (fastforce simp: inl_slot_globals_bot_def inl_glob_le_glob_env_def split: lifted.splits)
-
-text \<open>
-  \<open>inr_slot_locals_bot gs \<sigma> \<longrightarrow> (\<forall>s \<in> \<lbrakk>\<sigma> (Inl u) \<squnion> glob_env \<sigma>\<rbrakk>. ...)\<close> used to state
-  the reconstructed edge input by ordinary \<open>\<squnion>\<close>. With the solver payload lifted
-  (AD-52), that reconstruction is cross-role -- a queried local unknown against
-  the accumulated global -- so it goes through \<^const>\<open>assemble_local_global\<close>
-  instead: a \<open>Bot\<close> local unknown must dominate a live global rather than being
-  resurrected by it. \<^const>\<open>gamma_state_lift\<close> then makes the \<open>Bot\<close> case discharge
-  itself, since \<open>gamma_state_lift Bot = {}\<close> makes the membership premise
-  vacuously false; no explicit \<open>Bot\<close>/\<open>Lifted\<close> case split is needed at any
-  assumption below.
-\<close>
-
-locale sound_effectful_transfer =
-  fixes gs :: "vname => bool"
-    and etf :: "('g::finite, 'a::sound_domain) effectful_domain_transfer"
-  assumes etf_sound_skip[intro]:
-    "\<forall>u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_skip etf u) \<sigma>))"
-  assumes etf_sound_assign[intro]:
-    "\<forall>x e u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         s(x := aval e s) \<in> gamma_state_lift (etf_collecting_full_lift (etf_assign etf x e u) \<sigma>))"
-  assumes etf_sound_special[intro]:
-    "\<forall>sc x u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). \<forall>v.
-         special_result sc s v \<longrightarrow>
-         s(x := v) \<in> gamma_state_lift (etf_collecting_full_lift (etf_special etf sc x u) \<sigma>))"
-  assumes etf_sound_branch[intro]:
-    "\<forall>(b::exp) (pol::bool) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)). truthy (aval b s) = pol
-       \<longrightarrow> s \<in> gamma_state_lift (etf_collecting_full_lift (etf_branch etf b pol u) \<sigma>))"
-  assumes etf_sound_body[intro]:
-    "\<forall>p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_body etf p u) \<sigma>))"
-  assumes etf_sound_return[intro]:
-    "\<forall>(e::exp option) p u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
-           \<in> gamma_state_lift (etf_collecting_full_lift (etf_return etf e p u) \<sigma>))"
-  assumes etf_sound_enter[intro]:
-    "\<forall>xs (es::exp list) u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
-           \<in> gamma_state_lift (etf_collecting_full_lift (etf_enter etf xs es u) \<sigma>))"
-  assumes etf_sound_event[intro]:
-    "\<forall>ev u \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl u)) (glob_env \<sigma>)).
-         s \<in> gamma_state_lift (etf_collecting_full_lift (etf_event etf ev u) \<sigma>))"
-  assumes etf_sound_combine_env[intro]:
-    "\<forall>cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
-       \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
-         combine_env gs s t \<in> gamma_state_lift (etf_full (etf_combine_env etf cc ex) \<sigma>))"
-  assumes etf_sound_combine_collect[intro]:
-    "\<forall>dst cc ex \<sigma>. inr_slot_locals_bot gs \<sigma> \<longrightarrow>
-       (\<forall>s \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl cc)) (glob_env \<sigma>)).
-       \<forall>t \<in> gamma_state_lift (assemble_local_global (\<sigma> (Inl ex)) (glob_env \<sigma>)).
-         combine_collect gs dst s t \<in> gamma_state_lift (etf_full (etf_combine_collect etf dst cc ex) \<sigma>))"
-
-text \<open>
-  The keyed generator filters call-enter edges out of the intra predecessor fold
-  and instead seeds each callee-entry frame with a fixed fresh local frame.  For
-  that to stay sound the enter transfer must be bounded above by that fresh frame
-  joined with the global environment: entering a procedure resets locals into the
-  fresh frame and preserves only globals.  This is the upper-bound companion of
-  @{const sound_effectful_transfer}'s lower-bound @{text etf_sound_enter}.
-\<close>
-
-text \<open>
-  Formal parameters name locals.  \<^const>\<open>bind_formals_abs\<close> writes each formal
-  into the callee's fresh frame, so a formal naming a global would write a
-  caller-local value into a global slot and break the frame bound.  VIMP scoping
-  supplies this; the CFG well-formedness discharges it at each enter edge.
-\<close>
-
-definition local_formals :: "(vname => bool) => vname list \<Rightarrow> bool" where
-  "local_formals gs xs \<longleftrightarrow> (\<forall>x \<in> set xs. \<not> gs x)"
-
-lemma local_formals_Nil [simp]: "local_formals gs []"
-  unfolding local_formals_def by simp
-
-text \<open>Concrete companion of \<open>bind_formals_abs_global\<close>: binding local
-  formals leaves the global slots of the store untouched.\<close>
-lemma bind_formals_global:
-  assumes lf: "local_formals gs xs" and g: "gs x"
-  shows "bind_formals xs vs s x = s x"
-proof -
-  have "x \<notin> set xs" using lf g by (auto simp: local_formals_def)
-  thus ?thesis by (rule bind_formals_nonformal)
-qed
-lemma bind_formals_abs_global:
-  assumes "local_formals gs xs" and "gs x"
-  shows "bind_formals_abs xs avs \<sigma> x = \<sigma> x"
-  using assms unfolding local_formals_def bind_formals_abs_def
-proof (induction xs arbitrary: avs \<sigma>)
-  case Nil thus ?case by simp
-next
-  case (Cons y ys)
-  show ?case
-  proof (cases avs)
-    case Nil thus ?thesis by simp
-  next
-    case (Cons a rest)
-    have "x \<noteq> y" using Cons.prems(1) Cons.prems(2) by auto
-    then show ?thesis
-      using Cons.IH[of rest "\<sigma>(y := a)"] Cons.prems local.Cons
-      by simp
-  qed
-qed
-
-locale sound_effectful_transfer_framed = sound_effectful_transfer +
-  fixes fresh_frame :: "'a::sound_domain abs_state"
-  assumes etf_enter_framed_le[intro]:
-    "\<forall>xs (es::exp list) u \<sigma>.
-       local_formals gs xs \<longrightarrow>
-       inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_slot_globals_bot gs \<sigma> \<longrightarrow>
-       etf_full (etf_enter etf xs es u) \<sigma> \<le> assemble_local_global (Lifted fresh_frame) (glob_env \<sigma>)"
-
-text \<open>
-  The snapshot-compatible companion of @{locale sound_effectful_transfer_framed}:
-  the enter bound holds under the weaker premise @{const inl_glob_le_glob_env}, so
-  an analysis whose local slots carry globals can still discharge it.  Since
-  @{const inl_slot_globals_bot} implies @{const inl_glob_le_glob_env}, this contract
-  is stronger; the sublocale below recovers the publish contract, making every
-  @{locale sound_effectful_transfer_framed} fact available here for free.
-\<close>
-locale sound_effectful_transfer_framed_le = sound_effectful_transfer +
-  fixes fresh_frame :: "'a::sound_domain abs_state"
-  assumes etf_enter_framed_glob_le[intro]:
-    "\<forall>xs (es::exp list) u \<sigma>.
-       local_formals gs xs \<longrightarrow>
-       inr_slot_locals_bot gs \<sigma> \<longrightarrow> inl_glob_le_glob_env gs \<sigma> \<longrightarrow>
-       etf_full (etf_enter etf xs es u) \<sigma> \<le> assemble_local_global (Lifted fresh_frame) (glob_env \<sigma>)"
-
-sublocale sound_effectful_transfer_framed_le \<subseteq> sound_effectful_transfer_framed gs etf fresh_frame
-  by (simp add: sound_effectful_transfer_framed_def sound_effectful_transfer_axioms
-        sound_effectful_transfer_framed_axioms_def
-        etf_enter_framed_glob_le inl_slot_globals_bot_le_glob_env)
 
 end
 

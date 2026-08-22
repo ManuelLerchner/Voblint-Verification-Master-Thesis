@@ -67,6 +67,43 @@ instance edge_action :: countable
 instance call_action :: countable
   by countable_datatype
 
+text \<open>
+  \<open>call_info\<close> is the call-boundary metadata an interprocedural transfer may consult: the
+  caller destination, the callee, its formals, and the actual arguments.  Goblint's
+  \<open>Analyses.Spec\<close> hands the same four to both halves of its return protocol --
+  \<open>combine_env man lval fexp f args fc au ask\<close> and \<open>combine_assign\<close> with the identical
+  argument shape -- so a transfer that only ever sees the caller and callee-exit states is
+  strictly weaker than that interface.  The call site and the callee-exit point are the
+  combine tree's own two program-point arguments, so they are not duplicated here.
+
+  Goblint's \<open>fexp\<close> has no separate counterpart: VIMP calls a statically named procedure, so
+  \<open>ci_callee\<close> already carries what the call expression identifies.  The callee context \<open>fc\<close>
+  belongs to the routed-analysis layer rather than to a transfer-record field, and
+  \<open>Queries.ask\<close> over the callee exit has none: there is no query bus.
+\<close>
+record call_info =
+  ci_dst     :: "vname option"
+  ci_callee  :: pname
+  ci_formals :: "vname list"
+  ci_args    :: "exp list"
+
+definition call_info_of :: "call_action \<Rightarrow> pname \<Rightarrow> call_info" where
+  "call_info_of ca p =
+     \<lparr> ci_dst = ce_dst ca, ci_callee = p,
+       ci_formals = ce_formals ca, ci_args = ce_args ca \<rparr>"
+
+lemma ci_dst_call_info_of [simp]: "ci_dst (call_info_of ca p) = ce_dst ca"
+  by (simp add: call_info_of_def)
+
+lemma ci_callee_call_info_of [simp]: "ci_callee (call_info_of ca p) = p"
+  by (simp add: call_info_of_def)
+
+lemma ci_formals_call_info_of [simp]: "ci_formals (call_info_of ca p) = ce_formals ca"
+  by (simp add: call_info_of_def)
+
+lemma ci_args_call_info_of [simp]: "ci_args (call_info_of ca p) = ce_args ca"
+  by (simp add: call_info_of_def)
+
 subsection \<open>CFG record: two relations\<close>
 
 text \<open>

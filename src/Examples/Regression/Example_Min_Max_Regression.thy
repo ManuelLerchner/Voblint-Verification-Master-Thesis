@@ -1,7 +1,5 @@
 theory Example_Min_Max_Regression
-  imports
-    "Voblint_CLI.Analyse_Dispatch"
-    "Voblint_Analysis.Parity_Checks"
+  imports "Voblint_CLI.Analyse_Dispatch"
 begin
 
 section \<open>Regression: Min/Max special calls across Sign, Interval, and Parity\<close>
@@ -54,23 +52,26 @@ text \<open>
   \<open>parity_min\<close>/\<open>parity_max\<close> return exactly one of their two arguments, never
   a synthesized value, so when both arguments share a known parity the
   result provably shares it too. \<open>3\<close> and \<open>0 - 5\<close> are both odd; \<open>z\<close>/\<open>w\<close> stay
-  \<open>POdd\<close> here, not \<open>PTop\<close>. Parity is not wired into the \<open>analyse\<close> runtime
-  dispatcher (\<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>), so this reads the
-  exit state directly through \<^const>\<open>parity_exec_prog\<close>, the same executable
-  entry point \<^const>\<open>parity_check_report\<close> is built from.
+  \<open>POdd\<close> here, not \<open>PTop\<close>. The exit state is read through
+  \<^const>\<open>analyse_parity_result_for\<close>, the same routed table
+  \<^const>\<open>analyse_parity_report_for\<close> -- and hence the runtime dispatcher's
+  Parity branch -- serves.
 \<close>
 
+definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
+  "min_max_demo_parity_env =
+     (case lookup_context
+             (analyse_parity_result_for (declared_global min_max_demo_prog) min_max_demo_prog)
+             (cfg_exit (prog_cfg prog_main_name min_max_demo_prog)) () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+
 lemma min_max_demo_parity_z_odd:
-  "case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-     (parity_exec_prog (declared_global min_max_demo_prog) prog_main_name min_max_demo_prog)
-     (STR ''z'') = POdd"
-  by eval
+  "min_max_demo_parity_env (STR ''z'') = POdd"
+  by (simp add: min_max_demo_parity_env_def) eval
 
 lemma min_max_demo_parity_w_odd:
-  "case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-     (parity_exec_prog (declared_global min_max_demo_prog) prog_main_name min_max_demo_prog)
-     (STR ''w'') = POdd"
-  by eval
+  "min_max_demo_parity_env (STR ''w'') = POdd"
+  by (simp add: min_max_demo_parity_env_def) eval
 
 subsection \<open>Wrong arity is rejected by well-formedness, not silently reinterpreted\<close>
 

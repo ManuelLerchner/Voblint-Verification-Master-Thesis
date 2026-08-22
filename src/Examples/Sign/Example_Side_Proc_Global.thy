@@ -1,75 +1,104 @@
-section \<open>Example: TD\_side Sign Analysis on a Single Global Increment Call\<close>
+section \<open>Example: Sign analysis of a single global-increment call\<close>
 
 theory Example_Side_Proc_Global
   imports
-    "Voblint_Analysis.Sign_Side_Soundness"
-    "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_CLI.Sign_Codegen"
     "Voblint_VIMP.VIMP_Notation"
     Example_Inc_Proc
 begin
 
 text \<open>
-  Side-effecting interprocedural witness: \<open>inc_pi\<close> with a single call to
-  procedure p. Its soundness uses the effectful side TD solver.
+  Interprocedural witness: \<^const>\<open>inc_program\<close> with a single call to procedure
+  \<open>p\<close>, which increments the global \<open>counter\<close>. The computed result is read from
+  the routed D/G solved table the production report also reads, and its
+  soundness comes from that table's own node-soundness bridge --- no separate
+  analysis pipeline for the example.
 \<close>
-
-(* A non-trivial initial state: every variable -- including the globals --
-   starts at STop, not bot.  The entry seeds the initial globals into the
-   single global unknown, so soundness holds for an arbitrary s0 (no
-   restrict_global s0 = bot precondition). *)
-definition side_proc_global_s0 :: "sign abs_state" where
-  "side_proc_global_s0 = (\<lambda>_. STop)"
-
-theorem proc_global_side_sign_analysis:
-  fixes s t :: store and gs :: "vname \<Rightarrow> bool"
-  assumes s_sound: "s \<in> \<lbrakk>side_proc_global_s0\<rbrakk>"
-  assumes collect_exit:
-    "t \<in> ltr_collect gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) {s}
-       (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))"
-  assumes side_solve_dom:
-    "side_cfg_solve_dom_eff gs (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)) (sign_etf gs) bot
-       side_proc_global_s0 ()
-       (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>)))"
-  shows "t \<in> gamma_state_lift (side_analyse_eff gs inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>) (sign_etf gs) bot side_proc_global_s0 ()
-         (cfg_exit (compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> p() \<rbrakk>))))"
-  by (rule side_sign_analysis_sound[OF s_sound collect_exit side_solve_dom])
-subsection \<open>Executable sign analysis\<close>
-
-text \<open>Reuses @{const inc_program} (\<open>Example_Inc_Proc\<close>) directly rather than
-  reconstructing an equivalent @{typ imp_prog} from @{const inc_pi}.\<close>
 
 abbreviation inc_gs :: "vname \<Rightarrow> bool" where
   "inc_gs \<equiv> declared_global inc_program"
 
-value "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog inc_gs (STR ''main'') inc_program) (STR ''counter'')"
+lemma inc_reserved: "reserved_ret_var inc_gs"
+  unfolding reserved_ret_var_def inc_program_def by (simp add: ret_var_def)
 
-lemma inc_counter_nonneg:
-  "case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog inc_gs (STR ''main'') inc_program) (STR ''counter'') = SNonNeg"
+text \<open>The routed-unit solve terminates, and its solved key set is closed under
+  the compiled graph --- the four coverage facts the node-soundness bridge
+  turns on, each computed rather than argued. Unlike the store-only check
+  examples this program really does have a call edge, so the call and combine
+  closures are genuine \<open>eval\<close> facts rather than vacuous.\<close>
+
+lemma inc_solver_terminates:
+  "sctx_terminates_prog inc_gs prog_main_name inc_program"
+  by (rule sctx_terminates_prog_via_solve_c) eval
+
+lemma inc_entry_cov:
+  "(cfg_entry (prog_cfg prog_main_name inc_program), ())
+     \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
   by eval
 
-lemma inc_terminates: "sign_terminates_prog inc_gs (STR ''main'') inc_program"
-  by (rule sign_terminates_prog_via_solve_c) eval
+lemma inc_fwd_ok_ball:
+  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name inc_program).
+     (u, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  by eval
+
+lemma inc_fwd_ok:
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+    and "(u, a, w) \<in> intra (prog_cfg prog_main_name inc_program)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  using assms inc_fwd_ok_ball by (cases ctx) auto
+
+lemma inc_call_fwd_ok_ball:
+  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg prog_main_name inc_program).
+     (case ce of FunctionEntry q \<Rightarrow> (FunctionEntry q, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)
+      | _ \<Rightarrow> True)
+     \<and> ((k, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program))"
+  by eval
+
+lemma inc_call_fwd_ok:
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name inc_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  using assms inc_call_fwd_ok_ball by fastforce
+
+lemma inc_comb_fwd_ok:
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name inc_program)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog inc_gs prog_main_name inc_program)"
+  using assms inc_call_fwd_ok_ball by (cases c1) fastforce
+
+lemma inc_node_sound:
+  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs) v
+     \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for inc_gs inc_program) v () of
+            Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+  by (rule analyse_sign_result_node_sound_for
+        [OF inc_reserved inc_solver_terminates inc_entry_cov
+            inc_fwd_ok inc_call_fwd_ok inc_comb_fwd_ok])
+
+text \<open>The computed environment at the program exit, read out of the same
+  solved table.\<close>
+
+definition inc_exit_env :: "sign abs_state" where
+  "inc_exit_env =
+     (case lookup_context (analyse_sign_result_for inc_gs inc_program)
+             (cfg_exit (prog_cfg prog_main_name inc_program)) () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
+
+text \<open>The global the callee increments is strictly positive at the exit ---
+  computed by the solver, not asserted. \<^const>\<open>cinit_stores\<close> starts every
+  global at zero and the single call increments it once, so \<^const>\<open>SPos\<close> is
+  the exact answer; the routed table resolves it where a merged whole-state
+  environment only reaches \<^const>\<open>SNonNeg\<close>.\<close>
+
+lemma inc_counter_pos: "inc_exit_env (STR ''counter'') = SPos"
+  unfolding inc_exit_env_def by eval
 
 corollary inc_certified_sound:
-  "ltr_collect inc_gs (prog_cfg (STR ''main'') inc_program) (cinit_stores inc_gs) (cfg_exit (prog_cfg (STR ''main'') inc_program))
-   \<le> gamma_state_lift (sign_exec_prog inc_gs (STR ''main'') inc_program)"
-  by (rule sign_exec_prog_sound_collecting[OF refl inc_terminates])
-
-subsection \<open>Annotated CFG visualisation\<close>
-
-text \<open>
-  @{const sign_annotated_dot_prog_lit} on the same witness: CFG nodes labelled
-  with sign abstract states from @{const sign_exec_raw} (exit @{thm [source] inc_counter_nonneg}).
-\<close>
-
-
-definition inc_prog_mnm :: pname where "inc_prog_mnm = (STR ''main'')"
-
-ML_val \<open>
-  writeln (@{code sign_annotated_dot_prog_lit} (@{code declared_global} @{code inc_program}) @{code inc_prog_mnm} @{code inc_program})
-\<close>
+  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs)
+     (cfg_exit (prog_cfg prog_main_name inc_program))
+   \<le> \<lbrakk>inc_exit_env\<rbrakk>"
+  unfolding inc_exit_env_def
+  using inc_node_sound
+  by (simp add: gamma_point_def split: point_state.splits)
 
 end
-
-
-

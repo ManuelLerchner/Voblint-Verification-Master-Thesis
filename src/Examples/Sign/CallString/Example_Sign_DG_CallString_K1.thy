@@ -150,6 +150,14 @@ lemma sign_nest_Hcomb:
         [where tf = "sign_tf_for sign_nest_gs", unfolded fun_of_exec_dg_st_for_def,
          OF sign_nest_exact])
 
+lemma sign_nest_Hcont:
+  "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (caller_cont sign_nest_S_st ci dc g)
+   = caller_cont sign_nest_S_abs ci (map_lift (fun_of_resolved_st_q_for sign_nest_gs) dc)
+       (map_lift (fun_of_resolved_st_q_for sign_nest_gs) g)"
+  unfolding sign_nest_S_st_def sign_nest_S_abs_def
+  by (rule base_dg_spec_st_for_lifted_dgs_caller_cont_commute
+        [where tf = "sign_tf_for sign_nest_gs", unfolded fun_of_exec_dg_st_for_def])
+
 lemma sign_nest_seed_ne_global: "Seed p ctx \<noteq> Global" by simp
 
 text \<open>\<^const>\<open>cs_route\<close> never reads its data argument, so the routed combine and the routed
@@ -164,6 +172,7 @@ lemma sign_nest_Hcmb_routed:
      (routed_cmb_g sign_nest_S_abs Global Seed (cs_route k) ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [OF sign_nest_dg_reader sign_nest_seed_ne_global sign_nest_Henter sign_nest_Hcomb
+            sign_nest_Hcont
             cs_route_indep_of_data])
 
 lemma sign_nest_Hextra_routed:

@@ -175,7 +175,7 @@ section \<open>Solver-choice generalization\<close>
 text \<open>
   \<^const>\<open>cs_call_string_eqs\<close> names no solve function -- only \<open>ectx_spec\<close> and
   the routing policy -- so it is exactly as solver-independent as
-  \<^const>\<open>ivl_exec_eqs\<close> at \<open>Ctx_None\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
+  \<open>ictx_eqs\<close> at \<open>Ctx_None\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
   \<open>analyse_interval_dg_join_for\<close>/\<open>_per_origin_for\<close> alongside the Warrow
   default). The same routed system is solved under all three disciplines
   below, mirroring that pattern precisely; \<open>cs_call_string_sol_prog\<close> (Warrow,

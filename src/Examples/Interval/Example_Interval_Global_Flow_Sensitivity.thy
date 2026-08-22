@@ -1,6 +1,6 @@
-section \<open>M4 (G4) Phase 1 acceptance: A1/A2/A3\<close>
+section \<open>How a declared global is stored, and how flow-sensitively\<close>
 
-theory Example_M4_Acceptance
+theory Example_Interval_Global_Flow_Sensitivity
   imports
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Analysis.Ivl_Exec"
@@ -13,14 +13,15 @@ theory Example_M4_Acceptance
 begin
 
 text \<open>
-  The three Phase 1 acceptance cases named in the M4 design doc (section 6,
-  "Analysis roadmap"): A1 (explicitly declared mixed interval analysis), A2
-  (fully flow-sensitive sequential globals), A3 (selectively flow-sensitive
-  variables). Each subsection below computes, not asserts, the values the
-  design doc's own success criteria name.
+  Three questions about how a global is treated, answered by computation
+  rather than assertion, on programs small enough to read the expected value
+  off the source: is a global recognised from its declaration rather than its
+  spelling; does a global written in sequence keep its exact value at each
+  program point; and can flow sensitivity be chosen per variable instead of
+  fixed for a whole storage class.
 \<close>
 
-subsection \<open>A1 -- explicitly declared mixed interval analysis\<close>
+subsection \<open>A declared global, recognised without a naming hint\<close>
 
 text \<open>
   Reuses \<^const>\<open>inc_program\<close> (\<open>Example_Inc_Proc\<close>) rather than inventing a
@@ -90,7 +91,7 @@ text \<open>
   differently without contradicting its declaration.
 \<close>
 
-subsection \<open>A2 -- fully flow-sensitive sequential globals\<close>
+subsection \<open>A global written in sequence, exact at every point\<close>
 
 text \<open>
   \<open>global x; x := 0; x := 1; __voblint_check(x == 1)\<close>, exactly as specified.
@@ -211,7 +212,7 @@ lemma a2_flowsens_check_proved:
    = Check_Proved"
   by eval
 
-subsection \<open>A3 -- selectively flow-sensitive variables\<close>
+subsection \<open>Flow sensitivity chosen per variable, not per storage class\<close>
 
 text \<open>
   Reuses \<^const>\<open>placement_prog\<close> (\<open>Example_Interval_Placement\<close>) rather than a

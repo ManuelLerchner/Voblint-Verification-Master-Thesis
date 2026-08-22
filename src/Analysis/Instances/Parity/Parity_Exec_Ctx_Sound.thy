@@ -1,8 +1,13 @@
 theory Parity_Exec_Ctx_Sound
   imports
     "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Analysis.Routed_Unit_Domain"
     "Voblint_Analysis.Parity_Base_DG"
-    "Voblint_Analysis.Parity_Exec_Sound"
+    "Voblint_Analysis.Parity_Exec"
+    "Voblint_CFG.Compile_Invariants"
+    "Voblint_CFG.CFG_Prune"
+    "Voblint_Core.Solver_Side_RG"
+    "TD.TD_side_upd_rule"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"
@@ -38,11 +43,11 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: unit)
 subsection \<open>The routed unit-context D/G spec\<close>
 
 text \<open>
-  The same Base-style whole-state specification Parity's own executable analysis already
-  solves over (\<^theory>\<open>Voblint_Analysis.Parity_Exec_Sound\<close>), at the same
-  \<^const>\<open>parity_tf_st_for\<close>/\<^const>\<open>parity_enter_st_for\<close> primitives. Only the
-  equation generator wrapped around the spec changes; the spec itself, and every
-  domain-transfer soundness fact about it, is untouched.
+  A Base-style whole-state specification over
+  \<^const>\<open>parity_tf_st_for\<close>/\<^const>\<open>parity_enter_st_for\<close>
+  (\<^theory>\<open>Voblint_Analysis.Parity_Exec\<close>): the routed generator wraps around the
+  spec, and every domain-transfer soundness fact about the spec is untouched by
+  that wrapping.
 \<close>
 
 definition pctx_spec ::
@@ -123,6 +128,25 @@ interpretation parity_domain: routed_dg_domain_exec
 lemmas parity_Hstep_lifted_for = parity_domain.Hstep_lifted_for
 lemmas parity_Henter_lifted_for = parity_domain.Henter_lifted_for
 lemmas parity_Hcomb_lifted_for = parity_domain.Hcomb_lifted_for
+lemmas parity_Hcont_lifted_for = parity_domain.Hcont_lifted_for
+
+text \<open>
+  The routing layer on top of those three facts. \<^locale>\<open>routed_unit_domain_exec\<close> adds
+  only the seed-key pair and its distinctness, so the interpretation carries no Parity
+  mathematics: the first three obligations are the ones \<open>parity_domain\<close> already
+  discharged, and the fourth is datatype distinctness for \<^type>\<open>gk\<close>.
+\<close>
+
+interpretation parity_unit: routed_unit_domain_exec
+  gs is_bot_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
+  Global Seed
+  by unfold_locales
+     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp)
+
+lemmas parity_route_unit_commute_gen = parity_unit.route_unit_commute
+lemmas parity_dg_tree_st_commute_routed_cmb_g = parity_unit.dg_tree_st_commute_routed_cmb_g
+lemmas parity_hextra_commute_routed = parity_unit.hextra_commute_routed
+lemmas parity_pp_abs_gen = parity_unit.pp_abs
 
 end
 
@@ -145,6 +169,7 @@ lemma dg_tree_st_commute_routed_cmb_g_parity:
      apply (rule parity_seed_ne_global)
     apply (rule parity_Henter_lifted_for[OF exact])
    apply (rule parity_Hcomb_lifted_for[OF exact])
+  apply (rule parity_Hcont_lifted_for[OF exact])
   apply (rule parity_route_unit_commute)
   done
 

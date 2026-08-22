@@ -192,21 +192,11 @@ lemma main_cfg_calls:
  
 
 
-subsection \<open>DOT output\<close>
-
 text \<open>
-  @{const raw_cfg_dot_lit} emits the procedural CFG through the canonical
-  graph model and DOT backend, without interval annotations. A certified
-  interval analysis of a shared-global increment call is
-  @{text "Example_Side_Proc_Global"} / @{text "Example_Interval_Side_Proc_Global"};
+  A certified Sign analysis of a shared-global increment call is
+  @{text "Example_Side_Proc_Global"};
   this theory's own contribution is the concrete run (@{thm [source]
   main_prog_result [no_vars]}) and the compiled interprocedural CFG above.
-\<close>
-
-ML_val \<open>
-  writeln (@{code raw_cfg_dot_lit}
-              @{code proc_pi} @{code main_procs} @{code main_cfg_name} @{code main_prog}
-              @{code no_annotations})
 \<close>
 
 end

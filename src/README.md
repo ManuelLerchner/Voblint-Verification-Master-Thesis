@@ -10,7 +10,7 @@ collecting semantics, abstract equations, and the vendored **TD side** solver
 exports; the CI-only **Voblint_OCaml_Check** session compile-checks them.
 
 **Top level:** the interprocedural / side-effecting spine —
-`Mixed_Flow_Sound`, `TD_Side_Eff_Soundness`, `Sign_Side_Soundness`,
+`Run_Analysis_Sound`, `Source_Activation_Sound`,
 `Analysis_Sound`, plus the native D/G interface (`DG_Soundness`, `Sign_DG`,
 `Interval_DG`) and its executable transport
 (`Exec_DG_Bridge`). An intra-procedural (classical) formulation is developed
@@ -30,8 +30,8 @@ VIMP (+ Proc + Globals) → CFG (+ IP Collecting) → Equations → Solver (TD s
 | [`CFG/Collecting/`](CFG/Collecting/) | [README](CFG/Collecting/README.md) | IP collecting semantics (`cfg_collect`), trace collecting, run-to-exit projection |
 | [`Core/Domain/`](Core/Domain/) | [README](Core/Domain/README.md) | Abstract-domain classes and executable state representation |
 | [`Core/Equations/`](Core/Equations/) | [README](Core/Equations/README.md) | CFG -> IP equation system + fixpoint soundness |
-| [`Core/Solver/`](Core/Solver/) | [README](Core/Solver/README.md) | TD side solver bridge (`TD_Side/`, `Strategy_Tree/`, `Context/`, `Exec/`) |
-| [`Analysis/Instances/`](Analysis/Instances/) | [README](Analysis/Instances/README.md) | Concrete domains and native effectful transfer records (`sign_etf`, `ivl_etf`) |
+| [`Core/Solver/`](Core/Solver/) | [README](Core/Solver/README.md) | TD side solver bridge (`Strategy_Tree/`, `Context/`, `Exec/`) |
+| [`Analysis/Instances/`](Analysis/Instances/) | [README](Analysis/Instances/README.md) | Concrete domains and their routed D/G instances |
 | [`Formalization/Pipeline/`](Formalization/Pipeline/) | [README](Formalization/Pipeline/README.md) | End-to-end soundness and mixed-flow optimality (`trace_analysis_sound`, `mixed_flow_analysis_optimal`) |
 | [`Examples/`](Examples/) | [README](Examples/README.md) | Concrete demonstrations and precision examples |
 | [`Codegen/`](Codegen/) | -- | Downstream OCaml export declarations |

@@ -14,11 +14,9 @@ begin
 text \<open>
   Regression witnesses for the composite integer domain's three refinement
   modes (\<^const>\<open>Refine_Never\<close>, \<^const>\<open>Refine_Once\<close>, \<^const>\<open>Refine_Fixpoint\<close>,
-  \<^theory>\<open>Voblint_Analysis.Int_Refinement\<close>), organized the way
-  \<open>Example_Solver_Choice_Regression\<close> organizes its own acceptance witnesses:
-  each lemma's doc comment states exactly which component teaches which
-  other component what fact, and why the weaker mode or component could
-  not have derived it alone. \<^theory>\<open>Voblint_Examples.Example_Int_Domain\<close>
+  \<^theory>\<open>Voblint_Analysis.Int_Refinement\<close>). Each lemma's doc comment
+  states exactly which component teaches which other component what fact,
+  and why the weaker mode or component could not have derived it alone. \<^theory>\<open>Voblint_Examples.Example_Int_Domain\<close>
   already proves the raw-domain arithmetic this file draws on
   (\<open>arithmetic_left\<close>, \<open>arithmetic_right\<close>, \<open>progressive_refinement_input\<close>,
   \<open>refinement_round_is_progressive\<close>); this file cites those facts rather

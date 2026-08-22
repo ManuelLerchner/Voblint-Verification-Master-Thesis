@@ -1,9 +1,10 @@
 # Voblint examples
 
 `Voblint_Examples` is the leaf of the proof-session chain. It contains
-executable runs, concrete regressions, visualizations, and the narrative
-capstone. No soundness session depends on it; the downstream
-`Voblint_Codegen` session imports its executable facade solely to export code.
+executable runs, concrete regressions, and the narrative capstone. Nothing
+depends on it at all: `Voblint_Codegen`'s parent is `Voblint_CLI`, not this
+session, so every minute this session costs buys verification and exposition
+only.
 
 Folders are grouped by abstract domain, not by capability: every analysis in
 this framework runs concretely inside Isabelle/HOL (the executable pipeline is
@@ -21,7 +22,8 @@ procedure call.
 | `Parity/` | Parity | domain-registration validation flagship |
 | `Mixed/` | Composite and relational | composite-domain regressions and the generic pipeline/solver run against a non-`abs_state` carrier |
 | `CFG/` | domain-agnostic | compiler and collecting-semantics regressions; shared example programs |
-| `Tooling/` | domain-agnostic | Graphviz rendering demos, outside the proof spine |
+| `Regression/` | domain-agnostic | dispatcher, result-table, compile and min/max acceptance witnesses |
+| `Tooling/` | domain-agnostic | contextual GraphViz regression, solver buffering regressions, the strategy-tree demo |
 
 Regressions live in this session, not upstream, on purpose: `VIMP` -> `CFG` ->
 `Analysis` -> `Formalization` stay soundness-only, and concrete witness
@@ -30,3 +32,13 @@ executable definitions without moving code export into the soundness chain.
 
 `Voblint.thy` imports the curated examples and presents the complete certified
 pipeline.
+
+## What does not live here
+
+A `value` or `ML_val ... writeln` runs the analyzer at build time and asserts
+nothing, so a green build proves only that the code generator produced
+something that ran. This session contains none. Anything worth pinning is a
+`by eval` lemma; anything only observable as output -- rendered DOT, a report's
+text -- is pinned by the executable corpus under `tests/regression/`, which
+runs the same analysis through the code-generated CLI in milliseconds and
+compares the result.

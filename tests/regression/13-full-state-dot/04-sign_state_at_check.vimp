@@ -1,0 +1,62 @@
+// PARAM: --analysis sign --dot-full
+// The only non-Interval case in this group: full-state rendering has to read
+// the solved table through whichever domain's own value constructor is in
+// play, so this pins that the Sign adapter reaches the same per-node
+// rendering path the Interval cases exercise -- node labels carry
+// Positive/Top, not intervals.
+//
+// The program is 07-sign-precision/precision/04-intervening_write_preserves
+// _local.vimp's; that fixture pins the check's verdict, this one pins the
+// abstract state each node actually carries, including the entry nodes where
+// x is still Top and the post-assignment nodes where it is Positive. A
+// rendered state and a verdict are separate surfaces over the same solution,
+// and only the latter is checked by a verdict fixture.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp0_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//       #ret=Top
+//       x=Positive
+//       y=Top
+//   main_pp2_ctx0: pp2
+//       #ret=Top
+//       x=Positive
+//       y=Positive
+//   main_pp3_ctx0: pp3
+//       #ret=Top
+//       x=Positive
+//       y=Positive
+//   main_result_main_ctx0: exit_main
+//       #ret=Top
+//       x=Positive
+//       y=Positive
+//   main_entry_main_ctx0: entry_main
+//       #ret=Top
+//       x=Top
+//       y=Top
+//   main_pp0_ctx0: pp0
+//       #ret=Top
+//       x=Top
+//       y=Top
+//
+// edges:
+//   main_pp1_ctx0 -> main_pp2_ctx0: y := 1
+//   main_pp2_ctx0 -> main_pp3_ctx0: check(0<x)
+//   main_pp3_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp0_ctx0: nop
+//   main_pp0_ctx0 -> main_pp1_ctx0: x := 5
+// EXPECT-GRAPH-END
+
+void main() {
+  x := 5;
+  y := 1;
+  __voblint_check(0 < x)
+}

@@ -1,0 +1,22 @@
+// PARAM: --analysis interval --solver per-origin
+// 09's program under an explicit --solver per-origin. The shared resume node
+// makes one right-hand-side evaluation write the callee-entry seed key twice,
+// and per-origin is the update rule that shape is sharpest against: it keeps
+// one slot per write origin and overwrites that slot, so a partial accumulate
+// replaces a completed one from the same origin rather than joining into it.
+//
+// 09 pins the default configuration; this pins the update rule the mechanism
+// actually names, so a regression in the aggregation cannot hide behind
+// whichever rule the default happens to select.
+void f(n) {
+  return n
+}
+void main() {
+  x := 5;
+  if (x < 2) {
+    a := f(1)
+  } else {
+    a := f(1)
+  };
+  __voblint_check(x == 5) // PROVED
+}

@@ -137,12 +137,9 @@ lemma demo_rel_learns_yx:
   "relc_has (STR ''y'') (STR ''x'') (locals (snd demo_rel_sol (Inl (Statement 2, ()))))"
   unfolding demo_rel_sol_def demo_rel_eqs_def by eval
 
-text \<open>Side by side, evaluated in one call: Interval's two bounds stay
-  \<open>[-inf,+inf]\<close>; \<open>relc\<close> answers \<open>True\<close> for the pair \<open>(x,y)\<close>.\<close>
-
-value "(demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''x''),
-        demo_lookup (locals (snd demo_ivl_sol (Inl (Statement 1, ())))) (STR ''y''),
-        relc_has (STR ''x'') (STR ''y'') (locals (snd demo_rel_sol (Inl (Statement 1, ())))))"
+text \<open>Side by side, the three lemmas above are the comparison: at \<open>Statement 1\<close>
+  Interval's two bounds stay \<open>[-inf,+inf]\<close> while \<open>relc\<close> answers \<open>True\<close> for the
+  pair \<open>(x,y)\<close>.\<close>
 
 subsection \<open>Rendering the CFG\<close>
 
@@ -154,8 +151,6 @@ text \<open>The plain compiled CFG, rendered through the same GraphViz backend t
 definition demo_dot :: String.literal where
   "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
     (\<lambda>_. None)"
-
-ML_val \<open>writeln (@{code demo_dot})\<close>
 
 subsection \<open>Rendering the CFG annotated with the computed relational result\<close>
 
@@ -201,8 +196,6 @@ definition demo_rel_dot :: String.literal where
          None \<Rightarrow> ''solver did not terminate''
        | Some sol \<Rightarrow> contextual_analysis_dot demo_rel_graph_config demo_cfg
            demo_graph_domain (snd sol))"
-
-ML_val \<open>writeln (@{code demo_rel_dot})\<close>
 
 end
 

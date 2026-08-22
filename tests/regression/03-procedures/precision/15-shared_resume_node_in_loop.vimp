@@ -1,0 +1,22 @@
+// PARAM: --analysis interval
+// The shared resume node inside a loop, so the seed key is written twice per
+// right-hand-side evaluation and that evaluation is itself revisited under
+// widening and narrowing. Aggregating the two writes moves the key's
+// publication to after every contribution has been read, which reorders the
+// unknowns the solver visits on the first pass; narrowing is sensitive to that
+// order, so a loop is where a reordering that costs precision would surface.
+void f(n) {
+  return n
+}
+void main() {
+  i := 0;
+  while (i < 10) {
+    if (i < 5) {
+      a := f(1)
+    } else {
+      a := f(1)
+    };
+    i := i + 1
+  };
+  __voblint_check(0 < i) // PROVED
+}

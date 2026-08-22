@@ -13,5 +13,6 @@ session Voblint_CLI in "." = "Voblint_Analysis" +
     Sign_Codegen
     Interval_Codegen
     Int_Codegen
+    Parity_Codegen
     Analyse_Dispatch
     State_Report_GraphViz
