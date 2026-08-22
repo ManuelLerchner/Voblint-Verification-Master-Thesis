@@ -23,36 +23,44 @@ deliberately.
 
 ### Done
 
-- **P3** Exec_DG_Bridge's duplicate transport family. The carrier-generic
-  engine now proves the raw readback's post-solution transport too, as it
-  already did the lifted one; the eleven private `_for` support lemmas and the
-  unadopted exec-side lifted spec island are gone. 4885 -> 4234 lines.
+- **P3** Exec_DG_Bridge's duplicate transport family, then the file itself.
+  The carrier-generic engine now proves the raw readback's post-solution
+  transport as it already did the lifted one, and the eleven private `_for`
+  support lemmas and the unadopted exec-side lifted spec island are gone.
+  What was left split along its four layers: `Exec_DG_Refines` (769),
+  `Exec_DG_Trees` (1553), `Exec_DG_Generator` (1588), `Exec_DG_Bridge` (370).
 - **P4** the domain x context clone matrix. `routed_unit_domain_exec` became
   `routed_domain_exec` by taking the routing functions and their agreement as
   parameters, which is the only thing the eleven copies differed in. All
-  eleven post-solution transports -- Sign, Parity, Interval x3, Int x3 at the
-  unit context, Sign/Int/Interval at entry-state, Sign/Int at call-string --
-  are now that one derivation instantiated. About 1200 lines.
-- **P12, in part** `docs/history/` separates 70 completed migration notes,
-  handoffs, audits and plans from the 70 live documents; the theory comments
-  no longer describe themselves as staged ahead of a migration; the session
-  graph in the project contract is correct; editor debris is gone.
+  eleven post-solution transports are now that one derivation instantiated.
+- **P5** the four domain-generic theories moved from
+  `Analysis/Instances/Mixed` into `Core/Solver/Context/DG`, where the session
+  boundary enforces what their comments only asserted.
+- **P6** `CLI/Codegen` -> `CLI/Entry` (it contains no `export_code`),
+  `Instances/Mixed` -> `Product` with `Rel_Order_Domain` to
+  `Instances/Relational`, the ten context cells into
+  `Instances/<Domain>/Ctx/<Domain>_Ctx_<Policy>_Sound`, and
+  `Voblint_Formalization` -> `Voblint_Soundness` holding only its two
+  endpoints.
+- **P8** sixteen escaped modules folded into `Core`, leaving the four `cli/`
+  names; `scripts/check_codegen_modules.py` fails on any new escapee, in the
+  pre-commit hook and `pixi run codegen-modules`.
+- **P12, in part** `docs/history/` separates the completed migration record
+  from the live documentation; no theory comment describes itself as staged
+  ahead of a migration; the session graph in the project contract is correct.
 
-### Blocked on one build
+### Remaining
 
-`P5` and `P6` move theories between sessions, and `P8` changes what
-`export_code` emits. None can be verified interactively: I/Q checks a theory
-against the session heaps it already has, so a cross-session move or an export
-change is only real once the batch build and `codegen-check` agree. Run those
-two gates before starting either.
+`P9`, `P10` and `P11` are judgement work rather than mechanism, and all three
+touch `Analysis` and `Examples`. Check for concurrent work there before
+starting.
 
 ## P3 - Split `Exec_DG_Bridge`
 
-What is left of P3 is the split, not the deletion. At 4234 lines the file still
-holds four responsibilities: the refinement relation and basic transport, the
-per-tree and fold commutation, the equation-system and post-solution transport,
-and the monovariant specialisation. Split it along those lines when it moves to
-Core (P5), not before -- doing both at once keeps the import churn to one pass.
+Done, after the move to Core so the import churn was one pass. The cuts are
+where the file already changed subject, so no proof moved relative to another,
+and `Exec_DG_Bridge` keeps its name because it is still the bridge theorem --
+importing it pulls the whole stack, so no consumer changed.
 
 ## P5 - Rehome generic D/G framework into Core
 
@@ -75,6 +83,8 @@ Invariant now enforced by the build: Core imports no Analysis theory, because
 Core is built before Analysis exists.
 
 ## P6 - Normalize the source/session layout
+
+Done; what follows records what the names now mean.
 
 Only after P4/P5. `Formalization` is not an endpoint session: most of it is
 domain x context executable instantiation used by CLI/codegen. Normalize
@@ -112,29 +122,23 @@ only one. It must run through the canonical D/G generator and solver, not by
 evaluating the combine directly. Prove `sound_dg_spec` for the instance. Own
 commit.
 
-## P8 - Generate the `code_identifier` module map
+## P8 - Guard the `code_identifier` module map
 
-`CLI/Analyse_Dispatch.thy` carries 119 hand-written `code_module` entries and
-nineteen theories still escape them, emitting their own OCaml module:
+Done. Generating the list from the export closure turned out to be the wrong
+shape: 43 of its entries map HOL and AFP library modules that no repository
+source mentions, so the closure cannot be derived from the tree. Checking the
+emitted output can, and catches the same failure one edit earlier.
 
-```text
-Analysis_Config  Analysis_GraphViz  Call_String_Context  State_Report_GraphViz
-Congruence_Print  Interval_Print  Parity_Print  Sign_Print  Int_Print
-Parity_Exec  Parity_Checks  Parity_Numeric_Queries  Parity_Ctx_None_Sound
-Sign_Ctx_Call_String_Sound  Sign_Ctx_Entry_State_Sound
-Int_Ctx_Call_String_Sound   Int_Ctx_Entry_State_Sound
-Interval_Ctx_Call_String_Sound
-```
+The map now names 135 theories and four modules survive: `Core`, plus the
+three the handwritten OCaml calls into -- `Analysis_Config`,
+`Analyse_Dispatch`, `State_Report_GraphViz`. Folding cannot introduce a cycle
+(a cycle needs two modules), so those three are a deliberate API surface
+rather than the residue of which edit happened to fail first.
 
-The split is unprincipled: `Sign_Ctx_None_Sound` is remapped,
-`Sign_Ctx_Call_String_Sound` is not. Each unmapped theory is a latent module
-dependency cycle waiting on the next edit.
-
-Derive the mapping from the actual export closure: deterministic, stably
-ordered, generated artifact checked in, CI/lint failing when stale, and a new
-exported dependency never silently emitting an unexpected module. Remap the
-export closure only, not every theory in the repository. Verify the generated
-`Voblint_CLI.ml` module structure and the absence of cycles.
+`scripts/check_codegen_modules.py` reads the checked-in export and fails on
+any module outside that set, naming the theory to add. It needs no Isabelle,
+so it runs in the pre-commit hook beside the ASCII and grammar-drift guards,
+and as `pixi run codegen-modules`.
 
 ## P9 - Dead-code sweep
 
