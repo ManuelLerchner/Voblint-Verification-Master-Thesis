@@ -204,6 +204,30 @@ definition analyse_interval_report_per_origin :: "imp_prog \<Rightarrow> check_r
   "analyse_interval_report_per_origin p =
      analyse_interval_report_per_origin_for (declared_global p) p"
 
+subsection \<open>Solver-choice variant report: warrowing per origin\<close>
+
+text \<open>
+  The fourth update rule's report.  Unlike the \<open>join\<close>/\<open>per_origin\<close> pair, this one is not
+  interchangeable with \<open>analyse_interval_td_report\<close>'s Apinis warrowing on every
+  program: both widen, but this rule widens each origin's own contribution and joins
+  afterwards, so a global with two producers can end up strictly more precise here.
+\<close>
+
+definition analyse_interval_wpo_result_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_wpo_result_for gs p = analyse_interval_ctx_result_wpo_for gs prog_main_name p"
+
+definition analyse_interval_report_wpo_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_wpo_for gs p =
+     (let r = analyse_interval_wpo_result_for gs p
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
+           interval_classify_check)"
+
+definition analyse_interval_report_wpo :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_interval_report_wpo p =
+     analyse_interval_report_wpo_for (declared_global p) p"
+
 end
 
 

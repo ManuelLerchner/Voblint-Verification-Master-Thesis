@@ -181,5 +181,28 @@ definition analyse_int_report_per_origin :: "imp_prog \<Rightarrow> check_report
   "analyse_int_report_per_origin p =
      analyse_int_report_per_origin_for Refine_Fixpoint (declared_global p) p"
 
+subsection \<open>Solver-choice variant report: warrowing per origin\<close>
+
+text \<open>
+  The fourth update rule's report.  Both this and Apinis warrowing widen, so both terminate
+  where \<open>join\<close>/\<open>per_origin\<close> need not; they differ in whether the join happens before or
+  after the widening, which a global with two producers can observe.
+\<close>
+
+definition analyse_int_wpo_result_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_wpo_result_for mode gs p = analyse_int_ctx_result_wpo_for mode gs prog_main_name p"
+
+definition analyse_int_report_wpo_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_wpo_for mode gs p =
+     (let r = analyse_int_wpo_result_for mode gs p
+      in classify_checks (prog_cfg prog_main_name p)
+           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
+           int_classify_check)"
+
+definition analyse_int_report_wpo :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_int_report_wpo p =
+     analyse_int_report_wpo_for Refine_Fixpoint (declared_global p) p"
+
 end
 
