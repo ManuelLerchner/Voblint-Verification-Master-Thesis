@@ -79,6 +79,8 @@ module Core : sig
   val fst : 'a * 'b -> 'a
   type 'a set = Set of 'a list | Coset of 'a list
   type 'a equal
+  type 'a ord
+  type 'a preorder
   type 'a order
   type 'a linorder
   val comp : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
@@ -11716,6 +11718,11 @@ let rec string_of_abstract_value
 let rec state_line
   f x = Core.explode x @ [Core.char_0x3D] @ string_of_abstract_value (f x);;
 
+let rec project_env
+  into r v =
+    Core.map_point_state (Core.comp into)
+      (Core.lookup_context Core.equal_unit r v ());;
+
 let rec report_vars
   report =
     Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
@@ -11893,6 +11900,10 @@ let rec cs_ctx_export_auto
           Core.equal_call_string_gk cfg g (cs_ctx_domain_for kind k p base)
           sol));;
 
+let rec project_joined_env _A _B
+  into r v =
+    Core.map_point_state (Core.comp into) (Core.lookup_joined_state _B _A r v);;
+
 let rec entry_state_ctx_sol
   r k = (match k
           with Core.Inl (a, b) ->
@@ -11903,81 +11914,45 @@ let rec solver_point_env_for
   kind sc p =
     (match (kind, sc)
       with (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Join) ->
-        (let r = Core.analyse_sign_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.SignValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.SignValue a)
+               (Core.analyse_sign_result p))
       | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        (let r = Core.analyse_sign_result_per_origin p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.SignValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.SignValue a)
+               (Core.analyse_sign_result_per_origin p))
       | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Warrow) -> None
       | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
         -> None
       | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Join) ->
-        (let r = Core.analyse_interval_join_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.IntervalValue a)
+               (Core.analyse_interval_join_result p))
       | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        (let r = Core.analyse_interval_per_origin_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.IntervalValue a)
+               (Core.analyse_interval_per_origin_result p))
       | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Warrow) ->
-        (let r = Core.analyse_interval_td_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.IntervalValue a)
+               (Core.analyse_interval_td_result p))
       | (Analysis_Config.Interval_Analysis,
           Analysis_Config.Solver_WarrowPerOrigin)
-        -> (let r = Core.analyse_interval_wpo_result p in
-             Some (fun v ->
-                    Core.map_point_state
-                      (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-                      (Core.lookup_context Core.equal_unit r v ())))
+        -> Some (project_env (fun a -> Analyse_Dispatch.IntervalValue a)
+                  (Core.analyse_interval_wpo_result p))
       | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Join) ->
-        (let r = Core.analyse_int_join_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.IntDomValue a)
+               (Core.analyse_int_join_result p))
       | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        (let r = Core.analyse_int_per_origin_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.IntDomValue a)
+               (Core.analyse_int_per_origin_result p))
       | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow) ->
-        (let r = Core.analyse_int_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.IntDomValue a)
+               (Core.analyse_int_result p))
       | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
-        -> (let r = Core.analyse_int_wpo_result p in
-             Some (fun v ->
-                    Core.map_point_state
-                      (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
-                      (Core.lookup_context Core.equal_unit r v ())))
+        -> Some (project_env (fun a -> Analyse_Dispatch.IntDomValue a)
+                  (Core.analyse_int_wpo_result p))
       | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Join) ->
-        (let r = Core.analyse_parity_result p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.ParityValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.ParityValue a)
+               (Core.analyse_parity_result p))
       | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        (let r = Core.analyse_parity_result_per_origin p in
-          Some (fun v ->
-                 Core.map_point_state
-                   (Core.comp (fun a -> Analyse_Dispatch.ParityValue a))
-                   (Core.lookup_context Core.equal_unit r v ())))
+        Some (project_env (fun a -> Analyse_Dispatch.ParityValue a)
+               (Core.analyse_parity_result_per_origin p))
       | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Warrow) -> None
       | (Analysis_Config.Parity_Analysis,
           Analysis_Config.Solver_WarrowPerOrigin)
@@ -11987,29 +11962,17 @@ let rec analyse_point_env_for
   kind p =
     (match kind
       with Analysis_Config.Sign_Analysis ->
-        (let r = Core.analyse_sign_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.SignValue a))
-              (Core.lookup_context Core.equal_unit r v ())))
+        project_env (fun a -> Analyse_Dispatch.SignValue a)
+          (Core.analyse_sign_result p)
       | Analysis_Config.Interval_Analysis ->
-        (let r = Core.analyse_interval_td_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-              (Core.lookup_context Core.equal_unit r v ())))
+        project_env (fun a -> Analyse_Dispatch.IntervalValue a)
+          (Core.analyse_interval_td_result p)
       | Analysis_Config.Int_Analysis ->
-        (let r = Core.analyse_int_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
-              (Core.lookup_context Core.equal_unit r v ())))
+        project_env (fun a -> Analyse_Dispatch.IntDomValue a)
+          (Core.analyse_int_result p)
       | Analysis_Config.Parity_Analysis ->
-        (let r = Core.analyse_parity_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.ParityValue a))
-              (Core.lookup_context Core.equal_unit r v ()))));;
+        project_env (fun a -> Analyse_Dispatch.ParityValue a)
+          (Core.analyse_parity_result p));;
 
 let rec entry_state_ctx_route
   p u ctx ca d =
@@ -12074,29 +12037,21 @@ let rec entry_state_point_env_for
   kind p =
     (match kind
       with Analysis_Config.Sign_Analysis ->
-        (let r = Core.analyse_sign_entry_state_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.SignValue a))
-              (Core.lookup_joined_state (Core.equal_list Core.equal_sign)
-                Core.semilattice_sup_sign r v)))
+        project_joined_env Core.semilattice_sup_sign
+          (Core.equal_list Core.equal_sign)
+          (fun a -> Analyse_Dispatch.SignValue a)
+          (Core.analyse_sign_entry_state_result p)
       | Analysis_Config.Interval_Analysis ->
-        (let r = Core.analyse_interval_entry_state_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.IntervalValue a))
-              (Core.lookup_joined_state (Core.equal_list Core.equal_ivl)
-                Core.semilattice_sup_ivl r v)))
+        project_joined_env Core.semilattice_sup_ivl
+          (Core.equal_list Core.equal_ivl)
+          (fun a -> Analyse_Dispatch.IntervalValue a)
+          (Core.analyse_interval_entry_state_result p)
       | Analysis_Config.Int_Analysis ->
-        (let r = Core.analyse_int_entry_state_result p in
-          (fun v ->
-            Core.map_point_state
-              (Core.comp (fun a -> Analyse_Dispatch.IntDomValue a))
-              (Core.lookup_joined_state
-                (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit))
-                (Core.semilattice_sup_int_dom_ext
-                  Core.int_dom_record_lattice_unit)
-                r v)))
+        project_joined_env
+          (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+          (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit))
+          (fun a -> Analyse_Dispatch.IntDomValue a)
+          (Core.analyse_int_entry_state_result p)
       | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
 let rec cs_ctx_graph_snapshot_auto

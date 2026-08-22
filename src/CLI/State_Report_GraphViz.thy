@@ -85,6 +85,37 @@ text \<open>
   does not already cover, so the test is exact, not merely broader.
 \<close>
 
+text \<open>
+  Every renderer below needs the same thing from a solved table: the state at a point, as
+  the uniform \<^typ>\<open>abstract_value\<close> view rather than the domain's own carrier. Stating that
+  projection once means a dispatcher names a table and an injector and nothing else --- the
+  \<^const>\<open>map_point_state\<close>/\<^const>\<open>lookup_context\<close> pairing is not restated per domain, per
+  solver, and per context mode.
+
+  What cannot be factored out is the dispatch itself. \<^typ>\<open>analysis_domain\<close> is a runtime
+  value, while the type of a solved table is static and different for each domain, so
+  something has to enumerate the domains to get from one to the other. \<^typ>\<open>abstract_value\<close>
+  is precisely the type that ends that enumeration: past this projection every renderer is
+  domain-agnostic. The enumerations that remain are the boundary, not repetition.
+\<close>
+
+definition project_env ::
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "project_env into r v = map_point_state (\<lambda>st. into \<circ> st) (lookup_context r v ())"
+
+text \<open>
+  The context-sensitive counterpart: \<^const>\<open>lookup_joined_state\<close> joins the contexts covering
+  a point before projecting, so the reader is a per-node view with no context type left in
+  it. Same projection, different reading of the table.
+\<close>
+
+definition project_joined_env ::
+    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> ('ctx, 'a abs_state) analysis_result
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "project_joined_env into r v =
+     map_point_state (\<lambda>st. into \<circ> st) (lookup_joined_state r v)"
+
 definition program_vars :: "imp_prog \<Rightarrow> vname list" where
   "program_vars p =
      remdups (concat (map (scope_vnames_list p) (prog_main_name # prog_procs p)))"
@@ -216,14 +247,11 @@ definition entry_state_point_env_for ::
   "entry_state_point_env_for kind p =
      (case kind of
         Sign_Analysis \<Rightarrow>
-          (let r = analyse_sign_entry_state_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_joined_state r v)))
+          project_joined_env SignValue (analyse_sign_entry_state_result p)
       | Interval_Analysis \<Rightarrow>
-          (let r = analyse_interval_entry_state_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)))
+          project_joined_env IntervalValue (analyse_interval_entry_state_result p)
       | Int_Analysis \<Rightarrow>
-          (let r = analyse_int_entry_state_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_joined_state r v)))
+          project_joined_env IntDomValue (analyse_int_entry_state_result p)
       | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
 
 text \<open>
@@ -284,18 +312,10 @@ definition analyse_point_env_for ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
   "analyse_point_env_for kind p =
      (case kind of
-        Sign_Analysis \<Rightarrow>
-          (let r = analyse_sign_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ())))
-      | Interval_Analysis \<Rightarrow>
-          (let r = analyse_interval_td_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
-      | Int_Analysis \<Rightarrow>
-          (let r = analyse_int_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
-      | Parity_Analysis \<Rightarrow>
-          (let r = analyse_parity_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. ParityValue \<circ> st) (lookup_context r v ()))))"
+        Sign_Analysis \<Rightarrow> project_env SignValue (analyse_sign_result p)
+      | Interval_Analysis \<Rightarrow> project_env IntervalValue (analyse_interval_td_result p)
+      | Int_Analysis \<Rightarrow> project_env IntDomValue (analyse_int_result p)
+      | Parity_Analysis \<Rightarrow> project_env ParityValue (analyse_parity_result p))"
 
 text \<open>Canonical-text sibling, the same DOT-free relationship
   \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
@@ -503,42 +523,30 @@ definition solver_point_env_for ::
   "solver_point_env_for kind sc p =
      (case (kind, sc) of
         (Sign_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_sign_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ())))
+          Some (project_env SignValue (analyse_sign_result p))
       | (Sign_Analysis, Solver_PerOrigin) \<Rightarrow>
-          (let r = analyse_sign_result_per_origin p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ())))
+          Some (project_env SignValue (analyse_sign_result_per_origin p))
       | (Sign_Analysis, _) \<Rightarrow> None
       | (Interval_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_interval_join_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntervalValue (analyse_interval_join_result p))
       | (Interval_Analysis, Solver_PerOrigin) \<Rightarrow>
-          (let r = analyse_interval_per_origin_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntervalValue (analyse_interval_per_origin_result p))
       | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
-          (let r = analyse_interval_td_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntervalValue (analyse_interval_td_result p))
       | (Interval_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
-          (let r = analyse_interval_wpo_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntervalValue (analyse_interval_wpo_result p))
       | (Int_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_int_join_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntDomValue (analyse_int_join_result p))
       | (Int_Analysis, Solver_PerOrigin) \<Rightarrow>
-          (let r = analyse_int_per_origin_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntDomValue (analyse_int_per_origin_result p))
       | (Int_Analysis, Solver_Warrow) \<Rightarrow>
-          (let r = analyse_int_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntDomValue (analyse_int_result p))
       | (Int_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
-          (let r = analyse_int_wpo_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
+          Some (project_env IntDomValue (analyse_int_wpo_result p))
       | (Parity_Analysis, Solver_Join) \<Rightarrow>
-          (let r = analyse_parity_result p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. ParityValue \<circ> st) (lookup_context r v ())))
+          Some (project_env ParityValue (analyse_parity_result p))
       | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
-          (let r = analyse_parity_result_per_origin p
-           in Some (\<lambda>v. map_point_state (\<lambda>st. ParityValue \<circ> st) (lookup_context r v ())))
+          Some (project_env ParityValue (analyse_parity_result_per_origin p))
       | (Parity_Analysis, _) \<Rightarrow> None)"
 
 definition solver_checked_export_auto ::
