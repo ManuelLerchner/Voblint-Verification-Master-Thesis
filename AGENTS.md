@@ -175,15 +175,24 @@ a batch build for contextual proof development.
 ## New theories and the code-export module map
 
 `export_code` in `src/Codegen/Export/Voblint_Codegen.thy` names no
-`module_name`, so the OCaml serializer distributes output one module per
-contributing theory. `src/CLI/Analyse_Dispatch.thy` remaps every contributing
-theory onto `Core` (or `Analyse`) through one `code_identifier` block, because
-the unsplit theories have real mutual code-level dependencies.
+`module_name`, so the OCaml serializer would distribute output one module per
+contributing theory. `src/CLI/Analyse_Dispatch.thy` remaps almost every
+contributing theory onto `Core` through one `code_identifier` block, because
+the unsplit theories have real mutual code-level dependencies. Four modules
+survive, and only because the handwritten OCaml in `cli/` names them:
+
+```text
+Core                   everything else, folded into one module
+Analysis_Config        mk_analysis_config, valid_analysis_config
+Analyse_Dispatch       analyse_config, analyse_config_ctx,
+                       analyse_config_with_state, abstract_value
+State_Report_GraphViz  the twelve *_dot_auto / *_graph_snapshot_auto
+```
 
 Adding a theory whose constants are reachable from an export root therefore
 requires adding it to that `code_identifier` list. Forget it and the new
-theory keeps its own generated module, which the already-merged `Core` both
-depends on and is depended on by, and `export_code` fails with:
+theory keeps its own generated module, which the already-merged `Core` may
+both depend on and be depended on by, and `export_code` fails with:
 
 ```text
 Dependency "<some_core_constant>" -> "<your_constant>" would result in module
@@ -193,13 +202,19 @@ dependency cycle
 The error names two constants and no theory, so it reads like a layering bug
 in the new theory. It usually is not: check the `code_identifier` list first.
 The fix is one line there, not a `module_name` on the export -- that would
-collapse the whole export into a single module and change the API `cli/`
+collapse the four surviving modules together too and change the API `cli/`
 links against.
 
-Sessions and `pixi run build` do not catch this: only `Voblint_Codegen` runs
-the export, and it is the last session built. A change that lands a new
-theory without regenerating `codegen/generated/` leaves the breakage for
-whoever next runs a full build.
+`scripts/check_codegen_modules.py` (`pixi run codegen-modules`, and a
+pre-commit job) turns a missing entry into an immediate failure naming the
+theory, instead of a cycle error two edits later. It reads the checked-in
+export, so it needs no Isabelle. When it reports an unexpected module, add the
+mapping and re-run `pixi run codegen`.
+
+Sessions and `pixi run build` do not catch a stale export: only
+`Voblint_Codegen` runs it, and it is the last session built. A change that
+lands a new theory without regenerating `codegen/generated/` leaves the
+breakage for whoever next runs a full build.
 
 ## Regression discipline
 

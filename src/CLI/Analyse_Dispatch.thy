@@ -1012,6 +1012,22 @@ code_identifier
 | code_module Int_Classify \<rightharpoonup> (OCaml) Core
 | code_module Int_Checks \<rightharpoonup> (OCaml) Core
 | code_module Int_Exec_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Sign_Print \<rightharpoonup> (OCaml) Core
+| code_module Interval_Print \<rightharpoonup> (OCaml) Core
+| code_module Parity_Print \<rightharpoonup> (OCaml) Core
+| code_module Int_Print \<rightharpoonup> (OCaml) Core
+| code_module Congruence_Print \<rightharpoonup> (OCaml) Core
+| code_module Parity_Exec \<rightharpoonup> (OCaml) Core
+| code_module Parity_Numeric_Queries \<rightharpoonup> (OCaml) Core
+| code_module Parity_Checks \<rightharpoonup> (OCaml) Core
+| code_module Parity_Exec_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Call_String_Context \<rightharpoonup> (OCaml) Core
+| code_module Sign_Entry_State_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Sign_Call_String_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Int_Entry_State_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Int_Call_String_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Interval_Call_String_Ctx_Sound \<rightharpoonup> (OCaml) Core
+| code_module Analysis_GraphViz \<rightharpoonup> (OCaml) Core
 
 text \<open>
   There is deliberately no mapping for this theory's own module. A
@@ -1021,12 +1037,20 @@ text \<open>
   callers accordingly say \<open>Voblint_CLI.Analyse_Dispatch.analyse_config\<close>, and renaming it now
   would break them for no gain.
 
-  The mappings above are the ones that do fire, and they exist for one reason: OCaml's
-  single-file serializer emits modules in dependency order and cannot express a cycle, so
-  any two theory modules that end up mutually dependent must be folded into one. Folding
-  them all into \<open>Core\<close> is the blunt but stable answer. Add a mapping here only in response
-  to an actual serializer failure, and re-run \<open>export_code\<close> immediately after --- regrouping
-  speculatively is how cycles get introduced rather than avoided.
+  The mappings above exist for one reason: OCaml's single-file serializer emits modules in
+  dependency order and cannot express a cycle, so any two theory modules that end up
+  mutually dependent must be folded into one. Folding them all into \<open>Core\<close> is the blunt
+  but stable answer, and folding cannot introduce a cycle --- a cycle needs two modules.
+
+  What must stay separate is the surface the handwritten OCaml names:
+  \<open>Analysis_Config\<close>, this theory's own \<open>Analyse_Dispatch\<close>, and
+  \<open>State_Report_GraphViz\<close>. Absorbing one of those into \<open>Core\<close> would both break
+  \<open>cli/main.ml\<close> and risk a genuine cycle against the two that remain, so those three are
+  the deliberate exceptions rather than an accident of which theories happened to fail.
+
+  A theory reachable from an export root and missing from this list keeps its own module.
+  \<open>scripts/check_codegen_modules.py\<close> fails on exactly that, naming the theory, so the
+  omission surfaces before it becomes a cycle error naming two constants.
 \<close>
 
 
