@@ -1,5 +1,5 @@
 theory TD_Side_Eff_Bounds
-  imports TD_Side_Tree
+  imports TD_Side_Tree Solver_Mono
 begin
 
 section \<open>Effectful side IP solver: general monotonicity\<close>
@@ -228,15 +228,6 @@ qed
 
 subsection \<open>mono_sides for an arbitrary etf\<close>
 
-lemma fun_upd_sup_mono:
-  fixes m1 m2 :: "'b \<Rightarrow> 'a::bounded_semilattice_sup_bot"
-  assumes "m1 \<le> m2"
-  shows "m1(y := m1 y \<squnion> cd) \<le> m2(y := m2 y \<squnion> cd)"
-proof -
-  have eq: "\<And>m::'b \<Rightarrow> 'a. m(y := m y \<squnion> cd) = m \<squnion> ((\<lambda>_. bot)(y := cd))"
-    by (rule ext) (simp add: fun_upd_def sup_fun_def)
-  show ?thesis unfolding eq by (rule sup_mono[OF assms order_refl])
-qed
 
 lemma side_cfg_T_eff_mono_sides_gen:
   fixes g :: cfg

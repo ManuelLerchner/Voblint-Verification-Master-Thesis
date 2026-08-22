@@ -599,6 +599,16 @@ fun combine_assign_abs ::
     "combine_assign_abs None _ \<sigma> = \<sigma>"
   | "combine_assign_abs (Some x) v \<sigma> = \<sigma>(x := v)"
 
+text \<open>The return-value write is a single-slot update, hence monotone in both the
+  written value and the state it writes into.  Any combine built over it inherits
+  monotonicity from this one fact.\<close>
+
+lemma combine_assign_abs_mono:
+  fixes s1 s2 :: "'a::order abs_state"
+  assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
+  shows "combine_assign\<^sup># dst v1 s1 \<le> combine_assign\<^sup># dst v2 s2"
+  using assms by (cases dst) (auto simp: le_fun_def)
+
 text \<open>
   Return combination joins caller locals with callee globals and then assigns the
   callee's @{const ret_var} to the optional destination.  The ordinary abstract

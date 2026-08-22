@@ -1,5 +1,5 @@
 theory TD_Side_Eff_Pipeline
-  imports TD_Side_Eff_Bounds TD_Side_Eff_Sound TD_Side_Eff_Interface
+  imports TD_Side_Eff_Bounds TD_Side_Eff_Sound TD_Side_Eff_Interface Solver_Mono
 begin
 
 section \<open>Standalone effectful pipeline\<close>
@@ -11,26 +11,7 @@ text \<open>The pipeline derives the solver interface from monotonicity and stat
 
 subsection \<open>Threefold monotonicity\<close>
 
-text \<open>\<open>threefold_mono\<close> bundles the conditions required by the optimized
-  solver: equation values and side effects are monotone in the environment, while
-  dependency sets can only shrink as the environment grows. Together they guarantee a
-  least partial post-solution.\<close>
 
-definition threefold_mono ::
-  "('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT \<Rightarrow> bool"
-where
-  "threefold_mono T \<equiv> is_mono_eq T \<and> mono_sides T \<and> mono_deps T"
-
-lemma threefold_monoD_eq:   "threefold_mono T \<Longrightarrow> is_mono_eq T"
-  unfolding threefold_mono_def by blast
-
-lemma threefold_monoD_sides: "threefold_mono T \<Longrightarrow> mono_sides T"
-  unfolding threefold_mono_def by blast
-
-lemma threefold_monoD_deps:  "threefold_mono T \<Longrightarrow> mono_deps T"
-  unfolding threefold_mono_def by blast
-
-subsection \<open>Solver interface from the per-tree contract\<close>
 
 lemma td_cfg_side_solver_eff_gen:
   fixes g :: cfg

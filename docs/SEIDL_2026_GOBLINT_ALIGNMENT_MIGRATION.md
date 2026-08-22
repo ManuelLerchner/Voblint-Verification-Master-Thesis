@@ -778,3 +778,173 @@ state both the executable result and the semantic soundness property it witnesse
 - Structural combine is an instance of an abstract `combine`, not the only API.
 - The docs consistently describe the system as a side-effecting constraint
   system with local unknowns `L`, global unknowns `G`, and valuation `sigma`.
+
+### Slice A: shared primitives rehomed off the TD/etf spine
+
+The canonical D/G spine no longer imports a theory merely because a shared
+primitive happened to live inside the old one. Ownership is reversed: both
+spines now depend on the same neutral theories.
+
+| new theory | content moved in |
+| --- | --- |
+| `src/Core/Equations/State_Restriction.thy` | `restrict_local_for` / `restrict_global_for` and their algebra, `combine_env_abs_for_eq_restrict`, the split-state bridge, `res_edge` / `res_combine` and their monotonicity (from `TD_Side_CFG`) |
+| `src/Core/Domain/Exec_Refinement.thy` | the `fun_of_resolved_st_q_for` homomorphisms, the executable projection identities, `res_edge_st` / `res_combine_st` and their transport (from `Exec_Bridge`) |
+| `src/Core/Solver/Strategy_Tree/Strategy_Tree_Rhs.thy` | `fold_rhs_trees` and its `traverse_rhs` / `sides_of_rhs` / `dep_aux` characterizations (from `TD_Side_Tree`) |
+| `src/Core/Solver/Strategy_Tree/Strategy_Tree_Relabel.thy` | `map_ltree` (from `TD_Side_Tree`) joined with `map_gtree` (the former `TD_Side_Eff_Keyed_Gen`, which is gone) |
+| `src/Core/Solver/Strategy_Tree/Solver_Mono.thy` | `threefold_mono` (from `TD_Side_Eff_Pipeline`), `fun_upd_sup_mono` (from `TD_Side_Eff_Bounds`) |
+
+`is_mono_eq`, `mono_sides` and `mono_deps` needed no rehoming: they are vendored
+(`Basics_side`). `domain_transfer` is not part of the spine at all -- it is the
+per-domain transfer record `DG_Base` and `DG_Soundness` consume.
+
+`DG_Framework`, `DG_Soundness`, `DG_LTR_Sound`, `DG_Base`,
+`DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`,
+`DG_Ctx_Activation`, `Entry_State_Routed_Context`, `Call_String_Routed_Context`,
+`DG_Analysis_Adapter`, `Exec_DG_Bridge` and `DG_Base_Exec` now have zero
+transitive imports of `TD_Side_*`, `LTR_TD_Side_*` or `Exec_Bridge`.
+
+No compatibility aliases were introduced. The generated OCaml changed only by
+`map_ltree` and `map_gtree` moving position; their bodies are byte-identical.
+
+### Slice B: witnesses on the canonical spine
+
+**The custom-combine witness moved to D/G.**
+`src/Examples/Sign/Example_Sign_DG_Custom_Combine.thy` replaces the TD/etf
+`Example_Sign_Custom_Combine.thy`, which is deleted. It takes the ordinary
+executable Sign specification `unit_dg_spec_st_for`, overrides only
+`dgs_combine_env` with a merge that joins the callee-exit locals into the
+caller's, and runs both specifications through the same `dg_gen_of` generator
+and the same vendored solver. Every other field -- the caller continuation, the
+edge transfers, `dgs_enter`, `dgs_combine_assign` -- is the stock one, so the
+observed difference isolates exactly the degree of freedom issue #143
+introduced.
+
+The two solved systems agree at the call site (`r = SPos` at `Statement 4`) and
+disagree at the resume point: the stock merge keeps `SPos`, the callee-joining
+merge publishes `STop`. The destination `z` is `SPos` under both, because the
+return assignment is `dgs_combine_assign`'s job and that field is unchanged.
+
+**The flat-vs-D/G placement comparison is retired, its numbers recorded here.**
+
+```text
+Historical flat-vs-D/G regression (Example_Interval_Placement, one placement
+policy held fixed across both routes):
+
+  flat TD/etf route (side_cfg_T_eff_st over one tree per edge):
+      answer = Ivl (Fin 0) (Fin 3)
+  D/G route (placed_dg_gen_of_strict, separate local/side unknowns per node):
+      answer = Ivl (Fin 3) (Fin 3)   balance = Ivl (Fin 3) (Fin 3)
+
+The gap is associated with the D/G split itself -- the per-node local unknown
+the flat route's single shared unknown does not have -- not with the placement
+policy. It does not attribute the gap to any one lower-level mechanism inside
+the D/G route; isolating one would need a further controlled experiment.
+```
+
+This regression motivated the consolidation onto D/G and is intentionally not
+preserved as an executable comparison after removal of the inferior spine.
+`Example_Interval_Placement.thy` keeps its D/G half in full -- the placed
+generator, the per-node bounds, the abstract post-solution and the trace-native
+collecting soundness -- and loses only the `effectful_st_transfer` factory, its
+six recombination lemmas, and the comparison subsection.
+
+**The custom combine is proved sound, not only executed.**
+`sound_dg_spec_sign_dg_spec_env_join` interprets `sound_dg_spec` for the same
+merge at the abstract representation, reusing `sound_dg_spec_unit_for` for the
+four obligations the override does not touch. `combine_sound` follows from two
+new generic lemmas, added next to the definitions they are about rather than
+inside the example:
+
+```text
+combine_assign_abs_mono          (Constraint_System)  the return-value write is
+                                                      a single-slot update
+unit_combine_step_assign_for_mono (DG_Framework)      dgs_combine_assign is
+                                                      monotone in fst m ⊔ snd m
+```
+
+Any analysis whose `dgs_combine_env` sits above the stock one now inherits
+soundness from `sound_dg_spec_unit_for` through those two lemmas; no second
+soundness chain exists.
+
+**`Sign_Named_Global_Eff` retired.** The former named-global TD witness is
+deleted, with its `Instances/NamedGlobalSign` directory and its capstone bullet.
+Its sound instance used only constant global routes -- every `route` in
+`named_etf` was `(λ_. Gpos)` or `(λ_. Gneg)` -- and the theory itself recorded
+why: a route depending on the reassembled state is not σ-monotone and fails the
+TD solver's `mono_sides` precondition. It demonstrated that boundary, not a
+capability the analyzer has. Canonical D/G supplies keyed global unknowns
+through its context/seed machinery (`gkey :: 'c ⇒ 'k`, with the context itself
+computed at call boundaries), and `dep_aux_dg_edge_tree` already pins the
+"reads exactly the source local unknown and one global slot" contract that
+`dep_aux_sideg_tree` carried.
+
+### Slice C in progress: consumers of the flat spine
+
+Taint gate (transitive closure of flat-spine constant use, per definition
+block, canonical `side_cfg_T_eff_keyed_*` generators excluded):
+
+```text
+249 blocks / 23 files   start of Slice C
+228 blocks / 22 files   after Example_Checks_Store_Only
+208 blocks / 21 files   after Example_Interval_Checks_Store_Only
+```
+
+The recipe for a check-discharge example is fixed:
+
+```text
+*_exec_prog_at            ->  lookup_context (analyse_*_result_for gs p) v ()
+*_check_report            ->  analyse_*_report_for gs p
+*_exec_prog_sound_..._at  ->  analyse_*_result_node_sound_for
+three cfg_reaches chains  ->  four computed coverage facts
+```
+
+Two traps this exposed, both silent until the proof fails:
+
+- the coverage lemmas must be stated with `assumes`/`shows`; in the
+  meta-quantified form `OF` leaves higher-order schematics unsolved against the
+  bridge's own premises and the whole chain fails to unify;
+- the node-soundness bridge exports `reserved_ret_var` as its *first* premise
+  once you leave its context, and the flat import chain hid `phase.N` while the
+  codegen one does not.
+
+**Parity has no soundness theorem for its D/G report.** `analyse_parity_report`
+is what `analyse` dispatches to for `Parity_Analysis`, but unlike
+`analyse_sign_report` and `analyse_interval_td_report` there is no
+`analyse_parity_report_sound_proved`/`_refuted`, and no packaged
+`analyse_parity_result_node_sound_for`. `Parity_Checks` stops at
+`pctx_result_node_sound`, the adapter's raw export inside a context with six
+assumptions. Porting `Example_Parity_Checks_Store_Only` off the flat spine
+therefore needs that wrapper written first -- which closes a real gap in the
+Parity CLI branch rather than just moving an example.
+
+#### Behaviour differences observed while migrating consumers
+
+Each is classified rather than silently normalized away.
+
+| witness | flat result | canonical D/G | classification |
+| --- | --- | --- | --- |
+| `Example_Side_Proc_Global`, `counter` at exit | `SNonNeg` | `SPos` | precision improvement |
+
+`cinit_stores` starts every global at zero and the single call increments it
+once, so `SPos` is the exact answer and the old assertion was the imprecise
+one. The regression now pins the exact value; the old result is not preserved
+for parity.
+
+#### Proof patterns to reuse when migrating the remaining domains
+
+```isabelle
+lemma foo
+  assumes ...
+  shows ...
+  by (rule bridge[OF ...])
+```
+
+rather than `lemmas foo = bridge[OF ...]`. When the bridge's premises bind
+variables that also occur in its conclusion, `OF` against a meta-quantified
+lemma leaves higher-order schematics unsolved; stating the conclusion first is
+what constrains them. State the coverage lemmas themselves with
+`assumes`/`shows` for the same reason.
+
+Keep `hide_const phase.N` wherever an import chain that used to provide it is
+replaced. Namespace changes caused by swapping an import are real migration
+effects even when nothing semantic moves.

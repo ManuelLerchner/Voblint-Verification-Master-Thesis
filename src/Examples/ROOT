@@ -35,7 +35,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Side_Branch_Calls
     Example_Sign_Placement
     Example_Placement_Regression
-    Example_Sign_Custom_Combine
+    Example_Sign_DG_Custom_Combine
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
     Example_Sign_DG_EntryState_Result_Regression
@@ -64,7 +64,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Call_String_Solver_Refinement_Seeded
     Call_String_Solver_Regression
     Example_Interval_Source_Ctx
-    Example_Interval_Side_Proc_Global
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
     Example_Proc_Call
@@ -96,7 +95,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_EntryState_GraphViz_Regression
     (* Generator-layer Side buffering: the buffered RHS generator terminates
        where issuing two Side writes per evaluation livelocks the solver. *)
-    Example_Solver_Update_Rule_Regression
     Example_Keyed_Solver_Update_Rule_Regression
 
     Voblint

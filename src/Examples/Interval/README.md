@@ -10,7 +10,6 @@ split by concern.
 | `Exec_Ivl_Run.thy` | precision comparison | `Example_Interval_Loop_Coverage`'s `loop_prog` under three fixpoint engines — bounded Kleene, warrowing TD, and every update rule at once (`join` / `per_origin` / `warrow`); interval narrowing plus the backward guard filter recover `[0,20]` under all of them. Imports the coverage theory rather than restating the program |
 | `Example_Interval_DG_Flagship.thy` | canonical spine | interval analysis of a counting loop, executed and certified on the D/G spine |
 | `Example_Interval_DG_IP_Flagship.thy` | canonical spine | interprocedural: `twice` compiled and analyzed end to end through `FunctionEntry`/`FunctionResult` |
-| `Example_Interval_Side_Proc_Global.thy` | canonical spine | interval IP on a global increment call (`Example_Inc_Proc`, see `../CFG/`); `proc_global_side_ivl_analysis` |
 | `Example_Proc_Call.thy` | canonical spine | two procedures (`inc` / `sqr`) via a global; `main_prog_interval_analysis` + CFG combine structure |
 | `Example_Interval_Loop_Coverage.thy` | canonical spine | bounded loop; backward `assume_ivl` refines the body to `[0,19]`; certified trace soundness `[0,20]` at the loop head (`loop_head_x_bounded`) |
 | `Example_Guard_Refinement.thy` | regression | backward guard refinement strictly tighter than identity assume (`backward_analysis_strictly_tighter`) — a precision negative result |
@@ -22,9 +21,7 @@ Not tabled above, and grouped by what they pin rather than by domain concern:
 `Example_Interval_Checks_Store_Only.thy` (check discharge, the Interval
 analogue of Sign's), `Example_Interval_Placement.thy` (the placement/storage
 independence skeleton), `Example_Interval_Global_Flow_Sensitivity.thy` (how a declared global is
-stored and how flow-sensitively), and `Example_Interval_Side_Proc_Global.thy` (the
-side-effecting interprocedural witness at Interval). Role vocabulary:
-repository `README.md`.
+stored and how flow-sensitively). Role vocabulary: repository `README.md`.
 
 ## `Ctx/` — context routed by entered value
 

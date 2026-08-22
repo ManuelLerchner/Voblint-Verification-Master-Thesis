@@ -1,19 +1,36 @@
-theory TD_Side_Eff_Keyed_Gen
-  imports TD_Side_Eff_Sound
+theory Strategy_Tree_Relabel
+  imports Strategy_Tree_Monad
 begin
 
-section \<open>Global-key tree relabelling\<close>
+section \<open>Relabelling the unknowns of a strategy tree\<close>
 
 text \<open>
-  Global-key relabelling for strategy trees, the \<open>QueryG\<close> / \<open>Side\<close> analogue of
-  \<^const>\<open>map_ltree\<close>.  The heterogeneous D/G generator relabels the local unknowns
-  of a per-edge tree by context (\<^const>\<open>map_ltree\<close>) and routes its global writes to
-  the context's keyed slot with \<open>map_gtree\<close>; \<open>traverse_rhs_map_gtree\<close> shows the
-  latter commutes with the denotation under the matching \<^const>\<open>map_sum\<close>-pullback of
-  the global slots, exactly as \<open>traverse_rhs_map_ltree\<close> does on the local side.
+  A tree built against one indexing of unknowns can be read against another by
+  renaming the slots it queries. \<open>map_ltree\<close> renames the local
+  (\<open>QueryL\<close>) targets and leaves globals untouched; \<open>map_gtree\<close> is its
+  global (\<open>QueryG\<close> / \<open>Side\<close>) counterpart. Each commutes with the denotation
+  under the matching \<^const>\<open>map_sum\<close>-pullback of the environment, so a
+  relabelled equation system denotes the original one read against the
+  relabelled slots.
+
+  Context-sensitivity uses both at once: it reindexes the local unknown \<open>pp\<close> to
+  \<open>pp \<times> 'c\<close> by a position-aware \<open>h\<close> (a per-edge tree queries only its
+  predecessor \<open>u \<mapsto> (u, c)\<close>; a combine tree queries caller \<open>cc \<mapsto> (cc, c)\<close> and
+  callee exit \<open>ex \<mapsto> (ex, c')\<close>) and routes the global writes to the context's
+  keyed slot.
 \<close>
 
-subsection \<open>Relabelling global keys\<close>
+primrec map_ltree ::
+  "('x \<Rightarrow> 'y) \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('y, 'g, 'd) strategy_tree" where
+  "map_ltree h (Answer d) = Answer d"
+| "map_ltree h (QueryL y f) = QueryL (h y) (\<lambda>d. map_ltree h (f d))"
+| "map_ltree h (QueryG y f) = QueryG y (\<lambda>d. map_ltree h (f d))"
+| "map_ltree h (Side y d t) = Side y d (map_ltree h t)"
+
+lemma traverse_rhs_map_ltree:
+  "traverse_rhs (map_ltree h t) \<sigma> = traverse_rhs t (\<lambda>z. \<sigma> (map_sum h id z))"
+  by (induction t) auto
+
 
 primrec map_gtree ::
   "('g \<Rightarrow> 'h) \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('x, 'h, 'd) strategy_tree" where
@@ -46,11 +63,12 @@ lemma dep_aux_map_gtree:
 subsection \<open>Routing: the keyed intra tree reads the context / keyed-slot pullback\<close>
 
 text \<open>
-  Composing the two relabels commutes: a keyed intra tree denotes \<^const>\<open>apply_etf\<close>
-  read against the environment that reroutes locals to their context copy
-  (\<open>w \<mapsto> (w, ctx)\<close>) and the transfer's global slot to the context key \<open>gkey ctx\<close>.
-  This is the local half of routing correctness --- it exhibits, as a \<^const>\<open>map_sum\<close>
-  pullback, precisely which slots a keyed edge tree consults.
+  Composing the two relabels commutes: a keyed intra tree denotes the underlying
+  per-edge tree read against the environment that reroutes locals to their
+  context copy (\<open>w \<mapsto> (w, ctx)\<close>) and the tree's global slot to the context
+  key \<open>gkey ctx\<close>.  This is the local half of routing correctness --- it
+  exhibits, as a \<^const>\<open>map_sum\<close> pullback, precisely which slots a keyed edge
+  tree consults.
 \<close>
 
 lemma traverse_intra_keyed:

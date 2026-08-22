@@ -11,7 +11,7 @@ The layer is split into four concerns, one subfolder each:
 | --- | --- |
 | `TD_Side/` | the TD-side solver interface: generator, monotonicity, base collecting soundness |
 | `Strategy_Tree/` | the domain-agnostic strategy-tree monad and its combinators |
-| `Context/` | context-sensitive solver spine: `Context/Activation`, `Context/DG`, plus the standalone `Context/TD_Side_Eff_Keyed_Gen.thy` |
+| `Context/` | context-sensitive solver spine: `Context/Activation`, `Context/DG` |
 | `Exec/` | executable witnesses and DG-native example support |
 
 **External:** Algorithm correctness is in `TD.TD_side` (`partial_correctness`, `TD_side_mono`).

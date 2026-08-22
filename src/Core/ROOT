@@ -33,8 +33,13 @@ session Voblint_Core in "." = "Voblint_CFG" +
        compiled checks, parametric in an arbitrary abstract-state type,
        both per node and per covered context of the result table above. *)
     Abstract_Checks
+    State_Restriction
+    Exec_Refinement
     TD_Side_CFG
     Strategy_Tree_Monad
+    Strategy_Tree_Rhs
+    Strategy_Tree_Relabel
+    Solver_Mono
     Strategy_Tree_Do
     Strategy_Tree_Combinators
     (* Equation-level normalization: aggregates repeated side effects to one
@@ -54,7 +59,6 @@ session Voblint_Core in "." = "Voblint_CFG" +
     LTR_TD_Side_Eff_Exit
     Activation_Local_Sound
     Activation_Backbone
-    TD_Side_Eff_Keyed_Gen
     DG_Framework
     DG_Soundness
     DG_LTR_Sound

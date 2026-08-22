@@ -1,5 +1,6 @@
 theory Exec_Bridge
-  imports Exec_Backward Exec_Placement TD_Side_Eff_Bounds TD_Side_RHS_Generator Constraint_System
+  imports Exec_Backward Exec_Placement Exec_Refinement TD_Side_Eff_Bounds
+    TD_Side_RHS_Generator Constraint_System
 begin
 
 section \<open>Executable equation-system refinement\<close>
@@ -10,29 +11,6 @@ text \<open>
   per-tree traverse and side denotation commutation through fun_of_resolved_st_q_for gs.
 \<close>
 
-subsection \<open>fun_of_resolved_st_q_for gs homomorphisms for local/global projections\<close>
-
-lemma fun_of_resolved_st_q_for_restrict_local_abs [simp]:
-  "fun_of_resolved_st_q_for gs (restrict_local_resolved_q s) = restrict_local_for gs (fun_of_resolved_st_q_for gs s)"
-  unfolding restrict_local_for_def
-  by (rule ext) simp
-
-lemma fun_of_resolved_st_q_for_restrict_global_abs [simp]:
-  "fun_of_resolved_st_q_for gs (restrict_global_resolved_q s) = restrict_global_for gs (fun_of_resolved_st_q_for gs s)"
-  unfolding restrict_global_for_def
-  by (rule ext) simp
-
-lemma fun_of_resolved_st_q_for_combine_env_abs [simp]:
-  "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) =
-     combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
-       (fun_of_resolved_st_q_for gs se)"
-proof (rule ext)
-  fix x
-  show "fun_of_resolved_st_q_for gs (combine_resolved_st_q sc se) x =
-      combine_env_abs gs (fun_of_resolved_st_q_for gs sc)
-        (fun_of_resolved_st_q_for gs se) x"
-    by (cases "gs x"; simp add: combine_env_abs_def)
-qed
 
 subsection \<open>Finite pointwise readback for local/global reconstruction\<close>
 
@@ -82,85 +60,7 @@ lemma side_env_lift_st_readback:
 
 
 
-subsection \<open>Executable projection identities\<close>
 
-lemma restrict_local_resolved_q_combine_resolved_st_q [simp]:
-  "restrict_local_resolved_q (combine_resolved_st_q A B) =
-     restrict_local_resolved_q A"
-proof (rule resolved_st_q_eq_iff[THEN iffD2])
-  show "lookup_resolved_st_q (restrict_local_resolved_q (combine_resolved_st_q A B)) =
-      lookup_resolved_st_q (restrict_local_resolved_q A)"
-  proof (rule ext)
-    fix loc
-    show "lookup_resolved_st_q (restrict_local_resolved_q (combine_resolved_st_q A B)) loc =
-        lookup_resolved_st_q (restrict_local_resolved_q A) loc"
-      by (cases loc; simp)
-  qed
-qed
-
-lemma restrict_global_resolved_q_combine_resolved_st_q [simp]:
-  "restrict_global_resolved_q (combine_resolved_st_q A B) =
-     restrict_global_resolved_q B"
-proof (rule resolved_st_q_eq_iff[THEN iffD2])
-  show "lookup_resolved_st_q (restrict_global_resolved_q (combine_resolved_st_q A B)) =
-      lookup_resolved_st_q (restrict_global_resolved_q B)"
-  proof (rule ext)
-    fix loc
-    show "lookup_resolved_st_q (restrict_global_resolved_q (combine_resolved_st_q A B)) loc =
-        lookup_resolved_st_q (restrict_global_resolved_q B) loc"
-      by (cases loc; simp)
-  qed
-qed
-
-text \<open>The converse recombination: a local projection joined with a disjoint global
-  projection is exactly the routed combine. Left bare (not \<open>[simp]\<close>) since it would
-  compete with \<open>restrict_local_resolved_q_split\<close>/\<open>restrict_global_resolved_q_split\<close>
-  on the same \<open>restrict_local _ \<squnion> restrict_global _\<close> redex.\<close>
-lemma combine_resolved_st_q_eq_restrict_sup:
-  "combine_resolved_st_q A B = restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B"
-proof (rule resolved_st_q_eq_iff[THEN iffD2])
-  show "lookup_resolved_st_q (combine_resolved_st_q A B) =
-      lookup_resolved_st_q (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)"
-  proof (rule ext)
-    fix loc
-    show "lookup_resolved_st_q (combine_resolved_st_q A B) loc =
-        lookup_resolved_st_q (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B) loc"
-      by (cases loc; simp)
-  qed
-qed
-
-text \<open>Effectful executable trees use these projection identities to split combined states.\<close>
-lemma restrict_local_resolved_q_split [simp]:
-  "restrict_local_resolved_q (restrict_local_resolved_q A \<squnion>
-      restrict_global_resolved_q B) = restrict_local_resolved_q A"
-proof (rule resolved_st_q_eq_iff[THEN iffD2])
-  show "lookup_resolved_st_q (restrict_local_resolved_q
-      (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) =
-      lookup_resolved_st_q (restrict_local_resolved_q A)"
-  proof (rule ext)
-    fix loc
-    show "lookup_resolved_st_q (restrict_local_resolved_q
-        (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) loc =
-        lookup_resolved_st_q (restrict_local_resolved_q A) loc"
-      by (cases loc; simp)
-  qed
-qed
-
-lemma restrict_global_resolved_q_split [simp]:
-  "restrict_global_resolved_q (restrict_local_resolved_q A \<squnion>
-      restrict_global_resolved_q B) = restrict_global_resolved_q B"
-proof (rule resolved_st_q_eq_iff[THEN iffD2])
-  show "lookup_resolved_st_q (restrict_global_resolved_q
-      (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) =
-      lookup_resolved_st_q (restrict_global_resolved_q B)"
-  proof (rule ext)
-    fix loc
-    show "lookup_resolved_st_q (restrict_global_resolved_q
-        (restrict_local_resolved_q A \<squnion> restrict_global_resolved_q B)) loc =
-        lookup_resolved_st_q (restrict_global_resolved_q B) loc"
-      by (cases loc; simp)
-  qed
-qed
 
 
 
@@ -787,28 +687,6 @@ lemma apply_etf_st_exists_unit_of_transfer:
                = unit_edge_tree_st is_bot_pred f u"
   using apply_etf_st_unit_of_transfer[OF reduces] by blast
 
-text \<open>
-  \<open>res_edge_st\<close>/\<open>res_combine_st\<close> name the reconstructed input's transfer result
-  the same way \<^const>\<open>res_edge\<close>/\<^const>\<open>res_combine\<close> do on the spec side: \<^const>\<open>Bot\<close>
-  when either the reconstructed input or \<open>f\<close>'s own result is witness-bottom,
-  \<^const>\<open>Lifted\<close> \<open>f\<close>'s result otherwise. The witness-bottom test is the same
-  free \<open>is_bot_pred\<close> parameter \<^const>\<open>unit_edge_tree_st\<close> takes.
-\<close>
-definition res_edge_st ::
-  "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool) \<Rightarrow> ('a resolved_st_q \<Rightarrow> 'a resolved_st_q) \<Rightarrow> pp
-   \<Rightarrow> (pp + unit \<Rightarrow> 'a resolved_st_q lifted) \<Rightarrow> 'a resolved_st_q lifted" where
-  "res_edge_st is_bot_pred f u \<sigma>_st =
-     transfer_lift is_bot_pred f
-       (assemble_local_global (\<sigma>_st (Inl u)) (\<sigma>_st (Inr ())))"
-
-definition res_combine_st ::
-  "('a::bounded_semilattice_sup_bot resolved_st_q \<Rightarrow> bool)
-   \<Rightarrow> ('a resolved_st_q \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q) \<Rightarrow> pp \<Rightarrow> pp
-   \<Rightarrow> (pp + unit \<Rightarrow> 'a resolved_st_q lifted) \<Rightarrow> 'a resolved_st_q lifted" where
-  "res_combine_st is_bot_pred cmb cc ex \<sigma>_st =
-     transfer_lift2 is_bot_pred cmb
-       (assemble_local_global (\<sigma>_st (Inl cc)) (\<sigma>_st (Inr ())))
-       (assemble_local_global (\<sigma>_st (Inl ex)) (\<sigma>_st (Inr ())))"
 
 lemma traverse_unit_edge_tree_st:
   "traverse_rhs (unit_edge_tree_st is_bot_pred f u) \<sigma>_st =
@@ -939,38 +817,6 @@ lemma sides_unit_combine_tree_st_Inl:
   unfolding unit_combine_tree_st_def Let_def by simp
 
 
-text \<open>
-  \<open>res_edge_st\<close>/\<open>res_combine_st\<close> commute with the spec-side \<^const>\<open>res_edge\<close>/
-  \<^const>\<open>res_combine\<close> under \<open>map_lift (fun_of_resolved_st_q_for gs)\<close> as the
-  interpretation -- the AD-51/AD-52 exec/spec bridge, restated at the lifted
-  level.  \<^const>\<open>combine_collect_resolved_for_q\<close> already commutes with
-  \<open>combine\<^sup>#\<close> unconditionally (@{thm fun_of_resolved_st_q_for_combine_collect});
-  a single edge transfer \<open>f\<close>/\<open>F\<close> needs the caller's own \<open>commute\<close> fact, since
-  \<open>f\<close> is domain-specific. The caller also owes \<open>exact\<close>: \<open>is_bot_pred\<close> must
-  itself be extensionally the semantic @{const is_bot_state} test through
-  @{const fun_of_resolved_st_q_for} -- true of
-  @{const resolved_st_q_is_bot_for} at a program's own declared-global list
-  (@{thm resolved_st_q_is_bot_for_iff}) -- so this stays an exact commutation,
-  not a refinement.
-\<close>
-lemma res_edge_st_fun_of_resolved_st_q_for:
-  assumes commute: "\<And>s. fun_of_resolved_st_q_for gs (f s) = F (fun_of_resolved_st_q_for gs s)"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_lift (fun_of_resolved_st_q_for gs) (res_edge_st is_bot_pred f u \<sigma>_st) =
-         res_edge F u (map_lift (fun_of_resolved_st_q_for gs) \<circ> \<sigma>_st)"
-  unfolding res_edge_st_def res_edge_def o_def
-  by (cases "\<sigma>_st (Inl u)"; cases "\<sigma>_st (Inr ())";
-      simp add: commute exact normalize_lift_def split: if_splits)
-
-lemma res_combine_st_fun_of_resolved_st_q_for:
-  assumes commute: "\<And>sc se. fun_of_resolved_st_q_for gs (cmb_st sc se)
-                       = cmb (fun_of_resolved_st_q_for gs sc) (fun_of_resolved_st_q_for gs se)"
-    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "map_lift (fun_of_resolved_st_q_for gs) (res_combine_st is_bot_pred cmb_st cc ex \<sigma>_st) =
-   res_combine cmb cc ex (map_lift (fun_of_resolved_st_q_for gs) \<circ> \<sigma>_st)"
-  unfolding res_combine_st_def res_combine_def o_def
-  by (cases "\<sigma>_st (Inl cc)"; cases "\<sigma>_st (Inl ex)"; cases "\<sigma>_st (Inr ())";
-      simp add: commute exact normalize_lift_def split: if_splits)
 
 
 
@@ -1653,15 +1499,6 @@ proof -
     unfolding side_contribution_trees_st_def side_contribution_trees_def
     by (rule list_all2_appendI[OF edges suffix])
 qed
-lemma map_lift_fun_of_resolved_st_q_for_sup [simp]:
-  "map_lift (fun_of_resolved_st_q_for gs) (a \<squnion> b) =
-   map_lift (fun_of_resolved_st_q_for gs) a \<squnion> map_lift (fun_of_resolved_st_q_for gs) b"
-  by (cases a; cases b; simp)
-
-lemma map_lift_fun_of_resolved_st_q_for_mono:
-  assumes "x \<le> y"
-  shows "map_lift (fun_of_resolved_st_q_for gs) x \<le> map_lift (fun_of_resolved_st_q_for gs) y"
-  using assms by (cases x; cases y; simp add: fun_of_resolved_st_q_for_mono)
 
 lemma fold_rhs_values_fun_of_resolved_st_q_for:
   assumes rel: "list_all2

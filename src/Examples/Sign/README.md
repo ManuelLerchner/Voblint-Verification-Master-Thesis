@@ -13,7 +13,7 @@ concrete run to the abstract result.
 | `Example_Side_Branch_Calls.thy` | canonical spine | a branching procedure called twice; flow-sensitive locals against flow-insensitive globals |
 | `Example_Checks_Store_Only.thy` | acceptance | `__voblint_check(...)` discharged node-locally against a computed post-solution: one proved, one refuted, one unknown |
 | `Example_Random_Sign_Showcase.thy` | canonical spine | `x := __voblint_nondet_int()` closed end to end — the branches rejoin at `SNonNeg` rather than `STop`, with a source-level non-vacuity witness |
-| `Example_Sign_Custom_Combine.thy` | canonical spine | an analysis-supplied call-return combine that is *not* `combine_env_abs`, carried through the same generic soundness |
+| `Example_Sign_DG_Custom_Combine.thy` | canonical spine | an analysis-supplied call-return environment merge that is *not* the stock one, carried through the same D/G generator and solver |
 | `Example_Sign_Placement.thy` | canonical spine | the placement/storage-independence skeleton at Sign, where the `G` channel is always bottom |
 | `Example_Sign_DG_EntryState_Result_Regression.thy` | regression | `analyse_sign_entry_state_result` separates two call sites into `[SPos]` and `[SNeg]` contexts |
 

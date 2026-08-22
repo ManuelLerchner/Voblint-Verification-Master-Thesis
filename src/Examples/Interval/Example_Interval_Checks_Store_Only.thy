@@ -1,9 +1,12 @@
 section \<open>Example: checks_proven/checks_proven_sound alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_Analysis.Interval_Exec_Sound" "Voblint_Analysis.Interval_Checks"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Codegen" "Voblint_Analysis.Interval_Checks"
           "Voblint_Analysis.Sign_Checks" "Voblint_VIMP.VIMP_Notation"
 begin
+
+(* Disambiguate our N constructor from the phase datatype constructor. *)
+hide_const phase.N
 
 text \<open>This file compares Sign and Interval classification on the same
   program, so both are in scope, but both now resolve \<open>prog_cfg\<close> to the same
@@ -55,18 +58,60 @@ lemma checks_ivl_ex_program_declared_global_vars [simp]:
   "declared_global_vars checks_ivl_ex_program = []"
   by (simp add: checks_ivl_ex_program_def)
 
-lemma checks_ivl_ex_solver_terminates: "ivl_terminates_prog checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program"
-  by (rule ivl_terminates_prog_via_solve_c) eval
+lemma checks_ivl_ex_reserved: "reserved_ret_var checks_ivl_ex_gs"
+  unfolding reserved_ret_var_def checks_ivl_ex_program_def by (simp add: ret_var_def)
+
+lemma checks_ivl_ex_calls_eval: "calls (prog_cfg prog_main_name checks_ivl_ex_program) = {}"
+  unfolding prog_cfg_def by eval
+
+text \<open>The routed-unit solve terminates, and its solved key set is closed under
+  the compiled graph -- the four coverage facts the D/G node-soundness bridge
+  turns on, each computed rather than argued.\<close>
+
+lemma checks_ivl_ex_solver_terminates:
+  "ictx_terminates_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program"
+  by (rule ictx_terminates_prog_via_solve_c) eval
+
+lemma checks_ivl_ex_entry_cov:
+  "(cfg_entry (prog_cfg prog_main_name checks_ivl_ex_program), ())
+     \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+  by eval
+
+lemma checks_ivl_ex_fwd_ok_ball:
+  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name checks_ivl_ex_program).
+     (u, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program) \<longrightarrow>
+     (w, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+  by eval
+
+lemma checks_ivl_ex_fwd_ok:
+  assumes "(u, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+    and "(u, a, w) \<in> intra (prog_cfg prog_main_name checks_ivl_ex_program)"
+  shows "(w, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+  using assms checks_ivl_ex_fwd_ok_ball by (cases ctx) auto
+
+lemma checks_ivl_ex_call_fwd_ok:
+  assumes "(u, ctx) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name checks_ivl_ex_program)"
+  shows "(FunctionEntry q, ()) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+  using assms by (simp add: checks_ivl_ex_calls_eval)
+
+lemma checks_ivl_ex_comb_fwd_ok:
+  assumes "(cl, c1) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name checks_ivl_ex_program)"
+  shows "(k, c1) \<in> fst (ictx_sol_prog checks_ivl_ex_gs prog_main_name checks_ivl_ex_program)"
+  using assms by (simp add: checks_ivl_ex_calls_eval)
 
 definition checks_ivl_ex_reach :: "pp \<Rightarrow> store set" where
   "checks_ivl_ex_reach v = ltr_collect checks_ivl_ex_gs (prog_cfg (STR ''main'') checks_ivl_ex_program) (cinit_stores checks_ivl_ex_gs) v"
 
-text \<open>The computed Interval environment at an arbitrary node, not fixed to the
-  exit: \<^const>\<open>ivl_exec_prog_at\<close> queries the same solver result
-  \<^const>\<open>ivl_exec_prog\<close> reads only at the exit.\<close>
+text \<open>The computed Interval environment at an arbitrary node, read out of the
+  routed-unit solved table \<^const>\<open>analyse_interval_join_result_for\<close> the
+  always-join report also reads -- one solve, queried per node, with an
+  unreachable node concretizing to \<^term>\<open>bot\<close>.\<close>
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
-  "checks_ivl_ex_env v = case_lifted bot (\<lambda>\<sigma>. \<sigma>)
-     (ivl_exec_prog_at checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program v)"
+  "checks_ivl_ex_env v =
+     (case lookup_context (analyse_interval_join_result_for checks_ivl_ex_gs checks_ivl_ex_program) v () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 text \<open>The compiled edges, read off \<^const>\<open>prog_cfg\<close>'s own \<open>eval\<close>-computed
   shape: \<open>Statement 1\<close> (\<open>x := __voblint_nondet_int()\<close>'s successor) branches on
@@ -92,71 +137,33 @@ lemma checks_ivl_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ivl_ex_
 lemma checks_ivl_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ivl_ex_program) = FunctionEntry (STR ''main'')"
   unfolding prog_cfg_def by eval
 
-text \<open>Structural reachability to the exit, for each check node --- a fact
-  about the CFG's shape, not about any concrete store: it does not forward
-  stores.\<close>
-lemma checks_ivl_ex_statement2_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 2)
-     (cfg_exit (prog_cfg (STR ''main'') checks_ivl_ex_program))"
-proof -
-  have r2: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 2) (Statement 3)"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  have r3: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 3) (Statement 4)"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 4) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 6) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  show ?thesis
-    unfolding checks_ivl_ex_exit_eval
-    using r2 r3 r4 r6 cfg_reaches_trans by blast
-qed
+text \<open>Node-local collecting soundness at each check node, from the routed D/G
+  node-soundness bridge and the four computed coverage facts --- no store is
+  forwarded to the exit, and no reachability-to-exit premise is needed: the
+  routed bridge turns on solved-key coverage, not on the query seed.\<close>
 
-lemma checks_ivl_ex_statement3_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 3)
-     (cfg_exit (prog_cfg (STR ''main'') checks_ivl_ex_program))"
-proof -
-  have r3: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 3) (Statement 4)"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 4) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 6) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  show ?thesis
-    unfolding checks_ivl_ex_exit_eval
-    using r3 r4 r6 cfg_reaches_trans by blast
-qed
+lemmas checks_ivl_ex_node_sound =
+  analyse_interval_join_result_node_sound_for[OF checks_ivl_ex_reserved checks_ivl_ex_solver_terminates
+    checks_ivl_ex_entry_cov checks_ivl_ex_fwd_ok checks_ivl_ex_call_fwd_ok
+    checks_ivl_ex_comb_fwd_ok]
 
-lemma checks_ivl_ex_statement4_reaches_exit:
-  "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 4)
-     (cfg_exit (prog_cfg (STR ''main'') checks_ivl_ex_program))"
-proof -
-  have r4: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 4) (Statement 6)"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  have r6: "cfg_reaches (prog_cfg (STR ''main'') checks_ivl_ex_program) (Statement 6) (FunctionResult (STR ''main''))"
-    by (rule cfg_reaches_intra) (simp add: checks_ivl_ex_intra_eval)
-  show ?thesis
-    unfolding checks_ivl_ex_exit_eval
-    using r4 r6 cfg_reaches_trans by blast
-qed
-
-text \<open>Node-local collecting soundness at each check node, via
-  \<open>ivl_exec_prog_sound_collecting_at\<close> and the reachability facts above ---
-  no store is forwarded to the exit.\<close>
 lemma checks_ivl_ex_node_sound_2:
   "checks_ivl_ex_reach (Statement 2) \<le> \<lbrakk>checks_ivl_ex_env (Statement 2)\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def gamma_state_case_lifted
-  by (rule ivl_exec_prog_sound_collecting_at[OF refl checks_ivl_ex_solver_terminates checks_ivl_ex_statement2_reaches_exit])
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
+  using checks_ivl_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 lemma checks_ivl_ex_node_sound_3:
   "checks_ivl_ex_reach (Statement 3) \<le> \<lbrakk>checks_ivl_ex_env (Statement 3)\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def gamma_state_case_lifted
-  by (rule ivl_exec_prog_sound_collecting_at[OF refl checks_ivl_ex_solver_terminates checks_ivl_ex_statement3_reaches_exit])
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
+  using checks_ivl_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 lemma checks_ivl_ex_node_sound_4:
   "checks_ivl_ex_reach (Statement 4) \<le> \<lbrakk>checks_ivl_ex_env (Statement 4)\<rbrakk>"
-  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def gamma_state_case_lifted
-  by (rule ivl_exec_prog_sound_collecting_at[OF refl checks_ivl_ex_solver_terminates checks_ivl_ex_statement4_reaches_exit])
+  unfolding checks_ivl_ex_reach_def checks_ivl_ex_env_def
+  using checks_ivl_ex_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 text \<open>Executable classification at each check's own node --- the guard
   \<open>0 < x \<and> x < 10\<close> narrows \<open>x\<close> to \<open>[1,9]\<close> at \<open>Statement 2\<close>, so \<open>x < 11\<close> is
@@ -285,7 +292,7 @@ text \<open>
 \<close>
 
 lemma checks_ivl_ex_report_eval:
-  "interval_check_report checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program =
+  "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program =
      [(Statement 2, Less (V (STR ''x'')) (N 11), Check_Proved),
       (Statement 3, Less (V (STR ''x'')) (N 0), Check_Refuted),
       (Statement 4, Eq (V (STR ''x'')) (N 5), Check_Unknown)]"
@@ -296,10 +303,11 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
   representation to drift from the per-node facts above.\<close>
 
 lemma checks_ivl_ex_report_unfold:
-  "interval_check_report checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program
+  "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program
      = classify_checks (prog_cfg (STR ''main'') checks_ivl_ex_program) checks_ivl_ex_env
          interval_classify_check"
-  unfolding interval_check_report_def checks_ivl_ex_env_def by simp
+  unfolding analyse_interval_report_for_def checks_ivl_ex_env_def
+  by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report
   entry is derivable directly from \<open>classify_checks_mem_iff\<close> together with
@@ -309,7 +317,7 @@ text \<open>Agreement with the existing per-node classification: the first repor
 
 corollary checks_ivl_ex_report_agrees_with_node_classification:
   "(Statement 2, Less (V (STR ''x'')) (N 11), Check_Proved)
-     \<in> set (interval_check_report checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program)"
+     \<in> set (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program)"
   unfolding checks_ivl_ex_report_unfold
   using classify_checks_mem_iff[of "prog_cfg (STR ''main'') checks_ivl_ex_program"
       "Statement 2" "Less (V (STR ''x'')) (N 11)" Check_Proved checks_ivl_ex_env interval_classify_check]
@@ -332,7 +340,7 @@ text \<open>
 definition checks_ivl_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotation option" where
   "checks_ivl_ex_node_annotation v =
      (case check_report_node_annotation
-             (interval_check_report checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program) v of
+             (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program) v of
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then
@@ -363,6 +371,6 @@ definition checks_ivl_ex_dot_lit :: String.literal where
   "checks_ivl_ex_dot_lit =
      raw_cfg_dot_with_report_lit (prog_table checks_ivl_ex_program) (prog_procs checks_ivl_ex_program)
        (STR ''main'') (prog_main checks_ivl_ex_program) checks_ivl_ex_node_annotation
-       (interval_check_report checks_ivl_ex_gs (STR ''main'') checks_ivl_ex_program)"
+       (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program)"
 
 end

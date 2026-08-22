@@ -12,8 +12,7 @@ text \<open>
 theory Exec_DG_Bridge
   imports
     "Voblint_Core.DG_Soundness"
-    "Voblint_Core.Exec_Bridge"
-    "Voblint_Core.TD_Side_Eff_Keyed_Gen"
+    "Voblint_Core.Exec_Refinement"
     "Voblint_Core.Routed_Context"
 begin
 

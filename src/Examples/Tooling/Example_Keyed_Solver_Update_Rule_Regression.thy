@@ -21,9 +21,7 @@ text \<open>
   \<open>EA_Assign\<close>) against \<open>keyed_spec\<close> below, so their \<^const>\<open>dg_edge_tree\<close>
   contributions publish genuinely different global values -- reproducing the
   same per-origin-gate destabilization \<^const>\<open>update_global_warrowing_apinis\<close>
-  exhibits for the flat generator (\<open>Example_Solver_Update_Rule_Regression\<close>),
-  now from two \<open>intra\<close> list entries of the same equation instead of two Side
-  calls in one hand-written tree.
+  exhibits, from two \<open>intra\<close> list entries of the same equation.
 \<close>
 
 definition keyed_spec :: "(ivl, ivl) dg_spec" where

@@ -1,5 +1,5 @@
 theory Example_Side_Branch_Calls
-  imports "Voblint_Analysis.Sign_Exec_Sound" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_CLI.Sign_Codegen" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Certified sign analyzer on a branching, repeatedly-called procedure\<close>
@@ -71,46 +71,91 @@ lemma branch_prog_result_val_global [simp]: "branch_prog_gs (STR ''result_val'')
   by simp
 
 text \<open>
-  The computed abstract state at the exit.  With C-faithful seeding
-  (\<open>cinit_sign_st\<close>: globals start at \<open>SZero\<close>, locals at \<open>STop\<close>), the
-  7-element lattice can give tighter global bounds: \<open>SZero \<squnion> SPos = SNonNeg\<close>
-  instead of \<open>STop\<close>.  Concretely, both branches of \<open>compute\<close> assign
-  a positive \<open>Glocal\<close> to \<open>result_val\<close>; joined against the zero initial value
-  the result is \<open>SNonNeg\<close> (\<open>\<ge> 0\<close>), not \<open>STop\<close>.
+  The computed abstract state at the exit, read out of the routed solved table
+  the production report also reads.  Seeding is C-faithful (\<open>cinit_sign_st\<close>:
+  globals start at \<open>SZero\<close>, locals at \<open>STop\<close>), and the 7-element lattice keeps
+  a positive global apart from a non-negative one: both branches of \<open>compute\<close>
+  assign a positive \<open>Glocal\<close> to \<open>result_val\<close>, and every path to the exit runs
+  \<open>compute\<close>, so at the exit \<open>result_val\<close> is \<open>SPos\<close>.
 \<close>
 
-text \<open>
-  \<open>sign_exec_prog\<close> now returns a reachability-lifted \<^typ>\<open>sign abs_state lifted\<close>
-  (\<open>#113\<close>): \<open>branch_prog_env\<close> unwraps it to the raw environment
-  \<^const>\<open>case_lifted\<close> reads off directly, since \<open>branch_prog\<close>'s exit is reachable
-  and this witness is only ever used as a function of a vname below.
-\<close>
+text \<open>Termination is proved, not assumed: the executable routed solver returns
+  a result, so the program is in the solver's domain. The three closure facts
+  are computed the same way; this program really does have call edges, so they
+  are not vacuous.\<close>
+
+lemma ec_reserved: "reserved_ret_var branch_prog_gs"
+  unfolding reserved_ret_var_def branch_prog_def by (simp add: ret_var_def)
+
+lemma ec_terminates: "sctx_terminates_prog branch_prog_gs prog_main_name branch_prog"
+  by (rule sctx_terminates_prog_via_solve_c) eval
+
+lemma ec_entry_cov:
+  "(cfg_entry (prog_cfg prog_main_name branch_prog), ())
+     \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  by eval
+
+lemma ec_fwd_ok_ball:
+  "\<forall>(u, a, w) \<in> intra (prog_cfg prog_main_name branch_prog).
+     (u, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog) \<longrightarrow>
+     (w, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  by eval
+
+lemma ec_fwd_ok:
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+    and "(u, a, w) \<in> intra (prog_cfg prog_main_name branch_prog)"
+  shows "(w, ctx) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  using assms ec_fwd_ok_ball by (cases ctx) auto
+
+lemma ec_calls_cov_ball:
+  "\<forall>(u, ca, ce, k) \<in> calls (prog_cfg prog_main_name branch_prog).
+     (case ce of FunctionEntry q \<Rightarrow>
+        (FunctionEntry q, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)
+      | _ \<Rightarrow> True)
+     \<and> ((k, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog))"
+  by eval
+
+lemma ec_call_fwd_ok:
+  assumes "(u, ctx) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+    and "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name branch_prog)"
+  shows "(FunctionEntry q, ()) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  using assms ec_calls_cov_ball by fastforce
+
+lemma ec_comb_fwd_ok:
+  assumes "(cl, c1) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+    and "(cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name branch_prog)"
+  shows "(k, c1) \<in> fst (sctx_sol_prog branch_prog_gs prog_main_name branch_prog)"
+  using assms ec_calls_cov_ball by (cases c1) fastforce
+
+lemma ec_node_sound:
+  "ltr_collect branch_prog_gs (prog_cfg prog_main_name branch_prog) (cinit_stores branch_prog_gs) v
+     \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog) v () of
+            Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
+  by (rule analyse_sign_result_node_sound_for
+        [OF ec_reserved ec_terminates ec_entry_cov
+            ec_fwd_ok ec_call_fwd_ok ec_comb_fwd_ok])
+
+text \<open>The computed environment at the exit, read out of the routed solved
+  table the production report also reads.\<close>
 
 definition branch_prog_env :: "vname \<Rightarrow> sign" where
-  "branch_prog_env = case_lifted bot (\<lambda>\<sigma>. \<sigma>) (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
-
-lemma ec_result_nonnneg:
-  "branch_prog_env (STR ''result_val'') = SNonNeg"
-  by (simp add: branch_prog_env_def) eval
-
-text \<open>Termination is proved, not assumed: the executable side solver returns a
-  result, so by @{thm sign_terminates_prog_via_solve_c} the program is in the
-  solver's domain.\<close>
-
-lemma ec_terminates: "sign_terminates_prog branch_prog_gs (STR ''main'') branch_prog"
-  by (rule sign_terminates_prog_via_solve_c) eval
+  "branch_prog_env =
+     (case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog)
+             (cfg_exit (prog_cfg prog_main_name branch_prog)) () of
+        Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 text \<open>
   Certified sound, unconditionally: from any input store, every store reaching
   the exit under the interprocedural collecting semantics is over-approximated
   by the computed result -- across the \<open>if\<close>/\<open>else\<close> and both calls to \<open>compute\<close>.
-  An instance of the program-parametric @{thm sign_exec_prog_sound_collecting}.
 \<close>
 
 corollary ec_certified_sound:
   "ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
-   \<le> gamma_state_lift (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
-  by (rule sign_exec_prog_sound_collecting[OF refl ec_terminates])
+   \<le> \<lbrakk>branch_prog_env\<rbrakk>"
+  unfolding branch_prog_env_def
+  using ec_node_sound
+  by (simp add: prog_main_name_def gamma_point_def split: point_state.splits)
 
 text \<open>
   The store-level reading: \<^emph>\<open>any\<close> store reaching the exit under the
@@ -120,19 +165,17 @@ text \<open>
 
 corollary ec_certified_sound_store:
   assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
-  shows "s \<in> gamma_state_lift (sign_exec_prog branch_prog_gs (STR ''main'') branch_prog)"
+  shows "s \<in> \<lbrakk>branch_prog_env\<rbrakk>"
   using assms ec_certified_sound by blast
 
-text \<open>
-  Flow-insensitive global analysis: concrete values of every global at the exit.
-  The analysis joins all writes to a global across the entire program against the
-  C-faithful initialisation seed (\<open>SZero\<close> for globals).
-\<close>
+lemma ec_result_pos:
+  "branch_prog_env (STR ''result_val'') = SPos"
+  by (simp add: branch_prog_env_def) eval
 
 text \<open>
   \<open>input_val\<close> is assigned \<open>5\<close> (positive) and \<open>-3\<close> (negative) in \<open>main\<close>.  Both
-  writes are joined: \<open>SZero \<squnion> SPos \<squnion> SNeg = SZero \<squnion> STop = STop\<close>.
-  Opposite-sign writes still collapse to \<open>STop\<close> regardless of the seed.
+  writes are joined: \<open>SPos \<squnion> SNeg = STop\<close>.  Opposite-sign writes collapse to
+  \<open>STop\<close> whatever the initialisation seed contributes.
 \<close>
 
 lemma ec_ginput_top:
@@ -140,13 +183,12 @@ lemma ec_ginput_top:
   by (simp add: branch_prog_env_def) eval
 
 text \<open>
-  \<open>out_val\<close> is computed as \<open>100 * result_val\<close>.  With \<open>result_val = SNonNeg\<close>
-  (see @{thm ec_result_nonnneg}), the product \<open>SPos * SNonNeg = SNonNeg\<close>
-  joined against the zero seed gives \<open>SZero \<squnion> SNonNeg = SNonNeg\<close>.
+  \<open>out_val\<close> is computed as \<open>100 * result_val\<close>.  With \<open>result_val = SPos\<close>
+  (@{thm ec_result_pos}), the product is \<open>SPos * SPos = SPos\<close>.
 \<close>
 
-lemma ec_gout_nonnneg:
-  "branch_prog_env (STR ''out_val'') = SNonNeg"
+lemma ec_gout_pos:
+  "branch_prog_env (STR ''out_val'') = SPos"
   by (simp add: branch_prog_env_def) eval
 
 lemma ec_r_pos:
@@ -154,27 +196,21 @@ lemma ec_r_pos:
   by (simp add: branch_prog_env_def) eval
 
 text \<open>
-  Precision summary.
+  Precision summary at the exit.
 
-  \<^bold>\<open>Computed result with the concrete-faithful seed and seven-element lattice:\<close>
+  \<^item> \<open>input_val = STop\<close>: the writes \<open>5\<close> and \<open>-3\<close> have opposite signs, so no
+    single sign element covers both.
 
-  \<^item> \<open>input_val = STop\<close>: writes \<open>5\<close> and \<open>-3\<close> have opposite signs; their join is
-    \<open>STop\<close> regardless of the seed.
+  \<^item> \<open>result_val = SPos\<close>: both branches of \<open>compute\<close> assign a positive
+    \<open>Glocal\<close> (\<open>1+1\<close> and \<open>1+2\<close>), and every path reaching the exit has run
+    \<open>compute\<close>, so the zero initial value is not live there.  Exact.
 
-  \<^item> \<open>result_val = SNonNeg\<close>: both branches of \<open>compute\<close> assign a positive
-    \<open>Glocal\<close> (\<open>1+1\<close> and \<open>1+2\<close>).  The write \<open>SPos\<close> is joined against the \<open>SZero\<close> seed:
-    \<open>SZero \<squnion> SPos = SNonNeg\<close>.  The 5-element flat lattice would have given
-    \<open>STop\<close> here; the 7-element lattice gives \<open>SNonNeg\<close>.
+  \<^item> \<open>out_val = SPos\<close>: \<open>SPos * SPos = SPos\<close>.  Exact.
 
-  \<^item> \<open>out_val = SNonNeg\<close>: \<open>SPos * SNonNeg = SNonNeg\<close>, joined against \<open>SZero\<close>.
+  \<^item> \<open>r = SPos\<close>: \<open>r := 0\<close> followed by two increments.  Exact.
 
-  \<^bold>\<open>Precision limitation:\<close>
-
-  \<open>SNonNeg\<close> includes \<open>0\<close>, so the analysis cannot certify \<open>result_val \<noteq> 0\<close> -- the
-  check needed to justify a division such as \<open>100 / result_val\<close>.  That would require
-  knowing \<open>result_val\<close> is strictly positive (\<open>SPos\<close>), which in turn requires
-  knowing the initial write of \<open>0\<close> is overwritten before the exit (flow
-  sensitivity on globals, not modelled here).
+  Since \<open>result_val\<close> is \<open>SPos\<close> and not merely \<open>\<ge> 0\<close>, the analysis certifies
+  \<open>result_val \<noteq> 0\<close> -- the check a division such as \<open>100 / result_val\<close> needs.
 
   \<^bold>\<open>Local precision:\<close>
 
@@ -187,5 +223,3 @@ text \<open>
 \<close>
 
 end
-
-

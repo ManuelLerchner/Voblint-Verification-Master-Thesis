@@ -193,8 +193,8 @@ lemma main_cfg_calls:
 
 
 text \<open>
-  A certified interval analysis of a shared-global increment call is
-  @{text "Example_Side_Proc_Global"} / @{text "Example_Interval_Side_Proc_Global"};
+  A certified Sign analysis of a shared-global increment call is
+  @{text "Example_Side_Proc_Global"};
   this theory's own contribution is the concrete run (@{thm [source]
   main_prog_result [no_vars]}) and the compiled interprocedural CFG above.
 \<close>

@@ -1,6 +1,7 @@
 theory DG_Framework
-  imports Exec_Bridge TD_Side_Eff_Keyed_Gen Side_Buffering
-    TD_Side_Eff_Pipeline
+  imports State_Restriction Exec_Placement Solver_Mono Side_Buffering
+    Strategy_Tree_Rhs Strategy_Tree_Relabel Strategy_Tree_Combinators
+    "Voblint_CFG.CFG_Transfer"
 begin
 
 section \<open>The D/G framework core\<close>
@@ -29,8 +30,8 @@ subsection \<open>A structural-reachability unary step, staged ahead of \<^const
 text \<open>
   \<^const>\<open>unit_step_for\<close> reconstructs a complete state, applies the raw transfer, and splits
   -- with no notion of an unreachable input or a semantically-bottom result. This is the DG
-  analogue of the gap \<^theory>\<open>Voblint_Core.TD_Side_CFG\<close>'s \<^const>\<open>res_edge\<close> already closes for
-  the flat pipeline. \<^const>\<open>assemble_local_global\<close> itself is not the right reconstruction
+  analogue of the gap \<^theory>\<open>Voblint_Core.State_Restriction\<close>'s \<^const>\<open>res_edge\<close> closes
+  for a single reassembled environment. \<^const>\<open>assemble_local_global\<close> itself is not the right reconstruction
   primitive here: its \<open>Lifted d, Lifted g\<close> case joins with \<open>\<squnion>\<close>, but \<^const>\<open>unit_step_for\<close>
   reconstructs with \<^const>\<open>combine_env_abs\<close>, a per-variable selector (\<open>\<lambda>x. if gs x then g x
   else d x\<close>), not a join. \<open>assemble_env_abs\<close> below keeps \<^const>\<open>assemble_local_global\<close>'s
@@ -305,8 +306,7 @@ text \<open>
   each one's \<open>Side\<close> is published at a different moment within the same RHS evaluation:
   the vendored solver's warrowing/APINIS update rule gates convergence per \<^emph>\<open>origin\<close>, so
   repeated writes to the same key from the same origin can destabilize the equation's own
-  dependency and never converge (Voblint issue #121, first found in the flat generator,
-  fixed there by \<open>Voblint_Core.Exec_Bridge\<close>'s \<open>make_side_rhs_tree_eff_st_buffered\<close>).
+  dependency and never converge (Voblint issue #121).
 
   \<open>dg_edge_contribution_tree\<close> is the Side-free analogue: it answers the \<^emph>\<open>unsplit\<close>
   \<open>(G, D)\<close> result as one \<open>dg_state\<close>, publishing nothing. A caller folds several
@@ -636,6 +636,44 @@ definition unit_combine_step_env_for ::
      (let m = combine_env_abs gs dc g
       in (restrict_global_for gs m, restrict_local_for gs m))"
 
+text \<open>
+  The two halves of the environment merge rejoin to the merge itself, so a
+  consumer that only needs \<^const>\<open>dgs_combine_assign\<close>'s \<open>fst \<squnion> snd\<close> argument
+  never has to reason about the split.  \<^const>\<open>unit_combine_step_assign_for\<close> is
+  monotone in exactly that argument and in the callee exit, so an analysis that
+  replaces \<^const>\<open>dgs_combine_env\<close> by any merge above this one inherits
+  soundness from this one instead of re-proving the return assignment.
+\<close>
+
+lemma unit_combine_step_env_for_join:
+  "fst (unit_combine_step_env_for gs ci dc de g)
+     \<squnion> snd (unit_combine_step_env_for gs ci dc de g)
+   = combine_env_abs gs dc g"
+  unfolding unit_combine_step_env_for_def
+  by (simp add: Let_def restrict_global_for_local_join)
+
+lemma unit_combine_step_assign_for_mono:
+  fixes de1 de2 :: "'a::bounded_semilattice_sup_bot abs_state"
+  assumes de: "de1 \<le> de2"
+    and m: "fst m1 \<squnion> snd m1 \<le> fst m2 \<squnion> snd m2"
+  shows "fst (unit_combine_step_assign_for gs ci de1 g m1)
+           \<le> fst (unit_combine_step_assign_for gs ci de2 g m2)"
+    and "snd (unit_combine_step_assign_for gs ci de1 g m1)
+           \<le> snd (unit_combine_step_assign_for gs ci de2 g m2)"
+proof -
+  have res: "combine_assign\<^sup># (ci_dst ci) (de1 ret_var) (fst m1 \<squnion> snd m1)
+               \<le> combine_assign\<^sup># (ci_dst ci) (de2 ret_var) (fst m2 \<squnion> snd m2)"
+    by (rule combine_assign_abs_mono[OF le_funD[OF de] m])
+  show "fst (unit_combine_step_assign_for gs ci de1 g m1)
+          \<le> fst (unit_combine_step_assign_for gs ci de2 g m2)"
+    unfolding unit_combine_step_assign_for_def Let_def fst_conv
+    by (rule restrict_global_for_mono[OF res])
+  show "snd (unit_combine_step_assign_for gs ci de1 g m1)
+          \<le> snd (unit_combine_step_assign_for gs ci de2 g m2)"
+    unfolding unit_combine_step_assign_for_def Let_def snd_conv
+    by (rule restrict_local_for_mono[OF res])
+qed
+
 subsection \<open>The lifted combine split, staged ahead of \<^const>\<open>unit_combine_step_env_for\<close>/\<^const>\<open>unit_combine_step_assign_for\<close>'s own migration (issue #123)\<close>
 
 text \<open>
@@ -819,18 +857,9 @@ lemma dgs_combine_unit_dg_spec_for:
   "dgs_combine (unit_dg_spec_for gs tf) ci dcont de g =
      (let res = combine_assign\<^sup># (ci_dst ci) (de ret_var) (combine_env_abs gs dcont g)
       in (restrict_global_for gs res, restrict_local_for gs res))"
-proof -
-  have env:
-    "fst (unit_combine_step_env_for gs ci dcont de g) \<squnion>
-       snd (unit_combine_step_env_for gs ci dcont de g) =
-     combine_env_abs gs dcont g"
-    unfolding unit_combine_step_env_for_def
-    by (simp add: Let_def restrict_global_for_local_join)
-  show ?thesis
-    unfolding dgs_combine_def unit_dg_spec_for_def
-      unit_combine_step_assign_for_def Let_def
-    by (simp add: env)
-qed
+  unfolding dgs_combine_def unit_dg_spec_for_def
+    unit_combine_step_assign_for_def Let_def
+  by (simp add: unit_combine_step_env_for_join)
 
 lemma dg_spec_step_unit_for:
   "dg_spec_step (unit_dg_spec_for gs tf) a = unit_step_for gs (apply_tf tf a)"
@@ -2019,7 +2048,7 @@ qed
 subsection \<open>Threefold monotonicity for an arbitrary generator instance\<close>
 
 text \<open>
-  Mirrors @{thm td_cfg_side_solver_eff_gen} for the flat generator: the three
+  The three
   @{const TD_side_mono} preconditions reduce to a per-tree contract on the
   intra, combine, and extra hooks, discharged once here and reusable at every
   routing policy --- a routed context policy is then a second interpretation
@@ -2027,7 +2056,7 @@ text \<open>
   wrapper at @{term "cfg_entry g"} is invisible to @{const traverse_rhs} and
   @{const dep_aux} (a \<^const>\<open>Side\<close> node only ever repackages, never queries);
   it only has to be threaded through the @{const sides_of_rhs} case via
-  @{thm fun_upd_sup_mono}, mirroring @{thm side_cfg_T_eff_mono_sides_gen}.
+  @{thm fun_upd_sup_mono}.
 \<close>
 
 lemma side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen:
@@ -2184,8 +2213,7 @@ lemma side_cfg_T_eff_keyed_seed_dg_threefold_mono:
 subsection \<open>TD_side_mono interpretation for an arbitrary generator instance\<close>
 
 text \<open>
-  Mirrors @{const td_cfg_side_solver_eff} (\<^theory>\<open>Voblint_Core.TD_Side_Eff_Interface\<close>)
-  for the flat generator: bundling the nine primitive obligations from the three
+  Bundling the nine primitive obligations from the three
   \<open>..._gen\<close> lemmas above as locale assumptions gives a mechanical
   @{locale TD_side_mono} interpretation, hence a least partial post-solution,
   for any @{const side_cfg_T_eff_keyed_seed_dg} instance --- no per-instance

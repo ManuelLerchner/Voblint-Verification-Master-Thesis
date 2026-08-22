@@ -952,7 +952,11 @@ code_identifier
 | code_module Strategy_Tree_Monad \<rightharpoonup> (OCaml) Core
 | code_module Side_Buffering \<rightharpoonup> (OCaml) Core
 | code_module TD_Side_CFG \<rightharpoonup> (OCaml) Core
-| code_module TD_Side_Eff_Keyed_Gen \<rightharpoonup> (OCaml) Core
+| code_module State_Restriction \<rightharpoonup> (OCaml) Core
+| code_module Exec_Refinement \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Rhs \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Relabel \<rightharpoonup> (OCaml) Core
+| code_module Solver_Mono \<rightharpoonup> (OCaml) Core
 | code_module TD_Side_Tree \<rightharpoonup> (OCaml) Core
 | code_module Constraint_System \<rightharpoonup> (OCaml) Core
 | code_module DG_Framework \<rightharpoonup> (OCaml) Core

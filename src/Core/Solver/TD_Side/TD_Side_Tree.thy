@@ -1,5 +1,6 @@
 theory TD_Side_Tree
   imports TD_Side_CFG "Voblint_CFG.CFG_Transfer" Strategy_Tree_Monad
+    Strategy_Tree_Rhs Strategy_Tree_Relabel
 begin
 
 section \<open>Side IP solver: constraint system construction and denotation\<close>
@@ -24,14 +25,6 @@ text \<open>
   use that same list.
 \<close>
 
-fun fold_rhs_trees ::
-  "'a::bounded_semilattice_sup_bot
-   \<Rightarrow> ('k, 'g, 'a) strategy_tree list
-   \<Rightarrow> ('k, 'g, 'a) strategy_tree"
-where
-  "fold_rhs_trees acc [] = Answer acc"
-| "fold_rhs_trees acc (t # ts) =
-     seqcomp_tree t (\<lambda>res. fold_rhs_trees (acc \<squnion> res) ts)"
 
 subsection \<open>Buffered publication: fold Side-free contributions, publish once\<close>
 
@@ -51,15 +44,6 @@ text \<open>
   exactly one \<^const>\<open>Side\<close> per RHS evaluation.
 \<close>
 
-lemma map_lift_restrict_local_for_join [simp]:
-  "map_lift (restrict_local_for gs) (a \<squnion> b)
-     = map_lift (restrict_local_for gs) a \<squnion> map_lift (restrict_local_for gs) b"
-  by (cases a; cases b) simp_all
-
-lemma map_lift_restrict_global_for_join [simp]:
-  "map_lift (restrict_global_for gs) (a \<squnion> b)
-     = map_lift (restrict_global_for gs) a \<squnion> map_lift (restrict_global_for gs) b"
-  by (cases a; cases b) simp_all
 
 definition publish_split_lifted ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x,unit,'a::sound_domain abs_state lifted) strategy_tree
@@ -68,18 +52,6 @@ definition publish_split_lifted ::
      (\<lambda>res. depend_on () (map_lift (restrict_global_for gs) res)
               (answer (map_lift (restrict_local_for gs) res)))"
 
-lemma sides_of_rhs_fold_rhs_trees_bot:
-  fixes cs :: "('x,'g,'d::bounded_semilattice_sup_bot) strategy_tree list"
-  assumes "\<And>c \<sigma>. c \<in> set cs \<Longrightarrow> sides_of_rhs c \<sigma> = \<bottom>"
-  shows "sides_of_rhs (fold_rhs_trees acc cs) \<sigma> = \<bottom>"
-  using assms
-proof (induction cs arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons c cs)
-  then show ?case by simp
-qed
 
 lemma buffered_matches_local:
   fixes cs :: "('x,unit,'a::sound_domain abs_state lifted) strategy_tree list"
@@ -97,68 +69,7 @@ lemma buffered_matches_global:
   using side_free
   by (simp add: sides_of_rhs_fold_rhs_trees_bot)
 
-text \<open>
-  \<open>traverse_fold_rhs_trees_char\<close> characterizes \<^const>\<open>fold_rhs_trees\<close>'s
-  \<^const>\<open>traverse_rhs\<close> value as a fold over each list element's own,
-  fixed-\<open>\<sigma>\<close> \<^const>\<open>traverse_rhs\<close> value -- used both by \<open>buffered_matches_*\<close>
-  above and, via \<open>fold_rhs_trees_map_join_char\<close> below, to transport per-edge
-  correspondence facts to a whole contribution-list fold for the buffering
-  construction further down this theory.
-\<close>
 
-lemma foldr_sup_seed_swap:
-  fixes h :: "'t \<Rightarrow> 'd::semilattice_sup"
-  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') ts (a \<squnion> b) = a \<squnion> foldr (\<lambda>t acc'. h t \<squnion> acc') ts b"
-  by (induction ts) (simp_all add: ac_simps)
-
-lemma traverse_fold_rhs_trees_char:
-  "traverse_rhs (fold_rhs_trees acc ts) \<sigma>
-     = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') ts acc"
-proof (induction ts arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons t ts)
-  have "traverse_rhs (fold_rhs_trees acc (t # ts)) \<sigma>
-          = foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') ts (acc \<squnion> traverse_rhs t \<sigma>)"
-    using Cons.IH by simp
-  also have "\<dots> = traverse_rhs t \<sigma> \<squnion> foldr (\<lambda>t acc'. traverse_rhs t \<sigma> \<squnion> acc') ts acc"
-    by (simp add: sup_commute[of acc] foldr_sup_seed_swap)
-  finally show ?case by simp
-qed
-
-lemma fold_rhs_trees_map_join_char:
-  "traverse_rhs (fold_rhs_trees acc (map f xs)) \<sigma>
-     = foldr (\<lambda>x acc'. traverse_rhs (f x) \<sigma> \<squnion> acc') xs acc"
-proof (induction xs arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a xs)
-  then show ?case by (simp add: sup_commute[of acc] foldr_sup_seed_swap)
-qed
-
-lemma sides_of_rhs_fold_rhs_trees_char:
-  fixes ts :: "('x,'g,'d::bounded_semilattice_sup_bot) strategy_tree list"
-  shows "sides_of_rhs (fold_rhs_trees acc ts) \<sigma> z
-     = foldr (\<lambda>t acc'. sides_of_rhs t \<sigma> z \<squnion> acc') ts \<bottom>"
-proof (induction ts arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons t ts)
-  then show ?case by simp
-qed
-
-lemma dep_aux_fold_rhs_trees_char:
-  "dep_aux \<sigma> (fold_rhs_trees acc ts) = (\<Union>t\<in>set ts. dep_aux \<sigma> t)"
-proof (induction ts arbitrary: acc)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons t ts)
-  then show ?case by simp
-qed
 
 definition side_contribution_trees ::
   "('g, 'a::bounded_semilattice_sup_bot) effectful_domain_transfer
@@ -764,31 +675,6 @@ lemma entry_global_seed_le_sides:
   unfolding side_cfg_T_eff_def make_side_rhs_tree_eff_def
   by (simp add: Let_def)
 
-subsection \<open>Relabelling local unknowns for context indexing\<close>
-
-text \<open>
-  Context-sensitivity reindexes the local unknown \<open>pp\<close> to \<open>pp \<times> 'c\<close>.  A
-  per-edge tree \<open>apply_etf etf a u\<close> queries only the single predecessor \<open>u\<close>, and a
-  combine tree \<open>etf_combine_collect etf dst cc ex\<close> queries the caller \<open>cc\<close> and the callee exit
-  \<open>ex\<close>; so the context routing of either is captured by a position-aware
-  relabelling \<open>h :: pp \<Rightarrow> pp \<times> 'c\<close> of the \<open>QueryL\<close> targets (intra: \<open>u \<mapsto> (u, c)\<close>;
-  combine: caller \<open>\<mapsto> (cc, c)\<close>, callee \<open>\<mapsto> (ex, c')\<close>).  \<open>map_ltree\<close> performs that
-  relabelling; \<open>traverse_rhs_map_ltree\<close> shows it commutes with the denotation under
-  the matching \<open>map_sum\<close>-pullback of the unknown environment, so a context-indexed
-  equation system's denotation is the original one read against the relabelled
-  environment.  Globals (\<open>QueryG\<close> / \<open>Side\<close>) are untouched.
-\<close>
-
-primrec map_ltree ::
-  "('x \<Rightarrow> 'y) \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('y, 'g, 'd) strategy_tree" where
-  "map_ltree h (Answer d) = Answer d"
-| "map_ltree h (QueryL y f) = QueryL (h y) (\<lambda>d. map_ltree h (f d))"
-| "map_ltree h (QueryG y f) = QueryG y (\<lambda>d. map_ltree h (f d))"
-| "map_ltree h (Side y d t) = Side y d (map_ltree h t)"
-
-lemma traverse_rhs_map_ltree:
-  "traverse_rhs (map_ltree h t) \<sigma> = traverse_rhs t (\<lambda>z. \<sigma> (map_sum h id z))"
-  by (induction t) auto
 
 
 

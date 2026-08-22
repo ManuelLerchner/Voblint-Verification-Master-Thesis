@@ -38,7 +38,6 @@ theory Voblint
     "Voblint_Analysis.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
-    "Voblint_Analysis.Sign_Named_Global_Eff"
     Exec_Sign_DG_Run
     Example_Checks_Store_Only
     Example_Interval_Checks_Store_Only
@@ -57,7 +56,6 @@ theory Voblint
     Example_Side_Execute
     Example_Side_Branch_Calls
     Example_Side_Proc_Global
-    Example_Interval_Side_Proc_Global
     Example_Proc_Call
     Example_Interval_Loop_Coverage
     Example_Guard_Refinement
@@ -324,8 +322,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Side_Execute} --- minimal certified Sign IP example with annotated CFG DOT.
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
-    \<^item> @{theory Voblint_Examples.Example_Interval_Side_Proc_Global} --- Interval IP analysis on the same.
-    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified interval analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global} / @{theory Voblint_Examples.Example_Interval_Side_Proc_Global}.
+    \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified Sign analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global}.
     \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Ivl_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
@@ -377,7 +374,10 @@ text \<open>
       analysis-annotated, via GraphViz.
 
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
-    \<^item> @{theory Voblint_Analysis.Sign_Named_Global_Eff} --- named-global routing witness; the solver-compatible constant route and the conditional-route monotonicity boundary.
+    \<^item> \<^bold>\<open>Named global unknowns\<close> --- a keyed global family is the routed D/G
+      context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
+      @{thm dep_aux_dg_edge_tree} names the source local unknown and the one
+      global slot, nothing else.
     \<^item> \<^bold>\<open>DOT rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and \<^const>\<open>state_report_dot\<close>
       (@{theory Voblint_CLI.State_Report_GraphViz}) have no Isabelle-side witness of
       their own: rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the

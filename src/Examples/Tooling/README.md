@@ -7,7 +7,6 @@ regressions, and the strategy-tree language on its own.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_EntryState_GraphViz_Regression.thy` | regression | the two entry-state rendering paths — full-state via `point_state_node_annotation`, and the check-report surface — read back off the solved result table |
-| `Example_Solver_Update_Rule_Regression.thy` | regression | issue #121 at the vendored solver's own interface: a right-hand side issuing two `Side` writes to one global livelocks `update_global_warrowing_apinis`, while the buffered generator publishing one write terminates (`minimal_side_multiwrite_buffered_terminates`) |
 | `Example_Keyed_Solver_Update_Rule_Regression.thy` | regression | the keyed-generator instance of the same, at `side_cfg_T_eff_keyed_seed_dg`'s interface |
 | `Example_Strategy_Tree_Demo.thy` | demo | `strategy_tree` as a small dependency/effect language with no abstract domain, CFG, or context in play |
 

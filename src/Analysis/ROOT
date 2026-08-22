@@ -8,7 +8,6 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     "Instances/Congruence"
     "Instances/Parity"
     "Instances/Mixed"
-    "Instances/NamedGlobalSign"
     "Instances/Tooling"
     "Instances/Dispatch"
   theories
@@ -34,7 +33,6 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Sign_Local_Effects
     Sign_Domain
     Sign_Side_Soundness
-    Sign_Named_Global_Eff
     Interval_Side_Soundness
     Interval_DG
     Interval_Point_Digest

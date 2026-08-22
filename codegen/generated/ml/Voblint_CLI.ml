@@ -4792,12 +4792,6 @@ let rec char_of_integer
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
-let rec map_ltree
-  h x1 = match h, x1 with h, Answer d -> Answer d
-    | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
-    | h, QueryG (y, f) -> QueryG (y, (fun d -> map_ltree h (f d)))
-    | h, Side (y, d, t) -> Side (y, d, map_ltree h t);;
-
 let rec sigma (State_ext (c, infl, stabl, sigma, more)) = sigma;;
 
 let rec c_update
@@ -6619,12 +6613,6 @@ let rec return_call_action_list
               else None))
           (cfg_calls_list g);;
 
-let rec map_gtree
-  r x1 = match r, x1 with r, Answer d -> Answer d
-    | r, QueryL (y, f) -> QueryL (y, (fun d -> map_gtree r (f d)))
-    | r, QueryG (y, f) -> QueryG (r y, (fun d -> map_gtree r (f d)))
-    | r, Side (y, d, t) -> Side (r y, d, map_gtree r t);;
-
 let rec fold_rhs_trees _A
   acc x1 = match acc, x1 with acc, [] -> Answer acc
     | acc, t :: ts ->
@@ -6634,6 +6622,18 @@ let rec fold_rhs_trees _A
               (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                 acc res)
               ts);;
+
+let rec map_ltree
+  h x1 = match h, x1 with h, Answer d -> Answer d
+    | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
+    | h, QueryG (y, f) -> QueryG (y, (fun d -> map_ltree h (f d)))
+    | h, Side (y, d, t) -> Side (y, d, map_ltree h t);;
+
+let rec map_gtree
+  r x1 = match r, x1 with r, Answer d -> Answer d
+    | r, QueryL (y, f) -> QueryL (y, (fun d -> map_gtree r (f d)))
+    | r, QueryG (y, f) -> QueryG (r y, (fun d -> map_gtree r (f d)))
+    | r, Side (y, d, t) -> Side (r y, d, map_gtree r t);;
 
 let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
 
