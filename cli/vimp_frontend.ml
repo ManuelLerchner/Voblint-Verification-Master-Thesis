@@ -20,8 +20,24 @@ let position_of (lexbuf : Lexing.lexbuf) : int * int =
   let pos = Lexing.lexeme_start_p lexbuf in
   (pos.Lexing.pos_lnum, pos.Lexing.pos_cnum - pos.Lexing.pos_bol + 1)
 
+(* Every command that owns a Statement index, with the source position the
+   parser recorded for it, in the order compile allocates those indices.
+
+   The parser records positions bottom-up (reductions complete after their
+   parts), so what it hands back is post-order over the command tree. Pairing
+   is done by walking the parsed AST the same way -- structurally, not by
+   assuming anything about token order -- and the caller then reads them in
+   whatever order it needs. *)
+let rec com_post_order (c : Voblint_CLI.Core.com) : Voblint_CLI.Core.com list =
+  match c with
+  | Voblint_CLI.Core.Seq (c1, c2) -> com_post_order c1 @ com_post_order c2
+  | Voblint_CLI.Core.If (_, c1, c2) -> com_post_order c1 @ com_post_order c2 @ [ c ]
+  | Voblint_CLI.Core.While (_, body) -> com_post_order body @ [ c ]
+  | _ -> [ c ]
+
 let program (file : string) (src : string) : unit Voblint_CLI.Core.imp_prog_ext * (int * int) list =
   let lexbuf = Lexing.from_string src in
+  Vimp_positions.reset ();
   let check_positions = ref [] in
   let tracked_token lexbuf =
     let tok = Vimp_lexer.token lexbuf in

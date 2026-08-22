@@ -177,6 +177,17 @@ def rhs_pattern(rhs: list) -> str:
     return " ".join(binder(i, sym) for i, sym in enumerate(rhs))
 
 
+# Productions whose `com` node owns a Statement index in the compiled CFG --
+# exactly the clauses csize charges one for. Seq is absent on purpose: it is
+# folded by the stmts list rule and allocates nothing of its own.
+def owns_stmt_index(prod: dict) -> bool:
+    ctor = (prod.get("lower") or {}).get("ctor")
+    return ctor in {
+        "SKIP", "Assign", "Check", "If", "While", "Return", "Restore", "Unwind",
+        "com.Call", "com.If",
+    } or ctor in {"Call"}
+
+
 def render_alt(prod: dict) -> str:
     pattern = rhs_pattern(prod["rhs"])
     is_uminus = prod.get("special") == "unary_minus"
@@ -186,7 +197,15 @@ def render_alt(prod: dict) -> str:
     # automatically. Uminus's only terminal (MINUS) already carries the
     # *binary* Plus/Minus precedence, which would be wrong (too loose) here.
     prec = f" %prec {prod['precedence']}" if is_uminus else ""
-    return f"  | {pattern}{prec}\n      {{ {render_action(prod)} }}"
+    action = render_action(prod)
+    # A command's own source position, recorded where the parser knows it is
+    # building a command -- the lexer cannot tell a statement-position IDENT
+    # from one inside an expression. Reductions are bottom-up, so these arrive
+    # in post-order over the command tree; cli/vimp_frontend.ml pairs them by
+    # walking the parsed AST the same way rather than assuming token order.
+    if owns_stmt_index(prod):
+        action = f"record_stmt_pos $startpos ({action})"
+    return f"  | {pattern}{prec}\n      {{ {action} }}"
 
 
 def gen_list_rule(prod: dict) -> str:
@@ -294,6 +313,14 @@ def gen_parser(g: dict) -> str:
     rule_blocks.append(gen_program_rule())
 
     return HEADER + f'''
+%{{
+(* Menhir does not export prelude bindings through the generated .mli, so the
+   recorder itself lives in cli/vimp_positions.ml where Vimp_frontend can
+   reach it too. See that module for why positions are taken here rather than
+   from the token stream, and what order they come out in. *)
+let record_stmt_pos = Vimp_positions.record
+%}}
+
 {token_decls(g)}
 
 {precedence_decls(g)}

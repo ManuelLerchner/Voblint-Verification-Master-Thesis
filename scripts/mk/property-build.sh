@@ -10,6 +10,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 PROP_DIR="$REPO_ROOT/tests/property"
 
 cp "$REPO_ROOT/codegen/generated/ml/Voblint_CLI.ml" "$PROP_DIR/Voblint_CLI.ml"
+cp "$REPO_ROOT/cli/vimp_positions.ml" "$PROP_DIR/vimp_positions.ml"
 cp "$REPO_ROOT/cli/vimp_parser.mly" "$PROP_DIR/vimp_parser.mly"
 cp "$REPO_ROOT/cli/vimp_lexer.mll" "$PROP_DIR/vimp_lexer.mll"
 cp "$REPO_ROOT/cli/vimp_frontend.ml" "$PROP_DIR/vimp_frontend.ml"
@@ -18,4 +19,4 @@ cd "$PROP_DIR"
 menhir vimp_parser.mly
 ocamllex vimp_lexer.mll
 ocamlfind ocamlopt -package str,zarith -linkpkg \
-  Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml ast_driver.ml -o ast_driver
+  Voblint_CLI.ml vimp_positions.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml ast_driver.ml -o ast_driver

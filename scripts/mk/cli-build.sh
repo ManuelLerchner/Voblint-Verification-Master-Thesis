@@ -61,7 +61,7 @@ trap 'rm -f "$build_out"' EXIT
   # codegen/regression's regression.sh for the same suppression), not
   # signs of a real problem in the generated Voblint_CLI.ml.
   ocamlfind ocamlopt -w -8-11-20 -package str,zarith,unix -linkpkg \
-    Voblint_CLI.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml dot_render.ml html_report.ml main.ml -o voblint
+    Voblint_CLI.ml vimp_positions.ml vimp_parser.mli vimp_parser.ml vimp_lexer.ml vimp_frontend.ml dot_render.ml html_report.ml main.ml -o voblint
 ) >"$build_out"
 if [ -s "$build_out" ]; then
   echo "cli-build.sh wrote to stdout (would corrupt piped voblint output):" >&2
