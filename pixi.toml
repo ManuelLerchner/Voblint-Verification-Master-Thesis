@@ -45,6 +45,16 @@ pytest = ">=8.0"
 property-build = "bash scripts/mk/property-build.sh"
 property = { cmd = "python3 -m pytest tests/property", depends-on = ["property-build"] }
 
+# HTML result viewer (scripts/emit_html_report.py). graphviz supplies `dot`,
+# which renders the CFG the viewer's graph pane loads; the frontend itself is
+# the vendor/g2html submodule, initialized by the report task rather than by
+# vendor.sh so build/codegen never fetch it.
+[feature.report.dependencies]
+graphviz = "*"
+
+[feature.report.tasks]
+report = { cmd = "bash scripts/mk/report.sh", depends-on = ["cli-build"] }
+
 # Git hooks (.lefthook.yaml).
 [feature.lint.dependencies]
 lefthook = "*"
@@ -54,10 +64,11 @@ lefthook-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
 
 [environments]
-default = ["ir", "grammar", "test", "lint"]
+default = ["ir", "grammar", "test", "lint", "report"]
 lint = ["lint"]
 test = ["test"]
 grammar = ["grammar"]
+report = ["report"]
 
 # --------------------------------------------------------------------------
 # Repository task graph. Tasks here need only python3/bash/git (top-level

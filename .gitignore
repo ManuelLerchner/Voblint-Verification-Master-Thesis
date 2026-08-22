@@ -31,3 +31,6 @@ codegen/regression/ocaml/Voblint_CLI.ml
 codegen/regression/ocaml/*.cm*
 codegen/regression/ocaml/*.o
 codegen/regression/ocaml/regression-ml
+
+# HTML result directories emitted by scripts/emit_html_report.py
+/result/
