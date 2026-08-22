@@ -10,7 +10,7 @@ text \<open>
   context sensitivity. Presentation choices (DOT vs. a textual snapshot,
   collapsed vs. expanded context rendering) are deliberately absent -- they
   select how an already-computed result is drawn, never what the solver
-  computes, and stay owned by the CLI layer instead (\<open>Analysis_GraphViz.thy\<close>).
+  computes, and stay owned by the CLI layer instead (\<open>Analysis_GraphViz\<close>).
 
   This theory names \<open>Sign\<close>/\<open>Interval\<close>/\<open>Int\<close> explicitly by construction, so it
   sits in \<open>Voblint_Analysis\<close> rather than \<open>Voblint_Core\<close>: \<open>Core\<close> carries no
@@ -33,18 +33,18 @@ text \<open>
   Every value below is a real, currently reachable public selection --
   reachable from the CLI, from \<open>Analyse_Dispatch\<close>'s existing dispatchers, or
   both. Refinement mode (\<open>Refine_Never\<close>/\<open>Refine_Once\<close>/\<open>Refine_Fixpoint\<close>,
-  \<open>Int_Refinement.thy\<close>) stays out of this datatype: \<open>Int_Analysis\<close> is
+  \<open>Int_Refinement\<close>) stays out of this datatype: \<open>Int_Analysis\<close> is
   fixed at \<open>Refine_Fixpoint\<close> in production, and adding the axis here would
   design a configuration space around behavior that does not yet reach the
   CLI or \<open>Analyse_Dispatch\<close> at all.
 
   Call-string context length, by contrast, is now genuinely public: unlike
   the fixed \<open>k=1\<close>/\<open>k=2\<close> example theories this datatype once deferred to,
-  \<open>Interval_Ctx_Call_String_Sound.thy\<close> is one
+  \<open>Interval_Ctx_Call_String_Sound\<close> is one
   runtime-\<open>k\<close>-parametric pipeline, proved to reproduce those two examples'
   exact solved states and their precision separation. \<open>Ctx_CallString k\<close>
   routes to it directly, the same way \<open>Ctx_EntryState\<close> routes to
-  \<open>Interval_Ctx_Entry_State_Sound.thy\<close>.
+  \<open>Interval_Ctx_Entry_State_Sound\<close>.
 \<close>
 
 datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis | Parity_Analysis
@@ -90,12 +90,12 @@ text \<open>
   (\<open>Analyse_Dispatch\<close>'s own \<open>analyse\<close>/\<open>analyse_ctx\<close>/\<open>analyse_with_solver\<close>
   branches, unchanged). \<open>Plan_Interval_EntryState\<close> and
   \<open>Plan_Interval_CallString\<close> both carry a \<^typ>\<open>solver_choice\<close>: the routed
-  equation system underneath either context (\<open>Interval_Ctx_Entry_State_Sound.thy\<close>'s
-  \<open>entry_state_eqs\<close>, \<open>Interval_Ctx_Call_String_Sound.thy\<close>'s
+  equation system underneath either context (\<open>Interval_Ctx_Entry_State_Sound\<close>'s
+  \<open>entry_state_eqs\<close>, \<open>Interval_Ctx_Call_String_Sound\<close>'s
   \<open>cs_call_string_eqs\<close>) names no solve function of its own -- only the
   shared D/G spec and the routing policy -- so it is solved under all three
   disciplines exactly as the flat \<open>Ctx_None\<close> equation system already is
-  (\<open>Interval_Exec_Sound.thy\<close>'s \<open>analyse_interval_dg_join_for\<close>/
+  (\<open>Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
   \<open>_per_origin_for\<close>/default). Warrow stays each context's implicit default
   (\<open>cfg_solver = None\<close>), matching the behavior already shipped before this
   generalization.
@@ -341,7 +341,7 @@ lemma resolver_int_entrystate_warrow_invalid:
 text \<open>
   Call-string, pinned the same way: \<open>k=1\<close>/\<open>k=2\<close> at the implicit default
   solver resolve to Warrow; \<open>k=0\<close> is rejected regardless of solver, even
-  though \<open>cs_route 0\<close> (\<open>Call_String_Context.thy\<close>) is itself a well-defined,
+  though \<open>cs_route 0\<close> (\<open>Call_String_Context\<close>) is itself a well-defined,
   well-typed route (it collapses every activation's context to \<open>[]\<close>,
   distinct from \<open>Ctx_None\<close>'s own, entirely separate flat equation system --
   \<open>k=0\<close> is not \<open>Ctx_None\<close> in disguise). Exposing it anyway would only

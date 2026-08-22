@@ -93,7 +93,7 @@ lemma demo_ivl_terminates:
 subsection \<open>The relational analysis, on the very same CFG, generator, and solver\<close>
 
 text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<open>and\<close> the executable
-  specification -- \<open>relc\<close> needed no \<open>Exec_St.thy\<close>-style refinement layer,
+  specification -- \<open>relc\<close> needed no \<open>Exec_St\<close>-style refinement layer,
   so \<open>dg_gen_of\<close> is applied to it directly, with no bridging step and no
   parallel generator.\<close>
 

@@ -7,13 +7,13 @@ section \<open>Entry-state routing as a routed-context instance\<close>
 text \<open>
   \<^locale>\<open>routed_context_hetero\<close> at \<open>route := formals_route_lifted_gen S\<close>,
   \<open>enterc := route_enterc_of_sigma (formals_route_lifted_gen S) sigma g\<close>, over the CFG
-  of a compiled program. Unlike \<open>Call_String_Routed_Context.thy\<close>'s own
-  \<open>call_string_routed_context\<close> -- which hardcodes \<open>Call_String_Context.thy\<close>'s
+  of a compiled program. Unlike \<open>Call_String_Routed_Context\<close>'s own
+  \<open>call_string_routed_context\<close> -- which hardcodes \<open>Call_String_Context\<close>'s
   one canonical \<open>call_string_gk\<close> seed-key datatype, shared by every CallString instance --
   no single seed-key datatype is shared across EntryState instances: each domain's own
   routed context is keyed by \<open>that domain's own abstract carrier\<close> (\<open>ivl list\<close>, \<open>sign list\<close>,
   ...), so \<open>gk0\<close>/\<open>seed_key\<close> stay genuine locale parameters here, mirroring
-  \<open>Routed_Context_Unit.thy\<close>'s own \<open>unit_routed_context\<close>'s posture on that same axis
+  \<open>Routed_Context_Unit\<close>'s own \<open>unit_routed_context\<close>'s posture on that same axis
   rather than \<open>call_string_routed_context\<close>'s.
 
   Three of the five obligations \<^locale>\<open>routed_context_hetero\<close> leaves are then facts about

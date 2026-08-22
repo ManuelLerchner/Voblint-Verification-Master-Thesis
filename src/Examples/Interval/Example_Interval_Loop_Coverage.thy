@@ -29,7 +29,7 @@ text \<open>
   computed from a hand-picked node-1 input rather than the analyzer's own
   computed environment.  The certified end-to-end bound at the loop head is
   the executable pipeline's own computed and soundness-backed result:
-  @{text "Exec_Ivl_Run"} (\<open>loop_head_ivl\<close>/\<open>loop_head_ivl_td\<close>, \<open>by eval\<close> against
+  @{text "Exec_Interval_Run"} (\<open>loop_head_ivl\<close>/\<open>loop_head_ivl_td\<close>, \<open>by eval\<close> against
   the same program).
 \<close>
 
@@ -81,7 +81,7 @@ text \<open>
   \<^verbatim>\<open>[0,0]\<close> is exactly the loop-head value -- a finite (non-widened) fixpoint.
   \<open>loop_env\<close> below exhibits these hand-picked values as ordinary input to the
   guard-refinement computation; the certified computed environment for this
-  program is @{text "Exec_Ivl_Run"}'s.
+  program is @{text "Exec_Interval_Run"}'s.
 \<close>
 definition loop_env :: "pp \<Rightarrow> ivl abs_state" where
   "loop_env v =

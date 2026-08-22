@@ -18,7 +18,7 @@ text \<open>
   This covers only the executable/result/report path, mirroring exactly what
   \<open>Interval_Ctx_Entry_State_Sound\<close>'s own unconditional section
   (\<open>analyse_interval_entry_state_result_for\<close> onward) provides: no premise here
-  needs \<open>call_fwd\<close>/\<open>comb_fwd\<close> (\<open>Call_String_Routed_Context.thy\<close>),
+  needs \<open>call_fwd\<close>/\<open>comb_fwd\<close> (\<open>Call_String_Routed_Context\<close>),
   matching the entry-state pipeline's own current posture, where the shipped
   \<^const>\<open>analyse_interval_entry_state_result_for\<close> is likewise unconditional and
   the generic activation-collecting-soundness theorem is separate, open work.

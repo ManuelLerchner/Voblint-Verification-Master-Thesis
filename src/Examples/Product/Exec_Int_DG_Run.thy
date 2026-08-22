@@ -143,7 +143,7 @@ corollary dgExI_never_ne_once:
 text \<open>
   \<open>Once\<close> and \<open>Fixpoint\<close> compute the same result at this program point.
   This does not mean that one standalone reduction round is generally
-  enough -- \<open>refinement_round_is_progressive\<close> (\<open>Example_Int_Domain.thy\<close>)
+  enough -- \<open>refinement_round_is_progressive\<close> (\<open>Example_Int_Domain\<close>)
   is itself a witness where a single round is not exact and a further round
   still makes progress. \<open>Refine_Once\<close> performs one round per invocation of
   the composite operation, and recursive backward filtering invokes

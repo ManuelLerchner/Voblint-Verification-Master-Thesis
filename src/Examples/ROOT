@@ -11,7 +11,8 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     "Interval/Ctx"
     "Congruence"
     "Parity"
-    "Mixed"
+    "Product"
+    "Relational"
     "CFG"
     "Tooling"
     "Regression"
@@ -41,7 +42,7 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_Sign_DG_EntryState_Result_Regression
 
     (* Interval *)
-    Exec_Ivl_Run
+    Exec_Interval_Run
     (* The Interval analogue, inside a two-sided bound guard. *)
     Example_Interval_Checks_Store_Only
     Example_Interval_Placement

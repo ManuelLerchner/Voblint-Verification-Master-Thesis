@@ -136,7 +136,7 @@ Do **not** touch:
 
 - `Exec_Sign_Cmp_Keyed_DG_Run` (`Sign/Keyed/`) — uses the *retained*
   `DG_Route_Soundness`.
-- `Exec_Ivl_Run` — shared base run.
+- `Exec_Interval_Run` — shared base run.
 
 ## Migration steps
 

@@ -18,7 +18,7 @@ text \<open>
   solve function reports there. Only which native D/G solve function
   produces that local-unknown lookup differs. \<open>monovariant_analysis_result_for\<close>
   below factors the shared half out once, so a concrete adapter
-  (\<open>Sign_Checks.thy\<close>, \<open>Interval_Checks.thy\<close>, \<open>Int_Checks.thy\<close>) is a
+  (\<open>Sign_Checks\<close>, \<open>Interval_Checks\<close>, \<open>Int_Checks\<close>) is a
   one-line partial application, not a fifth (through ninth) copy of the
   same three-line \<^const>\<open>Analysis_Result\<close>/\<^const>\<open>normalize_point\<close> body.
 

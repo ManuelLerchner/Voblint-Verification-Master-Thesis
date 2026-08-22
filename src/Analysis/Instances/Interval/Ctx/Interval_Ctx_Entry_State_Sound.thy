@@ -398,7 +398,7 @@ text \<open>
   to \<^const>\<open>ectx_abs_spec\<close> (\<open>dgs_enter_base_for_lifted\<close>). Kept as their own named
   definitions -- rather than replaced outright -- because both are cited by name from the
   regression examples
-  (\<open>Example_Interval_DG_Ctx_Collect.thy\<close>, \<open>Example_Interval_DG_EntryState_Collect.thy\<close>); this
+  (\<open>Example_Interval_DG_Ctx_Collect\<close>, \<open>Example_Interval_DG_EntryState_Collect\<close>); this
   identity is what lets the routed interpretation below use the generic Core locale while
   every existing citation of these two names keeps working unchanged.
 \<close>
@@ -741,8 +741,8 @@ text \<open>
   once, generically, inside that locale. Only the five genuine
   \<^locale>\<open>dg_ctx_activation_base\<close> obligations, \<open>seed_key_ne_gk0\<close> (datatype distinctness
   for \<open>gk\<close>), and the two solver-coverage facts \<open>call_fwd\<close>/\<open>comb_fwd\<close> remain premises here.
-  \<^const>\<open>entry_state_context\<close> keeps its own name and definition (both \<open>Example_Interval_DG_Ctx_Collect.thy\<close>
-  and \<open>Example_Interval_DG_EntryState_Collect.thy\<close> cite it by name); \<open>entry_state_context_eq_route_enterc_of_sigma\<close>
+  \<^const>\<open>entry_state_context\<close> keeps its own name and definition (both \<open>Example_Interval_DG_Ctx_Collect\<close>
+  and \<open>Example_Interval_DG_EntryState_Collect\<close> cite it by name); \<open>entry_state_context_eq_route_enterc_of_sigma\<close>
   below identifies it with the locale's own \<open>enterc\<close>, so \<open>entry_state_sg_seed\<close>/\<open>entry_state_sg_comb\<close>
   can still be stated against \<^const>\<open>entry_state_context\<close> while citing the generic \<open>routed_context_call\<close>/\<open>_comb\<close>.
 \<close>
@@ -1103,7 +1103,7 @@ text \<open>
   \<open>ictx_eqs\<close> at \<open>Ctx_None\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
   \<open>_per_origin_for\<close> alongside the Warrow default), and exactly as its own
-  \<open>Interval_Ctx_Call_String_Sound.thy\<close> sibling solves the routed call-string
+  \<open>Interval_Ctx_Call_String_Sound\<close> sibling solves the routed call-string
   system under all three disciplines. \<^const>\<open>entry_state_sol_prog\<close> (Warrow,
   the shipped default) is untouched.
 \<close>

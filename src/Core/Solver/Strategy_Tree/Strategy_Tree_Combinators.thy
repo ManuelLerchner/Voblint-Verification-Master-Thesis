@@ -29,7 +29,7 @@ abbreviation answer :: "'d \<Rightarrow> ('x, 'g, 'd) strategy_tree" where
 text \<open>
   \<open>read_local\<close>/\<open>read_global\<close> are value-producing: the queried value itself is
   the tree's answer, so \<open>seqcomp_tree\<close> (bind for this monad,
-  \<open>Strategy_Tree_Monad.thy\<close>, given \<open>do\<close>-notation via \<open>Strategy_Tree_Do.thy\<close>'s
+  \<open>Strategy_Tree_Monad\<close>, given \<open>do\<close>-notation via \<open>Strategy_Tree_Do\<close>'s
   \<^verbatim>\<open>adhoc_overloading\<close>) sequences a read directly as
   \<open>do { d \<leftarrow> read_local key; ... }\<close>. Unfolding \<open>seqcomp_tree\<close>'s two
   defining equations on a bound read reduces it to exactly the \<open>_cont\<close> form
@@ -67,7 +67,7 @@ text \<open>
   trailing continuation is what a do-block statement (no \<open>\<leftarrow>\<close>) needs, so
   \<open>depend_on\<close> itself keeps this shape rather than gaining a value-producing
   twin: statement-form combinators built on it (\<open>publish_global\<close>,
-  \<open>publish_seed\<close>, \<open>DG_Transfer_Combinators.thy\<close>) supply \<open>answer bot\<close> as that
+  \<open>publish_seed\<close>, \<open>DG_Transfer_Combinators\<close>) supply \<open>answer bot\<close> as that
   continuation.
 \<close>
 

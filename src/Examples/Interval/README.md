@@ -7,7 +7,7 @@ split by concern.
 
 | File | Role | What |
 | --- | --- | --- |
-| `Exec_Ivl_Run.thy` | precision comparison | `Example_Interval_Loop_Coverage`'s `loop_prog` under three fixpoint engines — bounded Kleene, warrowing TD, and every update rule at once (`join` / `per_origin` / `warrow`); interval narrowing plus the backward guard filter recover `[0,20]` under all of them. Imports the coverage theory rather than restating the program |
+| `Exec_Interval_Run.thy` | precision comparison | `Example_Interval_Loop_Coverage`'s `loop_prog` under three fixpoint engines — bounded Kleene, warrowing TD, and every update rule at once (`join` / `per_origin` / `warrow`); interval narrowing plus the backward guard filter recover `[0,20]` under all of them. Imports the coverage theory rather than restating the program |
 | `Example_Interval_DG_Flagship.thy` | canonical spine | interval analysis of a counting loop, executed and certified on the D/G spine |
 | `Example_Interval_DG_IP_Flagship.thy` | canonical spine | interprocedural: `twice` compiled and analyzed end to end through `FunctionEntry`/`FunctionResult` |
 | `Example_Proc_Call.thy` | canonical spine | two procedures (`inc` / `sqr`) via a global; `main_prog_interval_analysis` + CFG combine structure |
@@ -15,7 +15,7 @@ split by concern.
 | `Example_Guard_Refinement.thy` | regression | backward guard refinement strictly tighter than identity assume (`backward_analysis_strictly_tighter`) — a precision negative result |
 
 Backward-analysis arc: `Example_Guard_Refinement` (one guard) -> `Example_Interval_Loop_Coverage`
-(full CFG + trace soundness) -> `Exec_Ivl_Run` (the same witness, executed).
+(full CFG + trace soundness) -> `Exec_Interval_Run` (the same witness, executed).
 
 Not tabled above, and grouped by what they pin rather than by domain concern:
 `Example_Interval_Checks_Store_Only.thy` (check discharge, the Interval

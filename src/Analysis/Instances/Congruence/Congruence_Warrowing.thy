@@ -6,7 +6,7 @@ section \<open>Type-class warrowing for the TD warrowing solver\<close>
 
 text \<open>
   Congruence follows Sign's and Parity's own choice
-  (\<open>Sign_Lattice.thy\<close>, \<open>Parity_Domain.thy\<close>): the vendored \<open>widening\<close>/
+  (\<open>Sign_Lattice\<close>, \<open>Parity_Domain\<close>): the vendored \<open>widening\<close>/
   \<open>narrowing\<close> classes require only the four upper/bracket laws below, not a
   termination proof, so a domain whose lattice is already well behaved gets
   a conservative instance rather than an invented acceleration mechanism.

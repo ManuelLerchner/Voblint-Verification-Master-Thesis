@@ -17,7 +17,7 @@ text \<open>
   over the \<open>solve_dom\<close> contract every routed instance otherwise relies on (a per-run,
   empirical termination check): here finiteness holds for the whole context space, before
   any solve is attempted, for every domain that instantiates \<open>call_string_routed_context\<close>
-  (\<open>Call_String_Routed_Context.thy\<close>) alike -- nothing below is domain-specific.
+  (\<open>Call_String_Routed_Context\<close>) alike -- nothing below is domain-specific.
 
   Entry-state contexts do not get this for free: an entry-state context is a domain value
   (\<open>ivl list\<close>, \<open>sign list\<close>, ...) rather than a bounded-length list over a finite alphabet,

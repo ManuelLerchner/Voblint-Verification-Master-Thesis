@@ -1,4 +1,4 @@
-theory Exec_Ivl_Run
+theory Exec_Interval_Run
   imports "Voblint_CLI.Interval_Entry"
             Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"

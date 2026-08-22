@@ -9,7 +9,7 @@ text \<open>
   (Sign/Interval only -- Parity's branch transfer is the identity, so it has
   none) and \<open>X_enter_st_for\<close> with an identical shape modulo the domain's own
   \<open>aval_X\<close>/\<open>bfilter_X_st\<close>/\<open>top\<close>. This theory captures that shared
-  state-transformer structure once, mirroring \<open>Special_Ops.thy\<close>'s
+  state-transformer structure once, mirroring \<open>Special_Ops\<close>'s
   record-of-primitives shape: each domain supplies its own evaluator,
   backward filter, and top value, and the two generic constructions below
   are defined once against them.
@@ -17,7 +17,7 @@ text \<open>
   \<open>n_bfilter\<close> is not optional even for a domain like Parity whose branch
   transfer degenerates to the identity: \<open>generic_branch_st_for\<close> stays
   uniform by taking the identity function as Parity's own \<open>n_bfilter\<close>
-  value, the same way \<open>Special_Ops.thy\<close> lets a domain with nothing special
+  value, the same way \<open>Special_Ops\<close> lets a domain with nothing special
   to do supply a trivial primitive rather than needing an option type.
 \<close>
 

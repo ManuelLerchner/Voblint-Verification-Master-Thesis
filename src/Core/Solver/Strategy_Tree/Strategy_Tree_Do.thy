@@ -6,7 +6,7 @@ section \<open>Do-notation for the strategy tree monad\<close>
 
 text \<open>
   \<^const>\<open>seqcomp_tree\<close> is bind for \<^type>\<open>strategy_tree\<close>
-  (\<open>Strategy_Tree_Monad.thy\<close>). This registers it under
+  (\<open>Strategy_Tree_Monad\<close>). This registers it under
   \<^const>\<open>Monad_Syntax.bind\<close>'s ad hoc overloading, so \<open>t \<bind> k\<close> and
   \<open>do { x \<leftarrow> t; k x }\<close> both parse to exactly \<open>seqcomp_tree t k\<close> -- a pure
   syntax translation resolved at elaboration time, so every lemma about

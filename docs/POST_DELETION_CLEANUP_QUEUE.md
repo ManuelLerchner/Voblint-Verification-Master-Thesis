@@ -142,75 +142,96 @@ and as `pixi run codegen-modules`.
 
 ## P9 - Dead-code sweep
 
-Re-run after the refactors; the current measurement is 296 constants defined,
-never referenced outside their own theory, and absent from the generated
-OCaml (excluding `Examples`, where file-local witness constants are expected).
-Concentrations:
+Done, and the answer is: there is nothing to delete. Three successive audits
+reported 177, then 288, then 942 dead constants. Every one of those figures was
+an artefact of a criterion that does not model how Isabelle names are used.
 
-```text
-26  Mixed/Exec_DG_Bridge.thy       expected to fall out of P3
-22  Mixed/Rel_Order_Domain.thy     NOT dead - Example_Relational_DG_Demo uses it
-21  Mixed/Int_Backward.thy         the never/once/fixpoint dispatch family
-18  Tooling/Analysis_GraphViz.thy  unused report/cluster renderers
-13  VIMP/VIMP_Notation.thy         mostly syntax scaffolding
-```
+- "unreferenced outside its own file" is not deadness. A type class
+  instantiation body defines `gamma`, `is_bot`, `is_top` and `(<)` for a type;
+  the definition's *name* is never used again because callers use the class
+  operation. All seven strictly-unreferenced definitions in the tree --
+  `gamma_abs_congruence`, `less_congruence`, `gamma_abs_int_dom_ext` and four
+  `is_top_*'` -- are exactly that, and deleting any of them breaks its
+  instance.
+- Counting lemmas at all inflates the figure past usefulness. A `[simp]` fact
+  is consumed by automation without ever being named, so textual reachability
+  says nothing about whether a proof depends on it. That is where 942 comes
+  from.
+- `Rel_Order_Domain` was called "entirely dead, 489 lines" by the first audit.
+  `Example_Relational_DG_Demo` consumes it.
 
-Two theories in `Core/Solver/Context/DG/` build via `Core/ROOT` but nothing
-imports them and nothing they prove is cited:
-`Call_String_Collecting_Refinement.thy` (86) and `Call_String_Context_Finite.thy`
-(76). The finiteness results look like a termination argument that was proved
-and then bypassed; decide deliberately rather than deleting.
+Two theories in `Core/Solver/Context/DG/` still build without being imported,
+and both stay. `Call_String_Collecting_Refinement` proves that a coarser
+call-string bound never sees more activations than a finer one.
+`Call_String_Context_Finite` proves the whole call-string context space finite
+before any solve is attempted -- a genuine strengthening over the per-run
+`solve_dom` contract, and the answer to the bounding question in #77. Neither
+is dead; they are results nothing has needed to cite yet, which the queue's own
+classification says to retain.
 
-Classify each candidate as dead implementation (delete), useful but
-unreferenced theorem (retain/document/integrate), regression or history only
-(move to Examples/docs), or public API compatibility (deliberate call).
-Re-run reachability after each tranche; commit coherent groups.
+If a future sweep is wanted, the only defensible criterion is: a `definition`
+outside a class instantiation, never mentioned again anywhere, absent from the
+generated OCaml. That set is currently empty.
 
 ## P10 - Simplify the API name cross-product
 
-Only now look at `_for`, `_lifted`, `_placed`, `_buffered`, `_st`, `_ctx`,
-`_per_origin`, `_warrow`. For each axis decide whether it is a runtime/config
-parameter, a type-level representation distinction, a proof specialization
-worth keeping, or obsolete migration scaffolding. Prefer `analysis_config`,
-`solver_mode`, `context_policy` and generic locale parameters where they
-genuinely replace orthogonal named families; keep separate constants where
-that makes theorem statements clearer. Do not optimize for constant count, and
-do not change stable public CLI behaviour unnecessarily.
+Deferred, deliberately. Nine families and 38 constants remain, down from
+nineteen and 89: the rest went with the TD/etf spine. What survives is the
+genuine domain x solver-mode axis -- `analyse_*_ctx_result` and its
+`_per_origin`/`_warrow` siblings -- and that axis is exactly what the
+update-rule parameterization is reshaping. Collapsing it first would be work
+done twice, in the wrong order.
+
+Revisit once the routed spine is parameterized over the update rule. For each
+remaining axis decide whether it is a runtime/config parameter, a type-level
+representation distinction, a proof specialization worth keeping, or leftover
+scaffolding. Do not optimize for constant count, and do not change stable
+public CLI behaviour unnecessarily.
 
 ## P11 - Examples and witness organization
 
-After the semantic refactors: runnable/regression material primarily under
-`Examples`; domain example structure mirroring domain source structure where
-useful; normalize `Ivl_Exec` to `Interval_*` if low risk; stray `*Regression*`
-files into regression subfolders. Leave small `by eval` sanity facts in core
-theories where they serve as local executable lemmas. Avoid churn for its own
-sake.
+Done. `Examples/` now mirrors `Analysis/Instances/`: `Mixed` became `Product`
+and the relational demo moved to a `Relational` folder of its own, matching the
+domain-side split. `Exec_Ivl_Run` became `Exec_Interval_Run`, so no runnable
+demo abbreviates a domain the others spell out.
+
+The "eight stray `*Regression*` files outside `Examples/Regression/`" from the
+earlier audit was a misreading: the session README states the convention
+explicitly -- folders group by abstract domain, not by capability, and
+`Regression/` is for the domain-agnostic witnesses. Those eight are filed
+correctly. The two that were genuinely misfiled ran the other way,
+domain-specific regressions sitting in the domain-agnostic folder, and are now
+with their domains. The README says so, so the next reader does not re-derive
+it.
 
 ## P12 - Docs and hygiene
 
-`docs/` holds 142 markdown files and 49.6k lines. Of those, 69 files and 27.0k
-lines are `*_MIGRATION.md` / `*_HANDOFF.md` / `*_AUDIT.md` / `*_PLAN.md`:
-completed work-in-progress notes. Only `docs/architecture/history/` is
-structured. Archive them under `docs/history/`, keeping live architecture and
-decision docs in place. Fix CLAUDE.md's dependency chain, which still shows
-`Formalization` as an endpoint (see section 0).
+Done. `docs/history/` holds the 70 completed migration notes, handoffs, audits
+and plans; 70 live documents remain, and the index points at the archive
+rather than saying such material is merely "kept in version control". Theory
+comments no longer describe themselves as staged ahead of a migration, and the
+88 file-path citations across 37 theories are now theory names, as the comment
+rules ask. Editor debris and the empty directory are gone.
 
-Current hygiene counts:
+### The metis/smt audit
+
+The contract keeps `metis` and `smt` only where reconstruction is fast in
+batch, and names them the leading cause of build hangs. Measured on a full
+verbose build: 84 `metis` and 4 `smt` call sites across 24 theories, and
+**not one of them is slow**. The build emits a slow-command warning for
+exactly one command in the whole tree, and it is not a `metis`:
 
 ```text
-105  untracked .thy~ jEdit backups under src/
-  1  src/Analysis/ROOT~
-  1  emacs autosave under src/Examples/Tooling/
-  1  empty directory under src/
-  0  sorry / oops
- 84  metis + 4 smt call sites          batch-hang risk per CLAUDE.md
-  6  staging/migration phrases in .thy comments
+command "by" running for 32.048s (line 856 of VIMP_Proc_to_CFG)
 ```
 
-Remove the backups, autosaves and empty directories; extend `.gitignore` for
-the untracked OCaml build outputs under `cli/` and `tests/property/`; do not
-commit generated HTML or fonts. The six staging phrases are the `issue #123`
-subsections in `Exec_DG_Bridge` and go with P3.
+That is the terminal `qed (auto simp: frag_stmts_def split: option.splits)`
+closing the residual cases of the `frag_stmts` induction -- cause 2 on the
+slow-build list, unbounded automation over inductive cases, not tactic
+reconstruction. It is 32 seconds inside a six-minute build, bounded and
+reproducible, in a compiler-correctness proof that nothing else in the tree
+would benefit from destabilising. Recorded rather than changed; if it ever
+grows, the fix is to name the residual cases rather than widen the `auto`.
 
 ## Verification and commit discipline
 

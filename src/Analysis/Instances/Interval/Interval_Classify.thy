@@ -19,7 +19,7 @@ text \<open>
   \<open>abstract_check_domain\<close> once, below, reusing the numeric-query facts
   already proved sound in \<open>interval_numeric_queries\<close> rather than re-deriving
   the comparison tables --- the same way \<open>ivl_backward_domain\<close> in
-  \<open>Interval_Backward.thy\<close> interprets \<open>backward_domain\<close> for guard narrowing.
+  \<open>Interval_Backward\<close> interprets \<open>backward_domain\<close> for guard narrowing.
 
   Split out of \<open>Interval_Checks\<close> as its own theory: the routed-spine
   producer (\<open>Interval_Ctx_None_Sound\<close>) interprets the generic report

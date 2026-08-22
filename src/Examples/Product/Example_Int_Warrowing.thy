@@ -9,7 +9,7 @@ subsection \<open>Widening is exactly componentwise\<close>
 text \<open>
   Each component's own accelerating \<open>widen\<close> surfaces through unchanged:
   Interval jumps a growing upper bound straight to \<open>PlusInf\<close>
-  (\<open>widen_ivl_core\<close>, \<open>Interval_Warrowing.thy\<close>) rather than merely joining
+  (\<open>widen_ivl_core\<close>, \<open>Interval_Warrowing\<close>) rather than merely joining
   to \<open>[1,3]\<close>, while Sign, Parity, and Congruence -- whose own widening is
   plain join -- stay at their shared value. No cross-component step runs
   afterward.
@@ -26,7 +26,7 @@ subsection \<open>Narrowing is exactly componentwise\<close>
 
 text \<open>
   Sign, Parity, and Congruence all choose the conservative \<open>narrow a b = a\<close>
-  (\<open>Sign_Lattice.thy\<close>, \<open>Parity_Domain.thy\<close>, \<open>Congruence_Warrowing.thy\<close>):
+  (\<open>Sign_Lattice\<close>, \<open>Parity_Domain\<close>, \<open>Congruence_Warrowing\<close>):
   once widened, they never narrow back, which trivially satisfies
   \<open>narrow_ge\<close>/\<open>narrow_le\<close> without needing anything about their own
   structure. Interval's \<open>narrow_ivl_td\<close> does real work, recovering a
@@ -49,7 +49,7 @@ text \<open>
   Not just spot-checked by \<open>eval\<close> at one instance: these cite the
   \<open>warrowing\<close> class facts directly at \<open>int_dom\<close>, witnessing that the
   \<open>instantiation int_dom_ext :: (int_dom_record_warrowing) warrowing\<close>
-  block in \<open>Int_Warrowing.thy\<close> actually resolves and discharges its
+  block in \<open>Int_Warrowing\<close> actually resolves and discharges its
   obligations for every \<open>a\<close>, \<open>b\<close>, not only the examples above.
 \<close>
 
@@ -68,7 +68,7 @@ lemma int_dom_narrow_le: "(b :: int_dom) \<le> a \<Longrightarrow> narrow a b \<
 subsection \<open>Why post-narrow refinement would break \<open>narrow_ge\<close>\<close>
 
 text \<open>
-  The concrete counterexample behind \<open>Int_Warrowing.thy\<close>'s design comment.
+  The concrete counterexample behind \<open>Int_Warrowing\<close>'s design comment.
   \<open>a\<close> is a widened solver state (top); \<open>b\<close> is a newer, more precise result
   that is not refinement-stable -- \<open>STop \<times> [-1,0] \<times> PEven \<times> top\<close> already
   denotes only concrete values with even parity in \<open>[-1,0]\<close>, i.e. \<open>{0}\<close>,
@@ -79,7 +79,7 @@ text \<open>
   not make -- lets Sign's own cross-component derivation from the now-exact
   Interval bound produce \<open>SNonPos\<close>, which sits strictly below \<open>b\<close>'s own
   \<open>STop\<close>: exactly the \<open>narrow_ge\<close> violation
-  \<open>Int_Warrowing.thy\<close>'s header comment describes in the abstract.
+  \<open>Int_Warrowing\<close>'s header comment describes in the abstract.
 \<close>
 
 lemma post_narrow_refinement_would_violate_narrow_ge:

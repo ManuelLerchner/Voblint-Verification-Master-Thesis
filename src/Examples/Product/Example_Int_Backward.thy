@@ -69,7 +69,7 @@ text \<open>
   guard still runs the composite intersection/refinement machinery, which
   propagates the existing information until Sign, Interval, and Congruence
   all expose the same precision Parity and Interval jointly already implied.
-  This is \<open>refinement_round_is_progressive\<close>'s (\<open>Example_Int_Domain.thy\<close>)
+  This is \<open>refinement_round_is_progressive\<close>'s (\<open>Example_Int_Domain\<close>)
   own witness, reached here through the guard machinery instead of a direct
   \<open>refine_round\<close> call.
 \<close>

@@ -21,7 +21,7 @@ text \<open>
   from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
   once, below, reusing the numeric-query facts already proved sound in
   \<open>sign_numeric_queries\<close> rather than re-deriving the comparison tables ---
-  the same way \<open>sign_backward_domain\<close> in \<open>Sign_Backward.thy\<close> interprets
+  the same way \<open>sign_backward_domain\<close> in \<open>Sign_Backward\<close> interprets
   \<open>backward_domain\<close> for guard narrowing.
 \<close>
 

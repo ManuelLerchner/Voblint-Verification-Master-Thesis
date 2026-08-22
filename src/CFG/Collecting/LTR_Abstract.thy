@@ -218,7 +218,7 @@ proof (rule subsetI)
 qed
 
 text \<open>\<open>activation_collect\<close>'s context projection is restated directly against \<^const>\<open>ctx_key\<close>
-  once \<open>activation_collect\<close> itself is redefined against it (\<open>Routed_Context.thy\<close> instance
+  once \<open>activation_collect\<close> itself is redefined against it (\<open>Routed_Context\<close> instance
   layer); the exact-match corollaries formerly here (\<open>activation_collect_subset_acc\<close>,
   \<open>return_uses_matched_callee\<close>, \<open>two_callers_separated\<close>) are subsumed by \<open>return_closed\<close> at
   \<open>admiss = admiss_exact enterc\<close>, so they are not restated separately.\<close>

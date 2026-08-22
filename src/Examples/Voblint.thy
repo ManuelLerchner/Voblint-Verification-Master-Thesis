@@ -315,7 +315,7 @@ text \<open>
     \<^item> @{theory Voblint_Examples.Example_Side_Branch_Calls} --- branching procedure called twice; flow-sensitive locals, flow-insensitive globals.
     \<^item> @{theory Voblint_Examples.Example_Side_Proc_Global} --- Sign IP analysis on the shared global-increment call.
     \<^item> @{theory Voblint_Examples.Example_Proc_Call} --- concrete-semantics witness for \<^verbatim>\<open>inc\<close> and \<^verbatim>\<open>sqr\<close> procedures communicating through a global, and their compiled interprocedural CFG; a certified Sign analysis of a shared-global increment call is @{theory Voblint_Examples.Example_Side_Proc_Global}.
-    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Ivl_Run"}'s.
+    \<^item> @{theory Voblint_Examples.Example_Interval_Loop_Coverage} --- backward guard-refinement precision witness for a bounded loop's body entry; the certified computed bound at the loop head is @{text "Exec_Interval_Run"}'s.
     \<^item> @{theory Voblint_Examples.Example_Guard_Refinement} --- backward guard refinement precision witness.
     \<^item> @{theory Voblint_Examples.Example_Random_Sign_Showcase} --- issue \<open>#43\<close>'s nondeterministic
       \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a

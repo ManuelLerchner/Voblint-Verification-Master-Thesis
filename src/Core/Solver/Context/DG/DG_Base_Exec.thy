@@ -228,7 +228,7 @@ text \<open>
   \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>is_bot_pred\<close>
   rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every current EntryState-style routed
   instance (Interval's own \<open>entry_state_entered\<close>/\<open>entry_state_route\<close>,
-  \<open>Interval_Ctx_Entry_State_Sound.thy\<close>) reproves this exact pair and its commute lemma from
+  \<open>Interval_Ctx_Entry_State_Sound\<close>) reproves this exact pair and its commute lemma from
   \<open>enter_st_commute\<close> alone; stating it here once lets a domain interpret it instead of
   restating it, mirroring how \<open>Hstep_lifted_for\<close> etc. already generalize the
   step/enter/combine commute facts.

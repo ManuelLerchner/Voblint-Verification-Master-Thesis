@@ -109,7 +109,7 @@ text \<open>Registers the sort intersection under its named synonym -- the vendo
   by name, not the raw \<open>{bounded_semilattice_sup_bot, warrowing}\<close> sort, and
   Isabelle does not compose that registration automatically from the two
   separate instances above.  \<^type>\<open>dg_state\<close> already carries the same
-  explicit step generically (\<open>DG_Framework.thy\<close>) once its component types
+  explicit step generically (\<open>DG_Framework\<close>) once its component types
   have it.\<close>
 instance relc :: bounded_warrowing ..
 

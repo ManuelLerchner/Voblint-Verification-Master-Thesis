@@ -12,8 +12,8 @@ text \<open>
   small effect language on its own -- no abstract domain, CFG, or context
   involved. \<^const>\<open>answer\<close> returns a value and \<^const>\<open>seqcomp_tree\<close> sequences
   two trees: exactly \<open>return\<close>/\<open>>>=\<close> for this monad
-  (\<open>Strategy_Tree_Monad.thy\<close>), written below with \<open>do\<close> notation
-  (\<open>Strategy_Tree_Do.thy\<close> registers \<^const>\<open>seqcomp_tree\<close> as this monad's
+  (\<open>Strategy_Tree_Monad\<close>), written below with \<open>do\<close> notation
+  (\<open>Strategy_Tree_Do\<close> registers \<^const>\<open>seqcomp_tree\<close> as this monad's
   bind, so \<open>do { x \<leftarrow> t; k x }\<close> parses to exactly \<open>seqcomp_tree t k\<close>).
 
   \<open>fib_tree n\<close> builds the whole finite computation tree for \<open>fib n\<close> before any

@@ -11,7 +11,7 @@ section \<open>Composite integer-domain backward filtering\<close>
 
 text \<open>
   Composite backward inversion follows the same shape as composite forward
-  arithmetic (\<open>Int_Arithmetic.thy\<close>): a raw componentwise operator, reusing
+  arithmetic (\<open>Int_Arithmetic\<close>): a raw componentwise operator, reusing
   each component's own existing inverse where one exists, then a mode-aware
   wrapper that refines the returned candidates with \<open>refine mode\<close>.
 
@@ -48,14 +48,14 @@ definition intersect_int_dom :: "int_dom => int_dom => int_dom" where
 
 text \<open>
   \<open>intersect_ivl\<close>'s defining equation is globally tagged \<open>[simp]\<close>
-  (\<open>Interval_Lattice.thy\<close>), so plain \<open>simp\<close>/\<open>auto\<close> unfolds it to
+  (\<open>Interval_Lattice\<close>), so plain \<open>simp\<close>/\<open>auto\<close> unfolds it to
   \<open>normalize_ivl (meet_ivl a b)\<close> before \<open>gamma_intersect_ivl_exact\<close> or
   \<open>intersect_ivl_le1\<close>/\<open>intersect_ivl_le2\<close>/\<open>intersect_ivl_mono\<close> -- all
   stated in terms of the abstract \<open>intersect_ivl\<close> -- get a chance to match.
   \<open>del: intersect_ivl_def\<close> below keeps \<open>intersect_ivl\<close> opaque for exactly
   those calls, matching \<open>is_bottom_int_dom_correct\<close>'s own
   \<open>simp only: gamma_intersect_ivl_exact ...\<close> workaround in
-  \<open>Int_Domain.thy\<close>.
+  \<open>Int_Domain\<close>.
 \<close>
 
 lemma intersect_int_dom_sound:
@@ -125,8 +125,8 @@ lemma intersect_int_dom_mode_sound:
   using intersect_int_dom_sound[OF assms] refine_exact by simp
 
 text \<open>
-  \<open>refine mode\<close> is reductive/exact for every mode (\<open>Int_Refinement.thy\<close>)
-  but only monotone off \<open>Refine_Fixpoint\<close> (\<open>Int_Arithmetic.thy\<close>'s
+  \<open>refine mode\<close> is reductive/exact for every mode (\<open>Int_Refinement\<close>)
+  but only monotone off \<open>Refine_Fixpoint\<close> (\<open>Int_Arithmetic\<close>'s
   \<open>refine_nonfixpoint_mono\<close>); these two helpers compose that fact with an
   arbitrary reductive/monotone raw step once, instead of re-deriving the
   transitivity argument at each of the ten raw operators below.
@@ -1015,7 +1015,7 @@ text \<open>
   \<open>mode \<noteq> Refine_Fixpoint\<close> (monotonicity). Refine_Fixpoint gets only the
   weaker backward_domain interpretation -- soundness alone -- since
   \<open>refine_fix\<close>'s total wrapper has no monotonicity theorem
-  (\<open>Int_Refinement.thy\<close>): a faithful transliteration of Goblint's
+  (\<open>Int_Refinement\<close>): a faithful transliteration of Goblint's
   \<open>fixpoint\<close> loop, not an oversight.
 \<close>
 

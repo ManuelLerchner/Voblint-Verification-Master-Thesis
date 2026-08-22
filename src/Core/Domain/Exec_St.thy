@@ -10,7 +10,7 @@ class bounded_warrowing = bounded_semilattice_sup_bot + warrowing
 text \<open>
   The vendored TD solver's warrowing update rule needs \<open>'d::bounded_warrowing\<close>
   (@{theory_text \<open>Solver_Side_RG\<close>}'s \<open>T :: (pp,unit,'a::bounded_warrowing resolved_st_q) eqsT\<close>).
-  \<^typ>\<open>'a lifted\<close> already carries \<open>widening\<close>/\<open>narrowing\<close> separately (\<open>Abstract_Domain.thy\<close>) and
+  \<^typ>\<open>'a lifted\<close> already carries \<open>widening\<close>/\<open>narrowing\<close> separately (\<open>Abstract_Domain\<close>) and
   \<open>bounded_semilattice_sup_bot\<close>; this registers the combined class explicitly, mirroring
   \<open>bounded_semilattice_sup_bot\<close>'s own combined registration there.
 \<close>

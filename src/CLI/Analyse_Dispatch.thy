@@ -142,7 +142,7 @@ text \<open>
   semantically.
 
   These three update-rule disciplines are convergence strategies, not
-  alternative precision semantics: \<open>Exec_Ivl_Run\<close>'s
+  alternative precision semantics: \<open>Exec_Interval_Run\<close>'s
   \<open>loop_head_across_update_rules\<close> proves join, per-origin, and warrowing
   compute the identical result on a bounded local loop whenever all three
   terminate, since interval narrowing and the backward guard filter -- not
@@ -216,10 +216,10 @@ subsection \<open>Public API: soundness corollaries stated over the runtime disp
 
 text \<open>
   \<open>analyse_interval_proved_sound\<close>/\<open>analyse_interval_refuted_sound\<close> restate
-  \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Interval_Entry.thy\<close>) over \<open>analyse\<close>,
+  \<open>analyse_interval_td_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Interval_Entry\<close>) over \<open>analyse\<close>,
   matching the routed-unit producer \<open>analyse Interval_Analysis\<close> now dispatches to: solver
   termination and coverage are stated over \<open>ictx_sol_prog_warrow\<close>/\<open>ictx_terminates_prog_warrow\<close>
-  (\<open>Interval_Ctx_None_Sound.thy\<close>) rather than the Base family's \<open>analyse_interval_dg\<close>/
+  (\<open>Interval_Ctx_None_Sound\<close>) rather than the Base family's \<open>analyse_interval_dg\<close>/
   \<open>analyse_interval_dg_eqs\<close>. \<open>finite (intra (prog_cfg prog_main_name p))\<close>/
   \<open>finite (calls ...)\<close> are no longer separate hypotheses here: the routed spine's own
   soundness chain derives both unconditionally from \<open>compile_prog_finite\<close>, so unlike the
@@ -290,10 +290,10 @@ corollary analyse_interval_refuted_sound:
 
 text \<open>
   \<open>analyse_sign_proved_sound\<close>/\<open>analyse_sign_refuted_sound\<close> restate
-  \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Sign_Entry.thy\<close>) over \<open>analyse\<close>,
+  \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Sign_Entry\<close>) over \<open>analyse\<close>,
   matching the routed-unit producer \<open>analyse Sign_Analysis\<close> now dispatches to: solver
   termination and coverage are stated over \<open>sctx_sol_prog\<close>/\<open>sctx_terminates_prog\<close>
-  (\<open>Sign_Ctx_None_Sound.thy\<close>) rather than the Base family's \<open>analyse_sign\<close>/\<open>analyse_sign_eqs\<close>.
+  (\<open>Sign_Ctx_None_Sound\<close>) rather than the Base family's \<open>analyse_sign\<close>/\<open>analyse_sign_eqs\<close>.
   \<open>finite (intra (prog_cfg prog_main_name p))\<close>/\<open>finite (calls ...)\<close> are no longer separate
   hypotheses here: the routed spine's own soundness chain derives both unconditionally from
   \<open>compile_prog_finite\<close>, so unlike the Base-family route this corollary needs no finiteness
@@ -344,7 +344,7 @@ corollary analyse_sign_refuted_sound:
 
 text \<open>
   \<open>analyse_int_proved_sound\<close>/\<open>analyse_int_refuted_sound\<close> restate
-  \<open>analyse_int_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Int_Entry.thy\<close>) over \<open>analyse\<close>,
+  \<open>analyse_int_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Int_Entry\<close>) over \<open>analyse\<close>,
   matching the routed-unit producer \<open>analyse Int_Analysis\<close> now dispatches to: solver
   termination and coverage are stated over
   \<^const>\<open>Int_Ctx_None_Sound.ictx_sol_prog_warrow\<close>/\<^const>\<open>Int_Ctx_None_Sound.ictx_terminates_prog_warrow\<close>
@@ -723,7 +723,7 @@ lemma analyse_config_ctx_interval_callstring_zero_explicit_solver_invalid:
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
-  Sign at \<open>Ctx_CallString\<close>, pinned the same way \<open>Analysis_Config.thy\<close>'s own
+  Sign at \<open>Ctx_CallString\<close>, pinned the same way \<open>Analysis_Config\<close>'s own
   resolver regressions are: valid at \<open>k \<ge> 1\<close> under the implicit-default and
   explicit \<open>Solver_Join\<close> selections, invalid at \<open>k = 0\<close> and at the two
   solvers Sign's call-string soundness does not prove.
@@ -804,7 +804,7 @@ subsubsection \<open>Dispatcher-path parity with the direct generic CallString c
 text \<open>
   The public path (through \<^const>\<open>resolve_analysis_config\<close> and
   \<^const>\<open>analyse_config_ctx\<close>) reaches the identical values the CS1--CS3
-  parity theory (\<open>Example_Interval_Call_String_Generic_Parity.thy\<close>)
+  parity theory (\<open>Example_Interval_Call_String_Generic_Parity\<close>)
   already pinned against the fixed \<open>k=1\<close>/\<open>k=2\<close> examples -- restated here as
   a report-level, not a solved-state-level, witness: the dispatcher does not
   reimplement or re-derive anything, it only routes.
@@ -843,7 +843,7 @@ text \<open>
   that special-cased "does the explicit solver already match the implicit
   one" would silently start accepting a combination the CLI has always
   rejected. Pinned above at the \<^const>\<open>resolve_analysis_config\<close> level
-  (\<open>Analysis_Config.thy\<close>'s \<open>resolver_interval_entrystate_warrow_invalid\<close>) and
+  (\<open>Analysis_Config\<close>'s \<open>resolver_interval_entrystate_warrow_invalid\<close>) and
   again here through the wrapper actually reachable from the CLI.
 \<close>
 

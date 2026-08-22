@@ -144,7 +144,7 @@ text \<open>
   Congruence teaches Parity a fact Parity's own two-value lattice cannot
   state as precisely: \<open>x \<equiv> 0 (mod 4)\<close> forces \<open>x\<close> even, so
   \<open>refine_congruence\<close> (via \<open>parity_fact_of_congruence\<close>) tightens \<open>PTop\<close> to
-  \<open>PEven\<close>. This direction is one-way in \<open>Int_Refinement.thy\<close>'s own design:
+  \<open>PEven\<close>. This direction is one-way in \<open>Int_Refinement\<close>'s own design:
   \<open>refinement_steps = [refine_interval, refine_congruence]\<close>
   (\<^theory>\<open>Voblint_Analysis.Int_Refinement\<close>) has no separate
   parity-refines-congruence step, because Congruence already subsumes every
@@ -163,7 +163,7 @@ lemma congruence_parity_mod4_narrows:
 section \<open>End-to-end VIMP precision\<close>
 
 text \<open>
-  \<open>Exec_Int_DG_Run.thy\<close> already carries the solver-run-level (compiled VIMP
+  \<open>Exec_Int_DG_Run\<close> already carries the solver-run-level (compiled VIMP
   program through the real Base/DG equation system and
   \<open>TD_side_always_join_Interp_solve\<close>) counterpart to this file's raw-domain
   witnesses above: on \<open>if (y + 1 == 3) {x := 1} else {x := 0}\<close>,
@@ -199,7 +199,7 @@ text \<open>
   \<^theory>\<open>Voblint_Examples.Exec_Int_DG_Run\<close>), never through
   \<^const>\<open>analyse_int_dg_eqs_for\<close>/\<^const>\<open>analyse_int_dg_env_for\<close>
   (\<^theory>\<open>Voblint_Analysis.Int_Exec_Sound\<close>) -- the actual production
-  equation-system/report layer \<open>Int_Checks.thy\<close>'s \<open>analyse_int_report_for\<close>
+  equation-system/report layer \<open>Int_Checks\<close>'s \<open>analyse_int_report_for\<close>
   is built on. Those two constants are now mode-parameterized, so this
   reruns \<^theory>\<open>Voblint_Examples.Exec_Int_DG_Run\<close>'s own
   \<open>int_ex_prog\<close>/\<open>Statement 1\<close> witness through the production route for all

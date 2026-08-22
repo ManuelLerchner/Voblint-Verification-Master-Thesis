@@ -397,7 +397,7 @@ maintained as a parallel architecture; its two example consumers
 (`Examples/Interval/Example_Interval_Loop_Coverage.thy`,
 `Examples/Interval/Example_Proc_Call.thy`) were trimmed to their concrete-semantics and
 CFG-compilation content, pointing to the real production analyses of the same or
-equivalent programs (`Exec_Ivl_Run.thy`, `Example_Side_Proc_Global.thy`) where a
+equivalent programs (`Exec_Interval_Run.thy`, `Example_Side_Proc_Global.thy`) where a
 certified bound is wanted.
 
 `domain_transfer`'s shared `tf_branch` field stays plain-state-valued (`branch`, not

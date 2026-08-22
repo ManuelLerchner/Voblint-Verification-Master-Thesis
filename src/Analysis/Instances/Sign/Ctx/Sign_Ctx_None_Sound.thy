@@ -340,7 +340,7 @@ text \<open>
   the raw executable solve through the same \<^const>\<open>canonicalize_lift\<close>/\<^const>\<open>normalize_point\<close>
   boundary the mixed-analysis \<open>monovariant_analysis_result_for\<close> and Interval's own
   \<open>analyse_interval_entry_state_result_for\<close> already use, and are the tables Sign's public
-  API (\<open>Sign_Checks.thy\<close>) redirects onto in production. Their soundness is established there
+  API (\<open>Sign_Checks\<close>) redirects onto in production. Their soundness is established there
   through a \<open>dg_analysis_adapter\<close> interpretation of this file's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
   context, bridged to these executable tables via \<open>normalize_point_canonicalize_lift_eq_old\<close>
   (\<^theory>\<open>Voblint_Core.Analysis_Result\<close>).
