@@ -386,8 +386,7 @@ definition checks_ex_node_annotation :: "pp \<Rightarrow> graphviz_node_annotati
         Some ann \<Rightarrow> Some ann
       | None \<Rightarrow>
           if v = FunctionResult (STR ''main'') then
-            Some (Node_Annotation ''''
-              ''shape=doublecircle,color=gray40,style=filled,fillcolor=lightgray'')
+            Some (Node_Annotation '''' NS_Exit)
           else None)"
 
 text \<open>Validation that the generic renderer's hook actually carries all three

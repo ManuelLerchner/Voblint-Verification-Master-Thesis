@@ -151,10 +151,20 @@ module Core : sig
   type refine_mode
   type 'a point_state = Unreachable | Reachable of 'a
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
+    NS_Unreachable | NS_Exit
   type ('a, 'b) analysis_result
   type contextual_verdict = Dead | Decided of check_result
+  type export_edge_kind = XE_Intra | XE_Enter | XE_Combine | XE_CallToReturn |
+    XE_GlobalRead | XE_GlobalWrite
+  type export_node_kind = XN_Entry | XN_Exit | XN_ProcEntry | XN_ProcExit |
+    XN_Point | XN_Global | XN_Source
   type 'a imp_prog_ext
-  type graphviz_node_annotation = Node_Annotation of char list * char list
+  type graphviz_node_annotation = Node_Annotation of char list * node_status
+  type 'a export_edge_ext
+  type 'a export_node_ext
+  type 'a export_cluster_ext
+  type 'a export_graph_ext
   type 'a procedure_scope_ext
   type ('a, 'b) domain_transfer_ext
   type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
@@ -194,12 +204,8 @@ module Core : sig
   val declared_global_vars : 'a imp_prog_ext -> string list
   val declared_global : unit imp_prog_ext -> string -> bool
   val char_0x74 : char
-  val char_0x73 : char
   val char_0x72 : char
-  val char_0x70 : char
   val char_0x6F : char
-  val char_0x69 : char
-  val char_0x67 : char
   val char_0x65 : char
   val char_0x61 : char
   val string_of_sign : sign -> char list
@@ -215,25 +221,19 @@ module Core : sig
   val char_0x3D : char
   val char_0x20 : char
   val string_of_parity : parity -> char list
-  val char_0x66 : char
   val char_0x5D : char
   val char_0x5B : char
-  val char_0x2C : char
   val string_of_ivl : ivl -> char list
-  val char_0x79 : char
   val char_0x75 : char
   val char_0x6C : char
   val char_0x63 : char
   val string_of_int_dom : unit int_dom_ext -> char list
   val join_gv_nl : (char list) list -> char list
   val char_0x2F : char
-  val char_0x30 : char
-  val char_0x34 : char
   val char_0x47 : char
   val char_0x62 : char
   val char_0x68 : char
   val char_0x6B : char
-  val char_0x77 : char
   val char_0x78 : char
   val string_of_exp : nat -> exp -> char list
   val analysis_graph_to_dot :
@@ -285,6 +285,23 @@ module Core : sig
   val cs_graph_route :
     nat ->
       cfg_node -> cfg_node list -> call_action -> 'a -> (cfg_node list) option
+  val analysis_graph_to_export :
+    'a equal -> 'b equal ->
+      ('a, 'b, 'c, 'd, unit) analysis_graph_config_ext ->
+        unit cfg_ext ->
+          (((cfg_node * 'a), 'b) sum -> 'c) ->
+            ('a, 'b) analysis_cluster list *
+              (('a, 'b) analysis_node list *
+                (('a, 'b) analysis_node *
+                  (analysis_edge_kind * ('a, 'b) analysis_node)) list) ->
+              unit export_graph_ext
+  val raw_cfg_export :
+    (string -> unit proc_decl_ext option) ->
+      string list ->
+        string ->
+          com ->
+            (cfg_node -> graphviz_node_annotation option) ->
+              unit export_graph_ext
   val raw_cfg_dot_lit :
     (string -> unit proc_decl_ext option) ->
       string list ->
@@ -295,6 +312,7 @@ module Core : sig
   val compile_program : unit imp_prog_ext -> unit cfg_ext
   val analyse_int_report_join :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
+  val xn_id : 'a export_node_ext -> string
   val lookup_joined_state :
     'a equal -> 'b semilattice_sup ->
       ('a, (string -> 'b)) analysis_result ->
@@ -303,6 +321,17 @@ module Core : sig
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_parity_result :
     unit imp_prog_ext -> (unit, (string -> parity)) analysis_result
+  val xe_dst : 'a export_edge_ext -> string
+  val xe_src : 'a export_edge_ext -> string
+  val xe_kind : 'a export_edge_ext -> export_edge_kind
+  val xn_kind : 'a export_node_ext -> export_node_kind
+  val xc_id : 'a export_cluster_ext -> string
+  val xe_label : 'a export_edge_ext -> string
+  val xn_label : 'a export_node_ext -> string
+  val xn_lines : 'a export_node_ext -> string list
+  val xg_edges : 'a export_graph_ext -> unit export_edge_ext list
+  val xg_nodes : 'a export_graph_ext -> unit export_node_ext list
+  val xn_status : 'a export_node_ext -> node_status option
   val interval_classify_check : exp -> (string -> ivl) -> check_result
   val analyse_interval_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
@@ -323,6 +352,8 @@ module Core : sig
       (cfg_node *
         (exp * (check_result * (bool * (string -> unit int_dom_ext))))) list
   val check_result_annotation : check_result -> exp -> graphviz_node_annotation
+  val xc_label : 'a export_cluster_ext -> string
+  val xc_nodes : 'a export_cluster_ext -> string list
   val compiled_procedure_scope :
     (string -> bool) ->
       (string -> unit proc_decl_ext option) ->
@@ -331,6 +362,7 @@ module Core : sig
   val contextual_result_domain :
     ('a, 'b, 'c, 'd, unit) analysis_graph_config_ext ->
       unit cfg_ext -> ('a, 'e) analysis_result -> ((cfg_node * 'a), 'b) sum list
+  val xg_clusters : 'a export_graph_ext -> unit export_cluster_ext list
   val analyse_interval_td_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_interval_td_result :
@@ -3401,6 +3433,9 @@ type 'a point_state = Unreachable | Reachable of 'a;;
 
 type check_result = Check_Proved | Check_Refuted | Check_Unknown;;
 
+type node_status = NS_Plain | NS_Proved | NS_Refuted | NS_Unknown |
+  NS_Unreachable | NS_Exit;;
+
 type ('a, 'b) analysis_result =
   Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b point_state);;
 
@@ -3425,6 +3460,12 @@ type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
 type contextual_verdict = Dead | Decided of check_result;;
 
+type export_edge_kind = XE_Intra | XE_Enter | XE_Combine | XE_CallToReturn |
+  XE_GlobalRead | XE_GlobalWrite;;
+
+type export_node_kind = XN_Entry | XN_Exit | XN_ProcEntry | XN_ProcExit |
+  XN_Point | XN_Global | XN_Source;;
+
 type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
 
@@ -3438,7 +3479,7 @@ type ('a, 'b) numeric_ops_ext =
         exp -> bool -> 'a resolved_st_q -> 'a resolved_st_q) *
       'a * 'b;;
 
-type graphviz_node_annotation = Node_Annotation of char list * char list;;
+type graphviz_node_annotation = Node_Annotation of char list * node_status;;
 
 type ('a, 'b, 'c, 'd) func_state =
   Q of ('a * ('a * (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
@@ -3451,6 +3492,21 @@ type ('a, 'b, 'c, 'd) func_state =
                  (('b -> 'c) *
                    (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext))));;
+
+type 'a export_edge_ext =
+  Export_edge_ext of string * string * export_edge_kind * string * 'a;;
+
+type 'a export_node_ext =
+  Export_node_ext of
+    string * string * export_node_kind * node_status option * string list * 'a;;
+
+type 'a export_cluster_ext =
+  Export_cluster_ext of string * string * string list * 'a;;
+
+type 'a export_graph_ext =
+  Export_graph_ext of
+    unit export_cluster_ext list * unit export_node_ext list *
+      unit export_edge_ext list * 'a;;
 
 type 'a procedure_scope_ext =
   Procedure_scope_ext of string list * string list * string option * 'a;;
@@ -7827,8 +7883,6 @@ let rec graphviz_label_text
         (if equal_chara ch char_0x0A then gv_nl else [ch]) @
           graphviz_label_text rest;;
 
-let rec annotation_style (Node_Annotation (x1, x2)) = x2;;
-
 let rec proc_entry_pps_list
   g = map (fun (_, (_, (entry, _))) -> entry) (cfg_calls_list g);;
 
@@ -7838,6 +7892,75 @@ let rec proc_exit_pps_list
               | FunctionEntry a -> FunctionResult a
               | FunctionResult _ -> entry))
         (cfg_calls_list g);;
+
+let rec annotation_status (Node_Annotation (x1, x2)) = x2;;
+
+let rec gv_style_of_status
+  status =
+    (match status
+      with NS_Plain ->
+        [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
+          char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
+          char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
+          char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
+          char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
+          char_0x6F; char_0x72; char_0x3D; char_0x6C; char_0x69; char_0x67;
+          char_0x68; char_0x74; char_0x67; char_0x72; char_0x65; char_0x65;
+          char_0x6E]
+      | NS_Proved ->
+        [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
+          char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
+          char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
+          char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
+          char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
+          char_0x6F; char_0x72; char_0x3D; char_0x64; char_0x61; char_0x72;
+          char_0x6B; char_0x67; char_0x72; char_0x65; char_0x65; char_0x6E;
+          char_0x2C; char_0x66; char_0x6F; char_0x6E; char_0x74; char_0x63;
+          char_0x6F; char_0x6C; char_0x6F; char_0x72; char_0x3D; char_0x77;
+          char_0x68; char_0x69; char_0x74; char_0x65]
+      | NS_Refuted ->
+        [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
+          char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
+          char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
+          char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
+          char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
+          char_0x6F; char_0x72; char_0x3D; char_0x72; char_0x65; char_0x64;
+          char_0x2C; char_0x66; char_0x6F; char_0x6E; char_0x74; char_0x63;
+          char_0x6F; char_0x6C; char_0x6F; char_0x72; char_0x3D; char_0x77;
+          char_0x68; char_0x69; char_0x74; char_0x65]
+      | NS_Unknown ->
+        [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
+          char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
+          char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
+          char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
+          char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
+          char_0x6F; char_0x72; char_0x3D; char_0x67; char_0x72; char_0x61;
+          char_0x79; char_0x37; char_0x30]
+      | NS_Unreachable ->
+        [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
+          char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
+          char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
+          char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
+          char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
+          char_0x6F; char_0x72; char_0x3D; char_0x67; char_0x72; char_0x61;
+          char_0x79; char_0x34; char_0x30; char_0x2C; char_0x66; char_0x6F;
+          char_0x6E; char_0x74; char_0x63; char_0x6F; char_0x6C; char_0x6F;
+          char_0x72; char_0x3D; char_0x77; char_0x68; char_0x69; char_0x74;
+          char_0x65]
+      | NS_Exit ->
+        [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
+          char_0x64; char_0x6F; char_0x75; char_0x62; char_0x6C; char_0x65;
+          char_0x63; char_0x69; char_0x72; char_0x63; char_0x6C; char_0x65;
+          char_0x2C; char_0x63; char_0x6F; char_0x6C; char_0x6F; char_0x72;
+          char_0x3D; char_0x67; char_0x72; char_0x61; char_0x79; char_0x34;
+          char_0x30; char_0x2C; char_0x73; char_0x74; char_0x79; char_0x6C;
+          char_0x65; char_0x3D; char_0x66; char_0x69; char_0x6C; char_0x6C;
+          char_0x65; char_0x64; char_0x2C; char_0x66; char_0x69; char_0x6C;
+          char_0x6C; char_0x63; char_0x6F; char_0x6C; char_0x6F; char_0x72;
+          char_0x3D; char_0x6C; char_0x69; char_0x67; char_0x68; char_0x74;
+          char_0x67; char_0x72; char_0x61; char_0x79]);;
+
+let rec annotation_style ann = gv_style_of_status (annotation_status ann);;
 
 let rec graphviz_exit
   g = (match cfg_entry g with Statement a -> Statement a
@@ -9369,10 +9492,107 @@ let rec cs_context_key ctx = implode (cs_show_context ctx);;
 
 let rec cs_graph_route k u ctx ca d = Some (cs_route k u ctx d ca);;
 
+let rec export_node_kind_of
+  g n = (match n
+          with LocalNode (p, _) ->
+            (if equal_cfg_nodea p (cfg_entry g) then XN_Entry
+              else (if equal_cfg_nodea p (graphviz_exit g) then XN_Exit
+                     else (if membera equal_cfg_node (proc_entry_pps_list g) p
+                            then XN_ProcEntry
+                            else (if membera equal_cfg_node
+                                       (proc_exit_pps_list g) p
+                                   then XN_ProcExit else XN_Point))))
+          | GlobalNode _ -> XN_Global | SourceNode _ -> XN_Source);;
+
+let rec export_node_of _A _B
+  cfg g sol ns n =
+    (let lines = contextual_node_label_lines cfg g sol n in
+     let status =
+       (match n
+         with LocalNode (p, ctx) ->
+           map_option annotation_status (node_annotation cfg p ctx)
+         | GlobalNode _ -> None | SourceNode _ -> None)
+       in
+     let named =
+       (match n with LocalNode (_, _) -> true | GlobalNode _ -> true
+         | SourceNode _ -> false)
+       in
+      Export_node_ext
+        (implode (analysis_node_id _A _B cfg ns n),
+          implode
+            (if named then (match lines with [] -> [] | l :: _ -> l) else []),
+          export_node_kind_of g n, status,
+          map implode
+            (if named then (match lines with [] -> [] | _ :: rest -> rest)
+              else lines),
+          ()));;
+
 let rec ordered_by_key
   key s =
     map (fun k -> the_elem (filter (fun x -> (((key x) : string) = k)) s))
       (sorted_list_of_set (equal_literal, linorder_literal) (image key s));;
+
+let rec export_edge_kind_of
+  kind =
+    (match kind with IntraEdge _ -> XE_Intra | EnterEdge (_, _) -> XE_Enter
+      | CombineEdge (_, _, _) -> XE_Combine
+      | CallToReturnEdge _ -> XE_CallToReturn | GlobalReadEdge -> XE_GlobalRead
+      | GlobalWriteEdge -> XE_GlobalWrite);;
+
+let rec export_edge_label
+  g kind =
+    (match kind with IntraEdge a -> source_action_label g a
+      | EnterEdge (callee, a) ->
+        callee @
+          [char_0x28] @
+            (let CallEdge (_, _, es) = a in
+              join_source [char_0x2C; char_0x20]
+                (map (string_of_exp zero_nat) es)) @
+              [char_0x29]
+      | CombineEdge (_, dst, ret) ->
+        (match (dst, ret) with (None, _) -> [] | (Some xa, None) -> explode xa
+          | (Some xa, Some r) ->
+            explode xa @
+              [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
+      | CallToReturnEdge a -> explode a | GlobalReadEdge -> []
+      | GlobalWriteEdge -> []);;
+
+let rec export_cluster_of _A _B
+  cfg clusters ns cluster =
+    Export_cluster_ext
+      (implode (analysis_cluster_id _A clusters cluster),
+        implode (analysis_cluster_label cfg cluster),
+        map (fun n -> implode (analysis_node_id _A _B cfg ns n))
+          (analysis_nodes_in_cluster _A _B cfg cluster ns),
+        ());;
+
+let rec analysis_graph_to_export _A _B
+  cfg g sol graph =
+    (let (clusters, (ns, es)) = graph in
+      Export_graph_ext
+        (map (export_cluster_of _A _B cfg clusters ns) clusters,
+          map (export_node_of _A _B cfg g sol ns) ns,
+          map (fun (src, (kind, dst)) ->
+                Export_edge_ext
+                  (implode (analysis_node_id _A _B cfg ns src),
+                    implode (analysis_node_id _A _B cfg ns dst),
+                    export_edge_kind_of kind,
+                    implode (export_edge_label g kind), ()))
+            es,
+          ()));;
+
+let rec contextual_analysis_export _A _B
+  cfg g domain sol =
+    analysis_graph_to_export _A _B cfg g sol
+      (build_analysis_graph _A _B cfg g domain sol);;
+
+let rec raw_cfg_export
+  pi ps mnm main annotate =
+    (let g = compile_prog pi ps mnm main in
+     let cfg = raw_cfg_graph_config pi ps mnm main annotate in
+     let domain = contextual_graph_domain g (fun _ -> [()]) in
+      contextual_analysis_export equal_unit equal_unit cfg g domain
+        (fun _ -> ()));;
 
 let rec join_abs_state_with j a b = (fun x -> j (a x) (b x));;
 
@@ -9874,6 +10094,10 @@ let rec classify_checks_ctx _A
           else None))
       (cfg_intra_list g);;
 
+let rec xn_id
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_id;;
+
 let rec lookup_joined_state _A _B
   r v = join_states_over _B (lookup_context _A r v) (contexts_at r v);;
 
@@ -9946,6 +10170,12 @@ let rec analyse_parity_report
 let rec analyse_parity_result
   p = analyse_parity_result_for (declared_global p) p;;
 
+let rec xe_dst
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_dst;;
+
+let rec xe_src
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_src;;
+
 let rec context_key
   (Analysis_graph_config_ext
     (local_of, route, context_key, show_context, locals_for_pp,
@@ -9956,6 +10186,13 @@ let rec context_key
 
 let rec result_contexts_at
   cfg r p = ordered_by_key (context_key cfg) (contexts_at r p);;
+
+let rec xe_kind
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_kind;;
+
+let rec xn_kind
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_kind;;
 
 let rec graphviz_action_defs = function EA_Assign (x, e) -> [x]
                                | EA_Special (sc, x) -> [x]
@@ -10071,6 +10308,19 @@ let rec canonical_node_block _A _B
                               line @ nl)
                        rest);;
 
+let rec xc_id (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_id;;
+
+let rec xe_label
+  (Export_edge_ext (xe_src, xe_dst, xe_kind, xe_label, more)) = xe_label;;
+
+let rec xn_label
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_label;;
+
+let rec xn_lines
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_lines;;
+
 let rec ics_sol_prog
   k gs mnm p =
     ics_sol k Refine_Fixpoint gs
@@ -10079,6 +10329,16 @@ let rec ics_sol_prog
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
       (prog_table p) (prog_procs p) mnm (prog_main p);;
+
+let rec xg_edges
+  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_edges;;
+
+let rec xg_nodes
+  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_nodes;;
+
+let rec xn_status
+  (Export_node_ext (xn_id, xn_label, xn_kind, xn_status, xn_lines, more)) =
+    xn_status;;
 
 let rec analyse_interval_ctx_result_for
   gs mnm p =
@@ -10517,44 +10777,27 @@ let rec check_result_annotation
         Node_Annotation
           ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
              string_of_exp zero_nat cnd,
-            [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
-              char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
-              char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
-              char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
-              char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
-              char_0x6F; char_0x72; char_0x3D; char_0x64; char_0x61; char_0x72;
-              char_0x6B; char_0x67; char_0x72; char_0x65; char_0x65; char_0x6E;
-              char_0x2C; char_0x66; char_0x6F; char_0x6E; char_0x74; char_0x63;
-              char_0x6F; char_0x6C; char_0x6F; char_0x72; char_0x3D; char_0x77;
-              char_0x68; char_0x69; char_0x74; char_0x65])
+            NS_Proved)
       | Check_Refuted ->
         Node_Annotation
           ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
              string_of_exp zero_nat cnd @
                [char_0x20; char_0x5B; char_0x52; char_0x45; char_0x46;
                  char_0x55; char_0x54; char_0x45; char_0x44; char_0x5D],
-            [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
-              char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
-              char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
-              char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
-              char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
-              char_0x6F; char_0x72; char_0x3D; char_0x72; char_0x65; char_0x64;
-              char_0x2C; char_0x66; char_0x6F; char_0x6E; char_0x74; char_0x63;
-              char_0x6F; char_0x6C; char_0x6F; char_0x72; char_0x3D; char_0x77;
-              char_0x68; char_0x69; char_0x74; char_0x65])
+            NS_Refuted)
       | Check_Unknown ->
         Node_Annotation
           ([char_0x63; char_0x68; char_0x65; char_0x63; char_0x6B; char_0x20] @
              string_of_exp zero_nat cnd @
                [char_0x20; char_0x5B; char_0x75; char_0x6E; char_0x6B;
                  char_0x6E; char_0x6F; char_0x77; char_0x6E; char_0x5D],
-            [char_0x73; char_0x68; char_0x61; char_0x70; char_0x65; char_0x3D;
-              char_0x62; char_0x6F; char_0x78; char_0x2C; char_0x73; char_0x74;
-              char_0x79; char_0x6C; char_0x65; char_0x3D; char_0x66; char_0x69;
-              char_0x6C; char_0x6C; char_0x65; char_0x64; char_0x2C; char_0x66;
-              char_0x69; char_0x6C; char_0x6C; char_0x63; char_0x6F; char_0x6C;
-              char_0x6F; char_0x72; char_0x3D; char_0x67; char_0x72; char_0x61;
-              char_0x79; char_0x37; char_0x30]));;
+            NS_Unknown));;
+
+let rec xc_label
+  (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_label;;
+
+let rec xc_nodes
+  (Export_cluster_ext (xc_id, xc_label, xc_nodes, more)) = xc_nodes;;
 
 let rec ictx_sol_prog_wpoa
   gs mnm p =
@@ -10671,6 +10914,9 @@ let rec compiled_procedure_scope
 
 let rec contextual_result_domain
   cfg g r = contextual_graph_domain g (result_contexts_at cfg r);;
+
+let rec xg_clusters
+  (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_clusters;;
 
 let rec tf_enter
   (Domain_transfer_ext
@@ -11948,22 +12194,39 @@ module State_Report_GraphViz : sig
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> string
   val exp_vnames_list : Core.exp -> string list
+  val cs_ctx_export_auto :
+    Analysis_Config.analysis_domain ->
+      Core.nat -> unit Core.imp_prog_ext -> unit Core.export_graph_ext
   val full_state_dot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val state_report_dot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
+  val full_state_export_auto :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext -> unit Core.export_graph_ext
   val entry_state_ctx_dot_auto : unit Core.imp_prog_ext -> string
+  val state_report_export_auto :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext -> unit Core.export_graph_ext
   val cs_ctx_graph_snapshot_auto :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> string
+  val entry_state_ctx_export_auto :
+    unit Core.imp_prog_ext -> unit Core.export_graph_ext
   val entry_state_report_dot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
+  val entry_state_report_export_auto :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext -> unit Core.export_graph_ext
   val full_state_graph_snapshot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val entry_state_full_state_dot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
   val state_report_graph_snapshot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
+  val entry_state_full_state_export_auto :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext -> unit Core.export_graph_ext
   val entry_state_ctx_graph_snapshot_auto : unit Core.imp_prog_ext -> string
   val entry_state_report_graph_snapshot_auto :
     Analysis_Config.analysis_domain -> unit Core.imp_prog_ext -> string
@@ -12032,22 +12295,6 @@ let rec cs_ctx_sol_for
               | Core.Inr _ -> Core.Unreachable)))
       | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
-let unreachable_gv_style : Core.char list
-  = [Core.char_0x73; Core.char_0x68; Core.char_0x61; Core.char_0x70;
-      Core.char_0x65; Core.char_0x3D; Core.char_0x62; Core.char_0x6F;
-      Core.char_0x78; Core.char_0x2C; Core.char_0x73; Core.char_0x74;
-      Core.char_0x79; Core.char_0x6C; Core.char_0x65; Core.char_0x3D;
-      Core.char_0x66; Core.char_0x69; Core.char_0x6C; Core.char_0x6C;
-      Core.char_0x65; Core.char_0x64; Core.char_0x2C; Core.char_0x66;
-      Core.char_0x69; Core.char_0x6C; Core.char_0x6C; Core.char_0x63;
-      Core.char_0x6F; Core.char_0x6C; Core.char_0x6F; Core.char_0x72;
-      Core.char_0x3D; Core.char_0x67; Core.char_0x72; Core.char_0x61;
-      Core.char_0x79; Core.char_0x34; Core.char_0x30; Core.char_0x2C;
-      Core.char_0x66; Core.char_0x6F; Core.char_0x6E; Core.char_0x74;
-      Core.char_0x63; Core.char_0x6F; Core.char_0x6C; Core.char_0x6F;
-      Core.char_0x72; Core.char_0x3D; Core.char_0x77; Core.char_0x68;
-      Core.char_0x69; Core.char_0x74; Core.char_0x65];;
-
 let rec dead_check_annotation
   cnd = Core.Node_Annotation
           ([Core.char_0x63; Core.char_0x68; Core.char_0x65; Core.char_0x63;
@@ -12055,7 +12302,7 @@ let rec dead_check_annotation
              Core.string_of_exp Core.zero_nat cnd @
                [Core.char_0x20; Core.char_0x5B; Core.char_0x64; Core.char_0x65;
                  Core.char_0x61; Core.char_0x64; Core.char_0x5D],
-            unreachable_gv_style);;
+            Core.NS_Unreachable);;
 
 let rec cs_ctx_check_annotation
   kind k p g v ctx =
@@ -12174,6 +12421,18 @@ let rec exp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.exp_vnames b);;
 
+let rec cs_ctx_export_auto
+  kind k p =
+    (let g = Core.prog_cfg Core.prog_main_name p in
+     let base = cs_ctx_graph_config p k in
+     let cfg = cs_ctx_annotated_config kind k p in
+     let sol = cs_ctx_sol_for kind k p in
+      Core.analysis_graph_to_export (Core.equal_list Core.equal_cfg_node)
+        Core.equal_call_string_gk cfg g sol
+        (Core.build_analysis_graph (Core.equal_list Core.equal_cfg_node)
+          Core.equal_call_string_gk cfg g (cs_ctx_domain_for kind k p base)
+          sol));;
+
 let rec entry_state_ctx_sol
   r k = (match k
           with Core.Inl (a, b) ->
@@ -12185,7 +12444,7 @@ let unreachable_state_annotation : Core.graphviz_node_annotation
       ([Core.char_0x75; Core.char_0x6E; Core.char_0x72; Core.char_0x65;
          Core.char_0x61; Core.char_0x63; Core.char_0x68; Core.char_0x61;
          Core.char_0x62; Core.char_0x6C; Core.char_0x65],
-        unreachable_gv_style);;
+        Core.NS_Unreachable);;
 
 let rec point_state_node_annotation
   vars env v =
@@ -12193,21 +12452,7 @@ let rec point_state_node_annotation
       | Core.Reachable st ->
         Some (Core.Node_Annotation
                (Core.join_gv_nl (Core.map (state_line st) vars),
-                 [Core.char_0x73; Core.char_0x68; Core.char_0x61;
-                   Core.char_0x70; Core.char_0x65; Core.char_0x3D;
-                   Core.char_0x62; Core.char_0x6F; Core.char_0x78;
-                   Core.char_0x2C; Core.char_0x73; Core.char_0x74;
-                   Core.char_0x79; Core.char_0x6C; Core.char_0x65;
-                   Core.char_0x3D; Core.char_0x66; Core.char_0x69;
-                   Core.char_0x6C; Core.char_0x6C; Core.char_0x65;
-                   Core.char_0x64; Core.char_0x2C; Core.char_0x66;
-                   Core.char_0x69; Core.char_0x6C; Core.char_0x6C;
-                   Core.char_0x63; Core.char_0x6F; Core.char_0x6C;
-                   Core.char_0x6F; Core.char_0x72; Core.char_0x3D;
-                   Core.char_0x6C; Core.char_0x69; Core.char_0x67;
-                   Core.char_0x68; Core.char_0x74; Core.char_0x67;
-                   Core.char_0x72; Core.char_0x65; Core.char_0x65;
-                   Core.char_0x6E])));;
+                 Core.NS_Plain)));;
 
 let rec analyse_point_env_for
   kind p =
@@ -12256,11 +12501,11 @@ let rec state_report_node_annotation
       Core.find (fun entry -> Core.equal_cfg_nodea (Core.fst entry) v) report
       with None -> None
       | Some (_, (cnd, (res, f))) ->
-        (let Core.Node_Annotation (lbl, style) =
+        (let Core.Node_Annotation (lbl, status) =
            Core.check_result_annotation res cnd in
           Some (Core.Node_Annotation
                  (Core.join_gv_nl (lbl :: Core.map (state_line f) vars),
-                   style))));;
+                   status))));;
 
 let rec state_report_dot_auto
   kind p =
@@ -12271,6 +12516,13 @@ let rec state_report_dot_auto
       Core.raw_cfg_dot_lit (Core.prog_table p) (Core.prog_procs p)
         Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
+
+let rec full_state_export_auto
+  kind p =
+    Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
+      Core.prog_main_name (Core.prog_main p)
+      (point_state_node_annotation (program_vars p)
+        (analyse_point_env_for kind p));;
 
 let rec entry_state_ctx_check_annotation
   g r v ctx =
@@ -12373,6 +12625,16 @@ let rec entry_state_verdicts_for
       | Analysis_Config.Int_Analysis -> Core.analyse_int_entry_state_report p
       | Analysis_Config.Parity_Analysis -> []);;
 
+let rec state_report_export_auto
+  kind p =
+    (let report =
+       Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
+         (Analyse_Dispatch.analyse_with_state kind p)
+       in
+      Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
+        (state_report_node_annotation (report_vars report) report));;
+
 let rec entry_state_point_env_for
   kind p =
     (match kind
@@ -12415,6 +12677,21 @@ let rec cs_ctx_graph_snapshot_auto
                 Core.equal_call_string_gk cfg g
                 (cs_ctx_domain_for kind k p base) sol)));;
 
+let rec entry_state_ctx_export_auto
+  p = (let r = Core.analyse_interval_entry_state_result p in
+       let g = Core.prog_cfg Core.prog_main_name p in
+       let base = entry_state_ctx_graph_config p in
+       let cfg =
+         Core.node_annotation_update
+           (fun _ -> entry_state_ctx_check_annotation g r) base
+         in
+       let sol = entry_state_ctx_sol r in
+        Core.analysis_graph_to_export (Core.equal_list Core.equal_ivl)
+          Core.equal_gkd cfg g sol
+          (Core.build_analysis_graph (Core.equal_list Core.equal_ivl)
+            Core.equal_gkd cfg g (Core.contextual_result_domain base g r)
+            sol));;
+
 let rec verdict_state_report_node_annotation
   vars report v =
     (match
@@ -12444,6 +12721,13 @@ let rec entry_state_report_dot_auto
         Core.prog_main_name (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
+let rec entry_state_report_export_auto
+  kind p =
+    (let report = entry_state_report_for_annotation kind p in
+      Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
+        (verdict_state_report_node_annotation (report_vars report) report));;
+
 let rec full_state_graph_snapshot_auto
   kind p =
     Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
@@ -12467,6 +12751,13 @@ let rec state_report_graph_snapshot_auto
       Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
         Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
+
+let rec entry_state_full_state_export_auto
+  kind p =
+    Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
+      Core.prog_main_name (Core.prog_main p)
+      (point_state_node_annotation (program_vars p)
+        (entry_state_point_env_for kind p));;
 
 let rec entry_state_ctx_graph_snapshot_auto
   p = (let r = Core.analyse_interval_entry_state_result p in

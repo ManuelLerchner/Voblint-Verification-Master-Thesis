@@ -100,8 +100,8 @@ definition state_report_node_annotation ::
         None \<Rightarrow> None
       | Some (_, cnd, res, f) \<Rightarrow>
           (case check_result_annotation res cnd of
-             Node_Annotation lbl style \<Rightarrow>
-               Some (Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)))"
+             Node_Annotation lbl status \<Rightarrow>
+               Some (Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)))"
 
 text \<open>
   \<open>analyse_with_state\<close>'s report also carries an exact \<open>unreachable\<close> flag
@@ -233,23 +233,18 @@ definition entry_state_point_env_for ::
       | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
 
 text \<open>
-  The unreachable styling draws from the palette \<^const>\<open>check_result_annotation\<close>
-  and \<^const>\<open>analysis_node_attrs\<close> already use: \<open>gray40\<close>, the grey the renderer
-  gives its own exit nodes, and deliberately not the \<open>gray70\<close> an undecided
-  check carries. ``Nothing reaches this node'' and ``something reaches it and
-  the abstraction could not decide'' are different findings and must not
-  render alike.
+  \<^const>\<open>NS_Unreachable\<close> is a distinct status, not a shade of the undecided one:
+  ``nothing reaches this node'' and ``something reaches it and the abstraction could not
+  decide'' are different findings, and \<^const>\<open>gv_style_of_status\<close> keeps them apart in
+  every renderer at once.
 \<close>
 
-definition unreachable_gv_style :: string where
-  "unreachable_gv_style = ''shape=box,style=filled,fillcolor=gray40,fontcolor=white''"
-
 definition unreachable_state_annotation :: graphviz_node_annotation where
-  "unreachable_state_annotation = Node_Annotation ''unreachable'' unreachable_gv_style"
+  "unreachable_state_annotation = Node_Annotation ''unreachable'' NS_Unreachable"
 
 definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation" where
   "dead_check_annotation cnd =
-     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') unreachable_gv_style"
+     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') NS_Unreachable"
 
 text \<open>
   The shared full-state renderer for every \<^typ>\<open>'a point_state\<close>-valued
@@ -267,8 +262,7 @@ definition point_state_node_annotation ::
      (case env v of
         Unreachable \<Rightarrow> Some unreachable_state_annotation
       | Reachable st \<Rightarrow>
-          Some (Node_Annotation (join_gv_nl (map (state_line st) vars))
-                  ''shape=box,style=filled,fillcolor=lightgreen''))"
+          Some (Node_Annotation (join_gv_nl (map (state_line st) vars)) NS_Plain))"
 
 text \<open>
   \<open>analyse_point_env_for\<close> is the monovariant sibling of
@@ -320,6 +314,25 @@ text \<open>Canonical-text sibling, the same DOT-free relationship
 definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p =
      raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
+
+text \<open>
+  The structured-export siblings. Same report, same annotation hook, same single solve per
+  render as their DOT and snapshot counterparts above --- only the view of the built graph
+  differs. These are what the CLI's own renderers consume: everything a DOT or HTML
+  rendering needs is in the returned \<^typ>\<open>export_graph\<close>, so no renderer outside this
+  session re-derives the graph or parses text back into one.
+\<close>
+
+definition state_report_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "state_report_export_auto kind p =
+     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
+      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (state_report_node_annotation (report_vars report) report))"
+
+definition full_state_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "full_state_export_auto kind p =
+     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
@@ -396,8 +409,8 @@ definition verdict_state_report_node_annotation ::
           Some (case (verdict, st) of
                   (Decided res, Reachable f) \<Rightarrow>
                     (case check_result_annotation res cnd of
-                       Node_Annotation lbl style \<Rightarrow>
-                         Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)
+                       Node_Annotation lbl status \<Rightarrow>
+                         Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)
                 | _ \<Rightarrow> dead_check_annotation cnd))"
 
 definition entry_state_report_dot_auto ::
@@ -413,6 +426,19 @@ definition entry_state_report_graph_snapshot_auto ::
      (let report = entry_state_report_for_annotation kind p
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (verdict_state_report_node_annotation (report_vars report) report))"
+
+definition entry_state_report_export_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "entry_state_report_export_auto kind p =
+     (let report = entry_state_report_for_annotation kind p
+      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (verdict_state_report_node_annotation (report_vars report) report))"
+
+definition entry_state_full_state_export_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "entry_state_full_state_export_auto kind p =
+     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,
@@ -629,6 +655,27 @@ lemma entry_state_ctx_graph_snapshot_auto_code [code]:
             entry_state_ctx_annotated_config_def Let_def
   by (rule refl)
 
+definition entry_state_ctx_export_auto :: "imp_prog \<Rightarrow> export_graph" where
+  "entry_state_ctx_export_auto p =
+     analysis_graph_to_export (entry_state_ctx_annotated_config p) (prog_cfg prog_main_name p)
+       (entry_state_ctx_sol (analyse_interval_entry_state_result p))
+       (entry_state_ctx_graph p)"
+
+declare entry_state_ctx_export_auto_def [code del]
+
+lemma entry_state_ctx_export_auto_code [code]:
+  "entry_state_ctx_export_auto p =
+     (let r = analyse_interval_entry_state_result p;
+          g = prog_cfg prog_main_name p;
+          base = entry_state_ctx_graph_config p;
+          cfg = base \<lparr> node_annotation := entry_state_ctx_check_annotation g r \<rparr>;
+          sol = entry_state_ctx_sol r
+      in analysis_graph_to_export cfg g sol
+           (build_analysis_graph cfg g (contextual_result_domain base g r) sol))"
+  unfolding entry_state_ctx_export_auto_def entry_state_ctx_graph_def
+            entry_state_ctx_annotated_config_def Let_def
+  by (rule refl)
+
 section \<open>The context-expanded call-string graph\<close>
 
 text \<open>
@@ -784,6 +831,15 @@ definition cs_ctx_annotated_config ::
      cs_ctx_graph_config p k
        \<lparr> node_annotation :=
            cs_ctx_check_annotation kind k p (prog_cfg prog_main_name p) \<rparr>"
+
+definition cs_ctx_export_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "cs_ctx_export_auto kind k p =
+     (let g = prog_cfg prog_main_name p;
+          base = cs_ctx_graph_config p k;
+          cfg = cs_ctx_annotated_config kind k p;
+          sol = cs_ctx_sol_for kind k p
+      in analysis_graph_to_export cfg g sol
+           (build_analysis_graph cfg g (cs_ctx_domain_for kind k p base) sol))"
 
 definition cs_ctx_dot_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "cs_ctx_dot_auto kind k p =

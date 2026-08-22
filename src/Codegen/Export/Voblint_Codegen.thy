@@ -52,6 +52,16 @@ export_code
   entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
   entry_state_ctx_dot_auto entry_state_ctx_graph_snapshot_auto
   cs_ctx_dot_auto cs_ctx_graph_snapshot_auto
+  state_report_export_auto full_state_export_auto
+  entry_state_report_export_auto entry_state_full_state_export_auto
+  entry_state_ctx_export_auto cs_ctx_export_auto
+  xn_id xn_label xn_kind xn_status xn_lines
+  xe_src xe_dst xe_kind xe_label
+  xc_id xc_label xc_nodes
+  xg_clusters xg_nodes xg_edges
+  XN_Entry XN_Exit XN_ProcEntry XN_ProcExit XN_Point XN_Global XN_Source
+  XE_Intra XE_Enter XE_Combine XE_CallToReturn XE_GlobalRead XE_GlobalWrite
+  NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
   exp_vnames_list string_of_abstract_value
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
