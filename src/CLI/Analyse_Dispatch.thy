@@ -130,9 +130,9 @@ text \<open>
   uses for \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close>. \<open>int_dom\<close> has a
   \<^theory>\<open>Voblint_Analysis.Int_Warrowing\<close> instance already needed for its own
   \<open>Solver_Warrow\<close> production route, so unlike Sign it has no type-level gap
-  left on this axis: all three \<open>int_dom\<close> pairings are supported, leaving
-  \<open>Sign_Analysis\<close>/\<open>Solver_Warrow\<close> the sole remaining \<open>None\<close> among the nine
-  \<open>analysis_domain \<times> solver_choice\<close> combinations.
+  left on this axis: every \<open>int_dom\<close> pairing is supported. Of the sixteen
+  \<open>analysis_domain \<times> solver_choice\<close> combinations the four \<open>None\<close>s are exactly the two
+  widening rules against the two finite-height domains, Sign and Parity.
 
   Each domain's own production default is exactly one of these pairings
   (\<open>Sign_Analysis\<close>/\<open>Solver_Join\<close>, \<open>Interval_Analysis\<close>/\<open>Solver_Warrow\<close>,
@@ -141,19 +141,23 @@ text \<open>
   below confirm all three reproduce \<open>analyse\<close> exactly, not just
   semantically.
 
-  These three update-rule disciplines are convergence strategies, not
-  alternative precision semantics: \<open>Exec_Interval_Run\<close>'s
-  \<open>loop_head_across_update_rules\<close> proves join, per-origin, and warrowing
-  compute the identical result on a bounded local loop whenever all three
-  terminate, since interval narrowing and the backward guard filter -- not
-  the update rule -- carry that precision. Since the Base-style migration,
-  a VIMP global lives in the same reachability-lifted local unknown as any
-  local, so the choice is no longer global-specific either: any node the
-  D/G solver revisits without a bounding narrowing phase --- a genuine
-  loop, or a call site reached more than once --- needs warrowing for
-  termination on Interval's infinite-height carrier; \<open>Solver_Join\<close> and
-  \<open>Solver_PerOrigin\<close> have no such guarantee there. Termination, not
-  precision, is therefore the axis on which this choice is observable.
+  Among \<open>Solver_Join\<close>, \<open>Solver_PerOrigin\<close> and \<open>Solver_Warrow\<close> the choice is a convergence
+  strategy: \<open>Exec_Interval_Run\<close>'s \<open>loop_head_across_update_rules\<close> proves all three compute
+  the identical result on a bounded local loop whenever they terminate, since interval
+  narrowing and the backward guard filter -- not the update rule -- carry that precision.
+  Since the Base-style migration, a VIMP global lives in the same reachability-lifted local
+  unknown as any local, so the choice is no longer global-specific either: any node the D/G
+  solver revisits without a bounding narrowing phase --- a genuine loop, or a call site
+  reached more than once --- needs warrowing for termination on Interval's infinite-height
+  carrier; \<open>Solver_Join\<close> and \<open>Solver_PerOrigin\<close> have no such guarantee there.
+
+  \<open>Solver_WarrowPerOrigin\<close> breaks that pattern, and is the reason this axis is not purely
+  about termination. It widens each origin's own contribution and joins afterwards, where
+  \<open>Solver_Warrow\<close> widens the value already joined across every origin. Both terminate;
+  they can still disagree. \<open>Example_Per_Origin_Widening_Precision\<close> is the witness: two
+  producers writing \<open>[1,1]\<close> and \<open>[2,2]\<close> to one global leave the joined rule at
+  \<open>[1, +inf]\<close> --- the second write makes the joined upper bound grow, though neither
+  producer's own contribution ever moved --- where the per-origin rule reads \<open>[1,2]\<close>.
 \<close>
 
 fun analyse_with_solver ::
@@ -170,6 +174,10 @@ fun analyse_with_solver ::
 | "analyse_with_solver Parity_Analysis Solver_Join p = Some (analyse_parity_report p)"
 | "analyse_with_solver Parity_Analysis Solver_PerOrigin p = Some (analyse_parity_report_per_origin p)"
 | "analyse_with_solver Parity_Analysis Solver_Warrow p = None"
+| "analyse_with_solver Sign_Analysis Solver_WarrowPerOrigin p = None"
+| "analyse_with_solver Interval_Analysis Solver_WarrowPerOrigin p = Some (analyse_interval_report_wpo p)"
+| "analyse_with_solver Int_Analysis Solver_WarrowPerOrigin p = Some (analyse_int_report_wpo p)"
+| "analyse_with_solver Parity_Analysis Solver_WarrowPerOrigin p = None"
 
 lemma analyse_with_solver_sign_default:
   "analyse_with_solver Sign_Analysis Solver_Join p = Some (analyse Sign_Analysis p)"
