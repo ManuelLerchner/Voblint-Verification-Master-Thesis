@@ -73,7 +73,7 @@ TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
 each concrete domain instance (Sign, Interval, ...) through it.
 
 Cross-session theory imports use qualified names.
-`Voblint_Formalization` contains the reusable soundness endpoints and the
+`Voblint_Soundness` contains the reusable soundness endpoints and the
 per-domain, per-context instantiations the CLI dispatches to, so it is not a
 leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
 through it. `Voblint_Examples` contains executable runs, regressions, GraphViz

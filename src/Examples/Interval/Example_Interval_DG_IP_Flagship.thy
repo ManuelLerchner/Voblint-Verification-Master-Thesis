@@ -7,7 +7,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 section \<open>The context-insensitive (monovariant) interval flagship\<close>

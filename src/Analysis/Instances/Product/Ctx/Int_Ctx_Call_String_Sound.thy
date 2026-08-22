@@ -1,6 +1,6 @@
-theory Int_Call_String_Ctx_Sound
+theory Int_Ctx_Call_String_Sound
   imports
-    "Voblint_Analysis.Int_Exec_Ctx_Sound"
+    "Voblint_Analysis.Int_Ctx_None_Sound"
     "Voblint_Analysis.Int_Classify"
     "Voblint_Core.Call_String_Context"
     "Voblint_Core.Call_String_Routed_Context"
@@ -9,8 +9,8 @@ begin
 section \<open>Int at the routed spine, instantiated at the call-string context\<close>
 
 text \<open>
-  The call-string sibling of \<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>'s own
-  routed-unit-context instance, mirroring \<open>Sign_Call_String_Ctx_Sound\<close>'s own
+  The call-string sibling of \<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>'s own
+  routed-unit-context instance, mirroring \<open>Sign_Ctx_Call_String_Sound\<close>'s own
   derivation for a second domain: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close>
   D/G specification and the same domain-commute facts Int's own routed-unit
   instance already interprets (\<^locale>\<open>routed_dg_domain_exec\<close>,
@@ -158,7 +158,7 @@ subsection \<open>Whole-program convenience layer\<close>
 
 text \<open>
   Fixed at \<^const>\<open>Refine_Fixpoint\<close>, matching Int's own production default
-  (\<open>Int_Codegen\<close>'s own \<open>analyse_int_report\<close>): \<open>mode\<close> stays a
+  (\<open>Int_Entry\<close>'s own \<open>analyse_int_report\<close>): \<open>mode\<close> stays a
   genuine parameter through every lemma above, exactly as Int's own routed-unit
   file threads it, and is only pinned here where the public, config-driven
   surface needs one concrete choice.

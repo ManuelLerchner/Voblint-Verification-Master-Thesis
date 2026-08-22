@@ -122,7 +122,7 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    `admiss`/`ctx_key` and removed from the codebase.
 3. **G3 -- executable context-sensitive Interval endpoint. Done, batch-green
    (2026-08-11).** `entry_state_sol`/`entry_state_terminates`
-   (`Interval_Exec_Ctx_Sound.thy`, `src/Formalization/Pipeline/`)
+   (`Interval_Ctx_Entry_State_Sound.thy`, `src/Soundness/`)
    generalize the acceptance example's fixed program to an arbitrary
    `imp_prog`, keyed on `pp x ivl list` exactly as sketched below, same
    `solve_dom`/`solve_c` convention as `analyse_interval_td_raw`. The

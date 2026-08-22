@@ -1,6 +1,6 @@
-theory Sign_Call_String_Ctx_Sound
+theory Sign_Ctx_Call_String_Sound
   imports
-    "Voblint_Analysis.Sign_Exec_Ctx_Sound"
+    "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Core.Call_String_Context"
     "Voblint_Core.Call_String_Routed_Context"
@@ -9,7 +9,7 @@ begin
 section \<open>Sign at the routed spine, instantiated at the call-string context\<close>
 
 text \<open>
-  The call-string sibling of \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own
+  The call-string sibling of \<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>'s own
   routed-unit-context instance: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
   specification and the same domain-commute facts it already interprets
   (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) --

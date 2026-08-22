@@ -165,7 +165,7 @@ Remove the ~40 stray `*.thy~` jEdit backups; add `*.thy~` to `.gitignore`.
 ## Completion record (2026-06-12)
 
 Executed on branch `consolidation/ip-only`. Net: **3908 deletions**, 18 files
-changed, full `isabelle build Voblint_Formalization` green after each phase.
+changed, full `isabelle build Voblint_Soundness` green after each phase.
 
 **Pre-step:** removed 41 stray `*.thy~` jEdit backups (already in `.gitignore`).
 

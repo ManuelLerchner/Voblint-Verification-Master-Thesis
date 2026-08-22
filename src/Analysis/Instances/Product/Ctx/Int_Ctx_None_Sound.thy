@@ -1,4 +1,4 @@
-theory Int_Exec_Ctx_Sound
+theory Int_Ctx_None_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"
@@ -557,7 +557,7 @@ text \<open>
   \<open>ictx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
   (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>). \<open>ictx_analyse_result_eq\<close> identifies that
   reading with the raw-tuple shape \<open>analyse_int_ctx_result_for\<close> (defined below)
-  already builds by hand, mirroring \<open>Interval_Ctx_None_Routed_Sound.ictx_analyse_result_eq\<close>.
+  already builds by hand, mirroring \<open>Interval_Ctx_None_Sound.ictx_analyse_result_eq\<close>.
 \<close>
 
 lemmas ictx_result_node_sound = ictx_adapter.analyse_result_node_sound
@@ -1235,7 +1235,7 @@ text \<open>
   \<open>ictx_result_node_sound_warrow\<close> re-exports the adapter's generic node-soundness bridge
   (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>). \<open>ictx_analyse_result_eq_warrow\<close> identifies that
   reading with the raw-tuple shape \<open>analyse_int_ctx_result_warrow_for\<close> (defined below)
-  already builds by hand, mirroring \<open>Interval_Ctx_None_Routed_Sound.ictx_analyse_result_eq_warrow\<close>.
+  already builds by hand, mirroring \<open>Interval_Ctx_None_Sound.ictx_analyse_result_eq_warrow\<close>.
 \<close>
 
 lemmas ictx_result_node_sound_warrow = ictx_adapter_warrow.analyse_result_node_sound
@@ -1291,7 +1291,7 @@ lemma ictx_terminates_prog_via_solve_c:
 text \<open>
   \<open>analyse_int_ctx_result_for\<close> is the routed-spine, always-join solved-result table,
   read as a \<^typ>\<open>(unit, int_dom abs_state) analysis_result\<close>: mirrors
-  \<open>Interval_Ctx_None_Routed_Sound.analyse_interval_ctx_result_for\<close> exactly, at the
+  \<open>Interval_Ctx_None_Sound.analyse_interval_ctx_result_for\<close> exactly, at the
   same \<open>ictx_sol_prog\<close> instance above, generic in \<open>mode\<close> to match
   \<open>ictx_sol_prog\<close>'s own signature. The \<open>[code]\<close> swap avoids re-solving per
   lookup: \<^const>\<open>ictx_sol_prog\<close> is bound once as \<open>sol\<close>, then read pointwise via

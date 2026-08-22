@@ -69,7 +69,7 @@ layer without embedding line numbers that drift.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Core/Solver/Context/DG/DG_Framework.thy` |
 | `sound_dg_spec` | Concrete-soundness obligations for a D/G instance. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
-| `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy` |
+| `dg_gen_of` | Executable D/G equation generator. | `src/Analysis/Instances/Product/Exec_DG_Bridge.thy` |
 | `dg_postfix` | Mathematical post-solution property for D/G equations. | `src/Core/Solver/Context/DG/DG_Soundness.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
@@ -162,5 +162,5 @@ Named, zero-cost (`abbreviation`) readings of the verified solver's four
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Formalization/Pipeline/Source_Activation_Sound.thy` |
-| `dg_exec_run_source_sound_for` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Formalization/Pipeline/Run_Analysis_Sound.thy` |
+| `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Soundness/Source_Activation_Sound.thy` |
+| `dg_exec_run_source_sound_for` | Reusable bundle connecting a computed D/G solver result to source execution. | `src/Soundness/Run_Analysis_Sound.thy` |

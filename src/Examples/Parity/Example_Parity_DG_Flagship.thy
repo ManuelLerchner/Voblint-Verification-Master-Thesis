@@ -36,7 +36,7 @@ theory Example_Parity_DG_Flagship
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 hide_const (open) Update_rules.N

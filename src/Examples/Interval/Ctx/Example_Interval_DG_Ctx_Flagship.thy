@@ -1,7 +1,7 @@
 theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
-    "Voblint_Formalization.Interval_Exec_Ctx_Sound"
+    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
     "Voblint_Analysis.Analysis_GraphViz"
 begin
 
@@ -9,7 +9,7 @@ section \<open>Context-sensitive interval analysis of \<open>twice\<close> (exec
 
 text \<open>
   The production entry-state analysis
-  (\<^theory>\<open>Voblint_Formalization.Interval_Exec_Ctx_Sound\<close>) run on
+  (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_Entry_State_Sound\<close>) run on
   \<^const>\<open>twice_program\<close>.  Each call to \<open>twice\<close> receives the abstract entry value
   of formal \<open>p\<close> as its context:
 

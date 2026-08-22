@@ -25,7 +25,7 @@ theory Exec_Sign_DG_Run
     "Voblint_Core.DG_Base_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)
@@ -147,7 +147,7 @@ text \<open>Interpret \<^locale>\<open>base_dg_exec_analysis\<close> once here a
   at this program's own declared globals -- the same five domain facts
   \<^locale>\<open>unit_dg_exec_analysis\<close> needed, plus the one new \<open>is_bot_pred\<close> exactness obligation. \<open>G\<close>
   is instantiated at \<open>sign exec_dg_st lifted\<close> too (the plumbing constraint
-  \<^theory>\<open>Voblint_Formalization.Run_Analysis_Sound\<close>'s \<open>base_dg_exec_analysis\<close> documents), not because
+  \<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>'s \<open>base_dg_exec_analysis\<close> documents), not because
   \<open>G\<close>'s content matters here.\<close>
 
 interpretation sign_ex_reg:

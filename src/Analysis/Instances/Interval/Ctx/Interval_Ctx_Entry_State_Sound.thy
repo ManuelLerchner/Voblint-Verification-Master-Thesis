@@ -1,4 +1,4 @@
-theory Interval_Exec_Ctx_Sound
+theory Interval_Ctx_Entry_State_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Interval_DG"
@@ -9,7 +9,6 @@ theory Interval_Exec_Ctx_Sound
     "Voblint_Core.Solver_Menu"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
-    Run_Analysis_Sound
 begin
 
 section \<open>Generic executable entry-state context analysis for Interval\<close>
@@ -245,7 +244,7 @@ subsection \<open>Whole-program convenience layer\<close>
 text \<open>
   \<open>Pi ps mnm main\<close> alone give no @{type imp_prog} to read a declared-global list off of, so
   \<open>entry_state_eqs\<close> and friends keep \<open>is_bot_pred\<close> as an explicit parameter, mirroring
-  \<open>ictx_eqs\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Routed_Sound\<close>). The \<open>_prog\<close> wrappers do
+  \<open>ictx_eqs\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Ctx_None_Sound\<close>). The \<open>_prog\<close> wrappers do
   have a program and instantiate \<open>is_bot_pred\<close> to \<^const>\<open>resolved_st_q_is_bot_for\<close> at its own
   \<^const>\<open>declared_global_vars\<close>, mirroring \<open>ictx_sol_prog\<close>.
 \<close>
@@ -1104,7 +1103,7 @@ text \<open>
   \<open>ictx_eqs\<close> at \<open>Ctx_None\<close>
   (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s \<open>analyse_interval_dg_join_for\<close>/
   \<open>_per_origin_for\<close> alongside the Warrow default), and exactly as its own
-  \<open>Interval_Call_String_Ctx_Sound.thy\<close> sibling solves the routed call-string
+  \<open>Interval_Ctx_Call_String_Sound.thy\<close> sibling solves the routed call-string
   system under all three disciplines. \<^const>\<open>entry_state_sol_prog\<close> (Warrow,
   the shipped default) is untouched.
 \<close>

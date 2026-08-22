@@ -1,5 +1,5 @@
 theory Exec_Ivl_Run
-  imports "Voblint_CLI.Interval_Codegen"
+  imports "Voblint_CLI.Interval_Entry"
             Voblint_Core.Solver_Menu "Voblint_CFG.CFG_Prune"
             "Voblint_VIMP.VIMP_Notation"
             Example_Interval_Loop_Coverage

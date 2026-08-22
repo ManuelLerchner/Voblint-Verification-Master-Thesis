@@ -39,7 +39,7 @@ frame-locality boundary where the projection-based reader ceases to be sufficien
 generator-to-collecting ENTRY/EDGE discharge remains future work shared by all digest instances.
 
 > **Status & companions.** One kernel, two instances, differing only in *where the digest comes
-> from*. Both build in `Voblint_Analysis` and are demonstrated in `Voblint_Formalization` under
+> from*. Both build in `Voblint_Analysis` and are demonstrated in `Voblint_Soundness` under
 > the full `isabelle build` (no `sorry`); the value-derived compiled run
 > `Exec_Sign_Mode_Compiled_Run` (`digest_separates_the_modes`) is wired into the session ROOT
 > alongside the RD run, and `Example_Digest_Pipeline_Showcase.thy` carries one program through the

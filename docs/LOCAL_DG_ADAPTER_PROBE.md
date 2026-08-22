@@ -1,7 +1,7 @@
 # Local-only DG adapter: single-framework feasibility probe
 
 > **Status:** probe DELIVERED, batch-green (`Voblint_Analysis` +
-> `Voblint_Formalization`, no `sorry`). **Recommendation: GO** — the single-domain
+> `Voblint_Soundness`, no `sorry`). **Recommendation: GO** — the single-domain
 > clean analysis becomes a genuine DG instance with no client-facing global plumbing.
 
 ## Question

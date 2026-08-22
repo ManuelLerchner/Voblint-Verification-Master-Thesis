@@ -1,4 +1,4 @@
-theory Interval_Ctx_None_Routed_Sound
+theory Interval_Ctx_None_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"
@@ -23,7 +23,7 @@ text \<open>
   routing-agreement obligation a non-trivial routed instance must prove from its
   own transfer facts collapses here to a free lemma about the constant function
   \<^const>\<open>route_unit\<close> --- exactly the collapse Sign's own unit-context instance
-  (\<open>Sign_Exec_Ctx_Sound\<close>) already exercises.
+  (\<open>Sign_Ctx_None_Sound\<close>) already exercises.
 
   Soundness below is derived directly from \<^locale>\<open>dg_ctx_activation_base\<close>'s
   generic machinery against the collecting semantics, exactly as Interval's
@@ -781,7 +781,7 @@ text \<open>
   Interval production's default solver: mirrors the always-join instantiation above under
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close> instead, solving the exact same \<open>ictx_eqs\<close>
   equation system -- exactly as Interval's own entry-state contextual mode
-  (\<open>Interval_Exec_Ctx_Sound\<close>) already does. That file's own soundness derivation needs no
+  (\<open>Interval_Ctx_Entry_State_Sound\<close>) already does. That file's own soundness derivation needs no
   \<open>ivl_widen_bot_bot\<close>/\<open>ivl_narrow_bot_bot\<close> bridging fact: those facts are needed only by the
   Base family's separate \<open>restrict_global_resolved_q\<close> bookkeeping for its flow-insensitive
   global slot (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>), which the routed spine's

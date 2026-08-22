@@ -1,5 +1,5 @@
-theory Int_Codegen
-  imports "Voblint_Analysis.Int_Checks" "Voblint_Formalization.Run_Analysis_Sound"
+theory Int_Entry
+  imports "Voblint_Analysis.Int_Checks" "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 section \<open>Int codegen API: an arbitrary VIMP program, and its production soundness\<close>
@@ -21,7 +21,7 @@ abbreviation pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_glob
 text \<open>
   \<open>analyse_int_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>'s \<^type>\<open>analysis_result\<close> table directly
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>): the routed-unit producer's own solved
+  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>): the routed-unit producer's own solved
   table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
   below is the node-soundness bridge for that table, built from
   \<open>ictx_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed
@@ -35,7 +35,7 @@ text \<open>
 text \<open>
   \<open>analyse_int_report_for\<close> reads its per-node state through
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>'s \<^type>\<open>analysis_result\<close> table directly
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>): the routed-unit producer's own solved
+  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>): the routed-unit producer's own solved
   table, at \<open>mode\<close> and \<open>prog_main_name\<close>. \<open>analyse_int_ctx_result_warrow_node_sound_for\<close>
   below is the node-soundness bridge for that table, built from
   \<open>ictx_activation_collect_sound_warrow\<close> (the routed spine's own activation-indexed

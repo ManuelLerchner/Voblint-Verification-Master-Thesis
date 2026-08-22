@@ -1072,7 +1072,7 @@ qed
 ```
 
 All four `sound_dg_spec` obligations are discharged. Batch build of
-`Voblint_Analysis` (and, incidentally, the downstream `Voblint_Formalization`
+`Voblint_Analysis` (and, incidentally, the downstream `Voblint_Soundness`
 and `Voblint_Examples` sessions, which re-verified clean in the same run)
 finished exit code 0, zero `FAILED`/error/`sorry` anywhere in the log.
 `git diff --stat` against the rest of the framework shows exactly one line

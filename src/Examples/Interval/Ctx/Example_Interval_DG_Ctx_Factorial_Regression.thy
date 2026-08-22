@@ -1,6 +1,6 @@
 theory Example_Interval_DG_Ctx_Factorial_Regression
   imports
-    "Voblint_Formalization.Interval_Exec_Ctx_Sound"
+    "Voblint_Analysis.Interval_Ctx_Entry_State_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

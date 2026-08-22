@@ -50,7 +50,7 @@ fi
 # Parallelism: unset IR_BUILD_JOBS => auto (-j hw.ncpu on macOS, nproc on Linux). On low RAM (e.g. 8 GB)
 # set IR_BUILD_JOBS=4 (or 2) to reduce memory spikes from many concurrent Poly/ML workers.
 if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
-  echo "Ensuring session heap (Voblint_Formalization) ..."
+  echo "Ensuring session heap (Voblint_Soundness) ..."
   vb=()
   [[ "${IR_VERBOSE_BUILD:-1}" != "0" ]] && vb=(-v)
   jobs=()
@@ -67,7 +67,7 @@ if [[ "${IR_SKIP_HEAP_BUILD:-0}" != "1" ]]; then
         ;;
     esac
   fi
-  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" Voblint_Formalization
+  "$ISABELLE" build -b "${vb[@]}" "${jobs[@]}" -d "$TD_COMPONENT_DIR" -d "$REPO_ROOT" Voblint_Soundness
   echo ""
 else
   echo "Skipping heap build (IR_SKIP_HEAP_BUILD=1)."
@@ -80,6 +80,6 @@ echo ""
 
 exec env IR_AUTH_TOKEN=isabelle-local IR_DEBUG="${IR_DEBUG:-1}" "$PYTHON" "$IR" \
   --isabelle "$ISABELLE" \
-  --session Voblint_Formalization \
+  --session Voblint_Soundness \
   --dir "$REPO_ROOT" \
   --mcp

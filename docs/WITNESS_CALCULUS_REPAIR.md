@@ -114,6 +114,6 @@ Every shipped executable seeded example is on the witness spine. The old decorat
 
 Verified: all use the repaired witness calculus (`twfr` + `twfr_reach_read`); no
 dependency on the superseded seeded / activation collecting path; no `sorry`; full
-`Voblint_Formalization` batch build green. The precision / DOT / warrowing studies and the
+`Voblint_Soundness` batch build green. The precision / DOT / warrowing studies and the
 negative `clean_transfer_unsound` result make no per-coordinate soundness claim, so they
 have no witness to construct.

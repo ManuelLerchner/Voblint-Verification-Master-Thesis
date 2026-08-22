@@ -1,13 +1,13 @@
-theory Interval_Call_String_Ctx_Sound
+theory Interval_Ctx_Call_String_Sound
   imports
-    Interval_Exec_Ctx_Sound
+    Interval_Ctx_Entry_State_Sound
     "Voblint_Core.Call_String_Context"
 begin
 
 section \<open>Generic executable call-string context analysis for Interval\<close>
 
 text \<open>
-  The call-string sibling of \<open>Interval_Exec_Ctx_Sound\<close>'s entry-state pipeline:
+  The call-string sibling of \<open>Interval_Ctx_Entry_State_Sound\<close>'s entry-state pipeline:
   same \<open>ectx_spec\<close> D/G specification, same executable Warrow solve, routed at
   \<^const>\<open>Call_String_Context.cs_route\<close> with a runtime bound \<open>k\<close> instead of at the
   entered callee formals. Every commutation fact the entry-state pipeline
@@ -16,7 +16,7 @@ text \<open>
   in the routing policy, so nothing here re-derives them.
 
   This covers only the executable/result/report path, mirroring exactly what
-  \<open>Interval_Exec_Ctx_Sound\<close>'s own unconditional section
+  \<open>Interval_Ctx_Entry_State_Sound\<close>'s own unconditional section
   (\<open>analyse_interval_entry_state_result_for\<close> onward) provides: no premise here
   needs \<open>call_fwd\<close>/\<open>comb_fwd\<close> (\<open>Call_String_Routed_Context.thy\<close>),
   matching the entry-state pipeline's own current posture, where the shipped

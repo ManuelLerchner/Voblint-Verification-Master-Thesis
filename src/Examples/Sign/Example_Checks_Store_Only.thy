@@ -1,7 +1,7 @@
 section \<open>Example: checks_proven/checks_proven_sound alone, store-only\<close>
 
 theory Example_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Codegen" "Voblint_Analysis.Sign_Checks"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Sign_Entry" "Voblint_Analysis.Sign_Checks"
           "Voblint_Analysis.Analysis_GraphViz" "Voblint_VIMP.VIMP_Notation"
 begin
 

@@ -49,7 +49,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 (* Disambiguate our N constructor from the phase datatype constructor. *)

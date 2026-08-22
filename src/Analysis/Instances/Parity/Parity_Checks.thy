@@ -2,7 +2,7 @@ theory Parity_Checks
   imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
-    Parity_Exec_Ctx_Sound
+    Parity_Ctx_None_Sound
 begin
 
 hide_const phase.N
@@ -111,7 +111,7 @@ section \<open>The generic report adapter, at the routed-unit context\<close>
 section \<open>The generic report adapter, at the routed-unit context\<close>
 
 text \<open>
-  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Parity_Exec_Ctx_Sound\<close>'s own routed-unit
+  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Parity_Ctx_None_Sound\<close>'s own routed-unit
   solved system, mirroring \<open>Sign_Checks\<close>'s own interpretation exactly. Every obligation is
   either one that theory's \<open>pctx_dg\<close>/\<open>pctx_routed\<close> interpretations already discharge, or
   one that collapses at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>; only
@@ -222,7 +222,7 @@ lemmas pctx_result_node_sound = pctx_adapter.analyse_result_node_sound
 
 text \<open>
   \<open>pctx_analyse_result_eq\<close> identifies the adapter's own result reading with the
-  raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Exec_Ctx_Sound\<close>)
+  raw-tuple shape \<^const>\<open>analyse_parity_ctx_result_for\<close> (\<open>Parity_Ctx_None_Sound\<close>)
   builds directly from \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close>: both
   collapse the same \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected
   local unknown, one via \<open>is_bot_state\<close> after projecting, the other via
@@ -251,7 +251,7 @@ section \<open>Solved-result table and whole-program check report\<close>
 text \<open>
   The public surface, in the same shape Sign's own
   \<open>analyse_sign_result_for\<close>/\<open>analyse_sign_report_for\<close> take: one-line partial
-  applications of \<open>Parity_Exec_Ctx_Sound\<close>'s tables at \<^const>\<open>prog_main_name\<close>, and a report
+  applications of \<open>Parity_Ctx_None_Sound\<close>'s tables at \<^const>\<open>prog_main_name\<close>, and a report
   reading per-node state through \<^const>\<open>lookup_context\<close> rather than a raw
   solver-environment lookup. An \<^const>\<open>Unreachable\<close> point classifies at \<^const>\<open>bot\<close>, the
   same value \<^const>\<open>classify_checks\<close> always fed such a node, so \<open>check_result\<close>'s existing

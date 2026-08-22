@@ -388,13 +388,13 @@ The `enter` case reduces to precisely two reusable premises, as required:
 
 ## 4. Instantiation (goal task 5)
 
-* **Sign** — `src/Formalization/Examples/Executable/Sign/SeededClean/`. Interpret
+* **Sign** — `src/Soundness/Examples/Executable/Sign/SeededClean/`. Interpret
   `point_digest` with the sign point map (already done for `enter_mono_kernel`);
   discharge `SEED_G` from the sign `restrict_global` coverage
   (`Exec_Sign_Seed_EnterMono.thy`). Produce
   `sign_seeded_cfg_collect_ctx_act ⊆ γ`.
 * **Interval (recursive rehydrate)** —
-  `src/Formalization/Examples/Digest/Example_Interval_Recursion_Rehydrate.thy` +
+  `src/Soundness/Examples/Digest/Example_Interval_Recursion_Rehydrate.thy` +
   `.../Interval/SeededClean/`. Reuse `point_ivl_gamma_exact` and
   `Exec_Ivl_Seed_EnterMono`; discharge `SEED_G` from interval `restrict_global`
   coverage. Produce the `rdiv` `⊆ γ`, replacing the current `rdiv_rehyd_rhs_dominated`
@@ -436,7 +436,7 @@ or CFG interfaces") is satisfied — it can.
    four closed reductions + `SEED_G`/`ROUTE`. Add to `src/Analysis/ROOT`. Build
    `Voblint_Analysis`. *(Medium risk — the induction assembly.)*
 3. `feat(dgc): sign seeded activation-collecting soundness` — Sign `SEED_G` witness
-   * `⊆ γ` corollary. Build `Voblint_Formalization`.
+   * `⊆ γ` corollary. Build `Voblint_Soundness`.
 4. `feat(dgc): interval recursion activation-collecting soundness` — interval
    `SEED_G` witness + `rdiv` return-node `⊆ γ`, retiring `rdiv_rehyd_rhs_dominated`
    as the stopping point.

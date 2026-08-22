@@ -57,7 +57,7 @@ Core (P5), not before -- doing both at once keeps the import churn to one pass.
 ## P5 - Rehome generic D/G framework into Core
 
 Done. The four domain-generic theories that lived in
-`Analysis/Instances/Mixed/` by accident now sit in `Core/Solver/Context/DG/`,
+`Analysis/Instances/Product/` by accident now sit in `Core/Solver/Context/DG/`,
 next to the abstract framework they mirror:
 
 ```text
@@ -82,7 +82,7 @@ toward `Core/{Domain,Equations,Exec,Solver,Pipeline}`, per-domain directories
 with a `Ctx/` subdirectory, `Soundness/`, `CLI/{Entry,Report}`, `Export/`,
 `Examples/`. Pick one naming convention for the context-matrix role, which
 currently appears as `*_Exec_Ctx_Sound`, `*_Ctx_None_Routed_Sound`,
-`*_Entry_State_Ctx_Sound`, `*_Call_String_Ctx_Sound`. Rename `CLI/Codegen/*`,
+`*_Entry_State_Ctx_Sound`, `*_Call_String_Ctx_Sound`. Rename `CLI/Entry/*`,
 which holds analysis entry/soundness bridges rather than the `export_code`
 layer. Update ROOT, ROOTS, imports, docs and the module map atomically.
 
@@ -120,14 +120,14 @@ nineteen theories still escape them, emitting their own OCaml module:
 ```text
 Analysis_Config  Analysis_GraphViz  Call_String_Context  State_Report_GraphViz
 Congruence_Print  Interval_Print  Parity_Print  Sign_Print  Int_Print
-Parity_Exec  Parity_Checks  Parity_Numeric_Queries  Parity_Exec_Ctx_Sound
-Sign_Call_String_Ctx_Sound  Sign_Entry_State_Ctx_Sound
-Int_Call_String_Ctx_Sound   Int_Entry_State_Ctx_Sound
-Interval_Call_String_Ctx_Sound
+Parity_Exec  Parity_Checks  Parity_Numeric_Queries  Parity_Ctx_None_Sound
+Sign_Ctx_Call_String_Sound  Sign_Ctx_Entry_State_Sound
+Int_Ctx_Call_String_Sound   Int_Ctx_Entry_State_Sound
+Interval_Ctx_Call_String_Sound
 ```
 
-The split is unprincipled: `Sign_Exec_Ctx_Sound` is remapped,
-`Sign_Call_String_Ctx_Sound` is not. Each unmapped theory is a latent module
+The split is unprincipled: `Sign_Ctx_None_Sound` is remapped,
+`Sign_Ctx_Call_String_Sound` is not. Each unmapped theory is a latent module
 dependency cycle waiting on the next edit.
 
 Derive the mapping from the actual export closure: deterministic, stably

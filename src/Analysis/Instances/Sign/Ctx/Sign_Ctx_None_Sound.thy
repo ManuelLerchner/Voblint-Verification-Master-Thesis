@@ -1,4 +1,4 @@
-theory Sign_Exec_Ctx_Sound
+theory Sign_Ctx_None_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"

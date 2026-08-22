@@ -1,5 +1,5 @@
-theory Parity_Codegen
-  imports Voblint_Analysis.Parity_Checks "Voblint_Formalization.Run_Analysis_Sound"
+theory Parity_Entry
+  imports Voblint_Analysis.Parity_Checks "Voblint_Soundness.Run_Analysis_Sound"
 begin
 
 hide_const phase.N
@@ -7,7 +7,7 @@ hide_const phase.N
 section \<open>Parity codegen API: an arbitrary VIMP program, and its production soundness\<close>
 
 text \<open>
-  The Parity analogue of \<open>Sign_Codegen\<close>'s node- and report-soundness bridges, for the
+  The Parity analogue of \<open>Sign_Entry\<close>'s node- and report-soundness bridges, for the
   branch the unified dispatcher takes when the configured domain is Parity.  Everything
   here is packaging: \<open>Parity_Checks.pctx_result_node_sound\<close> and
   \<open>Parity_Checks.pctx_analyse_result_eq\<close> already carry the argument, inside the

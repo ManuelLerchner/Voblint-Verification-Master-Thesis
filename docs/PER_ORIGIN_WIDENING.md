@@ -25,7 +25,7 @@ new code generator.
 | --- | --- | --- |
 | domain | `src/Analysis/Generic/Domain/Origin_State.thy` | `('a,'b) origin_st`: value-per-origin map, implicit `⊥` default, assoc-list rep. Full lattice + warrowing instance stack. `collapse_origins` = join over all origins. Widening is per-origin pointwise, **guarded** so an all-`⊥` cell stays `⊥` (needed for quotient well-definedness). |
 | adapter | `src/Analysis/Generic/Solver/Exec/Origin_Lift.thy` | `lift_tree` rewrites a strategy tree: reads (`QueryL`/`QueryG`) `collapse_origins` the origin map, writes (`Answer`/`Side`) `inject_origin` at the evaluated unknown's origin, transfers unchanged. `origin_lift_eqs`, `TD_side_per_origin_widen_solve`, `read_per_origin`. |
-| example | `src/Formalization/Examples/Digest/Example_Interval_Recursion_Origin.thy` | Runs it on the recursive interval program; compares to monovariant warrowing; GraphViz. |
+| example | `src/Soundness/Examples/Digest/Example_Interval_Recursion_Origin.thy` | Runs it on the recursive interval program; compares to monovariant warrowing; GraphViz. |
 
 The solver's own pointwise widening on `origin_st` **is** per-origin widening, and with
 finitely many origins it terminates — so `by eval` runs it directly.

@@ -13,7 +13,7 @@
 // second visit, so neither call's own exact argument (9 or 16) survives
 // -- both checks come back UNKNOWN, not a narrower sound join. A
 // call-string- or entry-state-context-sensitive analysis (see
-// Interval_Exec_Ctx_Sound, out of scope here) would key the entry per
+// Interval_Ctx_Entry_State_Sound, out of scope here) would key the entry per
 // call site instead.
 void square(n) {
   return n * n

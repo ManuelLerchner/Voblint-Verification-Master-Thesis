@@ -21,7 +21,7 @@ text \<open>
   \<open>analyse_sign_for\<close>'s soundness proof needs the \<open>base_dg_exec_analysis\<close> locale
   (\<open>Run_Analysis_Sound\<close>, Formalization session), one session later than Analysis
   in the locked six-session chain, so that half cannot live in this file; it
-  stays in \<open>Sign_Codegen\<close> (downstream in CLI), which references these
+  stays in \<open>Sign_Entry\<close> (downstream in CLI), which references these
   definitions with \<open>gs\<close>/\<open>p\<close> applied explicitly.
 
   \<open>G\<close> stays diagonal at \<open>sign exec_dg_st lifted\<close>, matching what the

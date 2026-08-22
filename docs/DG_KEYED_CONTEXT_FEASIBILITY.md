@@ -3,7 +3,7 @@
 Historical note: the `TD_Side_Eff_Ctx_Sound` / `side_env_ctx` spine discussed in this report has been deleted. Shared helpers now live in `TD_Side_Eff_Ctx_Shared`.
 
 > **Status:** feasibility slice DELIVERED (2026-07-14), batch-green
-> (`Voblint_Analysis` + `Voblint_Formalization`, no `sorry`). Recommendation:
+> (`Voblint_Analysis` + `Voblint_Soundness`, no `sorry`). Recommendation:
 > **conditional GO** — see §5.
 >
 > Scope: decide whether the homogeneous keyed/context soundness kernel

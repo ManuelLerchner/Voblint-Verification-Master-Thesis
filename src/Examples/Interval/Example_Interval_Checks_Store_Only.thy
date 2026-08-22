@@ -1,7 +1,7 @@
 section \<open>Example: checks_proven/checks_proven_sound alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
-  imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Codegen" "Voblint_Analysis.Interval_Checks"
+  imports "Voblint_Core.Checks" "Voblint_CLI.Interval_Entry" "Voblint_Analysis.Interval_Checks"
           "Voblint_Analysis.Sign_Checks" "Voblint_Analysis.Analysis_GraphViz"
           "Voblint_VIMP.VIMP_Notation"
 begin

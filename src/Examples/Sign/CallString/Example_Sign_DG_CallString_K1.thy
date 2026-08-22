@@ -6,7 +6,7 @@ theory Example_Sign_DG_CallString_K1
     "Voblint_Core.Call_String_Routed_Context"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.Solver_Menu"
-    "Voblint_Formalization.Run_Analysis_Sound"
+    "Voblint_Soundness.Run_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

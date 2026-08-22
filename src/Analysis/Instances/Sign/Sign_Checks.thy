@@ -3,7 +3,7 @@ theory Sign_Checks
     "Voblint_Core.Analysis_Result" Sign_Exec_Sound
     "Voblint_Core.Monovariant_Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
-    Sign_Exec_Ctx_Sound
+    Sign_Ctx_None_Sound
 begin
 
 hide_const phase.N
@@ -60,7 +60,7 @@ lemmas sign_checks_proven_sound = sign_check_domain.abstract_checks_proven_sound
 subsection \<open>The generic report adapter, at the routed-unit context\<close>
 
 text \<open>
-  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Exec_Ctx_Sound\<close>'s own routed-unit
+  Interpreting \<^locale>\<open>dg_analysis_adapter\<close> at \<open>Sign_Ctx_None_Sound\<close>'s own routed-unit
   solved system reuses every obligation that theory's own \<open>sctx_dg\<close>/\<open>sctx_routed\<close>
   interpretations already discharge: the five \<^locale>\<open>dg_ctx_activation_base\<close> obligations
   are exactly \<open>sctx_dg\<close>'s own (cited here via the exported \<open>sctx_pp_abs\<close>/\<open>sctx_sg_covered\<close>/
@@ -68,10 +68,10 @@ text \<open>
   \<^locale>\<open>unit_routed_context\<close>'s did, at \<^const>\<open>route_unit\<close>/\<^const>\<open>enterc_unit\<close>. Only
   \<open>classify_proved\<close>/\<open>classify_refuted\<close> are genuinely new here, discharged by
   \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close> above. This context re-opens
-  \<open>Sign_Exec_Ctx_Sound\<close>'s own six coverage hypotheses (\<open>solves\<close>/\<open>exact\<close>/\<open>entry_cov\<close>/
+  \<open>Sign_Ctx_None_Sound\<close>'s own six coverage hypotheses (\<open>solves\<close>/\<open>exact\<close>/\<open>entry_cov\<close>/
   \<open>fwd_ok\<close>/\<open>call_fwd_ok\<close>/\<open>comb_fwd_ok\<close>) rather than reusing that theory's context directly,
   since the classify obligations need \<open>sign_classify_check_proved\<close>/\<open>sign_classify_check_refuted\<close>,
-  which live in this theory, downstream of \<open>Sign_Exec_Ctx_Sound\<close>.
+  which live in this theory, downstream of \<open>Sign_Ctx_None_Sound\<close>.
 \<close>
 
 context
@@ -174,7 +174,7 @@ text \<open>
   \<open>sctx_result_node_sound\<close> re-exports the adapter's generic node-soundness bridge
   (\<^theory>\<open>Voblint_Core.DG_Analysis_Adapter\<close>), phrased against \<open>sctx_adapter.analyse_result\<close>.
   \<open>sctx_analyse_result_eq\<close> identifies that reading with the raw-tuple shape
-  \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Exec_Ctx_Sound\<close>) already builds by hand from
+  \<^const>\<open>analyse_sign_ctx_result_for\<close> (\<open>Sign_Ctx_None_Sound\<close>) already builds by hand from
   \<^const>\<open>normalize_point\<close>/\<^const>\<open>canonicalize_lift\<close> directly: both collapse the same
   \<^const>\<open>Bot\<close>/\<^const>\<open>Lifted\<close> case split on the same projected local unknown, one via
   \<open>is_bot_state\<close> after projecting (the adapter), the other via \<open>is_bot_pred\<close> before
@@ -259,7 +259,7 @@ text \<open>
   \<open>analyse_sign_result_for\<close> is the canonical solved D/G system, read as a
   \<^typ>\<open>(unit, sign abs_state) analysis_result\<close>: a one-line partial
   application of \<^const>\<open>analyse_sign_ctx_result_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  (\<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
   which already binds the single routed-unit solve and
   canonicalizes/normalizes each local key. Every report below reads
   through this table via \<^const>\<open>lookup_context\<close> rather than a raw
@@ -282,7 +282,7 @@ text \<open>
   \<open>analyse_sign_result_per_origin_for\<close> is \<^const>\<open>analyse_sign_result_for\<close>'s
   sibling under the per-origin rule: a one-line partial application of
   \<^const>\<open>analyse_sign_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
+  (\<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>,
   reading \<^const>\<open>sctx_sol_prog_per_origin\<close> instead of \<^const>\<open>sctx_sol_prog\<close>.
   Experimental: no dedicated soundness theorem is proved for this
   combination here -- \<open>analyse\<close> and its soundness corollaries are

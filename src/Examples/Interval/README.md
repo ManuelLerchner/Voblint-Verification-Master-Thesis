@@ -27,7 +27,7 @@ stored and how flow-sensitively). Role vocabulary: repository `README.md`.
 
 `twice` analyzed context-sensitively, each call site's context the entry value
 of formal `p`, by the production entry-state analysis
-(`Voblint_Formalization.Interval_Exec_Ctx_Sound`). Import chain:
+(`Voblint_Analysis.Interval_Ctx_Entry_State_Sound`). Import chain:
 `Ctx_Flagship` -> `Ctx_Collect` -> `Source_Ctx`.
 
 | File | Role | What |

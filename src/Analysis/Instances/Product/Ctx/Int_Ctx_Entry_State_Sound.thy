@@ -1,6 +1,6 @@
-theory Int_Entry_State_Ctx_Sound
+theory Int_Ctx_Entry_State_Sound
   imports
-    "Voblint_Analysis.Int_Exec_Ctx_Sound"
+    "Voblint_Analysis.Int_Ctx_None_Sound"
     "Voblint_Analysis.Int_Classify"
     "Voblint_Core.Entry_State_Routed_Context"
 begin
@@ -9,7 +9,7 @@ section \<open>Int at the routed spine, instantiated at the entry-state context\
 
 text \<open>
   The entry-state sibling of Int's own routed-unit-context instance
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>), and the fourth architecture-milestone
+  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>), and the fourth architecture-milestone
   acceptance test, after Sign's own call-string and entry-state derivations and Int's
   own call-string derivation: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close> D/G
   specification and the same domain-commute facts Int already interprets

@@ -1,5 +1,5 @@
 theory Int_Checks
-  imports Int_Classify Int_Exec_Ctx_Sound
+  imports Int_Classify Int_Ctx_None_Sound
 begin
 
 hide_const phase.N
@@ -7,7 +7,7 @@ hide_const phase.N
 text \<open>
   The check-classification machinery (\<open>int_classify_check\<close> and its soundness directions)
   lives in \<open>Int_Classify\<close>, split out so the routed-spine producer below
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>) can depend on it without a cycle through this
+  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>) can depend on it without a cycle through this
   theory's own solved-result tables, which read that producer's routed output.
 \<close>
 
@@ -17,7 +17,7 @@ text \<open>
   \<open>analyse_int_result_for\<close> is the canonical solved D/G system, read as a
   \<^typ>\<open>(unit, int_dom abs_state) analysis_result\<close>: a one-line partial application of
   \<^const>\<open>analyse_int_ctx_result_warrow_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>Refine_Fixpoint\<close> and
+  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>), fixed at \<^const>\<open>Refine_Fixpoint\<close> and
   \<^const>\<open>prog_main_name\<close>, which already binds the single routed-unit solve and
   canonicalizes/normalizes each local key -- Int's Apinis warrowing solver is its production
   default, mirroring \<open>Interval_Checks.analyse_interval_td_result_for\<close>. Every report below
@@ -41,7 +41,7 @@ subsection \<open>Solved-result table: always-join update rule\<close>
 text \<open>
   \<open>analyse_int_join_result\<close> is \<^const>\<open>analyse_int_result\<close>'s sibling under the
   always-join update rule: a one-line partial application of
-  \<^const>\<open>analyse_int_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>), fixed at
+  \<^const>\<open>analyse_int_ctx_result_for\<close> (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>), fixed at
   \<^const>\<open>prog_main_name\<close>, reading \<^const>\<open>ictx_sol_prog\<close> instead of
   \<^const>\<open>ictx_sol_prog_warrow\<close>. The CLI does not expose refinement mode as a separate
   axis, so the convenience instance below stays pinned at \<^const>\<open>Refine_Fixpoint\<close> like
@@ -61,7 +61,7 @@ subsection \<open>Solved-result table: per-origin update rule\<close>
 text \<open>
   \<open>analyse_int_per_origin_result\<close> mirrors \<^const>\<open>analyse_int_join_result\<close> exactly, a
   one-line partial application of \<^const>\<open>analyse_int_ctx_result_per_origin_for\<close>
-  (\<^theory>\<open>Voblint_Analysis.Int_Exec_Ctx_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>, reading
+  (\<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close>), fixed at \<^const>\<open>prog_main_name\<close>, reading
   \<^const>\<open>ictx_sol_prog_per_origin\<close> instead of \<^const>\<open>ictx_sol_prog\<close>.
 \<close>
 
@@ -83,7 +83,7 @@ text \<open>
   the same routed producer \<^const>\<open>analyse_int_result_for\<close> pins at
   \<^const>\<open>Refine_Fixpoint\<close> above -- but, unlike \<^const>\<open>analyse_int_result_for\<close>, keeping
   \<open>mode\<close> as a free parameter, matching the pre-migration definition's own generality
-  (\<open>Int_Codegen\<close> exercises both refinement modes through this same report function).
+  (\<open>Int_Entry\<close> exercises both refinement modes through this same report function).
   \<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the single
   D/G solve performs is shared across every check in the report, classifying an
   \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value \<^const>\<open>classify_checks\<close> always

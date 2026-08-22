@@ -21,7 +21,7 @@ Executed in four independently batch-green commits:
 | 5 — delete orphaned kernel | (this commit) | removed `Seeded_Clean_Ctx_Collect` (orphaned by Stage 4) + ROOT entry + doc references |
 
 Net: **~1,900 `.thy` lines removed across 12 files**; one ~155-line backbone
-added. Full `Voblint_Formalization` build green after each stage.
+added. Full `Voblint_Soundness` build green after each stage.
 
 Map corrections found during execution:
 
@@ -175,9 +175,9 @@ ROOT) confirmed it dead; remove it + its `ROOT` entry + doc references. Build gr
 - `src/Analysis/Generic/Solver/Context/Goblint/Routing/Support/Activation/Seeded_Activation_Reach.thy` (440)
 - `src/Analysis/Generic/Solver/Context/Goblint/Routing/Support/Activation/Seeded_Activation_Sound.thy` (395, minus ~90 extracted)
 - `src/Analysis/Instances/Tooling/Activation_Domain_Instances.thy` (49)
-- `src/Formalization/Examples/Executable/Common/Twfr_Reach_Read.thy` (91)
-- `src/Formalization/Examples/Executable/Interval/SeededClean/*.thy` (3 files, 295)
-- `src/Formalization/Examples/Executable/Sign/SeededClean/*.thy` (2 files, 165)
+- `src/Soundness/Examples/Executable/Common/Twfr_Reach_Read.thy` (91)
+- `src/Soundness/Examples/Executable/Interval/SeededClean/*.thy` (3 files, 295)
+- `src/Soundness/Examples/Executable/Sign/SeededClean/*.thy` (2 files, 165)
 
 ## Proof risks
 

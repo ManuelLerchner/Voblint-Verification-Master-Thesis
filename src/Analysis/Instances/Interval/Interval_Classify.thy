@@ -22,7 +22,7 @@ text \<open>
   \<open>Interval_Backward.thy\<close> interprets \<open>backward_domain\<close> for guard narrowing.
 
   Split out of \<open>Interval_Checks\<close> as its own theory: the routed-spine
-  producer (\<open>Interval_Ctx_None_Routed_Sound\<close>) interprets the generic report
+  producer (\<open>Interval_Ctx_None_Sound\<close>) interprets the generic report
   adapter locale and needs \<open>interval_classify_check\<close>'s soundness directions
   for its \<open>ClProved\<close>/\<open>ClRefuted\<close> obligations, while \<open>Interval_Checks\<close>'s own
   solved-result tables read that producer's routed output -- so this

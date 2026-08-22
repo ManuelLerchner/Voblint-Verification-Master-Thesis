@@ -1,6 +1,6 @@
-theory Sign_Entry_State_Ctx_Sound
+theory Sign_Ctx_Entry_State_Sound
   imports
-    "Voblint_Analysis.Sign_Exec_Ctx_Sound"
+    "Voblint_Analysis.Sign_Ctx_None_Sound"
     "Voblint_Analysis.Sign_Checks"
     "Voblint_Core.Entry_State_Routed_Context"
 begin
@@ -8,9 +8,9 @@ begin
 section \<open>Sign at the routed spine, instantiated at the entry-state context\<close>
 
 text \<open>
-  The entry-state sibling of \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own
+  The entry-state sibling of \<^theory>\<open>Voblint_Analysis.Sign_Ctx_None_Sound\<close>'s own
   routed-unit-context instance, and the second architecture-milestone acceptance test
-  after \<open>Sign_Call_String_Ctx_Sound.thy\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
+  after \<open>Sign_Ctx_Call_String_Sound.thy\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
   (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) -- nothing here
   re-derives them. The routing policy is Interval's own entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
@@ -26,7 +26,7 @@ text \<open>
   Unlike Sign's own routed-unit-context and call-string instances, this development goes
   one section further, to activation-indexed collecting soundness -- matching Interval's
   own EntryState pipeline's scope exactly (Interval's own CallString pipeline stops at the
-  executable result/report table, the same place \<open>Sign_Call_String_Ctx_Sound.thy\<close> stops).
+  executable result/report table, the same place \<open>Sign_Ctx_Call_String_Sound.thy\<close> stops).
 \<close>
 
 subsection \<open>Global key: real globals vs callee-entry seed slots\<close>
@@ -37,7 +37,7 @@ subsection \<open>The routed equation system's own route, generic per compiled p
 
 text \<open>
   Sign's own executable-carrier route, mirroring Interval's \<open>entry_state_entered\<close>/
-  \<open>entry_state_route\<close>/\<open>entry_state_route_gen\<close> (\<open>Interval_Exec_Ctx_Sound.thy\<close>) exactly, at
+  \<open>entry_state_route\<close>/\<open>entry_state_route_gen\<close> (\<open>Interval_Ctx_Entry_State_Sound.thy\<close>) exactly, at
   Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
   \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
@@ -450,7 +450,7 @@ section \<open>Solved-result table\<close>
 text \<open>
   The solved entry-state D/G system, read as a \<^typ>\<open>(sign list, sign abs_state)
   analysis_result\<close> -- the exact construction Interval's own entry-state result table
-  already uses (\<open>Interval_Exec_Ctx_Sound.thy\<close>), at Sign's own solve instead of
+  already uses (\<open>Interval_Ctx_Entry_State_Sound.thy\<close>), at Sign's own solve instead of
   Interval's. The covered-key set is the solver's own, never an enumerated theoretical
   context space, matching Interval's own posture.
 \<close>

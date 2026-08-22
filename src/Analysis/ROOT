@@ -4,10 +4,15 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     TD
   directories
     "Instances/Sign"
+    "Instances/Sign/Ctx"
     "Instances/Interval"
+    "Instances/Interval/Ctx"
     "Instances/Congruence"
     "Instances/Parity"
-    "Instances/Mixed"
+    "Instances/Parity/Ctx"
+    "Instances/Product"
+    "Instances/Product/Ctx"
+    "Instances/Relational"
     "Instances/Tooling"
     "Instances/Dispatch"
   theories
@@ -34,7 +39,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Interval_DG
     Interval_Point_Digest
     Interval_Exec_Sound
-    Interval_Ctx_None_Routed_Sound
+    Interval_Ctx_None_Sound
     Congruence_Domain
     Congruence_Lattice
     Congruence_Warrowing
@@ -43,7 +48,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Sign_Exec
     Sign_Exec_Sound
     Sign_DG
-    Sign_Exec_Ctx_Sound
+    Sign_Ctx_None_Sound
     Parity_Domain
     Parity_Print
     Parity_Transfer
@@ -51,7 +56,7 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Parity_Checks
     Parity_Numeric_Queries
     Parity_Base_DG
-    Parity_Exec_Ctx_Sound
+    Parity_Ctx_None_Sound
     Int_Domain
     Int_Refinement
     Int_Arithmetic
@@ -64,7 +69,13 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Int_Exec_Sound
     Int_Classify
     Int_Checks
-    Int_Exec_Ctx_Sound
+    Int_Ctx_None_Sound
+    Sign_Ctx_Entry_State_Sound
+    Sign_Ctx_Call_String_Sound
+    Interval_Ctx_Entry_State_Sound
+    Interval_Ctx_Call_String_Sound
+    Int_Ctx_Entry_State_Sound
+    Int_Ctx_Call_String_Sound
     Analysis_GraphViz
     Rel_Order_Domain
     Analysis_Config
