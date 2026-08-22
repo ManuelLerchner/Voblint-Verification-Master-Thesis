@@ -204,5 +204,16 @@ definition analyse_int_report_wpo :: "imp_prog \<Rightarrow> check_report_entry 
   "analyse_int_report_wpo p =
      analyse_int_report_wpo_for Refine_Fixpoint (declared_global p) p"
 
+text \<open>
+  The solved table behind that report, at the same \<^const>\<open>Refine_Fixpoint\<close> mode and on the
+  same \<^const>\<open>declared_global\<close> footing, so a caller reading states sees exactly what the
+  report's verdicts were drawn from rather than a second, differently-configured solve.
+\<close>
+
+definition analyse_int_wpo_result ::
+    "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_wpo_result p =
+     analyse_int_wpo_result_for Refine_Fixpoint (declared_global p) p"
+
 end
 

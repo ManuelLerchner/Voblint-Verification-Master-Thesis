@@ -48,6 +48,83 @@ CASES = [
         "--context call-string requires --context-depth K",
     ),
     (
+        # The default resolves to what the configuration supports; only an
+        # explicit request for something unsupported is an error.
+        "entry-state with sign still runs (expanded is interval-only)",
+        ["--analysis", "sign", "--context", "entry-state", "--graph-snapshot", SANITY_FILE],
+        0,
+        "",
+    ),
+    (
+        "explicit --context-graph expanded with sign is still rejected",
+        ["--analysis", "sign", "--context", "entry-state", "--context-graph", "expanded", SANITY_FILE],
+        1,
+        "only supported by --analysis interval",
+    ),
+    (
+        "several domains without --html is rejected",
+        ["--analysis", "int,interval", SANITY_FILE],
+        1,
+        "only supported by --html",
+    ),
+    (
+        # Node identifiers are built from the CFG and the context, so they only
+        # agree across domains when the context is the same for all of them.
+        "several domains with a context is rejected",
+        ["--analysis", "int,interval", "--context", "entry-state", "--html", SANITY_FILE],
+        1,
+        "requires --context none",
+    ),
+    (
+        "an unknown domain inside a list is rejected",
+        ["--analysis", "int,bogus", "--html", SANITY_FILE],
+        1,
+        "unknown --analysis value: bogus",
+    ),
+    (
+        "--html-out without a directory is rejected",
+        ["--analysis", "sign", "--html-out"],
+        1,
+        "--html-out expects a directory",
+    ),
+    (
+        # --html takes no argument, so the program is still read as the
+        # positional rather than mistaken for an output directory.
+        "--html after FILE.vimp still finds the file",
+        ["--analysis", "sign", SANITY_FILE, "--html-out", "/tmp/voblint-smoke-html", "--html"],
+        0,
+        "node(s)",
+    ),
+    (
+        # --html writes a directory, the other renderings write one document to
+        # stdout; asking for both is a contradiction about where output goes.
+        "--html combined with --dot-full is rejected",
+        ["--analysis", "sign", "--html", "--dot-full", SANITY_FILE],
+        1,
+        "--html cannot be combined with",
+    ),
+    (
+        # Every solver route already solves a state table; --html reads the one
+        # the requested discipline produced.
+        "--html with an explicit --solver is accepted",
+        ["--analysis", "interval", "--solver", "warrow", "--html-out", "/tmp/voblint-smoke-solver", SANITY_FILE],
+        0,
+        "node(s)",
+    ),
+    (
+        "--solver with a stdout rendering is still rejected",
+        ["--analysis", "interval", "--solver", "warrow", "--dot-full", SANITY_FILE],
+        1,
+        "--solver supports the plain text report and --html",
+    ),
+    (
+        # The contextual routes publish verdict reports, not state tables.
+        "--solver with --html and a context is rejected",
+        ["--analysis", "interval", "--solver", "join", "--context", "entry-state", "--html", SANITY_FILE],
+        1,
+        "--solver with --html requires --context none",
+    ),
+    (
         "--context-depth without --context call-string is rejected",
         ["--analysis", "interval", "--context-depth", "2", SANITY_FILE],
         1,

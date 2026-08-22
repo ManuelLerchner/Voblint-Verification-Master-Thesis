@@ -45,15 +45,21 @@ pytest = ">=8.0"
 property-build = "bash scripts/mk/property-build.sh"
 property = { cmd = "python3 -m pytest tests/property", depends-on = ["property-build"] }
 
-# HTML result viewer (scripts/emit_html_report.py). graphviz supplies `dot`,
-# which renders the CFG the viewer's graph pane loads; the frontend itself is
-# the vendor/g2html submodule, initialized by the report task rather than by
+# HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
+# renders the CFG the viewer's graph pane loads; the frontend itself is the
+# vendor/g2html submodule, initialized by the report task rather than by
 # vendor.sh so build/codegen never fetch it.
 [feature.report.dependencies]
 graphviz = "*"
 
 [feature.report.tasks]
 report = { cmd = "bash scripts/mk/report.sh", depends-on = ["cli-build"] }
+# Pins the emitted directory's shape, which is a contract with a frontend this
+# repository does not own -- see the test module's own docstring.
+html-report-check = { cmd = "python3 -m pytest tests/test_html_report.py", depends-on = ["cli-build"] }
+# Sweeps the whole fixture corpus, each under its own PARAM line, for the
+# faults that only show up on particular programs -- see the script's docstring.
+html-report-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = ["cli-build"] }
 
 # Git hooks (.lefthook.yaml).
 [feature.lint.dependencies]
@@ -135,6 +141,8 @@ ci = { depends-on = [
   "id-position-check",
   "cli-test",
   "cli-smoke",
+  "html-report-check",
+  "html-report-audit",
   "codegen-regression",
   "property",
 ] }

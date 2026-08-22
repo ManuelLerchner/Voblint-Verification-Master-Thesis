@@ -46,14 +46,12 @@ export_code
   analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
   Ctx_None Ctx_EntryState Ctx_CallString
   SignValue IntervalValue IntDomValue ParityValue
-  state_report_dot_auto state_report_graph_snapshot_auto
-  full_state_dot_auto full_state_graph_snapshot_auto
-  entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
-  entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
-  entry_state_ctx_dot_auto entry_state_ctx_graph_snapshot_auto
-  cs_ctx_dot_auto cs_ctx_graph_snapshot_auto
-  state_report_export_auto full_state_export_auto
+  state_report_graph_snapshot_auto full_state_graph_snapshot_auto
+  entry_state_report_graph_snapshot_auto entry_state_full_state_graph_snapshot_auto
+  entry_state_ctx_graph_snapshot_auto cs_ctx_graph_snapshot_auto
+  state_report_export_auto full_state_export_auto full_state_checked_export_auto
   entry_state_report_export_auto entry_state_full_state_export_auto
+  entry_state_full_state_checked_export_auto solver_checked_export_auto
   entry_state_ctx_export_auto cs_ctx_export_auto
   xn_id xn_label xn_kind xn_status xn_lines
   xe_src xe_dst xe_kind xe_label

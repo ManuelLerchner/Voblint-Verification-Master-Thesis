@@ -75,6 +75,40 @@ inspecting the fixpoint at a program point with no check at all, e.g. mid-loop.
 See "Running the CLI" below for `--graph-snapshot` (a DOT-free textual
 alternative) and `--parse-only`.
 
+Inlining a whole abstract state into a node label stops working once the
+domain is a product. `--analysis int` renders one variable as
+`sign=Positive, ivl=[1,1], parity=Odd, congruence==1`, and a graph of those
+is unreadable. `--html` separates the two the way Goblint's own HTML output
+does: the CFG keeps short labels, and each node's full state lives in its own
+document you reach by clicking that node.
+
+```bash
+pixi run report
+```
+
+That emits `result/`, serves it on <http://localhost:8080/index.xml>, and
+opens it -- click the file, then `main`, then any node. `pixi run report
+FILE.vimp int` picks a different program and domain; `PORT=9000` moves the
+port and `NO_OPEN=1` skips the browser.
+
+`--analysis` also takes a comma list, which puts every named domain in the
+same report -- one `<analysis>` block per node, the element Goblint uses for
+exactly this. `--analysis int,interval,sign,parity` on the example above shows
+`int: PROVED` beside `interval: UNKNOWN` with `y` pinned to `[2,2]` in one and
+`Top` in the others, so the precision claim is readable in place instead of
+across four runs. It needs `--html` and `--context none`: node identifiers
+depend on the context, so they only agree across domains when the context does.
+
+The entry point is `index.xml`, not an `.html` file, and it renders only when
+served -- browsers refuse to apply its stylesheet over `file://`.
+
+The frontend is [g2html](https://github.com/goblint/g2html)'s `resources/`,
+vendored as the `vendor/g2html` submodule and used unmodified: Voblint emits
+the XML vocabulary its stylesheets already consume. A web server is required
+because browsers refuse the cross-document loads that frontend performs over
+`file://` -- the same reason Goblint's own documentation says to serve its
+result directory.
+
 ## Foundations
 
 Voblint is inspired by several complementary lines of work:
@@ -388,6 +422,14 @@ pixi run voblint --analysis interval --dot-full tests/regression/02-control-flow
 # dependency -- what the regression corpus embeds as expected --graph-snapshot output
 pixi run voblint --analysis interval --graph-snapshot tests/regression/02-control-flow/precision/01-if_else.vimp
 
+# Browsable HTML result directory: short CFG labels, full state per node in
+# nodes/<id>.xml, dead nodes and check verdicts shaded in the graph itself.
+# Needs `dot` on PATH and the vendor/g2html submodule; serve it to view it.
+pixi run voblint --analysis int --html tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp
+python3 -m http.server --directory result 8080   # then open /index.xml
+
+# --html writes result/ (as Goblint's own --html does); --html-out DIR overrides it
+
 # Parse-only syntax check, no --analysis needed (0 on success, 2 on a parse error)
 pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp
 ```
@@ -403,7 +445,7 @@ interval ones:
 | Flag | Values (default first) | Effect |
 | --- | --- | --- |
 | `--context` | `none`, `entry-state`, `call-string` | `entry-state` re-analyzes each callee once per distinct entered-argument context, instead of once, flow- and call-site-insensitively, for the whole program. `call-string` splits it by bounded call history instead, and needs `--context-depth K` with `K >= 1`. Both are supported by `sign`, `interval` and `int`; `parity` is context-insensitive. |
-| `--context-graph` | `collapsed`, `expanded` | `collapsed` draws one node per program point, every context's state joined for rendering (same CFG shape as `--context none`). `expanded` draws one node per `(point, context)` pair with no join: a callee analyzed under three arguments renders as three clusters with their own state, and a check dead in one context but live in another is two distinct nodes, not one. Requires `--context entry-state` and `--analysis interval`: the expanded renderer is typed in the context type itself. Anything else is a configuration error, not a silent fallback. |
+| `--context-graph` | `collapsed`, `expanded` | `expanded` draws one node per `(point, context)` pair with no join: a callee analyzed under three arguments renders as three clusters with their own state, and a check dead in one context but live in another is two distinct nodes, not one. `collapsed` draws one node per program point, every context's state joined for rendering (same CFG shape as `--context none`). **Defaults to `expanded` wherever the configuration supports it** -- a context-sensitive run is asked for because the contexts matter, so joining them away is the thing to opt into. The expanded renderer is typed in the context type itself and only `--analysis interval` has that configuration, so the other domains default to `collapsed`; asking for `expanded` there explicitly is still a configuration error, not a silent fallback, and so is `expanded` with `--context none` or `--context call-string` (whose renderer is always per-context and has no collapsed mode). |
 
 ```bash
 # Text report: one row per __voblint_check, verdicts aggregated across every

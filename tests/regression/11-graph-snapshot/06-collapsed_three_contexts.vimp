@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --dot-full
+// PARAM: --analysis interval --context entry-state --context-graph collapsed --dot-full
 // Collapsed counterpart of 04-expanded_three_contexts.vimp: identical
 // program, default rendering (no --context-graph). Where expanded draws
 // three clusters with n=[5,5]/[4,4]/[19,19], collapsed has exactly one

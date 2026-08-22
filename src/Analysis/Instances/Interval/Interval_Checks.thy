@@ -228,6 +228,17 @@ definition analyse_interval_report_wpo :: "imp_prog \<Rightarrow> check_report_e
   "analyse_interval_report_wpo p =
      analyse_interval_report_wpo_for (declared_global p) p"
 
+text \<open>
+  The solved table behind that report, on the same \<^const>\<open>declared_global\<close> footing its
+  other three solver disciplines already publish. A report projects verdicts out of this
+  and discards the states; a caller that wants the states --- the HTML report does --- reads
+  the table directly rather than re-solving.
+\<close>
+
+definition analyse_interval_wpo_result ::
+    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_wpo_result p = analyse_interval_wpo_result_for (declared_global p) p"
+
 end
 
 

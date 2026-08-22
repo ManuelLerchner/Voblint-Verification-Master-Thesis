@@ -29,7 +29,7 @@ let usage =
    [--timeout SECONDS] FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\n\
    Options:\n\
-  \  --analysis sign|interval|int|parity\n\
+  \  --analysis sign|interval|int|parity[,...]\n\
   \                             Abstract domain to run (required, unless\n\
   \                             --parse-only). int is the refining composite\n\
   \                             Sign x Interval x Parity x Congruence domain,\n\
@@ -39,6 +39,12 @@ let usage =
   \                             lattice; it decides equalities only by\n\
   \                             refuting them across differing parities, and\n\
   \                             is context-insensitive.\n\
+  \                             A comma list (e.g. int,interval) puts every\n\
+  \                             named domain side by side in one --html\n\
+  \                             report, one <analysis> block per node, so\n\
+  \                             their precision can be compared in place.\n\
+  \                             Requires --html and --context none; every\n\
+  \                             other output path uses the first domain only.\n\
   \  --context none|entry-state|call-string\n\
   \                             Context sensitivity (default: none, today's\n\
   \                             flow-insensitive, call-site-insensitive\n\
@@ -47,7 +53,8 @@ let usage =
   \                             including under --dot/--dot-full/\n\
   \                             --graph-snapshot (a node covered by several\n\
   \                             contexts renders their joined state under\n\
-  \                             --context-graph collapsed, the default);\n\
+  \                             --context-graph, which now defaults to drawing\n\
+  \                             them separately);\n\
   \                             supported by sign, interval and int.\n\
   \                             call-string re-analyzes each callee per\n\
   \                             distinct bounded call history (requires\n\
@@ -66,23 +73,27 @@ let usage =
   \                             rejected rather than silently treated as\n\
   \                             --context none).\n\
   \  --context-graph collapsed|expanded\n\
-  \                             How --dot/--dot-full/--graph-snapshot render\n\
-  \                             --context entry-state (default: collapsed, one\n\
-  \                             node per program point with its contexts\n\
-  \                             joined). expanded instead draws one node per\n\
-  \                             (point, context) pair, annotated through the\n\
-  \                             same solved AnalysisResult with no join, so a\n\
-  \                             point dead in one activation and live in\n\
-  \                             another renders as two distinct nodes rather\n\
-  \                             than one live-looking join. Requires --context\n\
-  \                             entry-state and --analysis interval: the\n\
-  \                             expanded renderer is typed in the context type\n\
-  \                             itself, and only interval has that\n\
-  \                             configuration today, whereas the collapsed\n\
-  \                             renderings join contexts away and work for\n\
-  \                             every domain. expanded with --context none, or\n\
-  \                             with a non-interval domain, is a clear\n\
-  \                             configuration error, not a silent fallback.\n\
+  \                             How --dot/--dot-full/--graph-snapshot/--html\n\
+  \                             render --context entry-state. expanded draws\n\
+  \                             one node per (point, context) pair, annotated\n\
+  \                             through the same solved AnalysisResult with no\n\
+  \                             join, so a point dead in one activation and\n\
+  \                             live in another renders as two distinct nodes\n\
+  \                             rather than one live-looking join. collapsed\n\
+  \                             draws one node per program point with its\n\
+  \                             contexts joined.\n\
+  \                             The default is expanded wherever the\n\
+  \                             configuration supports it: a context-sensitive\n\
+  \                             run is asked for because the contexts matter.\n\
+  \                             The expanded renderer is typed in the context\n\
+  \                             type itself and only --analysis interval has\n\
+  \                             that configuration today, so the other domains\n\
+  \                             default to collapsed -- but an explicit\n\
+  \                             --context-graph expanded there is still a\n\
+  \                             configuration error, not a silent fallback, and\n\
+  \                             so is expanded with --context none or with\n\
+  \                             --context call-string (whose renderer is always\n\
+  \                             per-context and has no collapsed mode).\n\
   \  --solver join|per-origin|warrow|warrow-per-origin\n\
   \                             Pick the vendored solver's update-rule\n\
   \                             discipline directly, bypassing the domain's\n\
@@ -90,13 +101,28 @@ let usage =
   \                             #131). warrow is supported by interval and\n\
   \                             int; sign has no widen instance, and parity\n\
   \                             has one but no solved table behind it yet.\n\
-  \                             Plain text report only -- incompatible with\n\
-  \                             --context/--dot/--dot-full/--graph-snapshot.\n\
+  \                             Supported by the plain text report and by\n\
+  \                             --html, which reads the state table the chosen\n\
+  \                             discipline solved. Not by --dot/--dot-full/\n\
+  \                             --graph-snapshot, which annotate from a report\n\
+  \                             carrying no per-node state; and not by --html\n\
+  \                             together with --context, whose per-solver\n\
+  \                             routes publish verdicts without a state table.\n\
   \  --dot                      Emit a GraphViz .dot rendering of the solved CFG,\n\
   \                             annotated at check nodes only, instead of the\n\
   \                             textual check report.\n\
   \  --dot-full                 Like --dot, but every node is annotated with its\n\
   \                             own computed abstract state, not just check nodes.\n\
+  \  --html                     Write a browsable HTML result directory (default:\n\
+  \                             result/, as Goblint's own --html does)\n\
+  \                             (abstract states live in per-node documents, so\n\
+  \                             the CFG stays readable where --dot-full does\n\
+  \                             not). Needs `dot` on PATH for the graph pane,\n\
+  \                             and the vendor/g2html submodule for the\n\
+  \                             frontend. Serve it and open index.xml:\n\
+  \                               python3 -m http.server --directory result 8080\n\
+  \  --html-out DIR             Write that directory to DIR instead. Implies\n\
+  \                             --html.\n\
   \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
   \                             of the solved CFG (clusters/nodes/edges), for\n\
   \                             embedding as a regression fixture's expected\n\
@@ -216,7 +242,91 @@ let render_ctx_report
     report check_positions;
   Buffer.contents buf
 
-type outcome = Ok_text of string | Ok_dot of string | Ok_graph of string | Unsupported_combo of string
+(* Names the analysis in the report's own <analysis name="..."> element, so a
+   node document says which domain produced the state it shows. *)
+let analysis_label = function
+  | Voblint_CLI.Analysis_Config.Sign_Analysis -> "sign"
+  | Voblint_CLI.Analysis_Config.Interval_Analysis -> "interval"
+  | Voblint_CLI.Analysis_Config.Int_Analysis -> "int"
+  | Voblint_CLI.Analysis_Config.Parity_Analysis -> "parity"
+
+let rec mkdir_p dir =
+  if dir <> "" && dir <> "/" && dir <> "." && not (Sys.file_exists dir) then begin
+    mkdir_p (Filename.dirname dir);
+    try Unix.mkdir dir 0o755 with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+  end
+
+let rec rm_rf path =
+  match Sys.is_directory path with
+  | true ->
+    Array.iter (fun n -> rm_rf (Filename.concat path n)) (Sys.readdir path);
+    (try Unix.rmdir path with Unix.Unix_error _ -> ())
+  | false -> (try Sys.remove path with Sys_error _ -> ())
+  | exception Sys_error _ -> ()
+
+(* A second run into the same directory must not leave the previous program's
+   node documents behind: they are reachable from the frontend and describe a
+   different CFG. Only the subtrees this emitter owns are cleared, and only once
+   index.xml identifies the directory as a previous report -- so pointing
+   --html-out at a directory holding anything else is refused rather than
+   quietly emptied. *)
+let owned_entries = [ "nodes"; "files"; "dot"; "cfgs"; "index.xml" ]
+
+let prepare_report_dir dir =
+  if not (Sys.file_exists dir) then mkdir_p dir
+  else if not (Sys.is_directory dir) then begin
+    Printf.eprintf "voblint: %s exists and is not a directory\n" dir;
+    exit 5
+  end
+  else if Array.length (Sys.readdir dir) > 0 then begin
+    if not (Sys.file_exists (Filename.concat dir "index.xml")) then begin
+      Printf.eprintf
+        "voblint: refusing to write a report into non-empty %s (no index.xml, so \
+         this is not a previous report directory)\n"
+        dir;
+      exit 5
+    end;
+    List.iter (fun n -> rm_rf (Filename.concat dir n)) owned_entries
+  end
+
+let write_report_file root (f : Html_report.file) =
+  let path = Filename.concat root f.Html_report.path in
+  mkdir_p (Filename.dirname path);
+  let oc = open_out path in
+  output_string oc f.Html_report.content;
+  close_out oc
+
+let copy_file src dst =
+  let ic = open_in_bin src in
+  Fun.protect
+    ~finally:(fun () -> close_in ic)
+    (fun () ->
+       let n = in_channel_length ic in
+       let data = really_input_string ic n in
+       let oc = open_out_bin dst in
+       output_string oc data;
+       close_out oc)
+
+(* The frontend is g2html's resources/, copied in verbatim. Its location is
+   resolved relative to the binary so a built tree works in place; an explicit
+   VOBLINT_FRONTEND overrides that for an installed layout. *)
+let frontend_dir () =
+  match Sys.getenv_opt "VOBLINT_FRONTEND" with
+  | Some d -> Some d
+  | None ->
+    let candidate =
+      Filename.concat
+        (Filename.dirname (Filename.dirname Sys.executable_name))
+        (Filename.concat "vendor" (Filename.concat "g2html" "resources"))
+    in
+    if Sys.file_exists candidate && Sys.is_directory candidate then Some candidate else None
+
+type outcome =
+  | Ok_text of string
+  | Ok_dot of string
+  | Ok_graph of string
+  | Ok_report of string
+  | Unsupported_combo of string
 
 (* The analyzer is proved sound but not proved total (Interval especially,
    see docs/CLI_DESIGN.md's containment note) -- a killable subprocess bounds
@@ -237,6 +347,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
               | Ok_text s -> output_string oc "T\n"; output_string oc s
               | Ok_dot s -> output_string oc "D\n"; output_string oc s
               | Ok_graph s -> output_string oc "G\n"; output_string oc s
+              | Ok_report s -> output_string oc "R\n"; output_string oc s
               | Unsupported_combo s -> output_string oc "U\n"; output_string oc s);
              close_out oc;
              0
@@ -273,6 +384,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                  | "T" -> Ok (Ok_text body)
                  | "D" -> Ok (Ok_dot body)
                  | "G" -> Ok (Ok_graph body)
+                 | "R" -> Ok (Ok_report body)
                  | "U" -> Ok (Unsupported_combo body)
                  | _ -> Error body)
               | None -> Error "analysis subprocess produced no output")
@@ -282,6 +394,10 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
          in
          wait_loop ())
 
+(* Unset means "whatever the configuration supports": a context-sensitive run
+   is asked for because the contexts matter, so drawing them is the useful
+   default, and joining them away is the thing to opt into. An explicit choice
+   is still honoured -- and still rejected where it cannot be served. *)
 type context_graph_mode = Collapsed | Expanded
 
 (* --context/--context-depth are two independent flags that can arrive in
@@ -293,13 +409,21 @@ type context_kind = CK_None | CK_EntryState | CK_CallString
 
 let () =
   let analysis = ref None in
+  (* Every domain named by --analysis, in order. Only --html reads past the
+     head; see the comma-list note in parse_args. *)
+  let analyses = ref [] in
   let context_kind = ref CK_None in
   let context_depth = ref None in
-  let context_graph = ref Collapsed in
+  let context_graph = ref None in
   let solver = ref None in
   let dot = ref false in
   let dot_full = ref false in
   let graph_snapshot = ref false in
+  let html = ref false in
+  (* Goblint's --html writes a fixed "result" directory; --html-out is the
+     override. Taking no argument is what keeps `--html FILE.vimp` from reading
+     the program as the output directory. *)
+  let html_dir = ref "result" in
   let parse_only = ref false in
   let timeout = ref 10.0 in
   let file = ref None in
@@ -307,12 +431,24 @@ let () =
     | [] -> ()
     | "--help" :: _ -> print_endline usage; exit 0
     | "--analysis" :: v :: rest ->
-      (match v with
-       | "sign" -> analysis := Some Voblint_CLI.Analysis_Config.Sign_Analysis
-       | "interval" -> analysis := Some Voblint_CLI.Analysis_Config.Interval_Analysis
-       | "int" -> analysis := Some Voblint_CLI.Analysis_Config.Int_Analysis
-       | "parity" -> analysis := Some Voblint_CLI.Analysis_Config.Parity_Analysis
-       | _ -> prerr_endline ("unknown --analysis value: " ^ v); exit 1);
+      (* A comma list asks one report to carry several domains side by side.
+         The head stays the analysis every other output path means by
+         "--analysis", so a single name behaves exactly as before. *)
+      let kind_of name =
+        match name with
+        | "sign" -> Voblint_CLI.Analysis_Config.Sign_Analysis
+        | "interval" -> Voblint_CLI.Analysis_Config.Interval_Analysis
+        | "int" -> Voblint_CLI.Analysis_Config.Int_Analysis
+        | "parity" -> Voblint_CLI.Analysis_Config.Parity_Analysis
+        | _ -> prerr_endline ("unknown --analysis value: " ^ name); exit 1
+      in
+      let names = String.split_on_char ',' v |> List.filter (fun n -> n <> "") in
+      if names = [] then begin
+        prerr_endline "voblint: --analysis expects at least one domain";
+        exit 1
+      end;
+      analyses := List.map kind_of names;
+      analysis := Some (List.hd (List.map kind_of names));
       parse_args rest
     | "--context" :: v :: rest ->
       (match v with
@@ -327,8 +463,8 @@ let () =
       parse_args rest
     | "--context-graph" :: v :: rest ->
       (match v with
-       | "collapsed" -> context_graph := Collapsed
-       | "expanded" -> context_graph := Expanded
+       | "collapsed" -> context_graph := Some Collapsed
+       | "expanded" -> context_graph := Some Expanded
        | _ -> prerr_endline ("unknown --context-graph value: " ^ v); exit 1);
       parse_args rest
     | "--solver" :: v :: rest ->
@@ -343,6 +479,9 @@ let () =
     | "--dot" :: rest -> dot := true; parse_args rest
     | "--dot-full" :: rest -> dot_full := true; parse_args rest
     | "--graph-snapshot" :: rest -> graph_snapshot := true; parse_args rest
+    | "--html" :: rest -> html := true; parse_args rest
+    | "--html-out" :: v :: rest -> html := true; html_dir := v; parse_args rest
+    | [ "--html-out" ] -> prerr_endline "voblint: --html-out expects a directory"; exit 1
     | "--parse-only" :: rest -> parse_only := true; parse_args rest
     | "--timeout" :: v :: rest ->
       (try timeout := float_of_string v with _ -> prerr_endline "--timeout expects a number"; exit 1);
@@ -430,7 +569,7 @@ let () =
   (* expanded is meaningless without a context to expand -- reject rather than
      silently rendering the collapsed graph a bare --context-graph expanded
      might otherwise appear to have requested. *)
-  if !context_graph = Expanded && !context = Voblint_CLI.Analysis_Config.Ctx_None then begin
+  if !context_graph = Some Expanded && !context = Voblint_CLI.Analysis_Config.Ctx_None then begin
     prerr_endline "voblint: --context-graph expanded requires --context entry-state";
     exit 1
   end;
@@ -442,7 +581,7 @@ let () =
      through to Interval's renderer and emit a graph labelled with a different
      analysis's states, which is exactly the silent wrong output this check
      exists to prevent. *)
-  if !context_graph = Expanded
+  if !context_graph = Some Expanded
      && !context = Voblint_CLI.Analysis_Config.Ctx_EntryState
      && kind <> Voblint_CLI.Analysis_Config.Interval_Analysis then begin
     prerr_endline
@@ -452,7 +591,7 @@ let () =
   (* --context-graph has no effect on a call-string graph: that renderer is
      always per-context (it has no collapsed mode), so accepting the flag here
      would silently ignore it. *)
-  if !context_graph = Expanded && !context_kind = CK_CallString then begin
+  if !context_graph = Some Expanded && !context_kind = CK_CallString then begin
     prerr_endline
       "voblint: --context-graph is not supported with --context call-string";
     exit 1
@@ -462,13 +601,120 @@ let () =
      are Interval-only regardless of --solver -- this compatibility is about
      report *shape* versus presentation, not analysis semantics, so it stays
      a CLI-level check rather than moving into analysis_config's scope. *)
+  (* --html can show an explicitly chosen solver: every solver route already
+     solves a state table, and solver_checked_export_auto reads the one the
+     requested discipline produced. The stdout renderings still cannot -- they
+     annotate from a report that carries no per-node state. *)
   if !solver <> None && (!dot || !dot_full || !graph_snapshot) then begin
-    prerr_endline "voblint: --solver only supports the plain text report";
+    prerr_endline
+      "voblint: --solver supports the plain text report and --html, not \
+       --dot/--dot-full/--graph-snapshot";
     exit 1
   end;
+  if !solver <> None && !html && !context <> Voblint_CLI.Analysis_Config.Ctx_None then begin
+    prerr_endline
+      "voblint: --solver with --html requires --context none";
+    exit 1
+  end;
+  (* --html writes a directory; the other renderings write one document to
+     stdout. Asking for both is a contradiction about where output goes, not a
+     combination to silently resolve. *)
+  if !html && (!dot || !dot_full || !graph_snapshot) then begin
+    prerr_endline "voblint: --html cannot be combined with --dot/--dot-full/--graph-snapshot";
+    exit 1
+  end;
+  (* The expanded renderer is typed in the context type itself, and only
+     Interval has that configuration, so "draw the contexts" resolves to
+     collapsed for the others rather than failing a run nobody misconfigured.
+     An explicit --context-graph expanded is still rejected there, a few checks
+     above: defaulting to what the configuration supports is not the same as
+     ignoring what the user asked for. *)
+  let expanded_supported =
+    !context = Voblint_CLI.Analysis_Config.Ctx_EntryState
+    && kind = Voblint_CLI.Analysis_Config.Interval_Analysis
+  in
+  let context_graph =
+    match !context_graph with
+    | Some mode -> mode
+    | None -> if expanded_supported then Expanded else Collapsed
+  in
+  let context_graph = ref context_graph in
+  (* Several domains in one report means several solves feeding one set of node
+     documents, merged by node identifier. Identifiers are built from the CFG
+     and the context, so they only agree across domains when the context is the
+     same for all of them -- which is why a list is confined to the
+     context-insensitive path rather than silently merging mismatched nodes. *)
+  if List.length !analyses > 1 then begin
+    if not !html then begin
+      prerr_endline
+        "voblint: --analysis with several domains is only supported by --html";
+      exit 1
+    end;
+    if !context <> Voblint_CLI.Analysis_Config.Ctx_None then begin
+      prerr_endline
+        "voblint: --analysis with several domains requires --context none";
+      exit 1
+    end
+  end;
+  (* Prepared here, not inside the contained child: a refusal to write into the
+     given directory is an argument error the user should see as one, not as a
+     subprocess exit code relayed through the analysis timeout wrapper. *)
+  if !html then prepare_report_dir !html_dir;
   match
     run_contained ~timeout:!timeout (fun () ->
-      if !graph_snapshot && !dot_full then
+      if !html then
+        let dir = !html_dir in
+        let graph_for k =
+          match !solver with
+          | Some sc ->
+            (match Voblint_CLI.State_Report_GraphViz.solver_checked_export_auto k sc prog with
+             | Some g -> g
+             | None ->
+               (* valid_analysis_config already rejected the combinations with
+                  no table behind them, so this is unreachable rather than a
+                  fallback worth inventing a rendering for. *)
+               failwith "unsupported --analysis/--solver combination")
+          | None ->
+          if !context_kind = CK_CallString then
+            Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog
+          else if !context_graph = Expanded then
+            Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog
+          else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
+            Voblint_CLI.State_Report_GraphViz.entry_state_full_state_checked_export_auto k prog
+          else Voblint_CLI.State_Report_GraphViz.full_state_checked_export_auto k prog
+        in
+        let graphs = List.map (fun k -> (analysis_label k, graph_for k)) !analyses in
+        (* The source view's inline annotations need a verdict *and* a
+           position, and only the parser knows positions -- it notes each
+           __voblint_check token as it consumes one, in the same order this
+           report lists them. Unreachable checks are dropped, matching what
+           the text report does with those rows. *)
+        let checks =
+          match Voblint_CLI.Analyse_Dispatch.analyse_config_with_state cfg prog with
+          | None -> []
+          | Some report ->
+            List.filter_map
+              (fun ((_, (cond, (verdict, (unreachable, _)))), (line, column)) ->
+                 if unreachable then None
+                 else
+                   Some
+                     { Html_report.line;
+                       column;
+                       verdict = verdict_label verdict;
+                       cond =
+                         un_string
+                           (Voblint_CLI.Core.string_of_exp
+                              (Voblint_CLI.Core.nat_of_integer Z.zero) cond) })
+              (List.combine report check_positions)
+        in
+        let files, nodes, dead =
+          Html_report.emit ~graphs ~source_file:(Filename.basename path) ~source_text:src
+            ~fn:"main" ~checks
+        in
+        List.iter (fun (f : Html_report.file) -> write_report_file dir f) files;
+        Ok_report
+          (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead)
+      else if !graph_snapshot && !dot_full then
         Ok_graph
           (if !context_kind = CK_CallString then
              Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
@@ -526,5 +772,47 @@ let () =
   | Ok (Ok_text s) -> print_string s
   | Ok (Ok_dot s) -> print_string s
   | Ok (Ok_graph s) -> print_string s
+  | Ok (Ok_report s) ->
+    (* Post-processing runs here, not in the contained child: the analysis is
+       what needs a timeout, and a killed child should not take the asset copy
+       and the graphviz call down with it. *)
+    let dir = !html_dir in
+    (match frontend_dir () with
+     | None ->
+       prerr_endline
+         "voblint: frontend assets not found -- run: git submodule update --init vendor/g2html";
+       exit 5
+     | Some assets ->
+       Array.iter
+         (fun name ->
+            let src = Filename.concat assets name in
+            if not (Sys.is_directory src) then copy_file src (Filename.concat dir name))
+         (Sys.readdir assets));
+    let seg = Html_report.xmlify (Filename.basename path) in
+    let dot_file = Filename.concat dir (Filename.concat "dot" (Filename.concat seg "main.dot")) in
+    let svg_dir = Filename.concat dir (Filename.concat "cfgs" seg) in
+    mkdir_p svg_dir;
+    let svg_file = Filename.concat svg_dir "main.svg" in
+    let cmd = Filename.quote_command "dot" [ "-Tsvg"; dot_file; "-o"; svg_file ] in
+    (* Without a working graphviz the report still carries every node document;
+       only the graph pane is empty. Say so and carry on rather than fail. *)
+    (match Unix.system (cmd ^ " 2>/dev/null") with
+     | Unix.WEXITED 0 -> ()
+     | _ ->
+       prerr_endline
+         "voblint: `dot -Tsvg` failed or is missing -- wrote dot/ but no cfgs/*.svg, \
+          so the CFG pane will be empty");
+    print_string s;
+    (* The entry point is index.xml, not an .html file, and it renders only when
+       served: browsers refuse to apply its stylesheet over file://. Saying so
+       here is cheaper than the reader concluding nothing was written. *)
+    Printf.printf
+      "wrote %s/\n\
+       The entry point is %s/index.xml -- an .html file to open directly does not\n\
+       exist, and file:// will not render it. Serve the directory first:\n\
+      \  python3 -m http.server --directory %s 8080\n\
+       then open http://localhost:8080/index.xml (or use `pixi run report`,\n\
+       which serves and opens it for you).\n"
+      dir dir dir
   | Ok (Unsupported_combo msg) -> prerr_endline ("voblint: " ^ msg); exit 1
   | Error msg -> Printf.eprintf "voblint: %s\n" msg; exit 3

@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --context entry-state --dot-full
+// PARAM: --analysis interval --context entry-state --context-graph collapsed --dot-full
 // Same program as 03-procedures/precision/04-two_call_sites_entry_state.vimp.
 // full_state_dot_auto's entry-state sibling (entry_state_full_state_dot_auto,
 // #108) queries every node, but a rendered node can only carry one state:
