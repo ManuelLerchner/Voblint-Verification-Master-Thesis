@@ -2,7 +2,7 @@ theory Int_Exec_Sound
   imports
     Int_Base_DG
     Int_Warrowing
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_CFG.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"

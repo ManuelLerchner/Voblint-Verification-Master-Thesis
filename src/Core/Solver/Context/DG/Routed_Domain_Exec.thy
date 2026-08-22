@@ -1,24 +1,28 @@
-theory Routed_Unit_Domain
+theory Routed_Domain_Exec
   imports
     DG_Base_Exec
     "Voblint_Core.Routed_Context_Unit"
 begin
 
-section \<open>Unit-context routed execution, once for every domain\<close>
+section \<open>Routed execution, once for every domain and context policy\<close>
 
 text \<open>
   \<^locale>\<open>routed_dg_domain_exec\<close> already reduces a domain's obligation to the routed
   spine to three primitive commute facts. What it deliberately does not carry is the
-  \<^emph>\<open>routing\<close> layer: the equation system a \<open>Ctx_None\<close> analysis actually solves, and the
-  executable-to-abstract transport of its post-solution. Each domain re-derived that
-  layer, and because \<open>route_unit\<close> and \<^const>\<open>routed_cmb_g\<close> mention no domain constant,
-  the four derivations differ only in the domain carrier and a name prefix.
+  \<^emph>\<open>routing\<close> layer: the equation system a routed analysis actually solves, and the
+  executable-to-abstract transport of its post-solution. Each domain, at each context
+  policy, re-derived that layer, and because \<^const>\<open>routed_cmb_g\<close> mentions no domain
+  constant, those derivations differ only in the domain carrier, the routing function
+  and a name prefix.
 
   This locale is that layer, stated once. It adds the seed-key pair the routed
   generator needs --- kept as parameters rather than a fixed datatype, so a domain
   keeps its own key type and this locale stays independent of how that type is
-  eventually shared --- and derives the commute and transport facts every unit-context
-  instance needs.
+  eventually shared --- together with the executable and abstract routing functions
+  and their agreement, and derives the commute and transport facts every routed
+  instance needs. A context-insensitive instance passes \<^const>\<open>route_unit\<close> on both
+  sides, where agreement is free; a call-string instance passes its own routing
+  function on each side and discharges the agreement from that function's own laws.
 
   Deliberately absent: the equation-system, solved-table and result \<^theory_text>\<open>definition\<close>s
   themselves. They must stay concrete per-domain constants because they carry \<open>[code]\<close>
@@ -27,13 +31,14 @@ text \<open>
   interpreted globally. The domain keeps its definitions; what it stops re-proving is
   everything below.
 
-  Also deliberately absent: the solver. \<^const>\<open>route_unit\<close> and the generated equation
-  system are solver-independent, and \<open>TD_side_upd_rule\<close> already supplies
+  Also deliberately absent: the solver. The generated equation system is
+  solver-independent, and \<open>TD_side_upd_rule\<close> already supplies
   \<open>part_post_solution_of_solve_c\<close> for every update rule on the menu, so a solver choice
   is an argument at the use site, never a parameter of the domain capability.
 \<close>
 
-locale routed_unit_domain_exec =
+
+locale routed_domain_exec =
   routed_dg_domain_exec gs is_bot_pred tf_st enter_st tf
   for gs :: "vname \<Rightarrow> bool"
     and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
@@ -41,8 +46,12 @@ locale routed_unit_domain_exec =
     and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer" +
   fixes gk0 :: 'k
-    and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
+    and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and route_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route_abs :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
   assumes seed_key_ne_gk0 [simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
+      and route_agree: "\<And>u c' d ca. route_st u c' d ca
+                          = route_abs u c' (map_lift (fun_of_resolved_st_q_for gs) d) ca"
 begin
 
 text \<open>The executable and abstract routed specs this domain solves at. Abbreviations, not
@@ -55,20 +64,14 @@ abbreviation spec_st :: "('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_spec" w
 abbreviation spec_abs :: "('a abs_state lifted, 'a abs_state lifted) dg_spec" where
   "spec_abs \<equiv> base_dg_spec_for_lifted gs is_bot_state tf"
 
-text \<open>\<^const>\<open>route_unit\<close> ignores its \<open>'D\<close> argument outright, so routing agreement holds
-  for any reader.\<close>
-
-lemma route_unit_commute: "route_unit u c' d ca = route_unit u c' (f d) ca"
-  by simp
-
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. Mentions no
   domain constant beyond the two specs, so one proof serves every instance.\<close>
 
 lemma dg_tree_st_commute_routed_cmb_g:
   "dg_reader_commute_gen.dg_tree_st_commute
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g spec_st gk0 seed_key route_unit ctx ca cc ex)
-     (routed_cmb_g spec_abs gk0 seed_key route_unit ctx ca cc ex)"
+     (routed_cmb_g spec_st gk0 seed_key route_st ctx ca cc ex)
+     (routed_cmb_g spec_abs gk0 seed_key route_abs ctx ca cc ex)"
   apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
            and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
@@ -77,7 +80,7 @@ lemma dg_tree_st_commute_routed_cmb_g:
     apply (rule Henter_lifted_for)
    apply (rule Hcomb_lifted_for)
   apply (rule Hcont_lifted_for)
-  apply (rule route_unit_commute)
+  apply (rule route_agree)
   done
 
 text \<open>The routed extra-goal list commutes elementwise, for the same reason.\<close>
@@ -86,8 +89,8 @@ lemma hextra_commute_routed:
   "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
                 (map_lift (fun_of_resolved_st_q_for gs))
                 (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g seed_key gk0 route_unit ctx w)
-     (routed_extra_g seed_key gk0 route_unit ctx w)"
+     (routed_extra_g seed_key gk0 route_st ctx w)
+     (routed_extra_g seed_key gk0 route_abs ctx w)"
   by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g
         [OF dg_reader_commute_gen_lifted_for])
 
@@ -107,12 +110,12 @@ text \<open>
 
 theorem pp_abs:
   assumes pp: "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. gk0) route_unit
+     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. gk0) route_st
         (routed_cmb_g_contribution spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
         g spec_st bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0) route_unit
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0) route_abs
         (routed_cmb_g spec_abs gk0 seed_key) (routed_extra_g seed_key gk0)
         g spec_abs
         (map_lift (fun_of_resolved_st_q_for gs) bot0)
@@ -124,49 +127,49 @@ theorem pp_abs:
      vars"
 proof -
   have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0) route_unit
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0) route_st
           (routed_cmb_g spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
           g spec_st bot0 s0d s0g)
        x0 sigma_st vars"
   proof (rule part_post_solution_seed_dg_buffered_to_old
       [where cmb_c = "routed_cmb_g_contribution spec_st gk0 seed_key"])
     show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_unit c' ca cc ex) \<tau>)
+             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau>)
            = locals (traverse_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_unit c' ca cc ex) \<tau>)"
+             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau>)"
       by (rule routed_cmb_g_contribution_matches_local)
     show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_unit c' ca cc ex) \<tau>
+             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau>
              (Inr ((\<lambda>_. gk0) c'))) = bot"
       by (rule routed_cmb_g_side_pure[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_unit c' ca cc ex) \<tau>)
+             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau>)
            = globs (sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_unit c' ca cc ex) \<tau>
+             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau>
              (Inr ((\<lambda>_. gk0) c')))"
       by (rule routed_cmb_g_contribution_matches_global[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_unit c' ca cc ex) \<tau>
+             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau>
              (Inr ((\<lambda>_. gk0) c')) = bot"
       by (rule routed_cmb_g_contribution_free_at_key[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_unit c' ca cc ex) \<tau> z
+             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau> z
            = sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_unit c' ca cc ex) \<tau> z"
+             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau> z"
       by (rule routed_cmb_g_contribution_sides_off_key[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_unit c' ca cc ex)
+             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex)
            = dep_aux \<tau>
-             (routed_cmb_g spec_st gk0 seed_key route_unit c' ca cc ex)"
+             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex)"
       by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g seed_key gk0 route_unit c' w)
+    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
            \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
       by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g seed_key gk0 route_unit c' w)
+    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
            \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
       by (rule routed_extra_g_local_only)
     show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. gk0) route_unit
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. gk0) route_st
           (routed_cmb_g_contribution spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
           g spec_st bot0 s0d s0g)
        x0 sigma_st vars"
@@ -175,17 +178,14 @@ proof -
   show ?thesis
     apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
           [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. gk0"
-             and route_st = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> 'a exec_dg_st lifted
-                               \<Rightarrow> call_action \<Rightarrow> unit"
-             and route_abs = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> 'a abs_state lifted
-                               \<Rightarrow> call_action \<Rightarrow> unit"
+             and route_st = route_st and route_abs = route_abs
              and cmb_st = "routed_cmb_g spec_st gk0 seed_key"
              and cmb_abs = "routed_cmb_g spec_abs gk0 seed_key"
              and extra_st = "routed_extra_g seed_key gk0"
              and extra_abs = "routed_extra_g seed_key gk0"
              and g = g and S_st = spec_st and S_abs = spec_abs])
         apply (rule Hstep_lifted_for)
-       apply (rule route_unit_commute)
+       apply (rule route_agree)
       apply (rule dg_tree_st_commute_routed_cmb_g)
      apply (rule hextra_commute_routed)
     apply (rule pp')

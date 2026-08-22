@@ -5,8 +5,8 @@ theory Interval_Exec_Sound
           "Voblint_CFG.CFG_Prune"
           "Voblint_VIMP.VIMP_Notation"
           "Voblint_CFG.Compile_Invariants"
-          "Voblint_Analysis.Exec_DG_Bridge"
-          "Voblint_Analysis.DG_Base_Exec"
+          "Voblint_Core.Exec_DG_Bridge"
+          "Voblint_Core.DG_Base_Exec"
 begin
 
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>

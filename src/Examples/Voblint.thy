@@ -32,7 +32,7 @@ theory Voblint
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
     "Voblint_Core.Exec_St"
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     Exec_Sign_DG_Run
@@ -286,7 +286,7 @@ text \<open>
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Core.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Core.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Analysis.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- the native D/G runtime API for Sign: \<open>analyse_sign_eqs\<close>, \<open>analyse_sign\<close>, \<open>analyse_sign_env\<close>.
     \<^item> @{theory Voblint_Analysis.Interval_Exec_Sound} --- the Interval counterpart:

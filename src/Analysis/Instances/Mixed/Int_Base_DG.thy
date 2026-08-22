@@ -1,5 +1,5 @@
 theory Int_Base_DG
-  imports "Voblint_Core.DG_Base" "Voblint_Analysis.DG_Base_Exec" Int_Exec
+  imports "Voblint_Core.DG_Base" "Voblint_Core.DG_Base_Exec" Int_Exec
 begin
 
 section \<open>Composite integer domain on the generic Base DG construction\<close>
@@ -47,7 +47,7 @@ text \<open>
   and their \<open>once\<close>/\<open>fixpoint\<close> counterparts, all from
   \<^theory>\<open>Voblint_Analysis.Int_Exec\<close>); the whole-record correspondence,
   including the combine field, is discharged once, generically, by
-  \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>'s commute theorems. The passive
+  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>'s commute theorems. The passive
   \<open>is_bot_pred\<close> choice below makes the \<open>exact\<close> obligation each of those
   theorems needs trivially \<open>refl\<close>.
 \<close>

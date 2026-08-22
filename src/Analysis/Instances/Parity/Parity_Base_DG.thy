@@ -1,5 +1,5 @@
 theory Parity_Base_DG
-  imports "Voblint_Core.DG_Base" "Voblint_Analysis.DG_Base_Exec" Parity_Exec
+  imports "Voblint_Core.DG_Base" "Voblint_Core.DG_Base_Exec" Parity_Exec
 begin
 
 section \<open>Parity on the generic Base DG construction\<close>
@@ -31,7 +31,7 @@ text \<open>
   Parity supplies only its existing executable/mathematical commute facts
   (\<open>parity_tf_st_for_commute\<close>, \<open>parity_enter_st_for_commute\<close>); the whole-record
   correspondence, including the combine field, is discharged once, generically,
-  by \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>'s commute theorems. The passive
+  by \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>'s commute theorems. The passive
   \<open>is_bot_pred\<close> choice below makes the \<open>exact\<close> obligation each of those
   theorems needs trivially \<open>refl\<close>.
 \<close>

@@ -11,10 +11,10 @@ text \<open>
   The entry-state sibling of \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own
   routed-unit-context instance, and the second architecture-milestone acceptance test
   after \<open>Sign_Call_String_Ctx_Sound.thy\<close>: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close>  D/G specification and the same domain-commute facts Sign already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) -- nothing here
   re-derives them. The routing policy is Interval's own entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>), already
+  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>), already
   generalized in a domain -- unlike \<open>cs_route\<close>, this route genuinely depends on
   its caller-state argument (the entered callee frame), which is exactly the "small
   additional domain capability" the routed-domain milestone anticipated for EntryState;
@@ -40,7 +40,7 @@ text \<open>
   \<open>entry_state_route\<close>/\<open>entry_state_route_gen\<close> (\<open>Interval_Exec_Ctx_Sound.thy\<close>) exactly, at
   Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions (rather than reached through an interpretation) so
   the equation-system definitions below need no \<open>exact\<close> premise to be stated, matching
   every other routed instance's convention.
@@ -124,44 +124,29 @@ end
 subsection \<open>Per-tree transport commutation\<close>
 
 text \<open>
-  Mirrors \<open>Sign_Call_String_Ctx_Sound.thy\<close>'s own
-  \<open>dg_tree_st_commute_routed_cmb_g_sign_cs\<close>/\<open>hextra_commute_routed_sign_cs\<close> verbatim, only
-  repointed from \<open>cs_route\<close>/\<open>call_string_gk\<close> to this file's own \<open>sctx_entry_route_gen\<close>/\<open>gk\<close>:
-  both cite the exact same generic packaging theorem (\<^locale>\<open>dg_reader_commute_gen\<close>) at
-  the exact same domain-commute facts (\<open>sign_Henter_lifted_for\<close>, \<open>sign_Hcomb_lifted_for\<close>,
-  \<open>dg_reader_commute_gen_sign_lifted\<close>) the routed-unit instance already established -- no
-  new Sign transfer mathematics, only the routing-policy substitution.
+  The same interpretation Sign's unit-context instance makes, at the entry-state
+  routing policy. Here the routing-agreement obligation is not free --- the route reads
+  the entered state --- but it is exactly the fact just proved, and
+  \<^locale>\<open>routed_domain_exec\<close> takes it as a parameter, so switching context policy stays
+  a different instantiation of one derivation rather than a second one.
 \<close>
 
-lemma sctx_seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
-  by simp
-
-lemma dg_tree_st_commute_routed_cmb_g_sign_es:
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool"
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "dg_reader_commute_gen.dg_tree_st_commute
-           (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed
-        (sctx_entry_route_gen gs is_bot_pred) ctx ca cc ex)
-     (routed_cmb_g (sctx_abs_spec gs) Global Seed
-        (formals_route_lifted_gen (sctx_abs_spec gs)) ctx ca cc ex)"
-  unfolding sctx_spec_def sctx_abs_spec_def
-  apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
-      apply (rule dg_reader_commute_gen_sign_lifted)
-     apply (rule sctx_seed_ne_global)
-    apply (rule sign_Henter_lifted_for[OF exact])
-   apply (rule sign_Hcomb_lifted_for[OF exact])
-  apply (rule sign_Hcont_lifted_for[OF exact])
-  apply (rule sctx_entry_route_gen_commute[OF exact, unfolded sctx_abs_spec_def, symmetric])
-  done
+begin
 
-lemma hextra_commute_routed_sign_es:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g Seed Global (sctx_entry_route_gen gs is_bot_pred) ctx w)
-     (routed_extra_g Seed Global (formals_route_lifted_gen (sctx_abs_spec gs)) ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g[OF dg_reader_commute_gen_sign_lifted])
+interpretation sign_es: routed_domain_exec
+  gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
+  Global Seed "sctx_entry_route_gen gs is_bot_pred"
+  "formals_route_lifted_gen (sctx_abs_spec gs)"
+  by unfold_locales
+     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
+      rule sctx_entry_route_gen_commute[OF exact, symmetric])
+
+lemmas sign_es_pp_abs_gen = sign_es.pp_abs
+
+end
 
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
@@ -203,99 +188,19 @@ theorem sctx_entry_pp_abs:
         \<circ> snd (sctx_entry_sol gs is_bot_pred Pi ps mnm main))
      (fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main))"
 proof -
-  have pp'_buf: "part_post_solution
+  have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
           (sctx_entry_route_gen gs is_bot_pred)
           (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (sctx_entry_sol gs is_bot_pred Pi ps mnm main)) (fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main))"
+       (snd (sctx_entry_sol gs is_bot_pred Pi ps mnm main))
+       (fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main))"
     using sctx_entry_pp_st unfolding sctx_entry_eqs_def by simp
-  have seed_ne_global: "\<And>p c. Seed p c \<noteq> Global" by simp
-  have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (sctx_entry_route_gen gs is_bot_pred)
-          (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (sctx_entry_sol gs is_bot_pred Pi ps mnm main)) (fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main))"
-  proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed"])
-    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau>)
-           = locals (traverse_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau>)"
-      by (rule routed_cmb_g_contribution_matches_local)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c'))) = bot"
-      by (rule routed_cmb_g_side_pure[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau>)
-           = globs (sides_of_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')))"
-      by (rule routed_cmb_g_contribution_matches_global[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')) = bot"
-      by (rule routed_cmb_g_contribution_free_at_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Global) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau> z
-           = sides_of_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex) \<tau> z"
-      by (rule routed_cmb_g_contribution_sides_off_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex)
-           = dep_aux \<tau>
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed
-               (sctx_entry_route_gen gs is_bot_pred) c' ca cc ex)"
-      by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Seed Global (sctx_entry_route_gen gs is_bot_pred) c' w)
-           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-      by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Seed Global (sctx_entry_route_gen gs is_bot_pred) c' w)
-           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-      by (rule routed_extra_g_local_only)
-    show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
-          (sctx_entry_route_gen gs is_bot_pred)
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (sctx_entry_sol gs is_bot_pred Pi ps mnm main)) (fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main))"
-      by (rule pp'_buf)
-  qed
-  have sign_Hstep_ctx:
-    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       (dg_spec_step (sctx_spec gs is_bot_pred) a d g') =
-       dg_spec_step (sctx_abs_spec gs) a
-         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
-    unfolding sctx_spec_def sctx_abs_spec_def by (rule sign_Hstep_lifted_for[OF exact])
   show ?thesis
-    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
-             and route_st = "sctx_entry_route_gen gs is_bot_pred"
-             and route_abs = "formals_route_lifted_gen (sctx_abs_spec gs)"
-             and cmb_st = "routed_cmb_g (sctx_spec gs is_bot_pred) Global Seed"
-             and cmb_abs = "routed_cmb_g (sctx_abs_spec gs) Global Seed"
-             and extra_st = "routed_extra_g Seed Global"
-             and extra_abs = "routed_extra_g Seed Global"
-             and g = "compile_prog Pi ps mnm main" and S_st = "sctx_spec gs is_bot_pred" and S_abs = "sctx_abs_spec gs"])
-        apply (rule sign_Hstep_ctx)
-       apply (rule sctx_entry_route_gen_commute[OF exact, symmetric])
-      apply (rule dg_tree_st_commute_routed_cmb_g_sign_es[OF exact])
-     apply (rule hextra_commute_routed_sign_es)
-    apply (rule pp')
-    done
+    using pp_buf unfolding sctx_spec_def
+    by (rule sign_es_pp_abs_gen[OF exact, folded sctx_abs_spec_def])
 qed
 
 end

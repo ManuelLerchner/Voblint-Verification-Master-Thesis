@@ -1,7 +1,7 @@
 theory Int_Classify
   imports Int_Exec_Sound "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result"
-    "Voblint_Analysis.Monovariant_Analysis_Result"
+    "Voblint_Core.Monovariant_Analysis_Result"
 begin
 
 hide_const phase.N

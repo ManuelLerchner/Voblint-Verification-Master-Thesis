@@ -12,7 +12,7 @@ text \<open>
   The call-string sibling of \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own
   routed-unit-context instance: same \<^const>\<open>sctx_spec\<close>/\<^const>\<open>sctx_abs_spec\<close> D/G
   specification and the same domain-commute facts it already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>) --
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) --
   nothing here re-derives them. Only the routing policy changes, from
   \<^const>\<open>route_unit\<close> to \<^const>\<open>Call_String_Context.cs_route\<close> at a runtime bound
   \<open>k\<close>, and the routed-context locale interpreted changes from
@@ -62,61 +62,36 @@ lemma scs_terminates_via_solve_c:
             TD_side_always_join_Interp.solve_c_dom_def
   using assms by simp
 
-subsection \<open>Route agreement collapses to a free lemma\<close>
+subsection \<open>Domain commute facts, at the call-string routed spec\<close>
 
 text \<open>
-  \<^const>\<open>Call_String_Context.cs_route\<close> is polymorphic in its \<open>'d\<close> argument and ignores
-  it outright, exactly as \<^const>\<open>route_unit\<close> does: the routing-agreement obligation
-  is true unconditionally, for any reader \<open>f\<close>, the same free lemma
-  \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own \<open>route_unit_commute\<close> is.
+  The same interpretation Sign's unit-context instance makes, at the call-string
+  routing policy: \<^locale>\<open>routed_domain_exec\<close> takes the routing functions as
+  parameters, so switching from \<^const>\<open>route_unit\<close> to \<^const>\<open>cs_route\<close> at a runtime
+  bound \<open>k\<close> is a different instantiation of one derivation, not a second one.
+  \<^const>\<open>cs_route\<close> reads only the call site and the incoming string, never the
+  incoming abstract value, so the routing-agreement obligation is as free here as it
+  is for \<^const>\<open>route_unit\<close>.
 \<close>
 
 lemma cs_route_commute: "cs_route k u c' d ca = cs_route k u c' (f d) ca"
   by (simp add: cs_route_def)
 
-subsection \<open>Domain commute facts, at the call-string routed spec\<close>
-
-text \<open>
-  Mirrors \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own
-  \<open>dg_tree_st_commute_routed_cmb_g_sign\<close>/\<open>hextra_commute_routed_sign\<close> verbatim, only
-  repointed from \<open>route_unit\<close>/Sign's own unit-context \<open>gk\<close> to \<^const>\<open>cs_route\<close>/
-  \<^type>\<open>call_string_gk\<close>: both cite the exact same generic packaging theorem
-  (\<^locale>\<open>dg_reader_commute_gen\<close>) at the exact same domain-commute facts
-  (\<open>sign_Henter_lifted_for\<close>, \<open>sign_Hcomb_lifted_for\<close>,
-  \<open>dg_reader_commute_gen_sign_lifted\<close>) the routed-unit instance already established
-  -- no new Sign transfer mathematics, only the routing-policy substitution
-  \<^theory>\<open>Voblint_Analysis.Sign_Exec_Ctx_Sound\<close>'s own header comment anticipates.
-\<close>
-
-lemma cs_seed_ne_global [simp]: "Call_String_Context.Seed p ctx \<noteq> Call_String_Context.Global"
-  by simp
-
-lemma dg_tree_st_commute_routed_cmb_g_sign_cs:
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "sign exec_dg_st \<Rightarrow> bool" and k :: nat
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "dg_reader_commute_gen.dg_tree_st_commute
-           (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-        (cs_route k) ctx ca cc ex)
-     (routed_cmb_g (sctx_abs_spec gs) Call_String_Context.Global Call_String_Context.Seed
-        (cs_route k) ctx ca cc ex)"
-  unfolding sctx_spec_def sctx_abs_spec_def
-  apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
-      apply (rule dg_reader_commute_gen_sign_lifted)
-     apply (rule cs_seed_ne_global)
-    apply (rule sign_Henter_lifted_for[OF exact])
-   apply (rule sign_Hcomb_lifted_for[OF exact])
-  apply (rule sign_Hcont_lifted_for[OF exact])
-  apply (rule cs_route_commute)
-  done
+begin
 
-lemma hextra_commute_routed_sign_cs:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g Call_String_Context.Seed Call_String_Context.Global (cs_route k) ctx w)
-     (routed_extra_g Call_String_Context.Seed Call_String_Context.Global (cs_route k) ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g[OF dg_reader_commute_gen_sign_lifted])
+interpretation sign_cs: routed_domain_exec
+  gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
+  Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
+  by unfold_locales
+     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
+      rule cs_route_commute)
+
+lemmas sign_cs_pp_abs_gen = sign_cs.pp_abs
+
+end
 
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
@@ -157,99 +132,20 @@ theorem scs_pp_abs:
         \<circ> snd (scs_sol k gs is_bot_pred Pi ps mnm main))
      (fst (scs_sol k gs is_bot_pred Pi ps mnm main))"
 proof -
-  have pp'_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Call_String_Context.Global)
-          (cs_route k)
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed)
+  have pp_buf: "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list
+          (\<lambda>_. Call_String_Context.Global) (cs_route k)
+          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred)
+             Call_String_Context.Global Call_String_Context.Seed)
           (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
           (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (scs_sol k gs is_bot_pred Pi ps mnm main)) (fst (scs_sol k gs is_bot_pred Pi ps mnm main))"
+       (snd (scs_sol k gs is_bot_pred Pi ps mnm main))
+       (fst (scs_sol k gs is_bot_pred Pi ps mnm main))"
     using scs_pp_st unfolding scs_eqs_def by simp
-  have seed_ne_global: "\<And>p c. Call_String_Context.Seed p c \<noteq> Call_String_Context.Global" by simp
-  have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
-          (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed)
-          (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-          (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (scs_sol k gs is_bot_pred Pi ps mnm main)) (fst (scs_sol k gs is_bot_pred Pi ps mnm main))"
-  proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed"])
-    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau>)
-           = locals (traverse_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau>)"
-      by (rule routed_cmb_g_contribution_matches_local)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Call_String_Context.Global) c'))) = bot"
-      by (rule routed_cmb_g_side_pure[of Call_String_Context.Seed Call_String_Context.Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau>)
-           = globs (sides_of_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Call_String_Context.Global) c')))"
-      by (rule routed_cmb_g_contribution_matches_global[of Call_String_Context.Seed Call_String_Context.Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Call_String_Context.Global) c')) = bot"
-      by (rule routed_cmb_g_contribution_free_at_key[of Call_String_Context.Seed Call_String_Context.Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Call_String_Context.Global) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau> z
-           = sides_of_rhs
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex) \<tau> z"
-      by (rule routed_cmb_g_contribution_sides_off_key[of Call_String_Context.Seed Call_String_Context.Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex)
-           = dep_aux \<tau>
-             (routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed
-               (cs_route k) c' ca cc ex)"
-      by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Call_String_Context.Seed Call_String_Context.Global (cs_route k) c' w)
-           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-      by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Call_String_Context.Seed Call_String_Context.Global (cs_route k) c' w)
-           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-      by (rule routed_extra_g_local_only)
-    show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Call_String_Context.Global)
-          (cs_route k)
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed)
-          (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-          (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (scs_sol k gs is_bot_pred Pi ps mnm main)) (fst (scs_sol k gs is_bot_pred Pi ps mnm main))"
-      by (rule pp'_buf)
-  qed
-  have sign_Hstep_ctx:
-    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       (dg_spec_step (sctx_spec gs is_bot_pred) a d g') =
-       dg_spec_step (sctx_abs_spec gs) a
-         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
-    unfolding sctx_spec_def sctx_abs_spec_def by (rule sign_Hstep_lifted_for[OF exact])
   show ?thesis
-    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Call_String_Context.Global"
-             and route_st = "cs_route k :: cfg_node \<Rightarrow> call_string \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> call_string"
-             and route_abs = "cs_route k :: cfg_node \<Rightarrow> call_string \<Rightarrow> sign abs_state lifted \<Rightarrow> call_action \<Rightarrow> call_string"
-             and cmb_st = "routed_cmb_g (sctx_spec gs is_bot_pred) Call_String_Context.Global Call_String_Context.Seed"
-             and cmb_abs = "routed_cmb_g (sctx_abs_spec gs) Call_String_Context.Global Call_String_Context.Seed"
-             and extra_st = "routed_extra_g Call_String_Context.Seed Call_String_Context.Global"
-             and extra_abs = "routed_extra_g Call_String_Context.Seed Call_String_Context.Global"
-             and g = "compile_prog Pi ps mnm main" and S_st = "sctx_spec gs is_bot_pred" and S_abs = "sctx_abs_spec gs"])
-        apply (rule sign_Hstep_ctx)
-       apply (rule cs_route_commute)
-      apply (rule dg_tree_st_commute_routed_cmb_g_sign_cs[OF exact])
-     apply (rule hextra_commute_routed_sign_cs)
-    apply (rule pp')
-    done
+    unfolding sctx_abs_spec_def
+    using pp_buf unfolding sctx_spec_def by (rule sign_cs_pp_abs_gen[OF exact])
 qed
 
 end

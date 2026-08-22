@@ -1,7 +1,7 @@
 theory Parity_Exec_Ctx_Sound
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.Routed_Unit_Domain"
+    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Core.Routed_Domain_Exec"
     "Voblint_Analysis.Parity_Base_DG"
     "Voblint_Analysis.Parity_Exec"
     "Voblint_CFG.Compile_Invariants"
@@ -97,23 +97,16 @@ lemma pctx_terminates_via_solve_c:
             TD_side_always_join_Interp.solve_c_dom_def
   using assms by simp
 
-subsection \<open>Route agreement collapses to a free lemma\<close>
-
-text \<open>
-  \<^const>\<open>route_unit\<close> ignores its \<open>'D\<close> argument outright, so the routing-agreement
-  obligation holds unconditionally for any reader \<open>f\<close> --- the same collapse Sign's and
-  Int's own unit instances rely on.
-\<close>
-
-lemma parity_route_unit_commute: "route_unit u c' d ca = route_unit u c' (f d) ca"
-  by simp
-
 subsection \<open>Domain commute facts, at the routed unit spec\<close>
 
 text \<open>
-  The whole of Parity's obligation to the routed spine, in one interpretation. Both
-  premises are Parity's own pre-existing lemmas, cited unchanged; the \<open>exact\<close> premise is
-  the usual executable-bottom-predicate agreement every instance's caller supplies.
+  The whole of Parity's obligation to the routed spine, in one interpretation.
+  \<^locale>\<open>routed_domain_exec\<close> adds only the seed-key pair, its distinctness, and the
+  two routing functions on top of \<^locale>\<open>routed_dg_domain_exec\<close>, so the interpretation
+  carries no Parity mathematics: the first three obligations are Parity's own
+  pre-existing commute lemmas, cited unchanged, and the last two are datatype
+  distinctness for \<^type>\<open>gk\<close> and the free routing agreement \<^const>\<open>route_unit\<close> enjoys
+  by ignoring its \<open>'D\<close> argument outright.
 \<close>
 
 context
@@ -121,65 +114,15 @@ context
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
 begin
 
-interpretation parity_domain: routed_dg_domain_exec
+interpretation parity_unit: routed_domain_exec
   gs is_bot_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
-  by unfold_locales (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact)
-
-lemmas parity_Hstep_lifted_for = parity_domain.Hstep_lifted_for
-lemmas parity_Henter_lifted_for = parity_domain.Henter_lifted_for
-lemmas parity_Hcomb_lifted_for = parity_domain.Hcomb_lifted_for
-lemmas parity_Hcont_lifted_for = parity_domain.Hcont_lifted_for
-
-text \<open>
-  The routing layer on top of those three facts. \<^locale>\<open>routed_unit_domain_exec\<close> adds
-  only the seed-key pair and its distinctness, so the interpretation carries no Parity
-  mathematics: the first three obligations are the ones \<open>parity_domain\<close> already
-  discharged, and the fourth is datatype distinctness for \<^type>\<open>gk\<close>.
-\<close>
-
-interpretation parity_unit: routed_unit_domain_exec
-  gs is_bot_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
-  Global Seed
+  Global Seed route_unit route_unit
   by unfold_locales
-     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp)
+     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp)
 
-lemmas parity_route_unit_commute_gen = parity_unit.route_unit_commute
-lemmas parity_dg_tree_st_commute_routed_cmb_g = parity_unit.dg_tree_st_commute_routed_cmb_g
-lemmas parity_hextra_commute_routed = parity_unit.hextra_commute_routed
 lemmas parity_pp_abs_gen = parity_unit.pp_abs
 
 end
-
-lemmas dg_reader_commute_gen_parity_lifted = dg_reader_commute_gen_lifted_for
-
-lemma parity_seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
-  by simp
-
-lemma dg_tree_st_commute_routed_cmb_g_parity:
-  assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "dg_reader_commute_gen.dg_tree_st_commute
-           (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed route_unit ctx ca cc ex)
-     (routed_cmb_g (pctx_abs_spec gs) Global Seed route_unit ctx ca cc ex)"
-  unfolding pctx_spec_def pctx_abs_spec_def
-  apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
-      apply (rule dg_reader_commute_gen_parity_lifted)
-     apply (rule parity_seed_ne_global)
-    apply (rule parity_Henter_lifted_for[OF exact])
-   apply (rule parity_Hcomb_lifted_for[OF exact])
-  apply (rule parity_Hcont_lifted_for[OF exact])
-  apply (rule parity_route_unit_commute)
-  done
-
-lemma hextra_commute_routed_parity:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g Seed Global route_unit ctx w)
-     (routed_extra_g Seed Global route_unit ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g
-        [OF dg_reader_commute_gen_parity_lifted])
 
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
@@ -222,7 +165,7 @@ theorem pctx_pp_abs:
         \<circ> snd (pctx_sol gs is_bot_pred Pi ps mnm main))
      (fst (pctx_sol gs is_bot_pred Pi ps mnm main))"
 proof -
-  have pp'_buf: "part_post_solution
+  have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
           route_unit
           (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed)
@@ -231,91 +174,9 @@ proof -
        (cfg_exit (compile_prog Pi ps mnm main), ())
        (snd (pctx_sol gs is_bot_pred Pi ps mnm main)) (fst (pctx_sol gs is_bot_pred Pi ps mnm main))"
     using pctx_pp_st unfolding pctx_eqs_def by simp
-  have seed_ne_global: "\<And>p c. Seed p c \<noteq> Global" by simp
-  have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
-          (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), ())
-       (snd (pctx_sol gs is_bot_pred Pi ps mnm main)) (fst (pctx_sol gs is_bot_pred Pi ps mnm main))"
-  proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed"])
-    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau>)
-           = locals (traverse_rhs
-             (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau>)"
-      by (rule routed_cmb_g_contribution_matches_local)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c'))) = bot"
-      by (rule routed_cmb_g_side_pure[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau>)
-           = globs (sides_of_rhs
-             (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')))"
-      by (rule routed_cmb_g_contribution_matches_global[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')) = bot"
-      by (rule routed_cmb_g_contribution_free_at_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Global) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau> z
-           = sides_of_rhs
-             (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex) \<tau> z"
-      by (rule routed_cmb_g_contribution_sides_off_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex)
-           = dep_aux \<tau>
-             (routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed
-               route_unit c' ca cc ex)"
-      by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Seed Global route_unit c' w)
-           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-      by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Seed Global route_unit c' w)
-           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-      by (rule routed_extra_g_local_only)
-    show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
-          route_unit
-          (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), ())
-       (snd (pctx_sol gs is_bot_pred Pi ps mnm main)) (fst (pctx_sol gs is_bot_pred Pi ps mnm main))"
-      by (rule pp'_buf)
-  qed
-  have parity_Hstep_ctx:
-    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       (dg_spec_step (pctx_spec gs is_bot_pred) a d g') =
-       dg_spec_step (pctx_abs_spec gs) a
-         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
-    unfolding pctx_spec_def pctx_abs_spec_def by (rule parity_Hstep_lifted_for[OF exact])
   show ?thesis
-    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
-             and route_st = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> parity exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> unit"
-             and route_abs = "route_unit :: cfg_node \<Rightarrow> unit \<Rightarrow> parity abs_state lifted \<Rightarrow> call_action \<Rightarrow> unit"
-             and cmb_st = "routed_cmb_g (pctx_spec gs is_bot_pred) Global Seed"
-             and cmb_abs = "routed_cmb_g (pctx_abs_spec gs) Global Seed"
-             and extra_st = "routed_extra_g Seed Global"
-             and extra_abs = "routed_extra_g Seed Global"
-             and g = "compile_prog Pi ps mnm main" and S_st = "pctx_spec gs is_bot_pred"
-             and S_abs = "pctx_abs_spec gs"])
-        apply (rule parity_Hstep_ctx)
-       apply (rule parity_route_unit_commute)
-      apply (rule dg_tree_st_commute_routed_cmb_g_parity[OF exact])
-     apply (rule hextra_commute_routed_parity)
-    apply (rule pp')
-    done
+    unfolding pctx_abs_spec_def
+    using pp_buf unfolding pctx_spec_def by (rule parity_pp_abs_gen[OF exact])
 qed
 
 end

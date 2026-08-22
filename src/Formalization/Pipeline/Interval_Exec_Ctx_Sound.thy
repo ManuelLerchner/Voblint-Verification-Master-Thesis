@@ -1,6 +1,6 @@
 theory Interval_Exec_Ctx_Sound
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Analysis.Interval_Checks"
@@ -301,20 +301,20 @@ subsection \<open>The abstract routed hooks\<close>
 text \<open>
   Classifier-parametric commutation mirrors, generic in \<open>gs\<close>: same aliases the
   entry-state example's own base theory defines, not tied to any one \<open>gs\<close>.
-  Structural-reachability staging (issue #123): \<open>ectx_abs_spec\<close> and every hook
-  below now carry the lifted abstract carrier, mirroring \<open>ectx_spec\<close> itself.
+  \<open>ectx_abs_spec\<close> and every hook below carry the reachability-lifted abstract
+  carrier, mirroring \<open>ectx_spec\<close> itself.
   Every commutation fact between the executable and abstract solvers threads
   the same explicit \<open>is_bot_pred\<close>/\<open>exact\<close> pair the flat pipeline's own
   \<open>ivl_exec_sound_collecting_at\<close> uses (\<open>Voblint_Analysis.Interval_Exec_Sound\<close>),
   discharged only once a concrete program supplies \<open>resolved_st_q_is_bot_for\<close>.
   The whole-CFG commute obligations (\<open>Hcmb\<close>/\<open>Hextra\<close> below) are discharged
-  through \<open>dg_reader_commute_gen\<close> (issue #123, Layer 3.5), the carrier-generic
-  engine \<open>Voblint_Analysis.Exec_DG_Bridge\<close> proves once and instantiates here at
+  through \<open>dg_reader_commute_gen\<close>, the carrier-generic
+  engine \<open>Voblint_Core.Exec_DG_Bridge\<close> proves once and instantiates here at
   the lifted reader \<open>map_lift (fun_of_resolved_st_q_for gs)\<close>.
 \<close>
 
 text \<open>
-  The three primitive packaging commutes, at the Base-style record: \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>
+  The three primitive packaging commutes, at the Base-style record: \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>
   proves them once generically from \<^theory>\<open>Voblint_Core.DG_Base\<close>'s \<open>transfer_lift_commute\<close>/
   \<open>transfer_lift2_commute\<close>, so only Interval's own primitive facts
   \<open>ivl_tf_st_for_commute\<close>/\<open>ivl_enter_st_for_commute\<close> are supplied here. They are restated at
@@ -359,8 +359,8 @@ lemma ivl_Hcont_lifted_for:
         [where tf = "ivl_tf_for gs", unfolded fun_of_exec_dg_st_for_def])
 
 text \<open>
-  Registers \<open>dg_reader_commute_gen\<close> (issue #123, Layer 3.5,
-  \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>) at the one reader this whole section needs --
+  Registers \<open>dg_reader_commute_gen\<close> (\<^theory>\<open>Voblint_Core.Exec_DG_Bridge\<close>)
+  at the one reader this whole section needs --
   the lifted executable-to-abstract readback \<open>map_lift (fun_of_resolved_st_q_for gs)\<close> used
   identically for both the local and global carrier -- so every locale fact below
   (\<open>dg_tree_st_commute_def\<close>, \<open>fun_of_dg_st_gen_sup\<close>, ...) is available unconditionally,
@@ -517,41 +517,30 @@ qed
 subsection \<open>Per-tree transport commutation\<close>
 
 text \<open>
-  Both whole-CFG commute obligations are instances of \<^theory>\<open>Voblint_Analysis.Exec_DG_Bridge\<close>'s
-  routed heterogeneous transport (\<open>dg_tree_st_commute_routed_cmb_g\<close>/\<open>_routed_extra_g\<close>),
-  registered here at the one reader this section uses. Nothing Interval-specific enters
-  beyond the three primitive commutes and the route agreement.
+  The same interpretation Interval's unit-context instance makes, at the entry-state
+  routing policy. \<^locale>\<open>routed_domain_exec\<close> takes the routing functions and their
+  agreement as parameters; here the agreement is the route-consistency core just
+  proved, since the entry-state route reads the entered state.
 \<close>
 
 lemma seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
   by simp
 
-lemma dg_tree_st_commute_routed_cmb_g_ivl:
+context
+  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "ivl exec_dg_st \<Rightarrow> bool"
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "dg_reader_commute_gen.dg_tree_st_commute
-           (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed (entry_state_route_gen gs is_bot_pred) ctx ca cc ex)
-     (routed_cmb_g (ectx_abs_spec gs) Global Seed (entry_state_route_abs_gen gs) ctx ca cc ex)"
-  unfolding ectx_spec_def ectx_abs_spec_def
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"
-           and S_st = "base_dg_spec_st_for_lifted gs is_bot_pred (ivl_tf_st_for gs) (ivl_enter_st_for gs)"
-           and S_abs = "base_dg_spec_for_lifted gs is_bot_state (ivl_tf_for gs)"
-           and seed_key = Seed
-           and route_st = "entry_state_route_gen gs is_bot_pred"
-           and route_abs = "entry_state_route_abs_gen gs",
-         OF dg_reader_commute_gen_ivl_lifted seed_ne_global
-            ivl_Henter_lifted_for[OF exact] ivl_Hcomb_lifted_for[OF exact]
-            ivl_Hcont_lifted_for
-            entry_state_route_commute_gen[OF exact]])
+begin
 
-lemma hextra_commute_routed:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g Seed Global (entry_state_route_gen gs is_bot_pred) ctx w)
-     (routed_extra_g Seed Global (entry_state_route_abs_gen gs) ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g[OF dg_reader_commute_gen_ivl_lifted])
+interpretation ivl_es: routed_domain_exec
+  gs is_bot_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
+  Global Seed "entry_state_route_gen gs is_bot_pred" "entry_state_route_abs_gen gs"
+  by unfold_locales
+     (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp,
+      rule entry_state_route_commute_gen[OF exact])
+
+lemmas ivl_es_pp_abs_gen = ivl_es.pp_abs
+
+end
 
 
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
@@ -593,94 +582,20 @@ theorem entry_state_pp_abs:
         \<circ> snd (entry_state_sol gs is_bot_pred Pi ps mnm main))
      (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
 proof -
-  have pp'_buf: "part_post_solution
+  have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
           (entry_state_route_gen gs is_bot_pred)
           (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
           (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
+          (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred)
+          Bot (Lifted cinit_ivl_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (entry_state_sol gs is_bot_pred Pi ps mnm main)) (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
+       (snd (entry_state_sol gs is_bot_pred Pi ps mnm main))
+       (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
     using entry_state_pp_st unfolding entry_state_eqs_def by simp
-  have seed_ne_global: "\<And>p c. Seed p c \<noteq> Global" by simp
-  have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_gen gs is_bot_pred)
-          (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (entry_state_sol gs is_bot_pred Pi ps mnm main)) (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
-  proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed"])
-    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau>)
-           = locals (traverse_rhs
-             (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau>)"
-      by (rule routed_cmb_g_contribution_matches_local)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c'))) = bot"
-      by (rule routed_cmb_g_side_pure[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau>)
-           = globs (sides_of_rhs
-             (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')))"
-      by (rule routed_cmb_g_contribution_matches_global[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')) = bot"
-      by (rule routed_cmb_g_contribution_free_at_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Global) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau> z
-           = sides_of_rhs
-             (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex) \<tau> z"
-      by (rule routed_cmb_g_contribution_sides_off_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex)
-           = dep_aux \<tau>
-             (routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed
-               (entry_state_route_gen gs is_bot_pred) c' ca cc ex)"
-      by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Seed Global (entry_state_route_gen gs is_bot_pred) c' w)
-           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-      by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Seed Global (entry_state_route_gen gs is_bot_pred) c' w)
-           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-      by (rule routed_extra_g_local_only)
-    show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
-          (entry_state_route_gen gs is_bot_pred)
-          (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (entry_state_sol gs is_bot_pred Pi ps mnm main)) (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
-      by (rule pp'_buf)
-  qed
-  have ivl_Hstep_ctx:
-    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       (dg_spec_step (ectx_spec gs is_bot_pred) a d g') =
-       dg_spec_step (ectx_abs_spec gs) a
-         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
-    unfolding ectx_spec_def ectx_abs_spec_def by (rule ivl_Hstep_lifted_for[OF exact])
   show ?thesis
-    by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
-             and route_st = "entry_state_route_gen gs is_bot_pred" and route_abs = "entry_state_route_abs_gen gs"
-             and cmb_st = "routed_cmb_g (ectx_spec gs is_bot_pred) Global Seed"
-             and cmb_abs = "routed_cmb_g (ectx_abs_spec gs) Global Seed"
-             and extra_st = "routed_extra_g Seed Global"
-             and extra_abs = "routed_extra_g Seed Global"
-             and g = "compile_prog Pi ps mnm main" and S_st = "ectx_spec gs is_bot_pred" and S_abs = "ectx_abs_spec gs",
-           OF ivl_Hstep_ctx entry_state_route_commute_gen[OF exact] dg_tree_st_commute_routed_cmb_g_ivl[OF exact]
-              hextra_commute_routed pp'])
+    using pp_buf unfolding ectx_spec_def
+    by (rule ivl_es_pp_abs_gen[OF exact, folded ectx_abs_spec_def])
 qed
 
 

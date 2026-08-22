@@ -59,11 +59,13 @@ The procedure-aware CFG and generic D/G route are the sole analysis path. Sign,
 Interval, and mixed Sign/Interval instances use the side-effecting verified
 solver.
 
-The six-session dependency chain is:
+The session dependency graph is:
 
 ```text
-Voblint_VIMP -> Voblint_CFG -> Voblint_Core -> Voblint_Analysis
-             -> Voblint_Formalization -> Voblint_Examples
+VIMP -> CFG -> Core -> Analysis -+-> Formalization -+
+                                 |                  v
+                                 +----------------> CLI -> Codegen
+                                                     +---> Examples
 ```
 
 `Voblint_Core` is the abstract framework: domains, constraint systems, and the
@@ -71,9 +73,15 @@ TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
 each concrete domain instance (Sign, Interval, ...) through it.
 
 Cross-session theory imports use qualified names.
-`Voblint_Formalization` contains the reusable soundness endpoints.
-`Voblint_Examples` contains executable runs, regressions, code generation,
-GraphViz output, and the `Voblint` capstone.
+`Voblint_Formalization` contains the reusable soundness endpoints and the
+per-domain, per-context instantiations the CLI dispatches to, so it is not a
+leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
+through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
+output, and the `Voblint` capstone.
+
+`ROOTS` lists eight session directories. `src/CodegenCheck` is deliberately not
+among them: its `export_code ... checking OCaml` gate needs an OCaml toolchain
+and runs only where CI names the session explicitly.
 
 The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`

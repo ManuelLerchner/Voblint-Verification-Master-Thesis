@@ -1,7 +1,7 @@
 theory Run_Analysis_Sound
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.DG_Base_Exec"
+    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Core.DG_Base_Exec"
     "Voblint_Core.DG_LTR_Sound"
     "Voblint_Core.Solver_Menu"
     Source_Activation_Sound
@@ -477,7 +477,7 @@ text \<open>
   solver route \<open>dg_gen_of\<close> needs a common \<open>exec_dg_st lifted\<close> wrapper for both sides,
   the same plumbing constraint \<open>unit_dg_exec_analysis\<close> already carries.  A registered
   domain supplies only \<open>tf\<close>/\<open>tf_st\<close>/\<open>enter_st\<close>/\<open>is_bot_pred\<close> and their three primitive
-  commute facts; the packaging-correspondence proof itself is \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>'s
+  commute facts; the packaging-correspondence proof itself is \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>'s
   \<open>base_dg_spec_st_for_lifted_dg_spec_step_commute\<close>/\<open>_dgs_enter_commute\<close>/\<open>_dgs_combine_commute\<close>,
   cited directly -- unlike \<open>unit_dg_exec_analysis\<close>, no intermediate \<open>unit_dg_H*_for\<close>
   layer is needed because the Base packaging proof already has exactly this shape.

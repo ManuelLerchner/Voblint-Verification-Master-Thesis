@@ -1,7 +1,7 @@
 theory Exec_Int_DG_Run
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.DG_Base_Exec"
+    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Core.DG_Base_Exec"
     "Voblint_Analysis.Int_Exec"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.Run_Analysis_Sound"
@@ -51,7 +51,7 @@ text \<open>
   observable in the solver's own computed result.
 
   Each mode is registered on the generic Base construction
-  \<^const>\<open>base_dg_spec_st_for_lifted\<close> (\<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>),
+  \<^const>\<open>base_dg_spec_st_for_lifted\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>),
   matching Sign's own production route: the local unknown carries the whole
   reachability-lifted \<open>int_dom exec_dg_st\<close>, with no separate local/global
   split for \<open>int_ex_prog\<close>'s (empty) set of declared globals to route through.

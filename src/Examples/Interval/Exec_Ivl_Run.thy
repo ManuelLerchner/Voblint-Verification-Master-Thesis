@@ -120,9 +120,10 @@ text \<open>\<^const>\<open>run_menu\<close> reads the loop-head value of \<open
   machinery cannot bound the write-back and the slot stays \<open>[0, +inf]\<close>.\<close>
 lemma loop_head_across_update_rules:
   "run_menu loop_read_x loop_ivl_eqs (cfg_exit loop_cfg, ()) (Inl (Statement 1, ()))
-     = [(STR ''join'',       Ivl (Fin 0) (Fin 20)),
-        (STR ''per_origin'', Ivl (Fin 0) (Fin 20)),
-        (STR ''warrow'',     Ivl (Fin 0) (Fin 20))]"
+     = [(STR ''join'',              Ivl (Fin 0) (Fin 20)),
+        (STR ''per_origin'',        Ivl (Fin 0) (Fin 20)),
+        (STR ''warrow'',            Ivl (Fin 0) (Fin 20)),
+        (STR ''warrow_per_origin'', Ivl (Fin 0) (Fin 20))]"
   by eval
 
 subsection \<open>Whole-program entry points, and a second program\<close>

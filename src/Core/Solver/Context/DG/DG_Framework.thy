@@ -25,7 +25,7 @@ where
      (let res = f (combine_env_abs gs d g) in
       (restrict_global_for gs res, restrict_local_for gs res))"
 
-subsection \<open>A structural-reachability unary step, staged ahead of \<^const>\<open>unit_step_for\<close>'s own migration (issue #123)\<close>
+subsection \<open>A structural-reachability unary step, alongside \<^const>\<open>unit_step_for\<close>\<close>
 
 text \<open>
   \<^const>\<open>unit_step_for\<close> reconstructs a complete state, applies the raw transfer, and splits
@@ -674,7 +674,7 @@ proof -
     by (rule restrict_local_for_mono[OF res])
 qed
 
-subsection \<open>The lifted combine split, staged ahead of \<^const>\<open>unit_combine_step_env_for\<close>/\<^const>\<open>unit_combine_step_assign_for\<close>'s own migration (issue #123)\<close>
+subsection \<open>The lifted combine split, alongside \<^const>\<open>unit_combine_step_env_for\<close>/\<^const>\<open>unit_combine_step_assign_for\<close>\<close>
 
 text \<open>
   The two combine stages have different reachability disciplines. \<^const>\<open>unit_combine_step_env_for\<close>
@@ -872,7 +872,7 @@ lemma dgs_enter_unit_dg_spec_for:
   unfolding unit_dg_spec_for_def
   by simp
 
-subsection \<open>The complete lifted D/G specification, additive alongside \<^const>\<open>unit_dg_spec_for\<close> (issue #123)\<close>
+subsection \<open>The complete lifted D/G specification, alongside \<^const>\<open>unit_dg_spec_for\<close>\<close>
 
 text \<open>
   Assembles the three independently-validated lifted primitives into one \<^type>\<open>dg_spec\<close>

@@ -30,5 +30,6 @@ These documents describe the supported architecture and its verification.
 - [Isabelle agent notes](ISABELLE_AGENT_NOTES.md) — document-aware editing,
   diagnostics, proof-state inspection, and batch verification.
 
-Migration logs, superseded designs, and deleted component descriptions are kept
-in version control rather than indexed as live architecture documentation.
+Migration logs, superseded designs, and deleted component descriptions live in
+[`history/`](history/README.md). They are kept for provenance and are not
+maintained against the current tree.

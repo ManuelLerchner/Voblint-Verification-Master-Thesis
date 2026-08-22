@@ -1,7 +1,7 @@
 theory Sign_Checks
   imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
     "Voblint_Core.Analysis_Result" Sign_Exec_Sound
-    "Voblint_Analysis.Monovariant_Analysis_Result"
+    "Voblint_Core.Monovariant_Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
     Sign_Exec_Ctx_Sound
 begin

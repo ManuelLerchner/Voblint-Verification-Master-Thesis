@@ -2,7 +2,7 @@ theory Example_Sign_DG_CallString_K1
   imports
     "Voblint_Analysis.Sign_DG"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Analysis.DG_Base_Exec"
+    "Voblint_Core.DG_Base_Exec"
     "Voblint_Core.Call_String_Routed_Context"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.Solver_Menu"

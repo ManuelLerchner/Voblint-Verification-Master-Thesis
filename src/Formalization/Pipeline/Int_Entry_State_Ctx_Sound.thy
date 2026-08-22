@@ -13,12 +13,12 @@ text \<open>
   acceptance test, after Sign's own call-string and entry-state derivations and Int's
   own call-string derivation: same \<^const>\<open>ictx_spec\<close>/\<^const>\<open>ictx_abs_spec\<close> D/G
   specification and the same domain-commute facts Int already interprets
-  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>) -- nothing here
+  (\<^locale>\<open>routed_dg_domain_exec\<close>, \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>) -- nothing here
   re-derives them, and the \<^typ>\<open>refine_mode\<close> parameter Int threads throughout stays a
   genuine fixed argument exactly as it already is at Int's own \<^const>\<open>ictx_spec\<close>. The
   routing policy is the same generic entry-state construction
   (\<open>entry_exec_route_gen\<close>/\<^const>\<open>formals_route_lifted_gen\<close>,
-  \<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>) Sign's own
+  \<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>/\<^theory>\<open>Voblint_Core.Routed_Context\<close>) Sign's own
   entry-state instance already uses: it needed only \<^locale>\<open>routed_dg_domain_exec\<close>'s
   own three primitive commute facts, which Int's own routed-unit instance has already
   established, so no new Int-domain mathematics is needed here either.
@@ -42,7 +42,7 @@ text \<open>
   \<open>sctx_entry_route\<close>/\<open>sctx_entry_route_gen\<close> exactly, at Int's own
   \<open>int_dom_enter_st_for mode gs\<close> instead of Sign's \<open>sign_enter_st_for gs\<close> -- this is
   precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
-  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Analysis.DG_Base_Exec\<close>), restated here as
+  \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions so the equation-system definitions below need no
   \<open>exact\<close> premise to be stated, matching every other routed instance's convention.
 \<close>
@@ -131,45 +131,29 @@ end
 subsection \<open>Per-tree transport commutation\<close>
 
 text \<open>
-  Mirrors Sign's own \<open>dg_tree_st_commute_routed_cmb_g_sign_es\<close>/
-  \<open>hextra_commute_routed_sign_es\<close> verbatim, only repointed from Sign's own
-  \<open>sctx_spec\<close>/\<open>sctx_abs_spec\<close> to Int's own \<open>ictx_spec\<close>/\<open>ictx_abs_spec\<close> (both threading
-  \<open>mode\<close>): both cite the exact same generic packaging theorem
-  (\<^locale>\<open>dg_reader_commute_gen\<close>) at the exact same domain-commute facts
-  (\<open>int_Henter_lifted_for\<close>, \<open>int_Hcomb_lifted_for\<close>, \<open>dg_reader_commute_gen_int_lifted\<close>)
-  the routed-unit instance already established -- no new Int transfer mathematics, only
-  the routing-policy substitution.
+  The same interpretation Int's unit-context and call-string instances make, at the
+  entry-state routing policy. Here the routing-agreement obligation
+  \<^locale>\<open>routed_domain_exec\<close> takes as a parameter is not free --- the route reads the
+  entered state --- but it is exactly the fact just proved.
 \<close>
 
-lemma ictx_entry_seed_ne_global [simp]: "Seed p ctx \<noteq> Global"
-  by simp
-
-lemma dg_tree_st_commute_routed_cmb_g_int_es:
+context
+  fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool"
+    and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool"
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-  shows "dg_reader_commute_gen.dg_tree_st_commute
-           (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
-        (ictx_entry_route_gen mode gs is_bot_pred) ctx ca cc ex)
-     (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
-        (formals_route_lifted_gen (ictx_abs_spec mode gs)) ctx ca cc ex)"
-  unfolding ictx_spec_def ictx_abs_spec_def
-  apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
-        [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
-           and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
-      apply (rule dg_reader_commute_gen_int_lifted)
-     apply (rule ictx_entry_seed_ne_global)
-    apply (rule int_Henter_lifted_for[OF exact])
-   apply (rule int_Hcomb_lifted_for[OF exact])
-  apply (rule int_Hcont_lifted_for[OF exact])
-  apply (rule ictx_entry_route_gen_commute[OF exact, unfolded ictx_abs_spec_def, symmetric])
-  done
+begin
 
-lemma hextra_commute_routed_int_es:
-  "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
-                (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env)
-     (routed_extra_g Seed Global (ictx_entry_route_gen mode gs is_bot_pred) ctx w)
-     (routed_extra_g Seed Global (formals_route_lifted_gen (ictx_abs_spec mode gs)) ctx w)"
-  by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_extra_g[OF dg_reader_commute_gen_int_lifted])
+interpretation int_es: routed_domain_exec
+  gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
+  Global Seed "ictx_entry_route_gen mode gs is_bot_pred"
+  "formals_route_lifted_gen (ictx_abs_spec mode gs)"
+  by unfold_locales
+     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
+      rule ictx_entry_route_gen_commute[OF exact, symmetric])
+
+lemmas int_es_pp_abs_gen = int_es.pp_abs
+
+end
 
 subsection \<open>The certified executable post-solution, generic per compiled program\<close>
 
@@ -211,99 +195,20 @@ theorem ictx_entry_pp_abs:
         \<circ> snd (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))
      (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
 proof -
-  have pp'_buf: "part_post_solution
+  have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
           (ictx_entry_route_gen mode gs is_bot_pred)
           (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
           (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
+          (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs)
+          Bot (Lifted cinit_int_dom_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main)) (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
+       (snd (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))
+       (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
     using ictx_entry_pp_st unfolding ictx_entry_eqs_def by simp
-  have seed_ne_global: "\<And>p c. Seed p c \<noteq> Global" by simp
-  have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (ictx_entry_route_gen mode gs is_bot_pred)
-          (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main)) (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
-  proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed"])
-    show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau>)
-           = locals (traverse_rhs
-             (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau>)"
-      by (rule routed_cmb_g_contribution_matches_local)
-    show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c'))) = bot"
-      by (rule routed_cmb_g_side_pure[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau>)
-           = globs (sides_of_rhs
-             (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')))"
-      by (rule routed_cmb_g_contribution_matches_global[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau> (Inr ((\<lambda>_. Global) c')) = bot"
-      by (rule routed_cmb_g_contribution_free_at_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. Global) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau> z
-           = sides_of_rhs
-             (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex) \<tau> z"
-      by (rule routed_cmb_g_contribution_sides_off_key[of Seed Global, OF seed_ne_global])
-    show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex)
-           = dep_aux \<tau>
-             (routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed
-               (ictx_entry_route_gen mode gs is_bot_pred) c' ca cc ex)"
-      by (rule routed_cmb_g_contribution_dep)
-    show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g Seed Global (ictx_entry_route_gen mode gs is_bot_pred) c' w)
-           \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
-      by (rule routed_extra_g_free)
-    show "\<And>c' w \<tau> x. x \<in> set (routed_extra_g Seed Global (ictx_entry_route_gen mode gs is_bot_pred) c' w)
-           \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
-      by (rule routed_extra_g_local_only)
-    show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
-          (ictx_entry_route_gen mode gs is_bot_pred)
-          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
-          (routed_extra_g Seed Global)
-          (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
-       (snd (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main)) (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
-      by (rule pp'_buf)
-  qed
-  have int_Hstep_ctx:
-    "map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
-       (dg_spec_step (ictx_spec mode is_bot_pred gs) a d g') =
-       dg_spec_step (ictx_abs_spec mode gs) a
-         (map_lift (fun_of_resolved_st_q_for gs) d) (map_lift (fun_of_resolved_st_q_for gs) g')" for a d g'
-    unfolding ictx_spec_def ictx_abs_spec_def by (rule int_Hstep_lifted_for[OF exact])
   show ?thesis
-    apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
-             and route_st = "ictx_entry_route_gen mode gs is_bot_pred"
-             and route_abs = "formals_route_lifted_gen (ictx_abs_spec mode gs)"
-             and cmb_st = "routed_cmb_g (ictx_spec mode is_bot_pred gs) Global Seed"
-             and cmb_abs = "routed_cmb_g (ictx_abs_spec mode gs) Global Seed"
-             and extra_st = "routed_extra_g Seed Global"
-             and extra_abs = "routed_extra_g Seed Global"
-             and g = "compile_prog Pi ps mnm main" and S_st = "ictx_spec mode is_bot_pred gs" and S_abs = "ictx_abs_spec mode gs"])
-        apply (rule int_Hstep_ctx)
-       apply (rule ictx_entry_route_gen_commute[OF exact, symmetric])
-      apply (rule dg_tree_st_commute_routed_cmb_g_int_es[OF exact])
-     apply (rule hextra_commute_routed_int_es)
-    apply (rule pp')
-    done
+    using pp_buf unfolding ictx_spec_def
+    by (rule int_es_pp_abs_gen[OF exact, folded ictx_abs_spec_def])
 qed
 
 end

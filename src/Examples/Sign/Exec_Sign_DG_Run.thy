@@ -21,8 +21,8 @@ text \<open>
 
 theory Exec_Sign_DG_Run
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
-    "Voblint_Analysis.DG_Base_Exec"
+    "Voblint_Core.Exec_DG_Bridge"
+    "Voblint_Core.DG_Base_Exec"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Formalization.Run_Analysis_Sound"

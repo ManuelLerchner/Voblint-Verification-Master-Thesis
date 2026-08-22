@@ -4,140 +4,75 @@ Picked up once Slice C/D (obsolete TD/etf spine deletion) is complete and the
 full gates are green. Section 0 below is the measured post-deletion baseline;
 every count in P3-P12 is stated against it.
 
-## 0. Post-deletion baseline (measured)
+## 0. Where this stands
 
-Measured on the branch after Slice D, against the pre-deletion audit.
+Measured after the TD/etf deletion and the consolidation that followed.
 
-| metric | before | after |
-| --- | --- | --- |
-| `src` theories | 227 | 212 |
-| `src` `.thy` lines | ~96k | 85.8k |
-| `Core` | 55 thy / 27.6k | 44 thy / 19.6k |
-| `Analysis` | 71 thy / 32.0k | 66 thy / 29.2k |
-| `analyse_*` constants | 134 | 128 |
-| suffix families with >=4 variants | 19 fams / 89 consts | 9 fams / 38 consts |
-| `code_identifier` entries | 122 | 119 |
-| theories escaping the map | 20 | 19 |
+| metric | pre-deletion | after deletion | now |
+| --- | --- | --- | --- |
+| `src` theories | 227 | 212 | 212 |
+| `src` `.thy` lines | ~96k | 85.8k | 83.8k |
+| `analyse_*` constants | 134 | 128 | 128 |
+| suffix families with >=4 variants | 19 | 9 | 9 |
+| `docs/` markdown files (live) | 142 | 142 | 70 |
+| staged-migration phrases in `.thy` | many | 9 | 0 |
 
-Sessions and their ROOT graph:
+Session graph, and why `Formalization` is not a leaf, are in the project
+contract; `ROOTS` lists eight directories and omits `src/CodegenCheck`
+deliberately.
 
-```text
-VIMP -> CFG -> Core -> Analysis -+-> Formalization -+
-                                 |                  v
-                                 +----------------> CLI -> Codegen
-                                                     +---> Examples
-```
+### Done
 
-`Voblint_Formalization` is not an endpoint: `CLI/Analyse_Dispatch.thy` imports
-it, so the soundness session sits inside the export chain. `ROOTS` lists eight
-directories; `src/CodegenCheck` is not among them and builds only when CI
-names it.
+- **P3** Exec_DG_Bridge's duplicate transport family. The carrier-generic
+  engine now proves the raw readback's post-solution transport too, as it
+  already did the lifted one; the eleven private `_for` support lemmas and the
+  unadopted exec-side lifted spec island are gone. 4885 -> 4234 lines.
+- **P4** the domain x context clone matrix. `routed_unit_domain_exec` became
+  `routed_domain_exec` by taking the routing functions and their agreement as
+  parameters, which is the only thing the eleven copies differed in. All
+  eleven post-solution transports -- Sign, Parity, Interval x3, Int x3 at the
+  unit context, Sign/Int/Interval at entry-state, Sign/Int at call-string --
+  are now that one derivation instantiated. About 1200 lines.
+- **P12, in part** `docs/history/` separates 70 completed migration notes,
+  handoffs, audits and plans from the 70 live documents; the theory comments
+  no longer describe themselves as staged ahead of a migration; the session
+  graph in the project contract is correct; editor debris is gone.
 
-What the deletion did and did not change:
+### Blocked on one build
 
-- `side_cfg_T_eff*` as a suffix family is gone; so are `make_side_rhs_tree_eff*`,
-  and `unit_step` / `unit_dg_spec` / `unit_combine_step` fell below four
-  variants. The remaining nine families are the domain x mode axes of
-  `analyse_*_ctx_result`, `analyse_*_report`, `analyse_*_result`, and
-  `formals_route`.
-- The `Exec_DG_Bridge` duplicate families, the `pp_abs` clone matrix, the
-  generic framework under `Instances/Mixed`, the `CLI/Codegen` misnomer, the
-  hand-curated `code_identifier` map and the docs sprawl are untouched by it.
-- `Rel_Order_Domain` is no longer dead: `Examples/Mixed/Example_Relational_DG_Demo.thy`
-  (202 lines) consumes it. It is a relational witness, not removable code.
+`P5` and `P6` move theories between sessions, and `P8` changes what
+`export_code` emits. None can be verified interactively: I/Q checks a theory
+against the session heaps it already has, so a cross-session move or an export
+change is only real once the batch build and `codegen-check` agree. Run those
+two gates before starting either.
 
-## P3 - Finish the `Exec_DG_Bridge` migration
+## P3 - Split `Exec_DG_Bridge`
 
-`src/Analysis/Instances/Mixed/Exec_DG_Bridge.thy`, 4885 lines, carries two
-transport families. The carrier-generic one lives under the single
-`Carrier-generic whole-CFG commute` section (lines 3719-4339, 33 declarations);
-the superseded specialized one is split across lines 2687-3718 (37) and
-4340-4885 (20). Six subsection titles appear in both:
-
-```text
-Per-tree traversal commutation                     2687   3770
-Bundled per-tree transport relation                4340   3838
-Classifier-parametric fold transport               3333   4005
-Per-node tree-list transport for the generator     4420   4051
-Equation-system transport for the generic generator 4457  4077
-The post-solution transport theorem                4559   4164
-```
-
-The migration stalled at adoption, not at construction. The generic
-`part_post_solution_seed_dg_st_to_abs` (4166) has zero external users, while
-its specialized `_for` counterparts carry every downstream call site:
-`part_post_solution_seed_dg_st_to_abs_lifted_for` in six `Formalization/Pipeline`
-theories and two call-string examples, `part_post_solution_dg_st_to_abs_for` and
-`part_post_solution_dg_st_to_abs_lifted_for` in `Run_Analysis_Sound` and the
-interval flagship. Eleven external declarations in total keep the old family
-alive; the generic family exports six.
-
-Repoint those call sites at the generic theorems, delete the superseded family
-outright (no abstraction that keeps both), then split by responsibility if the
-dependency structure justifies it, roughly `Core/Exec/Exec_DG_Refines`,
-`_Trees`, `_Generator`, `_Monovariant`. Five subsections (610, 710, 796, 1040,
-1147) still carry `issue #123` staging language that the comment rules forbid;
-they go with the migration.
-
-Gate: no duplicate family; all consumers on the carrier-generic one; no
-theorem lost to renaming; I/Q clean; build and regressions green; own commit.
-
-## P4 - Collapse the domain x context clone matrix
-
-Twenty-one `pp_abs` theorems exist. One is generic
-(`Routed_Unit_Domain.pp_abs`, 108); fourteen are production clones and six are
-in `Examples`. Only two files outside `Routed_Unit_Domain` cite it at all
-(`Run_Analysis_Sound`, `Parity_Exec_Ctx_Sound`), which is why the adopters are
-the small cells and the non-adopters are the large ones:
-
-| cell | lines |
-| --- | --- |
-| `Analysis/.../Sign_Exec_Ctx_Sound` | 557 |
-| `Analysis/.../Parity_Exec_Ctx_Sound` | 571 |
-| `Analysis/.../Interval_Ctx_None_Routed_Sound` | 1544 |
-| `Analysis/.../Int_Exec_Ctx_Sound` | 1682 |
-| `Formalization/Pipeline/Interval_Exec_Ctx_Sound` | 1274 |
-| `Formalization/Pipeline/Int_Entry_State_Ctx_Sound` | 628 |
-| `Formalization/Pipeline/Sign_Entry_State_Ctx_Sound` | 614 |
-| `Formalization/Pipeline/Int_Call_String_Ctx_Sound` | 369 |
-| `Formalization/Pipeline/Sign_Call_String_Ctx_Sound` | 361 |
-| `Formalization/Pipeline/Interval_Call_String_Ctx_Sound` | 263 |
-| `CLI/Codegen/{Sign,Interval,Int,Parity}_Codegen` | 491 / 783 / 289 / 246 |
-
-9672 lines across fourteen files, split between two sessions on no principle,
-with four names for the same cell role (`_Exec_Ctx_Sound`,
-`_Ctx_None_Routed_Sound`, `_Entry_State_Ctx_Sound`, `_Call_String_Ctx_Sound`).
-`Interval` and `Int` each carry the solver-mode axis inline as three separate
-theorems (`ictx_pp_abs`, `_per_origin`, `_warrow`), which is the same axis
-`Routed_Unit_Domain` already parameterizes.
-
-Hoist the generic `ctx_sound` locale into `Core`, adopt
-`Routed_Unit_Domain.pp_abs`, and re-instantiate every cell. Nothing may lose a
-theorem statement; each cell keeps its named public corollary.
+What is left of P3 is the split, not the deletion. At 4234 lines the file still
+holds four responsibilities: the refinement relation and basic transport, the
+per-tree and fold commutation, the equation-system and post-solution transport,
+and the monovariant specialisation. Split it along those lines when it moves to
+Core (P5), not before -- doing both at once keeps the import churn to one pass.
 
 ## P5 - Rehome generic D/G framework into Core
 
-`Analysis/Instances/Mixed/` holds 5464 lines that are domain-generic and only
-live there by accident:
+Done. The four domain-generic theories that lived in
+`Analysis/Instances/Mixed/` by accident now sit in `Core/Solver/Context/DG/`,
+next to the abstract framework they mirror:
 
 ```text
-4885  Exec_DG_Bridge.thy               carrier-generic executable/abstract transport
- 293  DG_Base_Exec.thy                 executable mirror of Core's DG_Base
- 197  Routed_Unit_Domain.thy           unit-context routed execution, per domain
-  89  Monovariant_Analysis_Result.thy  one executable AnalysisResult constructor
+Exec_DG_Bridge               carrier-generic executable/abstract transport
+DG_Base_Exec                 executable mirror of Core's DG_Base
+Routed_Domain_Exec           the routing layer, renamed with the locale
+Monovariant_Analysis_Result  one executable AnalysisResult constructor
 ```
 
-The rest of the directory is the `Int_*` product domain (Sign x Interval), which
-is the only thing the name `Mixed` describes, plus `Rel_Order_Domain` (489
-lines), a relational instance that belongs with the domains, not here.
+What remains of the directory is the `Int_*` product domain (Sign x Interval),
+which is the only thing the name `Mixed` describes, plus `Rel_Order_Domain`, a
+relational instance that belongs with the domains. Both are P6's problem.
 
-Move the four generic files into `Core/Exec/` and the generic context/result
-pipeline into `Core/Pipeline/`. Real moves, not wrapper theories.
-`Core/.../DG/DG_Base.thy` and `Mixed/DG_Base_Exec.thy` are two halves of one
-concept and should end up adjacent.
-
-Invariant to verify mechanically: Core imports no domain-specific Analysis
-theory. Own commit.
+Invariant now enforced by the build: Core imports no Analysis theory, because
+Core is built before Analysis exists.
 
 ## P6 - Normalize the source/session layout
 

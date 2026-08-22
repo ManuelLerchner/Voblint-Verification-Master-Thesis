@@ -53,9 +53,9 @@ qed
 
 text \<open>
   Generic counterpart of \<open>activation_collect_sound\<close>, parametric in the concretization
-  reader \<open>gammaM\<close> rather than fixed to \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close> (issue #123):
-  see \<open>valid_ltr_ctx_sound_gen\<close>'s comment (\<open>Activation_Local_Sound.thy\<close>) for why this is a
-  genuine generalization, not a new proof.
+  reader \<open>gammaM\<close> rather than fixed to \<open>'a::sound_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close>: see
+  \<open>valid_ltr_ctx_sound_gen\<close>'s comment for why this is a genuine generalization, not a
+  new proof.
 \<close>
 
 theorem activation_collect_sound_gen:

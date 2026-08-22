@@ -42,7 +42,7 @@ text \<open>
 
 theory Example_Interval_DG_Flagship
   imports
-    "Voblint_Analysis.Exec_DG_Bridge"
+    "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.Solver_Menu"
