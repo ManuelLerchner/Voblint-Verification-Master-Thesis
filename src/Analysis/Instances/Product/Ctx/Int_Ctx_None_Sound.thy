@@ -952,4 +952,46 @@ lemma analyse_int_ctx_result_warrow_for_code [code]:
                         (locals (snd sol (Inl (v, ctx)))))))"
   unfolding analyse_int_ctx_result_warrow_for_def Let_def by (rule refl)
 
+subsection \<open>Solved-result table: warrowing per origin\<close>
+
+definition ictx_sol_prog_wpo ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+  "ictx_sol_prog_wpo mode gs mnm p =
+     TD_side_warrowing_per_origin_Interp_solve (ictx_eqs_prog mode gs mnm p) (cfg_exit (prog_cfg mnm p), ())"
+
+definition ictx_terminates_prog_wpo :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "ictx_terminates_prog_wpo mode gs mnm p =
+     ictx_terminates_wpo mode (resolved_st_q_is_bot_for (declared_global_vars p))
+       gs (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+lemma ictx_terminates_prog_wpo_via_solve_c:
+  assumes "TD_side_warrowing_per_origin_Interp_solve_c
+             (ictx_eqs mode (resolved_st_q_is_bot_for (declared_global_vars p))
+                gs (prog_table p) (prog_procs p) mnm (prog_main p))
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), ()) \<noteq> None"
+  shows "ictx_terminates_prog_wpo mode gs mnm p"
+  unfolding ictx_terminates_prog_wpo_def
+  using assms by (rule ictx_terminates_wpo_via_solve_c)
+
+definition analyse_int_ctx_result_wpo_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
+  "analyse_int_ctx_result_wpo_for mode gs mnm p =
+     Analysis_Result
+       (fst (ictx_sol_prog_wpo mode gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (ictx_sol_prog_wpo mode gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_int_ctx_result_wpo_for_def [code del]
+
+lemma analyse_int_ctx_result_wpo_for_code [code]:
+  "analyse_int_ctx_result_wpo_for mode gs mnm p =
+     (let sol = ictx_sol_prog_wpo mode gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_int_ctx_result_wpo_for_def Let_def by (rule refl)
+
 end
