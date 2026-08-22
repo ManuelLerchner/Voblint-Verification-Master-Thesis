@@ -335,7 +335,7 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
 lemma checks_ex_report_unfold:
   "analyse_sign_report_for checks_ex_gs checks_ex_program
      = classify_checks (prog_cfg (STR ''main'') checks_ex_program) checks_ex_env sign_classify_check"
-  unfolding analyse_sign_report_for_def checks_ex_env_def
+  unfolding analyse_sign_report_for_def surface_unfold checks_ex_env_def
   by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report

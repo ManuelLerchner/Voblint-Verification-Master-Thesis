@@ -238,9 +238,9 @@ module Core : sig
   val char_0x68 : char
   val char_0x6B : char
   val char_0x78 : char
-  val int_classify_check : exp -> (string -> unit int_dom_ext) -> check_result
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
+  val int_classify_check : exp -> (string -> unit int_dom_ext) -> check_result
   val analyse_int_report :
     unit imp_prog_ext -> (cfg_node * (exp * check_result)) list
   val analyse_int_result :
@@ -7856,9 +7856,17 @@ let rec analyse_int_ctx_result_warrow_for
                   gl)
                 (locals (snd sol (Inl (v, ctx))))))));;
 
-let rec int_classify_check
-  c d = (if int_check_true c d then Check_Proved
-          else (if int_check_false c d then Check_Refuted else Check_Unknown));;
+let rec result_at (Analysis_Result (x1, x2)) = x2;;
+
+let rec lookup_context _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
+      then result_at r v ctx else Unreachable);;
+
+let rec state_at
+  table bot_state p v =
+    (match lookup_context equal_unit (table p) v ()
+      with Unreachable -> bot_state | Reachable st -> st);;
 
 let rec classify_checks
   g env classify =
@@ -7871,23 +7879,20 @@ let rec classify_checks
           else None))
       (cfg_intra_list g);;
 
-let rec result_at (Analysis_Result (x1, x2)) = x2;;
+let rec report
+  table bot_state classify p =
+    classify_checks (prog_cfg prog_main_name p) (state_at table bot_state p)
+      classify;;
 
-let rec lookup_context _A
-  r v ctx =
-    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_keys r)
-      then result_at r v ctx else Unreachable);;
+let rec int_classify_check
+  c d = (if int_check_true c d then Check_Proved
+          else (if int_check_false c d then Check_Refuted else Check_Unknown));;
 
 let rec analyse_int_report_for
   mode gs p =
-    (let r = analyse_int_ctx_result_warrow_for mode gs prog_main_name p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable ->
-              bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Reachable st -> st))
-        int_classify_check);;
+    report (analyse_int_ctx_result_warrow_for mode gs prog_main_name)
+      (bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)) int_classify_check
+      p;;
 
 let rec analyse_int_report
   p = analyse_int_report_for Refine_Fixpoint (declared_global p) p;;
@@ -8204,12 +8209,8 @@ let rec sign_classify_check
 
 let rec analyse_sign_report_for
   gs p =
-    (let r = analyse_sign_result_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_sign | Reachable st -> st))
-        sign_classify_check);;
+    report (analyse_sign_result_for gs) (bot_fun bot_sign) sign_classify_check
+      p;;
 
 let rec analyse_sign_report p = analyse_sign_report_for (declared_global p) p;;
 
@@ -9328,14 +9329,9 @@ let rec analyse_int_wpo_result_for
 
 let rec analyse_int_report_wpo_for
   mode gs p =
-    (let r = analyse_int_wpo_result_for mode gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable ->
-              bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Reachable st -> st))
-        int_classify_check);;
+    report (analyse_int_wpo_result_for mode gs)
+      (bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)) int_classify_check
+      p;;
 
 let rec analyse_int_report_wpo
   p = analyse_int_report_wpo_for Refine_Fixpoint (declared_global p) p;;
@@ -9473,14 +9469,9 @@ let rec analyse_int_join_result
 
 let rec analyse_int_report_join_for
   mode gs p =
-    (let r = analyse_int_join_result_for mode gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable ->
-              bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Reachable st -> st))
-        int_classify_check);;
+    report (analyse_int_join_result_for mode gs)
+      (bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)) int_classify_check
+      p;;
 
 let rec analyse_int_report_join
   p = analyse_int_report_join_for Refine_Fixpoint (declared_global p) p;;
@@ -9614,12 +9605,8 @@ let rec parity_classify_check
 
 let rec analyse_parity_report_for
   gs p =
-    (let r = analyse_parity_result_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_parity | Reachable st -> st))
-        parity_classify_check);;
+    report (analyse_parity_result_for gs) (bot_fun bot_parity)
+      parity_classify_check p;;
 
 let rec analyse_parity_report
   p = analyse_parity_report_for (declared_global p) p;;
@@ -9819,12 +9806,8 @@ let rec interval_classify_check
 
 let rec analyse_interval_report_for
   gs p =
-    (let r = analyse_interval_join_result_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_ivl | Reachable st -> st))
-        interval_classify_check);;
+    report (analyse_interval_join_result_for gs) (bot_fun bot_ivl)
+      interval_classify_check p;;
 
 let rec analyse_interval_report
   p = analyse_interval_report_for (declared_global p) p;;
@@ -10102,14 +10085,9 @@ let rec analyse_int_per_origin_result
 
 let rec analyse_int_report_per_origin_for
   mode gs p =
-    (let r = analyse_int_per_origin_result_for mode gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable ->
-              bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)
-            | Reachable st -> st))
-        int_classify_check);;
+    report (analyse_int_per_origin_result_for mode gs)
+      (bot_fun (bot_int_dom_ext int_dom_record_lattice_unit)) int_classify_check
+      p;;
 
 let rec analyse_int_report_per_origin
   p = analyse_int_report_per_origin_for Refine_Fixpoint (declared_global p) p;;
@@ -10428,12 +10406,8 @@ let rec analyse_interval_td_result_for
 
 let rec analyse_interval_td_report_for
   gs p =
-    (let r = analyse_interval_td_result_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_ivl | Reachable st -> st))
-        interval_classify_check);;
+    report (analyse_interval_td_result_for gs) (bot_fun bot_ivl)
+      interval_classify_check p;;
 
 let rec analyse_interval_td_report
   p = analyse_interval_td_report_for (declared_global p) p;;
@@ -10487,12 +10461,8 @@ let rec analyse_sign_result_per_origin
   p = analyse_sign_result_per_origin_for (declared_global p) p;;
 
 let rec analyse_sign_report_per_origin
-  p = (let r = analyse_sign_result_per_origin p in
-        classify_checks (prog_cfg prog_main_name p)
-          (fun v ->
-            (match lookup_context equal_unit r v ()
-              with Unreachable -> bot_fun bot_sign | Reachable st -> st))
-          sign_classify_check);;
+  p = report analyse_sign_result_per_origin (bot_fun bot_sign)
+        sign_classify_check p;;
 
 let rec analyse_sign_report_for_with_state
   gs p =
@@ -10527,12 +10497,8 @@ let rec analyse_interval_wpo_result_for
 
 let rec analyse_interval_report_wpo_for
   gs p =
-    (let r = analyse_interval_wpo_result_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_ivl | Reachable st -> st))
-        interval_classify_check);;
+    report (analyse_interval_wpo_result_for gs) (bot_fun bot_ivl)
+      interval_classify_check p;;
 
 let rec analyse_interval_report_wpo
   p = analyse_interval_report_wpo_for (declared_global p) p;;
@@ -10695,12 +10661,8 @@ let rec analyse_parity_result_per_origin_for
 
 let rec analyse_parity_report_per_origin_for
   gs p =
-    (let r = analyse_parity_result_per_origin_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_parity | Reachable st -> st))
-        parity_classify_check);;
+    report (analyse_parity_result_per_origin_for gs) (bot_fun bot_parity)
+      parity_classify_check p;;
 
 let rec analyse_parity_report_per_origin
   p = analyse_parity_report_per_origin_for (declared_global p) p;;
@@ -10873,12 +10835,8 @@ let rec analyse_interval_per_origin_result
 
 let rec analyse_interval_report_per_origin_for
   gs p =
-    (let r = analyse_interval_per_origin_result_for gs p in
-      classify_checks (prog_cfg prog_main_name p)
-        (fun v ->
-          (match lookup_context equal_unit r v ()
-            with Unreachable -> bot_fun bot_ivl | Reachable st -> st))
-        interval_classify_check);;
+    report (analyse_interval_per_origin_result_for gs) (bot_fun bot_ivl)
+      interval_classify_check p;;
 
 let rec analyse_interval_report_per_origin
   p = analyse_interval_report_per_origin_for (declared_global p) p;;

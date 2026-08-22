@@ -155,7 +155,7 @@ proof -
              and classify = parity_classify_check
              and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: parity abs_state \<Rightarrow> store set",
-           OF finI mem[unfolded analyse_parity_report_for_def Let_def] parity_classify_check_proved node_sound])
+           OF finI mem[unfolded analyse_parity_report_for_def surface_unfold] parity_classify_check_proved node_sound])
 qed
 
 theorem analyse_parity_report_sound_refuted_for:
@@ -188,7 +188,7 @@ proof -
              and classify = parity_classify_check
              and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: parity abs_state \<Rightarrow> store set",
-           OF finI mem[unfolded analyse_parity_report_for_def Let_def] parity_classify_check_refuted node_sound])
+           OF finI mem[unfolded analyse_parity_report_for_def surface_unfold] parity_classify_check_refuted node_sound])
 qed
 
 end

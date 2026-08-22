@@ -92,10 +92,8 @@ text \<open>
 
 definition analyse_int_report_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_for mode gs p =
-     (let r = analyse_int_ctx_result_warrow_for mode gs prog_main_name p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           int_classify_check)"
+     analysis_surface.report (analyse_int_ctx_result_warrow_for mode gs prog_main_name) bot
+       int_classify_check p"
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, pinned at \<open>Refine_Fixpoint\<close>
@@ -154,10 +152,7 @@ text \<open>
 
 definition analyse_int_report_join_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_join_for mode gs p =
-     (let r = analyse_int_join_result_for mode gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           int_classify_check)"
+     analysis_surface.report (analyse_int_join_result_for mode gs) bot int_classify_check p"
 
 definition analyse_int_report_join :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_join p = analyse_int_report_join_for Refine_Fixpoint (declared_global p) p"
@@ -172,10 +167,8 @@ text \<open>
 
 definition analyse_int_report_per_origin_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_per_origin_for mode gs p =
-     (let r = analyse_int_per_origin_result_for mode gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           int_classify_check)"
+     analysis_surface.report (analyse_int_per_origin_result_for mode gs) bot
+       int_classify_check p"
 
 definition analyse_int_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_per_origin p =
@@ -195,10 +188,7 @@ definition analyse_int_wpo_result_for ::
 
 definition analyse_int_report_wpo_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_wpo_for mode gs p =
-     (let r = analyse_int_wpo_result_for mode gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           int_classify_check)"
+     analysis_surface.report (analyse_int_wpo_result_for mode gs) bot int_classify_check p"
 
 definition analyse_int_report_wpo :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_int_report_wpo p =
@@ -214,6 +204,48 @@ definition analyse_int_wpo_result ::
     "imp_prog \<Rightarrow> (unit, int_dom abs_state) analysis_result" where
   "analyse_int_wpo_result p =
      analyse_int_wpo_result_for Refine_Fixpoint (declared_global p) p"
+
+subsection \<open>The published surface, one interpretation per discipline\<close>
+
+text \<open>
+  Int's four disciplines through the shared \<^locale>\<open>analysis_surface\<close>, each at
+  \<^const>\<open>Refine_Fixpoint\<close> --- the production refinement mode its own report wrappers
+  already fix --- so a state read here comes from the same solve the verdicts did, not a
+  differently-configured one.
+\<close>
+
+interpretation int_join: analysis_surface
+  analyse_int_join_result bot int_classify_check
+  by unfold_locales
+
+interpretation int_per_origin: analysis_surface
+  analyse_int_per_origin_result bot int_classify_check
+  by unfold_locales
+
+interpretation int_warrow: analysis_surface
+  analyse_int_result bot int_classify_check
+  by unfold_locales
+
+interpretation int_wpo: analysis_surface
+  analyse_int_wpo_result bot int_classify_check
+  by unfold_locales
+
+lemma int_report_join_eq: "analyse_int_report_join p = int_join.report p"
+  by (simp add: analyse_int_report_join_def analyse_int_report_join_for_def
+      analyse_int_join_result_def surface_unfold)
+
+lemma int_report_per_origin_eq:
+  "analyse_int_report_per_origin p = int_per_origin.report p"
+  by (simp add: analyse_int_report_per_origin_def analyse_int_report_per_origin_for_def
+      analyse_int_per_origin_result_def surface_unfold)
+
+lemma int_report_warrow_eq: "analyse_int_report p = int_warrow.report p"
+  by (simp add: analyse_int_report_def analyse_int_report_for_def
+      analyse_int_result_def analyse_int_result_for_def surface_unfold)
+
+lemma int_report_wpo_eq: "analyse_int_report_wpo p = int_wpo.report p"
+  by (simp add: analyse_int_report_wpo_def analyse_int_report_wpo_for_def
+      analyse_int_wpo_result_def surface_unfold)
 
 end
 

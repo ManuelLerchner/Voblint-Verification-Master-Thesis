@@ -325,10 +325,7 @@ text \<open>
 
 definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report_for gs p =
-     (let r = analyse_sign_result_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           sign_classify_check)"
+     analysis_surface.report (analyse_sign_result_for gs) bot sign_classify_check p"
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_sign\<close>'s shape.
@@ -348,10 +345,33 @@ text \<open>
 
 definition analyse_sign_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_sign_report_per_origin p =
-     (let r = analyse_sign_result_per_origin p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           sign_classify_check)"
+     analysis_surface.report analyse_sign_result_per_origin bot sign_classify_check p"
+
+subsection \<open>The published surface, one interpretation per discipline\<close>
+
+text \<open>
+  Sign's two disciplines through the shared \<^locale>\<open>analysis_surface\<close>. There is no
+  warrowing interpretation because there is no warrowing table to name: Sign's carrier has
+  finite height and carries no widen instance, so warrowing has nothing to accelerate and
+  no solved table of its own. The absent interpretation and the absent solver route agree
+  by construction rather than by a separately maintained legality table.
+\<close>
+
+interpretation sign_join: analysis_surface
+  analyse_sign_result bot sign_classify_check
+  by unfold_locales
+
+interpretation sign_per_origin: analysis_surface
+  analyse_sign_result_per_origin bot sign_classify_check
+  by unfold_locales
+
+lemma sign_report_join_eq: "analyse_sign_report p = sign_join.report p"
+  by (simp add: analyse_sign_report_def analyse_sign_report_for_def
+      analyse_sign_result_def surface_unfold)
+
+lemma sign_report_per_origin_eq:
+  "analyse_sign_report_per_origin p = sign_per_origin.report p"
+  by (simp add: analyse_sign_report_per_origin_def surface_unfold)
 
 subsection \<open>Whole-program check report with state\<close>
 

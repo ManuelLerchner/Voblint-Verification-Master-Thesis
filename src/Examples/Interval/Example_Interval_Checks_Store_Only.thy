@@ -307,7 +307,7 @@ lemma checks_ivl_ex_report_unfold:
   "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program
      = classify_checks (prog_cfg (STR ''main'') checks_ivl_ex_program) checks_ivl_ex_env
          interval_classify_check"
-  unfolding analyse_interval_report_for_def checks_ivl_ex_env_def
+  unfolding analyse_interval_report_for_def surface_unfold checks_ivl_ex_env_def
   by (simp add: prog_main_name_def)
 
 text \<open>Agreement with the existing per-node classification: the first report

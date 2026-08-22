@@ -337,7 +337,9 @@ text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> appli
 lemma parity_ex_report_unfold:
   "analyse_parity_report_for parity_ex_gs parity_ex_program
      = classify_checks (prog_cfg (STR ''main'') parity_ex_program) parity_ex_env parity_classify_check"
-  unfolding analyse_parity_report_for_def Let_def parity_ex_env_def prog_main_name_def by simp
+  unfolding analyse_parity_report_for_def surface_unfold parity_ex_env_def
+            prog_main_name_def
+  by simp
 
 text \<open>Agreement with the existing per-node classification: the first report
   entry is derivable directly from \<open>classify_checks_mem_iff\<close> together with
