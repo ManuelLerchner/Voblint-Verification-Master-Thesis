@@ -49,7 +49,8 @@ text \<open>
 
 datatype analysis_domain = Sign_Analysis | Interval_Analysis | Int_Analysis | Parity_Analysis
 
-datatype solver_choice = Solver_Join | Solver_PerOrigin | Solver_Warrow
+datatype solver_choice =
+    Solver_Join | Solver_PerOrigin | Solver_Warrow | Solver_WarrowPerOrigin
 
 datatype context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString nat
 
@@ -179,6 +180,12 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr>
      = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_None \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Sign_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_CallString k \<rparr>
+     = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Interval Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
@@ -211,6 +218,10 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr>
      = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_EntryState \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_CallString k \<rparr>
+     = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = None, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Parity Solver_Join)"
 | "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_None \<rparr>
@@ -218,6 +229,8 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
 | "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Parity Solver_PerOrigin)"
 | "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_None \<rparr>
+     = None"
+| "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_None \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Parity_Analysis, cfg_solver = _, cfg_context = Ctx_EntryState \<rparr>
      = None"
