@@ -807,4 +807,49 @@ definition analyse_interval_ctx_result_warrow :: "imp_prog \<Rightarrow> (unit, 
   "analyse_interval_ctx_result_warrow p =
      analyse_interval_ctx_result_warrow_for (declared_global p) prog_main_name p"
 
+subsection \<open>Solved-result table: warrowing per origin\<close>
+
+definition ictx_sol_prog_wpo ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> unit) set \<times> (pp \<times> unit + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "ictx_sol_prog_wpo gs mnm p =
+     TD_side_warrowing_per_origin_Interp_solve (ictx_eqs_prog gs mnm p) (cfg_exit (prog_cfg mnm p), ())"
+
+definition ictx_terminates_prog_wpo :: "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "ictx_terminates_prog_wpo gs mnm p =
+     ictx_terminates_wpo gs (resolved_st_q_is_bot_for (declared_global_vars p))
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+lemma ictx_terminates_prog_wpo_via_solve_c:
+  assumes "TD_side_warrowing_per_origin_Interp_solve_c
+             (ictx_eqs gs (resolved_st_q_is_bot_for (declared_global_vars p))
+                (prog_table p) (prog_procs p) mnm (prog_main p))
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), ()) \<noteq> None"
+  shows "ictx_terminates_prog_wpo gs mnm p"
+  unfolding ictx_terminates_prog_wpo_def
+  using assms by (rule ictx_terminates_wpo_via_solve_c)
+
+definition analyse_interval_ctx_result_wpo_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_ctx_result_wpo_for gs mnm p =
+     Analysis_Result
+       (fst (ictx_sol_prog_wpo gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (ictx_sol_prog_wpo gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_interval_ctx_result_wpo_for_def [code del]
+
+lemma analyse_interval_ctx_result_wpo_for_code [code]:
+  "analyse_interval_ctx_result_wpo_for gs mnm p =
+     (let sol = ictx_sol_prog_wpo gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_interval_ctx_result_wpo_for_def Let_def by (rule refl)
+
+definition analyse_interval_ctx_result_wpo :: "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_ctx_result_wpo p =
+     analyse_interval_ctx_result_wpo_for (declared_global p) prog_main_name p"
 end
