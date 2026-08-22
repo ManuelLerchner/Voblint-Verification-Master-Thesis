@@ -40,7 +40,7 @@ not duplicated here.
  cli/main.ml  ->  Vimp_frontend.program (lexer/parser)
               ->  Voblint_CLI.Core.wf_program_compile_input_exec  (gate)
               ->  Voblint_CLI.Analysis_Config.mk_analysis_config  (one config value)
-              ->  Voblint_CLI.Analyse.analyse_config_with_state / analyse_config_ctx / analyse_config
+              ->  Voblint_CLI.Analyse_Dispatch.analyse_config_with_state / analyse_config_ctx / analyse_config
               ->  render_text_report  (hand-written OCaml; unreachable flag exported)
               ->  CLI output
 ```

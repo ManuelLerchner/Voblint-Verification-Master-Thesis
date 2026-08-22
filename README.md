@@ -395,12 +395,15 @@ pixi run voblint --parse-only tests/regression/00-sanity/02-malformed.vimp
 The "Context-sensitive" claim from "Why Voblint?" above, made concrete --
 `--context` controls the analysis, `--context-graph` only how an
 `entry-state` result is *drawn* by `--dot`/`--dot-full`/`--graph-snapshot`
-(same computed result, never a second analysis or a second solve):
+(same computed result, never a second analysis or a second solve). Every
+domain that supports a context policy renders under it, so
+`--analysis sign --context entry-state --dot` draws sign values, not
+interval ones:
 
 | Flag | Values (default first) | Effect |
 | --- | --- | --- |
-| `--context` | `none`, `entry-state` | `entry-state` re-analyzes each callee once per distinct entered-argument context, instead of once, flow- and call-site-insensitively, for the whole program. Only `--analysis interval` supports it. |
-| `--context-graph` | `collapsed`, `expanded` | `collapsed` draws one node per program point, every context's state joined for rendering (same CFG shape as `--context none`). `expanded` draws one node per `(point, context)` pair with no join: a callee analyzed under three arguments renders as three clusters with their own state, and a check dead in one context but live in another is two distinct nodes, not one. Requires `--context entry-state` -- a configuration error otherwise, not a silent fallback. |
+| `--context` | `none`, `entry-state`, `call-string` | `entry-state` re-analyzes each callee once per distinct entered-argument context, instead of once, flow- and call-site-insensitively, for the whole program. `call-string` splits it by bounded call history instead, and needs `--context-depth K` with `K >= 1`. Both are supported by `sign`, `interval` and `int`; `parity` is context-insensitive. |
+| `--context-graph` | `collapsed`, `expanded` | `collapsed` draws one node per program point, every context's state joined for rendering (same CFG shape as `--context none`). `expanded` draws one node per `(point, context)` pair with no join: a callee analyzed under three arguments renders as three clusters with their own state, and a check dead in one context but live in another is two distinct nodes, not one. Requires `--context entry-state` and `--analysis interval`: the expanded renderer is typed in the context type itself. Anything else is a configuration error, not a silent fallback. |
 
 ```bash
 # Text report: one row per __voblint_check, verdicts aggregated across every
