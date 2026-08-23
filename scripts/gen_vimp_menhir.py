@@ -204,7 +204,7 @@ def render_alt(prod: dict) -> str:
     # in post-order over the command tree; cli/vimp_frontend.ml pairs them by
     # walking the parsed AST the same way rather than assuming token order.
     if owns_stmt_index(prod):
-        action = f"record_stmt_pos $startpos ({action})"
+        action = f"record_stmt_pos $startpos $endpos ({action})"
     return f"  | {pattern}{prec}\n      {{ {action} }}"
 
 

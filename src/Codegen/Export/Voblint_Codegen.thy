@@ -52,6 +52,7 @@ export_code
   state_report_export_auto full_state_export_auto full_state_checked_payload_auto
   entry_state_report_export_auto entry_state_full_state_export_auto
   entry_state_full_state_checked_export_auto solver_checked_payload_auto
+  entry_state_verdicts_for
   entry_state_ctx_export_auto cs_ctx_export_auto
   xn_id xn_label xn_kind xn_status xn_lines
   xe_src xe_dst xe_kind xe_label

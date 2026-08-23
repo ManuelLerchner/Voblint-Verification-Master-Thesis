@@ -676,7 +676,7 @@ let () =
             (match
                Voblint_CLI.State_Report_GraphViz.solver_checked_payload_auto k sc prog
              with
-             | Some (g, report) -> (g, Some report)
+             | Some (g, (report, gvs)) -> (g, Some report, gvs)
              | None ->
                (* valid_analysis_config already rejected the combinations with
                   no table behind them, so this is unreachable rather than a
@@ -684,21 +684,31 @@ let () =
                failwith "unsupported --analysis/--solver combination")
           | None ->
             if !context_kind = CK_CallString then
-              (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog, None)
+              (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog, None, [])
             else if !context_graph = Expanded then
-              (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog, None)
+              (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog, None, [])
             else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
               ( Voblint_CLI.State_Report_GraphViz
                 .entry_state_full_state_checked_export_auto k prog,
-                None )
+                None, [] )
             else
-              let g, report =
+              let g, (report, gvs) =
                 Voblint_CLI.State_Report_GraphViz.full_state_checked_payload_auto k prog
               in
-              (g, Some report)
+              (g, Some report, gvs)
         in
         let payloads = List.map (fun k -> (analysis_label k, payload_for k)) !analyses in
-        let graphs = List.map (fun (label, (g, _)) -> (label, g)) payloads in
+        let graphs = List.map (fun (label, (g, _, _)) -> (label, g)) payloads in
+        let globals =
+          List.filter_map
+            (fun (label, (_, _, gvs)) ->
+               if gvs = [] then None
+               else
+                 Some
+                   ( label,
+                     gvs ))
+            payloads
+        in
         (* The source view's inline annotations need a verdict *and* a
            position, and only the parser knows positions -- it notes each
            __voblint_check token as it consumes one, in the same order this
@@ -706,28 +716,43 @@ let () =
            resolved to, so its verdicts are the ones the text report would
            print. Unreachable checks are dropped, matching what the text report
            does with those rows. *)
+        let annotation (line, column) verdict cond =
+          { Html_report.line;
+            column;
+            verdict = verdict_label verdict;
+            cond =
+              un_string
+                (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond)
+          }
+        in
         let checks =
           match payloads with
-          | (_, (_, Some report)) :: _ ->
+          | (_, (_, Some report, _)) :: _ ->
             List.filter_map
-              (fun ((_, (cond, (verdict, (unreachable, _)))), (line, column)) ->
-                 if unreachable then None
-                 else
-                   Some
-                     { Html_report.line;
-                       column;
-                       verdict = verdict_label verdict;
-                       cond =
-                         un_string
-                           (Voblint_CLI.Core.string_of_exp
-                              (Voblint_CLI.Core.nat_of_integer Z.zero) cond) })
+              (fun ((_, (cond, (verdict, (unreachable, _)))), pos) ->
+                 if unreachable then None else Some (annotation pos verdict cond))
               (List.combine report check_positions)
-          | _ -> []
+          | _ ->
+            (* A context-sensitive run has no state-carrying report, but it does
+               have per-context verdicts. Pairing happens before Dead is dropped:
+               entry_state_checked_verdicts filters first, which would shorten the
+               list and misalign every position after the first dead check. *)
+            let verdicts =
+              Voblint_CLI.State_Report_GraphViz.entry_state_verdicts_for kind prog
+            in
+            if List.length verdicts <> List.length check_positions then []
+            else
+              List.filter_map
+                (fun ((_, (cond, verdict)), pos) ->
+                   match verdict with
+                   | Voblint_CLI.Core.Dead -> None
+                   | Voblint_CLI.Core.Decided res -> Some (annotation pos res cond))
+                (List.combine verdicts check_positions)
         in
         let files, nodes, dead =
           Html_report.emit ~graphs ~source_file:(Filename.basename path) ~source_text:src
             ~fn:"main" ~checks ~positions:stmt_positions
-            ~globals:(Voblint_CLI.Core.declared_global_vars prog)
+            ~globals
         in
         List.iter (fun (f : Html_report.file) -> write_report_file dir f) files;
         Ok_report
@@ -830,7 +855,10 @@ let () =
        exist, and file:// will not render it. Serve the directory first:\n\
       \  python3 -m http.server --directory %s 8080\n\
        then open http://localhost:8080/index.xml (or use `pixi run report`,\n\
-       which serves and opens it for you).\n"
+       which serves and opens it for you).\n\
+       Needs a browser that still applies XSLT: Chrome removes it in M155/M158\n\
+       (November 2026), and this frontend uses it for the entry point and for\n\
+       every pane. See README.md for the migration routes.\n"
       dir dir dir
   | Ok (Unsupported_combo msg) -> prerr_endline ("voblint: " ^ msg); exit 1
   | Error msg -> Printf.eprintf "voblint: %s\n" msg; exit 3

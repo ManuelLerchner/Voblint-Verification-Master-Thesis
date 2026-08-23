@@ -22,7 +22,7 @@
    reduces once its body is complete and carries its own name, which is
    exactly the boundary needed. *)
 
-type pos = { line : int; column : int }
+type pos = { line : int; column : int; end_line : int; end_column : int }
 
 (* The definition being parsed, in reduction order; reversed. *)
 let pending : pos list ref = ref []
@@ -34,11 +34,16 @@ let reset () =
   pending := [];
   closed := []
 
-(* Returns its second argument so a semantic action can wrap its AST value
-   without restructuring: `record $startpos (Assign (x, e))`. *)
-let record (p : Lexing.position) (c : 'a) : 'a =
+(* Returns its last argument so a semantic action can wrap its AST value without
+   restructuring: `record $startpos $endpos (Assign (x, e))`. The end position is
+   where the command's own text stops, which is what a node document's endColumn
+   needs -- without it a span reads as zero-width. *)
+let record (p : Lexing.position) (q : Lexing.position) (c : 'a) : 'a =
   pending :=
-    { line = p.Lexing.pos_lnum; column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1 }
+    { line = p.Lexing.pos_lnum;
+      column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1;
+      end_line = q.Lexing.pos_lnum;
+      end_column = q.Lexing.pos_cnum - q.Lexing.pos_bol + 1 }
     :: !pending;
   c
 

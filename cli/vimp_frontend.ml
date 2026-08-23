@@ -33,7 +33,8 @@ let position_of (lexbuf : Lexing.lexbuf) : int * int =
    A definition whose two lists disagree in length contributes nothing rather
    than a shifted map: every position after the mismatch would be attributed to
    the wrong command, and a wrong line is worse than a missing one. *)
-let stmt_positions (prog : unit Voblint_CLI.Core.imp_prog_ext) : (int * (int * int)) list =
+let stmt_positions (prog : unit Voblint_CLI.Core.imp_prog_ext) :
+    (int * (int * int * int * int)) list =
   let recorded = Vimp_positions.definitions () in
   let index_of = function
     | Voblint_CLI.Core.Statement k -> Some (Z.to_int (Voblint_CLI.Core.integer_of_nat k))
@@ -47,14 +48,19 @@ let stmt_positions (prog : unit Voblint_CLI.Core.imp_prog_ext) : (int * (int * i
            (List.map2
               (fun node (p : Vimp_positions.pos) ->
                  match index_of node with
-                 | Some i -> [ (i, (p.Vimp_positions.line, p.Vimp_positions.column)) ]
+                 | Some i ->
+                   [ ( i,
+                       ( p.Vimp_positions.line,
+                         p.Vimp_positions.column,
+                         p.Vimp_positions.end_line,
+                         p.Vimp_positions.end_column ) ) ]
                  | None -> [])
               nodes ps)
        | _ -> [])
     (Voblint_CLI.Core.prog_stmt_post_order prog)
 
 let program (file : string) (src : string) :
-  unit Voblint_CLI.Core.imp_prog_ext * (int * int) list * (int * (int * int)) list =
+  unit Voblint_CLI.Core.imp_prog_ext * (int * int) list * (int * (int * int * int * int)) list =
   let lexbuf = Lexing.from_string src in
   Vimp_positions.reset ();
   let check_positions = ref [] in

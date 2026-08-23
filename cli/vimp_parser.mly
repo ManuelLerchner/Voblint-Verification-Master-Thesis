@@ -104,23 +104,23 @@ exp:
 (* stmt: *)
 stmt:
   | v0 = SKIP
-      { record_stmt_pos $startpos (Voblint_CLI.Core.SKIP) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.SKIP) }
   | v0 = IDENT v1 = ASSIGN v2 = exp
-      { record_stmt_pos $startpos (Voblint_CLI.Core.Assign (v0, v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Assign (v0, v2)) }
   | v0 = RETURN v1 = exp
-      { record_stmt_pos $startpos (Voblint_CLI.Core.Return (Some v1)) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Return (Some v1)) }
   | v0 = RETURN
-      { record_stmt_pos $startpos (Voblint_CLI.Core.Return None) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Return None) }
   | v0 = CHECK v1 = LPAREN v2 = exp v3 = RPAREN
-      { record_stmt_pos $startpos (Voblint_CLI.Core.Check v2) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Check v2) }
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
-      { record_stmt_pos $startpos (Voblint_CLI.Core.If (v2, v5, v9)) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.If (v2, v5, v9)) }
   | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
-      { record_stmt_pos $startpos (Voblint_CLI.Core.While (v2, v5)) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.While (v2, v5)) }
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN
-      { record_stmt_pos $startpos (Voblint_CLI.Core.Call (None, v0, v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Call (None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN
-      { record_stmt_pos $startpos (Voblint_CLI.Core.Call ((Some v0), v2, v4)) }
+      { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Call ((Some v0), v2, v4)) }
 (* stmts: *)
 stmts:
   | x = stmt

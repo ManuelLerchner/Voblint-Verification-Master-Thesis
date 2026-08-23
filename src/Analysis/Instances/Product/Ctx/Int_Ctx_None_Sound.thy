@@ -1,5 +1,6 @@
 theory Int_Ctx_None_Sound
   imports
+    "Voblint_Core.Monovariant_Analysis_Result"
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"
     "Voblint_Analysis.Int_Classify"
@@ -940,6 +941,24 @@ definition analyse_int_ctx_result_warrow_for ::
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (ictx_sol_prog_warrow mode gs mnm p) (Inl (v, ctx))))))"
+
+text \<open>\<^const>\<open>ctx_solved_for\<close> at this domain's warrowing solve, with \<^const>\<open>Global\<close>
+  and \<^const>\<open>Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
+  already takes them. The refinement mode is applied first, leaving the solve in the
+  shape \<^const>\<open>ctx_solved_for\<close> takes.\<close>
+
+definition analyse_int_ctx_solved_warrow_for ::
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+     \<Rightarrow> (unit, int_dom abs_state) analysis_result
+          \<times> (String.literal \<times> int_dom abs_state point_state) list" where
+  "analyse_int_ctx_solved_warrow_for mode =
+     ctx_solved_for (ictx_sol_prog_warrow mode) (unit_seed_global_keys Global Seed)"
+
+lemma fst_analyse_int_ctx_solved_warrow_for:
+  "fst (analyse_int_ctx_solved_warrow_for mode gs mnm p)
+     = analyse_int_ctx_result_warrow_for mode gs mnm p"
+  by (simp add: analyse_int_ctx_solved_warrow_for_def fst_ctx_solved_for
+      analyse_int_ctx_result_warrow_for_def Let_def)
 
 declare analyse_int_ctx_result_warrow_for_def [code del]
 

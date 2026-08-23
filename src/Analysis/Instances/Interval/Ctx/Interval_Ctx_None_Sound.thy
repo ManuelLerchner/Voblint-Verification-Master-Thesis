@@ -807,6 +807,28 @@ definition analyse_interval_ctx_result_warrow :: "imp_prog \<Rightarrow> (unit, 
   "analyse_interval_ctx_result_warrow p =
      analyse_interval_ctx_result_warrow_for (declared_global p) prog_main_name p"
 
+subsection \<open>The global unknowns the same solve side-effects\<close>
+
+text \<open>
+  \<^const>\<open>ctx_solved_for\<close> at this domain's warrowing solve, with \<^const>\<open>Global\<close> and
+  \<^const>\<open>Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
+  already takes them. Nothing here is domain-specific but the solve and the two
+  constructors.
+\<close>
+
+definition analyse_interval_ctx_solved_warrow_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+     \<Rightarrow> (unit, ivl abs_state) analysis_result
+          \<times> (String.literal \<times> ivl abs_state point_state) list" where
+  "analyse_interval_ctx_solved_warrow_for =
+     ctx_solved_for ictx_sol_prog_warrow (unit_seed_global_keys Global Seed)"
+
+lemma fst_analyse_interval_ctx_solved_warrow_for:
+  "fst (analyse_interval_ctx_solved_warrow_for gs mnm p)
+     = analyse_interval_ctx_result_warrow_for gs mnm p"
+  by (simp add: analyse_interval_ctx_solved_warrow_for_def fst_ctx_solved_for
+      analyse_interval_ctx_result_warrow_for_def Let_def)
+
 subsection \<open>Solved-result table: warrowing per origin\<close>
 
 definition ictx_sol_prog_wpo ::

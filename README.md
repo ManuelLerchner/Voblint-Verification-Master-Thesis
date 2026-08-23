@@ -109,6 +109,30 @@ because browsers refuse the cross-document loads that frontend performs over
 `file://` -- the same reason Goblint's own documentation says to serve its
 result directory.
 
+### Browser XSLT is being removed
+
+Chrome removes XSLT in M155/M158 (November 2026); Firefox and Safari have
+announced the same direction. This frontend depends on it at every level:
+`index.xml` carries an `<?xml-stylesheet?>` processing instruction, and each
+pane is an `<iframe src="....xml">` whose stylesheet the browser applies on
+load. When XSLT goes, the report renders as raw XML.
+
+Nothing here works around it yet, and the workaround is not a script tag.
+Three routes, none free:
+
+* **Run g2html proper.** The vendored submodule is a *converter* -- "Goblint
+  XML result to HTML converter" -- and emitting static HTML is what it is for.
+  Deprecation-proof and uses the stylesheets unmodified, at the cost of a JDK
+  and `ant` in the toolchain.
+* **Pre-render here.** `xsltproc` (from `libxslt`) can transform each document,
+  but `script.js` sets iframe sources to `.xml` paths, so the frontend would
+  have to be patched rather than vendored unmodified -- which is the property
+  that makes it Goblint's viewer rather than a fork of it.
+* **Polyfill.** A WASM libxslt shim restores the browser API, at the cost of
+  committing a JavaScript/WASM blob -- the thing the submodule exists to avoid.
+
+Until then, any browser that still applies XSLT renders the report.
+
 ## Foundations
 
 Voblint is inspired by several complementary lines of work:

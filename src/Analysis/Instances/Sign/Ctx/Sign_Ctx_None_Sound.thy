@@ -1,5 +1,6 @@
 theory Sign_Ctx_None_Sound
   imports
+    "Voblint_Core.Monovariant_Analysis_Result"
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"
     "Voblint_Analysis.Sign_DG"
@@ -393,6 +394,21 @@ definition analyse_sign_ctx_result_for ::
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
                     (locals (snd (sctx_sol_prog gs mnm p) (Inl (v, ctx))))))"
+
+text \<open>\<^const>\<open>ctx_solved_for\<close> at this domain's solve, with \<^const>\<open>Global\<close> and
+  \<^const>\<open>Seed\<close> handed to \<^const>\<open>seed_global_keys\<close> the way \<^const>\<open>routed_extra_g\<close>
+  already takes them.\<close>
+
+definition analyse_sign_ctx_solved_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+     \<Rightarrow> (unit, sign abs_state) analysis_result
+          \<times> (String.literal \<times> sign abs_state point_state) list" where
+  "analyse_sign_ctx_solved_for = ctx_solved_for sctx_sol_prog (unit_seed_global_keys Global Seed)"
+
+lemma fst_analyse_sign_ctx_solved_for:
+  "fst (analyse_sign_ctx_solved_for gs mnm p) = analyse_sign_ctx_result_for gs mnm p"
+  by (simp add: analyse_sign_ctx_solved_for_def fst_ctx_solved_for
+      analyse_sign_ctx_result_for_def Let_def)
 
 declare analyse_sign_ctx_result_for_def [code del]
 

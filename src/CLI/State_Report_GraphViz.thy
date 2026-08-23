@@ -391,10 +391,12 @@ text \<open>
 
 definition checked_payload_of ::
     "('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> 'a abs_state
-       \<Rightarrow> (unit, 'a abs_state) analysis_result \<Rightarrow> imp_prog
-       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list"
+       \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> (String.literal \<times> 'a abs_state point_state) list \<Rightarrow> imp_prog
+       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+            \<times> (String.literal \<times> String.literal list) list"
 where
-  "checked_payload_of into classify bot_state r p =
+  "checked_payload_of into classify bot_state r globals p =
      (let full = classify_checks_with_state (prog_cfg prog_main_name p)
                    (\<lambda>v. case lookup_context r v () of
                           Unreachable \<Rightarrow> (True, bot_state)
@@ -403,7 +405,14 @@ where
       in (raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
             (full_state_checked_node_annotation (program_vars p) (project_env into r)
                (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
-          map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full))"
+          map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full,
+          map (\<lambda>(k, st).
+                 (k, case st of
+                       Unreachable \<Rightarrow> [STR ''unreachable'']
+                     | Reachable s \<Rightarrow>
+                         map (\<lambda>x. String.implode (state_line (into \<circ> s) x))
+                             (program_vars p)))
+              globals))"
 
 text \<open>
   Dropping the two published columns leaves the plain check report. The
@@ -422,22 +431,33 @@ lemma map_classify_checks_with_state_flagged:
   by (simp add: classify_checks_with_state_def classify_checks_def comp_def case_prod_beta
       split: point_state.split)
 
+text \<open>
+  Each branch reads its domain's \<open>ctx_solved_for\<close> pair rather than the result table
+  alone, so the states, the verdicts and the global unknowns all come from the one
+  solve that pair performed.
+\<close>
+
 definition full_state_checked_payload_auto ::
     "analysis_domain \<Rightarrow> imp_prog
-       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list"
+       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+            \<times> (String.literal \<times> String.literal list) list"
 where
   "full_state_checked_payload_auto kind p =
      (case kind of
         Sign_Analysis \<Rightarrow>
-          checked_payload_of SignValue sign_classify_check bot (analyse_sign_result p) p
+          (case analyse_sign_ctx_solved_for (declared_global p) prog_main_name p of
+             (r, gvs) \<Rightarrow> checked_payload_of SignValue sign_classify_check bot r gvs p)
       | Interval_Analysis \<Rightarrow>
-          checked_payload_of IntervalValue interval_classify_check bot
-            (analyse_interval_td_result p) p
+          (case analyse_interval_ctx_solved_warrow_for (declared_global p) prog_main_name p of
+             (r, gvs) \<Rightarrow>
+               checked_payload_of IntervalValue interval_classify_check bot r gvs p)
       | Int_Analysis \<Rightarrow>
-          checked_payload_of IntDomValue int_classify_check bot (analyse_int_result p) p
+          (case analyse_int_ctx_solved_warrow_for Refine_Fixpoint (declared_global p)
+                  prog_main_name p of
+             (r, gvs) \<Rightarrow> checked_payload_of IntDomValue int_classify_check bot r gvs p)
       | Parity_Analysis \<Rightarrow>
-          checked_payload_of ParityValue parity_classify_check bot
-            (analyse_parity_result p) p)"
+          (case analyse_parity_ctx_solved_for (declared_global p) prog_main_name p of
+             (r, gvs) \<Rightarrow> checked_payload_of ParityValue parity_classify_check bot r gvs p))"
 
 text \<open>
   The report half is exactly \<^const>\<open>analyse_with_state\<close>'s answer, so sharing one
@@ -447,9 +467,13 @@ text \<open>
 \<close>
 
 lemma snd_full_state_checked_payload_auto [simp]:
-  "snd (full_state_checked_payload_auto kind p) = analyse_with_state kind p"
+  "fst (snd (full_state_checked_payload_auto kind p)) = analyse_with_state kind p"
   by (cases kind)
      (simp_all add: full_state_checked_payload_auto_def checked_payload_of_def Let_def
+        fst_analyse_sign_ctx_solved_for fst_analyse_parity_ctx_solved_for
+        fst_analyse_interval_ctx_solved_warrow_for fst_analyse_int_ctx_solved_warrow_for
+        case_prod_beta analyse_sign_result_for_def analyse_interval_td_result_for_def
+        analyse_int_result_for_def analyse_parity_result_for_def
         analyse_sign_report_with_state_def analyse_sign_report_for_with_state_def
         analyse_sign_result_def
         analyse_interval_td_report_with_state_def analyse_interval_td_report_for_with_state_def
@@ -601,48 +625,49 @@ text \<open>
 
 definition solver_checked_payload_auto ::
     "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
-       \<Rightarrow> (export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list)
+       \<Rightarrow> (export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+            \<times> (String.literal \<times> String.literal list) list)
           option"
 where
   "solver_checked_payload_auto kind sc p =
      (case (kind, sc) of
         (Sign_Analysis, Solver_Join) \<Rightarrow>
           Some (checked_payload_of SignValue sign_classify_check bot
-                  (analyse_sign_result p) p)
+                  (analyse_sign_result p) [] p)
       | (Sign_Analysis, Solver_PerOrigin) \<Rightarrow>
           Some (checked_payload_of SignValue sign_classify_check bot
-                  (analyse_sign_result_per_origin p) p)
+                  (analyse_sign_result_per_origin p) [] p)
       | (Sign_Analysis, _) \<Rightarrow> None
       | (Interval_Analysis, Solver_Join) \<Rightarrow>
           Some (checked_payload_of IntervalValue interval_classify_check bot
-                  (analyse_interval_join_result p) p)
+                  (analyse_interval_join_result p) [] p)
       | (Interval_Analysis, Solver_PerOrigin) \<Rightarrow>
           Some (checked_payload_of IntervalValue interval_classify_check bot
-                  (analyse_interval_per_origin_result p) p)
+                  (analyse_interval_per_origin_result p) [] p)
       | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
           Some (checked_payload_of IntervalValue interval_classify_check bot
-                  (analyse_interval_td_result p) p)
+                  (analyse_interval_td_result p) [] p)
       | (Interval_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
           Some (checked_payload_of IntervalValue interval_classify_check bot
-                  (analyse_interval_wpo_result p) p)
+                  (analyse_interval_wpo_result p) [] p)
       | (Int_Analysis, Solver_Join) \<Rightarrow>
           Some (checked_payload_of IntDomValue int_classify_check bot
-                  (analyse_int_join_result p) p)
+                  (analyse_int_join_result p) [] p)
       | (Int_Analysis, Solver_PerOrigin) \<Rightarrow>
           Some (checked_payload_of IntDomValue int_classify_check bot
-                  (analyse_int_per_origin_result p) p)
+                  (analyse_int_per_origin_result p) [] p)
       | (Int_Analysis, Solver_Warrow) \<Rightarrow>
           Some (checked_payload_of IntDomValue int_classify_check bot
-                  (analyse_int_result p) p)
+                  (analyse_int_result p) [] p)
       | (Int_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
           Some (checked_payload_of IntDomValue int_classify_check bot
-                  (analyse_int_wpo_result p) p)
+                  (analyse_int_wpo_result p) [] p)
       | (Parity_Analysis, Solver_Join) \<Rightarrow>
           Some (checked_payload_of ParityValue parity_classify_check bot
-                  (analyse_parity_result p) p)
+                  (analyse_parity_result p) [] p)
       | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
           Some (checked_payload_of ParityValue parity_classify_check bot
-                  (analyse_parity_result_per_origin p) p)
+                  (analyse_parity_result_per_origin p) [] p)
       | (Parity_Analysis, _) \<Rightarrow> None)"
 
 text \<open>
@@ -654,7 +679,7 @@ text \<open>
 \<close>
 
 lemma solver_checked_payload_verdicts:
-  "map_option (map (\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> snd)
+  "map_option (map (\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> fst \<circ> snd)
      (solver_checked_payload_auto kind sc p)
    = analyse_with_solver kind sc p"
   by (cases kind; cases sc)

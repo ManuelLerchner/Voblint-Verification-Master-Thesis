@@ -309,27 +309,50 @@ def _run(tmp_path, *args):
     return out
 
 
-def test_globals_pane_lists_the_declared_globals(tmp_path):
+def test_globals_pane_shows_the_constraint_systems_global_unknowns(tmp_path):
     """The globals button opened an empty pane.
 
-    Not because there was nothing to show -- a global's value is part of every
-    program point's state -- but because the document was a hardcoded empty
-    map, and in a shape globals.xsl does not read at that.
+    goblint's pane is GHT.iter over every GVar -- the global constraint system's
+    unknowns, not C globals, whose values live in the local state. Ours holds the
+    two kinds a routed D/G system side-effects: the shared slot, and one seed per
+    callee entry carrying the state a call pushes into that callee.
     """
     out = _run(tmp_path, "--analysis", "interval", str(GLOBALS_FIXTURE))
     root = ET.parse(out / "nodes" / "globals.xml").getroot()
     assert root.tag == "globs"
 
-    rows = {
-        g.find("key").text: [a.get("name") for a in g.findall("analysis")]
-        for g in root.findall("glob")
-    }
-    assert "g" in rows, f"declared global missing from the pane: {rows}"
-    assert rows["g"] == ["interval"]
+    keys = [g.find("key").text for g in root.findall("glob")]
+    assert "Global" in keys, f"shared slot missing: {keys}"
+    assert any(k.startswith("enter ") for k in keys), f"no callee-entry seed: {keys}"
+    # One seed per procedure, main included -- it is compiled through the same
+    # wrapper, and a procedure nothing calls is listed as unreachable, not omitted.
+    assert "enter main" in keys, keys
 
-    # The value is the one the analysis actually reached, not a placeholder.
-    value = root.find("glob").find("analysis").find("value")
-    assert (value.text or "").strip(), "global row carries no value"
+
+def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
+    """The seed is the pane's whole point: what a call hands its callee.
+
+    A procedure that is never called has no seed written to it, and must read as
+    unreachable rather than borrowing another entry's state.
+    """
+    src = tmp_path / "seeded.vimp"
+    src.write_text(
+        "void bump(n) {\n  m := n + 1;\n  return m\n}\n\n"
+        "void never() {\n  return 0\n}\n\n"
+        "void main() {\n  x := 7;\n  y := bump(x);\n  __voblint_check(y == 8)\n}\n"
+    )
+    out = _run(tmp_path, "--analysis", "interval", str(src))
+    rows = {
+        g.find("key").text: ET.tostring(g.find("analysis"), encoding="unicode")
+        for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
+    }
+    assert "enter bump" in rows, rows.keys()
+    assert "<key>n</key><value>[7,7]</value>" in rows["enter bump"], (
+        f"the seed does not carry the actual argument: {rows['enter bump']}"
+    )
+    assert "unreachable" in rows["enter never"], (
+        f"an uncalled procedure reported a seed: {rows['enter never']}"
+    )
 
 
 def test_globals_document_is_in_the_shape_the_stylesheet_reads(tmp_path):
@@ -351,18 +374,104 @@ def test_globals_document_is_in_the_shape_the_stylesheet_reads(tmp_path):
         assert g.findall("analysis"), "a <glob> with no <analysis> renders no value"
 
 
-def test_globals_pane_is_empty_when_the_program_cannot_terminate(tmp_path):
-    """The pane reports globals where the program ends.
+# Every field below was once a placeholder -- a hardcoded zero, a repeated
+# value, or an empty list -- that rendered as something plausible. None of them
+# fail loudly when they regress, which is why each is asserted rather than
+# eyeballed.
+CTX_FIXTURE = (
+    REPO_ROOT / "tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp"
+)
 
-    If nothing reaches the exit there is no such state, and showing the last
-    value the solver happened to hold would assert something no execution
-    performs.
+
+def test_context_sensitive_runs_annotate_the_source(tmp_path):
+    """--context entry-state rendered states and no findings.
+
+    A context-sensitive run has no state-carrying report, so the annotation path
+    fell through to []. It has per-context verdicts instead, and those carry the
+    same finding a reader opens the report for.
     """
-    src = tmp_path / "noexit.vimp"
-    src.write_text("global g;\n\nvoid main() {\n  g := 1;\n  while (0 < 1) {\n    g := g + 1\n  }\n}\n")
-    out = _run(tmp_path, "--analysis", "interval", "--timeout", "60", str(src))
-    root = ET.parse(out / "nodes" / "globals.xml").getroot()
-    assert root.findall("glob") == [], "a non-terminating program reported a final global"
+    out = _run(tmp_path, "--analysis", "interval", "--context", "entry-state",
+               str(CTX_FIXTURE))
+    warns = sorted((out / "warn").glob("warn*.xml"))
+    assert warns, "a context-sensitive run emitted no findings"
+
+    source = CTX_FIXTURE.read_text().splitlines()
+    check_lines = [i + 1 for i, l in enumerate(source) if "__voblint_check" in l]
+    warned = sorted(
+        int(ET.parse(w).getroot().find("text").get("line")) for w in warns
+    )
+    assert warned == check_lines, (
+        f"findings land on {warned}, checks are on {check_lines}"
+    )
+
+
+def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
+    """Filtering first would shift every annotation after a dead check.
+
+    The verdict list and the parser's position list are pairwise aligned only
+    while both are unfiltered, so a dead check must be dropped after the zip,
+    not before it.
+    """
+    src = tmp_path / "dead_then_live.vimp"
+    src.write_text(
+        "void main() {\n"
+        "  x := 5;\n"
+        "  if (x < 0) {\n"
+        "    __voblint_check(x == 99)\n"
+        "  } else {\n"
+        "    __voblint_check(x == 5)\n"
+        "  }\n"
+        "}\n"
+    )
+    out = _run(tmp_path, "--analysis", "interval", str(src))
+    warns = sorted((out / "warn").glob("warn*.xml"))
+    assert warns, "no findings emitted"
+    lines = [int(ET.parse(w).getroot().find("text").get("line")) for w in warns]
+    # The live check is on line 6; the dead one on line 4 is dropped. Reporting
+    # line 4 would mean the surviving verdict took the dropped row's position.
+    assert 6 in lines, f"the live check is not reported on its own line: {lines}"
+    assert 4 not in lines, f"a dead check was reported: {lines}"
+
+
+def test_node_locations_are_real_spans_not_repeated_values(tmp_path):
+    """endColumn repeated column, so every span read as zero-width.
+
+    The parser knew $endpos and discarded it. A command ends after its own text,
+    so endColumn must exceed column on any node with a command behind it.
+    """
+    out = _run(tmp_path, "--analysis", "interval", str(CTX_FIXTURE))
+    spans = 0
+    for doc in (out / "nodes").glob("*_pp*.xml"):
+        call = ET.parse(doc).getroot().find("call")
+        line, col = int(call.get("line")), int(call.get("column"))
+        end_line, end_col = int(call.get("endLine")), int(call.get("endColumn"))
+        if line == 0:
+            continue
+        assert end_line >= line, f"{doc.name} ends before it starts"
+        assert end_col > col, (
+            f"{doc.name} spans column {col}..{end_col} -- a zero-width span"
+        )
+        spans += 1
+    assert spans, "no node carried a span"
+
+
+def test_node_order_is_a_sequence_not_the_line_number(tmp_path):
+    """order is goblint's sequence number within the function.
+
+    It was fed the line number, which is plausible, monotone, and wrong -- and a
+    fabricated value is worse than the zero it replaced.
+    """
+    out = _run(tmp_path, "--analysis", "interval", str(CTX_FIXTURE))
+    pairs = []
+    for doc in (out / "nodes").glob("*_pp*.xml"):
+        call = ET.parse(doc).getroot().find("call")
+        line, order = int(call.get("line")), int(call.get("order"))
+        if line:
+            pairs.append((line, order))
+    assert pairs, "no positioned node"
+    assert any(line != order for line, order in pairs), (
+        f"order tracks line exactly, so it is still the line number: {sorted(pairs)}"
+    )
 
 
 def test_several_domains_land_in_one_node_document(tmp_path):

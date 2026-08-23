@@ -114,7 +114,8 @@ let node_line positions node =
   let n = String.length l in
   if n > 2 && l.[0] = 'p' && l.[1] = 'p' then
     Option.bind (int_of_string_opt (String.sub l 2 (n - 2)))
-      (fun i -> List.assoc_opt i positions)
+      (fun i ->
+         Option.map (fun (a, b, c, d) -> (a, b, c, d, i)) (List.assoc_opt i positions))
   else None
 
 (* <map> is alternating <key>/value siblings, <analysis name=> wraps one
@@ -183,13 +184,14 @@ let node_xml ~source_file ~fn ~loc ~blocks =
               (escape name) body)
          rendered)
   in
-  (* line/column/endLine/endColumn are display-only in node.xsl. VIMP has no
-     multi-line command, so a command's span ends on the line it starts on and
-     endLine repeats line; endColumn would need the command's own text length,
-     which the parser does not record, so it repeats column. A node with no
-     command behind it -- an entry, an exit, a global -- reports zero, which is
-     what goblint emits for a location it does not have. *)
-  let line, column = match loc with Some (l, c) -> (l, c) | None -> (0, 0) in
+  (* The command's own span, both ends recorded by the parser. order is
+     goblint's sequence number within the function, and the Statement index is
+     exactly that -- the counter compile allocates in source order. A node with
+     no command behind it -- an entry, an exit, a global -- reports zero
+     throughout, which is what goblint emits for a location it does not have. *)
+  let line, column, end_line, end_column, order =
+    match loc with Some (l, c, el, ec, o) -> (l, c, el, ec, o) | None -> (0, 0, 0, 0, 0)
+  in
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../node.xsl\"?>\n\
@@ -200,7 +202,8 @@ let node_xml ~source_file ~fn ~loc ~blocks =
      %s%s\
      </path>\n\
      </call></loc>\n"
-    (escape (C.xn_id node)) (escape source_file) (escape fn) line line column line column
+    (escape (C.xn_id node)) (escape source_file) (escape fn) line order column end_line
+    end_column
     (escape (C.xn_label node))
     note_xml analyses
 
@@ -213,46 +216,40 @@ let index_xml ~source_file ~fns =
     (String.concat "\n"
        (List.map (fun f -> Printf.sprintf "<function name=\"%s\"/>" (escape f)) fns))
 
-(* goblint's globals pane shows the solution of its global constraint system.
-   VIMP has no separate global unknown to show: since the Base-style migration
-   a global lives in the same reachability-lifted local unknown as any local,
-   so its value is part of a program point's state rather than beside it.
+(* goblint's globals pane shows the solution of its global constraint system --
+   GHT.iter over every GVar, unfiltered. Ours holds the two kinds a routed D/G
+   system side-effects: the shared slot, and one seed per callee entry carrying the
+   state a call pushes into that callee. Both come straight from the solve, so this
+   renders what the equation system holds rather than a source variable's value --
+   which lives in the local state here exactly as it does in goblint's CPA.
 
-   The nearest thing carrying the same meaning is each declared global's value
-   where the program ends, read off the entry procedure's exit node -- the
-   point every terminating execution arrives at. A program whose exit is
-   unreachable has no such state, and the pane stays empty rather than
-   reporting a value no execution reaches.
+   Values arrive already rendered, in the same "var=value" form a node document
+   shows, so a product domain's components fold here the way they do there.
 
-   globals.xsl walks globs/glob, taking each glob's <key> as the variable and
-   its <analysis name=> children as the per-analysis values -- one row per
-   global, not one map per analysis. That is a different shape from the node
-   documents' <map>, and a document in the map shape renders as a blank pane
-   rather than as an error. *)
-let globals_xml ~globals ~blocks =
-  let value_of var node =
-    List.find_map
-      (fun line ->
-         match split_binding line with Some (k, v) when k = var -> Some v | _ -> None)
-      (C.xn_lines node)
-  in
-  let row var =
-    match
-      List.filter_map
-        (fun (name, node) -> Option.map (fun v -> (name, v)) (value_of var node))
-        blocks
-    with
-    | [] -> ""
-    | per_domain ->
-      Printf.sprintf "<glob><key>%s</key>%s</glob>\n" (escape var)
-        (String.concat ""
-           (List.map
-              (fun (name, v) ->
-                 (* A product domain's components fold here exactly as they do
-                    in a node document: globals.xsl gives a value holding a
-                    nested map its own toggle. *)
-                 let rendered =
-                   match split_components v with
+   globals.xsl walks globs/glob, taking each glob's <key> as the unknown and its
+   <analysis name=> children as the per-analysis values -- one row per unknown, not
+   one map per analysis. That is a different shape from the node documents' <map>,
+   and a document in the map shape renders as a blank pane rather than as an error. *)
+let globals_xml ~blocks =
+  let state_xml lines =
+    let bindings, notes =
+      List.partition_map
+        (fun line ->
+           match split_binding line with
+           | Some (k, v) -> Left (k, v)
+           | None -> Right line)
+        lines
+    in
+    if bindings = [] then
+      Printf.sprintf "<value>%s</value>"
+        (escape (if notes = [] then "\xe2\x88\x85" else String.concat ", " notes))
+    else
+      "<value><map>"
+      ^ String.concat ""
+          (List.map
+             (fun (var, value) ->
+                Printf.sprintf "<key>%s</key><value>%s</value>" (escape var)
+                  (match split_components value with
                    | Some comps ->
                      "<map>"
                      ^ String.concat ""
@@ -262,17 +259,32 @@ let globals_xml ~globals ~blocks =
                                  (escape c))
                             comps)
                      ^ "</map>"
-                   | None -> escape v
-                 in
-                 Printf.sprintf "<analysis name=\"%s\"><value>%s</value></analysis>"
-                   (escape name) rendered)
+                   | None -> escape value))
+             bindings)
+      ^ "</map></value>"
+  in
+  let keys = match blocks with [] -> [] | (_, gvs) :: _ -> List.map fst gvs in
+  let row key =
+    match
+      List.filter_map
+        (fun (name, gvs) -> Option.map (fun l -> (name, l)) (List.assoc_opt key gvs))
+        blocks
+    with
+    | [] -> ""
+    | per_domain ->
+      Printf.sprintf "<glob><key>%s</key>%s</glob>\n" (escape key)
+        (String.concat ""
+           (List.map
+              (fun (name, lines) ->
+                 Printf.sprintf "<analysis name=\"%s\">%s</analysis>" (escape name)
+                   (state_xml lines))
               per_domain))
   in
   Printf.sprintf
     "<?xml version=\"1.0\" ?>\n\
      <?xml-stylesheet type=\"text/xsl\" href=\"../globals.xsl\"?>\n\
      <globs>\n%s</globs>\n"
-    (String.concat "" (List.map row globals))
+    (String.concat "" (List.map row keys))
 
 (* One check's source-level finding. Positions come from the parser, which
    notes each __voblint_check token as it consumes it; the verdict comes from
@@ -506,18 +518,6 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
       graphs
   in
   let nodes = List.filter (fun n -> C.xn_kind n <> C.XN_Source) (C.xg_nodes graph) in
-  (* The entry procedure's exit, by label rather than by kind: every procedure
-     contributes an XN_ProcExit, and only this one is where the program ends. *)
-  let exit_label = "exit_" ^ fn in
-  let exit_blocks =
-    match List.find_opt (fun n -> C.xn_label n = exit_label) (C.xg_nodes graph) with
-    | None -> []
-    | Some node ->
-      List.filter_map
-        (fun (name, by_id) ->
-           Option.map (fun n -> (name, n)) (Hashtbl.find_opt by_id (C.xn_id node)))
-        index
-  in
   let node_files =
     List.map
       (fun node ->
@@ -540,7 +540,7 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
     (fun node ->
        match node_line positions node with
        | None -> ()
-       | Some (l, _) ->
+       | Some (l, _, _, _, _) ->
          Hashtbl.replace line_nodes l (C.xn_id node :: Option.value ~default:[] (Hashtbl.find_opt line_nodes l)))
     nodes;
   let line_nodes = Hashtbl.fold (fun l ids acc -> (l, List.rev ids) :: acc) line_nodes [] in
@@ -552,8 +552,11 @@ let emit ~graphs ~source_file ~source_text ~fn ~checks ~positions ~globals =
          else None)
       line_nodes
   in
+  (* One graph per run covers the whole program -- procedures are clusters in it,
+     not separate CFGs -- so the index names that one entry rather than listing a
+     function whose own graph does not exist. *)
   ( { path = "index.xml"; content = index_xml ~source_file ~fns:[ fn ] }
-    :: { path = "nodes/globals.xml"; content = globals_xml ~globals ~blocks:exit_blocks }
+    :: { path = "nodes/globals.xml"; content = globals_xml ~blocks:globals }
     :: { path = Printf.sprintf "files/%s.xml" seg; content = file_xml ~source_text ~checks ~line_nodes ~dead_lines }
     :: { path = Printf.sprintf "dot/%s/%s.dot" seg fn; content = html_dot graph }
     :: (node_files
