@@ -9,7 +9,10 @@ text \<open>Regression coverage for the shape \<^const>\<open>DG_Framework.side_
   in that the routed context (\<open>cs_route k\<close>), the seed publication, and the callee-exit read
   all still live in \<open>Statement 3\<close>'s own equation, not in the call site's, and that the seed
   payload rides the \<^const>\<open>locals\<close> half of the published \<^type>\<open>dg_state\<close> while the shared
-  \<open>Global\<close> slot keeps its own \<^const>\<open>globs\<close> half. \<open>Call_String_Solver_Refinement_Seeded\<close>'s
+  \<open>Global\<close> slot keeps its own \<^const>\<open>globs\<close> half. The closed forms also pin the entered
+  callee frame down to one occurrence: the context, the seed payload and the callee-exit
+  key all read \<open>enter_local nest_S_st\<close> applied to the same caller state \<^emph>\<open>and\<close> the same
+  \<open>Global\<close> value. \<open>Call_String_Solver_Refinement_Seeded\<close>'s
   generic refinement proof never needs these closed forms -- they only guard against silent
   regressions in \<^const>\<open>routed_cmb_g\<close>/\<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close> generation
   itself.\<close>
@@ -39,12 +42,16 @@ lemma nest_2_eqs_statement3:
      = read_local_cont (Statement 2, ctx) (\<lambda>caller_state.
          read_global_cont Global (\<lambda>globals_state1.
            depend_on (Seed (FunctionEntry (STR ''g''))
-                   (cs_route 2 (Statement 2) ctx (locals caller_state)
+                   (cs_route 2 (Statement 2) ctx
+                     (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                        (locals caller_state) (globs globals_state1))
                      (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
              (DG (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
                    (locals caller_state) (globs globals_state1)) Bot)
              (read_local_cont (FunctionResult (STR ''g''),
-                     cs_route 2 (Statement 2) ctx (locals caller_state)
+                     cs_route 2 (Statement 2) ctx
+                       (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                          (locals caller_state) (globs globals_state1))
                        (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))
                  (\<lambda>callee_state.
                read_global_cont Global (\<lambda>globals_state2.
@@ -65,12 +72,16 @@ lemma nest_1_eqs_statement3:
      = read_local_cont (Statement 2, ctx) (\<lambda>caller_state.
          read_global_cont Global (\<lambda>globals_state1.
            depend_on (Seed (FunctionEntry (STR ''g''))
-                   (cs_route 1 (Statement 2) ctx (locals caller_state)
+                   (cs_route 1 (Statement 2) ctx
+                     (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                        (locals caller_state) (globs globals_state1))
                      (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])))
              (DG (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
                    (locals caller_state) (globs globals_state1)) Bot)
              (read_local_cont (FunctionResult (STR ''g''),
-                     cs_route 1 (Statement 2) ctx (locals caller_state)
+                     cs_route 1 (Statement 2) ctx
+                       (enter_local nest_S_st [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]
+                          (locals caller_state) (globs globals_state1))
                        (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')]))
                  (\<lambda>callee_state.
                read_global_cont Global (\<lambda>globals_state2.
