@@ -36,20 +36,17 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: "sign list")
 subsection \<open>The routed equation system's own route, generic per compiled program\<close>
 
 text \<open>
-  Sign's own executable-carrier route, mirroring Interval's \<open>entry_state_entered\<close>/
-  \<open>entry_state_route\<close>/\<open>entry_state_route_gen\<close> (\<open>Interval_Ctx_Entry_State_Sound\<close>) exactly, at
+  Sign's own executable-carrier route, mirroring Interval's \<open>entry_state_route\<close>/
+  \<open>entry_state_route_gen\<close> (\<open>Interval_Ctx_Entry_State_Sound\<close>) exactly, at
   Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
-  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
+  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
   \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions (rather than reached through an interpretation) so
   the equation-system definitions below need no \<open>exact\<close> premise to be stated, matching
-  every other routed instance's convention.
+  every other routed instance's convention. The routed generator enters the callee
+  frame before it routes, so the route itself only projects the formals out of the
+  state it is handed.
 \<close>
-
-definition sctx_entry_entered ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign exec_dg_st lifted" where
-  "sctx_entry_entered gs is_bot_pred d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_pred (sign_enter_st_for gs fs as) d)"
 
 definition sctx_entry_route ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign list" where

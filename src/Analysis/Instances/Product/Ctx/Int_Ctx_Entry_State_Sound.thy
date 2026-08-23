@@ -38,20 +38,16 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: "int_dom list")
 subsection \<open>The routed equation system's own route, generic per compiled program\<close>
 
 text \<open>
-  Int's own executable-carrier route, mirroring Sign's own \<open>sctx_entry_entered\<close>/
+  Int's own executable-carrier route, mirroring Sign's own
   \<open>sctx_entry_route\<close>/\<open>sctx_entry_route_gen\<close> exactly, at Int's own
   \<open>int_dom_enter_st_for mode gs\<close> instead of Sign's \<open>sign_enter_st_for gs\<close> -- this is
-  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
+  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
   \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions so the equation-system definitions below need no
-  \<open>exact\<close> premise to be stated, matching every other routed instance's convention.
+  \<open>exact\<close> premise to be stated, matching every other routed instance's convention. The
+  routed generator enters the callee frame before it routes, so the route itself only
+  projects the formals out of the state it is handed.
 \<close>
-
-definition ictx_entry_entered ::
-    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool)
-       \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> int_dom exec_dg_st lifted" where
-  "ictx_entry_entered mode gs is_bot_pred d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_pred (int_dom_enter_st_for mode gs fs as) d)"
 
 definition ictx_entry_route ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool)
