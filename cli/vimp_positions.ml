@@ -13,17 +13,43 @@
    Reductions complete after their parts, so what accumulates here is
    post-order over the command tree, not source order. Vimp_frontend pairs
    these by walking the parsed AST in that same order, structurally, rather
-   than relying on any claim about the order Menhir reduces in. *)
+   than relying on any claim about the order Menhir reduces in.
 
-let recorded : (int * int) list ref = ref []
+   Positions are grouped per definition rather than kept in one flat list.
+   Statement indices are allocated procedure by procedure with main compiled
+   last, whatever order the definitions appear in, so a flat list would pair
+   correctly only for sources that happen to end with main. A function_decl
+   reduces once its body is complete and carries its own name, which is
+   exactly the boundary needed. *)
 
-let reset () = recorded := []
+type pos = { line : int; column : int }
+
+(* The definition being parsed, in reduction order; reversed. *)
+let pending : pos list ref = ref []
+
+(* Completed definitions, most recent first. *)
+let closed : (string * pos list) list ref = ref []
+
+let reset () =
+  pending := [];
+  closed := []
 
 (* Returns its second argument so a semantic action can wrap its AST value
    without restructuring: `record $startpos (Assign (x, e))`. *)
 let record (p : Lexing.position) (c : 'a) : 'a =
-  recorded :=
-    (p.Lexing.pos_lnum, p.Lexing.pos_cnum - p.Lexing.pos_bol + 1) :: !recorded;
+  pending :=
+    { line = p.Lexing.pos_lnum; column = p.Lexing.pos_cnum - p.Lexing.pos_bol + 1 }
+    :: !pending;
   c
 
-let collected () : (int * int) list = List.rev !recorded
+(* Closes the current definition's bucket. Called from the function_decl
+   action, which reduces after the whole body and before the next definition
+   starts recording. *)
+let close (name : string) : unit =
+  closed := (name, List.rev !pending) :: !closed;
+  pending := []
+
+(* Definitions in source order: each function_decl reduces at its own closing
+   brace, so they close left to right even though the list production that
+   collects them is right-recursive. *)
+let definitions () : (string * pos list) list = List.rev !closed

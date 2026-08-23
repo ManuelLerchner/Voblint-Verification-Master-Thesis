@@ -49,9 +49,9 @@ export_code
   state_report_graph_snapshot_auto full_state_graph_snapshot_auto
   entry_state_report_graph_snapshot_auto entry_state_full_state_graph_snapshot_auto
   entry_state_ctx_graph_snapshot_auto cs_ctx_graph_snapshot_auto
-  state_report_export_auto full_state_export_auto full_state_checked_export_auto
+  state_report_export_auto full_state_export_auto full_state_checked_payload_auto
   entry_state_report_export_auto entry_state_full_state_export_auto
-  entry_state_full_state_checked_export_auto solver_checked_export_auto
+  entry_state_full_state_checked_export_auto solver_checked_payload_auto
   entry_state_ctx_export_auto cs_ctx_export_auto
   xn_id xn_label xn_kind xn_status xn_lines
   xe_src xe_dst xe_kind xe_label
@@ -69,7 +69,7 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
-  compile_program cfg_intra_list cfg_calls_list
+  compile_program cfg_intra_list cfg_calls_list prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec

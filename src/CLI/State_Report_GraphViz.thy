@@ -372,13 +372,92 @@ definition full_state_checked_node_annotation ::
                      Node_Annotation lbl status \<Rightarrow>
                        Some (Node_Annotation (join_gv_nl (lbl # lines)) status))))"
 
-definition full_state_checked_export_auto ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
-  "full_state_checked_export_auto kind p =
-     (let checks = map (\<lambda>(u, c, r, _, _). (u, c, r)) (analyse_with_state kind p)
-      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (full_state_checked_node_annotation (program_vars p)
-              (analyse_point_env_for kind p) checks))"
+text \<open>
+  One solve behind both views. A report browser needs a state at every point
+  and a verdict at every check, and those are two readings of one solved
+  table rather than two analyses: the state column and the verdict column
+  can only disagree if they came from different solves.
+
+  Taking the table as an argument is what makes that sharing survive code
+  generation. A body naming \<^const>\<open>analyse_sign_result\<close> once for the states
+  and once for the verdicts is two calls in the generated OCaml, hence two
+  solves of the same equation system; one argument used twice is one call.
+
+  \<open>bot_state\<close> is a parameter for the reason \<^locale>\<open>analysis_surface\<close> already
+  takes it as one: at an abstract state --- a function type --- the class
+  operation's code equation demands an executable \<^class>\<open>bot\<close> arity that a
+  definition polymorphic in \<open>'a\<close> cannot supply.
+\<close>
+
+definition checked_payload_of ::
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> 'a abs_state
+       \<Rightarrow> (unit, 'a abs_state) analysis_result \<Rightarrow> imp_prog
+       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list"
+where
+  "checked_payload_of into classify bot_state r p =
+     (let full = classify_checks_with_state (prog_cfg prog_main_name p)
+                   (\<lambda>v. case lookup_context r v () of
+                          Unreachable \<Rightarrow> (True, bot_state)
+                        | Reachable st \<Rightarrow> (False, st))
+                   (\<lambda>c (_, s). classify c s)
+      in (raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+            (full_state_checked_node_annotation (program_vars p) (project_env into r)
+               (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
+          map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full))"
+
+text \<open>
+  Dropping the two published columns leaves the plain check report. The
+  state-carrying traversal reads \<^const>\<open>Unreachable\<close> into a flag beside the state
+  and classifies from the state alone, so a verdict never depends on the extra
+  column --- which is what lets a payload's verdicts be compared against the
+  verdict-only dispatchers below rather than trusted to agree.
+\<close>
+
+lemma map_classify_checks_with_state_flagged:
+  "map ((\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> (\<lambda>(u, c, res, unr, st). (u, c, res, unr, h st)))
+     (classify_checks_with_state g
+        (\<lambda>v. case q v of Unreachable \<Rightarrow> (True, b) | Reachable st \<Rightarrow> (False, st))
+        (\<lambda>c (_, s). classify c s))
+   = classify_checks g (\<lambda>v. case q v of Unreachable \<Rightarrow> b | Reachable st \<Rightarrow> st) classify"
+  by (simp add: classify_checks_with_state_def classify_checks_def comp_def case_prod_beta
+      split: point_state.split)
+
+definition full_state_checked_payload_auto ::
+    "analysis_domain \<Rightarrow> imp_prog
+       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list"
+where
+  "full_state_checked_payload_auto kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          checked_payload_of SignValue sign_classify_check bot (analyse_sign_result p) p
+      | Interval_Analysis \<Rightarrow>
+          checked_payload_of IntervalValue interval_classify_check bot
+            (analyse_interval_td_result p) p
+      | Int_Analysis \<Rightarrow>
+          checked_payload_of IntDomValue int_classify_check bot (analyse_int_result p) p
+      | Parity_Analysis \<Rightarrow>
+          checked_payload_of ParityValue parity_classify_check bot
+            (analyse_parity_result p) p)"
+
+text \<open>
+  The report half is exactly \<^const>\<open>analyse_with_state\<close>'s answer, so sharing one
+  solve with the graph changes what the browser is shown from, not what it shows:
+  a reader's verdicts stay the CLI's verdicts, and no second classification
+  convention enters through the rendering path.
+\<close>
+
+lemma snd_full_state_checked_payload_auto [simp]:
+  "snd (full_state_checked_payload_auto kind p) = analyse_with_state kind p"
+  by (cases kind)
+     (simp_all add: full_state_checked_payload_auto_def checked_payload_of_def Let_def
+        analyse_sign_report_with_state_def analyse_sign_report_for_with_state_def
+        analyse_sign_result_def
+        analyse_interval_td_report_with_state_def analyse_interval_td_report_for_with_state_def
+        analyse_interval_td_result_def
+        analyse_int_report_with_state_def analyse_int_report_for_with_state_def
+        analyse_int_result_def
+        analyse_parity_report_with_state_def analyse_parity_report_for_with_state_def
+        analyse_parity_result_def)
 
 text \<open>
   One render is one solve. The \<open>[code]\<close> equations bind the result table once,
@@ -473,7 +552,7 @@ definition entry_state_full_state_export_auto ::
        (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
-  The entry-state counterpart of \<^const>\<open>full_state_checked_export_auto\<close>. Without it a
+  The entry-state counterpart of \<^const>\<open>full_state_checked_payload_auto\<close>. Without it a
   context-sensitive report shows every state and no verdict, which is the one column a
   reader opens a check node for.
 
@@ -507,56 +586,98 @@ text \<open>
   it is why a report browser had nothing to show for an explicit \<^typ>\<open>solver_choice\<close>.
 
   The states were never missing, only unpublished --- every one of those branches reads a
-  solved \<^type>\<open>analysis_result\<close> of its own. This is the same \<^const>\<open>lookup_context\<close> reading
-  \<^const>\<open>analyse_point_env_for\<close> already performs for the production defaults, taken over the
-  table the requested discipline actually solved, so what a reader sees is what the verdicts
-  were drawn from rather than a second solve under a different rule.
+  solved \<^type>\<open>analysis_result\<close> of its own. What a reader sees is therefore what the verdicts
+  were drawn from: \<^const>\<open>checked_payload_of\<close> reads the states and the verdicts off the one
+  table the requested discipline solved, rather than resolving under a second rule.
 
   The \<^const>\<open>None\<close> cases are exactly \<^const>\<open>analyse_with_solver\<close>'s: a domain with no widen
   instance has no warrowing table to read, and \<^const>\<open>valid_analysis_config\<close> rejects those
   combinations before a renderer runs.
+
+  Each \<^const>\<open>Some\<close> branch names the table of the corresponding
+  \<^locale>\<open>analysis_surface\<close> interpretation, which is the same pairing of table with
+  classifier that the domain's own check report goes through.
 \<close>
 
-definition solver_point_env_for ::
+definition solver_checked_payload_auto ::
     "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state point_state) option" where
-  "solver_point_env_for kind sc p =
+       \<Rightarrow> (export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list)
+          option"
+where
+  "solver_checked_payload_auto kind sc p =
      (case (kind, sc) of
         (Sign_Analysis, Solver_Join) \<Rightarrow>
-          Some (project_env SignValue (analyse_sign_result p))
+          Some (checked_payload_of SignValue sign_classify_check bot
+                  (analyse_sign_result p) p)
       | (Sign_Analysis, Solver_PerOrigin) \<Rightarrow>
-          Some (project_env SignValue (analyse_sign_result_per_origin p))
+          Some (checked_payload_of SignValue sign_classify_check bot
+                  (analyse_sign_result_per_origin p) p)
       | (Sign_Analysis, _) \<Rightarrow> None
       | (Interval_Analysis, Solver_Join) \<Rightarrow>
-          Some (project_env IntervalValue (analyse_interval_join_result p))
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_join_result p) p)
       | (Interval_Analysis, Solver_PerOrigin) \<Rightarrow>
-          Some (project_env IntervalValue (analyse_interval_per_origin_result p))
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_per_origin_result p) p)
       | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
-          Some (project_env IntervalValue (analyse_interval_td_result p))
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_td_result p) p)
       | (Interval_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
-          Some (project_env IntervalValue (analyse_interval_wpo_result p))
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_wpo_result p) p)
       | (Int_Analysis, Solver_Join) \<Rightarrow>
-          Some (project_env IntDomValue (analyse_int_join_result p))
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_join_result p) p)
       | (Int_Analysis, Solver_PerOrigin) \<Rightarrow>
-          Some (project_env IntDomValue (analyse_int_per_origin_result p))
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_per_origin_result p) p)
       | (Int_Analysis, Solver_Warrow) \<Rightarrow>
-          Some (project_env IntDomValue (analyse_int_result p))
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_result p) p)
       | (Int_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
-          Some (project_env IntDomValue (analyse_int_wpo_result p))
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_wpo_result p) p)
       | (Parity_Analysis, Solver_Join) \<Rightarrow>
-          Some (project_env ParityValue (analyse_parity_result p))
+          Some (checked_payload_of ParityValue parity_classify_check bot
+                  (analyse_parity_result p) p)
       | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
-          Some (project_env ParityValue (analyse_parity_result_per_origin p))
+          Some (checked_payload_of ParityValue parity_classify_check bot
+                  (analyse_parity_result_per_origin p) p)
       | (Parity_Analysis, _) \<Rightarrow> None)"
 
-definition solver_checked_export_auto ::
-    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog \<Rightarrow> export_graph option" where
-  "solver_checked_export_auto kind sc p =
-     (case (solver_point_env_for kind sc p, analyse_with_solver kind sc p) of
-        (Some env, Some report) \<Rightarrow>
-          Some (raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-                  (full_state_checked_node_annotation (program_vars p) env report))
-      | _ \<Rightarrow> None)"
+text \<open>
+  Every branch's verdict column is the one \<^const>\<open>analyse_with_solver\<close> already
+  answers with, and the \<^const>\<open>None\<close> branches coincide. Fourteen tables are named
+  here by hand, so the risk this rules out is concrete: a branch reading a
+  neighbouring discipline's table would still typecheck, still render, and
+  disagree with the text report only where the two disciplines happen to differ.
+\<close>
+
+lemma solver_checked_payload_verdicts:
+  "map_option (map (\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> snd)
+     (solver_checked_payload_auto kind sc p)
+   = analyse_with_solver kind sc p"
+  by (cases kind; cases sc)
+     (simp_all add: solver_checked_payload_auto_def checked_payload_of_def Let_def
+        map_classify_checks_with_state_flagged surface_unfold
+        analyse_sign_report_def analyse_sign_report_for_def
+        analyse_sign_report_per_origin_def
+        analyse_sign_result_def analyse_sign_result_per_origin_def
+        analyse_interval_report_def analyse_interval_report_for_def
+        analyse_interval_report_per_origin_def analyse_interval_report_per_origin_for_def
+        analyse_interval_td_report_def analyse_interval_td_report_for_def
+        analyse_interval_report_wpo_def analyse_interval_report_wpo_for_def
+        analyse_interval_join_result_def analyse_interval_per_origin_result_def
+        analyse_interval_td_result_def analyse_interval_wpo_result_def
+        analyse_int_report_join_def analyse_int_report_join_for_def
+        analyse_int_report_per_origin_def analyse_int_report_per_origin_for_def
+        analyse_int_report_def analyse_int_report_for_def
+        analyse_int_report_wpo_def analyse_int_report_wpo_for_def
+        analyse_int_join_result_def analyse_int_per_origin_result_def
+        analyse_int_result_def analyse_int_result_for_def analyse_int_wpo_result_def
+        analyse_parity_report_def analyse_parity_report_for_def
+        analyse_parity_report_per_origin_def analyse_parity_report_per_origin_for_def
+        analyse_parity_result_def analyse_parity_result_per_origin_def)
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,

@@ -142,7 +142,7 @@ let () =
     let source_text = source_text_of_program original in
     if mode = "--print-source" then (print_string source_text; exit 0);
     match Vimp_frontend.program "<generated>" source_text with
-    | reparsed, _ when mode = "--print-reprinted" ->
+    | reparsed, _, _ when mode = "--print-reprinted" ->
       (* Prints pretty(parse(pretty(original))) -- the print/parse/print
          invariant is implied by original = reparsed (pretty_string_of_program
          is a pure function, so structurally equal ASTs print identically),
@@ -151,7 +151,7 @@ let () =
          assumption) breaking silently. *)
       print_string (source_text_of_program reparsed);
       exit 0
-    | reparsed, _ ->
+    | reparsed, _, _ ->
       if original = reparsed then print_endline "OK"
       else begin
         Printf.printf "FAIL round-trip mismatch\n--- generated source ---\n%s\n--- end ---\n" source_text;

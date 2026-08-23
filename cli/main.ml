@@ -526,7 +526,7 @@ let () =
       s
     with Sys_error msg -> prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg); exit 1
   in
-  let prog, check_positions =
+  let prog, check_positions, stmt_positions =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
@@ -664,35 +664,51 @@ let () =
     run_contained ~timeout:!timeout (fun () ->
       if !html then
         let dir = !html_dir in
-        let graph_for k =
+        (* The graph and the source view's inline annotations are two readings
+           of one solved table, so the payload entry points hand back both from
+           a single solve rather than each re-solving the same equation system.
+           The context-sensitive renderers have no state-carrying report of
+           their own and contribute None -- which is what the config-driven
+           report answered for those configurations anyway. *)
+        let payload_for k =
           match !solver with
           | Some sc ->
-            (match Voblint_CLI.State_Report_GraphViz.solver_checked_export_auto k sc prog with
-             | Some g -> g
+            (match
+               Voblint_CLI.State_Report_GraphViz.solver_checked_payload_auto k sc prog
+             with
+             | Some (g, report) -> (g, Some report)
              | None ->
                (* valid_analysis_config already rejected the combinations with
                   no table behind them, so this is unreachable rather than a
                   fallback worth inventing a rendering for. *)
                failwith "unsupported --analysis/--solver combination")
           | None ->
-          if !context_kind = CK_CallString then
-            Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog
-          else if !context_graph = Expanded then
-            Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog
-          else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-            Voblint_CLI.State_Report_GraphViz.entry_state_full_state_checked_export_auto k prog
-          else Voblint_CLI.State_Report_GraphViz.full_state_checked_export_auto k prog
+            if !context_kind = CK_CallString then
+              (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog, None)
+            else if !context_graph = Expanded then
+              (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog, None)
+            else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
+              ( Voblint_CLI.State_Report_GraphViz
+                .entry_state_full_state_checked_export_auto k prog,
+                None )
+            else
+              let g, report =
+                Voblint_CLI.State_Report_GraphViz.full_state_checked_payload_auto k prog
+              in
+              (g, Some report)
         in
-        let graphs = List.map (fun k -> (analysis_label k, graph_for k)) !analyses in
+        let payloads = List.map (fun k -> (analysis_label k, payload_for k)) !analyses in
+        let graphs = List.map (fun (label, (g, _)) -> (label, g)) payloads in
         (* The source view's inline annotations need a verdict *and* a
            position, and only the parser knows positions -- it notes each
            __voblint_check token as it consumes one, in the same order this
-           report lists them. Unreachable checks are dropped, matching what
-           the text report does with those rows. *)
+           report lists them. The head of --analysis is the domain the config
+           resolved to, so its verdicts are the ones the text report would
+           print. Unreachable checks are dropped, matching what the text report
+           does with those rows. *)
         let checks =
-          match Voblint_CLI.Analyse_Dispatch.analyse_config_with_state cfg prog with
-          | None -> []
-          | Some report ->
+          match payloads with
+          | (_, (_, Some report)) :: _ ->
             List.filter_map
               (fun ((_, (cond, (verdict, (unreachable, _)))), (line, column)) ->
                  if unreachable then None
@@ -706,10 +722,12 @@ let () =
                            (Voblint_CLI.Core.string_of_exp
                               (Voblint_CLI.Core.nat_of_integer Z.zero) cond) })
               (List.combine report check_positions)
+          | _ -> []
         in
         let files, nodes, dead =
           Html_report.emit ~graphs ~source_file:(Filename.basename path) ~source_text:src
-            ~fn:"main" ~checks
+            ~fn:"main" ~checks ~positions:stmt_positions
+            ~globals:(Voblint_CLI.Core.declared_global_vars prog)
         in
         List.iter (fun (f : Html_report.file) -> write_report_file dir f) files;
         Ok_report

@@ -282,7 +282,15 @@ function_decl_star:
 
 
 def gen_named_rule(prod: dict) -> str:
-    return f"{prod['name']}:\n  | {rhs_pattern(prod['rhs'])}\n      {{ {render_action(prod)} }}"
+    action = render_action(prod)
+    # A definition boundary. Statement indices are allocated procedure by
+    # procedure with main compiled last, whatever order the definitions appear
+    # in, so positions have to be grouped by the definition they came from
+    # rather than left in one flat list. This production reduces at its own
+    # closing brace, with its name in scope.
+    if prod["name"] == "function_decl":
+        action = f"close_definition ({action})"
+    return f"{prod['name']}:\n  | {rhs_pattern(prod['rhs'])}\n      {{ {action} }}"
 
 
 def gen_parser(g: dict) -> str:
@@ -319,6 +327,13 @@ def gen_parser(g: dict) -> str:
    reach it too. See that module for why positions are taken here rather than
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record
+
+(* A function_decl's action builds (name, formals, body); closing the bucket
+   here keeps the name and its positions together without a second traversal. *)
+let close_definition ((name, formals, body) as decl) =
+  Vimp_positions.close name;
+  ignore formals; ignore body;
+  decl
 %}}
 
 {token_decls(g)}

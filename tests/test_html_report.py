@@ -32,6 +32,12 @@ FIXTURE = (
 )
 
 
+# A declared global, so the globals pane has something to show.
+GLOBALS_FIXTURE = (
+    REPO_ROOT / "tests/regression/04-globals/precision/04-global_written_constant.vimp"
+)
+
+
 @pytest.fixture(scope="module")
 def report(tmp_path_factory):
     if not VOBLINT.exists():
@@ -179,6 +185,184 @@ def test_warning_line_matches_the_check(report):
     assert "__voblint_check" in source[line - 1], (
         f"warn1 points at line {line}: {source[line - 1]!r}"
     )
+
+
+def test_source_lines_link_to_their_cfg_nodes(report):
+    """ns is what makes the listing navigable rather than just pretty-printed.
+
+    Every executable line should name the nodes compiled from it, and the
+    mapping should be exact: file.xsl splices ns into select_line(), so a line
+    pointing at the wrong node sends the reader to the wrong state rather than
+    failing visibly.
+    """
+    src = next((report / "files").glob("*.xml")).read_text()
+    linked = re.findall(r'<ln nr="(\d+)" ns="\[&quot;([^&]+)&quot;', src)
+    assert linked, "no source line references a CFG node"
+
+    ids = {n.stem for n in (report / "nodes").glob("*.xml")}
+    for nr, node_id in linked:
+        assert node_id in ids, f"line {nr} references {node_id}, which has no document"
+
+    # The check's own line must reach the node carrying that check's verdict.
+    source = FIXTURE.read_text().splitlines()
+    check_lines = [
+        str(i + 1) for i, l in enumerate(source) if "__voblint_check" in l
+    ]
+    linked_lines = {nr for nr, _ in linked}
+    for nr in check_lines:
+        assert nr in linked_lines, f"check on line {nr} links to no node"
+
+
+def test_dead_lines_are_marked_dead(report):
+    """ded greys a line out, so it has to mean 'no execution reaches this'.
+
+    A line with no node behind it -- a brace, a comment, a blank -- is not dead
+    code, and marking it so would grey out most of the file.
+    """
+    src = next((report / "files").glob("*.xml")).read_text()
+    entries = re.findall(r'<ln nr="(\d+)" ns="(\[[^"]*\])"[^>]*ded="(true|false)"', src)
+    assert entries, "no source lines emitted"
+
+    dead = [nr for nr, _, d in entries if d == "true"]
+    assert dead, "the fixture has an unreachable branch but no line is marked dead"
+
+    for nr, ns, d in entries:
+        if d == "true":
+            assert ns != "[]", f"line {nr} marked dead but has no node behind it"
+
+
+def test_node_documents_carry_a_source_position(report):
+    """A node document with line=0 renders a location goblint does not have.
+
+    Not every program point has a command behind it. Entry and exit nodes have
+    none, and compile_proc reserves one epilogue index per function that falls
+    through -- a point node whose only edge is the implicit return. Those
+    report zero, which is correct; what would be wrong is a node borrowing a
+    neighbour's line, so the check is that every position present is a real one
+    and that the checks in particular are placed exactly.
+    """
+    source = FIXTURE.read_text().splitlines()
+    positioned = 0
+    for doc in (report / "nodes").glob("*.xml"):
+        if doc.name == "globals.xml":
+            continue
+        line = int(ET.parse(doc).getroot().find("call").get("line"))
+        if line == 0:
+            continue
+        assert "_pp" in doc.stem, f"{doc.name} has no command but reports line {line}"
+        assert line <= len(source), f"{doc.name} points past the end of the file"
+        positioned += 1
+    assert positioned, "no point node carried a position"
+
+    # A check always compiles to a program point, so every check line must be
+    # one some node reports -- including a check in unreachable code, whose
+    # node renders as dead but is still the node that line belongs to.
+    placed = {
+        int(ET.parse(doc).getroot().find("call").get("line"))
+        for doc in (report / "nodes").glob("*_pp*.xml")
+    }
+    for i, text in enumerate(source):
+        if "__voblint_check" in text:
+            assert i + 1 in placed, f"no node carries the check on line {i + 1}"
+
+
+def test_explicit_solver_still_annotates_the_source(tmp_path):
+    """An explicit --solver used to render states with no findings beside them.
+
+    The graph and the inline annotations are two readings of one solved table,
+    and for a chosen discipline that is the table the discipline produced. The
+    verdicts were never missing, only unpublished: before, the source view fell
+    back to no annotations at all whenever --solver named anything but the
+    domain's default.
+    """
+    out = tmp_path / "result"
+    proc = subprocess.run(
+        [
+            str(VOBLINT),
+            "--analysis",
+            "interval",
+            "--solver",
+            "per-origin",
+            "--html-out",
+            str(out),
+            str(FIXTURE),
+        ],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stderr
+    warns = sorted((out / "warn").glob("warn*.xml"))
+    assert warns, "an explicit --solver emitted no warning documents"
+    line = int(ET.parse(warns[0]).getroot().find("text").get("line"))
+    source = FIXTURE.read_text().splitlines()
+    assert "__voblint_check" in source[line - 1], (
+        f"warn1 points at line {line}: {source[line - 1]!r}"
+    )
+
+
+def _run(tmp_path, *args):
+    out = tmp_path / "result"
+    proc = subprocess.run(
+        [str(VOBLINT), *args, "--html-out", str(out)], capture_output=True, text=True
+    )
+    assert proc.returncode == 0, proc.stderr
+    return out
+
+
+def test_globals_pane_lists_the_declared_globals(tmp_path):
+    """The globals button opened an empty pane.
+
+    Not because there was nothing to show -- a global's value is part of every
+    program point's state -- but because the document was a hardcoded empty
+    map, and in a shape globals.xsl does not read at that.
+    """
+    out = _run(tmp_path, "--analysis", "interval", str(GLOBALS_FIXTURE))
+    root = ET.parse(out / "nodes" / "globals.xml").getroot()
+    assert root.tag == "globs"
+
+    rows = {
+        g.find("key").text: [a.get("name") for a in g.findall("analysis")]
+        for g in root.findall("glob")
+    }
+    assert "g" in rows, f"declared global missing from the pane: {rows}"
+    assert rows["g"] == ["interval"]
+
+    # The value is the one the analysis actually reached, not a placeholder.
+    value = root.find("glob").find("analysis").find("value")
+    assert (value.text or "").strip(), "global row carries no value"
+
+
+def test_globals_document_is_in_the_shape_the_stylesheet_reads(tmp_path):
+    """globals.xsl walks globs/glob/key, not globs/analysis/value/map.
+
+    A document in the node documents' map shape renders as a blank pane rather
+    than as an error, so nothing downstream fails when this drifts -- which is
+    exactly how the pane came to be empty in the first place.
+    """
+    out = _run(tmp_path, "--analysis", "interval", str(GLOBALS_FIXTURE))
+    root = ET.parse(out / "nodes" / "globals.xml").getroot()
+    assert root.findall("glob"), "no <glob> rows: the stylesheet would render nothing"
+    assert not root.findall("analysis"), (
+        "<analysis> directly under <globs> is the node-document shape, "
+        "which globals.xsl does not read"
+    )
+    for g in root.findall("glob"):
+        assert g.find("key") is not None, "a <glob> with no <key> renders nameless"
+        assert g.findall("analysis"), "a <glob> with no <analysis> renders no value"
+
+
+def test_globals_pane_is_empty_when_the_program_cannot_terminate(tmp_path):
+    """The pane reports globals where the program ends.
+
+    If nothing reaches the exit there is no such state, and showing the last
+    value the solver happened to hold would assert something no execution
+    performs.
+    """
+    src = tmp_path / "noexit.vimp"
+    src.write_text("global g;\n\nvoid main() {\n  g := 1;\n  while (0 < 1) {\n    g := g + 1\n  }\n}\n")
+    out = _run(tmp_path, "--analysis", "interval", "--timeout", "60", str(src))
+    root = ET.parse(out / "nodes" / "globals.xml").getroot()
+    assert root.findall("glob") == [], "a non-terminating program reported a final global"
 
 
 def test_several_domains_land_in_one_node_document(tmp_path):

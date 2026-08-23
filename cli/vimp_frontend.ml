@@ -20,22 +20,41 @@ let position_of (lexbuf : Lexing.lexbuf) : int * int =
   let pos = Lexing.lexeme_start_p lexbuf in
   (pos.Lexing.pos_lnum, pos.Lexing.pos_cnum - pos.Lexing.pos_bol + 1)
 
-(* Every command that owns a Statement index, with the source position the
-   parser recorded for it, in the order compile allocates those indices.
+(* Which Statement index each recorded source position belongs to.
 
-   The parser records positions bottom-up (reductions complete after their
-   parts), so what it hands back is post-order over the command tree. Pairing
-   is done by walking the parsed AST the same way -- structurally, not by
-   assuming anything about token order -- and the caller then reads them in
-   whatever order it needs. *)
-let rec com_post_order (c : Voblint_CLI.Core.com) : Voblint_CLI.Core.com list =
-  match c with
-  | Voblint_CLI.Core.Seq (c1, c2) -> com_post_order c1 @ com_post_order c2
-  | Voblint_CLI.Core.If (_, c1, c2) -> com_post_order c1 @ com_post_order c2 @ [ c ]
-  | Voblint_CLI.Core.While (_, body) -> com_post_order body @ [ c ]
-  | _ -> [ c ]
+   Both sides of this pairing are keyed by definition, and neither could be a
+   flat list. The parser records bottom-up, so its positions come out in
+   post-order over each body; compile lays indices out procedure by procedure
+   with main last, whatever order the source wrote the definitions in.
+   prog_stmt_post_order (Compile_Invariants) answers both at once -- per
+   definition, that body's indices in the order a bottom-up parser finishes
+   them -- so all this does is zip.
 
-let program (file : string) (src : string) : unit Voblint_CLI.Core.imp_prog_ext * (int * int) list =
+   A definition whose two lists disagree in length contributes nothing rather
+   than a shifted map: every position after the mismatch would be attributed to
+   the wrong command, and a wrong line is worse than a missing one. *)
+let stmt_positions (prog : unit Voblint_CLI.Core.imp_prog_ext) : (int * (int * int)) list =
+  let recorded = Vimp_positions.definitions () in
+  let index_of = function
+    | Voblint_CLI.Core.Statement k -> Some (Z.to_int (Voblint_CLI.Core.integer_of_nat k))
+    | _ -> None
+  in
+  List.concat_map
+    (fun (name, nodes) ->
+       match List.assoc_opt name recorded with
+       | Some ps when List.length ps = List.length nodes ->
+         List.concat
+           (List.map2
+              (fun node (p : Vimp_positions.pos) ->
+                 match index_of node with
+                 | Some i -> [ (i, (p.Vimp_positions.line, p.Vimp_positions.column)) ]
+                 | None -> [])
+              nodes ps)
+       | _ -> [])
+    (Voblint_CLI.Core.prog_stmt_post_order prog)
+
+let program (file : string) (src : string) :
+  unit Voblint_CLI.Core.imp_prog_ext * (int * int) list * (int * (int * int)) list =
   let lexbuf = Lexing.from_string src in
   Vimp_positions.reset ();
   let check_positions = ref [] in
@@ -46,7 +65,7 @@ let program (file : string) (src : string) : unit Voblint_CLI.Core.imp_prog_ext 
   in
   try
     let prog = Vimp_parser.program tracked_token lexbuf in
-    (prog, List.rev !check_positions)
+    (prog, List.rev !check_positions, stmt_positions prog)
   with
   | Vimp_lexer.Lex_error { line; col; msg } -> raise (Parse_error { file; line; col; msg })
   | Vimp_parser.Error ->

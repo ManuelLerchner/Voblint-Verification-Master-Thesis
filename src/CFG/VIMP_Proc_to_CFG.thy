@@ -232,6 +232,69 @@ qed auto
 lemma distinct_com_stmt_order: "distinct (com_stmt_order n c)"
   by (induction c arbitrary: n) (auto simp: set_com_stmt_order)
 
+text \<open>
+  The same indices in the order a bottom-up parser produces them. A front end that
+  records one position per command as it reduces cannot emit \<^const>\<open>com_stmt_order\<close>'s
+  order: a reduction completes only once its whole right-hand side has been read, so
+  an \<open>if\<close> is finished after both its branches and a loop after its body. Every clause
+  here allocates exactly what its \<^const>\<open>com_stmt_order\<close> counterpart allocates and
+  differs only in where the guard's own index is listed.
+\<close>
+
+fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
+  "com_stmt_post_order n SKIP = [Statement n]"
+| "com_stmt_post_order n (Assign x a) = [Statement n]"
+| "com_stmt_post_order n (Check c) = [Statement n]"
+| "com_stmt_post_order n (Seq c1 c2) =
+     com_stmt_post_order n c1 @ com_stmt_post_order (n + csize c1) c2"
+| "com_stmt_post_order n (If b c1 c2) =
+     com_stmt_post_order (Suc n) c1 @ com_stmt_post_order (Suc n + csize c1) c2
+       @ [Statement n]"
+| "com_stmt_post_order n (While b c) = com_stmt_post_order (Suc n) c @ [Statement n]"
+| "com_stmt_post_order n (Call dst q actuals) = [Statement n]"
+| "com_stmt_post_order n (Return e) = [Statement n]"
+| "com_stmt_post_order n Restore = [Statement n]"
+| "com_stmt_post_order n Unwind = [Statement n]"
+
+text \<open>
+  The two orders enumerate the same indices: the same count, the same range, and no
+  repetition in either. Together those make each a permutation of the other, which is
+  what pairing by position needs --- a clause that dropped one index and repeated
+  another would misalign every position after it while leaving the list's length
+  unchanged.
+\<close>
+
+lemma length_com_stmt_post_order [simp]: "length (com_stmt_post_order n c) = csize c"
+  by (induction c arbitrary: n) auto
+
+lemma set_com_stmt_post_order:
+  "set (com_stmt_post_order n c) = Statement ` {n ..< n + csize c}"
+proof (induction c arbitrary: n)
+  case (Seq c1 c2)
+  have "{n ..< n + csize c1} \<union> {n + csize c1 ..< n + csize c1 + csize c2}
+          = {n ..< n + (csize c1 + csize c2)}"
+    by auto
+  then show ?case using Seq by (simp flip: image_Un add: add.assoc)
+next
+  case (If b c1 c2)
+  have "insert n ({Suc n ..< Suc (n + csize c1)}
+          \<union> {Suc (n + csize c1) ..< Suc (n + csize c1 + csize c2)})
+          = {n ..< Suc (n + (csize c1 + csize c2))}"
+    by auto
+  then show ?case using If by (auto simp flip: image_Un image_insert)
+next
+  case (While b c)
+  have "insert n {Suc n ..< Suc (n + csize c)} = {n ..< Suc (n + csize c)}" by auto
+  then show ?case using While by (auto simp flip: image_insert)
+qed auto
+
+lemma set_com_stmt_post_order_eq:
+  "set (com_stmt_post_order n c) = set (com_stmt_order n c)"
+  by (simp add: set_com_stmt_order set_com_stmt_post_order)
+
+lemma distinct_com_stmt_post_order: "distinct (com_stmt_post_order n c)"
+  by (induction c arbitrary: n) (auto simp: set_com_stmt_post_order)
+
 subsection \<open>Procedure and program compilation\<close>
 
 text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> and \<open>FunctionResult p\<close>.  The body

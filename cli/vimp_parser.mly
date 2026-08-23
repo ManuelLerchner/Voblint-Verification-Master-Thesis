@@ -6,6 +6,13 @@
    reach it too. See that module for why positions are taken here rather than
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record
+
+(* A function_decl's action builds (name, formals, body); closing the bucket
+   here keeps the name and its positions together without a second traversal. *)
+let close_definition ((name, formals, body) as decl) =
+  Vimp_positions.close name;
+  ignore formals; ignore body;
+  decl
 %}
 
 %token <string> IDENT
@@ -155,7 +162,7 @@ globals_decl:
 (* function_decl: *)
 function_decl:
   | v0 = VOID v1 = IDENT v2 = LPAREN v3 = formals v4 = RPAREN v5 = LBRACE v6 = stmts_opt v7 = RBRACE
-      { (v1, v3, v6) }
+      { close_definition ((v1, v3, v6)) }
 (* program: *)
 program:
   | g = globals_opt fs = function_decl_star EOF
