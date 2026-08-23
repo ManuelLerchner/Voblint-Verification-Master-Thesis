@@ -29,36 +29,63 @@
 //     f_pp0_ctx1
 //     f_entry_f_ctx1
 //     f_result_f_ctx1
+//   cluster_ctx_2:
+//     f_pp0_ctx2
+//     f_entry_f_ctx2
+//     f_result_f_ctx2
 //
 // nodes:
 //   main_pp5_ctx0: pp5
+//       x=[6,6]
+//       y=[20,20]
 //       check y==20
-//       x=[6,6]
-//       y=[20,20]
 //   main_pp6_ctx0: pp6
-//   main_result_main_ctx0: exit_main
-//   f_pp0_ctx1: pp0
-//   main_entry_main_ctx0: entry_main
-//   main_pp2_ctx0: pp2
-//   main_pp3_ctx0: pp3
-//   f_entry_f_ctx1: entry_f
-//   main_pp4_ctx0: pp4
-//       check x==6
 //       x=[6,6]
 //       y=[20,20]
+//   main_result_main_ctx0: exit_main
+//       x=[6,6]
+//       y=[20,20]
+//   f_pp0_ctx1: pp0
+//       p=[10,10]
+//   f_pp0_ctx2: pp0
+//       p=[3,3]
+//   main_entry_main_ctx0: entry_main
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   main_pp2_ctx0: pp2
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   main_pp3_ctx0: pp3
+//       x=[6,6]
+//       y=[-inf,+inf]
+//   f_entry_f_ctx1: entry_f
+//       p=[10,10]
+//   f_entry_f_ctx2: entry_f
+//       p=[3,3]
+//   main_pp4_ctx0: pp4
+//       x=[6,6]
+//       y=[20,20]
+//       check x==6
 //   f_result_f_ctx1: exit_f
+//       p=[10,10]
+//       ret=[20,20]
+//   f_result_f_ctx2: exit_f
+//       p=[3,3]
+//       ret=[6,6]
 //
 // edges:
 //   main_pp5_ctx0 -> main_pp6_ctx0: check(y==20)
 //   main_pp6_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx1 -> f_result_f_ctx1: return p+p
+//   f_pp0_ctx2 -> f_result_f_ctx2: return p+p
 //   main_entry_main_ctx0 -> main_pp2_ctx0: nop
 //   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   f_entry_f_ctx2 -> f_pp0_ctx2: nop
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(x==6)
-//   main_pp2_ctx0 -> f_entry_f_ctx1: enter f(3)
+//   main_pp2_ctx0 -> f_entry_f_ctx2: enter f(3)
 //   main_pp3_ctx0 -> f_entry_f_ctx1: enter f(10)
-//   f_result_f_ctx1 -> main_pp3_ctx0: combine x
-//   f_result_f_ctx1 -> main_pp4_ctx0: combine y
+//   f_result_f_ctx2 -> main_pp3_ctx0: combine x := #ret
+//   f_result_f_ctx1 -> main_pp4_ctx0: combine y := #ret
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return f
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
