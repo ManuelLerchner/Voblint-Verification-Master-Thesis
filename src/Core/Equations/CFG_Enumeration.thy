@@ -242,6 +242,60 @@ lemma return_call_action_list_call_info:
   unfolding return_call_action_list_def return_call_list_def
   by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
 
+
+subsection \<open>Call sites, named by callee procedure\<close>
+
+text \<open>
+  \<^const>\<open>return_call_action_list\<close> names a callee by the node its result is read at.
+  That node is derived data: the enumeration built it by mapping \<open>FunctionEntry p\<close> to
+  \<open>FunctionResult p\<close> in the first place. Naming the callee by its procedure instead
+  keeps the call site's own data (where the call is, what it passes, where it returns to)
+  separate from anything a resolver would decide, which is what lets the callee stop
+  being fixed at enumeration time. The result node is then \<open>FunctionResult p\<close> at the
+  point of use.
+\<close>
+
+definition call_target_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) list" where
+  "call_target_list g v =
+     map (\<lambda>(c, ca, ce, k). (c, ca, case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+       (filter (\<lambda>(c, ca, ce, k).
+          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
+         (cfg_calls_list g))"
+
+text \<open>The two enumerations carry the same call sites in the same order; only the callee's
+  spelling differs.\<close>
+
+lemma return_call_action_list_eq_call_target_list:
+  "return_call_action_list g v
+     = map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
+  unfolding return_call_action_list_def call_target_list_def
+  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
+
+lemma call_target_list_eq_return_call_action_list:
+  "call_target_list g v
+     = map (\<lambda>(c, ca, ex). (c, ca, result_proc ex)) (return_call_action_list g v)"
+  unfolding return_call_action_list_def call_target_list_def
+  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
+
+text \<open>Membership, in the form a call-site obligation states it: the enumeration lists
+  exactly the call edges of \<open>g\<close> whose continuation is \<open>v\<close>, each paired with the
+  procedure its callee entry names.\<close>
+
+lemma set_call_target_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_target_list g v)
+           = {(c, ca, p) | c ca p. (c, ca, FunctionEntry p, v) \<in> calls g}"
+  unfolding call_target_list_def using set_cfg_calls_list[OF assms]
+  by (auto simp: image_iff split: cfg_node.splits)
+
+lemma call_target_list_iff:
+  assumes "finite (calls g)"
+  shows "(c, ca, p) \<in> set (call_target_list g v)
+           \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
+  by (simp add: set_call_target_list[OF assms])
+
+
 subsection \<open>Full node enumeration\<close>
 
 text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the intra endpoints, the call-site/
