@@ -110,12 +110,12 @@ text \<open>
 
 theorem pp_abs:
   assumes pp: "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. gk0) route_st
+     (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
         (routed_cmb_g_contribution spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
         g spec_st bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0) route_abs
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_abs
         (routed_cmb_g spec_abs gk0 seed_key) (routed_extra_g seed_key gk0)
         g spec_abs
         (map_lift (fun_of_resolved_st_q_for gs) bot0)
@@ -127,7 +127,7 @@ theorem pp_abs:
      vars"
 proof -
   have pp': "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0) route_st
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_st
           (routed_cmb_g spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
           g spec_st bot0 s0d s0g)
        x0 sigma_st vars"
@@ -169,7 +169,7 @@ proof -
            \<Longrightarrow> globs (traverse_rhs x \<tau>) = bot"
       by (rule routed_extra_g_local_only)
     show "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. gk0) route_st
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
           (routed_cmb_g_contribution spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
           g spec_st bot0 s0d s0g)
        x0 sigma_st vars"
@@ -177,7 +177,7 @@ proof -
   qed
   show ?thesis
     apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where gs = gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. gk0"
+          [where gs = gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. gk0"
              and route_st = route_st and route_abs = route_abs
              and cmb_st = "routed_cmb_g spec_st gk0 seed_key"
              and cmb_abs = "routed_cmb_g spec_abs gk0 seed_key"

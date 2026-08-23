@@ -288,14 +288,21 @@ proof -
   finally show ?thesis .
 qed
 
-lemma routed_seed_publish_bound_local:
+text \<open>
+  The published callee-entry state is bounded by the seed unknown itself, and that
+  bound needs only the continuation's coverage: the seed is written by the combine
+  tree living at the continuation, so nothing about the callee entry's own unknown
+  enters the argument.  \<open>routed_seed_publish_bound_local\<close> adds the one further hop
+  from the seed to the callee-entry local, which is where the callee's own entry
+  equation reads it back, and that hop is what needs the callee entry covered.
+\<close>
+
+lemma routed_seed_publish_bound_seed:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and covV_cont: "(cont, ctx) \<in> vars"
-    and covV: "(FunctionEntry p,
-                 route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)) \<in> vars"
   shows "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-         \<le> locals (sigma (Inl (FunctionEntry p,
-               route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))))"
+         \<le> locals (sigma (Inr (seed_key (FunctionEntry p)
+               (route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)))))"
 proof -
   let ?ctx' = "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
@@ -315,28 +322,30 @@ proof -
     using ce by (simp add: set_return_call_action_list[OF finC] return_call_actions_iff)
   have mem: "?t \<in> set (trees cont ctx)"
     unfolding routed_cmb_g_def Let_def using ret by (force intro: rev_image_eqI)
-  have snd_bound:
-    "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-       \<le> locals (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
-  proof -
-    have "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
-        = locals (sides_of_rhs ?t sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
-      by (simp add: seed_key_ne_gk0)
-    also have "\<dots> \<le> locals (sides_of_rhs
-        (side_rhs_fold_dg (acc0 cont) (trees cont ctx)) sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
-      by (rule le_dg_state_localsD[OF sides_le_side_rhs_fold_dg[OF mem]])
-    also have "\<dots> \<le> locals (sides_of_rhs (Gen (cont, ctx)) sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
-      by (rule le_dg_state_localsD[OF sides_fold_le_Gen])
-    also have "\<dots> \<le> locals (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
-      using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr (seed_key (FunctionEntry p) ?ctx')"]
-      by (rule le_dg_state_localsD)
-    finally show ?thesis .
-  qed
-  have seed_le: "locals (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))
-      \<le> locals (sigma (Inl (FunctionEntry p, ?ctx')))"
-    by (rule routed_seed_read_bound[OF covV])
-  show ?thesis using order_trans[OF snd_bound seed_le] .
+  have "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+      = locals (sides_of_rhs ?t sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+    by (simp add: seed_key_ne_gk0)
+  also have "\<dots> \<le> locals (sides_of_rhs
+      (side_rhs_fold_dg (acc0 cont) (trees cont ctx)) sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+    by (rule le_dg_state_localsD[OF sides_le_side_rhs_fold_dg[OF mem]])
+  also have "\<dots> \<le> locals (sides_of_rhs (Gen (cont, ctx)) sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+    by (rule le_dg_state_localsD[OF sides_fold_le_Gen])
+  also have "\<dots> \<le> locals (sigma (Inr (seed_key (FunctionEntry p) ?ctx')))"
+    using pp_sides_bound[OF covV_cont, THEN le_funD, of "Inr (seed_key (FunctionEntry p) ?ctx')"]
+    by (rule le_dg_state_localsD)
+  finally show ?thesis .
 qed
+
+lemma routed_seed_publish_bound_local:
+  assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+    and covV_cont: "(cont, ctx) \<in> vars"
+    and covV: "(FunctionEntry p,
+                 route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)) \<in> vars"
+  shows "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+         \<le> locals (sigma (Inl (FunctionEntry p,
+               route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))))"
+  by (rule order_trans[OF routed_seed_publish_bound_seed[OF ce covV_cont]
+                          routed_seed_read_bound[OF covV]])
 
 lemma routed_seed_publish_bound_global:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"

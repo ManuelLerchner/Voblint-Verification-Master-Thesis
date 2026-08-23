@@ -6580,24 +6580,27 @@ and int_check_false
         int_eq_true (aval_int_dom Refine_Fixpoint (Times (v, va)) d)
           (aval_int_dom Refine_Fixpoint (N zero_inta) d);;
 
+let rec read_at_cont x0 k = match x0, k with Inl x, k -> QueryL (x, k)
+                       | Inr y, k -> QueryG (y, k);;
+
 let rec seqcomp_tree
   x0 k = match x0, k with Answer v, k -> k v
     | QueryL (u, f), k -> QueryL (u, (fun d -> seqcomp_tree (f d) k))
     | QueryG (g, f), k -> QueryG (g, (fun d -> seqcomp_tree (f d) k))
     | Side (g, v, t), k -> Side (g, v, seqcomp_tree t k);;
 
-let rec dg_edge_contribution_tree _A _B
-  step u =
-    seqcomp_tree (QueryL (u, (fun a -> Answer a)))
+let rec dg_edge_contribution_tree_at _A _B
+  step src gk =
+    seqcomp_tree (read_at_cont src (fun a -> Answer a))
       (fun d ->
-        seqcomp_tree (QueryG ((), (fun a -> Answer a)))
+        seqcomp_tree (QueryG (gk, (fun a -> Answer a)))
           (fun g ->
             Answer
               (DG (snd (step (locals d) (globs g)),
                     fst (step (locals d) (globs g))))));;
 
-let rec apply_dg_spec_contribution _A _B
-  s a u = dg_edge_contribution_tree _A _B (dg_spec_step s a) u;;
+let rec apply_dg_spec_contribution_at _A _B
+  s a src gk = dg_edge_contribution_tree_at _A _B (dg_spec_step s a) src gk;;
 
 let rec part _B
   f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
@@ -6661,18 +6664,6 @@ let rec fold_rhs_trees _A
                 acc res)
               ts);;
 
-let rec map_ltree
-  h x1 = match h, x1 with h, Answer d -> Answer d
-    | h, QueryL (y, f) -> QueryL (h y, (fun d -> map_ltree h (f d)))
-    | h, QueryG (y, f) -> QueryG (y, (fun d -> map_ltree h (f d)))
-    | h, Side (y, d, t) -> Side (y, d, map_ltree h t);;
-
-let rec map_gtree
-  r x1 = match r, x1 with r, Answer d -> Answer d
-    | r, QueryL (y, f) -> QueryL (y, (fun d -> map_gtree r (f d)))
-    | r, QueryG (y, f) -> QueryG (r y, (fun d -> map_gtree r (f d)))
-    | r, Side (y, d, t) -> Side (r y, d, map_gtree r t);;
-
 let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
 
 let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
@@ -6687,11 +6678,9 @@ let rec side_cfg_T_eff_keyed_seed_dg_buffered _B _C _D
                      bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
          in
        let intra =
-         map (fun (u, a) ->
-               map_gtree (fun _ -> gkey c)
-                 (map_ltree (fun w -> (w, c))
-                   (apply_dg_spec_contribution _C _D s a u)))
-           (pred_sel g v)
+         map (fun (src, a) ->
+               apply_dg_spec_contribution_at _C _D s a src (gkey c))
+           (pred_sel g v c)
          in
        let comb =
          map (fun (cc, (ca, a)) -> cmb_c route c ca cc a)
@@ -6777,6 +6766,9 @@ let rec intra_predecessor_list
             (if (let (_, (_, w)) = x in equal_cfg_nodea w v)
               then Some (let (u, (a, _)) = x in (u, a)) else None))
           (cfg_intra_list g);;
+
+let rec intra_predecessor_addr_list
+  g v ctx = map (fun (u, a) -> (Inl (u, ctx), a)) (intra_predecessor_list g v);;
 
 let rec route_unit u ctx d ca = ();;
 
@@ -7225,7 +7217,7 @@ let rec ictx_eqs
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
             int_dom_record_lattice_unit)))
-      intra_predecessor_list (fun _ -> Global) route_unit
+      intra_predecessor_addr_list (fun _ -> Global) route_unit
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
@@ -7602,7 +7594,7 @@ let rec sctx_eqs
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
-      intra_predecessor_list (fun _ -> Globala) route_unit
+      intra_predecessor_addr_list (fun _ -> Globala) route_unit
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
@@ -7983,7 +7975,7 @@ let rec pctx_eqs
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
-      intra_predecessor_list (fun _ -> Globalb) route_unit
+      intra_predecessor_addr_list (fun _ -> Globalb) route_unit
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_parity))
@@ -9154,7 +9146,7 @@ let rec ictx_eqsa
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
-      intra_predecessor_list (fun _ -> Globalc) route_unit
+      intra_predecessor_addr_list (fun _ -> Globalc) route_unit
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
@@ -9399,7 +9391,7 @@ let rec ics_eqs
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
             int_dom_record_lattice_unit)))
-      intra_predecessor_list (fun _ -> Globalg) (cs_route k)
+      intra_predecessor_addr_list (fun _ -> Globalg) (cs_route k)
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q
@@ -9539,7 +9531,7 @@ let rec scs_eqs
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
-      intra_predecessor_list (fun _ -> Globalg) (cs_route k)
+      intra_predecessor_addr_list (fun _ -> Globalg) (cs_route k)
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
@@ -10229,7 +10221,7 @@ let rec ictx_entry_eqs
         (semilattice_sup_resolved_st_q
           (bounded_semilattice_sup_bot_int_dom_ext
             int_dom_record_lattice_unit)))
-      intra_predecessor_list (fun _ -> Globald)
+      intra_predecessor_addr_list (fun _ -> Globald)
       (ictx_entry_route_gen mode gs is_bot_pred)
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
@@ -10375,7 +10367,7 @@ let rec sctx_entry_eqs
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
-      intra_predecessor_list (fun _ -> Globale)
+      intra_predecessor_addr_list (fun _ -> Globale)
       (sctx_entry_route_gen gs is_bot_pred)
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
@@ -10691,7 +10683,7 @@ let rec entry_state_eqs
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
-      intra_predecessor_list (fun _ -> Globalf)
+      intra_predecessor_addr_list (fun _ -> Globalf)
       (entry_state_route_gen gs is_bot_pred)
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
@@ -10894,7 +10886,7 @@ let rec cs_call_string_eqs
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
       (bounded_semilattice_sup_bot_lifted
         (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
-      intra_predecessor_list (fun _ -> Globalg) (cs_route k)
+      intra_predecessor_addr_list (fun _ -> Globalg) (cs_route k)
       (routed_cmb_g_contribution
         (bounded_semilattice_sup_bot_lifted
           (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))

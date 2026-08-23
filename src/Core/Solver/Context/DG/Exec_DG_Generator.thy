@@ -46,7 +46,7 @@ definition dg_gen_of ::
      \<Rightarrow> (pp \<times> unit, unit, ('d, 'h) dg_state) eqsT"
 where
   "dg_gen_of S g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ())
        (\<lambda>_ _ _ _. ()) (dg_cmb_of S) (dg_extra_of S g) g S bot0 s0d s0g"
 
 subsection \<open>Side-effect commutation for the generator\<close>
@@ -1136,6 +1136,50 @@ lemma dg_tree_st_commute_wrapped_edge:
         sides_wrapped_edge_commute[where step_st=step_st and step_abs=step_abs, OF H]
         dep_aux_wrapped_edge_eq)
 
+text \<open>The same transport at an address-formed edge tree: the source is read through the
+  valuation either way, so only the published key needs a case distinction.\<close>
+
+lemma traverse_dg_edge_tree_at_commute:
+  assumes H: "\<And>d g. map_prod Fglob Floc (step_st d g) = step_abs (Floc d) (Fglob g)"
+  shows "fun_of_dg_st_gen Floc Fglob (traverse_rhs (dg_edge_tree_at step_st src gk) \<sigma>_st)
+           = traverse_rhs (dg_edge_tree_at step_abs src gk) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
+proof -
+  have "snd (step_abs (Floc (locals (\<sigma>_st src))) (Fglob (globs (\<sigma>_st (Inr gk)))))
+        = Floc (snd (step_st (locals (\<sigma>_st src)) (globs (\<sigma>_st (Inr gk)))))"
+    using H[of "locals (\<sigma>_st src)" "globs (\<sigma>_st (Inr gk))"]
+    by (metis map_prod_simp snd_conv surj_pair)
+  thus ?thesis
+    by (simp add: traverse_dg_edge_tree_at Fglob_bot)
+qed
+
+lemma sides_dg_edge_tree_at_commute:
+  assumes H: "\<And>d g. map_prod Fglob Floc (step_st d g) = step_abs (Floc d) (Fglob g)"
+  shows "fun_of_dg_st_gen Floc Fglob (sides_of_rhs (dg_edge_tree_at step_st src gk) \<sigma>_st k)
+       = sides_of_rhs (dg_edge_tree_at step_abs src gk) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
+proof (cases "k = Inr gk")
+  case True
+  have "fst (step_abs (Floc (locals (\<sigma>_st src))) (Fglob (globs (\<sigma>_st (Inr gk)))))
+        = Fglob (fst (step_st (locals (\<sigma>_st src)) (globs (\<sigma>_st (Inr gk)))))"
+    using H[of "locals (\<sigma>_st src)" "globs (\<sigma>_st (Inr gk))"]
+    by (metis map_prod_simp fst_conv surj_pair)
+  with True show ?thesis
+    by (simp add: sides_dg_edge_tree_at Floc_bot)
+next
+  case False
+  then show ?thesis
+    by (simp add: sides_dg_edge_tree_at_other)
+qed
+
+lemma dg_tree_st_commute_at_edge:
+  assumes H: "\<And>d g. map_prod Fglob Floc (step_st d g) = step_abs (Floc d) (Fglob g)"
+  shows "dg_tree_st_commute \<sigma>_st
+           (dg_edge_tree_at step_st src gk) (dg_edge_tree_at step_abs src gk)"
+  unfolding dg_tree_st_commute_def
+  by (intro conjI allI
+        traverse_dg_edge_tree_at_commute[where step_st=step_st and step_abs=step_abs, OF H]
+        sides_dg_edge_tree_at_commute[where step_st=step_st and step_abs=step_abs, OF H])
+     (simp add: dep_aux_dg_edge_tree_at)
+
 subsubsection \<open>Combine-tree transport, generic in the reader\<close>
 
 text \<open>
@@ -1304,18 +1348,19 @@ lemma seed_dg_list_commute:
       and Hcmb: "\<And>c' ca cc ex. dg_tree_st_commute \<sigma>_st (cmb_st route_st c' ca cc ex) (cmb_abs route_abs c' ca cc ex)"
       and Hextra: "\<And>c' w. list_all2 (dg_tree_st_commute \<sigma>_st) (extra_st route_st c' w) (extra_abs route_abs c' w)"
   shows "list_all2 (dg_tree_st_commute \<sigma>_st)
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S_st a u))) (pred_sel g v)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_st a src (gkey ctx)) (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_st route_st ctx ca cc ex) (return_call_action_list g v)
       @ extra_st route_st ctx v)
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S_abs a u))) (pred_sel g v)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_abs a src (gkey ctx)) (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_abs route_abs ctx ca cc ex) (return_call_action_list g v)
       @ extra_abs route_abs ctx v)"
 proof -
-  have edge_elem: "\<And>u a. dg_tree_st_commute \<sigma>_st
-        (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S_st a u)))
-        (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S_abs a u)))"
-    unfolding apply_dg_spec_def
-    by (rule dg_tree_st_commute_wrapped_edge[where step_st="dg_spec_step S_st a" and step_abs="dg_spec_step S_abs a" for a, OF Hstep])
+  have edge_elem: "\<And>src a. dg_tree_st_commute \<sigma>_st
+        (apply_dg_spec_at S_st a src (gkey ctx))
+        (apply_dg_spec_at S_abs a src (gkey ctx))"
+    unfolding apply_dg_spec_at_def
+    by (rule dg_tree_st_commute_at_edge[where step_st="dg_spec_step S_st a"
+          and step_abs="dg_spec_step S_abs a" for a, OF Hstep])
   show ?thesis
     by (auto simp: list_all2_appendI list_all2_map1 list_all2_map2 list_all2_refl
                    edge_elem Hcmb Hextra split_beta)
@@ -1334,9 +1379,9 @@ lemma eq_seed_dg_commute:
                (Floc bot0) (Floc s0d) (Fglob s0g)) (v, ctx) (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)"
 proof -
   have la: "list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st))
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S_st a u))) (pred_sel g v)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_st a src (gkey ctx)) (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_st route_st ctx ca cc ex) (return_call_action_list g v) @ extra_st route_st ctx v)
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S_abs a u))) (pred_sel g v)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_abs a src (gkey ctx)) (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_abs route_abs ctx ca cc ex) (return_call_action_list g v) @ extra_abs route_abs ctx v)"
     by (rule dg_list_commute_trav[OF seed_dg_list_commute
           [where pred_sel=pred_sel and gkey=gkey and route_st=route_st and route_abs=route_abs
@@ -1361,19 +1406,19 @@ lemma sides_seed_dg_commute:
 proof -
   have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. fun_of_dg_st_gen Floc Fglob (traverse_rhs t_st \<sigma>_st) = traverse_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st)
              \<and> (\<forall>k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs t_st \<sigma>_st k) = sides_of_rhs t_abs (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k))
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_st a u))) (pred_sel g w)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_st a src (gkey ctx)) (pred_sel g w ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_st route_st ctx ca cc ex) (return_call_action_list g w) @ extra_st route_st ctx w)
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_abs a u))) (pred_sel g w)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_abs a src (gkey ctx)) (pred_sel g w ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_abs route_abs ctx ca cc ex) (return_call_action_list g w) @ extra_abs route_abs ctx w)"
     by (rule dg_list_commute_travsides[OF seed_dg_list_commute
           [where pred_sel=pred_sel and gkey=gkey and route_st=route_st and route_abs=route_abs
              and cmb_st=cmb_st and cmb_abs=cmb_abs and extra_st=extra_st and extra_abs=extra_abs
              and g=g and S_st=S_st and S_abs=S_abs, OF Hstep Hroute Hcmb Hextra]])
   have fold: "\<And>w acc_st k. fun_of_dg_st_gen Floc Fglob (sides_of_rhs (side_rhs_fold_dg acc_st
-        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_st a u))) (pred_sel g w)
+        (map (\<lambda>(src, a). apply_dg_spec_at S_st a src (gkey ctx)) (pred_sel g w ctx)
           @ map (\<lambda>(cc, ca, ex). cmb_st route_st ctx ca cc ex) (return_call_action_list g w) @ extra_st route_st ctx w)) \<sigma>_st k)
      = sides_of_rhs (side_rhs_fold_dg (Floc acc_st)
-        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_abs a u))) (pred_sel g w)
+        (map (\<lambda>(src, a). apply_dg_spec_at S_abs a src (gkey ctx)) (pred_sel g w ctx)
           @ map (\<lambda>(cc, ca, ex). cmb_abs route_abs ctx ca cc ex) (return_call_action_list g w) @ extra_abs route_abs ctx w))
           (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) k"
     by (rule sides_side_rhs_fold_dg_commute[OF la])
@@ -1395,9 +1440,9 @@ lemma dep_seed_dg_eq:
            (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route_abs cmb_abs extra_abs g S_abs bot0' s0d' s0g' (v, ctx))"
 proof -
   have la: "\<And>w. list_all2 (\<lambda>t_st t_abs. dep_aux \<sigma>_st t_st = dep_aux (fun_of_dg_st_gen Floc Fglob \<circ> \<sigma>_st) t_abs)
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_st a u))) (pred_sel g w)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_st a src (gkey ctx)) (pred_sel g w ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_st route_st ctx ca cc ex) (return_call_action_list g w) @ extra_st route_st ctx w)
-    (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec S_abs a u))) (pred_sel g w)
+    (map (\<lambda>(src, a). apply_dg_spec_at S_abs a src (gkey ctx)) (pred_sel g w ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_abs route_abs ctx ca cc ex) (return_call_action_list g w) @ extra_abs route_abs ctx w)"
     by (rule dg_list_commute_dep[OF seed_dg_list_commute
           [where pred_sel=pred_sel and gkey=gkey and route_st=route_st and route_abs=route_abs

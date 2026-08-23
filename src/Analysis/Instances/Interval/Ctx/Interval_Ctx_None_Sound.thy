@@ -78,7 +78,7 @@ definition ictx_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> unit, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "ictx_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
        (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
        (routed_extra_g Seed Global)
@@ -167,7 +167,7 @@ theorem pp_abs:
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
         (routed_cmb_g (ictx_abs_spec gs) Global Seed)
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
@@ -180,7 +180,7 @@ theorem pp_abs:
      (fst (sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
           (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
           (routed_extra_g Seed Global)
@@ -282,7 +282,7 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
              (routed_cmb_g (ictx_abs_spec gs) Global Seed)
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ictx_abs_spec gs)

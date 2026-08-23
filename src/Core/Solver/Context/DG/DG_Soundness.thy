@@ -304,7 +304,7 @@ definition dg_gen ::
         ('D, 'G) dg_state) eqsT"
 where
   "dg_gen g bot0 s0d s0g =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ())
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ())
        (\<lambda>_ _ _ _. ()) dg_cmb (dg_extra g) g S bot0 s0d s0g"
 
 definition dg_D ::
@@ -342,9 +342,8 @@ definition dg_trees ::
       ('D, 'G) dg_state) strategy_tree list"
 where
   "dg_trees g v =
-     map (\<lambda>(u, a). map_gtree (\<lambda>_. ())
-       (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u)))
-       (intra_predecessor_list g v)
+     map (\<lambda>(src, a). apply_dg_spec_at S a src ())
+       (intra_predecessor_addr_list g v ())
      @ map (\<lambda>(cc, ca, ex). dg_cmb (\<lambda>_ _ _ _. ()) () ca cc ex)
        (return_call_action_list g v)
      @ dg_extra g (\<lambda>_ _ _ _. ()) () v"
@@ -588,7 +587,8 @@ proof -
     then show "map_gtree (\<lambda>_. ())
         (map_ltree (\<lambda>w. (w, ())) (apply_dg_spec S a u))
       \<in> set (dg_trees g v)"
-      by (auto simp: dg_trees_def)
+      by (force simp: dg_trees_def intra_predecessor_addr_list_def
+          apply_dg_spec_relabel_as_at image_iff)
   qed
 
   have edgeD:
@@ -1628,7 +1628,9 @@ lemma dg_gen_eq_hook_gen: "dg_gen g bot0 s0d s0g = hooks.hook_gen g bot0 s0d s0g
   unfolding dg_gen_def hooks.hook_gen_def
     side_cfg_T_eff_keyed_seed_dg_def side_cfg_T_eff_keyed_seed_trees_def
     dg_extra_def dg_edge_tree_hook_def dg_combine_tree_hook_def dg_enter_tree_hook_def
-  by (rule ext) auto
+  by (rule ext)
+     (auto simp: intra_predecessor_addr_list_def apply_dg_spec_relabel_as_at
+        o_def case_prod_unfold)
 
 end
 

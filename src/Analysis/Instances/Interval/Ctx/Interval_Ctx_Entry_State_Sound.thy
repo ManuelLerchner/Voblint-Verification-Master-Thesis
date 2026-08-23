@@ -206,7 +206,7 @@ definition entry_state_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> ivl list, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "entry_state_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (entry_state_route_gen gs is_bot_pred)
       (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
       (routed_extra_g Seed Global)
@@ -569,7 +569,7 @@ lemma entry_state_pp_st:
 
 theorem entry_state_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
         (routed_cmb_g (ectx_abs_spec gs) Global Seed)
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
@@ -582,7 +582,7 @@ theorem entry_state_pp_abs:
      (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (entry_state_route_gen gs is_bot_pred)
           (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
           (routed_extra_g Seed Global)
@@ -759,7 +759,7 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule entry_state_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (ectx_abs_spec gs))
              (routed_cmb_g (ectx_abs_spec gs) Global Seed)
              (routed_extra_g Seed Global)

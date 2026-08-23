@@ -182,12 +182,12 @@ text \<open>The whole post-solution transport, stated once for a free bound \<op
 
 lemma nest_pp_abs_of_st:
   assumes pp: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route k)
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
           (routed_cmb_g nest_S_st Global Seed) (routed_extra_g Seed Global)
           nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot)
        x sigma_st vars"
   shows "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route k)
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
           (routed_cmb_g nest_S_abs Global Seed) (routed_extra_g Seed Global)
           nest_cfg nest_S_abs
           (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted))
@@ -196,7 +196,7 @@ lemma nest_pp_abs_of_st:
        x (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for nest_gs))
             (map_lift (fun_of_resolved_st_q_for nest_gs)) \<circ> sigma_st) vars"
   by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-        [where gs = nest_gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
+        [where gs = nest_gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. Global"
            and route_st = "cs_route k" and route_abs = "cs_route k"
            and cmb_st = "routed_cmb_g nest_S_st Global Seed"
            and cmb_abs = "routed_cmb_g nest_S_abs Global Seed"
@@ -222,7 +222,7 @@ definition nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route 1)
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (routed_cmb_g nest_S_st Global Seed) (routed_extra_g Seed Global)
        nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot"
 
@@ -327,7 +327,7 @@ abbreviation nest_1_sigma_abs ::
 
 theorem nest_1_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route 1)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
        (routed_cmb_g nest_S_abs Global Seed) (routed_extra_g Seed Global) nest_cfg nest_S_abs
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st))
@@ -618,7 +618,7 @@ definition nestg_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nestg_1_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route 1)
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_is_bot_pred
                        (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed)
       (routed_extra_g Seed Global)

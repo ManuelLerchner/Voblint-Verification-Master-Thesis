@@ -68,7 +68,7 @@ definition pctx_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> unit, gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pctx_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
        (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed)
        (routed_extra_g Seed Global)
@@ -154,7 +154,7 @@ lemma pctx_pp_st:
 
 theorem pctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
         (routed_cmb_g (pctx_abs_spec gs) Global Seed)
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (pctx_abs_spec gs)
@@ -167,7 +167,7 @@ theorem pctx_pp_abs:
      (fst (pctx_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
           (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed)
           (routed_extra_g Seed Global)
@@ -266,7 +266,7 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule pctx_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
              (routed_cmb_g (pctx_abs_spec gs) Global Seed)
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (pctx_abs_spec gs)

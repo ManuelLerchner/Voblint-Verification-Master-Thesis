@@ -352,6 +352,87 @@ lemma dg_edge_contribution_tree_matches_global:
      = globs (sides_of_rhs (dg_edge_tree step u) \<tau> (Inr ()))"
   by (simp add: traverse_dg_edge_contribution_tree sides_dg_edge_tree_Inr)
 
+subsection \<open>Edge formers over a solution address\<close>
+
+text \<open>
+  \<^const>\<open>dg_edge_tree\<close> and \<^const>\<open>dg_edge_contribution_tree\<close> fix their source to a
+  local unknown and their published slot to the \<^typ>\<open>unit\<close> key; the generator
+  relabels both afterwards.  The formers below instead take the source as an
+  \<^emph>\<open>address\<close> in the solver's own valuation space \<^typ>\<open>'x + 'k\<close> and the published
+  slot as an explicit key.  A program point whose value is carried by a
+  contribution-only unknown -- one with no equation of its own, so that its
+  value is exactly the join of what was published to it -- is then read by
+  exactly the same former as one carried by an equation-driven unknown, since
+  \<^const>\<open>QueryL\<close> and \<^const>\<open>QueryG\<close> project the same valuation.
+
+  Fixing the address to \<^const>\<open>Inl\<close> and the key to \<^term>\<open>()\<close> recovers the two
+  formers above, so an equation system built with those is unchanged.
+\<close>
+
+definition dg_edge_tree_at ::
+  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x, 'k, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "dg_edge_tree_at step src gk =
+     do {
+       d <- read_at src;
+       g <- read_global gk;
+       depend_on gk (DG bot (fst (step (locals d) (globs g))))
+         (answer (DG (snd (step (locals d) (globs g))) bot))
+     }"
+
+definition dg_edge_contribution_tree_at ::
+  "('dl::bounded_semilattice_sup_bot \<Rightarrow> 'dg::bounded_semilattice_sup_bot \<Rightarrow> 'dg \<times> 'dl)
+   \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x, 'k, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "dg_edge_contribution_tree_at step src gk =
+     do {
+       d <- read_at src;
+       g <- read_global gk;
+       answer (DG (snd (step (locals d) (globs g))) (fst (step (locals d) (globs g))))
+     }"
+
+lemma traverse_dg_edge_tree_at:
+  "traverse_rhs (dg_edge_tree_at step src gk) tau
+   = DG (snd (step (locals (tau src)) (globs (tau (Inr gk))))) bot"
+  unfolding dg_edge_tree_at_def by (cases src) simp_all
+
+lemma sides_dg_edge_tree_at:
+  "sides_of_rhs (dg_edge_tree_at step src gk) tau (Inr gk)
+   = DG bot (fst (step (locals (tau src)) (globs (tau (Inr gk)))))"
+  unfolding dg_edge_tree_at_def by (cases src) (simp_all add: Let_def)
+
+lemma sides_dg_edge_tree_at_other:
+  "k \<noteq> Inr gk \<Longrightarrow> sides_of_rhs (dg_edge_tree_at step src gk) tau k = bot"
+  unfolding dg_edge_tree_at_def by (cases src) (simp_all add: Let_def)
+
+lemma dep_aux_dg_edge_tree_at:
+  "dep_aux tau (dg_edge_tree_at step src gk) = {src, Inr gk}"
+  by (cases src) (simp_all add: dg_edge_tree_at_def)
+
+lemma traverse_dg_edge_contribution_tree_at:
+  "traverse_rhs (dg_edge_contribution_tree_at step src gk) tau
+   = DG (snd (step (locals (tau src)) (globs (tau (Inr gk)))))
+        (fst (step (locals (tau src)) (globs (tau (Inr gk)))))"
+  unfolding dg_edge_contribution_tree_at_def by (cases src) simp_all
+
+lemma sides_dg_edge_contribution_tree_at:
+  "sides_of_rhs (dg_edge_contribution_tree_at step src gk) tau k = bot"
+  unfolding dg_edge_contribution_tree_at_def
+  by (cases src) (cases k; simp_all add: Let_def)+
+
+lemma dep_aux_dg_edge_contribution_tree_at:
+  "dep_aux tau (dg_edge_contribution_tree_at step src gk) = {src, Inr gk}"
+  by (cases src) (simp_all add: dg_edge_contribution_tree_at_def)
+
+lemma dg_edge_tree_as_at:
+  "dg_edge_tree step u = dg_edge_tree_at step (Inl u) ()"
+  unfolding dg_edge_tree_def dg_edge_tree_at_def by simp
+
+lemma dg_edge_contribution_tree_as_at:
+  "dg_edge_contribution_tree step u = dg_edge_contribution_tree_at step (Inl u) ()"
+  unfolding dg_edge_contribution_tree_def dg_edge_contribution_tree_at_def by simp
+
 text \<open>Procedure-return combine: two \<open>D\<close> inputs (caller, callee exit), one \<open>G\<close>.\<close>
 
 definition dg_combine_tree ::
@@ -1362,9 +1443,11 @@ text \<open>
   The one context-generic generator.  Enter handling is routed by three hooks so
   that a monovariant and a context-sensitive analysis are both instances:
 
-  \<^item> \<open>pred_sel\<close> selects the intra predecessors folded as Answers into a node.  The
-    monovariant instance uses \<^const>\<open>intra_predecessor_list\<close> over \<^const>\<open>intra\<close>; a
-    callee entry over \<^const>\<open>calls\<close> merges into the single callee context, while the
+  \<^item> \<open>pred_sel g v ctx\<close> selects the intra predecessors folded as Answers into a node,
+    each paired with the \<^emph>\<open>address\<close> in the solver's valuation space that carries its
+    value.  \<open>intra_predecessor_addr_list\<close> over \<^const>\<open>intra\<close> addresses every
+    predecessor at its own \<open>(pp, 'c)\<close> local unknown; a callee entry over
+    \<^const>\<open>calls\<close> merges into the single callee context, while the
     context-sensitive instance instead publishes routed callee seeds.
   \<^item> \<open>cmb\<close> is the procedure-return combine tree (already fully abstract: the
     context-sensitive instance reads the callee exit under the routed context).
@@ -1376,8 +1459,54 @@ text \<open>
     slot) live.  The monovariant instance supplies \<open>\<lambda>_ _. []\<close>.
 \<close>
 
+definition apply_dg_spec_at ::
+  "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
+   \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x, 'k, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "apply_dg_spec_at S a src gk = dg_edge_tree_at (dg_spec_step S a) src gk"
+
+definition apply_dg_spec_contribution_at ::
+  "('dl::bounded_semilattice_sup_bot, 'dg::bounded_semilattice_sup_bot) dg_spec
+   \<Rightarrow> edge_action \<Rightarrow> 'x + 'k \<Rightarrow> 'k \<Rightarrow> ('x, 'k, ('dl, 'dg) dg_state) strategy_tree"
+where
+  "apply_dg_spec_contribution_at S a src gk =
+     dg_edge_contribution_tree_at (dg_spec_step S a) src gk"
+
+lemma apply_dg_spec_as_at:
+  "apply_dg_spec S a u = apply_dg_spec_at S a (Inl u) ()"
+  unfolding apply_dg_spec_def apply_dg_spec_at_def by (rule dg_edge_tree_as_at)
+
+lemma apply_dg_spec_contribution_as_at:
+  "apply_dg_spec_contribution S a u = apply_dg_spec_contribution_at S a (Inl u) ()"
+  unfolding apply_dg_spec_contribution_def apply_dg_spec_contribution_at_def
+  by (rule dg_edge_contribution_tree_as_at)
+
+text \<open>Relabelling a \<^typ>\<open>unit\<close>-keyed edge tree onto a routed local pair and a global
+  key is the same tree as building it at that address directly: \<^const>\<open>map_ltree\<close> and
+  \<^const>\<open>map_gtree\<close> rewrite exactly the two keys the former reads and writes.\<close>
+
+lemma apply_dg_spec_relabel_as_at:
+  "map_gtree (\<lambda>_. gk) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
+     = apply_dg_spec_at S a (Inl (u, ctx)) gk"
+  by (simp add: apply_dg_spec_def apply_dg_spec_at_def dg_edge_tree_def dg_edge_tree_at_def)
+
+lemma apply_dg_spec_contribution_relabel_as_at:
+  "map_gtree (\<lambda>_. gk) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))
+     = apply_dg_spec_contribution_at S a (Inl (u, ctx)) gk"
+  by (simp add: apply_dg_spec_contribution_def apply_dg_spec_contribution_at_def
+        dg_edge_contribution_tree_def dg_edge_contribution_tree_at_def)
+
+text \<open>The standard predecessor selection: every intra predecessor is carried by its
+  own \<open>(pp, 'c)\<close> local unknown, so its address is \<^const>\<open>Inl\<close> of that pair.\<close>
+
+definition intra_predecessor_addr_list ::
+  "cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list"
+where
+  "intra_predecessor_addr_list g v ctx =
+     map (\<lambda>(u, a). (Inl (u, ctx), a)) (intra_predecessor_list g v)"
+
 definition side_cfg_T_eff_keyed_seed_dg ::
-  "(cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list)
+  "(cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list)
    \<Rightarrow> ('c \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -1392,9 +1521,8 @@ where
   "side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
-            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
-                            (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
-                        (pred_sel g v);
+            intra = map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
+                        (pred_sel g v c);
             comb = map (\<lambda>(cc, ca, ex). cmb route c ca cc ex)
                        (return_call_action_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb @ extra route c v)
@@ -1406,9 +1534,8 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg:
    DG (side_acc_dg
      (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
      \<tau>
-     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-              (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-           (pred_sel g v)
+     (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx))
+           (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex)
             (return_call_action_list g v)
       @ extra route ctx v)) bot"
@@ -1420,8 +1547,8 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg:
       (v, ctx)) \<tau> (Inr (gkey ctx)) =
    (if v = cfg_entry g then DG bot s0g else bot)
    \<squnion> foldr (\<lambda>t acc'. sides_of_rhs t \<tau> (Inr (gkey ctx)) \<squnion> acc')
-       (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-          (pred_sel g v)
+       (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx))
+          (pred_sel g v ctx)
         @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)
         @ extra route ctx v) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def sides_of_rhs_side_rhs_fold_dg_char
@@ -1451,7 +1578,7 @@ text \<open>
 \<close>
 
 definition side_cfg_T_eff_keyed_seed_dg_buffered ::
-  "(cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list)
+  "(cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list)
    \<Rightarrow> ('c \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
    \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -1466,9 +1593,8 @@ where
   "side_cfg_T_eff_keyed_seed_dg_buffered pred_sel gkey route cmb_c extra g S bot0 s0d s0g =
      (\<lambda>(v, c).
         let acc0 = (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot);
-            intra = map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c)
-                            (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec_contribution S a u)))
-                        (pred_sel g v);
+            intra = map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey c))
+                        (pred_sel g v c);
             comb = map (\<lambda>(cc, ca, ex). cmb_c route c ca cc ex) (return_call_action_list g v);
             t = fold_rhs_trees acc0 (intra @ comb @ extra route c v)
         in buffer_sides (do {
@@ -1480,20 +1606,16 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg_buffered:
   "eq (side_cfg_T_eff_keyed_seed_dg_buffered pred_sel gkey route cmb_c extra g S bot0 s0d s0g)
       (v, ctx) \<tau> =
    DG (locals (foldr (\<lambda>t acc'. traverse_rhs t \<tau> \<squnion> acc')
-     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-              (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) (pred_sel g v)
+     (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx)) (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)
       @ extra route ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot))) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def traverse_fold_rhs_trees_char)
 
-lemma sides_dg_edge_contribution_tree_relabeled:
-  "sides_of_rhs (map_gtree r (map_ltree h (dg_edge_contribution_tree step u))) \<tau> z = bot"
-  by (cases z) (simp_all add: dg_edge_contribution_tree_def Let_def)
-
-lemma sides_apply_dg_spec_contribution_relabeled:
-  "sides_of_rhs (map_gtree r (map_ltree h (apply_dg_spec_contribution S a u))) \<tau> z = bot"
-  unfolding apply_dg_spec_contribution_def by (rule sides_dg_edge_contribution_tree_relabeled)
+lemma sides_apply_dg_spec_contribution_at:
+  "sides_of_rhs (apply_dg_spec_contribution_at S a src gk) \<tau> z = bot"
+  unfolding apply_dg_spec_contribution_at_def
+  by (rule sides_dg_edge_contribution_tree_at)
 
 lemma foldr_sup_bot_of_all_bot:
   fixes L :: "'a list" and h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
@@ -1507,24 +1629,23 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg_buffered:
   shows "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg_buffered pred_sel gkey route cmb_c extra g S bot0 s0d s0g
       (v, ctx)) \<tau> (Inr (gkey ctx)) =
    DG bot (globs (foldr (\<lambda>t acc'. traverse_rhs t \<tau> \<squnion> acc')
-     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-              (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) (pred_sel g v)
+     (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx)) (pred_sel g v ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)
       @ extra route ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot)))"
 proof -
-  have free: "\<And>w \<sigma> x. x \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-                    (map_ltree (\<lambda>w'. (w', ctx)) (apply_dg_spec_contribution S a u))) (pred_sel g w)
+  have free: "\<And>w \<sigma> x. x \<in> set (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx))
+                    (pred_sel g w ctx)
       @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g w)
       @ extra route ctx w) \<Longrightarrow> sides_of_rhs x \<sigma> (Inr (gkey ctx)) = bot"
-    using comb_free_at_key extra_free sides_apply_dg_spec_contribution_relabeled
+    using comb_free_at_key extra_free sides_apply_dg_spec_contribution_at
     by fastforce
   show ?thesis
   proof (cases "v = cfg_entry g")
     case True
     have z0: "sides_of_rhs (fold_rhs_trees (DG (bot0 \<squnion> s0d) s0g)
-        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-                 (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) (pred_sel g (cfg_entry g))
+        (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx))
+             (pred_sel g (cfg_entry g) ctx)
          @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g (cfg_entry g))
          @ extra route ctx (cfg_entry g))) \<tau> (Inr (gkey ctx)) = bot"
       by (simp only: sides_of_rhs_fold_rhs_trees_char
@@ -1535,8 +1656,7 @@ proof -
   next
     case False
     have z0: "sides_of_rhs (fold_rhs_trees (DG bot0 bot)
-        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-                 (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) (pred_sel g v)
+        (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx)) (pred_sel g v ctx)
          @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)
          @ extra route ctx v)) \<tau> (Inr (gkey ctx)) = bot"
       by (simp only: sides_of_rhs_fold_rhs_trees_char
@@ -1549,40 +1669,23 @@ qed
 
 subsection \<open>Correspondence: the buffered generator matches the original\<close>
 
-lemma apply_dg_spec_contribution_matches_local_relabeled:
-  "locals (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) \<tau>)
-     = locals (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau>)"
-  by (simp add: traverse_intra_keyed apply_dg_spec_contribution_matches_local)
+lemma apply_dg_spec_contribution_at_matches_local:
+  "locals (traverse_rhs (apply_dg_spec_contribution_at S a src gk) \<tau>)
+     = locals (traverse_rhs (apply_dg_spec_at S a src gk) \<tau>)"
+  by (simp add: apply_dg_spec_contribution_at_def apply_dg_spec_at_def
+        traverse_dg_edge_contribution_tree_at traverse_dg_edge_tree_at)
 
-lemma apply_dg_spec_contribution_matches_global_relabeled:
-  "globs (traverse_rhs (map_gtree (\<lambda>_. gkey ctx)
-       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) \<tau>)
-     = globs (sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau> (Inr (gkey ctx)))"
-proof -
-  have step1: "sides_of_rhs
-        (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau> (Inr (gkey ctx))
-      = sides_of_rhs (apply_dg_spec S a u) (\<lambda>z. \<tau> (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. gkey ctx) z)) (Inr ())"
-  proof -
-    have "sides_of_rhs
-            (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau>
-            (Inr ((\<lambda>_. gkey ctx) ()))
-        = sides_of_rhs (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
-            (\<lambda>z. \<tau> (map_sum id (\<lambda>_. gkey ctx) z)) (Inr ())"
-      by (rule sides_map_gtree_unit)
-    thus ?thesis by (simp add: sides_map_ltree_Inr sum.map_comp o_def)
-  qed
-  show ?thesis
-    by (simp add: traverse_intra_keyed apply_dg_spec_contribution_matches_global step1)
-qed
+lemma apply_dg_spec_contribution_at_matches_global:
+  "globs (traverse_rhs (apply_dg_spec_contribution_at S a src gk) \<tau>)
+     = globs (sides_of_rhs (apply_dg_spec_at S a src gk) \<tau> (Inr gk))"
+  by (simp add: apply_dg_spec_contribution_at_def apply_dg_spec_at_def
+        traverse_dg_edge_contribution_tree_at sides_dg_edge_tree_at)
 
-lemma apply_dg_spec_contribution_dep_aux_relabeled:
-  "dep_aux \<tau> (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u)))
-     = dep_aux \<tau> (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))"
-  by (simp add: dep_aux_map_gtree dep_aux_map_ltree
-        apply_dg_spec_contribution_dep_aux apply_dg_spec_dep_aux)
+lemma apply_dg_spec_contribution_at_dep_aux:
+  "dep_aux \<tau> (apply_dg_spec_contribution_at S a src gk)
+     = dep_aux \<tau> (apply_dg_spec_at S a src gk)"
+  by (simp add: apply_dg_spec_contribution_at_def apply_dg_spec_at_def
+        dep_aux_dg_edge_contribution_tree_at dep_aux_dg_edge_tree_at)
 
 lemma side_acc_dg_eq_foldr:
   "side_acc_dg acc \<tau> ts = foldr (\<lambda>t acc'. locals (traverse_rhs t \<tau>) \<squnion> acc') ts acc"
@@ -1694,24 +1797,9 @@ text \<open>
   any \<open>dg_spec\<close>.
 \<close>
 
-lemma apply_dg_spec_side_pure_relabeled:
-  "locals (sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau> (Inr (gkey ctx))) = bot"
-proof -
-  have "sides_of_rhs
-          (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau>
-          (Inr ((\<lambda>_. gkey ctx) ()))
-      = sides_of_rhs (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
-          (\<lambda>z. \<tau> (map_sum id (\<lambda>_. gkey ctx) z)) (Inr ())"
-    by (rule sides_map_gtree_unit)
-  then have "sides_of_rhs
-      (map_gtree (\<lambda>_. gkey ctx) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau> (Inr (gkey ctx))
-      = sides_of_rhs (apply_dg_spec S a u)
-          (\<lambda>z. \<tau> (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. gkey ctx) z)) (Inr ())"
-    by (simp add: sides_map_ltree_Inr sum.map_comp o_def)
-  then show ?thesis
-    unfolding apply_dg_spec_def by (simp add: dg_edge_tree_side_pure_G)
-qed
+lemma apply_dg_spec_side_pure_at:
+  "locals (sides_of_rhs (apply_dg_spec_at S a src gk) \<tau> (Inr gk)) = bot"
+  by (simp add: apply_dg_spec_at_def sides_dg_edge_tree_at)
 
 lemma side_cfg_T_eff_keyed_seed_dg_buffered_correspondence:
   fixes cmb cmb_c ::
@@ -1747,20 +1835,19 @@ lemma side_cfg_T_eff_keyed_seed_dg_buffered_correspondence:
            (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, ctx)) \<tau>"
     (is ?S)
 proof -
-  let ?intra_new = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-                       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec_contribution S a u))) (pred_sel g v)"
-  let ?intra_old = "map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey ctx)
-                       (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) (pred_sel g v)"
+  let ?intra_new = "map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx))
+                        (pred_sel g v ctx)"
+  let ?intra_old = "map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx)) (pred_sel g v ctx)"
   let ?comb_new = "map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)"
   let ?comb_old = "map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)"
   let ?extra = "extra route ctx v"
   let ?acc0 = "if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot"
   have intra_local: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
       ?intra_new ?intra_old"
-    by (rule list_all2_map_diag) (auto simp: apply_dg_spec_contribution_matches_local_relabeled)
+    by (rule list_all2_map_diag) (auto simp: apply_dg_spec_contribution_at_matches_local)
   have intra_global: "list_all2 (\<lambda>t_new t_old. globs (traverse_rhs t_new \<tau>)
                                     = globs (sides_of_rhs t_old \<tau> (Inr (gkey ctx)))) ?intra_new ?intra_old"
-    by (rule list_all2_map_diag) (auto simp: apply_dg_spec_contribution_matches_global_relabeled)
+    by (rule list_all2_map_diag) (auto simp: apply_dg_spec_contribution_at_matches_global)
   have comb_local: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
       ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_t)
@@ -1824,7 +1911,7 @@ proof -
   have old_elem_side_pure: "\<And>t. t \<in> set (?intra_old @ ?comb_old @ ?extra)
       \<Longrightarrow> locals (sides_of_rhs t \<tau> (Inr (gkey ctx))) = bot"
     using comb_side_pure extra_free
-    by (auto simp: apply_dg_spec_side_pure_relabeled bot_dg_state_def split: prod.splits)
+    by (auto simp: apply_dg_spec_side_pure_at bot_dg_state_def split: prod.splits)
   have old_fold_side_pure: "locals
       (foldr (\<lambda>t acc'. sides_of_rhs t \<tau> (Inr (gkey ctx)) \<squnion> acc') (?intra_old @ ?comb_old @ ?extra) bot)
       = bot"
@@ -1878,7 +1965,7 @@ proof -
     finally show ?thesis .
   qed
   have intra_dep: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old) ?intra_new ?intra_old"
-    by (rule list_all2_map_diag) (auto simp: apply_dg_spec_contribution_dep_aux_relabeled)
+    by (rule list_all2_map_diag) (auto simp: apply_dg_spec_contribution_at_dep_aux)
   have comb_dep_list: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old) ?comb_new ?comb_old"
     by (rule list_all2_map_diag) (auto simp: comb_dep)
   have extra_dep: "list_all2 (\<lambda>t_new t_old. dep_aux \<tau> t_new = dep_aux \<tau> t_old) ?extra ?extra"
@@ -1906,25 +1993,11 @@ proof -
   proof -
     fix z :: "cfg_node \<times> 'c + 'k"
     assume z: "z \<noteq> Inr (gkey ctx)"
-    have old_bot: "\<And>u a. sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-        (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau> z = bot"
-    proof -
-      fix u a
-      show "sides_of_rhs (map_gtree (\<lambda>_. gkey ctx)
-          (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) \<tau> z = bot"
-      proof (cases z)
-        case (Inl xx)
-        then show ?thesis by (simp add: sides_of_rhs_Inl_bot)
-      next
-        case (Inr k)
-        with z have "k \<noteq> gkey ctx" by simp
-        then have "k \<notin> range (\<lambda>_::'c. gkey ctx)" by auto
-        with Inr show ?thesis by (simp add: sides_map_gtree_off)
-      qed
-    qed
+    have old_bot: "\<And>src a. sides_of_rhs (apply_dg_spec_at S a src (gkey ctx)) \<tau> z = bot"
+      unfolding apply_dg_spec_at_def by (rule sides_dg_edge_tree_at_other[OF z])
     show "list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z) ?intra_new ?intra_old"
       by (rule list_all2_map_diag)
-         (auto simp: sides_apply_dg_spec_contribution_relabeled old_bot)
+         (auto simp: sides_apply_dg_spec_contribution_at old_bot)
   qed
   have comb_sides_off: "\<And>z. z \<noteq> Inr (gkey ctx)
       \<Longrightarrow> list_all2 (\<lambda>t_new t_old. sides_of_rhs t_new \<tau> z = sides_of_rhs t_old \<tau> z) ?comb_new ?comb_old"
@@ -2062,9 +2135,9 @@ text \<open>
 lemma side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen:
   fixes g :: cfg
     and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
-  assumes intra_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
-        \<le> traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+  assumes intra_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (apply_dg_spec_at S a src (gkey c)) s1
+        \<le> traverse_rhs (apply_dg_spec_at S a src (gkey c)) s2"
   assumes comb_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs (cmb route c ca cc ex) s1 \<le> traverse_rhs (cmb route c ca cc ex) s2"
   assumes extra_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
@@ -2081,20 +2154,18 @@ proof -
           \<le> eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s2"
     proof -
       assume le: "s1 \<le> s2"
-      have tree_mono: "\<forall>t \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
-                                  (pred_sel g v)
+      have tree_mono: "\<forall>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
+                                  (pred_sel g v c)
                             @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
                             @ extra route c v).
                          \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
         using intra_mono comb_mono extra_mono by auto
       have step: "traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
-                     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
-                          (pred_sel g v)
+                     (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g v c)
                        @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
                        @ extra route c v)) s1
                   \<le> traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
-                     (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))
-                          (pred_sel g v)
+                     (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g v c)
                        @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
                        @ extra route c v)) s2"
         by (rule side_rhs_fold_dg_mono[OF tree_mono le])
@@ -2111,9 +2182,9 @@ qed
 lemma side_cfg_T_eff_keyed_seed_dg_mono_sides_gen:
   fixes g :: cfg
     and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
-  assumes intra_sides_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
-        \<le> sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+  assumes intra_sides_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s1
+        \<le> sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s2"
   assumes comb_sides_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
   assumes extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
@@ -2130,20 +2201,18 @@ proof -
           \<le> sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s2"
     proof -
       assume le: "s1 \<le> s2"
-      have tree_sides_mono: "\<And>w. \<forall>t \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                                  (pred_sel g w)
+      have tree_sides_mono: "\<And>w. \<forall>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
+                                  (pred_sel g w c)
                             @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                             @ extra route c w).
                          \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
         using intra_sides_mono comb_sides_mono extra_sides_mono by auto
       have fold_le: "\<And>acc w. sides_of_rhs (side_rhs_fold_dg acc
-                        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                            (pred_sel g w)
+                        (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
                           @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                           @ extra route c w)) s1
                     \<le> sides_of_rhs (side_rhs_fold_dg acc
-                        (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                            (pred_sel g w)
+                        (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
                           @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                           @ extra route c w)) s2"
         by (rule side_rhs_fold_dg_sides_mono[OF tree_sides_mono le])
@@ -2160,8 +2229,8 @@ qed
 lemma side_cfg_T_eff_keyed_seed_dg_mono_deps_gen:
   fixes g :: cfg
     and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
-  assumes intra_static: "\<forall>v c u a. (u, a) \<in> set (pred_sel g v) \<longrightarrow>
-      static_deps (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))"
+  assumes intra_static: "\<forall>v c src a. (src, a) \<in> set (pred_sel g v c) \<longrightarrow>
+      static_deps (apply_dg_spec_at S a src (gkey c))"
   assumes comb_static: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
       static_deps (cmb route c ca cc ex)"
   assumes extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
@@ -2172,25 +2241,22 @@ proof -
         \<subseteq> dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s2 (v, c)"
   proof -
     fix v c s1 s2
-    have tree_static: "\<And>w. \<forall>t \<in> set (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                                (pred_sel g w)
+    have tree_static: "\<And>w. \<forall>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
+                                (pred_sel g w c)
                           @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                           @ extra route c w).
                        static_deps t"
       using intra_static comb_static extra_static by auto
     have fold_static: "\<And>acc w. static_deps (side_rhs_fold_dg acc
-                      (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                          (pred_sel g w)
+                      (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
                         @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                         @ extra route c w))"      by (rule side_rhs_fold_dg_static_deps[OF tree_static])
     have deq: "\<And>acc w. dep_aux s1 (side_rhs_fold_dg acc
-                  (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                      (pred_sel g w)
+                  (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
                     @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                     @ extra route c w))
                 = dep_aux s2 (side_rhs_fold_dg acc
-                  (map (\<lambda>(u, a). map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w'. (w', c)) (apply_dg_spec S a u)))
-                      (pred_sel g w)
+                  (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
                     @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
                     @ extra route c w))"
       using fold_static[unfolded static_deps_def] by blast
@@ -2222,7 +2288,7 @@ text \<open>
 \<close>
 
 locale td_cfg_side_solver_dg =
-  fixes pred_sel :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list"
+  fixes pred_sel :: "cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list"
     and gkey :: "'c \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'd::bounded_semilattice_sup_bot \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -2232,22 +2298,22 @@ locale td_cfg_side_solver_dg =
     and g :: cfg
     and S :: "('d, 'h) dg_spec"
     and bot0 s0d :: 'd and s0g :: 'h
-  assumes intra_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
-        \<le> traverse_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+  assumes intra_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (apply_dg_spec_at S a src (gkey c)) s1
+        \<le> traverse_rhs (apply_dg_spec_at S a src (gkey c)) s2"
     and comb_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs (cmb route c ca cc ex) s1 \<le> traverse_rhs (cmb route c ca cc ex) s2"
     and extra_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs t s1 \<le> traverse_rhs t s2"
-    and intra_sides_mono: "\<forall>v c u a s1 s2. (u, a) \<in> set (pred_sel g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s1
-        \<le> sides_of_rhs (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u))) s2"
+    and intra_sides_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s1
+        \<le> sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s2"
     and comb_sides_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
     and extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs t s1 \<le> sides_of_rhs t s2"
-    and intra_static[intro]: "\<forall>v c u a. (u, a) \<in> set (pred_sel g v) \<longrightarrow>
-      static_deps (map_gtree (\<lambda>_. gkey c) (map_ltree (\<lambda>w. (w, c)) (apply_dg_spec S a u)))"
+    and intra_static[intro]: "\<forall>v c src a. (src, a) \<in> set (pred_sel g v c) \<longrightarrow>
+      static_deps (apply_dg_spec_at S a src (gkey c))"
     and comb_static[intro]: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
       static_deps (cmb route c ca cc ex)"
     and extra_static[intro]: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"

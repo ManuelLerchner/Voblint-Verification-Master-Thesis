@@ -957,6 +957,7 @@ code_identifier
 | code_module TD_side_upd_rule \<rightharpoonup> (OCaml) Core
 | code_module Update_rules \<rightharpoonup> (OCaml) Core
 | code_module Strategy_Tree_Monad \<rightharpoonup> (OCaml) Core
+| code_module Strategy_Tree_Combinators \<rightharpoonup> (OCaml) Core
 | code_module Side_Buffering \<rightharpoonup> (OCaml) Core
 | code_module State_Restriction \<rightharpoonup> (OCaml) Core
 | code_module Exec_Refinement \<rightharpoonup> (OCaml) Core

@@ -241,13 +241,13 @@ proof -
     by (rule dg_extra_of_commute_for[OF Henter])
   from pp have pp':
     "part_post_solution
-      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
         (dg_cmb_of S_st) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
     unfolding dg_gen_of_def .
   show ?thesis
     unfolding dg_gen_of_def
     by (rule part_post_solution_seed_dg_st_to_abs_for
-          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          [where pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. ()"
              and route_st = "\<lambda>_ _ _ _. ()" and route_abs = "\<lambda>_ _ _ _. ()"
              and cmb_st = "dg_cmb_of S_st" and cmb_abs = "dg_cmb_of S_abs"
              and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",
@@ -351,13 +351,13 @@ proof -
     by (rule dg_extra_of_commute_lifted_for[OF Henter])
   from pp have pp':
     "part_post_solution
-      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
         (dg_cmb_of S_st) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
     unfolding dg_gen_of_def .
   show ?thesis
     unfolding dg_gen_of_def
     by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          [where pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. ()"
              and route_st = "\<lambda>_ _ _ _. ()" and route_abs = "\<lambda>_ _ _ _. ()"
              and cmb_st = "dg_cmb_of S_st" and cmb_abs = "dg_cmb_of S_abs"
              and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",

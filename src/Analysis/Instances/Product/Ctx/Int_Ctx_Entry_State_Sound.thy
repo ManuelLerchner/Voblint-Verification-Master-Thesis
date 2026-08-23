@@ -73,7 +73,7 @@ definition ictx_entry_eqs ::
        \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> int_dom list, gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
   "ictx_entry_eqs mode gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (ictx_entry_route_gen mode gs is_bot_pred)
        (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
        (routed_extra_g Seed Global)
@@ -182,7 +182,7 @@ lemma ictx_entry_pp_st:
 
 theorem ictx_entry_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (formals_route_lifted_gen (ictx_abs_spec mode gs))
         (routed_cmb_g (ictx_abs_spec mode gs) Global Seed)
         (routed_extra_g Seed Global)
@@ -196,7 +196,7 @@ theorem ictx_entry_pp_abs:
      (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (ictx_entry_route_gen mode gs is_bot_pred)
           (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
           (routed_extra_g Seed Global)
@@ -303,7 +303,7 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule ictx_entry_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (ictx_abs_spec mode gs))
              (routed_cmb_g (ictx_abs_spec mode gs) Global Seed)
              (routed_extra_g Seed Global)

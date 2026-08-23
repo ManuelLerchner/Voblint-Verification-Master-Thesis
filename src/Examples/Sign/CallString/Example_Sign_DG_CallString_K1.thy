@@ -188,12 +188,12 @@ text \<open>The whole post-solution transport, stated once for a free bound \<op
 
 lemma sign_nest_pp_abs_of_st:
   assumes pp: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route k)
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
           (routed_cmb_g sign_nest_S_st Global Seed) (routed_extra_g Seed Global)
           sign_nest_cfg sign_nest_S_st Bot (Lifted cinit_sign_st) Bot)
        x sigma_st vars"
   shows "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route k)
+       (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
           (routed_cmb_g sign_nest_S_abs Global Seed) (routed_extra_g Seed Global)
           sign_nest_cfg sign_nest_S_abs
           (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))
@@ -202,7 +202,7 @@ lemma sign_nest_pp_abs_of_st:
        x (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
             (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) \<circ> sigma_st) vars"
   by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-        [where gs = sign_nest_gs and pred_sel = intra_predecessor_list and gkey = "\<lambda>_. Global"
+        [where gs = sign_nest_gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. Global"
            and route_st = "cs_route k" and route_abs = "cs_route k"
            and cmb_st = "routed_cmb_g sign_nest_S_st Global Seed"
            and cmb_abs = "routed_cmb_g sign_nest_S_abs Global Seed"
@@ -229,7 +229,7 @@ definition sign_nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
      (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
-     side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route 1)
+     side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
        (routed_cmb_g sign_nest_S_st Global Seed) (routed_extra_g Seed Global)
        sign_nest_cfg sign_nest_S_st Bot (Lifted cinit_sign_st) Bot"
 
@@ -334,7 +334,7 @@ abbreviation sigma_1 ::
 
 theorem sign_nest_1_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (cs_route 1)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
        (routed_cmb_g sign_nest_S_abs Global Seed) (routed_extra_g Seed Global)
         sign_nest_cfg sign_nest_S_abs
         (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))

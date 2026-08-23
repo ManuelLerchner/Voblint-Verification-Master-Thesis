@@ -66,7 +66,7 @@ definition sctx_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> unit, gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sctx_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
        (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
        (routed_extra_g Seed Global)
@@ -151,7 +151,7 @@ lemma sctx_pp_st:
 
 theorem sctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
         (routed_cmb_g (sctx_abs_spec gs) Global Seed)
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
@@ -164,7 +164,7 @@ theorem sctx_pp_abs:
      (fst (sctx_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
           (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
           (routed_extra_g Seed Global)
@@ -266,7 +266,7 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule sctx_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
              (routed_cmb_g (sctx_abs_spec gs) Global Seed)
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (sctx_abs_spec gs)

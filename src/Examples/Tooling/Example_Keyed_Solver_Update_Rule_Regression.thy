@@ -43,10 +43,12 @@ definition keyed_dummy_cfg :: cfg where
 
 text \<open>Two predecessors of \<open>Statement 1\<close>, both from \<open>Statement 0\<close>, with different
   \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_tree\<close> contributions differ.\<close>
-definition keyed_pred_sel :: "cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> edge_action) list" where
-  "keyed_pred_sel g v =
+definition keyed_pred_sel ::
+  "cfg \<Rightarrow> pp \<Rightarrow> unit \<Rightarrow> ((pp \<times> unit + unit) \<times> edge_action) list" where
+  "keyed_pred_sel g v ctx =
      (if v = Statement 1 then
-        [(Statement 0, EA_Nop), (Statement 0, EA_Assign (STR ''x'') (exp.N 0))]
+        [(Inl (Statement 0, ctx), EA_Nop),
+         (Inl (Statement 0, ctx), EA_Assign (STR ''x'') (exp.N 0))]
       else [])"
 
 text \<open>\<open>cmb\<close>/\<open>extra\<close> are never invoked: \<open>calls = {}\<close> makes
@@ -124,7 +126,7 @@ definition merge_cfg :: cfg where
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
        keyed_cmb_c keyed_extra merge_cfg merge_spec bot bot bot"
 
 lemma merge_terminates:

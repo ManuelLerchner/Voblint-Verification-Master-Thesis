@@ -57,7 +57,8 @@ lemma nest_2_eqs_statement3:
                         (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
                         (locals callee_state) (globs globals_state2)) Bot)))))))"
   unfolding nest_2_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def routed_cmb_g_def
-  by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def)
+  by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
+        statement3_no_calls nest_entry Let_def)
 
 lemma nest_1_eqs_statement3:
   "nest_1_eqs (Statement 3, ctx)
@@ -82,7 +83,8 @@ lemma nest_1_eqs_statement3:
                         (caller_cont nest_S_st nest_ci (locals caller_state) (globs globals_state1))
                         (locals callee_state) (globs globals_state2)) Bot)))))))"
   unfolding nest_1_eqs_def side_cfg_T_eff_keyed_seed_dg_def routed_extra_g_def routed_cmb_g_def
-  by (simp add: statement3_no_intra statement3_comb statement3_no_calls nest_entry Let_def)
+  by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
+        statement3_no_calls nest_entry Let_def)
 
 end
 
