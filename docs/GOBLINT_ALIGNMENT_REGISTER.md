@@ -32,10 +32,12 @@ Evidence labels:
 | Area | Current state | Difference from Goblint | Why it exists | Closure path | Status |
 | --- | --- | --- | --- | --- | --- |
 | Source language | Scalar, procedural IMP2; an AFP IMP2 bridge embeds scalars into constant arrays. | Goblint analyzes C/CIL programs, including memory, types, and library semantics. | A small executable language permits end-to-end collecting and compiler proofs; the AFP bridge anchors its concrete semantics. | Arrays, then a C/CIL front-end model only after a concrete proof target is selected. | Deliberate scope boundary. |
-| CFG and collecting semantics | Verified interprocedural CFG, trace collecting semantics, explicit enter edges and combine triples. | Goblint consumes its C CFG and has framework-specific node/edge forms. | The CFG is the proof-level semantic interface; reproducing CIL CFG construction would dominate the current proof. | Specify a translation relation from a selected Goblint CFG fragment before claiming CFG fidelity. | Inference; no active migration. |
+| CFG and collecting semantics | Verified interprocedural CFG, trace collecting semantics, a separate four-place `calls` relation labelled `CallEdge`, and combine triples. | Goblint consumes its C CFG and has framework-specific node/edge forms. | The CFG is the proof-level semantic interface; reproducing CIL CFG construction would dominate the current proof. | Specify a translation relation from a selected Goblint CFG fragment before claiming CFG fidelity. | Inference; no active migration. |
 | Unknown space and contexts | One generalized D/G executable generator; monovariant = the `unit` instantiation. The routed interval instance computes exact per-context results (batch-green eval); the collecting-soundness certificate is the remaining proof. | Goblint's `FromSpec` local variable is `(node, S.C.t)` and selects context at calls. | The semantic layer was built before the executable route; the generic route seeds the callee entry dynamically. | Finish the soundness pipeline in `ROUTE_A7_EXECUTABLE_DG_MIGRATION.md` (bridge -> route lemma -> `activation_collect_sound` -> coverage -> interval theorem -> source lift). | Active; generator + routing done, certificate remaining. |
-| Context input boundary | Context is selected from the post-enter callee state (`enterc c s'` on the entered store), matching `context man f callee_state`; argument-sensitive context is expressible. | Goblint's `Spec.context` receives a local `D.t`; global information is available through the manager/global channel, not by framework-level joining. | The prior caller-store / joined `side_env_cmp` read could not express argument context; routing on the entered callee state fixes it. | Certify the routed solution via `activation_collect_sound` + `point_digest` (ENTER_MONO); the manager/query channel remains a simplification. | Callee-state routing done (batch-green); soundness certificate remaining. |
-| Call entry and return | IMP2 carries actuals and an optional destination through CFG metadata, but entry/reset and the abstract caller-local/callee-global merge are fixed. | Goblint's `enter` can return several caller/callee states; `combine_env` and `combine_assign` are analysis operations. | Fixed operations match the IMP2 concrete semantics and keep the first TD bridge small. | First-class analysis-driven call contract, then generator-driving `combine_env`/`combine_assign` with multi-result entry. | Basic source call/return implemented; analysis-defined contract missing. |
+| Context input boundary | Context is selected from the post-enter callee state (`enterc c s'` on the entered store), matching `context man f callee_state`; argument-sensitive context is expressible. | Goblint's `Spec.context` receives a local `D.t`; global information is available through the manager/global channel, not by framework-level joining. | The prior caller-store / joined `side_env_cmp` read could not express argument context; routing on the entered callee state fixes it. | Certify the routed solution via `activation_collect_sound` + `point_digest` (ENTER_MONO); the manager/query channel remains a simplification. | Callee-state routing done (batch-green); soundness certificate remaining. The load-bearing assumption is `route_enterc_agree` (`routed_context_base_hetero`): the abstract route on the entered frame must agree with the trace-semantic `enterc` on the entered store. Every live instance discharges it because its `enterc` either ignores the store (`enterc_unit`, `cs_context`) or is defined as the abstract route (`route_enterc_of_sigma`). A genuinely store-decoding context selector such as `formals_context_sem`, instantiated nowhere today, is where that assumption would have to be earned. |
+| Call entry and return | IMP2 carries actuals and an optional destination through CFG metadata, but entry/reset and the abstract caller-local/callee-global merge are fixed. `enter` yields one contribution. | Goblint's `enter` can return several caller/callee states; `combine_env` and `combine_assign` are analysis operations. | Fixed operations match the IMP2 concrete semantics and keep the first TD bridge small. | First-class analysis-driven call contract, then generator-driving `combine_env`/`combine_assign` with multi-result entry (#142 W2). | Basic source call/return implemented; analysis-defined contract missing. |
+| Call-target resolution | The combine trees are built from the materialized `calls` relation, one tree per statically enumerated `(call site, call action, exit)` tuple of `return_call_action_list`. The callee of a call site is fixed when the equation system is constructed. | Goblint's `tf_proc` resolves a target set from the abstract state (`Queries.EvalFunvar`, direct-call fast path) and the call-site RHS iterates it. | The structural `calls` relation is what `wf_cfg`, `call_enter_store`, `valid_ltr` and the renderer read; building the analysis equations from it too was the shortest route to a working generator. | Call-site-owned `resolve_targets :: call_expression => abstract_state => pname set`, initially a singleton for direct calls, with the structural relation retained for the concrete semantics (#142 W1). Independent of any solver change. | Open; no dynamic or indirect calls expressible. |
+| Function-entry unknown | The callee entry state is side-effected into a **global** proxy `Inr (Seed (FunctionEntry f) ctx)`; the callee's local `(FunctionEntry f, ctx)` reads it back through `routed_extra_g`. | Goblint's `sidel (FunctionEntry f, fc) v` targets a **local** unknown in the same variable space as every program point, with no CFG predecessors, so its value is exactly the join of the contributions. | The vendored `TD_side` solver's `Side` targets globals only (`Basics_side.thy`); there is no `sidel`. | A `SideL`-capable vendored solver with proved post-solution and termination obligations, or a recorded decision not to pursue it (#142 W2). Deferred vendor work, not impossible work. | Open. Consequences: one extra unknown per (callee entry, context) with no Goblint counterpart; the proxy is a plain join accumulator with no equation of its own, so widening happens one hop later at the local entry unknown; anything enumerating local unknowns sees a variable Goblint does not have. **No operational equivalence to Goblint's fixpoint is claimed.** |
 | Local/global payloads | One `'a abs_state = vname => 'a` serves local slots and named global slots. | Goblint distinguishes `D.t` local and `G.t` global lattices. | The vendored TD bridge and current Sign/Interval instances use one payload type. | Split state/tree/transfer payloads and re-state gamma over the two components. | High-cost stretch. |
 | Relational state | Pointwise abstract states. | Goblint analyses may use opaque relational local states; product maps cannot represent cross-variable constraints faithfully. | Pointwise Sign and Interval make executable transfer and gamma proofs direct. | Abstract-state interface with sound projection/merge operations; prerequisite for an Octagon result. | Deferred. |
 | Named globals and side effects | `QueryG`/`Side`, finite keys, and D/G routing are modeled. | Goblint has analysis-defined global variables and global payloads, with richer namespaces and update behavior. | The finite-key, common-payload form fits `TD_side` and current examples. | Combine this with payload separation and per-global update rules. | Partial alignment. |
@@ -70,32 +72,63 @@ and
 
 ### What the formalization implements (this repo)
 
+Read the status column as one of three things: **implemented** (the mechanism
+exists and is batch-green), **simplified** (a mechanism exists, but it is
+weaker than Goblint's and the difference is load-bearing), or **proxied** (the
+observable effect is reproduced through a different encoding, with no claim that
+the two compute the same fixpoint).
+
 | Goblint | Formalization | Status |
 | --- | --- | --- |
-| `enter` -> callee entry with bound formals | `EA_Enter formals actuals` / `edge_step` (`bind_formals` over `enter_state`) | done |
-| `context man f callee_state` (post-enter callee state) | `enterc c s'` on the entered store `s'` (`trace_witness_act.enter`) | done, **batch-green** |
-| local unknown `(node, context)` | `Inl (pp, ctx)` | done |
-| `sidel (FunctionEntry f, fc) callee_state` | seed slot `Inr (Seed callee_entry ctx)`, published by the routed enter `Side` | done, batch-green (interval example) |
-| `getl (Function f, fc)` | routed callee-exit read `Inl (ex, route ...)` in the combine | done, batch-green |
-| `combine_env` then `combine_assign` | `combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)` (`combine_env gs s t` = caller locals + callee globals; `combine_assign dst` = destination write) | done |
+| `enter` -> callee entry with bound formals | `CallEdge dst formals actuals` in the `calls` relation; `enter_state`/`bind_formals` on the concrete side, `dgs_enter` on the abstract side | implemented, single contribution only |
+| several `(caller continuation, callee entry)` pairs from one `enter` | one pair | simplified; #142 W2 |
+| target set resolved from the abstract state (`tf_proc`, `Queries.EvalFunvar`) | statically enumerated from the materialized `calls` relation at construction time | simplified; #142 W1 |
+| `context man f callee_state` (post-enter callee state) | `route` applied to the entered frame the generator computes, `enterc c s'` on the concrete side | implemented, **batch-green** |
+| local unknown `(node, context)` | `Inl (pp, ctx)` | implemented |
+| `sidel (FunctionEntry f, fc) callee_state` | `Side` into the global proxy `Inr (Seed (FunctionEntry f) ctx)`, read back into the local `(FunctionEntry f, ctx)` by `routed_extra_g` | proxied; #142 W2. The vendored solver has no `sidel` |
+| `getl (Function f, fc)` | routed callee-exit read `Inl (ex, route ...)` in the combine | implemented, batch-green |
+| `combine_env` then `combine_assign` | `combine_collect gs dst s t = combine_assign dst (t ret_var) (combine_env gs s t)` (`combine_env gs s t` = caller locals + callee globals; `combine_assign dst` = destination write) | implemented, composed rather than exposed as two hooks |
 
-The load-bearing correction this session: **context is now selected from the
-callee-entry abstract state after parameter binding** (`enterc c s'`), matching
-`context man f callee_state`. The prior model routed on the caller store, which
-cannot express argument-sensitive context. See
-`ROUTE_A7_EXECUTABLE_DG_MIGRATION.md` (architectural finding + minimal fix).
+Two corrections worth keeping separate.
+
+**Context is selected from the callee-entry abstract state after parameter
+binding**, matching `context man f callee_state`. An earlier model routed on the
+caller store, which cannot express argument-sensitive context. See
+`ROUTE_A7_EXECUTABLE_DG_MIGRATION.md`.
+
+**That entry state is computed once and shared** between context selection and
+publication, matching Goblint's use of the same `v` for both `S.context man f v`
+and `sidel`. Previously the route entered the frame itself, against a bottom
+global, while the publication entered it against the solved global — two `enter`
+applications per call edge, one of them fed a value the solver did not hold. The
+generator now binds the entered frame once and every route is a formals
+projection of the state it is handed. Current domains cannot observe the
+difference, because their `dgs_enter` discards its global argument; the `w0_*`
+lemmas in `Example_Keyed_Solver_Update_Rule_Regression` use a transfer that does
+not, and fail on the old routing.
 
 ### Claim discipline
 
 Accurate: *a simplified, machine-checked semantic model of Goblint's
 interprocedural context-sensitive architecture.* Not: *the exact implementation.*
+
 Known simplifications (future faithfulness, not blockers): `enter` is a single
 language-level formal-binding transfer, not an analysis-controlled `(D.t * D.t)
-list` (no multi-path split / nondeterminism); the context selector sees the caller
-context and entered store, not a full manager/query interface; `D.t` is a store,
-not a product of relational / heap / thread / path-sensitive domains; `combine_env`
-/ `combine_assign` are composed in one `combine_collect`, not exposed as two
-analysis-overridable hooks.
+list` (no multi-path split / nondeterminism); call targets are enumerated when
+the equation system is built, so no analysis-driven or indirect call is
+expressible; the context selector sees the caller context and entered frame, not
+a full manager/query interface; `D.t` is a store, not a product of relational /
+heap / thread / path-sensitive domains; `combine_env` / `combine_assign` are
+composed in one `combine_collect`, not exposed as two analysis-overridable hooks.
+
+Unproved equivalence, distinct from the above: the callee-entry unknown is a
+global proxy plus a mirror read, where Goblint has one local unknown. The
+encoding expresses the same collecting dependency and the soundness theorems are
+stated and proved against it. Whether it reaches the same fixpoint as Goblint's
+local-side-effect formulation is **not** claimed and has not been proved. The
+scheduling and widening behaviour differ by construction: the proxy carries no
+equation, so contributions join there and widening applies one hop later at the
+local entry unknown.
 
 ## Boundary examples
 
@@ -141,6 +174,16 @@ advance the target without closing an entire register row.
 | `GHOST_INSTRUMENTATION_MIGRATION.md` | Validation only | Useful executable observability, not a Goblint framework-alignment closure. |
 | `NONDET_HAVOC_MIGRATION.md` | Source language | Improves semantic breadth; it does not reduce the C/CIL gap. |
 
+The three interprocedural rows added above — call entry and return, call-target
+resolution, function-entry unknown — are tracked as workstreams on issue #142
+rather than as a migration document:
+
+| Workstream | Register rows | State |
+| --- | --- | --- |
+| W0 shared entry frame | Context input boundary | Closed. The entry state is computed once and shared by context selection and publication. |
+| W1 `resolve_targets` | Call-target resolution | Open. Independent of the solver; a singleton resolver already removes the dependency on pre-instantiated caller-callee equations. |
+| W2 `SideL` | Function-entry unknown, call entry and return | Open, investigation first. Contribution preservation across RHS re-evaluation, widening placement at the target, repeated contributions from one origin, the affected termination and post-solution proofs, whether `buffer_sides` generalizes, and the cost of a forked vendored solver all need answers before a migration is promised. |
+
 ## Rules for future alignment work
 
 - State the upstream interface fragment and commit before calling a design
@@ -155,6 +198,15 @@ advance the target without closing an entire register row.
   generator *does* derive and seed the callee context from the post-enter callee
   state, batch-green; what remains for "complete" is the collecting-soundness
   certificate for the routed solution, not the routing mechanism.)
+- Separate "proxied" from "implemented" in every status. A row that reproduces an
+  observable effect through a different encoding must say so and must state
+  whether operational equivalence is claimed. Proxy encodings are where a silent
+  fidelity claim is cheapest to make and hardest to notice.
+- Do not close a fidelity gap with a lemma that characterizes today's domains
+  when the point of the gap is to admit domains that violate it. An
+  `enter_local ... d g = enter_local ... d bot` independence lemma would have
+  been true of every current spec and would have written the restriction into
+  the generic interface.
 
 ## Superseded inventories
 
