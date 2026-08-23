@@ -365,6 +365,23 @@ jobs:
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: opam exec -- pixi run property
 
+      # The report is a contract with a frontend this repository does not own,
+      # and its faults are quiet ones: a renamed element, a repeated span, an
+      # empty findings list all render a page that looks fine. `pixi run ci`
+      # has covered these locally for a while; running them here is what stops
+      # a change reaching main without them.
+      - name: Fetch the g2html frontend the report is checked against
+        run: git submodule update --init vendor/g2html
+
+      - name: HTML report structure (element shapes g2html's stylesheets read)
+        run: opam exec -- pixi run html-report-check
+
+      - name: HTML report sweep over the regression corpus
+        run: opam exec -- pixi run html-report-audit
+
+      - name: HTML report sweep over the domain/solver/context space
+        run: opam exec -- pixi run html-config-audit
+
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: html
