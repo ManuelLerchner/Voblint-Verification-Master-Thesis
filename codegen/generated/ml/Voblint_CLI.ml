@@ -132,6 +132,7 @@ module Core : sig
   val equal_paritya : parity -> parity -> bool
   val bot_parity : parity bot
   val top_paritya : parity
+  val semilattice_sup_parity : parity semilattice_sup
   type ('a, 'b) dg_state
   val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
@@ -224,6 +225,7 @@ module Core : sig
   val char_0x65 : char
   val char_0x61 : char
   val string_of_sign : sign -> char list
+  val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
   val ea_check_cond : edge_action -> exp
   val is_EA_Check : edge_action -> bool
   val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
@@ -238,6 +240,7 @@ module Core : sig
   val string_of_parity : parity -> char list
   val char_0x5D : char
   val char_0x5B : char
+  val char_0x2C : char
   val string_of_ivl : ivl -> char list
   val char_0x75 : char
   val char_0x6C : char
@@ -275,6 +278,7 @@ module Core : sig
   val cs_graph_route :
     nat ->
       cfg_node -> cfg_node list -> call_action -> 'a -> (cfg_node list) option
+  val ordered_by_key : ('a -> string) -> 'a set -> 'a list
   val analysis_graph_to_export :
     'a equal -> 'b equal ->
       ('a, 'b, 'c, 'd, unit) analysis_graph_config_ext ->
@@ -11758,13 +11762,23 @@ end;; (*struct Analyse_Dispatch*)
 module State_Report_GraphViz : sig
   val string_of_abstract_value :
     Analyse_Dispatch.abstract_value -> Core.char list
+  val cs_globals_for :
+    Analysis_Config.analysis_domain ->
+      Core.nat -> unit Core.imp_prog_ext -> (string * string list) list
   val exp_vnames_list : Core.exp -> string list
   val cs_ctx_export_auto :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> unit Core.export_graph_ext
+  val solver_globals_for :
+    Analysis_Config.analysis_domain ->
+      Analysis_Config.solver_choice ->
+        unit Core.imp_prog_ext -> (string * string list) list
   val full_state_export_auto :
     Analysis_Config.analysis_domain ->
       unit Core.imp_prog_ext -> unit Core.export_graph_ext
+  val entry_state_globals_for :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext -> (string * string list) list
   val entry_state_verdicts_for :
     Analysis_Config.analysis_domain ->
       unit Core.imp_prog_ext ->
@@ -11823,8 +11837,29 @@ let rec string_of_abstract_value
     | Analyse_Dispatch.IntDomValue d -> Core.string_of_int_dom d
     | Analyse_Dispatch.ParityValue v -> Core.string_of_parity v;;
 
+let rec ctx_key_of
+  into ctx =
+    Core.implode
+      (Core.maps (fun x -> string_of_abstract_value (into x) @ [Core.char_0x20])
+        ctx);;
+
 let rec state_line
   f x = Core.explode x @ [Core.char_0x3D] @ string_of_abstract_value (f x);;
+
+let rec ctx_show_of
+  into ctx =
+    (match ctx
+      with [] ->
+        [Core.char_0x72; Core.char_0x6F; Core.char_0x6F; Core.char_0x74;
+          Core.char_0x20; Core.char_0x63; Core.char_0x6F; Core.char_0x6E;
+          Core.char_0x74; Core.char_0x65; Core.char_0x78; Core.char_0x74]
+      | x :: xs ->
+        string_of_abstract_value (into x) @
+          Core.maps
+            (fun y ->
+              [Core.char_0x2C; Core.char_0x20] @
+                string_of_abstract_value (into y))
+            xs);;
 
 let rec project_env
   into r v =
@@ -11883,6 +11918,47 @@ let rec cs_ctx_sol_for
               | Core.Inr _ -> Core.Unreachable)))
       | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
+let rec point_state_lines
+  vars st =
+    (match st with Core.Unreachable -> ["unreachable"]
+      | Core.Reachable s ->
+        Core.map (fun x -> Core.implode (state_line s x)) vars);;
+
+let rec ctx_seed_globals _A _B
+  into ckey show_ctx r p =
+    Core.maps
+      (fun f ->
+        Core.map
+          (fun c ->
+            ((("enter " ^ f) ^ " @ ") ^ Core.implode (show_ctx c),
+              point_state_lines (program_vars p)
+                (Core.map_point_state (Core.comp into)
+                  (Core.lookup_context _B r (Core.FunctionEntry f) c))))
+          (Core.ordered_by_key ckey
+            (Core.contexts_at r (Core.FunctionEntry f))))
+      (Core.prog_main_name :: Core.prog_procs p);;
+
+let rec cs_globals_for
+  kind k p =
+    (match kind
+      with Analysis_Config.Sign_Analysis ->
+        ctx_seed_globals Core.semilattice_sup_sign
+          (Core.equal_list Core.equal_cfg_node)
+          (fun a -> Analyse_Dispatch.SignValue a) Core.cs_context_key
+          Core.cs_show_context (Core.analyse_sign_call_string_result k p) p
+      | Analysis_Config.Interval_Analysis ->
+        ctx_seed_globals Core.semilattice_sup_ivl
+          (Core.equal_list Core.equal_cfg_node)
+          (fun a -> Analyse_Dispatch.IntervalValue a) Core.cs_context_key
+          Core.cs_show_context (Core.analyse_interval_call_string_result k p) p
+      | Analysis_Config.Int_Analysis ->
+        ctx_seed_globals
+          (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+          (Core.equal_list Core.equal_cfg_node)
+          (fun a -> Analyse_Dispatch.IntDomValue a) Core.cs_context_key
+          Core.cs_show_context (Core.analyse_int_call_string_result k p) p
+      | Analysis_Config.Parity_Analysis -> []);;
+
 let rec exp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.exp_vnames b);;
@@ -11900,6 +11976,14 @@ let rec cs_ctx_domain_for
         Core.contextual_result_domain base (Core.prog_cfg Core.prog_main_name p)
           (Core.analyse_int_call_string_result k p)
       | Analysis_Config.Parity_Analysis -> []);;
+
+let rec unit_seed_globals _A
+  into =
+    ctx_seed_globals _A Core.equal_unit into (fun _ -> "")
+      (fun _ ->
+        [Core.char_0x72; Core.char_0x6F; Core.char_0x6F; Core.char_0x74;
+          Core.char_0x20; Core.char_0x63; Core.char_0x6F; Core.char_0x6E;
+          Core.char_0x74; Core.char_0x65; Core.char_0x78; Core.char_0x74]);;
 
 let unreachable_state_annotation : Core.graphviz_node_annotation
   = Core.Node_Annotation
@@ -11945,12 +12029,8 @@ let rec checked_payload_of
            full,
           Core.map
             (fun (k, st) ->
-              (k, (match st with Core.Unreachable -> ["unreachable"]
-                    | Core.Reachable s ->
-                      Core.map
-                        (fun x ->
-                          Core.implode (state_line (Core.comp into s) x))
-                        (program_vars p))))
+              (k, point_state_lines (program_vars p)
+                    (Core.map_point_state (Core.comp into) st)))
             globals)));;
 
 let rec dead_check_annotation
@@ -12064,6 +12144,69 @@ let rec project_joined_env _A _B
   into r v =
     Core.map_point_state (Core.comp into) (Core.lookup_joined_state _B _A r v);;
 
+let rec solver_globals_for
+  kind sc p =
+    (match (kind, sc)
+      with (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Join) ->
+        unit_seed_globals Core.semilattice_sup_sign
+          (fun a -> Analyse_Dispatch.SignValue a) (Core.analyse_sign_result p) p
+      | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_PerOrigin) ->
+        unit_seed_globals Core.semilattice_sup_sign
+          (fun a -> Analyse_Dispatch.SignValue a)
+          (Core.analyse_sign_result_per_origin p) p
+      | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Warrow) -> []
+      | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
+        -> []
+      | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Join) ->
+        unit_seed_globals Core.semilattice_sup_ivl
+          (fun a -> Analyse_Dispatch.IntervalValue a)
+          (Core.analyse_interval_join_result p) p
+      | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_PerOrigin) ->
+        unit_seed_globals Core.semilattice_sup_ivl
+          (fun a -> Analyse_Dispatch.IntervalValue a)
+          (Core.analyse_interval_per_origin_result p) p
+      | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Warrow) ->
+        unit_seed_globals Core.semilattice_sup_ivl
+          (fun a -> Analyse_Dispatch.IntervalValue a)
+          (Core.analyse_interval_td_result p) p
+      | (Analysis_Config.Interval_Analysis,
+          Analysis_Config.Solver_WarrowPerOrigin)
+        -> unit_seed_globals Core.semilattice_sup_ivl
+             (fun a -> Analyse_Dispatch.IntervalValue a)
+             (Core.analyse_interval_wpo_result p) p
+      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Join) ->
+        unit_seed_globals
+          (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+          (fun a -> Analyse_Dispatch.IntDomValue a)
+          (Core.analyse_int_join_result p) p
+      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin) ->
+        unit_seed_globals
+          (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+          (fun a -> Analyse_Dispatch.IntDomValue a)
+          (Core.analyse_int_per_origin_result p) p
+      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow) ->
+        unit_seed_globals
+          (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+          (fun a -> Analyse_Dispatch.IntDomValue a) (Core.analyse_int_result p)
+          p
+      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
+        -> unit_seed_globals
+             (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+             (fun a -> Analyse_Dispatch.IntDomValue a)
+             (Core.analyse_int_wpo_result p) p
+      | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Join) ->
+        unit_seed_globals Core.semilattice_sup_parity
+          (fun a -> Analyse_Dispatch.ParityValue a)
+          (Core.analyse_parity_result p) p
+      | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_PerOrigin) ->
+        unit_seed_globals Core.semilattice_sup_parity
+          (fun a -> Analyse_Dispatch.ParityValue a)
+          (Core.analyse_parity_result_per_origin p) p
+      | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Warrow) -> []
+      | (Analysis_Config.Parity_Analysis,
+          Analysis_Config.Solver_WarrowPerOrigin)
+        -> []);;
+
 let rec entry_state_ctx_sol
   r k = (match k
           with Core.Inl (a, b) ->
@@ -12106,6 +12249,33 @@ let rec full_state_export_auto
       Core.prog_main_name (Core.prog_main p)
       (point_state_node_annotation (program_vars p)
         (analyse_point_env_for kind p));;
+
+let rec entry_state_globals_for
+  kind p =
+    (match kind
+      with Analysis_Config.Sign_Analysis ->
+        ctx_seed_globals Core.semilattice_sup_sign
+          (Core.equal_list Core.equal_sign)
+          (fun a -> Analyse_Dispatch.SignValue a)
+          (ctx_key_of (fun a -> Analyse_Dispatch.SignValue a))
+          (ctx_show_of (fun a -> Analyse_Dispatch.SignValue a))
+          (Core.analyse_sign_entry_state_result p) p
+      | Analysis_Config.Interval_Analysis ->
+        ctx_seed_globals Core.semilattice_sup_ivl
+          (Core.equal_list Core.equal_ivl)
+          (fun a -> Analyse_Dispatch.IntervalValue a)
+          (ctx_key_of (fun a -> Analyse_Dispatch.IntervalValue a))
+          (ctx_show_of (fun a -> Analyse_Dispatch.IntervalValue a))
+          (Core.analyse_interval_entry_state_result p) p
+      | Analysis_Config.Int_Analysis ->
+        ctx_seed_globals
+          (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
+          (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit))
+          (fun a -> Analyse_Dispatch.IntDomValue a)
+          (ctx_key_of (fun a -> Analyse_Dispatch.IntDomValue a))
+          (ctx_show_of (fun a -> Analyse_Dispatch.IntDomValue a))
+          (Core.analyse_int_entry_state_result p) p
+      | Analysis_Config.Parity_Analysis -> []);;
 
 let rec entry_state_verdicts_for
   kind p =

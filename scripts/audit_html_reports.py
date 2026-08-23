@@ -65,6 +65,21 @@ def skip_reason(fixture: Path) -> str | None:
     return None
 
 
+def ensure_dot_renderers() -> None:
+    """conda-forge's graphviz registers its renderer plugins from a post-link
+    script, which pixi skips unless run-post-link-scripts is enabled. Without
+    that registry `dot -Tsvg` fails with 'Format: "svg" not recognized' -- an
+    environment fault that reads here as a report defect. `dot -c` rebuilds the
+    registry in the active prefix and is idempotent, so probe first and only pay
+    for it on a prefix that needs it; a system graphviz already works.
+    """
+    probe = subprocess.run(
+        ["dot", "-Tsvg"], input="digraph{a}", capture_output=True, text=True
+    )
+    if probe.returncode != 0:
+        subprocess.run(["dot", "-c"], capture_output=True, text=True)
+
+
 def audit_one(fixture: Path, out: Path) -> list[str]:
     """Returns a list of problems; empty means the report is coherent."""
     args = param_args(fixture)
@@ -158,6 +173,30 @@ def audit_one(fixture: Path, out: Path) -> list[str]:
             if not 1 <= line <= expected:
                 problems.append(f"{ref} points at line {line}, file has {expected}")
 
+        # 7b. A check in the source is a finding in the report. This is the
+        #     invariant a placeholder breaks silently: a route that has no
+        #     verdict reader falls back to no annotations at all, and every
+        #     structural check above still passes on the result.
+        #
+        #     Dead checks are exempt: an unreachable check has no finding to
+        #     report, which is the same convention the text report follows.
+        annotated = {
+            int(ET.parse(w).getroot().find("text").get("line"))
+            for w in (out / "warn").glob("warn*.xml")
+        }
+        dead_lines = {
+            int(ln.get("nr")) for ln in lines if ln.get("ded") == "true"
+        }
+        source_lines = fixture.read_text().splitlines()
+        for i, text_line in enumerate(source_lines):
+            nr = i + 1
+            if "__voblint_check" not in text_line or nr in dead_lines:
+                continue
+            if nr not in annotated:
+                problems.append(
+                    f"check on line {nr} produced no finding in the source view"
+                )
+
     # 8. The frontend itself has to be there, or none of the above is reachable.
     for asset in ("report.xsl", "node.xsl", "file.xsl", "frame.html", "script.js"):
         if not (out / asset).is_file():
@@ -226,13 +265,50 @@ def audit_combinations(verbose: bool) -> int:
                             for a in ET.parse(d).getroot().findall("./call/path/analysis")
                         )
                     ]
+                    faults = []
                     if not stated:
+                        faults.append("no node carries a state")
+
+                    # An accepted configuration must also report its findings and
+                    # publish its global unknowns. Both are per-route lookups that
+                    # fall back to an empty list when a route has no reader, and
+                    # an empty list renders a page that passes every structural
+                    # check above -- which is how a whole context mode shipped
+                    # showing states and no findings.
+                    src_doc = next((out / "files").glob("*.xml"), None)
+                    dead = set()
+                    if src_doc is not None:
+                        dead = {
+                            int(ln.get("nr"))
+                            for ln in ET.parse(src_doc).getroot().findall("ln")
+                            if ln.get("ded") == "true"
+                        }
+                    annotated = {
+                        int(ET.parse(w).getroot().find("text").get("line"))
+                        for w in (out / "warn").glob("warn*.xml")
+                    }
+                    missing = [
+                        i + 1
+                        for i, t in enumerate(fixture.read_text().splitlines())
+                        if "__voblint_check" in t and i + 1 not in dead
+                        and i + 1 not in annotated
+                    ]
+                    if missing:
+                        faults.append(f"checks on {missing} produced no finding")
+
+                    globs_doc = out / "nodes" / "globals.xml"
+                    if not globs_doc.is_file():
+                        faults.append("no nodes/globals.xml")
+                    elif not ET.parse(globs_doc).getroot().findall("glob"):
+                        faults.append("globals pane is empty")
+
+                    if faults:
                         failures += 1
-                        print(f"FAIL {label}: accepted, but no node carries a state")
+                        print(f"FAIL {label}: " + "; ".join(faults))
                     elif verbose:
                         print(f"ok   {label} ({len(stated)}/{len(docs)} nodes with state)")
                     shutil.rmtree(out, ignore_errors=True)
-    print(f"\n{accepted} accepted configuration(s), {failures} producing no state")
+    print(f"\n{accepted} accepted configuration(s), {failures} with problems")
     return 1 if failures else 0
 
 
@@ -247,6 +323,8 @@ def main() -> int:
     if not VOBLINT.exists():
         print("cli/voblint not built -- run `pixi run cli-build`", file=sys.stderr)
         return 2
+
+    ensure_dot_renderers()
 
     if args.combinations:
         return audit_combinations(args.verbose)

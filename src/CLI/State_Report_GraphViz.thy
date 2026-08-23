@@ -123,6 +123,17 @@ definition program_vars :: "imp_prog \<Rightarrow> vname list" where
 definition state_line :: "(vname \<Rightarrow> abstract_value) \<Rightarrow> vname \<Rightarrow> string" where
   "state_line f x = String.explode x @ ''='' @ string_of_abstract_value (f x)"
 
+text \<open>One point's state as the lines a document shows, unreachability included ---
+  the same rendering a node label carries, so a state reads the same wherever it
+  appears.\<close>
+
+definition point_state_lines ::
+    "vname list \<Rightarrow> abstract_value abs_state point_state \<Rightarrow> String.literal list" where
+  "point_state_lines vars st =
+     (case st of
+        Unreachable \<Rightarrow> [STR ''unreachable'']
+      | Reachable s \<Rightarrow> map (\<lambda>x. String.implode (state_line s x)) vars)"
+
 definition state_report_node_annotation ::
     "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
      \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
@@ -407,11 +418,8 @@ where
                (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
           map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full,
           map (\<lambda>(k, st).
-                 (k, case st of
-                       Unreachable \<Rightarrow> [STR ''unreachable'']
-                     | Reachable s \<Rightarrow>
-                         map (\<lambda>x. String.implode (state_line (into \<circ> s) x))
-                             (program_vars p)))
+                 (k, point_state_lines (program_vars p)
+                       (map_point_state (\<lambda>s. into \<circ> s) st)))
               globals))"
 
 text \<open>
@@ -520,6 +528,137 @@ definition entry_state_verdicts_for ::
         Sign_Analysis \<Rightarrow> analyse_sign_entry_state_report p
       | Interval_Analysis \<Rightarrow> analyse_interval_entry_state p
       | Int_Analysis \<Rightarrow> analyse_int_entry_state_report p
+      | Parity_Analysis \<Rightarrow> [])"
+
+subsection \<open>Global unknowns of a context-sensitive solve\<close>
+
+text \<open>
+  A seed's payload is readable off the local table, so this needs no second solve:
+  \<open>routed_extra_g\<close> answers a callee entry's local from
+  \<^term>\<open>locals (sigma (Inr (seed_key v ctx)))\<close>, which makes
+  \<^term>\<open>lookup_context r (FunctionEntry f) ctx\<close> that seed rather than a summary of it.
+
+  Contexts come from the table's own covered set, ordered by the same key the
+  expanded graph clusters by --- \<^const>\<open>ordered_by_key\<close> needs an order on that key,
+  not on the context type, which is what makes an \<^typ>\<open>ivl list\<close> enumerable at all.
+
+  The shared slot is absent here, unlike the context-insensitive pane. Its value
+  lives in \<^term>\<open>globs (sigma (Inr gk0))\<close> and no local table carries it, so listing
+  it would mean inventing one; a route that publishes it needs the solve itself.
+\<close>
+
+definition ctx_key_of :: "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> String.literal" where
+  "ctx_key_of into ctx =
+     String.implode (concat (map (\<lambda>x. string_of_abstract_value (into x) @ '' '') ctx))"
+
+text \<open>The key orders the rows; this names them. \<^const>\<open>prog_main_name\<close>'s context is
+  empty --- nothing calls it, so nothing seeds it --- and the expanded graph already
+  calls that the root context, so a reader meets one spelling in both places.\<close>
+
+definition ctx_show_of :: "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> string" where
+  "ctx_show_of into ctx =
+     (case ctx of
+        [] \<Rightarrow> ''root context''
+      | x # xs \<Rightarrow>
+          string_of_abstract_value (into x)
+            @ concat (map (\<lambda>y. '', '' @ string_of_abstract_value (into y)) xs))"
+
+definition ctx_seed_globals ::
+    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> String.literal) \<Rightarrow> ('c \<Rightarrow> string)
+       \<Rightarrow> ('c, 'a abs_state) analysis_result \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "ctx_seed_globals into ckey show_ctx r p =
+     concat
+       (map (\<lambda>f.
+               map (\<lambda>c.
+                      (STR ''enter '' + f + STR '' @ '' + String.implode (show_ctx c),
+                       point_state_lines (program_vars p)
+                         (map_point_state (\<lambda>st. into \<circ> st)
+                           (lookup_context r (FunctionEntry f) c))))
+                   (ordered_by_key ckey (contexts_at r (FunctionEntry f))))
+            (prog_main_name # prog_procs p))"
+
+text \<open>A context-insensitive route has one context per entry, so its rows differ only
+  by procedure and the context adds nothing to read.\<close>
+
+definition unit_seed_globals ::
+    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> imp_prog \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "unit_seed_globals into =
+     ctx_seed_globals into (\<lambda>_. STR '''') (\<lambda>_. ''root context'')"
+
+definition entry_state_globals_for ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "entry_state_globals_for kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          ctx_seed_globals SignValue (ctx_key_of SignValue) (ctx_show_of SignValue)
+            (analyse_sign_entry_state_result p) p
+      | Interval_Analysis \<Rightarrow>
+          ctx_seed_globals IntervalValue (ctx_key_of IntervalValue)
+            (ctx_show_of IntervalValue) (analyse_interval_entry_state_result p) p
+      | Int_Analysis \<Rightarrow>
+          ctx_seed_globals IntDomValue (ctx_key_of IntDomValue) (ctx_show_of IntDomValue)
+            (analyse_int_entry_state_result p) p
+      | Parity_Analysis \<Rightarrow> [])"
+
+text \<open>
+  The same reading for a route that solved at one context. An explicit solver choice
+  and the call-string renderer both have a solved table and no combined producer, and a
+  seed is in that table either way, so neither needs to solve again to publish one.
+\<close>
+
+definition solver_globals_for ::
+    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "solver_globals_for kind sc p =
+     (case (kind, sc) of
+        (Sign_Analysis, Solver_Join) \<Rightarrow> unit_seed_globals SignValue (analyse_sign_result p) p
+      | (Sign_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals SignValue (analyse_sign_result_per_origin p) p
+      | (Sign_Analysis, _) \<Rightarrow> []
+      | (Interval_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_join_result p) p
+      | (Interval_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_per_origin_result p) p
+      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_td_result p) p
+      | (Interval_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_wpo_result p) p
+      | (Int_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_join_result p) p
+      | (Int_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_per_origin_result p) p
+      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_result p) p
+      | (Int_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_wpo_result p) p
+      | (Parity_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals ParityValue (analyse_parity_result p) p
+      | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals ParityValue (analyse_parity_result_per_origin p) p
+      | (Parity_Analysis, _) \<Rightarrow> [])"
+
+text \<open>
+  The call-string reading, keyed and named by the same \<^const>\<open>cs_context_key\<close> and
+  \<^const>\<open>cs_show_context\<close> the call-string graph clusters by, so one context has one
+  spelling wherever it appears. Parity has no call-string table to read.
+\<close>
+
+definition cs_globals_for ::
+    "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "cs_globals_for kind k p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          ctx_seed_globals SignValue cs_context_key cs_show_context
+            (analyse_sign_call_string_result k p) p
+      | Interval_Analysis \<Rightarrow>
+          ctx_seed_globals IntervalValue cs_context_key cs_show_context
+            (analyse_interval_call_string_result k p) p
+      | Int_Analysis \<Rightarrow>
+          ctx_seed_globals IntDomValue cs_context_key cs_show_context
+            (analyse_int_call_string_result k p) p
       | Parity_Analysis \<Rightarrow> [])"
 
 definition entry_state_report_for_annotation ::

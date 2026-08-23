@@ -474,6 +474,57 @@ def test_node_order_is_a_sequence_not_the_line_number(tmp_path):
     )
 
 
+def test_context_sensitive_globals_show_one_seed_per_context(tmp_path):
+    """--context entry-state rendered an empty globals pane.
+
+    The seeds are what context-sensitivity buys, and they are readable off the
+    table the run already solved: routed_extra_g answers a callee entry's local
+    from its seed, so the entry's local *is* that seed. Two call sites with
+    different arguments must therefore appear as two rows, each pinning the
+    argument it was called with -- one joined row would mean the contexts were
+    lost.
+    """
+    out = _run(tmp_path, "--analysis", "interval", "--context", "entry-state",
+               str(CTX_FIXTURE))
+    rows = {
+        g.find("key").text: ET.tostring(g.find("analysis"), encoding="unicode")
+        for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
+    }
+    assert rows, "a context-sensitive run published no global unknowns"
+
+    seeds = [k for k in rows if k.startswith("enter square")]
+    assert len(seeds) == 2, f"two call sites should seed two contexts: {sorted(rows)}"
+
+    # square(3) and square(4): each seed pins n to its own actual argument.
+    pinned = sorted(
+        v for k in seeds
+        for v in ["[3,3]" if "<key>n</key><value>[3,3]</value>" in rows[k] else "",
+                  "[4,4]" if "<key>n</key><value>[4,4]</value>" in rows[k] else ""]
+        if v
+    )
+    assert pinned == ["[3,3]", "[4,4]"], (
+        f"seeds do not carry the actual arguments: {[rows[k] for k in seeds]}"
+    )
+
+
+def test_the_uncalled_entry_is_named_root_context(tmp_path):
+    """main has no seed -- nothing calls it -- and the graph already says so.
+
+    Its context is empty, and an empty context rendered as a bare trailing
+    separator reads as a missing value rather than as the root.
+    """
+    out = _run(tmp_path, "--analysis", "interval", "--context", "entry-state",
+               str(CTX_FIXTURE))
+    keys = [
+        g.find("key").text
+        for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
+    ]
+    assert "enter main @ root context" in keys, keys
+    for k in keys:
+        assert k == k.strip(), f"row key has stray whitespace: {k!r}"
+        assert not k.endswith("@"), f"row key ends in a bare separator: {k!r}"
+
+
 def test_several_domains_land_in_one_node_document(tmp_path):
     """<analysis> is the element Goblint uses for exactly this, so several
     domains stack in one document rather than needing several reports."""

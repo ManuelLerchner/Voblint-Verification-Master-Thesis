@@ -676,21 +676,35 @@ let () =
             (match
                Voblint_CLI.State_Report_GraphViz.solver_checked_payload_auto k sc prog
              with
-             | Some (g, (report, gvs)) -> (g, Some report, gvs)
+             | Some (g, (report, _)) ->
+               (* solver_checked_payload_auto has no combined producer, so its
+                  globals come from the same table it already solved. *)
+               ( g,
+                 Some report,
+                 Voblint_CLI.State_Report_GraphViz.solver_globals_for k sc prog )
              | None ->
                (* valid_analysis_config already rejected the combinations with
                   no table behind them, so this is unreachable rather than a
                   fallback worth inventing a rendering for. *)
                failwith "unsupported --analysis/--solver combination")
           | None ->
+            (* A context-sensitive route has no state-carrying report, but its
+               seeds are readable off the local table it already solved -- a
+               callee entry's local is the seed routed_extra_g answered it
+               with. Call-string contexts have no such reader yet. *)
             if !context_kind = CK_CallString then
-              (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog, None, [])
+              ( Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto k (cs_depth ()) prog,
+                None,
+                Voblint_CLI.State_Report_GraphViz.cs_globals_for k (cs_depth ()) prog )
             else if !context_graph = Expanded then
-              (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog, None, [])
+              ( Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog,
+                None,
+                Voblint_CLI.State_Report_GraphViz.entry_state_globals_for k prog )
             else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
               ( Voblint_CLI.State_Report_GraphViz
                 .entry_state_full_state_checked_export_auto k prog,
-                None, [] )
+                None,
+                Voblint_CLI.State_Report_GraphViz.entry_state_globals_for k prog )
             else
               let g, (report, gvs) =
                 Voblint_CLI.State_Report_GraphViz.full_state_checked_payload_auto k prog
