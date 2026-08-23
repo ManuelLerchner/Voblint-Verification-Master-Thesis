@@ -107,6 +107,60 @@ lemma routed_extra_g_local_only:
   "x \<in> set (routed_extra_g seed_key gk0 route ctx v) \<Longrightarrow> globs (traverse_rhs x tau) = bot"
   unfolding routed_extra_g_def by (cases v) auto
 
+subsection \<open>Addressing a callee entry at the seed it is published to\<close>
+
+text \<open>
+  A callee entry receives no intra edge: its value is exactly the join of the entry
+  contributions published at its seed key.  \<open>seed_addr\<close> is the address function that
+  says so --- a \<^const>\<open>FunctionEntry\<close> is carried by the contribution-only unknown
+  \<open>seed_key v ctx\<close>, every other program point by its own \<open>(pp, 'c)\<close> equation-driven
+  unknown --- and \<open>seed_predecessor_addr_list\<close> is the predecessor selection built
+  from it, to be supplied where \<^const>\<open>intra_predecessor_addr_list\<close> addresses every
+  predecessor locally.
+
+  \<open>val_at\<close> is the same function read the other way round: the abstract value a
+  solution assigns to a program point, whichever side of the solver's valuation
+  carries it.  Reading a solution through \<open>val_at\<close> rather than through
+  \<^const>\<open>Inl\<close> directly is what keeps a coverage statement uniform over program
+  points once the two kinds coexist.
+\<close>
+
+definition seed_addr :: "(pp \<Rightarrow> 'c \<Rightarrow> 'k) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> (pp \<times> 'c + 'k)" where
+  "seed_addr seed_key v ctx =
+     (case v of FunctionEntry _ \<Rightarrow> Inr (seed_key v ctx) | _ \<Rightarrow> Inl (v, ctx))"
+
+lemma seed_addr_FunctionEntry [simp]:
+  "seed_addr seed_key (FunctionEntry p) ctx = Inr (seed_key (FunctionEntry p) ctx)"
+  by (simp add: seed_addr_def)
+
+lemma seed_addr_Statement [simp]:
+  "seed_addr seed_key (Statement n) ctx = Inl (Statement n, ctx)"
+  by (simp add: seed_addr_def)
+
+lemma seed_addr_FunctionResult [simp]:
+  "seed_addr seed_key (FunctionResult p) ctx = Inl (FunctionResult p, ctx)"
+  by (simp add: seed_addr_def)
+
+definition seed_predecessor_addr_list ::
+  "(pp \<Rightarrow> 'c \<Rightarrow> 'k) \<Rightarrow> cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list"
+where
+  "seed_predecessor_addr_list seed_key g v ctx =
+     map (\<lambda>(u, a). (seed_addr seed_key u ctx, a)) (intra_predecessor_list g v)"
+
+definition val_at ::
+  "(pp \<Rightarrow> 'c \<Rightarrow> 'k) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'D"
+where
+  "val_at seed_key sigma v ctx = locals (sigma (seed_addr seed_key v ctx))"
+
+lemma val_at_FunctionEntry:
+  "val_at seed_key sigma (FunctionEntry p) ctx
+     = locals (sigma (Inr (seed_key (FunctionEntry p) ctx)))"
+  by (simp add: val_at_def)
+
+lemma val_at_not_entry:
+  "(\<And>p. v \<noteq> FunctionEntry p) \<Longrightarrow> val_at seed_key sigma v ctx = locals (sigma (Inl (v, ctx)))"
+  by (cases v) (auto simp: val_at_def seed_addr_def)
+
 text \<open>
   Side-free analogue of \<^const>\<open>routed_cmb_g\<close>: instead of publishing \<open>gk0\<close> itself
   it answers the
