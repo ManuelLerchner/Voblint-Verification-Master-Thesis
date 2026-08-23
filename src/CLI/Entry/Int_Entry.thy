@@ -169,7 +169,7 @@ proof -
   have finI: "finite (intra (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
   obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg prog_main_name p)"
-    using mem[unfolded analyse_int_report_for_def Let_def]
+    using mem[unfolded analyse_int_report_for_def surface_unfold]
           classify_checks_mem_iff[OF finI, of v c Check_Proved
             "\<lambda>v. case lookup_context (analyse_int_ctx_result_warrow_for mode pgs prog_main_name p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
             int_classify_check]
@@ -184,7 +184,7 @@ proof -
              and classify = int_classify_check
              and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: int_dom abs_state \<Rightarrow> store set",
-           OF finI mem[unfolded analyse_int_report_for_def Let_def] int_classify_check_proved node_sound])
+           OF finI mem[unfolded analyse_int_report_for_def surface_unfold] int_classify_check_proved node_sound])
 qed
 
 theorem analyse_int_report_sound_refuted_for:
@@ -208,7 +208,7 @@ proof -
   have finI: "finite (intra (prog_cfg prog_main_name p))"
     unfolding prog_cfg_def using compile_prog_finite by simp
   obtain tgt where edge: "(v, EA_Check c, tgt) \<in> intra (prog_cfg prog_main_name p)"
-    using mem[unfolded analyse_int_report_for_def Let_def]
+    using mem[unfolded analyse_int_report_for_def surface_unfold]
           classify_checks_mem_iff[OF finI, of v c Check_Refuted
             "\<lambda>v. case lookup_context (analyse_int_ctx_result_warrow_for mode pgs prog_main_name p) v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st"
             int_classify_check]
@@ -223,7 +223,7 @@ proof -
              and classify = int_classify_check
              and reach = "ltr_collect pgs (prog_cfg prog_main_name p) (cinit_stores pgs)"
              and v = v and gamma_state = "gamma_state :: int_dom abs_state \<Rightarrow> store set",
-           OF finI mem[unfolded analyse_int_report_for_def Let_def] int_classify_check_refuted node_sound])
+           OF finI mem[unfolded analyse_int_report_for_def surface_unfold] int_classify_check_refuted node_sound])
 qed
 
 end

@@ -85,12 +85,54 @@ text \<open>
   does not already cover, so the test is exact, not merely broader.
 \<close>
 
+text \<open>
+  Every renderer below needs the same thing from a solved table: the state at a point, as
+  the uniform \<^typ>\<open>abstract_value\<close> view rather than the domain's own carrier. Stating that
+  projection once means a dispatcher names a table and an injector and nothing else --- the
+  \<^const>\<open>map_point_state\<close>/\<^const>\<open>lookup_context\<close> pairing is not restated per domain, per
+  solver, and per context mode.
+
+  What cannot be factored out is the dispatch itself. \<^typ>\<open>analysis_domain\<close> is a runtime
+  value, while the type of a solved table is static and different for each domain, so
+  something has to enumerate the domains to get from one to the other. \<^typ>\<open>abstract_value\<close>
+  is precisely the type that ends that enumeration: past this projection every renderer is
+  domain-agnostic. The enumerations that remain are the boundary, not repetition.
+\<close>
+
+definition project_env ::
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "project_env into r v = map_point_state (\<lambda>st. into \<circ> st) (lookup_context r v ())"
+
+text \<open>
+  The context-sensitive counterpart: \<^const>\<open>lookup_joined_state\<close> joins the contexts covering
+  a point before projecting, so the reader is a per-node view with no context type left in
+  it. Same projection, different reading of the table.
+\<close>
+
+definition project_joined_env ::
+    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> ('ctx, 'a abs_state) analysis_result
+       \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
+  "project_joined_env into r v =
+     map_point_state (\<lambda>st. into \<circ> st) (lookup_joined_state r v)"
+
 definition program_vars :: "imp_prog \<Rightarrow> vname list" where
   "program_vars p =
      remdups (concat (map (scope_vnames_list p) (prog_main_name # prog_procs p)))"
 
 definition state_line :: "(vname \<Rightarrow> abstract_value) \<Rightarrow> vname \<Rightarrow> string" where
   "state_line f x = String.explode x @ ''='' @ string_of_abstract_value (f x)"
+
+text \<open>One point's state as the lines a document shows, unreachability included ---
+  the same rendering a node label carries, so a state reads the same wherever it
+  appears.\<close>
+
+definition point_state_lines ::
+    "vname list \<Rightarrow> abstract_value abs_state point_state \<Rightarrow> String.literal list" where
+  "point_state_lines vars st =
+     (case st of
+        Unreachable \<Rightarrow> [STR ''unreachable'']
+      | Reachable s \<Rightarrow> map (\<lambda>x. String.implode (state_line s x)) vars)"
 
 definition state_report_node_annotation ::
     "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
@@ -100,8 +142,8 @@ definition state_report_node_annotation ::
         None \<Rightarrow> None
       | Some (_, cnd, res, f) \<Rightarrow>
           (case check_result_annotation res cnd of
-             Node_Annotation lbl style \<Rightarrow>
-               Some (Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)))"
+             Node_Annotation lbl status \<Rightarrow>
+               Some (Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)))"
 
 text \<open>
   \<open>analyse_with_state\<close>'s report also carries an exact \<open>unreachable\<close> flag
@@ -135,12 +177,6 @@ definition exp_vnames_list :: "exp \<Rightarrow> vname list" where
 definition report_vars :: "('n \<times> exp \<times> 'r) list \<Rightarrow> vname list" where
   "report_vars report =
      sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames c) ` set report))"
-
-definition state_report_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "state_report_dot_auto kind p =
-     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
-      in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (state_report_node_annotation (report_vars report) report))"
 
 text \<open>
   The canonical-snapshot sibling of \<open>state_report_dot_auto\<close>: same report,
@@ -222,34 +258,26 @@ definition entry_state_point_env_for ::
   "entry_state_point_env_for kind p =
      (case kind of
         Sign_Analysis \<Rightarrow>
-          (let r = analyse_sign_entry_state_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_joined_state r v)))
+          project_joined_env SignValue (analyse_sign_entry_state_result p)
       | Interval_Analysis \<Rightarrow>
-          (let r = analyse_interval_entry_state_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_joined_state r v)))
+          project_joined_env IntervalValue (analyse_interval_entry_state_result p)
       | Int_Analysis \<Rightarrow>
-          (let r = analyse_int_entry_state_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_joined_state r v)))
+          project_joined_env IntDomValue (analyse_int_entry_state_result p)
       | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
 
 text \<open>
-  The unreachable styling draws from the palette \<^const>\<open>check_result_annotation\<close>
-  and \<^const>\<open>analysis_node_attrs\<close> already use: \<open>gray40\<close>, the grey the renderer
-  gives its own exit nodes, and deliberately not the \<open>gray70\<close> an undecided
-  check carries. ``Nothing reaches this node'' and ``something reaches it and
-  the abstraction could not decide'' are different findings and must not
-  render alike.
+  \<^const>\<open>NS_Unreachable\<close> is a distinct status, not a shade of the undecided one:
+  ``nothing reaches this node'' and ``something reaches it and the abstraction could not
+  decide'' are different findings, and \<^const>\<open>gv_style_of_status\<close> keeps them apart in
+  every renderer at once.
 \<close>
 
-definition unreachable_gv_style :: string where
-  "unreachable_gv_style = ''shape=box,style=filled,fillcolor=gray40,fontcolor=white''"
-
 definition unreachable_state_annotation :: graphviz_node_annotation where
-  "unreachable_state_annotation = Node_Annotation ''unreachable'' unreachable_gv_style"
+  "unreachable_state_annotation = Node_Annotation ''unreachable'' NS_Unreachable"
 
 definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation" where
   "dead_check_annotation cnd =
-     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') unreachable_gv_style"
+     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') NS_Unreachable"
 
 text \<open>
   The shared full-state renderer for every \<^typ>\<open>'a point_state\<close>-valued
@@ -267,8 +295,7 @@ definition point_state_node_annotation ::
      (case env v of
         Unreachable \<Rightarrow> Some unreachable_state_annotation
       | Reachable st \<Rightarrow>
-          Some (Node_Annotation (join_gv_nl (map (state_line st) vars))
-                  ''shape=box,style=filled,fillcolor=lightgreen''))"
+          Some (Node_Annotation (join_gv_nl (map (state_line st) vars)) NS_Plain))"
 
 text \<open>
   \<open>analyse_point_env_for\<close> is the monovariant sibling of
@@ -296,23 +323,10 @@ definition analyse_point_env_for ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> abstract_value abs_state point_state" where
   "analyse_point_env_for kind p =
      (case kind of
-        Sign_Analysis \<Rightarrow>
-          (let r = analyse_sign_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. SignValue \<circ> st) (lookup_context r v ())))
-      | Interval_Analysis \<Rightarrow>
-          (let r = analyse_interval_td_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntervalValue \<circ> st) (lookup_context r v ())))
-      | Int_Analysis \<Rightarrow>
-          (let r = analyse_int_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. IntDomValue \<circ> st) (lookup_context r v ())))
-      | Parity_Analysis \<Rightarrow>
-          (let r = analyse_parity_result p
-           in (\<lambda>v. map_point_state (\<lambda>st. ParityValue \<circ> st) (lookup_context r v ()))))"
-
-definition full_state_dot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "full_state_dot_auto kind p =
-     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
+        Sign_Analysis \<Rightarrow> project_env SignValue (analyse_sign_result p)
+      | Interval_Analysis \<Rightarrow> project_env IntervalValue (analyse_interval_td_result p)
+      | Int_Analysis \<Rightarrow> project_env IntDomValue (analyse_int_result p)
+      | Parity_Analysis \<Rightarrow> project_env ParityValue (analyse_parity_result p))"
 
 text \<open>Canonical-text sibling, the same DOT-free relationship
   \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
@@ -323,18 +337,167 @@ definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_
        (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
+  The structured-export siblings. Same report, same annotation hook, same single solve per
+  render as their DOT and snapshot counterparts above --- only the view of the built graph
+  differs. These are what the CLI's own renderers consume: everything a DOT or HTML
+  rendering needs is in the returned \<^typ>\<open>export_graph\<close>, so no renderer outside this
+  session re-derives the graph or parses text back into one.
+\<close>
+
+definition state_report_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "state_report_export_auto kind p =
+     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
+      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (state_report_node_annotation (report_vars report) report))"
+
+definition full_state_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "full_state_export_auto kind p =
+     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
+
+text \<open>
+  Neither existing annotation carries what a report browser needs at once.
+  \<^const>\<open>point_state_node_annotation\<close> has a state at every point but no verdicts;
+  \<^const>\<open>state_report_node_annotation\<close> has verdicts but only at check nodes, and nothing
+  anywhere else. This one is their join: the state everywhere, and at a point that carries
+  a check, that check's \<^typ>\<open>node_status\<close> in place of \<^const>\<open>NS_Plain\<close>, so a refuted check
+  is visible in the graph without opening the node.
+
+  Unreachability wins over a verdict, and deliberately: a check whose point nothing
+  reaches has no finding to report, which is the same convention the CLI's text report
+  follows when it suppresses those rows entirely.
+\<close>
+
+definition full_state_checked_node_annotation ::
+    "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state point_state)
+       \<Rightarrow> (pp \<times> exp \<times> check_result) list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+  "full_state_checked_node_annotation vars env verdicts v =
+     (case env v of
+        Unreachable \<Rightarrow> Some unreachable_state_annotation
+      | Reachable st \<Rightarrow>
+          (let lines = map (state_line st) vars
+           in case find (\<lambda>entry. fst entry = v) verdicts of
+                None \<Rightarrow> Some (Node_Annotation (join_gv_nl lines) NS_Plain)
+              | Some (_, cnd, res) \<Rightarrow>
+                  (case check_result_annotation res cnd of
+                     Node_Annotation lbl status \<Rightarrow>
+                       Some (Node_Annotation (join_gv_nl (lbl # lines)) status))))"
+
+text \<open>
+  One solve behind both views. A report browser needs a state at every point
+  and a verdict at every check, and those are two readings of one solved
+  table rather than two analyses: the state column and the verdict column
+  can only disagree if they came from different solves.
+
+  Taking the table as an argument is what makes that sharing survive code
+  generation. A body naming \<^const>\<open>analyse_sign_result\<close> once for the states
+  and once for the verdicts is two calls in the generated OCaml, hence two
+  solves of the same equation system; one argument used twice is one call.
+
+  \<open>bot_state\<close> is a parameter for the reason \<^locale>\<open>analysis_surface\<close> already
+  takes it as one: at an abstract state --- a function type --- the class
+  operation's code equation demands an executable \<^class>\<open>bot\<close> arity that a
+  definition polymorphic in \<open>'a\<close> cannot supply.
+\<close>
+
+definition checked_payload_of ::
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> 'a abs_state
+       \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> (String.literal \<times> 'a abs_state point_state) list \<Rightarrow> imp_prog
+       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+            \<times> (String.literal \<times> String.literal list) list"
+where
+  "checked_payload_of into classify bot_state r globals p =
+     (let full = classify_checks_with_state (prog_cfg prog_main_name p)
+                   (\<lambda>v. case lookup_context r v () of
+                          Unreachable \<Rightarrow> (True, bot_state)
+                        | Reachable st \<Rightarrow> (False, st))
+                   (\<lambda>c (_, s). classify c s)
+      in (raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+            (full_state_checked_node_annotation (program_vars p) (project_env into r)
+               (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
+          map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full,
+          map (\<lambda>(k, st).
+                 (k, point_state_lines (program_vars p)
+                       (map_point_state (\<lambda>s. into \<circ> s) st)))
+              globals))"
+
+text \<open>
+  Dropping the two published columns leaves the plain check report. The
+  state-carrying traversal reads \<^const>\<open>Unreachable\<close> into a flag beside the state
+  and classifies from the state alone, so a verdict never depends on the extra
+  column --- which is what lets a payload's verdicts be compared against the
+  verdict-only dispatchers below rather than trusted to agree.
+\<close>
+
+lemma map_classify_checks_with_state_flagged:
+  "map ((\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> (\<lambda>(u, c, res, unr, st). (u, c, res, unr, h st)))
+     (classify_checks_with_state g
+        (\<lambda>v. case q v of Unreachable \<Rightarrow> (True, b) | Reachable st \<Rightarrow> (False, st))
+        (\<lambda>c (_, s). classify c s))
+   = classify_checks g (\<lambda>v. case q v of Unreachable \<Rightarrow> b | Reachable st \<Rightarrow> st) classify"
+  by (simp add: classify_checks_with_state_def classify_checks_def comp_def case_prod_beta
+      split: point_state.split)
+
+text \<open>
+  Each branch reads its domain's \<open>ctx_solved_for\<close> pair rather than the result table
+  alone, so the states, the verdicts and the global unknowns all come from the one
+  solve that pair performed.
+\<close>
+
+definition full_state_checked_payload_auto ::
+    "analysis_domain \<Rightarrow> imp_prog
+       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+            \<times> (String.literal \<times> String.literal list) list"
+where
+  "full_state_checked_payload_auto kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          (case analyse_sign_ctx_solved_for (declared_global p) prog_main_name p of
+             (r, gvs) \<Rightarrow> checked_payload_of SignValue sign_classify_check bot r gvs p)
+      | Interval_Analysis \<Rightarrow>
+          (case analyse_interval_ctx_solved_warrow_for (declared_global p) prog_main_name p of
+             (r, gvs) \<Rightarrow>
+               checked_payload_of IntervalValue interval_classify_check bot r gvs p)
+      | Int_Analysis \<Rightarrow>
+          (case analyse_int_ctx_solved_warrow_for Refine_Fixpoint (declared_global p)
+                  prog_main_name p of
+             (r, gvs) \<Rightarrow> checked_payload_of IntDomValue int_classify_check bot r gvs p)
+      | Parity_Analysis \<Rightarrow>
+          (case analyse_parity_ctx_solved_for (declared_global p) prog_main_name p of
+             (r, gvs) \<Rightarrow> checked_payload_of ParityValue parity_classify_check bot r gvs p))"
+
+text \<open>
+  The report half is exactly \<^const>\<open>analyse_with_state\<close>'s answer, so sharing one
+  solve with the graph changes what the browser is shown from, not what it shows:
+  a reader's verdicts stay the CLI's verdicts, and no second classification
+  convention enters through the rendering path.
+\<close>
+
+lemma snd_full_state_checked_payload_auto [simp]:
+  "fst (snd (full_state_checked_payload_auto kind p)) = analyse_with_state kind p"
+  by (cases kind)
+     (simp_all add: full_state_checked_payload_auto_def checked_payload_of_def Let_def
+        fst_analyse_sign_ctx_solved_for fst_analyse_parity_ctx_solved_for
+        fst_analyse_interval_ctx_solved_warrow_for fst_analyse_int_ctx_solved_warrow_for
+        case_prod_beta analyse_sign_result_for_def analyse_interval_td_result_for_def
+        analyse_int_result_for_def analyse_parity_result_for_def
+        analyse_sign_report_with_state_def analyse_sign_report_for_with_state_def
+        analyse_sign_result_def
+        analyse_interval_td_report_with_state_def analyse_interval_td_report_for_with_state_def
+        analyse_interval_td_result_def
+        analyse_int_report_with_state_def analyse_int_report_for_with_state_def
+        analyse_int_result_def
+        analyse_parity_report_with_state_def analyse_parity_report_for_with_state_def
+        analyse_parity_result_def)
+
+text \<open>
   One render is one solve. The \<open>[code]\<close> equations bind the result table once,
   outside the per-node annotation closure, so the whole graph is annotated
   from a single \<^const>\<open>entry_state_sol_prog\<close> run no matter how many nodes it
   has; the defining equations stay in the shape that reads as the intended
   meaning.
 \<close>
-
-definition entry_state_full_state_dot_auto ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "entry_state_full_state_dot_auto kind p =
-     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 definition entry_state_full_state_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
@@ -367,6 +530,137 @@ definition entry_state_verdicts_for ::
       | Int_Analysis \<Rightarrow> analyse_int_entry_state_report p
       | Parity_Analysis \<Rightarrow> [])"
 
+subsection \<open>Global unknowns of a context-sensitive solve\<close>
+
+text \<open>
+  A seed's payload is readable off the local table, so this needs no second solve:
+  \<open>routed_extra_g\<close> answers a callee entry's local from
+  \<^term>\<open>locals (sigma (Inr (seed_key v ctx)))\<close>, which makes
+  \<^term>\<open>lookup_context r (FunctionEntry f) ctx\<close> that seed rather than a summary of it.
+
+  Contexts come from the table's own covered set, ordered by the same key the
+  expanded graph clusters by --- \<^const>\<open>ordered_by_key\<close> needs an order on that key,
+  not on the context type, which is what makes an \<^typ>\<open>ivl list\<close> enumerable at all.
+
+  The shared slot is absent here, unlike the context-insensitive pane. Its value
+  lives in \<^term>\<open>globs (sigma (Inr gk0))\<close> and no local table carries it, so listing
+  it would mean inventing one; a route that publishes it needs the solve itself.
+\<close>
+
+definition ctx_key_of :: "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> String.literal" where
+  "ctx_key_of into ctx =
+     String.implode (concat (map (\<lambda>x. string_of_abstract_value (into x) @ '' '') ctx))"
+
+text \<open>The key orders the rows; this names them. \<^const>\<open>prog_main_name\<close>'s context is
+  empty --- nothing calls it, so nothing seeds it --- and the expanded graph already
+  calls that the root context, so a reader meets one spelling in both places.\<close>
+
+definition ctx_show_of :: "('a \<Rightarrow> abstract_value) \<Rightarrow> 'a list \<Rightarrow> string" where
+  "ctx_show_of into ctx =
+     (case ctx of
+        [] \<Rightarrow> ''root context''
+      | x # xs \<Rightarrow>
+          string_of_abstract_value (into x)
+            @ concat (map (\<lambda>y. '', '' @ string_of_abstract_value (into y)) xs))"
+
+definition ctx_seed_globals ::
+    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> ('c \<Rightarrow> String.literal) \<Rightarrow> ('c \<Rightarrow> string)
+       \<Rightarrow> ('c, 'a abs_state) analysis_result \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "ctx_seed_globals into ckey show_ctx r p =
+     concat
+       (map (\<lambda>f.
+               map (\<lambda>c.
+                      (STR ''enter '' + f + STR '' @ '' + String.implode (show_ctx c),
+                       point_state_lines (program_vars p)
+                         (map_point_state (\<lambda>st. into \<circ> st)
+                           (lookup_context r (FunctionEntry f) c))))
+                   (ordered_by_key ckey (contexts_at r (FunctionEntry f))))
+            (prog_main_name # prog_procs p))"
+
+text \<open>A context-insensitive route has one context per entry, so its rows differ only
+  by procedure and the context adds nothing to read.\<close>
+
+definition unit_seed_globals ::
+    "('a::semilattice_sup \<Rightarrow> abstract_value) \<Rightarrow> (unit, 'a abs_state) analysis_result
+       \<Rightarrow> imp_prog \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "unit_seed_globals into =
+     ctx_seed_globals into (\<lambda>_. STR '''') (\<lambda>_. ''root context'')"
+
+definition entry_state_globals_for ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "entry_state_globals_for kind p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          ctx_seed_globals SignValue (ctx_key_of SignValue) (ctx_show_of SignValue)
+            (analyse_sign_entry_state_result p) p
+      | Interval_Analysis \<Rightarrow>
+          ctx_seed_globals IntervalValue (ctx_key_of IntervalValue)
+            (ctx_show_of IntervalValue) (analyse_interval_entry_state_result p) p
+      | Int_Analysis \<Rightarrow>
+          ctx_seed_globals IntDomValue (ctx_key_of IntDomValue) (ctx_show_of IntDomValue)
+            (analyse_int_entry_state_result p) p
+      | Parity_Analysis \<Rightarrow> [])"
+
+text \<open>
+  The same reading for a route that solved at one context. An explicit solver choice
+  and the call-string renderer both have a solved table and no combined producer, and a
+  seed is in that table either way, so neither needs to solve again to publish one.
+\<close>
+
+definition solver_globals_for ::
+    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "solver_globals_for kind sc p =
+     (case (kind, sc) of
+        (Sign_Analysis, Solver_Join) \<Rightarrow> unit_seed_globals SignValue (analyse_sign_result p) p
+      | (Sign_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals SignValue (analyse_sign_result_per_origin p) p
+      | (Sign_Analysis, _) \<Rightarrow> []
+      | (Interval_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_join_result p) p
+      | (Interval_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_per_origin_result p) p
+      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_td_result p) p
+      | (Interval_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
+          unit_seed_globals IntervalValue (analyse_interval_wpo_result p) p
+      | (Int_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_join_result p) p
+      | (Int_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_per_origin_result p) p
+      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_result p) p
+      | (Int_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
+          unit_seed_globals IntDomValue (analyse_int_wpo_result p) p
+      | (Parity_Analysis, Solver_Join) \<Rightarrow>
+          unit_seed_globals ParityValue (analyse_parity_result p) p
+      | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
+          unit_seed_globals ParityValue (analyse_parity_result_per_origin p) p
+      | (Parity_Analysis, _) \<Rightarrow> [])"
+
+text \<open>
+  The call-string reading, keyed and named by the same \<^const>\<open>cs_context_key\<close> and
+  \<^const>\<open>cs_show_context\<close> the call-string graph clusters by, so one context has one
+  spelling wherever it appears. Parity has no call-string table to read.
+\<close>
+
+definition cs_globals_for ::
+    "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog
+       \<Rightarrow> (String.literal \<times> String.literal list) list" where
+  "cs_globals_for kind k p =
+     (case kind of
+        Sign_Analysis \<Rightarrow>
+          ctx_seed_globals SignValue cs_context_key cs_show_context
+            (analyse_sign_call_string_result k p) p
+      | Interval_Analysis \<Rightarrow>
+          ctx_seed_globals IntervalValue cs_context_key cs_show_context
+            (analyse_interval_call_string_result k p) p
+      | Int_Analysis \<Rightarrow>
+          ctx_seed_globals IntDomValue cs_context_key cs_show_context
+            (analyse_int_call_string_result k p) p
+      | Parity_Analysis \<Rightarrow> [])"
+
 definition entry_state_report_for_annotation ::
     "analysis_domain \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list" where
@@ -396,16 +690,9 @@ definition verdict_state_report_node_annotation ::
           Some (case (verdict, st) of
                   (Decided res, Reachable f) \<Rightarrow>
                     (case check_result_annotation res cnd of
-                       Node_Annotation lbl style \<Rightarrow>
-                         Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) style)
+                       Node_Annotation lbl status \<Rightarrow>
+                         Node_Annotation (join_gv_nl (lbl # map (state_line f) vars)) status)
                 | _ \<Rightarrow> dead_check_annotation cnd))"
-
-definition entry_state_report_dot_auto ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "entry_state_report_dot_auto kind p =
-     (let report = entry_state_report_for_annotation kind p
-      in raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-           (verdict_state_report_node_annotation (report_vars report) report))"
 
 definition entry_state_report_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
@@ -413,6 +700,148 @@ definition entry_state_report_graph_snapshot_auto ::
      (let report = entry_state_report_for_annotation kind p
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (verdict_state_report_node_annotation (report_vars report) report))"
+
+definition entry_state_report_export_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "entry_state_report_export_auto kind p =
+     (let report = entry_state_report_for_annotation kind p
+      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+           (verdict_state_report_node_annotation (report_vars report) report))"
+
+definition entry_state_full_state_export_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "entry_state_full_state_export_auto kind p =
+     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
+
+text \<open>
+  The entry-state counterpart of \<^const>\<open>full_state_checked_payload_auto\<close>. Without it a
+  context-sensitive report shows every state and no verdict, which is the one column a
+  reader opens a check node for.
+
+  \<^const>\<open>full_state_checked_node_annotation\<close> is reused unchanged by dropping the
+  \<^const>\<open>Dead\<close> verdicts on the way in: a dead check's point is \<^const>\<open>Unreachable\<close> in the
+  joined state as well, so the annotation reaches the same conclusion from the env alone.
+  The two columns cannot disagree --- a verdict is \<^const>\<open>Dead\<close> exactly when every context
+  covered at the node is unreachable, which is exactly when the join is.
+\<close>
+
+definition entry_state_checked_verdicts ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result) list" where
+  "entry_state_checked_verdicts kind p =
+     List.map_filter
+       (\<lambda>(v, cnd, verdict).
+          case verdict of Decided res \<Rightarrow> Some (v, cnd, res) | Dead \<Rightarrow> None)
+       (entry_state_verdicts_for kind p)"
+
+definition entry_state_full_state_checked_export_auto ::
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "entry_state_full_state_checked_export_auto kind p =
+     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       (full_state_checked_node_annotation (program_vars p)
+          (entry_state_point_env_for kind p) (entry_state_checked_verdicts kind p))"
+
+subsection \<open>Reporting an explicitly chosen solver\<close>
+
+text \<open>
+  \<^const>\<open>analyse_with_solver\<close> answers a \<^typ>\<open>check_report_entry list\<close>: it projects verdicts
+  out of the solved table and drops the states. That is all a textual check report needs, and
+  it is why a report browser had nothing to show for an explicit \<^typ>\<open>solver_choice\<close>.
+
+  The states were never missing, only unpublished --- every one of those branches reads a
+  solved \<^type>\<open>analysis_result\<close> of its own. What a reader sees is therefore what the verdicts
+  were drawn from: \<^const>\<open>checked_payload_of\<close> reads the states and the verdicts off the one
+  table the requested discipline solved, rather than resolving under a second rule.
+
+  The \<^const>\<open>None\<close> cases are exactly \<^const>\<open>analyse_with_solver\<close>'s: a domain with no widen
+  instance has no warrowing table to read, and \<^const>\<open>valid_analysis_config\<close> rejects those
+  combinations before a renderer runs.
+
+  Each \<^const>\<open>Some\<close> branch names the table of the corresponding
+  \<^locale>\<open>analysis_surface\<close> interpretation, which is the same pairing of table with
+  classifier that the domain's own check report goes through.
+\<close>
+
+definition solver_checked_payload_auto ::
+    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
+       \<Rightarrow> (export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+            \<times> (String.literal \<times> String.literal list) list)
+          option"
+where
+  "solver_checked_payload_auto kind sc p =
+     (case (kind, sc) of
+        (Sign_Analysis, Solver_Join) \<Rightarrow>
+          Some (checked_payload_of SignValue sign_classify_check bot
+                  (analyse_sign_result p) [] p)
+      | (Sign_Analysis, Solver_PerOrigin) \<Rightarrow>
+          Some (checked_payload_of SignValue sign_classify_check bot
+                  (analyse_sign_result_per_origin p) [] p)
+      | (Sign_Analysis, _) \<Rightarrow> None
+      | (Interval_Analysis, Solver_Join) \<Rightarrow>
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_join_result p) [] p)
+      | (Interval_Analysis, Solver_PerOrigin) \<Rightarrow>
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_per_origin_result p) [] p)
+      | (Interval_Analysis, Solver_Warrow) \<Rightarrow>
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_td_result p) [] p)
+      | (Interval_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
+          Some (checked_payload_of IntervalValue interval_classify_check bot
+                  (analyse_interval_wpo_result p) [] p)
+      | (Int_Analysis, Solver_Join) \<Rightarrow>
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_join_result p) [] p)
+      | (Int_Analysis, Solver_PerOrigin) \<Rightarrow>
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_per_origin_result p) [] p)
+      | (Int_Analysis, Solver_Warrow) \<Rightarrow>
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_result p) [] p)
+      | (Int_Analysis, Solver_WarrowPerOrigin) \<Rightarrow>
+          Some (checked_payload_of IntDomValue int_classify_check bot
+                  (analyse_int_wpo_result p) [] p)
+      | (Parity_Analysis, Solver_Join) \<Rightarrow>
+          Some (checked_payload_of ParityValue parity_classify_check bot
+                  (analyse_parity_result p) [] p)
+      | (Parity_Analysis, Solver_PerOrigin) \<Rightarrow>
+          Some (checked_payload_of ParityValue parity_classify_check bot
+                  (analyse_parity_result_per_origin p) [] p)
+      | (Parity_Analysis, _) \<Rightarrow> None)"
+
+text \<open>
+  Every branch's verdict column is the one \<^const>\<open>analyse_with_solver\<close> already
+  answers with, and the \<^const>\<open>None\<close> branches coincide. Fourteen tables are named
+  here by hand, so the risk this rules out is concrete: a branch reading a
+  neighbouring discipline's table would still typecheck, still render, and
+  disagree with the text report only where the two disciplines happen to differ.
+\<close>
+
+lemma solver_checked_payload_verdicts:
+  "map_option (map (\<lambda>(u, c, res, _, _). (u, c, res)) \<circ> fst \<circ> snd)
+     (solver_checked_payload_auto kind sc p)
+   = analyse_with_solver kind sc p"
+  by (cases kind; cases sc)
+     (simp_all add: solver_checked_payload_auto_def checked_payload_of_def Let_def
+        map_classify_checks_with_state_flagged surface_unfold
+        analyse_sign_report_def analyse_sign_report_for_def
+        analyse_sign_report_per_origin_def
+        analyse_sign_result_def analyse_sign_result_per_origin_def
+        analyse_interval_report_def analyse_interval_report_for_def
+        analyse_interval_report_per_origin_def analyse_interval_report_per_origin_for_def
+        analyse_interval_td_report_def analyse_interval_td_report_for_def
+        analyse_interval_report_wpo_def analyse_interval_report_wpo_for_def
+        analyse_interval_join_result_def analyse_interval_per_origin_result_def
+        analyse_interval_td_result_def analyse_interval_wpo_result_def
+        analyse_int_report_join_def analyse_int_report_join_for_def
+        analyse_int_report_per_origin_def analyse_int_report_per_origin_for_def
+        analyse_int_report_def analyse_int_report_for_def
+        analyse_int_report_wpo_def analyse_int_report_wpo_for_def
+        analyse_int_join_result_def analyse_int_per_origin_result_def
+        analyse_int_result_def analyse_int_result_for_def analyse_int_wpo_result_def
+        analyse_parity_report_def analyse_parity_report_for_def
+        analyse_parity_report_per_origin_def analyse_parity_report_per_origin_for_def
+        analyse_parity_result_def analyse_parity_result_per_origin_def)
 
 text \<open>
   \<open>program_vars\<close> pulls \<^const>\<open>scope_vnames_list\<close> (hence \<open>VIMP_Notation\<close>,
@@ -576,35 +1005,12 @@ lemma entry_state_ctx_graph_code [code]:
   unfolding entry_state_ctx_graph_def entry_state_ctx_annotated_config_def Let_def
   by (rule refl)
 
-definition entry_state_ctx_dot_auto :: "imp_prog \<Rightarrow> String.literal" where
-  "entry_state_ctx_dot_auto p =
-     String.implode
-       (analysis_graph_to_dot (entry_state_ctx_annotated_config p) (prog_cfg prog_main_name p)
-          (entry_state_ctx_sol (analyse_interval_entry_state_result p))
-          (entry_state_ctx_graph p))"
-
-declare entry_state_ctx_dot_auto_def [code del]
-
 text \<open>
-  The graph is inlined here rather than left as a call to
-  \<^const>\<open>entry_state_ctx_graph\<close>: that constant binds a solve of its own, so
-  naming it under an already-bound \<open>r\<close> would solve the program twice, once for
-  the rendering's own annotations and once inside the graph it renders.
+  The graph is inlined in each \<open>[code]\<close> equation below rather than left as a call to
+  \<^const>\<open>entry_state_ctx_graph\<close>: that constant binds a solve of its own, so naming it
+  under an already-bound \<open>r\<close> would solve the program twice, once for the rendering's own
+  annotations and once inside the graph it renders.
 \<close>
-
-lemma entry_state_ctx_dot_auto_code [code]:
-  "entry_state_ctx_dot_auto p =
-     (let r = analyse_interval_entry_state_result p;
-          g = prog_cfg prog_main_name p;
-          base = entry_state_ctx_graph_config p;
-          cfg = base \<lparr> node_annotation := entry_state_ctx_check_annotation g r \<rparr>;
-          sol = entry_state_ctx_sol r
-      in String.implode
-           (analysis_graph_to_dot cfg g sol
-              (build_analysis_graph cfg g (contextual_result_domain base g r) sol)))"
-  unfolding entry_state_ctx_dot_auto_def entry_state_ctx_graph_def
-            entry_state_ctx_annotated_config_def Let_def
-  by (rule refl)
 
 definition entry_state_ctx_graph_snapshot_auto :: "imp_prog \<Rightarrow> String.literal" where
   "entry_state_ctx_graph_snapshot_auto p =
@@ -626,6 +1032,27 @@ lemma entry_state_ctx_graph_snapshot_auto_code [code]:
            (analysis_graph_to_canonical_text cfg g sol
               (build_analysis_graph cfg g (contextual_result_domain base g r) sol)))"
   unfolding entry_state_ctx_graph_snapshot_auto_def entry_state_ctx_graph_def
+            entry_state_ctx_annotated_config_def Let_def
+  by (rule refl)
+
+definition entry_state_ctx_export_auto :: "imp_prog \<Rightarrow> export_graph" where
+  "entry_state_ctx_export_auto p =
+     analysis_graph_to_export (entry_state_ctx_annotated_config p) (prog_cfg prog_main_name p)
+       (entry_state_ctx_sol (analyse_interval_entry_state_result p))
+       (entry_state_ctx_graph p)"
+
+declare entry_state_ctx_export_auto_def [code del]
+
+lemma entry_state_ctx_export_auto_code [code]:
+  "entry_state_ctx_export_auto p =
+     (let r = analyse_interval_entry_state_result p;
+          g = prog_cfg prog_main_name p;
+          base = entry_state_ctx_graph_config p;
+          cfg = base \<lparr> node_annotation := entry_state_ctx_check_annotation g r \<rparr>;
+          sol = entry_state_ctx_sol r
+      in analysis_graph_to_export cfg g sol
+           (build_analysis_graph cfg g (contextual_result_domain base g r) sol))"
+  unfolding entry_state_ctx_export_auto_def entry_state_ctx_graph_def
             entry_state_ctx_annotated_config_def Let_def
   by (rule refl)
 
@@ -785,15 +1212,14 @@ definition cs_ctx_annotated_config ::
        \<lparr> node_annotation :=
            cs_ctx_check_annotation kind k p (prog_cfg prog_main_name p) \<rparr>"
 
-definition cs_ctx_dot_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
-  "cs_ctx_dot_auto kind k p =
+definition cs_ctx_export_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
+  "cs_ctx_export_auto kind k p =
      (let g = prog_cfg prog_main_name p;
           base = cs_ctx_graph_config p k;
           cfg = cs_ctx_annotated_config kind k p;
           sol = cs_ctx_sol_for kind k p
-      in String.implode
-           (analysis_graph_to_dot cfg g sol
-              (build_analysis_graph cfg g (cs_ctx_domain_for kind k p base) sol)))"
+      in analysis_graph_to_export cfg g sol
+           (build_analysis_graph cfg g (cs_ctx_domain_for kind k p base) sol))"
 
 definition cs_ctx_graph_snapshot_auto :: "analysis_domain \<Rightarrow> nat \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "cs_ctx_graph_snapshot_auto kind k p =

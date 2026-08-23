@@ -35,15 +35,21 @@
 //
 // nodes:
 //   main_pp1_ctx0: pp1
+//       x=[5,5]
 //   main_pp2_ctx0: pp2
+//       unreachable
 //       check x==99 [dead]
 //   main_pp3_ctx0: pp3
-//       check x==5
 //       x=[5,5]
+//       check x==5
 //   main_pp4_ctx0: pp4
+//       x=[5,5]
 //   main_result_main_ctx0: exit_main
+//       x=[5,5]
 //   main_entry_main_ctx0: entry_main
+//       x=[-inf,+inf]
 //   main_pp0_ctx0: pp0
+//       x=[-inf,+inf]
 //
 // edges:
 //   main_pp1_ctx0 -> main_pp2_ctx0: x<2

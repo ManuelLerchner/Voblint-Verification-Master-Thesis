@@ -105,10 +105,7 @@ text \<open>
 
 definition analyse_interval_td_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_td_report_for gs p =
-     (let r = analyse_interval_td_result_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           interval_classify_check)"
+     analysis_surface.report (analyse_interval_td_result_for gs) bot interval_classify_check p"
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>.
@@ -165,10 +162,7 @@ text \<open>
 
 definition analyse_interval_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_for gs p =
-     (let r = analyse_interval_join_result_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           interval_classify_check)"
+     analysis_surface.report (analyse_interval_join_result_for gs) bot interval_classify_check p"
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
@@ -192,10 +186,8 @@ text \<open>
 
 definition analyse_interval_report_per_origin_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_per_origin_for gs p =
-     (let r = analyse_interval_per_origin_result_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           interval_classify_check)"
+     analysis_surface.report (analyse_interval_per_origin_result_for gs) bot
+       interval_classify_check p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_interval_report\<close>'s
   shape.\<close>
@@ -219,14 +211,78 @@ definition analyse_interval_wpo_result_for ::
 
 definition analyse_interval_report_wpo_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_wpo_for gs p =
-     (let r = analyse_interval_wpo_result_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           interval_classify_check)"
+     analysis_surface.report (analyse_interval_wpo_result_for gs) bot interval_classify_check p"
 
 definition analyse_interval_report_wpo :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_interval_report_wpo p =
      analyse_interval_report_wpo_for (declared_global p) p"
+
+text \<open>
+  The solved table behind that report, on the same \<^const>\<open>declared_global\<close> footing its
+  other three solver disciplines already publish. A report projects verdicts out of this
+  and discards the states; a caller that wants the states --- the HTML report does --- reads
+  the table directly rather than re-solving.
+\<close>
+
+definition analyse_interval_wpo_result ::
+    "imp_prog \<Rightarrow> (unit, ivl abs_state) analysis_result" where
+  "analyse_interval_wpo_result p = analyse_interval_wpo_result_for (declared_global p) p"
+
+subsection \<open>The published surface, one interpretation per discipline\<close>
+
+text \<open>
+  Interval is the domain that carries all four solver disciplines, so it is where the
+  shared surface is worth checking against the richest case. Each interpretation names one
+  solved table and Interval's own classifier; \<^locale>\<open>analysis_surface\<close> supplies the state
+  reading and the check report, which were previously written out once per discipline.
+
+  Naming a discipline here is what publishes it. Omitting one leaves no \<open>report\<close> to cite,
+  rather than a solved table that quietly nothing reads --- which is how warrowing per
+  origin came to have a table and no way to see the states in it.
+\<close>
+
+interpretation interval_join: analysis_surface
+  analyse_interval_join_result bot interval_classify_check
+  by unfold_locales
+
+interpretation interval_per_origin: analysis_surface
+  analyse_interval_per_origin_result bot interval_classify_check
+  by unfold_locales
+
+interpretation interval_warrow: analysis_surface
+  analyse_interval_td_result bot interval_classify_check
+  by unfold_locales
+
+interpretation interval_wpo: analysis_surface
+  analyse_interval_wpo_result bot interval_classify_check
+  by unfold_locales
+
+text \<open>
+  The report names the rest of the development cites, shown to be the shared surface. Both
+  sides are the same \<^const>\<open>classify_checks\<close> assembly over the same solved table, so these
+  are definitional: every existing theorem about these reports keeps both its statement and
+  its proof, while new callers can read the surface uniformly.
+\<close>
+
+lemma interval_report_join_eq: "analyse_interval_report p = interval_join.report p"
+  by (simp add: analyse_interval_report_def analyse_interval_report_for_def
+      analyse_interval_join_result_def surface_unfold)
+
+lemma interval_report_per_origin_eq:
+  "analyse_interval_report_per_origin p = interval_per_origin.report p"
+  by (simp add: analyse_interval_report_per_origin_def
+      analyse_interval_report_per_origin_for_def analyse_interval_per_origin_result_def
+      surface_unfold)
+
+lemma interval_report_warrow_eq:
+  "analyse_interval_td_report p = interval_warrow.report p"
+  by (simp add: analyse_interval_td_report_def analyse_interval_td_report_for_def
+      analyse_interval_td_result_def surface_unfold)
+
+lemma interval_report_wpo_eq:
+  "analyse_interval_report_wpo p = interval_wpo.report p"
+  by (simp add: analyse_interval_report_wpo_def analyse_interval_report_wpo_for_def
+      analyse_interval_wpo_result_def surface_unfold)
 
 end
 

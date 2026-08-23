@@ -2,6 +2,7 @@
 *.cmx
 *.o
 Voblint_CLI.ml
+vimp_positions.ml
 vimp_parser.mly
 vimp_parser.ml
 vimp_parser.mli

@@ -2,6 +2,7 @@ theory Parity_Checks
   imports Parity_Numeric_Queries "Voblint_Core.Abstract_Checks" Parity_Exec
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
+    "Voblint_Core.Monovariant_Analysis_Result"
     Parity_Ctx_None_Sound
 begin
 
@@ -280,10 +281,7 @@ text \<open>\<open>r\<close> is bound once, outside \<^const>\<open>classify_che
 definition analyse_parity_report_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report_for gs p =
-     (let r = analyse_parity_result_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           parity_classify_check)"
+     analysis_surface.report (analyse_parity_result_for gs) bot parity_classify_check p"
 
 definition analyse_parity_report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report p = analyse_parity_report_for (declared_global p) p"
@@ -291,14 +289,38 @@ definition analyse_parity_report :: "imp_prog \<Rightarrow> check_report_entry l
 definition analyse_parity_report_per_origin_for ::
     "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report_per_origin_for gs p =
-     (let r = analyse_parity_result_per_origin_for gs p
-      in classify_checks (prog_cfg prog_main_name p)
-           (\<lambda>v. case lookup_context r v () of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)
-           parity_classify_check)"
+     analysis_surface.report (analyse_parity_result_per_origin_for gs) bot
+       parity_classify_check p"
 
 definition analyse_parity_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report_per_origin p =
      analyse_parity_report_per_origin_for (declared_global p) p"
+
+subsection \<open>The published surface, one interpretation per discipline\<close>
+
+text \<open>
+  Parity's two disciplines through the shared \<^locale>\<open>analysis_surface\<close>. Like Sign, it has
+  no warrowing interpretation: the four-element lattice has finite height, so widening has
+  nothing to accelerate and no solved table of its own.
+\<close>
+
+interpretation parity_join: analysis_surface
+  analyse_parity_result bot parity_classify_check
+  by unfold_locales
+
+interpretation parity_per_origin: analysis_surface
+  analyse_parity_result_per_origin bot parity_classify_check
+  by unfold_locales
+
+lemma parity_report_join_eq: "analyse_parity_report p = parity_join.report p"
+  by (simp add: analyse_parity_report_def analyse_parity_report_for_def
+      analyse_parity_result_def surface_unfold)
+
+lemma parity_report_per_origin_eq:
+  "analyse_parity_report_per_origin p = parity_per_origin.report p"
+  by (simp add: analyse_parity_report_per_origin_def
+      analyse_parity_report_per_origin_for_def analyse_parity_result_per_origin_def
+      surface_unfold)
 
 text \<open>
   State-carrying sibling, via \<^const>\<open>classify_checks_with_state\<close>: the same result table,

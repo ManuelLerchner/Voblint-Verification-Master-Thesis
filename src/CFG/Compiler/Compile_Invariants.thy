@@ -363,6 +363,90 @@ theorem inv16_entry_is_main:
   unfolding compile_prog_def by (simp add: Let_def split: prod.splits)
 
 
+section \<open>Where each statement index came from in the source\<close>
+
+text \<open>
+  \<^const>\<open>com_stmt_post_order\<close> answers this for one fragment given the counter it
+  starts at. A whole program needs those starting counters, and they are not a
+  fragment-local fact: \<^const>\<open>compile_procs\<close> lays the procedures out one after another
+  and \<^const>\<open>compile_prog\<close> compiles \<open>main\<close> after all of them, whatever order the source
+  wrote them in.
+
+  \<open>procs_stmt_next\<close> below is that layout and nothing else --- each declared procedure
+  advances the counter past its body and past the one index \<^const>\<open>compile_proc\<close>
+  reserves for the epilogue. Undeclared names advance it by nothing, matching the
+  clause \<^const>\<open>compile_procs\<close> skips.
+\<close>
+
+fun procs_stmt_next :: "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
+  "procs_stmt_next \<Pi> [] n = n"
+| "procs_stmt_next \<Pi> (p # ps) n =
+     (case \<Pi> p of
+        None \<Rightarrow> procs_stmt_next \<Pi> ps n
+      | Some decl \<Rightarrow> procs_stmt_next \<Pi> ps (Suc (n + csize (body decl))))"
+
+text \<open>
+  The layout is the compiler's own, not a second copy of it. Without this the
+  arithmetic above would be a plausible restatement that no build could catch drifting
+  from \<^const>\<open>compile_procs\<close>, and every position in every procedure after the first
+  would move with it.
+\<close>
+
+lemma procs_stmt_next_eq_compile_procs:
+  "procs_stmt_next \<Pi> ps n = fst (compile_procs \<Pi> ps n)"
+proof (induction ps arbitrary: n)
+  case (Cons p ps)
+  show ?case
+  proof (cases "\<Pi> p")
+    case None
+    then show ?thesis using Cons by simp
+  next
+    case (Some decl)
+    obtain n1 E K where cp: "compile_proc \<Pi> p decl n = (n1, E, K)"
+      by (cases "compile_proc \<Pi> p decl n") auto
+    obtain n2 E' K' where cps: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+      by (cases "compile_procs \<Pi> ps n1") auto
+    have n1: "n1 = Suc (n + csize (body decl))"
+      using cp by (simp add: compile_proc_def Let_def split: prod.splits)
+    have "procs_stmt_next \<Pi> (p # ps) n = fst (compile_procs \<Pi> ps n1)"
+      using Some Cons n1 by simp
+    then show ?thesis using Some cp cps by simp
+  qed
+qed simp
+
+text \<open>
+  Each definition paired with the statement indices its body owns, in the order a
+  bottom-up parser finishes them. \<open>main\<close> comes last because that is where
+  \<^const>\<open>compile_prog\<close> compiles it, not because of where it appears in the source ---
+  which is exactly why a front end cannot pair a flat position list against the program
+  and must group by definition first.
+\<close>
+
+fun defs_stmt_post_order ::
+  "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> (pname \<times> cfg_node list) list"
+where
+  "defs_stmt_post_order \<Pi> [] n = []"
+| "defs_stmt_post_order \<Pi> (p # ps) n =
+     (case \<Pi> p of
+        None \<Rightarrow> defs_stmt_post_order \<Pi> ps n
+      | Some decl \<Rightarrow>
+          (p, com_stmt_post_order n (body decl))
+            # defs_stmt_post_order \<Pi> ps (Suc (n + csize (body decl))))"
+
+definition prog_stmt_post_order :: "imp_prog \<Rightarrow> (pname \<times> cfg_node list) list" where
+  "prog_stmt_post_order p =
+     defs_stmt_post_order (prog_table p) (prog_procs p) 0
+       @ [(prog_main_name,
+           com_stmt_post_order (procs_stmt_next (prog_table p) (prog_procs p) 0)
+             (prog_main p))]"
+
+text \<open>Every definition contributes as many indices as its body has commands, so a
+  caller can pair position lists against these without a length check per entry.\<close>
+
+lemma length_defs_stmt_post_order:
+  "(q, vs) \<in> set (defs_stmt_post_order \<Pi> ps n)
+     \<Longrightarrow> \<exists>decl. \<Pi> q = Some decl \<and> length vs = csize (body decl)"
+  by (induction ps arbitrary: n) (auto split: option.splits)
 
 end
 

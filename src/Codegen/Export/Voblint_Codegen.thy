@@ -46,12 +46,21 @@ export_code
   analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
   Ctx_None Ctx_EntryState Ctx_CallString
   SignValue IntervalValue IntDomValue ParityValue
-  state_report_dot_auto state_report_graph_snapshot_auto
-  full_state_dot_auto full_state_graph_snapshot_auto
-  entry_state_report_dot_auto entry_state_report_graph_snapshot_auto
-  entry_state_full_state_dot_auto entry_state_full_state_graph_snapshot_auto
-  entry_state_ctx_dot_auto entry_state_ctx_graph_snapshot_auto
-  cs_ctx_dot_auto cs_ctx_graph_snapshot_auto
+  state_report_graph_snapshot_auto full_state_graph_snapshot_auto
+  entry_state_report_graph_snapshot_auto entry_state_full_state_graph_snapshot_auto
+  entry_state_ctx_graph_snapshot_auto cs_ctx_graph_snapshot_auto
+  state_report_export_auto full_state_export_auto full_state_checked_payload_auto
+  entry_state_report_export_auto entry_state_full_state_export_auto
+  entry_state_full_state_checked_export_auto solver_checked_payload_auto
+  entry_state_verdicts_for entry_state_globals_for solver_globals_for cs_globals_for
+  entry_state_ctx_export_auto cs_ctx_export_auto
+  xn_id xn_label xn_kind xn_status xn_lines
+  xe_src xe_dst xe_kind xe_label
+  xc_id xc_label xc_nodes
+  xg_clusters xg_nodes xg_edges
+  XN_Entry XN_Exit XN_ProcEntry XN_ProcExit XN_Point XN_Global XN_Source
+  XE_Intra XE_Enter XE_Combine XE_CallToReturn XE_GlobalRead XE_GlobalWrite
+  NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
   exp_vnames_list string_of_abstract_value
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
@@ -61,7 +70,7 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
   char_of_integer integer_of_char
-  compile_program cfg_intra_list cfg_calls_list
+  compile_program cfg_intra_list cfg_calls_list prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp
   wf_program_compile_input_exec

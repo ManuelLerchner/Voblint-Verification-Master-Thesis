@@ -2,6 +2,7 @@ theory Monovariant_Analysis_Result
   imports
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.CFG_Enumeration"
+    "Voblint_Core.Abstract_Checks"
     "Voblint_CFG.Compile_Invariants"
     Exec_DG_Bridge
 begin
@@ -41,6 +42,130 @@ text \<open>
   interpretation would, without qualified-name/interpretation machinery a
   reader of the generated OCaml would otherwise have to see through.
 \<close>
+
+text \<open>
+  The same solve's other half. A routed D/G system has two kinds of unknown, and
+  \<^const>\<open>Analysis_Result\<close> keeps only the first: the local one at every
+  \<open>Inl (v, ctx)\<close>. The global ones at \<open>Inr k\<close> are what an interprocedural
+  analysis actually side-effects, and a result browser has nothing to show for them
+  as long as this projection drops them.
+
+  Which half of a global slot carries its payload depends on the key, and the two
+  cannot be read uniformly. \<open>routed_cmb_g\<close> publishes the shared slot through
+  \<open>publish_global\<close>, which writes \<^const>\<open>globs\<close>; it seeds a callee entry through
+  \<open>depend_on\<close> with \<open>DG (enter_local \<dots>) bot\<close>, whose payload is in
+  \<^const>\<open>locals\<close> and whose \<^const>\<open>globs\<close> half is \<^const>\<open>bot\<close> -- which is also how
+  \<open>routed_extra_g\<close> reads it back. Reading \<^const>\<open>globs\<close> everywhere would report
+  every seed as unreachable, and nothing would fail: the shared slot would still
+  look right.
+
+  So each key arrives with the projection its own writer used, rather than this
+  constant guessing from the key's shape -- which it could not do anyway, being
+  generic in \<open>'k\<close>.
+\<close>
+
+definition dg_globals_for ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> vname list
+     \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('a::computable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)
+     \<Rightarrow> ('k \<times> String.literal
+          \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state \<Rightarrow> 'a exec_dg_st lifted)) list
+     \<Rightarrow> (String.literal \<times> 'a abs_state point_state) list" where
+  "dg_globals_for gs gl sigma keys =
+     map (\<lambda>(k, label, payload).
+            (label,
+             normalize_point gs
+               (canonicalize_lift (resolved_st_q_is_bot_for gl) (payload (sigma (Inr k))))))
+         keys"
+
+text \<open>Reading a key the solver never touched is \<^const>\<open>Unreachable\<close>, the same
+  structural \<^const>\<open>Bot\<close> case a never-visited program point takes, so a caller can
+  list every key the program could have without testing solver support first.\<close>
+
+lemma length_dg_globals_for [simp]:
+  "length (dg_globals_for gs gl sigma keys) = length keys"
+  by (simp add: dg_globals_for_def)
+
+lemma map_fst_dg_globals_for:
+  "map fst (dg_globals_for gs gl sigma keys) = map (fst o snd) keys"
+  by (simp add: dg_globals_for_def case_prod_beta comp_def)
+
+text \<open>
+  Which keys a routed unit-context solve can write, taking the two constructors as
+  arguments the way \<^const>\<open>routed_extra_g\<close> already does. Every domain declares its own
+  \<open>gk\<close>, but they agree on the shape the routed spine imposes --- a shared slot and one
+  seed per callee entry --- so the enumeration is a fact about that spine, not about
+  any domain, and does not need restating once per \<open>gk\<close>.
+
+  \<^const>\<open>prog_main_name\<close> is included: \<open>main\<close> compiles through the same procedure
+  wrapper as any other, and a procedure nothing calls simply reads
+  \<^const>\<open>Unreachable\<close> rather than being absent.
+\<close>
+
+definition seed_global_keys ::
+    "'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k) \<Rightarrow> (pp \<Rightarrow> 'c list) \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> String.literal)
+     \<Rightarrow> imp_prog \<Rightarrow> ('k \<times> String.literal \<times> (('d, 'd) dg_state \<Rightarrow> 'd)) list" where
+  "seed_global_keys gk0 seed ctxs label p =
+     (gk0, STR ''Global'', globs)
+       # concat
+           (map (\<lambda>f. map (\<lambda>c. (seed (FunctionEntry f) c, label f c, locals))
+                         (ctxs (FunctionEntry f)))
+                (prog_main_name # prog_procs p))"
+
+text \<open>
+  At the unit context every entry has exactly one seed, so the context list is a
+  constant and the label is the procedure name alone. A context-sensitive caller
+  passes \<open>result_contexts_at\<close> instead, which enumerates a solved table's own
+  covered contexts without needing an order on the context type.
+\<close>
+
+definition unit_seed_global_keys ::
+    "'k \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'k) \<Rightarrow> imp_prog
+     \<Rightarrow> ('k \<times> String.literal \<times> (('d, 'd) dg_state \<Rightarrow> 'd)) list" where
+  "unit_seed_global_keys gk0 seed =
+     seed_global_keys gk0 seed (\<lambda>_. [()]) (\<lambda>f _. STR ''enter '' + f)"
+
+text \<open>
+  Both halves of one routed unit-context solve: the locals table every check report
+  already reads, and the globals beside it. \<open>solve\<close> is a parameter for the same reason
+  it is one in \<open>monovariant_analysis_result_for\<close> below --- which solver discipline
+  produced the pair is an application-site choice, so each domain's instance is a
+  partial application rather than another copy of this body.
+
+  Binding \<open>sol\<close> once is what keeps a report that shows both halves from solving twice.
+\<close>
+
+definition ctx_solved_for ::
+    "((vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+        \<Rightarrow> (pp \<times> unit) set
+             \<times> (pp \<times> unit + 'k
+                  \<Rightarrow> ('a::computable_domain exec_dg_st lifted, 'a exec_dg_st lifted) dg_state))
+     \<Rightarrow> (imp_prog
+          \<Rightarrow> ('k \<times> String.literal
+                \<times> (('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state
+                     \<Rightarrow> 'a exec_dg_st lifted)) list)
+     \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+     \<Rightarrow> (unit, 'a abs_state) analysis_result
+          \<times> (String.literal \<times> 'a abs_state point_state) list" where
+  "ctx_solved_for solve keys gs mnm p =
+     (let sol = solve gs mnm p; gl = declared_global_vars p
+      in (Analysis_Result (fst sol)
+            (\<lambda>v ctx. normalize_point gs
+                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                         (locals (snd sol (Inl (v, ctx)))))),
+          dg_globals_for gs gl (snd sol) (keys p)))"
+
+text \<open>The locals half is exactly what every domain's own result constructor builds from
+  the same solve, so publishing the globals beside it adds a column and changes no
+  verdict. Each domain's \<open>fst_\<close> corollary is this equation at its own solver.\<close>
+
+lemma fst_ctx_solved_for:
+  "fst (ctx_solved_for solve keys gs mnm p)
+     = (let sol = solve gs mnm p
+        in Analysis_Result (fst sol)
+             (\<lambda>v ctx. normalize_point gs
+                        (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                          (locals (snd sol (Inl (v, ctx)))))))"
+  by (simp add: ctx_solved_for_def Let_def)
 
 definition monovariant_analysis_result_for ::
     "((vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>
@@ -83,6 +208,74 @@ lemma contexts_at_monovariant_analysis_result_for:
   "contexts_at (monovariant_analysis_result_for solve gs p) v =
      (if v \<in> set (cfg_node_list (prog_cfg prog_main_name p)) then {()} else {})"
   by (auto simp: monovariant_analysis_result_for_def contexts_at_def Let_def)
+
+
+section \<open>The surface a solved table publishes\<close>
+
+text \<open>
+  What every domain, at every solver discipline, ends up publishing about a whole program:
+  the state its solved table holds at a point, and the check report read off that. Both are
+  the same assembly every time --- only the table and the domain's own classifier differ ---
+  so they are stated once here and instantiated, rather than rewritten per domain and per
+  discipline.
+
+  That repetition was not free. The four solver disciplines were propagated by hand as each
+  was added, and the propagation thinned: the newest discipline reached fewer domains than
+  the oldest, and a solved table with no wrapper published for it is invisible to every
+  caller that reads the surface rather than the solver. An interpretation cannot be
+  partially present, so a discipline that is interpreted has its whole surface, or none of
+  it and a name that fails to resolve.
+
+  \<^const>\<open>bot\<close> at an \<^const>\<open>Unreachable\<close> point is the reading every existing report function
+  already makes: nothing reaches the point, so no store does, and \<^const>\<open>bot\<close> is the
+  abstract state whose concretisation is empty.
+\<close>
+
+text \<open>
+  \<open>bot_state\<close> is a parameter rather than the \<^class>\<open>order_bot\<close> class operation, and that is
+  a code-generation requirement, not a stylistic choice. A sort constraint here would make
+  the surface's code equation polymorphic in \<open>'a::order_bot\<close>, and generating code for it at
+  an abstract state --- a function type \<^typ>\<open>String.literal \<Rightarrow> 'b\<close> --- would demand an
+  executable \<^const>\<open>bot\<close> arity for that function type, which needs the domain to be
+  \<^class>\<open>enum\<close>. \<^typ>\<open>String.literal\<close> is not. Taking the element as a parameter keeps the
+  equation free of sorts; every interpretation still passes \<^const>\<open>bot\<close>, where the concrete
+  instance is executable exactly as it was before.
+\<close>
+
+locale analysis_surface =
+  fixes table :: "imp_prog \<Rightarrow> (unit, 'a) analysis_result"
+    and bot_state :: 'a
+    and classify :: "exp \<Rightarrow> 'a \<Rightarrow> check_result"
+begin
+
+definition state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> 'a" where
+  "state_at p v =
+     (case lookup_context (table p) v () of Unreachable \<Rightarrow> bot_state | Reachable st \<Rightarrow> st)"
+
+definition report :: "imp_prog \<Rightarrow> check_report_entry list" where
+  "report p = classify_checks (prog_cfg prog_main_name p) (state_at p) classify"
+
+end
+
+text \<open>
+  Unfolds the surface down to the \<^const>\<open>classify_checks\<close> term it stands for. A caller
+  proving one of its own report names equal to the surface needs both equations, and
+  \<^const>\<open>analysis_surface.state_at\<close> in \<open>abs_def\<close> form because \<^const>\<open>analysis_surface.report\<close>
+  passes it partially applied while the definition states it fully applied.
+\<close>
+
+lemmas surface_unfold =
+  analysis_surface.report_def analysis_surface.state_at_def [abs_def]
+
+text \<open>
+  A locale constant carries no code equation of its own, so every report reading through
+  the surface would drop out of the generated code and out of \<open>by eval\<close> alike. Both
+  defining equations are already in executable shape --- \<^const>\<open>classify_checks\<close> over a
+  \<^const>\<open>lookup_context\<close> reading --- so declaring them is all the code generator needs.
+\<close>
+
+declare analysis_surface.state_at_def [code]
+declare analysis_surface.report_def [code]
 
 
 end

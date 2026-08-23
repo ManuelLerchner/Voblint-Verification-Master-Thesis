@@ -347,6 +347,13 @@ jobs:
           CLI/property-test parser generator)
         run: opam install -y zarith menhir
 
+      # This job checks out without submodules, but the CLI refuses --html
+      # without the frontend, and the smoke tests exercise --html for real --
+      # so the submodule has to land before the first CLI run, not before the
+      # report gates that come later.
+      - name: Fetch the g2html frontend --html renders through
+        run: git submodule update --init vendor/g2html
+
       - name: Compile and run codegen/regression drivers against codegen/generated/
         # ocaml/setup-ocaml@v3 puts `opam` itself on PATH but does not export the
         # switch's own bin dir (ocamlfind, ocamlopt) into later run steps' shells --
@@ -364,6 +371,20 @@ jobs:
 
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: opam exec -- pixi run property
+
+      # The report is a contract with a frontend this repository does not own,
+      # and its faults are quiet ones: a renamed element, a repeated span, an
+      # empty findings list all render a page that looks fine. `pixi run ci`
+      # has covered these locally for a while; running them here is what stops
+      # a change reaching main without them.
+      - name: HTML report structure (element shapes g2html's stylesheets read)
+        run: opam exec -- pixi run html-report-check
+
+      - name: HTML report sweep over the regression corpus
+        run: opam exec -- pixi run html-report-audit
+
+      - name: HTML report sweep over the domain/solver/context space
+        run: opam exec -- pixi run html-config-audit
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

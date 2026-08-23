@@ -55,6 +55,7 @@ fun csize :: "com \<Rightarrow> nat" where
 lemma csize_pos: "0 < csize c"
   by (induction c) auto
 
+
 subsection \<open>Normal completion\<close>
 
 text \<open>\<open>falls_through c\<close>: control can leave the fragment of \<open>c\<close> through its continuation, rather
@@ -166,6 +167,133 @@ where
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p Unwind k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
+
+subsection \<open>Statement order in the source\<close>
+
+text \<open>
+  Which \<^const>\<open>Statement\<close> index \<^const>\<open>compile\<close> gives each command of a fragment, in the
+  order the source writes them. Every clause below allocates the same index its
+  \<^const>\<open>compile\<close> counterpart does: a leaf takes \<open>n\<close>; \<^const>\<open>Seq\<close> hands \<open>c2\<close> the counter
+  \<open>c1\<close> ends at; \<^const>\<open>If\<close> and \<^const>\<open>While\<close> take \<open>n\<close> for the guard and start the body at
+  \<open>Suc n\<close>. The result is a pre-order walk, which is also the order a reader meets those
+  commands in the text --- an \<open>if\<close> before its branches, a loop before its body, \<open>c1\<close> before
+  \<open>c2\<close>.
+
+  That correspondence is what a source-position map needs: a front end that records one
+  position per command, in the order it parses them, can pair its \<open>k\<close>th position with this
+  list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic. Stating the
+  order here rather than re-deriving it outside is what keeps the two from drifting.
+\<close>
+
+fun com_stmt_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
+  "com_stmt_order n SKIP = [Statement n]"
+| "com_stmt_order n (Assign x a) = [Statement n]"
+| "com_stmt_order n (Check c) = [Statement n]"
+| "com_stmt_order n (Seq c1 c2) =
+     com_stmt_order n c1 @ com_stmt_order (n + csize c1) c2"
+| "com_stmt_order n (If b c1 c2) =
+     Statement n # com_stmt_order (Suc n) c1 @ com_stmt_order (Suc n + csize c1) c2"
+| "com_stmt_order n (While b c) = Statement n # com_stmt_order (Suc n) c"
+| "com_stmt_order n (Call dst q actuals) = [Statement n]"
+| "com_stmt_order n (Return e) = [Statement n]"
+| "com_stmt_order n Restore = [Statement n]"
+| "com_stmt_order n Unwind = [Statement n]"
+
+text \<open>
+  The enumeration names exactly the indices the fragment allocates: as many as
+  \<^const>\<open>csize\<close> claims, each one once, and none from outside the fragment's own counter
+  range. Together these are what make pairing by position sound --- a shorter or longer
+  list, or a repeated index, would silently misalign every position after it.
+\<close>
+
+lemma length_com_stmt_order [simp]: "length (com_stmt_order n c) = csize c"
+  by (induction c arbitrary: n) auto
+
+lemma set_com_stmt_order: "set (com_stmt_order n c) = Statement ` {n ..< n + csize c}"
+proof (induction c arbitrary: n)
+  case (Seq c1 c2)
+  have "{n ..< n + csize c1} \<union> {n + csize c1 ..< n + csize c1 + csize c2}
+          = {n ..< n + (csize c1 + csize c2)}"
+    by auto
+  then show ?case using Seq by (simp flip: image_Un add: add.assoc)
+next
+  case (If b c1 c2)
+  have "insert n ({Suc n ..< Suc (n + csize c1)}
+          \<union> {Suc (n + csize c1) ..< Suc (n + csize c1 + csize c2)})
+          = {n ..< Suc (n + (csize c1 + csize c2))}"
+    by auto
+  then show ?case using If by (simp flip: image_Un image_insert)
+next
+  case (While b c)
+  have "insert n {Suc n ..< Suc (n + csize c)} = {n ..< Suc (n + csize c)}" by auto
+  then show ?case using While by (simp flip: image_insert)
+qed auto
+
+lemma distinct_com_stmt_order: "distinct (com_stmt_order n c)"
+  by (induction c arbitrary: n) (auto simp: set_com_stmt_order)
+
+text \<open>
+  The same indices in the order a bottom-up parser produces them. A front end that
+  records one position per command as it reduces cannot emit \<^const>\<open>com_stmt_order\<close>'s
+  order: a reduction completes only once its whole right-hand side has been read, so
+  an \<open>if\<close> is finished after both its branches and a loop after its body. Every clause
+  here allocates exactly what its \<^const>\<open>com_stmt_order\<close> counterpart allocates and
+  differs only in where the guard's own index is listed.
+\<close>
+
+fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
+  "com_stmt_post_order n SKIP = [Statement n]"
+| "com_stmt_post_order n (Assign x a) = [Statement n]"
+| "com_stmt_post_order n (Check c) = [Statement n]"
+| "com_stmt_post_order n (Seq c1 c2) =
+     com_stmt_post_order n c1 @ com_stmt_post_order (n + csize c1) c2"
+| "com_stmt_post_order n (If b c1 c2) =
+     com_stmt_post_order (Suc n) c1 @ com_stmt_post_order (Suc n + csize c1) c2
+       @ [Statement n]"
+| "com_stmt_post_order n (While b c) = com_stmt_post_order (Suc n) c @ [Statement n]"
+| "com_stmt_post_order n (Call dst q actuals) = [Statement n]"
+| "com_stmt_post_order n (Return e) = [Statement n]"
+| "com_stmt_post_order n Restore = [Statement n]"
+| "com_stmt_post_order n Unwind = [Statement n]"
+
+text \<open>
+  The two orders enumerate the same indices: the same count, the same range, and no
+  repetition in either. Together those make each a permutation of the other, which is
+  what pairing by position needs --- a clause that dropped one index and repeated
+  another would misalign every position after it while leaving the list's length
+  unchanged.
+\<close>
+
+lemma length_com_stmt_post_order [simp]: "length (com_stmt_post_order n c) = csize c"
+  by (induction c arbitrary: n) auto
+
+lemma set_com_stmt_post_order:
+  "set (com_stmt_post_order n c) = Statement ` {n ..< n + csize c}"
+proof (induction c arbitrary: n)
+  case (Seq c1 c2)
+  have "{n ..< n + csize c1} \<union> {n + csize c1 ..< n + csize c1 + csize c2}
+          = {n ..< n + (csize c1 + csize c2)}"
+    by auto
+  then show ?case using Seq by (simp flip: image_Un add: add.assoc)
+next
+  case (If b c1 c2)
+  have "insert n ({Suc n ..< Suc (n + csize c1)}
+          \<union> {Suc (n + csize c1) ..< Suc (n + csize c1 + csize c2)})
+          = {n ..< Suc (n + (csize c1 + csize c2))}"
+    by auto
+  then show ?case using If by (auto simp flip: image_Un image_insert)
+next
+  case (While b c)
+  have "insert n {Suc n ..< Suc (n + csize c)} = {n ..< Suc (n + csize c)}" by auto
+  then show ?case using While by (auto simp flip: image_insert)
+qed auto
+
+lemma set_com_stmt_post_order_eq:
+  "set (com_stmt_post_order n c) = set (com_stmt_order n c)"
+  by (simp add: set_com_stmt_order set_com_stmt_post_order)
+
+lemma distinct_com_stmt_post_order: "distinct (com_stmt_post_order n c)"
+  by (induction c arbitrary: n) (auto simp: set_com_stmt_post_order)
 
 subsection \<open>Procedure and program compilation\<close>
 

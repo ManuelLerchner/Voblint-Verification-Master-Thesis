@@ -33,89 +33,97 @@
 //     f_pp0_ctx1
 //     f_entry_f_ctx1
 //     f_result_f_ctx1
+//   cluster_ctx_2:
+//     f_pp1_ctx2
+//     f_pp2_ctx2
+//     f_pp3_ctx2
+//     f_pp4_ctx2
+//     f_pp0_ctx2
+//     f_entry_f_ctx2
+//     f_result_f_ctx2
 //
 // nodes:
 //   f_pp1_ctx1: pp1
 //       unreachable
+//       check n==99 [dead]
+//   f_pp1_ctx2: pp1
+//       unreachable
+//       check n==99 [dead]
 //   f_pp2_ctx1: pp2
 //       unreachable
+//   f_pp2_ctx2: pp2
+//       unreachable
 //   f_pp3_ctx1: pp3
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[5,7]
+//       n=[5,5]
+//       check 2<n
+//   f_pp3_ctx2: pp3
+//       n=[7,7]
+//       check 2<n
 //   f_pp4_ctx1: pp4
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[5,7]
+//       n=[5,5]
+//   f_pp4_ctx2: pp4
+//       n=[7,7]
 //   main_pp9_ctx0: pp9
 //       a=[5,5]
 //       b=[7,7]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
+//       check b==7
 //   main_pp10_ctx0: pp10
 //       a=[5,5]
 //       b=[7,7]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
 //   main_result_main_ctx0: exit_main
 //       a=[5,5]
 //       b=[7,7]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
 //   f_pp0_ctx1: pp0
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[5,7]
+//       n=[5,5]
+//   f_pp0_ctx2: pp0
+//       n=[7,7]
 //   main_entry_main_ctx0: entry_main
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
 //   main_pp6_ctx0: pp6
 //       a=[-inf,+inf]
 //       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
 //   main_pp7_ctx0: pp7
 //       a=[5,5]
 //       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
 //   f_entry_f_ctx1: entry_f
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       #ret=[-inf,+inf]
-//       n=[5,7]
+//       n=[5,5]
+//   f_entry_f_ctx2: entry_f
+//       n=[7,7]
 //   main_pp8_ctx0: pp8
 //       a=[5,5]
 //       b=[7,7]
-//       #ret=[-inf,+inf]
-//       n=[-inf,+inf]
+//       check a==5
 //   f_result_f_ctx1: exit_f
-//       a=[-inf,+inf]
-//       b=[-inf,+inf]
-//       #ret=[5,7]
-//       n=[5,7]
+//       n=[5,5]
+//       ret=[5,5]
+//   f_result_f_ctx2: exit_f
+//       n=[7,7]
+//       ret=[7,7]
 //
 // edges:
 //   f_pp1_ctx1 -> f_pp2_ctx1: check(n==99)
+//   f_pp1_ctx2 -> f_pp2_ctx2: check(n==99)
 //   f_pp2_ctx1 -> f_result_f_ctx1: return 0
+//   f_pp2_ctx2 -> f_result_f_ctx2: return 0
 //   f_pp3_ctx1 -> f_pp4_ctx1: check(2<n)
+//   f_pp3_ctx2 -> f_pp4_ctx2: check(2<n)
 //   f_pp4_ctx1 -> f_result_f_ctx1: return n
+//   f_pp4_ctx2 -> f_result_f_ctx2: return n
 //   main_pp9_ctx0 -> main_pp10_ctx0: check(b==7)
 //   main_pp10_ctx0 -> main_result_main_ctx0: terminate
 //   f_pp0_ctx1 -> f_pp1_ctx1: n<2
 //   f_pp0_ctx1 -> f_pp3_ctx1: not (n<2)
+//   f_pp0_ctx2 -> f_pp1_ctx2: n<2
+//   f_pp0_ctx2 -> f_pp3_ctx2: not (n<2)
 //   main_entry_main_ctx0 -> main_pp6_ctx0: nop
 //   f_entry_f_ctx1 -> f_pp0_ctx1: nop
+//   f_entry_f_ctx2 -> f_pp0_ctx2: nop
 //   main_pp8_ctx0 -> main_pp9_ctx0: check(a==5)
 //   main_pp6_ctx0 -> f_entry_f_ctx1: enter f(5)
-//   main_pp7_ctx0 -> f_entry_f_ctx1: enter f(7)
-//   f_result_f_ctx1 -> main_pp7_ctx0: combine a
-//   f_result_f_ctx1 -> main_pp8_ctx0: combine b
+//   main_pp7_ctx0 -> f_entry_f_ctx2: enter f(7)
+//   f_result_f_ctx1 -> main_pp7_ctx0: combine a := #ret
+//   f_result_f_ctx2 -> main_pp8_ctx0: combine b := #ret
 //   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return f
 //   main_pp7_ctx0 -> main_pp8_ctx0: call-to-return f
 // EXPECT-GRAPH-END
