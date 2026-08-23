@@ -295,6 +295,50 @@ lemma call_target_list_iff:
            \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
   by (simp add: set_call_target_list[OF assms])
 
+text \<open>
+  The call site alone, with no callee: what a call-site-owned resolver is given.
+  \<open>static_targets\<close> is the resolver that answers from the CFG, ignoring the
+  caller's abstract state -- the behaviour a statically enumerated generator already
+  has. A resolver reading that state instead is what makes an indirect call
+  expressible; the shape of the equation does not change when it does.
+\<close>
+
+definition call_site_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
+  "call_site_list g v = map (\<lambda>(c, ca, p). (c, ca)) (call_target_list g v)"
+
+definition static_targets ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> pname list" where
+  "static_targets g v cc ca =
+     map (\<lambda>(c, a, p). p)
+       (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v))"
+
+lemma set_call_site_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_site_list g v)
+           = {(c, ca) | c ca. \<exists>p. (c, ca, FunctionEntry p, v) \<in> calls g}"
+  unfolding call_site_list_def
+  by (force simp: set_call_target_list[OF assms] image_iff)
+
+lemma static_targets_iff:
+  assumes "finite (calls g)"
+  shows "p \<in> set (static_targets g v cc ca)
+           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
+  unfolding static_targets_def
+  by (force simp: call_target_list_iff[OF assms, symmetric] image_iff)
+
+text \<open>Every listed call site resolves to at least its own callee, which is what a
+  coverage obligation stated over the enumeration needs.\<close>
+
+lemma static_targets_nonempty:
+  assumes "finite (calls g)" and "(cc, ca, FunctionEntry p, v) \<in> calls g"
+  shows "static_targets g v cc ca \<noteq> []"
+proof -
+  have "p \<in> set (static_targets g v cc ca)"
+    using static_targets_iff[OF assms(1)] assms(2) by simp
+  thus ?thesis by auto
+qed
+
 
 subsection \<open>Full node enumeration\<close>
 
