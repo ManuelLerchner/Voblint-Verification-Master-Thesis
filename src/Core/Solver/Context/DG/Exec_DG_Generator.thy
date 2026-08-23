@@ -1557,7 +1557,8 @@ proof -
   obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
   let ?caller = "locals (\<sigma>_st (Inl (cc, ctx)))"
   let ?globals1 = "globs (\<sigma>_st (Inr gk0))"
-  let ?ctx' = "route_st cc ctx ?caller (CallEdge dst fs as)"
+  let ?entry = "enter_local S_st fs as ?caller ?globals1"
+  let ?ctx' = "route_st cc ctx ?entry (CallEdge dst fs as)"
   let ?eg = "enter_global S_st fs as ?caller ?globals1"
   let ?callee = "locals (\<sigma>_st (Inl (ex, ?ctx')))"
   let ?ci = "call_info_of (CallEdge dst fs as) (result_proc ex)"
@@ -1575,8 +1576,9 @@ proof -
   have Hcomb_l: "\<And>ci dc de g'. Floc (combine_local S_st ci dc de g')
                     = combine_local S_abs ci (Floc dc) (Floc de) (Fglob g')"
     using Hcomb by (metis map_prod_simp snd_conv surj_pair)
-  have route_eq: "route_abs cc ctx (Floc ?caller) (CallEdge dst fs as) = ?ctx'"
-    using Hroute[of cc ctx ?caller "CallEdge dst fs as"] by simp
+  have route_eq: "route_abs cc ctx (enter_local S_abs fs as (Floc ?caller) (Fglob ?globals1))
+        (CallEdge dst fs as) = ?ctx'"
+    using Hroute[of cc ctx ?entry "CallEdge dst fs as"] by (simp add: Henter_l)
   have trav: "traverse_rhs (routed_cmb_g S_st gk0 seed_key route_st ctx ca cc ex) \<sigma>_st
       = DG (combine_local S_st ?ci ?dcont ?callee ?globals1) bot"
     unfolding ca_eq routed_cmb_g_def Let_def by simp

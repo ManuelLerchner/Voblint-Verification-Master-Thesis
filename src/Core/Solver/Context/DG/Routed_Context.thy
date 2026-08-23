@@ -73,11 +73,12 @@ where
        let caller = locals caller_state;
        let globals1 = globs globals_state1;
        let ci = call_info_of ca (result_proc ex);
-       let ctx' = route cc ctx caller ca;
+       let entry = enter_local S fs as caller globals1;
+       let ctx' = route cc ctx entry ca;
        let dcont = caller_cont S ci caller globals1;
        let eg = enter_global S fs as caller globals1;
        depend_on (seed_key (FunctionEntry (result_proc ex)) ctx')
-         (DG (enter_local S fs as caller globals1) bot) (answer (DG bot bot));
+         (DG entry bot) (answer (DG bot bot));
        callee_state \<leftarrow> read_local (ex, ctx');
        globals_state2 \<leftarrow> read_global gk0;
        let callee = locals callee_state;
@@ -185,11 +186,12 @@ where
        let caller = locals caller_state;
        let globals1 = globs globals_state1;
        let ci = call_info_of ca (result_proc ex);
-       let ctx' = route cc ctx caller ca;
+       let entry = enter_local S fs as caller globals1;
+       let ctx' = route cc ctx entry ca;
        let dcont = caller_cont S ci caller globals1;
        let eg = enter_global S fs as caller globals1;
        depend_on (seed_key (FunctionEntry (result_proc ex)) ctx')
-         (DG (enter_local S fs as caller globals1) bot) (answer (DG bot bot));
+         (DG entry bot) (answer (DG bot bot));
        callee_state \<leftarrow> read_local (ex, ctx');
        globals_state2 \<leftarrow> read_global gk0;
        let callee = locals callee_state;
@@ -296,12 +298,15 @@ locale routed_context_base_hetero =
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow>       s \<in> gammaDG (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
-       \<Longrightarrow> route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+       \<Longrightarrow> route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
             = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> (FunctionEntry p, route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+       \<Longrightarrow> (FunctionEntry p,
+              route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                              (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -356,14 +361,20 @@ lemma routed_seed_publish_bound_seed:
     and covV_cont: "(cont, ctx) \<in> vars"
   shows "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
          \<le> locals (sigma (Inr (seed_key (FunctionEntry p)
-               (route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)))))"
+               (route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                                (globs (sigma (Inr gk0)))) (CallEdge dst pars args)))))"
 proof -
-  let ?ctx' = "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)"
+  let ?ctx' = "route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                  (globs (sigma (Inr gk0)))) (CallEdge dst pars args)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
-              Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+              Side (seed_key (FunctionEntry p)
+                     (route u ctx (enter_local S pars args (locals d) (globs gv))
+                        (CallEdge dst pars args)))
                 (DG (enter_local S pars args (locals d) (globs gv)) bot)
-                (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
+                (QueryL (FunctionResult p,
+                          route u ctx (enter_local S pars args (locals d) (globs gv))
+                            (CallEdge dst pars args))
                   (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
                     Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)
                                         \<squnion> combine_global S ?ci
@@ -394,10 +405,12 @@ lemma routed_seed_publish_bound_local:
   assumes ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and covV_cont: "(cont, ctx) \<in> vars"
     and covV: "(FunctionEntry p,
-                 route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)) \<in> vars"
+                 route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                     (globs (sigma (Inr gk0)))) (CallEdge dst pars args)) \<in> vars"
   shows "snd (dgs_enter S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
          \<le> locals (sigma (Inl (FunctionEntry p,
-               route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))))"
+               route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                   (globs (sigma (Inr gk0)))) (CallEdge dst pars args))))"
   by (rule order_trans[OF routed_seed_publish_bound_seed[OF ce covV_cont]
                           routed_seed_read_bound[OF covV]])
 
@@ -409,9 +422,13 @@ lemma routed_seed_publish_bound_global:
 proof -
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?t = "QueryL (u, ctx) (\<lambda>d. QueryG gk0 (\<lambda>gv.
-              Side (seed_key (FunctionEntry p) (route u ctx (locals d) (CallEdge dst pars args)))
+              Side (seed_key (FunctionEntry p)
+                     (route u ctx (enter_local S pars args (locals d) (globs gv))
+                        (CallEdge dst pars args)))
                 (DG (enter_local S pars args (locals d) (globs gv)) bot)
-                (QueryL (FunctionResult p, route u ctx (locals d) (CallEdge dst pars args))
+                (QueryL (FunctionResult p,
+                          route u ctx (enter_local S pars args (locals d) (globs gv))
+                            (CallEdge dst pars args))
                   (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
                     Side gk0 (DG bot (enter_global S pars args (locals d) (globs gv)
                                         \<squnion> combine_global S ?ci
@@ -452,7 +469,7 @@ next
   case True
   let ?d = "locals (sigma (Inl (u, ctx)))"
   let ?g = "globs (sigma (Inr gk0))"
-  let ?ctx' = "route u ctx ?d (CallEdge dst pars args)"
+  let ?ctx' = "route u ctx (enter_local S pars args ?d ?g) (CallEdge dst pars args)"
   have covV: "(FunctionEntry p, ?ctx') \<in> vars"
     using call_fwd[OF True ce] .
   have covV_cont: "(cont, ctx) \<in> vars"
@@ -481,16 +498,22 @@ lemma routed_comb_bound_local:
                (caller_cont S (call_info_of (CallEdge dst pars args) p)
                   (locals (sigma (Inl (cl, c1)))) (globs (sigma (Inr gk0))))
                (locals (sigma (Inl (FunctionResult p,
-                 route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
+                 route cl c1 (enter_local S pars args (locals (sigma (Inl (cl, c1))))
+                     (globs (sigma (Inr gk0)))) (CallEdge dst pars args)))))
                (globs (sigma (Inr gk0))))
          \<le> locals (sigma (Inl (cont, c1)))"
 proof -
-  let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
+  let ?ex_ctx = "route cl c1 (enter_local S pars args (locals (sigma (Inl (cl, c1))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryG gk0 (\<lambda>gv1.
-              Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
+              Side (seed_key (FunctionEntry p)
+                     (route cl c1 (enter_local S pars args (locals dcl) (globs gv1))
+                        (CallEdge dst pars args)))
                 (DG (enter_local S pars args (locals dcl) (globs gv1)) bot)
-                (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+                (QueryL (FunctionResult p,
+                          route cl c1 (enter_local S pars args (locals dcl) (globs gv1))
+                            (CallEdge dst pars args))
                   (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
                     Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)
                                         \<squnion> fst (dgs_combine S ?ci
@@ -525,16 +548,22 @@ lemma routed_comb_bound_global:
                (caller_cont S (call_info_of (CallEdge dst pars args) p)
                   (locals (sigma (Inl (cl, c1)))) (globs (sigma (Inr gk0))))
                (locals (sigma (Inl (FunctionResult p,
-                 route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)))))
+                 route cl c1 (enter_local S pars args (locals (sigma (Inl (cl, c1))))
+                     (globs (sigma (Inr gk0)))) (CallEdge dst pars args)))))
                (globs (sigma (Inr gk0))))
          \<le> globs (sigma (Inr gk0))"
 proof -
-  let ?ex_ctx = "route cl c1 (locals (sigma (Inl (cl, c1)))) (CallEdge dst pars args)"
+  let ?ex_ctx = "route cl c1 (enter_local S pars args (locals (sigma (Inl (cl, c1))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?t = "QueryL (cl, c1) (\<lambda>dcl. QueryG gk0 (\<lambda>gv1.
-              Side (seed_key (FunctionEntry p) (route cl c1 (locals dcl) (CallEdge dst pars args)))
+              Side (seed_key (FunctionEntry p)
+                     (route cl c1 (enter_local S pars args (locals dcl) (globs gv1))
+                        (CallEdge dst pars args)))
                 (DG (enter_local S pars args (locals dcl) (globs gv1)) bot)
-                (QueryL (FunctionResult p, route cl c1 (locals dcl) (CallEdge dst pars args))
+                (QueryL (FunctionResult p,
+                          route cl c1 (enter_local S pars args (locals dcl) (globs gv1))
+                            (CallEdge dst pars args))
                   (\<lambda>dex. QueryG gk0 (\<lambda>gv2.
                     Side gk0 (DG bot (enter_global S pars args (locals dcl) (globs gv1)
                                         \<squnion> fst (dgs_combine S ?ci
@@ -578,7 +607,7 @@ next
   case True
   let ?d = "locals (sigma (Inl (cl, c1)))"
   let ?g = "globs (sigma (Inr gk0))"
-  let ?ex_ctx = "route cl c1 ?d (CallEdge dst pars args)"
+  let ?ex_ctx = "route cl c1 (enter_local S pars args ?d ?g) (CallEdge dst pars args)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   have sin: "s \<in> gammaDG ?d ?g"
     using s True by (simp add: sg_cov)
@@ -645,12 +674,15 @@ locale routed_context_hetero =
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
        \<Longrightarrow>       s \<in> gamma_dg_base (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))
-       \<Longrightarrow> route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+       \<Longrightarrow> route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
             = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     and call_fwd:
     "\<And>u ctx dst pars args p cont.
        (u, ctx) \<in> vars \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> (FunctionEntry p, route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+       \<Longrightarrow> (FunctionEntry p,
+              route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                              (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -673,13 +705,16 @@ next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     "s \<in> gamma_dg_base (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))"
-  then show "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+  then show "route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                 (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
       = enterc u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_enterc_agree)
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars" "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(FunctionEntry p, route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+  then show "(FunctionEntry p,
+                route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
         \<in> vars"
     by (rule call_fwd)
 next
@@ -823,7 +858,7 @@ definition formals_route_lifted ::
 where
   "formals_route_lifted S d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (case enter_local S pars args d bot of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
+        formals_context pars (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
 
 definition formals_route_lifted_gen ::
   "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec
@@ -851,11 +886,14 @@ text \<open>
 \<close>
 
 definition route_enterc_of_sigma ::
-  "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> cfg
-     \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
+  "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec
+     \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> 'k
+     \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
 where
-  "route_enterc_of_sigma route sigma g u ctx s =
-     route u ctx (locals (sigma (Inl (u, ctx)))) (call_action_at_call_site g u)"
+  "route_enterc_of_sigma S route sigma gk0 g u ctx s =
+     (let ca = call_action_at_call_site g u in
+        route u ctx (enter_local S (ce_formals ca) (ce_args ca)
+                        (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0)))) ca)"
 
 lemma route_enterc_of_sigma_agree:
   assumes fin: "finite (calls g)"
@@ -863,8 +901,9 @@ lemma route_enterc_of_sigma_agree:
                  (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
                  \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "route u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
-       = route_enterc_of_sigma route sigma g u ctx s"
+  shows "route u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                         (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
+       = route_enterc_of_sigma S route sigma gk0 g u ctx s"
   unfolding route_enterc_of_sigma_def
   using call_action_at_call_site_eq[OF fin uniq ce] by simp
 

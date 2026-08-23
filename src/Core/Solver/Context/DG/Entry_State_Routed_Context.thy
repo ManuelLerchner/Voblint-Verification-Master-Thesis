@@ -55,7 +55,9 @@ locale entry_state_routed_context =
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont)
              \<in> calls (compile_prog Pi ps mnm main)
        \<Longrightarrow> (FunctionEntry p,
-              formals_route_lifted_gen S u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+              formals_route_lifted_gen S u ctx
+                (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
              \<in> vars"
     and comb_fwd:
     "\<And>cl c1 dst pars args p cont.
@@ -67,7 +69,7 @@ begin
 
 sublocale routed: routed_context_hetero S gs "compile_prog Pi ps mnm main" gk0
   "formals_route_lifted_gen S" bot0 s0d s0g sigma vars x0 sg seed_key
-  "route_enterc_of_sigma (formals_route_lifted_gen S) sigma (compile_prog Pi ps mnm main)"
+  "route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0 (compile_prog Pi ps mnm main)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps mnm main))" using compile_prog_finite by simp
 next
@@ -78,9 +80,11 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps mnm main)"
   have fin: "finite (calls (compile_prog Pi ps mnm main))" using compile_prog_finite by blast
-  show "formals_route_lifted_gen S u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
-          = route_enterc_of_sigma (formals_route_lifted_gen S) sigma (compile_prog Pi ps mnm main) u ctx
-              (call_enter gs (CallEdge dst pars args) s)"
+  show "formals_route_lifted_gen S u ctx
+            (enter_local S pars args (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
+            (CallEdge dst pars args)
+          = route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0
+              (compile_prog Pi ps mnm main) u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_enterc_of_sigma_agree[OF fin compile_prog_calls_source_unique ce])
 next
   fix u ctx dst pars args p cont
@@ -88,7 +92,9 @@ next
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps mnm main)"
   then show "(FunctionEntry p,
-                formals_route_lifted_gen S u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
+                formals_route_lifted_gen S u ctx
+                  (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                      (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
 next

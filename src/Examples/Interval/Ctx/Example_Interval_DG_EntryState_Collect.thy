@@ -71,15 +71,28 @@ text \<open>The routed callee entry the abstract side selects is the executable
   same readback the transport uses, so \<open>entry_state_route_commute\<close> turns it back
   into the executable route \<^const>\<open>ctx_call\<close> is defined by.\<close>
 
+lemma rc_enter_local_eq_entered:
+  "enter_local (ectx_abs_spec rc_gs) pars args
+      (map_lift (fun_of_resolved_st_q_for rc_gs) d) g
+   = map_lift (fun_of_resolved_st_q_for rc_gs)
+       (transfer_lift rc_is_bot_pred (ivl_enter_st_for rc_gs pars args) d)"
+  using entry_state_entered_commute[OF rc_exact, of d "CallEdge None pars args"]
+  by (simp add: entry_state_entered_def entered_state_abs_def ectx_abs_spec_def
+                dgs_enter_base_for_lifted)
+
 lemma rc_route_abs_at_call:
   "entry_state_route_abs_gen rc_gs (Statement 3) []
-     (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main
-        (Inl (Statement 3, []))))
+     (enter_local (ectx_abs_spec rc_gs) [(STR ''a'')] [V (STR ''x'')]
+        (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main
+           (Inl (Statement 3, []))))
+        (globs (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main
+           (Inr Global))))
      (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
    = ctx_call"
   unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call_def
     rc_ctx_sol_def o_apply fun_of_dg_st_gen_simps
-  by (rule entry_state_route_commute[OF rc_exact])
+  by (simp add: rc_enter_local_eq_entered entry_state_entered_def
+                entry_state_route_commute[OF rc_exact])
 
 lemma rc_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main)"
@@ -87,8 +100,11 @@ lemma rc_call_fwd_ok:
                \<in> calls (compile_prog rc_pi rc_procs (STR ''main'') rc_main)"
   shows "(FunctionEntry p,
             entry_state_route_abs_gen rc_gs u ctx
-              (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main
-                 (Inl (u, ctx))))
+              (enter_local (ectx_abs_spec rc_gs) pars args
+                 (locals (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main
+                    (Inl (u, ctx))))
+                 (globs (entry_state_sigma_abs_exec rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main
+                    (Inr Global))))
               (CallEdge dst pars args))
          \<in> fst (entry_state_sol rc_gs rc_is_bot_pred rc_pi rc_procs (STR ''main'') rc_main)"
 proof -

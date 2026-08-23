@@ -242,7 +242,7 @@ definition entry_exec_route :: "'a exec_dg_st lifted \<Rightarrow> call_action \
   "entry_exec_route d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars (fun_of_resolved_st_q_for gs
-          (case entry_exec_entered d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
   "entry_exec_route_gen u ctx d ca = entry_exec_route d ca"
@@ -266,21 +266,9 @@ qed
 lemma entry_exec_route_commute:
   "formals_route_lifted (base_dg_spec_for_lifted gs is_bot_state tf)
      (map_lift (fun_of_resolved_st_q_for gs) s) ca = entry_exec_route s ca"
-proof (cases ca)
-  case (CallEdge dst pars args)
-  have "formals_route_lifted (base_dg_spec_for_lifted gs is_bot_state tf)
-          (map_lift (fun_of_resolved_st_q_for gs) s) ca
-      = formals_context pars
-          (case map_lift (fun_of_resolved_st_q_for gs) (entry_exec_entered s ca)
-             of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)"
-    using CallEdge
-    by (simp add: formals_route_lifted_def entry_exec_entered_commute dgs_enter_base_for_lifted)
-  also have "\<dots> = entry_exec_route s ca"
-    using CallEdge
-    by (cases "entry_exec_entered s ca")
-       (simp_all add: entry_exec_route_def formals_context_def fun_of_resolved_st_q_for_def)
-  finally show ?thesis .
-qed
+  by (cases ca; cases s)
+     (simp_all add: formals_route_lifted_def entry_exec_route_def
+                    formals_context_def fun_of_resolved_st_q_for_def)
 
 lemma entry_exec_route_gen_commute:
   "formals_route_lifted_gen (base_dg_spec_for_lifted gs is_bot_state tf) u ctx

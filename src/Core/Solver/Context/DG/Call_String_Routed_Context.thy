@@ -57,7 +57,8 @@ next
   show "\<And>p ctx. Seed p ctx \<noteq> Global" by simp
 next
   fix u ctx dst pars args p cont s
-  show "cs_route k u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+  show "cs_route k u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+            (globs (sigma (Inr Global)))) (CallEdge dst pars args)
           = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule cs_route_context_agree)
 next
@@ -65,10 +66,15 @@ next
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps mnm main)"
-  then show "(FunctionEntry p,
+  then have "(FunctionEntry p,
                 cs_route k u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
+  then show "(FunctionEntry p,
+                cs_route k u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr Global)))) (CallEdge dst pars args))
+               \<in> vars"
+    by (simp add: cs_route_def)
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"

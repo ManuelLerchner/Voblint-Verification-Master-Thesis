@@ -56,7 +56,7 @@ definition sctx_entry_route ::
   "sctx_entry_route gs is_bot_pred d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars (fun_of_resolved_st_q_for gs
-          (case sctx_entry_entered gs is_bot_pred d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 definition sctx_entry_route_gen ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> sign list \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign list" where
@@ -110,7 +110,6 @@ lemma sctx_entry_route_gen_eq_generic:
   "sctx_entry_route_gen gs is_bot_pred u ctx d ca = sign_domain.entry_exec_route_gen u ctx d ca"
   unfolding sctx_entry_route_gen_def sign_domain.entry_exec_route_gen_def
     sctx_entry_route_def sign_domain.entry_exec_route_def
-    sctx_entry_entered_def sign_domain.entry_exec_entered_def
   by (rule refl)
 
 lemma sctx_entry_route_gen_commute:
@@ -245,7 +244,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> (FunctionEntry p,
                formals_route_lifted_gen (sctx_abs_spec gs) u ctx
-                 (locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                 (enter_local (sctx_abs_spec gs) pars args
+                    (locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                    (globs (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inr Global))))
                  (CallEdge dst pars args))
              \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -328,7 +329,9 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
   show "(FunctionEntry p,
            formals_route_lifted_gen (sctx_abs_spec gs) u ctx
-             (locals (sctx_entry_sigma_abs (Inl (u, ctx)))) (CallEdge dst pars args))
+             (enter_local (sctx_abs_spec gs) pars args
+                (locals (sctx_entry_sigma_abs (Inl (u, ctx))))
+                (globs (sctx_entry_sigma_abs (Inr Global)))) (CallEdge dst pars args))
           \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main)"
     unfolding sctx_entry_sigma_abs_def
     using mem ce call_fwd_ok by blast
@@ -361,8 +364,9 @@ qed
 
 definition sctx_entry_enterc ::
     "cfg_node \<Rightarrow> sign list \<Rightarrow> store \<Rightarrow> sign list" where
-  "sctx_entry_enterc = route_enterc_of_sigma
-     (formals_route_lifted_gen (sctx_abs_spec gs)) sctx_entry_sigma_abs (compile_prog Pi ps mnm main)"
+  "sctx_entry_enterc = route_enterc_of_sigma (sctx_abs_spec gs)
+     (formals_route_lifted_gen (sctx_abs_spec gs)) sctx_entry_sigma_abs Global
+     (compile_prog Pi ps mnm main)"
 
 lemmas sctx_entry_routed_context_call =
   sctx_entry_routed.routed_context_call[folded sctx_entry_enterc_def]

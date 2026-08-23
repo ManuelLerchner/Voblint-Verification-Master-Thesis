@@ -70,33 +70,53 @@ text \<open>The routed callee entry the abstract side selects is the executable 
   readback the transport uses, so \<open>entry_state_route_commute\<close> turns it back into the
   executable route \<^const>\<open>ctx_call1\<close> / \<^const>\<open>ctx_call2\<close> are defined by.\<close>
 
+lemma twice_enter_local_eq_entered:
+  "enter_local (ectx_abs_spec twice_gs) pars args
+      (map_lift (fun_of_resolved_st_q_for twice_gs) d) g
+   = map_lift (fun_of_resolved_st_q_for twice_gs)
+       (transfer_lift twice_is_bot_pred (ivl_enter_st_for twice_gs pars args) d)"
+  using entry_state_entered_commute[OF twice_exact, of d "CallEdge None pars args"]
+  by (simp add: entry_state_entered_def entered_state_abs_def ectx_abs_spec_def
+                dgs_enter_base_for_lifted)
+
 lemma twice_route_abs_at_call1:
   "entry_state_route_abs_gen twice_gs (Statement 2) []
-     (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
-        (Inl (Statement 2, []))))
+     (enter_local (ectx_abs_spec twice_gs) [(STR ''p'')] [VIMP_Syntax.N 3]
+        (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+           (Inl (Statement 2, []))))
+        (globs (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+           (Inr Global))))
      (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
    = ctx_call1"
   unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call1_def
     twice_ctx_sol_def o_apply fun_of_dg_st_gen_simps
-  by (rule entry_state_route_commute[OF twice_exact])
+  by (simp add: twice_enter_local_eq_entered entry_state_entered_def
+                entry_state_route_commute[OF twice_exact])
 
 lemma twice_route_abs_at_call2:
   "entry_state_route_abs_gen twice_gs (Statement 3) []
-     (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
-        (Inl (Statement 3, []))))
+     (enter_local (ectx_abs_spec twice_gs) [(STR ''p'')] [VIMP_Syntax.N 10]
+        (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+           (Inl (Statement 3, []))))
+        (globs (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+           (Inr Global))))
      (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
    = ctx_call2"
   unfolding entry_state_route_abs_gen_def entry_state_sigma_abs_exec_def ctx_call2_def
     twice_ctx_sol_def o_apply fun_of_dg_st_gen_simps
-  by (rule entry_state_route_commute[OF twice_exact])
+  by (simp add: twice_enter_local_eq_entered entry_state_entered_def
+                entry_state_route_commute[OF twice_exact])
 
 lemma twice_call_fwd_ok:
   assumes cov: "(u, ctx) \<in> fst twice_ctx_sol"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls twice_cfg"
   shows "(FunctionEntry p,
             entry_state_route_abs_gen twice_gs u ctx
-              (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
-                 (Inl (u, ctx))))
+              (enter_local (ectx_abs_spec twice_gs) pars args
+                 (locals (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+                    (Inl (u, ctx))))
+                 (globs (entry_state_sigma_abs_exec twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
+                    (Inr Global))))
               (CallEdge dst pars args))
          \<in> fst twice_ctx_sol"
 proof -

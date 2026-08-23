@@ -120,17 +120,23 @@ next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+  show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
           = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(FunctionEntry p,
+  then have "(FunctionEntry p,
                 route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
+  then show "(FunctionEntry p,
+                route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+               \<in> vars"
+    by simp
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
@@ -186,17 +192,23 @@ next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+  show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
           = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(FunctionEntry p,
+  then have "(FunctionEntry p,
                 route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
+  then show "(FunctionEntry p,
+                route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+               \<in> vars"
+    by simp
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
