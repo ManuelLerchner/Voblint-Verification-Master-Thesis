@@ -110,7 +110,6 @@ codegen-check = { cmd = "git diff --exit-code -- codegen/generated/", depends-on
 # Reads the checked-in export, so it needs no Isabelle and can run in the
 # pre-commit hook alongside the ASCII and grammar-drift guards.
 codegen-modules = "python3 scripts/check_codegen_modules.py"
-codegen-ocaml-check = { cmd = "bash scripts/mk/codegen-ocaml-check.sh", depends-on = ["vendor"] }
 codegen-regression = "bash scripts/mk/codegen-regression.sh"
 
 # voblint CLI

@@ -317,7 +317,6 @@ for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
 | `isabelle-lint` | Isabelle | Run Isabelle's own linter over the session |
 | `codegen` | Isabelle, `AFP` | Regenerate `codegen/generated/` from the `export_code` declarations |
 | `codegen-check` | Isabelle, `AFP` | Fail if `codegen/generated/` has drifted from those declarations |
-| `codegen-ocaml-check` | Isabelle, `AFP`, opam | Compile-check the generated OCaml |
 | `codegen-regression` | opam | Run the OCaml driver under `codegen/regression/` against Isabelle-proved expected output |
 | `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
 | `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |

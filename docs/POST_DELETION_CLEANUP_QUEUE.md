@@ -18,8 +18,7 @@ Measured after the TD/etf deletion and the consolidation that followed.
 | staged-migration phrases in `.thy` | many | 9 | 0 |
 
 Session graph, and why `Formalization` is not a leaf, are in the project
-contract; `ROOTS` lists eight directories and omits `src/CodegenCheck`
-deliberately.
+contract; `ROOTS` lists eight directories, one per session.
 
 ### Done
 

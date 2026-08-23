@@ -7,7 +7,7 @@ analysis from VIMP source with procedures through interprocedural CFG
 collecting semantics, abstract equations, and the vendored **TD side** solver
 (`vendor/td-verification`, session `TD`) to pipeline soundness theorems.
 **Voblint_Codegen** is a seventh, downstream session that owns executable
-exports; the CI-only **Voblint_OCaml_Check** session compile-checks them.
+exports.
 
 **Top level:** the interprocedural / side-effecting spine —
 `Run_Analysis_Sound`, `Source_Activation_Sound`,

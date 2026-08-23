@@ -167,8 +167,7 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    UNKNOWN is the sound verdict, not a false PROVED). `context_mode`/
    `analyse_ctx` export through the same Haskell/OCaml `export_code`
    pipeline as `analyse` (`Analyse_Dispatch.thy`,
-   `Example_State_Report_GraphViz.thy`), including the CI-only OCaml
-   compile check (`Voblint_OCaml_Check.thy`). `--dot`/`--dot-full`/
+   `Example_State_Report_GraphViz.thy`). `--dot`/`--dot-full`/
    `--graph-snapshot` also support `--context entry-state`
    (`entry_state_report_dot_auto`/`entry_state_full_state_dot_auto` and
    their `_graph_snapshot_auto` siblings, `Example_State_Report_GraphViz

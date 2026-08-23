@@ -79,9 +79,12 @@ leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
 through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
 output, and the `Voblint` capstone.
 
-`ROOTS` lists eight session directories. `src/CodegenCheck` is deliberately not
-among them: its `export_code ... checking OCaml` gate needs an OCaml toolchain
-and runs only where CI names the session explicitly.
+`ROOTS` lists eight session directories, one per session in the graph above.
+
+The generated OCaml is compile-checked by actually compiling it: both
+`codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
+`codegen/generated/ml/Voblint_CLI.ml`, so a serializer defect fails those
+tasks locally and in CI.
 
 The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`

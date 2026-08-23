@@ -238,9 +238,9 @@ the solver layer beyond ordinary code-generation trust.
 
 Two `export_code` declarations exist, both targeting OCaml
 (`Codegen/Export/Voblint_Codegen.thy:13-29,31-52`), landing at
-`codegen/generated/ml/{Voblint_Analyse_OCaml,Voblint_CLI}.ml`. A third,
-CI-only `export_code` in `CodegenCheck/Voblint_OCaml_Check.thy:22` is a
-compile check with no runtime artifact.
+`codegen/generated/ml/{Voblint_Analyse_OCaml,Voblint_CLI}.ml`. Both are
+compiled by `codegen-regression` and `cli-build`, which is what checks the
+serializer's output rather than a separate declaration.
 
 No `code_printing`, `code_datatype`, `code_const`, `code_reserved`, or
 `code_abbrev` appears anywhere in `src/`. The `[code]` equations that do
