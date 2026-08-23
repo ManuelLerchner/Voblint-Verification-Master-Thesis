@@ -6726,12 +6726,13 @@ let rec routed_cmb_g_contribution _A _B
               (let caller = locals caller_state in
                let globals1 = globs globals_state1 in
                let ci = call_info_of ca (result_proc ex) in
-               let ctxa = route cc ctx caller ca in
+               let entry = snd (dgs_enter s fs asa caller globals1) in
+               let ctxa = route cc ctx entry ca in
                let dcont = dgs_caller_cont s ci caller globals1 in
                let eg = fst (dgs_enter s fs asa caller globals1) in
                 seqcomp_tree
                   (Side (seed_key (FunctionEntry (result_proc ex)) ctxa,
-                          DG (snd (dgs_enter s fs asa caller globals1),
+                          DG (entry,
                                bot _B.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
                           Answer
                             (DG (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
@@ -10191,17 +10192,12 @@ let rec analyse_int_report_for_with_state
 let rec analyse_int_report_with_state
   p = analyse_int_report_for_with_state (declared_global p) p;;
 
-let rec ictx_entry_entered
-  mode gs is_bot_pred d ca =
-    (let CallEdge (_, fs, asa) = ca in
-      transfer_lift is_bot_pred (int_dom_enter_st_for mode gs fs asa) d);;
-
 let rec ictx_entry_route
   mode gs is_bot_pred d ca =
     (let CallEdge (_, pars, _) = ca in
       formals_context pars
         (fun_of_resolved_st_q_for (bot_int_dom_ext int_dom_record_lattice_unit)
-          gs (match ictx_entry_entered mode gs is_bot_pred d ca
+          gs (match d
                with Bot ->
                  bot_resolved_st_qa
                    (bot_int_dom_ext int_dom_record_lattice_unit)
@@ -10344,18 +10340,13 @@ let rec ictx_sol_prog_wpoa
             (bounded_warrowing_resolved_st_q bounded_warrowing_ivl))))
       (ictx_eqs_proga gs mnm p) (cfg_exit (prog_cfg mnm p), ());;
 
-let rec sctx_entry_entered
-  gs is_bot_pred d ca =
-    (let CallEdge (_, fs, asa) = ca in
-      transfer_lift is_bot_pred (sign_enter_st_for gs fs asa) d);;
-
 let rec sctx_entry_route
   gs is_bot_pred d ca =
     (let CallEdge (_, pars, _) = ca in
       formals_context pars
         (fun_of_resolved_st_q_for bot_sign gs
-          (match sctx_entry_entered gs is_bot_pred d ca
-            with Bot -> bot_resolved_st_qa bot_sign | Lifted d0 -> d0)));;
+          (match d with Bot -> bot_resolved_st_qa bot_sign
+            | Lifted d0 -> d0)));;
 
 let rec sctx_entry_route_gen
   gs is_bot_pred u ctx d ca = sctx_entry_route gs is_bot_pred d ca;;
@@ -10658,19 +10649,13 @@ let rec ics_check_projection
       (analyse_int_call_string_result_for k (declared_global p) mnm p)
       int_classify_check;;
 
-let rec entry_state_entered
-  gs is_bot_pred d ca =
-    (let CallEdge (_, fs, asa) = ca in
-      transfer_lift is_bot_pred (ivl_enter_st_for gs fs asa) d);;
-
 let rec entry_state_route
   gs is_bot_pred d ca =
     (let CallEdge (_, pars, _) = ca in
       formals_context pars
         (fun x ->
           lookup_resolved_st_q bot_ivl
-            (match entry_state_entered gs is_bot_pred d ca
-              with Bot -> bot_resolved_st_qa bot_ivl | Lifted d0 -> d0)
+            (match d with Bot -> bot_resolved_st_qa bot_ivl | Lifted d0 -> d0)
             (location_of gs x)));;
 
 let rec entry_state_route_gen
