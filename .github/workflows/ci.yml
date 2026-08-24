@@ -295,6 +295,23 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules
 
+      # check_thy_prose_refs resolves a cited name against every .thy under src/
+      # AND vendor/, so prose naming a vendored TD constant
+      # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
+      # dangling unless the submodule is present. The checkout above is
+      # submodules: false, so it has to be initialised here -- after the four
+      # checks that genuinely need nothing, so those still fail fast.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
       # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
       # leaves prose describing a constant that no longer exists.
       - name: Theory prose references (no build needed -- fail fast)

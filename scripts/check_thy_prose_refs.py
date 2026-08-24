@@ -81,6 +81,19 @@ def main() -> int:
         print("check_thy_prose_refs: no .thy files found", file=sys.stderr)
         return 1
 
+    # A name defined only in the vendored solver resolves nowhere when the
+    # submodule is absent, so every prose reference to one is reported as
+    # dangling. That looks like a dozen broken renames rather than a missing
+    # checkout, so say which it is.
+    if not any(str(p).startswith(str(REPO / "vendor" / "td-verification"))
+               for p in sources):
+        print("check_thy_prose_refs: vendor/td-verification has no .thy "
+              "files -- the submodule is not checked out.\n"
+              "Prose naming a vendored constant would be reported as dangling. "
+              "Run: git submodule update --init --depth 1 vendor/td-verification",
+              file=sys.stderr)
+        return 1
+
     defined: set[str] = set()
     for path, text in sources.items():
         body = strip_prose(text) if str(path).startswith(str(REPO / "src")) else text
