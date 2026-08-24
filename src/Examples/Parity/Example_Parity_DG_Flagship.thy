@@ -113,7 +113,9 @@ lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls p
   unfolding parity_cfg_def
   using compile_prog_finite by auto
 
-lemma parity_calls: "calls parity_cfg = {}" by eval
+lemma parity_calls: "calls parity_cfg = {}"
+  unfolding parity_cfg_def parity_pi_def
+  by (rule compile_prog_calls_empty) (simp_all add: parity_prog_def parity_program_def)
 
 subsection \<open>3. Executable parity D/G specification\<close>
 

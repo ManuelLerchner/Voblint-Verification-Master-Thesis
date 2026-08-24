@@ -61,7 +61,9 @@ definition sign_ex_pi :: proc_table where
 definition gEx :: cfg where
   "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
 
-lemma gEx_calls: "calls gEx = {}" by eval
+lemma gEx_calls: "calls gEx = {}"
+  unfolding gEx_def sign_ex_pi_def
+  by (rule compile_prog_calls_empty) (simp_all add: sign_ex_prog_def)
 lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')"
   unfolding gEx_def prog_main_name_def by (rule inv16_entry_is_main)
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp

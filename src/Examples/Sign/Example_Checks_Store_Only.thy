@@ -59,7 +59,9 @@ text \<open>The compiled graph has no call edges: the nondeterministic read comp
   to an \<^const>\<open>EA_Special\<close> intra edge, not a \<^const>\<open>CallEdge\<close>.\<close>
 
 lemma checks_ex_calls_eval: "calls (prog_cfg prog_main_name checks_ex_program) = {}"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def
+  by (rule compile_prog_calls_empty)
+     (simp_all add: checks_ex_program_def special_table_def special_pname_nondet_int_def)
 
 text \<open>The routed-unit solve terminates, and its solved key set is closed under
   the compiled graph -- the four coverage facts the D/G node-soundness bridge
