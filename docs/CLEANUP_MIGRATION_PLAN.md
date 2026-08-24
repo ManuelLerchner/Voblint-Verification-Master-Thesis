@@ -112,10 +112,47 @@ than keeping), and the seven unconsumed export roots (§2.4). Move
 of the file — into the Examples session, where `src/CLI/ROOT`'s own description
 says it belongs.
 
-**2.3 Analysis** — §12.1, ~700 lines: `Sign_DG`, `Int_DG`, `Int_Base_DG`,
-`Parity_Base_DG`, `Interval_DG`; the five `Analysis_GraphViz` constants;
-`congruence_fact_of_parity`; the four proved-never-consumed lemma families.
-**Coordinate:** `Analysis_GraphViz.thy` has uncommitted work in it right now.
+**2.3 Analysis** — **partly done; partly reclassified.**
+
+*Done:* the five `Analysis_GraphViz` constants (60 lines, export byte-identical).
+Each was a plain definition — two aliases, a constant `None` annotator, an
+alias for `string_of_call_action`, and one config builder — occurring exactly
+twice in the tree.
+
+*Reclassified, and **not** mechanical dead code.* On reading them, the five
+`*_DG` / `*_Base_DG` files do not belong in Phase 2 at all. §12.1 called them
+"whole files with zero external consumers", which is true of their *names* but
+misleading about their *content*: what they contain is unconsumed **theorems**,
+not scaffolding.
+
+- `Sign_DG` / `Int_DG` / `Interval_DG` carry terminal soundness claims
+  (`<d>_dg_post_solution_collect_sound`, over `ltr_collect`) plus, in Sign's
+  case, the `sign_dg_privatized` interpretation and three lemmas about the
+  keep-all placement. `Example_Placement_Regression.thy:78` says it "validates
+  concretely" the exact case that interpretation covers, and that example is one
+  of the two the alignment register cites as evidence for the
+  `gamma_unit` / `gamma_join` row.
+- `Parity_Base_DG` / `Int_Base_DG` each export three `*_dg_spec_*_commute`
+  theorems from a `context fixes gs` block. The inner `interpretation` really is
+  inert (its facts never escape the context), but the theorems are not — they
+  are proved, exported, and cited nowhere.
+
+All five are therefore **decision #4**, not Phase 2. Retiring them deletes
+stated theorems; keeping them means instantiating the abstract statements so
+some concrete path reaches them. That is a judgement about what the project
+claims, not a cleanup.
+
+*Also deferred:* `congruence_fact_of_parity` and its `[simp]` exactness lemma
+(9 lines) are genuinely unreferenced, but that lemma is precisely the proof that
+parity embeds exactly into congruence — the evidence base for **decision #2**
+(whether `int_parity` earns its place in `int_dom`, worth ~250 lines). Deleting
+9 lines to destroy the evidence for a 250-line decision is a bad trade. Resolve
+decision #2 first.
+
+*Still open in 2.3:* the four proved-never-consumed lemma families
+(`fun_of_st_top_<D>_st`, `<D>_tf_st_for_reduces`, `update_*_{exact,le}`,
+`first_deciding*`). These need the same read-before-delete treatment: check
+whether each is scaffolding or a stated result.
 
 **2.4 Soundness / CFG** — §10.2: `intra_successors`, `cone`, `collect_result`,
 `com_stmt_order` + its four lemmas, `frames_match` and its six-lemma inversion
@@ -310,9 +347,13 @@ absence of `startstate`/`exitstate`/`morphstate`.
 3. **`wf_cfg`** (§10.2). Proved for every compiled program, assumed by no
    soundness theorem. Either wire it into a premise where it belongs or retire it
    and its four uncited consumers.
-4. **The `<D>_DG` LTR route** (§12.1, 429 lines). Real terminal soundness
-   theorems that no concrete path reaches — the instantiation gap in reverse. Keep
-   and instantiate, or retire.
+4. **The `<D>_DG` LTR route and the `*_Base_DG` commutation theorems**
+   (§12.1, ~1,000 lines across five files). Real theorems that no concrete path
+   reaches — the instantiation gap in reverse. Keep and instantiate, or retire.
+   Note the coupling: retiring `Sign_DG` also removes `sign_dg_privatized`,
+   which `Example_Placement_Regression` is written against and which the
+   alignment register's D/G-reconstruction row leans on. Widened from 429 lines
+   after reading the files during Phase 2.3.
 5. **The two placement examples** (§7.4). 3,861 lines carrying evidence the
    register genuinely cites. Not deletable, but ~1,500 of it is framework work
    misfiled as an example. Hoisting §7.4(a)'s lemma triple into
