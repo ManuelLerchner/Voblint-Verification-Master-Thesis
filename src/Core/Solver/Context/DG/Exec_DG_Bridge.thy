@@ -172,13 +172,14 @@ text \<open>\<^const>\<open>dg_spec_combine_tree\<close> applies the caller cont
   not \<open>combine\<close> alone.  \<open>Hcont\<close> is the executable/abstract commute for that
   caller half; the two hypotheses compose into \<open>Hcomb'\<close> below.\<close>
 
-lemma dg_tree_st_commute_dg_cmb_of_for:
+lemma dg_tree_st_commute_dg_cmb_at_of_for:
   assumes Hcomb: "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_combine S_st ci dc de g)
                             = dgs_combine S_abs ci (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
     and Hcont: "\<And>ci d g. fun_of_exec_dg_st_for gs (caller_cont S_st ci d g)
                             = caller_cont S_abs ci (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
-  shows "dg_tree_st_commute_for gs \<sigma>_st (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)
-                                  (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)"
+  shows "dg_tree_st_commute_for gs \<sigma>_st
+           (dg_cmb_at_of S_st c' (CallEdge dst fs as) cc p)
+           (dg_cmb_at_of S_abs c' (CallEdge dst fs as) cc p)"
 proof -
   have Hcomb': "\<And>ci dc de g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
         (dgs_combine S_st ci (caller_cont S_st ci dc g) de g)
@@ -186,8 +187,7 @@ proof -
           (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"
     by (simp add: Hcomb Hcont)
   show ?thesis
-    unfolding dg_tree_st_commute_for_def dg_cmb_of_def dg_spec_combine_tree_def
-    apply simp
+    unfolding dg_tree_st_commute_for_def dg_cmb_at_of_def dg_spec_combine_tree_def
     apply (intro conjI allI
           traverse_wrapped_combine_commute_for
             [where comb_st = "\<lambda>ci' dc de g. dgs_combine S_st ci' (caller_cont S_st ci' dc g) de g"
@@ -227,29 +227,45 @@ theorem part_post_solution_dg_st_to_abs_for:
 proof -
   have hr: "\<And>u c' d ca. (\<lambda>_ _ _ _. ()) u c' d ca = (\<lambda>_ _ _ _. ()) u c' (fun_of_exec_dg_st_for gs d) ca"
     by simp
-  have hc: "\<And>c' ca cc ex. dg_tree_st_commute_for gs \<sigma>_st
-      (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
+  interpret R: dg_reader_commute_gen
+    "fun_of_exec_dg_st_for gs" "fun_of_exec_dg_st_for gs"
+    by unfold_locales simp_all
+  have hc: "\<And>c' ca cc v. dg_tree_st_commute_for gs \<sigma>_st
+      (dg_cmb_of S_st g (\<lambda>_ _ _ _. ()) c' ca cc v)
+      (dg_cmb_of S_abs g (\<lambda>_ _ _ _. ()) c' ca cc v)"
   proof -
-    fix c' ca cc ex
+    fix c' ca cc v
     obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
-    thus "dg_tree_st_commute_for gs \<sigma>_st
-        (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
-      by (simp add: dg_tree_st_commute_dg_cmb_of_for[OF Hcomb Hcont])
+    have at: "\<And>p ct. dg_tree_st_commute_for gs \<sigma>_st
+        (dg_cmb_at_of S_st ct ca cc p) (dg_cmb_at_of S_abs ct ca cc p)"
+      unfolding ca_eq
+      by (rule dg_tree_st_commute_dg_cmb_at_of_for[OF Hcomb Hcont])
+    have la: "list_all2 (R.dg_tree_st_commute \<sigma>_st)
+        (map (dg_cmb_at_of S_st c' ca cc) (static_targets g v cc ca))
+        (map (dg_cmb_at_of S_abs c' ca cc) (static_targets g v cc ca))"
+      by (auto simp: list_all2_conv_all_nth
+            intro: at[unfolded dg_tree_st_commute_for_as_gen])
+    show "dg_tree_st_commute_for gs \<sigma>_st
+        (dg_cmb_of S_st g (\<lambda>_ _ _ _. ()) c' ca cc v)
+        (dg_cmb_of S_abs g (\<lambda>_ _ _ _. ()) c' ca cc v)"
+      unfolding dg_tree_st_commute_for_as_gen dg_cmb_of_def
+      using R.dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
+      by simp
   qed
   have he: "\<And>c' w. list_all2 (dg_tree_st_commute_for gs \<sigma>_st)
       (dg_extra_of S_st g (\<lambda>_ _ _ _. ()) c' w) (dg_extra_of S_abs g (\<lambda>_ _ _ _. ()) c' w)"
     by (rule dg_extra_of_commute_for[OF Henter])
   from pp have pp':
     "part_post_solution
-      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-        (dg_cmb_of S_st) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
+      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+        (dg_cmb_of S_st g) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
     unfolding dg_gen_of_def .
   show ?thesis
     unfolding dg_gen_of_def
     by (rule part_post_solution_seed_dg_st_to_abs_for
-          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          [where pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. ()"
              and route_st = "\<lambda>_ _ _ _. ()" and route_abs = "\<lambda>_ _ _ _. ()"
-             and cmb_st = "dg_cmb_of S_st" and cmb_abs = "dg_cmb_of S_abs"
+             and cmb_st = "dg_cmb_of S_st g" and cmb_abs = "dg_cmb_of S_abs g"
              and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",
            OF Hstep hr hc he pp'])
 qed
@@ -263,7 +279,7 @@ text \<open>
   reasoning, mirroring the diagonal proofs at the reachability-lifted local carrier.
 \<close>
 
-lemma dg_tree_st_commute_dg_cmb_of_lifted_for:
+lemma dg_tree_st_commute_dg_cmb_at_of_lifted_for:
   assumes Hcomb: "\<And>ci dc de g. map_prod (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
                             (dgs_combine S_st ci dc de g)
                           = dgs_combine S_abs ci (map_lift (fun_of_resolved_st_q_for gs) dc)
@@ -273,8 +289,8 @@ lemma dg_tree_st_commute_dg_cmb_of_lifted_for:
                               (map_lift (fun_of_resolved_st_q_for gs) g)"
   shows "dg_reader_commute_gen.dg_tree_st_commute
            (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
-           (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)
-           (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' (CallEdge dst fs as) cc ex)"
+           (dg_cmb_at_of S_st c' (CallEdge dst fs as) cc p)
+           (dg_cmb_at_of S_abs c' (CallEdge dst fs as) cc p)"
 proof -
   interpret R: dg_reader_commute_gen
     "map_lift (fun_of_resolved_st_q_for gs)" "map_lift (fun_of_resolved_st_q_for gs)"
@@ -286,8 +302,7 @@ proof -
           (map_lift (fun_of_resolved_st_q_for gs) de) (map_lift (fun_of_resolved_st_q_for gs) g)"
     by (simp add: Hcomb Hcont)
   show ?thesis
-    unfolding dg_cmb_of_def dg_spec_combine_tree_def
-    apply simp
+    unfolding dg_cmb_at_of_def dg_spec_combine_tree_def
     apply (rule R.dg_tree_st_commute_wrapped_combine
             [where comb_st = "\<lambda>ci' dc de g. dgs_combine S_st ci' (caller_cont S_st ci' dc g) de g"
                and comb_abs = "\<lambda>ci' dc de g. dgs_combine S_abs ci' (caller_cont S_abs ci' dc g) de g",
@@ -334,16 +349,29 @@ theorem part_post_solution_dg_st_to_abs_lifted_for:
 proof -
   have hr: "\<And>u c' d ca. (\<lambda>_ _ _ _. ()) u c' d ca = (\<lambda>_ _ _ _. ()) u c' (map_lift (fun_of_resolved_st_q_for gs) d) ca"
     by simp
-  have hc: "\<And>c' ca cc ex. dg_reader_commute_gen.dg_tree_st_commute
-      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
-      (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
+  interpret R: dg_reader_commute_gen
+    "map_lift (fun_of_resolved_st_q_for gs)" "map_lift (fun_of_resolved_st_q_for gs)"
+    by unfold_locales (simp_all add: map_lift_sup fun_of_resolved_st_q_for_sup)
+  have hc: "\<And>c' ca cc v. R.dg_tree_st_commute \<sigma>_st
+      (dg_cmb_of S_st g (\<lambda>_ _ _ _. ()) c' ca cc v)
+      (dg_cmb_of S_abs g (\<lambda>_ _ _ _. ()) c' ca cc v)"
   proof -
-    fix c' ca cc ex
+    fix c' ca cc v
     obtain dst fs as where ca_eq: "ca = CallEdge dst fs as" by (cases ca) auto
-    thus "dg_reader_commute_gen.dg_tree_st_commute
-        (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st
-        (dg_cmb_of S_st (\<lambda>_ _ _ _. ()) c' ca cc ex) (dg_cmb_of S_abs (\<lambda>_ _ _ _. ()) c' ca cc ex)"
-      by (simp add: dg_tree_st_commute_dg_cmb_of_lifted_for[OF Hcomb Hcont])
+    have at: "\<And>p ct. R.dg_tree_st_commute \<sigma>_st
+        (dg_cmb_at_of S_st ct ca cc p) (dg_cmb_at_of S_abs ct ca cc p)"
+      unfolding ca_eq
+      by (rule dg_tree_st_commute_dg_cmb_at_of_lifted_for[OF Hcomb Hcont])
+    have la: "list_all2 (R.dg_tree_st_commute \<sigma>_st)
+        (map (dg_cmb_at_of S_st c' ca cc) (static_targets g v cc ca))
+        (map (dg_cmb_at_of S_abs c' ca cc) (static_targets g v cc ca))"
+      by (auto simp: list_all2_conv_all_nth intro: at)
+    show "R.dg_tree_st_commute \<sigma>_st
+        (dg_cmb_of S_st g (\<lambda>_ _ _ _. ()) c' ca cc v)
+        (dg_cmb_of S_abs g (\<lambda>_ _ _ _. ()) c' ca cc v)"
+      unfolding dg_cmb_of_def
+      using R.dg_tree_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
+      by simp
   qed
   have he: "\<And>c' w. list_all2 (dg_reader_commute_gen.dg_tree_st_commute
       (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) \<sigma>_st)
@@ -351,15 +379,15 @@ proof -
     by (rule dg_extra_of_commute_lifted_for[OF Henter])
   from pp have pp':
     "part_post_solution
-      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
-        (dg_cmb_of S_st) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
+      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ()) (\<lambda>_ _ _ _. ())
+        (dg_cmb_of S_st g) (dg_extra_of S_st g) g S_st bot0 s0d s0g) x \<sigma>_st vars"
     unfolding dg_gen_of_def .
   show ?thesis
     unfolding dg_gen_of_def
     by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
-          [where pred_sel = intra_predecessor_list and gkey = "\<lambda>_. ()"
+          [where pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. ()"
              and route_st = "\<lambda>_ _ _ _. ()" and route_abs = "\<lambda>_ _ _ _. ()"
-             and cmb_st = "dg_cmb_of S_st" and cmb_abs = "dg_cmb_of S_abs"
+             and cmb_st = "dg_cmb_of S_st g" and cmb_abs = "dg_cmb_of S_abs g"
              and extra_st = "dg_extra_of S_st g" and extra_abs = "dg_extra_of S_abs g",
            OF Hstep hr hc he pp'])
 qed

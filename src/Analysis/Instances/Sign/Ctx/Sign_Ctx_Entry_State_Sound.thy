@@ -36,27 +36,24 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: "sign list")
 subsection \<open>The routed equation system's own route, generic per compiled program\<close>
 
 text \<open>
-  Sign's own executable-carrier route, mirroring Interval's \<open>entry_state_entered\<close>/
-  \<open>entry_state_route\<close>/\<open>entry_state_route_gen\<close> (\<open>Interval_Ctx_Entry_State_Sound\<close>) exactly, at
+  Sign's own executable-carrier route, mirroring Interval's \<open>entry_state_route\<close>/
+  \<open>entry_state_route_gen\<close> (\<open>Interval_Ctx_Entry_State_Sound\<close>) exactly, at
   Sign's own \<open>sign_enter_st_for\<close> instead of Interval's \<open>ivl_enter_st_for\<close> -- this is
-  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
+  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
   \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions (rather than reached through an interpretation) so
   the equation-system definitions below need no \<open>exact\<close> premise to be stated, matching
-  every other routed instance's convention.
+  every other routed instance's convention. The routed generator enters the callee
+  frame before it routes, so the route itself only projects the formals out of the
+  state it is handed.
 \<close>
-
-definition sctx_entry_entered ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign exec_dg_st lifted" where
-  "sctx_entry_entered gs is_bot_pred d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_pred (sign_enter_st_for gs fs as) d)"
 
 definition sctx_entry_route ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign list" where
   "sctx_entry_route gs is_bot_pred d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars (fun_of_resolved_st_q_for gs
-          (case sctx_entry_entered gs is_bot_pred d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 definition sctx_entry_route_gen ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> sign list \<Rightarrow> sign exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> sign list" where
@@ -68,9 +65,10 @@ definition sctx_entry_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> sign list, gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sctx_entry_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (sctx_entry_route_gen gs is_bot_pred)
-       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
+       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
 
@@ -110,7 +108,6 @@ lemma sctx_entry_route_gen_eq_generic:
   "sctx_entry_route_gen gs is_bot_pred u ctx d ca = sign_domain.entry_exec_route_gen u ctx d ca"
   unfolding sctx_entry_route_gen_def sign_domain.entry_exec_route_gen_def
     sctx_entry_route_def sign_domain.entry_exec_route_def
-    sctx_entry_entered_def sign_domain.entry_exec_entered_def
   by (rule refl)
 
 lemma sctx_entry_route_gen_commute:
@@ -140,9 +137,11 @@ interpretation sign_es: routed_domain_exec
   gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   Global Seed "sctx_entry_route_gen gs is_bot_pred"
   "formals_route_lifted_gen (sctx_abs_spec gs)"
+  static_resolve static_resolve
   by unfold_locales
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
-      rule sctx_entry_route_gen_commute[OF exact, symmetric])
+      rule sctx_entry_route_gen_commute[OF exact, symmetric],
+      simp add: static_resolve_def)
 
 lemmas sign_es_pp_abs_gen = sign_es.pp_abs
 
@@ -175,9 +174,10 @@ lemma sctx_entry_pp_st:
 
 theorem sctx_entry_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (formals_route_lifted_gen (sctx_abs_spec gs))
-        (routed_cmb_g (sctx_abs_spec gs) Global Seed)
+        (routed_cmb_g (sctx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
@@ -189,9 +189,10 @@ theorem sctx_entry_pp_abs:
      (fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (sctx_entry_route_gen gs is_bot_pred)
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), [])
@@ -245,7 +246,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> (FunctionEntry p,
                formals_route_lifted_gen (sctx_abs_spec gs) u ctx
-                 (locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                 (enter_local (sctx_abs_spec gs) pars args
+                    (locals (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                    (globs (sctx_entry_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inr Global))))
                  (CallEdge dst pars args))
              \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -296,9 +299,10 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule sctx_entry_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (sctx_abs_spec gs))
-             (routed_cmb_g (sctx_abs_spec gs) Global Seed)
+             (routed_cmb_g (sctx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
@@ -328,7 +332,9 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
   show "(FunctionEntry p,
            formals_route_lifted_gen (sctx_abs_spec gs) u ctx
-             (locals (sctx_entry_sigma_abs (Inl (u, ctx)))) (CallEdge dst pars args))
+             (enter_local (sctx_abs_spec gs) pars args
+                (locals (sctx_entry_sigma_abs (Inl (u, ctx))))
+                (globs (sctx_entry_sigma_abs (Inr Global)))) (CallEdge dst pars args))
           \<in> fst (sctx_entry_sol gs is_bot_pred Pi ps mnm main)"
     unfolding sctx_entry_sigma_abs_def
     using mem ce call_fwd_ok by blast
@@ -361,8 +367,9 @@ qed
 
 definition sctx_entry_enterc ::
     "cfg_node \<Rightarrow> sign list \<Rightarrow> store \<Rightarrow> sign list" where
-  "sctx_entry_enterc = route_enterc_of_sigma
-     (formals_route_lifted_gen (sctx_abs_spec gs)) sctx_entry_sigma_abs (compile_prog Pi ps mnm main)"
+  "sctx_entry_enterc = route_enterc_of_sigma (sctx_abs_spec gs)
+     (formals_route_lifted_gen (sctx_abs_spec gs)) sctx_entry_sigma_abs Global
+     (compile_prog Pi ps mnm main)"
 
 lemmas sctx_entry_routed_context_call =
   sctx_entry_routed.routed_context_call[folded sctx_entry_enterc_def]

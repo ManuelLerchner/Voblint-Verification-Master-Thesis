@@ -52,7 +52,9 @@ subsection \<open>The routed context is exactly \<open>Top\<close>\<close>
 
 definition ctx_call :: "ivl list" where
   "ctx_call = entry_state_route rc_gs rc_is_bot_pred
-                (locals (snd rc_ctx_sol (Inl (Statement 3, []))))
+                (entry_state_entered rc_gs rc_is_bot_pred
+                   (locals (snd rc_ctx_sol (Inl (Statement 3, []))))
+                   (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]))
                 (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])"
 
 lemma ctx_call_val: "ctx_call = [ivl_top]"

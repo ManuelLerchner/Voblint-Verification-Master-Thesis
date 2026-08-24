@@ -61,17 +61,23 @@ abbreviation fact_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarr
 
 definition ctx_a :: "ivl list" where
   "ctx_a = entry_state_route fact_gs fact_is_bot_pred
-             (locals (snd fact_sol (Inl (Statement 7, []))))
+             (entry_state_entered fact_gs fact_is_bot_pred
+                (locals (snd fact_sol (Inl (Statement 7, []))))
+                (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3]))
              (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3])"
 
 definition ctx_b :: "ivl list" where
   "ctx_b = entry_state_route fact_gs fact_is_bot_pred
-             (locals (snd fact_sol (Inl (Statement 8, []))))
+             (entry_state_entered fact_gs fact_is_bot_pred
+                (locals (snd fact_sol (Inl (Statement 8, []))))
+                (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]))
              (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
 
 definition ctx_rec :: "ivl list \<Rightarrow> ivl list" where
   "ctx_rec caller_ctx = entry_state_route fact_gs fact_is_bot_pred
-                          (locals (snd fact_sol (Inl (Statement 3, caller_ctx))))
+                          (entry_state_entered fact_gs fact_is_bot_pred
+                             (locals (snd fact_sol (Inl (Statement 3, caller_ctx))))
+                             (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)]))
                           (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])"
 
 definition ctx_a2 :: "ivl list" where "ctx_a2 = ctx_rec ctx_a"

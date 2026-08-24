@@ -66,9 +66,10 @@ definition sctx_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> unit, gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sctx_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
+       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
 
@@ -112,9 +113,10 @@ begin
 
 interpretation sign_unit: routed_domain_exec
   gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
-  Global Seed route_unit route_unit
+  Global Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp, simp)
+     (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact,
+      simp, simp, simp add: static_resolve_def)
 
 lemmas sign_pp_abs_gen = sign_unit.pp_abs
 
@@ -151,8 +153,9 @@ lemma sctx_pp_st:
 
 theorem sctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (sctx_abs_spec gs) Global Seed)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+        (routed_cmb_g (sctx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
@@ -164,9 +167,10 @@ theorem sctx_pp_abs:
      (fst (sctx_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), ())
@@ -255,7 +259,8 @@ interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
 
 interpretation sctx_dg: dg_ctx_activation_base "sctx_abs_spec gs" gamma_dg_base gs
     "compile_prog Pi ps mnm main" Global route_unit
-    "routed_cmb_g (sctx_abs_spec gs) Global Seed"
+    "routed_cmb_g (sctx_abs_spec gs) Global Seed
+       (static_resolve (compile_prog Pi ps mnm main))"
     "routed_extra_g Seed Global"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
@@ -266,8 +271,9 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule sctx_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (sctx_abs_spec gs) Global Seed)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+             (routed_cmb_g (sctx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))

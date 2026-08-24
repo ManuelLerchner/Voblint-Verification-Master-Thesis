@@ -80,7 +80,7 @@ text \<open>
 
 locale unit_routed_context =
   dg_ctx_activation_base S gammaDG gs g gk0 route_unit
-    "routed_cmb_g S gk0 seed_key" "routed_extra_g seed_key gk0"
+    "routed_cmb_g S gk0 seed_key (static_resolve g)" "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -113,24 +113,36 @@ locale unit_routed_context =
 begin
 
 sublocale routed: routed_context_base_hetero S gammaDG gs g gk0 route_unit
-  bot0 s0d s0g sigma vars x0 sg seed_key gammaM enterc_unit
+  bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" gammaM enterc_unit
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+  assume "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "p \<in> set (static_resolve g cont u (CallEdge dst pars args)
+                        (locals (sigma (Inl (u, ctx)))))"
+    by (simp add: static_resolve_iff[OF finC])
+next
+  fix u ctx dst pars args p cont s
+  show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
           = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(FunctionEntry p,
+  then have "(FunctionEntry p,
                 route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
+  then show "(FunctionEntry p,
+                route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+               \<in> vars"
+    by simp
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
@@ -179,24 +191,36 @@ locale unit_routed_context_hetero =
 begin
 
 sublocale hetero: routed_context_hetero S gs g gk0 route_unit
-  bot0 s0d s0g sigma vars x0 sg seed_key enterc_unit
+  bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" enterc_unit
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
 next
   fix u ctx dst pars args p cont s
-  show "route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args)
+  assume "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
+  then show "p \<in> set (static_resolve g cont u (CallEdge dst pars args)
+                        (locals (sigma (Inl (u, ctx)))))"
+    by (simp add: static_resolve_iff[OF finC])
+next
+  fix u ctx dst pars args p cont s
+  show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+            (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
           = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
   assume "(u, ctx) \<in> vars"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "(FunctionEntry p,
+  then have "(FunctionEntry p,
                 route_unit u ctx (locals (sigma (Inl (u, ctx)))) (CallEdge dst pars args))
                \<in> vars"
     by (rule call_fwd)
+  then show "(FunctionEntry p,
+                route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
+                    (globs (sigma (Inr gk0)))) (CallEdge dst pars args))
+               \<in> vars"
+    by simp
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"

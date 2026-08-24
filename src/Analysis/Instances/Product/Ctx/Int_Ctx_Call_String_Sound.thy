@@ -36,9 +36,11 @@ definition ics_eqs ::
        \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
   "ics_eqs k mode gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Call_String_Context.Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Call_String_Context.Global Call_String_Context.Seed)
+       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs)
+          Call_String_Context.Global Call_String_Context.Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
        (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
 
@@ -88,9 +90,10 @@ begin
 interpretation int_cs: routed_domain_exec
   gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
+  static_resolve static_resolve
   by unfold_locales
      (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
-      rule ics_route_commute)
+      rule ics_route_commute, simp add: static_resolve_def)
 
 lemmas int_cs_pp_abs_gen = int_cs.pp_abs
 
@@ -123,8 +126,9 @@ lemma ics_pp_st:
 
 theorem ics_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
-        (routed_cmb_g (ictx_abs_spec mode gs) Call_String_Context.Global Call_String_Context.Seed)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
+        (routed_cmb_g (ictx_abs_spec mode gs) Call_String_Context.Global Call_String_Context.Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
         (compile_prog Pi ps mnm main) (ictx_abs_spec mode gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
@@ -136,10 +140,11 @@ theorem ics_pp_abs:
      (fst (ics_sol k mode gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
           (\<lambda>_. Call_String_Context.Global) (cs_route k)
           (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs)
-             Call_String_Context.Global Call_String_Context.Seed)
+             Call_String_Context.Global Call_String_Context.Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
           (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs)
           Bot (Lifted cinit_int_dom_st) Bot)

@@ -68,9 +68,10 @@ definition pctx_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (parity exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> unit, gk, (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) eqsT" where
   "pctx_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed)
+       (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot"
 
@@ -117,9 +118,10 @@ begin
 
 interpretation parity_unit: routed_domain_exec
   gs is_bot_pred "parity_tf_st_for gs" "parity_enter_st_for gs" "parity_tf_for gs"
-  Global Seed route_unit route_unit
+  Global Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp)
+     (rule parity_tf_st_for_commute, rule parity_enter_st_for_commute, rule exact, simp, simp,
+      simp add: static_resolve_def)
 
 lemmas parity_pp_abs_gen = parity_unit.pp_abs
 
@@ -154,8 +156,9 @@ lemma pctx_pp_st:
 
 theorem pctx_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (pctx_abs_spec gs) Global Seed)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+        (routed_cmb_g (pctx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (pctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted))
@@ -167,9 +170,10 @@ theorem pctx_pp_abs:
      (fst (pctx_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
-          (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (pctx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (pctx_spec gs is_bot_pred) Bot (Lifted cinit_parity_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), ())
@@ -255,7 +259,8 @@ interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs" gamma_dg_base gs
 
 interpretation pctx_dg: dg_ctx_activation_base "pctx_abs_spec gs" gamma_dg_base gs
     "compile_prog Pi ps mnm main" Global route_unit
-    "routed_cmb_g (pctx_abs_spec gs) Global Seed"
+    "routed_cmb_g (pctx_abs_spec gs) Global Seed
+       (static_resolve (compile_prog Pi ps mnm main))"
     "routed_extra_g Seed Global"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
@@ -266,8 +271,9 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule pctx_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (pctx_abs_spec gs) Global Seed)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
+             (routed_cmb_g (pctx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (pctx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted))

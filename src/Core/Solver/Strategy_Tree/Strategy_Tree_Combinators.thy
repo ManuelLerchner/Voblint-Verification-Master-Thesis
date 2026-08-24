@@ -60,6 +60,38 @@ where
   "read_global_cont key k \<equiv> QueryG key k"
 
 text \<open>
+  \<open>read_at_cont\<close> reads whichever unknown an address names.  The solver's
+  valuation is a single function on \<^typ>\<open>'x + 'g\<close>, so a tree whose source is
+  an address rather than a fixed key -- a program point that is equation-driven
+  under one instantiation of the equation generator and contribution-only under
+  another -- selects the constructor from the address instead of fixing it at
+  the call site.  \<open>read_local_cont\<close> and \<open>read_global_cont\<close> are its two
+  branches, and the reading lemmas below collapse to the corresponding
+  \<^const>\<open>QueryL\<close>/\<^const>\<open>QueryG\<close> facts on each.
+\<close>
+
+fun read_at_cont ::
+  "'x + 'g \<Rightarrow> ('d \<Rightarrow> ('x, 'g, 'd) strategy_tree) \<Rightarrow> ('x, 'g, 'd) strategy_tree"
+where
+  "read_at_cont (Inl x) k = QueryL x k"
+| "read_at_cont (Inr y) k = QueryG y k"
+
+lemma traverse_read_at_cont [simp]:
+  "traverse_rhs (read_at_cont src k) sigma = traverse_rhs (k (sigma src)) sigma"
+  by (cases src) auto
+
+lemma sides_read_at_cont [simp]:
+  "sides_of_rhs (read_at_cont src k) sigma = sides_of_rhs (k (sigma src)) sigma"
+  by (cases src) auto
+
+lemma dep_aux_read_at_cont [simp]:
+  "dep_aux sigma (read_at_cont src k) = insert src (dep_aux sigma (k (sigma src)))"
+  by (cases src) auto
+
+abbreviation read_at :: "'x + 'g \<Rightarrow> ('x, 'g, 'd) strategy_tree" where
+  "read_at src \<equiv> read_at_cont src answer"
+
+text \<open>
   \<open>depend_on key val cont\<close> publishes \<open>val\<close> as a side effect on the global
   unknown \<open>key\<close> and continues as \<open>cont\<close>. The name reflects the direction an
   equation author reasons in: ``this equation also depends on -- contributes

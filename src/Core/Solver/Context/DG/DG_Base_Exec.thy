@@ -227,60 +227,31 @@ text \<open>
   system a solver actually runs needs the same construction at the exec carrier
   \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>is_bot_pred\<close>
   rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every current EntryState-style routed
-  instance (Interval's own \<open>entry_state_entered\<close>/\<open>entry_state_route\<close>,
-  \<open>Interval_Ctx_Entry_State_Sound\<close>) reproves this exact pair and its commute lemma from
-  \<open>enter_st_commute\<close> alone; stating it here once lets a domain interpret it instead of
-  restating it, mirroring how \<open>Hstep_lifted_for\<close> etc. already generalize the
-  step/enter/combine commute facts.
-\<close>
+  instance (Interval's own \<open>entry_state_route\<close>, \<open>Interval_Ctx_Entry_State_Sound\<close>)
+  reproves this exact projection and its commute lemma; stating it here once lets a
+  domain interpret it instead of restating it, mirroring how \<open>Hstep_lifted_for\<close> etc.
+  already generalize the step/enter/combine commute facts.
 
-definition entry_exec_entered :: "'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a exec_dg_st lifted" where
-  "entry_exec_entered d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_pred (enter_st fs as) d)"
+  The route is a pure projection of the state it is handed: the routed generator
+  enters the callee frame once and routes on that entered state, so entering again
+  here would key the seed on a doubly-entered frame.
+\<close>
 
 definition entry_exec_route :: "'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
   "entry_exec_route d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars (fun_of_resolved_st_q_for gs
-          (case entry_exec_entered d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
   "entry_exec_route_gen u ctx d ca = entry_exec_route d ca"
 
-lemma entry_exec_entered_commute:
-  "map_lift (fun_of_resolved_st_q_for gs) (entry_exec_entered s ca)
-     = (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_state (enter\<^sup># tf fs as)
-                     (map_lift (fun_of_resolved_st_q_for gs) s))"
-proof (cases ca)
-  case (CallEdge dst fs as)
-  have step: "map_lift (fun_of_resolved_st_q_for gs) (transfer_lift is_bot_pred (enter_st fs as) s)
-      = transfer_lift is_bot_state (enter\<^sup># tf fs as) (map_lift (fun_of_resolved_st_q_for gs) s)"
-    by (rule transfer_lift_commute
-          [where phi = "fun_of_resolved_st_q_for gs" and f = "enter_st fs as"
-             and F = "enter\<^sup># tf fs as" and is_bot_pred = is_bot_pred
-             and is_bot_pred' = is_bot_state, OF enter_st_commute is_bot_pred_exact])
-  show ?thesis
-    unfolding entry_exec_entered_def CallEdge by (simp add: step)
-qed
-
 lemma entry_exec_route_commute:
   "formals_route_lifted (base_dg_spec_for_lifted gs is_bot_state tf)
      (map_lift (fun_of_resolved_st_q_for gs) s) ca = entry_exec_route s ca"
-proof (cases ca)
-  case (CallEdge dst pars args)
-  have "formals_route_lifted (base_dg_spec_for_lifted gs is_bot_state tf)
-          (map_lift (fun_of_resolved_st_q_for gs) s) ca
-      = formals_context pars
-          (case map_lift (fun_of_resolved_st_q_for gs) (entry_exec_entered s ca)
-             of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)"
-    using CallEdge
-    by (simp add: formals_route_lifted_def entry_exec_entered_commute dgs_enter_base_for_lifted)
-  also have "\<dots> = entry_exec_route s ca"
-    using CallEdge
-    by (cases "entry_exec_entered s ca")
-       (simp_all add: entry_exec_route_def formals_context_def fun_of_resolved_st_q_for_def)
-  finally show ?thesis .
-qed
+  by (cases ca; cases s)
+     (simp_all add: formals_route_lifted_def entry_exec_route_def
+                    formals_context_def fun_of_resolved_st_q_for_def)
 
 lemma entry_exec_route_gen_commute:
   "formals_route_lifted_gen (base_dg_spec_for_lifted gs is_bot_state tf) u ctx

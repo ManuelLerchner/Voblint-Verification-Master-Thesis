@@ -29,6 +29,7 @@ locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree"
+      \<comment> \<open>one tree per call site: the site's own resolver decides which callees it folds\<close>
     and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list"
     and bot0 s0d :: 'D and s0g :: 'G
@@ -38,7 +39,7 @@ locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
     and gammaM :: "'M \<Rightarrow> store set"
   assumes finE[intro]: "finite (intra g)"
     and pp: "part_post_solution
-               (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
+               (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0)
                   route cmb extra g S bot0 s0d s0g) x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> gammaM (sg (Inl (v, c))) =
@@ -51,7 +52,7 @@ locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
-  "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. gk0)
+  "Gen \<equiv> side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0)
            route cmb extra g S bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
@@ -60,9 +61,8 @@ abbreviation acc0 :: "pp \<Rightarrow> 'D" where
 abbreviation trees :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list" where
   "trees v ctx \<equiv>
-     map (\<lambda>(u, a). map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-         (intra_predecessor_list g v)
-     @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)
+     map (\<lambda>(src, a). apply_dg_spec_at S a src gk0) (intra_predecessor_addr_list g v ctx)
+     @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
      @ extra route ctx v"
 
 subsection \<open>Post-solution elimination\<close>
@@ -98,40 +98,14 @@ lemma sg_uncovered_empty: "(v, ctx) \<notin> vars \<Longrightarrow> gammaM (sg (
 subsection \<open>Routed intra edge tree denotation\<close>
 
 lemma edge_tree_local_ctx:
-  "locals (traverse_rhs
-       (map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))) sigma)
-   = snd (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))"
-  unfolding apply_dg_spec_def
-  by (subst traverse_intra_keyed) (simp add: traverse_dg_edge_tree)
+  "locals (traverse_rhs (apply_dg_spec_at S a src gk0) sigma)
+   = snd (dg_spec_step S a (locals (sigma src)) (globs (sigma (Inr gk0))))"
+  by (simp add: apply_dg_spec_at_def traverse_dg_edge_tree_at)
 
 lemma edge_tree_global_ctx:
-  "globs (sides_of_rhs
-       (map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-       sigma (Inr gk0))
-   = fst (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))"
-proof -
-  have step1:
-    "sides_of_rhs (map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-       sigma (Inr gk0)
-     = sides_of_rhs (apply_dg_spec S a u)
-         (\<lambda>z. sigma (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. gk0) z)) (Inr ())"
-  proof -
-    have "sides_of_rhs (map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-            sigma (Inr ((\<lambda>_. gk0) ()))
-        = sides_of_rhs (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))
-            (\<lambda>z. sigma (map_sum id (\<lambda>_. gk0) z)) (Inr ())"
-      by (rule sides_map_gtree_unit)
-    thus ?thesis by (simp add: sides_map_ltree_Inr sum.map_comp o_def)
-  qed
-  have "globs (sides_of_rhs (map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u)))
-          sigma (Inr gk0))
-      = globs (sides_of_rhs (apply_dg_spec S a u)
-          (\<lambda>z. sigma (map_sum (\<lambda>w. (w, ctx)) (\<lambda>_. gk0) z)) (Inr ()))"
-    by (rule arg_cong[OF step1])
-  also have "\<dots> = fst (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))"
-    unfolding apply_dg_spec_def by (simp add: sides_dg_edge_tree_Inr)
-  finally show ?thesis .
-qed
+  "globs (sides_of_rhs (apply_dg_spec_at S a src gk0) sigma (Inr gk0))
+   = fst (dg_spec_step S a (locals (sigma src)) (globs (sigma (Inr gk0))))"
+  by (simp add: apply_dg_spec_at_def sides_dg_edge_tree_at)
 
 subsection \<open>The entry Side wrapper only grows the sides\<close>
 
@@ -149,9 +123,10 @@ lemma edge_bound_local:
   shows "snd (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
            \<le> locals (sigma (Inl (v, ctx)))"
 proof -
-  let ?t = "map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))"
-  have pred: "(u, a) \<in> set (intra_predecessor_list g v)"
-    using e by (simp add: set_intra_predecessor_list[OF finE] intra_predecessors_def)
+  let ?t = "apply_dg_spec_at S a (Inl (u, ctx)) gk0"
+  have pred: "(Inl (u, ctx), a) \<in> set (intra_predecessor_addr_list g v ctx)"
+    using e by (force simp: intra_predecessor_addr_list_def
+        set_intra_predecessor_list[OF finE] intra_predecessors_def)
   hence mem: "?t \<in> set (trees v ctx)" by (force intro: rev_image_eqI)
   have "snd (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
       = locals (traverse_rhs ?t sigma)"
@@ -171,9 +146,10 @@ lemma edge_bound_global:
   shows "fst (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
            \<le> globs (sigma (Inr gk0))"
 proof -
-  let ?t = "map_gtree (\<lambda>_. gk0) (map_ltree (\<lambda>w. (w, ctx)) (apply_dg_spec S a u))"
-  have pred: "(u, a) \<in> set (intra_predecessor_list g v)"
-    using e by (simp add: set_intra_predecessor_list[OF finE] intra_predecessors_def)
+  let ?t = "apply_dg_spec_at S a (Inl (u, ctx)) gk0"
+  have pred: "(Inl (u, ctx), a) \<in> set (intra_predecessor_addr_list g v ctx)"
+    using e by (force simp: intra_predecessor_addr_list_def
+        set_intra_predecessor_list[OF finE] intra_predecessors_def)
   hence mem: "?t \<in> set (trees v ctx)" by (force intro: rev_image_eqI)
   have "fst (dg_spec_step S a (locals (sigma (Inl (u, ctx)))) (globs (sigma (Inr gk0))))
       = globs (sides_of_rhs ?t sigma (Inr gk0))"

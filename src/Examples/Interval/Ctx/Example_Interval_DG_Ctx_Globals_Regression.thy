@@ -62,12 +62,16 @@ abbreviation gcall_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightar
 
 definition gcall_ctx_first :: "ivl list" where
   "gcall_ctx_first = entry_state_route gcall_gs gcall_is_bot_pred
-                       (locals (snd gcall_sol (Inl (Statement 4, []))))
+                       (entry_state_entered gcall_gs gcall_is_bot_pred
+                          (locals (snd gcall_sol (Inl (Statement 4, []))))
+                          (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5]))
                        (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5])"
 
 definition gcall_ctx_second :: "ivl list" where
   "gcall_ctx_second = entry_state_route gcall_gs gcall_is_bot_pred
-                        (locals (snd gcall_sol (Inl (Statement 5, []))))
+                        (entry_state_entered gcall_gs gcall_is_bot_pred
+                           (locals (snd gcall_sol (Inl (Statement 5, []))))
+                           (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]))
                         (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
 
 text \<open>Two call sites, two entry-state contexts: the routed context is the entered value
@@ -84,7 +88,9 @@ lemma gcall_ctx_distinct: "gcall_ctx_first \<noteq> gcall_ctx_second"
 
 definition gcall_ctx_third :: "ivl list" where
   "gcall_ctx_third = entry_state_route gcall_gs gcall_is_bot_pred
-                       (locals (snd gcall_sol (Inl (Statement 9, []))))
+                       (entry_state_entered gcall_gs gcall_is_bot_pred
+                          (locals (snd gcall_sol (Inl (Statement 9, []))))
+                          (CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')]))
                        (CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')])"
 
 text \<open>A third call site whose actual argument is itself the global \<open>g\<close>, not a literal.

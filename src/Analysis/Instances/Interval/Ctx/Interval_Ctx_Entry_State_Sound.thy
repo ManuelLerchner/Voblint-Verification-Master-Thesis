@@ -84,7 +84,7 @@ definition entry_state_route ::
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars
           (\<lambda>x. lookup_resolved_st_q
-                 (case entry_state_entered gs is_bot_pred d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)
+                 (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)
                  (location_of gs x)))"
 
 definition entry_state_route_gen ::
@@ -206,9 +206,10 @@ definition entry_state_eqs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> ivl list, gk, (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "entry_state_eqs gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (entry_state_route_gen gs is_bot_pred)
-      (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
+      (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
+         (static_resolve (compile_prog Pi ps mnm main)))
       (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
 
@@ -383,7 +384,7 @@ definition entry_state_route_abs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
   "entry_state_route_abs gs d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (case entered_state_abs gs d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
+        formals_context pars (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
 
 definition entry_state_route_abs_gen ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> ivl list \<Rightarrow> ivl abs_state lifted \<Rightarrow> call_action \<Rightarrow> ivl list" where
@@ -409,8 +410,8 @@ proof (intro ext)
   fix u ctx d ca
   show "entry_state_route_abs_gen gs u ctx d ca = formals_route_lifted_gen (ectx_abs_spec gs) u ctx d ca"
     unfolding entry_state_route_abs_gen_def formals_route_lifted_gen_def
-      entry_state_route_abs_def formals_route_lifted_def entered_state_abs_def ectx_abs_spec_def
-    by (cases ca) (simp_all add: dgs_enter_base_for_lifted)
+      entry_state_route_abs_def formals_route_lifted_def
+    by (cases ca) simp_all
 qed
 
 subsection \<open>The route-consistency core\<close>
@@ -436,22 +437,9 @@ lemma entry_state_route_commute:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
   shows "entry_state_route_abs gs (map_lift (fun_of_resolved_st_q_for gs) s) ca
            = entry_state_route gs is_bot_pred s ca"
-proof (cases ca)
-  case (CallEdge dst pars args)
-  have "entry_state_route_abs gs (map_lift (fun_of_resolved_st_q_for gs) s) ca
-      = formals_context pars
-          (case entered_state_abs gs (map_lift (fun_of_resolved_st_q_for gs) s) ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)"
-    using CallEdge by (simp add: entry_state_route_abs_def)
-  also have "\<dots> = formals_context pars
-      (case map_lift (fun_of_resolved_st_q_for gs) (entry_state_entered gs is_bot_pred s ca)
-         of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)"
-    by (simp add: entry_state_entered_commute[OF exact])
-  also have "\<dots> = entry_state_route gs is_bot_pred s ca"
-    using CallEdge
-    by (cases "entry_state_entered gs is_bot_pred s ca")
-       (simp_all add: entry_state_route_def formals_context_def fun_of_resolved_st_q_for_def)
-  finally show ?thesis .
-qed
+  by (cases ca; cases s)
+     (simp_all add: entry_state_route_abs_def entry_state_route_def
+                    formals_context_def fun_of_resolved_st_q_for_def)
 
 lemma entry_state_route_commute_gen:
   assumes exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
@@ -486,7 +474,7 @@ theorem entry_state_callee_ctx_eq_route_partial:
   shows "entry_state_callee_ctx gs ca st =
     (if entered_state_abs gs (Lifted st) ca = Bot
      then None
-     else Some (entry_state_route gs is_bot_pred d ca))"
+     else Some (entry_state_route gs is_bot_pred (entry_state_entered gs is_bot_pred d ca) ca))"
 proof (cases ca)
   case (CallEdge dst pars args)
   define entered where "entered = enter\<^sup># (ivl_tf_for gs) pars args st"
@@ -503,12 +491,17 @@ proof (cases ca)
     with entered_state_eq callee_ctx_eq show ?thesis by simp
   next
     case False
-    have "entry_state_route gs is_bot_pred d ca = entry_state_route_abs gs (Lifted st) ca"
-      using entry_state_route_commute[OF exact, of d ca] reach by simp
+    have "entry_state_route gs is_bot_pred (entry_state_entered gs is_bot_pred d ca) ca
+        = entry_state_route_abs gs
+            (map_lift (fun_of_resolved_st_q_for gs) (entry_state_entered gs is_bot_pred d ca)) ca"
+      by (simp add: entry_state_route_commute[OF exact])
+    also have "\<dots> = entry_state_route_abs gs (entered_state_abs gs (Lifted st) ca) ca"
+      using entry_state_entered_commute[OF exact] reach by simp
     also have "\<dots> = formals_context pars entered"
       unfolding entry_state_route_abs_def
       using entered_state_eq False CallEdge by simp
-    finally have "entry_state_route gs is_bot_pred d ca = formals_context pars entered" .
+    finally have "entry_state_route gs is_bot_pred (entry_state_entered gs is_bot_pred d ca) ca
+        = formals_context pars entered" .
     with False entered_state_eq callee_ctx_eq show ?thesis by simp
   qed
 qed
@@ -533,9 +526,10 @@ begin
 interpretation ivl_es: routed_domain_exec
   gs is_bot_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
   Global Seed "entry_state_route_gen gs is_bot_pred" "entry_state_route_abs_gen gs"
+  static_resolve static_resolve
   by unfold_locales
      (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp,
-      rule entry_state_route_commute_gen[OF exact])
+      rule entry_state_route_commute_gen[OF exact], simp add: static_resolve_def)
 
 lemmas ivl_es_pp_abs_gen = ivl_es.pp_abs
 
@@ -569,8 +563,9 @@ lemma entry_state_pp_st:
 
 theorem entry_state_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
-        (routed_cmb_g (ectx_abs_spec gs) Global Seed)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
+        (routed_cmb_g (ectx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
@@ -582,9 +577,10 @@ theorem entry_state_pp_abs:
      (fst (entry_state_sol gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (entry_state_route_gen gs is_bot_pred)
-          (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred)
           Bot (Lifted cinit_ivl_st) Bot)
@@ -669,7 +665,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> (FunctionEntry p,
               entry_state_route_abs_gen gs u ctx
-                (locals (entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                (enter_local (ectx_abs_spec gs) pars args
+                   (locals (entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                   (globs (entry_state_sigma_abs_exec gs is_bot_pred Pi ps mnm main (Inr Global))))
                 (CallEdge dst pars args))
             \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -698,8 +696,11 @@ text \<open>
 
 definition entry_state_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
   "entry_state_context u ctx s =
-     entry_state_route_abs_gen gs u ctx (locals (entry_state_sigma_abs (Inl (u, ctx))))
-       (call_action_at_call_site (compile_prog Pi ps mnm main) u)"
+     (let ca = call_action_at_call_site (compile_prog Pi ps mnm main) u in
+        entry_state_route_abs_gen gs u ctx
+          (enter_local (ectx_abs_spec gs) (ce_formals ca) (ce_args ca)
+             (locals (entry_state_sigma_abs (Inl (u, ctx))))
+             (globs (entry_state_sigma_abs (Inr Global)))) ca)"
 
 lemma entry_state_reserved: "reserved_ret_var gs"
   using wf by (rule wf_compile_input_reserved_ret_var)
@@ -759,9 +760,10 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule entry_state_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (ectx_abs_spec gs))
-             (routed_cmb_g (ectx_abs_spec gs) Global Seed)
+             (routed_cmb_g (ectx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
@@ -792,7 +794,9 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
   show "(FunctionEntry p,
            formals_route_lifted_gen (ectx_abs_spec gs) u ctx
-             (locals (entry_state_sigma_abs (Inl (u, ctx)))) (CallEdge dst pars args))
+             (enter_local (ectx_abs_spec gs) pars args
+                (locals (entry_state_sigma_abs (Inl (u, ctx))))
+                (globs (entry_state_sigma_abs (Inr Global)))) (CallEdge dst pars args))
           \<in> fst (entry_state_sol gs is_bot_pred Pi ps mnm main)"
     unfolding entry_state_route_abs_gen_eq_formals_route_lifted_gen[symmetric]
     using mem ce call_fwd_ok
@@ -813,8 +817,9 @@ text \<open>
 \<close>
 
 lemma entry_state_context_eq_route_enterc_of_sigma:
-  "entry_state_context = route_enterc_of_sigma
-     (formals_route_lifted_gen (ectx_abs_spec gs)) entry_state_sigma_abs (compile_prog Pi ps mnm main)"
+  "entry_state_context = route_enterc_of_sigma (ectx_abs_spec gs)
+     (formals_route_lifted_gen (ectx_abs_spec gs)) entry_state_sigma_abs Global
+     (compile_prog Pi ps mnm main)"
   unfolding entry_state_context_def route_enterc_of_sigma_def
     entry_state_route_abs_gen_eq_formals_route_lifted_gen[symmetric]
   by (rule refl)
@@ -994,7 +999,10 @@ corollary entry_state_callee_ctx_at_result:
      then None
      else Some (entry_state_route (declared_global p)
                (resolved_st_q_is_bot_for (declared_global_vars p))
-               (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx)))) ca))"
+               (entry_state_entered (declared_global p)
+                  (resolved_st_q_is_bot_for (declared_global_vars p))
+                  (locals (snd (entry_state_sol_prog (declared_global p) mnm p) (Inl (u, ctx)))) ca)
+               ca))"
 proof -
   have globals: "\<And>x. declared_global p x = (x \<in> set (declared_global_vars p))" by simp
   have exact: "\<And>s. resolved_st_q_is_bot_for (declared_global_vars p) s

@@ -25,6 +25,7 @@ text \<open>
 
 locale dg_analysis_adapter =
   routed_context_hetero S gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
+    "static_resolve g"
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
     and g gk0

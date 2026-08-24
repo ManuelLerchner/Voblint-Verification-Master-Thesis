@@ -242,6 +242,130 @@ lemma return_call_action_list_call_info:
   unfolding return_call_action_list_def return_call_list_def
   by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
 
+
+subsection \<open>Call sites, named by callee procedure\<close>
+
+text \<open>
+  \<^const>\<open>return_call_action_list\<close> names a callee by the node its result is read at.
+  That node is derived data: the enumeration built it by mapping \<open>FunctionEntry p\<close> to
+  \<open>FunctionResult p\<close> in the first place. Naming the callee by its procedure instead
+  keeps the call site's own data (where the call is, what it passes, where it returns to)
+  separate from anything a resolver would decide, which is what lets the callee stop
+  being fixed at enumeration time. The result node is then \<open>FunctionResult p\<close> at the
+  point of use.
+\<close>
+
+definition call_target_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action \<times> pname) list" where
+  "call_target_list g v =
+     map (\<lambda>(c, ca, ce, k). (c, ca, case ce of FunctionEntry p \<Rightarrow> p | _ \<Rightarrow> undefined))
+       (filter (\<lambda>(c, ca, ce, k).
+          k = v \<and> (case ce of FunctionEntry _ \<Rightarrow> True | _ \<Rightarrow> False))
+         (cfg_calls_list g))"
+
+text \<open>The two enumerations carry the same call sites in the same order; only the callee's
+  spelling differs.\<close>
+
+lemma return_call_action_list_eq_call_target_list:
+  "return_call_action_list g v
+     = map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
+  unfolding return_call_action_list_def call_target_list_def
+  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
+
+lemma call_target_list_eq_return_call_action_list:
+  "call_target_list g v
+     = map (\<lambda>(c, ca, ex). (c, ca, result_proc ex)) (return_call_action_list g v)"
+  unfolding return_call_action_list_def call_target_list_def
+  by (induction "cfg_calls_list g") (auto split: cfg_node.splits)
+
+text \<open>Membership, in the form a call-site obligation states it: the enumeration lists
+  exactly the call edges of \<open>g\<close> whose continuation is \<open>v\<close>, each paired with the
+  procedure its callee entry names.\<close>
+
+lemma set_call_target_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_target_list g v)
+           = {(c, ca, p) | c ca p. (c, ca, FunctionEntry p, v) \<in> calls g}"
+  unfolding call_target_list_def using set_cfg_calls_list[OF assms]
+  by (auto simp: image_iff split: cfg_node.splits)
+
+lemma call_target_list_iff:
+  assumes "finite (calls g)"
+  shows "(c, ca, p) \<in> set (call_target_list g v)
+           \<longleftrightarrow> (c, ca, FunctionEntry p, v) \<in> calls g"
+  by (simp add: set_call_target_list[OF assms])
+
+text \<open>
+  The call site alone, with no callee: what a call-site-owned resolver is given.
+  \<open>static_targets\<close> is the resolver that answers from the CFG, ignoring the
+  caller's abstract state -- the behaviour a statically enumerated generator already
+  has. A resolver reading that state instead is what makes an indirect call
+  expressible; the shape of the equation does not change when it does.
+\<close>
+
+definition call_site_list ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> call_action) list" where
+  "call_site_list g v = map (\<lambda>(c, ca, p). (c, ca)) (call_target_list g v)"
+
+definition static_targets ::
+    "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> pname list" where
+  "static_targets g v cc ca =
+     map (\<lambda>(c, a, p). p)
+       (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v))"
+
+lemma set_call_site_list [simp]:
+  assumes "finite (calls g)"
+  shows "set (call_site_list g v)
+           = {(c, ca) | c ca. \<exists>p. (c, ca, FunctionEntry p, v) \<in> calls g}"
+  unfolding call_site_list_def
+  by (force simp: set_call_target_list[OF assms] image_iff)
+
+lemma static_targets_iff:
+  assumes "finite (calls g)"
+  shows "p \<in> set (static_targets g v cc ca)
+           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
+  unfolding static_targets_def
+  by (force simp: call_target_list_iff[OF assms, symmetric] image_iff)
+
+text \<open>The resolver that ignores the caller state and answers from the CFG. A call site
+  parameterised by a resolver reproduces the statically enumerated behaviour exactly at
+  this one; a resolver reading the state can only narrow the answer.\<close>
+
+definition static_resolve ::
+  "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> pname list" where
+  "static_resolve g v cc ca d = static_targets g v cc ca"
+
+lemma static_resolve_iff:
+  assumes "finite (calls g)"
+  shows "p \<in> set (static_resolve g v cc ca d)
+           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
+  unfolding static_resolve_def by (rule static_targets_iff[OF assms])
+
+text \<open>Grouping the enumeration by call site and resolving each site loses nothing:
+  the sites' resolved targets, concatenated, carry exactly the pairs
+  \<^const>\<open>call_target_list\<close> lists. Order and multiplicity are not preserved --- one
+  site's targets are gathered together --- so this is a set equality, which is all a
+  fold over the entries can observe.\<close>
+
+lemma set_concat_call_site_static_targets:
+  "set (concat (map (\<lambda>(cc, ca). map (h cc ca) (static_targets g v cc ca))
+                    (call_site_list g v)))
+     = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
+  by (force simp: call_site_list_def static_targets_def image_iff)
+
+text \<open>Every listed call site resolves to at least its own callee, which is what a
+  coverage obligation stated over the enumeration needs.\<close>
+
+lemma static_targets_nonempty:
+  assumes "finite (calls g)" and "(cc, ca, FunctionEntry p, v) \<in> calls g"
+  shows "static_targets g v cc ca \<noteq> []"
+proof -
+  have "p \<in> set (static_targets g v cc ca)"
+    using static_targets_iff[OF assms(1)] assms(2) by simp
+  thus ?thesis by auto
+qed
+
+
 subsection \<open>Full node enumeration\<close>
 
 text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the intra endpoints, the call-site/

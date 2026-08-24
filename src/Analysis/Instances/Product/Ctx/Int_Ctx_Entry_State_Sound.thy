@@ -38,20 +38,16 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: "int_dom list")
 subsection \<open>The routed equation system's own route, generic per compiled program\<close>
 
 text \<open>
-  Int's own executable-carrier route, mirroring Sign's own \<open>sctx_entry_entered\<close>/
+  Int's own executable-carrier route, mirroring Sign's own
   \<open>sctx_entry_route\<close>/\<open>sctx_entry_route_gen\<close> exactly, at Int's own
   \<open>int_dom_enter_st_for mode gs\<close> instead of Sign's \<open>sign_enter_st_for gs\<close> -- this is
-  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_entered\<close>/\<open>entry_exec_route\<close>/
+  precisely \<^locale>\<open>routed_dg_domain_exec\<close>'s own \<open>entry_exec_route\<close>/
   \<open>entry_exec_route_gen\<close> (\<^theory>\<open>Voblint_Core.DG_Base_Exec\<close>), restated here as
   unconditional top-level definitions so the equation-system definitions below need no
-  \<open>exact\<close> premise to be stated, matching every other routed instance's convention.
+  \<open>exact\<close> premise to be stated, matching every other routed instance's convention. The
+  routed generator enters the callee frame before it routes, so the route itself only
+  projects the formals out of the state it is handed.
 \<close>
-
-definition ictx_entry_entered ::
-    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool)
-       \<Rightarrow> int_dom exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> int_dom exec_dg_st lifted" where
-  "ictx_entry_entered mode gs is_bot_pred d ca =
-     (case ca of CallEdge dst fs as \<Rightarrow> transfer_lift is_bot_pred (int_dom_enter_st_for mode gs fs as) d)"
 
 definition ictx_entry_route ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool)
@@ -59,7 +55,7 @@ definition ictx_entry_route ::
   "ictx_entry_route mode gs is_bot_pred d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars (fun_of_resolved_st_q_for gs
-          (case ictx_entry_entered mode gs is_bot_pred d ca of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 definition ictx_entry_route_gen ::
     "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool)
@@ -73,9 +69,10 @@ definition ictx_entry_eqs ::
        \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> int_dom list, gk, (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state) eqsT" where
   "ictx_entry_eqs mode gs is_bot_pred Pi ps mnm main =
-     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+     side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (ictx_entry_route_gen mode gs is_bot_pred)
-       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
+       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
 
@@ -117,7 +114,6 @@ lemma ictx_entry_route_gen_eq_generic:
   "ictx_entry_route_gen mode gs is_bot_pred u ctx d ca = int_domain.entry_exec_route_gen u ctx d ca"
   unfolding ictx_entry_route_gen_def int_domain.entry_exec_route_gen_def
     ictx_entry_route_def int_domain.entry_exec_route_def
-    ictx_entry_entered_def int_domain.entry_exec_entered_def
   by (rule refl)
 
 lemma ictx_entry_route_gen_commute:
@@ -147,9 +143,11 @@ interpretation int_es: routed_domain_exec
   gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
   Global Seed "ictx_entry_route_gen mode gs is_bot_pred"
   "formals_route_lifted_gen (ictx_abs_spec mode gs)"
+  static_resolve static_resolve
   by unfold_locales
      (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp,
-      rule ictx_entry_route_gen_commute[OF exact, symmetric])
+      rule ictx_entry_route_gen_commute[OF exact, symmetric],
+      simp add: static_resolve_def)
 
 lemmas int_es_pp_abs_gen = int_es.pp_abs
 
@@ -182,9 +180,10 @@ lemma ictx_entry_pp_st:
 
 theorem ictx_entry_pp_abs:
   "part_post_solution
-     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (formals_route_lifted_gen (ictx_abs_spec mode gs))
-        (routed_cmb_g (ictx_abs_spec mode gs) Global Seed)
+        (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ictx_abs_spec mode gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
@@ -196,9 +195,10 @@ theorem ictx_entry_pp_abs:
      (fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main))"
 proof -
   have pp_buf: "part_post_solution
-       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_list (\<lambda>_. Global)
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (ictx_entry_route_gen mode gs is_bot_pred)
-          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
+          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs)
           Bot (Lifted cinit_int_dom_st) Bot)
@@ -253,7 +253,9 @@ context
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
         \<Longrightarrow> (FunctionEntry p,
                formals_route_lifted_gen (ictx_abs_spec mode gs) u ctx
-                 (locals (ictx_entry_sigma_abs_exec mode gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                 (enter_local (ictx_abs_spec mode gs) pars args
+                    (locals (ictx_entry_sigma_abs_exec mode gs is_bot_pred Pi ps mnm main (Inl (u, ctx))))
+                    (globs (ictx_entry_sigma_abs_exec mode gs is_bot_pred Pi ps mnm main (Inr Global))))
                  (CallEdge dst pars args))
              \<in> fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
@@ -303,9 +305,10 @@ proof unfold_locales
   show "finite (intra (compile_prog Pi ps mnm main))" by (rule ictx_entry_fin)
 next
   show "part_post_solution
-          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_list (\<lambda>_. Global)
+          (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (ictx_abs_spec mode gs))
-             (routed_cmb_g (ictx_abs_spec mode gs) Global Seed)
+             (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ictx_abs_spec mode gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
@@ -335,7 +338,9 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)"
   show "(FunctionEntry p,
            formals_route_lifted_gen (ictx_abs_spec mode gs) u ctx
-             (locals (ictx_entry_sigma_abs (Inl (u, ctx)))) (CallEdge dst pars args))
+             (enter_local (ictx_abs_spec mode gs) pars args
+                (locals (ictx_entry_sigma_abs (Inl (u, ctx))))
+                (globs (ictx_entry_sigma_abs (Inr Global)))) (CallEdge dst pars args))
           \<in> fst (ictx_entry_sol mode gs is_bot_pred Pi ps mnm main)"
     unfolding ictx_entry_sigma_abs_def
     using mem ce call_fwd_ok by blast
@@ -369,8 +374,9 @@ qed
 
 definition ictx_entry_enterc ::
     "cfg_node \<Rightarrow> int_dom list \<Rightarrow> store \<Rightarrow> int_dom list" where
-  "ictx_entry_enterc = route_enterc_of_sigma
-     (formals_route_lifted_gen (ictx_abs_spec mode gs)) ictx_entry_sigma_abs (compile_prog Pi ps mnm main)"
+  "ictx_entry_enterc = route_enterc_of_sigma (ictx_abs_spec mode gs)
+     (formals_route_lifted_gen (ictx_abs_spec mode gs)) ictx_entry_sigma_abs Global
+     (compile_prog Pi ps mnm main)"
 
 lemmas ictx_entry_routed_context_call =
   ictx_entry_routed.routed_context_call[folded ictx_entry_enterc_def]

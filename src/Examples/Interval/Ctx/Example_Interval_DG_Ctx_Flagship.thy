@@ -71,12 +71,16 @@ subsection \<open>The two calling contexts are distinct\<close>
 
 definition ctx_call1 :: "ivl list" where
   "ctx_call1 = entry_state_route twice_gs twice_is_bot_pred
-                 (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
+                 (entry_state_entered twice_gs twice_is_bot_pred
+                    (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
+                    (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))
                  (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])"
 
 definition ctx_call2 :: "ivl list" where
   "ctx_call2 = entry_state_route twice_gs twice_is_bot_pred
-                 (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
+                 (entry_state_entered twice_gs twice_is_bot_pred
+                    (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
+                    (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))
                  (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])"
 
 lemma ctx_call1_val: "ctx_call1 = [Ivl (Fin 3) (Fin 3)]"
@@ -161,7 +165,8 @@ definition twice_ctx_graph_config ::
      analysis_graph_config" where
   "twice_ctx_graph_config =
     \<lparr> local_of = locals,
-      route = (\<lambda>_ ctx action d. Some (entry_state_route twice_gs twice_is_bot_pred d action)),
+      route = (\<lambda>_ ctx action d. Some (entry_state_route twice_gs twice_is_bot_pred
+                 (entry_state_entered twice_gs twice_is_bot_pred d action) action)),
       context_key = String.implode o (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       locals_for_pp = (\<lambda>p.
