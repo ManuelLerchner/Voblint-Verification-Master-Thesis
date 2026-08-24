@@ -104,9 +104,8 @@ lemma ictx_terminates_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c (ictx_eqs mode is_bot_pred gs Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
   shows "ictx_terminates mode is_bot_pred gs Pi ps mnm main"
-  unfolding ictx_terminates_def TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding ictx_terminates_def
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>Route agreement collapses to a free lemma\<close>
 
@@ -652,9 +651,8 @@ lemma ictx_terminates_per_origin_via_solve_c:
   assumes "TD_side_per_origin_Interp_solve_c (ictx_eqs mode is_bot_pred gs Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
   shows "ictx_terminates_per_origin mode is_bot_pred gs Pi ps mnm main"
-  unfolding ictx_terminates_per_origin_def TD_side_per_origin_Interp.term_equivalence
-            TD_side_per_origin_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding ictx_terminates_per_origin_def
+  by (rule TD_side_per_origin_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>The PerOrigin instance\<close>
 
@@ -717,9 +715,8 @@ lemma ictx_terminates_warrow_via_solve_c:
   assumes "TD_side_warrowing_apinis_Interp_solve_c (ictx_eqs mode is_bot_pred gs Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
   shows "ictx_terminates_warrow mode is_bot_pred gs Pi ps mnm main"
-  unfolding ictx_terminates_warrow_def TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding ictx_terminates_warrow_def
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>The Apinis warrowing instance\<close>
 
@@ -775,9 +772,8 @@ lemma ictx_terminates_wpo_via_solve_c:
   assumes "TD_side_warrowing_per_origin_Interp_solve_c (ictx_eqs mode is_bot_pred gs Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
   shows "ictx_terminates_wpo mode is_bot_pred gs Pi ps mnm main"
-  unfolding ictx_terminates_wpo_def TD_side_warrowing_per_origin_Interp.term_equivalence
-            TD_side_warrowing_per_origin_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding ictx_terminates_wpo_def
+  by (rule TD_side_warrowing_per_origin_Interp.solve_dom_of_solve_c[OF assms])
 
 lemma ictx_wpo_pp_st:
   "ictx_terminates_wpo mode is_bot_pred gs Pi ps mnm main

@@ -50,10 +50,7 @@ lemma nest_1_seeded_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
      TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
      nest_1_seeded_eqs (cfg_exit nest_cfg, [])"
-  using nest_1_seeded_terminates
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF nest_1_seeded_terminates])
 
 lemma nest_1_seeded_pp_st:
   "part_post_solution nest_1_seeded_eqs (cfg_exit nest_cfg, [])

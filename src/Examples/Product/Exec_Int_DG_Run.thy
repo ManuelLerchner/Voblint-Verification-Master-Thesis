@@ -33,7 +33,8 @@ abbreviation int_ex_read :: "int_dom exec_dg_st lifted => vname => int_dom" wher
   "int_ex_read d x == (case map_lift (fun_of_exec_dg_st_for int_ex_gs) d of Lifted f => f x | Bot => top)"
 
 lemma gExI_calls: "calls gExI = {}" by eval
-lemma gExI_entry: "cfg_entry gExI = FunctionEntry (STR ''main'')" by eval
+lemma gExI_entry: "cfg_entry gExI = FunctionEntry (STR ''main'')"
+  unfolding gExI_def prog_main_name_def by (rule inv16_entry_is_main)
 lemma gExI_finE: "finite (intra gExI)" unfolding gExI_def using compile_prog_finite by simp
 lemma gExI_finC: "finite (calls gExI)" unfolding gExI_def using compile_prog_finite by simp
 

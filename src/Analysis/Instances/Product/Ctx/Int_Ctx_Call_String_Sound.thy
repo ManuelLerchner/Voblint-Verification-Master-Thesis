@@ -63,9 +63,8 @@ lemma ics_terminates_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c (ics_eqs k mode gs is_bot_pred Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), []) \<noteq> None"
   shows "ics_terminates k mode gs is_bot_pred Pi ps mnm main"
-  unfolding ics_terminates_def TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding ics_terminates_def
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>Domain commute facts, at the call-string routed spec\<close>
 
@@ -111,10 +110,7 @@ begin
 lemma ics_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
      (ics_eqs k mode gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])"
-  using solves
-  unfolding ics_terminates_def TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  by simp
+  using solves[unfolded ics_terminates_def] .
 
 lemma ics_pp_st:
   "part_post_solution (ics_eqs k mode gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])

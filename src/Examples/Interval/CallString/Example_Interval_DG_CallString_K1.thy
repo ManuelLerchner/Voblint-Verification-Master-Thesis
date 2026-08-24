@@ -62,7 +62,8 @@ lemma nest_cfg_compile [simp]:
   "compile_prog nest_pi nest_procs (STR ''main'') nest_main = nest_cfg"
   by (simp add: nest_cfg_def)
 
-lemma nest_entry: "cfg_entry nest_cfg = FunctionEntry (STR ''main'')" by eval
+lemma nest_entry: "cfg_entry nest_cfg = FunctionEntry (STR ''main'')"
+  unfolding nest_cfg_def by (rule inv16_entry_is_main)
 
 text \<open>\<open>main\<close> calls \<open>f\<close> at two sites (\<open>Statement 5\<close>, args \<open>3\<close>; \<open>Statement 6\<close>, args \<open>10\<close>).
   \<open>f\<close> calls \<open>g\<close> at one site inside its own body (\<open>Statement 2\<close>), passing through its own
@@ -280,12 +281,12 @@ text \<open>\<open>main\<close>'s two call sites are only ever reached at the ro
 lemma enter_callers_only_root_main_1:
   "\<forall>(p, ctx)\<in>fst nest_1_sol.
      (p = Statement 5 \<or> p = Statement 6) \<longrightarrow> ctx = []"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 
 lemma enter_callers_g_1:
   "\<forall>(p, ctx)\<in>fst nest_1_sol.
      p = Statement 2 \<longrightarrow> ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
+  unfolding nest_1_nodes_eq nest_1_nodes_def by simp
 
 lemma callee_covered_f3_1: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst nest_1_sol"
   unfolding nest_1_nodes_eq nest_1_nodes_def by simp
@@ -310,10 +311,7 @@ lemma nest_1_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
      TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
      nest_1_eqs (cfg_exit nest_cfg, [])"
-  using nest_1_terminates
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF nest_1_terminates])
 
 lemma nest_1_pp_st:
   "part_post_solution nest_1_eqs (cfg_exit nest_cfg, [])

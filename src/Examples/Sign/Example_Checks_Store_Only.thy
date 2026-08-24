@@ -129,10 +129,10 @@ lemma checks_ex_intra_eval:
   unfolding prog_cfg_def by eval
 
 lemma checks_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ex_program) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (rule cfg_exit_compile_prog)
 
 lemma checks_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (rule inv16_entry_is_main)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is

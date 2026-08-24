@@ -59,7 +59,8 @@ text \<open>
   \<open>FunctionEntry (STR ''twice'')\<close> --- this is the monovariant (single-context) view.
 \<close>
 
-lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')" by eval
+lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')"
+  unfolding twice_cfg_def by (rule inv16_entry_is_main)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
@@ -137,10 +138,7 @@ subsection \<open>Certified solution (reusing solver correctness)\<close>
 lemma twice_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
      twice_eqs (cfg_exit twice_cfg, ())"
-  using twice_terminates_c
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF twice_terminates_c])
 
 lemma twice_pp_st:
   "part_post_solution twice_eqs (cfg_exit twice_cfg, ()) (snd twice_sol) (fst twice_sol)"

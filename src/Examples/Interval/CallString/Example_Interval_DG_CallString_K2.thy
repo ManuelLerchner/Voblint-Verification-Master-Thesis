@@ -81,12 +81,12 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>g\<close>'s call site is now cov
 lemma enter_callers_only_root_main_2:
   "\<forall>(p, ctx)\<in>fst nest_2_sol.
      (p = Statement 5 \<or> p = Statement 6) \<longrightarrow> ctx = []"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  unfolding nest_2_nodes_eq nest_2_nodes_def by simp
 
 lemma enter_callers_g_2:
   "\<forall>(p, ctx)\<in>fst nest_2_sol.
      p = Statement 2 \<longrightarrow> ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
+  unfolding nest_2_nodes_eq nest_2_nodes_def by simp
 
 lemma callee_covered_f3_2: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst nest_2_sol"
   unfolding nest_2_nodes_eq nest_2_nodes_def by simp
@@ -113,10 +113,7 @@ lemma nest_2_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
      TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
      nest_2_eqs (cfg_exit nest_cfg, [])"
-  using nest_2_terminates
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF nest_2_terminates])
 
 lemma nest_2_pp_st:
   "part_post_solution nest_2_eqs (cfg_exit nest_cfg, [])

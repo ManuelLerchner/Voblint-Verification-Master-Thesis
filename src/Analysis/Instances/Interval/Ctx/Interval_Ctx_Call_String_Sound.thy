@@ -62,9 +62,8 @@ lemma cs_call_string_terminates_via_solve_c:
   assumes "TD_side_warrowing_apinis_Interp_solve_c (cs_call_string_eqs k gs is_bot_pred Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), []) \<noteq> None"
   shows "cs_call_string_terminates k gs is_bot_pred Pi ps mnm main"
-  unfolding cs_call_string_terminates_def TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding cs_call_string_terminates_def
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>Whole-program convenience layer\<close>
 

@@ -99,7 +99,8 @@ definition flagship_pi :: proc_table where
 definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
 
-lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')" by eval
+lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
+  unfolding flagship_cfg_def prog_main_name_def by (rule inv16_entry_is_main)
 lemma flagship_calls: "calls flagship_cfg = {}" by eval
 
 lemma flagship_finE: "finite (intra flagship_cfg)"

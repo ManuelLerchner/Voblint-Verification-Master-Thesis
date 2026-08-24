@@ -62,7 +62,8 @@ definition gEx :: cfg where
   "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
 
 lemma gEx_calls: "calls gEx = {}" by eval
-lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')" by eval
+lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')"
+  unfolding gEx_def prog_main_name_def by (rule inv16_entry_is_main)
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
@@ -88,9 +89,7 @@ lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit 
 
 lemma dgEx_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) dgEx_eqs (cfg_exit gEx, ())"
-  using dgEx_terminates_c
-  unfolding TD_side_always_join_Interp.term_equivalence TD_side_always_join_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF dgEx_terminates_c])
 
 lemma dgEx_pp_st:
   "part_post_solution dgEx_eqs (cfg_exit gEx, ()) (snd dgEx_sol) (fst dgEx_sol)"
