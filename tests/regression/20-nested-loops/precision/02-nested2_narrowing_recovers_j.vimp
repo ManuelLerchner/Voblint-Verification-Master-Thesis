@@ -1,0 +1,25 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/34-localwn_restart/03-nested2.c
+// (Amato-Scozzari, SAS 2013): an endless outer loop whose body runs a
+// counted inner loop and then steps i := i + 11 - j. Goblint expects
+// i >= 0 under td3 and slr3 with sem.int.signed_overflow assume_none;
+// the point of the example is that a non-localized narrowing sees j at
+// its widened [0,+inf] when the outer head first stabilizes and can never
+// bound 11 - j from below.
+//
+// Voblint proves it: the inner head widens j to [0,+inf] and narrows it
+// back to [0,10], its exit edge leaves j = [10,10] (measured), so
+// i + 11 - j is i + 1 at the outer back-edge; the outer head widens i to
+// [0,+inf] and the check sees i = [1,+inf], never below zero.
+// Solver-invariant across join, per-origin, warrow, warrow-per-origin.
+void main() {
+  i := 0;
+  while (true) {
+    j := 0;
+    while (j < 10) {
+      j := j + 1
+    };
+    i := i + 11 - j;
+    __voblint_check(!(i < 0)) // PROVED
+  }
+}

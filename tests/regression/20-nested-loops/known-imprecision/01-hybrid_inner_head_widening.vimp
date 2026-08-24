@@ -1,0 +1,37 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/34-localwn_restart/02-hybrid.c
+// (Amato-Scozzari, SAS 2013, after Halbwachs-Henry, SAS 2012). Goblint
+// proves 0 <= i <= 10 inside the inner loop only with
+// solvers.td3.restart.wpoint.enabled (restart.wpoint.once disabled), or
+// under the sl4 solver: the inner widening point must be restarted from
+// bottom once the outer head narrows.
+//
+// Voblint answers !(10 < i) UNKNOWN. Mechanism: the inner head is its
+// own widening point, and i flows around the inner back-edge unrefined
+// (the inner guard j < 10 says nothing about i). On the outer head's
+// first widening, i := i + 1 delivers [1,+inf] to the inner head; the
+// outer head later narrows to [0,9] and delivers [1,10], but the inner
+// head's right-hand side joins that with its own back-edge value
+// [1,+inf], so [1,+inf] is a self-fixpoint that narrowing never
+// re-descends (measured: i = [1,+inf] at both checks). Removing the
+// inner loop -- the same program with the checks directly in the outer
+// body -- measures i = [1,10] and PROVED x2, so the loss is the inner
+// widening point, not the outer narrowing.
+// Solver-invariant across join, per-origin, warrow, warrow-per-origin.
+void main() {
+  i := 0;
+  while (true) {
+    i := i + 1;
+    j := 0;
+    while (j < 10) {
+      __voblint_check(!(i < 0)); // PROVED
+      __voblint_check(!(10 < i)); // UNKNOWN
+      j := j + 1
+    };
+    if (9 < i) {
+      i := 0
+    } else {
+      skip
+    }
+  }
+}

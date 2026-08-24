@@ -1,0 +1,28 @@
+// PARAM: --analysis interval --context call-string --context-depth 5
+// Same program as precision/03-global_written_per_recursion_level.vimp
+// (Goblint 79-callstring/10-inf_callstack_cs.c) under a bounded call
+// string. The concrete m after each call is 0. Levels deeper than the
+// bound share one truncated key, so their callee-entry seed is the join
+// of every argument that reaches it from the three call chains;
+// --graph-snapshot shows that collapsed context entered with i=[0,+inf]
+// (warrowing widens the accumulating seed). Its body writes m := i - 1
+// from that range, so the m the caller reads back after the call is
+// [0,+inf] and never the singleton 0. Depth 10 fits the o(5) and o(8)
+// chains (6 and 9 sites) and proves those two; o(25) stays UNKNOWN at any
+// depth below 26.
+global m;
+void o(i) {
+  if (0 < i) { i := i - 1; m := i; o(i) } else { skip };
+  return 0
+}
+void main() {
+  m := 20;
+  o(5);
+  __voblint_check(m == 0); // UNKNOWN
+  m := 20;
+  o(8);
+  __voblint_check(m == 0); // UNKNOWN
+  m := 20;
+  o(25);
+  __voblint_check(m == 0)  // UNKNOWN
+}

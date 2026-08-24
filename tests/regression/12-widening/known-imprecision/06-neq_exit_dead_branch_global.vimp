@@ -1,0 +1,28 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/82-widen/03-loop_conditional_side.c:
+// a loop exiting on i != 10 contains a branch 11 < i that is dead in every
+// concrete run and would write g := 42. Goblint expects g != 42 only
+// under solvers.td3.widen_gas 11 (with exp.earlyglobs), gas enough for i
+// to reach [0,10] before any widening.
+//
+// Same mechanism as 01-neq_exit_loop.vimp, observed through a global
+// instead of the counter: the head widens i to [0,+inf] and the guard
+// !(i == 10) refines nothing, so the concretely dead branch 11 < i is
+// abstractly live, g := 42 joins into g = [0,42] and the head widens that
+// to [0,+inf] (measured after the loop). The imprecision escapes the loop
+// through a variable the loop never checks. Solver-invariant across join,
+// per-origin, warrow, warrow-per-origin.
+global g;
+void main() {
+  i := 0;
+  g := 0;
+  while (!(i == 10)) {
+    if (11 < i) {
+      g := 42
+    } else {
+      skip
+    };
+    i := i + 1
+  };
+  __voblint_check(!(g == 42)) // UNKNOWN
+}

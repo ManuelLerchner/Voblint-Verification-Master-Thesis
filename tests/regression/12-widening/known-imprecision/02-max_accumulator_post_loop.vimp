@@ -1,0 +1,23 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/82-widen/06-post_loop1.c: b
+// accumulates max(b, a) over a counted loop a < 5, so b == 4 on exit.
+// Goblint expects b < 5 only under solvers.td3.widen_gas 6, which delays
+// widening long enough for a to settle at [0,4] and b along with it.
+//
+// Voblint answers UNKNOWN. Mechanism: the head widens both variables on
+// the first revisit; narrowing recovers a = [0,5] at the head because
+// the guard a < 5 cuts a, but no guard mentions b, and b := max(b, a)
+// reads b's own widened value back, so every re-evaluation of the body
+// returns [0,+inf] for b and the head keeps it (measured: b = [0,+inf]
+// at the head and the check). Narrowing descends only through a guard,
+// never through an accumulator's self-dependency.
+// Solver-invariant across join, per-origin, warrow, warrow-per-origin.
+void main() {
+  b := 0;
+  a := 0;
+  while (a < 5) {
+    b := max(b, a);
+    a := a + 1
+  };
+  __voblint_check(b < 5) // UNKNOWN
+}

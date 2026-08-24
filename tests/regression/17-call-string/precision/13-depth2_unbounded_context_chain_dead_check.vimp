@@ -1,0 +1,20 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Adapted from Goblint tests/regression/32-widen-context/01-on.c
+// (ana.context.widen enabled). f(x) recurses on x + 1 whenever x is
+// nonzero, so f(1) never returns over VIMP's mathematical integers: the
+// check after the call is dead and is suppressed (NOWARN). Goblint
+// annotates the same check as proved because its C int wraps to 0 after
+// overflow (or is widened to top, which its `!a` check tolerates); that is
+// a semantic difference between C machine integers and VIMP's unbounded
+// ints, not a precision difference. The bounded call string keeps the
+// context space finite; under --context entry-state the same program
+// creates a fresh context per x value and diverges, which
+// 21-context-sensitivity/01-unbounded_context_chain_diverges.vimp pins
+// through --timeout.
+void f(x) {
+  if (!(x == 0)) { r := f(x + 1); return r } else { return x }
+}
+void main() {
+  a := f(1);
+  __voblint_check(a == 0) // NOWARN
+}

@@ -1,0 +1,27 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/34-localwn_restart/01-nested.c
+// (Halbwachs-Henry, SAS 2012: nested counted loops, i == 10 after the
+// outer loop) with the in-loop checks of 56-witness/35-hh-ex1b.c folded
+// in. Goblint runs 01-nested.c under td3 and slr3 and expects every check
+// to hold; 35-hh-ex1b.c additionally feeds a YAML unassume witness.
+//
+// Voblint proves all four with plain widening and narrowing: the inner
+// head widens j to [0,+inf] and narrows it back to [0,10] against j < 10,
+// so the outer body sees j == 10 exactly; the outer head does the same for
+// i. Solver-invariant: join, per-origin, warrow and warrow-per-origin all
+// answer PROVED x4, and the same program with bound 100 (35-hh-ex1b.c's
+// literal shape) measures identically.
+void main() {
+  i := 0;
+  while (i < 10) {
+    j := 0;
+    while (j < 10) {
+      j := j + 1;
+      __voblint_check(!(10 < j)) // PROVED
+    };
+    __voblint_check(j == 10); // PROVED
+    i := i + 1;
+    __voblint_check(!(10 < i)) // PROVED
+  };
+  __voblint_check(i == 10) // PROVED
+}

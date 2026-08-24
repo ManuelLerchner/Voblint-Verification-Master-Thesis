@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/33-constants/03-empty-not-dead-branch.c,
+// where a branch with no locals produced an empty path-sensitive state after
+// the join and raised Deadcode on the next assignment. main has no locals; g
+// is the only variable, read nondeterministically so both arms are live. The
+// join keeps g = [1,2], so 0 < g is PROVED, and the following write is still
+// reached: g == 3 is PROVED, not absent.
+global g;
+void main() {
+  g := __voblint_nondet_int();
+  if (g) {
+    g := 1
+  } else {
+    g := 2
+  };
+  __voblint_check(0 < g); // PROVED
+  g := 3;
+  __voblint_check(g == 3) // PROVED
+}

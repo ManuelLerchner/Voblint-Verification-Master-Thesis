@@ -1,0 +1,26 @@
+// PARAM: --analysis int --context entry-state
+// Adapted from Goblint tests/regression/20-slr_term/03-3ctxs.c, a
+// termination test carrying no checks (NOCHECK): the loop calls f(i) = i + 1
+// and steps i := 1 + f(i), so i runs 0, 2, ..., 10 and the added post-loop
+// check is i == 10.
+//
+// The composite proves it under entry-state context sensitivity: the
+// interval narrows the head to [0,11] and the exit guard leaves [10,11],
+// parity keeps i Even through the stride of 2, and the reduction cuts
+// [10,11] to [10,10]. --analysis interval on the same source answers
+// UNKNOWN with i = [10,11]. Verified with --context call-string
+// --context-depth 1 as well (PROVED). Without any context
+// (16-composite-domain/known-imprecision/01-3ctxs_context_insensitive_entry.vimp)
+// f's single entry state is widened and never narrowed, and the same
+// check answers UNKNOWN.
+void f(j) {
+  return j + 1
+}
+void main() {
+  i := 0;
+  while (i < 10) {
+    t := f(i);
+    i := 1 + t
+  };
+  __voblint_check(i == 10) // PROVED
+}

@@ -1,0 +1,23 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/36-apron/18-branch2.c and
+// 27-inv_invariants/03-ints-not.c. A bare int as a condition means != 0, so
+// the false arm of if (i) and the true arm of if (!x) both refine the
+// nondeterministic value to exactly [0,0]: i == 0 and x == 0 are PROVED and
+// i < 0 is REFUTED (Goblint: bare, bare, FAIL). The other arms only learn
+// "not 0", which decides nothing about i >= 1 or x == 1; those UNKNOWNs are
+// in soundness/01-truthiness_guard_underdetermined.vimp. sign and int agree.
+void main() {
+  i := __voblint_nondet_int();
+  x := __voblint_nondet_int();
+  if (i) {
+    skip
+  } else {
+    __voblint_check(i == 0); // PROVED
+    __voblint_check(i < 0) // REFUTED
+  };
+  if (!x) {
+    __voblint_check(x == 0) // PROVED
+  } else {
+    skip
+  }
+}

@@ -1,0 +1,20 @@
+// PARAM: --analysis interval --context entry-state --timeout 5
+// Adapted from Goblint tests/regression/32-widen-context/01-on.c
+// (ana.context.widen enabled; Goblint's default full context maps to
+// --context entry-state). f(x) recurses on x + 1 whenever x is nonzero, so
+// every activation enters with a new singleton x and entry-state keying
+// creates one fresh context per recursion level, without bound. Goblint
+// terminates here only because ana.context.widen widens the context itself
+// across levels; voblint has no context widening, so the solver never
+// reaches a fixpoint and --timeout turns that into a structured "did not
+// finish within" rejection, which is what this fixture pins (no verdict
+// annotations: the runner expects the rejection, not a report). A bounded
+// call string keeps the same program finite; see
+// 17-call-string/precision/13-depth2_unbounded_context_chain_dead_check.vimp.
+void f(x) {
+  if (!(x == 0)) { r := f(x + 1); return r } else { return x }
+}
+void main() {
+  a := f(1);
+  __voblint_check(a == 0)
+}

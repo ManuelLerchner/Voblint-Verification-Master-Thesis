@@ -1,0 +1,26 @@
+// PARAM: --analysis interval --context call-string --context-depth 5
+// Adapted from Goblint tests/regression/80-context_gas/23-per-fun.c
+// (ana.context.gas_value 3 with gas_scope function; context gas has no
+// voblint equivalent, and Goblint's own annotation for a == 0 is UNKNOWN).
+// Two-formal recursion f(x, y) with a nondeterministic branch that calls a
+// non-recursive nr(5, 5) or nr(6, 6) before recursing. Both nr call sites
+// are distinct, so even at depth 1 each has its own key and x == y is
+// proved inside nr; the branch merges the caller state afterwards without
+// touching x or y. main -> f(3,3) -> ... -> f(0,0) is five sites, so at
+// depth 5 every f activation keeps its own key and a == 0 is exact. At
+// depth 2 the deeper activations f(1,1) and f(0,0) share a key
+// (known-imprecision/04). --context none proves neither check.
+void nr(x, y) {
+  __voblint_check(x == y) // PROVED
+}
+void f(x, y) {
+  if (x == 0) { return y } else { skip };
+  top := __voblint_nondet_int();
+  if (0 < top) { nr(5, 5) } else { nr(6, 6) };
+  r := f(x - 1, y - 1);
+  return r
+}
+void main() {
+  a := f(3, 3);
+  __voblint_check(a == 0) // PROVED
+}

@@ -1,0 +1,31 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/82-widen/12-mihaila-widen-slide-
+// delay.c (Mihaila, "Widening as Abstract Domain" slides): y is a flag set
+// to 1 once x passes 5 inside a loop stepping x by 4 up to 100. Goblint
+// expects all four checks only under ana.widen.delay.local 3: on the
+// head's third revisit y has already reached its final [0,1], so the
+// delayed widening leaves it alone and widens x only.
+//
+// Voblint has no widening delay. The head's first revisit widens x to
+// [0,+inf]; the second revisit is the first time y grows ([0,0] to
+// [0,1]) and it is widened at once to [0,+inf] (measured at every check).
+// No guard in the loop or after it mentions y, so narrowing recovers the
+// bound of x but has nothing to descend y through; 0 <= y survives only
+// because the lower bound never moved. Solver-invariant across join,
+// per-origin, warrow, warrow-per-origin.
+void main() {
+  x := 0;
+  y := 0;
+  while (x < 100) {
+    __voblint_check(!(y < 0)); // PROVED
+    __voblint_check(!(1 < y)); // UNKNOWN
+    if (5 < x) {
+      y := 1
+    } else {
+      skip
+    };
+    x := x + 4
+  };
+  __voblint_check(!(y < 0)); // PROVED
+  __voblint_check(!(1 < y)) // UNKNOWN
+}

@@ -1,0 +1,32 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/36-apron/94-simple-apron-interval.c
+// (Mine's counting loop, HOSC 2006); Goblint's interval configuration marks
+// all three UNKNOWN as well. Concretely N >= 0 after the clamp, X counts from
+// 0 up to N and stops exactly at X = N, so X == N and X - N == 0 hold in every
+// execution; the else arm of if (X == N) is never taken and N == 8 holds too.
+// The loop head joins X = [0,0] with the widened body state and keeps X and N
+// as independent intervals [0,+inf]: the fact X = N is a relation between two
+// variables and no non-relational domain retains it, so the loop exit's
+// !(X < N) only bounds each side. Both equality arms then look live, N becomes
+// [8,42], and N == 8 is UNKNOWN for the same reason. An octagon or a
+// polyhedron would recover X = N; int agrees with interval.
+void main() {
+  X := 0;
+  N := __voblint_nondet_int();
+  if (N < 0) {
+    N := 0
+  } else {
+    skip
+  };
+  while (X < N) {
+    X := X + 1
+  };
+  __voblint_check(X - N == 0); // UNKNOWN
+  __voblint_check(X == N); // UNKNOWN
+  if (X == N) {
+    N := 8
+  } else {
+    N := 42
+  };
+  __voblint_check(N == 8) // UNKNOWN
+}

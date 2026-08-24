@@ -1,0 +1,31 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Adapted from Goblint tests/regression/79-callstring/06-big_loop_cs.c
+// (ana.context.callString_length 10; --context-depth 2 already suffices
+// here). Mutual recursion f <-> g called from a 200-iteration loop. Each
+// chain is three sites deep (main -> f(2) -> g(1) -> f(0)), so depth 2
+// keeps f(2) and g(2) apart from the inner f(0)/g(0) activations and both
+// results are exact. The loop counter is widened to [0,200] as usual; the
+// callee keys carry no loop state, so the 200 iterations add no contexts.
+// --context none answers UNKNOWN for both (res1=[1,12]): f and g each have
+// one activation shared by every call site, the same mechanism as
+// 03-procedures/known-imprecision/01-two_call_sites_same_procedure.vimp.
+void g(i) {
+  if (i == 0) { return 1 } else { skip };
+  if (0 < i) { r := f(i - 1); return r } else { skip };
+  return 11
+}
+void f(i) {
+  if (i == 0) { return 2 } else { skip };
+  if (0 < i) { r := g(i - 1); return r } else { skip };
+  return 12
+}
+void main() {
+  i := 200;
+  while (0 < i) {
+    res1 := f(2);
+    res2 := g(2);
+    __voblint_check(res1 == 2); // PROVED
+    __voblint_check(res2 == 1); // PROVED
+    i := i - 1
+  }
+}

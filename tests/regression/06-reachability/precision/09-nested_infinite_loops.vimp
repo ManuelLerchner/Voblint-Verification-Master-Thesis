@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/03-practical/22-nested-infinite-loops.c
+// (issue #231), which only asks that the CFG survive; the checks here pin
+// which points are live. The inner while (true) never exits, so the outer
+// body's tail and everything after the outer loop are dead: their checks are
+// absent. The check at the top of the outer body runs on every entry of the
+// outer loop, and since the outer loop's back edge is itself dead, x is still
+// exactly 0 there -- the head sees only its entry state.
+void main() {
+  x := 0;
+  while (true) {
+    __voblint_check(x == 0); // PROVED
+    while (true) {
+      x := x + 1
+    };
+    x := x - 1;
+    __voblint_check(false) // NOWARN (unreachable)
+  };
+  x := x - 1;
+  __voblint_check(false) // NOWARN (unreachable)
+}

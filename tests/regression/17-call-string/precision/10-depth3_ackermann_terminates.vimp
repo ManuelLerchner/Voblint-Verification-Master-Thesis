@@ -1,0 +1,23 @@
+// PARAM: --analysis interval --context call-string --context-depth 3 --timeout 60
+// Adapted from Goblint tests/regression/79-callstring/05-ackermann_cs.c
+// (ana.context.callString_length 10). Termination witness, not a value
+// check: ack(4, 1) is astronomically deep in the concrete, and the
+// call-string bound is what keeps the context space finite
+// (compiled_call_strings_finite). Measured cost by depth: K=3 about 1 s,
+// K=4 about 5 s, K>=5 does not finish within a minute. The fixture pins
+// K=3 with an explicit --timeout so a solver-level regression surfaces as
+// a structured timeout rather than a hung suite. `reachable` only asserts
+// the check after the call is reported.
+void ack(n, m) {
+  if (n == 0) { return m + 1 } else {
+    if (m == 0) { r := ack(n - 1, 1); return r } else {
+      t := ack(n, m - 1);
+      r := ack(n - 1, t);
+      return r
+    }
+  }
+}
+void main() {
+  x := ack(4, 1);
+  __voblint_check(true) // reachable
+}

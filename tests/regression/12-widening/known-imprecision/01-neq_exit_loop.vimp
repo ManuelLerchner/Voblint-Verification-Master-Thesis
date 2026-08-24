@@ -1,0 +1,24 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/82-widen/02-loop_increment.c,
+// whose loops exit on a != 3 / b != 4. Goblint expects both checks only
+// under solvers.td3.widen_gas 5: the gas lets the head grow [0,0], [0,1],
+// ..., [0,3] step by step until the interval stabilizes on its own.
+//
+// Voblint has no widening gas. The head widens a from [0,1] straight to
+// [0,+inf], and the loop guard !(a == 3) refines nothing in intervals --
+// a disequality cannot cut a hole out of [0,+inf] -- so narrowing has no
+// upper bound to recover and a stays [0,+inf] (measured) at the check.
+// Same for b. Solver-invariant across join, per-origin, warrow,
+// warrow-per-origin.
+void main() {
+  a := 0;
+  while (!(a == 3)) {
+    __voblint_check(a < 3); // UNKNOWN
+    a := a + 1
+  };
+  b := 0;
+  while (!(b == 4)) {
+    __voblint_check(b < 4); // UNKNOWN
+    b := b + 1
+  }
+}

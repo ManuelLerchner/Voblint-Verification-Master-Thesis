@@ -1,0 +1,39 @@
+// PARAM: --analysis int
+// Adapted from Goblint tests/regression/37-congruence/01-simple.c
+// (Granger, "Static analysis of arithmetical congruences", 1989) with the
+// post-loop division and modulo lines and their checks dropped (VIMP has
+// neither operator). Goblint runs it with the congruence domain alone
+// and expects d != 1, 2, 3 and annotates c == 4, d == 12 and e == -8
+// UNKNOWN, since a congruence knows d = 0 (mod 4) but not its value.
+//
+// The composite proves d == 12 as well: the interval narrows d to [9,12]
+// against d < 9 stepping by 4 and the congruence-to-interval reduction
+// rounds that class-aligned to [12,12] (measured; --analysis interval
+// alone stays at [9,12] and answers d == 12 UNKNOWN, --analysis parity
+// alone refutes only d == 1 and d == 3).
+//
+// c == 4 and e == -8 stay UNKNOWN by design of a non-relational domain:
+// e := e - 4 * a decreases every iteration, the head widens its lower
+// bound to -inf, and no guard mentions e, so e = [-inf,0] survives
+// narrowing; c := e + d inherits that as c = [-inf,8]. Recovering them
+// needs the relation c = e + d = 4 the product does not track.
+void main() {
+  a := 1;
+  b := 2;
+  c := 3;
+  d := 4;
+  e := 0;
+  while (d < 9) {
+    b := 2 * a;
+    d := d + 4;
+    e := e - 4 * a;
+    a := b - a;
+    c := e + d
+  };
+  __voblint_check(c == 4); // UNKNOWN
+  __voblint_check(!(d == 1)); // PROVED
+  __voblint_check(!(d == 2)); // PROVED
+  __voblint_check(!(d == 3)); // PROVED
+  __voblint_check(d == 12); // PROVED
+  __voblint_check(e == -8) // UNKNOWN
+}

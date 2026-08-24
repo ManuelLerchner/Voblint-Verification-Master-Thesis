@@ -1,0 +1,26 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/56-witness/29-mine-tutorial-ex4.10.c
+// (Mine's tutorial, example 4.10): v starts at 1 and steps by 2 while
+// v <= 50 (v < 51 here), so v == 51 on exit. Goblint runs it under Apron
+// polyhedra with an unassumed witness and asserts only the bounds
+// 51 <= v <= 52; the v == 51 check is added here.
+//
+// Voblint proves every bound: the head widens v to [1,+inf] and narrows
+// it back to [1,52] against v < 51 stepping by 2. The exact exit value
+// stays UNKNOWN because an interval cannot express "odd": narrowing stops
+// at v = [51,52] (measured), one element too wide, and nothing in the
+// program refines that further. Solver-invariant across join, per-origin,
+// warrow, warrow-per-origin. Under --analysis int (16-composite-domain/
+// precision/05-mine_ex410_stride2_congruence.vimp) congruence 1 (mod 2)
+// cuts [51,52] down to [51,51].
+void main() {
+  v := 1;
+  while (v < 51) {
+    __voblint_check(!(v < 1)); // PROVED
+    v := v + 2;
+    __voblint_check(!(52 < v)) // PROVED
+  };
+  __voblint_check(!(v < 51)); // PROVED
+  __voblint_check(!(52 < v)); // PROVED
+  __voblint_check(v == 51) // UNKNOWN
+}

@@ -1,0 +1,14 @@
+// PARAM: --analysis sign
+// Sign sibling of 11-empty_not_dead_interval.vimp (Goblint
+// tests/regression/02-base/58-empty-not-dead.c): the reachability probe over
+// an empty variable set is domain-generic, so a program with no variables
+// stays live under Sign as well. int and parity give the same three PROVED
+// rows.
+void p() {
+  __voblint_check(true) // PROVED
+}
+void main() {
+  __voblint_check(true); // PROVED
+  p();
+  __voblint_check(true) // PROVED
+}

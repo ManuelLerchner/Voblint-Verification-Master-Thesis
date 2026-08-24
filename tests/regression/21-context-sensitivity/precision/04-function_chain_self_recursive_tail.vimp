@@ -1,0 +1,41 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/80-context_gas/12-multiple_function_chain_sens.c
+// and 13-multiple_function_chain_ins.c (ana.context.gas_value 10; the
+// 13 checks exceed the gas and are UNKNOWN in Goblint, while Goblint's
+// default full context, which --context entry-state maps to, proves all of
+// them). The chain f -> g -> h with h self-recursive: f(i) = g(i-1) = h(i-2)
+// = ... = h(0) = 3 for i >= 2. Entry-state keys every h level by its
+// entered i, so each is exact down to h(0), and the deepest chain
+// (h(300), 301 levels) takes about 1 s. Under --context none the same
+// program is UNKNOWN throughout; known-imprecision/02 names the mechanism.
+void h(i) {
+  if (i == 0) { return 3 } else { skip };
+  if (0 < i) { r := h(i - 1); return r } else { skip };
+  return 13
+}
+void g(i) {
+  if (i == 0) { return 2 } else { skip };
+  if (0 < i) { r := h(i - 1); return r } else { skip };
+  return 12
+}
+void f(i) {
+  if (i == 0) { return 1 } else { skip };
+  if (0 < i) { r := g(i - 1); return r } else { skip };
+  return 11
+}
+void main() {
+  a := f(10); __voblint_check(a == 3);  // PROVED
+  b := f(8); __voblint_check(b == 3);   // PROVED
+  c := h(5); __voblint_check(c == 3);   // PROVED
+  d := f(0); __voblint_check(d == 1);   // PROVED
+  e := f(1); __voblint_check(e == 2);   // PROVED
+  x := g(0); __voblint_check(x == 2);   // PROVED
+  y := g(1); __voblint_check(y == 3);   // PROVED
+  z := f(11); __voblint_check(z == 3);  // PROVED
+  u := g(12); __voblint_check(u == 3);  // PROVED
+  v := g(20); __voblint_check(v == 3);  // PROVED
+  w := f(20); __voblint_check(w == 3);  // PROVED
+  s := h(40); __voblint_check(s == 3);  // PROVED
+  t := h(300); __voblint_check(t == 3); // PROVED
+  q := f(300); __voblint_check(q == 3)  // PROVED
+}
