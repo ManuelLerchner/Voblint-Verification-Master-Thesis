@@ -1,11 +1,30 @@
 # Digest-Indexed Context-Sensitive Analysis
 
-> **RETIRED — Family A (reaching definitions) was removed from the tree (commit `92739cf`).**
-> This document is kept as design rationale: it records *why* the digest kernel is generic
-> (it was validated against two dissimilar instances). In the current tree only **Family B
-> (value-derived / mode)** is instantiated; the generic `obs_digest` kernel remains, but its
-> externally-computed reaching-definitions instance and all RD witnesses are gone. Read the
-> Family A / §3 material below as historical design, not as current code.
+> **RETIRED — the whole digest spine was removed, not only Family A.**
+>
+> An earlier banner recorded Family A's removal (commit `92739cf`) and stated that "the
+> generic `obs_digest` kernel remains". That is no longer true and was already false when
+> this file was last edited. Commit `f66862dd` (2026-07-18, "Stage 5B/D") removed the
+> remaining spine — `Digest_Global_Read.thy`, `Value_Digest_Read.thy`,
+> `Digest_Keyed_Writer.thy`, `CFG_Collect_Trace.thy` and the rest — as part of the
+> `digest-removal` series, archived at tag `archive/relational-digest-experiment`.
+>
+> **Every theory file named in this document is gone.** Nothing below describes current
+> code. `docs/history/DIGEST_SPINE_REMOVAL_PLAN.md` is the authoritative record of what was
+> removed and why.
+>
+> The design rationale is why this file is kept: the kernel was validated against two
+> dissimilar instances, and that remains the argument for its genericity.
+>
+> **One claim below is now known to be wrong.** §6's note that set-valued digests such as
+> locksets "need a product domain and are out of scope" describes a limitation of the
+> `sign`-typed instance, not of the approach. Goblint's live mechanism is a two-operation
+> interface, `current` and `accounted_for` (`src/analyses/commonPriv.ml`), with the global's
+> *value* — not its key — carrying a digest-indexed map. The removal ledger's premise that
+> "there is no relational concrete compatibility to preserve" held under single-threaded
+> scope and does not hold once two threads exist: `accounted_for` consults
+> may-happen-in-parallel and must-joined information rather than collapsing to key equality.
+> Treat the removal as conditional on that scope, not as a permanent architectural finding.
 
 This work develops a generic framework for digest-indexed context-sensitive analyses on top of a
 verified top-down solver. Rather than committing to a single notion of context, the framework

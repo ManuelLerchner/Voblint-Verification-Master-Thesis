@@ -16,6 +16,11 @@ task at hand:
 - For the proof architecture and intended claims, read
   `docs/PROOF_OVERVIEW.md` and `docs/PROOF_PHASES.md`.
 - For current terminology and defining layers, read `docs/GLOSSARY.md`.
+- Before claiming any difference from Goblint is new, unresolved, or worth
+  closing, read `docs/GOBLINT_ALIGNMENT_REGISTER.md`. It is the canonical
+  record of where this formalization differs from upstream, why, and what
+  would close it. An audit run against the source alone will rediscover
+  decisions already recorded there and mistake them for findings.
 - For scope and priorities, read `docs/ROADMAP.md`, `docs/NEXT_STEPS.md`, and
   `docs/NON_GOALS.md`.
 - For an area-specific task, read the nearest `README.md`.

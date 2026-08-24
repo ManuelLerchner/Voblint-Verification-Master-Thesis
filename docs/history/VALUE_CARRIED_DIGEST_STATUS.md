@@ -1,19 +1,30 @@
 # Value-carried digest migration — status, roadmap, judgement
 
-> Companion to `VALUE_CARRIED_DIGEST_MIGRATION.md` (the design). This file records
-> what is **built and machine-checked**. Stages 0–2, the read-integration keystone,
-> and an executable end-to-end example are complete and **batch-green** (`isabelle
-> build Voblint_Analysis` + downstream `Voblint_Soundness`, no `sorry`). Claims
-> tagged **[verified]** were checked against the Isabelle sources (`file:line`);
-> **[batch-green]** = passes the full `isabelle build`, not only the I/Q checker.
+> **RETIRED — this file describes code that no longer exists.**
+>
+> Everything below was accurate when written. It stopped being accurate on 2026-07-18,
+> when commit `f66862dd` removed the digest spine (`Value_Digest_Read.thy`,
+> `Digest_Global_Read.thy`, `Digest_Keyed_Writer.thy` and the rest) as part of the
+> `digest-removal` series, archived at tag `archive/relational-digest-experiment`. The
+> file was edited twice afterwards without being corrected, so its "Done … batch-green"
+> bottom line has been read as current status since. **Every theory file it names is
+> gone**, and no claim below should be treated as describing the present tree.
+>
+> Its companion design document, `VALUE_CARRIED_DIGEST_MIGRATION.md`, was retired to
+> `docs/history/` at the time; this status file was left behind in `docs/`. That
+> oversight is what this banner corrects.
+>
+> `docs/history/DIGEST_SPINE_REMOVAL_PLAN.md` is the authoritative record of the removal.
+> Kept for the design rationale and for the record of what was demonstrated end to end —
+> read side and write side — before the spine was taken out.
 
 ---
 
 ## 1. Bottom line
 
-**Done. The Goblint-style value-carried digest is implemented, batch-green, and
-demonstrated end-to-end — read side *and* write side — with the generic digest kernel
-unchanged.** The read side (`mode_obs`) is the digest-filtered `getg`; the new write
+**Done — as of 2026-07-06; removed 2026-07-18, see banner.** The Goblint-style
+value-carried digest was implemented, batch-green, and demonstrated end to end —
+read side *and* write side — with the generic digest kernel unchanged. The read side (`mode_obs`) is the digest-filtered `getg`; the new write
 side (`side_cfg_T_eff_digest_st`) is Goblint's `sideg (G, Digest.compute d)` — each
 intra global write keyed by a **projection of the write-point state**. On a compiled
 program the two writes `G:=0`/`G:=1` separate into partitions `Inr MZero`/`Inr MOne`
