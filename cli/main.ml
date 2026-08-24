@@ -267,13 +267,31 @@ let rec rm_rf path =
   | false -> (try Sys.remove path with Sys_error _ -> ())
   | exception Sys_error _ -> ()
 
-(* A second run into the same directory must not leave the previous program's
-   node documents behind: they are reachable from the frontend and describe a
-   different CFG. Only the subtrees this emitter owns are cleared, and only once
-   index.xml identifies the directory as a previous report -- so pointing
-   --html-out at a directory holding anything else is refused rather than
-   quietly emptied. *)
-let owned_entries = [ "nodes"; "files"; "dot"; "cfgs"; "index.xml" ]
+let frontend_dir () =
+  match Sys.getenv_opt "VOBLINT_FRONTEND" with
+  | Some d -> Some d
+  | None ->
+    let candidate =
+      Filename.concat
+        (Filename.dirname (Filename.dirname Sys.executable_name))
+        (Filename.concat "vendor" (Filename.concat "g2html" "resources"))
+    in
+    if Sys.file_exists candidate && Sys.is_directory candidate then Some candidate else None
+
+(* --html owns its output directory: every run rewrites the report entries
+   below and the copied frontend assets, so stale node documents from a
+   previous program (or the leftovers of a run that died halfway) never
+   survive into the next report. The only thing refused is a directory that
+   holds a regular file this emitter does not write: that is someone else's
+   data, and the report would be interleaved with it. Empty directories and
+   old voblint output are never a reason to refuse. *)
+let owned_entries = [ "nodes"; "files"; "dot"; "cfgs"; "warn"; "index.xml" ]
+
+let rec has_regular_file path =
+  match Sys.is_directory path with
+  | true -> Array.exists (fun n -> has_regular_file (Filename.concat path n)) (Sys.readdir path)
+  | false -> true
+  | exception Sys_error _ -> false
 
 let prepare_report_dir dir =
   if not (Sys.file_exists dir) then mkdir_p dir
@@ -281,14 +299,26 @@ let prepare_report_dir dir =
     Printf.eprintf "voblint: %s exists and is not a directory\n" dir;
     exit 5
   end
-  else if Array.length (Sys.readdir dir) > 0 then begin
-    if not (Sys.file_exists (Filename.concat dir "index.xml")) then begin
-      Printf.eprintf
-        "voblint: refusing to write a report into non-empty %s (no index.xml, so \
-         this is not a previous report directory)\n"
-        dir;
-      exit 5
-    end;
+  else begin
+    let assets =
+      match frontend_dir () with
+      | Some d -> Array.to_list (Sys.readdir d)
+      | None -> []
+    in
+    let owned n = List.mem n owned_entries || List.mem n assets in
+    let foreign =
+      List.filter
+        (fun n -> not (owned n) && has_regular_file (Filename.concat dir n))
+        (Array.to_list (Sys.readdir dir))
+    in
+    (match foreign with
+     | [] -> ()
+     | n :: _ ->
+       Printf.eprintf
+         "voblint: refusing to write a report into %s: it holds %s, which is not \
+          voblint output\n"
+         dir n;
+       exit 5);
     List.iter (fun n -> rm_rf (Filename.concat dir n)) owned_entries
   end
 
@@ -313,17 +343,6 @@ let copy_file src dst =
 (* The frontend is g2html's resources/, copied in verbatim. Its location is
    resolved relative to the binary so a built tree works in place; an explicit
    VOBLINT_FRONTEND overrides that for an installed layout. *)
-let frontend_dir () =
-  match Sys.getenv_opt "VOBLINT_FRONTEND" with
-  | Some d -> Some d
-  | None ->
-    let candidate =
-      Filename.concat
-        (Filename.dirname (Filename.dirname Sys.executable_name))
-        (Filename.concat "vendor" (Filename.concat "g2html" "resources"))
-    in
-    if Sys.file_exists candidate && Sys.is_directory candidate then Some candidate else None
-
 type outcome =
   | Ok_text of string
   | Ok_dot of string
@@ -391,7 +410,22 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                  | "U" -> Ok (Unsupported_combo body)
                  | _ -> Error body)
               | None -> Error "analysis subprocess produced no output")
-           | _, Unix.WEXITED code -> Error (Printf.sprintf "analysis subprocess exited with code %d" code)
+           | _, Unix.WEXITED code ->
+             (* The child records its exception under an "E" tag before
+                exiting non-zero; surface it instead of only the code. *)
+             let detail =
+               try
+                 let ic = open_in tmp in
+                 let n = in_channel_length ic in
+                 let contents = really_input_string ic n in
+                 close_in ic;
+                 (match String.index_opt contents '\n' with
+                  | Some i when String.sub contents 0 i = "E" ->
+                    ": " ^ String.sub contents (i + 1) (String.length contents - i - 1)
+                  | _ -> "")
+               with Sys_error _ | End_of_file -> ""
+             in
+             Error (Printf.sprintf "analysis subprocess exited with code %d%s" code detail)
            | _, (Unix.WSIGNALED s | Unix.WSTOPPED s) ->
              Error (Printf.sprintf "analysis subprocess terminated by signal %d" s)
          in

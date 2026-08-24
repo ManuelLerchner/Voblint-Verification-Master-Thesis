@@ -976,6 +976,7 @@ global_interpretation congruence_backward_domain:
       inv_plus_congruence inv_minus_congruence inv_times_congruence
   defines
     afilter_congruence = congruence_backward_domain.afilter
+    and feasible_congruence = congruence_backward_domain.feasible
     and bfilter_congruence = congruence_backward_domain.bfilter
     and afilter_congruence_st = congruence_backward_domain.afilter_st
     and bfilter_congruence_st = congruence_backward_domain.bfilter_st

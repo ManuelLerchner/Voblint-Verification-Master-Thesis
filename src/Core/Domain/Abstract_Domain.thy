@@ -988,6 +988,52 @@ fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
   | "afilter _ a \<sigma> = \<sigma>"
 
 text \<open>
+  \<open>feasible\<close> is the forward half of Goblint's two-phase branch handling, as a
+  predicate: evaluate \<open>e\<close> forward and ask whether the abstract value that
+  yields leaves the selected polarity possible at all. A bottom value denotes
+  no store, and a definite \<open>tobool\<close> answer disagreeing with \<open>pol\<close> rules the
+  polarity out; every other case keeps it open. Backward narrowing cannot
+  replace this test: a Boolean-valued subexpression in an operand position
+  inverts to a target \<open>afilter\<close> has no rule to push through a comparison node,
+  so the target is dropped and the state survives unrefined even where no state
+  satisfies the condition.
+
+  The leading \<open>is_bot\<close> test is not redundant with the \<open>tobool\<close> one. An
+  author's \<open>tobool\<close> is free to answer arbitrarily at its own domain's bottom
+  (every answer is vacuously sound there, since \<open>gamma bot = {}\<close>), so it need
+  not, and generally does not, agree across a bottom/non-bottom pair
+  \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Answering \<open>is_bot\<close> directly,
+  ahead of \<open>tobool\<close>, sidesteps that disagreement instead of relying on it, and
+  is what makes \<open>feasible_mono\<close> hold.
+\<close>
+
+definition feasible :: "exp => bool => 'a abs_state => bool" where
+  "feasible e pol \<sigma> =
+     (\<not> is_bot (aval_abs e \<sigma>) \<and> tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol))"
+
+text \<open>
+  Every state a concrete store witnesses is feasible for the polarity that
+  store takes: \<open>aval_abs_sound\<close> rules out the bottom case and \<open>tobool_sound\<close>
+  the disagreeing-answer case. This is what makes the gate's \<open>bot\<close> outcome
+  sound wherever it fires -- it fires only when no represented store exists.
+\<close>
+
+lemma feasible_of_concrete:
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (aval e s) = pol"
+  shows "feasible e pol \<sigma>"
+proof -
+  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
+  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have nb: "\<not> is_bot (aval_abs e \<sigma>)" using ea is_bot_correct by auto
+  have "tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol)"
+  proof
+    assume "tobool (aval_abs e \<sigma>) = Some (\<not> pol)"
+    then have "truthy (aval e s) = (\<not> pol)" using tobool_sound[OF _ ea] by simp
+    then show False using assms(2) by simp
+  qed
+  with nb show ?thesis by (simp add: feasible_def)
+qed
+text \<open>
   \<open>bfilter\<close> narrows a state under an assumed truth value of \<open>e\<close>: \<open>bfilter e
   True\<close> is \<open>assume e\<close>, \<open>bfilter e False\<close> is \<open>assume-not e\<close>. \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>
   distribute structurally (De Morgan, over \<open>\<squnion>\<close> for the disjunctive branch);
@@ -999,6 +1045,16 @@ text \<open>
   against the abstract constant \<open>0\<close> narrows \<open>e\<close>'s own target value, and
   \<open>afilter\<close> propagates that target through \<open>e\<close>'s structure. This reuses
   \<open>inv_eq\<close>/\<open>afilter\<close> rather than adding a new domain-author operator.
+
+  The two disjunctive cases -- \<open>Or _ _ True\<close> and \<open>And _ _ False\<close> -- gate each
+  side on \<open>feasible\<close> before joining, matching Goblint's \<open>inv_exp\<close>, which
+  refines the arms of a disjunction separately and drops one whose refinement
+  contradicts. Without the gate, a side no state satisfies still contributes
+  its own unrefined incoming state and the join discards what the other side
+  established: the empty target such a side inverts to is dropped wherever
+  \<open>afilter\<close> has no rule for the node carrying it, so the narrowing that would
+  have signalled the contradiction never happens. \<open>bot\<close> is the unit of \<open>\<squnion>\<close>,
+  so gating an infeasible side removes it from the join exactly.
 \<close>
 
 fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
@@ -1007,8 +1063,12 @@ fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
         in afilter e1 a1 (afilter e2 a2 \<sigma>))"
   | "bfilter (Not b) res \<sigma> = bfilter b (\<not> res) \<sigma>"
   | "bfilter (And b1 b2) True  \<sigma> = bfilter b1 True  (bfilter b2 True  \<sigma>)"
-  | "bfilter (And b1 b2) False \<sigma> = bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>"
-  | "bfilter (Or  b1 b2) True  \<sigma> = bfilter b1 True  \<sigma> \<squnion> bfilter b2 True  \<sigma>"
+  | "bfilter (And b1 b2) False \<sigma> =
+       (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
+       \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
+  | "bfilter (Or  b1 b2) True  \<sigma> =
+       (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
+       \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
   | "bfilter (Or  b1 b2) False \<sigma> = bfilter b1 False (bfilter b2 False \<sigma>)"
   | "bfilter (Eq  e1 e2) res  \<sigma> =
        (let (a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
@@ -1016,7 +1076,6 @@ fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
   | "bfilter e res \<sigma> =
        (let (a1, a2) = inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)
         in afilter e a1 \<sigma>)"
-
 lemma afilter_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
   shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
@@ -1156,22 +1215,28 @@ next
       have v1: "truthy (aval e1 s) = False" using b1F by simp
       have h: "s \<in> \<lbrakk>bfilter e1 False \<sigma>\<rbrakk>"
         using And.IH(1)[OF And.prems(1) v1] by simp
-      have sup1: "s \<in> \<lbrakk>bfilter e1 False \<sigma> \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub1[of "bfilter e1 False \<sigma>" "bfilter e2 False \<sigma>"] h]
-        by simp
-      show ?thesis using False sup1
-        using bfilter.simps(4) by presburger
-    next
+      have g: "feasible e1 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v1])
+      have sup1: "s \<in> \<lbrakk>bfilter e1 False \<sigma>
+                       \<squnion> (if feasible e2 False \<sigma> then bfilter e2 False \<sigma> else bot)\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1 h] .
+      have eqb: "bfilter (And e1 e2) res \<sigma>
+                   = bfilter e1 False \<sigma>
+                     \<squnion> (if feasible e2 False \<sigma> then bfilter e2 False \<sigma> else bot)"
+        using False g by simp
+      show ?thesis unfolding eqb by (rule sup1)    next
       case b1T: True
       have v2: "truthy (aval e2 s) = False" using disj b1T by simp
       have h: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
         using And.IH(2)[OF And.prems(1) v2] by simp
-      have sup2: "s \<in> \<lbrakk>bfilter e1 False \<sigma> \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub2[of "bfilter e2 False \<sigma>" "bfilter e1 False \<sigma>"] h]
-        by simp
-      show ?thesis using False sup2
-        using bfilter.simps(4) by presburger 
-    qed
+      have g: "feasible e2 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v2])
+      have sup2: "s \<in> \<lbrakk>(if feasible e1 False \<sigma> then bfilter e1 False \<sigma> else bot)
+                       \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2 h] .
+      have eqb: "bfilter (And e1 e2) res \<sigma>
+                   = (if feasible e1 False \<sigma> then bfilter e1 False \<sigma> else bot)
+                     \<squnion> bfilter e2 False \<sigma>"
+        using False g by simp
+      show ?thesis unfolding eqb by (rule sup2)    qed
   qed
 next
   case (Or e1 e2)
@@ -1184,22 +1249,28 @@ next
       have v1: "truthy (aval e1 s) = True" using b1T by simp
       have h: "s \<in> \<lbrakk>bfilter e1 True \<sigma>\<rbrakk>"
         using Or.IH(1)[OF Or.prems(1) v1] by simp
-      have sup1: "s \<in> \<lbrakk>bfilter e1 True \<sigma> \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub1[of "bfilter e1 True \<sigma>" "bfilter e2 True \<sigma>"] h]
-        by simp
-      show ?thesis using True sup1
-        using bfilter.simps(5) by presburger 
-    next
+      have g: "feasible e1 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v1])
+      have sup1: "s \<in> \<lbrakk>bfilter e1 True \<sigma>
+                       \<squnion> (if feasible e2 True \<sigma> then bfilter e2 True \<sigma> else bot)\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub1 h] .
+      have eqb: "bfilter (Or e1 e2) res \<sigma>
+                   = bfilter e1 True \<sigma>
+                     \<squnion> (if feasible e2 True \<sigma> then bfilter e2 True \<sigma> else bot)"
+        using True g by simp
+      show ?thesis unfolding eqb by (rule sup1)    next
       case b1F: False
       have v2: "truthy (aval e2 s) = True" using disj b1F by simp
       have h: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
         using Or.IH(2)[OF Or.prems(1) v2] by simp
-      have sup2: "s \<in> \<lbrakk>bfilter e1 True \<sigma> \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
-        using subsetD[OF gamma_state_sup_ub2[of "bfilter e2 True \<sigma>" "bfilter e1 True \<sigma>"] h]
-        by simp
-      show ?thesis using True sup2
-        using bfilter.simps(5) by presburger
-    qed
+      have g: "feasible e2 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v2])
+      have sup2: "s \<in> \<lbrakk>(if feasible e1 True \<sigma> then bfilter e1 True \<sigma> else bot)
+                       \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
+        using subsetD[OF gamma_state_sup_ub2 h] .
+      have eqb: "bfilter (Or e1 e2) res \<sigma>
+                   = (if feasible e1 True \<sigma> then bfilter e1 True \<sigma> else bot)
+                     \<squnion> bfilter e2 True \<sigma>"
+        using True g by simp
+      show ?thesis unfolding eqb by (rule sup2)    qed
   next
     case False
     have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
@@ -1208,7 +1279,7 @@ next
       using Or.IH(2)[OF Or.prems(1) v2] by simp
     show ?thesis
       using Or.IH(1)[OF gs2 v1] by (simp add: False)
-  qed
+      qed
 next
   case (Less e1 e2)
   obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
@@ -1242,84 +1313,73 @@ next
 qed
 
 text \<open>
-  \<open>branch_lifted\<close> is the canonical Goblint-aligned branch semantics: a forward
-  \<open>tobool\<close> feasibility check ahead of \<open>bfilter\<close>, matching \<open>Base.branch\<close>'s
-  \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>. A definite
-  contradiction between \<open>tobool\<close>'s answer and \<open>pol\<close> denotes \<open>Bot\<close> -- no
-  concrete successor, matching Goblint's \<open>Deadcode\<close> as an outer control-flow
-  fact rather than a value of the domain -- while every other case narrows via
-  \<open>bfilter\<close> and returns \<open>Lifted\<close>. \<open>tobool\<close>'s definite answer, when present,
-  is exactly \<open>truthy\<close> of every concrete value \<open>aval_abs e \<sigma>\<close> represents;
-  \<open>truthy (aval e s) = pol\<close> for a represented \<open>s\<close> then forces that answer
-  to equal \<open>pol\<close>, so the \<open>Bot\<close> case below is exercised only when no
-  represented \<open>s\<close> exists at all.
+  \<open>branch_lifted\<close> is the canonical Goblint-aligned branch semantics: the
+  forward \<open>feasible\<close> gate on the whole condition ahead of \<open>bfilter\<close>, matching
+  \<open>Base.branch\<close>'s \<open>eval_rv\<close> / \<open>to_bool\<close> dead-code gate ahead of \<open>invariant\<close>.
+  An infeasible condition denotes \<open>Bot\<close> -- no concrete successor, matching
+  Goblint's \<open>Deadcode\<close> as an outer control-flow fact rather than a value of the
+  domain -- while every other case narrows via \<open>bfilter\<close> and returns
+  \<open>Lifted\<close>. \<open>tobool\<close>'s definite answer, when present, is exactly \<open>truthy\<close> of
+  every concrete value \<open>aval_abs e \<sigma>\<close> represents; \<open>truthy (aval e s) = pol\<close>
+  for a represented \<open>s\<close> then forces that answer to equal \<open>pol\<close>, so the \<open>Bot\<close>
+  case below is exercised only when no represented \<open>s\<close> exists at all.
 
-  The leading \<open>is_bot (aval_abs e \<sigma>)\<close> guard is not a separate soundness
-  case -- \<open>aval_abs_sound\<close> already makes it unreachable whenever \<open>\<sigma>\<close>
-  represents anything, so \<open>branch_lifted_sound\<close> discharges it the same way
-  as the \<open>tobool\<close> disagreement case. It exists for monotonicity: an
-  author's \<open>tobool\<close> is free to answer arbitrarily at its own domain's
-  bottom (every answer is vacuously sound there, since \<open>gamma bot = {}\<close>),
-  so \<open>tobool\<close> need not, and generally does not, agree across a
-  bottom/non-bottom pair \<open>\<sigma>1 \<le> \<sigma>2\<close> the way \<open>tobool_mono\<close> requires. Routing
-  \<open>is_bot\<close> itself to \<open>Bot\<close> directly, ahead of \<open>tobool\<close>, sidesteps that
-  disagreement instead of relying on it.
+  It is the same gate \<open>bfilter\<close> applies per disjunct inside its two join cases,
+  here run on the whole condition -- which is what makes it a control-flow fact
+  rather than a narrowing.
 
   \<open>branch\<close> is the plain-\<open>abs_state\<close> projection of \<open>branch_lifted\<close>, used by
   \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>) and the
   executable mirror: it collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that
-  never needs to
-  distinguish "no successor" from "successor whose store is bottom" can keep
-  working with plain \<open>abs_state\<close>. The routed D/G pipeline instead consumes
-  \<open>branch_lifted\<close> directly, so that a dead branch never has to be
-  reconstructed as a whole-state-bottom value indistinguishable from an
+  never needs to distinguish "no successor" from "successor whose store is
+  bottom" can keep working with plain \<open>abs_state\<close>. The routed D/G pipeline
+  instead consumes \<open>branch_lifted\<close> directly, so that a dead branch never has to
+  be reconstructed as a whole-state-bottom value indistinguishable from an
   ordinary local/global-restricted result.
 \<close>
 
 definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
-  "branch_lifted e pol \<sigma> =
-     (if is_bot (aval_abs e \<sigma>) then Bot
-      else case tobool (aval_abs e \<sigma>) of
-        Some c \<Rightarrow> if c = pol then Lifted (bfilter e pol \<sigma>) else Bot
-      | None \<Rightarrow> Lifted (bfilter e pol \<sigma>))"
+  "branch_lifted e pol \<sigma> = (if feasible e pol \<sigma> then Lifted (bfilter e pol \<sigma>) else Bot)"
 
 definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
   "branch e pol \<sigma> = (case branch_lifted e pol \<sigma> of Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>')"
 
 text \<open>
-  The original case-split shape, recovered as a lemma rather than the
-  primitive definition: callers reasoning about \<open>branch\<close> at the plain
-  \<open>abs_state\<close> level (\<open>domain_transfer\<close>'s \<open>tf_branch\<close> field, the executable
-  mirror) unfold through this instead of \<open>branch_lifted\<close>.
+  The plain-state case split, recovered as a lemma rather than the primitive
+  definition: callers reasoning about \<open>branch\<close> at the plain \<open>abs_state\<close> level
+  (\<open>domain_transfer\<close>'s \<open>tf_branch\<close> field, the executable mirror) unfold through
+  this instead of \<open>branch_lifted\<close>.
 \<close>
 
 lemma branch_unfold:
-  "branch e pol \<sigma> =
-     (if is_bot (aval_abs e \<sigma>) then bot
-      else case tobool (aval_abs e \<sigma>) of
-        Some c \<Rightarrow> if c = pol then bfilter e pol \<sigma> else bot
-      | None \<Rightarrow> bfilter e pol \<sigma>)"
-  unfolding branch_def branch_lifted_def by (simp split: option.splits)
+  "branch e pol \<sigma> = (if feasible e pol \<sigma> then bfilter e pol \<sigma> else bot)"
+  unfolding branch_def branch_lifted_def by simp
 
+text \<open>
+  \<open>bfilter\<close>'s two join cases, restated through \<open>branch\<close>: each disjunct is
+  narrowed by exactly the operator the branch transfer applies to a whole
+  condition, and the results are joined. This is the shape Goblint's \<open>inv_exp\<close>
+  has for \<open>LOr\<close> -- refine each arm, drop an arm whose refinement raises
+  \<open>Deadcode\<close> -- with \<open>bot\<close> in place of the exception, since \<open>bot\<close> is the unit
+  of \<open>\<squnion>\<close>. Downstream mirrors and their correctness proofs cite these rather
+  than re-deriving the gate from \<open>bfilter\<close>'s primitive equations.
+\<close>
+
+lemma bfilter_And_False_branch:
+  "bfilter (And b1 b2) False \<sigma> = branch b1 False \<sigma> \<squnion> branch b2 False \<sigma>"
+  by (simp add: branch_unfold)
+
+lemma bfilter_Or_True_branch:
+  "bfilter (Or b1 b2) True \<sigma> = branch b1 True \<sigma> \<squnion> branch b2 True \<sigma>"
+  by (simp add: branch_unfold)
 lemma branch_lifted_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
   shows "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)"
 proof -
-  have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
-  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have not_bot: "\<not> is_bot (aval_abs e \<sigma>)" using ea is_bot_correct by auto
-  show ?thesis
-  proof (cases "tobool (aval_abs e \<sigma>)")
-    case None
-    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_lifted_def)
-  next
-    case (Some c)
-    have "truthy (aval e s) = c" using tobool_sound[OF Some ea] .
-    with assms(2) have "c = pol" by simp
-    then show ?thesis using bfilter_sound[OF assms] not_bot by (simp add: branch_lifted_def Some)
-  qed
+  have "feasible e pol \<sigma>" by (rule feasible_of_concrete[OF assms])
+  then show ?thesis
+    using bfilter_sound[OF assms] by (simp add: branch_lifted_def)
 qed
-
 lemma branch_sound:
   assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
   shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
@@ -1685,6 +1745,52 @@ proof -
   show ?thesis by (rule afilter_mono[OF iv assms])
 qed
 
+text \<open>
+  The forward gate is monotone in the direction its call sites need: a state
+  whose forward value already rules the selected polarity out cannot become
+  feasible by shrinking. \<open>is_bot_mono\<close> settles the bottom case and
+  \<open>tobool_mono\<close> the definite-answer case. \<open>tobool_mono\<close> explicitly excludes
+  bottom operands -- an author's \<open>tobool\<close> may answer arbitrarily there, since
+  \<open>gamma bot = {}\<close> makes every answer vacuously sound -- which is why
+  \<open>feasible\<close> tests \<open>is_bot\<close> first rather than relying on \<open>tobool\<close> to agree
+  across a bottom/non-bottom pair.
+\<close>
+
+lemma feasible_mono:
+  assumes "sigma1 \<le> sigma2" and "feasible e pol sigma1"
+  shows "feasible e pol sigma2"
+proof -
+  have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms(1)])
+  have nb1: "\<not> is_bot (aval_abs e sigma1)" using assms(2) by (simp add: feasible_def)
+  have nb2: "\<not> is_bot (aval_abs e sigma2)" using nb1 is_bot_mono[OF v] by blast
+  have "tobool (aval_abs e sigma2) \<noteq> Some (\<not> pol)"
+  proof
+    assume "tobool (aval_abs e sigma2) = Some (\<not> pol)"
+    then have "tobool (aval_abs e sigma1) = Some (\<not> pol)"
+      using tobool_mono[OF nb1 v] by simp
+    then show False using assms(2) by (simp add: feasible_def)
+  qed
+  with nb2 show ?thesis by (simp add: feasible_def)
+qed
+
+text \<open>
+  Monotonicity of a single gated disjunct -- the shape \<open>bfilter\<close>'s two join
+  cases need. An infeasible disjunct contributes \<open>bot\<close>, which is below
+  everything; a feasible one stays feasible in the larger state.
+\<close>
+
+lemma gate_mono:
+  assumes "sigma1 \<le> sigma2" and "bfilter e pol sigma1 \<le> bfilter e pol sigma2"
+  shows "(if feasible e pol sigma1 then bfilter e pol sigma1 else bot)
+           \<le> (if feasible e pol sigma2 then bfilter e pol sigma2 else bot)"
+proof (cases "feasible e pol sigma1")
+  case True
+  have "feasible e pol sigma2" by (rule feasible_mono[OF assms(1) True])
+  with True assms(2) show ?thesis by simp
+next
+  case False
+  then show ?thesis by simp
+qed
 lemma bfilter_mono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
@@ -1720,29 +1826,41 @@ next
     thus ?thesis using True by simp
   next
     case False
-    have resF: "res = False" using False by simp
-    have c1: "bfilter b1 False \<sigma>1 \<le> bfilter b1 False \<sigma>2" by (rule And.IH(1)[OF And.prems])
-    have c2: "bfilter b2 False \<sigma>1 \<le> bfilter b2 False \<sigma>2" by (rule And.IH(2)[OF And.prems])
-    have e1: "bfilter (And b1 b2) res \<sigma>1 = bfilter b1 False \<sigma>1 \<squnion> bfilter b2 False \<sigma>1"
-      using resF by simp
-    have e2: "bfilter (And b1 b2) res \<sigma>2 = bfilter b1 False \<sigma>2 \<squnion> bfilter b2 False \<sigma>2"
-      using resF by simp
-    show ?thesis unfolding e1 e2 by (rule sup_mono[OF c1 c2])
-  qed
+    have c1: "(if feasible b1 False \<sigma>1 then bfilter b1 False \<sigma>1 else bot)
+                \<le> (if feasible b1 False \<sigma>2 then bfilter b1 False \<sigma>2 else bot)"
+      by (rule gate_mono[OF And.prems And.IH(1)[OF And.prems]])
+    have c2: "(if feasible b2 False \<sigma>1 then bfilter b2 False \<sigma>1 else bot)
+                \<le> (if feasible b2 False \<sigma>2 then bfilter b2 False \<sigma>2 else bot)"
+      by (rule gate_mono[OF And.prems And.IH(2)[OF And.prems]])
+    have eq1: "bfilter (And b1 b2) res \<sigma>1
+                 = (if feasible b1 False \<sigma>1 then bfilter b1 False \<sigma>1 else bot)
+                   \<squnion> (if feasible b2 False \<sigma>1 then bfilter b2 False \<sigma>1 else bot)"
+      using False by simp
+    have eq2: "bfilter (And b1 b2) res \<sigma>2
+                 = (if feasible b1 False \<sigma>2 then bfilter b1 False \<sigma>2 else bot)
+                   \<squnion> (if feasible b2 False \<sigma>2 then bfilter b2 False \<sigma>2 else bot)"
+      using False by simp
+    show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])  qed
 next
   case (Or b1 b2)
   show ?case
   proof (cases res)
     case True
-    have resT: "res = True" using True by simp
-    have c1: "bfilter b1 True \<sigma>1 \<le> bfilter b1 True \<sigma>2" by (rule Or.IH(1)[OF Or.prems])
-    have c2: "bfilter b2 True \<sigma>1 \<le> bfilter b2 True \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
-    have e1: "bfilter (Or b1 b2) res \<sigma>1 = bfilter b1 True \<sigma>1 \<squnion> bfilter b2 True \<sigma>1"
-      using resT by simp
-    have e2: "bfilter (Or b1 b2) res \<sigma>2 = bfilter b1 True \<sigma>2 \<squnion> bfilter b2 True \<sigma>2"
-      using resT by simp
-    show ?thesis unfolding e1 e2 by (rule sup_mono[OF c1 c2])
-  next
+    have c1: "(if feasible b1 True \<sigma>1 then bfilter b1 True \<sigma>1 else bot)
+                \<le> (if feasible b1 True \<sigma>2 then bfilter b1 True \<sigma>2 else bot)"
+      by (rule gate_mono[OF Or.prems Or.IH(1)[OF Or.prems]])
+    have c2: "(if feasible b2 True \<sigma>1 then bfilter b2 True \<sigma>1 else bot)
+                \<le> (if feasible b2 True \<sigma>2 then bfilter b2 True \<sigma>2 else bot)"
+      by (rule gate_mono[OF Or.prems Or.IH(2)[OF Or.prems]])
+    have eq1: "bfilter (Or b1 b2) res \<sigma>1
+                 = (if feasible b1 True \<sigma>1 then bfilter b1 True \<sigma>1 else bot)
+                   \<squnion> (if feasible b2 True \<sigma>1 then bfilter b2 True \<sigma>1 else bot)"
+      using True by simp
+    have eq2: "bfilter (Or b1 b2) res \<sigma>2
+                 = (if feasible b1 True \<sigma>2 then bfilter b1 True \<sigma>2 else bot)
+                   \<squnion> (if feasible b2 True \<sigma>2 then bfilter b2 True \<sigma>2 else bot)"
+      using True by simp
+    show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])  next
     case False
     have c: "bfilter b2 False \<sigma>1 \<le> bfilter b2 False \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
     have "bfilter b1 False (bfilter b2 False \<sigma>1) \<le> bfilter b1 False (bfilter b2 False \<sigma>2)"
@@ -1780,65 +1898,24 @@ next
 qed
 
 text \<open>
-  \<open>branch_lifted\<close>'s forward gate rests on \<open>tobool\<close>, and \<open>tobool_mono\<close>
-  explicitly excludes bottom operands -- an author's \<open>tobool\<close> may answer
-  arbitrarily there, since \<open>gamma bot = {}\<close> makes every answer vacuously
-  sound. Routing \<open>is_bot (aval_abs e \<sigma>)\<close> to \<open>Bot\<close> directly
-  (\<open>branch_lifted\<close>'s own leading guard) is what keeps this total: whichever
-  of \<open>\<sigma>1\<close>/\<open>\<sigma>2\<close> has a bottom \<open>aval_abs\<close> value collapses to \<open>Bot\<close>
-  immediately, without needing \<open>tobool\<close> to say anything about it.
-  \<open>branch_mono\<close> is then a direct consequence: \<open>branch\<close>'s
-  \<open>Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>'\<close> projection is itself monotone (\<open>Bot\<close> is
-  least, so it can only project below whatever the \<open>Lifted\<close> side projects to).
+  \<open>branch_lifted\<close>'s gate is the same \<open>feasible\<close> test \<open>bfilter\<close>'s join cases
+  apply per disjunct, so its monotonicity is \<open>feasible_mono\<close> and
+  \<open>bfilter_mono\<close> together. \<open>branch_mono\<close> follows: \<open>branch\<close>'s
+  \<open>Bot => bot | Lifted s => s\<close> projection is itself monotone (\<open>Bot\<close> is least,
+  so it can only project below whatever the \<open>Lifted\<close> side projects to).
 \<close>
-
 lemma branch_lifted_mono:
   assumes "sigma1 \<le> sigma2"
   shows "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
-proof (cases "is_bot (aval_abs e sigma2)")
-  case True
-  have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
-  from True have "is_bot (aval_abs e sigma1)" using is_bot_mono[OF v] by simp
-  with True show ?thesis by (simp add: branch_lifted_def)
+proof (cases "feasible e pol sigma1")
+  case False
+  then show ?thesis by (simp add: branch_lifted_def)
 next
-  case not_bot2: False
-  have below_bfilter: "\<And>sigma. branch_lifted e pol sigma \<le> Lifted (bfilter e pol sigma)"
-    unfolding branch_lifted_def by (auto split: option.splits)
-  show ?thesis
-  proof (cases "tobool (aval_abs e sigma2)")
-    case None
-    have eq2: "branch_lifted e pol sigma2 = Lifted (bfilter e pol sigma2)"
-      using None not_bot2 by (simp add: branch_lifted_def)
-    show ?thesis
-      unfolding eq2
-      by (rule order_trans[OF below_bfilter[of sigma1]]) (simp add: bfilter_mono[OF assms])
-  next
-    case (Some c2)
-    show ?thesis
-    proof (cases "c2 = pol")
-      case True
-      have eq2: "branch_lifted e pol sigma2 = Lifted (bfilter e pol sigma2)"
-        using Some True not_bot2 by (simp add: branch_lifted_def)
-      show ?thesis
-        unfolding eq2
-        by (rule order_trans[OF below_bfilter[of sigma1]]) (simp add: bfilter_mono[OF assms])
-    next
-      case False
-      show ?thesis
-      proof (cases "is_bot (aval_abs e sigma1)")
-        case True
-        then show ?thesis by (simp add: branch_lifted_def)
-      next
-        case not_bot1: False
-        have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms])
-        have "tobool (aval_abs e sigma1) = Some c2"
-          using tobool_mono[OF not_bot1 v Some] .
-        with False not_bot1 show ?thesis by (simp add: branch_lifted_def)
-      qed
-    qed
-  qed
+  case True
+  have "feasible e pol sigma2" by (rule feasible_mono[OF assms True])
+  with True show ?thesis
+    by (simp add: branch_lifted_def bfilter_mono[OF assms])
 qed
-
 lemma branch_mono:
   assumes "sigma1 \<le> sigma2"
   shows "branch e pol sigma1 \<le> branch e pol sigma2"
@@ -1955,9 +2032,13 @@ next
     finally show ?thesis using True by simp
   next
     case False
-    have c1: "bfilter b1 False \<sigma> \<le> \<sigma>" by (rule And.IH(1))
-    have c2: "bfilter b2 False \<sigma> \<le> \<sigma>" by (rule And.IH(2))
-    have e1: "bfilter (And b1 b2) res \<sigma> = bfilter b1 False \<sigma> \<squnion> bfilter b2 False \<sigma>"
+    have c1: "(if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot) \<le> \<sigma>"
+      using And.IH(1) by simp
+    have c2: "(if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot) \<le> \<sigma>"
+      using And.IH(2) by simp
+    have e1: "bfilter (And b1 b2) res \<sigma>
+                = (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
+                  \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
       using False by simp
     show ?thesis unfolding e1 by (rule sup_least[OF c1 c2])
   qed
@@ -1966,9 +2047,13 @@ next
   show ?case
   proof (cases res)
     case True
-    have c1: "bfilter b1 True \<sigma> \<le> \<sigma>" by (rule Or.IH(1))
-    have c2: "bfilter b2 True \<sigma> \<le> \<sigma>" by (rule Or.IH(2))
-    have e1: "bfilter (Or b1 b2) res \<sigma> = bfilter b1 True \<sigma> \<squnion> bfilter b2 True \<sigma>"
+    have c1: "(if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot) \<le> \<sigma>"
+      using Or.IH(1) by simp
+    have c2: "(if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot) \<le> \<sigma>"
+      using Or.IH(2) by simp
+    have e1: "bfilter (Or b1 b2) res \<sigma>
+                = (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
+                  \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
       using True by simp
     show ?thesis unfolding e1 by (rule sup_least[OF c1 c2])
   next

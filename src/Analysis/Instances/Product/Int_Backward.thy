@@ -1060,6 +1060,7 @@ global_interpretation int_dom_backward_never:
       inv_plus_int_dom_never inv_minus_int_dom_never inv_times_int_dom_never
   defines
     afilter_int_dom_never = int_dom_backward_never.afilter
+    and feasible_int_dom_never = int_dom_backward_never.feasible
     and bfilter_int_dom_never = int_dom_backward_never.bfilter
     and branch_int_dom_never = int_dom_backward_never.branch
     and branch_lifted_int_dom_never = int_dom_backward_never.branch_lifted
@@ -1249,6 +1250,7 @@ global_interpretation int_dom_backward_once:
       inv_plus_int_dom_once inv_minus_int_dom_once inv_times_int_dom_once
   defines
     afilter_int_dom_once = int_dom_backward_once.afilter
+    and feasible_int_dom_once = int_dom_backward_once.feasible
     and bfilter_int_dom_once = int_dom_backward_once.bfilter
     and branch_int_dom_once = int_dom_backward_once.branch
     and branch_lifted_int_dom_once = int_dom_backward_once.branch_lifted
@@ -1438,6 +1440,7 @@ global_interpretation int_dom_backward_fixpoint:
       inv_plus_int_dom_fixpoint inv_minus_int_dom_fixpoint inv_times_int_dom_fixpoint
   defines
     afilter_int_dom_fixpoint = int_dom_backward_fixpoint.afilter
+    and feasible_int_dom_fixpoint = int_dom_backward_fixpoint.feasible
     and bfilter_int_dom_fixpoint = int_dom_backward_fixpoint.bfilter
     and branch_int_dom_fixpoint = int_dom_backward_fixpoint.branch
     and branch_lifted_int_dom_fixpoint = int_dom_backward_fixpoint.branch_lifted

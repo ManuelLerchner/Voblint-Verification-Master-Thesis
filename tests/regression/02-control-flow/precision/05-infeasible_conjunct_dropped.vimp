@@ -1,0 +1,26 @@
+// PARAM: --analysis interval
+// The conjunctive half of the branch gate, dual to
+// 04-infeasible_disjunct_dropped.vimp. Concretely "y < 1" holds on the
+// else-branch: x is 5, so "(x < 0) == 0" is true in every state, and the branch
+// is taken only when the second conjunct is false.
+//
+// bfilter's "And _ _ False" case joins the two sides -- assuming the negation of
+// a conjunction rules out one conjunct or the other -- and gates each side
+// first. The first conjunct is infeasible for the assumed polarity, since it is
+// definitely true, so that side contributes bot instead of its own unrefined
+// incoming state and the join keeps what the second side established. Without
+// the gate the first side would contribute y unconstrained: Interval's
+// "inv_eq False" is the sound identity, so the Eq inversion narrows nothing,
+// and the join would discard "y <= 0".
+//
+// The then-branch is the sequential "And _ _ True" case, where both conjuncts
+// are narrowed in turn and no join is involved.
+void main() {
+  x := 5;
+  y := __voblint_nondet_int();
+  if ((x < 0) == 0 && 0 < y) {
+    __voblint_check(0 < y) // PROVED
+  } else {
+    __voblint_check(y < 1) // PROVED
+  }
+}

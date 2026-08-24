@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// The branch transfer's forward feasibility gate, not backward narrowing, is
+// what makes this branch dead. Backward narrowing alone cannot: bfilter's Eq
+// case inverts "(x < 0) == 1" to an empty target for its left operand, but
+// afilter has no narrowing rule for a comparison node, so the empty target is
+// dropped and the incoming state survives unchanged. The gate instead
+// evaluates the whole condition forward -- interval_tobool of [0,0] answers
+// Some False -- and contradicts the selected polarity, so the then-branch has
+// no successor at all and its check never reaches the report.
+// Example_Guard_Refinement.thy pins both halves of that comparison directly on
+// the abstract state.
+void main() {
+  x := 5;
+  if ((x < 0) == 1) {
+    __voblint_check(false) // NOWARN (unreachable)
+  } else {
+    __voblint_check(true) // PROVED
+  }
+}

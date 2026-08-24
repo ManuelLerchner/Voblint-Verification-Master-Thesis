@@ -1,0 +1,32 @@
+// PARAM: --analysis interval
+// "0 < y" holds on the then-branch: x is 5, so the second disjunct
+// "(x < 0) == 1" is false in every state, and the branch is taken only when the
+// first disjunct is true.
+//
+// Refining a disjunction joins both sides, so the analyzer sees it only because
+// each side is gated first: bfilter's "Or _ _ True" case narrows each disjunct
+// with the same feasibility test the branch transfer applies to a whole
+// condition, and an infeasible side then contributes bot -- the unit of the
+// join -- instead of its own unrefined incoming state. Without that gate the
+// second disjunct would contribute y unconstrained and the join would discard
+// what the first disjunct established. The branch transfer's own gate cannot
+// substitute for it: it reads the whole condition, whose abstract value is
+// [0,1], and so decides nothing.
+//
+// The else-branch assumes neither disjunct, which bfilter's "Or _ _ False" case
+// narrows sequentially rather than by a join -- a different path through the
+// same operator, and one the gate plays no part in.
+//
+// Example_Guard_Refinement.thy pins the then-branch result on the abstract state
+// (bfilter_or_drops_infeasible_disjunct) and states the join identity
+// (bfilter_or_is_the_gated_join). The conjunctive half of the gate is
+// 05-infeasible_conjunct_dropped.vimp.
+void main() {
+  x := 5;
+  y := __voblint_nondet_int();
+  if (0 < y || (x < 0) == 1) {
+    __voblint_check(0 < y) // PROVED
+  } else {
+    __voblint_check(y < 1) // PROVED
+  }
+}

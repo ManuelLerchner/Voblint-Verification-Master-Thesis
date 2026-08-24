@@ -3654,23 +3654,6 @@ let rec fmdom (Fmap_of_list m) = fimage fst (fset_of_list m);;
 
 let rec fmupd _A k v m = fmadd _A m (Fmap_of_list [(k, v)]);;
 
-let rec interval_eq_false
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
-
-let rec interval_eq_true
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    not (less_eq_eint l1 u1) ||
-      (not (less_eq_eint l2 u2) ||
-        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
-
-let rec interval_tobool
-  a = (if interval_eq_false a (Ivl (Fin zero_inta, Fin zero_inta))
-        then Some true
-        else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
-               then Some false else None));;
-
 let rec lookup_resolved_st_q _A (Abs_resolved_st x) = lookup_resolved_st _A x;;
 
 let rec location_of
@@ -3755,6 +3738,23 @@ let rec plus_ivl
     (let (Ivl (a, b), Ivl (c, d)) =
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (plus_eint a c, plus_eint b d)));;
+
+let rec interval_eq_false
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) || (less_eint u1 l2 || less_eint u2 l1));;
+
+let rec interval_eq_true
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    not (less_eq_eint l1 u1) ||
+      (not (less_eq_eint l2 u2) ||
+        equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
+
+let rec interval_tobool
+  a = (if interval_eq_false a (Ivl (Fin zero_inta, Fin zero_inta))
+        then Some true
+        else (if interval_eq_true a (Ivl (Fin zero_inta, Fin zero_inta))
+               then Some false else None));;
 
 let rec interval_eqb
   a b = (if interval_eq_true a b then Some true
@@ -3885,6 +3885,12 @@ let rec inv_less_ivl
         (inf_ivl (Ivl (l1, u1)) (Ivl (l2, PlusInf)),
           inf_ivl (Ivl (l2, u2)) (Ivl (MinInf, u1)));;
 
+let rec feasible_ivl
+  e pol sigma =
+    not (is_bot_ivl (aval_ivl e sigma)) &&
+      not (equal_option equal_bool (interval_tobool (aval_ivl e sigma))
+            (Some (not pol)));;
+
 let rec inv_eq_ivl
   x0 a1 a2 = match x0, a1, a2 with
     true, a1, a2 -> (meet_ivl a1 a2, meet_ivl a1 a2)
@@ -3903,10 +3909,16 @@ let rec bfilter_ivl_st
         bfilter_ivl_st gs b1 true (bfilter_ivl_st gs b2 true s)
     | gs, And (b1, b2), false, s ->
         sup_resolved_st_qa bounded_semilattice_sup_bot_ivl
-          (bfilter_ivl_st gs b1 false s) (bfilter_ivl_st gs b2 false s)
+          (if feasible_ivl b1 false (fun_of_resolved_st_q_for bot_ivl gs s)
+            then bfilter_ivl_st gs b1 false s else bot_resolved_st_qa bot_ivl)
+          (if feasible_ivl b2 false (fun_of_resolved_st_q_for bot_ivl gs s)
+            then bfilter_ivl_st gs b2 false s else bot_resolved_st_qa bot_ivl)
     | gs, Or (b1, b2), true, s ->
         sup_resolved_st_qa bounded_semilattice_sup_bot_ivl
-          (bfilter_ivl_st gs b1 true s) (bfilter_ivl_st gs b2 true s)
+          (if feasible_ivl b1 true (fun_of_resolved_st_q_for bot_ivl gs s)
+            then bfilter_ivl_st gs b1 true s else bot_resolved_st_qa bot_ivl)
+          (if feasible_ivl b2 true (fun_of_resolved_st_q_for bot_ivl gs s)
+            then bfilter_ivl_st gs b2 true s else bot_resolved_st_qa bot_ivl)
     | gs, Or (b1, b2), false, s ->
         bfilter_ivl_st gs b1 false (bfilter_ivl_st gs b2 false s)
     | gs, Eq (e1, e2), res, s ->
@@ -3953,15 +3965,8 @@ let rec bfilter_ivl_st
 
 let rec branch_ivl_st
   gs e pol s =
-    (if is_bot_ivl (aval_ivl e (fun_of_resolved_st_q_for bot_ivl gs s))
-      then bot_resolved_st_qa bot_ivl
-      else (match
-             interval_tobool
-               (aval_ivl e (fun_of_resolved_st_q_for bot_ivl gs s))
-             with None -> bfilter_ivl_st gs e pol s
-             | Some c ->
-               (if equal_boola c pol then bfilter_ivl_st gs e pol s
-                 else bot_resolved_st_qa bot_ivl)));;
+    (if feasible_ivl e pol (fun_of_resolved_st_q_for bot_ivl gs s)
+      then bfilter_ivl_st gs e pol s else bot_resolved_st_qa bot_ivl);;
 
 let ivl_ops : (ivl, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_ivl, branch_ivl_st, ivl_top, ());;
@@ -4301,6 +4306,12 @@ let rec inv_less_sign
            in
           (a1a, a));;
 
+let rec feasible_sign
+  e pol sigma =
+    not (is_bot_sign (aval_sign e sigma)) &&
+      not (equal_option equal_bool (sign_tobool (aval_sign e sigma))
+            (Some (not pol)));;
+
 let rec inv_eq_sign
   x0 a1 a2 = match x0, a1, a2 with
     true, a1, a2 -> (meet_sign a1 a2, meet_sign a1 a2)
@@ -4335,10 +4346,16 @@ let rec bfilter_sign_st
         bfilter_sign_st gs b1 true (bfilter_sign_st gs b2 true s)
     | gs, And (b1, b2), false, s ->
         sup_resolved_st_qa bounded_semilattice_sup_bot_sign
-          (bfilter_sign_st gs b1 false s) (bfilter_sign_st gs b2 false s)
+          (if feasible_sign b1 false (fun_of_resolved_st_q_for bot_sign gs s)
+            then bfilter_sign_st gs b1 false s else bot_resolved_st_qa bot_sign)
+          (if feasible_sign b2 false (fun_of_resolved_st_q_for bot_sign gs s)
+            then bfilter_sign_st gs b2 false s else bot_resolved_st_qa bot_sign)
     | gs, Or (b1, b2), true, s ->
         sup_resolved_st_qa bounded_semilattice_sup_bot_sign
-          (bfilter_sign_st gs b1 true s) (bfilter_sign_st gs b2 true s)
+          (if feasible_sign b1 true (fun_of_resolved_st_q_for bot_sign gs s)
+            then bfilter_sign_st gs b1 true s else bot_resolved_st_qa bot_sign)
+          (if feasible_sign b2 true (fun_of_resolved_st_q_for bot_sign gs s)
+            then bfilter_sign_st gs b2 true s else bot_resolved_st_qa bot_sign)
     | gs, Or (b1, b2), false, s ->
         bfilter_sign_st gs b1 false (bfilter_sign_st gs b2 false s)
     | gs, Eq (e1, e2), res, s ->
@@ -4388,14 +4405,8 @@ let rec bfilter_sign_st
 
 let rec branch_sign_st
   gs e pol s =
-    (if is_bot_sign (aval_sign e (fun_of_resolved_st_q_for bot_sign gs s))
-      then bot_resolved_st_qa bot_sign
-      else (match
-             sign_tobool (aval_sign e (fun_of_resolved_st_q_for bot_sign gs s))
-             with None -> bfilter_sign_st gs e pol s
-             | Some c ->
-               (if equal_boola c pol then bfilter_sign_st gs e pol s
-                 else bot_resolved_st_qa bot_sign)));;
+    (if feasible_sign e pol (fun_of_resolved_st_q_for bot_sign gs s)
+      then bfilter_sign_st gs e pol s else bot_resolved_st_qa bot_sign);;
 
 let sign_ops : (sign, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_sign, branch_sign_st, STop, ());;
@@ -5968,6 +5979,14 @@ let rec afilter_int_dom_once_st
     | gs, And (v, va), a, s -> s
     | gs, Or (v, va), a, s -> s;;
 
+let rec feasible_int_dom_once
+  e pol sigma =
+    not (is_bot_int_dom_ext int_dom_record_lattice_unit
+          (aval_int_dom Refine_Once e sigma)) &&
+      not (equal_option equal_bool
+            (int_dom_tobool (aval_int_dom Refine_Once e sigma))
+            (Some (not pol)));;
+
 let rec inv_eq_congruence
   x0 a b = match x0, a, b with
     true, a, b -> (intersect_congruence a b, intersect_congruence a b)
@@ -6012,13 +6031,33 @@ let rec bfilter_int_dom_once_st
     | gs, And (b1, b2), false, s ->
         sup_resolved_st_qa
           (bounded_semilattice_sup_bot_int_dom_ext int_dom_record_lattice_unit)
-          (bfilter_int_dom_once_st gs b1 false s)
-          (bfilter_int_dom_once_st gs b2 false s)
+          (if feasible_int_dom_once b1 false
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_once_st gs b1 false s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
+          (if feasible_int_dom_once b2 false
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_once_st gs b2 false s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
     | gs, Or (b1, b2), true, s ->
         sup_resolved_st_qa
           (bounded_semilattice_sup_bot_int_dom_ext int_dom_record_lattice_unit)
-          (bfilter_int_dom_once_st gs b1 true s)
-          (bfilter_int_dom_once_st gs b2 true s)
+          (if feasible_int_dom_once b1 true
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_once_st gs b1 true s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
+          (if feasible_int_dom_once b2 true
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_once_st gs b2 true s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
     | gs, Or (b1, b2), false, s ->
         bfilter_int_dom_once_st gs b1 false
           (bfilter_int_dom_once_st gs b2 false s)
@@ -6091,21 +6130,11 @@ let rec bfilter_int_dom_once_st
 
 let rec branch_int_dom_once_st
   gs e pol s =
-    (if is_bot_int_dom_ext int_dom_record_lattice_unit
-          (aval_int_dom Refine_Once e
-            (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
-      then bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit)
-      else (match
-             int_dom_tobool
-               (aval_int_dom Refine_Once e
-                 (fun_of_resolved_st_q_for
-                   (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
-             with None -> bfilter_int_dom_once_st gs e pol s
-             | Some c ->
-               (if equal_boola c pol then bfilter_int_dom_once_st gs e pol s
-                 else bot_resolved_st_qa
-                        (bot_int_dom_ext int_dom_record_lattice_unit))));;
+    (if feasible_int_dom_once e pol
+          (fun_of_resolved_st_q_for
+            (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+      then bfilter_int_dom_once_st gs e pol s
+      else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
 let int_dom_ops_once : (unit int_dom_ext, unit) numeric_ops_ext
   = Numeric_ops_ext
@@ -6285,6 +6314,14 @@ let rec afilter_int_dom_never_st
     | gs, And (v, va), a, s -> s
     | gs, Or (v, va), a, s -> s;;
 
+let rec feasible_int_dom_never
+  e pol sigma =
+    not (is_bot_int_dom_ext int_dom_record_lattice_unit
+          (aval_int_dom Refine_Never e sigma)) &&
+      not (equal_option equal_bool
+            (int_dom_tobool (aval_int_dom Refine_Never e sigma))
+            (Some (not pol)));;
+
 let rec bfilter_int_dom_never_st
   gs x1 res s = match gs, x1, res, s with
     gs, Less (e1, e2), res, s ->
@@ -6305,13 +6342,33 @@ let rec bfilter_int_dom_never_st
     | gs, And (b1, b2), false, s ->
         sup_resolved_st_qa
           (bounded_semilattice_sup_bot_int_dom_ext int_dom_record_lattice_unit)
-          (bfilter_int_dom_never_st gs b1 false s)
-          (bfilter_int_dom_never_st gs b2 false s)
+          (if feasible_int_dom_never b1 false
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_never_st gs b1 false s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
+          (if feasible_int_dom_never b2 false
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_never_st gs b2 false s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
     | gs, Or (b1, b2), true, s ->
         sup_resolved_st_qa
           (bounded_semilattice_sup_bot_int_dom_ext int_dom_record_lattice_unit)
-          (bfilter_int_dom_never_st gs b1 true s)
-          (bfilter_int_dom_never_st gs b2 true s)
+          (if feasible_int_dom_never b1 true
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_never_st gs b1 true s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
+          (if feasible_int_dom_never b2 true
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_never_st gs b2 true s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
     | gs, Or (b1, b2), false, s ->
         bfilter_int_dom_never_st gs b1 false
           (bfilter_int_dom_never_st gs b2 false s)
@@ -6385,21 +6442,11 @@ let rec bfilter_int_dom_never_st
 
 let rec branch_int_dom_never_st
   gs e pol s =
-    (if is_bot_int_dom_ext int_dom_record_lattice_unit
-          (aval_int_dom Refine_Never e
-            (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
-      then bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit)
-      else (match
-             int_dom_tobool
-               (aval_int_dom Refine_Never e
-                 (fun_of_resolved_st_q_for
-                   (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
-             with None -> bfilter_int_dom_never_st gs e pol s
-             | Some c ->
-               (if equal_boola c pol then bfilter_int_dom_never_st gs e pol s
-                 else bot_resolved_st_qa
-                        (bot_int_dom_ext int_dom_record_lattice_unit))));;
+    (if feasible_int_dom_never e pol
+          (fun_of_resolved_st_q_for
+            (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+      then bfilter_int_dom_never_st gs e pol s
+      else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
 let int_dom_ops_never : (unit int_dom_ext, unit) numeric_ops_ext
   = Numeric_ops_ext
@@ -6914,6 +6961,14 @@ let rec afilter_int_dom_fixpoint_st
     | gs, And (v, va), a, s -> s
     | gs, Or (v, va), a, s -> s;;
 
+let rec feasible_int_dom_fixpoint
+  e pol sigma =
+    not (is_bot_int_dom_ext int_dom_record_lattice_unit
+          (aval_int_dom Refine_Fixpoint e sigma)) &&
+      not (equal_option equal_bool
+            (int_dom_tobool (aval_int_dom Refine_Fixpoint e sigma))
+            (Some (not pol)));;
+
 let rec bfilter_int_dom_fixpoint_st
   gs x1 res s = match gs, x1, res, s with
     gs, Less (e1, e2), res, s ->
@@ -6935,13 +6990,33 @@ let rec bfilter_int_dom_fixpoint_st
     | gs, And (b1, b2), false, s ->
         sup_resolved_st_qa
           (bounded_semilattice_sup_bot_int_dom_ext int_dom_record_lattice_unit)
-          (bfilter_int_dom_fixpoint_st gs b1 false s)
-          (bfilter_int_dom_fixpoint_st gs b2 false s)
+          (if feasible_int_dom_fixpoint b1 false
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_fixpoint_st gs b1 false s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
+          (if feasible_int_dom_fixpoint b2 false
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_fixpoint_st gs b2 false s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
     | gs, Or (b1, b2), true, s ->
         sup_resolved_st_qa
           (bounded_semilattice_sup_bot_int_dom_ext int_dom_record_lattice_unit)
-          (bfilter_int_dom_fixpoint_st gs b1 true s)
-          (bfilter_int_dom_fixpoint_st gs b2 true s)
+          (if feasible_int_dom_fixpoint b1 true
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_fixpoint_st gs b1 true s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
+          (if feasible_int_dom_fixpoint b2 true
+                (fun_of_resolved_st_q_for
+                  (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+            then bfilter_int_dom_fixpoint_st gs b2 true s
+            else bot_resolved_st_qa
+                   (bot_int_dom_ext int_dom_record_lattice_unit))
     | gs, Or (b1, b2), false, s ->
         bfilter_int_dom_fixpoint_st gs b1 false
           (bfilter_int_dom_fixpoint_st gs b2 false s)
@@ -7015,21 +7090,11 @@ let rec bfilter_int_dom_fixpoint_st
 
 let rec branch_int_dom_fixpoint_st
   gs e pol s =
-    (if is_bot_int_dom_ext int_dom_record_lattice_unit
-          (aval_int_dom Refine_Fixpoint e
-            (fun_of_resolved_st_q_for
-              (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
-      then bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit)
-      else (match
-             int_dom_tobool
-               (aval_int_dom Refine_Fixpoint e
-                 (fun_of_resolved_st_q_for
-                   (bot_int_dom_ext int_dom_record_lattice_unit) gs s))
-             with None -> bfilter_int_dom_fixpoint_st gs e pol s
-             | Some c ->
-               (if equal_boola c pol then bfilter_int_dom_fixpoint_st gs e pol s
-                 else bot_resolved_st_qa
-                        (bot_int_dom_ext int_dom_record_lattice_unit))));;
+    (if feasible_int_dom_fixpoint e pol
+          (fun_of_resolved_st_q_for
+            (bot_int_dom_ext int_dom_record_lattice_unit) gs s)
+      then bfilter_int_dom_fixpoint_st gs e pol s
+      else bot_resolved_st_qa (bot_int_dom_ext int_dom_record_lattice_unit));;
 
 let int_dom_ops_fixpoint : (unit int_dom_ext, unit) numeric_ops_ext
   = Numeric_ops_ext
@@ -7441,6 +7506,8 @@ let char_0x7C : char = Chr (Z.of_int 124);;
 
 let char_0x7D : char = Chr (Z.of_int 125);;
 
+let rec bot_fun _B x = bot _B;;
+
 let rec sup_fun _B f g x = sup _B.sup_semilattice_sup (f x) (g x);;
 
 let rec afilter_ivl
@@ -7475,11 +7542,17 @@ let rec bfilter_ivl
     | And (b1, b2), true, sigma ->
         bfilter_ivl b1 true (bfilter_ivl b2 true sigma)
     | And (b1, b2), false, sigma ->
-        sup_fun semilattice_sup_ivl (bfilter_ivl b1 false sigma)
-          (bfilter_ivl b2 false sigma)
+        sup_fun semilattice_sup_ivl
+          (if feasible_ivl b1 false sigma then bfilter_ivl b1 false sigma
+            else bot_fun bot_ivl)
+          (if feasible_ivl b2 false sigma then bfilter_ivl b2 false sigma
+            else bot_fun bot_ivl)
     | Or (b1, b2), true, sigma ->
-        sup_fun semilattice_sup_ivl (bfilter_ivl b1 true sigma)
-          (bfilter_ivl b2 true sigma)
+        sup_fun semilattice_sup_ivl
+          (if feasible_ivl b1 true sigma then bfilter_ivl b1 true sigma
+            else bot_fun bot_ivl)
+          (if feasible_ivl b2 true sigma then bfilter_ivl b2 true sigma
+            else bot_fun bot_ivl)
     | Or (b1, b2), false, sigma ->
         bfilter_ivl b1 false (bfilter_ivl b2 false sigma)
     | Eq (e1, e2), res, sigma ->
@@ -7519,14 +7592,8 @@ let rec bfilter_ivl
 
 let rec branch_lifted_ivl
   e pol sigma =
-    (if is_bot_ivl (aval_ivl e sigma) then Bot
-      else (match interval_tobool (aval_ivl e sigma)
-             with None -> Lifted (bfilter_ivl e pol sigma)
-             | Some c ->
-               (if equal_boola c pol then Lifted (bfilter_ivl e pol sigma)
-                 else Bot)));;
-
-let rec bot_fun _B x = bot _B;;
+    (if feasible_ivl e pol sigma then Lifted (bfilter_ivl e pol sigma)
+      else Bot);;
 
 let rec branch_ivl
   e pol sigma =
