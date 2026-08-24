@@ -10,7 +10,7 @@ text \<open>
   post-solution, discharged node-locally through the generic
   \<^theory>\<open>Voblint_Analysis.Sign_Checks\<close> interface rather than by forwarding each
   check node's stores to the procedure exit. The compiled \<^const>\<open>checks\<close> field
-  comes from a real compiler run (\<open>collect_checks_prog\<close>, \<open>VIMP_Proc_to_CFG\<close>);
+  comes from a real \<^const>\<open>compile_prog\<close> run, not a hand-built table;
   \<open>y\<close> is overwritten (\<open>y := 0\<close>) between the first and second check, and \<open>z\<close> is
   set by a nondeterministic \<open>__voblint_nondet_int()\<close> read, so the three checks land in each
   of the three possible outcomes: the first is \<^term>\<open>Check_Proved\<close>, the second

@@ -155,7 +155,7 @@ text \<open>\<open>sound_dg_hooks_ltr\<close> re-packages \<open>sound_dg_hooks\
   obligations, so the base-locale reduction (\<open>DG_Soundness\<close>,
   \<open>sublocale sound_dg_spec \<subseteq> sound_dg_hooks ...\<close>) already discharges this one
   too: every \<open>sound_dg_spec\<close> interpretation is a \<open>sound_dg_hooks_ltr\<close>
-  interpretation for free, so \<open>sound_dg_spec_ltr\<close>/\<open>sound_dg_spec_ltr_for\<close>
+  interpretation for free, so \<open>sound_dg_spec_ltr_for\<close>/\<open>sound_dg_spec_ltr_for\<close>
   (which extend \<open>sound_dg_spec\<close> with no new obligations of their own) inherit
   \<open>hook_post_solution_collect_sound_ltr\<close> without restating any per-step
   soundness argument.\<close>

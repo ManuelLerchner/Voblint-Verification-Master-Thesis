@@ -221,7 +221,7 @@ domains plus Congruence), and `docs/INDEX.md` (omits the living register).
 **4.3 `git mv` the ~42 superseded docs to `docs/history/`** and rewrite the 51
 path-stale citations. Two need a content edit rather than a move
 (`03-recursion.vimp:9`, `NEXT_STEPS.md`). Rename
-`PROCEDURE_AWARE_CFG_MIGRATION.md`, which is living, so the `*_MIGRATION.md`
+`PROCEDURE_AWARE_CFG_ARCHITECTURE.md`, which is living, so the `*_MIGRATION.md`
 suffix stops meaning two things. Delete the three that are wrong as references
 rather than historical: `LOCALES.md`, `PIPELINE_AST_TO_SOLUTION.md`,
 `ARRAY_SYNTAX_EXTENSION.md`.
@@ -337,23 +337,60 @@ absence of `startstate`/`exitstate`/`morphstate`.
    say so plainly in the theory text, or move the figures to the CLI and delete
    it. Blocks nothing, but the current bookkeeping — `AGENTS.md` advertising
    twelve `*_dot_auto` that do not exist — should not survive either way.
-2. **`int_parity` inside `int_dom`** (§12.4). Parity is congruence with modulus
-   pinned to 2, both directions of the embedding are already proved in the tree,
-   and Goblint has no parity domain. The open question is whether any forward
-   operation makes the parity component strictly more precise than the congruence
-   one. A `nitpick`-scale check settles it; if not, removal takes ~250 lines of
-   Product plumbing. Independent of `Parity_Analysis` as a standalone domain,
-   which stays.
+2. **`int_parity` inside `int_dom`** — **decided: remove it.** Accepted with
+   the precision loss below. Not yet done: this is proof engineering, not a
+   deletion sweep, and it wants a dedicated session.
+
+   *Why it is not mechanical.* `int_parity` is a **node in the reduction
+   graph**, not just a carried component. `refine_interval`
+   (`Int_Refinement.thy:342`) updates
+   `int_parity := refine_parity_with_interval fct (int_parity d)`, and
+   `refine_congruence` refines it too. Removing the field therefore restructures
+   `refinement_steps`, not only the record.
+
+   *Measured blast radius:* 152 occurrences over 8 theories; 285 declarations in
+   the five that carry real content (`Int_Domain` 58, `Int_Arithmetic` 45,
+   `Int_Backward` 62, `Int_Refinement` 113, `Int_Warrowing` 7). Because it is a
+   record *field*, every `int_dom` proof is in scope.
+
+   *What is actually lost.* Two things, and only the first was expected:
+   - `int_dom_min_raw`/`max_raw` set `int_parity` and leave `int_congruence` at
+     `top`, and there is no `congruence_min`. Today the reduction pushes parity
+     into congruence, so `min(4,6)` carries `≡0 (mod 2)`. After removal it
+     carries nothing.
+   - The **interval -> parity** edge disappears with no interval -> congruence
+     edge to replace it. Demonstrated: `c := min(a,b)` with `a=4, b=6` has
+     interval `[4,4]` — a singleton — yet congruence only `≡0 (mod 2)`, never
+     `≡4`. That edge is Goblint's `Congruence.refine_with_interval` (§12.4
+     missing edge 1) and does not exist here.
+
+   *Order that avoids both losses,* if the precision is ever wanted back: add
+   the interval -> congruence reduction edge first (a singleton interval pins
+   congruence exactly, which is strictly better than what parity gave), then
+   remove the field.
+
+   *Recipe.* (1) drop `int_parity` from the `int_dom` record and from the
+   `less_eq`/`sup`/`bot`/`top` instance conjuncts; (2) drop the
+   `gamma_parity (int_parity d)` conjunct from `gamma_int_dom` and its eight
+   update lemmas; (3) drop the `int_parity :=` component from
+   `plus/minus/times_int_dom_raw`, `int_dom_min_raw`/`max_raw`, and the five
+   `inv_*_int_dom_raw`; (4) drop `refine_parity_with_interval` /
+   `refine_parity_with_congruence` and their reduction targets; (5) drop
+   `congruence_fact_of_parity`, `restrict_congruence_by_parity`,
+   `parity_accepts`, `int_dom_sip`'s parity argument, and the `Int_Warrowing`
+   componentwise conjunct; (6) update every `by eval` and `.vimp` fixture whose
+   asserted value mentions `parity=` under `--analysis int` to the new value.
+
+   `Parity_Analysis` as a standalone domain is unaffected and stays.
 3. **`wf_cfg`** (§10.2). Proved for every compiled program, assumed by no
    soundness theorem. Either wire it into a premise where it belongs or retire it
    and its four uncited consumers.
-4. **The `<D>_DG` LTR route and the `*_Base_DG` commutation theorems**
-   (§12.1, ~1,000 lines across five files). Real theorems that no concrete path
-   reaches — the instantiation gap in reverse. Keep and instantiate, or retire.
-   Note the coupling: retiring `Sign_DG` also removes `sign_dg_privatized`,
-   which `Example_Placement_Regression` is written against and which the
-   alignment register's D/G-reconstruction row leans on. Widened from 429 lines
-   after reading the files during Phase 2.3.
+4. **The `<D>_DG` LTR route and the `*_Base_DG` commutation theorems** —
+   **decided: retired.** Done: `Sign_DG`, `Interval_DG`, `Int_DG`,
+   `Int_Base_DG`, `Parity_Base_DG` deleted (657 lines), seventeen importers
+   rewired onto `DG_LTR_Sound` plus the domain's transfer theory, export
+   byte-identical. `Example_Placement_Regression`'s section 5 no longer cites
+   `sign_dg_privatized` and now stands on its own terms.
 5. **The two placement examples** (§7.4). 3,861 lines carrying evidence the
    register genuinely cites. Not deletable, but ~1,500 of it is framework work
    misfiled as an example. Hoisting §7.4(a)'s lemma triple into

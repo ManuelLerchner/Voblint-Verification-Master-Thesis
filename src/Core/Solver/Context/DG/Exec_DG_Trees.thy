@@ -816,7 +816,7 @@ subsection \<open>Per-tree traversal commutation\<close>
 text \<open>
   The D/G edge and combine trees have closed-form traversals
   (\<open>Voblint_Core.DG_Framework\<close>): the local Answer carries \<open>snd (step \<dots>)\<close>
-  and no global, so \<open>fun_of_dg_st\<close> commutes with the traversal precisely when
+  and no global, so \<open>fun_of_dg_st_for\<close> commutes with the traversal precisely when
   the analysis step commutes componentwise.
 \<close>
 
@@ -853,7 +853,7 @@ subsection \<open>Wrapped-tree commutation and the accumulator fold\<close>
 text \<open>
   The generator re-keys each tree with \<open>map_gtree\<close> / \<open>map_ltree\<close> to place
   local unknowns at \<open>(pp, c)\<close> and global unknowns at \<open>gkey c\<close>.  Those relabellings
-  are transparent to \<open>fun_of_dg_st\<close>: it acts on values, they act on unknown
+  are transparent to \<open>fun_of_dg_st_for\<close>: it acts on values, they act on unknown
   keys, and the per-tree commutation is stated for an arbitrary valuation.
 \<close>
 

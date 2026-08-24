@@ -1,10 +1,10 @@
 // PARAM: --analysis interval --solver warrow
-// Direct contrast with ../04-global_self_feedback_join_hangs.vimp: the
-// identical self-referential global write, but under Interval's production
+// Direct contrast with 05-global_self_feedback_join_terminates.vimp: the
+// identical self-referential global write, here under Interval's production
 // solver (Solver_Warrow).
 //
-// Base-style migration acceptance case: this used to lock in termination
-// with only a sound, imprecise UNKNOWN (the flow-insensitive global
+// Termination here is not the whole claim: an imprecise UNKNOWN would also
+// be sound (the flow-insensitive global
 // summary could only prove total=[0,+inf) even though total is exactly 3
 // here) -- widening bought termination, not precision. With the whole
 // abstract state lifted into the local unknown, there is no separate

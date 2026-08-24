@@ -26,6 +26,12 @@ pre-commit:
         - "src/**/*.thy"
       run: pixi run python3 scripts/check_codegen_modules.py
 
+    # A rename that leaves prose naming a constant that no longer exists is
+    # invisible to the document checker; this catches it at commit time.
+    - name: thy-prose-refs
+      glob: "src/**/*.thy"
+      run: pixi run python3 scripts/check_thy_prose_refs.py
+
     - name: vimp-isabelle-grammar-drift
       glob:
         - "grammar/vimp.yaml"

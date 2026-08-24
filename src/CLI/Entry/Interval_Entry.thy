@@ -219,10 +219,10 @@ text \<open>
   \<open>analyse_interval_dg_eqs\<close>/\<open>analyse_interval_dg\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>)
   and \<open>analyse_interval_td_report\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Checks\<close>) are the
   \<^const>\<open>declared_global\<close> \<open>p\<close> convenience instances the context above's \<open>_for\<close> layer already
-  feeds, matching \<open>analyse_sign_sound\<close>/\<open>analyse_sign_report_sound_proved\<close>'s own shape.
+  feeds, matching \<open>analyse_sign_report_sound_proved\<close>'s own shape.
   \<open>wf[THEN wf_compile_input_reserved_ret_var]\<close> discharges the context's \<open>reserved\<close>
   assumption from the concrete program's own well-formedness fact --- the same
-  instantiation step \<open>analyse_sign_sound\<close> uses.
+  instantiation step Sign's own entry-point corollaries use.
 \<close>
 
 corollary analyse_interval_td_report_sound_proved:
@@ -296,7 +296,7 @@ text \<open>
   that table, built from \<open>ictx_activation_collect_sound\<close> (the routed
   spine's own activation-indexed collecting soundness) composed with
   \<open>activation_collect_unit_eq_ltr_collect\<close> (the unit-context collapse
-  to \<^const>\<open>ltr_collect\<close>) rather than from \<open>p_reg_join\<close>/\<open>analyse_interval_dg_join_for\<close> --- the
+  to \<^const>\<open>ltr_collect\<close>) rather than from the flat \<open>analyse_interval_dg_join_for\<close> route --- the
   routed spine needs no \<open>wf_compile_input\<close>/finiteness/node-membership premise,
   so this bridge only takes the four coverage-and-termination facts the
   routed solve genuinely turns on.
@@ -548,7 +548,7 @@ text \<open>
   that table, built from \<open>ictx_activation_collect_sound_per_origin\<close> (the routed
   spine's own activation-indexed collecting soundness) composed with
   \<open>activation_collect_unit_eq_ltr_collect\<close> (the unit-context collapse
-  to \<^const>\<open>ltr_collect\<close>) rather than from \<open>p_reg_per_origin\<close>/\<open>analyse_interval_dg_per_origin_for\<close> --- the
+  to \<^const>\<open>ltr_collect\<close>) rather than from the flat \<open>analyse_interval_dg_per_origin_for\<close> route --- the
   routed spine needs no \<open>wf_compile_input\<close>/finiteness/node-membership premise,
   so this bridge only takes the four coverage-and-termination facts the
   routed solve genuinely turns on.

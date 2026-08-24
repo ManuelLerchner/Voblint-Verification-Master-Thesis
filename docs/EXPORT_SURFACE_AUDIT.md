@@ -684,7 +684,7 @@ delete candidates are `LOCALES.md`, `PIPELINE_AST_TO_SOLUTION.md` and
 `ARRAY_SYNTAX_EXTENSION.md` — see §5.2 for why those are wrong-as-references
 rather than merely historical.
 
-One naming hazard worth fixing while moving: `PROCEDURE_AWARE_CFG_MIGRATION.md`
+One naming hazard worth fixing while moving: `PROCEDURE_AWARE_CFG_ARCHITECTURE.md`
 is *living* — `docs/INDEX.md` treats it as the architecture entry point — so the
 `*_MIGRATION.md` suffix currently means two different things. Rename it.
 

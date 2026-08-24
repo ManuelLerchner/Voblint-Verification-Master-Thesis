@@ -9,7 +9,7 @@ Question: *if we wanted a real Goblint-style k-call-string context in this
 formalization, what is the smallest principled architecture that supports
 it?*
 
-Short answer, argued below: it is **not** what `docs/M1_CALLSTRING_CONTEXT_MIGRATION.md`
+Short answer, argued below: it is **not** what `docs/history/M1_CALLSTRING_CONTEXT_MIGRATION.md`
 plans. `routed_context`/`dg_ctx_activation` (the same locales
 `Example_Interval_DG_CallString.thy` already interprets) already provide the
 right hook, generically, with no new monotonicity proof and no digest
@@ -18,7 +18,7 @@ string is much smaller than M1's staged plan (A0–A5) assumes.
 
 ## 0. Correcting M1's own status table
 
-`docs/M1_CALLSTRING_CONTEXT_MIGRATION.md` section 3 lists eight "Reusable
+`docs/history/M1_CALLSTRING_CONTEXT_MIGRATION.md` section 3 lists eight "Reusable
 (done)" artifacts. Checked each against the current tree:
 
 | Artifact / file | Status |
@@ -33,7 +33,7 @@ string is much smaller than M1's staged plan (A0–A5) assumes.
 | compile pattern / `Example_Inc_Proc.thy` | present (`src/Examples/CFG/Example_Inc_Proc.thy`) |
 
 Six of eight are gone — deleted in the digest-spine removal (AD-44,
-2026-07-18, `docs/DIGEST_SPINE_REMOVAL_PLAN.md`), which post-dates M1's
+2026-07-18, `docs/history/DIGEST_SPINE_REMOVAL_PLAN.md`), which post-dates M1's
 "~80% present" claim in section 3 without that section being updated. M1's
 "Semantic layer B0–B2... mostly DONE" dependency claim (section 5) is
 likewise no longer accurate: the B0–B2 artifacts it names are the same ones
@@ -388,7 +388,7 @@ the call history. What this document proposes is deliberately narrower:
 `C = syntactic call history abstraction` only, no value hashing. That
 narrowing is not a limitation this design failed to lift — it is M1's own
 stated scope ("the syntactic-history axis, not the whole Goblint context
-menu," `docs/M1_CALLSTRING_CONTEXT_MIGRATION.md` section 2's fidelity
+menu," `docs/history/M1_CALLSTRING_CONTEXT_MIGRATION.md` section 2's fidelity
 caveat), which this document inherits unchanged. Value-sensitive contexts,
 if ever wanted, are a separate future question — the digest abstraction
 option C considered (section 2) is one candidate mechanism for that
@@ -451,7 +451,7 @@ medium, concentrated entirely in this stage; Stages 1–2 have no open proof
 risk given sections 1–2's findings.
 
 **Net estimate versus M1's 6–8-week figure (which was for a different,
-heavier architecture, `docs/TRACE_BASED_FORK_MIGRATION.md`'s Track A, not
+heavier architecture, `docs/history/TRACE_BASED_FORK_MIGRATION.md`'s Track A, not
 this one):** Stages 1–2 are close to mechanical, reusing a proven-generic
 locale at a new instantiation. Stage 3 is the only stage carrying real
 proof risk, and it is scoped, bounded, and does not block a green build if
@@ -492,7 +492,7 @@ signature inspection: `route_enterc_agree` is bare reflexivity, no locale
 changes were needed, and the same solver/domain/example program carries
 over unchanged.
 
-Update `docs/M1_CALLSTRING_CONTEXT_MIGRATION.md`'s status line to point
+Update `docs/history/M1_CALLSTRING_CONTEXT_MIGRATION.md`'s status line to point
 here instead of planning against the deleted digest/TD_side-extension
 machinery; this document's option B delivers M1's own stated goal (section
 1: "a computed context-sensitive analyzer whose calling context is a

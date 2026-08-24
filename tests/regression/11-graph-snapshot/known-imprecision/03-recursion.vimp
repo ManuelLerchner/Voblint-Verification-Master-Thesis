@@ -4,11 +4,13 @@
 // activation of fact into the same context (cluster_ctx_1), giving a small,
 // deterministic graph with a self-loop EnterEdge (fact_pp2_ctx1 back into
 // fact_entry_fact_ctx1) not exercised by 11-graph-snapshot/02-call_return.vimp's
-// plain caller/callee pair. Verdict is UNKNOWN, not PROVED: recursion is a known
-// precision limitation of the current context representation (see
-// docs/OPEN_PROBLEMS.md and docs/CALLSTRING_CONTEXT_DESIGN.md -- unbounded
-// call histories make a precise finite context key an open problem), but
-// the solver still terminates and gives a sound, decidable UNKNOWN here.
+// plain caller/callee pair. Verdict is UNKNOWN, not PROVED, and the mechanism
+// is that collapse: every recursive activation of fact shares one context key,
+// so the callee-entry seed is the join over all depths, and interval widening
+// at the resulting self-loop drives the accumulating product to an unbounded
+// bound. It is the *context-insensitive* keying that loses this, not recursion
+// as such -- 03-procedures/precision/06 proves the same recursive factorial
+// exactly under --context entry-state, where each depth gets its own key.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

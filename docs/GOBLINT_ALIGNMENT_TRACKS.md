@@ -78,7 +78,7 @@ constraint among the value-bearing tracks is M1 → M3b.
 - `docs/NEXT_STEPS.md` — "Context-sensitivity status" (what is already done)
 - `docs/DGC_ALIGNMENT_ANALYSIS.md` — the M2 obstruction audit (§6 layered change)
 - `docs/ROUTE_A7_GOBLINT_CONTEXT_DESIGN_STUDY.md` — corrected call-only Goblint model
-- `docs/TRACE_BASED_FORK_MIGRATION.md` — M1 fork detail (A1–A5, R1–R6)
-- `docs/GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` — Gap inventory (Gap 6 = M3; Gap 7
+- `docs/history/TRACE_BASED_FORK_MIGRATION.md` — M1 fork detail (A1–A5, R1–R6)
+- `docs/history/GOBLINT_SPEC_FULL_ALIGNMENT_PLAN.md` — Gap inventory (Gap 6 = M3; Gap 7
   context-sensitivity is **partially stale** — the semantic-context half landed
   since 2026-06-17; only computed call-strings (M1) remain of that gap)

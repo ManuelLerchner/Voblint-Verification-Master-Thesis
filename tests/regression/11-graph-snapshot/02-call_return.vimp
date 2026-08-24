@@ -2,8 +2,8 @@
 // Canonical CFG snapshot coverage: a procedure call with a formal and a used
 // return value, covering the interprocedural shape (two clusters, plus
 // EnterEdge/CombineEdge/CallToReturnEdge) -- see 01-straight_line.vimp in
-// this same group for the single-cluster case and why only these two
-// fixtures carry an EXPECT-GRAPH block.
+// this same group for the single-cluster case and why this pair pins the
+// two structural shapes.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

@@ -5,7 +5,7 @@ These documents describe the supported architecture and its verification.
 
 ## Architecture
 
-- [Procedure-aware CFG architecture](PROCEDURE_AWARE_CFG_MIGRATION.md) — source
+- [Procedure-aware CFG architecture](PROCEDURE_AWARE_CFG_ARCHITECTURE.md) — source
   contract, compiler, activation-local semantics, equations, D/G routing, and
   solver integration.
 - [Proof overview](PROOF_OVERVIEW.md) — end-to-end soundness chain.

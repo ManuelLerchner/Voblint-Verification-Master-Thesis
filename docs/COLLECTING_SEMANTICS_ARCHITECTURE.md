@@ -3,7 +3,7 @@
 Status: **SUPERSEDED (2026-07-18) — historical review.** This review recommended
 *Option B* (make `valid_ltr` canonical and reconstruct the digest world on top of
 it via `flatten`). The project instead **deleted** the relational digest spine
-(see docs/DIGEST_SPINE_REMOVAL_PLAN.md, AD-44) — the witness-merging half of the
+(see docs/history/DIGEST_SPINE_REMOVAL_PLAN.md, AD-44) — the witness-merging half of the
 recommendation was not adopted. What was adopted: the generic `collect_by`
 combinator and `valid_ltr` as the single trace foundation (both live). Retained
 as the design analysis that led to the removal decision.
@@ -17,7 +17,7 @@ knowing the maintainer will accept a large migration *iff* the result is
 genuinely simpler.
 
 > Follow-up: the actionable migration decision is
-> `docs/COLLECTING_SEMANTICS_UNIFICATION_PLAN.md`. It also corrects §3 below:
+> `docs/history/COLLECTING_SEMANTICS_UNIFICATION_PLAN.md`. It also corrects §3 below:
 > `cfg_collect` is **not** irreducibly primitive — `cfg_collect_eq_paths`
 > (`CFG_Collect.thy:392`) proves `cfg_collect = cfg_collect_paths`, a store-level
 > `cfg_witness` collection. It is a *derived* witness collection over the weakest

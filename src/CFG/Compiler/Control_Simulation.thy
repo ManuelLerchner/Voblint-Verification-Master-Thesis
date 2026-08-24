@@ -1989,7 +1989,7 @@ text \<open>
   \<^const>\<open>seq_after\<close> spine when pending continuations follow the call.  Everything the callee needs
   (edge inclusions, entry wiring, body source-ness) comes from the single \<^const>\<open>procs_compiled\<close>
   certificate.  This is the low-level helper: the caller's post-call location \<^term>\<open>seq_after SKIP afters\<close>
-  is supplied as a hypothesis; \<open>csim_call_preservation\<close> derives it from the located call residual.
+  is supplied as a hypothesis; \<open>csim_call_completion\<close> derives it from the located call residual.
 \<close>
 
 

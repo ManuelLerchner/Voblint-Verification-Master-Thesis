@@ -15,7 +15,7 @@ text \<open>
   The final theorem \<open>dgEx_source_run_sound\<close> turns the single \<open>by eval\<close> solver success
   directly into a source-level guarantee, matching the pattern in
   \<open>Example_Interval_DG_Flagship\<close>: no transport lemma, \<open>part_post_solution\<close>, \<open>solve_dom\<close>,
-  or \<open>fun_of_dg_st\<close> appears in this file's own proofs.  It depends on the \<^emph>\<open>computed\<close>
+  or \<open>fun_of_dg_st_for\<close> appears in this file's own proofs.  It depends on the \<^emph>\<open>computed\<close>
   solver result \<open>snd dgEx_sol\<close>, not on any hand-written candidate solution.
 \<close>
 

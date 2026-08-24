@@ -194,7 +194,7 @@ side rather than the termination side. #108's G1-G5 plan (in the issue):
    /03-two_call_sites_entry_state.vimp` is the DOT-free sibling.
 
 Arbitrary `gs`/`--flow-insensitive` stays explicitly out of scope -- see
-#66's M4 / `docs/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
+#66's M4 / `docs/history/SEIDL_CONTEXT_LIFECYCLE_MIGRATION.md`; `declared_global p`
 stays invariant across whatever this lands as.
 
 6. **G6 -- #77 scoping audit and call-string finiteness. Done, batch-green

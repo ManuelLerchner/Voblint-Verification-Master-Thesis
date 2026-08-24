@@ -179,7 +179,7 @@ independent improvement.
 
 ### Two prior attempts already exist in this repo's history
 
-- **`docs/DOMAIN_TYPECLASS_MIGRATION.md`** — status "DONE," commit `52d7486`:
+- **`docs/history/DOMAIN_TYPECLASS_MIGRATION.md`** — status "DONE," commit `52d7486`:
   a full locale-to-type-class migration of `sound_domain`/`abstract_domain`
   was built and completed once, under the *prior* `src/Analysis/Domains/`
   layout. The codebase was later restructured (`d91fa93f`, "move analysis
@@ -193,7 +193,7 @@ independent improvement.
   `abs_state` did not survive as this project's chosen shape through its own
   next major refactor, and is worth weighing against Option 1's abstract
   appeal.
-- **`docs/SPLIT_STATE_MIGRATION.md`** ("migration complete") is the design
+- **`docs/history/SPLIT_STATE_MIGRATION.md`** ("migration complete") is the design
   history behind today's DG heterogeneity (`Split_State.thy`, `dg_state`).
   Its own "Remaining limitations toward Goblint" section, written before
   this session's Gap 3/4 work, independently names the same leverage point
@@ -604,7 +604,7 @@ mutated by the call. `dgs_combine_env`'s signature has no channel for this;
 neither does anything else in the DG framework. Matches
 `SPLIT_STATE_MIGRATION.md`'s own independent finding: "no Goblint-style
 manager/query interface... analyses cannot communicate through typed
-queries" (`docs/SPLIT_STATE_MIGRATION.md`, Framework limitations #1 of the
+queries" (`docs/history/SPLIT_STATE_MIGRATION.md`, Framework limitations #1 of the
 Analysis-limitations table).
 
 **Not required for soundness** — omitting it means keeping more state

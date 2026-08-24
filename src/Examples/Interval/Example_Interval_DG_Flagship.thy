@@ -80,8 +80,9 @@ text \<open>
   the body of \<open>main\<close>, so it runs between \<open>FunctionEntry (STR ''main'')\<close> and
   \<open>FunctionResult (STR ''main'')\<close>; inside, \<open>x := 0\<close> falls directly into the loop head \<open>1\<close> (the
   continuation-passing compiler needs no separate join node), the guard \<open>x < 20\<close> branches
-  to body \<open>2\<close> or exit \<open>3\<close>, and the increment at \<open>2\<close> jumps back to \<open>1\<close>.  \<open>flagship_cfg_eq\<close>
-  proves the compilation equals the explicit graph; the annotated rendering is in section 10.
+  to body \<open>2\<close> or exit \<open>3\<close>, and the increment at \<open>2\<close> jumps back to \<open>1\<close>.  \<open>flagship_cfg\<close>
+  is the compilation itself, so the shape lemmas below read off the compiled graph
+  rather than a hand-written one; the annotated rendering is in section 10.
 \<close>
 
 text \<open>The declaration environment holds exactly \<open>main\<close>: there are no other procedures, and

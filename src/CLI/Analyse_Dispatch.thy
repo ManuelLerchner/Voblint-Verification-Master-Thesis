@@ -817,9 +817,9 @@ text \<open>
   solver entry-state analysis already uses internally, so a resolver bug
   that special-cased "does the explicit solver already match the implicit
   one" would silently start accepting a combination the CLI has always
-  rejected. Pinned above at the \<^const>\<open>resolve_analysis_config\<close> level
-  (\<open>Analysis_Config\<close>'s \<open>resolver_interval_entrystate_warrow_invalid\<close>) and
-  again here through the wrapper actually reachable from the CLI.
+  rejected. Pinned above at the \<^const>\<open>resolve_analysis_config\<close> level, in
+  \<open>Analysis_Config\<close>'s own resolver regressions, and again here through the
+  wrapper actually reachable from the CLI.
 \<close>
 
 text \<open>

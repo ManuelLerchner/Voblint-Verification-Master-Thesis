@@ -66,8 +66,8 @@ lemma dispatch_demo_exit_eval:
   unfolding prog_cfg_def by (simp add: cfg_exit_compile_prog prog_main_name_def)
 
 text \<open>Structural reachability of the first check node to the exit --- a fact about the CFG's
-  shape, following the same \<open>cfg_reaches_intra\<close>/\<open>cfg_reaches_trans\<close> chaining as
-  \<open>checks_ivl_ex_statement2_reaches_exit\<close> (\<open>Example_Interval_Checks_Store_Only\<close>).\<close>
+  shape, following the same \<open>cfg_reaches_intra\<close>/\<open>cfg_reaches_trans\<close> chaining the
+  store-only check examples use.\<close>
 
 lemma dispatch_demo_statement1_reaches_exit:
   "cfg_reaches (prog_cfg prog_main_name dispatch_demo_prog) (Statement 1)

@@ -16,8 +16,8 @@ text \<open>
   anchor, only the store-level check layer on top of an existing one.
 
   The table's shape, \<open>(pp \<times> exp) set\<close>, matches \<^const>\<open>checks\<close> --- the
-  \<^type>\<open>cfg\<close> record field a real compiler populates (\<open>collect_checks_prog\<close>,
-  \<open>VIMP_Proc_to_CFG\<close>) --- directly: a caller instantiates \<open>ck\<close> with
+  \<^type>\<open>cfg\<close> record field the compiler populates from the \<open>EA_Check\<close> edges it
+  emits --- directly: a caller instantiates \<open>ck\<close> with
   \<open>checks g\<close> for a compiled \<open>g\<close>, not with a hand-built table.
 \<close>
 

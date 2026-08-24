@@ -3,7 +3,7 @@
 How to add a new abstract domain to the D/G solver pipeline without
 constructing `strategy_tree` by hand. Term definitions are in
 `docs/GLOSSARY.md`; the combinator design is in
-`docs/DG_COMBINATOR_MIGRATION.md`.
+`docs/history/DG_COMBINATOR_MIGRATION.md`.
 
 ## The steps
 
@@ -73,5 +73,5 @@ genuinely needs a shape none of them express, extend
 `Strategy_Tree_Combinators.thy` (generic) or `DG_Transfer_Combinators.thy`
 (DG-specific) with a new `abbreviation` rather than falling back to raw
 constructors in the analysis file — see the design note in
-`docs/DG_COMBINATOR_MIGRATION.md` on why `abbreviation`, not `definition`, is
+`docs/history/DG_COMBINATOR_MIGRATION.md` on why `abbreviation`, not `definition`, is
 the default shape.

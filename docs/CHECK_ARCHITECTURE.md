@@ -167,7 +167,7 @@ procedure-exit node.
 
 The natural-looking generalization —
 `sublocale backward_domain \<subseteq> abstract_numeric_queries` — was tried and
-reverted (`docs/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
+reverted (`docs/history/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
 It answers two different questions, both against it:
 
 1. **Should the derived queries be canonical for every backward domain?**

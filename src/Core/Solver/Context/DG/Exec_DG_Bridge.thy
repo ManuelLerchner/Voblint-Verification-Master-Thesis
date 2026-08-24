@@ -2,7 +2,7 @@ section \<open>The post-solution transport theorem\<close>
 
 text \<open>
   The bridge itself: a partial post-solution of the executable equation system, read through
-  \<open>fun_of_dg_st\<close>, is a partial post-solution of the abstract one over the same unknowns. Only
+  \<open>fun_of_dg_st_for\<close>, is a partial post-solution of the abstract one over the same unknowns. Only
   the equation values transport --- unknown identity, the covered set and the dependencies are
   unchanged.
 
@@ -19,7 +19,7 @@ subsection \<open>Bundled per-tree transport relation\<close>
 text \<open>
   \<open>dg_tree_st_commute \<sigma>_st t_st t_abs\<close> is the reusable transport contract for a
   single strategy tree: its executable denotation, its side-effect map, and its
-  static dependencies all agree (through \<open>fun_of_dg_st\<close>) with the abstract tree
+  static dependencies all agree (through \<open>fun_of_dg_st_for\<close>) with the abstract tree
   read against the pushed-forward valuation \<open>fun_of_dg_st \<circ> \<sigma>_st\<close>.  It bundles
   the three commutation obligations the equation-system transport threads through
   the accumulator fold.
@@ -92,7 +92,7 @@ subsection \<open>The post-solution transport theorem\<close>
 
 text \<open>
   A partial post-solution of the executable context-indexed D/G equation system,
-  mapped value-wise through \<open>fun_of_dg_st\<close>, is a partial post-solution of the
+  mapped value-wise through \<open>fun_of_dg_st_for\<close>, is a partial post-solution of the
   abstract system over the same unknown set --- unknown identity, \<open>vars\<close>, and
   dependencies are unchanged; only the equation values transport.  The routed
   combine and enter-seed trees transport through the bundled \<open>Hcmb\<close> / \<open>Hextra\<close>

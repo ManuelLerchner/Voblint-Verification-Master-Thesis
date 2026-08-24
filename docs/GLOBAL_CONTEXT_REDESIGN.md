@@ -14,7 +14,7 @@ a context-independent `fresh_frame` is seeded at frame-entry nodes; soundness is
 table's **Option X** row is now a *proven* `by eval` witness, not the false
 witness §5 warned against: `Example_Finite_Sign_Context_Analysis.thy` gives
 `G/GH = SZero` in ctx0 and `SPos` in ctx1 (join-all `SNonNeg`). See
-`docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`. This design supersedes the
+`docs/history/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`. This design supersedes the
 entry-local context premise (`ent = id`), which is unsound under IMP2 entry
 semantics (§1). The Part II `glob_env` read-bottleneck analysis remains the
 rationale for the `cmp`-filtered read the generator now uses.
