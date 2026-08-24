@@ -15,11 +15,12 @@ subsection \<open>Owner-aware executable D/G trees\<close>
 
 text \<open>
   \<open>placed_dg_edge_tree_with\<close> factors the query/answer/side skeleton out from
-  the projection it materializes results through.  \<open>placed_dg_edge_tree\<close>
-  keeps the original, defensive \<open>project_resolved_on\<close>; \<open>placed_dg_edge_tree_strict\<close>
-  uses \<open>project_resolved_on_strict\<close>, whose output support is bounded by the
-  write node's declared scope unconditionally (\<open>effective_support_rep_project_resolved_on_strict\<close>),
-  with no fact about the raw transfer's own support needed.
+  the projection it materializes results through, and
+  \<open>placed_dg_edge_tree_strict\<close> instantiates it at \<open>project_resolved_on_strict\<close>,
+  whose output support is bounded by the write node's declared scope
+  unconditionally (\<open>effective_support_rep_project_resolved_on_strict\<close>), with no
+  fact about the raw transfer's own support needed. The parameter is what lets
+  that bound be stated once for the skeleton rather than per tree shape.
 \<close>
 
 definition placed_dg_edge_tree_with ::
@@ -62,14 +63,6 @@ lemma dep_aux_placed_abs_dg_edge_tree:
       publish_side transfer read_node write_node) = {Inl read_node, Inr ()}"
   by (simp add: placed_abs_dg_edge_tree_def dep_aux_def Let_def)
 
-definition placed_dg_edge_tree ::
-  "(pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   pp => pp => (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state)
-     strategy_tree"
-where
-  "placed_dg_edge_tree = placed_dg_edge_tree_with project_resolved_on"
 
 definition placed_dg_edge_tree_strict ::
   "(pp => pname) => (pp => location list) =>
@@ -80,29 +73,6 @@ definition placed_dg_edge_tree_strict ::
 where
   "placed_dg_edge_tree_strict = placed_dg_edge_tree_with project_resolved_on_strict"
 
-lemma traverse_placed_dg_edge_tree:
-  "traverse_rhs
-    (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-      transfer read_node write_node) sigma =
-    DG (project_resolved_on (owner_of write_node) (locations_of write_node)
-          keep_local
-          (transfer (locals (sigma (Inl read_node)) \<squnion>
-             globs (sigma (Inr ())))))
-      bot"
-  unfolding placed_dg_edge_tree_def placed_dg_edge_tree_with_def
-  by (simp add: Let_def)
-
-lemma sides_placed_dg_edge_tree_Inr:
-  "sides_of_rhs
-    (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-      transfer read_node write_node) sigma (Inr ()) =
-    DG bot
-      (project_resolved_on (owner_of write_node) (locations_of write_node)
-        publish_side
-        (transfer (locals (sigma (Inl read_node)) \<squnion>
-           globs (sigma (Inr ())))))"
-  unfolding placed_dg_edge_tree_def placed_dg_edge_tree_with_def
-  by (simp add: Let_def)
 
 lemma traverse_placed_dg_edge_tree_strict:
   "traverse_rhs
@@ -160,46 +130,6 @@ lemma placed_dg_edge_tree_strict_side_default_bot:
   by (simp add: sides_placed_dg_edge_tree_strict_Inr
     resolved_default_rep_project_resolved_on_strict)
 
-lemma dg_refines_on_placed_edge:
-  fixes executable_transfer ::
-    "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and abstract_transfer :: "'a abs_state => 'a abs_state"
-    and executable_sigma ::
-      "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-    and abstract_sigma ::
-      "pp + unit => ('a abs_state, 'a abs_state) dg_state"
-  assumes raw:
-    "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
-      lookup_resolved_st_q
-        (executable_transfer
-          (locals (executable_sigma (Inl read_node)) \<squnion>
-           globs (executable_sigma (Inr ())))) location =
-      abstract_transfer
-        (locals (abstract_sigma (Inl read_node)) \<squnion>
-         globs (abstract_sigma (Inr ())))
-        (location_vname location)"
-    and resolved:
-      "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
-  shows
-    "dg_refines_on (set (locations_of write_node))
-      (DG
-        (locals (traverse_rhs
-          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-            executable_transfer read_node write_node) executable_sigma))
-        (globs (sides_of_rhs
-          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-            executable_transfer read_node write_node) executable_sigma (Inr ()))))
-      (DG
-        (locals (traverse_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
-            abstract_transfer read_node write_node) abstract_sigma))
-        (globs (sides_of_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
-            abstract_transfer read_node write_node) abstract_sigma (Inr ()))))"
-  unfolding traverse_placed_dg_edge_tree sides_placed_dg_edge_tree_Inr
-    traverse_placed_abs_dg_edge_tree sides_placed_abs_dg_edge_tree_Inr
-  by (simp add: dg_refines_on_project[OF raw resolved])
 
 lemma dg_refines_on_placed_edge_strict:
   fixes executable_transfer ::
@@ -242,25 +172,6 @@ lemma dg_refines_on_placed_edge_strict:
     traverse_placed_abs_dg_edge_tree sides_placed_abs_dg_edge_tree_Inr
   by (simp add: dg_refines_on_project_strict[OF raw resolved])
 
-definition placed_dg_enter_tree ::
-  "(pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
-     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   vname list => exp list => pp => pp =>
-   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
-where
-  "placed_dg_enter_tree owner_of locations_of keep_local publish_side
-      enter parameters arguments caller callee =
-    placed_dg_edge_tree owner_of locations_of keep_local publish_side
-      (enter parameters arguments) caller callee"
-
-lemma placed_dg_enter_tree_eq:
-  "placed_dg_enter_tree owner_of locations_of keep_local publish_side
-      enter parameters arguments caller callee =
-    placed_dg_edge_tree owner_of locations_of keep_local publish_side
-      (enter parameters arguments) caller callee"
-  unfolding placed_dg_enter_tree_def by rule
 
 definition placed_dg_enter_tree_strict ::
   "(pp => pname) => (pp => location list) =>
@@ -330,78 +241,6 @@ lemma dep_aux_placed_abs_dg_enter_tree:
   unfolding placed_abs_dg_enter_tree_def
   by (rule dep_aux_placed_abs_dg_edge_tree)
 
-lemma dg_refines_on_placed_entry:
-  fixes executable_enter ::
-    "vname list => exp list =>
-      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and abstract_enter ::
-      "vname list => exp list => 'a abs_state => 'a abs_state"
-  assumes raw:
-    "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
-      lookup_resolved_st_q
-        (executable_enter parameters arguments
-          (locals (executable_sigma (Inl caller)) \<squnion>
-           globs (executable_sigma (Inr ())))) location =
-      abstract_enter parameters arguments
-        (locals (abstract_sigma (Inl caller)) \<squnion>
-         globs (abstract_sigma (Inr ())))
-        (location_vname location)"
-    and resolved:
-      "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
-  shows
-    "dg_refines_on (set (locations_of callee))
-      (DG
-        (locals (traverse_rhs
-          (placed_dg_enter_tree owner_of locations_of keep_local publish_side
-            executable_enter parameters arguments caller callee)
-          executable_sigma))
-        (globs (sides_of_rhs
-          (placed_dg_enter_tree owner_of locations_of keep_local publish_side
-            executable_enter parameters arguments caller callee)
-          executable_sigma (Inr ()))))
-      (DG
-        (locals (traverse_rhs
-          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
-            abstract_enter parameters arguments caller callee)
-          abstract_sigma))
-        (globs (sides_of_rhs
-          (placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
-            abstract_enter parameters arguments caller callee)
-          abstract_sigma (Inr ()))))"
-proof -
-  have bridge:
-    "dg_refines_on (set (locations_of callee))
-      (DG
-        (locals (traverse_rhs
-          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-            (executable_enter parameters arguments) caller callee)
-          executable_sigma))
-        (globs (sides_of_rhs
-          (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-            (executable_enter parameters arguments) caller callee)
-          executable_sigma (Inr ()))))
-      (DG
-        (locals (traverse_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
-            (abstract_enter parameters arguments) caller callee)
-          abstract_sigma))
-        (globs (sides_of_rhs
-          (placed_abs_dg_edge_tree source_global owner_of keep_local publish_side
-            (abstract_enter parameters arguments) caller callee)
-          abstract_sigma (Inr ()))))"
-    by (rule dg_refines_on_placed_edge[
-      where executable_transfer = "executable_enter parameters arguments"
-        and abstract_transfer = "abstract_enter parameters arguments"
-        and executable_sigma = executable_sigma and abstract_sigma = abstract_sigma
-        and read_node = caller and write_node = callee
-        and source_global = source_global and owner_of = owner_of
-        and locations_of = locations_of and keep_local = keep_local
-        and publish_side = publish_side, OF raw resolved])
-  show ?thesis
-    unfolding placed_dg_enter_tree_def placed_abs_dg_enter_tree_def
-    by (rule bridge)
-qed
 
 lemma dg_refines_on_placed_entry_strict:
   fixes executable_enter ::
@@ -515,16 +354,6 @@ lemma dep_aux_placed_abs_dg_combine_tree:
     {Inl caller, Inl callee, Inr ()}"
   by (simp add: placed_abs_dg_combine_tree_def dep_aux_def Let_def)
 
-definition placed_dg_combine_tree ::
-  "(pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (vname option =>
-     ('a::bounded_semilattice_sup_bot) exec_dg_st =>
-     'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
-   vname option => pp => pp => pp =>
-   (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
-where
-  "placed_dg_combine_tree = placed_dg_combine_tree_with project_resolved_on"
 
 definition placed_dg_combine_tree_strict ::
   "(pp => pname) => (pp => location list) =>
@@ -537,29 +366,6 @@ definition placed_dg_combine_tree_strict ::
 where
   "placed_dg_combine_tree_strict = placed_dg_combine_tree_with project_resolved_on_strict"
 
-lemma traverse_placed_dg_combine_tree:
-  "traverse_rhs
-    (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-      combine destination caller callee write_node) sigma =
-    DG (project_resolved_on (owner_of write_node) (locations_of write_node)
-          keep_local
-          (combine destination (locals (sigma (Inl caller)))
-            (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))
-      bot"
-  unfolding placed_dg_combine_tree_def placed_dg_combine_tree_with_def
-  by (simp add: Let_def)
-
-lemma sides_placed_dg_combine_tree_Inr:
-  "sides_of_rhs
-    (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-      combine destination caller callee write_node) sigma (Inr ()) =
-    DG bot
-      (project_resolved_on (owner_of write_node) (locations_of write_node)
-        publish_side
-        (combine destination (locals (sigma (Inl caller)))
-          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))))"
-  unfolding placed_dg_combine_tree_def placed_dg_combine_tree_with_def
-  by (simp add: Let_def)
 
 lemma traverse_placed_dg_combine_tree_strict:
   "traverse_rhs
@@ -619,54 +425,6 @@ lemma placed_dg_combine_tree_strict_side_default_bot:
   by (simp add: sides_placed_dg_combine_tree_strict_Inr
     resolved_default_rep_project_resolved_on_strict)
 
-lemma dg_refines_on_placed_combine:
-  fixes executable_combine ::
-    "vname option => ('a::bounded_semilattice_sup_bot) exec_dg_st =>
-      'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st"
-    and abstract_combine ::
-      "vname option => 'a abs_state => 'a abs_state => 'a abs_state => 'a abs_state"
-    and executable_sigma ::
-      "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-    and abstract_sigma ::
-      "pp + unit => ('a abs_state, 'a abs_state) dg_state"
-  assumes raw:
-    "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
-      lookup_resolved_st_q
-        (executable_combine destination
-          (locals (executable_sigma (Inl caller)))
-          (locals (executable_sigma (Inl callee)))
-          (globs (executable_sigma (Inr ())))) location =
-      abstract_combine destination
-        (locals (abstract_sigma (Inl caller)))
-        (locals (abstract_sigma (Inl callee)))
-        (globs (abstract_sigma (Inr ())))
-        (location_vname location)"
-    and resolved:
-      "\<And>location. location \<in> set (locations_of write_node) \<Longrightarrow>
-        location = location_of source_global (location_vname location)"
-  shows
-    "dg_refines_on (set (locations_of write_node))
-      (DG
-        (locals (traverse_rhs
-          (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-            executable_combine destination caller callee write_node)
-          executable_sigma))
-        (globs (sides_of_rhs
-          (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-            executable_combine destination caller callee write_node)
-          executable_sigma (Inr ()))))
-      (DG
-        (locals (traverse_rhs
-          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
-            abstract_combine destination caller callee write_node)
-          abstract_sigma))
-        (globs (sides_of_rhs
-          (placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
-            abstract_combine destination caller callee write_node)
-          abstract_sigma (Inr ()))))"
-  unfolding traverse_placed_dg_combine_tree sides_placed_dg_combine_tree_Inr
-    traverse_placed_abs_dg_combine_tree sides_placed_abs_dg_combine_tree_Inr
-  by (simp add: dg_refines_on_project[OF raw resolved])
 
 lemma dg_refines_on_placed_combine_strict:
   fixes executable_combine ::
@@ -739,155 +497,6 @@ where
     (\<forall>s. set (effective_support (rep_resolved_st (transfer s))) \<subseteq>
       set (effective_support (rep_resolved_st s)) \<union> footprint)"
 
-lemma placed_dg_edge_tree_input_support_bounded:
-  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
-    'a exec_dg_st) dg_state"
-  assumes read_local_bounded:
-    "set (effective_support (rep_resolved_st (locals (sigma (Inl read_node)))))
-      \<subseteq> read_scope"
-    and read_side_bounded:
-    "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
-      \<subseteq> gscope"
-    and covers: "read_scope \<union> gscope \<subseteq> write_scope"
-  shows
-    "set (effective_support (rep_resolved_st
-      (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<subseteq> write_scope"
-proof -
-  have "set (effective_support (rep_resolved_st
-      (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<subseteq>
-    set (effective_support (rep_resolved_st (locals (sigma (Inl read_node))))) \<union>
-    set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))"
-    by (rule effective_support_rep_sup_resolved_st_q)
-  also have "\<dots> \<subseteq> read_scope \<union> gscope"
-    using read_local_bounded read_side_bounded by (rule Un_mono)
-  also have "\<dots> \<subseteq> write_scope" by (rule covers)
-  finally show ?thesis .
-qed
-
-lemma placed_dg_edge_tree_local_support_bounded:
-  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes growth: "support_growth_bounded transfer footprint"
-    and footprint_scope: "footprint \<subseteq> set (locations_of write_node)"
-    and input_bounded:
-      "set (effective_support (rep_resolved_st
-        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))
-        \<subseteq> set (locations_of write_node)"
-  shows
-    "set (effective_support (rep_resolved_st
-      (locals (traverse_rhs
-        (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-          transfer read_node write_node) sigma)))) \<subseteq> set (locations_of write_node)"
-proof -
-  have transfer_bounded:
-    "set (effective_support (rep_resolved_st
-      (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))
-      \<subseteq> set (locations_of write_node)"
-  proof -
-    have "set (effective_support (rep_resolved_st
-        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))) \<subseteq>
-      set (effective_support (rep_resolved_st
-        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<union> footprint"
-      using growth unfolding support_growth_bounded_def by blast
-    also have "\<dots> \<subseteq> set (locations_of write_node)"
-      using input_bounded footprint_scope by blast
-    finally show ?thesis .
-  qed
-  have "set (effective_support (rep_resolved_st
-      (project_resolved_on (owner_of write_node) (locations_of write_node) keep_local
-        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
-    set (locations_of write_node)"
-    using transfer_bounded effective_support_rep_project_resolved_on by blast
-  then show ?thesis
-    by (simp add: traverse_placed_dg_edge_tree)
-qed
-
-lemma placed_dg_edge_tree_side_support_bounded:
-  fixes transfer :: "('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes growth: "support_growth_bounded transfer footprint"
-    and footprint_scope: "footprint \<subseteq> set (locations_of write_node)"
-    and input_bounded:
-      "set (effective_support (rep_resolved_st
-        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))
-        \<subseteq> set (locations_of write_node)"
-  shows
-    "set (effective_support (rep_resolved_st
-      (globs (sides_of_rhs
-        (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-          transfer read_node write_node) sigma (Inr ()))))) \<subseteq>
-      set (locations_of write_node)"
-proof -
-  have transfer_bounded:
-    "set (effective_support (rep_resolved_st
-      (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))
-      \<subseteq> set (locations_of write_node)"
-  proof -
-    have "set (effective_support (rep_resolved_st
-        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ())))))) \<subseteq>
-      set (effective_support (rep_resolved_st
-        (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))) \<union> footprint"
-      using growth unfolding support_growth_bounded_def by blast
-    also have "\<dots> \<subseteq> set (locations_of write_node)"
-      using input_bounded footprint_scope by blast
-    finally show ?thesis .
-  qed
-  have "set (effective_support (rep_resolved_st
-      (project_resolved_on (owner_of write_node) (locations_of write_node) publish_side
-        (transfer (locals (sigma (Inl read_node)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
-    set (locations_of write_node)"
-    using transfer_bounded effective_support_rep_project_resolved_on by blast
-  then show ?thesis
-    by (simp add: sides_placed_dg_edge_tree_Inr)
-qed
-
-corollary placed_dg_enter_tree_local_support_bounded:
-  fixes enter :: "vname list => exp list =>
-    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes growth: "support_growth_bounded (enter parameters arguments) footprint"
-    and footprint_scope: "footprint \<subseteq> set (locations_of callee)"
-    and input_bounded:
-      "set (effective_support (rep_resolved_st
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))))
-        \<subseteq> set (locations_of callee)"
-  shows
-    "set (effective_support (rep_resolved_st
-      (locals (traverse_rhs
-        (placed_dg_enter_tree owner_of locations_of keep_local publish_side
-          enter parameters arguments caller callee) sigma)))) \<subseteq>
-      set (locations_of callee)"
-  unfolding placed_dg_enter_tree_def
-  by (rule placed_dg_edge_tree_local_support_bounded
-    [where owner_of = owner_of and locations_of = locations_of
-       and keep_local = keep_local and publish_side = publish_side
-       and transfer = "enter parameters arguments" and read_node = caller
-       and write_node = callee and sigma = sigma,
-     OF growth footprint_scope input_bounded])
-
-corollary placed_dg_enter_tree_side_support_bounded:
-  fixes enter :: "vname list => exp list =>
-    ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
-    and sigma :: "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes growth: "support_growth_bounded (enter parameters arguments) footprint"
-    and footprint_scope: "footprint \<subseteq> set (locations_of callee)"
-    and input_bounded:
-      "set (effective_support (rep_resolved_st
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))))
-        \<subseteq> set (locations_of callee)"
-  shows
-    "set (effective_support (rep_resolved_st
-      (globs (sides_of_rhs
-        (placed_dg_enter_tree owner_of locations_of keep_local publish_side
-          enter parameters arguments caller callee) sigma (Inr ()))))) \<subseteq>
-      set (locations_of callee)"
-  unfolding placed_dg_enter_tree_def
-  by (rule placed_dg_edge_tree_side_support_bounded
-    [where owner_of = owner_of and locations_of = locations_of
-       and keep_local = keep_local and publish_side = publish_side
-       and transfer = "enter parameters arguments" and read_node = caller
-       and write_node = callee and sigma = sigma,
-     OF growth footprint_scope input_bounded])
 
 text \<open>
   \<^const>\<open>combine_collect_resolved_for_q\<close> keeps locals from its caller-side
@@ -899,277 +508,10 @@ text \<open>
   bound, matching what \<open>combine_collect_resolved_for_q\<close> itself discards.
 \<close>
 
-lemma placed_dg_combine_tree_transfer_support_bounded:
-  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
-    'a exec_dg_st) dg_state"
-  assumes caller_bounded:
-      "set (effective_support (rep_resolved_st (locals (sigma (Inl caller)))))
-        \<subseteq> caller_scope"
-    and callee_bounded:
-      "set (effective_support (rep_resolved_st (locals (sigma (Inl callee)))))
-        \<subseteq> callee_scope"
-    and side_bounded:
-      "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
-        \<subseteq> gscope"
-    and covers:
-      "{loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
-       {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
-       (case destination of None => {} | Some x => {location_of source_global x})
-        \<subseteq> write_scope"
-  shows
-    "set (effective_support (rep_resolved_st
-      (combine_collect_resolved_for_q source_global destination
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
-        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))
-      \<subseteq> write_scope"
-proof -
-  have sc_bounded: "set (effective_support (rep_resolved_st
-      (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ()))))) \<subseteq> caller_scope \<union> gscope"
-  proof -
-    have "set (effective_support (rep_resolved_st
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ()))))) \<subseteq>
-      set (effective_support (rep_resolved_st (locals (sigma (Inl caller))))) \<union>
-      set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))"
-      by (rule effective_support_rep_sup_resolved_st_q)
-    also have "\<dots> \<subseteq> caller_scope \<union> gscope"
-      using caller_bounded side_bounded by blast
-    finally show ?thesis .
-  qed
-  have se_bounded: "set (effective_support (rep_resolved_st
-      (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))) \<subseteq> callee_scope \<union> gscope"
-  proof -
-    have "set (effective_support (rep_resolved_st
-        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))) \<subseteq>
-      set (effective_support (rep_resolved_st (locals (sigma (Inl callee))))) \<union>
-      set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))"
-      by (rule effective_support_rep_sup_resolved_st_q)
-    also have "\<dots> \<subseteq> callee_scope \<union> gscope"
-      using callee_bounded side_bounded by blast
-    finally show ?thesis .
-  qed
-  have "set (effective_support (rep_resolved_st
-      (combine_collect_resolved_for_q source_global destination
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
-        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ())))))) \<subseteq>
-    {loc \<in> set (effective_support (rep_resolved_st
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ()))))). location_is_local loc} \<union>
-    {loc \<in> set (effective_support (rep_resolved_st
-        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))). location_is_global loc} \<union>
-    (case destination of None => {} | Some x => {location_of source_global x})"
-    by (rule effective_support_rep_combine_collect_resolved_for_q)
-  also have "\<dots> \<subseteq>
-    {loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
-    {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
-    (case destination of None => {} | Some x => {location_of source_global x})"
-    using sc_bounded se_bounded by blast
-  also have "\<dots> \<subseteq> write_scope" by (rule covers)
-  finally show ?thesis .
-qed
 
-lemma placed_dg_combine_tree_local_support_bounded:
-  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
-    'a exec_dg_st) dg_state"
-  assumes caller_bounded:
-      "set (effective_support (rep_resolved_st (locals (sigma (Inl caller)))))
-        \<subseteq> caller_scope"
-    and callee_bounded:
-      "set (effective_support (rep_resolved_st (locals (sigma (Inl callee)))))
-        \<subseteq> callee_scope"
-    and side_bounded:
-      "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
-        \<subseteq> gscope"
-    and covers:
-      "{loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
-       {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
-       (case destination of None => {} | Some x => {location_of source_global x})
-        \<subseteq> set (locations_of write_node)"
-  shows
-    "set (effective_support (rep_resolved_st
-      (locals (traverse_rhs
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          (\<lambda>dst cs ce sd. combine_collect_resolved_for_q source_global dst (cs \<squnion> sd) (ce \<squnion> sd))
-          destination caller callee write_node) sigma)))) \<subseteq>
-      set (locations_of write_node)"
-proof -
-  have transfer_bounded: "set (effective_support (rep_resolved_st
-      (combine_collect_resolved_for_q source_global destination
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
-        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))
-      \<subseteq> set (locations_of write_node)"
-    by (rule placed_dg_combine_tree_transfer_support_bounded
-      [OF caller_bounded callee_bounded side_bounded covers])
-  have "set (effective_support (rep_resolved_st
-      (project_resolved_on (owner_of write_node) (locations_of write_node) keep_local
-        (combine_collect_resolved_for_q source_global destination
-          (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
-          (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
-    set (locations_of write_node)"
-    using transfer_bounded effective_support_rep_project_resolved_on by blast
-  then show ?thesis
-    by (simp add: traverse_placed_dg_combine_tree)
-qed
-
-lemma placed_dg_combine_tree_side_support_bounded:
-  fixes sigma :: "pp + unit => ('a::bounded_semilattice_sup_bot exec_dg_st,
-    'a exec_dg_st) dg_state"
-  assumes caller_bounded:
-      "set (effective_support (rep_resolved_st (locals (sigma (Inl caller)))))
-        \<subseteq> caller_scope"
-    and callee_bounded:
-      "set (effective_support (rep_resolved_st (locals (sigma (Inl callee)))))
-        \<subseteq> callee_scope"
-    and side_bounded:
-      "set (effective_support (rep_resolved_st (globs (sigma (Inr ())))))
-        \<subseteq> gscope"
-    and covers:
-      "{loc \<in> caller_scope \<union> gscope. location_is_local loc} \<union>
-       {loc \<in> callee_scope \<union> gscope. location_is_global loc} \<union>
-       (case destination of None => {} | Some x => {location_of source_global x})
-        \<subseteq> set (locations_of write_node)"
-  shows
-    "set (effective_support (rep_resolved_st
-      (globs (sides_of_rhs
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          (\<lambda>dst cs ce sd. combine_collect_resolved_for_q source_global dst (cs \<squnion> sd) (ce \<squnion> sd))
-          destination caller callee write_node) sigma (Inr ()))))) \<subseteq>
-      set (locations_of write_node)"
-proof -
-  have transfer_bounded: "set (effective_support (rep_resolved_st
-      (combine_collect_resolved_for_q source_global destination
-        (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
-        (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))
-      \<subseteq> set (locations_of write_node)"
-    by (rule placed_dg_combine_tree_transfer_support_bounded
-      [OF caller_bounded callee_bounded side_bounded covers])
-  have "set (effective_support (rep_resolved_st
-      (project_resolved_on (owner_of write_node) (locations_of write_node) publish_side
-        (combine_collect_resolved_for_q source_global destination
-          (locals (sigma (Inl caller)) \<squnion> globs (sigma (Inr ())))
-          (locals (sigma (Inl callee)) \<squnion> globs (sigma (Inr ()))))))) \<subseteq>
-    set (locations_of write_node)"
-    using transfer_bounded effective_support_rep_project_resolved_on by blast
-  then show ?thesis
-    by (simp add: sides_placed_dg_combine_tree_Inr)
-qed
-
-
-lemma lookup_placed_dg_combine_tree_recombine:
-  fixes sigma :: "pp + unit =>
-    ('a::bounded_semilattice_sup_bot exec_dg_st, 'a exec_dg_st) dg_state"
-  assumes relevant:
-    "target \<in> set (locations_of write_node @
-      effective_support
-        (rep_resolved_st
-          (combine destination (locals (sigma (Inl caller)))
-            (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))))"
-    and covered:
-      "keep_local (owner_of write_node, target) \<or>
-       publish_side (owner_of write_node, target)"
-  shows
-    "lookup_resolved_st_q
-      (locals (traverse_rhs
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          combine destination caller callee write_node) sigma) \<squnion>
-       globs (sides_of_rhs
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          combine destination caller callee write_node) sigma (Inr ()))) target =
-     lookup_resolved_st_q
-      (combine destination (locals (sigma (Inl caller)))
-        (locals (sigma (Inl callee))) (globs (sigma (Inr ())))) target"
-proof -
-  have result_eq:
-    "locals (traverse_rhs
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          combine destination caller callee write_node) sigma) \<squnion>
-       globs (sides_of_rhs
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          combine destination caller callee write_node) sigma (Inr ())) =
-     project_resolved_on (owner_of write_node) (locations_of write_node)
-       keep_local
-       (combine destination (locals (sigma (Inl caller)))
-         (locals (sigma (Inl callee))) (globs (sigma (Inr ())))) \<squnion>
-     project_resolved_on (owner_of write_node) (locations_of write_node)
-       publish_side
-       (combine destination (locals (sigma (Inl caller)))
-         (locals (sigma (Inl callee))) (globs (sigma (Inr ()))))"
-    by (simp add: traverse_placed_dg_combine_tree
-      sides_placed_dg_combine_tree_Inr)
-  show ?thesis
-    unfolding result_eq
-    by (rule lookup_project_resolved_on_join[
-      where owner = "owner_of write_node" and universe = "locations_of write_node"
-        and keep_local = keep_local and publish_side = publish_side
-        and s = "combine destination (locals (sigma (Inl caller)))
-          (locals (sigma (Inl callee))) (globs (sigma (Inr ())))"
-        and target = target, OF relevant covered])
-qed
-
-
-definition placed_dg_edge_of ::
-  "(pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   unit => pp => edge_action => pp =>
-   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
-where
-  "placed_dg_edge_of owner_of locations_of keep_local publish_side transfer ctx
-      read_node action write_node =
-    map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-      (placed_dg_edge_tree owner_of locations_of keep_local publish_side
-        (transfer action) read_node write_node))"
-
-definition placed_dg_combine_of ::
-  "(vname => bool) => (pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   unit => pp => call_action => pp => pp =>
-   (pp \<times> unit, unit, ('a::bounded_semilattice_sup_bot exec_dg_st,
-     'a exec_dg_st) dg_state) strategy_tree"
-where
-  "placed_dg_combine_of source_global owner_of locations_of keep_local publish_side
-      ctx caller action callee continuation =
-    (case action of CallEdge destination parameters arguments =>
-      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-        (placed_dg_combine_tree owner_of locations_of keep_local publish_side
-          (\<lambda>destination caller_state callee_state side_state.
-            combine_collect_resolved_for_q source_global destination
-              (caller_state \<squnion> side_state) (callee_state \<squnion> side_state))
-          destination caller callee continuation)))"
-
-definition placed_dg_enter_of ::
-  "(pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
-     ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   unit => pp => call_action => pp =>
-   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
-where
-  "placed_dg_enter_of owner_of locations_of keep_local publish_side enter ctx
-      caller action callee =
-    (case action of CallEdge destination parameters arguments =>
-      map_gtree (\<lambda>_. ()) (map_ltree (\<lambda>node. (node, ctx))
-        (placed_dg_enter_tree owner_of locations_of keep_local publish_side
-          enter parameters arguments caller callee)))"
-
-definition placed_dg_gen_of ::
-  "(vname => bool) => (pp => pname) => (pp => location list) =>
-   (scoped_location => bool) => (scoped_location => bool) =>
-   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   (vname list => exp list => 'a exec_dg_st => 'a exec_dg_st) =>
-   cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
-   (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
-where
-  "placed_dg_gen_of source_global owner_of locations_of keep_local publish_side
-      transfer enter graph bot0 s0d s0g =
-    side_cfg_T_eff_keyed_seed_trees intra_predecessor_list (\<lambda>_. ())
-      (placed_dg_edge_of owner_of locations_of keep_local publish_side transfer)
-      (placed_dg_combine_of source_global owner_of locations_of keep_local publish_side)
-      (placed_dg_enter_of owner_of locations_of keep_local publish_side enter)
-      graph bot0 s0d s0g"
-
-text \<open>Strict counterparts, wired to \<open>placed_dg_*_tree_strict\<close> instead of the
-  defensive \<open>placed_dg_*_tree\<close>: the equation system a placement instance
-  actually solves should use these, so every generated value's support is
-  bounded by construction.\<close>
+text \<open>The per-shape generators, wired to \<open>placed_dg_*_tree_strict\<close>: the
+  equation system a placement instance solves is built from these, so every
+  generated value's support is bounded by construction.\<close>
 
 definition placed_dg_edge_of_strict ::
   "(pp => pname) => (pp => location list) =>
