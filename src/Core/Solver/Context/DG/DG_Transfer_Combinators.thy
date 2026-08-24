@@ -46,43 +46,30 @@ where
 
 text \<open>
   Every value a DG equation reads or publishes is a \<open>('d, 'd) dg_state\<close> pair
-  (\<^const>\<open>DG\<close>), with the unused half fixed to \<open>bot\<close> by convention: a
-  global-key publication -- the one shared \<open>gk0\<close> slot, or a routed seed
-  slot, both living in the same global-key space \<open>'g\<close> -- carries its payload
-  in the \<open>globs\<close> half; a local-key answer carries its payload in the
-  \<open>locals\<close> half (\<open>routed_extra_g\<close>'s frame-entry read and \<open>routed_cmb_g\<close>'s
-  final answer, both in \<open>Routed_Context\<close>, return the analysis's own local
-  contribution this way). \<open>publish_global\<close>, \<open>publish_seed\<close>, and
-  \<open>answer_local\<close> apply that convention so an equation never writes
-  \<^const>\<open>DG\<close>, \<open>fst\<close>, or \<open>snd\<close> directly -- each is still a plain
-  syntax translation, so unfolding an equation's \<open>_def\<close> exposes exactly the
-  \<^const>\<open>DG\<close> term it names.
+  (\<^const>\<open>DG\<close>), with the unused half fixed to \<open>bot\<close>. Which half carries the
+  payload is decided by the \<^emph>\<open>reader\<close>, not by the key's role:
+  \<open>publish_global\<close> writes the shared \<open>gk0\<close> slot in the \<open>globs\<close> half because
+  \<open>routed_cmb_g\<close> reads it back with \<open>globs\<close>, and \<open>answer_local\<close> writes the
+  \<open>locals\<close> half because a local-key answer is read with \<open>locals\<close>. A routed
+  seed slot is a global key that nonetheless carries its payload in \<open>locals\<close>,
+  since \<open>routed_extra_g\<close> reads it back as \<open>answer_local (locals seed_state)\<close>;
+  it is therefore written as a plain \<^const>\<open>depend_on\<close> at its call site in
+  \<open>Routed_Context\<close>, rather than through an abbreviation whose name would
+  suggest the \<open>globs\<close> convention.
 
-  \<open>publish_global\<close> and \<open>publish_seed\<close> are \<^const>\<open>depend_on\<close> under the
-  same \<^const>\<open>DG\<close> convention, named for which global-key role the
-  publication plays; a routed context-sensitive analysis
-  (\<open>Routed_Context\<close>) uses one of each per call. Both are value-producing
-  (no trailing continuation): as a \<open>do\<close>-block statement (no \<open>\<leftarrow>\<close>), the
-  published side effect is what matters and the answer -- \<open>DG bot bot\<close>, the
-  same neutral value every \<open>_cont\<close> caller already supplied by hand -- is
-  discarded by the bind. The \<open>_cont\<close> forms keep the explicit continuation for
-  direct, non-\<open>do\<close> use. No explicit type signature is given -- as with
-  \<open>enter_global\<close>/\<open>combine_global\<close>, an annotated signature forcing both
-  \<^const>\<open>DG\<close> halves to one shared type variable over-constrains unification
-  wherever the caller and callee sides are inferred independently.
+  \<open>publish_global\<close> and \<open>answer_local\<close> exist so an equation never writes
+  \<^const>\<open>DG\<close>, \<open>fst\<close>, or \<open>snd\<close> directly. Each is a plain syntax translation,
+  so unfolding an equation's \<open>_def\<close> exposes exactly the \<^const>\<open>DG\<close> term it
+  names. \<open>publish_global\<close> is value-producing (no trailing continuation): as a
+  \<open>do\<close>-block statement (no \<open>\<leftarrow>\<close>), the published side effect is what matters and
+  the answer \<open>DG bot bot\<close> is discarded by the bind. No explicit type signature
+  is given -- as with \<open>enter_global\<close>/\<open>combine_global\<close>, an annotated signature
+  forcing both \<^const>\<open>DG\<close> halves to one shared type variable over-constrains
+  unification wherever the caller and callee sides are inferred independently.
 \<close>
 
 abbreviation publish_global where
   "publish_global key x \<equiv> depend_on key (DG bot x) (answer (DG bot bot))"
-
-abbreviation publish_seed where
-  "publish_seed key x \<equiv> depend_on key (DG bot x) (answer (DG bot bot))"
-
-abbreviation publish_global_cont where
-  "publish_global_cont key x cont \<equiv> depend_on key (DG bot x) cont"
-
-abbreviation publish_seed_cont where
-  "publish_seed_cont key x cont \<equiv> depend_on key (DG bot x) cont"
 
 abbreviation answer_local where
   "answer_local x \<equiv> answer (DG x bot)"

@@ -781,24 +781,38 @@ runtime modules `Bit_Shifts` and `Str_Literal`); `tests/run.py --lint` reports
 
 Two of these are live bugs, not hygiene.
 
-**(a) The same CFG node gets two different names — verified.**
-`string_of_cfg_node` (generated `Voblint_CLI.ml:8400`) renders
-`FunctionResult p` as `"result_" ^ p`. `graphviz_point_label`
-(`Voblint_CLI.ml:8493`) renders the same constructor as `"exit_" ^ p`. So one
-node appears as `result_main` in the text report and `exit_main` in the graph.
-Both are HOL definitions; nothing gates their agreement. Compounding it,
-`cli/main.ml:153-156` hand-reimplements the mapping a *third* time in OCaml —
-because `string_of_cfg_node` is not in the exported `Core` signature. The fix
-is one entry in the `export_code` root list plus a HOL lemma pinning the two
-label functions together.
+**(a) ~~The same CFG node gets two different names.~~ RETRACTED — not a bug.**
+An earlier draft reported `string_of_cfg_node` rendering `FunctionResult p` as
+`result_p` while `graphviz_point_label` renders it `exit_p`, and called that a
+divergence. Running the CLI settles it:
 
-**(b) `--dot-full` is silently ignored under two configurations — verified.**
-`cli/main.ml:776-779` is byte-identical to `:785-788`, and `:794-799` to
-`:806-811`. Under `--context call-string` or `--context-graph expanded`,
-`--dot-full` behaves exactly like `--dot` / `--graph-snapshot`, with no
-message. This contradicts the CLI's own stated policy of rejecting rather than
-silently falling back (`main.ml:64-67`, `:92-96`). The four-way `if/else` chain
-is written out four times; one helper would have made the omission visible.
+```
+main_result_main_ctx0 [... label="exit_main\nr=[6,6]"];
+```
+
+The two serve different roles. `string_of_cfg_node` builds the DOT **node id**
+(`owner ^ "_" ^ string_of_cfg_node p ^ "_ctx" ^ ctx`), which wants a structural
+name derived from the constructor; `graphviz_point_label` builds the **display
+label**, which wants the symmetric `entry_`/`exit_` pair. They agree on
+`FunctionEntry` incidentally and differ on `FunctionResult` deliberately. The
+check report never carries a `FunctionEntry`/`FunctionResult` node, since checks
+compile to `EA_Check` between `Statement` nodes, so the two spellings never
+label the same thing in the same role.
+
+The verification error was checking that two strings differ without checking
+that they are used for the same purpose. What survives is much narrower:
+`cli/main.ml:153-156` does hand-reimplement the node-id mapping in OCaml,
+because `string_of_cfg_node` is not exported — but only its `Statement` branch
+is ever exercised.
+
+**(b) `--dot-full` is a no-op under two configurations — verified, and the
+reason matters.** Under `--context call-string` or `--context-graph expanded`,
+`--dot-full` produces byte-identical output to plain `--dot`. But it is not a
+missing feature: those views already annotate *every* node with its per-context
+state, so there is nothing left for "full" to add. The four-way `if/else` chain
+written out four times is what made the coincidence invisible — the first two
+branches are identical in all four copies. Collapsing it to two helpers with a
+`~full` flag states the fact once, and `--help` now says it.
 
 **(c) `cli/html_report.ml` re-parses rendered strings, against its own header.**
 `:18` states "nothing re-derives the CFG or parses a rendered rendering back".
