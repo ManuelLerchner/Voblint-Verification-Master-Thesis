@@ -40,7 +40,8 @@ text \<open>
 locale entry_state_routed_context =
   dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps mnm main" gk0
     "formals_route_lifted_gen S"
-    "routed_cmb_g S gk0 seed_key" "routed_extra_g seed_key gk0"
+    "routed_cmb_g S gk0 seed_key (static_resolve (compile_prog Pi ps mnm main))"
+    "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gamma_state_lift
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
@@ -69,11 +70,19 @@ begin
 
 sublocale routed: routed_context_hetero S gs "compile_prog Pi ps mnm main" gk0
   "formals_route_lifted_gen S" bot0 s0d s0g sigma vars x0 sg seed_key
+  "static_resolve (compile_prog Pi ps mnm main)"
   "route_enterc_of_sigma S (formals_route_lifted_gen S) sigma gk0 (compile_prog Pi ps mnm main)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps mnm main))" using compile_prog_finite by simp
 next
   show "\<And>p ctx. seed_key p ctx \<noteq> gk0" by (rule seed_key_ne_gk0)
+next
+  fix u ctx dst pars args p cont s
+  assume "(u, CallEdge dst pars args, FunctionEntry p, cont)
+            \<in> calls (compile_prog Pi ps mnm main)"
+  then show "p \<in> set (static_resolve (compile_prog Pi ps mnm main) cont u
+                        (CallEdge dst pars args) (locals (sigma (Inl (u, ctx)))))"
+    by (simp add: static_resolve_iff compile_prog_finite)
 next
   fix u ctx dst pars args p cont s
   assume "(u, ctx) \<in> vars"

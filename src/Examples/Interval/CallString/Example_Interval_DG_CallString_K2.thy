@@ -25,7 +25,8 @@ definition nest_2_eqs ::
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_2_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 2)
-      (routed_cmb_g nest_S_st Global Seed) (routed_extra_g Seed Global)
+      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
+      (routed_extra_g Seed Global)
        nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot"
 
 definition nest_2_sol ::
@@ -134,7 +135,8 @@ abbreviation nest_2_sigma_abs ::
 theorem nest_2_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 2)
-       (routed_cmb_g nest_S_abs Global Seed) (routed_extra_g Seed Global) nest_cfg nest_S_abs
+       (routed_cmb_g nest_S_abs Global Seed (static_resolve nest_cfg))
+       (routed_extra_g Seed Global) nest_cfg nest_S_abs
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st))
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)))

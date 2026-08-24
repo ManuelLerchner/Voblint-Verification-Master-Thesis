@@ -208,7 +208,8 @@ definition entry_state_eqs ::
   "entry_state_eqs gs is_bot_pred Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (entry_state_route_gen gs is_bot_pred)
-      (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
+      (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
+         (static_resolve (compile_prog Pi ps mnm main)))
       (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
 
@@ -525,9 +526,10 @@ begin
 interpretation ivl_es: routed_domain_exec
   gs is_bot_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
   Global Seed "entry_state_route_gen gs is_bot_pred" "entry_state_route_abs_gen gs"
+  static_resolve static_resolve
   by unfold_locales
      (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp,
-      rule entry_state_route_commute_gen[OF exact])
+      rule entry_state_route_commute_gen[OF exact], simp add: static_resolve_def)
 
 lemmas ivl_es_pp_abs_gen = ivl_es.pp_abs
 
@@ -562,7 +564,8 @@ lemma entry_state_pp_st:
 theorem entry_state_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (entry_state_route_abs_gen gs)
-        (routed_cmb_g (ectx_abs_spec gs) Global Seed)
+        (routed_cmb_g (ectx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
@@ -576,7 +579,8 @@ proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (entry_state_route_gen gs is_bot_pred)
-          (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (ectx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (ectx_spec gs is_bot_pred)
           Bot (Lifted cinit_ivl_st) Bot)
@@ -758,7 +762,8 @@ next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (ectx_abs_spec gs))
-             (routed_cmb_g (ectx_abs_spec gs) Global Seed)
+             (routed_cmb_g (ectx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ectx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))

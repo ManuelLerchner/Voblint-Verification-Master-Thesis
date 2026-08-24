@@ -168,13 +168,15 @@ lemma sign_nest_Hcmb_routed:
   "dg_reader_commute_gen.dg_tree_st_commute
      (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
      (map_lift (fun_of_resolved_st_q_for sign_nest_gs)) sigma_st
-     (routed_cmb_g sign_nest_S_st Global Seed (cs_route k) ctx ca cc ex)
-     (routed_cmb_g sign_nest_S_abs Global Seed (cs_route k) ctx ca cc ex)"
+     (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
+        (cs_route k) ctx ca cc ex)
+     (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg)
+        (cs_route k) ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [OF sign_nest_dg_reader sign_nest_seed_ne_global sign_nest_Henter sign_nest_Hcomb
             sign_nest_Hcont
             cs_route_indep_of_data])
-
+     (simp add: static_resolve_def)
 lemma sign_nest_Hextra_routed:
   "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
                 (map_lift (fun_of_resolved_st_q_for sign_nest_gs))
@@ -189,12 +191,14 @@ text \<open>The whole post-solution transport, stated once for a free bound \<op
 lemma sign_nest_pp_abs_of_st:
   assumes pp: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
-          (routed_cmb_g sign_nest_S_st Global Seed) (routed_extra_g Seed Global)
+          (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg))
+          (routed_extra_g Seed Global)
           sign_nest_cfg sign_nest_S_st Bot (Lifted cinit_sign_st) Bot)
        x sigma_st vars"
   shows "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
-          (routed_cmb_g sign_nest_S_abs Global Seed) (routed_extra_g Seed Global)
+          (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg))
+          (routed_extra_g Seed Global)
           sign_nest_cfg sign_nest_S_abs
           (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))
           (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))
@@ -204,8 +208,8 @@ lemma sign_nest_pp_abs_of_st:
   by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
         [where gs = sign_nest_gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. Global"
            and route_st = "cs_route k" and route_abs = "cs_route k"
-           and cmb_st = "routed_cmb_g sign_nest_S_st Global Seed"
-           and cmb_abs = "routed_cmb_g sign_nest_S_abs Global Seed"
+           and cmb_st = "routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)"
+           and cmb_abs = "routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg)"
            and extra_st = "routed_extra_g Seed Global"
            and extra_abs = "routed_extra_g Seed Global"
            and g = sign_nest_cfg and S_st = sign_nest_S_st and S_abs = sign_nest_S_abs,
@@ -230,7 +234,8 @@ definition sign_nest_1_eqs ::
      (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
   "sign_nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-       (routed_cmb_g sign_nest_S_st Global Seed) (routed_extra_g Seed Global)
+       (routed_cmb_g sign_nest_S_st Global Seed (static_resolve sign_nest_cfg))
+       (routed_extra_g Seed Global)
        sign_nest_cfg sign_nest_S_st Bot (Lifted cinit_sign_st) Bot"
 
 definition sign_nest_1_sol ::
@@ -335,7 +340,8 @@ abbreviation sigma_1 ::
 theorem sign_nest_1_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-       (routed_cmb_g sign_nest_S_abs Global Seed) (routed_extra_g Seed Global)
+       (routed_cmb_g sign_nest_S_abs Global Seed (static_resolve sign_nest_cfg))
+       (routed_extra_g Seed Global)
         sign_nest_cfg sign_nest_S_abs
         (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st))

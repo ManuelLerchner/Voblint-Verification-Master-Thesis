@@ -270,16 +270,27 @@ lemma combine_sound_fs:
            gammaDG (snd (dgs_combine S ci dcont de g)) (fst (dgs_combine S ci dcont de g))"
   using combine_sound[OF assms] by (simp add: case_prod_beta)
 
+text \<open>The cross-validating pull family's own combine, at the resolved shape: the call
+  site is handed the continuation node and folds one tree per procedure the resolver
+  answers with. \<^const>\<open>static_targets\<close> answers from the CFG, so this family keeps
+  exactly the trees it had.\<close>
+
+definition dg_cmb_at ::
+  "unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pname
+   \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
+where
+  "dg_cmb_at ctx ca cc p =
+     map_gtree (\<lambda>_. ())
+       (map_ltree (\<lambda>w. (w, ctx))
+         (dg_spec_combine_tree S (call_info_of ca p) cc (FunctionResult p)))"
+
 definition dg_cmb ::
-  "(pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+  "cfg \<Rightarrow> (pp \<Rightarrow> unit \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> unit) \<Rightarrow> unit \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> unit, unit,
         ('D, 'G) dg_state) strategy_tree"
 where
-  "dg_cmb route ctx ca cc ex =
-     (case ca of CallEdge dst _ _ \<Rightarrow>
-       map_gtree (\<lambda>_. ())
-         (map_ltree (\<lambda>w. (w, ctx))
-           (dg_spec_combine_tree S (call_info_of ca (result_proc ex)) cc ex)))"
+  "dg_cmb g route ctx ca cc v =
+     side_rhs_fold_dg bot (map (dg_cmb_at ctx ca cc) (static_targets g v cc ca))"
 
 definition dg_enter ::
   "unit \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> pp
@@ -305,7 +316,7 @@ definition dg_gen ::
 where
   "dg_gen g bot0 s0d s0g =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. ())
-       (\<lambda>_ _ _ _. ()) dg_cmb (dg_extra g) g S bot0 s0d s0g"
+       (\<lambda>_ _ _ _. ()) (dg_cmb g) (dg_extra g) g S bot0 s0d s0g"
 
 definition dg_D ::
   "(pp \<times> unit + unit \<Rightarrow>
@@ -344,8 +355,8 @@ where
   "dg_trees g v =
      map (\<lambda>(src, a). apply_dg_spec_at S a src ())
        (intra_predecessor_addr_list g v ())
-     @ map (\<lambda>(cc, ca, ex). dg_cmb (\<lambda>_ _ _ _. ()) () ca cc ex)
-       (return_call_action_list g v)
+     @ map (\<lambda>(cc, ca). dg_cmb g (\<lambda>_ _ _ _. ()) () ca cc v)
+       (call_site_list g v)
      @ dg_extra g (\<lambda>_ _ _ _. ()) () v"
 
 definition dg_acc ::
@@ -359,7 +370,7 @@ lemma eq_dg_gen:
   "eq (dg_gen g bot0 s0d s0g) (v, ()) sigma =
    DG (side_acc_dg (dg_acc g bot0 s0d v)
      sigma (dg_trees g v)) bot"
-  unfolding dg_gen_def dg_trees_def dg_acc_def dg_cmb_def
+  unfolding dg_gen_def dg_trees_def dg_acc_def
   by (simp add: eq_side_cfg_T_eff_keyed_seed_dg)
 
 lemma sides_fold_le_dg_gen:
@@ -367,7 +378,7 @@ lemma sides_fold_le_dg_gen:
       (side_rhs_fold_dg (dg_acc g bot0 s0d v)
         (dg_trees g v)) sigma k
    \<le> sides_of_rhs (dg_gen g bot0 s0d s0g (v, ())) sigma k"
-  unfolding dg_gen_def dg_trees_def dg_acc_def dg_cmb_def
+  unfolding dg_gen_def dg_trees_def dg_acc_def
     side_cfg_T_eff_keyed_seed_dg_def
   by (cases "v = cfg_entry g") (simp_all add: Let_def)
 
@@ -482,22 +493,21 @@ lemma dg_edge_tree_global:
       sum.map_comp o_def)
 
 lemma dg_combine_tree_local:
-  "locals (traverse_rhs (dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) cc ex) sigma)
-   = snd (dgs_combine S (call_info_of (CallEdge dst fs as) (result_proc ex))
-            (dgs_caller_cont S (call_info_of (CallEdge dst fs as) (result_proc ex)) (dg_D sigma cc) (dg_G sigma))
-            (dg_D sigma ex) (dg_G sigma))"
-  unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
-  apply simp
+  "locals (traverse_rhs (dg_cmb_at () (CallEdge dst fs as) cc p) sigma)
+   = snd (dgs_combine S (call_info_of (CallEdge dst fs as) p)
+            (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
+            (dg_D sigma (FunctionResult p)) (dg_G sigma))"
+  unfolding dg_cmb_at_def dg_spec_combine_tree_def dg_D_def dg_G_def
   apply (subst traverse_intra_keyed)
   apply (simp add: traverse_dg_combine_tree)
   done
 
 lemma dg_combine_tree_global:
-  "globs (sides_of_rhs (dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) cc ex) sigma (Inr ()))
-   = fst (dgs_combine S (call_info_of (CallEdge dst fs as) (result_proc ex))
-            (dgs_caller_cont S (call_info_of (CallEdge dst fs as) (result_proc ex)) (dg_D sigma cc) (dg_G sigma))
-            (dg_D sigma ex) (dg_G sigma))"
-  unfolding dg_cmb_def dg_spec_combine_tree_def dg_D_def dg_G_def
+  "globs (sides_of_rhs (dg_cmb_at () (CallEdge dst fs as) cc p) sigma (Inr ()))
+   = fst (dgs_combine S (call_info_of (CallEdge dst fs as) p)
+            (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma cc) (dg_G sigma))
+            (dg_D sigma (FunctionResult p)) (dg_G sigma))"
+  unfolding dg_cmb_at_def dg_spec_combine_tree_def dg_D_def dg_G_def
   by (simp add: sides_map_gtree_unit_gen sides_map_ltree_Inr sides_dg_combine_tree_Inr
       sum.map_comp o_def)
 
@@ -699,16 +709,27 @@ proof -
 
   have combine_tree_mem:
     "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
-      dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c (FunctionResult p) \<in> set (dg_trees g k)"
+      dg_cmb g (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c k \<in> set (dg_trees g k)"
   proof -
     fix c dst fs as p k
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
-    have "(c, CallEdge dst fs as, FunctionResult p) \<in> set (return_call_action_list g k)"
-      using ce by (auto simp: set_return_call_action_list[OF finC] return_call_actions_iff)
-    then show "dg_cmb (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c (FunctionResult p)
+    have "(c, CallEdge dst fs as) \<in> set (call_site_list g k)"
+      using ce by (auto simp: set_call_site_list[OF finC])
+    then show "dg_cmb g (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c k
         \<in> set (dg_trees g k)"
       by (force simp: dg_trees_def)
   qed
+
+  text \<open>Each resolved callee contributes one tree to the call site's own fold,
+    so a call edge reaches the generated equation in two hops: into the site's
+    target fold, then into the node's tree list.\<close>
+
+  have combine_at_mem:
+    "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
+      dg_cmb_at () (CallEdge dst fs as) c p
+        \<in> set (map (dg_cmb_at () (CallEdge dst fs as) c)
+                 (static_targets g k c (CallEdge dst fs as)))"
+    by (simp add: static_targets_iff[OF finC])
 
   have combineD:
     "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g \<Longrightarrow>
@@ -719,10 +740,15 @@ proof -
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
     have "snd (dgs_combine S (call_info_of (CallEdge dst fs as) p) (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma)) (dg_D sigma (FunctionResult p))
           (dg_G sigma))
-        \<le> side_acc_dg (dg_acc g bot0 s0d k)
-          sigma (dg_trees g k)"
-      using locals_traverse_le_side_acc_dg[OF combine_tree_mem[OF ce]]
+        = locals (traverse_rhs (dg_cmb_at () (CallEdge dst fs as) c p) sigma)"
       by (simp add: dg_combine_tree_local)
+    also have "... \<le> locals (traverse_rhs
+        (dg_cmb g (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c k) sigma)"
+      using locals_traverse_le_side_acc_dg[OF combine_at_mem[OF ce], where acc = bot]
+      by (simp add: dg_cmb_def traverse_side_rhs_fold_dg)
+    also have "... \<le> side_acc_dg (dg_acc g bot0 s0d k)
+          sigma (dg_trees g k)"
+      by (rule locals_traverse_le_side_acc_dg[OF combine_tree_mem[OF ce]])
     also have "... = locals
         (eq (dg_gen g bot0 s0d s0g) (k, ()) sigma)"
       by (simp add: eq_dg_gen)
@@ -742,12 +768,19 @@ proof -
     assume ce: "(c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls g"
     have "fst (dgs_combine S (call_info_of (CallEdge dst fs as) p) (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p) (dg_D sigma c) (dg_G sigma)) (dg_D sigma (FunctionResult p))
           (dg_G sigma))
-        \<le> globs (sides_of_rhs
+        = globs (sides_of_rhs (dg_cmb_at () (CallEdge dst fs as) c p) sigma (Inr ()))"
+      by (simp add: dg_combine_tree_global)
+    also have "... \<le> globs (sides_of_rhs
+        (dg_cmb g (\<lambda>_ _ _ _. ()) () (CallEdge dst fs as) c k) sigma (Inr ()))"
+      using sides_le_side_rhs_fold_dg
+        [OF combine_at_mem[OF ce], where acc = bot and k = "Inr ()"]
+      by (simp add: dg_cmb_def less_eq_dg_state_def)
+    also have "... \<le> globs (sides_of_rhs
           (side_rhs_fold_dg (dg_acc g bot0 s0d k)
             (dg_trees g k)) sigma (Inr ()))"
       using sides_le_side_rhs_fold_dg
         [OF combine_tree_mem[OF ce], where k = "Inr ()"]
-      by (simp add: dg_combine_tree_global less_eq_dg_state_def)
+      by (simp add: less_eq_dg_state_def)
     also have "... \<le> globs (sides_of_rhs
         (dg_gen g bot0 s0d s0g (k, ())) sigma (Inr ()))"
       using sides_fold_le_dg_gen[where k = "Inr ()"]
@@ -885,7 +918,7 @@ where
 definition dg_combine_tree_hook ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
 where
-  "dg_combine_tree_hook cc ca ex k = dg_cmb (\<lambda>_ _ _ _. ()) () ca cc ex"
+  "dg_combine_tree_hook cc ca ex k = dg_cmb_at () ca cc (result_proc ex)"
 
 definition dg_enter_tree_hook ::
   "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
@@ -904,20 +937,20 @@ lemma dg_edge_tree_hook_global:
   unfolding dg_edge_tree_hook_def by (rule dg_edge_tree_global)
 
 lemma dg_combine_tree_hook_local:
-  "locals (traverse_rhs (dg_combine_tree_hook cc (CallEdge dst fs as) ex k) sigma)
-     = snd (dgs_combine S (call_info_of (CallEdge dst fs as) (result_proc ex))
-              (dgs_caller_cont S (call_info_of (CallEdge dst fs as) (result_proc ex))
+  "locals (traverse_rhs (dg_combine_tree_hook cc (CallEdge dst fs as) (FunctionResult p) k) sigma)
+     = snd (dgs_combine S (call_info_of (CallEdge dst fs as) p)
+              (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p)
                  (dg_D sigma cc) (dg_G sigma))
-              (dg_D sigma ex) (dg_G sigma))"
-  unfolding dg_combine_tree_hook_def by (rule dg_combine_tree_local)
+              (dg_D sigma (FunctionResult p)) (dg_G sigma))"
+  unfolding dg_combine_tree_hook_def by (simp add: dg_combine_tree_local)
 
 lemma dg_combine_tree_hook_global:
-  "globs (sides_of_rhs (dg_combine_tree_hook cc (CallEdge dst fs as) ex k) sigma (Inr ()))
-     = fst (dgs_combine S (call_info_of (CallEdge dst fs as) (result_proc ex))
-              (dgs_caller_cont S (call_info_of (CallEdge dst fs as) (result_proc ex))
+  "globs (sides_of_rhs (dg_combine_tree_hook cc (CallEdge dst fs as) (FunctionResult p) k) sigma (Inr ()))
+     = fst (dgs_combine S (call_info_of (CallEdge dst fs as) p)
+              (dgs_caller_cont S (call_info_of (CallEdge dst fs as) p)
                  (dg_D sigma cc) (dg_G sigma))
-              (dg_D sigma ex) (dg_G sigma))"
-  unfolding dg_combine_tree_hook_def by (rule dg_combine_tree_global)
+              (dg_D sigma (FunctionResult p)) (dg_G sigma))"
+  unfolding dg_combine_tree_hook_def by (simp add: dg_combine_tree_global)
 
 lemma dg_enter_tree_hook_local:
   "locals (traverse_rhs (dg_enter_tree_hook cc (CallEdge dst fs as) p) sigma)
@@ -939,7 +972,6 @@ definition dg_hook_D ::
     'G::bounded_semilattice_sup_bot) dg_state) \<Rightarrow> pp \<Rightarrow> 'D"
 where
   "dg_hook_D sigma v = locals (sigma (Inl (v, ())))"
-
 definition dg_hook_G ::
   "((pp \<times> unit + unit) \<Rightarrow> ('D::bounded_semilattice_sup_bot,
     'G::bounded_semilattice_sup_bot) dg_state) \<Rightarrow> 'G"
@@ -1617,20 +1649,100 @@ qed
 context sound_dg_spec
 begin
 
-text \<open>The two equation systems -- \<open>dg_gen\<close>, built directly off the
-  spec-record, and \<open>hook_gen\<close>, inherited from the hook-route sublocale
-  interpretation above at the instantiation just proved sound -- denote the
-  same function, not merely a sound approximation of each other. Both unfold
-  to the same \<open>side_rhs_fold_dg\<close> application over the same list of trees once
-  the hook route's \<open>edge_tree\<close>/\<open>combine_tree\<close>/\<open>enter_tree\<close> are read back as
-  \<open>dg_edge_tree_hook\<close>/\<open>dg_combine_tree_hook\<close>/\<open>dg_enter_tree_hook\<close>.\<close>
-lemma dg_gen_eq_hook_gen: "dg_gen g bot0 s0d s0g = hooks.hook_gen g bot0 s0d s0g"
-  unfolding dg_gen_def hooks.hook_gen_def
-    side_cfg_T_eff_keyed_seed_dg_def side_cfg_T_eff_keyed_seed_trees_def
-    dg_extra_def dg_edge_tree_hook_def dg_combine_tree_hook_def dg_enter_tree_hook_def
-  by (rule ext)
-     (auto simp: intra_predecessor_addr_list_def apply_dg_spec_relabel_as_at
+text \<open>
+  The two equation systems --- \<open>dg_gen\<close>, built directly off the spec-record, and
+  \<open>hook_gen\<close>, inherited from the hook-route sublocale interpretation above ---
+  denote the same function, not merely a sound approximation of each other. They
+  are not the same term: \<open>dg_gen\<close> folds one tree per call \<^emph>\<open>site\<close>, which resolves
+  its callees and folds their contributions, while \<open>hook_gen\<close> folds one flat tree
+  per call-site/callee pair. Both foldings range over the same contributions, so
+  every observable of the generated right-hand side --- its answer, its side
+  contribution at any key, and its dependency set --- agrees.
+\<close>
+
+lemma dg_trees_as_hook_shape:
+  "dg_trees g v
+     = map (\<lambda>(u, a). dg_edge_tree_hook u a v) (intra_predecessor_list g v)
+       @ map (side_rhs_fold_dg bot)
+           (map (\<lambda>(cc, ca). map (dg_cmb_at () ca cc) (static_targets g v cc ca))
+                (call_site_list g v))
+       @ map (\<lambda>(c, ca). dg_enter_tree_hook c ca v) (entry_call_list g v)"
+  unfolding dg_trees_def dg_extra_def dg_edge_tree_hook_def dg_enter_tree_hook_def
+    dg_cmb_def
+  by (auto simp: intra_predecessor_addr_list_def apply_dg_spec_relabel_as_at
         o_def case_prod_unfold)
+
+lemma set_dg_cmb_targets_eq_hook:
+  "set (concat (map (\<lambda>(cc, ca). map (dg_cmb_at () ca cc) (static_targets g v cc ca))
+                    (call_site_list g v)))
+     = set (map (\<lambda>(c, ca, ex). dg_combine_tree_hook c ca ex v)
+                (return_call_action_list g v))"
+proof -
+  have "set (concat (map (\<lambda>(cc, ca). map (dg_cmb_at () ca cc) (static_targets g v cc ca))
+                         (call_site_list g v)))
+          = set (map (\<lambda>(c, ca, p). dg_cmb_at () ca c p) (call_target_list g v))"
+    by (rule set_concat_call_site_static_targets)
+  also have "... = set (map (\<lambda>(c, ca, ex). dg_combine_tree_hook c ca ex v)
+                            (return_call_action_list g v))"
+    unfolding dg_combine_tree_hook_def call_target_list_eq_return_call_action_list
+    by (simp add: case_prod_unfold)
+  finally show ?thesis .
+qed
+
+lemma dg_trees_agrees_hook_trees:
+  "side_acc_dg acc sigma (dg_trees g v) = side_acc_dg acc sigma (hooks.hook_trees g v)"
+  "sides_of_rhs (side_rhs_fold_dg acc (dg_trees g v)) sigma z
+     = sides_of_rhs (side_rhs_fold_dg acc (hooks.hook_trees g v)) sigma z"
+  "dep_aux sigma (side_rhs_fold_dg acc (dg_trees g v))
+     = dep_aux sigma (side_rhs_fold_dg acc (hooks.hook_trees g v))"
+proof -
+  show "side_acc_dg acc sigma (dg_trees g v) = side_acc_dg acc sigma (hooks.hook_trees g v)"
+    using side_rhs_fold_dg_flat_cong(1)[OF set_dg_cmb_targets_eq_hook,
+            where acc = acc and \<tau> = sigma]
+    unfolding dg_trees_as_hook_shape hooks.hook_trees_def
+    by (simp add: traverse_side_rhs_fold_dg)
+next
+  show "sides_of_rhs (side_rhs_fold_dg acc (dg_trees g v)) sigma z
+          = sides_of_rhs (side_rhs_fold_dg acc (hooks.hook_trees g v)) sigma z"
+    unfolding dg_trees_as_hook_shape hooks.hook_trees_def
+    by (rule side_rhs_fold_dg_flat_cong(2)[OF set_dg_cmb_targets_eq_hook])
+next
+  show "dep_aux sigma (side_rhs_fold_dg acc (dg_trees g v))
+          = dep_aux sigma (side_rhs_fold_dg acc (hooks.hook_trees g v))"
+    unfolding dg_trees_as_hook_shape hooks.hook_trees_def
+    by (rule side_rhs_fold_dg_flat_cong(3)[OF set_dg_cmb_targets_eq_hook])
+qed
+
+lemma dg_gen_unfold:
+  "dg_gen g bot0 s0d s0g (v, ())
+     = (if v = cfg_entry g
+        then depend_on () (DG bot s0g) (side_rhs_fold_dg (dg_acc g bot0 s0d v) (dg_trees g v))
+        else side_rhs_fold_dg (dg_acc g bot0 s0d v) (dg_trees g v))"
+  unfolding dg_gen_def dg_trees_def dg_acc_def side_cfg_T_eff_keyed_seed_dg_def
+  by (simp add: Let_def)
+
+lemma hook_gen_unfold:
+  "hooks.hook_gen g bot0 s0d s0g (v, ())
+     = (if v = cfg_entry g
+        then depend_on () (DG bot s0g)
+               (side_rhs_fold_dg (dg_acc g bot0 s0d v) (hooks.hook_trees g v))
+        else side_rhs_fold_dg (dg_acc g bot0 s0d v) (hooks.hook_trees g v))"
+  unfolding hooks.hook_gen_def hooks.hook_trees_def dg_acc_def
+    side_cfg_T_eff_keyed_seed_trees_def
+  by (simp add: Let_def)
+
+lemma dg_gen_agrees_hook_gen:
+  "eq (dg_gen g bot0 s0d s0g) (v, ()) sigma
+     = eq (hooks.hook_gen g bot0 s0d s0g) (v, ()) sigma"
+  "sides_of_rhs (dg_gen g bot0 s0d s0g (v, ())) sigma z
+     = sides_of_rhs (hooks.hook_gen g bot0 s0d s0g (v, ())) sigma z"
+  "dep_aux sigma (dg_gen g bot0 s0d s0g (v, ()))
+     = dep_aux sigma (hooks.hook_gen g bot0 s0d s0g (v, ()))"
+    apply (simp add: eq_dg_gen hooks.eq_hook_gen dg_acc_def hooks.hook_acc_def
+             dg_trees_agrees_hook_trees(1))
+   apply (simp add: dg_gen_unfold hook_gen_unfold dg_trees_agrees_hook_trees(2) Let_def)
+  apply (simp add: dg_gen_unfold hook_gen_unfold dg_trees_agrees_hook_trees(3))
+  done
 
 end
 

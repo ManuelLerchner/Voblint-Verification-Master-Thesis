@@ -29,6 +29,7 @@ locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree"
+      \<comment> \<open>one tree per call site: the site's own resolver decides which callees it folds\<close>
     and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list"
     and bot0 s0d :: 'D and s0g :: 'G
@@ -61,7 +62,7 @@ abbreviation trees :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state) strategy_tree list" where
   "trees v ctx \<equiv>
      map (\<lambda>(src, a). apply_dg_spec_at S a src gk0) (intra_predecessor_addr_list g v ctx)
-     @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)
+     @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
      @ extra route ctx v"
 
 subsection \<open>Post-solution elimination\<close>

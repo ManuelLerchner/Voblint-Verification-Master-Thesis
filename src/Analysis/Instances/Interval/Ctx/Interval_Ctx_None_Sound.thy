@@ -80,7 +80,8 @@ definition ictx_eqs ::
   "ictx_eqs gs is_bot_pred Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+       (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot"
 
@@ -123,9 +124,10 @@ begin
 
 interpretation ivl_unit: routed_domain_exec
   gs is_bot_pred "ivl_tf_st_for gs" "ivl_enter_st_for gs" "ivl_tf_for gs"
-  Global Seed route_unit route_unit
+  Global Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp, simp)
+     (rule ivl_tf_st_for_commute, rule ivl_enter_st_for_commute, rule exact, simp, simp,
+      simp add: static_resolve_def)
 
 lemmas ivl_pp_abs_gen = ivl_unit.pp_abs
 
@@ -168,7 +170,8 @@ theorem pp_abs:
   shows
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+        (routed_cmb_g (ictx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
@@ -182,7 +185,8 @@ proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
-          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (ictx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (ictx_spec gs is_bot_pred) Bot (Lifted cinit_ivl_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), ())
@@ -271,7 +275,8 @@ interpretation dg_base: sound_dg_spec "ictx_abs_spec gs" gamma_dg_base gs
 
 interpretation dg: dg_ctx_activation_base "ictx_abs_spec gs" gamma_dg_base gs
     "compile_prog Pi ps mnm main" Global route_unit
-    "routed_cmb_g (ictx_abs_spec gs) Global Seed"
+    "routed_cmb_g (ictx_abs_spec gs) Global Seed
+       (static_resolve (compile_prog Pi ps mnm main))"
     "routed_extra_g Seed Global"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_ivl_st)"
@@ -283,7 +288,8 @@ proof unfold_locales
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (ictx_abs_spec gs) Global Seed)
+             (routed_cmb_g (ictx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ictx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::ivl exec_dg_st lifted))
@@ -368,7 +374,8 @@ interpretation adapter: dg_analysis_adapter enterc_unit "ictx_abs_spec gs" gs
     sigma_abs "fst (sol gs is_bot_pred Pi ps mnm main)"
     "(cfg_exit (compile_prog Pi ps mnm main), ())" sg
     Seed interval_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
+    RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
   case FinE show ?case by (rule fin)
 next
   case PP show ?case
@@ -387,6 +394,9 @@ next
   case FinC show ?case by (rule finC)
 next
   case (SeedKey p ctx) show ?case by simp
+next
+  case (ResolveSound u ctx dst pars args p cont s)
+  thus ?case by (simp add: static_resolve_iff[OF finC])
 next
   case (RouteEnterc u ctx dst pars args p cont s)
   show ?case by simp

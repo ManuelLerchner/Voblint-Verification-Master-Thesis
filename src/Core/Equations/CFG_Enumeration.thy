@@ -327,6 +327,32 @@ lemma static_targets_iff:
   unfolding static_targets_def
   by (force simp: call_target_list_iff[OF assms, symmetric] image_iff)
 
+text \<open>The resolver that ignores the caller state and answers from the CFG. A call site
+  parameterised by a resolver reproduces the statically enumerated behaviour exactly at
+  this one; a resolver reading the state can only narrow the answer.\<close>
+
+definition static_resolve ::
+  "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> call_action \<Rightarrow> 'd \<Rightarrow> pname list" where
+  "static_resolve g v cc ca d = static_targets g v cc ca"
+
+lemma static_resolve_iff:
+  assumes "finite (calls g)"
+  shows "p \<in> set (static_resolve g v cc ca d)
+           \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
+  unfolding static_resolve_def by (rule static_targets_iff[OF assms])
+
+text \<open>Grouping the enumeration by call site and resolving each site loses nothing:
+  the sites' resolved targets, concatenated, carry exactly the pairs
+  \<^const>\<open>call_target_list\<close> lists. Order and multiplicity are not preserved --- one
+  site's targets are gathered together --- so this is a set equality, which is all a
+  fold over the entries can observe.\<close>
+
+lemma set_concat_call_site_static_targets:
+  "set (concat (map (\<lambda>(cc, ca). map (h cc ca) (static_targets g v cc ca))
+                    (call_site_list g v)))
+     = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
+  by (force simp: call_site_list_def static_targets_def image_iff)
+
 text \<open>Every listed call site resolves to at least its own callee, which is what a
   coverage obligation stated over the enumeration needs.\<close>
 

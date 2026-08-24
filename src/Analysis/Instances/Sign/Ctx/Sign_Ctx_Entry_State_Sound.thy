@@ -67,7 +67,8 @@ definition sctx_entry_eqs ::
   "sctx_entry_eqs gs is_bot_pred Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        (sctx_entry_route_gen gs is_bot_pred)
-       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
+       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
 
@@ -136,9 +137,11 @@ interpretation sign_es: routed_domain_exec
   gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   Global Seed "sctx_entry_route_gen gs is_bot_pred"
   "formals_route_lifted_gen (sctx_abs_spec gs)"
+  static_resolve static_resolve
   by unfold_locales
      (rule sign_tf_st_for_commute, rule sign_enter_st_for_commute, rule exact, simp,
-      rule sctx_entry_route_gen_commute[OF exact, symmetric])
+      rule sctx_entry_route_gen_commute[OF exact, symmetric],
+      simp add: static_resolve_def)
 
 lemmas sign_es_pp_abs_gen = sign_es.pp_abs
 
@@ -173,7 +176,8 @@ theorem sctx_entry_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
         (formals_route_lifted_gen (sctx_abs_spec gs))
-        (routed_cmb_g (sctx_abs_spec gs) Global Seed)
+        (routed_cmb_g (sctx_abs_spec gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
@@ -187,7 +191,8 @@ proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           (sctx_entry_route_gen gs is_bot_pred)
-          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed)
+          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
        (cfg_exit (compile_prog Pi ps mnm main), [])
@@ -296,7 +301,8 @@ next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global)
              (formals_route_lifted_gen (sctx_abs_spec gs))
-             (routed_cmb_g (sctx_abs_spec gs) Global Seed)
+             (routed_cmb_g (sctx_abs_spec gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (sctx_abs_spec gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))

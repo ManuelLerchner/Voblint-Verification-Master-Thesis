@@ -49,9 +49,13 @@ locale routed_domain_exec =
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and route_st :: "pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and route_abs :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
+    and resolve_st :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> pname list"
+    and resolve_abs :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a abs_state lifted \<Rightarrow> pname list"
   assumes seed_key_ne_gk0 [simp]: "\<And>p ctx. seed_key p ctx \<noteq> gk0"
       and route_agree: "\<And>u c' d ca. route_st u c' d ca
                           = route_abs u c' (map_lift (fun_of_resolved_st_q_for gs) d) ca"
+      and resolve_agree: "\<And>g w cc ca d. resolve_st g w cc ca d
+                          = resolve_abs g w cc ca (map_lift (fun_of_resolved_st_q_for gs) d)"
 begin
 
 text \<open>The executable and abstract routed specs this domain solves at. Abbreviations, not
@@ -70,17 +74,18 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
 lemma dg_tree_st_commute_routed_cmb_g:
   "dg_reader_commute_gen.dg_tree_st_commute
      (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs)) env
-     (routed_cmb_g spec_st gk0 seed_key route_st ctx ca cc ex)
-     (routed_cmb_g spec_abs gk0 seed_key route_abs ctx ca cc ex)"
+     (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st ctx ca cc ex)
+     (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g) route_abs ctx ca cc ex)"
   apply (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [where Floc = "map_lift (fun_of_resolved_st_q_for gs)"
            and Fglob = "map_lift (fun_of_resolved_st_q_for gs)"])
-      apply (rule dg_reader_commute_gen_lifted_for)
-     apply (rule seed_key_ne_gk0)
-    apply (rule Henter_lifted_for)
-   apply (rule Hcomb_lifted_for)
-  apply (rule Hcont_lifted_for)
+       apply (rule dg_reader_commute_gen_lifted_for)
+      apply (rule seed_key_ne_gk0)
+     apply (rule Henter_lifted_for)
+    apply (rule Hcomb_lifted_for)
+   apply (rule Hcont_lifted_for)
   apply (rule route_agree)
+  apply (rule resolve_agree)
   done
 
 text \<open>The routed extra-goal list commutes elementwise, for the same reason.\<close>
@@ -107,16 +112,16 @@ text \<open>
   rather than a derived fact for the same reason a solver is not a parameter --- which
   update rule produced it is the caller's choice.
 \<close>
-
 theorem pp_abs:
   assumes pp: "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-        (routed_cmb_g_contribution spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
+        (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g))
+        (routed_extra_g seed_key gk0)
         g spec_st bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_abs
-        (routed_cmb_g spec_abs gk0 seed_key) (routed_extra_g seed_key gk0)
+        (routed_cmb_g spec_abs gk0 seed_key (resolve_abs g)) (routed_extra_g seed_key gk0)
         g spec_abs
         (map_lift (fun_of_resolved_st_q_for gs) bot0)
         (map_lift (fun_of_resolved_st_q_for gs) s0d)
@@ -128,39 +133,44 @@ theorem pp_abs:
 proof -
   have pp': "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-          (routed_cmb_g spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
+          (routed_cmb_g spec_st gk0 seed_key (resolve_st g)) (routed_extra_g seed_key gk0)
           g spec_st bot0 s0d s0g)
        x0 sigma_st vars"
   proof (rule part_post_solution_seed_dg_buffered_to_old
-      [where cmb_c = "routed_cmb_g_contribution spec_st gk0 seed_key"])
+      [where cmb_c = "routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)"])
     show "\<And>c' ca cc ex \<tau>. locals (traverse_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau>)
+             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+                route_st c' ca cc ex) \<tau>)
            = locals (traverse_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau>)"
+             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>)"
       by (rule routed_cmb_g_contribution_matches_local)
     show "\<And>c' ca cc ex \<tau>. locals (sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau>
+             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>
              (Inr ((\<lambda>_. gk0) c'))) = bot"
       by (rule routed_cmb_g_side_pure[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau>. globs (traverse_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau>)
+             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+                route_st c' ca cc ex) \<tau>)
            = globs (sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau>
+             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau>
              (Inr ((\<lambda>_. gk0) c')))"
       by (rule routed_cmb_g_contribution_matches_global[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau>. sides_of_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau>
+             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+                route_st c' ca cc ex) \<tau>
              (Inr ((\<lambda>_. gk0) c')) = bot"
       by (rule routed_cmb_g_contribution_free_at_key[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr ((\<lambda>_. gk0) c') \<Longrightarrow> sides_of_rhs
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex) \<tau> z
+             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+                route_st c' ca cc ex) \<tau> z
            = sides_of_rhs
-             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex) \<tau> z"
+             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex) \<tau> z"
       by (rule routed_cmb_g_contribution_sides_off_key[of seed_key gk0, OF seed_key_ne_gk0])
     show "\<And>c' ca cc ex \<tau>. dep_aux \<tau>
-             (routed_cmb_g_contribution spec_st gk0 seed_key route_st c' ca cc ex)
+             (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g)
+                route_st c' ca cc ex)
            = dep_aux \<tau>
-             (routed_cmb_g spec_st gk0 seed_key route_st c' ca cc ex)"
+             (routed_cmb_g spec_st gk0 seed_key (resolve_st g) route_st c' ca cc ex)"
       by (rule routed_cmb_g_contribution_dep)
     show "\<And>c' w \<tau> z x. x \<in> set (routed_extra_g seed_key gk0 route_st c' w)
            \<Longrightarrow> sides_of_rhs x \<tau> z = bot"
@@ -170,7 +180,8 @@ proof -
       by (rule routed_extra_g_local_only)
     show "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. gk0) route_st
-          (routed_cmb_g_contribution spec_st gk0 seed_key) (routed_extra_g seed_key gk0)
+          (routed_cmb_g_contribution spec_st gk0 seed_key (resolve_st g))
+          (routed_extra_g seed_key gk0)
           g spec_st bot0 s0d s0g)
        x0 sigma_st vars"
       by (rule pp)
@@ -179,8 +190,8 @@ proof -
     apply (rule part_post_solution_seed_dg_st_to_abs_lifted_for
           [where gs = gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. gk0"
              and route_st = route_st and route_abs = route_abs
-             and cmb_st = "routed_cmb_g spec_st gk0 seed_key"
-             and cmb_abs = "routed_cmb_g spec_abs gk0 seed_key"
+             and cmb_st = "routed_cmb_g spec_st gk0 seed_key (resolve_st g)"
+             and cmb_abs = "routed_cmb_g spec_abs gk0 seed_key (resolve_abs g)"
              and extra_st = "routed_extra_g seed_key gk0"
              and extra_abs = "routed_extra_g seed_key gk0"
              and g = g and S_st = spec_st and S_abs = spec_abs])

@@ -163,11 +163,12 @@ text \<open>\<^const>\<open>cs_route\<close> never reads its data argument, so t
 lemma nest_Hcmb_routed:
   "dg_reader_commute_gen.dg_tree_st_commute
      (map_lift (fun_of_resolved_st_q_for nest_gs)) (map_lift (fun_of_resolved_st_q_for nest_gs)) sigma_st
-     (routed_cmb_g nest_S_st Global Seed (cs_route k) ctx ca cc ex)
-     (routed_cmb_g nest_S_abs Global Seed (cs_route k) ctx ca cc ex)"
+     (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg) (cs_route k) ctx ca cc ex)
+     (routed_cmb_g nest_S_abs Global Seed (static_resolve nest_cfg) (cs_route k) ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_tree_st_commute_routed_cmb_g
         [OF nest_dg_reader nest_seed_ne_global nest_Henter nest_Hcomb nest_Hcont
             cs_route_indep_of_data])
+     (simp add: static_resolve_def)
 
 lemma nest_Hextra_routed:
   "list_all2 (dg_reader_commute_gen.dg_tree_st_commute
@@ -183,12 +184,14 @@ text \<open>The whole post-solution transport, stated once for a free bound \<op
 lemma nest_pp_abs_of_st:
   assumes pp: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
-          (routed_cmb_g nest_S_st Global Seed) (routed_extra_g Seed Global)
+          (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
+          (routed_extra_g Seed Global)
           nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot)
        x sigma_st vars"
   shows "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route k)
-          (routed_cmb_g nest_S_abs Global Seed) (routed_extra_g Seed Global)
+          (routed_cmb_g nest_S_abs Global Seed (static_resolve nest_cfg))
+          (routed_extra_g Seed Global)
           nest_cfg nest_S_abs
           (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted))
           (map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st))
@@ -198,8 +201,8 @@ lemma nest_pp_abs_of_st:
   by (rule part_post_solution_seed_dg_st_to_abs_lifted_for
         [where gs = nest_gs and pred_sel = intra_predecessor_addr_list and gkey = "\<lambda>_. Global"
            and route_st = "cs_route k" and route_abs = "cs_route k"
-           and cmb_st = "routed_cmb_g nest_S_st Global Seed"
-           and cmb_abs = "routed_cmb_g nest_S_abs Global Seed"
+           and cmb_st = "routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg)"
+           and cmb_abs = "routed_cmb_g nest_S_abs Global Seed (static_resolve nest_cfg)"
            and extra_st = "routed_extra_g Seed Global"
            and extra_abs = "routed_extra_g Seed Global"
            and g = nest_cfg and S_st = nest_S_st and S_abs = nest_S_abs,
@@ -223,7 +226,8 @@ definition nest_1_eqs ::
      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-      (routed_cmb_g nest_S_st Global Seed) (routed_extra_g Seed Global)
+      (routed_cmb_g nest_S_st Global Seed (static_resolve nest_cfg))
+      (routed_extra_g Seed Global)
        nest_cfg nest_S_st Bot (Lifted cinit_ivl_st) Bot"
 
 definition nest_1_sol ::
@@ -328,7 +332,8 @@ abbreviation nest_1_sigma_abs ::
 theorem nest_1_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
-       (routed_cmb_g nest_S_abs Global Seed) (routed_extra_g Seed Global) nest_cfg nest_S_abs
+       (routed_cmb_g nest_S_abs Global Seed (static_resolve nest_cfg))
+       (routed_extra_g Seed Global) nest_cfg nest_S_abs
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st))
         (map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)))
@@ -620,7 +625,8 @@ definition nestg_1_eqs ::
   "nestg_1_eqs =
      side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) (cs_route 1)
       (routed_cmb_g (base_dg_spec_st_for_lifted nestg_gs nestg_is_bot_pred
-                       (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed)
+                       (ivl_tf_st_for nestg_gs) (ivl_enter_st_for nestg_gs)) Global Seed
+         (static_resolve nestg_cfg))
       (routed_extra_g Seed Global)
        nestg_cfg
        (base_dg_spec_st_for_lifted nestg_gs nestg_is_bot_pred

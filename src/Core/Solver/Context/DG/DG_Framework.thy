@@ -1274,6 +1274,86 @@ next
   finally show ?case by simp
 qed
 
+text \<open>
+  Grouping is invisible to a fold. All three observables of \<^const>\<open>side_rhs_fold_dg\<close> ---
+  the local accumulator, the side contribution at one key, and the dependency set --- are
+  sups, respectively unions, over the elements, so replacing a segment by a segment of
+  nested folds with the same underlying elements changes nothing. This is what lets a
+  generator that folds one tree per call site agree with one that folds one tree per
+  call-site/callee pair.
+\<close>
+
+lemma foldr_sup_acc:
+  fixes f :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
+  shows "foldr (\<lambda>t a. f t \<squnion> a) xs bot \<squnion> b = foldr (\<lambda>t a. f t \<squnion> a) xs b"
+  by (induction xs) (simp_all add: sup_assoc)
+
+lemma foldr_sup_le_iff:
+  fixes f :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
+  shows "foldr (\<lambda>t a. f t \<squnion> a) xs bot \<le> y \<longleftrightarrow> (\<forall>x \<in> set xs. f x \<le> y)"
+  by (induction xs) auto
+
+lemma foldr_sup_set_cong:
+  fixes f :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
+  assumes eq: "set xs = set ys"
+  shows "foldr (\<lambda>t a. f t \<squnion> a) xs b = foldr (\<lambda>t a. f t \<squnion> a) ys b"
+proof -
+  have "foldr (\<lambda>t a. f t \<squnion> a) xs bot = foldr (\<lambda>t a. f t \<squnion> a) ys bot"
+  proof (rule antisym)
+    show "foldr (\<lambda>t a. f t \<squnion> a) xs bot \<le> foldr (\<lambda>t a. f t \<squnion> a) ys bot"
+      using eq foldr_sup_le_iff[of f ys "foldr (\<lambda>t a. f t \<squnion> a) ys bot"]
+      by (simp add: foldr_sup_le_iff)
+  next
+    show "foldr (\<lambda>t a. f t \<squnion> a) ys bot \<le> foldr (\<lambda>t a. f t \<squnion> a) xs bot"
+      using eq foldr_sup_le_iff[of f xs "foldr (\<lambda>t a. f t \<squnion> a) xs bot"]
+      by (simp add: foldr_sup_le_iff)
+  qed
+  then show ?thesis
+    using foldr_sup_acc[of f xs b] foldr_sup_acc[of f ys b] by simp
+qed
+
+lemma side_acc_dg_as_foldr:
+  "side_acc_dg acc \<tau> ts = acc \<squnion> foldr (\<lambda>t a. locals (traverse_rhs t \<tau>) \<squnion> a) ts bot"
+  by (induction ts arbitrary: acc) (simp_all add: sup_assoc)
+
+lemma foldr_sup_locals_map_fold:
+  "foldr (\<lambda>t a. locals (traverse_rhs t \<tau>) \<squnion> a) (map (side_rhs_fold_dg bot) tss) b
+     = foldr (\<lambda>t a. locals (traverse_rhs t \<tau>) \<squnion> a) (concat tss) b"
+  by (induction tss arbitrary: b)
+     (simp_all add: traverse_side_rhs_fold_dg side_acc_dg_as_foldr foldr_sup_acc)
+
+lemma foldr_sup_sides_map_fold:
+  "foldr (\<lambda>t a. sides_of_rhs t \<tau> z \<squnion> a) (map (side_rhs_fold_dg bot) tss) b
+     = foldr (\<lambda>t a. sides_of_rhs t \<tau> z \<squnion> a) (concat tss) b"
+  by (induction tss arbitrary: b)
+     (simp_all add: sides_of_rhs_side_rhs_fold_dg_char foldr_sup_acc)
+
+lemma side_rhs_fold_dg_flat_cong:
+  assumes eq: "set (concat tss) = set us"
+  shows
+    "traverse_rhs (side_rhs_fold_dg acc (xs @ map (side_rhs_fold_dg bot) tss @ zs)) \<tau>
+       = traverse_rhs (side_rhs_fold_dg acc (xs @ us @ zs)) \<tau>"
+    "sides_of_rhs (side_rhs_fold_dg acc (xs @ map (side_rhs_fold_dg bot) tss @ zs)) \<tau> z
+       = sides_of_rhs (side_rhs_fold_dg acc (xs @ us @ zs)) \<tau> z"
+    "dep_aux \<sigma> (side_rhs_fold_dg acc (xs @ map (side_rhs_fold_dg bot) tss @ zs))
+       = dep_aux \<sigma> (side_rhs_fold_dg acc (xs @ us @ zs))"
+proof -
+  show "traverse_rhs (side_rhs_fold_dg acc (xs @ map (side_rhs_fold_dg bot) tss @ zs)) \<tau>
+          = traverse_rhs (side_rhs_fold_dg acc (xs @ us @ zs)) \<tau>"
+    by (simp add: traverse_side_rhs_fold_dg side_acc_dg_as_foldr
+          foldr_sup_locals_map_fold foldr_sup_set_cong[OF eq])
+next
+  show "sides_of_rhs (side_rhs_fold_dg acc (xs @ map (side_rhs_fold_dg bot) tss @ zs)) \<tau> z
+          = sides_of_rhs (side_rhs_fold_dg acc (xs @ us @ zs)) \<tau> z"
+    by (simp add: sides_of_rhs_side_rhs_fold_dg_char
+          foldr_sup_sides_map_fold foldr_sup_set_cong[OF eq])
+next
+  show "dep_aux \<sigma> (side_rhs_fold_dg acc (xs @ map (side_rhs_fold_dg bot) tss @ zs))
+          = dep_aux \<sigma> (side_rhs_fold_dg acc (xs @ us @ zs))"
+    by (auto simp add: dep_aux_side_rhs_fold_dg_char simp flip: eq)
+qed
+
+
 lemma side_rhs_fold_dg_sides_mono:
   assumes tree_sides_mono: "\<forall>t \<in> set ts. \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
   shows "\<And>acc s1 s2. s1 \<le> s2 \<Longrightarrow>
@@ -1523,10 +1603,11 @@ where
         let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
             intra = map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
                         (pred_sel g v c);
-            comb = map (\<lambda>(cc, ca, ex). cmb route c ca cc ex)
-                       (return_call_action_list g v);
+            comb = map (\<lambda>(cc, ca). cmb route c ca cc v)
+                       (call_site_list g v);
             t = side_rhs_fold_dg acc0 (intra @ comb @ extra route c v)
         in if v = cfg_entry g then depend_on (gkey c) (DG bot s0g) t else t)"
+
 
 lemma eq_side_cfg_T_eff_keyed_seed_dg:
   "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)
@@ -1536,8 +1617,8 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg:
      \<tau>
      (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx))
            (pred_sel g v ctx)
-      @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex)
-            (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). cmb route ctx ca cc v)
+            (call_site_list g v)
       @ extra route ctx v)) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def
         traverse_side_rhs_fold_dg)
@@ -1549,7 +1630,7 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg:
    \<squnion> foldr (\<lambda>t acc'. sides_of_rhs t \<tau> (Inr (gkey ctx)) \<squnion> acc')
        (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx))
           (pred_sel g v ctx)
-        @ map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)
+        @ map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)
         @ extra route ctx v) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_def Let_def sides_of_rhs_side_rhs_fold_dg_char
         bot_dg_state_def[symmetric] ac_simps)
@@ -1595,7 +1676,7 @@ where
         let acc0 = (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot);
             intra = map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey c))
                         (pred_sel g v c);
-            comb = map (\<lambda>(cc, ca, ex). cmb_c route c ca cc ex) (return_call_action_list g v);
+            comb = map (\<lambda>(cc, ca). cmb_c route c ca cc v) (call_site_list g v);
             t = fold_rhs_trees acc0 (intra @ comb @ extra route c v)
         in buffer_sides (do {
           res \<leftarrow> t;
@@ -1607,7 +1688,7 @@ lemma eq_side_cfg_T_eff_keyed_seed_dg_buffered:
       (v, ctx) \<tau> =
    DG (locals (foldr (\<lambda>t acc'. traverse_rhs t \<tau> \<squnion> acc')
      (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx)) (pred_sel g v ctx)
-      @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (call_site_list g v)
       @ extra route ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot))) bot"
   by (simp add: side_cfg_T_eff_keyed_seed_dg_buffered_def Let_def traverse_fold_rhs_trees_char)
@@ -1630,13 +1711,13 @@ lemma sides_side_cfg_T_eff_keyed_seed_dg_buffered:
       (v, ctx)) \<tau> (Inr (gkey ctx)) =
    DG bot (globs (foldr (\<lambda>t acc'. traverse_rhs t \<tau> \<squnion> acc')
      (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx)) (pred_sel g v ctx)
-      @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)
+      @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (call_site_list g v)
       @ extra route ctx v)
      (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot)))"
 proof -
   have free: "\<And>w \<sigma> x. x \<in> set (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx))
                     (pred_sel g w ctx)
-      @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g w)
+      @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc w) (call_site_list g w)
       @ extra route ctx w) \<Longrightarrow> sides_of_rhs x \<sigma> (Inr (gkey ctx)) = bot"
     using comb_free_at_key extra_free sides_apply_dg_spec_contribution_at
     by fastforce
@@ -1646,7 +1727,7 @@ proof -
     have z0: "sides_of_rhs (fold_rhs_trees (DG (bot0 \<squnion> s0d) s0g)
         (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx))
              (pred_sel g (cfg_entry g) ctx)
-         @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g (cfg_entry g))
+         @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc (cfg_entry g)) (call_site_list g (cfg_entry g))
          @ extra route ctx (cfg_entry g))) \<tau> (Inr (gkey ctx)) = bot"
       by (simp only: sides_of_rhs_fold_rhs_trees_char
           foldr_sup_bot_of_all_bot[OF free[where w = "cfg_entry g"]])
@@ -1657,7 +1738,7 @@ proof -
     case False
     have z0: "sides_of_rhs (fold_rhs_trees (DG bot0 bot)
         (map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx)) (pred_sel g v ctx)
-         @ map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)
+         @ map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (call_site_list g v)
          @ extra route ctx v)) \<tau> (Inr (gkey ctx)) = bot"
       by (simp only: sides_of_rhs_fold_rhs_trees_char
           foldr_sup_bot_of_all_bot[OF free[where w = v]])
@@ -1838,8 +1919,8 @@ proof -
   let ?intra_new = "map (\<lambda>(src, a). apply_dg_spec_contribution_at S a src (gkey ctx))
                         (pred_sel g v ctx)"
   let ?intra_old = "map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey ctx)) (pred_sel g v ctx)"
-  let ?comb_new = "map (\<lambda>(cc, ca, ex). cmb_c route ctx ca cc ex) (return_call_action_list g v)"
-  let ?comb_old = "map (\<lambda>(cc, ca, ex). cmb route ctx ca cc ex) (return_call_action_list g v)"
+  let ?comb_new = "map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (call_site_list g v)"
+  let ?comb_old = "map (\<lambda>(cc, ca). cmb route ctx ca cc v) (call_site_list g v)"
   let ?extra = "extra route ctx v"
   let ?acc0 = "if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot"
   have intra_local: "list_all2 (\<lambda>t_new t_old. locals (traverse_rhs t_new \<tau>) = locals (traverse_rhs t_old \<tau>))
@@ -2138,8 +2219,8 @@ lemma side_cfg_T_eff_keyed_seed_dg_is_mono_eq_gen:
   assumes intra_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs (apply_dg_spec_at S a src (gkey c)) s1
         \<le> traverse_rhs (apply_dg_spec_at S a src (gkey c)) s2"
-  assumes comb_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      traverse_rhs (cmb route c ca cc ex) s1 \<le> traverse_rhs (cmb route c ca cc ex) s2"
+  assumes comb_mono: "\<forall>v c cc ca s1 s2. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (cmb route c ca cc v) s1 \<le> traverse_rhs (cmb route c ca cc v) s2"
   assumes extra_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs t s1 \<le> traverse_rhs t s2"
   shows "is_mono_eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
@@ -2156,17 +2237,17 @@ proof -
       assume le: "s1 \<le> s2"
       have tree_mono: "\<forall>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
                                   (pred_sel g v c)
-                            @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
+                            @ map (\<lambda>(cc, ca). cmb route c ca cc v) (call_site_list g v)
                             @ extra route c v).
                          \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_rhs t s1 \<le> traverse_rhs t s2"
         using intra_mono comb_mono extra_mono by auto
       have step: "traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
                      (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g v c)
-                       @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
+                       @ map (\<lambda>(cc, ca). cmb route c ca cc v) (call_site_list g v)
                        @ extra route c v)) s1
                   \<le> traverse_rhs (side_rhs_fold_dg (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
                      (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g v c)
-                       @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g v)
+                       @ map (\<lambda>(cc, ca). cmb route c ca cc v) (call_site_list g v)
                        @ extra route c v)) s2"
         by (rule side_rhs_fold_dg_mono[OF tree_mono le])
       show "eq (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) (v, c) s1
@@ -2185,8 +2266,8 @@ lemma side_cfg_T_eff_keyed_seed_dg_mono_sides_gen:
   assumes intra_sides_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s1
         \<le> sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s2"
-  assumes comb_sides_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
+  assumes comb_sides_mono: "\<forall>v c cc ca s1 s2. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (cmb route c ca cc v) s1 \<le> sides_of_rhs (cmb route c ca cc v) s2"
   assumes extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs t s1 \<le> sides_of_rhs t s2"
   shows "mono_sides (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
@@ -2203,17 +2284,17 @@ proof -
       assume le: "s1 \<le> s2"
       have tree_sides_mono: "\<And>w. \<forall>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
                                   (pred_sel g w c)
-                            @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                            @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                             @ extra route c w).
                          \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_rhs t s1 \<le> sides_of_rhs t s2"
         using intra_sides_mono comb_sides_mono extra_sides_mono by auto
       have fold_le: "\<And>acc w. sides_of_rhs (side_rhs_fold_dg acc
                         (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                          @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                          @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                           @ extra route c w)) s1
                     \<le> sides_of_rhs (side_rhs_fold_dg acc
                         (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                          @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                          @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                           @ extra route c w)) s2"
         by (rule side_rhs_fold_dg_sides_mono[OF tree_sides_mono le])
       show "sides_of_rhs (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g (v, c)) s1
@@ -2231,8 +2312,8 @@ lemma side_cfg_T_eff_keyed_seed_dg_mono_deps_gen:
     and S :: "('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_spec"
   assumes intra_static: "\<forall>v c src a. (src, a) \<in> set (pred_sel g v c) \<longrightarrow>
       static_deps (apply_dg_spec_at S a src (gkey c))"
-  assumes comb_static: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
-      static_deps (cmb route c ca cc ex)"
+  assumes comb_static: "\<forall>v c cc ca. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow>
+      static_deps (cmb route c ca cc v)"
   assumes extra_static: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
   shows "mono_deps (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g)"
 proof -
@@ -2243,21 +2324,21 @@ proof -
     fix v c s1 s2
     have tree_static: "\<And>w. \<forall>t \<in> set (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c))
                                 (pred_sel g w c)
-                          @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                          @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                           @ extra route c w).
                        static_deps t"
       using intra_static comb_static extra_static by auto
     have fold_static: "\<And>acc w. static_deps (side_rhs_fold_dg acc
                       (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                        @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                        @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                         @ extra route c w))"      by (rule side_rhs_fold_dg_static_deps[OF tree_static])
     have deq: "\<And>acc w. dep_aux s1 (side_rhs_fold_dg acc
                   (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                    @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                    @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                     @ extra route c w))
                 = dep_aux s2 (side_rhs_fold_dg acc
                   (map (\<lambda>(src, a). apply_dg_spec_at S a src (gkey c)) (pred_sel g w c)
-                    @ map (\<lambda>(cc, ca, ex). cmb route c ca cc ex) (return_call_action_list g w)
+                    @ map (\<lambda>(cc, ca). cmb route c ca cc w) (call_site_list g w)
                     @ extra route c w))"
       using fold_static[unfolded static_deps_def] by blast
     show "dep (side_cfg_T_eff_keyed_seed_dg pred_sel gkey route cmb extra g S bot0 s0d s0g) s1 (v, c)
@@ -2301,21 +2382,21 @@ locale td_cfg_side_solver_dg =
   assumes intra_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs (apply_dg_spec_at S a src (gkey c)) s1
         \<le> traverse_rhs (apply_dg_spec_at S a src (gkey c)) s2"
-    and comb_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      traverse_rhs (cmb route c ca cc ex) s1 \<le> traverse_rhs (cmb route c ca cc ex) s2"
+    and comb_mono: "\<forall>v c cc ca s1 s2. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      traverse_rhs (cmb route c ca cc v) s1 \<le> traverse_rhs (cmb route c ca cc v) s2"
     and extra_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       traverse_rhs t s1 \<le> traverse_rhs t s2"
     and intra_sides_mono: "\<forall>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s1
         \<le> sides_of_rhs (apply_dg_spec_at S a src (gkey c)) s2"
-    and comb_sides_mono: "\<forall>v c cc ca ex s1 s2. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
-      sides_of_rhs (cmb route c ca cc ex) s1 \<le> sides_of_rhs (cmb route c ca cc ex) s2"
+    and comb_sides_mono: "\<forall>v c cc ca s1 s2. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
+      sides_of_rhs (cmb route c ca cc v) s1 \<le> sides_of_rhs (cmb route c ca cc v) s2"
     and extra_sides_mono: "\<forall>v c t s1 s2. t \<in> set (extra route c v) \<longrightarrow> s1 \<le> s2 \<longrightarrow>
       sides_of_rhs t s1 \<le> sides_of_rhs t s2"
     and intra_static[intro]: "\<forall>v c src a. (src, a) \<in> set (pred_sel g v c) \<longrightarrow>
       static_deps (apply_dg_spec_at S a src (gkey c))"
-    and comb_static[intro]: "\<forall>v c cc ca ex. (cc, ca, ex) \<in> set (return_call_action_list g v) \<longrightarrow>
-      static_deps (cmb route c ca cc ex)"
+    and comb_static[intro]: "\<forall>v c cc ca. (cc, ca) \<in> set (call_site_list g v) \<longrightarrow>
+      static_deps (cmb route c ca cc v)"
     and extra_static[intro]: "\<forall>v c t. t \<in> set (extra route c v) \<longrightarrow> static_deps t"
 begin
 

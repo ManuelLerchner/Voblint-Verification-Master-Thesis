@@ -184,9 +184,16 @@ definition w0_sigma :: "pp \<times> ivl + w0_gk \<Rightarrow> (ivl, ivl) dg_stat
               | Inr W0Global \<Rightarrow> DG bot (Ivl (Fin 7) (Fin 7))
               | Inr (W0Seed _ _) \<Rightarrow> bot)"
 
+text \<open>The call site resolves to the single callee \<open>f\<close>. Stated directly rather than
+  through \<^const>\<open>static_resolve\<close>, because this witness builds one call tree by hand
+  instead of compiling a program.\<close>
+
+definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> ivl \<Rightarrow> pname list" where
+  "w0_resolve v cc ca d = [STR ''f'']"
+
 definition w0_tree :: "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state) strategy_tree" where
   "w0_tree =
-     routed_cmb_g w0_spec W0Global W0Seed w0_route bot
+     routed_cmb_g w0_spec W0Global W0Seed w0_resolve w0_route bot
        (CallEdge None [STR ''p''] []) (Statement 0) (FunctionResult (STR ''f''))"
 
 text \<open>The seed lands at the entered frame's own key, carrying that same frame.\<close>
@@ -210,6 +217,7 @@ lemma w0_dep_at_entered_frame:
    = {Inl (Statement 0, bot), Inr W0Global,
       Inl (FunctionResult (STR ''f''), Ivl (Fin 7) (Fin 7))}"
   unfolding w0_tree_def w0_sigma_def w0_spec_def w0_route_def
-  by (simp add: routed_cmb_g_def Let_def insert_commute)
+  by (simp add: routed_cmb_g_def routed_cmb_g_at_def w0_resolve_def
+        Let_def insert_commute)
 
 end

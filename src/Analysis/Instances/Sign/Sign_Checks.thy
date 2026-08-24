@@ -105,7 +105,8 @@ interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" 
     "sctx_sigma_abs gs is_bot_pred Pi ps mnm main" "fst (sctx_sol gs is_bot_pred Pi ps mnm main)"
     "(cfg_exit (compile_prog Pi ps mnm main), ())" "sctx_sg gs is_bot_pred Pi ps mnm main"
     Seed sign_classify_check
-proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
+proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
+    RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
   case FinE show ?case
     using compile_prog_finite by auto
 next
@@ -134,6 +135,9 @@ next
     by (simp add: compile_prog_finite)
 next
   case (SeedKey p ctx) show ?case by simp
+next
+  case (ResolveSound u ctx dst pars args p cont s)
+  thus ?case by (simp add: static_resolve_iff compile_prog_finite)
 next
   case (RouteEnterc u ctx dst pars args p cont s)
   show ?case by (simp add: route_unit_def enterc_unit_def)

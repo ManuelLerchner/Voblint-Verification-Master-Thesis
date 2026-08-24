@@ -41,8 +41,11 @@ text \<open>The semantic core, generic in the storage classifier this locale fix
 context sound_dg_spec_ltr_for
 begin
 
-lemma dg_cmb_of_eq_for: "dg_cmb_of S = dg_cmb"
-  by (rule ext)+ (simp add: dg_cmb_of_def dg_cmb_def)
+lemma dg_cmb_at_of_eq_for: "dg_cmb_at_of S = dg_cmb_at"
+  by (rule ext)+ (simp add: dg_cmb_at_of_def dg_cmb_at_def)
+
+lemma dg_cmb_of_eq_for: "dg_cmb_of S g = dg_cmb g"
+  by (rule ext)+ (simp add: dg_cmb_of_def dg_cmb_def dg_cmb_at_of_eq_for)
 
 lemma dg_extra_of_eq_for: "dg_extra_of S g = dg_extra g"
   by (rule ext)+ (simp add: dg_extra_of_def dg_extra_def dg_enter_def)

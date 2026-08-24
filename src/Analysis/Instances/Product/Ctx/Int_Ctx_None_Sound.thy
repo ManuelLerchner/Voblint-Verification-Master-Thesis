@@ -82,7 +82,8 @@ definition ictx_eqs ::
   "ictx_eqs mode is_bot_pred gs Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
        route_unit
-       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
+       (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
+          (static_resolve (compile_prog Pi ps mnm main)))
        (routed_extra_g Seed Global)
        (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs) Bot (Lifted cinit_int_dom_st) Bot"
 
@@ -159,9 +160,10 @@ begin
 
 interpretation int_unit: routed_domain_exec
   gs is_bot_pred "int_tf_st_for mode gs" "int_dom_enter_st_for mode gs" "int_tf_for mode gs"
-  Global Seed route_unit route_unit
+  Global Seed route_unit route_unit static_resolve static_resolve
   by unfold_locales
-     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp, simp)
+     (rule int_tf_st_for_commute, rule int_dom_enter_st_for_commute, rule exact, simp, simp,
+      simp add: static_resolve_def)
 
 lemmas int_pp_abs_gen = int_unit.pp_abs
 
@@ -226,7 +228,8 @@ theorem ictx_pp_abs:
   shows
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-        (routed_cmb_g (ictx_abs_spec mode gs) Global Seed)
+        (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
         (routed_extra_g Seed Global)
         (compile_prog Pi ps mnm main) (ictx_abs_spec mode gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
@@ -240,7 +243,8 @@ proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Global)
           route_unit
-          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed)
+          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs) Global Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
           (routed_extra_g Seed Global)
           (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs)
           Bot (Lifted cinit_int_dom_st) Bot)
@@ -331,7 +335,8 @@ interpretation ictx_dg_base: sound_dg_spec "ictx_abs_spec mode gs" gamma_dg_base
 
 interpretation ictx_dg: dg_ctx_activation_base "ictx_abs_spec mode gs" gamma_dg_base gs
     "compile_prog Pi ps mnm main" Global route_unit
-    "routed_cmb_g (ictx_abs_spec mode gs) Global Seed"
+    "routed_cmb_g (ictx_abs_spec mode gs) Global Seed
+       (static_resolve (compile_prog Pi ps mnm main))"
     "routed_extra_g Seed Global"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st)"
@@ -343,7 +348,8 @@ proof unfold_locales
 next
   show "part_post_solution
           (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Global) route_unit
-             (routed_cmb_g (ictx_abs_spec mode gs) Global Seed)
+             (routed_cmb_g (ictx_abs_spec mode gs) Global Seed
+                (static_resolve (compile_prog Pi ps mnm main)))
              (routed_extra_g Seed Global)
              (compile_prog Pi ps mnm main) (ictx_abs_spec mode gs)
              (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
@@ -517,10 +523,14 @@ interpretation ictx_adapter: dg_analysis_adapter
     and x0 = "(cfg_exit (compile_prog Pi ps mnm main), ())" and sg = ictx_sg
     and seed_key = Seed and enterc = enterc_unit and classify = int_classify_check
 proof (unfold_locales, goal_cases
-    FinC SeedKey RouteEnterAgree CallFwd CombFwd CallEnterStoreAgree ClassifyProved ClassifyRefuted)
+    FinC SeedKey ResolveSound RouteEnterAgree CallFwd CombFwd CallEnterStoreAgree
+    ClassifyProved ClassifyRefuted)
   case FinC show ?case by (rule ictx_finC)
 next
   case (SeedKey p ctx) show ?case by simp
+next
+  case (ResolveSound u ctx dst pars args p cont s)
+  thus ?case by (simp add: static_resolve_iff[OF ictx_finC])
 next
   case (RouteEnterAgree u ctx dst pars args p cont s)
   show ?case by simp
