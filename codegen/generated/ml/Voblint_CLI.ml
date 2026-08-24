@@ -3620,6 +3620,9 @@ let rec bind x0 f = match x0, f with None, f -> None
 let rec list_ex p x1 = match p, x1 with p, [] -> false
                   | p, x :: xs -> p x || list_ex p xs;;
 
+let rec product x0 uu = match x0, uu with [], uu -> []
+                  | x :: xs, ys -> map (fun a -> (x, a)) ys @ product xs ys;;
+
 let rec remdups _A
   = function [] -> []
     | x :: xs ->
@@ -8795,20 +8798,18 @@ let rec analysis_graph_to_export _A _B
 
 let rec analysis_call_to_return_edges _A
   cfg g covered =
-    maps (fun src_ctx ->
-           maps (fun a ->
-                  (match a with (_, (_, (Statement _, _))) -> []
-                    | (call, (_, (FunctionEntry p, cont))) ->
-                      (if equal_cfg_nodea (fst src_ctx) call &&
-                            membera (equal_prod equal_cfg_node _A) covered
-                              (cont, snd src_ctx)
-                        then [(LocalNode (call, snd src_ctx),
-                                (CallToReturnEdge p,
-                                  LocalNode (cont, snd src_ctx)))]
-                        else [])
-                    | (_, (_, (FunctionResult _, _))) -> []))
-             (cfg_calls_list g))
-      covered;;
+    map_filter
+      (fun a ->
+        (match a with (_, (_, (_, (Statement _, _)))) -> None
+          | (src_ctx, (call, (_, (FunctionEntry p, cont)))) ->
+            (if equal_cfg_nodea (fst src_ctx) call &&
+                  membera (equal_prod equal_cfg_node _A) covered
+                    (cont, snd src_ctx)
+              then Some (LocalNode (call, snd src_ctx),
+                          (CallToReturnEdge p, LocalNode (cont, snd src_ctx)))
+              else None)
+          | (_, (_, (_, (FunctionResult _, _)))) -> None))
+      (product covered (cfg_calls_list g));;
 
 let rec analysis_context_clusters _A
   cfg covered =
@@ -8841,30 +8842,29 @@ let rec route
 
 let rec analysis_combine_edges _A
   cfg g covered sol =
-    maps (fun src_ctx ->
-           maps (fun a ->
-                  (match a with (_, (_, (Statement _, _))) -> []
-                    | (call, (ca, (FunctionEntry p, cont))) ->
-                      (if equal_cfg_nodea (fst src_ctx) call
-                        then (match
-                               route cfg call (snd src_ctx) ca
-                                 (local_of cfg (sol (Inl src_ctx)))
-                               with None -> []
-                               | Some callee_ctx ->
-                                 (let result = FunctionResult p in
-                                   (if membera (equal_prod equal_cfg_node _A)
- covered (result, callee_ctx) &&
- membera (equal_prod equal_cfg_node _A) covered (cont, snd src_ctx)
-                                     then [(LocalNode (result, callee_ctx),
-     (CombineEdge
-        (call, (let CallEdge (dst, _, _) = ca in dst),
-          return_slot_for_pp cfg result),
-       LocalNode (cont, snd src_ctx)))]
-                                     else [])))
-                        else [])
-                    | (_, (_, (FunctionResult _, _))) -> []))
-             (cfg_calls_list g))
-      covered;;
+    map_filter
+      (fun a ->
+        (match a with (_, (_, (_, (Statement _, _)))) -> None
+          | (src_ctx, (call, (ca, (FunctionEntry p, cont)))) ->
+            (if equal_cfg_nodea (fst src_ctx) call
+              then (match
+                     route cfg call (snd src_ctx) ca
+                       (local_of cfg (sol (Inl src_ctx)))
+                     with None -> None
+                     | Some callee_ctx ->
+                       (if membera (equal_prod equal_cfg_node _A) covered
+                             (FunctionResult p, callee_ctx) &&
+                             membera (equal_prod equal_cfg_node _A) covered
+                               (cont, snd src_ctx)
+                         then Some (LocalNode (FunctionResult p, callee_ctx),
+                                     (CombineEdge
+(call, (let CallEdge (dst, _, _) = ca in dst),
+  return_slot_for_pp cfg (FunctionResult p)),
+                                       LocalNode (cont, snd src_ctx)))
+                         else None))
+              else None)
+          | (_, (_, (_, (FunctionResult _, _)))) -> None))
+      (product covered (cfg_calls_list g));;
 
 let rec source_text
   (Analysis_graph_config_ext
@@ -8910,36 +8910,32 @@ let rec analysis_global_nodes _B
 
 let rec analysis_intra_edges _A
   g covered =
-    maps (fun src_ctx ->
-           maps (fun (u, (a, v)) ->
-                  (if equal_cfg_nodea (fst src_ctx) u &&
-                        membera (equal_prod equal_cfg_node _A) covered
-                          (v, snd src_ctx)
-                    then [(LocalNode (u, snd src_ctx),
-                            (IntraEdge a, LocalNode (v, snd src_ctx)))]
-                    else []))
-             (cfg_intra_list g))
-      covered;;
+    map_filter
+      (fun (src_ctx, (u, (a, v))) ->
+        (if equal_cfg_nodea (fst src_ctx) u &&
+              membera (equal_prod equal_cfg_node _A) covered (v, snd src_ctx)
+          then Some (LocalNode (u, snd src_ctx),
+                      (IntraEdge a, LocalNode (v, snd src_ctx)))
+          else None))
+      (product covered (cfg_intra_list g));;
 
 let rec analysis_enter_edges _A
   cfg g covered sol =
-    maps (fun src_ctx ->
-           maps (fun (u, (ca, (entry, _))) ->
-                  (if equal_cfg_nodea (fst src_ctx) u
-                    then (match
-                           route cfg u (snd src_ctx) ca
-                             (local_of cfg (sol (Inl src_ctx)))
-                           with None -> []
-                           | Some callee_ctx ->
-                             (if membera (equal_prod equal_cfg_node _A) covered
-                                   (entry, callee_ctx)
-                               then [(LocalNode (u, snd src_ctx),
-                                       (EnterEdge (owner_of cfg entry, ca),
- LocalNode (entry, callee_ctx)))]
-                               else []))
-                    else []))
-             (cfg_calls_list g))
-      covered;;
+    map_filter
+      (fun (src_ctx, (u, (ca, (entry, _)))) ->
+        (if equal_cfg_nodea (fst src_ctx) u
+          then (match
+                 route cfg u (snd src_ctx) ca (local_of cfg (sol (Inl src_ctx)))
+                 with None -> None
+                 | Some callee_ctx ->
+                   (if membera (equal_prod equal_cfg_node _A) covered
+                         (entry, callee_ctx)
+                     then Some (LocalNode (u, snd src_ctx),
+                                 (EnterEdge (owner_of cfg entry, ca),
+                                   LocalNode (entry, callee_ctx)))
+                     else None))
+          else None))
+      (product covered (cfg_calls_list g));;
 
 let rec covered_local_nodes
   covered = map (fun pc -> LocalNode (fst pc, snd pc)) covered;;

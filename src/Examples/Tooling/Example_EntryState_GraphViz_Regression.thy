@@ -207,7 +207,7 @@ definition gcall_ctx_graph :: "(ivl list, gk) analysis_graph" where
   "gcall_ctx_graph = entry_state_ctx_graph gcall_prog"
 
 lemma gcall_ctx_graph_wf: "analysis_graph_wf gcall_ctx_graph"
-  by eval
+  unfolding gcall_ctx_graph_def by (rule entry_state_ctx_graph_wf)
 
 subsection \<open>The drawn domain is exactly the solver's coverage\<close>
 
@@ -371,7 +371,7 @@ definition mixed_ctx_graph :: "(ivl list, gk) analysis_graph" where
   "mixed_ctx_graph = entry_state_ctx_graph mixed_ctx_prog"
 
 lemma mixed_ctx_graph_wf: "analysis_graph_wf mixed_ctx_graph"
-  by eval
+  unfolding mixed_ctx_graph_def by (rule entry_state_ctx_graph_wf)
 
 lemma mixed_ctx_graph_check_live_and_dead:
   "entry_state_ctx_check_annotation (prog_cfg prog_main_name mixed_ctx_prog)
@@ -456,7 +456,7 @@ definition dead_route_graph :: "(ivl list, gk) analysis_graph" where
   "dead_route_graph = entry_state_ctx_graph dead_route_prog"
 
 lemma dead_route_graph_wf: "analysis_graph_wf dead_route_graph"
-  by eval
+  unfolding dead_route_graph_def by (rule entry_state_ctx_graph_wf)
 
 text \<open>
   The dead call's own context, \<open>[3]\<close>, is genuinely a real entered-formal

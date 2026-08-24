@@ -765,7 +765,10 @@ definition nest_1_dot :: String.literal where
       (analysis_graph_to_dot nest_1_graph_config nest_cfg (snd nest_1_sol)
         nest_1_graph)"
 
-lemma nest_1_graph_wf: "analysis_graph_wf nest_1_graph" by eval
+lemma nest_1_graph_wf: "analysis_graph_wf nest_1_graph"
+  unfolding nest_1_graph_def nest_cfg_def
+  by (rule build_analysis_graph_wf
+        [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
 
 lemma nest_1_graph_domain_is_covered:
   "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> fst nest_1_sol | Inr _ \<Rightarrow> True)
