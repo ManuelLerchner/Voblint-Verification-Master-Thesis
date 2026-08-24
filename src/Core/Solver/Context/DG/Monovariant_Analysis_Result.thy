@@ -255,6 +255,22 @@ definition state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> 'a" where
 definition report :: "imp_prog \<Rightarrow> check_report_entry list" where
   "report p = classify_checks (prog_cfg prog_main_name p) (state_at p) classify"
 
+text \<open>
+  The same table read with its reachability kept: \<open>True\<close> marks a node the solve never
+  covered, which a report consumer suppresses instead of printing the bottom state's
+  vacuous verdict. Exact for the same reason \<^const>\<open>state_at\<close> is -- it is the
+  \<^const>\<open>lookup_context\<close> case split itself, not a second test on the raw unknown.
+\<close>
+
+definition reach_state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
+  "reach_state_at p v =
+     (case lookup_context (table p) v () of Unreachable \<Rightarrow> (True, bot_state) | Reachable st \<Rightarrow> (False, st))"
+
+definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
+  "report_with_state p =
+     classify_checks_with_state (prog_cfg prog_main_name p) (reach_state_at p)
+       (\<lambda>c (_, s). classify c s)"
+
 end
 
 text \<open>
@@ -276,6 +292,8 @@ text \<open>
 
 declare analysis_surface.state_at_def [code]
 declare analysis_surface.report_def [code]
+declare analysis_surface.reach_state_at_def [code]
+declare analysis_surface.report_with_state_def [code]
 
 
 end

@@ -450,9 +450,6 @@ module Core : sig
         ((cfg_node list), (string -> unit int_dom_ext)) analysis_result
   val analyse_int_entry_state_report :
     unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
-  val analyse_int_entry_state_result :
-    unit imp_prog_ext ->
-      ((unit int_dom_ext list), (string -> unit int_dom_ext)) analysis_result
   val analyse_sign_call_string_report :
     nat -> unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
   val analyse_sign_call_string_result :
@@ -475,6 +472,18 @@ module Core : sig
         unit imp_prog_ext ->
           (unit, (string -> ivl)) analysis_result *
             (string * (string -> ivl) point_state) list
+  val report_with_state :
+    (unit imp_prog_ext -> (unit, 'a) analysis_result) ->
+      'a -> (exp -> 'a -> check_result) ->
+              unit imp_prog_ext ->
+                (cfg_node * (exp * (check_result * (bool * 'a)))) list
+  val analyse_int_call_string_report_warrow :
+    nat -> unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
+  val analyse_int_entry_state_report_warrow :
+    unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
+  val analyse_int_entry_state_result_warrow :
+    unit imp_prog_ext ->
+      ((unit int_dom_ext list), (string -> unit int_dom_ext)) analysis_result
   val analyse_interval_entry_state_wpo :
     unit imp_prog_ext -> (cfg_node * (exp * contextual_verdict)) list
   val analyse_interval_entry_state_join :
@@ -10276,6 +10285,41 @@ let rec analyse_int_report_for_with_state
 let rec analyse_int_report_with_state
   p = analyse_int_report_for_with_state (declared_global p) p;;
 
+let rec ics_sol_warrow
+  k mode gs is_bot_pred pi ps mnm main =
+    tD_side_warrowing_apinis_Interp_solve
+      (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+      equal_call_string_gk
+      ((equal_dg_state
+         (equal_lifted
+           (equal_resolved_st_q
+             ((equal_int_dom_ext equal_unit),
+               (bounded_warrowing_int_dom_ext
+                 int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+         (equal_lifted
+           (equal_resolved_st_q
+             ((equal_int_dom_ext equal_unit),
+               (bounded_warrowing_int_dom_ext
+                 int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+        (bounded_semilattice_sup_bot_dg_state
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext
+                int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext
+                int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
+        (warrowing_dg_state
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
+      (ics_eqs k mode gs is_bot_pred pi ps mnm main)
+      (cfg_exit (compile_prog pi ps mnm main), []);;
+
 let rec ictx_entry_route
   mode gs is_bot_pred d ca =
     (let CallEdge (_, pars, _) = ca in
@@ -10701,6 +10745,15 @@ let rec seed_global_keys
                (ctxs (FunctionEntry f)))
         (prog_main_name :: prog_procs p);;
 
+let rec ics_sol_prog_warrow
+  k gs mnm p =
+    ics_sol_warrow k Refine_Fixpoint gs
+      (resolved_st_q_is_bot_for
+        (computable_domain_int_dom_ext
+          (equal_unit, int_dom_record_lattice_unit))
+        (declared_global_vars p))
+      (prog_table p) (prog_procs p) mnm (prog_main p);;
+
 let rec ictx_entry_sol_prog
   gs mnm p =
     ictx_entry_sol Refine_Fixpoint gs
@@ -10875,6 +10928,41 @@ let rec sctx_entry_sol_prog
 let rec scope_formals
   (Procedure_scope_ext (scope_formals, scope_locals, scope_return_slot, more)) =
     scope_formals;;
+
+let rec ictx_entry_sol_warrow
+  mode gs is_bot_pred pi ps mnm main =
+    tD_side_warrowing_apinis_Interp_solve
+      (equal_prod equal_cfg_node (equal_list (equal_int_dom_ext equal_unit)))
+      equal_gkd
+      ((equal_dg_state
+         (equal_lifted
+           (equal_resolved_st_q
+             ((equal_int_dom_ext equal_unit),
+               (bounded_warrowing_int_dom_ext
+                 int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))
+         (equal_lifted
+           (equal_resolved_st_q
+             ((equal_int_dom_ext equal_unit),
+               (bounded_warrowing_int_dom_ext
+                 int_dom_record_warrowing_unit).bounded_semilattice_sup_bot_bounded_warrowing.order_bot_bounded_semilattice_sup_bot)))),
+        (bounded_semilattice_sup_bot_dg_state
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext
+                int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext
+                int_dom_record_warrowing_unit))).bounded_semilattice_sup_bot_bounded_warrowing),
+        (warrowing_dg_state
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))
+          (bounded_warrowing_lifted
+            (bounded_warrowing_resolved_st_q
+              (bounded_warrowing_int_dom_ext int_dom_record_warrowing_unit)))))
+      (ictx_entry_eqs mode gs is_bot_pred pi ps mnm main)
+      (cfg_exit (compile_prog pi ps mnm main), []);;
 
 let rec analyse_sign_call_string_result_for
   k gs mnm p =
@@ -11058,6 +11146,15 @@ let rec analyse_parity_ctx_solved_for
   x = ctx_solved_for computable_domain_parity pctx_sol_prog
         (unit_seed_global_keys Globalb (fun a b -> Seedb (a, b))) x;;
 
+let rec ictx_entry_sol_prog_warrow
+  gs mnm p =
+    ictx_entry_sol_warrow Refine_Fixpoint gs
+      (resolved_st_q_is_bot_for
+        (computable_domain_int_dom_ext
+          (equal_unit, int_dom_record_lattice_unit))
+        (declared_global_vars p))
+      (prog_table p) (prog_procs p) mnm (prog_main p);;
+
 let rec analyse_int_ctx_solved_warrow_for
   mode =
     ctx_solved_for
@@ -11171,6 +11268,27 @@ let rec analyse_int_call_string_result
   k p = analyse_int_call_string_result_for k (declared_global p) prog_main_name
           p;;
 
+let rec analyse_int_call_string_result_for_warrow
+  k gs mnm p =
+    (let sol = ics_sol_prog_warrow k gs mnm p in
+     let gl = declared_global_vars p in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point (bot_int_dom_ext int_dom_record_lattice_unit) gs
+              (canonicalize_lift
+                (resolved_st_q_is_bot_for
+                  (computable_domain_int_dom_ext
+                    (equal_unit, int_dom_record_lattice_unit))
+                  gl)
+                (locals (snd sol (Inl (v, ctx))))))));;
+
+let rec ics_verdict_report_prog_warrow
+  k mnm p =
+    classify_checks_verdicts (equal_list equal_cfg_node) (prog_cfg mnm p)
+      (analyse_int_call_string_result_for_warrow k (declared_global p) mnm p)
+      int_classify_check;;
+
 let rec ictx_entry_verdict_report_prog
   mnm p =
     map (fun (u, (c, vs)) -> (u, (c, aggregate_verdicts (image snd vs))))
@@ -11178,9 +11296,6 @@ let rec ictx_entry_verdict_report_prog
 
 let rec analyse_int_entry_state_report
   p = ictx_entry_verdict_report_prog prog_main_name p;;
-
-let rec analyse_int_entry_state_result
-  p = analyse_int_entry_state_result_for (declared_global p) prog_main_name p;;
 
 let rec entry_state_sol_prog_join
   gs mnm p =
@@ -11309,6 +11424,11 @@ let rec entry_state_verdict_report_prog
 let rec analyse_interval_entry_state
   p = entry_state_verdict_report_prog prog_main_name p;;
 
+let rec reach_state_at
+  table bot_state p v =
+    (match lookup_context equal_unit (table p) v ()
+      with Unreachable -> (true, bot_state) | Reachable a -> (false, a));;
+
 let rec node_annotation_update
   node_annotationa
     (Analysis_graph_config_ext
@@ -11371,6 +11491,43 @@ let rec entry_state_sol_prog_per_origin
 let rec analyse_interval_ctx_solved_warrow_for
   x = ctx_solved_for computable_domain_ivl ictx_sol_prog_warrowa
         (unit_seed_global_keys Globalc (fun a b -> Seedc (a, b))) x;;
+
+let rec report_with_state
+  table bot_state classify p =
+    classify_checks_with_state (prog_cfg prog_main_name p)
+      (reach_state_at table bot_state p) (fun c (_, a) -> classify c a);;
+
+let rec analyse_int_call_string_report_warrow
+  k p = ics_verdict_report_prog_warrow k prog_main_name p;;
+
+let rec analyse_int_entry_state_result_for_warrow
+  gs mnm p =
+    (let sol = ictx_entry_sol_prog_warrow gs mnm p in
+     let gl = declared_global_vars p in
+      Analysis_Result
+        (fst sol,
+          (fun v ctx ->
+            normalize_point (bot_int_dom_ext int_dom_record_lattice_unit) gs
+              (canonicalize_lift
+                (resolved_st_q_is_bot_for
+                  (computable_domain_int_dom_ext
+                    (equal_unit, int_dom_record_lattice_unit))
+                  gl)
+                (locals (snd sol (Inl (v, ctx))))))));;
+
+let rec ictx_entry_verdict_report_prog_warrow
+  mnm p =
+    classify_checks_verdicts (equal_list (equal_int_dom_ext equal_unit))
+      (prog_cfg mnm p)
+      (analyse_int_entry_state_result_for_warrow (declared_global p) mnm p)
+      int_classify_check;;
+
+let rec analyse_int_entry_state_report_warrow
+  p = ictx_entry_verdict_report_prog_warrow prog_main_name p;;
+
+let rec analyse_int_entry_state_result_warrow
+  p = analyse_int_entry_state_result_for_warrow (declared_global p)
+        prog_main_name p;;
 
 let rec analyse_interval_entry_state_result_for_wpo
   gs mnm p =
@@ -11652,17 +11809,17 @@ let rec resolve_analysis_config
     | Analysis_config_ext (Int_Analysis, Some s, Ctx_None, ()) ->
         Some (Plan_Int s)
     | Analysis_config_ext (Int_Analysis, None, Ctx_EntryState, ()) ->
-        Some (Plan_Int_EntryState Solver_Join)
+        Some (Plan_Int_EntryState Solver_Warrow)
     | Analysis_config_ext (Int_Analysis, Some Solver_Join, Ctx_EntryState, ())
         -> Some (Plan_Int_EntryState Solver_Join)
     | Analysis_config_ext
         (Int_Analysis, Some Solver_PerOrigin, Ctx_EntryState, ())
         -> None
     | Analysis_config_ext (Int_Analysis, Some Solver_Warrow, Ctx_EntryState, ())
-        -> None
+        -> Some (Plan_Int_EntryState Solver_Warrow)
     | Analysis_config_ext (Int_Analysis, None, Ctx_CallString k, ()) ->
         (if Core.equal_nata k Core.zero_nat then None
-          else Some (Plan_Int_CallString (Solver_Join, k)))
+          else Some (Plan_Int_CallString (Solver_Warrow, k)))
     | Analysis_config_ext (Int_Analysis, Some Solver_Join, Ctx_CallString k, ())
         -> (if Core.equal_nata k Core.zero_nat then None
              else Some (Plan_Int_CallString (Solver_Join, k)))
@@ -11671,7 +11828,8 @@ let rec resolve_analysis_config
         -> None
     | Analysis_config_ext
         (Int_Analysis, Some Solver_Warrow, Ctx_CallString k, ())
-        -> None
+        -> (if Core.equal_nata k Core.zero_nat then None
+             else Some (Plan_Int_CallString (Solver_Warrow, k)))
     | Analysis_config_ext
         (Int_Analysis, Some Solver_WarrowPerOrigin, Ctx_EntryState, ())
         -> None
@@ -11712,12 +11870,6 @@ module Analyse_Dispatch : sig
     unit Analysis_Config.analysis_config_ext ->
       unit Core.imp_prog_ext ->
         ((Core.cfg_node * (Core.exp * Core.contextual_verdict)) list) option
-  val analyse_with_state :
-    Analysis_Config.analysis_domain ->
-      unit Core.imp_prog_ext ->
-        (Core.cfg_node *
-          (Core.exp *
-            (Core.check_result * (bool * (string -> abstract_value))))) list
   val analyse_config_with_state :
     unit Analysis_Config.analysis_config_ext ->
       unit Core.imp_prog_ext ->
@@ -11725,6 +11877,12 @@ module Analyse_Dispatch : sig
            (Core.exp *
              (Core.check_result *
                (bool * (string -> abstract_value))))) list) option
+  val analyse_with_state_default :
+    Analysis_Config.analysis_domain ->
+      unit Core.imp_prog_ext ->
+        (Core.cfg_node *
+          (Core.exp *
+            (Core.check_result * (bool * (string -> abstract_value))))) list
 end = struct
 
 type abstract_value = SignValue of Core.sign | IntervalValue of Core.ivl |
@@ -11736,6 +11894,11 @@ let rec analyse
     | Analysis_Config.Interval_Analysis, p -> Core.analyse_interval_td_report p
     | Analysis_Config.Int_Analysis, p -> Core.analyse_int_report p
     | Analysis_Config.Parity_Analysis, p -> Core.analyse_parity_report p;;
+
+let rec tag_states
+  tag = Core.map
+          (fun (u, (c, (r, (unreachable, s)))) ->
+            (u, (c, (r, (unreachable, Core.comp tag s)))));;
 
 let rec analyse_with_solver
   x0 x1 p = match x0, x1, p with
@@ -11854,7 +12017,7 @@ let rec analyse_config_ctx
                Analysis_Config.Solver_PerOrigin)
         -> None
       | Some (Analysis_Config.Plan_Int_EntryState Analysis_Config.Solver_Warrow)
-        -> None
+        -> Some (Core.analyse_int_entry_state_report_warrow p)
       | Some (Analysis_Config.Plan_Int_EntryState
                Analysis_Config.Solver_WarrowPerOrigin)
         -> None
@@ -11865,8 +12028,8 @@ let rec analyse_config_ctx
                (Analysis_Config.Solver_PerOrigin, _))
         -> None
       | Some (Analysis_Config.Plan_Int_CallString
-               (Analysis_Config.Solver_Warrow, _))
-        -> None
+               (Analysis_Config.Solver_Warrow, k))
+        -> Some (Core.analyse_int_call_string_report_warrow k p)
       | Some (Analysis_Config.Plan_Int_CallString
                (Analysis_Config.Solver_WarrowPerOrigin, _))
         -> None
@@ -11875,67 +12038,96 @@ let rec analyse_config_ctx
           (analyse_with_solver Analysis_Config.Parity_Analysis s p));;
 
 let rec analyse_with_state
-  x0 p = match x0, p with
-    Analysis_Config.Sign_Analysis, p ->
-      Core.map
-        (fun (u, (c, (r, (unreachable, s)))) ->
-          (u, (c, (r, (unreachable, Core.comp (fun a -> SignValue a) s)))))
-        (Core.analyse_sign_report_with_state p)
-    | Analysis_Config.Interval_Analysis, p ->
-        Core.map
-          (fun (u, (c, (r, (unreachable, s)))) ->
-            (u, (c, (r, (unreachable,
-                          Core.comp (fun a -> IntervalValue a) s)))))
-          (Core.analyse_interval_td_report_with_state p)
-    | Analysis_Config.Int_Analysis, p ->
-        Core.map
-          (fun (u, (c, (r, (unreachable, s)))) ->
-            (u, (c, (r, (unreachable, Core.comp (fun a -> IntDomValue a) s)))))
-          (Core.analyse_int_report_with_state p)
-    | Analysis_Config.Parity_Analysis, p ->
-        Core.map
-          (fun (u, (c, (r, (unreachable, s)))) ->
-            (u, (c, (r, (unreachable, Core.comp (fun a -> ParityValue a) s)))))
-          (Core.analyse_parity_report_with_state p);;
+  x0 x1 p = match x0, x1, p with
+    Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Join, p ->
+      Some (tag_states (fun a -> SignValue a)
+             (Core.analyse_sign_report_with_state p))
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (tag_states (fun a -> SignValue a)
+               (Core.report_with_state Core.analyse_sign_result_per_origin
+                 (Core.bot_fun Core.bot_sign) Core.sign_classify_check p))
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Warrow, p -> None
+    | Analysis_Config.Sign_Analysis, Analysis_Config.Solver_WarrowPerOrigin, p
+        -> None
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Join, p ->
+        Some (tag_states (fun a -> IntervalValue a)
+               (Core.report_with_state Core.analyse_interval_join_result
+                 (Core.bot_fun Core.bot_ivl) Core.interval_classify_check p))
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (tag_states (fun a -> IntervalValue a)
+               (Core.report_with_state Core.analyse_interval_per_origin_result
+                 (Core.bot_fun Core.bot_ivl) Core.interval_classify_check p))
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Warrow, p ->
+        Some (tag_states (fun a -> IntervalValue a)
+               (Core.analyse_interval_td_report_with_state p))
+    | Analysis_Config.Interval_Analysis, Analysis_Config.Solver_WarrowPerOrigin,
+        p
+        -> Some (tag_states (fun a -> IntervalValue a)
+                  (Core.report_with_state Core.analyse_interval_wpo_result
+                    (Core.bot_fun Core.bot_ivl) Core.interval_classify_check p))
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_Join, p ->
+        Some (tag_states (fun a -> IntDomValue a)
+               (Core.report_with_state Core.analyse_int_join_result
+                 (Core.bot_fun
+                   (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                 Core.int_classify_check p))
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (tag_states (fun a -> IntDomValue a)
+               (Core.report_with_state Core.analyse_int_per_origin_result
+                 (Core.bot_fun
+                   (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                 Core.int_classify_check p))
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow, p ->
+        Some (tag_states (fun a -> IntDomValue a)
+               (Core.analyse_int_report_with_state p))
+    | Analysis_Config.Int_Analysis, Analysis_Config.Solver_WarrowPerOrigin, p ->
+        Some (tag_states (fun a -> IntDomValue a)
+               (Core.report_with_state Core.analyse_int_wpo_result
+                 (Core.bot_fun
+                   (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                 Core.int_classify_check p))
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Join, p ->
+        Some (tag_states (fun a -> ParityValue a)
+               (Core.analyse_parity_report_with_state p))
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_PerOrigin, p ->
+        Some (tag_states (fun a -> ParityValue a)
+               (Core.report_with_state Core.analyse_parity_result_per_origin
+                 (Core.bot_fun Core.bot_parity) Core.parity_classify_check p))
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Warrow, p -> None
+    | Analysis_Config.Parity_Analysis, Analysis_Config.Solver_WarrowPerOrigin, p
+        -> None;;
 
 let rec analyse_config_with_state
   cfg p =
     (match Analysis_Config.resolve_analysis_config cfg with None -> None
-      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_Join) ->
-        Some (analyse_with_state Analysis_Config.Sign_Analysis p)
-      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_PerOrigin) ->
-        None
-      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_Warrow) -> None
-      | Some (Analysis_Config.Plan_Sign Analysis_Config.Solver_WarrowPerOrigin)
-        -> None
+      | Some (Analysis_Config.Plan_Sign s) ->
+        analyse_with_state Analysis_Config.Sign_Analysis s p
       | Some (Analysis_Config.Plan_Sign_EntryState _) -> None
       | Some (Analysis_Config.Plan_Sign_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Interval Analysis_Config.Solver_Join) -> None
-      | Some (Analysis_Config.Plan_Interval Analysis_Config.Solver_PerOrigin) ->
-        None
-      | Some (Analysis_Config.Plan_Interval Analysis_Config.Solver_Warrow) ->
-        Some (analyse_with_state Analysis_Config.Interval_Analysis p)
-      | Some (Analysis_Config.Plan_Interval
-               Analysis_Config.Solver_WarrowPerOrigin)
-        -> None
+      | Some (Analysis_Config.Plan_Interval s) ->
+        analyse_with_state Analysis_Config.Interval_Analysis s p
       | Some (Analysis_Config.Plan_Interval_EntryState _) -> None
       | Some (Analysis_Config.Plan_Interval_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_Join) -> None
-      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_PerOrigin) -> None
-      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_Warrow) ->
-        Some (analyse_with_state Analysis_Config.Int_Analysis p)
-      | Some (Analysis_Config.Plan_Int Analysis_Config.Solver_WarrowPerOrigin)
-        -> None
+      | Some (Analysis_Config.Plan_Int s) ->
+        analyse_with_state Analysis_Config.Int_Analysis s p
       | Some (Analysis_Config.Plan_Int_EntryState _) -> None
       | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Parity Analysis_Config.Solver_Join) ->
-        Some (analyse_with_state Analysis_Config.Parity_Analysis p)
-      | Some (Analysis_Config.Plan_Parity Analysis_Config.Solver_PerOrigin) ->
-        None
-      | Some (Analysis_Config.Plan_Parity Analysis_Config.Solver_Warrow) -> None
-      | Some (Analysis_Config.Plan_Parity
-               Analysis_Config.Solver_WarrowPerOrigin)
-        -> None);;
+      | Some (Analysis_Config.Plan_Parity s) ->
+        analyse_with_state Analysis_Config.Parity_Analysis s p);;
+
+let rec analyse_with_state_default
+  x0 p = match x0, p with
+    Analysis_Config.Sign_Analysis, p ->
+      tag_states (fun a -> SignValue a) (Core.analyse_sign_report_with_state p)
+    | Analysis_Config.Interval_Analysis, p ->
+        tag_states (fun a -> IntervalValue a)
+          (Core.analyse_interval_td_report_with_state p)
+    | Analysis_Config.Int_Analysis, p ->
+        tag_states (fun a -> IntDomValue a)
+          (Core.analyse_int_report_with_state p)
+    | Analysis_Config.Parity_Analysis, p ->
+        tag_states (fun a -> ParityValue a)
+          (Core.analyse_parity_report_with_state p);;
 
 end;; (*struct Analyse_Dispatch*)
 
@@ -12454,7 +12646,7 @@ let rec entry_state_globals_for
           (fun a -> Analyse_Dispatch.IntDomValue a)
           (ctx_key_of (fun a -> Analyse_Dispatch.IntDomValue a))
           (ctx_show_of (fun a -> Analyse_Dispatch.IntDomValue a))
-          (Core.analyse_int_entry_state_result p) p
+          (Core.analyse_int_entry_state_result_warrow p) p
       | Analysis_Config.Parity_Analysis -> []);;
 
 let rec entry_state_verdicts_for
@@ -12463,7 +12655,8 @@ let rec entry_state_verdicts_for
       with Analysis_Config.Sign_Analysis ->
         Core.analyse_sign_entry_state_report p
       | Analysis_Config.Interval_Analysis -> Core.analyse_interval_entry_state p
-      | Analysis_Config.Int_Analysis -> Core.analyse_int_entry_state_report p
+      | Analysis_Config.Int_Analysis ->
+        Core.analyse_int_entry_state_report_warrow p
       | Analysis_Config.Parity_Analysis -> []);;
 
 let rec state_report_node_annotation
@@ -12482,7 +12675,7 @@ let rec state_report_export_auto
   kind p =
     (let report =
        Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
-         (Analyse_Dispatch.analyse_with_state kind p)
+         (Analyse_Dispatch.analyse_with_state_default kind p)
        in
       Core.raw_cfg_export (Core.prog_table p) (Core.prog_procs p)
         Core.prog_main_name (Core.prog_main p)
@@ -12506,7 +12699,7 @@ let rec entry_state_point_env_for
           (Core.semilattice_sup_int_dom_ext Core.int_dom_record_lattice_unit)
           (Core.equal_list (Core.equal_int_dom_ext Core.equal_unit))
           (fun a -> Analyse_Dispatch.IntDomValue a)
-          (Core.analyse_int_entry_state_result p)
+          (Core.analyse_int_entry_state_result_warrow p)
       | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
 let rec cs_ctx_graph_snapshot_auto
@@ -12765,7 +12958,7 @@ let rec state_report_graph_snapshot_auto
   kind p =
     (let report =
        Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
-         (Analyse_Dispatch.analyse_with_state kind p)
+         (Analyse_Dispatch.analyse_with_state_default kind p)
        in
       Core.raw_cfg_canonical_text_lit (Core.prog_table p) (Core.prog_procs p)
         Core.prog_main_name (Core.prog_main p)

@@ -156,7 +156,7 @@ text \<open>
 
 definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_graph_snapshot_auto kind p =
-     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
+     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
       in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
@@ -230,7 +230,7 @@ definition entry_state_point_env_for ::
       | Interval_Analysis \<Rightarrow>
           project_joined_env IntervalValue (analyse_interval_entry_state_result p)
       | Int_Analysis \<Rightarrow>
-          project_joined_env IntDomValue (analyse_int_entry_state_result p)
+          project_joined_env IntDomValue (analyse_int_entry_state_result_warrow p)
       | Parity_Analysis \<Rightarrow> (\<lambda>_. Unreachable))"
 
 text \<open>
@@ -315,7 +315,7 @@ text \<open>
 
 definition state_report_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "state_report_export_auto kind p =
-     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)
+     (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
       in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
@@ -444,7 +444,7 @@ text \<open>
 \<close>
 
 lemma snd_full_state_checked_payload_auto [simp]:
-  "fst (snd (full_state_checked_payload_auto kind p)) = analyse_with_state kind p"
+  "fst (snd (full_state_checked_payload_auto kind p)) = analyse_with_state_default kind p"
   by (cases kind)
      (simp_all add: full_state_checked_payload_auto_def checked_payload_of_def Let_def
         fst_analyse_sign_ctx_solved_for fst_analyse_parity_ctx_solved_for
@@ -458,7 +458,7 @@ lemma snd_full_state_checked_payload_auto [simp]:
         analyse_int_report_with_state_def analyse_int_report_for_with_state_def
         analyse_int_result_def
         analyse_parity_report_with_state_def analyse_parity_report_for_with_state_def
-        analyse_parity_result_def)
+        analyse_parity_result_def analyse_with_state_default.simps tag_states_def)
 
 text \<open>
   One render is one solve. The \<open>[code]\<close> equations bind the result table once,
@@ -496,7 +496,7 @@ definition entry_state_verdicts_for ::
      (case kind of
         Sign_Analysis \<Rightarrow> analyse_sign_entry_state_report p
       | Interval_Analysis \<Rightarrow> analyse_interval_entry_state p
-      | Int_Analysis \<Rightarrow> analyse_int_entry_state_report p
+      | Int_Analysis \<Rightarrow> analyse_int_entry_state_report_warrow p
       | Parity_Analysis \<Rightarrow> [])"
 
 subsection \<open>Global unknowns of a context-sensitive solve\<close>
@@ -568,7 +568,7 @@ definition entry_state_globals_for ::
             (ctx_show_of IntervalValue) (analyse_interval_entry_state_result p) p
       | Int_Analysis \<Rightarrow>
           ctx_seed_globals IntDomValue (ctx_key_of IntDomValue) (ctx_show_of IntDomValue)
-            (analyse_int_entry_state_result p) p
+            (analyse_int_entry_state_result_warrow p) p
       | Parity_Analysis \<Rightarrow> [])"
 
 text \<open>

@@ -6,11 +6,13 @@
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
        -> Voblint_CLI.Analysis_Config.mk_analysis_config (one config value)
-       -> Voblint_CLI.Analyse_Dispatch.analyse_config/analyse_config_ctx/
-          analyse_config_with_state (Isabelle-generated; each consults
-          Analysis_Config.resolve_analysis_config, the single domain/solver/
-          context legality-and-defaults table, then dispatches to the
-          matching typed report function)
+       -> Voblint_CLI.Analyse_Dispatch.analyse_config_ctx/analyse_config_with_state
+          (Isabelle-generated; each consults Analysis_Config.resolve_analysis_config,
+          the single domain/solver/context legality-and-defaults table, then
+          dispatches to the matching typed report function -- state-carrying at
+          every context-free solver selection, so a check inside an infeasible
+          branch is suppressed the same way under any --solver, not only the
+          implicit default)
        -> proved analysis results, subject to the Isabelle theorem
           assumptions (solver termination and check reachability -- see
           Example_Analysis_Dispatch.thy's soundness corollaries)
@@ -205,20 +207,6 @@ let report_row buf (line, col) node cond verdict =
     (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
        (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
        (verdict_label verdict))
-
-(* analyse_with_solver's check_report_entry list carries no per-variable state
-   projection (unlike analyse_with_state's report) and no deadness channel, so
-   there is no dead-code filter or per-variable state column here -- only the
-   check verdict itself. *)
-let render_flat_report
-    (report :
-      (Voblint_CLI.Core.cfg_node * (Voblint_CLI.Core.exp * Voblint_CLI.Core.check_result)) list)
-    (check_positions : (int * int) list) =
-  let buf = Buffer.create 256 in
-  List.iter2
-    (fun (node, (cond, verdict)) (line, col) -> report_row buf (line, col) node cond verdict)
-    report check_positions;
-  Buffer.contents buf
 
 (* analyse_ctx's report distinguishes Dead -- every context covering the check
    is unreachable -- from a decided verdict (Abstract_Checks.thy's
@@ -849,14 +837,15 @@ let () =
         (match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
          | Some report -> Ok_text (render_ctx_report report check_positions)
          | None -> Unsupported_combo "unsupported --analysis/--context combination")
-      else if !solver <> None then
-        (match Voblint_CLI.Analyse_Dispatch.analyse_config cfg prog with
-         | Some report -> Ok_text (render_flat_report report check_positions)
-         | None -> Unsupported_combo "unsupported --analysis/--solver combination")
       else
+        (* analyse_config_with_state resolves the implicit default solver the
+           same way analyse_config does when !solver = None, so one route
+           covers both: an explicit --solver now gets the same unreachable-flag
+           suppression the default route always had, instead of printing a
+           dead check's bottom state as a vacuous PROVED. *)
         (match Voblint_CLI.Analyse_Dispatch.analyse_config_with_state cfg prog with
          | Some report -> Ok_text (render_text_report report check_positions)
-         | None -> Unsupported_combo "unsupported --analysis combination"))
+         | None -> Unsupported_combo "unsupported --analysis/--solver combination"))
   with
   | Ok (Ok_text s) -> print_string s
   | Ok (Ok_dot s) -> print_string s

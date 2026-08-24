@@ -9,10 +9,9 @@
 // check is absent (Goblint: NOWARN (unreachable)). The x == 50 check pins
 // that the loop head was narrowed, not merely widened and joined.
 //
-// Measured identically under the default solver and under every explicit
-// --solver choice for the abstract states; the explicit --solver report
-// route, however, does not carry the reachability flag and prints the dead
-// check as a vacuous PROVED, so this fixture stays on the default route.
+// Solver-invariant: 15/16/17 in this directory are the same program under
+// --solver join/per-origin/warrow-per-origin and agree on both verdicts,
+// the NOWARN included.
 global g;
 void main() {
   x := 0;

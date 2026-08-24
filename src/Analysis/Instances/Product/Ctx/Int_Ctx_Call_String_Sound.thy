@@ -66,6 +66,38 @@ lemma ics_terminates_via_solve_c:
   unfolding ics_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
+text \<open>
+  The same routed system under Apinis warrowing, Int's production default at
+  \<open>Ctx_None\<close>. Always-join has no termination guarantee on the interval component:
+  a call string that collapses a recursion's contexts feeds the callee entry its
+  own decremented formals, and a join-only solve descends that chain forever.
+  \<^locale>\<open>TD_side_upd_rule\<close>'s \<open>solve_dom\<close>/\<open>partial_post_solution\<close> are generic over
+  the update rule, so the certificate below is the join one with the solver
+  swapped, exactly as \<^theory>\<open>Voblint_Analysis.Int_Ctx_None_Sound\<close> does.
+\<close>
+
+definition ics_sol_warrow ::
+    "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
+       \<Rightarrow> pname \<Rightarrow> com
+       \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+  "ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main =
+     TD_side_warrowing_apinis_Interp_solve (ics_eqs k mode gs is_bot_pred Pi ps mnm main)
+       (cfg_exit (compile_prog Pi ps mnm main), [])"
+
+definition ics_terminates_warrow ::
+    "nat \<Rightarrow> refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (int_dom exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list
+       \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
+  "ics_terminates_warrow k mode gs is_bot_pred Pi ps mnm main =
+     TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
+       (ics_eqs k mode gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])"
+
+lemma ics_terminates_warrow_via_solve_c:
+  assumes "TD_side_warrowing_apinis_Interp_solve_c (ics_eqs k mode gs is_bot_pred Pi ps mnm main)
+             (cfg_exit (compile_prog Pi ps mnm main), []) \<noteq> None"
+  shows "ics_terminates_warrow k mode gs is_bot_pred Pi ps mnm main"
+  unfolding ics_terminates_warrow_def
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF assms])
+
 subsection \<open>Domain commute facts, at the call-string routed spec\<close>
 
 text \<open>
@@ -155,6 +187,63 @@ qed
 
 end
 
+subsection \<open>The certified executable post-solution under warrowing\<close>
+
+context
+  fixes mode :: refine_mode and gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "int_dom exec_dg_st \<Rightarrow> bool"
+    and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com and k :: nat
+  assumes solves: "ics_terminates_warrow k mode gs is_bot_pred Pi ps mnm main"
+    and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
+begin
+
+lemma ics_solve_dom_warrow:
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk) TYPE((int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)
+     (ics_eqs k mode gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])"
+  using solves[unfolded ics_terminates_warrow_def] .
+
+lemma ics_pp_st_warrow:
+  "part_post_solution (ics_eqs k mode gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])
+     (snd (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main)) (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main))"
+  using TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF ics_solve_dom_warrow, of "fst (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main)"
+             "snd (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main)"]
+  unfolding ics_sol_warrow_def by simp
+
+theorem ics_pp_abs_warrow:
+  "part_post_solution
+     (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
+        (routed_cmb_g (ictx_abs_spec mode gs) Call_String_Context.Global Call_String_Context.Seed
+           (static_resolve (compile_prog Pi ps mnm main)))
+        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+        (compile_prog Pi ps mnm main) (ictx_abs_spec mode gs)
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted))
+        (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_int_dom_st))
+        (map_lift (fun_of_resolved_st_q_for gs) (Bot::int_dom exec_dg_st lifted)))
+     (cfg_exit (compile_prog Pi ps mnm main), [])
+     (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
+        \<circ> snd (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main))
+     (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main))"
+proof -
+  have pp_buf: "part_post_solution
+       (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
+          (\<lambda>_. Call_String_Context.Global) (cs_route k)
+          (routed_cmb_g_contribution (ictx_spec mode is_bot_pred gs)
+             Call_String_Context.Global Call_String_Context.Seed
+             (static_resolve (compile_prog Pi ps mnm main)))
+          (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
+          (compile_prog Pi ps mnm main) (ictx_spec mode is_bot_pred gs)
+          Bot (Lifted cinit_int_dom_st) Bot)
+       (cfg_exit (compile_prog Pi ps mnm main), [])
+       (snd (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main))
+       (fst (ics_sol_warrow k mode gs is_bot_pred Pi ps mnm main))"
+    using ics_pp_st_warrow unfolding ics_eqs_def by simp
+  show ?thesis
+    unfolding ictx_abs_spec_def
+    using pp_buf unfolding ictx_spec_def by (rule int_cs_pp_abs_gen[OF exact])
+qed
+
+end
+
 subsection \<open>Whole-program convenience layer\<close>
 
 text \<open>
@@ -192,6 +281,27 @@ lemma ics_terminates_prog_via_solve_c:
   using assms
   unfolding ics_terminates_prog_def ics_eqs_prog_def
   by (rule ics_terminates_via_solve_c)
+
+definition ics_sol_prog_warrow ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (int_dom exec_dg_st lifted, int_dom exec_dg_st lifted) dg_state)" where
+  "ics_sol_prog_warrow k gs mnm p =
+     ics_sol_warrow k Refine_Fixpoint gs (resolved_st_q_is_bot_for (declared_global_vars p))
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+definition ics_terminates_prog_warrow :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "ics_terminates_prog_warrow k gs mnm p =
+     ics_terminates_warrow k Refine_Fixpoint gs (resolved_st_q_is_bot_for (declared_global_vars p))
+       (prog_table p) (prog_procs p) mnm (prog_main p)"
+
+lemma ics_terminates_prog_warrow_via_solve_c:
+  assumes "TD_side_warrowing_apinis_Interp_solve_c
+             (ics_eqs_prog k gs mnm p)
+             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), []) \<noteq> None"
+  shows "ics_terminates_prog_warrow k gs mnm p"
+  using assms
+  unfolding ics_terminates_prog_warrow_def ics_eqs_prog_def
+  by (rule ics_terminates_warrow_via_solve_c)
 
 section \<open>Solved-result table\<close>
 
@@ -265,5 +375,43 @@ lemma ics_verdict_report_prog_eq:
 definition analyse_int_call_string_report ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_int_call_string_report k p = ics_verdict_report_prog k prog_main_name p"
+
+subsection \<open>Result table and report under warrowing\<close>
+
+definition analyse_int_call_string_result_for_warrow ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, int_dom abs_state) analysis_result" where
+  "analyse_int_call_string_result_for_warrow k gs mnm p =
+     Analysis_Result
+       (fst (ics_sol_prog_warrow k gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (ics_sol_prog_warrow k gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_int_call_string_result_for_warrow_def [code del]
+
+lemma analyse_int_call_string_result_for_warrow_code [code]:
+  "analyse_int_call_string_result_for_warrow k gs mnm p =
+     (let sol = ics_sol_prog_warrow k gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_int_call_string_result_for_warrow_def Let_def by (rule refl)
+
+definition analyse_int_call_string_result_warrow ::
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, int_dom abs_state) analysis_result" where
+  "analyse_int_call_string_result_warrow k p =
+     analyse_int_call_string_result_for_warrow k (declared_global p) prog_main_name p"
+
+definition ics_verdict_report_prog_warrow ::
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "ics_verdict_report_prog_warrow k mnm p =
+     classify_checks_verdicts (prog_cfg mnm p)
+       (analyse_int_call_string_result_for_warrow k (declared_global p) mnm p)
+       int_classify_check"
+
+definition analyse_int_call_string_report_warrow ::
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "analyse_int_call_string_report_warrow k p = ics_verdict_report_prog_warrow k prog_main_name p"
 
 end
