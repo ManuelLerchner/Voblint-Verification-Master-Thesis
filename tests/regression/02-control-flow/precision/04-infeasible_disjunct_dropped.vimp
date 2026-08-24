@@ -13,15 +13,20 @@
 // substitute for it: it reads the whole condition, whose abstract value is
 // [0,1], and so decides nothing.
 //
-// Example_Guard_Refinement.thy pins the same result on the abstract state
+// The else-branch assumes neither disjunct, which bfilter's "Or _ _ False" case
+// narrows sequentially rather than by a join -- a different path through the
+// same operator, and one the gate plays no part in.
+//
+// Example_Guard_Refinement.thy pins the then-branch result on the abstract state
 // (bfilter_or_drops_infeasible_disjunct) and states the join identity
-// (bfilter_or_is_the_gated_join).
+// (bfilter_or_is_the_gated_join). The conjunctive half of the gate is
+// 05-infeasible_conjunct_dropped.vimp.
 void main() {
   x := 5;
   y := __voblint_nondet_int();
   if (0 < y || (x < 0) == 1) {
     __voblint_check(0 < y) // PROVED
   } else {
-    __voblint_check(true) // PROVED
+    __voblint_check(y < 1) // PROVED
   }
 }

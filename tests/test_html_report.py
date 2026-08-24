@@ -627,5 +627,48 @@ def test_refuses_a_directory_that_is_not_a_previous_report(tmp_path):
     assert keep.read_text() == "do not delete me"
 
 
+def _html(out):
+    return subprocess.run(
+        [str(VOBLINT), "--analysis", "interval", "--html-out", str(out), str(FIXTURE)],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_rerun_overwrites_stale_report_leftovers(tmp_path):
+    """--html owns its directory: old voblint output never blocks a rerun.
+
+    A half-cleaned previous report (empty subdirectories, a stray dot file,
+    no index.xml) is exactly what a crashed run or an external `find -delete`
+    leaves behind, and the tool used to refuse it as "not a report directory".
+    """
+    out = tmp_path / "result"
+    for sub in ["nodes", "files", "warn", "cfgs/old.vimp"]:
+        (out / sub).mkdir(parents=True)
+    stale = out / "dot" / "old.vimp" / "main.dot"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("digraph stale {}")
+    (out / "warn" / "warn9.xml").write_text("<warning/>")
+    proc = _html(out)
+    assert proc.returncode == 0, proc.stderr
+    assert (out / "index.xml").is_file()
+    assert not stale.exists(), "stale dot/ subtree survived the rerun"
+    assert not (out / "warn" / "warn9.xml").exists(), "stale warn/ survived the rerun"
+    assert not (out / "cfgs" / "old.vimp").exists()
+
+
+def test_foreign_subdirectory_is_refused(tmp_path):
+    """A regular file voblint never writes makes the directory foreign, however
+    deep it sits; an empty subdirectory does not."""
+    out = tmp_path / "work"
+    (out / "notes").mkdir(parents=True)
+    (out / "notes" / "todo.txt").write_text("keep me")
+    proc = _html(out)
+    assert proc.returncode == 5, proc.stdout
+    assert "notes" in proc.stderr
+    assert (out / "notes" / "todo.txt").read_text() == "keep me"
+    assert not (out / "index.xml").exists()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))

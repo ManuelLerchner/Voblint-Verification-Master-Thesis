@@ -12,7 +12,7 @@
 void main() {
   x := 5;
   if ((x < 0) == 1) {
-    __voblint_check(true) // NOWARN
+    __voblint_check(false) // NOWARN (unreachable)
   } else {
     __voblint_check(true) // PROVED
   }
