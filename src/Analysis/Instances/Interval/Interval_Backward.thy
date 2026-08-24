@@ -417,6 +417,7 @@ global_interpretation ivl_backward_domain:
                     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
+    and feasible_ivl = ivl_backward_domain.feasible
     and bfilter_ivl = ivl_backward_domain.bfilter
     and branch_ivl = ivl_backward_domain.branch
     and branch_lifted_ivl = ivl_backward_domain.branch_lifted

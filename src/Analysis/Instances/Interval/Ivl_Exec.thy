@@ -341,6 +341,7 @@ proof -
   show ?thesis
     unfolding ivl_backward_domain.branch_st_def ivl_backward_domain.branch_def[folded branch_ivl_def]
       ivl_backward_domain.branch_lifted_def[folded branch_lifted_ivl_def]
+      ivl_backward_domain.feasible_def[folded feasible_ivl_def]
       aval_agree bot_fun_def
     using bot_readback bf
     by (simp split: option.splits)

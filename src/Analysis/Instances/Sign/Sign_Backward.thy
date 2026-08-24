@@ -347,6 +347,7 @@ global_interpretation sign_backward_domain:
                     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative
   defines
     afilter_sign = sign_backward_domain.afilter
+    and feasible_sign = sign_backward_domain.feasible
     and bfilter_sign = sign_backward_domain.bfilter
     and branch_sign = sign_backward_domain.branch
     and branch_lifted_sign = sign_backward_domain.branch_lifted
