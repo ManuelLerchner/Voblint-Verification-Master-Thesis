@@ -271,13 +271,12 @@ corollary analyse_interval_refuted_sound:
 text \<open>
   \<open>analyse_sign_proved_sound\<close>/\<open>analyse_sign_refuted_sound\<close> restate
   \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Sign_Entry\<close>) over \<open>analyse\<close>,
-  matching the routed-unit producer \<open>analyse Sign_Analysis\<close> now dispatches to: solver
+  matching the routed-unit producer \<open>analyse Sign_Analysis\<close> dispatches to: solver
   termination and coverage are stated over \<open>sctx_sol_prog\<close>/\<open>sctx_terminates_prog\<close>
-  (\<open>Sign_Ctx_None_Sound\<close>) rather than the Base family's \<open>analyse_sign\<close>/\<open>analyse_sign_eqs\<close>.
-  \<open>finite (intra (prog_cfg prog_main_name p))\<close>/\<open>finite (calls ...)\<close> are no longer separate
-  hypotheses here: the routed spine's own soundness chain derives both unconditionally from
-  \<open>compile_prog_finite\<close>, so unlike the Base-family route this corollary needs no finiteness
-  premise of its own.
+  (\<open>Sign_Ctx_None_Sound\<close>). \<open>finite (intra (prog_cfg prog_main_name p))\<close>/
+  \<open>finite (calls ...)\<close> are not separate hypotheses here: the routed spine's own
+  soundness chain derives both unconditionally from \<open>compile_prog_finite\<close>, so this
+  corollary needs no finiteness premise of its own.
 \<close>
 
 corollary analyse_sign_proved_sound:
@@ -411,7 +410,8 @@ text \<open>
   \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close>, relevant
   wherever a \<open>char\<close> is inspected directly (e.g. \<^const>\<open>String.explode\<close>'s
   result) rather than through the opaque \<open>String.literal\<close> above.
-  \<open>char_of_integer\<close>/\<open>integer_of_char\<close> are that bridge.
+  \<open>integer_of_char\<close> is that bridge; only the inspecting direction is exported,
+  since nothing handwritten builds a \<open>char\<close> from an integer.
 
   \<open>string_of_exp\<close> is exported alongside the structured \<open>exp\<close> already in
   every \<open>check_report_entry\<close>: a consumer can pattern-match the AST directly,

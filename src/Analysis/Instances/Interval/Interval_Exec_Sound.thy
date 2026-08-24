@@ -18,10 +18,11 @@ text \<open>
   it through.
 
   Interval's local lattice has infinite height (an unbounded integer bound), so
-  unlike Sign this route needs widening for termination: a loop-carried local
-  bound still needs \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>, not the
-  always-join rule \<open>analyse_sign_for\<close> uses --- \<open>Example_Interval_DG_Flagship\<close>
-  demonstrates that solver terminating on a genuinely unbounded loop.
+  unlike a finite-height domain this route needs widening for termination: a
+  loop-carried local bound still needs
+  \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>, not the always-join rule ---
+  \<open>Example_Interval_DG_Flagship\<close> demonstrates that solver terminating on a
+  genuinely unbounded loop.
 
   Only the raw computation lives here: soundness needs the
   \<open>base_dg_exec_analysis\<close> locale (\<open>Run_Analysis_Sound\<close>, Formalization session),
@@ -49,16 +50,15 @@ definition analyse_interval_dg_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rig
 
 text \<open>
   \<open>analyse_interval_dg_env_for\<close> reads the local unknown at \<open>v\<close> (\<open>Inl (v, ())\<close>) straight
-  back through \<^const>\<open>fun_of_exec_dg_st_for\<close>/\<^const>\<open>map_lift\<close>, mirroring
-  \<open>analyse_sign_env_for\<close> exactly: the whole abstract state already lives there, so there
-  is no locals-from-\<open>D\<close>/globals-from-\<open>G\<close> reconstruction to perform. A genuinely
-  unreachable local unknown (\<open>Bot\<close>) concretizes to \<open>bot\<close>, matching
-  \<^const>\<open>gamma_state_lift\<close>'s own \<open>Bot\<close> case.
+  back through \<^const>\<open>fun_of_exec_dg_st_for\<close>/\<^const>\<open>map_lift\<close>: the whole abstract
+  state already lives there, so there is no locals-from-\<open>D\<close>/globals-from-\<open>G\<close>
+  reconstruction to perform. A genuinely unreachable local unknown (\<open>Bot\<close>)
+  concretizes to \<open>bot\<close>, matching \<^const>\<open>gamma_state_lift\<close>'s own \<open>Bot\<close> case.
 
-  The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, the same single-solve-per-report fix
-  \<open>analyse_sign_env_for_code\<close> uses: \<^const>\<open>analyse_interval_dg_for\<close> is solved exactly
-  once per partial application to \<open>is_bot_pred gs p\<close>, reused for every \<open>v\<close> queried
-  afterward against the resulting closure.
+  The \<open>[code]\<close> rewrite below is point-free in \<open>v\<close>, so
+  \<^const>\<open>analyse_interval_dg_for\<close> is solved exactly once per partial application
+  to \<open>is_bot_pred gs p\<close>, reused for every \<open>v\<close> queried afterward against the
+  resulting closure -- one solve per report rather than one per node.
 \<close>
 
 definition analyse_interval_dg_env_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> ivl abs_state" where
@@ -76,8 +76,9 @@ lemma analyse_interval_dg_env_for_code [code]:
   unfolding analyse_interval_dg_env_for_def Let_def by (rule refl)
 
 text \<open>
-  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<open>analyse_sign_eqs\<close>/
-  \<open>analyse_sign\<close>/\<open>analyse_sign_env\<close>'s shape. \<open>is_bot_pred\<close> is fixed here to
+  Convenience instances at \<^const>\<open>declared_global\<close> \<open>p\<close>, the classifier every
+  caller with only an \<^typ>\<open>imp_prog\<close> in hand recomputes anyway.
+  \<open>is_bot_pred\<close> is fixed here to
   \<^const>\<open>resolved_st_q_is_bot_for\<close> at \<open>p\<close>'s own \<^const>\<open>declared_global_vars\<close>, exact for
   \<^const>\<open>is_bot_state\<close> by @{thm resolved_st_q_is_bot_for_iff} (@{thm declared_global_iff}).
 \<close>
@@ -101,12 +102,11 @@ text \<open>
   (\<^const>\<open>TD_side_always_join_Interp_solve\<close>, \<^const>\<open>TD_side_per_origin_Interp_solve\<close>) instead of
   Apinis warrowing --- solving the exact same \<^const>\<open>analyse_interval_dg_eqs_for\<close> equation
   system, so a VIMP global still lives only in the reachability-lifted local unknown, with no
-  separate flow-insensitive summary reintroduced for either update rule. Mirrors Sign's
-  \<open>Sign_Checks.analyse_sign_for_per_origin\<close>, and gives Interval's own join/per-origin variants
-  the same \<open>_env_for\<close> reading layer \<^const>\<open>analyse_interval_dg_env_for\<close> already has, so their
-  soundness proofs (in the Examples session, downstream) can reuse the identical
-  \<open>base_dg_exec_analysis\<close>/\<open>gamma_eq_env\<close> proof shape the warrowing route uses, not a bespoke
-  argument per update rule.
+  separate flow-insensitive summary reintroduced for either update rule. Both get
+  the same \<open>_env_for\<close> reading layer \<^const>\<open>analyse_interval_dg_env_for\<close> already
+  has, so their soundness proofs (in the Examples session, downstream) reuse the
+  identical \<open>base_dg_exec_analysis\<close> proof shape the warrowing route uses, not a
+  bespoke argument per update rule.
 \<close>
 
 definition analyse_interval_dg_join_for :: "(ivl exec_dg_st \<Rightarrow> bool) \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow>

@@ -273,7 +273,7 @@ text \<open>
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
     \<^item> @{theory Voblint_Core.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> copy lattice, the seeded keyed generator.
-    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>.
+    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
     \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance.
     \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>, over \<^const>\<open>ltr_collect\<close>).
 
@@ -285,7 +285,7 @@ text \<open>
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Core.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Core.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^const>\<open>fun_of_dg_st_gen\<close>, \<^const>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_seed_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
     \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
     \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.
@@ -454,8 +454,8 @@ text \<open>
       the theorem to a concrete program additionally needs a solver-termination
       witness for that program --- nothing here proves that either solver
       terminates on every input, so termination is a genuine per-program fact,
-      typically discharged \<^verbatim>\<open>by eval\<close> via
-      \<^verbatim>\<open>analyse_interval_td_terminates_via_solve_c\<close> --- and a proof that the
+      typically discharged \<^verbatim>\<open>by eval\<close> through the domain's own
+      \<^verbatim>\<open>*_terminates_prog_via_solve_c\<close> --- and a proof that the
       checked node reaches \<^verbatim>\<open>cfg_exit\<close>, a real structural fact about the
       compiled CFG, not a formality. \<^verbatim>\<open>dispatch_demo_first_check_certified\<close>
       is one complete instance of the whole chain with every hypothesis
@@ -483,7 +483,7 @@ text \<open>
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. There is one
   such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through
-  \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>, and the routed instances
+  \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close>, and the routed instances
   through \<^verbatim>\<open>activation_collect_sound\<close> above it.
 \<close>
 

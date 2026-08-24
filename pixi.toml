@@ -129,6 +129,12 @@ regression-lint = "python3 tests/run.py --lint"
 # undocumented headings, and gating on it today would just be a red build.
 # Add it to `ci` once that backlog is cleared.
 docs-lint = "python3 scripts/extract_definitions.py --lint"
+
+# Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
+# cartouches, which Isabelle does not resolve -- so a rename leaves the comment
+# describing something that no longer exists. Not in `ci` yet: there is a
+# standing backlog of such references, enumerated by running this task.
+thy-prose-refs = "python3 scripts/check_thy_prose_refs.py"
 docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
