@@ -23,3 +23,8 @@ The following claims are outside the supported framework.
 - No claim that demand-cone coverage changes the concrete CFG semantics.
 - No theorem about external analyzer implementations unless a separate
   correspondence proof is supplied.
+- No general `DefExc`/exclusion-set `int_dom` component. A persistent,
+  join-surviving "exclude an arbitrary literal" fact over unbounded `int`
+  cannot satisfy `bounded_semilattice_sup_bot` -- proved infeasible, not
+  merely undone (`docs/GOBLINT_ALIGNMENT_REGISTER.md`, Value domains row,
+  issue #162).
