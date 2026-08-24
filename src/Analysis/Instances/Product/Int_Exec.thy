@@ -1,5 +1,6 @@
 theory Int_Exec
-  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops Int_DG
+  imports Voblint_Core.Exec_Refinement Voblint_Core.Numeric_Ops
+    Voblint_Core.DG_LTR_Sound Int_Transfer
 begin
 
 section \<open>Composite integer domain: executable transfer mirror\<close>

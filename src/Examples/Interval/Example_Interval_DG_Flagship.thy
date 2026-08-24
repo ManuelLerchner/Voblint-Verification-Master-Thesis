@@ -43,7 +43,8 @@ text \<open>
 theory Example_Interval_DG_Flagship
   imports
     "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.Solver_Menu"
     "Voblint_Core.DG_Coverage"
@@ -333,9 +334,9 @@ proof -
 qed
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> ivl_dg_gamma flagship_gs (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding ivl_dg_gamma_def
-            sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+  "(\<lambda>_. 100) \<notin> sound_dg_spec.dg_gamma (gamma_unit flagship_gs)
+                 (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
+  unfolding sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
             gamma_unit_def gamma_state_def
             sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
             sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]

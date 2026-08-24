@@ -1,7 +1,8 @@
 theory Example_Interval_DG_IP_Flagship
   imports
     "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.Solver_Menu"
     "Voblint_Core.DG_Coverage"

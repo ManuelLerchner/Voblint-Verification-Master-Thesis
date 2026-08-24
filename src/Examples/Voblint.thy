@@ -27,8 +27,8 @@ theory Voblint
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Core.DG_Framework"
     "Voblint_Core.DG_Soundness"
-    "Voblint_Analysis.Sign_DG"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Analysis.Sign_Transfer"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
     "Voblint_Core.Exec_St"
@@ -274,8 +274,10 @@ text \<open>
     the canonical context-sensitive backbone.
     \<^item> @{theory Voblint_Core.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> copy lattice, the seeded keyed generator.
     \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
-    \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance.
-    \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>, over \<^const>\<open>ltr_collect\<close>).
+    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} and
+      @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- Sign and Interval as
+      routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
+      through the adapter's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.

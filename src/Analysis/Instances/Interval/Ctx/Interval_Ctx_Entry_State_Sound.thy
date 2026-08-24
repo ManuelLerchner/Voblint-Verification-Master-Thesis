@@ -1,7 +1,8 @@
 theory Interval_Ctx_Entry_State_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Core.Routed_Context"
