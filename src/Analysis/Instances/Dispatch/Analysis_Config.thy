@@ -142,9 +142,11 @@ text \<open>
     as solver-independent as the flat one.
   \<^item> \<open>Int\<close>: every solver is supported at \<open>Ctx_None\<close>, defaulting to
     \<open>Solver_Warrow\<close> (\<open>Int_Analysis\<close>'s own production default). \<open>Ctx_EntryState\<close>
-    and \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) are both supported at the one solver Int's
-    own routed soundness proves at each, \<open>Solver_Join\<close>, mirroring Sign's own
-    posture at both contexts.
+    and \<open>Ctx_CallString k\<close> (\<open>k \<ge> 1\<close>) are supported at the two solvers Int's
+    own routed soundness certifies at each, \<open>Solver_Warrow\<close> (the default, as at
+    \<open>Ctx_None\<close>: always-join has no termination guarantee on the interval
+    component once a collapsed context feeds a callee its own decremented
+    formals) and \<open>Solver_Join\<close>.
   \<^item> \<open>Parity\<close>: \<open>Ctx_None\<close> only, at \<open>Solver_Join\<close> (the default) and
     \<open>Solver_PerOrigin\<close> --- the two solved tables Parity's own routed-unit
     instance builds. \<open>Solver_Warrow\<close> is mechanically available (\<open>parity\<close> is a
@@ -203,21 +205,21 @@ fun resolve_analysis_config :: "analysis_config \<Rightarrow> analysis_plan opti
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some s, cfg_context = Ctx_None \<rparr>
      = Some (Plan_Int s)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_EntryState \<rparr>
-     = Some (Plan_Int_EntryState Solver_Join)"
+     = Some (Plan_Int_EntryState Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_EntryState \<rparr>
      = Some (Plan_Int_EntryState Solver_Join)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_EntryState \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
-     = None"
+     = Some (Plan_Int_EntryState Solver_Warrow)"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = None, cfg_context = Ctx_CallString k \<rparr>
-     = (if k = 0 then None else Some (Plan_Int_CallString Solver_Join k))"
+     = (if k = 0 then None else Some (Plan_Int_CallString Solver_Warrow k))"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_CallString k \<rparr>
      = (if k = 0 then None else Some (Plan_Int_CallString Solver_Join k))"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_PerOrigin, cfg_context = Ctx_CallString k \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString k \<rparr>
-     = None"
+     = (if k = 0 then None else Some (Plan_Int_CallString Solver_Warrow k))"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_EntryState \<rparr>
      = None"
 | "resolve_analysis_config \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_CallString k \<rparr>
@@ -323,14 +325,14 @@ lemma resolver_sign_entrystate_warrow_invalid:
   by simp
 
 text \<open>
-  Int at \<open>Ctx_EntryState\<close>, pinned the same way Sign's own resolver regressions are:
-  valid at the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid at the
-  two solvers Int's own entry-state soundness does not prove.
+  Int at \<open>Ctx_EntryState\<close>: the implicit default resolves to \<open>Solver_Warrow\<close>, the
+  explicit \<open>Solver_Warrow\<close>/\<open>Solver_Join\<close> selections are valid, and the two solvers
+  Int's own entry-state soundness does not certify stay invalid.
 \<close>
 
 lemma resolver_int_entrystate_default_valid:
   "resolve_analysis_config (default_config Int_Analysis Ctx_EntryState)
-     = Some (Plan_Int_EntryState Solver_Join)"
+     = Some (Plan_Int_EntryState Solver_Warrow)"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma resolver_int_entrystate_explicit_join_valid:
@@ -345,10 +347,10 @@ lemma resolver_int_entrystate_per_origin_invalid:
    = None"
   by simp
 
-lemma resolver_int_entrystate_warrow_invalid:
+lemma resolver_int_entrystate_warrow_valid:
   "resolve_analysis_config
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr>
-   = None"
+   = Some (Plan_Int_EntryState Solver_Warrow)"
   by simp
 
 text \<open>
@@ -447,20 +449,19 @@ lemma resolver_sign_callstring_warrow_invalid:
   by simp
 
 text \<open>
-  Int at \<open>Ctx_CallString\<close>, pinned the same way Sign's own resolver regressions are:
-  valid at \<open>k \<ge> 1\<close> under the implicit-default and explicit \<open>Solver_Join\<close> selections,
-  invalid at \<open>k = 0\<close> and at the two solvers Int's own call-string soundness does not
-  prove.
+  Int at \<open>Ctx_CallString\<close>: valid at \<open>k \<ge> 1\<close> under the implicit default (\<open>Solver_Warrow\<close>)
+  and the explicit \<open>Solver_Warrow\<close>/\<open>Solver_Join\<close> selections, invalid at \<open>k = 0\<close> and at
+  the two solvers Int's own call-string soundness does not certify.
 \<close>
 
 lemma resolver_int_callstring_k1_valid:
   "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 1))
-     = Some (Plan_Int_CallString Solver_Join 1)"
+     = Some (Plan_Int_CallString Solver_Warrow 1)"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma resolver_int_callstring_k2_valid:
   "resolve_analysis_config (default_config Int_Analysis (Ctx_CallString 2))
-     = Some (Plan_Int_CallString Solver_Join 2)"
+     = Some (Plan_Int_CallString Solver_Warrow 2)"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma resolver_int_callstring_zero_invalid:
@@ -479,10 +480,10 @@ lemma resolver_int_callstring_per_origin_invalid:
    = None"
   by simp
 
-lemma resolver_int_callstring_warrow_invalid:
+lemma resolver_int_callstring_warrow_valid:
   "resolve_analysis_config
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr>
-   = None"
+   = Some (Plan_Int_CallString Solver_Warrow 2)"
   by simp
 
 

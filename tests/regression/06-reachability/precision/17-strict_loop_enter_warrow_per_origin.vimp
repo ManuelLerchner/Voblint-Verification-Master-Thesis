@@ -1,0 +1,26 @@
+// PARAM: --analysis interval --solver warrow-per-origin
+// Same program as 10-strict_loop_enter.vimp under the warrow-per-origin update rule.
+// Regression for issue #160: an explicit --solver used to have no
+// reachability flag, so the NOWARN check below printed a vacuous PROVED for
+// the bottom state instead of being suppressed. analyse_config_with_state
+// now carries that flag at every solver, so this agrees with the default
+// route exactly.
+global g;
+void main() {
+  x := 0;
+  while (x < 50) {
+    g := 1;
+    x := x + 1
+  };
+  __voblint_check(x == 50); // PROVED
+  if (50 < x) {
+    i := 0;
+    while (!(0 < i)) {
+      g := 57;
+      i := i - 1
+    };
+    __voblint_check(true) // NOWARN (unreachable)
+  } else {
+    skip
+  }
+}

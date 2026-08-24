@@ -181,16 +181,70 @@ text \<open>
 datatype abstract_value =
   SignValue sign | IntervalValue ivl | IntDomValue int_dom | ParityValue parity
 
+definition tag_states ::
+    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 's abs_state) list
+       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
+  "tag_states tag = map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, tag \<circ> s))"
+
+text \<open>
+  One state-carrying report per \<open>analysis_domain \<times> solver_choice\<close> pairing that has a
+  solved table, \<^const>\<open>None\<close> at the pairings \<^const>\<open>analyse_with_solver\<close> also rejects.
+  Each domain's production default reads its own \<open>analyse_*_report_with_state\<close>
+  constant unchanged; the other solved tables are read through their
+  \<^locale>\<open>analysis_surface\<close> instance, which is the same \<^const>\<open>classify_checks_with_state\<close>
+  assembly over the table that solver produced. This is what lets an explicit
+  \<open>--solver\<close> keep the unreachable flag: a flat \<^const>\<open>analyse_with_solver\<close> report has
+  no deadness channel, so a check inside an infeasible branch would print the
+  bottom state's vacuous verdict instead of being suppressed.
+\<close>
+
 fun analyse_with_state ::
+    "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option" where
+  "analyse_with_state Sign_Analysis Solver_Join p = Some (tag_states SignValue (analyse_sign_report_with_state p))"
+| "analyse_with_state Sign_Analysis Solver_PerOrigin p = Some (tag_states SignValue (sign_per_origin.report_with_state p))"
+| "analyse_with_state Sign_Analysis Solver_Warrow p = None"
+| "analyse_with_state Sign_Analysis Solver_WarrowPerOrigin p = None"
+| "analyse_with_state Interval_Analysis Solver_Join p = Some (tag_states IntervalValue (interval_join.report_with_state p))"
+| "analyse_with_state Interval_Analysis Solver_PerOrigin p = Some (tag_states IntervalValue (interval_per_origin.report_with_state p))"
+| "analyse_with_state Interval_Analysis Solver_Warrow p = Some (tag_states IntervalValue (analyse_interval_td_report_with_state p))"
+| "analyse_with_state Interval_Analysis Solver_WarrowPerOrigin p = Some (tag_states IntervalValue (interval_wpo.report_with_state p))"
+| "analyse_with_state Int_Analysis Solver_Join p = Some (tag_states IntDomValue (int_join.report_with_state p))"
+| "analyse_with_state Int_Analysis Solver_PerOrigin p = Some (tag_states IntDomValue (int_per_origin.report_with_state p))"
+| "analyse_with_state Int_Analysis Solver_Warrow p = Some (tag_states IntDomValue (analyse_int_report_with_state p))"
+| "analyse_with_state Int_Analysis Solver_WarrowPerOrigin p = Some (tag_states IntDomValue (int_wpo.report_with_state p))"
+| "analyse_with_state Parity_Analysis Solver_Join p = Some (tag_states ParityValue (analyse_parity_report_with_state p))"
+| "analyse_with_state Parity_Analysis Solver_PerOrigin p = Some (tag_states ParityValue (parity_per_origin.report_with_state p))"
+| "analyse_with_state Parity_Analysis Solver_Warrow p = None"
+| "analyse_with_state Parity_Analysis Solver_WarrowPerOrigin p = None"
+
+lemma analyse_with_state_some_iff_with_solver:
+  "(analyse_with_state d s p = None) = (analyse_with_solver d s p = None)"
+  by (cases d; cases s) simp_all
+
+text \<open>
+  Each domain's own production default, context-free -- the GraphViz renderers'
+  one report per domain, with no solver axis of their own to expose. Its four
+  equations are exactly \<^const>\<open>analyse_with_state\<close>'s at each domain's default
+  solver (\<open>Solver_Join\<close> for Sign and Parity, \<open>Solver_Warrow\<close> for Interval and
+  Int, matching \<^const>\<open>resolve_analysis_config\<close>'s own implicit-default choice),
+  restated as a total function so a caller with no solver selection to offer
+  does not have to discharge an \<open>option\<close> it already knows is \<^const>\<open>Some\<close>.
+\<close>
+
+fun analyse_with_state_default ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
-  "analyse_with_state Sign_Analysis p =
-     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, SignValue \<circ> s)) (analyse_sign_report_with_state p)"
-| "analyse_with_state Interval_Analysis p =
-     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, IntervalValue \<circ> s)) (analyse_interval_td_report_with_state p)"
-| "analyse_with_state Int_Analysis p =
-     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, IntDomValue \<circ> s)) (analyse_int_report_with_state p)"
-| "analyse_with_state Parity_Analysis p =
-     map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, ParityValue \<circ> s)) (analyse_parity_report_with_state p)"
+  "analyse_with_state_default Sign_Analysis p = tag_states SignValue (analyse_sign_report_with_state p)"
+| "analyse_with_state_default Interval_Analysis p = tag_states IntervalValue (analyse_interval_td_report_with_state p)"
+| "analyse_with_state_default Int_Analysis p = tag_states IntDomValue (analyse_int_report_with_state p)"
+| "analyse_with_state_default Parity_Analysis p = tag_states ParityValue (analyse_parity_report_with_state p)"
+
+lemma analyse_with_state_default_eq:
+  "analyse_with_state Sign_Analysis Solver_Join p = Some (analyse_with_state_default Sign_Analysis p)"
+  "analyse_with_state Interval_Analysis Solver_Warrow p = Some (analyse_with_state_default Interval_Analysis p)"
+  "analyse_with_state Int_Analysis Solver_Warrow p = Some (analyse_with_state_default Int_Analysis p)"
+  "analyse_with_state Parity_Analysis Solver_Join p = Some (analyse_with_state_default Parity_Analysis p)"
+  by simp_all
 
 subsection \<open>Public API: soundness corollaries stated over the runtime dispatcher\<close>
 
@@ -486,11 +540,11 @@ definition analyse_config_ctx ::
       | Some (Plan_Sign_EntryState Solver_WarrowPerOrigin) \<Rightarrow> None
       | Some (Plan_Int_CallString Solver_Join k) \<Rightarrow> Some (analyse_int_call_string_report k p)
       | Some (Plan_Int_CallString Solver_PerOrigin _) \<Rightarrow> None
-      | Some (Plan_Int_CallString Solver_Warrow _) \<Rightarrow> None
+      | Some (Plan_Int_CallString Solver_Warrow k) \<Rightarrow> Some (analyse_int_call_string_report_warrow k p)
       | Some (Plan_Int_CallString Solver_WarrowPerOrigin _) \<Rightarrow> None
       | Some (Plan_Int_EntryState Solver_Join) \<Rightarrow> Some (analyse_int_entry_state_report p)
       | Some (Plan_Int_EntryState Solver_PerOrigin) \<Rightarrow> None
-      | Some (Plan_Int_EntryState Solver_Warrow) \<Rightarrow> None
+      | Some (Plan_Int_EntryState Solver_Warrow) \<Rightarrow> Some (analyse_int_entry_state_report_warrow p)
       | Some (Plan_Int_EntryState Solver_WarrowPerOrigin) \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
@@ -498,13 +552,12 @@ definition analyse_config_ctx ::
       | Some (Plan_Parity s) \<Rightarrow> map_option decided_report (analyse_with_solver Parity_Analysis s p))"
 
 text \<open>
-  \<^const>\<open>analyse_with_state\<close> carries no solver or context parameter of its own
-  -- every branch reads that domain's own hardcoded production solver, the
-  same one \<^const>\<open>resolve_analysis_config\<close> already picks as each domain's
-  default. This wrapper is therefore \<^const>\<open>Some\<close> exactly at the three
-  default-solver, context-free plans, and \<^const>\<open>None\<close> everywhere else --
-  an explicit non-default solver or \<open>Ctx_EntryState\<close> selection has no
-  state-carrying report to answer with, not a silently degraded one.
+  \<^const>\<open>analyse_with_state\<close> decides legality over the domain and solver axes
+  only, so this wrapper is \<^const>\<open>Some\<close> at every context-free plan whose pairing
+  has a solved table -- the implicit default and every explicit solver alike -- and
+  \<^const>\<open>None\<close> at every context plan: a \<open>Ctx_EntryState\<close>/\<open>Ctx_CallString\<close>
+  selection has a contextual report (\<open>analyse_config_ctx\<close>), not a flat
+  state-carrying one, and is not silently degraded to it.
 \<close>
 
 fun analyse_config_with_state ::
@@ -512,10 +565,10 @@ fun analyse_config_with_state ::
 where
   "analyse_config_with_state cfg p =
      (case resolve_analysis_config cfg of
-        Some (Plan_Sign Solver_Join) \<Rightarrow> Some (analyse_with_state Sign_Analysis p)
-      | Some (Plan_Interval Solver_Warrow) \<Rightarrow> Some (analyse_with_state Interval_Analysis p)
-      | Some (Plan_Int Solver_Warrow) \<Rightarrow> Some (analyse_with_state Int_Analysis p)
-      | Some (Plan_Parity Solver_Join) \<Rightarrow> Some (analyse_with_state Parity_Analysis p)
+        Some (Plan_Sign s) \<Rightarrow> analyse_with_state Sign_Analysis s p
+      | Some (Plan_Interval s) \<Rightarrow> analyse_with_state Interval_Analysis s p
+      | Some (Plan_Int s) \<Rightarrow> analyse_with_state Int_Analysis s p
+      | Some (Plan_Parity s) \<Rightarrow> analyse_with_state Parity_Analysis s p
       | _ \<Rightarrow> None)"
 
 subsection \<open>Config-driven dispatch agrees with each existing typed entry point\<close>
@@ -641,14 +694,14 @@ lemma analyse_config_ctx_parity_callstring_invalid:
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 text \<open>
-  Int at \<open>Ctx_EntryState\<close>, pinned the same way Sign's own regressions are: valid at
-  the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid at the two
-  solvers Int's own entry-state soundness does not prove.
+  Int at \<open>Ctx_EntryState\<close>: the implicit default routes to the warrowing report, the
+  explicit \<open>Solver_Warrow\<close>/\<open>Solver_Join\<close> selections to theirs, and the two solvers
+  Int's own entry-state soundness does not certify stay invalid.
 \<close>
 
 lemma analyse_config_ctx_int_entrystate_default_valid:
   "analyse_config_ctx (default_config Int_Analysis Ctx_EntryState) p
-     = Some (analyse_int_entry_state_report p)"
+     = Some (analyse_int_entry_state_report_warrow p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_int_entrystate_explicit_join_valid:
@@ -663,10 +716,10 @@ lemma analyse_config_ctx_int_entrystate_per_origin_invalid:
    = None"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_int_entrystate_warrow_invalid:
+lemma analyse_config_ctx_int_entrystate_warrow_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
-   = None"
+   = Some (analyse_int_entry_state_report_warrow p)"
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
@@ -759,19 +812,19 @@ lemma analyse_config_ctx_sign_callstring_warrow_invalid:
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
-  Int at \<open>Ctx_CallString\<close>, pinned the same way Sign's own regressions are: valid at
-  \<open>k \<ge> 1\<close> under the implicit-default and explicit \<open>Solver_Join\<close> selections, invalid
-  at \<open>k = 0\<close> and at the two solvers Int's own call-string soundness does not prove.
+  Int at \<open>Ctx_CallString\<close>: valid at \<open>k \<ge> 1\<close> under the implicit default (the warrowing
+  report) and the explicit \<open>Solver_Warrow\<close>/\<open>Solver_Join\<close> selections, invalid at \<open>k = 0\<close>
+  and at the two solvers Int's own call-string soundness does not certify.
 \<close>
 
 lemma analyse_config_ctx_int_callstring_k1_valid:
   "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 1)) p
-     = Some (analyse_int_call_string_report 1 p)"
+     = Some (analyse_int_call_string_report_warrow 1 p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_int_callstring_k2_valid:
   "analyse_config_ctx (default_config Int_Analysis (Ctx_CallString 2)) p
-     = Some (analyse_int_call_string_report 2 p)"
+     = Some (analyse_int_call_string_report_warrow 2 p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 lemma analyse_config_ctx_int_callstring_zero_invalid:
@@ -790,10 +843,10 @@ lemma analyse_config_ctx_int_callstring_per_origin_invalid:
    = None"
   by (simp add: analyse_config_ctx_def)
 
-lemma analyse_config_ctx_int_callstring_warrow_invalid:
+lemma analyse_config_ctx_int_callstring_warrow_valid:
   "analyse_config_ctx
      \<lparr> cfg_domain = Int_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_CallString 2 \<rparr> p
-   = None"
+   = Some (analyse_int_call_string_report_warrow 2 p)"
   by (simp add: analyse_config_ctx_def)
 
 subsubsection \<open>Dispatcher-path parity with the direct generic CallString core\<close>
@@ -820,15 +873,35 @@ lemma analyse_config_ctx_interval_callstring_k2_reaches_generic_core:
                 analyse_interval_call_string_report_def)
 
 lemma analyse_config_with_state_sign_default:
-  "analyse_config_with_state (default_config Sign_Analysis Ctx_None) p = Some (analyse_with_state Sign_Analysis p)"
+  "analyse_config_with_state (default_config Sign_Analysis Ctx_None) p
+     = Some (tag_states SignValue (analyse_sign_report_with_state p))"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma analyse_config_with_state_interval_default:
-  "analyse_config_with_state (default_config Interval_Analysis Ctx_None) p = Some (analyse_with_state Interval_Analysis p)"
+  "analyse_config_with_state (default_config Interval_Analysis Ctx_None) p
+     = Some (tag_states IntervalValue (analyse_interval_td_report_with_state p))"
   by (simp add: default_config_def mk_analysis_config_def)
 
 lemma analyse_config_with_state_int_default:
-  "analyse_config_with_state (default_config Int_Analysis Ctx_None) p = Some (analyse_with_state Int_Analysis p)"
+  "analyse_config_with_state (default_config Int_Analysis Ctx_None) p
+     = Some (tag_states IntDomValue (analyse_int_report_with_state p))"
+  by (simp add: default_config_def mk_analysis_config_def)
+
+text \<open>
+  An explicit solver at \<open>Ctx_None\<close> now answers with a state-carrying report of its
+  own table, and a context selection still does not: the flat
+  \<^const>\<open>analyse_config\<close> stays the only report shape for those callers that want
+  one, never a degraded view of the contextual result.
+\<close>
+
+lemma analyse_config_with_state_interval_explicit_join:
+  "analyse_config_with_state
+     \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Join, cfg_context = Ctx_None \<rparr> p
+   = Some (tag_states IntervalValue (interval_join.report_with_state p))"
+  by simp
+
+lemma analyse_config_with_state_entrystate_none:
+  "analyse_config_with_state (default_config Interval_Analysis Ctx_EntryState) p = None"
   by (simp add: default_config_def mk_analysis_config_def)
 
 
