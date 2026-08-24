@@ -1,0 +1,16 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/02-base/58-empty-not-dead.c. The
+// program declares no variable at all, so the abstract state at every point is
+// the empty map. Goblint's concern is that a Hoare-set reduce drops the bot
+// element of an empty local state and marks the code dead; the analogue here
+// is the reachability probe over program_vars: with nothing to probe it must
+// answer "live", not vacuously "bottom". Every check(true) is PROVED, in main
+// and across a call into an equally empty procedure.
+void p() {
+  __voblint_check(true) // PROVED
+}
+void main() {
+  __voblint_check(true); // PROVED
+  p();
+  __voblint_check(true) // PROVED
+}

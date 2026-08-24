@@ -1,0 +1,25 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/56-witness/26-mine-tutorial-ex4.6.c
+// (Mine's tutorial, example 4.6): a counter runs from 40 down to 0 and
+// exits on x != 0. Goblint proves the in-loop bounds only by unassuming
+// a YAML witness (26-mine-tutorial-ex4.6.yml); the post-loop x == 0 needs
+// no witness.
+//
+// Voblint proves !(40 < x) and x == 0 but not !(x < 0). Mechanism: the
+// head widens x from [40,40] against [39,40] and drops the lower bound to
+// -inf; the guard !(x == 0) is a disequality that gives intervals no
+// floor to narrow back to, so x = [-inf,40] at the head and [-inf,39]
+// after the decrement (measured). The upper bound survives because it
+// never grew, and x == 0 holds because the exit edge asserts equality.
+// Solver-invariant across join, per-origin, warrow, warrow-per-origin.
+// The same program under --analysis int (16-composite-domain/precision/
+// 04-mine_ex46_sign_zero_threshold.vimp) proves all three.
+void main() {
+  x := 40;
+  while (!(x == 0)) {
+    __voblint_check(!(40 < x)); // PROVED
+    x := x - 1;
+    __voblint_check(!(x < 0)) // UNKNOWN
+  };
+  __voblint_check(x == 0) // PROVED
+}

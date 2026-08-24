@@ -1,0 +1,17 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/00-sanity/05-inf_loop.c and
+// 03-practical/09-nonterm2.c. The loop body is reachable, so its check(false)
+// is REFUTED (Goblint: FAIL!). The loop's exit edge is the guard's negation,
+// !(true), and the branch gate evaluates it to Some False in every state:
+// nothing after the loop has a successor, so both trailing checks are absent
+// from the report (Goblint: NOWARN (unreachable), formerly NONTERM). The
+// second trailing check reads x so the suppression is seen to hold for a
+// check over a bound variable, not only for the literal sentinel.
+void main() {
+  x := 0;
+  while (true) {
+    __voblint_check(false) // REFUTED
+  };
+  __voblint_check(false); // NOWARN (unreachable)
+  __voblint_check(x == 0) // NOWARN (unreachable)
+}

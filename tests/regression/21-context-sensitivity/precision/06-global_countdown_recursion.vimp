@@ -1,0 +1,25 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/80-context_gas/07-main_recursion_sens.c
+// (ana.context.gas_value 10). Goblint recurses through main itself; VIMP's
+// main cannot be called, so the recursion lives in a helper. rec decrements
+// the global num_iterat from 11 and recurses while it is positive, then
+// returns 5 from the num_iterat == 0 base case, and every level passes 5
+// back up. The result is proved in every mode, including --context none:
+// the base case's num_iterat == 0 guard selects the `return 5` arm on any
+// state containing 0, and the recursive arm only forwards that value.
+global num_iterat;
+void rec() {
+  if (0 < num_iterat) {
+    num_iterat := num_iterat - 1;
+    res := rec();
+    __voblint_check(res == 5); // PROVED
+    return res
+  } else {
+    if (num_iterat == 0) { return 5 } else { return 2 }
+  }
+}
+void main() {
+  num_iterat := 11;
+  r := rec();
+  __voblint_check(r == 5) // PROVED
+}

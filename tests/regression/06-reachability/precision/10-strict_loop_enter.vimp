@@ -1,0 +1,34 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/00-sanity/26-strict-loop-enter.c.
+// The counted loop's head widens to [0,+inf] before narrowing brings it back
+// to [0,50], so the branch 50 < x is live at the widened value and dead after
+// narrowing. Goblint's note is that the node after Pos(x>50) ends up dead
+// while the diverging inner loop keeps its widened x = [51,2147483647]; here
+// the TD solver re-evaluates the branch's dependents on narrowing, so the
+// inner loop head, its body and the check after it all end at bot and the
+// check is absent (Goblint: NOWARN (unreachable)). The x == 50 check pins
+// that the loop head was narrowed, not merely widened and joined.
+//
+// Measured identically under the default solver and under every explicit
+// --solver choice for the abstract states; the explicit --solver report
+// route, however, does not carry the reachability flag and prints the dead
+// check as a vacuous PROVED, so this fixture stays on the default route.
+global g;
+void main() {
+  x := 0;
+  while (x < 50) {
+    g := 1;
+    x := x + 1
+  };
+  __voblint_check(x == 50); // PROVED
+  if (50 < x) {
+    i := 0;
+    while (!(0 < i)) {
+      g := 57;
+      i := i - 1
+    };
+    __voblint_check(true) // NOWARN (unreachable)
+  } else {
+    skip
+  }
+}

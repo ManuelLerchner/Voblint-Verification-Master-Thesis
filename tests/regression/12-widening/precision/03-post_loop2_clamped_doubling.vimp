@@ -1,0 +1,23 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/82-widen/07-post_loop2.c: a is a
+// nondeterministic value clamped to [-9,9], then repeatedly mapped to
+// -2 * (a - 1) while -10 < a < 10, so on exit -16 <= a <= 20. Goblint
+// expects both bounds only under solvers.td3.widen_gas 5 together with
+// exp.no-narrow.
+//
+// Voblint proves both by narrowing alone: the head widens a to
+// [-inf,+inf], narrowing brings it back to [-16,20] because the guard
+// admits only [-9,9] into the body and doubling that range gives
+// [-16,20] (measured at the head and at both checks). The clamp is two
+// assignments because a special call cannot nest inside another call.
+// Solver-invariant across join, per-origin, warrow, warrow-per-origin.
+void main() {
+  u := __voblint_nondet_int();
+  t := min(9, u);
+  a := max(-9, t);
+  while (-10 < a && a < 10) {
+    a := -2 * (a - 1)
+  };
+  __voblint_check(!(a < -16)); // PROVED
+  __voblint_check(!(20 < a)) // PROVED
+}

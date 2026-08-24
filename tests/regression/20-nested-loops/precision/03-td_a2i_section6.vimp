@@ -1,0 +1,34 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/34-localwn_restart/06-td-a2i.c,
+// the running example of "The Top-Down Solver -- An Exercise in A^2I",
+// Section 6. Goblint runs it with solvers.td3.remove-wpoint and expects
+// the first four checks; the post-loop j == 17 is annotated TODO there,
+// i.e. Goblint cannot establish it either.
+//
+// Voblint proves the four in-loop and i == 42 checks: each head widens its
+// own counter and narrows it back against its guard, and the inner exit
+// leaves j = [17,17] for the checks in the outer body.
+//
+// The post-loop j == 17 is UNKNOWN by a non-relational join, not by
+// widening: the outer head joins the entry state j = 0 with the back-edge
+// state j = 17, giving j = [0,17] (measured), and the outer exit guard
+// !(i < 42) refines only i. Recovering j == 17 there needs the relation
+// "i > 0 implies j = 17", which no interval can carry.
+// Solver-invariant across join, per-origin, warrow, warrow-per-origin.
+void main() {
+  i := 0;
+  j := 0;
+  while (i < 42) {
+    j := 0;
+    while (j < 17) {
+      x := i + j;
+      j := j + 1
+    };
+    __voblint_check(j == 17); // PROVED
+    __voblint_check(!(i < 0)); // PROVED
+    __voblint_check(!(41 < i)); // PROVED
+    i := i + 1
+  };
+  __voblint_check(i == 42); // PROVED
+  __voblint_check(j == 17) // UNKNOWN
+}

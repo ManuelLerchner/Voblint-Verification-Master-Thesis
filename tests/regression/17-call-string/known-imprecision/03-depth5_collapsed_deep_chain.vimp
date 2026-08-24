@@ -1,0 +1,80 @@
+// PARAM: --analysis interval --context call-string --context-depth 5
+// Adapted from Goblint tests/regression/79-callstring/01-multiple_tests_h5sens_cs.c
+// and 02-multiple_tests_h5ins_cs.c (ana.context.callString_length 5, i.e.
+// --context call-string --context-depth 5). Goblint proves a(7), e(5),
+// k(9) and o(5) (its widening delay tolerates about three collapsed
+// levels) and reports the 02 checks UNKNOWN; voblint reports all of them
+// UNKNOWN. Every concrete result is fixed, so this is imprecision, not
+// underdetermination.
+// The call string is exact only while the deepest activation chain fits in
+// K call sites. Beyond that every deeper activation carries the same
+// truncated key, so one callee-entry seed is the join of their arguments
+// (--graph-snapshot: a's collapsed context enters with i=[0,2] for a(7)).
+// What each family then loses, measured:
+// - a/b/c and k/h: the joined seed contains 0 next to positive values.
+//   Interval's guard refinement for !(i == 0) cannot strip the endpoint 0
+//   from [0,2], so the following !(0 < i) arm keeps i=[0,0] and its
+//   fall-through `return 1` becomes live; the collapsed exit joins to
+//   [1,11]. --analysis int proves a(7), a(8), c(11) and b(21) at this same
+//   depth: its Sign component refines !(i == 0) on NonNegative to Positive
+//   and the product refinement lifts the interval to [1,2], which kills the
+//   arm. k(9) stays UNKNOWN under int too, because the joined seed admits
+//   i=0 through the recursive arm (k(1) -> k(0)) that the concrete run
+//   never takes (k stops at 2), and the fall-through `return 1` is live.
+// - e/f: the collapsed activations return different concrete values
+//   (e(1) = 3, e(3) = 4), so their joined exit is a genuine range; no
+//   domain refinement separates depths that share a key.
+// - o with the global m: the collapsed context is entered from three call
+//   chains, warrowing widens its seed to i=[0,+inf], the body writes m := i
+//   from it, and m reads back as [0,+inf] after each call.
+// --context entry-state proves every check in this file.
+global m;
+void a(i) {
+  if (i == 0) { return 11 } else { skip };
+  if (0 < i) { r := a(i - 1); return r } else { skip };
+  return 1
+}
+void b(i) {
+  if (i == 0) { return 12 } else { skip };
+  if (0 < i) { r := a(i - 1); return r } else { skip };
+  return 2
+}
+void c(i) {
+  if (i == 0) { return 13 } else { skip };
+  if (0 < i) { r := b(i - 1); return r } else { skip };
+  return 3
+}
+void f(i) {
+  if (0 < i) { r := e(i - 1); return r } else { skip };
+  return 2
+}
+void e(i) {
+  r := f(i - 1);
+  return r + 1
+}
+void h(i) {
+  if (i == 0) { return 1 } else { skip };
+  if (0 < i) { r := h(i - 1); return r } else { skip };
+  return 0
+}
+void k(i) {
+  if (i == 2) { r := h(i - 1); return r + 1 } else { skip };
+  if (0 < i) { r := k(i - 1); return r } else { skip };
+  return 1
+}
+void o(i) {
+  if (0 < i) { i := i - 1; m := i; o(i) } else { skip };
+  return 0
+}
+void main() {
+  x0 := a(7); __voblint_check(x0 == 11);  // UNKNOWN
+  x1 := a(8); __voblint_check(x1 == 11);  // UNKNOWN
+  x2 := c(11); __voblint_check(x2 == 11); // UNKNOWN
+  x3 := b(21); __voblint_check(x3 == 11); // UNKNOWN
+  y0 := e(5); __voblint_check(y0 == 5);   // UNKNOWN
+  y1 := e(7); __voblint_check(y1 == 6);   // UNKNOWN
+  z0 := k(9); __voblint_check(z0 == 2);   // UNKNOWN
+  z1 := k(10); __voblint_check(z1 == 2);  // UNKNOWN
+  m := 20; o(5); __voblint_check(m == 0); // UNKNOWN
+  m := 20; o(6); __voblint_check(m == 0)  // UNKNOWN
+}

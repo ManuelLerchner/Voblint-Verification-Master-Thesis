@@ -1,0 +1,40 @@
+// PARAM: --analysis int
+// Adapted from Goblint tests/regression/38-int-refinements/
+// 01-interval-congruence.c (ana.int.refinement fixpoint): r is 2 or 7
+// depending on a nondeterministic branch, so the join knows r = 2 (mod 5)
+// and r = [2,7]. The guard k >= 3 then leaves [3,7], and the congruence
+// rounds the lower bound up to 7 because 3..6 are not in the class, so
+// Goblint refutes k < 7 (annotated FAIL). The second half mirrors it with
+// 37 or 42 under l <= 41, rounding the upper bound down to 37.
+//
+// Voblint refutes both. This exercises the congruence-to-interval
+// reduction: the interval alone leaves k = [3,7] and l = [37,41] and
+// answers UNKNOWN (verified with --analysis interval on this source),
+// while the composite reports k = [7,7] and l = [37,37]. The nondet
+// branch is on a fresh variable so that r itself is not refined by the
+// condition; only its two constant assignments reach the join.
+void main() {
+  c := __voblint_nondet_int();
+  if (c == 0) {
+    r := 2
+  } else {
+    r := 7
+  };
+  k := r;
+  if (!(k < 3)) {
+    __voblint_check(k < 7) // REFUTED
+  } else {
+    skip
+  };
+  m := __voblint_nondet_int();
+  if (m == 0) {
+    l := 37
+  } else {
+    l := 42
+  };
+  if (!(41 < l)) {
+    __voblint_check(37 < l) // REFUTED
+  } else {
+    skip
+  }
+}

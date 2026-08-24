@@ -1,0 +1,31 @@
+// PARAM: --analysis sign
+// Adapted from Goblint tests/regression/99-tutorials/01-first.c,
+// 02-first-extend.c and 05-gstore-zero.c, merged: the tutorial's signs domain
+// with the annotations its TODOs ask for. x is -5 or -7 by a nondet branch,
+// so the join stays Negative and x < 0 is PROVED. The guard 8 < x on a
+// Negative x is infeasible, so the then-arm is dead (its check is absent) and
+// x is still Negative after the join. y is -5 or 0: Negative join Zero is
+// NonPositive, enough for y < 1 but not for y < 0, which the nondet branch
+// genuinely leaves open.
+void main() {
+  u := __voblint_nondet_int();
+  if (u) {
+    x := -5
+  } else {
+    x := -7
+  };
+  __voblint_check(x < 0); // PROVED
+  if (8 < x) {
+    x := 10;
+    __voblint_check(false) // NOWARN (unreachable)
+  } else {
+    skip
+  };
+  __voblint_check(x < 0); // PROVED
+  if (u) {
+    y := -5
+  } else {
+    y := 0
+  };
+  __voblint_check(y < 1) // PROVED
+}

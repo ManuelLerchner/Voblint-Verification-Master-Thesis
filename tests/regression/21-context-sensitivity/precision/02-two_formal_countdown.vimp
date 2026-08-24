@@ -1,0 +1,21 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/80-context_gas/01-basic_tests_bound_sens.c
+// (gas 10) and 04-contextGasNeg.c (gas -5, i.e. fully context-sensitive;
+// both map to --context entry-state). Two-formal recursion f(x, y) that
+// decrements both until x reaches 0 and returns y. Each level enters with
+// a distinct (x, y) pair, so entry-state creates one exact context per
+// level and the result is the singleton 0. Depth scales linearly: f(300,
+// 300) takes about 1 s, f(1000, 1000) about 7 s on the same machine and is
+// left out to stay clear of the runner's ceiling. --context call-string
+// at any depth up to 5 answers UNKNOWN for all three (the collapsed key
+// joins the remaining (x, y) pairs).
+void f(x, y) {
+  if (x == 0) { return y } else { skip };
+  r := f(x - 1, y - 1);
+  return r
+}
+void main() {
+  a := f(8, 8); __voblint_check(a == 0);    // PROVED
+  b := f(20, 20); __voblint_check(b == 0);  // PROVED
+  c := f(300, 300); __voblint_check(c == 0) // PROVED
+}

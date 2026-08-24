@@ -1,0 +1,57 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/31-ikind-aware-ints/16-enums-compare.c.
+// x and y are each 0 or 1 by a nondet branch, so x = [0,1] exactly. Every C
+// comparison operator is written with <, == and !: x <= c is !(c < x),
+// x > c is c < x, x >= c is !(x < c), x != c is !(x == c). Thresholds walk
+// across the interval so each operator is exercised at PROVED, UNKNOWN and
+// REFUTED (Goblint: bare, UNKNOWN!, FAIL).
+//
+// The UNKNOWN rows are soundness cases inside a precision fixture, kept here
+// so the operator walk stays in one place: x < 1, x == 1, x == y and their
+// negations are each true in some execution and false in another, so UNKNOWN
+// is the only sound answer. The final z == 3 arm shows equality refinement to
+// [3,3]; its else arm's two checks are in
+// known-imprecision/01-equality_else_arm_no_exclusion_set.vimp. int gives the
+// same verdicts.
+void main() {
+  top := __voblint_nondet_int();
+  top2 := __voblint_nondet_int();
+  if (top) {
+    x := 1
+  } else {
+    x := 0
+  };
+  if (top2) {
+    y := 1
+  } else {
+    y := 0
+  };
+  __voblint_check(x < 2); // PROVED
+  __voblint_check(x < 1); // UNKNOWN
+  __voblint_check(x < 0); // REFUTED
+  __voblint_check(!(2 < x)); // PROVED
+  __voblint_check(!(1 < x)); // PROVED
+  __voblint_check(!(0 < x)); // UNKNOWN
+  __voblint_check(!(-1 < x)); // REFUTED
+  __voblint_check(-1 < x); // PROVED
+  __voblint_check(0 < x); // UNKNOWN
+  __voblint_check(1 < x); // REFUTED
+  __voblint_check(!(x < -1)); // PROVED
+  __voblint_check(!(x < 0)); // PROVED
+  __voblint_check(!(x < 1)); // UNKNOWN
+  __voblint_check(!(x < 2)); // REFUTED
+  __voblint_check(x == y); // UNKNOWN
+  __voblint_check(x == 1); // UNKNOWN
+  __voblint_check(x == 2); // REFUTED
+  __voblint_check(!(x == y)); // UNKNOWN
+  __voblint_check(!(x == 1)); // UNKNOWN
+  __voblint_check(!(x == 2)); // PROVED
+  z := __voblint_nondet_int();
+  y := 3;
+  if (z == 3) {
+    __voblint_check(y == z); // PROVED
+    __voblint_check(!(y == z)) // REFUTED
+  } else {
+    skip
+  }
+}

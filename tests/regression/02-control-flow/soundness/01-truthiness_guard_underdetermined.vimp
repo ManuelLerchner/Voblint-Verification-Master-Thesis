@@ -1,0 +1,34 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/36-apron/18-branch2.c (i >= 1 is
+// UNKNOWN!), 27-inv_invariants/03-ints-not.c (x == 1 is UNKNOWN!) and
+// 01-cpa/28-interval.c (a == 8, b == 8 are UNKNOWN). Each value is an
+// unconstrained __voblint_nondet_int(): inside if (i) the guard only rules out
+// 0, so i = 1 and i = -1 are both executions; likewise x in the else arm of
+// if (!x). a and b are 8 or 9 depending on the nondet z. Every check has a
+// satisfying and a violating run, so UNKNOWN is the only sound verdict --
+// refining if (i) to [1,+inf] would be a soundness bug, and this fixture is
+// the witness against it.
+void main() {
+  i := __voblint_nondet_int();
+  x := __voblint_nondet_int();
+  z := __voblint_nondet_int();
+  if (i) {
+    __voblint_check(!(i < 1)) // UNKNOWN
+  } else {
+    skip
+  };
+  if (!x) {
+    skip
+  } else {
+    __voblint_check(x == 1) // UNKNOWN
+  };
+  if (!(z == 0)) {
+    a := 8;
+    b := 9
+  } else {
+    a := 9;
+    b := 8
+  };
+  __voblint_check(a == 8); // UNKNOWN
+  __voblint_check(b == 8) // UNKNOWN
+}

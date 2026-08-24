@@ -1,0 +1,60 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Adapted from Goblint tests/regression/79-callstring/03-multiple_tests_h2sens_cs.c
+// (ana.context.callString_length 2, i.e. --context call-string
+// --context-depth 2). Chains of at most two call sites keep exact keys, so
+// the base cases of the a/b/c chain and the e/f pair are proved. The
+// seven-procedure cyclic call graph m -> q -> o -> r -> q -> s -> p -> l ->
+// q -> p -> l runs twelve activations deep, far past depth 2, and still
+// proves m(4) == 4: every path through it ends in l's `return 4`, so
+// collapsing keys joins equal values. --context none proves m(4) too.
+// Goblint's k(6) == 2 check from the same file is UNKNOWN here at depth 2
+// (the collapsed k seed admits i=0 and its fall-through `return 1`; see
+// known-imprecision/03) and proved at depth 5 in precision/07.
+void a(i) {
+  if (i == 0) { return 11 } else { skip };
+  if (0 < i) { r := a(i - 1); return r } else { skip };
+  return 1
+}
+void b(i) {
+  if (i == 0) { return 12 } else { skip };
+  if (0 < i) { r := a(i - 1); return r } else { skip };
+  return 2
+}
+void c(i) {
+  if (i == 0) { return 13 } else { skip };
+  if (0 < i) { r := b(i - 1); return r } else { skip };
+  return 3
+}
+void f(i) {
+  if (0 < i) { r := e(i - 1); return r } else { skip };
+  return 2
+}
+void e(i) {
+  r := f(i - 1);
+  return r + 1
+}
+void l(i) {
+  if (i == 0) { r := q(2); return r } else { return 4 }
+}
+void p(i) { r := l(i - 1); return r }
+void s(i) { r := p(i - 1); return r }
+void r(i) { t := q(i - 1); return t }
+void o(i) {
+  if (!(0 < i)) { t := r(4); return t } else { t := o(i - 1); return t }
+}
+void q(i) {
+  if (i == 4) { t := o(3); return t } else { skip };
+  if (i == 3) { t := s(2); return t } else { skip };
+  t := p(20);
+  return t
+}
+void m(i) { t := q(i); return t }
+void main() {
+  x0 := a(1); __voblint_check(x0 == 11); // PROVED
+  x1 := a(0); __voblint_check(x1 == 11); // PROVED
+  x2 := b(0); __voblint_check(x2 == 12); // PROVED
+  x3 := c(0); __voblint_check(x3 == 13); // PROVED
+  y0 := f(0); __voblint_check(y0 == 2);  // PROVED
+  y1 := e(0); __voblint_check(y1 == 3);  // PROVED
+  z := m(4); __voblint_check(z == 4)     // PROVED
+}

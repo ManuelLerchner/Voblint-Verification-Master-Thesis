@@ -1,0 +1,39 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/80-context_gas/05-circle_call_sens.c
+// and 06-circle_call_ins.c (ana.context.gas_value 15; Goblint's full
+// context, which gas 15 preserves for these depths, maps to --context
+// entry-state). Mutual recursion f -> g -> f with non-linear results: f(i)
+// = g(i-2) + g(i-3) and g(i) = f(i+1). Entry-state keys each activation by
+// its entered i, so every intermediate value is a singleton and all sums
+// are exact. Goblint's annotations for its 06 file are arithmetically
+// wrong: the concrete values are f(13) = 1817 (annotated 233), f(20) =
+// 52756 (6765), g(13) = 2940 (377), g(20) = 10946 -> 85361; Goblint never
+// notices since it marks those checks UNKNOWN. voblint REFUTES the wrong
+// value and PROVES the right ones (computed by direct evaluation).
+// --context call-string --context-depth 5 proves only f(0) and g(0);
+// --context none proves nothing.
+void g(i) {
+  if (i == 0) { return 1 } else { skip };
+  if (0 < i) { r := f(i + 1); return r } else { skip };
+  return 11
+}
+void f(i) {
+  if (i == 0) { return 2 } else { skip };
+  if (0 < i) { r1 := g(i - 2); r2 := g(i - 3); return r1 + r2 } else { skip };
+  return 12
+}
+void main() {
+  a := f(0); __voblint_check(a == 2);      // PROVED
+  b := f(7); __voblint_check(b == 101);    // PROVED
+  c := f(9); __voblint_check(c == 265);    // PROVED
+  d := f(10); __voblint_check(d == 429);   // PROVED
+  e := g(0); __voblint_check(e == 1);      // PROVED
+  h := g(3); __voblint_check(h == 25);     // PROVED
+  k := g(6); __voblint_check(k == 101);    // PROVED
+  l := g(8); __voblint_check(l == 265);    // PROVED
+  m := f(13); __voblint_check(m == 233);   // REFUTED
+  __voblint_check(m == 1817);              // PROVED
+  n := f(20); __voblint_check(n == 52756); // PROVED
+  o := g(13); __voblint_check(o == 2940);  // PROVED
+  p := g(20); __voblint_check(p == 85361)  // PROVED
+}

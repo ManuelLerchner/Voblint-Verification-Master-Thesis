@@ -474,18 +474,24 @@ definition analyse_config_ctx ::
       | Some (Plan_Interval_CallString Solver_Warrow k) \<Rightarrow> Some (analyse_interval_call_string_report k p)
       | Some (Plan_Interval_CallString Solver_Join k) \<Rightarrow> Some (analyse_interval_call_string_report_join k p)
       | Some (Plan_Interval_CallString Solver_PerOrigin k) \<Rightarrow> Some (analyse_interval_call_string_report_per_origin k p)
+      | Some (Plan_Interval_EntryState Solver_WarrowPerOrigin) \<Rightarrow> Some (analyse_interval_entry_state_wpo p)
+      | Some (Plan_Interval_CallString Solver_WarrowPerOrigin k) \<Rightarrow> Some (analyse_interval_call_string_report_wpo k p)
       | Some (Plan_Sign_CallString Solver_Join k) \<Rightarrow> Some (analyse_sign_call_string_report k p)
       | Some (Plan_Sign_CallString Solver_PerOrigin _) \<Rightarrow> None
       | Some (Plan_Sign_CallString Solver_Warrow _) \<Rightarrow> None
+      | Some (Plan_Sign_CallString Solver_WarrowPerOrigin _) \<Rightarrow> None
       | Some (Plan_Sign_EntryState Solver_Join) \<Rightarrow> Some (analyse_sign_entry_state_report p)
       | Some (Plan_Sign_EntryState Solver_PerOrigin) \<Rightarrow> None
       | Some (Plan_Sign_EntryState Solver_Warrow) \<Rightarrow> None
+      | Some (Plan_Sign_EntryState Solver_WarrowPerOrigin) \<Rightarrow> None
       | Some (Plan_Int_CallString Solver_Join k) \<Rightarrow> Some (analyse_int_call_string_report k p)
       | Some (Plan_Int_CallString Solver_PerOrigin _) \<Rightarrow> None
       | Some (Plan_Int_CallString Solver_Warrow _) \<Rightarrow> None
+      | Some (Plan_Int_CallString Solver_WarrowPerOrigin _) \<Rightarrow> None
       | Some (Plan_Int_EntryState Solver_Join) \<Rightarrow> Some (analyse_int_entry_state_report p)
       | Some (Plan_Int_EntryState Solver_PerOrigin) \<Rightarrow> None
       | Some (Plan_Int_EntryState Solver_Warrow) \<Rightarrow> None
+      | Some (Plan_Int_EntryState Solver_WarrowPerOrigin) \<Rightarrow> None
       | Some (Plan_Sign s) \<Rightarrow> map_option decided_report (analyse_with_solver Sign_Analysis s p)
       | Some (Plan_Interval s) \<Rightarrow> map_option decided_report (analyse_with_solver Interval_Analysis s p)
       | Some (Plan_Int s) \<Rightarrow> map_option decided_report (analyse_with_solver Int_Analysis s p)
@@ -557,6 +563,22 @@ lemma analyse_config_ctx_interval_entrystate_explicit_per_origin_valid:
 lemma analyse_config_ctx_interval_entrystate_explicit_warrow_valid:
   "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_Warrow, cfg_context = Ctx_EntryState \<rparr> p
      = Some (analyse_interval_entry_state p)"
+  by (simp add: analyse_config_ctx_def)
+
+text \<open>
+  The fourth discipline is pinned at both contexts because the resolver already
+  accepts it there: a plan the resolver produces but this dispatcher does not
+  match is a code-generated match failure, not a rejected configuration.
+\<close>
+
+lemma analyse_config_ctx_interval_entrystate_explicit_wpo_valid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_EntryState \<rparr> p
+     = Some (analyse_interval_entry_state_wpo p)"
+  by (simp add: analyse_config_ctx_def)
+
+lemma analyse_config_ctx_interval_callstring_explicit_wpo_valid:
+  "analyse_config_ctx \<lparr> cfg_domain = Interval_Analysis, cfg_solver = Some Solver_WarrowPerOrigin, cfg_context = Ctx_CallString (Suc k) \<rparr> p
+     = Some (analyse_interval_call_string_report_wpo (Suc k) p)"
   by (simp add: analyse_config_ctx_def)
 
 text \<open>

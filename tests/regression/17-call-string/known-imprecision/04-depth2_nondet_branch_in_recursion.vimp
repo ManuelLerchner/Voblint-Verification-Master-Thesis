@@ -1,0 +1,25 @@
+// PARAM: --analysis interval --context call-string --context-depth 2
+// Same program as precision/12-depth5_nondet_branch_in_recursion.vimp
+// (Goblint 80-context_gas/23-per-fun.c) at depth 2. The concrete result
+// f(3, 3) == 0 is fixed. main -> f(3,3) -> f(2,2) keep distinct keys, but
+// f(1,1), f(0,0) and every deeper level share the truncated key [f, f],
+// so that one context re-enters itself with (x - 1, y - 1) and warrowing
+// extrapolates its callee-entry seed to x=[-inf,1], y=[-inf,1]
+// (--graph-snapshot). The x == 0 arm refines x alone -- the domain is
+// non-relational -- and returns y=[-inf,1], which propagates back up the
+// chain to a. The nr check stays proved because nr(5, 5) and nr(6, 6) are
+// different call sites and get different keys at any depth.
+void nr(x, y) {
+  __voblint_check(x == y) // PROVED
+}
+void f(x, y) {
+  if (x == 0) { return y } else { skip };
+  top := __voblint_nondet_int();
+  if (0 < top) { nr(5, 5) } else { nr(6, 6) };
+  r := f(x - 1, y - 1);
+  return r
+}
+void main() {
+  a := f(3, 3);
+  __voblint_check(a == 0) // UNKNOWN
+}

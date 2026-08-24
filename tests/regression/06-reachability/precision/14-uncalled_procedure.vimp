@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/00-sanity/27-uncalled.c, where the
+// uncalled function only earns a "will never be called" warning. Here foo's
+// FunctionEntry has no call edge feeding it, so its seed is bot, every point
+// inside foo is unreachable, and its check is absent from the report. main's
+// own check is still live.
+void foo() {
+  __voblint_check(true) // NOWARN (unreachable)
+}
+void main() {
+  x := 0;
+  __voblint_check(x == 0) // PROVED
+}

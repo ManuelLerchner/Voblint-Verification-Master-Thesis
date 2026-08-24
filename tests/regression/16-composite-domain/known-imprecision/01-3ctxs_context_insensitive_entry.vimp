@@ -1,0 +1,32 @@
+// PARAM: --analysis int
+// Adapted from Goblint tests/regression/20-slr_term/03-3ctxs.c (a NOCHECK
+// termination test; the post-loop check i == 10 is added). The same
+// program under --context entry-state (16-composite-domain/precision/
+// 03-3ctxs_parity_bounds_entry_state.vimp) proves it, and inlining f
+// proves it in the context-insensitive analysis too, so the composite
+// itself has the precision.
+//
+// Mechanism: f has one context-insensitive FunctionEntry unknown, fed by
+// side effect from the call site inside the loop. The head's widening
+// makes the call site deliver i = [0,9] on its second visit, the entry
+// unknown widens [0,0] against that to [0,+inf], and side-effected
+// unknowns only ever grow -- narrowing at the loop head later cuts the
+// call site back to i = [0,8], but f's entry keeps j = [0,+inf] (measured
+// with --dot-full: call site i = [0,8], entry_f j = [0,+inf]). f then
+// returns [1,+inf], the back-edge carries [2,+inf], and the head cannot
+// narrow below +inf, leaving i = [10,+inf] with parity Even after the
+// loop: parity alone cannot single out 10. Distinct from 03-procedures/
+// known-imprecision/01-two_call_sites_same_procedure.vimp, which merges
+// two call sites; here a single call site loses to widening on the entry
+// unknown that the caller's own narrowing never reaches.
+void f(j) {
+  return j + 1
+}
+void main() {
+  i := 0;
+  while (i < 10) {
+    t := f(i);
+    i := 1 + t
+  };
+  __voblint_check(i == 10) // UNKNOWN
+}

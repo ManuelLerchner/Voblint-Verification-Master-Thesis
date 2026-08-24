@@ -1,0 +1,30 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/36-apron/94-simple-apron-interval.c
+// (Mine's counting loop, HOSC 2006), keeping the checks Goblint's interval
+// configuration proves. N is nondet and clamped to [0,+inf); the loop head
+// widens X to [0,+inf] and !(X < 0), !(N < 0) hold after the loop. The
+// equality branch writes 8 or 42 and the join gives N = [8,42], so the bound
+// checks N >= 8 and N <= 42, written with < and !, are PROVED. The equality
+// checks X == N, X - N == 0 and N == 8 are in
+// known-imprecision/02-counting_loop_nonrelational_join.vimp. int agrees.
+void main() {
+  X := 0;
+  N := __voblint_nondet_int();
+  if (N < 0) {
+    N := 0
+  } else {
+    skip
+  };
+  while (X < N) {
+    X := X + 1
+  };
+  __voblint_check(!(X < 0)); // PROVED
+  __voblint_check(!(N < 0)); // PROVED
+  if (X == N) {
+    N := 8
+  } else {
+    N := 42
+  };
+  __voblint_check(!(N < 8)); // PROVED
+  __voblint_check(!(42 < N)) // PROVED
+}

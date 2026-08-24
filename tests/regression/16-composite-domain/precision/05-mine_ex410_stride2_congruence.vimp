@@ -1,0 +1,26 @@
+// PARAM: --analysis int
+// Adapted from Goblint tests/regression/56-witness/29-mine-tutorial-ex4.10.c
+// (Mine's tutorial, example 4.10): v starts at 1 and steps by 2 while
+// v <= 50 (v < 51 here), so v == 51 on exit. Goblint runs it under Apron
+// polyhedra with an unassumed witness and asserts only the bounds; the
+// v == 51 check is added here.
+//
+// The composite proves the exact exit value. The interval alone narrows
+// to v = [51,52] and answers v == 51 UNKNOWN (12-widening/
+// known-imprecision/05-mine_ex410_stride2_parity.vimp). Here v := v + 2
+// keeps congruence 1 (mod 2) and parity Odd through the loop, and the
+// congruence-to-interval reduction rounds [51,52] down to [51,51]
+// (measured at the post-loop checks). Verified that --analysis parity
+// alone knows only Odd and --analysis sign only Positive, so the exact
+// value comes from the reduction, not from any single component.
+void main() {
+  v := 1;
+  while (v < 51) {
+    __voblint_check(!(v < 1)); // PROVED
+    v := v + 2;
+    __voblint_check(!(52 < v)) // PROVED
+  };
+  __voblint_check(!(v < 51)); // PROVED
+  __voblint_check(!(52 < v)); // PROVED
+  __voblint_check(v == 51) // PROVED
+}

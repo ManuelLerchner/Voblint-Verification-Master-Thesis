@@ -178,7 +178,7 @@ text \<open>
   the routing policy -- so it is exactly as solver-independent as
   \<open>ictx_eqs\<close> at \<open>Ctx_None\<close> (\<^theory>\<open>Voblint_Analysis.Interval_Exec_Sound\<close>'s
   \<open>analyse_interval_dg_join_for\<close>/\<open>_per_origin_for\<close> alongside the Warrow
-  default). The same routed system is solved under all three disciplines
+  default). The same routed system is solved under every discipline
   below, mirroring that pattern precisely; \<open>cs_call_string_sol_prog\<close> (Warrow,
   the shipped default) is untouched.
 \<close>
@@ -260,5 +260,44 @@ definition analyse_interval_call_string_report_per_origin ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "analyse_interval_call_string_report_per_origin k p =
      cs_call_string_verdict_report_prog_per_origin k prog_main_name p"
+
+definition cs_call_string_sol_prog_wpo ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+  "cs_call_string_sol_prog_wpo k gs mnm p =
+     TD_side_warrowing_per_origin_Interp_solve (cs_call_string_eqs_prog k gs mnm p)
+       (cfg_exit (prog_cfg mnm p), [])"
+
+definition analyse_interval_call_string_result_for_wpo ::
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, ivl abs_state) analysis_result" where
+  "analyse_interval_call_string_result_for_wpo k gs mnm p =
+     Analysis_Result
+       (fst (cs_call_string_sol_prog_wpo k gs mnm p))
+       (\<lambda>v ctx. normalize_point gs
+                  (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
+                    (locals (snd (cs_call_string_sol_prog_wpo k gs mnm p) (Inl (v, ctx))))))"
+
+declare analyse_interval_call_string_result_for_wpo_def [code del]
+
+lemma analyse_interval_call_string_result_for_wpo_code [code]:
+  "analyse_interval_call_string_result_for_wpo k gs mnm p =
+     (let sol = cs_call_string_sol_prog_wpo k gs mnm p; gl = declared_global_vars p
+      in Analysis_Result (fst sol)
+           (\<lambda>v ctx. normalize_point gs
+                      (canonicalize_lift (resolved_st_q_is_bot_for gl)
+                        (locals (snd sol (Inl (v, ctx)))))))"
+  unfolding analyse_interval_call_string_result_for_wpo_def Let_def by (rule refl)
+
+definition cs_call_string_verdict_report_prog_wpo ::
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "cs_call_string_verdict_report_prog_wpo k mnm p =
+     classify_checks_verdicts (prog_cfg mnm p)
+       (analyse_interval_call_string_result_for_wpo k (declared_global p) mnm p)
+       interval_classify_check"
+
+definition analyse_interval_call_string_report_wpo ::
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+  "analyse_interval_call_string_report_wpo k p =
+     cs_call_string_verdict_report_prog_wpo k prog_main_name p"
 
 end

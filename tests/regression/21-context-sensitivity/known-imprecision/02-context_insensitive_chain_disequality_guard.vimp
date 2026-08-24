@@ -1,0 +1,42 @@
+// PARAM: --analysis interval --context none
+// Adapted from Goblint tests/regression/85-narrow_globs/07-ctxt-widen.c
+// (ana.context.gas_value 0, i.e. context-insensitive, with
+// solvers.td3.narrow-globs enabled, which lets Goblint prove all seven).
+// Same program as precision/04-function_chain_self_recursive_tail.vimp;
+// every concrete result is 3. Under --context none each procedure has one
+// activation shared by all its call sites, so h's entry is seeded by the
+// join of every argument reaching it; --dot-full shows that entry as
+// i=[0,+inf] (the upper bound widened, the lower bound 0 kept). The loss
+// is downstream of the seed: Interval's guard refinement for !(i == 0)
+// cannot strip the endpoint 0 from [0,+inf], the following !(0 < i) arm
+// keeps i=[0,0], its fall-through `return 13` is live, and every result
+// joins to [3,13]. Goblint's narrow-globs recovers a widened lower bound
+// on the entry unknown; that is not what voblint loses here, since the
+// lower bound survives and the disequality guard is the gap. --analysis
+// int closes it: its Sign component refines !(i == 0) on NonNegative to
+// Positive, the product lifts the interval past 0, and the arm dies (see
+// 16-composite-domain/precision/10).
+void h(i) {
+  if (i == 0) { return 3 } else { skip };
+  if (0 < i) { r := h(i - 1); return r } else { skip };
+  return 13
+}
+void g(i) {
+  if (i == 0) { return 2 } else { skip };
+  if (0 < i) { r := h(i - 1); return r } else { skip };
+  return 12
+}
+void f(i) {
+  if (i == 0) { return 1 } else { skip };
+  if (0 < i) { r := g(i - 1); return r } else { skip };
+  return 11
+}
+void main() {
+  a := f(11); __voblint_check(a == 3);  // UNKNOWN
+  b := g(12); __voblint_check(b == 3);  // UNKNOWN
+  c := g(20); __voblint_check(c == 3);  // UNKNOWN
+  d := f(20); __voblint_check(d == 3);  // UNKNOWN
+  e := h(40); __voblint_check(e == 3);  // UNKNOWN
+  x := h(300); __voblint_check(x == 3); // UNKNOWN
+  y := f(300); __voblint_check(y == 3)  // UNKNOWN
+}

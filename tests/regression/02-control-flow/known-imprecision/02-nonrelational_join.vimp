@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/01-cpa/28-interval.c (a != b is
+// UNKNOWN there too). Every execution leaves (a, b) at (8, 9) or (9, 8), so
+// a != b concretely holds. The join after the branch is pointwise: a and b
+// each become [8,9] and the state no longer records that a = 8 pairs with
+// b = 9. An interval domain has no way to relate two variables, so
+// !(a == b) over [8,9] x [8,9] is UNKNOWN. int agrees.
+void main() {
+  z := __voblint_nondet_int();
+  if (!(z == 0)) {
+    a := 8;
+    b := 9
+  } else {
+    a := 9;
+    b := 8
+  };
+  __voblint_check(!(a == b)) // UNKNOWN
+}

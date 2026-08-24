@@ -1,0 +1,21 @@
+// PARAM: --analysis interval --solver warrow-per-origin --context call-string --context-depth 1
+// warrow-per-origin under a call-string context. Depth 1 keeps only the
+// innermost call site, so both activations of q -- contexts [main:q(1)] and
+// [main:q(2)] -- enter p at the single context [q:p(m)]. That one
+// FunctionEntry seed is written from two origins, [1,1] and [2,2].
+// Widening per origin keeps each contribution exact and joins afterwards,
+// so the entry slot reads [1,2] and n < 10 is decided.
+//
+// The same program under --solver warrow is the paired known-imprecision
+// case (04-warrow_call_string_joins_before_widening.vimp). Context-free
+// sibling: 06-warrow_per_origin_keeps_bound.vimp.
+void p(n) {
+  __voblint_check(n < 10) // PROVED
+}
+void q(m) {
+  p(m)
+}
+void main() {
+  q(1);
+  q(2)
+}

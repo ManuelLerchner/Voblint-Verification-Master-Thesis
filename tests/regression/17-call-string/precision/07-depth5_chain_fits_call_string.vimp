@@ -1,0 +1,59 @@
+// PARAM: --analysis interval --context call-string --context-depth 5
+// Adapted from Goblint tests/regression/79-callstring/01-multiple_tests_h5sens_cs.c
+// and 03-multiple_tests_h2sens_cs.c (ana.context.callString_length 5, i.e.
+// --context call-string --context-depth 5). The checks that Goblint proves
+// at length 5 and voblint proves too: every activation chain here fits in
+// five call sites (main -> a(4) -> ... -> a(0) is five sites; c(4) -> b(3)
+// -> a(2) -> a(1) -> a(0) likewise), so each activation keeps its own
+// call-string key, no two depths share a callee-entry seed, and every
+// argument stays a singleton interval. The a(7), a(8), e(5), k(9) and o(5)
+// checks of the same Goblint file need deeper chains and stay UNKNOWN;
+// they live in known-imprecision/03-depth5_collapsed_deep_chain.vimp.
+// k(6) is Goblint's 03 Test 3 at length 2, where voblint answers UNKNOWN
+// (see precision/08); at depth 5 it fits and is proved.
+// --context entry-state proves all of these as well.
+void a(i) {
+  if (i == 0) { return 11 } else { skip };
+  if (0 < i) { r := a(i - 1); return r } else { skip };
+  return 1
+}
+void b(i) {
+  if (i == 0) { return 12 } else { skip };
+  if (0 < i) { r := a(i - 1); return r } else { skip };
+  return 2
+}
+void c(i) {
+  if (i == 0) { return 13 } else { skip };
+  if (0 < i) { r := b(i - 1); return r } else { skip };
+  return 3
+}
+void f(i) {
+  if (0 < i) { r := e(i - 1); return r } else { skip };
+  return 2
+}
+void e(i) {
+  r := f(i - 1);
+  return r + 1
+}
+void h(i) {
+  if (i == 0) { return 1 } else { skip };
+  if (0 < i) { r := h(i - 1); return r } else { skip };
+  return 0
+}
+void k(i) {
+  if (i == 2) { r := h(i - 1); return r + 1 } else { skip };
+  if (0 < i) { r := k(i - 1); return r } else { skip };
+  return 1
+}
+void main() {
+  x0 := a(0); __voblint_check(x0 == 11); // PROVED
+  x1 := a(1); __voblint_check(x1 == 11); // PROVED
+  x2 := a(4); __voblint_check(x2 == 11); // PROVED
+  x3 := b(4); __voblint_check(x3 == 11); // PROVED
+  x4 := c(4); __voblint_check(x4 == 11); // PROVED
+  x5 := b(0); __voblint_check(x5 == 12); // PROVED
+  x6 := c(0); __voblint_check(x6 == 13); // PROVED
+  y0 := f(0); __voblint_check(y0 == 2);  // PROVED
+  y1 := e(0); __voblint_check(y1 == 3);  // PROVED
+  z0 := k(6); __voblint_check(z0 == 2)   // PROVED
+}

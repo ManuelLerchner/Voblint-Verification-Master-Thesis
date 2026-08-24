@@ -1,0 +1,26 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/79-callstring/10-inf_callstack_cs.c
+// (ana.context.callString_length -1, an unbounded call string, which
+// behaves like Goblint's full context and maps to --context entry-state).
+// o(i) counts i down and writes the global m at every level, so after the
+// call m holds the deepest level's write, 0. Entry-state keys each level
+// by its entered i, the deepest activation is analyzed with i=[1,1] and
+// writes m := 0, and the combine after each call site reads that back.
+// Any bounded call string collapses the deep levels instead;
+// known-imprecision/01 pins that at depth 5.
+global m;
+void o(i) {
+  if (0 < i) { i := i - 1; m := i; o(i) } else { skip };
+  return 0
+}
+void main() {
+  m := 20;
+  o(5);
+  __voblint_check(m == 0); // PROVED
+  m := 20;
+  o(8);
+  __voblint_check(m == 0); // PROVED
+  m := 20;
+  o(25);
+  __voblint_check(m == 0)  // PROVED
+}

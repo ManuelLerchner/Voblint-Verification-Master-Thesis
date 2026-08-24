@@ -1,0 +1,24 @@
+// PARAM: --analysis int
+// Adapted from Goblint tests/regression/01-cpa/28-interval.c (x != 0 in the
+// true arm of if (x)) and 36-apron/18-branch2.c. Inside if (x) and in the
+// else arm of if (!x) every execution has x != 0, so the concrete result is
+// fixed. Goblint proves it through DefExc's exclusion set {0}. No component of
+// the reduced product Sign x Interval x Parity x Congruence can represent
+// "everything except 0": the sign lattice has no NonZero element (its
+// non-trivial elements are Neg, NonPos, Zero, NonNeg, Pos), an interval is
+// convex, parity and congruence cannot carve a single point out of Top. The
+// guard refines x to Top in every component and !(x == 0) stays UNKNOWN.
+// interval and sign alone answer the same.
+void main() {
+  x := __voblint_nondet_int();
+  if (x) {
+    __voblint_check(!(x == 0)) // UNKNOWN
+  } else {
+    skip
+  };
+  if (!x) {
+    skip
+  } else {
+    __voblint_check(!(x == 0)) // UNKNOWN
+  }
+}
