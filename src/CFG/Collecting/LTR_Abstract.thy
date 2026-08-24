@@ -9,7 +9,7 @@ text \<open>
   soundly covers the stack-faithful semantics \<^const>\<open>valid_ltr\<close>.  The abstract object is a
   context-indexed concretization
 
-  \<^item> \<open>acc :: cfg_node \<Rightarrow> 'c \<Rightarrow> store set\<close>
+  \<open>\<^item>\<close> \<open>acc :: cfg_node \<Rightarrow> 'c \<Rightarrow> store set\<close>
 
   --- the set of stores the analysis admits at node \<open>v\<close> in abstract context \<open>c\<close>.  No
   \<open>sound_domain\<close>, \<open>abs_state\<close>, solver, or DG dependency appears here.
@@ -45,20 +45,20 @@ locale ltr_gamma =
     and acc :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
     and startcontext :: 'c
-    and gs :: "vname \<Rightarrow> bool"
+    and gs :: "vname \<Rightarrow> bool" and \<Gamma> :: tyenv
   assumes ROOT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> acc (cfg_entry g) startcontext"
     and EDGE[intro]: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> acc v c"
+        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> s' \<in> edge_step \<Gamma> a s \<Longrightarrow> s' \<in> acc v c"
     and ADMISS_TOTAL: "\<And>u c s. \<exists>c'. admiss u c s c'"
     and CALL[intro]: "\<And>u dst pars args p cont c s c'.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> admiss u c (call_enter gs (CallEdge dst pars args) s) c'
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> acc (FunctionEntry p) c'"
+        \<Longrightarrow> s \<in> acc u c \<Longrightarrow> admiss u c (call_enter \<Gamma> gs (CallEdge dst pars args) s) c'
+        \<Longrightarrow> call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> acc (FunctionEntry p) c'"
     and COMB[intro]: "\<And>cl dst pars args p cont c1 c2 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> acc cl c1 \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> acc (FunctionResult p) c2
-        \<Longrightarrow> call_enter_store gs g cl s es
-        \<Longrightarrow> combine_collect gs dst s t \<in> acc cont c1"
+        \<Longrightarrow> call_enter_store \<Gamma> gs g cl s es
+        \<Longrightarrow> combine_collect \<Gamma> gs dst s t \<in> acc cont c1"
 begin
 
 text \<open>\<open>bnd u\<close>: the sink store of \<open>u\<close> is admitted at \<open>u\<close>'s own node under every context
@@ -81,7 +81,7 @@ text \<open>\<open>intra_closed\<close>: an intra edge preserves every admissibl
   concrete step through \<open>EDGE\<close> at that same context.\<close>
 lemma intra_closed:
   assumes e: "(sink_node t, a, v) \<in> intra g"
-    and st: "s' \<in> edge_step a (sink_store t)" and pne: "path t \<noteq> []" and iht: "bnd t"
+    and st: "s' \<in> edge_step \<Gamma> a (sink_store t)" and pne: "path t \<noteq> []" and iht: "bnd t"
   shows "bnd (extend t (v, s'))"
 proof (intro allI impI)
   fix c assume "ctx_key admiss startcontext (extend t (v, s')) c"
@@ -98,18 +98,18 @@ text \<open>\<open>call_closed\<close>: the entered store is admitted in the cal
 lemma call_closed:
   assumes e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and ihc: "bnd caller"
-  shows "bnd (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+  shows "bnd (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))])"
 proof (intro allI impI)
   fix c' assume "ctx_key admiss startcontext
-      (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]) c'"
+      (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))]) c'"
   then obtain c where c: "ctx_key admiss startcontext caller c"
-    and adm: "admiss (sink_node caller) c (call_enter gs (CallEdge dst pars args) (sink_store caller)) c'"
+    and adm: "admiss (sink_node caller) c (call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller)) c'"
     by (auto elim: ctx_key_CallE)
   have mem: "sink_store caller \<in> acc (sink_node caller) c" using ihc c by blast
-  have "call_enter gs (CallEdge dst pars args) (sink_store caller) \<in> acc (FunctionEntry p) c'"
+  have "call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller) \<in> acc (FunctionEntry p) c'"
     by (rule CALL[OF e mem adm])
-  then show "sink_store (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])
-               \<in> acc (sink_node (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])) c'"
+  then show "sink_store (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))])
+               \<in> acc (sink_node (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))])) c'"
     by simp
 qed
 
@@ -118,33 +118,33 @@ text \<open>\<open>return_closed\<close>: the matched return.  \<open>ctx_key_en
   \<open>admiss\<close> (\<open>ADMISS_TOTAL\<close> supplies a witness), so \<open>COMB\<close> is applied at the SAME \<open>c1\<close>/\<open>c2\<close>
   pair the callee's own binding used --- never rediscovered independently.\<close>
 lemma return_closed:
-  assumes callee_val: "callee \<in> valid_ltr gs g S"
+  assumes callee_val: "callee \<in> valid_ltr \<Gamma> gs g S"
     and cof: "caller_of callee = Some caller"
     and res: "sink_node callee = FunctionResult p"
     and comb: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and ih_caller: "bnd caller"
     and ih_callee: "bnd callee"
   shows "bnd (Resume caller callee
-               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+               (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))"
 proof (intro allI impI)
   fix c1 assume "ctx_key admiss startcontext (Resume caller callee
-      (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])) c1"
+      (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))])) c1"
   hence ck1: "ctx_key admiss startcontext caller c1" by (auto elim: ctx_key_ResumeE)
   have s1: "sink_store caller \<in> acc (sink_node caller) c1" using ih_caller ck1 by blast
   obtain c2 where adm: "admiss (sink_node caller) c1 (entry_store callee) c2"
     using ADMISS_TOTAL by blast
   have ck2: "ctx_key admiss startcontext callee c2"
     using ctx_key_entry_invariant_iff[OF callee_val cof] ck1 adm by fastforce
-  have call_enter: "call_enter_store gs g (sink_node caller) (sink_store caller) (entry_store callee)"
+  have call_enter: "call_enter_store \<Gamma> gs g (sink_node caller) (sink_store caller) (entry_store callee)"
     using ctx_key_entry_invariant_call_enterD[OF callee_val cof] .
   have t2': "sink_store callee \<in> acc (sink_node callee) c2" using ih_callee ck2 by blast
   have t2: "sink_store callee \<in> acc (FunctionResult p) c2" using t2' res by simp
-  have "combine_collect gs dst (sink_store caller) (sink_store callee) \<in> acc cont c1"
+  have "combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee) \<in> acc cont c1"
     by (rule COMB[OF comb s1 adm t2 call_enter])
   then show "sink_store (Resume caller callee
-               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))
+               (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))
              \<in> acc (sink_node (Resume caller callee
-               (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))) c1"
+               (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))) c1"
     by (simp add: sink_node_def sink_store_def)
 qed
 
@@ -155,13 +155,13 @@ text \<open>The bound holds along the whole caller chain, by \<^const>\<open>val
   case needs: it recovers its caller structurally, and the caller lies in the callee's
   chain.\<close>
 lemma gamma_chain:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> \<forall>u \<in> callers t. bnd u"
+  "t \<in> valid_ltr \<Gamma> gs g S \<Longrightarrow> \<forall>u \<in> callers t. bnd u"
 proof (rule caller_chain_closure)
   fix s assume "s \<in> S"
   then show "bnd (Root [(cfg_entry g, s)])" by (rule root_closed)
 next
-  fix t a v s' assume ht: "t \<in> valid_ltr gs g S" and ch: "\<forall>u \<in> callers t. bnd u"
-    and e: "(sink_node t, a, v) \<in> intra g" and st: "s' \<in> edge_step a (sink_store t)"
+  fix t a v s' assume ht: "t \<in> valid_ltr \<Gamma> gs g S" and ch: "\<forall>u \<in> callers t. bnd u"
+    and e: "(sink_node t, a, v) \<in> intra g" and st: "s' \<in> edge_step \<Gamma> a (sink_store t)"
   have pt: "path t \<noteq> []" using ht valid_ltr_path_nonempty by blast
   have iht: "bnd t" using ch callers_refl by blast
   show "bnd (extend t (v, s'))" by (rule intra_closed[OF e st pt iht])
@@ -170,32 +170,32 @@ next
   assume ch: "\<forall>u \<in> callers caller. bnd u"
     and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   have ihc: "bnd caller" using ch callers_refl by blast
-  show "bnd (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+  show "bnd (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))])"
     by (rule call_closed[OF e ihc])
 next
   fix callee caller p dst pars args cont
-  assume cv: "callee \<in> valid_ltr gs g S" and ch: "\<forall>u \<in> callers callee. bnd u"
+  assume cv: "callee \<in> valid_ltr \<Gamma> gs g S" and ch: "\<forall>u \<in> callers callee. bnd u"
     and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
     and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
   have ih_caller: "bnd caller" using ch cof callers_caller_subset callers_refl by blast
   have ih_callee: "bnd callee" using ch callers_refl by blast
   show "bnd (Resume caller callee
-             (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+             (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))"
     by (rule return_closed[OF cv cof res e ih_caller ih_callee])
 qed
 
 text \<open>Every valid trace's sink lies in its own activation slot: \<^const>\<open>valid_ltr\<close> is
   soundly over-approximated by \<open>gamma_ltr\<close>.\<close>
-theorem valid_ltr_subset_gamma_ltr: "valid_ltr gs g S \<subseteq> gamma_ltr"
+theorem valid_ltr_subset_gamma_ltr: "valid_ltr \<Gamma> gs g S \<subseteq> gamma_ltr"
 proof (rule subsetI)
-  fix t assume "t \<in> valid_ltr gs g S"
+  fix t assume "t \<in> valid_ltr \<Gamma> gs g S"
   then have "\<forall>u \<in> callers t. bnd u" by (rule gamma_chain)
   then have "bnd t" using callers_refl by blast
   then show "t \<in> gamma_ltr" by (simp add: gamma_ltr_def)
 qed
 
 text \<open>The same statement in fixed-point form, via \<open>valid_ltr_eq_lfp\<close>.\<close>
-corollary lfp_ltr_F_subset_gamma_ltr: "lfp (ltr_F gs g S) \<subseteq> gamma_ltr"
+corollary lfp_ltr_F_subset_gamma_ltr: "lfp (ltr_F \<Gamma> gs g S) \<subseteq> gamma_ltr"
   using valid_ltr_subset_gamma_ltr by (simp add: valid_ltr_eq_lfp)
 
 subsection \<open>Node and context projection of the soundness bound\<close>
@@ -205,10 +205,10 @@ text \<open>Node projection: at any node \<open>v\<close>, the concrete collecti
   admissible context (\<open>ctx_key_exists\<close>), so the union is never taken over an empty witness
   set.\<close>
 theorem ltr_collect_subset_acc_Union:
-  "ltr_collect gs g S v \<subseteq> (\<Union>c. acc v c)"
+  "ltr_collect \<Gamma> gs g S v \<subseteq> (\<Union>c. acc v c)"
 proof (rule subsetI)
-  fix x assume "x \<in> ltr_collect gs g S v"
-  then obtain t where t: "t \<in> valid_ltr gs g S" "sink_node t = v" "sink_store t = x"
+  fix x assume "x \<in> ltr_collect \<Gamma> gs g S v"
+  then obtain t where t: "t \<in> valid_ltr \<Gamma> gs g S" "sink_node t = v" "sink_store t = x"
     by (rule ltr_collect_E)
   have bt: "bnd t" using valid_ltr_subset_gamma_ltr t(1) by (auto simp: gamma_ltr_def)
   obtain c where "ctx_key admiss startcontext t c"
@@ -232,7 +232,7 @@ text \<open>The interface is satisfiable for every graph, seed set, admissibilit
   remaining four obligations.\<close>
 lemma ltr_gamma_UNIV:
   assumes "\<And>u c s. \<exists>c'. admiss u c s c'"
-  shows "ltr_gamma g S (\<lambda>_ _. UNIV) admiss startcontext gs"
+  shows "ltr_gamma g S (\<lambda>_ _. UNIV) admiss startcontext gs \<Gamma>"
   using assms by unfold_locales auto
 
 subsection \<open>Monovariant semantic post-fixpoint\<close>
@@ -245,16 +245,16 @@ text \<open>
 \<close>
 lemma ltr_collect_semantic_postfix:
   fixes g :: cfg and B :: "cfg_node \<Rightarrow> store set" and S0 :: "store set" and v :: cfg_node
-    and gs :: "vname \<Rightarrow> bool"
+    and gs :: "vname \<Rightarrow> bool" and \<Gamma> :: tyenv
   assumes entry: "S0 \<subseteq> B (cfg_entry g)"
-    and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g \<Longrightarrow> s \<in> B u \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> s' \<in> B w"
+    and edge: "\<And>u a w s s'. (u, a, w) \<in> intra g \<Longrightarrow> s \<in> B u \<Longrightarrow> s' \<in> edge_step \<Gamma> a s \<Longrightarrow> s' \<in> B w"
     and call: "\<And>u dst pars args p cont s. (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B u \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
+        \<Longrightarrow> s \<in> B u \<Longrightarrow> call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> B (FunctionEntry p)"
     and combine: "\<And>cl dst pars args p cont s t. (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p) \<Longrightarrow> combine_collect gs dst s t \<in> B cont"
-  shows "ltr_collect gs g S0 v \<subseteq> B v"
+        \<Longrightarrow> s \<in> B cl \<Longrightarrow> t \<in> B (FunctionResult p) \<Longrightarrow> combine_collect \<Gamma> gs dst s t \<in> B cont"
+  shows "ltr_collect \<Gamma> gs g S0 v \<subseteq> B v"
 proof -
-  interpret G: ltr_gamma g S0 "\<lambda>v _. B v" "admiss_exact (\<lambda>_ _ _. ())" "()" gs
+  interpret G: ltr_gamma g S0 "\<lambda>v _. B v" "admiss_exact (\<lambda>_ _ _. ())" "()" gs \<Gamma>
   proof (standard, goal_cases ROOT EDGE ADMISS_TOTAL CALL COMB)
     case (ROOT s) then show ?case using entry by auto
   next
@@ -268,8 +268,8 @@ proof -
   qed
   show ?thesis
   proof (rule subsetI)
-    fix x assume "x \<in> ltr_collect gs g S0 v"
-    then obtain u where u: "u \<in> valid_ltr gs g S0" "sink_node u = v" "sink_store u = x"
+    fix x assume "x \<in> ltr_collect \<Gamma> gs g S0 v"
+    then obtain u where u: "u \<in> valid_ltr \<Gamma> gs g S0" "sink_node u = v" "sink_store u = x"
       by (rule ltr_collect_E)
     have gt: "G.bnd u" using G.valid_ltr_subset_gamma_ltr u(1) by (auto simp: G.gamma_ltr_def)
     have ck: "ctx_key (admiss_exact (\<lambda>_ _ _. ())) () u ()"
@@ -280,4 +280,3 @@ proof -
 qed
 
 end
-

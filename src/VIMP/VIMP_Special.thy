@@ -67,6 +67,40 @@ lemma special_result_ex [simp]: "\<exists>v. special_result \<Gamma> sc s v"
   by (cases sc) (auto simp: Let_def)
 
 text \<open>
+  \<open>taval\<close> collapses to the untyped \<open>aval\<close> whenever \<open>ik_norm\<close> never actually
+  truncates any value it is handed: every arithmetic leaf of \<open>taval\<close> norms once
+  more than \<open>aval\<close> does, and nothing else about the recursion differs. This is
+  the bridge a domain interpretation's own \<open>aval\<close>-stated soundness proof needs
+  to discharge the newer \<open>taval_syn\<close>/\<open>ik_norm\<close>-stated obligations a sound
+  transfer function's own soundness locale now states, without restating any
+  of those proofs against the typed evaluator directly.
+  (Lives here, not \<^theory>\<open>Voblint_VIMP.VIMP_Typing\<close>, because that theory
+  precedes \<^theory>\<open>Voblint_VIMP.VIMP_Expr\<close> in the session's layering and so has
+  no \<open>aval\<close> to relate \<open>taval\<close> to; this is the first theory importing both.)
+\<close>
+lemma taval_eq_aval:
+  assumes triv: "\<And>ik v. ik_norm ik v = v"
+  shows "taval G ik e s = aval e s"
+  by (induction e arbitrary: ik) (auto simp: Let_def triv)
+
+lemma taval_syn_eq_aval:
+  assumes triv: "\<And>ik v. ik_norm ik v = v"
+  shows "taval_syn G e s = aval e s"
+  unfolding taval_syn_def by (rule taval_eq_aval[OF triv])
+
+text \<open>Companion to \<open>taval_eq_aval\<close>: when \<open>ik_norm\<close> never truncates,
+  \<open>special_result\<close>'s \<open>Min\<close>/\<open>Max\<close> cases collapse to the untyped \<open>aval\<close>
+  minimum/maximum a domain's own soundness proof already establishes.\<close>
+lemma special_result_eq_aval:
+  assumes triv: "\<And>ik v. ik_norm ik v = v"
+  shows "special_result \<Gamma> sc s v \<longleftrightarrow>
+           (case sc of
+              Nondet_Int \<Rightarrow> True
+            | Min a b \<Rightarrow> v = min (aval a s) (aval b s)
+            | Max a b \<Rightarrow> v = max (aval a s) (aval b s))"
+  by (cases sc) (simp_all add: Let_def taval_eq_aval[OF triv])
+
+text \<open>
   \<open>special_mentions_global\<close> is \<open>special_call\<close>'s analogue of \<open>exp_mentions_global\<close>:
   whether evaluating the classified operation could read a global variable,
   needed wherever a special call's locality is at stake (mirroring how an

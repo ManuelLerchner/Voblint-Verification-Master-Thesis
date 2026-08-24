@@ -27,6 +27,14 @@ rule token = parse
   | "while"             { WHILE }
   | "true"              { BOOL_TRUE }
   | "false"             { BOOL_FALSE }
+  | "int8"              { TINT8 }
+  | "uint8"             { TUINT8 }
+  | "int16"             { TINT16 }
+  | "uint16"            { TUINT16 }
+  | "int32"             { TINT32 }
+  | "uint32"            { TUINT32 }
+  | "int64"             { TINT64 }
+  | "uint64"            { TUINT64 }
   | ":="                { ASSIGN }
   | "+"                 { PLUS }
   | "-"                 { MINUS }

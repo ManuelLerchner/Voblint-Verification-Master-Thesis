@@ -945,16 +945,16 @@ locale backward_domain =
   semantic_intersection intersect
     for intersect :: "'a::sound_domain => 'a => 'a" +
   fixes
-    aval_abs  :: "exp => 'a abs_state => 'a"
+    aval_abs  :: "tyenv => ikind => exp => 'a abs_state => 'a"
     and tobool :: "'a => bool option"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
-    and inv_plus  :: "'a => 'a => 'a => 'a * 'a"
-    and inv_minus :: "'a => 'a => 'a => 'a * 'a"
-    and inv_times :: "'a => 'a => 'a => 'a * 'a"
+    and inv_plus  :: "ikind => 'a => 'a => 'a => 'a * 'a"
+    and inv_minus :: "ikind => 'a => 'a => 'a => 'a * 'a"
+    and inv_times :: "ikind => 'a => 'a => 'a => 'a * 'a"
   assumes
     aval_abs_sound[intro]:
-      "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> aval e s \<in> gamma (aval_abs e \<sigma>)"
+      "(\<forall>x. s x \<in> gamma (\<sigma> x)) \<Longrightarrow> taval \<Gamma> ik e s \<in> gamma (aval_abs \<Gamma> ik e \<sigma>)"
   and inv_less_sound[intro]:
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 < n2) = res
        \<Longrightarrow> n1 \<in> gamma (fst (inv_less res a1 a2)) \<and> n2 \<in> gamma (snd (inv_less res a1 a2))"
@@ -962,30 +962,38 @@ locale backward_domain =
       "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> (n1 = n2) = res
        \<Longrightarrow> n1 \<in> gamma (fst (inv_eq res a1 a2)) \<and> n2 \<in> gamma (snd (inv_eq res a1 a2))"
   and inv_plus_sound[intro]:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 + n2 \<in> gamma r
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_plus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus r a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> ik_norm ik (n1 + n2) \<in> gamma r
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_plus ik r a1 a2)) \<and> n2 \<in> gamma (snd (inv_plus ik r a1 a2))"
   and inv_minus_sound[intro]:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 - n2 \<in> gamma r
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_minus r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus r a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> ik_norm ik (n1 - n2) \<in> gamma r
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_minus ik r a1 a2)) \<and> n2 \<in> gamma (snd (inv_minus ik r a1 a2))"
   and inv_times_sound[intro]:
-      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> n1 * n2 \<in> gamma r
-       \<Longrightarrow> n1 \<in> gamma (fst (inv_times r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times r a1 a2))"
+      "n1 \<in> gamma a1 \<Longrightarrow> n2 \<in> gamma a2 \<Longrightarrow> ik_norm ik (n1 * n2) \<in> gamma r
+       \<Longrightarrow> n1 \<in> gamma (fst (inv_times ik r a1 a2)) \<and> n2 \<in> gamma (snd (inv_times ik r a1 a2))"
   and tobool_sound:
       "tobool p = Some b \<Longrightarrow> i \<in> gamma p \<Longrightarrow> truthy i = b"
 begin
 
-fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
-    "afilter (V x) a \<sigma> = \<sigma>(x := intersect a (\<sigma> x))"
-  | "afilter (Plus  e1 e2) a \<sigma> =
-       (let (a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
-        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "afilter (Minus e1 e2) a \<sigma> =
-       (let (a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
-        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "afilter (Times e1 e2) a \<sigma> =
-       (let (a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
-        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "afilter _ a \<sigma> = \<sigma>"
+text \<open>
+  \<open>afilter\<close> takes an explicit \<open>ik\<close>: \<^const>\<open>taval\<close>'s \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>
+  evaluate their operands at the very same \<open>ik\<close> as the node itself (no
+  re-synthesis), so a caller narrowing through an arithmetic node must pass
+  that same \<open>ik\<close> down unchanged -- exactly mirroring \<^const>\<open>taval\<close>'s own
+  recursion. \<open>V x\<close>'s leaf case does not consult \<open>ik\<close> itself: the caller
+  already established \<open>a\<close> at the correct kind.
+\<close>
+fun afilter :: "tyenv => ikind => exp => 'a => 'a abs_state => 'a abs_state" where
+    "afilter \<Gamma> ik (V x) a \<sigma> = \<sigma>(x := intersect a (\<sigma> x))"
+  | "afilter \<Gamma> ik (Plus  e1 e2) a \<sigma> =
+       (let (a1, a2) = inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)
+        in afilter \<Gamma> ik e1 a1 (afilter \<Gamma> ik e2 a2 \<sigma>))"
+  | "afilter \<Gamma> ik (Minus e1 e2) a \<sigma> =
+       (let (a1, a2) = inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)
+        in afilter \<Gamma> ik e1 a1 (afilter \<Gamma> ik e2 a2 \<sigma>))"
+  | "afilter \<Gamma> ik (Times e1 e2) a \<sigma> =
+       (let (a1, a2) = inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)
+        in afilter \<Gamma> ik e1 a1 (afilter \<Gamma> ik e2 a2 \<sigma>))"
+  | "afilter \<Gamma> ik _ a \<sigma> = \<sigma>"
 
 text \<open>
   \<open>feasible\<close> is the forward half of Goblint's two-phase branch handling, as a
@@ -1007,9 +1015,18 @@ text \<open>
   is what makes \<open>feasible_mono\<close> hold.
 \<close>
 
-definition feasible :: "exp => bool => 'a abs_state => bool" where
-  "feasible e pol \<sigma> =
-     (\<not> is_bot (aval_abs e \<sigma>) \<and> tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol))"
+text \<open>
+  \<open>feasible\<close> tests a full sub-expression's own truthiness, exactly like
+  \<^const>\<open>taval_syn\<close>'s top-level entry: it synthesizes its own kind from \<open>e\<close>
+  itself (\<open>opk (esyn \<Gamma> e)\<close>) rather than taking one from the caller, since
+  \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>/\<open>Less\<close>/\<open>Eq\<close> -- the shapes \<open>feasible\<close> is ever called on --
+  never consult an externally supplied \<open>ik\<close> either.
+\<close>
+
+definition feasible :: "tyenv => exp => bool => 'a abs_state => bool" where
+  "feasible \<Gamma> e pol \<sigma> =
+     (let ik = opk (esyn \<Gamma> e) in
+      \<not> is_bot (aval_abs \<Gamma> ik e \<sigma>) \<and> tobool (aval_abs \<Gamma> ik e \<sigma>) \<noteq> Some (\<not> pol))"
 
 text \<open>
   Every state a concrete store witnesses is feasible for the polarity that
@@ -1019,17 +1036,18 @@ text \<open>
 \<close>
 
 lemma feasible_of_concrete:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (aval e s) = pol"
-  shows "feasible e pol \<sigma>"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and "truthy (taval_syn \<Gamma> e s) = pol"
+  shows "feasible \<Gamma> e pol \<sigma>"
 proof -
+  let ?ik = "opk (esyn \<Gamma> e)"
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
-  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have nb: "\<not> is_bot (aval_abs e \<sigma>)" using ea is_bot_correct by auto
-  have "tobool (aval_abs e \<sigma>) \<noteq> Some (\<not> pol)"
+  have ea: "taval \<Gamma> ?ik e s \<in> gamma (aval_abs \<Gamma> ?ik e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have nb: "\<not> is_bot (aval_abs \<Gamma> ?ik e \<sigma>)" using ea is_bot_correct by auto
+  have "tobool (aval_abs \<Gamma> ?ik e \<sigma>) \<noteq> Some (\<not> pol)"
   proof
-    assume "tobool (aval_abs e \<sigma>) = Some (\<not> pol)"
-    then have "truthy (aval e s) = (\<not> pol)" using tobool_sound[OF _ ea] by simp
-    then show False using assms(2) by simp
+    assume "tobool (aval_abs \<Gamma> ?ik e \<sigma>) = Some (\<not> pol)"
+    then have "truthy (taval \<Gamma> ?ik e s) = (\<not> pol)" using tobool_sound[OF _ ea] by simp
+    then show False using assms(2) by (simp add: taval_syn_def)
   qed
   with nb show ?thesis by (simp add: feasible_def)
 qed
@@ -1057,35 +1075,70 @@ text \<open>
   so gating an infeasible side removes it from the join exactly.
 \<close>
 
-fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
-    "bfilter (Less e1 e2) res \<sigma> =
-       (let (a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
-        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "bfilter (Not b) res \<sigma> = bfilter b (\<not> res) \<sigma>"
-  | "bfilter (And b1 b2) True  \<sigma> = bfilter b1 True  (bfilter b2 True  \<sigma>)"
-  | "bfilter (And b1 b2) False \<sigma> =
-       (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
-       \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
-  | "bfilter (Or  b1 b2) True  \<sigma> =
-       (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
-       \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
-  | "bfilter (Or  b1 b2) False \<sigma> = bfilter b1 False (bfilter b2 False \<sigma>)"
-  | "bfilter (Eq  e1 e2) res  \<sigma> =
-       (let (a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)
-        in afilter e1 a1 (afilter e2 a2 \<sigma>))"
-  | "bfilter e res \<sigma> =
-       (let (a1, a2) = inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)
-        in afilter e a1 \<sigma>)"
+text \<open>
+  \<open>bfilter\<close> takes no separate \<open>ik\<close>: every case synthesizes its own kind from
+  the sub-expression(s) it dispatches on (\<open>opk (esyn \<Gamma> _)\<close> or
+  \<open>opk (kjoin (esyn \<Gamma> _) (esyn \<Gamma> _))\<close>), exactly mirroring \<^const>\<open>taval\<close>'s
+  own \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> cases, none of which consult an
+  externally supplied kind either.
+\<close>
+fun bfilter :: "tyenv => exp => bool => 'a abs_state => 'a abs_state" where
+    "bfilter \<Gamma> (Less e1 e2) res \<sigma> =
+       (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2));
+            (a1, a2) = inv_less res (aval_abs \<Gamma> k e1 \<sigma>) (aval_abs \<Gamma> k e2 \<sigma>)
+        in afilter \<Gamma> k e1 a1 (afilter \<Gamma> k e2 a2 \<sigma>))"
+  | "bfilter \<Gamma> (Not b) res \<sigma> = bfilter \<Gamma> b (\<not> res) \<sigma>"
+  | "bfilter \<Gamma> (And b1 b2) True  \<sigma> = bfilter \<Gamma> b1 True  (bfilter \<Gamma> b2 True  \<sigma>)"
+  | "bfilter \<Gamma> (And b1 b2) False \<sigma> =
+       (if feasible \<Gamma> b1 False \<sigma> then bfilter \<Gamma> b1 False \<sigma> else bot)
+       \<squnion> (if feasible \<Gamma> b2 False \<sigma> then bfilter \<Gamma> b2 False \<sigma> else bot)"
+  | "bfilter \<Gamma> (Or  b1 b2) True  \<sigma> =
+       (if feasible \<Gamma> b1 True \<sigma> then bfilter \<Gamma> b1 True \<sigma> else bot)
+       \<squnion> (if feasible \<Gamma> b2 True \<sigma> then bfilter \<Gamma> b2 True \<sigma> else bot)"
+  | "bfilter \<Gamma> (Or  b1 b2) False \<sigma> = bfilter \<Gamma> b1 False (bfilter \<Gamma> b2 False \<sigma>)"
+  | "bfilter \<Gamma> (Eq  e1 e2) res  \<sigma> =
+       (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2));
+            (a1, a2) = inv_eq res (aval_abs \<Gamma> k e1 \<sigma>) (aval_abs \<Gamma> k e2 \<sigma>)
+        in afilter \<Gamma> k e1 a1 (afilter \<Gamma> k e2 a2 \<sigma>))"
+  | "bfilter \<Gamma> e res \<sigma> =
+       (let k = opk (esyn \<Gamma> e);
+            (a1, a2) = inv_eq (\<not> res) (aval_abs \<Gamma> k e \<sigma>) (aval_abs \<Gamma> k (N 0) \<sigma>)
+        in afilter \<Gamma> k e a1 \<sigma>)"
+text \<open>
+  \<open>styped \<Gamma> s\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Typing\<close>) is an explicit, honestly-scoped
+  premise, not a guess: \<open>\<^theory>\<open>Voblint_VIMP.VIMP_Proc\<close>\<close>'s
+  \<open>pstep_preserves_sstyped\<close>/\<open>pcompletes_preserves_styped\<close> already prove every
+  concrete store the small-step semantics reaches stays within its variables'
+  declared kinds. \<open>V x\<close>'s leaf case is genuinely unsound without it: \<open>taval \<Gamma>
+  ik (V x) s = ik_norm ik (s x)\<close>, and inverting that cast to recover \<open>s x \<in>
+  gamma a\<close> from \<open>ik_norm ik (s x) \<in> gamma a\<close> needs \<open>s x\<close> already in \<open>ik\<close>'s
+  range. That existing proof is not yet threaded through the CFG-execution /
+  activation-trace / DG-framework soundness chain up to this call site --
+  \<open>styped\<close> is carried here as an assumption pending that wiring, not
+  discharged by it.
+\<close>
 lemma afilter_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "aval e s \<in> gamma a"
-  shows "s \<in> \<lbrakk>afilter e a \<sigma>\<rbrakk>"
-using assms proof (induction e arbitrary: a \<sigma>)
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "taval \<Gamma> ik e s \<in> gamma a" "styped \<Gamma> s" "wt_exp \<Gamma> e ik"
+  shows "s \<in> \<lbrakk>afilter \<Gamma> ik e a \<sigma>\<rbrakk>"
+using assms proof (induction e arbitrary: ik a \<sigma>)
   case (N n)
   then show ?case by simp
 next
   case (V x)
+  have ik_choice: "ik = \<Gamma> x \<or> ik = ik_promote (\<Gamma> x)" using V.prems(4) by simp
+  have sx_range: "s x \<in> ik_range ik"
+  proof (cases "ik = \<Gamma> x")
+    case True
+    with V.prems(3) show ?thesis by (simp add: styped_def)
+  next
+    case False
+    with ik_choice have ik_prom: "ik = ik_promote (\<Gamma> x)" by simp
+    have "s x \<in> ik_range (\<Gamma> x)" using V.prems(3) by (simp add: styped_def)
+    with ik_range_promote_mono[of "\<Gamma> x"] ik_prom show ?thesis by auto
+  qed
+  have norm_id: "ik_norm ik (s x) = s x" by (rule ik_norm_id[OF sx_range])
   have sx_a: "s x \<in> gamma a"
-    using V.prems(2) by simp
+    using V.prems(2) norm_id by simp
   have sx_s: "s x \<in> gamma (\<sigma> x)"
     using gamma_stateD[OF V.prems(1)] by simp
   show ?case
@@ -1097,49 +1150,52 @@ next
   qed
 next
   case (Plus e1 e2)
-  obtain a1 a2 where pair: "(a1, a2) = inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
-    by (cases "inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  obtain a1 a2 where pair: "(a1, a2) = inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)"
+    by (cases "inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)") auto
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Plus.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have asum: "aval e1 s + aval e2 s \<in> gamma a" using Plus.prems(2) by simp
-  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
+  have e1a: "taval \<Gamma> ik e1 s \<in> gamma (aval_abs \<Gamma> ik e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "taval \<Gamma> ik e2 s \<in> gamma (aval_abs \<Gamma> ik e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have asum: "ik_norm ik (taval \<Gamma> ik e1 s + taval \<Gamma> ik e2 s) \<in> gamma a" using Plus.prems(2) by simp
+  have inv12: "taval \<Gamma> ik e1 s \<in> gamma a1 \<and> taval \<Gamma> ik e2 s \<in> gamma a2"
     using inv_plus_sound[OF e1a e2a asum] pair[symmetric] by simp
-  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
-    using Plus.IH(2)[OF Plus.prems(1) inv12[THEN conjunct2]] by simp
+  have wt1: "wt_exp \<Gamma> e1 ik" and wt2: "wt_exp \<Gamma> e2 ik" using Plus.prems(4) by simp_all
+  have gs2: "s \<in> \<lbrakk>afilter \<Gamma> ik e2 a2 \<sigma>\<rbrakk>"
+    using Plus.IH(2)[OF Plus.prems(1) inv12[THEN conjunct2] Plus.prems(3) wt2] by simp
   show ?case
     unfolding afilter.simps pair[symmetric] Let_def
-    using Plus.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+    using Plus.IH(1)[OF gs2 inv12[THEN conjunct1] Plus.prems(3) wt1] by simp
 next
   case (Minus e1 e2)
-  obtain a1 a2 where pair: "(a1, a2) = inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
-    by (cases "inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  obtain a1 a2 where pair: "(a1, a2) = inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)"
+    by (cases "inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)") auto
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Minus.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have adiff: "aval e1 s - aval e2 s \<in> gamma a" using Minus.prems(2) by simp
-  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
+  have e1a: "taval \<Gamma> ik e1 s \<in> gamma (aval_abs \<Gamma> ik e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "taval \<Gamma> ik e2 s \<in> gamma (aval_abs \<Gamma> ik e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have adiff: "ik_norm ik (taval \<Gamma> ik e1 s - taval \<Gamma> ik e2 s) \<in> gamma a" using Minus.prems(2) by simp
+  have inv12: "taval \<Gamma> ik e1 s \<in> gamma a1 \<and> taval \<Gamma> ik e2 s \<in> gamma a2"
     using inv_minus_sound[OF e1a e2a adiff] pair[symmetric] by simp
-  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
-    using Minus.IH(2)[OF Minus.prems(1) inv12[THEN conjunct2]] by simp
+  have wt1: "wt_exp \<Gamma> e1 ik" and wt2: "wt_exp \<Gamma> e2 ik" using Minus.prems(4) by simp_all
+  have gs2: "s \<in> \<lbrakk>afilter \<Gamma> ik e2 a2 \<sigma>\<rbrakk>"
+    using Minus.IH(2)[OF Minus.prems(1) inv12[THEN conjunct2] Minus.prems(3) wt2] by simp
   show ?case
     unfolding afilter.simps pair[symmetric] Let_def
-    using Minus.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+    using Minus.IH(1)[OF gs2 inv12[THEN conjunct1] Minus.prems(3) wt1] by simp
 next
   case (Times e1 e2)
-  obtain a1 a2 where pair: "(a1, a2) = inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
-    by (cases "inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  obtain a1 a2 where pair: "(a1, a2) = inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)"
+    by (cases "inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)") auto
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Times.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have aprod: "aval e1 s * aval e2 s \<in> gamma a" using Times.prems(2) by simp
-  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
+  have e1a: "taval \<Gamma> ik e1 s \<in> gamma (aval_abs \<Gamma> ik e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "taval \<Gamma> ik e2 s \<in> gamma (aval_abs \<Gamma> ik e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have aprod: "ik_norm ik (taval \<Gamma> ik e1 s * taval \<Gamma> ik e2 s) \<in> gamma a" using Times.prems(2) by simp
+  have inv12: "taval \<Gamma> ik e1 s \<in> gamma a1 \<and> taval \<Gamma> ik e2 s \<in> gamma a2"
     using inv_times_sound[OF e1a e2a aprod] pair[symmetric] by simp
-  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
-    using Times.IH(2)[OF Times.prems(1) inv12[THEN conjunct2]] by simp
+  have wt1: "wt_exp \<Gamma> e1 ik" and wt2: "wt_exp \<Gamma> e2 ik" using Times.prems(4) by simp_all
+  have gs2: "s \<in> \<lbrakk>afilter \<Gamma> ik e2 a2 \<sigma>\<rbrakk>"
+    using Times.IH(2)[OF Times.prems(1) inv12[THEN conjunct2] Times.prems(3) wt2] by simp
   show ?case
     unfolding afilter.simps pair[symmetric] Let_def
-    using Times.IH(1)[OF gs2 inv12[THEN conjunct1]] by simp
+    using Times.IH(1)[OF gs2 inv12[THEN conjunct1] Times.prems(3) wt1] by simp
 next
   case (Less e1 e2) then show ?case by simp
 next
@@ -1162,155 +1218,182 @@ text \<open>
   arithmetic constructor.
 \<close>
 lemma bfilter_default_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
-  shows "s \<in> \<lbrakk>afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma>\<rbrakk>"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (taval \<Gamma> (opk (esyn \<Gamma> e)) e s) = res" "styped \<Gamma> s" "wt_exp \<Gamma> e (opk (esyn \<Gamma> e))"
+  shows "s \<in> \<lbrakk>afilter \<Gamma> (opk (esyn \<Gamma> e)) e
+      (fst (inv_eq (\<not> res) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) e \<sigma>) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) (N 0) \<sigma>))) \<sigma>\<rbrakk>"
 proof -
+  let ?ik = "opk (esyn \<Gamma> e)"
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF assms(1)] .
-  have ea: "aval e s \<in> gamma (aval_abs e \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e0: "aval (N 0) s \<in> gamma (aval_abs (N 0) \<sigma>)" by (rule aval_abs_sound[of s \<sigma> "N 0", OF gs])
-  have eq0: "(aval e s = aval (N 0) s) = (\<not> res)" using assms(2) by auto
-  have "aval e s \<in> gamma (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>)))"
+  have ea: "taval \<Gamma> ?ik e s \<in> gamma (aval_abs \<Gamma> ?ik e \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e0: "taval \<Gamma> ?ik (N 0) s \<in> gamma (aval_abs \<Gamma> ?ik (N 0) \<sigma>)"
+    by (rule aval_abs_sound[of s \<sigma> \<Gamma> ?ik "N 0", OF gs])
+  have eq0: "(taval \<Gamma> ?ik e s = taval \<Gamma> ?ik (N 0) s) = (\<not> res)" using assms(2) by auto
+  have "taval \<Gamma> ?ik e s \<in> gamma (fst (inv_eq (\<not> res) (aval_abs \<Gamma> ?ik e \<sigma>) (aval_abs \<Gamma> ?ik (N 0) \<sigma>)))"
     using inv_eq_sound[OF ea e0 eq0] by simp
-  then show ?thesis using afilter_sound[OF assms(1)] by simp
+  then show ?thesis using afilter_sound[OF assms(1) _ assms(3) assms(4)] by simp
 qed
 
 lemma bfilter_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = res"
-  shows "s \<in> \<lbrakk>bfilter e res \<sigma>\<rbrakk>"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (taval_syn \<Gamma> e s) = res" "styped \<Gamma> s" "wt_exp \<Gamma> e (opk (esyn \<Gamma> e))"
+  shows "s \<in> \<lbrakk>bfilter \<Gamma> e res \<sigma>\<rbrakk>"
 using assms proof (induction e arbitrary: res \<sigma>)
-  case (N n) show ?case using bfilter_default_sound[OF N.prems(1) N.prems(2)] by simp
+  case (N n) show ?case
+    using bfilter_default_sound[OF N.prems(1) N.prems(2)[unfolded taval_syn_def] N.prems(3) N.prems(4)]
+    by simp
 next
   case (V x) show ?case
-    using bfilter_default_sound[OF V.prems(1) V.prems(2)]
+    using bfilter_default_sound[OF V.prems(1) V.prems(2)[unfolded taval_syn_def] V.prems(3) V.prems(4)]
     by (simp add: bfilter.simps Let_def case_prod_beta fun_upd_def)
 next
   case (Plus e1 e2) show ?case
-    using bfilter_default_sound[OF Plus.prems(1) Plus.prems(2)] by (simp add: Let_def case_prod_beta)
+    using bfilter_default_sound[OF Plus.prems(1) Plus.prems(2)[unfolded taval_syn_def]
+      Plus.prems(3) Plus.prems(4)]
+    by (simp add: Let_def case_prod_beta)
 next
   case (Minus e1 e2) show ?case
-    using bfilter_default_sound[OF Minus.prems(1) Minus.prems(2)] by (simp add: Let_def case_prod_beta)
+    using bfilter_default_sound[OF Minus.prems(1) Minus.prems(2)[unfolded taval_syn_def]
+      Minus.prems(3) Minus.prems(4)]
+    by (simp add: Let_def case_prod_beta)
 next
   case (Times e1 e2) show ?case
-    using bfilter_default_sound[OF Times.prems(1) Times.prems(2)] by (simp add: Let_def case_prod_beta)
+    using bfilter_default_sound[OF Times.prems(1) Times.prems(2)[unfolded taval_syn_def]
+      Times.prems(3) Times.prems(4)]
+    by (simp add: Let_def case_prod_beta)
 next
   case (Not e)
-  have bv': "truthy (aval e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
-  from Not.IH[OF Not.prems(1) bv'] show ?case by simp
+  have bv': "truthy (taval_syn \<Gamma> e s) = (\<not> res)" using Not.prems(2) by (auto simp: taval_syn_def split: if_splits)
+  have wte: "wt_exp \<Gamma> e (opk (esyn \<Gamma> e))" using Not.prems(4) by simp
+  from Not.IH[OF Not.prems(1) bv' Not.prems(3) wte] show ?case by simp
 next
   case (And e1 e2)
+  have wt1: "wt_exp \<Gamma> e1 (opk (esyn \<Gamma> e1))" and wt2: "wt_exp \<Gamma> e2 (opk (esyn \<Gamma> e2))"
+    using And.prems(4) by simp_all
   show ?case proof (cases res)
     case True
-    have v1: "truthy (aval e1 s) = True" and v2: "truthy (aval e2 s) = True"
-      using And.prems(2) True by (auto split: if_splits)
-    have gs2: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
-      using And.IH(2)[OF And.prems(1) v2] by simp
+    have v1: "truthy (taval_syn \<Gamma> e1 s) = True" and v2: "truthy (taval_syn \<Gamma> e2 s) = True"
+      using And.prems(2) True by (auto simp: taval_syn_def split: if_splits)
+    have gs2: "s \<in> \<lbrakk>bfilter \<Gamma> e2 True \<sigma>\<rbrakk>"
+      using And.IH(2)[OF And.prems(1) v2 And.prems(3) wt2] by simp
     show ?thesis
-      using And.IH(1)[OF gs2 v1] by (simp add: True)
+      using And.IH(1)[OF gs2 v1 And.prems(3) wt1] by (simp add: True)
   next
     case False
-    have disj: "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
-      using And.prems(2) False by (auto split: if_splits)
-    show ?thesis proof (cases "truthy (aval e1 s)")
+    have disj: "\<not> truthy (taval_syn \<Gamma> e1 s) \<or> \<not> truthy (taval_syn \<Gamma> e2 s)"
+      using And.prems(2) False by (auto simp: taval_syn_def split: if_splits)
+    show ?thesis proof (cases "truthy (taval_syn \<Gamma> e1 s)")
       case b1F: False
-      have v1: "truthy (aval e1 s) = False" using b1F by simp
-      have h: "s \<in> \<lbrakk>bfilter e1 False \<sigma>\<rbrakk>"
-        using And.IH(1)[OF And.prems(1) v1] by simp
-      have g: "feasible e1 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v1])
-      have sup1: "s \<in> \<lbrakk>bfilter e1 False \<sigma>
-                       \<squnion> (if feasible e2 False \<sigma> then bfilter e2 False \<sigma> else bot)\<rbrakk>"
+      have v1: "truthy (taval_syn \<Gamma> e1 s) = False" using b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter \<Gamma> e1 False \<sigma>\<rbrakk>"
+        using And.IH(1)[OF And.prems(1) v1 And.prems(3) wt1] by simp
+      have g: "feasible \<Gamma> e1 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v1])
+      have sup1: "s \<in> \<lbrakk>bfilter \<Gamma> e1 False \<sigma>
+                       \<squnion> (if feasible \<Gamma> e2 False \<sigma> then bfilter \<Gamma> e2 False \<sigma> else bot)\<rbrakk>"
         using subsetD[OF gamma_state_sup_ub1 h] .
-      have eqb: "bfilter (And e1 e2) res \<sigma>
-                   = bfilter e1 False \<sigma>
-                     \<squnion> (if feasible e2 False \<sigma> then bfilter e2 False \<sigma> else bot)"
+      have eqb: "bfilter \<Gamma> (And e1 e2) res \<sigma>
+                   = bfilter \<Gamma> e1 False \<sigma>
+                     \<squnion> (if feasible \<Gamma> e2 False \<sigma> then bfilter \<Gamma> e2 False \<sigma> else bot)"
         using False g by simp
-      show ?thesis unfolding eqb by (rule sup1)    next
+      show ?thesis unfolding eqb by (rule sup1)
+    next
       case b1T: True
-      have v2: "truthy (aval e2 s) = False" using disj b1T by simp
-      have h: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
-        using And.IH(2)[OF And.prems(1) v2] by simp
-      have g: "feasible e2 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v2])
-      have sup2: "s \<in> \<lbrakk>(if feasible e1 False \<sigma> then bfilter e1 False \<sigma> else bot)
-                       \<squnion> bfilter e2 False \<sigma>\<rbrakk>"
+      have v2: "truthy (taval_syn \<Gamma> e2 s) = False" using disj b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter \<Gamma> e2 False \<sigma>\<rbrakk>"
+        using And.IH(2)[OF And.prems(1) v2 And.prems(3) wt2] by simp
+      have g: "feasible \<Gamma> e2 False \<sigma>" by (rule feasible_of_concrete[OF And.prems(1) v2])
+      have sup2: "s \<in> \<lbrakk>(if feasible \<Gamma> e1 False \<sigma> then bfilter \<Gamma> e1 False \<sigma> else bot)
+                       \<squnion> bfilter \<Gamma> e2 False \<sigma>\<rbrakk>"
         using subsetD[OF gamma_state_sup_ub2 h] .
-      have eqb: "bfilter (And e1 e2) res \<sigma>
-                   = (if feasible e1 False \<sigma> then bfilter e1 False \<sigma> else bot)
-                     \<squnion> bfilter e2 False \<sigma>"
+      have eqb: "bfilter \<Gamma> (And e1 e2) res \<sigma>
+                   = (if feasible \<Gamma> e1 False \<sigma> then bfilter \<Gamma> e1 False \<sigma> else bot)
+                     \<squnion> bfilter \<Gamma> e2 False \<sigma>"
         using False g by simp
-      show ?thesis unfolding eqb by (rule sup2)    qed
+      show ?thesis unfolding eqb by (rule sup2)
+    qed
   qed
 next
   case (Or e1 e2)
+  have wt1: "wt_exp \<Gamma> e1 (opk (esyn \<Gamma> e1))" and wt2: "wt_exp \<Gamma> e2 (opk (esyn \<Gamma> e2))"
+    using Or.prems(4) by simp_all
   show ?case proof (cases res)
     case True
-    have disj: "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using Or.prems(2) True by (auto split: if_splits)
-    show ?thesis proof (cases "truthy (aval e1 s)")
+    have disj: "truthy (taval_syn \<Gamma> e1 s) \<or> truthy (taval_syn \<Gamma> e2 s)"
+      using Or.prems(2) True by (auto simp: taval_syn_def split: if_splits)
+    show ?thesis proof (cases "truthy (taval_syn \<Gamma> e1 s)")
       case b1T: True
-      have v1: "truthy (aval e1 s) = True" using b1T by simp
-      have h: "s \<in> \<lbrakk>bfilter e1 True \<sigma>\<rbrakk>"
-        using Or.IH(1)[OF Or.prems(1) v1] by simp
-      have g: "feasible e1 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v1])
-      have sup1: "s \<in> \<lbrakk>bfilter e1 True \<sigma>
-                       \<squnion> (if feasible e2 True \<sigma> then bfilter e2 True \<sigma> else bot)\<rbrakk>"
+      have v1: "truthy (taval_syn \<Gamma> e1 s) = True" using b1T by simp
+      have h: "s \<in> \<lbrakk>bfilter \<Gamma> e1 True \<sigma>\<rbrakk>"
+        using Or.IH(1)[OF Or.prems(1) v1 Or.prems(3) wt1] by simp
+      have g: "feasible \<Gamma> e1 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v1])
+      have sup1: "s \<in> \<lbrakk>bfilter \<Gamma> e1 True \<sigma>
+                       \<squnion> (if feasible \<Gamma> e2 True \<sigma> then bfilter \<Gamma> e2 True \<sigma> else bot)\<rbrakk>"
         using subsetD[OF gamma_state_sup_ub1 h] .
-      have eqb: "bfilter (Or e1 e2) res \<sigma>
-                   = bfilter e1 True \<sigma>
-                     \<squnion> (if feasible e2 True \<sigma> then bfilter e2 True \<sigma> else bot)"
+      have eqb: "bfilter \<Gamma> (Or e1 e2) res \<sigma>
+                   = bfilter \<Gamma> e1 True \<sigma>
+                     \<squnion> (if feasible \<Gamma> e2 True \<sigma> then bfilter \<Gamma> e2 True \<sigma> else bot)"
         using True g by simp
-      show ?thesis unfolding eqb by (rule sup1)    next
+      show ?thesis unfolding eqb by (rule sup1)
+    next
       case b1F: False
-      have v2: "truthy (aval e2 s) = True" using disj b1F by simp
-      have h: "s \<in> \<lbrakk>bfilter e2 True \<sigma>\<rbrakk>"
-        using Or.IH(2)[OF Or.prems(1) v2] by simp
-      have g: "feasible e2 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v2])
-      have sup2: "s \<in> \<lbrakk>(if feasible e1 True \<sigma> then bfilter e1 True \<sigma> else bot)
-                       \<squnion> bfilter e2 True \<sigma>\<rbrakk>"
+      have v2: "truthy (taval_syn \<Gamma> e2 s) = True" using disj b1F by simp
+      have h: "s \<in> \<lbrakk>bfilter \<Gamma> e2 True \<sigma>\<rbrakk>"
+        using Or.IH(2)[OF Or.prems(1) v2 Or.prems(3) wt2] by simp
+      have g: "feasible \<Gamma> e2 True \<sigma>" by (rule feasible_of_concrete[OF Or.prems(1) v2])
+      have sup2: "s \<in> \<lbrakk>(if feasible \<Gamma> e1 True \<sigma> then bfilter \<Gamma> e1 True \<sigma> else bot)
+                       \<squnion> bfilter \<Gamma> e2 True \<sigma>\<rbrakk>"
         using subsetD[OF gamma_state_sup_ub2 h] .
-      have eqb: "bfilter (Or e1 e2) res \<sigma>
-                   = (if feasible e1 True \<sigma> then bfilter e1 True \<sigma> else bot)
-                     \<squnion> bfilter e2 True \<sigma>"
+      have eqb: "bfilter \<Gamma> (Or e1 e2) res \<sigma>
+                   = (if feasible \<Gamma> e1 True \<sigma> then bfilter \<Gamma> e1 True \<sigma> else bot)
+                     \<squnion> bfilter \<Gamma> e2 True \<sigma>"
         using True g by simp
-      show ?thesis unfolding eqb by (rule sup2)    qed
+      show ?thesis unfolding eqb by (rule sup2)
+    qed
   next
     case False
-    have v1: "truthy (aval e1 s) = False" and v2: "truthy (aval e2 s) = False"
-      using Or.prems(2) False by (auto split: if_splits)
-    have gs2: "s \<in> \<lbrakk>bfilter e2 False \<sigma>\<rbrakk>"
-      using Or.IH(2)[OF Or.prems(1) v2] by simp
+    have v1: "truthy (taval_syn \<Gamma> e1 s) = False" and v2: "truthy (taval_syn \<Gamma> e2 s) = False"
+      using Or.prems(2) False by (auto simp: taval_syn_def split: if_splits)
+    have gs2: "s \<in> \<lbrakk>bfilter \<Gamma> e2 False \<sigma>\<rbrakk>"
+      using Or.IH(2)[OF Or.prems(1) v2 Or.prems(3) wt2] by simp
     show ?thesis
-      using Or.IH(1)[OF gs2 v1] by (simp add: False)
-      qed
+      using Or.IH(1)[OF gs2 v1 Or.prems(3) wt1] by (simp add: False)
+  qed
 next
   case (Less e1 e2)
-  obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
-    by (cases "inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
+  have wt1: "wt_exp \<Gamma> e1 ?k" and wt2: "wt_exp \<Gamma> e2 ?k" using Less.prems(4) by (simp_all add: Let_def)
+  obtain a1 a2 where pair: "(a1, a2) = inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>) (aval_abs \<Gamma> ?k e2 \<sigma>)"
+    by (cases "inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>) (aval_abs \<Gamma> ?k e2 \<sigma>)") auto
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Less.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have less: "(aval e1 s < aval e2 s) = res" using Less.prems(2) by (auto split: if_splits)
-  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
+  have e1a: "taval \<Gamma> ?k e1 s \<in> gamma (aval_abs \<Gamma> ?k e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "taval \<Gamma> ?k e2 s \<in> gamma (aval_abs \<Gamma> ?k e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have less: "(taval \<Gamma> ?k e1 s < taval \<Gamma> ?k e2 s) = res"
+    using Less.prems(2) by (auto simp: taval_syn_def Let_def split: if_splits)
+  have inv12: "taval \<Gamma> ?k e1 s \<in> gamma a1 \<and> taval \<Gamma> ?k e2 s \<in> gamma a2"
     using inv_less_sound[OF e1a e2a less] pair[symmetric] by simp
-  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
-    using afilter_sound[OF Less.prems(1) inv12[THEN conjunct2]] by simp
+  have gs2: "s \<in> \<lbrakk>afilter \<Gamma> ?k e2 a2 \<sigma>\<rbrakk>"
+    using afilter_sound[OF Less.prems(1) inv12[THEN conjunct2] Less.prems(3) wt2] by simp
   show ?case
     unfolding bfilter.simps pair[symmetric] Let_def
-    using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
+    using afilter_sound[OF gs2 inv12[THEN conjunct1] Less.prems(3) wt1] by simp
 next
   case (Eq e1 e2)
-  obtain a1 a2 where pair: "(a1, a2) = inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)"
-    by (cases "inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)") auto
+  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
+  have wt1: "wt_exp \<Gamma> e1 ?k" and wt2: "wt_exp \<Gamma> e2 ?k" using Eq.prems(4) by (simp_all add: Let_def)
+  obtain a1 a2 where pair: "(a1, a2) = inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>) (aval_abs \<Gamma> ?k e2 \<sigma>)"
+    by (cases "inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>) (aval_abs \<Gamma> ?k e2 \<sigma>)") auto
   have gs: "\<forall>x. s x \<in> gamma (\<sigma> x)" using gamma_stateD[OF Eq.prems(1)] .
-  have e1a: "aval e1 s \<in> gamma (aval_abs e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have e2a: "aval e2 s \<in> gamma (aval_abs e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
-  have eq: "(aval e1 s = aval e2 s) = res" using Eq.prems(2) by (auto split: if_splits)
-  have inv12: "aval e1 s \<in> gamma a1 \<and> aval e2 s \<in> gamma a2"
+  have e1a: "taval \<Gamma> ?k e1 s \<in> gamma (aval_abs \<Gamma> ?k e1 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have e2a: "taval \<Gamma> ?k e2 s \<in> gamma (aval_abs \<Gamma> ?k e2 \<sigma>)" using aval_abs_sound[OF gs] by simp
+  have eq: "(taval \<Gamma> ?k e1 s = taval \<Gamma> ?k e2 s) = res"
+    using Eq.prems(2) by (auto simp: taval_syn_def Let_def split: if_splits)
+  have inv12: "taval \<Gamma> ?k e1 s \<in> gamma a1 \<and> taval \<Gamma> ?k e2 s \<in> gamma a2"
     using inv_eq_sound[OF e1a e2a eq] pair[symmetric] by simp
-  have gs2: "s \<in> \<lbrakk>afilter e2 a2 \<sigma>\<rbrakk>"
-    using afilter_sound[OF Eq.prems(1) inv12[THEN conjunct2]] by simp
+  have gs2: "s \<in> \<lbrakk>afilter \<Gamma> ?k e2 a2 \<sigma>\<rbrakk>"
+    using afilter_sound[OF Eq.prems(1) inv12[THEN conjunct2] Eq.prems(3) wt2] by simp
   show ?case
     unfolding bfilter.simps pair[symmetric] Let_def
-    using afilter_sound[OF gs2 inv12[THEN conjunct1]] by simp
+    using afilter_sound[OF gs2 inv12[THEN conjunct1] Eq.prems(3) wt1] by simp
 qed
+
 
 text \<open>
   \<open>branch_lifted\<close> is the canonical Goblint-aligned branch semantics: the
@@ -1332,17 +1415,17 @@ text \<open>
   \<open>domain_transfer\<close>'s \<open>tf_branch\<close> field (and hence \<open>apply_tf\<close>) and the
   executable mirror: it collapses \<open>Bot\<close> to ordinary \<open>bot\<close>, so a caller that
   never needs to distinguish "no successor" from "successor whose store is
-  bottom" can keep working with plain \<open>abs_state\<close>. The routed D/G pipeline
+  bottom" can keep working with plain \<open>abs_state\<close>. The routed D/\<Gamma> pipeline
   instead consumes \<open>branch_lifted\<close> directly, so that a dead branch never has to
   be reconstructed as a whole-state-bottom value indistinguishable from an
   ordinary local/global-restricted result.
 \<close>
 
-definition branch_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
-  "branch_lifted e pol \<sigma> = (if feasible e pol \<sigma> then Lifted (bfilter e pol \<sigma>) else Bot)"
+definition branch_lifted :: "tyenv => exp => bool => 'a abs_state => 'a abs_state lifted" where
+  "branch_lifted \<Gamma> e pol \<sigma> = (if feasible \<Gamma> e pol \<sigma> then Lifted (bfilter \<Gamma> e pol \<sigma>) else Bot)"
 
-definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
-  "branch e pol \<sigma> = (case branch_lifted e pol \<sigma> of Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>')"
+definition branch :: "tyenv => exp => bool => 'a abs_state => 'a abs_state" where
+  "branch \<Gamma> e pol \<sigma> = (case branch_lifted \<Gamma> e pol \<sigma> of Bot \<Rightarrow> bot | Lifted \<sigma>' \<Rightarrow> \<sigma>')"
 
 text \<open>
   The plain-state case split, recovered as a lemma rather than the primitive
@@ -1352,7 +1435,7 @@ text \<open>
 \<close>
 
 lemma branch_unfold:
-  "branch e pol \<sigma> = (if feasible e pol \<sigma> then bfilter e pol \<sigma> else bot)"
+  "branch \<Gamma> e pol \<sigma> = (if feasible \<Gamma> e pol \<sigma> then bfilter \<Gamma> e pol \<sigma> else bot)"
   unfolding branch_def branch_lifted_def by simp
 
 text \<open>
@@ -1366,27 +1449,29 @@ text \<open>
 \<close>
 
 lemma bfilter_And_False_branch:
-  "bfilter (And b1 b2) False \<sigma> = branch b1 False \<sigma> \<squnion> branch b2 False \<sigma>"
+  "bfilter \<Gamma> (And b1 b2) False \<sigma> = branch \<Gamma> b1 False \<sigma> \<squnion> branch \<Gamma> b2 False \<sigma>"
   by (simp add: branch_unfold)
 
 lemma bfilter_Or_True_branch:
-  "bfilter (Or b1 b2) True \<sigma> = branch b1 True \<sigma> \<squnion> branch b2 True \<sigma>"
+  "bfilter \<Gamma> (Or b1 b2) True \<sigma> = branch \<Gamma> b1 True \<sigma> \<squnion> branch \<Gamma> b2 True \<sigma>"
   by (simp add: branch_unfold)
+
 lemma branch_lifted_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
-  shows "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (taval_syn \<Gamma> e s) = pol" "styped \<Gamma> s" "wt_exp \<Gamma> e (opk (esyn \<Gamma> e))"
+  shows "s \<in> gamma_state_lift (branch_lifted \<Gamma> e pol \<sigma>)"
 proof -
-  have "feasible e pol \<sigma>" by (rule feasible_of_concrete[OF assms])
+  have "feasible \<Gamma> e pol \<sigma>" by (rule feasible_of_concrete[OF assms(1,2)])
   then show ?thesis
-    using bfilter_sound[OF assms] by (simp add: branch_lifted_def)
+    using bfilter_sound[OF assms(1,2,3,4)] by (simp add: branch_lifted_def)
 qed
+
 lemma branch_sound:
-  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (aval e s) = pol"
-  shows "s \<in> \<lbrakk>branch e pol \<sigma>\<rbrakk>"
+  assumes "s \<in> \<lbrakk>\<sigma>\<rbrakk>" "truthy (taval_syn \<Gamma> e s) = pol" "styped \<Gamma> s" "wt_exp \<Gamma> e (opk (esyn \<Gamma> e))"
+  shows "s \<in> \<lbrakk>branch \<Gamma> e pol \<sigma>\<rbrakk>"
 proof -
-  have "s \<in> gamma_state_lift (branch_lifted e pol \<sigma>)" by (rule branch_lifted_sound[OF assms])
+  have "s \<in> gamma_state_lift (branch_lifted \<Gamma> e pol \<sigma>)" by (rule branch_lifted_sound[OF assms])
   then show ?thesis
-    unfolding branch_def by (cases "branch_lifted e pol \<sigma>") simp_all
+    unfolding branch_def by (cases "branch_lifted \<Gamma> e pol \<sigma>") simp_all
 qed
 
 text \<open>
@@ -1398,7 +1483,7 @@ text \<open>
   case split.
 \<close>
 
-lemma branch_le_bfilter: "branch e pol \<sigma> \<le> bfilter e pol \<sigma>"
+lemma branch_le_bfilter: "branch \<Gamma> e pol \<sigma> \<le> bfilter \<Gamma> e pol \<sigma>"
   unfolding branch_unfold by (auto split: option.splits)
 
 end
@@ -1415,23 +1500,25 @@ text \<open>
   one proof instead of each restating the same trivial obligation.
 \<close>
 
-definition inv_conservative :: "'a => 'a => 'a => 'a * 'a" where
-  "inv_conservative r a1 a2 = (a1, a2)"
+definition inv_conservative :: "ikind => 'a => 'a => 'a => 'a * 'a" where
+  "inv_conservative ik r a1 a2 = (a1, a2)"
 
 lemma inv_conservative_sound:
   fixes a1 a2 :: "'a::sound_domain"
   assumes "n1 \<in> gamma a1" and "n2 \<in> gamma a2"
-  shows "n1 \<in> gamma (fst (inv_conservative r a1 a2)) \<and> n2 \<in> gamma (snd (inv_conservative r a1 a2))"
+  shows
+    "n1 \<in> gamma (fst (inv_conservative ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_conservative ik r a1 a2))"
   using assms by (simp add: inv_conservative_def)
 
 lemma inv_conservative_reductive1:
   fixes a1 a2 :: "'a::sound_domain"
-  shows "fst (inv_conservative r a1 a2) \<le> a1"
+  shows "fst (inv_conservative ik r a1 a2) \<le> a1"
   by (simp add: inv_conservative_def)
 
 lemma inv_conservative_reductive2:
   fixes a1 a2 :: "'a::sound_domain"
-  shows "snd (inv_conservative r a1 a2) \<le> a2"
+  shows "snd (inv_conservative ik r a1 a2) \<le> a2"
   by (simp add: inv_conservative_def)
 
 text \<open>
@@ -1505,24 +1592,27 @@ locale backward_domain_refined = backward_domain +
   assumes intersect_mono[intro]:
       "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
   and aval_abs_mono[intro]:
-      "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2"
+      "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> aval_abs \<Gamma> ik e \<sigma>1 \<le> aval_abs \<Gamma> ik e \<sigma>2"
   and inv_less_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_less res x1 y1) (inv_less res x2 y2)"
   and inv_eq_mono:
       "x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_eq res x1 y1) (inv_eq res x2 y2)"
   and inv_plus_mono:
-      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_plus r1 x1 y1) (inv_plus r2 x2 y2)"
+      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       le_pair (inv_plus ik r1 x1 y1) (inv_plus ik r2 x2 y2)"
   and inv_minus_mono:
-      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_minus r1 x1 y1) (inv_minus r2 x2 y2)"
+      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       le_pair (inv_minus ik r1 x1 y1) (inv_minus ik r2 x2 y2)"
   and inv_times_mono:
-      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow> le_pair (inv_times r1 x1 y1) (inv_times r2 x2 y2)"
+      "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
+       le_pair (inv_times ik r1 x1 y1) (inv_times ik r2 x2 y2)"
   and intersect_reductive1[intro]: "intersect a b \<le> a"
   and intersect_reductive2[intro]: "intersect a b \<le> b"
   and inv_less_reductive: "le_pair (inv_less res a1 a2) (a1, a2)"
   and inv_eq_reductive: "le_pair (inv_eq res a1 a2) (a1, a2)"
-  and inv_plus_reductive: "le_pair (inv_plus r a1 a2) (a1, a2)"
-  and inv_minus_reductive: "le_pair (inv_minus r a1 a2) (a1, a2)"
-  and inv_times_reductive: "le_pair (inv_times r a1 a2) (a1, a2)"
+  and inv_plus_reductive: "le_pair (inv_plus ik r a1 a2) (a1, a2)"
+  and inv_minus_reductive: "le_pair (inv_minus ik r a1 a2) (a1, a2)"
+  and inv_times_reductive: "le_pair (inv_times ik r a1 a2) (a1, a2)"
   and tobool_mono:
       "\<not> is_bot (p1::'a) \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> tobool p2 = Some (bv::bool) \<Longrightarrow> tobool p1 = Some bv"
 begin
@@ -1540,19 +1630,19 @@ lemma inv_eq_reductive1: "fst (inv_eq res a1 a2) \<le> a1"
 lemma inv_eq_reductive2: "snd (inv_eq res a1 a2) \<le> a2"
   using le_pair_snd[OF inv_eq_reductive] by simp
 
-lemma inv_plus_reductive1: "fst (inv_plus r a1 a2) \<le> a1"
+lemma inv_plus_reductive1: "fst (inv_plus ik r a1 a2) \<le> a1"
   using le_pair_fst[OF inv_plus_reductive] by simp
-lemma inv_plus_reductive2: "snd (inv_plus r a1 a2) \<le> a2"
+lemma inv_plus_reductive2: "snd (inv_plus ik r a1 a2) \<le> a2"
   using le_pair_snd[OF inv_plus_reductive] by simp
 
-lemma inv_minus_reductive1: "fst (inv_minus r a1 a2) \<le> a1"
+lemma inv_minus_reductive1: "fst (inv_minus ik r a1 a2) \<le> a1"
   using le_pair_fst[OF inv_minus_reductive] by simp
-lemma inv_minus_reductive2: "snd (inv_minus r a1 a2) \<le> a2"
+lemma inv_minus_reductive2: "snd (inv_minus ik r a1 a2) \<le> a2"
   using le_pair_snd[OF inv_minus_reductive] by simp
 
-lemma inv_times_reductive1: "fst (inv_times r a1 a2) \<le> a1"
+lemma inv_times_reductive1: "fst (inv_times ik r a1 a2) \<le> a1"
   using le_pair_fst[OF inv_times_reductive] by simp
-lemma inv_times_reductive2: "snd (inv_times r a1 a2) \<le> a2"
+lemma inv_times_reductive2: "snd (inv_times ik r a1 a2) \<le> a2"
   using le_pair_snd[OF inv_times_reductive] by simp
 
 text \<open>Componentwise conjunctions of each pair-shaped monotonicity assumption, used by
@@ -1572,20 +1662,20 @@ lemma inv_eq_mono_conj:
 
 lemma inv_plus_mono_conj:
   "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_plus r1 x1 y1) \<le> fst (inv_plus r2 x2 y2) \<and>
-   snd (inv_plus r1 x1 y1) \<le> snd (inv_plus r2 x2 y2)"
+   fst (inv_plus ik r1 x1 y1) \<le> fst (inv_plus ik r2 x2 y2) \<and>
+   snd (inv_plus ik r1 x1 y1) \<le> snd (inv_plus ik r2 x2 y2)"
   using inv_plus_mono le_pair_fst le_pair_snd by metis
 
 lemma inv_minus_mono_conj:
   "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_minus r1 x1 y1) \<le> fst (inv_minus r2 x2 y2) \<and>
-   snd (inv_minus r1 x1 y1) \<le> snd (inv_minus r2 x2 y2)"
+   fst (inv_minus ik r1 x1 y1) \<le> fst (inv_minus ik r2 x2 y2) \<and>
+   snd (inv_minus ik r1 x1 y1) \<le> snd (inv_minus ik r2 x2 y2)"
   using inv_minus_mono le_pair_fst le_pair_snd by metis
 
 lemma inv_times_mono_conj:
   "r1 \<le> r2 \<Longrightarrow> x1 \<le> x2 \<Longrightarrow> y1 \<le> y2 \<Longrightarrow>
-   fst (inv_times r1 x1 y1) \<le> fst (inv_times r2 x2 y2) \<and>
-   snd (inv_times r1 x1 y1) \<le> snd (inv_times r2 x2 y2)"
+   fst (inv_times ik r1 x1 y1) \<le> fst (inv_times ik r2 x2 y2) \<and>
+   snd (inv_times ik r1 x1 y1) \<le> snd (inv_times ik r2 x2 y2)"
   using inv_times_mono le_pair_fst le_pair_snd by metis
 
 text \<open>Bottom-preservation, bare (not \<open>[intro]\<close>): @{term "intersect_bot1"}/@{term "intersect_bot2"}
@@ -1608,55 +1698,57 @@ lemma inv_eq_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_eq res a1 a2
 lemma inv_eq_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_eq res a1 a2))"
   using inv_eq_reductive2 is_bot_mono by blast
 
-lemma inv_plus_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_plus r a1 a2))"
+lemma inv_plus_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_plus ik r a1 a2))"
   using inv_plus_reductive1 is_bot_mono by blast
-lemma inv_plus_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_plus r a1 a2))"
+lemma inv_plus_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_plus ik r a1 a2))"
   using inv_plus_reductive2 is_bot_mono by blast
 
-lemma inv_minus_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_minus r a1 a2))"
+lemma inv_minus_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_minus ik r a1 a2))"
   using inv_minus_reductive1 is_bot_mono by blast
-lemma inv_minus_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_minus r a1 a2))"
+lemma inv_minus_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_minus ik r a1 a2))"
   using inv_minus_reductive2 is_bot_mono by blast
 
-lemma inv_times_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_times r a1 a2))"
+lemma inv_times_fst_bot: "is_bot a1 \<Longrightarrow> is_bot (fst (inv_times ik r a1 a2))"
   using inv_times_reductive1 is_bot_mono by blast
-lemma inv_times_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_times r a1 a2))"
+lemma inv_times_snd_bot: "is_bot a2 \<Longrightarrow> is_bot (snd (inv_times ik r a1 a2))"
   using inv_times_reductive2 is_bot_mono by blast
 
 text \<open>Expose the @{term afilter} arithmetic recursions in @{term fst} / @{term snd} form.\<close>
 lemma afilter_Plus_unfold:
-  "afilter (Plus e1 e2) a \<sigma> =
-     afilter e1 (fst (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-               (afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  "afilter \<Gamma> ik (Plus e1 e2) a \<sigma> =
+     afilter \<Gamma> ik e1 (fst (inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)))
+               (afilter \<Gamma> ik e2 (snd (inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_Minus_unfold:
-  "afilter (Minus e1 e2) a \<sigma> =
-     afilter e1 (fst (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-               (afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  "afilter \<Gamma> ik (Minus e1 e2) a \<sigma> =
+     afilter \<Gamma> ik e1 (fst (inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)))
+               (afilter \<Gamma> ik e2 (snd (inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_Times_unfold:
-  "afilter (Times e1 e2) a \<sigma> =
-     afilter e1 (fst (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-               (afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  "afilter \<Gamma> ik (Times e1 e2) a \<sigma> =
+     afilter \<Gamma> ik e1 (fst (inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)))
+               (afilter \<Gamma> ik e2 (snd (inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_Less_unfold:
-  "bfilter (Less e1 e2) res \<sigma> =
-     afilter e1 (fst (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-               (afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  "bfilter \<Gamma> (Less e1 e2) res \<sigma> =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)) in
+      afilter \<Gamma> k e1 (fst (inv_less res (aval_abs \<Gamma> k e1 \<sigma>) (aval_abs \<Gamma> k e2 \<sigma>)))
+               (afilter \<Gamma> k e2 (snd (inv_less res (aval_abs \<Gamma> k e1 \<sigma>) (aval_abs \<Gamma> k e2 \<sigma>))) \<sigma>))"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_Eq_unfold:
-  "bfilter (Eq e1 e2) res \<sigma> =
-     afilter e1 (fst (inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-               (afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)"
+  "bfilter \<Gamma> (Eq e1 e2) res \<sigma> =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)) in
+      afilter \<Gamma> k e1 (fst (inv_eq res (aval_abs \<Gamma> k e1 \<sigma>) (aval_abs \<Gamma> k e2 \<sigma>)))
+               (afilter \<Gamma> k e2 (snd (inv_eq res (aval_abs \<Gamma> k e1 \<sigma>) (aval_abs \<Gamma> k e2 \<sigma>))) \<sigma>))"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_mono:
-  "a1 \<le> a2 \<Longrightarrow> \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> afilter e a1 \<sigma>1 \<le> afilter e a2 \<sigma>2"
-proof (induction e arbitrary: a1 a2 \<sigma>1 \<sigma>2)
+  "a1 \<le> a2 \<Longrightarrow> \<sigma>1 \<le> \<sigma>2 \<Longrightarrow> afilter \<Gamma> ik e a1 \<sigma>1 \<le> afilter \<Gamma> ik e a2 \<sigma>2"
+proof (induction e arbitrary: ik a1 a2 \<sigma>1 \<sigma>2)
   case (N n)
   then show ?case by simp
 next
@@ -1675,43 +1767,43 @@ next
   qed
 next
   case (Plus e1 e2)
-  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
-  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
-  have iv: "fst (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> fst (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
-          \<and> snd (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> snd (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+  have v1: "aval_abs \<Gamma> ik e1 \<sigma>1 \<le> aval_abs \<Gamma> ik e1 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
+  have v2: "aval_abs \<Gamma> ik e2 \<sigma>1 \<le> aval_abs \<Gamma> ik e2 \<sigma>2" by (rule aval_abs_mono[OF Plus.prems(2)])
+  have iv: "fst (inv_plus ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))
+              \<le> fst (inv_plus ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))
+          \<and> snd (inv_plus ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))
+              \<le> snd (inv_plus ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))"
     by (rule inv_plus_mono_conj[OF Plus.prems(1) v1 v2])
-  have step: "afilter e2 (snd (inv_plus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
-            \<le> afilter e2 (snd (inv_plus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+  have step: "afilter \<Gamma> ik e2 (snd (inv_plus ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))) \<sigma>1
+            \<le> afilter \<Gamma> ik e2 (snd (inv_plus ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))) \<sigma>2"
     by (rule Plus.IH(2)[OF conjunct2[OF iv] Plus.prems(2)])
   show ?case unfolding afilter_Plus_unfold
     by (rule Plus.IH(1)[OF conjunct1[OF iv] step])
 next
   case (Minus e1 e2)
-  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Minus.prems(2)])
-  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Minus.prems(2)])
-  have iv: "fst (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> fst (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
-          \<and> snd (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> snd (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+  have v1: "aval_abs \<Gamma> ik e1 \<sigma>1 \<le> aval_abs \<Gamma> ik e1 \<sigma>2" by (rule aval_abs_mono[OF Minus.prems(2)])
+  have v2: "aval_abs \<Gamma> ik e2 \<sigma>1 \<le> aval_abs \<Gamma> ik e2 \<sigma>2" by (rule aval_abs_mono[OF Minus.prems(2)])
+  have iv: "fst (inv_minus ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))
+              \<le> fst (inv_minus ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))
+          \<and> snd (inv_minus ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))
+              \<le> snd (inv_minus ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))"
     by (rule inv_minus_mono_conj[OF Minus.prems(1) v1 v2])
-  have step: "afilter e2 (snd (inv_minus a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
-            \<le> afilter e2 (snd (inv_minus a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+  have step: "afilter \<Gamma> ik e2 (snd (inv_minus ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))) \<sigma>1
+            \<le> afilter \<Gamma> ik e2 (snd (inv_minus ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))) \<sigma>2"
     by (rule Minus.IH(2)[OF conjunct2[OF iv] Minus.prems(2)])
   show ?case unfolding afilter_Minus_unfold
     by (rule Minus.IH(1)[OF conjunct1[OF iv] step])
 next
   case (Times e1 e2)
-  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Times.prems(2)])
-  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Times.prems(2)])
-  have iv: "fst (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> fst (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
-          \<and> snd (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> snd (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+  have v1: "aval_abs \<Gamma> ik e1 \<sigma>1 \<le> aval_abs \<Gamma> ik e1 \<sigma>2" by (rule aval_abs_mono[OF Times.prems(2)])
+  have v2: "aval_abs \<Gamma> ik e2 \<sigma>1 \<le> aval_abs \<Gamma> ik e2 \<sigma>2" by (rule aval_abs_mono[OF Times.prems(2)])
+  have iv: "fst (inv_times ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))
+              \<le> fst (inv_times ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))
+          \<and> snd (inv_times ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))
+              \<le> snd (inv_times ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))"
     by (rule inv_times_mono_conj[OF Times.prems(1) v1 v2])
-  have step: "afilter e2 (snd (inv_times a1 (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
-            \<le> afilter e2 (snd (inv_times a2 (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+  have step: "afilter \<Gamma> ik e2 (snd (inv_times ik a1 (aval_abs \<Gamma> ik e1 \<sigma>1) (aval_abs \<Gamma> ik e2 \<sigma>1))) \<sigma>1
+            \<le> afilter \<Gamma> ik e2 (snd (inv_times ik a2 (aval_abs \<Gamma> ik e1 \<sigma>2) (aval_abs \<Gamma> ik e2 \<sigma>2))) \<sigma>2"
     by (rule Times.IH(2)[OF conjunct2[OF iv] Times.prems(2)])
   show ?case unfolding afilter_Times_unfold
     by (rule Times.IH(1)[OF conjunct1[OF iv] step])
@@ -1734,13 +1826,16 @@ text \<open>
 \<close>
 lemma bfilter_default_mono:
   assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))) \<sigma>1
-       \<le> afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))) \<sigma>2"
+  shows "afilter \<Gamma> (opk (esyn \<Gamma> e)) e
+           (fst (inv_eq (\<not> res) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) e \<sigma>1) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) (N 0) \<sigma>1))) \<sigma>1
+       \<le> afilter \<Gamma> (opk (esyn \<Gamma> e)) e
+           (fst (inv_eq (\<not> res) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) e \<sigma>2) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) (N 0) \<sigma>2))) \<sigma>2"
 proof -
-  have v1: "aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2" by (rule aval_abs_mono[OF assms])
-  have v0: "aval_abs (N 0) \<sigma>1 \<le> aval_abs (N 0) \<sigma>2" by (rule aval_abs_mono[OF assms])
-  have iv: "fst (inv_eq (\<not> res) (aval_abs e \<sigma>1) (aval_abs (N 0) \<sigma>1))
-              \<le> fst (inv_eq (\<not> res) (aval_abs e \<sigma>2) (aval_abs (N 0) \<sigma>2))"
+  let ?ik = "opk (esyn \<Gamma> e)"
+  have v1: "aval_abs \<Gamma> ?ik e \<sigma>1 \<le> aval_abs \<Gamma> ?ik e \<sigma>2" by (rule aval_abs_mono[OF assms])
+  have v0: "aval_abs \<Gamma> ?ik (N 0) \<sigma>1 \<le> aval_abs \<Gamma> ?ik (N 0) \<sigma>2" by (rule aval_abs_mono[OF assms])
+  have iv: "fst (inv_eq (\<not> res) (aval_abs \<Gamma> ?ik e \<sigma>1) (aval_abs \<Gamma> ?ik (N 0) \<sigma>1))
+              \<le> fst (inv_eq (\<not> res) (aval_abs \<Gamma> ?ik e \<sigma>2) (aval_abs \<Gamma> ?ik (N 0) \<sigma>2))"
     using inv_eq_mono_conj[OF v1 v0] by simp
   show ?thesis by (rule afilter_mono[OF iv assms])
 qed
@@ -1757,16 +1852,17 @@ text \<open>
 \<close>
 
 lemma feasible_mono:
-  assumes "sigma1 \<le> sigma2" and "feasible e pol sigma1"
-  shows "feasible e pol sigma2"
+  assumes "sigma1 \<le> sigma2" and "feasible \<Gamma> e pol sigma1"
+  shows "feasible \<Gamma> e pol sigma2"
 proof -
-  have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms(1)])
-  have nb1: "\<not> is_bot (aval_abs e sigma1)" using assms(2) by (simp add: feasible_def)
-  have nb2: "\<not> is_bot (aval_abs e sigma2)" using nb1 is_bot_mono[OF v] by blast
-  have "tobool (aval_abs e sigma2) \<noteq> Some (\<not> pol)"
+  let ?ik = "opk (esyn \<Gamma> e)"
+  have v: "aval_abs \<Gamma> ?ik e sigma1 \<le> aval_abs \<Gamma> ?ik e sigma2" by (rule aval_abs_mono[OF assms(1)])  have nb1: "\<not> is_bot (aval_abs \<Gamma> ?ik e sigma1)"
+    using assms(2) by (simp add: feasible_def Let_def)
+  have nb2: "\<not> is_bot (aval_abs \<Gamma> ?ik e sigma2)" using nb1 is_bot_mono[OF v] by blast
+  have "tobool (aval_abs \<Gamma> ?ik e sigma2) \<noteq> Some (\<not> pol)"
   proof
-    assume "tobool (aval_abs e sigma2) = Some (\<not> pol)"
-    then have "tobool (aval_abs e sigma1) = Some (\<not> pol)"
+    assume "tobool (aval_abs \<Gamma> ?ik e sigma2) = Some (\<not> pol)"
+    then have "tobool (aval_abs \<Gamma> ?ik e sigma1) = Some (\<not> pol)"
       using tobool_mono[OF nb1 v] by simp
     then show False using assms(2) by (simp add: feasible_def)
   qed
@@ -1780,19 +1876,19 @@ text \<open>
 \<close>
 
 lemma gate_mono:
-  assumes "sigma1 \<le> sigma2" and "bfilter e pol sigma1 \<le> bfilter e pol sigma2"
-  shows "(if feasible e pol sigma1 then bfilter e pol sigma1 else bot)
-           \<le> (if feasible e pol sigma2 then bfilter e pol sigma2 else bot)"
-proof (cases "feasible e pol sigma1")
+  assumes "sigma1 \<le> sigma2" and "bfilter \<Gamma> e pol sigma1 \<le> bfilter \<Gamma> e pol sigma2"
+  shows "(if feasible \<Gamma> e pol sigma1 then bfilter \<Gamma> e pol sigma1 else bot)
+           \<le> (if feasible \<Gamma> e pol sigma2 then bfilter \<Gamma> e pol sigma2 else bot)"
+proof (cases "feasible \<Gamma> e pol sigma1")
   case True
-  have "feasible e pol sigma2" by (rule feasible_mono[OF assms(1) True])
+  have "feasible \<Gamma> e pol sigma2" by (rule feasible_mono[OF assms(1) True])
   with True assms(2) show ?thesis by simp
 next
   case False
   then show ?thesis by simp
 qed
 lemma bfilter_mono:
-  "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter b res \<sigma>1 \<le> bfilter b res \<sigma>2"
+  "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> bfilter \<Gamma> b res \<sigma>1 \<le> bfilter \<Gamma> b res \<sigma>2"
 proof (induction b arbitrary: res \<sigma>1 \<sigma>2)
   case (N n) show ?case
     using bfilter_default_mono[where e = "N n" and res = res, OF N.prems]
@@ -1820,25 +1916,25 @@ next
   show ?case
   proof (cases res)
     case True
-    have c: "bfilter b2 True \<sigma>1 \<le> bfilter b2 True \<sigma>2" by (rule And.IH(2)[OF And.prems])
-    have "bfilter b1 True (bfilter b2 True \<sigma>1) \<le> bfilter b1 True (bfilter b2 True \<sigma>2)"
+    have c: "bfilter \<Gamma> b2 True \<sigma>1 \<le> bfilter \<Gamma> b2 True \<sigma>2" by (rule And.IH(2)[OF And.prems])
+    have "bfilter \<Gamma> b1 True (bfilter \<Gamma> b2 True \<sigma>1) \<le> bfilter \<Gamma> b1 True (bfilter \<Gamma> b2 True \<sigma>2)"
       by (rule And.IH(1)[OF c])
     thus ?thesis using True by simp
   next
     case False
-    have c1: "(if feasible b1 False \<sigma>1 then bfilter b1 False \<sigma>1 else bot)
-                \<le> (if feasible b1 False \<sigma>2 then bfilter b1 False \<sigma>2 else bot)"
+    have c1: "(if feasible \<Gamma> b1 False \<sigma>1 then bfilter \<Gamma> b1 False \<sigma>1 else bot)
+                \<le> (if feasible \<Gamma> b1 False \<sigma>2 then bfilter \<Gamma> b1 False \<sigma>2 else bot)"
       by (rule gate_mono[OF And.prems And.IH(1)[OF And.prems]])
-    have c2: "(if feasible b2 False \<sigma>1 then bfilter b2 False \<sigma>1 else bot)
-                \<le> (if feasible b2 False \<sigma>2 then bfilter b2 False \<sigma>2 else bot)"
+    have c2: "(if feasible \<Gamma> b2 False \<sigma>1 then bfilter \<Gamma> b2 False \<sigma>1 else bot)
+                \<le> (if feasible \<Gamma> b2 False \<sigma>2 then bfilter \<Gamma> b2 False \<sigma>2 else bot)"
       by (rule gate_mono[OF And.prems And.IH(2)[OF And.prems]])
-    have eq1: "bfilter (And b1 b2) res \<sigma>1
-                 = (if feasible b1 False \<sigma>1 then bfilter b1 False \<sigma>1 else bot)
-                   \<squnion> (if feasible b2 False \<sigma>1 then bfilter b2 False \<sigma>1 else bot)"
+    have eq1: "bfilter \<Gamma> (And b1 b2) res \<sigma>1
+                 = (if feasible \<Gamma> b1 False \<sigma>1 then bfilter \<Gamma> b1 False \<sigma>1 else bot)
+                   \<squnion> (if feasible \<Gamma> b2 False \<sigma>1 then bfilter \<Gamma> b2 False \<sigma>1 else bot)"
       using False by simp
-    have eq2: "bfilter (And b1 b2) res \<sigma>2
-                 = (if feasible b1 False \<sigma>2 then bfilter b1 False \<sigma>2 else bot)
-                   \<squnion> (if feasible b2 False \<sigma>2 then bfilter b2 False \<sigma>2 else bot)"
+    have eq2: "bfilter \<Gamma> (And b1 b2) res \<sigma>2
+                 = (if feasible \<Gamma> b1 False \<sigma>2 then bfilter \<Gamma> b1 False \<sigma>2 else bot)
+                   \<squnion> (if feasible \<Gamma> b2 False \<sigma>2 then bfilter \<Gamma> b2 False \<sigma>2 else bot)"
       using False by simp
     show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])  qed
 next
@@ -1846,54 +1942,56 @@ next
   show ?case
   proof (cases res)
     case True
-    have c1: "(if feasible b1 True \<sigma>1 then bfilter b1 True \<sigma>1 else bot)
-                \<le> (if feasible b1 True \<sigma>2 then bfilter b1 True \<sigma>2 else bot)"
+    have c1: "(if feasible \<Gamma> b1 True \<sigma>1 then bfilter \<Gamma> b1 True \<sigma>1 else bot)
+                \<le> (if feasible \<Gamma> b1 True \<sigma>2 then bfilter \<Gamma> b1 True \<sigma>2 else bot)"
       by (rule gate_mono[OF Or.prems Or.IH(1)[OF Or.prems]])
-    have c2: "(if feasible b2 True \<sigma>1 then bfilter b2 True \<sigma>1 else bot)
-                \<le> (if feasible b2 True \<sigma>2 then bfilter b2 True \<sigma>2 else bot)"
+    have c2: "(if feasible \<Gamma> b2 True \<sigma>1 then bfilter \<Gamma> b2 True \<sigma>1 else bot)
+                \<le> (if feasible \<Gamma> b2 True \<sigma>2 then bfilter \<Gamma> b2 True \<sigma>2 else bot)"
       by (rule gate_mono[OF Or.prems Or.IH(2)[OF Or.prems]])
-    have eq1: "bfilter (Or b1 b2) res \<sigma>1
-                 = (if feasible b1 True \<sigma>1 then bfilter b1 True \<sigma>1 else bot)
-                   \<squnion> (if feasible b2 True \<sigma>1 then bfilter b2 True \<sigma>1 else bot)"
+    have eq1: "bfilter \<Gamma> (Or b1 b2) res \<sigma>1
+                 = (if feasible \<Gamma> b1 True \<sigma>1 then bfilter \<Gamma> b1 True \<sigma>1 else bot)
+                   \<squnion> (if feasible \<Gamma> b2 True \<sigma>1 then bfilter \<Gamma> b2 True \<sigma>1 else bot)"
       using True by simp
-    have eq2: "bfilter (Or b1 b2) res \<sigma>2
-                 = (if feasible b1 True \<sigma>2 then bfilter b1 True \<sigma>2 else bot)
-                   \<squnion> (if feasible b2 True \<sigma>2 then bfilter b2 True \<sigma>2 else bot)"
+    have eq2: "bfilter \<Gamma> (Or b1 b2) res \<sigma>2
+                 = (if feasible \<Gamma> b1 True \<sigma>2 then bfilter \<Gamma> b1 True \<sigma>2 else bot)
+                   \<squnion> (if feasible \<Gamma> b2 True \<sigma>2 then bfilter \<Gamma> b2 True \<sigma>2 else bot)"
       using True by simp
     show ?thesis unfolding eq1 eq2 by (rule sup_mono[OF c1 c2])  next
     case False
-    have c: "bfilter b2 False \<sigma>1 \<le> bfilter b2 False \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
-    have "bfilter b1 False (bfilter b2 False \<sigma>1) \<le> bfilter b1 False (bfilter b2 False \<sigma>2)"
+    have c: "bfilter \<Gamma> b2 False \<sigma>1 \<le> bfilter \<Gamma> b2 False \<sigma>2" by (rule Or.IH(2)[OF Or.prems])
+    have "bfilter \<Gamma> b1 False (bfilter \<Gamma> b2 False \<sigma>1) \<le> bfilter \<Gamma> b1 False (bfilter \<Gamma> b2 False \<sigma>2)"
       by (rule Or.IH(1)[OF c])
     thus ?thesis using False by simp
   qed
 next
   case (Less e1 e2)
-  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Less.prems])
-  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Less.prems])
-  have iv: "fst (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> fst (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
-          \<and> snd (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> snd (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
+  have v1: "aval_abs \<Gamma> ?k e1 \<sigma>1 \<le> aval_abs \<Gamma> ?k e1 \<sigma>2" by (rule aval_abs_mono[OF Less.prems])
+  have v2: "aval_abs \<Gamma> ?k e2 \<sigma>1 \<le> aval_abs \<Gamma> ?k e2 \<sigma>2" by (rule aval_abs_mono[OF Less.prems])
+  have iv: "fst (inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>1) (aval_abs \<Gamma> ?k e2 \<sigma>1))
+              \<le> fst (inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>2) (aval_abs \<Gamma> ?k e2 \<sigma>2))
+          \<and> snd (inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>1) (aval_abs \<Gamma> ?k e2 \<sigma>1))
+              \<le> snd (inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>2) (aval_abs \<Gamma> ?k e2 \<sigma>2))"
     by (rule inv_less_mono_conj[OF v1 v2])
-  have step: "afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
-            \<le> afilter e2 (snd (inv_less res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+  have step: "afilter \<Gamma> ?k e2 (snd (inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>1) (aval_abs \<Gamma> ?k e2 \<sigma>1))) \<sigma>1
+            \<le> afilter \<Gamma> ?k e2 (snd (inv_less res (aval_abs \<Gamma> ?k e1 \<sigma>2) (aval_abs \<Gamma> ?k e2 \<sigma>2))) \<sigma>2"
     by (rule afilter_mono[OF conjunct2[OF iv] Less.prems])
-  show ?case unfolding bfilter_Less_unfold
+  show ?case unfolding bfilter_Less_unfold Let_def
     by (rule afilter_mono[OF conjunct1[OF iv] step])
 next
   case (Eq e1 e2)
-  have v1: "aval_abs e1 \<sigma>1 \<le> aval_abs e1 \<sigma>2" by (rule aval_abs_mono[OF Eq.prems])
-  have v2: "aval_abs e2 \<sigma>1 \<le> aval_abs e2 \<sigma>2" by (rule aval_abs_mono[OF Eq.prems])
-  have iv: "fst (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> fst (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))
-          \<and> snd (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))
-              \<le> snd (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))"
+  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
+  have v1: "aval_abs \<Gamma> ?k e1 \<sigma>1 \<le> aval_abs \<Gamma> ?k e1 \<sigma>2" by (rule aval_abs_mono[OF Eq.prems])
+  have v2: "aval_abs \<Gamma> ?k e2 \<sigma>1 \<le> aval_abs \<Gamma> ?k e2 \<sigma>2" by (rule aval_abs_mono[OF Eq.prems])
+  have iv: "fst (inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>1) (aval_abs \<Gamma> ?k e2 \<sigma>1))
+              \<le> fst (inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>2) (aval_abs \<Gamma> ?k e2 \<sigma>2))
+          \<and> snd (inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>1) (aval_abs \<Gamma> ?k e2 \<sigma>1))
+              \<le> snd (inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>2) (aval_abs \<Gamma> ?k e2 \<sigma>2))"
     by (rule inv_eq_mono_conj[OF v1 v2])
-  have step: "afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>1) (aval_abs e2 \<sigma>1))) \<sigma>1
-            \<le> afilter e2 (snd (inv_eq res (aval_abs e1 \<sigma>2) (aval_abs e2 \<sigma>2))) \<sigma>2"
+  have step: "afilter \<Gamma> ?k e2 (snd (inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>1) (aval_abs \<Gamma> ?k e2 \<sigma>1))) \<sigma>1
+            \<le> afilter \<Gamma> ?k e2 (snd (inv_eq res (aval_abs \<Gamma> ?k e1 \<sigma>2) (aval_abs \<Gamma> ?k e2 \<sigma>2))) \<sigma>2"
     by (rule afilter_mono[OF conjunct2[OF iv] Eq.prems])
-  show ?case unfolding bfilter_Eq_unfold
+  show ?case unfolding bfilter_Eq_unfold Let_def
     by (rule afilter_mono[OF conjunct1[OF iv] step])
 qed
 
@@ -1906,25 +2004,25 @@ text \<open>
 \<close>
 lemma branch_lifted_mono:
   assumes "sigma1 \<le> sigma2"
-  shows "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
-proof (cases "feasible e pol sigma1")
+  shows "branch_lifted \<Gamma> e pol sigma1 \<le> branch_lifted \<Gamma> e pol sigma2"
+proof (cases "feasible \<Gamma> e pol sigma1")
   case False
   then show ?thesis by (simp add: branch_lifted_def)
 next
   case True
-  have "feasible e pol sigma2" by (rule feasible_mono[OF assms True])
+  have "feasible \<Gamma> e pol sigma2" by (rule feasible_mono[OF assms True])
   with True show ?thesis
     by (simp add: branch_lifted_def bfilter_mono[OF assms])
 qed
 lemma branch_mono:
   assumes "sigma1 \<le> sigma2"
-  shows "branch e pol sigma1 \<le> branch e pol sigma2"
+  shows "branch \<Gamma> e pol sigma1 \<le> branch \<Gamma> e pol sigma2"
 proof -
-  have lm: "branch_lifted e pol sigma1 \<le> branch_lifted e pol sigma2"
+  have lm: "branch_lifted \<Gamma> e pol sigma1 \<le> branch_lifted \<Gamma> e pol sigma2"
     by (rule branch_lifted_mono[OF assms])
   show ?thesis
     unfolding branch_def
-    using lm by (cases "branch_lifted e pol sigma1"; cases "branch_lifted e pol sigma2") auto
+    using lm by (cases "branch_lifted \<Gamma> e pol sigma1"; cases "branch_lifted \<Gamma> e pol sigma2") auto
 qed
 
 
@@ -1937,8 +2035,8 @@ text \<open>
   @{const is_bot} through every later step (@{thm is_bot_state_mono}).
 \<close>
 
-lemma afilter_reductive: "afilter e a \<sigma> \<le> \<sigma>"
-proof (induction e arbitrary: a \<sigma>)
+lemma afilter_reductive: "afilter \<Gamma> ik e a \<sigma> \<le> \<sigma>"
+proof (induction e arbitrary: ik a \<sigma>)
   case (N n)
   then show ?case by simp
 next
@@ -1951,29 +2049,29 @@ next
   qed
 next
   case (Plus e1 e2)
-  have h2: "afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma> \<le> \<sigma>"
+  have h2: "afilter \<Gamma> ik e2 (snd (inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma> \<le> \<sigma>"
     by (rule Plus.IH(2))
-  have h1: "afilter e1 (fst (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-              (afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)
-            \<le> afilter e2 (snd (inv_plus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
+  have h1: "afilter \<Gamma> ik e1 (fst (inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)))
+              (afilter \<Gamma> ik e2 (snd (inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>)
+            \<le> afilter \<Gamma> ik e2 (snd (inv_plus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>"
     by (rule Plus.IH(1))
   show ?case unfolding afilter_Plus_unfold by (rule order_trans[OF h1 h2])
 next
   case (Minus e1 e2)
-  have h2: "afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma> \<le> \<sigma>"
+  have h2: "afilter \<Gamma> ik e2 (snd (inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma> \<le> \<sigma>"
     by (rule Minus.IH(2))
-  have h1: "afilter e1 (fst (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-              (afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)
-            \<le> afilter e2 (snd (inv_minus a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
+  have h1: "afilter \<Gamma> ik e1 (fst (inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)))
+              (afilter \<Gamma> ik e2 (snd (inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>)
+            \<le> afilter \<Gamma> ik e2 (snd (inv_minus ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>"
     by (rule Minus.IH(1))
   show ?case unfolding afilter_Minus_unfold by (rule order_trans[OF h1 h2])
 next
   case (Times e1 e2)
-  have h2: "afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma> \<le> \<sigma>"
+  have h2: "afilter \<Gamma> ik e2 (snd (inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma> \<le> \<sigma>"
     by (rule Times.IH(2))
-  have h1: "afilter e1 (fst (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>)))
-              (afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>)
-            \<le> afilter e2 (snd (inv_times a (aval_abs e1 \<sigma>) (aval_abs e2 \<sigma>))) \<sigma>"
+  have h1: "afilter \<Gamma> ik e1 (fst (inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>)))
+              (afilter \<Gamma> ik e2 (snd (inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>)
+            \<le> afilter \<Gamma> ik e2 (snd (inv_times ik a (aval_abs \<Gamma> ik e1 \<sigma>) (aval_abs \<Gamma> ik e2 \<sigma>))) \<sigma>"
     by (rule Times.IH(1))
   show ?case unfolding afilter_Times_unfold by (rule order_trans[OF h1 h2])
 next
@@ -1994,10 +2092,11 @@ text \<open>
   of \<open>afilter_reductive\<close> with no further argument.
 \<close>
 lemma bfilter_default_reductive:
-  "afilter e (fst (inv_eq (\<not> res) (aval_abs e \<sigma>) (aval_abs (N 0) \<sigma>))) \<sigma> \<le> \<sigma>"
+  "afilter \<Gamma> (opk (esyn \<Gamma> e)) e
+     (fst (inv_eq (\<not> res) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) e \<sigma>) (aval_abs \<Gamma> (opk (esyn \<Gamma> e)) (N 0) \<sigma>))) \<sigma> \<le> \<sigma>"
   by (rule afilter_reductive)
 
-lemma bfilter_reductive: "bfilter b res \<sigma> \<le> \<sigma>"
+lemma bfilter_reductive: "bfilter \<Gamma> b res \<sigma> \<le> \<sigma>"
 proof (induction b arbitrary: res \<sigma>)
   case (N n) show ?case
     using bfilter_default_reductive[where e = "N n" and res = res]
@@ -2026,19 +2125,19 @@ next
   show ?case
   proof (cases res)
     case True
-    have c: "bfilter b2 True \<sigma> \<le> \<sigma>" by (rule And.IH(2))
-    have "bfilter b1 True (bfilter b2 True \<sigma>) \<le> bfilter b2 True \<sigma>" by (rule And.IH(1))
+    have c: "bfilter \<Gamma> b2 True \<sigma> \<le> \<sigma>" by (rule And.IH(2))
+    have "bfilter \<Gamma> b1 True (bfilter \<Gamma> b2 True \<sigma>) \<le> bfilter \<Gamma> b2 True \<sigma>" by (rule And.IH(1))
     also have "... \<le> \<sigma>" by (rule c)
     finally show ?thesis using True by simp
   next
     case False
-    have c1: "(if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot) \<le> \<sigma>"
+    have c1: "(if feasible \<Gamma> b1 False \<sigma> then bfilter \<Gamma> b1 False \<sigma> else bot) \<le> \<sigma>"
       using And.IH(1) by simp
-    have c2: "(if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot) \<le> \<sigma>"
+    have c2: "(if feasible \<Gamma> b2 False \<sigma> then bfilter \<Gamma> b2 False \<sigma> else bot) \<le> \<sigma>"
       using And.IH(2) by simp
-    have e1: "bfilter (And b1 b2) res \<sigma>
-                = (if feasible b1 False \<sigma> then bfilter b1 False \<sigma> else bot)
-                  \<squnion> (if feasible b2 False \<sigma> then bfilter b2 False \<sigma> else bot)"
+    have e1: "bfilter \<Gamma> (And b1 b2) res \<sigma>
+                = (if feasible \<Gamma> b1 False \<sigma> then bfilter \<Gamma> b1 False \<sigma> else bot)
+                  \<squnion> (if feasible \<Gamma> b2 False \<sigma> then bfilter \<Gamma> b2 False \<sigma> else bot)"
       using False by simp
     show ?thesis unfolding e1 by (rule sup_least[OF c1 c2])
   qed
@@ -2047,29 +2146,29 @@ next
   show ?case
   proof (cases res)
     case True
-    have c1: "(if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot) \<le> \<sigma>"
+    have c1: "(if feasible \<Gamma> b1 True \<sigma> then bfilter \<Gamma> b1 True \<sigma> else bot) \<le> \<sigma>"
       using Or.IH(1) by simp
-    have c2: "(if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot) \<le> \<sigma>"
+    have c2: "(if feasible \<Gamma> b2 True \<sigma> then bfilter \<Gamma> b2 True \<sigma> else bot) \<le> \<sigma>"
       using Or.IH(2) by simp
-    have e1: "bfilter (Or b1 b2) res \<sigma>
-                = (if feasible b1 True \<sigma> then bfilter b1 True \<sigma> else bot)
-                  \<squnion> (if feasible b2 True \<sigma> then bfilter b2 True \<sigma> else bot)"
+    have e1: "bfilter \<Gamma> (Or b1 b2) res \<sigma>
+                = (if feasible \<Gamma> b1 True \<sigma> then bfilter \<Gamma> b1 True \<sigma> else bot)
+                  \<squnion> (if feasible \<Gamma> b2 True \<sigma> then bfilter \<Gamma> b2 True \<sigma> else bot)"
       using True by simp
     show ?thesis unfolding e1 by (rule sup_least[OF c1 c2])
   next
     case False
-    have c: "bfilter b2 False \<sigma> \<le> \<sigma>" by (rule Or.IH(2))
-    have "bfilter b1 False (bfilter b2 False \<sigma>) \<le> bfilter b2 False \<sigma>" by (rule Or.IH(1))
+    have c: "bfilter \<Gamma> b2 False \<sigma> \<le> \<sigma>" by (rule Or.IH(2))
+    have "bfilter \<Gamma> b1 False (bfilter \<Gamma> b2 False \<sigma>) \<le> bfilter \<Gamma> b2 False \<sigma>" by (rule Or.IH(1))
     also have "... \<le> \<sigma>" by (rule c)
     finally show ?thesis using False by simp
   qed
 next
   case (Less e1 e2)
-  show ?case unfolding bfilter_Less_unfold
+  show ?case unfolding bfilter_Less_unfold Let_def
     by (rule order_trans[OF afilter_reductive afilter_reductive])
 next
   case (Eq e1 e2)
-  show ?case unfolding bfilter_Eq_unfold
+  show ?case unfolding bfilter_Eq_unfold Let_def
     by (rule order_trans[OF afilter_reductive afilter_reductive])
 qed
 

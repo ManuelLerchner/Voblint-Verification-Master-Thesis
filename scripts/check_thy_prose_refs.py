@@ -40,6 +40,10 @@ ALLOWED = {
     # that its branch transfer is the identity, so there is no such constant to
     # generalize.
     "branch_parity_st_for",
+    # Deliberately name lemmas that no longer exist -- the Interval flagship
+    # examples explain *why* they were deleted (EA_Ret's unconditional top
+    # fallback breaks action_reduces's ret_some conjunct).
+    "ivl_tf_st_for_reduces", "sign_tf_st_for_reduces",
 }
 
 PROSE_KW = re.compile(r"\b(text|txt|section|subsection|subsubsection|paragraph|chapter)\b\s*")

@@ -25,12 +25,13 @@ text \<open>
 \<close>
 
 locale call_string_routed_context =
-  dg_ctx_activation_base S gamma_dg_base gs "compile_prog Pi ps mnm main" Global "cs_route k"
+  dg_ctx_activation_base S gamma_dg_base gs \<Gamma> "compile_prog Pi ps mnm main" Global "cs_route k"
     "routed_cmb_g S Global Seed (static_resolve (compile_prog Pi ps mnm main))"
     "routed_extra_g Seed Global"
     bot0 s0d s0g sigma vars x0 sg gamma_state_lift
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
     and k :: nat
     and bot0 s0d s0g sigma vars x0 sg +
@@ -50,7 +51,7 @@ locale call_string_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context_hetero S gs "compile_prog Pi ps mnm main" Global
+sublocale routed: routed_context_hetero S gs \<Gamma> "compile_prog Pi ps mnm main" Global
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
   "static_resolve (compile_prog Pi ps mnm main)" "cs_context k"
 proof unfold_locales
@@ -68,7 +69,7 @@ next
   fix u ctx dst pars args p cont s
   show "cs_route k u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
             (globs (sigma (Inr Global)))) (CallEdge dst pars args)
-          = cs_context k u ctx (call_enter gs (CallEdge dst pars args) s)"
+          = cs_context k u ctx (call_enter \<Gamma> gs (CallEdge dst pars args) s)"
     by (rule cs_route_context_agree)
 next
   fix u ctx dst pars args p cont
@@ -92,17 +93,17 @@ next
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 next
   fix cl s es dst pars args p cont
-  assume ces: "call_enter_store gs (compile_prog Pi ps mnm main) cl s es"
+  assume ces: "call_enter_store \<Gamma> gs (compile_prog Pi ps mnm main) cl s es"
     and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont)
                \<in> calls (compile_prog Pi ps mnm main)"
   obtain dst' pars' args' p' cont' where
       ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
               \<in> calls (compile_prog Pi ps mnm main)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    and es_eq: "es = call_enter \<Gamma> gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
     using compile_prog_calls_source_unique[OF ce' ce] by simp
-  then show "es = call_enter gs (CallEdge dst pars args) s" using es_eq by simp
+  then show "es = call_enter \<Gamma> gs (CallEdge dst pars args) s" using es_eq by simp
 qed
 
 text \<open>CALL and COMB, at the call-string instance: the callee entry state published under

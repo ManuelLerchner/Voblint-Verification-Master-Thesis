@@ -16,16 +16,19 @@ definition test_env_top :: "int_dom abs_state" where
 subsection \<open>x + 1 = 3 ==> x = 2\<close>
 
 text \<open>
-  The composite analogue of \<open>Example_Congruence_Backward\<close>'s single-domain
-  \<open>x + 1 = 3 ==> x = 2\<close> witness. \<open>Refine_Once\<close> is local to each composite
-  operation, not to the whole recursive traversal: the guard's own
-  \<open>afilter\<close> recursion invokes refinement once inside \<open>inv_plus_int_dom\<close>
-  and again at the \<open>V\<close> leaf's \<open>intersect_int_dom_mode\<close>, so two refinement
-  rounds run along this single path even under \<open>Once\<close>. A caller who only
-  knows \<open>refine Refine_Once d\<close> is one round should not expect
-  \<open>bfilter_int_dom_once\<close> to match that bound -- a recursive backward
-  filter can invoke refinement at multiple nodes. Here it already reaches
-  the exact singleton, so \<open>Refine_Fixpoint\<close> finds nothing further to do.
+  Stale, pending the B6/B7 \<open>\<Gamma> :: tyenv\<close> gate: every \<open>bfilter_int_dom_*\<close>
+  call site now needs a leading \<open>\<Gamma> :: tyenv\<close> argument from the
+  \<Gamma>-threading landed in that gate, which this file predates. The RHS
+  values below were computed against a
+  transitional design where \<open>int_dom\<close>'s composite \<open>inv_plus\<close>/
+  \<open>inv_minus\<close>/\<open>inv_times\<close> routed every component -- including Congruence
+  -- through the shared \<open>inv_conservative\<close> no-op; that transitional
+  design is gone. Congruence's own real inverse
+  (\<open>Congruence_Backward.inv_plus_congruence_ik\<close>, composed with
+  \<open>cong_unwrap\<close> to reconcile the \<open>ik_norm\<close>-wrapped result register) now
+  runs inside \<open>int_dom\<close>'s \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close> again, so
+  once the \<open>\<Gamma>\<close> argument lands these lemmas need re-deriving via \<open>by
+  eval\<close>, not merely re-stating with the extra argument.
 \<close>
 
 lemma bfilter_int_dom_once_plus_eq_exact:
@@ -43,11 +46,14 @@ lemma bfilter_int_dom_fixpoint_plus_eq_exact:
   by eval
 
 text \<open>
-  \<open>Refine_Never\<close> applies no cross-component refinement at all. Congruence's
-  own real inverse (\<open>Congruence_Backward.inv_plus_congruence\<close>) still
-  narrows the congruence component directly -- that is the component's own
-  inversion, not refinement -- but Sign, Interval, and Parity never learn
-  about it.
+  Stale for the same reason as above (the \<open>\<Gamma> :: tyenv\<close> gate), but not for
+  a soundness reason any more: \<open>Refine_Never\<close> skips cross-component
+  refinement, but Congruence's own real inverse
+  (\<open>Congruence_Backward.inv_plus_congruence_ik\<close>) narrows unconditionally
+  inside \<open>int_dom\<close>'s \<open>inv_plus\<close> regardless of mode, so this lemma's RHS
+  is expected to show Congruence's own narrowing even here once the \<open>\<Gamma>\<close>
+  argument lands and the value is re-derived via \<open>by eval\<close> -- not the
+  \<open>STop\<close>/\<open>PTop\<close>/no-narrowing shape currently asserted.
 \<close>
 
 lemma bfilter_int_dom_never_plus_eq_congruence_only:

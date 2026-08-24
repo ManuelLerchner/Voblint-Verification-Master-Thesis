@@ -41,6 +41,13 @@ match v1 with
       | _ ->
         Voblint_CLI.Core.Minus
           (Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer Z.zero), v1)""",
+    # Declarations lower to (name, kind option) pairs; the program action
+    # keeps the names and collects the annotated kinds (see
+    # gen_program_rule).
+    "formal_untyped": "(v0, None)",
+    "formal_typed": "(v1, Some v0)",
+    "globals_untyped": "List.map (fun n -> (n, None)) v1",
+    "globals_typed": "List.map (fun n -> (n, Some v1)) v2",
 }
 
 
@@ -140,12 +147,16 @@ NONTERMINAL_TYPES = {
     "stmts": "Voblint_CLI.Core.com",
     "stmts_opt": "Voblint_CLI.Core.com",
     "actuals": "Voblint_CLI.Core.exp list",
-    "formals": "string list",
+    "ty": "Voblint_CLI.Core.ikind",
+    "formal": "string * Voblint_CLI.Core.ikind option",
+    "formals": "(string * Voblint_CLI.Core.ikind option) list",
     "ids": "string list",
-    "globals_decl": "string list",
-    "globals_opt": "string list",
-    "function_decl": "string * string list * Voblint_CLI.Core.com",
-    "function_decl_star": "(string * string list * Voblint_CLI.Core.com) list",
+    "globals_decl": "(string * Voblint_CLI.Core.ikind option) list",
+    "globals_star": "(string * Voblint_CLI.Core.ikind option) list",
+    "function_decl":
+        "string * (string * Voblint_CLI.Core.ikind option) list * Voblint_CLI.Core.com",
+    "function_decl_star":
+        "(string * (string * Voblint_CLI.Core.ikind option) list * Voblint_CLI.Core.com) list",
 }
 
 
@@ -255,7 +266,7 @@ def gen_program_rule() -> str:
     # grammar/vimp.yaml's header comment on why this stays a parse-time
     # diagnostic rather than a deferred well-formedness check.
     return """program:
-  | g = globals_opt fs = function_decl_star EOF
+  | g = globals_star fs = function_decl_star EOF
       { let mains, procs = List.partition (fun (n, _, _) -> n = "main") fs in
         let main_body =
           match mains with
@@ -264,15 +275,24 @@ def gen_program_rule() -> str:
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
-        Voblint_CLI.Core.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Core.proc_decl_of formals b)) procs)
-          main_body g }
+        let kind_entries pairs =
+          List.filter_map (fun (n, k) ->
+              match k with Some k -> Some (n, k) | None -> None) pairs
+        in
+        let kinds =
+          kind_entries g
+          @ List.concat_map (fun (_, formals, _) -> kind_entries formals) fs
+        in
+        Voblint_CLI.Core.mk_program_typed
+          (List.map (fun (n, formals, b) ->
+               (n, Voblint_CLI.Core.proc_decl_of (List.map fst formals) b)) procs)
+          main_body (List.map fst g) kinds }
 
-globals_opt:
+globals_star:
   | (* empty *)
       { [] }
-  | gs = globals_decl
-      { gs }
+  | l = globals_decl g = globals_star
+      { l @ g }
 
 function_decl_star:
   | (* empty *)
@@ -314,8 +334,15 @@ def gen_parser(g: dict) -> str:
     for p in list_prods:
         rule_blocks.append(gen_list_rule(p))
 
-    globals_prod = next(p for p in productions if p["name"] == "globals_decl")
-    rule_blocks.append(gen_named_rule(globals_prod))
+    # All `globals`-typed productions form one nonterminal (`globals_decl`,
+    # the name gen_program_rule's globals_star references): a `global`
+    # line with or without a kind annotation.
+    globals_prods = [p for p in productions if p["result"] == "globals"]
+    globals_alts = "\n".join(
+        f"  | {rhs_pattern(p['rhs'])}\n      {{ {render_action(p)} }}"
+        for p in globals_prods
+    )
+    rule_blocks.append(f"globals_decl:\n{globals_alts}")
     function_prod = next(p for p in productions if p["name"] == "function_decl")
     rule_blocks.append(gen_named_rule(function_prod))
     rule_blocks.append(gen_program_rule())

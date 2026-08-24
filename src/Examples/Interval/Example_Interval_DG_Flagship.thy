@@ -136,7 +136,8 @@ text \<open>
 \<close>
 
 definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs) (ivl_enter_st_for flagship_gs))
+  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs (prog_tyenv flagship_prog))
+       (ivl_enter_st_for (prog_tyenv flagship_prog) flagship_gs))
      flagship_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
@@ -239,27 +240,49 @@ lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
   by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def reserved_ret_var_def
       split: if_splits)
 
+text \<open>
+  \<^bold>\<open>Blocked, not merely unproved.\<close> This interpretation cannot be I/Q-checked at all right
+  now: \<^locale>\<open>unit_dg_exec_analysis\<close> (\<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>) is itself
+  currently undefined, because that theory's own citations of \<open>pstep\<close>/\<open>sound_transfer_for\<close>/
+  \<open>sound_dg_spec_ltr_for\<close> predate those constants' \<open>Gamma :: tyenv\<close> parameter and are out of
+  scope here. Independent of that blocker, the citation below is also stale on its own
+  terms: \<open>ivl_tf_st_for_reduces\<close> no longer exists, for the same reason
+  \<open>sign_tf_st_for_reduces\<close> was deleted (see \<open>Sign_Exec.thy\<close>) --
+  \<^const>\<open>ivl_tf_st_for\<close>'s \<open>EA_Ret (Some a)\<close> case now sets the result to \<open>ivl_top\<close>
+  unconditionally rather than reusing the \<open>EA_Assign\<close> case, so \<open>action_reduces\<close>'s
+  \<open>ret_some\<close> conjunct (\<open>F (EA_Ret (Some a) p rk) = F (EA_Assign ret_var a)\<close>) is genuinely
+  false for it now. \<^locale>\<open>unit_dg_exec_analysis\<close>'s own \<open>reduces\<close> field demands the full
+  \<open>action_reduces\<close> predicate (\<open>Run_Analysis_Sound.dg_spec_step_unit_st_for\<close> only actually
+  needs the weaker fact that \<open>ivl_tf_st_for\<close>'s \<open>EA_Ret\<close> case does not depend on \<open>rk\<close>, which
+  \<^emph>\<open>does\<close> still hold post-fix -- both sides collapse to the same unconditional \<open>ivl_top\<close> --
+  but the locale has no field to state that weaker fact instead), so this interpretation
+  needs either \<open>Run_Analysis_Sound.unit_dg_exec_analysis\<close>'s \<open>reduces\<close> field relaxed to that
+  weaker rk-independence obligation, or this file repointed onto \<open>base_dg_exec_analysis\<close>
+  the way \<open>Exec_Sign_DG_Run.sign_ex_reg\<close> was for an unrelated reason. Both are changes to
+  files outside this example.
+\<close>
 interpretation flagship_ex_reg:
   unit_dg_exec_analysis flagship_gs
-    "ivl_tf_for flagship_gs" "ivl_tf_st_for flagship_gs" "ivl_enter_st_for flagship_gs"
+    "ivl_tf_for flagship_gs (prog_tyenv flagship_prog)"
+    "ivl_tf_st_for flagship_gs (prog_tyenv flagship_prog)"
+    "ivl_enter_st_for (prog_tyenv flagship_prog) flagship_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
-  interpret flagship_ex_transfer: sound_transfer_for flagship_gs "ivl_tf_for flagship_gs"
+  interpret flagship_ex_transfer: sound_transfer_for flagship_gs
+    "ivl_tf_for flagship_gs (prog_tyenv flagship_prog)" "prog_tyenv flagship_prog"
     by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs) (ivl_tf_st_for flagship_gs)
-          (ivl_enter_st_for flagship_gs)
+  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs (prog_tyenv flagship_prog))
+          (ivl_tf_st_for flagship_gs (prog_tyenv flagship_prog))
+          (ivl_enter_st_for (prog_tyenv flagship_prog) flagship_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
-    by unfold_locales
-       (rule flagship_wf_reserved
-             flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
+    apply unfold_locales
+       apply (rule flagship_wf_reserved)
+      apply (rule flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
              flagship_ex_transfer.tf_sound_branch_for
-             flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for
-             ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]
-             action_reduces.ret_none[OF ivl_tf_st_for_reduces]
-             action_reduces.ret_some[OF ivl_tf_st_for_reduces]
-             action_reduces.check[OF ivl_tf_st_for_reduces]
-             TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)+
+             flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for)+
+      apply (rule ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def])
+     apply (rule ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def])
+    sorry
 qed
 
 text \<open>
@@ -334,13 +357,29 @@ proof -
     by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def C L)
 qed
 
+text \<open>
+  \<open>sound_dg_spec_unit_for\<close>'s third premise, \<open>ret_ok: (\<And>x v. ik_norm (\<Gamma> x) v = v)\<close>,
+  is unresolved below: it holds only when every combine-published value already lies in
+  its destination's declared range for every \<open>x\<close>, a well-typedness invariant this file
+  does not carry. Pre-existing gap, unrelated to Gamma-threading -- the same gap
+  \<open>ivl_is_sound_transfer_for\<close>'s own comment and \<open>Sign_Ctx_None_Sound.sctx_dg_base\<close> both
+  flag.
+\<close>
+lemma flagship_ret_ok: "\<And>x v. ik_norm (prog_tyenv flagship_prog x) v = v"
+  sorry
+
+lemma flagship_sound_dg_spec_unit:
+  "sound_dg_spec (unit_dg_spec_for flagship_gs (ivl_tf_for flagship_gs (prog_tyenv flagship_prog)))
+     (gamma_unit flagship_gs) flagship_gs (prog_tyenv flagship_prog)"
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved flagship_ret_ok])
+
 theorem flagship_head_bound_proper:
   "(\<lambda>_. 100) \<notin> sound_dg_spec.dg_gamma (gamma_unit flagship_gs)
                  (fun_of_dg_st_for flagship_gs \<circ> snd flagship_sol) (Statement (Suc 0))"
-  unfolding sound_dg_spec.dg_gamma_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+  unfolding sound_dg_spec.dg_gamma_def[OF flagship_sound_dg_spec_unit]
             gamma_unit_def gamma_state_def
-            sound_dg_spec.dg_D_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
-            sound_dg_spec.dg_G_def[OF sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved]]
+            sound_dg_spec.dg_D_def[OF flagship_sound_dg_spec_unit]
+            sound_dg_spec.dg_G_def[OF flagship_sound_dg_spec_unit]
   apply (simp only: mem_Collect_eq not_all)
   apply (rule exI[of _ "(STR ''x'')"])
   using head_x_bound apply (simp add: fun_of_dg_st_for_simps combine_env_abs_def)

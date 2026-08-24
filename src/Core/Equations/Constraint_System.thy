@@ -1,7 +1,7 @@
 theory Constraint_System
   imports CFG_Enumeration "Voblint_CFG.CFG_Transfer" Abstract_Domain
     "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
-    "TD.Basics_side"
+    "Voblint_VIMP.VIMP_Elaborated" "TD.Basics_side"
 begin
 
 section \<open>Equation system over a CFG\<close>
@@ -92,7 +92,7 @@ fun apply_tf :: "'a domain_transfer
   | "apply_tf tf (EA_Special sc x)   \<sigma> = special\<^sup># tf sc x \<sigma>"
   | "apply_tf tf (EA_Assume b)       \<sigma> = branch\<^sup># tf b True \<sigma>"
   | "apply_tf tf (EA_AssumeNot b)    \<sigma> = branch\<^sup># tf b False \<sigma>"
-  | "apply_tf tf (EA_Ret e p)        \<sigma> = return\<^sup># tf e p \<sigma>"
+  | "apply_tf tf (EA_Ret e p rk)        \<sigma> = return\<^sup># tf e p \<sigma>"
   | "apply_tf tf (EA_Check c)        \<sigma> = event\<^sup># tf (Check_Event c) \<sigma>"
 
 text \<open>
@@ -122,7 +122,7 @@ lemma apply_tf_EA_AssumeNot [simp]:
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_Ret [simp]:
-  "apply_tf tf (EA_Ret e p) = return\<^sup># tf e p"
+  "apply_tf tf (EA_Ret e p rk) = return\<^sup># tf e p"
   by (simp add: fun_eq_iff)
 
 lemma apply_tf_EA_Check [simp]:
@@ -131,19 +131,21 @@ lemma apply_tf_EA_Check [simp]:
 
 text \<open>Some families this codebase builds over \<^typ>\<open>edge_action\<close> happen to reduce a
   void return and a check to the same value as \<^const>\<open>EA_Nop\<close>, and a value return
-  to the same value as the \<^const>\<open>EA_Assign\<close> it publishes -- true of every current
-  executable mirror (\<open>sign_tf_st_for\<close> and siblings), since their \<open>EA_Ret\<close>/\<open>EA_Check\<close>
-  cases still literally implement today's \<open>skip\<^sup>#\<close>/\<open>return\<^sup>#\<close> semantics by hand. This
-  is a fact about a concrete family \<open>F\<close>, not a structural property \<^const>\<open>apply_tf\<close>
-  itself provides any more (\<open>return\<^sup>#\<close>/\<open>skip\<^sup>#\<close> are free fields a future domain may
-  implement differently), so \<open>action_reduces\<close> is not used to discharge
-  \<^const>\<open>apply_tf\<close>'s own \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_wrap_eqI\<close>
-  below); it only packages a mirror's own self-consistency for callers such as
-  \<open>unit_dg_exec_analysis\<close> that state it as an explicit obligation.\<close>
+  to the same value as the \<^const>\<open>EA_Assign\<close> it publishes -- true of an executable
+  mirror whose \<open>EA_Ret\<close>/\<open>EA_Check\<close> cases still literally implement today's
+  \<open>skip\<^sup>#\<close>/\<open>return\<^sup>#\<close> semantics by hand. This is a fact about a concrete family \<open>F\<close>,
+  not a structural property \<^const>\<open>apply_tf\<close> itself provides any more
+  (\<open>return\<^sup>#\<close>/\<open>skip\<^sup>#\<close> are free fields a future domain may implement differently),
+  so \<open>action_reduces\<close> is not used to discharge \<^const>\<open>apply_tf\<close>'s own
+  \<^typ>\<open>edge_action\<close> case split (see \<open>apply_tf_wrap_eqI\<close> below); it only packages a
+  mirror's own self-consistency for callers such as \<open>unit_dg_exec_analysis\<close> that
+  state it as an explicit obligation. A mirror whose value-return case cannot reuse
+  its assign case -- because the destination cast is not the caller-supplied \<open>rk\<close> --
+  need not (and, for Sign, Interval, Parity, and Int, does not) satisfy it.\<close>
 locale action_reduces =
   fixes F :: "edge_action \<Rightarrow> 'y"
-  assumes ret_none[simp,intro]: "\<And>p. F (EA_Ret None p) = F EA_Nop"
-    and ret_some[simp,intro]: "\<And>a p. F (EA_Ret (Some a) p) = F (EA_Assign ret_var a)"
+  assumes ret_none[simp,intro]: "\<And>p rk. F (EA_Ret None p rk) = F EA_Nop"
+    and ret_some[simp,intro]: "\<And>a p rk. F (EA_Ret (Some a) p rk) = F (EA_Assign ret_var a)"
     and check[simp,intro]: "\<And>c. F (EA_Check c) = F EA_Nop"
 
 text \<open>Composing an \<open>action_reduces\<close> family with any outer function preserves the
@@ -173,7 +175,7 @@ lemma apply_tf_wrap_eqI:
     and special: "\<And>sc x. F (EA_Special sc x) = H (apply_tf tf (EA_Special sc x))"
     and assm: "\<And>b. F (EA_Assume b) = H (apply_tf tf (EA_Assume b))"
     and assm_not: "\<And>b. F (EA_AssumeNot b) = H (apply_tf tf (EA_AssumeNot b))"
-    and ret: "\<And>e p. F (EA_Ret e p) = H (apply_tf tf (EA_Ret e p))"
+    and ret: "\<And>e p rk. F (EA_Ret e p rk) = H (apply_tf tf (EA_Ret e p rk))"
     and check: "\<And>c. F (EA_Check c) = H (apply_tf tf (EA_Check c))"
   shows "F a = H (apply_tf tf a)"
   by (cases a) (simp_all add: nop assign special assm assm_not ret check)
@@ -589,6 +591,74 @@ lemma enter_D_mono:
   by (rule bind_formals_abs_mono[OF enter_frame_D_mono[OF base] vals])
 
 text \<open>
+  \<open>enter_D_typed\<close> is \<open>enter_D\<close>'s ikind-aware counterpart, matching
+  \<open>sound_transfer_for\<close>'s \<open>tf_sound_enter_for\<close> obligation exactly: each
+  actual \<open>e\<close> is evaluated at its own synthesized kind, then cast to its
+  formal \<open>x\<close>'s declared kind -- the same double-cast shape \<open>EA_Assign\<close>
+  uses, applied pointwise across the formal/actual pairing rather than to
+  a single destination. \<open>enter_D\<close> itself has no per-formal kind to cast
+  to (its \<open>aval_abs\<close> sees only \<open>e\<close>, never the paired \<open>x\<close>), so it cannot
+  express this and is not reused here.
+\<close>
+
+definition enter_D_typed ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> tyenv \<Rightarrow> (ikind \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> (texp \<Rightarrow> 'a abs_state \<Rightarrow> 'a)
+   \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
+  "enter_D_typed gs top_val \<Gamma> cast aval_abs_t xs es \<sigma> =
+     bind_formals_abs xs
+       (map2 (\<lambda>x e. cast (\<Gamma> x) (aval_abs_t (elaborate_syn \<Gamma> e) \<sigma>)) xs es)
+       (enter_frame_D gs top_val \<sigma>)"
+
+lemma enter_D_typed_sound:
+  fixes top_val :: "'a::sound_domain"
+  assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and top_full: "gamma top_val = UNIV"
+    and cast_sound: "\<And>ik v a. v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (cast ik a)"
+    and aval_t_sound: "\<And>ik e' s' \<sigma>'. (\<forall>x. s' x \<in> gamma (\<sigma>' x)) \<Longrightarrow>
+                          taval \<Gamma> ik e' s' \<in> gamma (aval_abs_t (elaborate \<Gamma> ik e') \<sigma>')"
+  shows "bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state gs s)
+           \<in> \<lbrakk>enter_D_typed gs top_val \<Gamma> cast aval_abs_t xs es \<sigma>\<rbrakk>"
+proof -
+  have base: "enter_state gs s \<in> \<lbrakk>enter_frame_D gs top_val \<sigma>\<rbrakk>"
+    by (rule enter_frame_D_sound[OF sv top_full])
+  have V: "\<forall>x. s x \<in> gamma (\<sigma> x)" using sv unfolding gamma_state_def by simp
+  have vals: "list_all2 (\<lambda>v a. v \<in> gamma a)
+                (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es)
+                (map2 (\<lambda>x e. cast (\<Gamma> x) (aval_abs_t (elaborate_syn \<Gamma> e) \<sigma>)) xs es)"
+    unfolding list_all2_conv_all_nth
+  proof
+    show "length (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) =
+          length (map2 (\<lambda>x e. cast (\<Gamma> x) (aval_abs_t (elaborate_syn \<Gamma> e) \<sigma>)) xs es)"
+      by simp
+  next
+    show "\<forall>i < length (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es).
+            map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es ! i
+              \<in> gamma (map2 (\<lambda>x e. cast (\<Gamma> x) (aval_abs_t (elaborate_syn \<Gamma> e) \<sigma>)) xs es ! i)"
+      using aval_t_sound[OF V] cast_sound
+      by (auto simp: taval_syn_def elaborate_syn_def)
+  qed
+  from bind_formals_abs_sound[OF base vals]
+  show ?thesis unfolding enter_D_typed_def .
+qed
+
+lemma enter_D_typed_mono:
+  fixes top_val :: "'a::order"
+  assumes base: "\<sigma>1 \<le> \<sigma>2"
+    and cast_mono: "\<And>ik a1 a2. a1 \<le> a2 \<Longrightarrow> cast ik a1 \<le> cast ik a2"
+    and aval_t_mono: "\<And>ik e' \<tau>1 \<tau>2. \<tau>1 \<le> \<tau>2 \<Longrightarrow>
+                         aval_abs_t (elaborate \<Gamma> ik e') \<tau>1 \<le> aval_abs_t (elaborate \<Gamma> ik e') \<tau>2"
+  shows "enter_D_typed gs top_val \<Gamma> cast aval_abs_t xs es \<sigma>1 \<le>
+         enter_D_typed gs top_val \<Gamma> cast aval_abs_t xs es \<sigma>2"
+  unfolding enter_D_typed_def
+proof (rule bind_formals_abs_mono[OF enter_frame_D_mono[OF base]])
+  show "list_all2 (\<le>)
+          (map2 (\<lambda>x e. cast (\<Gamma> x) (aval_abs_t (elaborate_syn \<Gamma> e) \<sigma>1)) xs es)
+          (map2 (\<lambda>x e. cast (\<Gamma> x) (aval_abs_t (elaborate_syn \<Gamma> e) \<sigma>2)) xs es)"
+    unfolding list_all2_conv_all_nth
+    using cast_mono aval_t_mono[OF base]
+    by (auto simp: elaborate_syn_def)
+qed
+
+text \<open>
   Abstract counterpart of @{const combine_assign}: write the callee's return slot
   into the caller's destination, or leave the caller untouched when the call
   discards its result.
@@ -727,10 +797,25 @@ text \<open>
   @{const ret_var} slot is, and every other slot is handled by
   @{thm combine_env_sound}.
 \<close>
+text \<open>
+  \<open>ret_ok\<close> is the price of \<^const>\<open>combine_collect\<close>'s destination-kind truncation
+  (\<^theory>\<open>Voblint_VIMP.VIMP_Proc\<close>'s \<open>combine_assign\<close>): the abstract combine
+  \<^const>\<open>combine_collect_abs\<close> still publishes the callee's return slot verbatim, with
+  no ikind-aware clip -- adding one generically would need a domain-level cast
+  operation (Goblint's \<open>IntDomain0.cast_to\<close>; matches this project's D7/B5 gap), which
+  no domain instance carries yet. Until then, this lemma is honest about exactly what
+  it needs: the concrete return value must already be representable at the caller's
+  destination kind, so the concrete truncation is a no-op and the untouched abstract
+  slot is still sound. Every call site compiled from a well-typed program satisfies
+  this by construction (the destination's declared kind agrees with the callee's, and
+  the callee's own \<open>ret_var\<close> slot is already in that kind's range at completion) --
+  discharging \<open>ret_ok\<close> is a well-typedness fact for callers to supply, not a domain fact.
+\<close>
 lemma combine_collect_sound:
   fixes \<sigma>c \<sigma>e :: "'a::sound_domain abs_state"
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst \<sigma>c \<sigma>e\<rbrakk>"
+    and ret_ok: "\<And>x v. ik_norm (\<Gamma> x) v = v"
+  shows "combine_collect \<Gamma> gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst \<sigma>c \<sigma>e\<rbrakk>"
 proof (cases dst)
   case None
   then show ?thesis
@@ -742,8 +827,10 @@ next
     by (rule combine_env_sound[OF sc se])
   have ret: "t ret_var \<in> gamma (\<sigma>e ret_var)"
     using se unfolding gamma_state_def by auto
+  have norm: "ik_norm (\<Gamma> x) (t ret_var) = t ret_var"
+    by (rule ret_ok)
   show ?thesis
-    using base ret Some
+    using base ret Some norm
     unfolding gamma_state_def combine_collect_def combine_collect_abs_def
     by auto
 qed
@@ -760,10 +847,11 @@ lemma combine_env_abs_bound_sound:
   fixes sc se sr :: "'a::sound_domain abs_state"
   assumes bound: "combine\<^sup># gs dst sc se \<le> sr"
     and sc: "s \<in> \<lbrakk>sc\<rbrakk>" and se: "t \<in> \<lbrakk>se\<rbrakk>"
-  shows "combine_collect gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
+    and ret_ok: "\<And>x v. ik_norm (\<Gamma> x) v = v"
+  shows "combine_collect \<Gamma> gs dst s t \<in> \<lbrakk>sr\<rbrakk>"
 proof -
-  have "combine_collect gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst sc se\<rbrakk>"
-    using sc se by (rule combine_collect_sound)
+  have "combine_collect \<Gamma> gs dst s t \<in> \<lbrakk>combine\<^sup># gs dst sc se\<rbrakk>"
+    using sc se ret_ok by (rule combine_collect_sound)
   thus ?thesis using gamma_state_mono[OF bound] by blast
 qed
 
@@ -810,25 +898,26 @@ text \<open>
 locale sound_transfer_for =
   fixes gs :: "vname => bool"
     and tf :: "'a::sound_domain domain_transfer"
+    and \<Gamma> :: tyenv
   assumes tf_sound_assign_for[intro]:
     "\<forall>x (a::exp) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+       s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   assumes tf_sound_special_for[intro]:
-    "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+    "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result \<Gamma> sc s v \<longrightarrow> s(x := ik_norm (\<Gamma> x) v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
   assumes tf_sound_branch_for[intro]:
-    "\<forall>(b::exp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol
+    "\<forall>(b::exp) (pol::bool) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (taval_syn \<Gamma> b s) = pol
        \<longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   assumes tf_sound_skip_for[intro]:
     "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
   assumes tf_sound_body_for[intro]:
     "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
   assumes tf_sound_return_for[intro]:
-    "\<forall>(e::exp option) p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+    "\<forall>(e::exp option) p rk \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
          \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
   assumes tf_sound_enter_for[intro]:
     "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+       bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   assumes tf_sound_event_for[intro]:
     "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
@@ -842,15 +931,15 @@ context sound_transfer_for
 begin
 
 lemma tf_sound_assign_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
   using tf_sound_assign_for by blast
 
 lemma tf_sound_special_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result \<Gamma> sc s v \<Longrightarrow> s(x := ik_norm (\<Gamma> x) v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
   using tf_sound_special_for by blast
 
 lemma tf_sound_branch_forD[intro]:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
   using tf_sound_branch_for by blast
 
 lemma tf_sound_skip_forD[intro]:
@@ -863,13 +952,13 @@ lemma tf_sound_body_forD[intro]:
 
 lemma tf_sound_return_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+     s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
        \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
   using tf_sound_return_for by blast
 
 lemma tf_sound_enter_forD[intro]:
   "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-     bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+     bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state gs s)
        \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
   using tf_sound_enter_for by blast
 
@@ -901,7 +990,8 @@ text \<open>Soundness of the analysis-supplied whole combine.  The merge obligat
   a sound \<open>combine_env\<^sup>#\<close> already makes \<^const>\<open>tf_combine_collect_abs\<close> sound.\<close>
 lemma tf_sound_combine_collect_forD[intro]:
   assumes sc: "s \<in> \<lbrakk>\<sigma>cont\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect gs (ci_dst ci) s t
+    and ret_ok: "\<And>x v. ik_norm (\<Gamma> x) v = v"
+  shows "combine_collect \<Gamma> gs (ci_dst ci) s t
            \<in> \<lbrakk>tf_combine_collect_abs tf ci \<sigma>cont \<sigma>e\<rbrakk>"
 proof -
   have base: "combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
@@ -915,8 +1005,10 @@ proof -
       using base by (simp add: combine_collect_def tf_combine_collect_abs_def)
   next
     case (Some x)
+    have norm: "ik_norm (\<Gamma> x) (t ret_var) = t ret_var"
+      by (rule ret_ok)
     then show ?thesis
-      using base ret
+      using base ret Some norm
       unfolding gamma_state_def combine_collect_def tf_combine_collect_abs_def
       by auto
   qed
@@ -926,35 +1018,37 @@ text \<open>The same statement at a call site, where the caller operand is the r
   state and the continuation is produced on the spot by \<open>caller_cont\<^sup>#\<close>.\<close>
 lemma tf_sound_combine_collect_at_call_forD[intro]:
   assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect gs (ci_dst ci) s t
+    and ret_ok: "\<And>x v. ik_norm (\<Gamma> x) v = v"
+  shows "combine_collect \<Gamma> gs (ci_dst ci) s t
            \<in> \<lbrakk>tf_combine_collect_abs tf ci (caller_cont\<^sup># tf ci \<sigma>c) \<sigma>e\<rbrakk>"
-  by (rule tf_sound_combine_collect_forD[OF tf_sound_caller_cont_forD[OF sc] se])
+  by (rule tf_sound_combine_collect_forD[OF tf_sound_caller_cont_forD[OF sc] se ret_ok])
 
 end
 
 lemma sound_transferI_for:
   fixes gs :: "vname => bool"
     and tf :: "'a::sound_domain domain_transfer"
+    and \<Gamma> :: tyenv
   assumes assign[intro]:
     "\<And>x a \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+       s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     and special[intro]:
-    "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow>
-       s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+    "\<And>sc x \<sigma> s v. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result \<Gamma> sc s v \<Longrightarrow>
+       s(x := ik_norm (\<Gamma> x) v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     and branch[intro]:
-    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (aval b s) = pol \<Longrightarrow>
+    "\<And>b pol \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = pol \<Longrightarrow>
        s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     and skip[intro]:
     "\<And>\<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
     and body[intro]:
     "\<And>p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
     and return[intro]:
-    "\<And>e p \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+    "\<And>e p rk \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+       s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
          \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
     and enter[intro]:
     "\<And>xs es \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
-       bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+       bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state gs s)
          \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     and event[intro]:
     "\<And>ev \<sigma> s. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"
@@ -963,27 +1057,27 @@ lemma sound_transferI_for:
     and combine[intro]:
     "\<And>ci \<sigma>cont \<sigma>e s t. s \<in> \<lbrakk>\<sigma>cont\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>e\<rbrakk> \<Longrightarrow>
        combine_env gs s t \<in> \<lbrakk>combine_env\<^sup># tf ci \<sigma>cont \<sigma>e\<rbrakk>"
-  shows "sound_transfer_for gs tf"
+  shows "sound_transfer_for gs tf \<Gamma>"
 proof unfold_locales
   show "\<forall>x a \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(x := aval a s) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
+      s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign\<^sup># tf x a \<sigma>\<rbrakk>"
     using assign by blast
-  show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result sc s v \<longrightarrow>
-      s(x := v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
+  show "\<forall>sc x \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. \<forall>v. special_result \<Gamma> sc s v \<longrightarrow>
+      s(x := ik_norm (\<Gamma> x) v) \<in> \<lbrakk>special\<^sup># tf sc x \<sigma>\<rbrakk>"
     using special by blast
-  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (aval b s) = pol \<longrightarrow>
+  show "\<forall>b pol \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. truthy (taval_syn \<Gamma> b s) = pol \<longrightarrow>
       s \<in> \<lbrakk>branch\<^sup># tf b pol \<sigma>\<rbrakk>"
     using branch by blast
   show "\<forall>\<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>skip\<^sup># tf \<sigma>\<rbrakk>"
     using skip by blast
   show "\<forall>p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>body\<^sup># tf p \<sigma>\<rbrakk>"
     using body by blast
-  show "\<forall>e p \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s))
+  show "\<forall>e p rk \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
+      s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
         \<in> \<lbrakk>return\<^sup># tf e p \<sigma>\<rbrakk>"
     using return by blast
   show "\<forall>xs (es::exp list) \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>.
-      bind_formals xs (map (\<lambda>e. aval e s) es) (enter_state gs s)
+      bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state gs s)
         \<in> \<lbrakk>tf_enter tf xs es \<sigma>\<rbrakk>"
     using enter by blast
   show "\<forall>ev \<sigma>. \<forall>s \<in> \<lbrakk>\<sigma>\<rbrakk>. s \<in> \<lbrakk>event\<^sup># tf ev \<sigma>\<rbrakk>"

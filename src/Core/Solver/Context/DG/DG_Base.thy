@@ -158,9 +158,9 @@ next
 qed
 
 lemma gamma_dg_base_step_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
+  assumes tf_sound: "sound_transfer_for gs tf \<Gamma>"
     and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "edge_collect a (gamma_dg_base d g) \<subseteq>
+  shows "edge_collect \<Gamma> a (gamma_dg_base d g) \<subseteq>
            (case dg_spec_step (base_dg_spec_for_lifted gs is_bot_pred tf) a d g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof (cases d)
@@ -168,7 +168,7 @@ proof (cases d)
   then show ?thesis by (simp add: gamma_dg_base_def)
 next
   case (Lifted sigma)
-  have base: "edge_collect a (gamma_state sigma) \<subseteq> \<lbrakk>apply_tf tf a sigma\<rbrakk>"
+  have base: "edge_collect \<Gamma> a (gamma_state sigma) \<subseteq> \<lbrakk>apply_tf tf a sigma\<rbrakk>"
     by (rule sound_transfer_for.edge_collect_apply_tf_sound_for[OF tf_sound])
   show ?thesis
   proof (cases "is_bot_pred (apply_tf tf a sigma)")
@@ -186,10 +186,11 @@ next
 qed
 
 lemma gamma_dg_base_combine_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
+  assumes tf_sound: "sound_transfer_for gs tf \<Gamma>"
     and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
     and sc: "s \<in> gamma_dg_base dc g" and tc: "t \<in> gamma_dg_base de g"
-  shows "combine_collect gs (ci_dst ci) s t \<in>
+    and ret_ok: "\<And>x v. ik_norm (\<Gamma> x) v = v"
+  shows "combine_collect \<Gamma> gs (ci_dst ci) s t \<in>
            (case dgs_combine (base_dg_spec_for_lifted gs is_bot_pred tf) ci dc de g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof -
@@ -197,9 +198,9 @@ proof -
     using sc unfolding gamma_dg_base_def by (cases dc) auto
   obtain sigma_e where de_eq: "de = Lifted sigma_e" and tc': "t \<in> \<lbrakk>sigma_e\<rbrakk>"
     using tc unfolding gamma_dg_base_def by (cases de) auto
-  have base: "combine_collect gs (ci_dst ci) s t
+  have base: "combine_collect \<Gamma> gs (ci_dst ci) s t
                 \<in> \<lbrakk>combine\<^sup># gs (ci_dst ci) sigma_c sigma_e\<rbrakk>"
-    by (rule combine_collect_sound[OF sc' tc'])
+    by (rule combine_collect_sound[OF sc' tc' ret_ok])
   show ?thesis
   proof (cases "is_bot_pred (combine\<^sup># gs (ci_dst ci) sigma_c sigma_e)")
     case True
@@ -216,16 +217,16 @@ proof -
 qed
 
 lemma gamma_dg_base_enter_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
+  assumes tf_sound: "sound_transfer_for gs tf \<Gamma>"
     and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
     and sc: "s \<in> gamma_dg_base dc g"
-  shows "call_enter gs (CallEdge dst pars args) s \<in>
+  shows "call_enter \<Gamma> gs (CallEdge dst pars args) s \<in>
            (case dgs_enter (base_dg_spec_for_lifted gs is_bot_pred tf) pars args dc g of
               (g', d') \<Rightarrow> gamma_dg_base d' g')"
 proof -
   obtain sigma_c where dc_eq: "dc = Lifted sigma_c" and sc': "s \<in> \<lbrakk>sigma_c\<rbrakk>"
     using sc unfolding gamma_dg_base_def by (cases dc) auto
-  have base: "call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args sigma_c\<rbrakk>"
+  have base: "call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> \<lbrakk>enter\<^sup># tf pars args sigma_c\<rbrakk>"
     using sound_transfer_for.tf_sound_enter_forD[OF tf_sound sc']
     by (simp add: call_enter_CallEdge)
   show ?thesis
@@ -251,14 +252,16 @@ text \<open>
 \<close>
 
 theorem base_dg_spec_sound:
-  assumes tf_sound: "sound_transfer_for gs tf"
+  assumes tf_sound: "sound_transfer_for gs tf \<Gamma>"
     and is_bot_pred_sound: "\<And>sigma. is_bot_pred sigma \<Longrightarrow> \<lbrakk>sigma\<rbrakk> = {}"
-  shows "sound_dg_spec (base_dg_spec_for_lifted gs is_bot_pred tf) gamma_dg_base gs"
+    and ret_ok: "\<And>x v. ik_norm (\<Gamma> x) v = v"
+  shows "sound_dg_spec (base_dg_spec_for_lifted gs is_bot_pred tf) gamma_dg_base gs \<Gamma>"
   apply unfold_locales
   subgoal for d d' g g' by (rule gamma_dg_base_mono)
   subgoal for a d g by (rule gamma_dg_base_step_sound[OF tf_sound is_bot_pred_sound])
   subgoal premises prems using prems by simp
-  subgoal premises prems by (rule gamma_dg_base_combine_sound[OF tf_sound is_bot_pred_sound prems])
+  subgoal premises prems for s dc g t de ci
+    by (rule gamma_dg_base_combine_sound[OF tf_sound is_bot_pred_sound prems ret_ok])
   subgoal premises prems by (rule gamma_dg_base_enter_sound[OF tf_sound is_bot_pred_sound prems])
   done
 

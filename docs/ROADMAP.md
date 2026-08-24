@@ -156,6 +156,97 @@ width-dependent domains (bitfield, DefExc) become definable. Staged plan and
 locked design decisions: `docs/history/IKIND_MIGRATION.md`; register row
 "Integer width and wraparound".
 
+Known gap: `sound_transfer_for`'s `tf_sound_branch_for` obligation
+(`src/Core/Equations/Constraint_System.thy`) supplies no `styped Gamma s` or
+`wt_exp Gamma b (opk (esyn Gamma b))` fact, but each domain's `branch_*_sound`
+lemma (e.g. `branch_sign_sound` in `src/Analysis/Instances/Sign/Sign_Backward.thy`)
+requires both -- added for the Goblint-faithful backward-narrowing pivot
+without updating this obligation or its callers. `sign_is_sound_transfer_for`
+carries a `sorry` at this subgoal. Closing it means threading a well-typedness
+invariant through the whole `sound_transfer_for` soundness chain, not a local
+proof fix; it blocks every domain wired through `sound_transfer_for`
+(Sign now, Interval/Parity/Int on the same pattern). Interval's own
+`ivl_is_sound_transfer_for` (`src/Analysis/Instances/Interval/Interval_Transfer.thy`)
+now carries the same `sorry`, for the same reason. The composite `int_dom`'s
+three refinement-mode bundles in `src/Analysis/Instances/Product/Int_Transfer.thy`
+(`int_never_is_sound_transfer_for`, `int_once_is_sound_transfer_for`,
+`int_fixpoint_is_sound_transfer_for`) each carry the same `sorry` at their own
+branch subgoal, for the same reason.
+
+Scope audit (2026-08-26): the generic chain that would need to carry this
+invariant is now mapped exactly. `Constraint_System_Sound.thy`'s
+`edge_collect_apply_tf_sound_for` (in `context sound_transfer_for`) discharges
+the `EA_Assume`/`EA_AssumeNot` cases via `tf_sound_branch_forD`; that feeds
+`LTR_Abstract.thy`'s `ltr_collect_semantic_postfix` (`edge` obligation), cited
+by `DG_LTR_Sound.thy`'s `dg_postfix_collect_sound_ltr_for` and
+`hook_postfix_collect_sound_ltr`, in turn cited by `Run_Analysis_Sound.thy`'s
+literal source-facing theorems (`run_source_sound`, `collect_sound`) and by
+`DG_Base.thy`/`DG_Soundness.thy`'s context-sensitive siblings (2328 lines, a
+dozen direct `sound_transfer_for.*` citations, dozens more derived). Adding
+`styped Gamma s` to the branch obligation forces every `B`/`dg_gamma` in that
+whole chain to carry a `styped Gamma` conjunct, not just the branch lemma.
+
+Two prerequisites this needs are not built yet. First, no whole-program
+well-typedness checker exists: `wf_source_program`/`wf_source_com`
+(`src/VIMP/VIMP_Proc.thy`) take no `Gamma`/typing argument at all today, so
+there is no fact anywhere that a compiled `EA_Assume`/`EA_AssumeNot` edge's
+guard is well-typed -- this is `IKIND_MIGRATION.md`'s B3 stage ("Typing
+layer"), not started. Second, `call_enter`/`combine_collect`
+(`src/CFG/CFG_Def.thy`) have no `styped`-preservation lemmas; only the plain
+per-variable `styped_update_norm`/`styped_update_taval` exist
+(`VIMP_Typing.thy`). These look tractable on their own (same shape as the
+existing preservation lemmas) but are unproven.
+
+Separately, `src/Soundness/Run_Analysis_Sound.thy` -- the file holding the
+actual source-facing endpoints this chain serves -- is itself currently
+unbuildable (64 I/Q errors, checked 2026-08-26): a bare
+`sound_transfer_for gs tf` assumption missing the now-required `Gamma`
+argument, plus an `Unknown ancestor theory Voblint_Core.DG_Base_Exec` session
+break. This is `IKIND_MIGRATION.md`'s own B6/B7 gate, recorded there as "not
+yet met" -- so a change to the branch obligation cannot be verified end-to-end
+against its real consumer until that unrelated breakage is fixed. Closing this
+gap should sequence behind ikind migration B3/B6/B7, not attempt in isolation
+alongside it.
+
+Known gap: `backward_domain`'s `aval_abs` field
+(`src/Core/Domain/Abstract_Domain.thy`) requires a typed evaluator
+(`tyenv => ikind => exp => store => 'a`), since its narrowing math
+(`inv_plus`/`inv_minus`/`inv_times`) is genuinely `ik`-dependent. Congruence's
+`aval_congruence` (`src/Analysis/Instances/Congruence/Congruence_Arithmetic.thy`)
+is still the old untyped, unbounded-int evaluator -- its `Plus`/`Minus`/`Times`
+cases do not wrap at `ik` at all, and its own soundness fact is stated against
+the plain `aval`, not `taval`. `congruence_backward_domain`'s interpretation in
+`src/Analysis/Instances/Congruence/Congruence_Backward.thy` passes
+`aval_congruence` where the typed `aval_abs` is expected and does not
+type-check. A trivial typed wrapper that ignores `Gamma`/`ik` is not sound: it
+would need `taval Gamma ik e s \<in> gamma (aval_congruence e sigma)`, strictly
+stronger than the already-proven unbounded-evaluator fact, and false wherever
+`ik` actually wraps. Closing this means deciding whether Congruence's
+arithmetic needs the same elaboration/wraparound treatment Sign, Interval, and
+Parity already have, which is a real semantic question, not a mechanical
+typing fix. This predates the elaboration migration -- both gaps above trace
+to the same commit that made `expression_domain_sound` and `backward_domain`
+typed without updating every domain that interprets them.
+
+Closed: Parity's `parity_cast` (`src/Analysis/Instances/Parity/Parity_Domain.thy`)
+previously used the generic `a_cast_of` fallback, which widened every cast to
+`top` regardless of value (`parity_lt` is unconditionally `None`, so
+`a_cast_of`'s boundary-literal guard could never succeed). `parity_cast` is
+now the identity: parity's modulus, `2`, divides every machine-width
+wraparound modulus this project defines (`ik_bits ik >= 1` for every
+`ikind`), so evenness/oddness survives `ik_norm` truncation unconditionally
+(`even_ik_norm`), unlike a domain whose modulus does not divide every
+wraparound modulus (Congruence, whose narrowing genuinely needs
+`cong_cast`/`cong_unwrap`'s `gcd(m, ik_mod ik)` reasoning). The three
+`Parity_Checks.thy` example lemmas that had been downgraded to `Check_Unknown`
+now recover their original `Check_Proved`/`Check_Refuted` verdicts. `a_cast_of`
+itself was removed from `Abstract_Arithmetic.thy` entirely once Sign's own
+`sign_cast` (the only other consumer) was migrated off it to a bespoke,
+strictly more precise cast: `SZero` stays exact at any kind, and an unsigned
+target is always sound at `SNonNeg` (`ik_norm` for an unsigned kind always
+lands in `[0, ik_max ik]`) rather than widening to `STop` the way the generic
+fallback did for every non-zero sign value regardless of target.
+
 ### Source language
 
 Arrays and richer types require explicit syntax, operational semantics,

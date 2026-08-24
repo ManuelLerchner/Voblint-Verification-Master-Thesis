@@ -645,7 +645,7 @@ where
     dgs_special    = (\<lambda>sc x. unit_step_st (tf_st (EA_Special sc x))),
     dgs_branch     = (\<lambda>b pol. unit_step_st (tf_st (if pol then EA_Assume b else EA_AssumeNot b))),
     dgs_body       = (\<lambda>p. unit_step_st (tf_st EA_Nop)),
-    dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p))),
+    dgs_return     = (\<lambda>e p. unit_step_st (tf_st (EA_Ret e p I32))),
     dgs_enter      = (\<lambda>xs es. unit_step_st (enter_st xs es)),
     dgs_event      = (\<lambda>ev. case ev of Check_Event bc \<Rightarrow> unit_step_st (tf_st (EA_Check bc))),
     dgs_caller_cont    = (\<lambda>ci d g. d),
@@ -763,7 +763,15 @@ lemma unit_combine_step_st_commute_for:
 lemma dg_spec_step_unit_st_for:
   assumes reduces: "action_reduces tf_st"
   shows "dg_spec_step (unit_dg_spec_st_for gs tf_st enter_st) a = unit_step_st (tf_st a)"
-  unfolding unit_dg_spec_st_for_def
-  by (cases a) simp_all
+proof -
+  interpret action_reduces tf_st by (rule reduces)
+  show ?thesis
+  proof (cases a)
+    case (EA_Ret e p rk)
+    then show ?thesis
+      unfolding unit_dg_spec_st_for_def
+      by (cases e) (simp_all add: ret_none ret_some)
+  qed (simp_all add: unit_dg_spec_st_for_def check)
+qed
 
 end

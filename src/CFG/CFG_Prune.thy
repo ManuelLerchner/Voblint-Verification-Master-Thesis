@@ -298,7 +298,7 @@ next
 next
   case (Return e)
   have en: "en = Statement n"
-    and mem: "(Statement n, EA_Ret e p, FunctionResult p) \<in> intra g"
+    and mem: "(Statement n, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra g"
     using Return.prems by (auto split: prod.splits)
   from mem have "cfg_reaches g en (FunctionResult p)" unfolding en by (rule cfg_reaches_intra)
   then show ?case ..
@@ -502,7 +502,7 @@ next
 next
   case (Return e)
   have en: "en = Statement n"
-    and mem: "(Statement n, EA_Ret e p, FunctionResult p) \<in> intra g"
+    and mem: "(Statement n, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra g"
     using Return.prems by (auto split: prod.splits)
   from mem show ?case unfolding en by (rule cfg_reaches_intra)
 next
@@ -522,7 +522,7 @@ proof -
       body: "compile \<Pi> p (body decl) (Statement ?r) n = (?r, Statement n, Eb, K)"
     and E_eq: "E = insert (FunctionEntry p, EA_Nop, Statement n)
                      (if falls_through (body decl)
-                      then insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb
+                      then insert (Statement ?r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                       else Eb)"
     by (rule compile_procE[OF assms(1)])
   have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by (auto split: if_splits)

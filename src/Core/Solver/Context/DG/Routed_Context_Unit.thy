@@ -79,12 +79,13 @@ text \<open>
 \<close>
 
 locale unit_routed_context =
-  dg_ctx_activation_base S gammaDG gs g gk0 route_unit
+  dg_ctx_activation_base S gammaDG gs \<Gamma> g gk0 route_unit
     "routed_cmb_g S gk0 seed_key (static_resolve g)" "routed_extra_g seed_key gk0"
     bot0 s0d s0g sigma vars x0 sg gammaM
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and g :: cfg and gk0 :: 'k
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> unit + 'k \<Rightarrow> ('D, 'G) dg_state"
@@ -107,12 +108,12 @@ locale unit_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
     and call_enter_store_agree:
     "\<And>cl s es dst pars args p cont.
-       call_enter_store gs g cl s es
+       call_enter_store \<Gamma> gs g cl s es
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
+       \<Longrightarrow> es = call_enter \<Gamma> gs (CallEdge dst pars args) s"
 begin
 
-sublocale routed: routed_context_base_hetero S gammaDG gs g gk0 route_unit
+sublocale routed: routed_context_base_hetero S gammaDG gs \<Gamma> g gk0 route_unit
   bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" gammaM enterc_unit
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
@@ -128,7 +129,7 @@ next
   fix u ctx dst pars args p cont s
   show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
             (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
-          = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
+          = enterc_unit u ctx (call_enter \<Gamma> gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
@@ -150,9 +151,9 @@ next
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 next
   fix cl s es dst pars args p cont
-  assume "call_enter_store gs g cl s es"
+  assume "call_enter_store \<Gamma> gs g cl s es"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "es = call_enter gs (CallEdge dst pars args) s"
+  then show "es = call_enter \<Gamma> gs (CallEdge dst pars args) s"
     by (rule call_enter_store_agree)
 qed
 
@@ -178,10 +179,11 @@ text \<open>
 \<close>
 
 locale unit_routed_context_hetero =
-  unit_routed_context S gamma_dg_base gs g gk0 bot0 s0d s0g sigma vars x0 sg
+  unit_routed_context S gamma_dg_base gs \<Gamma> g gk0 bot0 s0d s0g sigma vars x0 sg
     seed_key gamma_state_lift
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and g :: cfg and gk0 :: 'k
     and bot0 s0d :: "'a abs_state lifted" and s0g :: 'G
     and sigma :: "pp \<times> unit + 'k \<Rightarrow> ('a abs_state lifted, 'G) dg_state"
@@ -190,7 +192,7 @@ locale unit_routed_context_hetero =
     and seed_key :: "pp \<Rightarrow> unit \<Rightarrow> 'k"
 begin
 
-sublocale hetero: routed_context_hetero S gs g gk0 route_unit
+sublocale hetero: routed_context_hetero S gs \<Gamma> g gk0 route_unit
   bot0 s0d s0g sigma vars x0 sg seed_key "static_resolve g" enterc_unit
 proof unfold_locales
   show "finite (calls g)" by (rule finC)
@@ -206,7 +208,7 @@ next
   fix u ctx dst pars args p cont s
   show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
             (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
-          = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
+          = enterc_unit u ctx (call_enter \<Gamma> gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
@@ -228,9 +230,9 @@ next
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
 next
   fix cl s es dst pars args p cont
-  assume "call_enter_store gs g cl s es"
+  assume "call_enter_store \<Gamma> gs g cl s es"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "es = call_enter gs (CallEdge dst pars args) s"
+  then show "es = call_enter \<Gamma> gs (CallEdge dst pars args) s"
     by (rule call_enter_store_agree)
 qed
 
@@ -252,7 +254,7 @@ text \<open>
 \<close>
 
 lemma activation_collect_unit_eq_ltr_collect:
-  "activation_collect gs (admiss_exact enterc_unit) () g S v () = ltr_collect gs g S v"
+  "activation_collect \<Gamma> gs (admiss_exact enterc_unit) () g S v () = ltr_collect \<Gamma> gs g S v"
   unfolding activation_collect_def ltr_collect_def
   by (auto simp: ctx_key_exact_iff)
 

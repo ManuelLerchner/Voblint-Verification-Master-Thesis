@@ -27,6 +27,14 @@ let close_definition ((name, formals, body) as decl) =
 %token WHILE
 %token BOOL_TRUE
 %token BOOL_FALSE
+%token TINT8
+%token TUINT8
+%token TINT16
+%token TUINT16
+%token TINT32
+%token TUINT32
+%token TINT64
+%token TUINT64
 %token ASSIGN
 %token PLUS
 %token MINUS
@@ -56,12 +64,14 @@ let close_definition ((name, formals, body) as decl) =
 %type <Voblint_CLI.Core.com> stmts
 %type <Voblint_CLI.Core.com> stmts_opt
 %type <Voblint_CLI.Core.exp list> actuals
-%type <string list> formals
+%type <Voblint_CLI.Core.ikind> ty
+%type <string * Voblint_CLI.Core.ikind option> formal
+%type <(string * Voblint_CLI.Core.ikind option) list> formals
 %type <string list> ids
-%type <string list> globals_decl
-%type <string list> globals_opt
-%type <string * string list * Voblint_CLI.Core.com> function_decl
-%type <(string * string list * Voblint_CLI.Core.com) list> function_decl_star
+%type <(string * Voblint_CLI.Core.ikind option) list> globals_decl
+%type <(string * Voblint_CLI.Core.ikind option) list> globals_star
+%type <string * (string * Voblint_CLI.Core.ikind option) list * Voblint_CLI.Core.com> function_decl
+%type <(string * (string * Voblint_CLI.Core.ikind option) list * Voblint_CLI.Core.com) list> function_decl_star
 
 %start <unit Voblint_CLI.Core.imp_prog_ext> program
 %%
@@ -121,6 +131,30 @@ stmt:
       { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Call (None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN
       { record_stmt_pos $startpos $endpos (Voblint_CLI.Core.Call ((Some v0), v2, v4)) }
+(* ty: *)
+ty:
+  | v0 = TINT8
+      { Voblint_CLI.Core.I8 }
+  | v0 = TUINT8
+      { Voblint_CLI.Core.U8 }
+  | v0 = TINT16
+      { Voblint_CLI.Core.I16 }
+  | v0 = TUINT16
+      { Voblint_CLI.Core.U16 }
+  | v0 = TINT32
+      { Voblint_CLI.Core.I32 }
+  | v0 = TUINT32
+      { Voblint_CLI.Core.U32 }
+  | v0 = TINT64
+      { Voblint_CLI.Core.I64 }
+  | v0 = TUINT64
+      { Voblint_CLI.Core.U64 }
+(* formal: *)
+formal:
+  | v0 = IDENT
+      { (v0, None) }
+  | v0 = ty v1 = IDENT
+      { (v1, Some v0) }
 (* stmts: *)
 stmts:
   | x = stmt
@@ -145,9 +179,9 @@ actuals:
 formals:
   | (* empty *)
       { [] }
-  | x = IDENT
+  | x = formal
       { [x] }
-  | xs = formals COMMA x = IDENT
+  | xs = formals COMMA x = formal
       { xs @ [x] }
 (* ids: *)
 ids:
@@ -158,14 +192,16 @@ ids:
 (* globals_decl: *)
 globals_decl:
   | v0 = GLOBAL v1 = ids v2 = SEMI
-      { v1 }
+      { List.map (fun n -> (n, None)) v1 }
+  | v0 = GLOBAL v1 = ty v2 = ids v3 = SEMI
+      { List.map (fun n -> (n, Some v1)) v2 }
 (* function_decl: *)
 function_decl:
   | v0 = VOID v1 = IDENT v2 = LPAREN v3 = formals v4 = RPAREN v5 = LBRACE v6 = stmts_opt v7 = RBRACE
       { close_definition ((v1, v3, v6)) }
 (* program: *)
 program:
-  | g = globals_opt fs = function_decl_star EOF
+  | g = globals_star fs = function_decl_star EOF
       { let mains, procs = List.partition (fun (n, _, _) -> n = "main") fs in
         let main_body =
           match mains with
@@ -174,15 +210,24 @@ program:
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
-        Voblint_CLI.Core.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Core.proc_decl_of formals b)) procs)
-          main_body g }
+        let kind_entries pairs =
+          List.filter_map (fun (n, k) ->
+              match k with Some k -> Some (n, k) | None -> None) pairs
+        in
+        let kinds =
+          kind_entries g
+          @ List.concat_map (fun (_, formals, _) -> kind_entries formals) fs
+        in
+        Voblint_CLI.Core.mk_program_typed
+          (List.map (fun (n, formals, b) ->
+               (n, Voblint_CLI.Core.proc_decl_of (List.map fst formals) b)) procs)
+          main_body (List.map fst g) kinds }
 
-globals_opt:
+globals_star:
   | (* empty *)
       { [] }
-  | gs = globals_decl
-      { gs }
+  | l = globals_decl g = globals_star
+      { l @ g }
 
 function_decl_star:
   | (* empty *)

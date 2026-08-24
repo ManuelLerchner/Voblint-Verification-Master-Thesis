@@ -26,8 +26,8 @@ fun string_of_action :: "edge_action \<Rightarrow> string" where
     String.explode x @ '' := max('' @ string_of_exp 0 a @ '', '' @ string_of_exp 0 b @ '')''"
 | "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 b @ '']''"
 | "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 b @ '']''"
-| "string_of_action (EA_Ret None p) = ''return''"
-| "string_of_action (EA_Ret (Some e) p) =
+| "string_of_action (EA_Ret None p rk) = ''return''"
+| "string_of_action (EA_Ret (Some e) p rk) =
     ''return '' @ string_of_exp 0 e"
 | "string_of_action (EA_Check cnd) = ''check('' @ string_of_exp 0 cnd @ '')''"
 
@@ -1029,7 +1029,7 @@ definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> s
     (case a of EA_Assign x e \<Rightarrow>
        if x = ret_var then ''ret := '' @ string_of_exp 0 e else string_of_action a    | EA_Assume b \<Rightarrow> string_of_exp 0 b
     | EA_AssumeNot b \<Rightarrow> ''not ('' @ string_of_exp 0 b @ '')''
-    | EA_Ret _ p \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
+    | EA_Ret _ p _ \<Rightarrow> if cfg_entry g = FunctionEntry p then ''terminate'' else string_of_action a
     | _ \<Rightarrow> string_of_action a)"
 
 definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarrow> string" where

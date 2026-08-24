@@ -29,58 +29,58 @@ text \<open>
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
-inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for gs and g where
+inductive cstep :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool" for \<Gamma> and gs and g where
   Intra:
-    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow>
-     cstep gs g (u, s, stk) (v, s', stk)"
+    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step \<Gamma> a s \<Longrightarrow>
+     cstep \<Gamma> gs g (u, s, stk) (v, s', stk)"
 | Call:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-     cstep gs g (u, s, stk)
-       (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+     cstep \<Gamma> gs g (u, s, stk)
+       (FunctionEntry q, call_enter \<Gamma> gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
 | Return:
-    "cstep gs g (FunctionResult q, t, (cont, dst, caller) # stk)
-       (cont, combine_collect gs dst caller t, stk)"
+    "cstep \<Gamma> gs g (FunctionResult q, t, (cont, dst, caller) # stk)
+       (cont, combine_collect \<Gamma> gs dst caller t, stk)"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
-lemma cstep_star_single: "cstep gs g cf cf' \<Longrightarrow> star (cstep gs g) cf cf'"
+lemma cstep_star_single: "cstep \<Gamma> gs g cf cf' \<Longrightarrow> star (cstep \<Gamma> gs g) cf cf'"
   by (rule star.step[OF _ star.refl])
 
 lemma cstep_nop:
   assumes "(u, EA_Nop, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  shows "cstep \<Gamma> gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assign:
   assumes "(u, EA_Assign x a, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s(x := aval a s), stk)"
+  shows "cstep \<Gamma> gs g (u, s, stk) (v, s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
-  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (aval b s)"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (taval_syn \<Gamma> b s)"
+  shows "cstep \<Gamma> gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
-  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (aval b s)"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (taval_syn \<Gamma> b s)"
+  shows "cstep \<Gamma> gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_ret:
-  assumes "(u, EA_Ret e q, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk)
-     (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> aval a s)), stk)"
+  assumes "(u, EA_Ret e q rk, v) \<in> intra g"
+  shows "cstep \<Gamma> gs g (u, s, stk)
+     (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s))), stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_check:
   assumes "(u, EA_Check c, v) \<in> intra g"
-  shows "cstep gs g (u, s, stk) (v, s, stk)"
+  shows "cstep \<Gamma> gs g (u, s, stk) (v, s, stk)"
   by (rule cstep.Intra[OF assms]) simp
 
 lemma cstep_call:
   "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-   cstep gs g (u, s, stk)
-     (FunctionEntry q, call_enter gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+   cstep \<Gamma> gs g (u, s, stk)
+     (FunctionEntry q, call_enter \<Gamma> gs (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
   by (rule cstep.Call)
 
 subsection \<open>Activation-stack matching\<close>
@@ -90,7 +90,7 @@ text \<open>Both stacks record procedure activations.  \<open>act_frames\<close>
 
 fun act_frames :: "frame list \<Rightarrow> (store \<times> vname option) list" where
   "act_frames [] = []"
-| "act_frames (Frame s d # frs) = (s, d) # act_frames frs"
+| "act_frames (Frame s d rk # frs) = (s, d) # act_frames frs"
 
 definition cframe_act :: "cframe \<Rightarrow> store \<times> vname option" where
   "cframe_act cf = (case cf of (cont, d, s) \<Rightarrow> (s, d))"
@@ -106,14 +106,14 @@ lemma frames_match_Nil [simp]: "frames_match [] []"
 
 text \<open>An activation frame matches the top CFG activation on caller store and destination.\<close>
 lemma frames_match_activation:
-  "frames_match (Frame s d # frs) ((cont, d, s) # stk)
+  "frames_match (Frame s d rk # frs) ((cont, d, s) # stk)
      = frames_match frs stk"
   by (simp add: frames_match_def cframe_act_def)
 
 text \<open>Call entry creates exactly one child activation on top of the preserved caller stack.\<close>
 lemma frames_match_call:
   "frames_match frs stk \<Longrightarrow>
-   frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
+   frames_match (Frame caller dst rk # frs) ((cont, dst, caller) # stk)"
   by (simp add: frames_match_activation)
 
 

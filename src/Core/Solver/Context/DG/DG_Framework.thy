@@ -627,7 +627,7 @@ where
 | "dg_spec_step S (EA_Special sc x) = dgs_special S sc x"
 | "dg_spec_step S (EA_Assume b)    = dgs_branch S b True"
 | "dg_spec_step S (EA_AssumeNot b) = dgs_branch S b False"
-| "dg_spec_step S (EA_Ret e p)     = dgs_return S e p"
+| "dg_spec_step S (EA_Ret e p rk)  = dgs_return S e p"
 | "dg_spec_step S (EA_Check cnd)   = dgs_event S (Check_Event cnd)"
 
 definition apply_dg_spec ::

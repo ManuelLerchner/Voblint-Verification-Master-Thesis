@@ -117,6 +117,22 @@ definition call_formals :: "proc_table \<Rightarrow> pname \<Rightarrow> vname l
 
 declare call_formals_def [simp]
 
+text \<open>
+  \<open>proc_ret_kind \<Pi> p\<close> is \<open>EA_Ret\<close>'s baked return kind (\<open>CFG_Def.thy\<close>'s doc comment on
+  \<open>edge_action\<close>): \<open>p\<close>'s declared return kind, \<open>I32\<close> for \<open>void\<close> or an undeclared \<open>p\<close>, resolved
+  once at compile time exactly as \<^const>\<open>pstep\<close>'s \<open>Call\<close> rule resolves the callee's active
+  return kind (\<open>rk' = case ret_kind decl of None \<Rightarrow> I32 | Some k \<Rightarrow> k\<close>) --- the same classifier
+  shape as \<^const>\<open>call_formals\<close> above, so every \<open>EA_Ret\<close> this compiler emits for \<open>p\<close> carries
+  \<open>p\<close>'s declared kind by construction.
+\<close>
+definition proc_ret_kind :: "proc_table \<Rightarrow> pname \<Rightarrow> ikind" where
+  "proc_ret_kind \<Pi> p =
+     (case \<Pi> p of
+        None \<Rightarrow> I32
+      | Some decl \<Rightarrow> (case ret_kind decl of None \<Rightarrow> I32 | Some k \<Rightarrow> k))"
+
+declare proc_ret_kind_def [simp]
+
 fun compile ::
   "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node
@@ -162,7 +178,7 @@ where
              CallEdge dst (call_formals \<Pi> q) actuals,
              FunctionEntry q, k)}))"
 | "compile \<Pi> p (Return e) k n =
-     (Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})"
+     (Suc n, Statement n, {(Statement n, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p)}, {})"
 | "compile \<Pi> p Restore k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 | "compile \<Pi> p Unwind k n =
@@ -330,7 +346,7 @@ where
       in (Suc r,
           insert (FunctionEntry p, EA_Nop, ben)
             (if falls_through (body decl)
-             then insert (Statement r, EA_Ret None p, FunctionResult p) E
+             then insert (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) E
              else E),
           K))"
 
@@ -1000,7 +1016,7 @@ text \<open>A fragment that cannot complete normally contains an explicit return
   an edge into \<^term>\<open>FunctionResult p\<close>, so the procedure keeps a return edge either way.\<close>
 lemma compile_returns_edge:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> \<not> falls_through c
-   \<Longrightarrow> \<exists>u e. (u, EA_Ret e p, FunctionResult p) \<in> E"
+   \<Longrightarrow> \<exists>u e. (u, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
@@ -1104,7 +1120,8 @@ lemma compile_procE:
        = (n + csize (body decl), Statement n, Eb, K)"
     "E = insert (FunctionEntry p, EA_Nop, Statement n)
            (if falls_through (body decl)
-            then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+            then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p),
+                         FunctionResult p) Eb
             else Eb)"
     "n' = Suc (n + csize (body decl))"
 proof -
@@ -1117,7 +1134,7 @@ proof -
   from assms cb e i
   have "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
     "K = Kb" "n' = Suc r"
     unfolding compile_proc_def r_def by (auto simp: Let_def)
@@ -1249,7 +1266,7 @@ lemma compile_intra_tgt_not_entry:
 text \<open>Every \<open>EA_Ret\<close> edge lands on the matching \<open>FunctionResult\<close> --- the enclosing
   procedure name in the action equals the one in the target node.\<close>
 lemma compile_ret_wf:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E
    \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> v = FunctionResult q"
   by (induction c arbitrary: k n n' en E K)
      (auto simp: Let_def split: prod.splits if_splits option.splits)
@@ -1266,7 +1283,7 @@ lemma compile_proc_intra_tgt_not_entry:
        dest: compile_E_shape compile_entry)
 
 lemma compile_proc_ret_wf:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E
    \<Longrightarrow> v = FunctionResult q"
   by (auto simp: compile_proc_def Let_def split: prod.splits if_splits
        dest: compile_ret_wf)
@@ -1313,7 +1330,7 @@ next
 qed
 
 lemma compile_procs_ret_wf:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E \<Longrightarrow> v = FunctionResult q"
+  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E \<Longrightarrow> v = FunctionResult q"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -1363,10 +1380,10 @@ proof -
       using compile_procs_intra_tgt_not_entry[OF procs] compile_proc_intra_tgt_not_entry[OF mainc]
       by blast
   next
-    fix u e p v assume "(u, EA_Ret e p, v) \<in> intra \<lparr>intra = Eprocs \<union> Emain,
+    fix u e p rk v assume "(u, EA_Ret e p rk, v) \<in> intra \<lparr>intra = Eprocs \<union> Emain,
         calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
         checks = (\<lambda>(u, a, v). (u, ea_check_cond a)) ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain)\<rparr>"
-    then have "(u, EA_Ret e p, v) \<in> Eprocs \<or> (u, EA_Ret e p, v) \<in> Emain" by simp
+    then have "(u, EA_Ret e p rk, v) \<in> Eprocs \<or> (u, EA_Ret e p rk, v) \<in> Emain" by simp
     then show "v = FunctionResult p"
       using compile_procs_ret_wf[OF procs] compile_proc_ret_wf[OF mainc] by blast
   qed
@@ -1389,9 +1406,10 @@ text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on
   \<^const>\<open>bind_formals\<close>-bound to the formals.  The resulting store is exactly the
   source \<open>Call\<close> callee store used by the local-trace call rule.\<close>
 lemma call_enter_eq_source_call_store:
-  "call_enter source_global (CallEdge dst (formals decl) actuals) s
-     = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
-       (enter_state source_global s)"
+  "call_enter \<Gamma> source_global (CallEdge dst (formals decl) actuals) s
+     = bind_formals (formals decl)
+         (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals)
+         (enter_state source_global s)"
   by (simp add: call_enter_CallEdge)
 
 text \<open>Combined: traversing the compiled call edge lands the callee at the source callee-entry
@@ -1400,9 +1418,10 @@ lemma compile_call_enter_eq_source:
   assumes "\<Pi> q = Some decl" and "special_table q = None"
     and "(cs, CallEdge dst pars actuals, FunctionEntry q, af)
            \<in> snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))"
-  shows "call_enter source_global (CallEdge dst pars actuals) s
-           = bind_formals (formals decl) (map (\<lambda>e. aval e s) actuals)
-             (enter_state source_global s)"
+  shows "call_enter \<Gamma> source_global (CallEdge dst pars actuals) s
+           = bind_formals (formals decl)
+               (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals)
+               (enter_state source_global s)"
 proof -
   from assms(3) have "pars = formals decl"
     by (simp add: assms(1,2))
@@ -1415,8 +1434,8 @@ subsection \<open>Return transfer agrees with the source semantics\<close>
 text \<open>The \<open>EA_Ret\<close> edge publishes the return value into \<^const>\<open>ret_var\<close> exactly as the
   source \<open>Return\<close> step: \<open>Some e\<close> writes \<open>aval e\<close>, \<open>None\<close> leaves the reserved local.\<close>
 lemma return_publishes_ret_var:
-  assumes "pstep source_global \<Pi> (Return e, s, frs) (Unwind, s', frs)"
-  shows "s' \<in> edge_step (EA_Ret e p) s"
+  assumes "pstep \<Gamma> source_global \<Pi> (Return e, s, frs, rk) (Unwind, s', frs, rk)"
+  shows "s' \<in> edge_step \<Gamma> (EA_Ret e p rk) s"
   using assms by (cases e) auto
 
 text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> reproduces the store built by the source
@@ -1424,17 +1443,20 @@ text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> repr
   callee \<^const>\<open>ret_var\<close> written into the destination.  \<open>caller\<close> is the saved caller store in
   the activation frame, \<open>callee\<close> the callee-exit store.\<close>
 lemma combine_collect_eq_source_unwind:
-  assumes "pstep source_global \<Pi> (Seq Unwind Restore, callee, Frame caller dst # frs)
-                    (SKIP, s', frs)"
-  shows "s' = combine_collect source_global dst caller callee"
-  using assms by (auto simp: combine_collect_def)
+  assumes "pstep \<Gamma> source_global \<Pi>
+             (Seq Unwind Restore, callee, Frame caller dst rk # frs, rk')
+             (SKIP, s', frs, rk)"
+  shows "s' = combine_collect \<Gamma> source_global dst caller callee"
+  using assms by (auto simp: combine_collect_def elim: pstep.cases)
 
 text \<open>The same combine also matches the normal-completion \<open>Restore\<close> step, which fires once the
   callee body has reduced to \<^const>\<open>SKIP\<close>: the combined store is fixed by the destination and stores.\<close>
 lemma combine_collect_eq_source_restore:
-  assumes "pstep source_global \<Pi> (Restore, callee, Frame caller dst # frs) (SKIP, s', frs)"
-  shows "s' = combine_collect source_global dst caller callee"
-  using assms by (auto simp: combine_collect_def)
+  assumes "pstep \<Gamma> source_global \<Pi>
+             (Restore, callee, Frame caller dst rk # frs, rk')
+             (SKIP, s', frs, rk)"
+  shows "s' = combine_collect \<Gamma> source_global dst caller callee"
+  using assms by (auto simp: combine_collect_def elim: pstep.cases)
 
 
 end

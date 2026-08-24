@@ -21,10 +21,11 @@ text \<open>
   not reconstruct activation pairing.
 \<close>
 
-locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs
+locale dg_ctx_activation_base = sound_dg_spec S gammaDG gs \<Gamma>
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
-    and gs :: "vname \<Rightarrow> bool" +
+    and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv +
   fixes g :: cfg and gk0 :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
@@ -168,7 +169,7 @@ qed
 
 theorem dg_ctx_act_edge:
   assumes e: "(u, a, v) \<in> intra g"
-    and sin: "s \<in> gammaM (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step a s"
+    and sin: "s \<in> gammaM (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step \<Gamma> a s"
   shows "s' \<in> gammaM (sg (Inl (v, ctx)))"
 proof (cases "(u, ctx) \<in> vars")
   case False
@@ -182,9 +183,9 @@ next
   have sin': "s \<in> gammaDG ?d ?g"
     using sin True by (simp add: sg_cov)
   have "{s} \<subseteq> gammaDG ?d ?g" using sin' by simp
-  hence "edge_collect a {s} \<subseteq> edge_collect a (gammaDG ?d ?g)" by (rule edge_collect_mono)
-  moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
-  ultimately have "s' \<in> edge_collect a (gammaDG ?d ?g)" by blast
+  hence "edge_collect \<Gamma> a {s} \<subseteq> edge_collect \<Gamma> a (gammaDG ?d ?g)" by (rule edge_collect_mono)
+  moreover have "s' \<in> edge_collect \<Gamma> a {s}" using st by (simp add: edge_collect_single)
+  ultimately have "s' \<in> edge_collect \<Gamma> a (gammaDG ?d ?g)" by blast
   hence "s' \<in> gammaDG (snd (dg_spec_step S a ?d ?g)) (fst (dg_spec_step S a ?d ?g))"
     using step_sound_fs by blast
   also have "\<dots> \<subseteq> gammaDG (locals (sigma (Inl (v, ctx)))) (globs (sigma (Inr gk0)))"
@@ -214,7 +215,7 @@ lemma dg_ctx_act_comb_covered:
               (locals (sigma (Inl (ex, c2))))
               (globs (sigma (Inr gk0))))
        \<le> globs (sigma (Inr gk0))"
-  shows "combine_collect gs (ci_dst ci) s t \<in> gammaM (sg (Inl (v, cv)))"
+  shows "combine_collect \<Gamma> gs (ci_dst ci) s t \<in> gammaM (sg (Inl (v, cv)))"
 proof -
   let ?Dc = "locals (sigma (Inl (cl, c1)))"
   let ?De = "locals (sigma (Inl (ex, c2)))"
@@ -223,7 +224,7 @@ proof -
     using s covCl by (simp add: sg_cov)
   have tin: "t \<in> gammaDG ?De ?G"
     using t covEx by (simp add: sg_cov)
-  have "combine_collect gs (ci_dst ci) s t
+  have "combine_collect \<Gamma> gs (ci_dst ci) s t
         \<in> gammaDG (snd (dgs_combine S ci (dgs_caller_cont S ci ?Dc ?G) ?De ?G))
                    (fst (dgs_combine S ci (dgs_caller_cont S ci ?Dc ?G) ?De ?G))"
     using combine_sound_at_call_fs[where ci = ci, OF sin tin order_refl] .

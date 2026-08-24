@@ -111,21 +111,14 @@ lemma sign_max_combine_mono:
 
 subsection \<open>Special-call dispatch\<close>
 
-fun special_sign ::
-    "special_call => vname => (vname => sign) => (vname => sign)"
-where
-  "special_sign Nondet_Int x \<sigma> = \<sigma>(x := STop)"
-| "special_sign (Min a b) x \<sigma> = \<sigma>(x := sign_min (aval_sign a \<sigma>) (aval_sign b \<sigma>))"
-| "special_sign (Max a b) x \<sigma> = \<sigma>(x := sign_max (aval_sign a \<sigma>) (aval_sign b \<sigma>))"
-
 definition sign_special_ops :: "sign special_ops" where
   "sign_special_ops = (| special_min = sign_min, special_max = sign_max |)"
 
-interpretation sign_special: sound_special_ops sign_special_ops aval_sign
+interpretation sign_special: sound_special_ops sign_special_ops aval_sign sign_cast
   by unfold_locales
      (auto simp: sign_special_ops_def gamma_sign_top
            intro: sign_min_sound sign_max_sound sign_min_combine_mono sign_max_combine_mono
-                  aval_sign_sound aval_sign_mono)
+                  aval_sign_sound aval_sign_mono sign_cast_sound_sign sign_cast_mono)
 
 lemma sign_special_ops_min [simp]: "special_min sign_special_ops = sign_min"
   by (simp add: sign_special_ops_def)
@@ -133,10 +126,20 @@ lemma sign_special_ops_min [simp]: "special_min sign_special_ops = sign_min"
 lemma sign_special_ops_max [simp]: "special_max sign_special_ops = sign_max"
   by (simp add: sign_special_ops_def)
 
-lemma special_sign_eq_transfer: "special_sign sc x \<sigma> = sign_special.special_transfer sc x \<sigma>"
-  by (cases sc) (simp_all add: top_sign_def)
+text \<open>
+  \<open>special_sign\<close> is a thin alias for \<^const>\<open>sound_special_ops.special_transfer\<close>
+  at its own \<open>sign_special_ops\<close>/\<open>aval_sign\<close> instance -- \<open>special_transfer\<close>
+  already correctly threads \<open>\<Gamma>\<close>/synthesized-kind evaluation into \<open>Min\<close>/
+  \<open>Max\<close>'s two operands, so there is nothing for a per-domain reimplementation
+  to add.
+\<close>
 
-lemmas special_sign_sound = sign_special.special_transfer_sound[folded special_sign_eq_transfer]
-lemmas special_sign_mono  = sign_special.special_transfer_mono[folded special_sign_eq_transfer]
+definition special_sign ::
+    "tyenv => special_call => vname => (vname => sign) => (vname => sign)"
+where
+  "special_sign = sign_special.special_transfer"
+
+lemmas special_sign_sound = sign_special.special_transfer_sound[folded special_sign_def]
+lemmas special_sign_mono  = sign_special.special_transfer_mono[folded special_sign_def]
 
 end

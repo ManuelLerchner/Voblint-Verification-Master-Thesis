@@ -32,16 +32,33 @@ datatype com =
   | Restore
   | Unwind
 
-text \<open>A procedure's declared formals and body -- deliberately thin: activation
-  (fresh locals, formal argument binding) happens at the call site via
-  \<^const>\<open>enter_state\<close> plus argument evaluation, not as a field here.
-  \<open>proc_decl\<close> only records what a call site looks up by name.\<close>
+text \<open>A procedure's declared formals, body, and return kind -- deliberately
+  thin: activation (fresh locals, formal argument binding) happens at the
+  call site via \<^const>\<open>enter_state\<close> plus argument evaluation, not as a
+  field here. \<open>proc_decl\<close> only records what a call site looks up by name.
+
+  \<open>ret_kind\<close> is \<open>None\<close> for a \<open>void\<close> declaration (never publishes a
+  value) and \<open>Some ik\<close> for a declared return kind \<open>ik\<close>, in the role of
+  C's declared return type -- the kind \<open>Return\<close>'s expression is cast
+  into, matching CIL's \<open>castTo et rt e'\<close> at a \<open>return\<close> statement, where
+  \<open>rt\<close> is the currently-compiled function's declared return type.\<close>
 record proc_decl =
-  formals :: "vname list"
-  body    :: com
+  formals  :: "vname list"
+  body     :: com
+  ret_kind :: "ikind option"
+
+text \<open>
+  \<open>proc_decl_of\<close> stays the \<open>void\<close> constructor -- unannotated, matching
+  every existing declaration in the corpus -- so no existing call site
+  needs to change. \<open>proc_decl_of_typed\<close> is the constructor for a
+  declared return kind.
+\<close>
 
 definition proc_decl_of :: "vname list => com => proc_decl" where
-  "proc_decl_of xs bdy = \<lparr>formals = xs, body = bdy\<rparr>"
+  "proc_decl_of xs bdy = \<lparr>formals = xs, body = bdy, ret_kind = None\<rparr>"
+
+definition proc_decl_of_typed :: "vname list => ikind => com => proc_decl" where
+  "proc_decl_of_typed xs rk bdy = \<lparr>formals = xs, body = bdy, ret_kind = Some rk\<rparr>"
 
 text \<open>
   The reserved local \<open>ret_var\<close> carries a published result to the restore
@@ -58,8 +75,16 @@ datatype source_location =
 (* Procedure table: names to declarations. *)
 type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
 
-(* Runtime frame: the caller's store and the optional destination variable. *)
-datatype frame = Frame (frame_store: store) (frame_dest: "vname option")
+text \<open>
+  Runtime frame: the caller's store, the optional destination variable,
+  and the return kind to restore on the way back out -- the caller's
+  own activation's declared return type, saved here at the call and
+  handed back to the configuration by \<open>RestoreStep\<close>/\<open>UnwindAct\<close>, exactly
+  as a return-address register is saved to the stack and restored on
+  return.
+\<close>
+datatype frame =
+  Frame (frame_store: store) (frame_dest: "vname option") (frame_ret_kind: ikind)
 
 definition bind_formals :: "vname list \<Rightarrow> int list \<Rightarrow> store \<Rightarrow> store" where
   "bind_formals xs vs s =
@@ -84,82 +109,98 @@ text \<open>
   norms the produced value. A branch condition evaluates at its own
   synthesized kind (\<open>taval_syn\<close>). The typing environment is a
   parameter of the relation, exactly as the globals classifier is.
+
+  The configuration carries a fourth component, the return kind of the
+  presently-executing activation -- in the role of CIL's
+  \<open>currentReturnType\<close>, which is scoped to whichever function is
+  currently being compiled. \<open>Call\<close> sets it to the callee's declared
+  kind (\<open>I32\<close> for \<open>void\<close>, D8's untyped-defaults-to-\<open>int32\<close>
+  convention) and saves the caller's own value on the pushed \<open>Frame\<close>;
+  \<open>RestoreStep\<close>/\<open>UnwindAct\<close> read it back off the popped frame. Every
+  other rule threads it through unchanged. Carrying it in the
+  configuration rather than deriving it from the frame stack's head
+  keeps it invariant under frame-stack extension (\<open>pstep_frame_extend\<close>
+  below): a step's target value no longer depends on what the stack
+  looks like beyond the frames this step itself pushes or pops.
 \<close>
 
 inductive
-  pstep :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
-                       \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
+  pstep :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list \<times> ikind
+                       \<Rightarrow> com \<times> store \<times> frame list \<times> ikind \<Rightarrow> bool"
   for \<Gamma> :: tyenv and gs :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
 where
-  Assign:  "pstep \<Gamma> gs \<Pi> (Assign x a, s, frs) (SKIP, s(x := taval \<Gamma> (\<Gamma> x) a s), frs)"
-| Check:   "pstep \<Gamma> gs \<Pi> (Check c, s, frs) (SKIP, s, frs)"
-| Seq1:    "pstep \<Gamma> gs \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
-| Seq2:    "pstep \<Gamma> gs \<Pi> (c1, s, frs) (c1', s', frs')
-             \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
-| IfTrue:  "truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pstep \<Gamma> gs \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
-| IfFalse: "\<not> truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pstep \<Gamma> gs \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
-| While:   "pstep \<Gamma> gs \<Pi> (While b c, s, frs)
-                      (If b (Seq c (While b c)) SKIP, s, frs)"
+  Assign:  "pstep \<Gamma> gs \<Pi> (Assign x a, s, frs, rk)
+              (SKIP, s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)), frs, rk)"
+| Check:   "pstep \<Gamma> gs \<Pi> (Check c, s, frs, rk) (SKIP, s, frs, rk)"
+| Seq1:    "pstep \<Gamma> gs \<Pi> (Seq SKIP c2, s, frs, rk) (c2, s, frs, rk)"
+| Seq2:    "pstep \<Gamma> gs \<Pi> (c1, s, frs, rk) (c1', s', frs', rk')
+             \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Seq c1 c2, s, frs, rk) (Seq c1' c2, s', frs', rk')"
+| IfTrue:  "truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pstep \<Gamma> gs \<Pi> (If b c1 c2, s, frs, rk) (c1, s, frs, rk)"
+| IfFalse: "\<not> truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pstep \<Gamma> gs \<Pi> (If b c1 c2, s, frs, rk) (c2, s, frs, rk)"
+| While:   "pstep \<Gamma> gs \<Pi> (While b c, s, frs, rk)
+                      (If b (Seq c (While b c)) SKIP, s, frs, rk)"
 | Call:    "\<Pi> p = Some decl
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
-             \<Longrightarrow> vals = map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s) (formals decl) actuals
+             \<Longrightarrow> vals = map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals
              \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state gs s)
-             \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Call dst p actuals, s, frs)
+             \<Longrightarrow> rk' = (case ret_kind decl of None \<Rightarrow> I32 | Some k \<Rightarrow> k)
+             \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Call dst p actuals, s, frs, rk)
                  (Seq (body decl) Restore,
                   callee,
-                  Frame s dst # frs)"
+                  Frame s dst rk # frs,
+                  rk')"
 | Special: "special_table p = Some desc
              \<Longrightarrow> classify_special desc actuals = Some sc
              \<Longrightarrow> special_result \<Gamma> sc s v
-             \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Call (Some x) p actuals, s, frs)
-                 (SKIP, s(x := ik_norm (\<Gamma> x) v), frs)"
+             \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Call (Some x) p actuals, s, frs, rk)
+                 (SKIP, s(x := ik_norm (\<Gamma> x) v), frs, rk)"
 | RestoreStep:
-    "pstep \<Gamma> gs \<Pi> (Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign \<Gamma> dst (s ret_var) (combine_env gs fr s), frs)"
+    "pstep \<Gamma> gs \<Pi> (Restore, s, Frame fr dst rk # frs, rk')
+       (SKIP, combine_assign \<Gamma> dst (s ret_var) (combine_env gs fr s), frs, rk)"
 | ReturnSome:
-    "pstep \<Gamma> gs \<Pi> (Return (Some e), s, frs)
-       (Unwind, s(ret_var := taval \<Gamma> (\<Gamma> ret_var) e s), frs)"
+    "pstep \<Gamma> gs \<Pi> (Return (Some e), s, frs, rk)
+       (Unwind, s(ret_var := ik_norm rk (taval_syn \<Gamma> e s)), frs, rk)"
 | ReturnNone:
-    "pstep \<Gamma> gs \<Pi> (Return None, s, frs) (Unwind, s, frs)"
+    "pstep \<Gamma> gs \<Pi> (Return None, s, frs, rk) (Unwind, s, frs, rk)"
 | UnwindDead:
     "c2 \<noteq> Restore
-     \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Seq Unwind c2, s, frs) (Unwind, s, frs)"
+     \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Seq Unwind c2, s, frs, rk) (Unwind, s, frs, rk)"
 | UnwindAct:
-    "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, s, Frame fr dst # frs)
-       (SKIP, combine_assign \<Gamma> dst (s ret_var) (combine_env gs fr s), frs)"
+    "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, s, Frame fr dst rk # frs, rk')
+       (SKIP, combine_assign \<Gamma> dst (s ret_var) (combine_env gs fr s), frs, rk)"
 
 abbreviation
-  psteps :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
-                        \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
+  psteps :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list \<times> ikind
+                        \<Rightarrow> com \<times> store \<times> frame list \<times> ikind \<Rightarrow> bool"
 where "psteps \<Gamma> gs \<Pi> x y \<equiv> star (pstep \<Gamma> gs \<Pi>) x y"
 
 declare pstep.intros [simp, intro]
 declare pstep.Seq2[simp del]
 
 inductive_cases SkipSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (SKIP, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (SKIP, s, frs, rk) cfg"
 inductive_cases AssignSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (Assign x a, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Assign x a, s, frs, rk) cfg"
 inductive_cases CheckSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (Check c, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Check c, s, frs, rk) cfg"
 inductive_cases SeqSE[elim]:
-  "pstep \<Gamma> gs \<Pi> (Seq c1 c2, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Seq c1 c2, s, frs, rk) cfg"
 inductive_cases IfSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (If b c1 c2, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (If b c1 c2, s, frs, rk) cfg"
 inductive_cases WhileSE[elim]:
-  "pstep \<Gamma> gs \<Pi> (While b c, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (While b c, s, frs, rk) cfg"
 inductive_cases CallSE[elim]:
-  "pstep \<Gamma> gs \<Pi> (Call dst p actuals, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Call dst p actuals, s, frs, rk) cfg"
 inductive_cases RestoreSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (Restore, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Restore, s, frs, rk) cfg"
 inductive_cases ReturnSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (Return e, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Return e, s, frs, rk) cfg"
 inductive_cases UnwindSE[elim!]:
-  "pstep \<Gamma> gs \<Pi> (Unwind, s, frs) cfg"
+  "pstep \<Gamma> gs \<Pi> (Unwind, s, frs, rk) cfg"
 
 (* Structured induction over pstep-runs: split_format states each case on the
-   (c, s, frs) components rather than an anonymous configuration product. *)
+   (c, s, frs, rk) components rather than an anonymous configuration product. *)
 lemmas star_pstep_induct =
   star.induct[of "pstep \<Gamma> gs \<Pi>", split_format(complete), case_names refl step]
 
@@ -186,37 +227,50 @@ text \<open>
   \<^term>\<open>pfinal\<close> is the good exit: command finished and frames balanced.
 \<close>
 
-fun pfinal :: "com \<times> store \<times> frame list \<Rightarrow> bool" where
-  "pfinal (c, s, frs) = (c = SKIP \<and> frs = [])"
+fun pfinal :: "com \<times> store \<times> frame list \<times> ikind \<Rightarrow> bool" where
+  "pfinal (c, s, frs, rk) = (c = SKIP \<and> frs = [])"
 
-definition pcompletes :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pcompletes \<Gamma> gs \<Pi> c s t = psteps \<Gamma> gs \<Pi> (c, s, []) (SKIP, t, [])"
+text \<open>
+  \<open>pcompletes\<close> now takes the return kind in scope as an explicit
+  argument, matching \<open>pstep\<close>'s own fourth configuration component: a
+  body run generically over any ambient \<open>rk\<close> is exactly the fall-
+  through-only completions every lemma below witnesses (a body
+  containing its own \<open>Return\<close> cannot complete this way at all --
+  \<open>Unwind\<close> has no frame to pop at depth \<open>0\<close> -- so \<open>rk\<close> never actually
+  matters to these proofs, only to keeping \<open>pstep_frame_extend\<close>
+  applicable at the call boundary in \<open>pcompletes_Call\<close>).
+\<close>
+
+definition pcompletes ::
+    "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> ikind \<Rightarrow> bool" where
+  "pcompletes \<Gamma> gs \<Pi> c s t rk = psteps \<Gamma> gs \<Pi> (c, s, [], rk) (SKIP, t, [], rk)"
 
 lemma pcompletes_iff_small_termination[simp]:
-  "pcompletes \<Gamma> gs \<Pi> c s t \<longleftrightarrow>
-     (\<exists>cfg. psteps \<Gamma> gs \<Pi> (c, s, []) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t)"
+  "pcompletes \<Gamma> gs \<Pi> c s t rk \<longleftrightarrow>
+     (\<exists>cfg. psteps \<Gamma> gs \<Pi> (c, s, [], rk) cfg \<and> pfinal cfg \<and> fst (snd cfg) = t
+            \<and> snd (snd (snd cfg)) = rk)"
   unfolding pcompletes_def by auto
 
-lemma pcompletes_skip: "pcompletes \<Gamma> gs \<Pi> SKIP s s"
+lemma pcompletes_skip: "pcompletes \<Gamma> gs \<Pi> SKIP s s rk"
   unfolding pcompletes_def by (rule star.refl)
 
 lemma pcompletes_assign:
-  "pcompletes \<Gamma> gs \<Pi> (Assign x a) s (s(x := taval \<Gamma> (\<Gamma> x) a s))"
+  "pcompletes \<Gamma> gs \<Pi> (Assign x a) s (s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s))) rk"
   by (simp add: pcompletes_def)
 
 lemma pcompletes_special_nondet_int:
   "pcompletes \<Gamma> gs \<Pi> (Call (Some x) special_pname_nondet_int []) s
-     (s(x := ik_norm (\<Gamma> x) v))"
+     (s(x := ik_norm (\<Gamma> x) v)) rk"
   by (simp add: pcompletes_def special_table_def)
 
-lemma pcompletes_check: "pcompletes \<Gamma> gs \<Pi> (Check c) s s"
+lemma pcompletes_check: "pcompletes \<Gamma> gs \<Pi> (Check c) s s rk"
   by (simp add: pcompletes_def)
 
 (* -- Sequencing lifts through the small-step --------------------------- *)
 
 lemma psteps_Seq2:
-  "star (pstep \<Gamma> gs \<Pi>) (c1, s, frs) (c1', s', frs')
-   \<Longrightarrow> star (pstep \<Gamma> gs \<Pi>) (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+  "star (pstep \<Gamma> gs \<Pi>) (c1, s, frs, rk) (c1', s', frs', rk')
+   \<Longrightarrow> star (pstep \<Gamma> gs \<Pi>) (Seq c1 c2, s, frs, rk) (Seq c1' c2, s', frs', rk')"
 proof (induction rule: star_pstep_induct)
   case refl show ?case by (rule star.refl)
 next
@@ -226,59 +280,68 @@ qed
 (* -- Structural composition of terminating runs ---------------------- *)
 
 lemma pcompletes_Seq:
-  assumes "pcompletes \<Gamma> gs \<Pi> c1 s s2" and "pcompletes \<Gamma> gs \<Pi> c2 s2 t"
-  shows "pcompletes \<Gamma> gs \<Pi> (Seq c1 c2) s t"
+  assumes "pcompletes \<Gamma> gs \<Pi> c1 s s2 rk" and "pcompletes \<Gamma> gs \<Pi> c2 s2 t rk"
+  shows "pcompletes \<Gamma> gs \<Pi> (Seq c1 c2) s t rk"
 proof -
-  from assms(1) have a: "star (pstep \<Gamma> gs \<Pi>) (Seq c1 c2, s, []) (Seq SKIP c2, s2, [])"
+  from assms(1) have a: "star (pstep \<Gamma> gs \<Pi>) (Seq c1 c2, s, [], rk) (Seq SKIP c2, s2, [], rk)"
     unfolding pcompletes_def by (rule psteps_Seq2)
-  have b: "pstep \<Gamma> gs \<Pi> (Seq SKIP c2, s2, []) (c2, s2, [])" by (rule Seq1)
+  have b: "pstep \<Gamma> gs \<Pi> (Seq SKIP c2, s2, [], rk) (c2, s2, [], rk)" by (rule Seq1)
   from a b assms(2) show ?thesis
     unfolding pcompletes_def by (meson star.step star_trans)
 qed
 
 lemma pcompletes_IfTrue:
-  "truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> c1 s t
-   \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> (If b c1 c2) s t"
+  "truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> c1 s t rk
+   \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> (If b c1 c2) s t rk"
   unfolding pcompletes_def by (meson IfTrue star.step)
 
 lemma pcompletes_IfFalse:
-  "\<not> truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> c2 s t
-   \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> (If b c1 c2) s t"
+  "\<not> truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> c2 s t rk
+   \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> (If b c1 c2) s t rk"
   unfolding pcompletes_def by (meson IfFalse star.step)
 
 lemma pcompletes_WhileFalse:
-  "\<not> truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> (While b c) s s"
+  "\<not> truthy (taval_syn \<Gamma> b s) \<Longrightarrow> pcompletes \<Gamma> gs \<Pi> (While b c) s s rk"
   unfolding pcompletes_def by (meson While IfFalse star.refl star.step)
 
 lemma pcompletes_WhileTrue:
   assumes b:    "truthy (taval_syn \<Gamma> b s)"
-      and body: "pcompletes \<Gamma> gs \<Pi> c s s2"
-      and rest: "pcompletes \<Gamma> gs \<Pi> (While b c) s2 t"
-  shows "pcompletes \<Gamma> gs \<Pi> (While b c) s t"
+      and body: "pcompletes \<Gamma> gs \<Pi> c s s2 rk"
+      and rest: "pcompletes \<Gamma> gs \<Pi> (While b c) s2 t rk"
+  shows "pcompletes \<Gamma> gs \<Pi> (While b c) s t rk"
 proof -
-  have seq: "pcompletes \<Gamma> gs \<Pi> (Seq c (While b c)) s t"
+  have seq: "pcompletes \<Gamma> gs \<Pi> (Seq c (While b c)) s t rk"
     using body rest by (rule pcompletes_Seq)
-  have w: "pstep \<Gamma> gs \<Pi> (While b c, s, [])
-                    (If b (Seq c (While b c)) SKIP, s, [])"
+  have w: "pstep \<Gamma> gs \<Pi> (While b c, s, [], rk)
+                    (If b (Seq c (While b c)) SKIP, s, [], rk)"
     by (rule While)
-  have i: "pstep \<Gamma> gs \<Pi> (If b (Seq c (While b c)) SKIP, s, [])
-                    (Seq c (While b c), s, [])"
+  have i: "pstep \<Gamma> gs \<Pi> (If b (Seq c (While b c)) SKIP, s, [], rk)
+                    (Seq c (While b c), s, [], rk)"
     using b by (rule IfTrue)
   from w i seq show ?thesis unfolding pcompletes_def by (meson star.step)
 qed
 
 (* -- Frame-stack extension ------------------------------------------ *)
 
+text \<open>
+  Extending the frame stack on both sides of a transition preserves it:
+  every rule either leaves \<open>frs\<close> as a schematic tail (unaffected by
+  appending beyond it) or pushes/pops exactly one frame at its head,
+  and -- since return kind is now a configuration component rather than
+  something read off \<open>frs\<close>'s head -- no rule's target value depends on
+  what lies beyond the frames it itself touches.
+\<close>
+
 lemma pstep_frame_extend:
-  "pstep \<Gamma> gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
-   pstep \<Gamma> gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
-  by (induction "(c, s, frs)" "(c', s', frs')"
-        arbitrary: c s frs c' s' frs' rule: pstep.induct)
+  "pstep \<Gamma> gs \<Pi> (c, s, frs, rk) (c', s', frs', rk') \<Longrightarrow>
+   pstep \<Gamma> gs \<Pi> (c, s, frs @ extra, rk) (c', s', frs' @ extra, rk')"
+  by (induction "(c, s, frs, rk)" "(c', s', frs', rk')"
+        arbitrary: c s frs rk c' s' frs' rk' rule: pstep.induct)
      auto
 
 lemma psteps_frame_extend:
-  "psteps \<Gamma> gs \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
-   psteps \<Gamma> gs \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
+  "psteps \<Gamma> gs \<Pi> (c, s, frs, rk) (c', s', frs', rk') \<Longrightarrow>
+   psteps \<Gamma> gs \<Pi> (c, s, frs @ extra, rk) (c', s', frs' @ extra, rk')"
 proof (induction rule: star_pstep_induct)
   case refl show ?case by (rule star.refl)
 next
@@ -286,8 +349,9 @@ next
 qed
 
 lemma psteps_frame_mono:
-  "psteps \<Gamma> gs \<Pi> (c, s, []) (SKIP, t, []) \<Longrightarrow>
-   psteps \<Gamma> gs \<Pi> (c, s, extra) (SKIP, t, extra)"
+  "psteps \<Gamma> gs \<Pi> (c, s, [], rk) (SKIP, t, [], rk) \<Longrightarrow>
+   psteps \<Gamma> gs \<Pi> (c, s, extra, rk) (SKIP, t, extra, rk)"
+
   using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
   by simp
 
@@ -296,25 +360,26 @@ lemma psteps_frame_mono:
 (* The restore rule pops a call frame: the destination
    rides in the frame and the value in ret_var. *)
 lemma psteps_Seq_Restore_body:
-  assumes "psteps \<Gamma> gs \<Pi> (c, s0, [Frame fr dst]) (SKIP, t', [Frame fr dst])"
-  shows "psteps \<Gamma> gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
-           (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs fr t'), [])"
+  assumes "psteps \<Gamma> gs \<Pi> (c, s0, [Frame fr dst rk], rk')
+             (SKIP, t', [Frame fr dst rk], rk')"
+  shows "psteps \<Gamma> gs \<Pi> (Seq c Restore, s0, [Frame fr dst rk], rk')
+           (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs fr t'), [], rk)"
 proof -
   have body_seq:
-    "psteps \<Gamma> gs \<Pi> (Seq c Restore, s0, [Frame fr dst])
-       (Seq SKIP Restore, t', [Frame fr dst])"
+    "psteps \<Gamma> gs \<Pi> (Seq c Restore, s0, [Frame fr dst rk], rk')
+       (Seq SKIP Restore, t', [Frame fr dst rk], rk')"
     using psteps_Seq2[OF assms] .
   have step_seq1:
-    "pstep \<Gamma> gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
-       (Restore, t', [Frame fr dst])"
+    "pstep \<Gamma> gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst rk], rk')
+       (Restore, t', [Frame fr dst rk], rk')"
     by (rule Seq1)
   have step_restore:
-    "pstep \<Gamma> gs \<Pi> (Restore, t', [Frame fr dst])
-       (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs fr t'), [])"
+    "pstep \<Gamma> gs \<Pi> (Restore, t', [Frame fr dst rk], rk')
+       (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs fr t'), [], rk)"
     by (rule RestoreStep)
   have tail:
-    "psteps \<Gamma> gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst])
-       (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs fr t'), [])"
+    "psteps \<Gamma> gs \<Pi> (Seq SKIP Restore, t', [Frame fr dst rk], rk')
+       (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs fr t'), [], rk)"
     using step_seq1 step_restore by (meson star.refl star.step)
   show ?thesis using body_seq tail by (rule star_trans)
 qed
@@ -328,30 +393,36 @@ text \<open>A completing body drives a call to completion: the callee body runs 
   then the \<^const>\<open>Restore\<close> pops the frame, keeping callee globals and restoring caller locals, and
   \<^const>\<open>combine_assign\<close> writes the callee's \<^const>\<open>ret_var\<close> to the destination (or discards it for a
   value-less call).  A value is published only if an explicit \<^const>\<open>Return\<close> wrote \<^const>\<open>ret_var\<close>;
-  otherwise the destination receives its \<^const>\<open>enter_state\<close> initial 0.\<close>
+  otherwise the destination receives its \<^const>\<open>enter_state\<close> initial 0. The callee's body
+  premise is quantified at the callee's own declared return kind, and the caller's ambient
+  \<open>rk\<close> threads through unchanged -- saved on the pushed frame, restored on the way out.\<close>
 lemma pcompletes_Call:
   assumes p: "\<Pi> p = Some decl"
       and arity: "length actuals = length (formals decl)"
       and distinct_formals: "distinct (formals decl)"
       and body: "pcompletes \<Gamma> gs \<Pi> (body decl)
                    (bind_formals (formals decl)
-                     (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s) (formals decl) actuals)
-                     (enter_state gs s)) t'"
+                     (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals)
+                     (enter_state gs s)) t'
+                   (case ret_kind decl of None \<Rightarrow> I32 | Some k \<Rightarrow> k)"
   shows "pcompletes \<Gamma> gs \<Pi> (Call dst p actuals) s
-           (combine_assign \<Gamma> dst (t' ret_var) (combine_env gs s t'))"
+           (combine_assign \<Gamma> dst (t' ret_var) (combine_env gs s t')) rk"
   unfolding pcompletes_def
 proof (rule star.step)
-  let ?vals = "map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s) (formals decl) actuals"
+  let ?rk' = "case ret_kind decl of None \<Rightarrow> I32 | Some k \<Rightarrow> k"
+  let ?vals = "map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals"
   let ?callee = "bind_formals (formals decl) ?vals (enter_state gs s)"
-  show "pstep \<Gamma> gs \<Pi> (Call dst p actuals, s, [])
-          (Seq (body decl) Restore, ?callee, [Frame s dst])"
+  show "pstep \<Gamma> gs \<Pi> (Call dst p actuals, s, [], rk)
+          (Seq (body decl) Restore, ?callee, [Frame s dst rk], ?rk')"
     using p arity distinct_formals
-    by (intro Call[where vals = ?vals and callee = ?callee]) auto
+    by (intro Call[where vals = ?vals and callee = ?callee and rk' = ?rk']) auto
   have framed:
-    "psteps \<Gamma> gs \<Pi> (body decl, ?callee, [Frame s dst]) (SKIP, t', [Frame s dst])"
-    using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s dst]"] by simp
-  show "psteps \<Gamma> gs \<Pi> (Seq (body decl) Restore, ?callee, [Frame s dst])
-          (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs s t'), [])"
+    "psteps \<Gamma> gs \<Pi> (body decl, ?callee, [Frame s dst rk], ?rk')
+       (SKIP, t', [Frame s dst rk], ?rk')"
+    using psteps_frame_mono[OF body[unfolded pcompletes_def], where extra = "[Frame s dst rk]"]
+    by simp
+  show "psteps \<Gamma> gs \<Pi> (Seq (body decl) Restore, ?callee, [Frame s dst rk], ?rk')
+          (SKIP, combine_assign \<Gamma> dst (t' ret_var) (combine_env gs s t'), [], rk)"
     using psteps_Seq_Restore_body[OF framed] by simp
 qed
 
@@ -364,20 +435,22 @@ lemma pcompletes_Call_dst_fallthrough_zero:
       and distinct_formals: "distinct (formals decl)"
       and body: "pcompletes \<Gamma> gs \<Pi> (body decl)
                    (bind_formals (formals decl)
-                     (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s) (formals decl) actuals)
-                     (enter_state gs s)) t'"
+                     (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals)
+                     (enter_state gs s)) t'
+                   (case ret_kind decl of None \<Rightarrow> I32 | Some k \<Rightarrow> k)"
       and fallthrough: "t' ret_var = 0"
-  shows "pcompletes \<Gamma> gs \<Pi> (Call (Some x) p actuals) s ((combine_env gs s t')(x := 0))"
-  using pcompletes_Call[OF p arity distinct_formals body, where dst = "Some x"] fallthrough
+  shows "pcompletes \<Gamma> gs \<Pi> (Call (Some x) p actuals) s ((combine_env gs s t')(x := 0)) rk"
+  using pcompletes_Call[OF p arity distinct_formals body, where dst = "Some x" and rk = rk]
+        fallthrough
   by simp
 
 lemma pcompletes_Call_parameterless:
   assumes p: "\<Pi> p = Some (proc_decl_of [] c)"
-      and body: "pcompletes \<Gamma> gs \<Pi> c (enter_state gs s) t'"
-  shows "pcompletes \<Gamma> gs \<Pi> (Call None p []) s (combine_env gs s t')"
+      and body: "pcompletes \<Gamma> gs \<Pi> c (enter_state gs s) t' I32"
+  shows "pcompletes \<Gamma> gs \<Pi> (Call None p []) s (combine_env gs s t') rk"
 proof -
   have "pcompletes \<Gamma> gs \<Pi> (Call None p []) s
-          (combine_assign \<Gamma> None (t' ret_var) (combine_env gs s t'))"
+          (combine_assign \<Gamma> None (t' ret_var) (combine_env gs s t')) rk"
   proof (rule pcompletes_Call)
     show "\<Pi> p = Some (proc_decl_of [] c)" by (rule p)
     show "length [] = length (formals (proc_decl_of [] c))"
@@ -386,8 +459,9 @@ proof -
       by (simp add: proc_decl_of_def)
     show "pcompletes \<Gamma> gs \<Pi> (body (proc_decl_of [] c))
             (bind_formals (formals (proc_decl_of [] c))
-              (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s) (formals (proc_decl_of [] c)) [])
-              (enter_state gs s)) t'"
+              (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals (proc_decl_of [] c)) [])
+              (enter_state gs s)) t'
+            (case ret_kind (proc_decl_of [] c) of None \<Rightarrow> I32 | Some k \<Rightarrow> k)"
       using body by (simp add: proc_decl_of_def bind_formals_def)
   qed
   thus ?thesis by simp
@@ -397,43 +471,47 @@ text \<open>
   A frame-generic building block: a parameterless call whose body returns a value completes,
   writing the value to dst and leaving the surrounding stack \<^term>\<open>frs\<close> exactly as it was.  The
   Return unwinds only to the call's own -- the run is frame-balanced -- so this
-  is the witness that a return never escapes its nearest activation.
+  is the witness that a return never escapes its nearest activation. The callee is
+  \<open>void\<close>-declared (\<open>proc_decl_of\<close>), so its return value evaluates at \<open>I32\<close>; the ambient
+  caller's \<open>rk\<close> is unaffected, saved on the pushed frame and restored by \<open>UnwindAct\<close>.
 \<close>
 
 lemma call_return_completes:
   assumes q: "\<Pi> p = Some (proc_decl_of [] (Return (Some e)))"
-  shows "psteps \<Gamma> gs \<Pi> (Call (Some x) p [], s, frs)
+  shows "psteps \<Gamma> gs \<Pi> (Call (Some x) p [], s, frs, rk)
            (SKIP,
             (combine_env gs s
               ((enter_state gs s)
-                (ret_var := taval \<Gamma> (\<Gamma> ret_var) e (enter_state gs s))))
-              (x := ik_norm (\<Gamma> x) (taval \<Gamma> (\<Gamma> ret_var) e (enter_state gs s))),
-            frs)"
+                (ret_var := ik_norm I32 (taval_syn \<Gamma> e (enter_state gs s)))))
+              (x := ik_norm (\<Gamma> x) (ik_norm I32 (taval_syn \<Gamma> e (enter_state gs s)))),
+            frs, rk)"
 proof -
   let ?se = "enter_state gs s"
-  let ?s' = "?se(ret_var := taval \<Gamma> (\<Gamma> ret_var) e ?se)"
-  let ?F = "Frame s (Some x)"
-  have c1: "pstep \<Gamma> gs \<Pi> (Call (Some x) p [], s, frs)
-              (Seq (Return (Some e)) Restore, ?se, ?F # frs)"
+  let ?s' = "?se(ret_var := ik_norm I32 (taval_syn \<Gamma> e ?se))"
+  let ?F = "Frame s (Some x) rk"
+  have c1: "pstep \<Gamma> gs \<Pi> (Call (Some x) p [], s, frs, rk)
+              (Seq (Return (Some e)) Restore, ?se, ?F # frs, I32)"
   proof -
-    have "pstep \<Gamma> gs \<Pi> (Call (Some x) p [], s, frs)
+    have "pstep \<Gamma> gs \<Pi> (Call (Some x) p [], s, frs, rk)
             (Seq (body (proc_decl_of [] (Return (Some e)))) Restore,
              bind_formals (formals (proc_decl_of [] (Return (Some e))))
-               (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s)
+               (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s))
                   (formals (proc_decl_of [] (Return (Some e)))) [])
-               (enter_state gs s), ?F # frs)"
+               (enter_state gs s), ?F # frs,
+             case ret_kind (proc_decl_of [] (Return (Some e))) of
+               None \<Rightarrow> I32 | Some k \<Rightarrow> k)"
       using q by (intro Call) (auto simp: proc_decl_of_def)
     thus ?thesis by (simp add: proc_decl_of_def bind_formals_def)
   qed
-  have c2: "pstep \<Gamma> gs \<Pi> (Seq (Return (Some e)) Restore, ?se, ?F # frs)
-              (Seq Unwind Restore, ?s', ?F # frs)"
+  have c2: "pstep \<Gamma> gs \<Pi> (Seq (Return (Some e)) Restore, ?se, ?F # frs, I32)
+              (Seq Unwind Restore, ?s', ?F # frs, I32)"
     by (intro pstep.Seq2 pstep.ReturnSome)
-  have c4: "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
+  have c4: "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs, I32)
               (SKIP, (combine_env gs s ?s')
-                       (x := ik_norm (\<Gamma> x) (taval \<Gamma> (\<Gamma> ret_var) e ?se)), frs)"
+                       (x := ik_norm (\<Gamma> x) (ik_norm I32 (taval_syn \<Gamma> e ?se))), frs, rk)"
   proof -
-    have "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs)
-            (SKIP, combine_assign \<Gamma> (Some x) (?s' ret_var) (combine_env gs s ?s'), frs)"
+    have "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?s', ?F # frs, I32)
+            (SKIP, combine_assign \<Gamma> (Some x) (?s' ret_var) (combine_env gs s ?s'), frs, rk)"
       by (rule UnwindAct)
     thus ?thesis by simp
   qed
@@ -447,34 +525,38 @@ text \<open>
 
 lemma call_return_none_completes:
   assumes q: "\<Pi> p = Some (proc_decl_of [] (Return None))"
-  shows "psteps \<Gamma> gs \<Pi> (Call None p [], s, frs)
-           (SKIP, combine_env gs s (enter_state gs s), frs)"
+  shows "psteps \<Gamma> gs \<Pi> (Call None p [], s, frs, rk)
+           (SKIP, combine_env gs s (enter_state gs s), frs, rk)"
 proof -
   let ?se = "enter_state gs s"
-  let ?F = "Frame s None"
-  have c1: "pstep \<Gamma> gs \<Pi> (Call None p [], s, frs) (Seq (Return None) Restore, ?se, ?F # frs)"
+  let ?F = "Frame s None rk"
+  have c1: "pstep \<Gamma> gs \<Pi> (Call None p [], s, frs, rk)
+              (Seq (Return None) Restore, ?se, ?F # frs, I32)"
   proof -
-    have "pstep \<Gamma> gs \<Pi> (Call None p [], s, frs)
+    have "pstep \<Gamma> gs \<Pi> (Call None p [], s, frs, rk)
             (Seq (body (proc_decl_of [] (Return None))) Restore,
              bind_formals (formals (proc_decl_of [] (Return None)))
                (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s)
                   (formals (proc_decl_of [] (Return None))) [])
-               (enter_state gs s), ?F # frs)"
+               (enter_state gs s), ?F # frs,
+             case ret_kind (proc_decl_of [] (Return None)) of None \<Rightarrow> I32 | Some k \<Rightarrow> k)"
       using q by (intro Call) (auto simp: proc_decl_of_def)
     thus ?thesis by (simp add: proc_decl_of_def bind_formals_def)
   qed
-  have c2: "pstep \<Gamma> gs \<Pi> (Seq (Return None) Restore, ?se, ?F # frs) (Seq Unwind Restore, ?se, ?F # frs)"
+  have c2: "pstep \<Gamma> gs \<Pi> (Seq (Return None) Restore, ?se, ?F # frs, I32)
+              (Seq Unwind Restore, ?se, ?F # frs, I32)"
     by (intro pstep.Seq2 pstep.ReturnNone)
-  have c3: "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-              (SKIP, combine_env gs s ?se, frs)"
+  have c3: "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs, I32)
+              (SKIP, combine_env gs s ?se, frs, rk)"
   proof -
-    have "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs)
-            (SKIP, combine_assign \<Gamma> None (?se ret_var) (combine_env gs s ?se), frs)"
+    have "pstep \<Gamma> gs \<Pi> (Seq Unwind Restore, ?se, ?F # frs, I32)
+            (SKIP, combine_assign \<Gamma> None (?se ret_var) (combine_env gs s ?se), frs, rk)"
       by (rule UnwindAct)
     thus ?thesis by simp
   qed
   from c1 c2 c3 show ?thesis by (meson star.refl star.step)
 qed
+
 
 text \<open>
   Nested calls: an outer procedure calls an inner procedure that returns, then continues.  The
@@ -484,65 +566,107 @@ text \<open>
   resumes at the outer continuation \<^term>\<open>after\<close>.
 \<close>
 
+text \<open>
+  The outer and inner callees are both \<open>void\<close>-declared (\<open>proc_decl_of\<close>),
+  so each activates at \<open>I32\<close>; the ambient \<open>rk\<close> the outer call starts
+  with is saved on \<open>?Fout\<close> and, since neither call's \<open>Restore\<close> fires
+  during this trace, plays no further role until the frame is popped.
+\<close>
+
 theorem nested_call_return_trace:
   assumes qin: "\<Pi> pin = Some (proc_decl_of [] (Return (Some e)))"
       and qout: "\<Pi> pout = Some (proc_decl_of []
                    (Seq (Call (Some rin) pin []) after))"
-  shows "psteps \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [])
+  shows "psteps \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [], rk)
            (Seq after Restore,
             (combine_env gs (enter_state gs s0)
               ((enter_state gs (enter_state gs s0))
-                (ret_var := taval \<Gamma> (\<Gamma> ret_var) e (enter_state gs (enter_state gs s0)))))
+                (ret_var := ik_norm I32 (taval_syn \<Gamma> e (enter_state gs (enter_state gs s0))))))
                 (rin := ik_norm (\<Gamma> rin)
-                          (taval \<Gamma> (\<Gamma> ret_var) e (enter_state gs (enter_state gs s0)))),
-            [Frame s0 (Some rout)])"
+                          (ik_norm I32 (taval_syn \<Gamma> e (enter_state gs (enter_state gs s0))))),
+            [Frame s0 (Some rout) rk], I32)"
 proof -
   let ?s1 = "enter_state gs s0"
-  let ?Fout = "Frame s0 (Some rout)"
+  let ?Fout = "Frame s0 (Some rout) rk"
   let ?inner = "(combine_env gs ?s1
                     ((enter_state gs ?s1)
-                      (ret_var := taval \<Gamma> (\<Gamma> ret_var) e (enter_state gs ?s1))))
-                  (rin := ik_norm (\<Gamma> rin) (taval \<Gamma> (\<Gamma> ret_var) e (enter_state gs ?s1)))"
+                      (ret_var := ik_norm I32 (taval_syn \<Gamma> e (enter_state gs ?s1)))))
+                  (rin := ik_norm (\<Gamma> rin) (ik_norm I32 (taval_syn \<Gamma> e (enter_state gs ?s1))))"
   \<comment> \<open>outer call pushes the outer\<close>
-  have K01: "pstep \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [])
-      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])"
+  have K01: "pstep \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [], rk)
+      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout], I32)"
   proof -
-    have "pstep \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [])
+    have "pstep \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [], rk)
             (Seq (body (proc_decl_of [] (Seq (Call (Some rin) pin []) after))) Restore,
              bind_formals (formals (proc_decl_of []
                  (Seq (Call (Some rin) pin []) after)))
-               (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s0)
+               (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s0))
                   (formals (proc_decl_of [] (Seq (Call (Some rin) pin []) after))) [])
                (enter_state gs s0),
-             Frame s0 (Some rout) # [])"
+             Frame s0 (Some rout) rk # [],
+             case ret_kind (proc_decl_of [] (Seq (Call (Some rin) pin []) after)) of
+               None \<Rightarrow> I32 | Some k \<Rightarrow> k)"
       using qout by (intro Call) (auto simp: proc_decl_of_def)
-    thus "pstep \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [])
-            (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])"
+    thus "pstep \<Gamma> gs \<Pi> (Call (Some rout) pout [], s0, [], rk)
+            (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout], I32)"
       by (simp add: proc_decl_of_def bind_formals_def)
   qed
   \<comment> \<open>inner call runs to completion, caught by the inner; ?Fout survives\<close>
-  have inner: "psteps \<Gamma> gs \<Pi> (Call (Some rin) pin [], ?s1, [?Fout]) (SKIP, ?inner, [?Fout])"
-    by (rule call_return_completes[where \<Pi> = \<Pi> and p = pin, OF qin])
+  have inner: "psteps \<Gamma> gs \<Pi> (Call (Some rin) pin [], ?s1, [?Fout], I32)
+                 (SKIP, ?inner, [?Fout], I32)"
+    by (rule call_return_completes[where \<Pi> = \<Pi> and p = pin and rk = I32, OF qin])
   have K15: "psteps \<Gamma> gs \<Pi>
-      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout])
-      (Seq (Seq SKIP after) Restore, ?inner, [?Fout])"
+      (Seq (Seq (Call (Some rin) pin []) after) Restore, ?s1, [?Fout], I32)
+      (Seq (Seq SKIP after) Restore, ?inner, [?Fout], I32)"
     by (intro psteps_Seq2 inner)
   \<comment> \<open>the outer continuation is exposed: execution resumes in the outer procedure\<close>
   have K56: "pstep \<Gamma> gs \<Pi>
-      (Seq (Seq SKIP after) Restore, ?inner, [?Fout])
-      (Seq after Restore, ?inner, [?Fout])"
+      (Seq (Seq SKIP after) Restore, ?inner, [?Fout], I32)
+      (Seq after Restore, ?inner, [?Fout], I32)"
     by (intro pstep.Seq2 pstep.Seq1)
-  from K01 K15 K56 show ?thesis by (meson star.refl star.step star_trans)
+  show ?thesis
+    apply (rule star.step)
+     apply (rule K01)
+    apply (rule star_trans)
+     apply (rule K15)
+    apply (rule star_step1)
+    apply (rule K56)
+    done
 qed
 
 
-section \<open>Kind preservation\<close>
-
 text \<open>
-  Every store a run reaches stays within its declared kinds: each write in
-  the small step is normed at \<comment> \<open>or evaluated at\<close> its target
-  variable's kind, activation entry resets locals to \<open>0\<close>, and the
-  restore boundary selects pointwise between two typed stores.
+  Every store a run reaches stays within its declared kinds -- with one
+  transient exception. Each write in the small step is normed at \<comment>
+  \<open>or evaluated at\<close> its target variable's kind, activation entry
+  resets locals to \<open>0\<close>, and the restore boundary selects pointwise
+  between two typed stores. The exception is \<open>ret_var\<close> itself, right
+  after \<open>ReturnSome\<close> writes it: that write is normed at the presently-
+  active \<open>rk\<close> (the fourth pstep component), not at \<open>\<Gamma> ret_var\<close> -- the
+  one FIXED, name-keyed kind a blanket \<open>styped\<close> invariant can express
+  for a reserved name every activation shares. This is exactly the
+  gap \<open>ret_var\<close>'s own documentation already names ("absent from source
+  programs... local to the callee activation"): it is not a stably-
+  typed variable in the same sense as a source name.
+
+  The gap is transient. It exists only while the command is
+  \<open>Unwind\<close>-shaped (\<open>in_flight_unwind\<close>), i.e. between \<open>ReturnSome\<close>
+  firing and the matching \<open>RestoreStep\<close>/\<open>UnwindAct\<close> consuming it; every
+  other rule either never touches \<open>ret_var\<close> or restores it. And
+  \<open>RestoreStep\<close>/\<open>UnwindAct\<close> restore full typedness the instant they
+  fire, because \<open>combine_env\<close> reads a non-global name -- \<open>ret_var\<close> is
+  non-global by \<open>reserved_ret_var\<close> -- from the popped frame's SAVED
+  store, never from the callee's finishing one; a frame is only ever
+  pushed while its owner's own command is not \<open>Unwind\<close>-shaped, so
+  every frame on the stack is fully typed by construction
+  (\<open>frames_typed\<close>, unchanged below).
+
+  \<open>sstyped\<close> packages this: fully \<open>styped\<close> except while the command is
+  in flight, when only \<open>rstyped\<close> (every variable but \<open>ret_var\<close>) is
+  claimed. It is a proof device local to the small-step lemmas; the
+  externally visible guarantee, \<open>pcompletes_preserves_styped\<close>, still
+  concludes full \<open>styped\<close> -- \<open>pcompletes\<close> only ever starts and ends at
+  an ordinary (never \<open>Unwind\<close>-shaped) command.
 \<close>
 
 definition frames_typed :: "tyenv \<Rightarrow> frame list \<Rightarrow> bool" where
@@ -552,8 +676,51 @@ lemma frames_typed_Nil [simp]: "frames_typed \<Gamma> []"
   by (simp add: frames_typed_def)
 
 lemma frames_typed_Cons [simp]:
-  "frames_typed \<Gamma> (Frame fr dst # frs) \<longleftrightarrow> styped \<Gamma> fr \<and> frames_typed \<Gamma> frs"
+  "frames_typed \<Gamma> (Frame fr dst rk # frs) \<longleftrightarrow> styped \<Gamma> fr \<and> frames_typed \<Gamma> frs"
   by (simp add: frames_typed_def)
+
+text \<open>
+  Recursive on the leading component so that ANY depth of \<open>Seq\<close> nesting
+  around an in-flight \<open>Unwind\<close> is detected -- not only one level. This
+  is what makes \<open>sstyped\<close>'s \<open>Seq2\<close> case (the small-step congruence rule
+  that re-wraps a nested transition, e.g. a \<open>Call\<close> firing inside a
+  larger statement sequence) collapse to a trivial rewrite: the outer
+  wrapping \<open>Seq c1 c2\<close>'s flight status is definitionally identical to
+  \<open>c1\<close>'s own, at whatever depth \<open>c1\<close> is itself already \<open>Seq\<close>-nested.
+\<close>
+fun in_flight_unwind :: "com \<Rightarrow> bool" where
+  "in_flight_unwind Unwind = True"
+| "in_flight_unwind (Seq c1 _) = in_flight_unwind c1"
+| "in_flight_unwind _ = False"
+
+definition rstyped :: "tyenv \<Rightarrow> store \<Rightarrow> bool" where
+  "rstyped \<Gamma> s \<longleftrightarrow> (\<forall>x. x \<noteq> ret_var \<longrightarrow> s x \<in> ik_range (\<Gamma> x))"
+
+definition sstyped :: "tyenv \<Rightarrow> com \<Rightarrow> store \<Rightarrow> bool" where
+  "sstyped \<Gamma> c s \<longleftrightarrow> (if in_flight_unwind c then rstyped \<Gamma> s else styped \<Gamma> s)"
+
+lemma styped_imp_rstyped [intro]: "styped \<Gamma> s \<Longrightarrow> rstyped \<Gamma> s"
+  unfolding styped_def rstyped_def by simp
+
+text \<open>
+  Fully \<open>styped\<close> is always enough for \<open>sstyped\<close>, at any command shape --
+  including one this generic proof cannot decide is or is not
+  \<open>Unwind\<close>-shaped, such as a call's opaque \<open>body decl\<close>.
+\<close>
+lemma styped_imp_sstyped [intro]: "styped \<Gamma> s \<Longrightarrow> sstyped \<Gamma> c s"
+  unfolding sstyped_def by (auto intro: styped_imp_rstyped)
+
+lemma rstyped_update [intro]:
+  "rstyped \<Gamma> s \<Longrightarrow> v \<in> ik_range (\<Gamma> x) \<Longrightarrow> x \<noteq> ret_var \<Longrightarrow> rstyped \<Gamma> (s(x := v))"
+  unfolding rstyped_def by auto
+
+lemma rstyped_update_ret_var [simp, intro]:
+  "rstyped \<Gamma> s \<Longrightarrow> rstyped \<Gamma> (s(ret_var := v))"
+  unfolding rstyped_def by auto
+
+lemma rstyped_update_taval [simp, intro]:
+  "rstyped \<Gamma> s \<Longrightarrow> x \<noteq> ret_var \<Longrightarrow> rstyped \<Gamma> (s(x := taval \<Gamma> (\<Gamma> x) e s))"
+  unfolding rstyped_def by auto
 
 lemma styped_enter_state [simp, intro]:
   "styped \<Gamma> s \<Longrightarrow> styped \<Gamma> (enter_state gs s)"
@@ -562,6 +729,31 @@ lemma styped_enter_state [simp, intro]:
 lemma styped_combine_env [simp, intro]:
   "styped \<Gamma> s \<Longrightarrow> styped \<Gamma> t \<Longrightarrow> styped \<Gamma> (combine_env gs s t)"
   unfolding styped_def by auto
+
+text \<open>
+  The bridging step \<open>UnwindAct\<close> relies on: \<open>combine_env\<close>'s \<open>ret_var\<close>
+  slot comes from the SAVED frame (\<open>fr\<close>, non-global per
+  \<open>reserved_ret_var\<close>), never from the finishing callee store \<open>t\<close>, so
+  \<open>t\<close> only needs \<open>rstyped\<close> -- its own \<open>ret_var\<close> value, whatever it is,
+  is never read.
+\<close>
+lemma styped_combine_env_rstyped [simp, intro]:
+  assumes "styped \<Gamma> fr" and "rstyped \<Gamma> t" and "\<not> gs ret_var"
+  shows "styped \<Gamma> (combine_env gs fr t)"
+  unfolding styped_def
+proof
+  fix x
+  show "combine_env gs fr t x \<in> ik_range (\<Gamma> x)"
+  proof (cases "x = ret_var")
+    case True
+    with \<open>\<not> gs ret_var\<close> \<open>styped \<Gamma> fr\<close> show ?thesis
+      by (simp add: styped_def)
+  next
+    case False
+    with \<open>styped \<Gamma> fr\<close> \<open>rstyped \<Gamma> t\<close> show ?thesis
+      by (cases "gs x") (auto simp: styped_def rstyped_def)
+  qed
+qed
 
 lemma styped_combine_assign [simp, intro]:
   "styped \<Gamma> s \<Longrightarrow> styped \<Gamma> (combine_assign \<Gamma> dst v s)"
@@ -595,39 +787,67 @@ next
 qed
 
 lemma map2_taval_ranges:
-  "\<forall>(x, v) \<in> set (zip xs (map2 (\<lambda>x e. taval \<Gamma> (\<Gamma> x) e s) xs es)).
+  "\<forall>(x, v) \<in> set (zip xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es)).
      v \<in> ik_range (\<Gamma> x)"
   by (auto simp: set_zip)
 
-theorem pstep_preserves_styped:
-  assumes "pstep \<Gamma> gs \<Pi> (c, s, frs) (c', s', frs')"
-    and "styped \<Gamma> s" and "frames_typed \<Gamma> frs"
-  shows "styped \<Gamma> s' \<and> frames_typed \<Gamma> frs'"
-  using assms
-proof (induction "(c, s, frs)" "(c', s', frs')"
-         arbitrary: c s frs c' s' frs' rule: pstep.induct)
-  case (Call p decl actuals vals s callee dst frs)
+theorem pstep_preserves_sstyped:
+  assumes "pstep \<Gamma> gs \<Pi> (c, s, frs, rk) (c', s', frs', rk')"
+    and "sstyped \<Gamma> c s" and "frames_typed \<Gamma> frs" and "\<not> gs ret_var"
+  shows "sstyped \<Gamma> c' s' \<and> frames_typed \<Gamma> frs'"
+  using assms(1,2,3)
+proof (induction "(c, s, frs, rk)" "(c', s', frs', rk')"
+         arbitrary: c s frs rk c' s' frs' rk' rule: pstep.induct)
+  case (Assign x a s frs rk)
+  then show ?case by (simp add: sstyped_def in_flight_unwind.simps)
+next
+  case (Call p decl actuals vals s callee rk' dst frs rk)
+  have hs: "styped \<Gamma> s" using Call.prems by (simp add: sstyped_def)
   have "styped \<Gamma> callee"
     unfolding Call.hyps(5) Call.hyps(4)
-    by (intro styped_bind_formals styped_enter_state map2_taval_ranges Call.prems)
-  with Call.prems show ?case by simp
-qed auto
+    by (rule styped_bind_formals[OF styped_enter_state[OF hs] map2_taval_ranges])
+  with hs Call.prems show ?case by auto
+next
+  case (RestoreStep s fr dst rk frs rk')
+  then show ?case by (simp add: sstyped_def in_flight_unwind.simps)
+next
+  case (ReturnSome e s frs rk)
+  then show ?case
+    by (auto simp: sstyped_def in_flight_unwind.simps intro: styped_imp_rstyped)
+next
+  case (ReturnNone s frs rk)
+  then show ?case
+    by (auto simp: sstyped_def in_flight_unwind.simps intro: styped_imp_rstyped)
+next
+  case (UnwindDead c2 s frs rk)
+  then show ?case by (simp add: sstyped_def)
+next
+  case (UnwindAct s fr dst rk frs rk')
+  then show ?case using \<open>\<not> gs ret_var\<close> by (simp add: sstyped_def in_flight_unwind.simps)
+qed (auto simp: sstyped_def in_flight_unwind.simps)
 
-theorem psteps_preserves_styped:
-  assumes "psteps \<Gamma> gs \<Pi> (c, s, frs) (c', s', frs')"
-    and "styped \<Gamma> s" and "frames_typed \<Gamma> frs"
-  shows "styped \<Gamma> s' \<and> frames_typed \<Gamma> frs'"
-  using assms
+theorem psteps_preserves_sstyped:
+  assumes "psteps \<Gamma> gs \<Pi> (c, s, frs, rk) (c', s', frs', rk')"
+    and "sstyped \<Gamma> c s" and "frames_typed \<Gamma> frs" and "\<not> gs ret_var"
+  shows "sstyped \<Gamma> c' s' \<and> frames_typed \<Gamma> frs'"
+  using assms(1,2,3)
 proof (induction rule: star_pstep_induct)
   case refl then show ?case by simp
 next
-  case step then show ?case by (meson pstep_preserves_styped)
+  case (step c s frs rk c' s' frs' rk' c'' s'' frs'' rk'')
+  then show ?case using \<open>\<not> gs ret_var\<close> pstep_preserves_sstyped by blast
 qed
 
 corollary pcompletes_preserves_styped:
-  "pcompletes \<Gamma> gs \<Pi> c s t \<Longrightarrow> styped \<Gamma> s \<Longrightarrow> styped \<Gamma> t"
-  unfolding pcompletes_def
-  using psteps_preserves_styped frames_typed_Nil by blast
+  assumes "pcompletes \<Gamma> gs \<Pi> c s t rk" and "styped \<Gamma> s"
+    and "\<not> in_flight_unwind c" and "\<not> gs ret_var"
+  shows "styped \<Gamma> t"
+proof -
+  have "sstyped \<Gamma> c s" using \<open>styped \<Gamma> s\<close> \<open>\<not> in_flight_unwind c\<close> by (simp add: sstyped_def)
+  from psteps_preserves_sstyped[OF assms(1)[unfolded pcompletes_def] this frames_typed_Nil \<open>\<not> gs ret_var\<close>]
+  show ?thesis by (simp add: sstyped_def)
+qed
+
 
 
 section \<open>Source-program well-formedness\<close>

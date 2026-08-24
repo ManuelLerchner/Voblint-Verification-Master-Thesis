@@ -410,15 +410,15 @@ proof -
 qed
 
 lemma dgs_ret_rel_sound[intro]:
-  "edge_collect (EA_Ret e p) (gammaDG_rel d g) \<subseteq>
-     (case dg_spec_step rel_order_spec (EA_Ret e p) d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
+  "edge_collect (EA_Ret e p I32) (gammaDG_rel d g) \<subseteq>
+     (case dg_spec_step rel_order_spec (EA_Ret e p I32) d g of (g', d') \<Rightarrow> gammaDG_rel d' g')"
 proof (cases e)
   case None
   then show ?thesis
     by (simp add: rel_order_spec_def dgs_return_rel_def dgs_skip_rel_def)
 next
   case (Some a)
-  have "edge_collect (EA_Ret (Some a) p) (gammaDG_rel d g)
+  have "edge_collect (EA_Ret (Some a) p I32) (gammaDG_rel d g)
       = {s(ret_var := aval a s) | s. s \<in> gammaDG_rel d g}"
     by simp
   also have "... \<subseteq> gamma_rel (forget_relc ret_var d) \<inter> gamma_rel (forget_relc ret_var g)"

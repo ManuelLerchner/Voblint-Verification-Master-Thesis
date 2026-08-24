@@ -70,21 +70,14 @@ lemma parity_max_combine_mono:
 
 subsection \<open>Special-call dispatch\<close>
 
-fun special_parity ::
-    "special_call => vname => (vname => parity) => (vname => parity)"
-where
-  "special_parity Nondet_Int x \<sigma> = \<sigma>(x := PTop)"
-| "special_parity (Min a b) x \<sigma> = \<sigma>(x := parity_min (aval_parity a \<sigma>) (aval_parity b \<sigma>))"
-| "special_parity (Max a b) x \<sigma> = \<sigma>(x := parity_max (aval_parity a \<sigma>) (aval_parity b \<sigma>))"
-
 definition parity_special_ops :: "parity special_ops" where
   "parity_special_ops = (| special_min = parity_min, special_max = parity_max |)"
 
-interpretation parity_special: sound_special_ops parity_special_ops aval_parity
+interpretation parity_special: sound_special_ops parity_special_ops aval_parity parity_cast
   by unfold_locales
      (auto simp: parity_special_ops_def gamma_parity_top
            intro: parity_min_sound parity_max_sound parity_min_combine_mono parity_max_combine_mono
-                  aval_parity_sound aval_parity_mono)
+                  aval_parity_sound aval_parity_mono parity_cast_sound_parity parity_cast_mono)
 
 lemma parity_special_ops_min [simp]: "special_min parity_special_ops = parity_min"
   by (simp add: parity_special_ops_def)
@@ -92,11 +85,20 @@ lemma parity_special_ops_min [simp]: "special_min parity_special_ops = parity_mi
 lemma parity_special_ops_max [simp]: "special_max parity_special_ops = parity_max"
   by (simp add: parity_special_ops_def)
 
-lemma special_parity_eq_transfer:
-  "special_parity sc x \<sigma> = parity_special.special_transfer sc x \<sigma>"
-  by (cases sc) (simp_all add: top_parity_def)
+text \<open>
+  \<open>special_parity\<close> is a thin alias for \<^const>\<open>sound_special_ops.special_transfer\<close>
+  at its own \<open>parity_special_ops\<close>/\<open>aval_parity\<close> instance -- \<open>special_transfer\<close>
+  already correctly threads \<open>\<Gamma>\<close>/synthesized-kind evaluation into \<open>Min\<close>/
+  \<open>Max\<close>'s two operands, so there is nothing for a per-domain reimplementation
+  to add.
+\<close>
 
-lemmas special_parity_sound = parity_special.special_transfer_sound[folded special_parity_eq_transfer]
-lemmas special_parity_mono  = parity_special.special_transfer_mono[folded special_parity_eq_transfer]
+definition special_parity ::
+    "tyenv => special_call => vname => (vname => parity) => (vname => parity)"
+where
+  "special_parity = parity_special.special_transfer"
+
+lemmas special_parity_sound = parity_special.special_transfer_sound[folded special_parity_def]
+lemmas special_parity_mono  = parity_special.special_transfer_mono[folded special_parity_def]
 
 end

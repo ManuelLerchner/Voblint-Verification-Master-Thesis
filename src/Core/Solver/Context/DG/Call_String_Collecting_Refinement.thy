@@ -67,11 +67,11 @@ text \<open>
 
 lemma call_string_collecting_mono:
   assumes le: "k1 \<le> k2"
-  shows "activation_collect gs (admiss_exact (cs_context k2)) seed g S v c2
-           \<subseteq> activation_collect gs (admiss_exact (cs_context k1)) (take k1 seed) g S v (take k1 c2)"
+  shows "activation_collect \<Gamma> gs (admiss_exact (cs_context k2)) seed g S v c2
+           \<subseteq> activation_collect \<Gamma> gs (admiss_exact (cs_context k1)) (take k1 seed) g S v (take k1 c2)"
 proof
-  fix s assume "s \<in> activation_collect gs (admiss_exact (cs_context k2)) seed g S v c2"
-  then obtain t where t1: "t \<in> valid_ltr gs g S" and t2: "sink_node t = v"
+  fix s assume "s \<in> activation_collect \<Gamma> gs (admiss_exact (cs_context k2)) seed g S v c2"
+  then obtain t where t1: "t \<in> valid_ltr \<Gamma> gs g S" and t2: "sink_node t = v"
     and t3: "ctx_key (admiss_exact (cs_context k2)) seed t c2" and t4: "sink_store t = s"
     by (rule activation_collect_E)
   from t3 have t3': "key (cs_context k2) seed t = c2" by (simp add: ctx_key_exact_iff)
@@ -79,7 +79,7 @@ proof
   have key1: "key (cs_context k1) (take k1 seed) t = take k1 c2" by simp
   have ck1: "ctx_key (admiss_exact (cs_context k1)) (take k1 seed) t (take k1 c2)"
     using key1 by (simp add: ctx_key_exact_iff)
-  show "s \<in> activation_collect gs (admiss_exact (cs_context k1)) (take k1 seed) g S v (take k1 c2)"
+  show "s \<in> activation_collect \<Gamma> gs (admiss_exact (cs_context k1)) (take k1 seed) g S v (take k1 c2)"
     using activation_collect_I[OF t1 t2 ck1] t4 by simp
 qed
 

@@ -219,7 +219,7 @@ text \<open>Every source \<open>Return e\<close> in procedure \<open>p\<close> c
   reaches \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
 lemma compile_return_edge:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> returns_in e c
-   \<Longrightarrow> \<exists>j. (Statement j, EA_Ret e p, FunctionResult p) \<in> E"
+   \<Longrightarrow> \<exists>j. (Statement j, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
@@ -263,25 +263,25 @@ proof -
     cb: "compile \<Pi> p (body decl) (Statement r) n = (r, Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
                   (if falls_through (body decl)
-                   then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
+                   then insert (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                    else Eb)"
     and n': "n' = Suc r"
     unfolding r_def by (rule compile_procE)
   have body: "frag_stmts Eb K \<subseteq> {n..<n'}"
     using compile_frag_stmts_range[OF cb] n' compile_counter_mono[OF cb] by auto
   have lit: "frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
-                (Statement r, EA_Ret None p, FunctionResult p)} {} \<subseteq> {n..<n'}"
+                (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p)} {} \<subseteq> {n..<n'}"
     using n' r_def compile_counter_mono[OF cb] by (auto simp: frag_stmts_def)
   \<comment> \<open>the epilogue edge may be absent, so bound \<open>E\<close> by the set that always contains it\<close>
   have Esub: "E \<subseteq> {(FunctionEntry p, EA_Nop, Statement n),
-                      (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb"
+                      (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p)} \<union> Eb"
     using E by (auto split: if_splits)
   have "frag_stmts E K
           \<subseteq> frag_stmts ({(FunctionEntry p, EA_Nop, Statement n),
-              (Statement r, EA_Ret None p, FunctionResult p)} \<union> Eb) ({} \<union> K)"
+              (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p)} \<union> Eb) ({} \<union> K)"
     by (rule frag_stmts_mono[OF Esub]) simp
   also have "... = frag_stmts {(FunctionEntry p, EA_Nop, Statement n),
-                (Statement r, EA_Ret None p, FunctionResult p)} {} \<union> frag_stmts Eb K"
+                (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p)} {} \<union> frag_stmts Eb K"
     by (rule frag_stmts_Un)
   also have "... \<subseteq> {n..<n'}" using lit body by fastforce
   finally show ?thesis .
@@ -364,8 +364,8 @@ theorem inv11_return_ignores_continuation:
 text \<open>Return branches of the same procedure converge at \<open>FunctionResult p\<close>.\<close>
 theorem inv13_multi_return_converge:
   assumes "compile \<Pi> p (If b (Return e1) (Return e2)) k n = (n', en, E, K)"
-  shows "(\<exists>j. (Statement j, EA_Ret e1 p, FunctionResult p) \<in> E)
-       \<and> (\<exists>j. (Statement j, EA_Ret e2 p, FunctionResult p) \<in> E)"
+  shows "(\<exists>j. (Statement j, EA_Ret e1 p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E)
+       \<and> (\<exists>j. (Statement j, EA_Ret e2 p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E)"
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
 
 text \<open>A self-call targets the procedure's own entry node; its call site is an ordinary

@@ -33,7 +33,7 @@ where
     dgs_branch     = (\<lambda>b pol d g. (g, transfer_lift is_bot_pred
       (tf_st (if pol then EA_Assume b else EA_AssumeNot b)) d)),
     dgs_body       = (\<lambda>p d g. (g, transfer_lift is_bot_pred (tf_st EA_Nop) d)),
-    dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (tf_st (EA_Ret e p)) d)),
+    dgs_return     = (\<lambda>e p d g. (g, transfer_lift is_bot_pred (tf_st (EA_Ret e p I32)) d)),
     dgs_enter      = (\<lambda>xs es d g. (g, transfer_lift is_bot_pred (enter_st xs es) d)),
     dgs_event      = (\<lambda>ev d g. (g, case ev of Check_Event bc \<Rightarrow>
                                       transfer_lift is_bot_pred (tf_st (EA_Check bc)) d)),
@@ -49,11 +49,21 @@ where
 
 subsection \<open>Basic equations\<close>
 
+text \<open>Unlike \<^const>\<open>apply_tf\<close>, \<open>tf_st\<close> is a free dispatcher parameter with no
+  registered \<open>action_reduces\<close> fact in scope here, so this is stated only for the
+  one field \<^const>\<open>base_dg_spec_st_for_lifted\<close> actually bakes a fixed \<open>rk\<close> into
+  (\<open>dgs_return\<close>, which the \<open>dg_spec\<close> record's own \<open>rk\<close>-free field type forces):
+  every other field reproduces \<open>tf_st a\<close> verbatim.\<close>
 lemma dg_spec_step_base_st_for_lifted:
-  "dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g =
+  assumes ret_reduces: "\<And>e p rk. tf_st (EA_Ret e p rk) = tf_st (EA_Ret e p I32)"
+  shows "dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g =
      (g, transfer_lift is_bot_pred (tf_st a) d)"
-  unfolding base_dg_spec_st_for_lifted_def
-  by (cases a) simp_all
+proof (cases a)
+  case (EA_Ret e p rk)
+  then show ?thesis
+    unfolding base_dg_spec_st_for_lifted_def
+    by (simp add: ret_reduces[of e p rk])
+qed (simp_all add: base_dg_spec_st_for_lifted_def)
 
 lemma dgs_enter_base_st_for_lifted:
   "dgs_enter (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) xs es d g =
@@ -97,8 +107,8 @@ theorem base_dg_spec_st_for_lifted_dg_spec_step_commute:
            (dg_spec_step (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) a d g) =
          dg_spec_step (base_dg_spec_for_lifted gs is_bot_state tf) a
            (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
-  unfolding dg_spec_step_base_st_for_lifted dg_spec_step_base_for_lifted map_prod_def
-  by (cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
+  unfolding base_dg_spec_st_for_lifted_def dg_spec_step_base_for_lifted map_prod_def
+  by (cases a; cases d) (simp_all add: transfer_lift_def normalize_lift_def commute exact)
 
 theorem base_dg_spec_st_for_lifted_dgs_enter_commute:
   assumes commute: "\<And>xs es s. fun_of_exec_dg_st_for gs (enter_st xs es s) =

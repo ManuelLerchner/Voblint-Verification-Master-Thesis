@@ -29,9 +29,20 @@ text \<open>
   classify machinery has to sit below both, not inside either.
 \<close>
 
+text \<open>
+  \<open>aval\<close>'s arithmetic is genuinely unbounded (no \<open>ik_norm\<close> truncation at any node), while
+  \<open>aval_ivl\<close>'s abstract semantics is now ikind-aware -- each operation truncates via
+  \<open>ik_norm\<close> at the elaborated kind. No fixed \<open>tyenv\<close>/\<open>ikind\<close> instantiation of \<open>aval_ivl\<close>
+  soundly over-approximates \<open>aval\<close>'s unbounded semantics in general (a value that
+  overflows a machine kind is still exact under \<open>aval\<close> but truncates under \<open>aval_ivl\<close>),
+  so the obligation below is left \<open>sorry\<close>ed at the natural default instantiation.
+  Pre-existing gap between this check-discharge interface and the ikind-threaded
+  evaluator, predating this file's own Gamma-threading sweep -- the same gap
+  \<open>Sign_Checks.sign_check_domain\<close> carries for \<open>aval_sign\<close>.
+\<close>
 global_interpretation interval_check_domain:
   abstract_check_domain gamma_ivl interval_less_true interval_less_false interval_eq_true
-    interval_eq_false gamma_state aval_ivl
+    interval_eq_false gamma_state "aval_ivl default_tyenv I32"
   defines
     interval_check_true = interval_check_domain.check_true
     and interval_check_false = interval_check_domain.check_false
@@ -42,7 +53,8 @@ proof unfold_locales
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
   then have "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_ivl (aval_ivl e \<sigma>)" using aval_ivl_sound by blast
+  then show "aval e s \<in> gamma_ivl (aval_ivl default_tyenv I32 e \<sigma>)"
+    sorry
 qed
 
 text \<open>

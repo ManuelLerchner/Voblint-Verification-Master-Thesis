@@ -63,14 +63,14 @@ theorem dg_run_source_sound_abs_for:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG s0d s0g"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+    and run: "star (pstep \<Gamma> gs Pi) (main, s0, [], proc_ret_kind Pi mnm) (residual, t, frs, rk)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> dg_gamma sigma v"
 proof -
   from source_reaches_ltr_collect[OF wf s0mem run]
-  obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)"
-    and coll: "t \<in> ltr_collect gs (compile_prog Pi ps mnm main) S0 v" by blast
-  have "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
+  obtain v stk where m: "csim Pi (compile_prog Pi ps mnm main) (residual, t, frs, rk) (v, t, stk)"
+    and coll: "t \<in> ltr_collect \<Gamma> gs (compile_prog Pi ps mnm main) S0 v" by blast
+  have "ltr_collect \<Gamma> gs (compile_prog Pi ps mnm main) S0 v \<subseteq> dg_gamma sigma v"
     by (rule dg_post_solution_collect_sound_ltr_for[OF pp cover finI finC sound0])
   then show ?thesis using m coll by blast
 qed
@@ -96,7 +96,7 @@ theorem dg_exec_run_source_sound_for:
     and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
     and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
     and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma>"
     and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
                         = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
@@ -113,11 +113,11 @@ theorem dg_exec_run_source_sound_for:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+    and run: "star (pstep \<Gamma> gs Pi) (main, s0, [], proc_ret_kind Pi mnm) (residual, t, frs, rk)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st_for gs \<circ> sigma_st) v"
 proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma> by (rule sds)
   have pp_abs: "part_post_solution
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
@@ -149,7 +149,7 @@ theorem dg_exec_collect_sound_for:
     and gammaDG :: "'d1 abs_state \<Rightarrow> 'g1 abs_state \<Rightarrow> store set"
     and bot0 s0d :: "'d1 exec_dg_st" and s0g :: "'g1 exec_dg_st"
     and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma>"
     and Hstep: "\<And>a d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dg_spec_step S_st a d g)
                         = dg_spec_step S_abs a (fun_of_exec_dg_st_for gs d) (fun_of_exec_dg_st_for gs g)"
     and Henter: "\<And>xs es d g. map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs) (dgs_enter S_st xs es d g)
@@ -165,10 +165,10 @@ theorem dg_exec_collect_sound_for:
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
-  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v
+  shows "ltr_collect \<Gamma> gs (compile_prog Pi ps mnm main) S0 v
            \<subseteq> sound_dg_spec.dg_gamma gammaDG (fun_of_dg_st_for gs \<circ> sigma_st) v"
 proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma> by (rule sds)
   have pp_abs: "part_post_solution
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (fun_of_exec_dg_st_for gs bot0) (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g))
@@ -262,9 +262,11 @@ locale unit_dg_exec_analysis =
                        (pp \<times> unit + unit \<Rightarrow>
                          ('a exec_dg_st, 'a exec_dg_st) dg_state)) option"
   assumes tf_sound:
-      "sound_transfer_for gs tf"
+      "sound_transfer_for gs tf \<Gamma>"
     and reserved:
       "reserved_ret_var gs"
+    and ret_ok:
+      "\<And>x v. ik_norm (\<Gamma> x) v = v"
     and tf_commute[simp]:
       "\<And>a s.
         fun_of_exec_dg_st_for gs (tf_st a s) =
@@ -293,9 +295,9 @@ text \<open>
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"
   where "gamma sigma_st v = sound_dg_spec.dg_gamma (gamma_unit gs) (fun_of_dg_st_for gs \<circ> sigma_st) v"
 
-lemma sds: "sound_dg_spec_ltr_for (unit_dg_spec_for gs tf) (gamma_unit gs) gs"
+lemma sds: "sound_dg_spec_ltr_for (unit_dg_spec_for gs tf) (gamma_unit gs) gs \<Gamma>"
   unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF tf_sound reserved])
+  by (rule sound_dg_spec_unit_for[OF tf_sound reserved ret_ok])
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps mnm main and s0 t :: store and bot0 s0d s0g :: "'a exec_dg_st"
@@ -306,8 +308,8 @@ theorem run_source_sound:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_unit gs (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+    and run: "star (pstep \<Gamma> gs Pi) (main, s0, [], proc_ret_kind Pi mnm) (residual, t, frs, rk)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
@@ -337,7 +339,7 @@ theorem collect_sound:
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_unit gs (fun_of_exec_dg_st_for gs s0d) (fun_of_exec_dg_st_for gs s0g)"
-  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
+  shows "ltr_collect \<Gamma> gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     by (rule solver_pps[OF SOLVE])
@@ -376,7 +378,7 @@ theorem dg_exec_run_source_sound_lifted_for:
     and gammaDG :: "'d1 abs_state lifted \<Rightarrow> 'g1 abs_state lifted \<Rightarrow> store set"
     and bot0 s0d :: "'d1 exec_dg_st lifted" and s0g :: "'g1 exec_dg_st lifted"
     and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma>"
     and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dg_spec_step S_st a d g)
                       = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
@@ -398,12 +400,12 @@ theorem dg_exec_run_source_sound_lifted_for:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+    and run: "star (pstep \<Gamma> gs Pi) (main, s0, [], proc_ret_kind Pi mnm) (residual, t, frs, rk)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> sound_dg_spec.dg_gamma gammaDG
                      (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
 proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma> by (rule sds)
   have pp_abs: "part_post_solution
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
@@ -428,7 +430,7 @@ theorem dg_exec_collect_sound_lifted_for:
     and gammaDG :: "'d1 abs_state lifted \<Rightarrow> 'g1 abs_state lifted \<Rightarrow> store set"
     and bot0 s0d :: "'d1 exec_dg_st lifted" and s0g :: "'g1 exec_dg_st lifted"
     and gs :: "vname \<Rightarrow> bool"
-  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs"
+  assumes sds: "sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma>"
     and Hstep: "\<And>a d g. map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
                         (dg_spec_step S_st a d g)
                       = dg_spec_step S_abs a (map_lift (fun_of_exec_dg_st_for gs) d) (map_lift (fun_of_exec_dg_st_for gs) g)"
@@ -449,11 +451,11 @@ theorem dg_exec_collect_sound_lifted_for:
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gammaDG (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
-  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v
+  shows "ltr_collect \<Gamma> gs (compile_prog Pi ps mnm main) S0 v
            \<subseteq> sound_dg_spec.dg_gamma gammaDG
                (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
 proof -
-  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs by (rule sds)
+  interpret sds: sound_dg_spec_ltr_for S_abs gammaDG gs \<Gamma> by (rule sds)
   have pp_abs: "part_post_solution
       (dg_gen_of S_abs (compile_prog Pi ps mnm main)
          (map_lift (fun_of_exec_dg_st_for gs) bot0) (map_lift (fun_of_exec_dg_st_for gs) s0d)
@@ -504,9 +506,11 @@ locale base_dg_exec_analysis =
                        (pp \<times> unit + unit \<Rightarrow>
                          ('a exec_dg_st lifted, 'g exec_dg_st lifted) dg_state)) option"
   assumes tf_sound:
-      "sound_transfer_for gs tf"
+      "sound_transfer_for gs tf \<Gamma>"
     and reserved:
       "reserved_ret_var gs"
+    and ret_ok:
+      "\<And>x v. ik_norm (\<Gamma> x) v = v"
     and tf_commute[simp]:
       "\<And>a s.
         fun_of_exec_dg_st_for gs (tf_st a s) =
@@ -535,9 +539,9 @@ definition gamma ::
   where "gamma sigma_st v = sound_dg_spec.dg_gamma gamma_dg_base
            (fun_of_dg_st_gen (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs)) \<circ> sigma_st) v"
 
-lemma sds: "sound_dg_spec_ltr_for (base_dg_spec_for_lifted gs is_bot_state tf) gamma_dg_base gs"
+lemma sds: "sound_dg_spec_ltr_for (base_dg_spec_for_lifted gs is_bot_state tf) gamma_dg_base gs \<Gamma>"
   unfolding sound_dg_spec_ltr_for_def
-  by (rule base_dg_spec_sound[OF tf_sound is_bot_state_gamma_state_empty])
+  by (rule base_dg_spec_sound[OF tf_sound is_bot_state_gamma_state_empty ret_ok])
 
 theorem run_source_sound:
   fixes Pi :: proc_table and ps mnm main and s0 t :: store
@@ -551,8 +555,8 @@ theorem run_source_sound:
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
     and s0mem: "s0 \<in> S0"
-    and run: "star (pstep gs Pi) (main, s0, []) (residual, t, frs)"
-  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs) (v, t, stk)
+    and run: "star (pstep \<Gamma> gs Pi) (main, s0, [], proc_ret_kind Pi mnm) (residual, t, frs, rk)"
+  shows "\<exists>v stk. csim Pi (compile_prog Pi ps mnm main) (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
@@ -586,7 +590,7 @@ theorem collect_sound:
     and finI: "finite (intra (compile_prog Pi ps mnm main))"
     and finC: "finite (calls (compile_prog Pi ps mnm main))"
     and sound0: "S0 \<subseteq> gamma_dg_base (map_lift (fun_of_exec_dg_st_for gs) s0d) (map_lift (fun_of_exec_dg_st_for gs) s0g)"
-  shows "ltr_collect gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
+  shows "ltr_collect \<Gamma> gs (compile_prog Pi ps mnm main) S0 v \<subseteq> gamma (snd (solve eqs x)) v"
 proof -
   have pp_st: "part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     by (rule solver_pps[OF SOLVE])

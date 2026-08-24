@@ -37,27 +37,27 @@ text \<open>
 theorem valid_ltr_ctx_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::sound_domain abs_state"
     and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c
-    and gs :: "vname \<Rightarrow> bool"
+    and gs :: "vname \<Rightarrow> bool" and \<Gamma> :: tyenv
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cfg_entry g, startcontext))\<rbrakk>"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step a s
+        \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> s' \<in> edge_step \<Gamma> a s
         \<Longrightarrow> s' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
     and ADMISS_TOTAL: "\<And>u c s. \<exists>c'. admiss u c s c'"
     and CALL: "\<And>u dst pars args p cont c s c'.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
-        \<Longrightarrow> admiss u c (call_enter gs (CallEdge dst pars args) s) c'
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
+        \<Longrightarrow> admiss u c (call_enter \<Gamma> gs (CallEdge dst pars args) s) c'
+        \<Longrightarrow> call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
     and COMB: "\<And>cl dst pars args p cont c1 c2 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk> \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c2))\<rbrakk>
-        \<Longrightarrow> call_enter_store gs g cl s es
-        \<Longrightarrow> combine_collect gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-    and t: "t \<in> valid_ltr gs g S"
+        \<Longrightarrow> call_enter_store \<Gamma> gs g cl s es
+        \<Longrightarrow> combine_collect \<Gamma> gs dst s t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
+    and t: "t \<in> valid_ltr \<Gamma> gs g S"
     and ck: "ctx_key admiss startcontext t c"
   shows "sink_store t \<in> \<lbrakk>sg (Inl (sink_node t, c))\<rbrakk>"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" admiss startcontext gs
+  interpret G: ltr_gamma g S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" admiss startcontext gs \<Gamma>
     apply unfold_locales
     apply (blast intro: ENTRY_G)
     apply (blast intro: EDGE)
@@ -83,27 +83,27 @@ theorem valid_ltr_ctx_sound_gen:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'M"
     and gammaM :: "'M \<Rightarrow> store set"
     and admiss :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" and startcontext :: 'c
-    and gs :: "vname \<Rightarrow> bool"
+    and gs :: "vname \<Rightarrow> bool" and \<Gamma> :: tyenv
   assumes ENTRY_G: "\<And>s. s \<in> S \<Longrightarrow> s \<in> gammaM (sg (Inl (cfg_entry g, startcontext)))"
     and EDGE: "\<And>u a v c s s'. (u, a, v) \<in> intra g
-        \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step a s
+        \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c))) \<Longrightarrow> s' \<in> edge_step \<Gamma> a s
         \<Longrightarrow> s' \<in> gammaM (sg (Inl (v, c)))"
     and ADMISS_TOTAL: "\<And>u c s. \<exists>c'. admiss u c s c'"
     and CALL: "\<And>u dst pars args p cont c s c'.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> gammaM (sg (Inl (u, c)))
-        \<Longrightarrow> admiss u c (call_enter gs (CallEdge dst pars args) s) c'
-        \<Longrightarrow> call_enter gs (CallEdge dst pars args) s \<in> gammaM (sg (Inl (FunctionEntry p, c')))"
+        \<Longrightarrow> admiss u c (call_enter \<Gamma> gs (CallEdge dst pars args) s) c'
+        \<Longrightarrow> call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> gammaM (sg (Inl (FunctionEntry p, c')))"
     and COMB: "\<And>cl dst pars args p cont c1 c2 s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> gammaM (sg (Inl (cl, c1))) \<Longrightarrow> admiss cl c1 es c2 \<Longrightarrow> t \<in> gammaM (sg (Inl (FunctionResult p, c2)))
-        \<Longrightarrow> call_enter_store gs g cl s es
-        \<Longrightarrow> combine_collect gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
-    and t: "t \<in> valid_ltr gs g S"
+        \<Longrightarrow> call_enter_store \<Gamma> gs g cl s es
+        \<Longrightarrow> combine_collect \<Gamma> gs dst s t \<in> gammaM (sg (Inl (cont, c1)))"
+    and t: "t \<in> valid_ltr \<Gamma> gs g S"
     and ck: "ctx_key admiss startcontext t c"
   shows "sink_store t \<in> gammaM (sg (Inl (sink_node t, c)))"
 proof -
-  interpret G: ltr_gamma g S "\<lambda>v c. gammaM (sg (Inl (v, c)))" admiss startcontext gs
+  interpret G: ltr_gamma g S "\<lambda>v c. gammaM (sg (Inl (v, c)))" admiss startcontext gs \<Gamma>
     apply unfold_locales
     apply (blast intro: ENTRY_G)
     apply (blast intro: EDGE)

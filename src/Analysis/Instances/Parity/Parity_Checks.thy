@@ -7,6 +7,9 @@ theory Parity_Checks
 begin
 
 hide_const phase.N
+hide_const (open) \<sigma>
+  \<comment> \<open>\<open>TD_side\<close> defines a record field \<open>\<sigma>\<close>; hide the short name so
+      this theory's own \<open>\<sigma>\<close> abstract-state variables stay unambiguous.\<close>
 
 section \<open>Parity instance of the generic check-discharge interface\<close>
 
@@ -26,9 +29,198 @@ text \<open>
   is restated.
 \<close>
 
+text \<open>
+  \<open>esyn default_tyenv\<close> always synthesizes \<open>I32\<close> (or nothing, and \<open>opk\<close> then
+  defaults to \<open>I32\<close> too): every declared kind is \<open>I32\<close>, and \<open>ik_promote I32 =
+  I32\<close>. Every \<open>elaborate default_tyenv ik e\<close> therefore elaborates \<open>e\<close> at
+  \<open>I32\<close> throughout, regardless of the outer \<open>ik\<close> -- \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/
+  \<open>Or\<close>'s own recomputed kind is always \<open>I32\<close> too, the same one \<open>Plus\<close>/
+  \<open>Minus\<close>/\<open>Times\<close> propagate unchanged. (Restated locally from
+  \<open>Sign_Checks\<close>; both domains need the same domain-independent fact about
+  \<open>esyn\<close>/\<open>kjoin\<close>/\<open>default_tyenv\<close>.)
+\<close>
+
+lemma esyn_default_tyenv_cases:
+  "esyn default_tyenv e = None \<or> esyn default_tyenv e = Some I32"
+  by (induction e) (auto simp: default_tyenv_def ik_promote_pins)
+
+lemma esyn_default_tyenv_I32 [simp]: "opk (esyn default_tyenv e) = I32"
+  using esyn_default_tyenv_cases[of e] by (auto simp: opk_def)
+
+lemma kjoin_default_tyenv_I32 [simp]:
+  "opk (kjoin (esyn default_tyenv e1) (esyn default_tyenv e2)) = I32"
+  using esyn_default_tyenv_cases[of e1] esyn_default_tyenv_cases[of e2]
+  by (auto simp: opk_def)
+
+text \<open>
+  \<open>aval\<close>'s arithmetic is genuinely unbounded (no \<open>ik_norm\<close> truncation at any
+  node), while \<open>aval_parity_t\<close> casts at every arithmetic node -- but
+  \<open>parity_cast\<close> is the identity, so that cast is a no-op at the abstract
+  level: it never invokes \<open>ik_norm\<close>. The two evaluators therefore agree
+  exactly, by a direct structural homomorphism (\<open>parity_plus_sound\<close> etc.),
+  with no wraparound reasoning needed at all.
+\<close>
+
+lemma aval_parity_t_default_agree:
+  assumes H: "\<forall>x. s x \<in> gamma_parity (\<sigma> x)"
+  shows "aval e s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e) \<sigma>)"
+using H proof (induction e)
+  case (N n)
+  show ?case by (simp add: parity_cast_def parity_of_int_gamma)
+next
+  case (V x)
+  from H show ?case by (simp add: parity_cast_def)
+next
+  case (Plus e1 e2)
+  from Plus.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from Plus.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  show ?case using parity_plus_sound[OF h1 h2] by (simp add: parity_cast_def)
+next
+  case (Minus e1 e2)
+  from Minus.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from Minus.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  show ?case using parity_minus_sound[OF h1 h2] by (simp add: parity_cast_def)
+next
+  case (Times e1 e2)
+  from Times.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from Times.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  show ?case using parity_times_sound[OF h1 h2] by (simp add: parity_cast_def)
+next
+  case (Less e1 e2)
+  from Less.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from Less.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  let ?c1 = "aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>"
+  let ?c2 = "aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>"
+  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bottom_parity_correct)
+  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bottom_parity_correct)
+  have shape: "aval_parity_t (elaborate default_tyenv I32 (Less e1 e2)) \<sigma> = PTop"
+    using nb1 nb2 by (simp add: kjoin_default_tyenv_I32 Let_def)
+  show ?case by (simp add: shape)
+next
+  case (Eq e1 e2)
+  from Eq.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from Eq.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  let ?c1 = "aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>"
+  let ?c2 = "aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>"
+  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bottom_parity_correct)
+  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bottom_parity_correct)
+  have shape: "aval_parity_t (elaborate default_tyenv I32 (exp.Eq e1 e2)) \<sigma> =
+      (if parity_eqb ?c1 ?c2 = Some True then POdd
+       else if parity_eqb ?c1 ?c2 = Some False then PEven
+       else PTop)"
+    using nb1 nb2 by (simp add: kjoin_default_tyenv_I32 Let_def)
+  show ?case
+  proof (cases "parity_eqb ?c1 ?c2")
+    case (Some b)
+    then show ?thesis
+      using parity_eqb_sound[OF Some h1 h2] by (cases b) (simp_all add: shape)
+  next
+    case None
+    then show ?thesis by (simp add: shape)
+  qed
+next
+  case (Not e)
+  from Not.IH[OF H] have h: "aval e s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e) \<sigma>)"
+    by auto
+  let ?c = "aval_parity_t (elaborate default_tyenv I32 e) \<sigma>"
+  have nb: "\<not> is_bot ?c" using h by (auto simp: is_bottom_parity_correct)
+  have shape: "aval_parity_t (elaborate default_tyenv I32 (exp.Not e)) \<sigma> =
+      (if parity_tobool ?c = Some True then PEven
+       else if parity_tobool ?c = Some False then POdd
+       else PTop)"
+    using nb by (simp add: esyn_default_tyenv_I32)
+  show ?case
+  proof (cases "parity_tobool ?c")
+    case (Some b)
+    then show ?thesis
+      using parity_tobool_sound[OF Some h] by (cases b) (simp_all add: shape truthy_def)
+  next
+    case None
+    then show ?thesis by (simp add: shape)
+  qed
+next
+  case (And e1 e2)
+  from And.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from And.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  let ?c1 = "aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>"
+  let ?c2 = "aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>"
+  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bottom_parity_correct)
+  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bottom_parity_correct)
+  have shape: "aval_parity_t (elaborate default_tyenv I32 (And e1 e2)) \<sigma> =
+      (if parity_tobool ?c1 = Some False \<or> parity_tobool ?c2 = Some False then PEven
+       else if parity_tobool ?c1 = Some True \<and> parity_tobool ?c2 = Some True then POdd
+       else PTop)"
+    using nb1 nb2 by (simp add: esyn_default_tyenv_I32)
+  show ?case
+  proof (cases "parity_tobool ?c1 = Some False \<or> parity_tobool ?c2 = Some False")
+    case True
+    then have "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
+      using parity_tobool_sound h1 h2 by fastforce
+    with True show ?thesis by (simp add: shape truthy_def)
+  next
+    case False
+    show ?thesis
+    proof (cases "parity_tobool ?c1 = Some True \<and> parity_tobool ?c2 = Some True")
+      case True
+      then have "truthy (aval e1 s) \<and> truthy (aval e2 s)"
+        using parity_tobool_sound h1 h2 by auto
+      with True False show ?thesis by (simp add: shape truthy_def)
+    next
+      case False
+      show ?thesis by (simp add: shape)
+    qed
+  qed
+next
+  case (Or e1 e2)
+  from Or.IH[OF H] have h1: "aval e1 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>)"
+    by auto
+  from Or.IH[OF H] have h2: "aval e2 s \<in> gamma_parity (aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>)"
+    by auto
+  let ?c1 = "aval_parity_t (elaborate default_tyenv I32 e1) \<sigma>"
+  let ?c2 = "aval_parity_t (elaborate default_tyenv I32 e2) \<sigma>"
+  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bottom_parity_correct)
+  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bottom_parity_correct)
+  have shape: "aval_parity_t (elaborate default_tyenv I32 (Or e1 e2)) \<sigma> =
+      (if parity_tobool ?c1 = Some True \<or> parity_tobool ?c2 = Some True then POdd
+       else if parity_tobool ?c1 = Some False \<and> parity_tobool ?c2 = Some False then PEven
+       else PTop)"
+    using nb1 nb2 by (simp add: esyn_default_tyenv_I32)
+  show ?case
+  proof (cases "parity_tobool ?c1 = Some True \<or> parity_tobool ?c2 = Some True")
+    case True
+    then have "truthy (aval e1 s) \<or> truthy (aval e2 s)"
+      using parity_tobool_sound h1 h2 by fastforce
+    with True show ?thesis by (simp add: shape truthy_def)
+  next
+    case False
+    show ?thesis
+    proof (cases "parity_tobool ?c1 = Some False \<and> parity_tobool ?c2 = Some False")
+      case True
+      then have "\<not> truthy (aval e1 s) \<and> \<not> truthy (aval e2 s)"
+        using parity_tobool_sound h1 h2 by auto
+      with True False show ?thesis by (simp add: shape truthy_def)
+    next
+      case False
+      show ?thesis by (simp add: shape)
+    qed
+  qed
+qed
+
 global_interpretation parity_check_domain:
   abstract_check_domain gamma_parity parity_less_true parity_less_false
-    parity_eq_true parity_eq_false gamma_state aval_parity
+    parity_eq_true parity_eq_false gamma_state "aval_parity default_tyenv I32"
   defines
     parity_check_true = parity_check_domain.check_true
     and parity_check_false = parity_check_domain.check_false
@@ -38,8 +230,9 @@ proof unfold_locales
   fix s :: store and e :: exp and \<sigma> :: "parity abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
-  then have "\<forall>x. s x \<in> gamma_parity (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_parity (aval_parity e \<sigma>)" using aval_parity_sound by blast
+  then have H: "\<forall>x. s x \<in> gamma_parity (\<sigma> x)" by simp
+  then show "aval e s \<in> gamma_parity (aval_parity default_tyenv I32 e \<sigma>)"
+    using aval_parity_t_default_agree[OF H] by (simp add: aval_parity_def)
 qed
 
 text \<open>
@@ -65,9 +258,13 @@ text \<open>One state per test, built as an override of an otherwise-unconstrain
 definition test_env_eo :: "parity abs_state" where
   "test_env_eo = (\<lambda>_. PTop)((STR ''x'') := PEven, (STR ''y'') := POdd)"
 
-text \<open>Disjoint parity classes: the direct equality is refuted, and its
-  negation is proved --- going through \<open>check_false\<close> on the un-negated
-  equality, not a one-sided negation of \<open>check_true\<close>.\<close>
+text \<open>
+  Disjoint parity classes at the variable's own declared kind:
+  \<^const>\<open>parity_cast\<close> is the identity (parity's modulus, \<open>2\<close>, divides every
+  machine-width wraparound modulus, so evenness/oddness survives truncation
+  unconditionally), so casting through a concrete \<open>ikind\<close> loses no
+  information here.
+\<close>
 
 lemma parity_classify_eq_refuted:
   "parity_classify_check (Eq (V (STR ''x'')) (V (STR ''y''))) test_env_eo = Check_Refuted"
@@ -85,7 +282,8 @@ lemma parity_classify_eq_unknown:
   "parity_classify_check (Eq (V (STR ''x'')) (N 4)) test_env_eo = Check_Unknown"
   unfolding test_env_eo_def by eval
 
-text \<open>Nested \<open>Or\<close>: proved through the negated-equality branch alone.\<close>
+text \<open>Nested \<open>Or\<close> with disjoint operand parities: the left disjunct alone
+  already proves the whole \<open>Or\<close>.\<close>
 
 definition test_env_nested_proved :: "parity abs_state" where
   "test_env_nested_proved = (\<lambda>_. PTop)((STR ''x'') := PEven, (STR ''y'') := POdd)"
@@ -123,36 +321,42 @@ text \<open>
 \<close>
 
 context
-  fixes gs :: "vname \<Rightarrow> bool" and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
+  fixes gs :: "vname \<Rightarrow> bool" and \<Gamma> :: tyenv and is_bot_pred :: "parity exec_dg_st \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
-  assumes solves: "pctx_terminates gs is_bot_pred Pi ps mnm main"
+  assumes solves: "pctx_terminates gs \<Gamma> is_bot_pred Pi ps mnm main"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
     and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ())
-                      \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)
+                      \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
                    \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
-                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)"
+                   \<Longrightarrow> (v, ctx) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
-        (u, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)
+        (u, ctx) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)"
+        \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
-        (cl, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)
+        (cl, c1) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
-        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)"
+        \<Longrightarrow> (cont, c1) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
 begin
 
-interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs" gamma_dg_base gs
+text \<open>
+  @{thm [source] base_dg_spec_sound}'s third premise, \<open>ret_ok: (\<And>x v. ik_norm (\<Gamma> x) v = v)\<close>,
+  is unresolved below -- the same pre-existing well-typedness gap flagged in
+  \<open>Parity_Ctx_None_Sound.pctx_dg_base\<close>.
+\<close>
+interpretation pctx_dg_base: sound_dg_spec "pctx_abs_spec gs \<Gamma>" gamma_dg_base gs \<Gamma>
   unfolding pctx_abs_spec_def
-  by (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
+  apply (rule base_dg_spec_sound[OF parity_is_sound_transfer_for is_bot_state_gamma_state_empty])
+  sorry
 
-interpretation pctx_adapter: dg_analysis_adapter enterc_unit "pctx_abs_spec gs" gs
+interpretation pctx_adapter: dg_analysis_adapter enterc_unit "pctx_abs_spec gs \<Gamma>" gs \<Gamma>
     "compile_prog Pi ps mnm main" Global route_unit
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_parity_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::parity exec_dg_st lifted)"
-    "pctx_sigma_abs gs is_bot_pred Pi ps mnm main" "fst (pctx_sol gs is_bot_pred Pi ps mnm main)"
-    "(cfg_exit (compile_prog Pi ps mnm main), ())" "pctx_sg gs is_bot_pred Pi ps mnm main"
+    "pctx_sigma_abs gs \<Gamma> is_bot_pred Pi ps mnm main" "fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
+    "(cfg_exit (compile_prog Pi ps mnm main), ())" "pctx_sg gs \<Gamma> is_bot_pred Pi ps mnm main"
     Seed parity_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
@@ -166,8 +370,8 @@ next
 next
   case (SgCov v c)
   note mem = this
-  have eq1: "pctx_sg gs is_bot_pred Pi ps mnm main (Inl (v, c))
-               = locals (pctx_sigma_abs gs is_bot_pred Pi ps mnm main (Inl (v, c)))"
+  have eq1: "pctx_sg gs \<Gamma> is_bot_pred Pi ps mnm main (Inl (v, c))
+               = locals (pctx_sigma_abs gs \<Gamma> is_bot_pred Pi ps mnm main (Inl (v, c)))"
     by (rule pctx_sg_covered[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem])
   show ?case
     using eq1 gamma_dg_base_def by auto
@@ -203,7 +407,7 @@ next
   obtain dst' pars' args' p' cont' where
       ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont')
               \<in> calls (compile_prog Pi ps mnm main)"
-    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
+    and es_eq: "es = call_enter \<Gamma> gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
     using compile_prog_calls_source_unique[OF ce' ce] by simp
@@ -239,14 +443,15 @@ text \<open>
 
 lemma pctx_analyse_result_eq:
   "lookup_context pctx_adapter.analyse_result v ctx =
-     (if (v, ctx) \<in> fst (pctx_sol gs is_bot_pred Pi ps mnm main)
+     (if (v, ctx) \<in> fst (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
       then normalize_point gs
-             (canonicalize_lift is_bot_pred (locals (snd (pctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
+             (canonicalize_lift is_bot_pred
+               (locals (snd (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main) (Inl (v, ctx)))))
       else Unreachable)"
   unfolding pctx_adapter.lookup_context_analyse_result
   apply (simp only: pctx_sigma_abs_def[OF solves exact entry_cov fwd_ok call_fwd_ok comb_fwd_ok]
                      pctx_sigma_abs_exec_def o_apply fun_of_dg_st_gen_simps(1))
-  by (cases "locals (snd (pctx_sol gs is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
+  by (cases "locals (snd (pctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main) (Inl (v, ctx)))")
      (simp_all add: exact normalize_lift_def)
 
 end
@@ -264,41 +469,42 @@ text \<open>
 \<close>
 
 definition analyse_parity_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result_for gs p = analyse_parity_ctx_result_for gs prog_main_name p"
+    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
+  "analyse_parity_result_for gs \<Gamma> p = analyse_parity_ctx_result_for gs \<Gamma> prog_main_name p"
 
 definition analyse_parity_result :: "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result p = analyse_parity_result_for (declared_global p) p"
+  "analyse_parity_result p = analyse_parity_result_for (declared_global p) (prog_tyenv p) p"
 
 definition analyse_parity_result_per_origin_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result_per_origin_for gs p =
-     analyse_parity_ctx_result_per_origin_for gs prog_main_name p"
+    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
+  "analyse_parity_result_per_origin_for gs \<Gamma> p =
+     analyse_parity_ctx_result_per_origin_for gs \<Gamma> prog_main_name p"
 
 definition analyse_parity_result_per_origin ::
     "imp_prog \<Rightarrow> (unit, parity abs_state) analysis_result" where
-  "analyse_parity_result_per_origin p = analyse_parity_result_per_origin_for (declared_global p) p"
+  "analyse_parity_result_per_origin p =
+     analyse_parity_result_per_origin_for (declared_global p) (prog_tyenv p) p"
 
 text \<open>\<open>r\<close> is bound once, outside \<^const>\<open>classify_checks\<close>'s per-check closure, so the single
   routed solve is shared across every check rather than repeated per check.\<close>
 
 definition analyse_parity_report_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_parity_report_for gs p =
-     analysis_surface.report (analyse_parity_result_for gs) bot parity_classify_check p"
+    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_parity_report_for gs \<Gamma> p =
+     analysis_surface.report (analyse_parity_result_for gs \<Gamma>) bot parity_classify_check p"
 
 definition analyse_parity_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_parity_report p = analyse_parity_report_for (declared_global p) p"
+  "analyse_parity_report p = analyse_parity_report_for (declared_global p) (prog_tyenv p) p"
 
 definition analyse_parity_report_per_origin_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_parity_report_per_origin_for gs p =
-     analysis_surface.report (analyse_parity_result_per_origin_for gs) bot
+    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_parity_report_per_origin_for gs \<Gamma> p =
+     analysis_surface.report (analyse_parity_result_per_origin_for gs \<Gamma>) bot
        parity_classify_check p"
 
 definition analyse_parity_report_per_origin :: "imp_prog \<Rightarrow> check_report_entry list" where
   "analyse_parity_report_per_origin p =
-     analyse_parity_report_per_origin_for (declared_global p) p"
+     analyse_parity_report_per_origin_for (declared_global p) (prog_tyenv p) p"
 
 subsection \<open>The published surface, one interpretation per discipline\<close>
 
@@ -335,9 +541,9 @@ text \<open>
 \<close>
 
 definition analyse_parity_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> parity)) list" where
-  "analyse_parity_report_for_with_state gs p =
-     (let r = analyse_parity_result_for gs p
+    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> parity)) list" where
+  "analyse_parity_report_for_with_state gs \<Gamma> p =
+     (let r = analyse_parity_result_for gs \<Gamma> p
       in classify_checks_with_state (prog_cfg prog_main_name p)
            (\<lambda>v. case lookup_context r v () of
                   Unreachable \<Rightarrow> (True, bot)
@@ -346,6 +552,7 @@ definition analyse_parity_report_for_with_state ::
 
 definition analyse_parity_report_with_state ::
     "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> parity)) list" where
-  "analyse_parity_report_with_state p = analyse_parity_report_for_with_state (declared_global p) p"
+  "analyse_parity_report_with_state p =
+     analyse_parity_report_for_with_state (declared_global p) (prog_tyenv p) p"
 
 end

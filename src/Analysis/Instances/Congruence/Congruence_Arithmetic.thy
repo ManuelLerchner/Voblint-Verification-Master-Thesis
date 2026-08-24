@@ -1,5 +1,5 @@
 theory Congruence_Arithmetic
-  imports Congruence_Lattice "Voblint_VIMP.VIMP_Expr"
+  imports Congruence_Lattice "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Elaborated"
     Voblint_Core.Abstract_Arithmetic
 begin
 
@@ -644,69 +644,351 @@ qed
 
 subsection \<open>Abstract expression evaluation\<close>
 
-fun aval_congruence ::
-    "exp => (vname => congruence) => congruence"
-where
-  "aval_congruence (N n) sigma = congruence_of_int n"
-| "aval_congruence (V x) sigma = sigma x"
-| "aval_congruence (Plus e1 e2) sigma =
-     aval_congruence e1 sigma + aval_congruence e2 sigma"
-| "aval_congruence (Minus e1 e2) sigma =
-     aval_congruence e1 sigma - aval_congruence e2 sigma"
-| "aval_congruence (Times e1 e2) sigma =
-     aval_congruence e1 sigma * aval_congruence e2 sigma"
-| "aval_congruence (Less e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
-      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
-| "aval_congruence (exp.Eq e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
-      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
-| "aval_congruence (exp.Not e) sigma =
-     (if is_bot (aval_congruence e sigma) then bot
-      else if congruence_tobool (aval_congruence e sigma) = Some True then congruence_of_int 0
-      else if congruence_tobool (aval_congruence e sigma) = Some False then congruence_of_int 1
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
-| "aval_congruence (And e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
-      else if congruence_tobool (aval_congruence e1 sigma) = Some False
-           \<or> congruence_tobool (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else if congruence_tobool (aval_congruence e1 sigma) = Some True
-           \<and> congruence_tobool (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
-| "aval_congruence (Or e1 e2) sigma =
-     (if is_bot (aval_congruence e1 sigma) \<or> is_bot (aval_congruence e2 sigma) then bot
-      else if congruence_tobool (aval_congruence e1 sigma) = Some True
-           \<or> congruence_tobool (aval_congruence e2 sigma) = Some True
-      then congruence_of_int 1
-      else if congruence_tobool (aval_congruence e1 sigma) = Some False
-           \<and> congruence_tobool (aval_congruence e2 sigma) = Some False
-      then congruence_of_int 0
-      else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+
+text \<open>
+  \<open>cong_cast\<close> mirrors Goblint's own \<open>CongruenceDomain.cast_to\<close> for the
+  same-kind case this migration's single-\<open>ik\<close> arithmetic always exercises
+  (source-checked 2026-08-25 against \<open>congruenceDomain.ml\<close>): an exact-point
+  class (modulus 0) always wraps via \<open>ik_norm\<close>, since even a single concrete
+  value can overflow -- \<open>ik_norm ik c\<close> is computable exactly, no residue
+  reasoning needed. A genuine class (nonzero modulus \<open>m\<close>) is not known to
+  survive \<open>ik_norm\<close>'s wraparound in general, since \<open>m\<close> need not divide
+  \<open>ik_mod ik\<close>; it widens to the class at modulus \<open>gcd m (ik_mod ik)\<close>
+  instead of unconditionally to \<open>top\<close>. This is sound because \<open>ik_norm ik
+  v\<close> and \<open>v\<close> agree modulo any divisor of \<open>ik_mod ik\<close>
+  (\<open>ik_mod_dvd_ik_norm_diff\<close>), so in particular modulo \<open>gcd m (ik_mod
+  ik)\<close>, and \<open>v\<close>'s own class is exact modulo any divisor of \<open>m\<close>, so also at
+  that same \<open>gcd\<close>. It stays monotone precisely because \<open>gcd\<close> is: \<open>a1 \<le> a2\<close>
+  gives \<open>m2 dvd m1\<close> (the coarser modulus divides the finer one), which
+  gives \<open>gcd m2 N dvd gcd m1 N\<close> for any \<open>N\<close> -- the earlier, coarser design
+  (\<open>m dvd ik_mod ik \<Longrightarrow>\<close> unchanged, else \<open>top\<close>) lacked this monotone
+  structure and needed the unconditional \<open>top\<close> fallback instead.
+\<close>
+
+definition cong_cast :: "ikind => congruence => congruence" where
+  "cong_cast ik a =
+     (case Rep_congruence a of
+        None => bottom_congruence
+      | Some (c, m) =>
+          if m = 0 then mk_congruence (ik_norm ik c) 0
+          else mk_congruence c (gcd m (ik_mod ik)))"
+
+lemma cong_cast_sound:
+  assumes v: "v \<in> gamma_congruence a"
+  shows "ik_norm ik v \<in> gamma_congruence (cong_cast ik a)"
+proof (cases "Rep_congruence a")
+  case None
+  then show ?thesis using v by (simp add: gamma_congruence_def)
+next
+  case (Some q)
+  obtain c m where q: "q = (c, m)" by (cases q)
+  show ?thesis
+  proof (cases "m = 0")
+    case True
+    have gam: "gamma_congruence a = {c}"
+      using Some q True by (simp add: gamma_congruence_def)
+    have vc: "v = c" using v gam by simp
+    have "cong_cast ik a = mk_congruence (ik_norm ik c) 0"
+      using Some q True by (simp add: cong_cast_def)
+    then have "gamma_congruence (cong_cast ik a) = {ik_norm ik c}"
+      by (simp add: gamma_congruence_def)
+    with vc show ?thesis by simp
+  next
+    case False
+    let ?d = "gcd m (ik_mod ik)"
+    have gam: "gamma_congruence a = {n. m dvd n - c}"
+      using Some q by (simp add: gamma_congruence_def)
+    have m_dvd: "m dvd (v - c)" using v gam by simp
+    have d_m: "?d dvd (v - c)" using dvd_trans[OF gcd_dvd1 m_dvd] .
+    have d_wrap: "?d dvd (ik_norm ik v - v)"
+      using dvd_trans[OF gcd_dvd2 ik_mod_dvd_ik_norm_diff] .
+    have "?d dvd ((v - c) + (ik_norm ik v - v))"
+      using dvd_add[OF d_m d_wrap] .
+    then have "?d dvd (ik_norm ik v - c)" by (simp add: algebra_simps)
+    then show ?thesis
+      using Some q False by (simp add: cong_cast_def)
+  qed
+qed
+
+lemma cong_cast_mono:
+  assumes le: "a1 \<le> (a2 :: congruence)"
+  shows "cong_cast ik a1 \<le> cong_cast ik a2"
+proof (cases "Rep_congruence a1")
+  case None
+  then have "cong_cast ik a1 = bottom_congruence" by (simp add: cong_cast_def)
+  then show ?thesis by (simp add: bot_congruence_def [symmetric] bot_least)
+next
+  case (Some q1)
+  obtain c1 m1 where q1eq: "q1 = (c1, m1)" by (cases q1)
+  have rep1: "Rep_congruence a1 = Some (c1, m1)"
+    using Some q1eq by simp
+  have gam1: "gamma_congruence a1 = {n. m1 dvd n - c1}"
+    using rep1 by (simp add: gamma_congruence_def)
+  show ?thesis
+  proof (cases "m1 = 0")
+    case True
+    have c1_mem: "c1 \<in> gamma_congruence a1" using gam1 True by simp
+    have sub1: "gamma_congruence a1 \<subseteq> gamma_congruence a2"
+      using le by (simp add: less_eq_congruence_def congruence_le_iff_gamma)
+    have c1_mem2: "c1 \<in> gamma_congruence a2"
+      using sub1 c1_mem by blast
+    have sound2: "ik_norm ik c1 \<in> gamma_congruence (cong_cast ik a2)"
+      using cong_cast_sound [OF c1_mem2] .
+    have cast1: "cong_cast ik a1 = mk_congruence (ik_norm ik c1) 0"
+      using rep1 True by (simp add: cong_cast_def)
+    show ?thesis
+      using sound2 cast1
+      by (simp add: less_eq_congruence_def congruence_le_iff_gamma)
+  next
+    case False
+    have sub: "gamma_congruence a1 \<subseteq> gamma_congruence a2"
+      using le by (simp add: less_eq_congruence_def congruence_le_iff_gamma)
+    show ?thesis
+    proof (cases "Rep_congruence a2")
+      case None
+      then have gam2: "gamma_congruence a2 = {}"
+        by (simp add: gamma_congruence_def)
+      have c1_mem: "c1 \<in> gamma_congruence a1" using gam1 by simp
+      with sub gam2 have False by blast
+      then show ?thesis ..
+    next
+      case (Some q2)
+      obtain c2 m2 where q2eq: "q2 = (c2, m2)" by (cases q2)
+      have rep2: "Rep_congruence a2 = Some (c2, m2)"
+        using Some q2eq by simp
+      have gam2: "gamma_congruence a2 = {n. m2 dvd n - c2}"
+        using rep2 by (simp add: gamma_congruence_def)
+      have subset_form: "{n. m1 dvd n - c1} \<subseteq> {n. m2 dvd n - c2}"
+        using sub gam1 gam2 by simp
+      have m2_m1: "m2 dvd m1" and m2_diff: "m2 dvd c1 - c2"
+        using subset_form congruence_class_subset_iff by simp_all
+      have m2_ne: "m2 \<noteq> 0" using m2_m1 False by auto
+      let ?d1 = "gcd m1 (ik_mod ik)" and ?d2 = "gcd m2 (ik_mod ik)"
+      have d2_d1: "?d2 dvd ?d1"
+        using m2_m1 by (meson dvd_trans gcd_dvd1 gcd_dvd2 gcd_greatest)
+      have d2_diff: "?d2 dvd c1 - c2"
+        using dvd_trans[OF gcd_dvd1 m2_diff] .
+      have cast1: "cong_cast ik a1 = mk_congruence c1 ?d1"
+        using rep1 False by (simp add: cong_cast_def)
+      have cast2: "cong_cast ik a2 = mk_congruence c2 ?d2"
+        using rep2 m2_ne by (simp add: cong_cast_def)
+      have "{n. ?d1 dvd n - c1} \<subseteq> {n. ?d2 dvd n - c2}"
+        using congruence_class_subset_iff[of ?d1 c1 ?d2 c2] d2_d1 d2_diff by simp
+      then show ?thesis
+        using cast1 cast2
+        by (simp add: less_eq_congruence_def congruence_le_iff_gamma)
+    qed
+  qed
+qed
+
+text \<open>
+  \<open>cong_unwrap\<close> is the backward counterpart to \<open>cong_cast\<close>: from a fact
+  about the wrapped result of an operation (\<open>ik_norm ik v \<in>
+  gamma_congruence r\<close>), it derives the strongest sound fact about the
+  unwrapped value \<open>v\<close> itself, at the same \<open>gcd m (ik_mod ik)\<close> modulus
+  \<open>cong_cast\<close> uses (the derivation is the same two facts combined the
+  other way). Unlike \<open>cong_cast\<close> there is no exact-point shortcut: knowing
+  \<open>ik_norm ik v\<close> exactly does not pin \<open>v\<close> to a single value, since
+  \<open>ik_norm\<close> is not injective -- \<open>gcd 0 (ik_mod ik) = ik_mod ik\<close> already
+  gives the right (widened) answer for that case through the same formula.
+\<close>
+
+definition cong_unwrap :: "ikind => congruence => congruence" where
+  "cong_unwrap ik r =
+     (case Rep_congruence r of
+        None => bottom_congruence
+      | Some (c, m) => mk_congruence c (gcd m (ik_mod ik)))"
+
+lemma cong_unwrap_sound:
+  assumes v: "ik_norm ik v \<in> gamma_congruence r"
+  shows "v \<in> gamma_congruence (cong_unwrap ik r)"
+proof (cases "Rep_congruence r")
+  case None
+  then show ?thesis using v by (simp add: gamma_congruence_def)
+next
+  case (Some q)
+  obtain c m where q: "q = (c, m)" by (cases q)
+  let ?d = "gcd m (ik_mod ik)"
+  have gam: "gamma_congruence r = {n. m dvd n - c}"
+    using Some q by (simp add: gamma_congruence_def)
+  have m_dvd: "m dvd (ik_norm ik v - c)" using v gam by simp
+  have d_r: "?d dvd (ik_norm ik v - c)" using dvd_trans[OF gcd_dvd1 m_dvd] .
+  have d_wrap: "?d dvd (ik_norm ik v - v)"
+    using dvd_trans[OF gcd_dvd2 ik_mod_dvd_ik_norm_diff] .
+  have "?d dvd ((ik_norm ik v - c) - (ik_norm ik v - v))"
+    using dvd_diff[OF d_r d_wrap] .
+  then have "?d dvd (v - c)" by (simp add: algebra_simps)
+  then show ?thesis
+    using Some q by (simp add: cong_unwrap_def)
+qed
+
+lemma cong_unwrap_mono:
+  assumes le: "r1 \<le> (r2 :: congruence)"
+  shows "cong_unwrap ik r1 \<le> cong_unwrap ik r2"
+proof (cases "Rep_congruence r1")
+  case None
+  then have "cong_unwrap ik r1 = bottom_congruence" by (simp add: cong_unwrap_def)
+  then show ?thesis by (simp add: bot_congruence_def [symmetric] bot_least)
+next
+  case (Some q1)
+  obtain c1 m1 where q1eq: "q1 = (c1, m1)" by (cases q1)
+  have rep1: "Rep_congruence r1 = Some (c1, m1)"
+    using Some q1eq by simp
+  have sub: "gamma_congruence r1 \<subseteq> gamma_congruence r2"
+    using le by (simp add: less_eq_congruence_def congruence_le_iff_gamma)
+  have gam1: "gamma_congruence r1 = {n. m1 dvd n - c1}"
+    using rep1 by (simp add: gamma_congruence_def)
+  show ?thesis
+  proof (cases "Rep_congruence r2")
+    case None
+    then have gam2: "gamma_congruence r2 = {}"
+      by (simp add: gamma_congruence_def)
+    have c1_mem: "c1 \<in> gamma_congruence r1" using gam1 by simp
+    with sub gam2 have False by blast
+    then show ?thesis ..
+  next
+    case (Some q2)
+    obtain c2 m2 where q2eq: "q2 = (c2, m2)" by (cases q2)
+    have rep2: "Rep_congruence r2 = Some (c2, m2)"
+      using Some q2eq by simp
+    have gam2: "gamma_congruence r2 = {n. m2 dvd n - c2}"
+      using rep2 by (simp add: gamma_congruence_def)
+    have subset_form: "{n. m1 dvd n - c1} \<subseteq> {n. m2 dvd n - c2}"
+      using sub gam1 gam2 by simp
+    have m2_m1: "m2 dvd m1" and m2_diff: "m2 dvd c1 - c2"
+      using subset_form congruence_class_subset_iff by simp_all
+    let ?d1 = "gcd m1 (ik_mod ik)" and ?d2 = "gcd m2 (ik_mod ik)"
+    have d2_d1: "?d2 dvd ?d1"
+      using m2_m1 by (meson dvd_trans gcd_dvd1 gcd_dvd2 gcd_greatest)
+    have d2_diff: "?d2 dvd c1 - c2"
+      using dvd_trans[OF gcd_dvd1 m2_diff] .
+    have unwrap1: "cong_unwrap ik r1 = mk_congruence c1 ?d1"
+      using rep1 by (simp add: cong_unwrap_def)
+    have unwrap2: "cong_unwrap ik r2 = mk_congruence c2 ?d2"
+      using rep2 by (simp add: cong_unwrap_def)
+    have "{n. ?d1 dvd n - c1} \<subseteq> {n. ?d2 dvd n - c2}"
+      using congruence_class_subset_iff[of ?d1 c1 ?d2 c2] d2_d1 d2_diff by simp
+    then show ?thesis
+      using unwrap1 unwrap2
+      by (simp add: less_eq_congruence_def congruence_le_iff_gamma)
+  qed
+qed
+
+text \<open>
+  \<open>aval_congruence_t\<close> is the sole evaluator for congruence: it operates
+  directly on an already-elaborated \<^typ>\<open>texp\<close>, so it needs no
+  \<open>\<Gamma>\<close>/\<open>ik\<close> parameter of its own -- every node already carries the kind
+  it should be normed at. Every arithmetic node is normed once through
+  \<^const>\<open>cong_cast\<close> at its own kind, mirroring \<^const>\<open>teval\<close>'s own
+  structure; \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own
+  \<open>0\<close>/\<open>1\<close>-shaped result. \<open>aval_congruence\<close>
+  (\<^theory>\<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
+  locale this interprets below) is a thin wrapper elaborating its argument
+  once and handing it to \<open>aval_congruence_t\<close>, not a second, independent
+  recursion to keep in sync: \<open>Congruence_Backward\<close>'s \<open>backward_domain\<close>
+  interpretation targets it directly.
+\<close>
+
+fun aval_congruence_t :: "texp \<Rightarrow> (vname \<Rightarrow> congruence) \<Rightarrow> congruence" where
+    "aval_congruence_t (TN ik n)       sigma = cong_cast ik (congruence_of_int n)"
+  | "aval_congruence_t (TV ik x)       sigma = cong_cast ik (sigma x)"
+  | "aval_congruence_t (TPlus  ik a b) sigma =
+       cong_cast ik (aval_congruence_t a sigma + aval_congruence_t b sigma)"
+  | "aval_congruence_t (TMinus ik a b) sigma =
+       cong_cast ik (aval_congruence_t a sigma - aval_congruence_t b sigma)"
+  | "aval_congruence_t (TTimes ik a b) sigma =
+       cong_cast ik (aval_congruence_t a sigma * aval_congruence_t b sigma)"
+  | "aval_congruence_t (TLess a b) sigma =
+       (if is_bot (aval_congruence_t a sigma) \<or> is_bot (aval_congruence_t b sigma) then bot
+        else if congruence_lt (aval_congruence_t a sigma) (aval_congruence_t b sigma) = Some True
+        then congruence_of_int 1
+        else if congruence_lt (aval_congruence_t a sigma) (aval_congruence_t b sigma) = Some False
+        then congruence_of_int 0
+        else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+  | "aval_congruence_t (TEq a b) sigma =
+       (if is_bot (aval_congruence_t a sigma) \<or> is_bot (aval_congruence_t b sigma) then bot
+        else if congruence_eqb (aval_congruence_t a sigma) (aval_congruence_t b sigma) = Some True
+        then congruence_of_int 1
+        else if congruence_eqb (aval_congruence_t a sigma) (aval_congruence_t b sigma) = Some False
+        then congruence_of_int 0
+        else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+  | "aval_congruence_t (TNot a) sigma =
+       (if is_bot (aval_congruence_t a sigma) then bot
+        else if congruence_tobool (aval_congruence_t a sigma) = Some True then congruence_of_int 0
+        else if congruence_tobool (aval_congruence_t a sigma) = Some False then congruence_of_int 1
+        else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+  | "aval_congruence_t (TAnd a b) sigma =
+       (if is_bot (aval_congruence_t a sigma) \<or> is_bot (aval_congruence_t b sigma) then bot
+        else if congruence_tobool (aval_congruence_t a sigma) = Some False
+             \<or> congruence_tobool (aval_congruence_t b sigma) = Some False
+        then congruence_of_int 0
+        else if congruence_tobool (aval_congruence_t a sigma) = Some True
+             \<and> congruence_tobool (aval_congruence_t b sigma) = Some True
+        then congruence_of_int 1
+        else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+  | "aval_congruence_t (TOr a b) sigma =
+       (if is_bot (aval_congruence_t a sigma) \<or> is_bot (aval_congruence_t b sigma) then bot
+        else if congruence_tobool (aval_congruence_t a sigma) = Some True
+             \<or> congruence_tobool (aval_congruence_t b sigma) = Some True
+        then congruence_of_int 1
+        else if congruence_tobool (aval_congruence_t a sigma) = Some False
+             \<and> congruence_tobool (aval_congruence_t b sigma) = Some False
+        then congruence_of_int 0
+        else congruence_of_int 0 \<squnion> congruence_of_int 1)"
+
+definition aval_congruence :: "tyenv \<Rightarrow> ikind \<Rightarrow> exp \<Rightarrow> (vname \<Rightarrow> congruence) \<Rightarrow> congruence" where
+  "aval_congruence \<Gamma> ik a sigma = aval_congruence_t (elaborate \<Gamma> ik a) sigma"
 
 interpretation congruence_arith: expression_domain_sound
-    aval_congruence congruence_of_int congruence_lt congruence_eqb congruence_tobool
+    aval_congruence cong_cast congruence_of_int congruence_lt congruence_eqb congruence_tobool
   apply unfold_locales
-  apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound
-                        congruence_plus_mono congruence_minus_mono congruence_times_mono
-                        congruence_lt_sound congruence_eqb_sound
-                        congruence_tobool_sound[unfolded truthy_def]
+  apply (simp_all add: aval_congruence_def congruence_plus_sound congruence_minus_sound
+                        congruence_times_sound congruence_plus_mono congruence_minus_mono
+                        congruence_times_mono congruence_lt_sound congruence_eqb_sound
+                        congruence_tobool_sound[unfolded truthy_def] gamma_top_congruence
+                        cong_cast_sound cong_cast_mono Let_def
                     del: congruence_lt.simps)
   apply (blast intro: congruence_lt_mono[unfolded is_bot_congruence])
   apply (blast intro: congruence_eqb_mono[unfolded is_bot_congruence])
   apply (blast intro: congruence_tobool_mono[unfolded is_bot_congruence])
   done
 
-lemmas aval_congruence_sound = congruence_arith.aval_dom_sound
+lemmas aval_congruence_sound = congruence_arith.aval_dom_sound[unfolded gamma_abs_congruence]
 lemmas aval_congruence_mono = congruence_arith.aval_dom_mono
+
+text \<open>
+  \<open>aval_congruence_t (elaborate \<Gamma> ik a) = aval_congruence \<Gamma> ik a\<close> is
+  immediate from \<open>aval_congruence\<close>'s own definition -- no induction needed,
+  since \<open>aval_congruence_t\<close> is the primitive recursion and
+  \<open>aval_congruence\<close> is defined in terms of it.
+\<close>
+
+lemma aval_congruence_t_elaborate [simp]:
+  "aval_congruence_t (elaborate \<Gamma> ik a) sigma = aval_congruence \<Gamma> ik a sigma"
+  by (simp add: aval_congruence_def)
+
+lemma aval_congruence_t_elaborate_syn [simp]:
+  "aval_congruence_t (elaborate_syn \<Gamma> a) sigma = aval_congruence \<Gamma> (opk (esyn \<Gamma> a)) a sigma"
+  by (simp add: elaborate_syn_def)
+
+lemma aval_congruence_t_sound:
+  assumes "\<forall>x. s x \<in> gamma_congruence (sigma x)"
+  shows "taval \<Gamma> ik a s \<in> gamma_congruence (aval_congruence_t (elaborate \<Gamma> ik a) sigma)"
+  using aval_congruence_sound[OF assms] by simp
+
+lemma aval_congruence_t_mono:
+  "sigma1 \<le> sigma2 \<Longrightarrow>
+   aval_congruence_t (elaborate \<Gamma> ik a) sigma1 \<le> aval_congruence_t (elaborate \<Gamma> ik a) sigma2"
+  using aval_congruence_mono by simp
+
+lemma aval_congruence_t_sound_syn:
+  assumes "\<forall>x. s x \<in> gamma_congruence (sigma x)"
+  shows "taval_syn \<Gamma> a s \<in> gamma_congruence (aval_congruence_t (elaborate_syn \<Gamma> a) sigma)"
+  unfolding taval_syn_def elaborate_syn_def using aval_congruence_t_sound[OF assms] .
+
+lemma aval_congruence_t_mono_syn:
+  "sigma1 \<le> sigma2 \<Longrightarrow>
+   aval_congruence_t (elaborate_syn \<Gamma> a) sigma1 \<le> aval_congruence_t (elaborate_syn \<Gamma> a) sigma2"
+  unfolding elaborate_syn_def using aval_congruence_t_mono .
 
 end

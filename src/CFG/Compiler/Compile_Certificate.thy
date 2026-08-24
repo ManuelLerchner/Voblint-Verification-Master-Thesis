@@ -7,7 +7,7 @@ section \<open>The static compiler certificate for a whole compiled program\<clo
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
 lemma wf_compile_input_source_wf:
   assumes "wf_compile_input source_global \<Pi> ps mnm main"
-  shows "source_wf (main, s, [])"
+  shows "source_wf (main, s, [], proc_ret_kind \<Pi> mnm)"
   using wf_compile_input_source_com[OF assms] wf_compile_input_no_return[OF assms]
   by (rule source_com_no_return_source_wf)
 
@@ -111,13 +111,13 @@ proof (intro allI impI)
            = (m + csize (body decl), Statement m, Eb, Kf)"
     and Edef: "Ef = insert (FunctionEntry p, EA_Nop, Statement m)
                  (if falls_through (body decl)
-                  then insert (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+                  then insert (Statement (m + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                   else Eb)"
     by (rule compile_procE)
   have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by (auto split: if_splits)
   have ent: "(FunctionEntry p, EA_Nop, Statement m) \<in> intra ?g" using Edef Esub by auto
   have ext: "falls_through (body decl) \<longrightarrow>
-               (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
+               (Statement (m + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra ?g"
     using Edef Esub by auto
   have spNone: "special_table p = None"
     using wf_compile_input_special_table_none[OF wf pd] .
@@ -125,7 +125,7 @@ proof (intro allI impI)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
           \<and> (FunctionEntry p, EA_Nop, en) \<in> intra ?g
           \<and> (falls_through (body decl) \<longrightarrow>
-               (k, EA_Ret None p, FunctionResult p) \<in> intra ?g)
+               (k, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> intra ?g)
           \<and> source_com (body decl) \<and> special_table p = None"
     using cb Ebsub Ksub ent ext srccom spNone by blast
 

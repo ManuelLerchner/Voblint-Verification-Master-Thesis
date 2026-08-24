@@ -185,46 +185,6 @@ where
            (d1\<lparr>int_sign := s1, int_ivl := i1, int_congruence := c1\<rparr>,
             d2\<lparr>int_sign := s2, int_ivl := i2, int_congruence := c2\<rparr>)))"
 
-definition inv_plus_int_dom_raw ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_plus_int_dom_raw r d1 d2 =
-     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2);
-          (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2);
-          (p1, p2) = inv_conservative (int_parity r) (int_parity d1) (int_parity d2);
-          (c1, c2) =
-            inv_plus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)
-      in
-        (d1\<lparr>int_sign := s1, int_ivl := i1, int_parity := p1, int_congruence := c1\<rparr>,
-         d2\<lparr>int_sign := s2, int_ivl := i2, int_parity := p2, int_congruence := c2\<rparr>))"
-
-definition inv_minus_int_dom_raw ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_minus_int_dom_raw r d1 d2 =
-     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2);
-          (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2);
-          (p1, p2) = inv_conservative (int_parity r) (int_parity d1) (int_parity d2);
-          (c1, c2) =
-            inv_minus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)
-      in
-        (d1\<lparr>int_sign := s1, int_ivl := i1, int_parity := p1, int_congruence := c1\<rparr>,
-         d2\<lparr>int_sign := s2, int_ivl := i2, int_parity := p2, int_congruence := c2\<rparr>))"
-
-definition inv_times_int_dom_raw ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_times_int_dom_raw r d1 d2 =
-     (let (s1, s2) = inv_conservative (int_sign r) (int_sign d1) (int_sign d2);
-          (i1, i2) = inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2);
-          (p1, p2) = inv_conservative (int_parity r) (int_parity d1) (int_parity d2);
-          (c1, c2) =
-            inv_times_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)
-      in
-        (d1\<lparr>int_sign := s1, int_ivl := i1, int_parity := p1, int_congruence := c1\<rparr>,
-         d2\<lparr>int_sign := s2, int_ivl := i2, int_parity := p2, int_congruence := c2\<rparr>))"
-
-
 subsection \<open>Raw soundness\<close>
 
 lemma inv_less_int_dom_raw_sound:
@@ -298,124 +258,6 @@ next
     using False s i c hx(3) hy(3) by simp
 qed
 
-lemma inv_plus_int_dom_raw_sound:
-  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "x + y \<in> gamma_int_dom r"
-  shows
-    "x \<in> gamma_int_dom (fst (inv_plus_int_dom_raw r d1 d2)) \<and>
-     y \<in> gamma_int_dom (snd (inv_plus_int_dom_raw r d1 d2))"
-proof -
-  have hx: "x \<in> gamma_sign (int_sign d1)" "x \<in> gamma_ivl (int_ivl d1)"
-           "x \<in> gamma_parity (int_parity d1)" "x \<in> gamma_congruence (int_congruence d1)"
-    using assms(1) by (simp_all add: gamma_int_dom_def)
-  have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
-           "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
-    using assms(2) by (simp_all add: gamma_int_dom_def)
-  have hr: "x + y \<in> gamma_congruence (int_congruence r)"
-    using assms(3) by (simp add: gamma_int_dom_def)
-  have s: "x \<in> gamma_sign (fst (inv_conservative (int_sign r) (int_sign d1) (int_sign d2))) \<and>
-           y \<in> gamma_sign (snd (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)))"
-    using hx(1) hy(1) by (simp add: inv_conservative_def)
-  have i: "x \<in> gamma_ivl (fst (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2))) \<and>
-           y \<in> gamma_ivl (snd (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)))"
-    using hx(2) hy(2) by (simp add: inv_conservative_def)
-  have p:
-    "x \<in> gamma_parity
-            (fst (inv_conservative (int_parity r) (int_parity d1) (int_parity d2))) \<and>
-     y \<in> gamma_parity
-            (snd (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)))"
-    using hx(3) hy(3) by (simp add: inv_conservative_def)
-  have c:
-    "x \<in> gamma_congruence
-            (fst (inv_plus_congruence
-                    (int_congruence r) (int_congruence d1) (int_congruence d2))) \<and>
-     y \<in> gamma_congruence
-            (snd (inv_plus_congruence
-                    (int_congruence r) (int_congruence d1) (int_congruence d2)))"
-    by (rule inv_plus_congruence_sound[OF hx(4) hy(4) hr])
-  show ?thesis
-    unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def
-    using s i p c by simp
-qed
-
-lemma inv_minus_int_dom_raw_sound:
-  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "x - y \<in> gamma_int_dom r"
-  shows
-    "x \<in> gamma_int_dom (fst (inv_minus_int_dom_raw r d1 d2)) \<and>
-     y \<in> gamma_int_dom (snd (inv_minus_int_dom_raw r d1 d2))"
-proof -
-  have hx: "x \<in> gamma_sign (int_sign d1)" "x \<in> gamma_ivl (int_ivl d1)"
-           "x \<in> gamma_parity (int_parity d1)" "x \<in> gamma_congruence (int_congruence d1)"
-    using assms(1) by (simp_all add: gamma_int_dom_def)
-  have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
-           "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
-    using assms(2) by (simp_all add: gamma_int_dom_def)
-  have hr: "x - y \<in> gamma_congruence (int_congruence r)"
-    using assms(3) by (simp add: gamma_int_dom_def)
-  have s: "x \<in> gamma_sign (fst (inv_conservative (int_sign r) (int_sign d1) (int_sign d2))) \<and>
-           y \<in> gamma_sign (snd (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)))"
-    using hx(1) hy(1) by (simp add: inv_conservative_def)
-  have i: "x \<in> gamma_ivl (fst (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2))) \<and>
-           y \<in> gamma_ivl (snd (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)))"
-    using hx(2) hy(2) by (simp add: inv_conservative_def)
-  have p:
-    "x \<in> gamma_parity
-            (fst (inv_conservative (int_parity r) (int_parity d1) (int_parity d2))) \<and>
-     y \<in> gamma_parity
-            (snd (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)))"
-    using hx(3) hy(3) by (simp add: inv_conservative_def)
-  have c:
-    "x \<in> gamma_congruence
-            (fst (inv_minus_congruence
-                    (int_congruence r) (int_congruence d1) (int_congruence d2))) \<and>
-     y \<in> gamma_congruence
-            (snd (inv_minus_congruence
-                    (int_congruence r) (int_congruence d1) (int_congruence d2)))"
-    by (rule inv_minus_congruence_sound[OF hx(4) hy(4) hr])
-  show ?thesis
-    unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def
-    using s i p c by simp
-qed
-
-lemma inv_times_int_dom_raw_sound:
-  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "x * y \<in> gamma_int_dom r"
-  shows
-    "x \<in> gamma_int_dom (fst (inv_times_int_dom_raw r d1 d2)) \<and>
-     y \<in> gamma_int_dom (snd (inv_times_int_dom_raw r d1 d2))"
-proof -
-  have hx: "x \<in> gamma_sign (int_sign d1)" "x \<in> gamma_ivl (int_ivl d1)"
-           "x \<in> gamma_parity (int_parity d1)" "x \<in> gamma_congruence (int_congruence d1)"
-    using assms(1) by (simp_all add: gamma_int_dom_def)
-  have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
-           "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
-    using assms(2) by (simp_all add: gamma_int_dom_def)
-  have hr: "x * y \<in> gamma_congruence (int_congruence r)"
-    using assms(3) by (simp add: gamma_int_dom_def)
-  have s: "x \<in> gamma_sign (fst (inv_conservative (int_sign r) (int_sign d1) (int_sign d2))) \<and>
-           y \<in> gamma_sign (snd (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)))"
-    using hx(1) hy(1) by (simp add: inv_conservative_def)
-  have i: "x \<in> gamma_ivl (fst (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2))) \<and>
-           y \<in> gamma_ivl (snd (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)))"
-    using hx(2) hy(2) by (simp add: inv_conservative_def)
-  have p:
-    "x \<in> gamma_parity
-            (fst (inv_conservative (int_parity r) (int_parity d1) (int_parity d2))) \<and>
-     y \<in> gamma_parity
-            (snd (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)))"
-    using hx(3) hy(3) by (simp add: inv_conservative_def)
-  have c:
-    "x \<in> gamma_congruence
-            (fst (inv_times_congruence
-                    (int_congruence r) (int_congruence d1) (int_congruence d2))) \<and>
-     y \<in> gamma_congruence
-            (snd (inv_times_congruence
-                    (int_congruence r) (int_congruence d1) (int_congruence d2)))"
-    by (rule inv_times_congruence_sound[OF hx(4) hy(4) hr])
-  show ?thesis
-    unfolding inv_times_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def
-    using s i p c by simp
-qed
-
-
 subsection \<open>Raw reductiveness\<close>
 
 lemma inv_less_int_dom_raw_reductive1:
@@ -459,121 +301,6 @@ next
     by (simp add: inv_eq_sign_reductive2 inv_eq_ivl_reductive2
           del: intersect_ivl_def inv_eq_sign.simps)
 qed
-
-lemma inv_plus_int_dom_raw_reductive1:
-  "fst (inv_plus_int_dom_raw r d1 d2) \<le> d1"
-proof -
-  have s: "fst (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)) \<le> int_sign d1"
-    by (rule inv_conservative_reductive1)
-  have i: "fst (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)) \<le> int_ivl d1"
-    by (rule inv_conservative_reductive1)
-  have p:
-    "fst (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)) \<le> int_parity d1"
-    by (rule inv_conservative_reductive1)
-  have c:
-    "fst (inv_plus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)) \<le>
-     int_congruence d1"
-    using le_pair_fst[OF inv_plus_congruence_reductive] by simp
-  show ?thesis
-    unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_plus_int_dom_raw_reductive2:
-  "snd (inv_plus_int_dom_raw r d1 d2) \<le> d2"
-proof -
-  have s: "snd (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)) \<le> int_sign d2"
-    by (rule inv_conservative_reductive2)
-  have i: "snd (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)) \<le> int_ivl d2"
-    by (rule inv_conservative_reductive2)
-  have p:
-    "snd (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)) \<le> int_parity d2"
-    by (rule inv_conservative_reductive2)
-  have c:
-    "snd (inv_plus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)) \<le>
-     int_congruence d2"
-    using le_pair_snd[OF inv_plus_congruence_reductive] by simp
-  show ?thesis
-    unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_minus_int_dom_raw_reductive1:
-  "fst (inv_minus_int_dom_raw r d1 d2) \<le> d1"
-proof -
-  have s: "fst (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)) \<le> int_sign d1"
-    by (rule inv_conservative_reductive1)
-  have i: "fst (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)) \<le> int_ivl d1"
-    by (rule inv_conservative_reductive1)
-  have p:
-    "fst (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)) \<le> int_parity d1"
-    by (rule inv_conservative_reductive1)
-  have c:
-    "fst (inv_minus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)) \<le>
-     int_congruence d1"
-    using le_pair_fst[OF inv_minus_congruence_reductive] by simp
-  show ?thesis
-    unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_minus_int_dom_raw_reductive2:
-  "snd (inv_minus_int_dom_raw r d1 d2) \<le> d2"
-proof -
-  have s: "snd (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)) \<le> int_sign d2"
-    by (rule inv_conservative_reductive2)
-  have i: "snd (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)) \<le> int_ivl d2"
-    by (rule inv_conservative_reductive2)
-  have p:
-    "snd (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)) \<le> int_parity d2"
-    by (rule inv_conservative_reductive2)
-  have c:
-    "snd (inv_minus_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)) \<le>
-     int_congruence d2"
-    using le_pair_snd[OF inv_minus_congruence_reductive] by simp
-  show ?thesis
-    unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_times_int_dom_raw_reductive1:
-  "fst (inv_times_int_dom_raw r d1 d2) \<le> d1"
-proof -
-  have s: "fst (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)) \<le> int_sign d1"
-    by (rule inv_conservative_reductive1)
-  have i: "fst (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)) \<le> int_ivl d1"
-    by (rule inv_conservative_reductive1)
-  have p:
-    "fst (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)) \<le> int_parity d1"
-    by (rule inv_conservative_reductive1)
-  have c:
-    "fst (inv_times_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)) \<le>
-     int_congruence d1"
-    using le_pair_fst[OF inv_times_congruence_reductive] by simp
-  show ?thesis
-    unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_times_int_dom_raw_reductive2:
-  "snd (inv_times_int_dom_raw r d1 d2) \<le> d2"
-proof -
-  have s: "snd (inv_conservative (int_sign r) (int_sign d1) (int_sign d2)) \<le> int_sign d2"
-    by (rule inv_conservative_reductive2)
-  have i: "snd (inv_conservative (int_ivl r) (int_ivl d1) (int_ivl d2)) \<le> int_ivl d2"
-    by (rule inv_conservative_reductive2)
-  have p:
-    "snd (inv_conservative (int_parity r) (int_parity d1) (int_parity d2)) \<le> int_parity d2"
-    by (rule inv_conservative_reductive2)
-  have c:
-    "snd (inv_times_congruence (int_congruence r) (int_congruence d1) (int_congruence d2)) \<le>
-     int_congruence d2"
-    using le_pair_snd[OF inv_times_congruence_reductive] by simp
-  show ?thesis
-    unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
 
 subsection \<open>Raw monotonicity\<close>
 
@@ -654,136 +381,6 @@ next
     using False s i c hd(3) he(3) by (simp del: inv_eq_sign.simps)
 qed
 
-lemma inv_plus_int_dom_raw_mono:
-  assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
-  shows
-    "fst (inv_plus_int_dom_raw r1 d1 e1) \<le> fst (inv_plus_int_dom_raw r2 d2 e2) \<and>
-     snd (inv_plus_int_dom_raw r1 d1 e1) \<le> snd (inv_plus_int_dom_raw r2 d2 e2)"
-proof -
-  have hr: "int_congruence r1 \<le> int_congruence r2"
-    using assms(1) by (simp add: less_eq_int_dom_ext_def)
-  have hd: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
-           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
-    using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
-  have he: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
-           "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
-    using assms(3) by (simp_all add: less_eq_int_dom_ext_def)
-  have s:
-    "fst (inv_conservative (int_sign r1) (int_sign d1) (int_sign e1)) \<le>
-     fst (inv_conservative (int_sign r2) (int_sign d2) (int_sign e2)) \<and>
-     snd (inv_conservative (int_sign r1) (int_sign d1) (int_sign e1)) \<le>
-     snd (inv_conservative (int_sign r2) (int_sign d2) (int_sign e2))"
-    using hd(1) he(1) by (simp add: inv_conservative_def)
-  have i:
-    "fst (inv_conservative (int_ivl r1) (int_ivl d1) (int_ivl e1)) \<le>
-     fst (inv_conservative (int_ivl r2) (int_ivl d2) (int_ivl e2)) \<and>
-     snd (inv_conservative (int_ivl r1) (int_ivl d1) (int_ivl e1)) \<le>
-     snd (inv_conservative (int_ivl r2) (int_ivl d2) (int_ivl e2))"
-    using hd(2) he(2) by (simp add: inv_conservative_def)
-  have p:
-    "fst (inv_conservative (int_parity r1) (int_parity d1) (int_parity e1)) \<le>
-     fst (inv_conservative (int_parity r2) (int_parity d2) (int_parity e2)) \<and>
-     snd (inv_conservative (int_parity r1) (int_parity d1) (int_parity e1)) \<le>
-     snd (inv_conservative (int_parity r2) (int_parity d2) (int_parity e2))"
-    using hd(3) he(3) by (simp add: inv_conservative_def)
-  have c:
-    "fst (inv_plus_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
-     fst (inv_plus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
-     snd (inv_plus_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
-     snd (inv_plus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2))"
-    using inv_plus_congruence_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
-  show ?thesis
-    unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_minus_int_dom_raw_mono:
-  assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
-  shows
-    "fst (inv_minus_int_dom_raw r1 d1 e1) \<le> fst (inv_minus_int_dom_raw r2 d2 e2) \<and>
-     snd (inv_minus_int_dom_raw r1 d1 e1) \<le> snd (inv_minus_int_dom_raw r2 d2 e2)"
-proof -
-  have hr: "int_congruence r1 \<le> int_congruence r2"
-    using assms(1) by (simp add: less_eq_int_dom_ext_def)
-  have hd: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
-           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
-    using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
-  have he: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
-           "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
-    using assms(3) by (simp_all add: less_eq_int_dom_ext_def)
-  have s:
-    "fst (inv_conservative (int_sign r1) (int_sign d1) (int_sign e1)) \<le>
-     fst (inv_conservative (int_sign r2) (int_sign d2) (int_sign e2)) \<and>
-     snd (inv_conservative (int_sign r1) (int_sign d1) (int_sign e1)) \<le>
-     snd (inv_conservative (int_sign r2) (int_sign d2) (int_sign e2))"
-    using hd(1) he(1) by (simp add: inv_conservative_def)
-  have i:
-    "fst (inv_conservative (int_ivl r1) (int_ivl d1) (int_ivl e1)) \<le>
-     fst (inv_conservative (int_ivl r2) (int_ivl d2) (int_ivl e2)) \<and>
-     snd (inv_conservative (int_ivl r1) (int_ivl d1) (int_ivl e1)) \<le>
-     snd (inv_conservative (int_ivl r2) (int_ivl d2) (int_ivl e2))"
-    using hd(2) he(2) by (simp add: inv_conservative_def)
-  have p:
-    "fst (inv_conservative (int_parity r1) (int_parity d1) (int_parity e1)) \<le>
-     fst (inv_conservative (int_parity r2) (int_parity d2) (int_parity e2)) \<and>
-     snd (inv_conservative (int_parity r1) (int_parity d1) (int_parity e1)) \<le>
-     snd (inv_conservative (int_parity r2) (int_parity d2) (int_parity e2))"
-    using hd(3) he(3) by (simp add: inv_conservative_def)
-  have c:
-    "fst (inv_minus_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
-     fst (inv_minus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
-     snd (inv_minus_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
-     snd (inv_minus_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2))"
-    using inv_minus_congruence_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
-  show ?thesis
-    unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-lemma inv_times_int_dom_raw_mono:
-  assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
-  shows
-    "fst (inv_times_int_dom_raw r1 d1 e1) \<le> fst (inv_times_int_dom_raw r2 d2 e2) \<and>
-     snd (inv_times_int_dom_raw r1 d1 e1) \<le> snd (inv_times_int_dom_raw r2 d2 e2)"
-proof -
-  have hr: "int_congruence r1 \<le> int_congruence r2"
-    using assms(1) by (simp add: less_eq_int_dom_ext_def)
-  have hd: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
-           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
-    using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
-  have he: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
-           "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
-    using assms(3) by (simp_all add: less_eq_int_dom_ext_def)
-  have s:
-    "fst (inv_conservative (int_sign r1) (int_sign d1) (int_sign e1)) \<le>
-     fst (inv_conservative (int_sign r2) (int_sign d2) (int_sign e2)) \<and>
-     snd (inv_conservative (int_sign r1) (int_sign d1) (int_sign e1)) \<le>
-     snd (inv_conservative (int_sign r2) (int_sign d2) (int_sign e2))"
-    using hd(1) he(1) by (simp add: inv_conservative_def)
-  have i:
-    "fst (inv_conservative (int_ivl r1) (int_ivl d1) (int_ivl e1)) \<le>
-     fst (inv_conservative (int_ivl r2) (int_ivl d2) (int_ivl e2)) \<and>
-     snd (inv_conservative (int_ivl r1) (int_ivl d1) (int_ivl e1)) \<le>
-     snd (inv_conservative (int_ivl r2) (int_ivl d2) (int_ivl e2))"
-    using hd(2) he(2) by (simp add: inv_conservative_def)
-  have p:
-    "fst (inv_conservative (int_parity r1) (int_parity d1) (int_parity e1)) \<le>
-     fst (inv_conservative (int_parity r2) (int_parity d2) (int_parity e2)) \<and>
-     snd (inv_conservative (int_parity r1) (int_parity d1) (int_parity e1)) \<le>
-     snd (inv_conservative (int_parity r2) (int_parity d2) (int_parity e2))"
-    using hd(3) he(3) by (simp add: inv_conservative_def)
-  have c:
-    "fst (inv_times_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
-     fst (inv_times_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
-     snd (inv_times_congruence (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
-     snd (inv_times_congruence (int_congruence r2) (int_congruence d2) (int_congruence e2))"
-    using inv_times_congruence_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
-  show ?thesis
-    unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
-    using s i p c by simp
-qed
-
-
 subsection \<open>Mode-aware wrappers\<close>
 
 definition inv_less_int_dom ::
@@ -799,28 +396,6 @@ where
   "inv_eq_int_dom mode res d1 d2 =
      (let (r1, r2) = inv_eq_int_dom_raw res d1 d2
       in (refine mode r1, refine mode r2))"
-
-definition inv_plus_int_dom ::
-    "refine_mode => int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_plus_int_dom mode r d1 d2 =
-     (let (r1, r2) = inv_plus_int_dom_raw r d1 d2
-      in (refine mode r1, refine mode r2))"
-
-definition inv_minus_int_dom ::
-    "refine_mode => int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_minus_int_dom mode r d1 d2 =
-     (let (r1, r2) = inv_minus_int_dom_raw r d1 d2
-      in (refine mode r1, refine mode r2))"
-
-definition inv_times_int_dom ::
-    "refine_mode => int_dom => int_dom => int_dom => int_dom * int_dom"
-where
-  "inv_times_int_dom mode r d1 d2 =
-     (let (r1, r2) = inv_times_int_dom_raw r d1 d2
-      in (refine mode r1, refine mode r2))"
-
 
 subsection \<open>Mode-aware soundness\<close>
 
@@ -839,31 +414,6 @@ lemma inv_eq_int_dom_sound:
      y \<in> gamma_int_dom (snd (inv_eq_int_dom mode res d1 d2))"
   unfolding inv_eq_int_dom_def Let_def case_prod_beta
   using inv_eq_int_dom_raw_sound[OF assms] refine_exact by simp
-
-lemma inv_plus_int_dom_sound:
-  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "x + y \<in> gamma_int_dom r"
-  shows
-    "x \<in> gamma_int_dom (fst (inv_plus_int_dom mode r d1 d2)) \<and>
-     y \<in> gamma_int_dom (snd (inv_plus_int_dom mode r d1 d2))"
-  unfolding inv_plus_int_dom_def Let_def case_prod_beta
-  using inv_plus_int_dom_raw_sound[OF assms] refine_exact by simp
-
-lemma inv_minus_int_dom_sound:
-  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "x - y \<in> gamma_int_dom r"
-  shows
-    "x \<in> gamma_int_dom (fst (inv_minus_int_dom mode r d1 d2)) \<and>
-     y \<in> gamma_int_dom (snd (inv_minus_int_dom mode r d1 d2))"
-  unfolding inv_minus_int_dom_def Let_def case_prod_beta
-  using inv_minus_int_dom_raw_sound[OF assms] refine_exact by simp
-
-lemma inv_times_int_dom_sound:
-  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "x * y \<in> gamma_int_dom r"
-  shows
-    "x \<in> gamma_int_dom (fst (inv_times_int_dom mode r d1 d2)) \<and>
-     y \<in> gamma_int_dom (snd (inv_times_int_dom mode r d1 d2))"
-  unfolding inv_times_int_dom_def Let_def case_prod_beta
-  using inv_times_int_dom_raw_sound[OF assms] refine_exact by simp
-
 
 subsection \<open>Mode-aware reductiveness\<close>
 
@@ -886,37 +436,6 @@ lemma inv_eq_int_dom_reductive2:
   "snd (inv_eq_int_dom mode res d1 d2) \<le> d2"
   unfolding inv_eq_int_dom_def Let_def case_prod_beta
   using refine_mode_reductive_trans[OF inv_eq_int_dom_raw_reductive2] by simp
-
-lemma inv_plus_int_dom_reductive1:
-  "fst (inv_plus_int_dom mode r d1 d2) \<le> d1"
-  unfolding inv_plus_int_dom_def Let_def case_prod_beta
-  using refine_mode_reductive_trans[OF inv_plus_int_dom_raw_reductive1] by simp
-
-lemma inv_plus_int_dom_reductive2:
-  "snd (inv_plus_int_dom mode r d1 d2) \<le> d2"
-  unfolding inv_plus_int_dom_def Let_def case_prod_beta
-  using refine_mode_reductive_trans[OF inv_plus_int_dom_raw_reductive2] by simp
-
-lemma inv_minus_int_dom_reductive1:
-  "fst (inv_minus_int_dom mode r d1 d2) \<le> d1"
-  unfolding inv_minus_int_dom_def Let_def case_prod_beta
-  using refine_mode_reductive_trans[OF inv_minus_int_dom_raw_reductive1] by simp
-
-lemma inv_minus_int_dom_reductive2:
-  "snd (inv_minus_int_dom mode r d1 d2) \<le> d2"
-  unfolding inv_minus_int_dom_def Let_def case_prod_beta
-  using refine_mode_reductive_trans[OF inv_minus_int_dom_raw_reductive2] by simp
-
-lemma inv_times_int_dom_reductive1:
-  "fst (inv_times_int_dom mode r d1 d2) \<le> d1"
-  unfolding inv_times_int_dom_def Let_def case_prod_beta
-  using refine_mode_reductive_trans[OF inv_times_int_dom_raw_reductive1] by simp
-
-lemma inv_times_int_dom_reductive2:
-  "snd (inv_times_int_dom mode r d1 d2) \<le> d2"
-  unfolding inv_times_int_dom_def Let_def case_prod_beta
-  using refine_mode_reductive_trans[OF inv_times_int_dom_raw_reductive2] by simp
-
 
 subsection \<open>Mode-aware monotonicity (Never/Once only)\<close>
 
@@ -954,15 +473,362 @@ proof -
     by simp
 qed
 
+subsection \<open>Raw componentwise plus/minus/times inverse operators\<close>
+
+text \<open>
+  Sign, Interval, and Parity narrow \<open>+\<close>/\<open>-\<close>/\<open>*\<close> through
+  \<^const>\<open>inv_conservative\<close>, matching their own per-domain backward
+  theories (\<open>Sign_Backward\<close>, \<open>Interval_Backward\<close>); Parity has no
+  backward-inversion theory at all, so it gets the same no-op. Congruence
+  narrows for real, through \<^const>\<open>Congruence_Backward.inv_plus_congruence_ik\<close>
+  and its minus/times siblings: those wrappers already reconcile the
+  ikind-wrapped result register with \<^const>\<open>Congruence_Arithmetic.cong_unwrap\<close>
+  (\<open>Congruence_Backward\<close>), so \<open>r\<close> here can stay the ordinary wrapped
+  \<open>int_dom\<close> register. Precision Sign/Interval/Parity cannot recover
+  directly at inversion time is not lost: the mode-aware wrapper's
+  \<open>refine mode\<close> step re-derives their bounds from the Congruence-tightened
+  returned operand, exactly as \<open>refine_interval\<close>/\<open>refine_congruence\<close>
+  already do for forward arithmetic.
+\<close>
+
+definition inv_plus_int_dom_raw ::
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
+where
+  "inv_plus_int_dom_raw ik r d1 d2 =
+     (let (s1, s2) = inv_conservative ik (int_sign r) (int_sign d1) (int_sign d2);
+          (i1, i2) = inv_conservative ik (int_ivl r) (int_ivl d1) (int_ivl d2);
+          (p1, p2) = inv_conservative ik (int_parity r) (int_parity d1) (int_parity d2);
+          (c1, c2) = inv_plus_congruence_ik ik
+                       (int_congruence r) (int_congruence d1) (int_congruence d2)
+      in
+        (d1\<lparr>int_sign := s1, int_ivl := i1, int_parity := p1, int_congruence := c1\<rparr>,
+         d2\<lparr>int_sign := s2, int_ivl := i2, int_parity := p2, int_congruence := c2\<rparr>))"
+
+definition inv_minus_int_dom_raw ::
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
+where
+  "inv_minus_int_dom_raw ik r d1 d2 =
+     (let (s1, s2) = inv_conservative ik (int_sign r) (int_sign d1) (int_sign d2);
+          (i1, i2) = inv_conservative ik (int_ivl r) (int_ivl d1) (int_ivl d2);
+          (p1, p2) = inv_conservative ik (int_parity r) (int_parity d1) (int_parity d2);
+          (c1, c2) = inv_minus_congruence_ik ik
+                       (int_congruence r) (int_congruence d1) (int_congruence d2)
+      in
+        (d1\<lparr>int_sign := s1, int_ivl := i1, int_parity := p1, int_congruence := c1\<rparr>,
+         d2\<lparr>int_sign := s2, int_ivl := i2, int_parity := p2, int_congruence := c2\<rparr>))"
+
+definition inv_times_int_dom_raw ::
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
+where
+  "inv_times_int_dom_raw ik r d1 d2 =
+     (let (s1, s2) = inv_conservative ik (int_sign r) (int_sign d1) (int_sign d2);
+          (i1, i2) = inv_conservative ik (int_ivl r) (int_ivl d1) (int_ivl d2);
+          (p1, p2) = inv_conservative ik (int_parity r) (int_parity d1) (int_parity d2);
+          (c1, c2) = inv_times_congruence_ik ik
+                       (int_congruence r) (int_congruence d1) (int_congruence d2)
+      in
+        (d1\<lparr>int_sign := s1, int_ivl := i1, int_parity := p1, int_congruence := c1\<rparr>,
+         d2\<lparr>int_sign := s2, int_ivl := i2, int_parity := p2, int_congruence := c2\<rparr>))"
+
+subsection \<open>Raw plus/minus/times soundness\<close>
+
+lemma inv_plus_int_dom_raw_sound:
+  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2"
+      and "ik_norm ik (x + y) \<in> gamma_int_dom r"
+  shows
+    "x \<in> gamma_int_dom (fst (inv_plus_int_dom_raw ik r d1 d2)) \<and>
+     y \<in> gamma_int_dom (snd (inv_plus_int_dom_raw ik r d1 d2))"
+proof -
+  have hx: "x \<in> gamma_sign (int_sign d1)" "x \<in> gamma_ivl (int_ivl d1)"
+           "x \<in> gamma_parity (int_parity d1)" "x \<in> gamma_congruence (int_congruence d1)"
+    using assms(1) by (simp_all add: gamma_int_dom_def)
+  have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
+           "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
+    using assms(2) by (simp_all add: gamma_int_dom_def)
+  have hr: "ik_norm ik (x + y) \<in> gamma_congruence (int_congruence r)"
+    using assms(3) by (simp add: gamma_int_dom_def)
+  have c:
+    "x \<in> gamma_congruence
+            (fst (inv_plus_congruence_ik ik (int_congruence r) (int_congruence d1) (int_congruence d2))) \<and>
+     y \<in> gamma_congruence
+            (snd (inv_plus_congruence_ik ik (int_congruence r) (int_congruence d1) (int_congruence d2)))"
+    by (rule inv_plus_congruence_ik_sound[OF hx(4) hy(4) hr])
+  show ?thesis
+    unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def inv_conservative_def
+    using c hx(1,2,3) hy(1,2,3) by simp
+qed
+
+lemma inv_minus_int_dom_raw_sound:
+  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2"
+      and "ik_norm ik (x - y) \<in> gamma_int_dom r"
+  shows
+    "x \<in> gamma_int_dom (fst (inv_minus_int_dom_raw ik r d1 d2)) \<and>
+     y \<in> gamma_int_dom (snd (inv_minus_int_dom_raw ik r d1 d2))"
+proof -
+  have hx: "x \<in> gamma_sign (int_sign d1)" "x \<in> gamma_ivl (int_ivl d1)"
+           "x \<in> gamma_parity (int_parity d1)" "x \<in> gamma_congruence (int_congruence d1)"
+    using assms(1) by (simp_all add: gamma_int_dom_def)
+  have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
+           "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
+    using assms(2) by (simp_all add: gamma_int_dom_def)
+  have hr: "ik_norm ik (x - y) \<in> gamma_congruence (int_congruence r)"
+    using assms(3) by (simp add: gamma_int_dom_def)
+  have c:
+    "x \<in> gamma_congruence
+            (fst (inv_minus_congruence_ik ik (int_congruence r) (int_congruence d1) (int_congruence d2))) \<and>
+     y \<in> gamma_congruence
+            (snd (inv_minus_congruence_ik ik (int_congruence r) (int_congruence d1) (int_congruence d2)))"
+    by (rule inv_minus_congruence_ik_sound[OF hx(4) hy(4) hr])
+  show ?thesis
+    unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def inv_conservative_def
+    using c hx(1,2,3) hy(1,2,3) by simp
+qed
+
+lemma inv_times_int_dom_raw_sound:
+  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2"
+      and "ik_norm ik (x * y) \<in> gamma_int_dom r"
+  shows
+    "x \<in> gamma_int_dom (fst (inv_times_int_dom_raw ik r d1 d2)) \<and>
+     y \<in> gamma_int_dom (snd (inv_times_int_dom_raw ik r d1 d2))"
+proof -
+  have hx: "x \<in> gamma_sign (int_sign d1)" "x \<in> gamma_ivl (int_ivl d1)"
+           "x \<in> gamma_parity (int_parity d1)" "x \<in> gamma_congruence (int_congruence d1)"
+    using assms(1) by (simp_all add: gamma_int_dom_def)
+  have hy: "y \<in> gamma_sign (int_sign d2)" "y \<in> gamma_ivl (int_ivl d2)"
+           "y \<in> gamma_parity (int_parity d2)" "y \<in> gamma_congruence (int_congruence d2)"
+    using assms(2) by (simp_all add: gamma_int_dom_def)
+  have hr: "ik_norm ik (x * y) \<in> gamma_congruence (int_congruence r)"
+    using assms(3) by (simp add: gamma_int_dom_def)
+  have c:
+    "x \<in> gamma_congruence
+            (fst (inv_times_congruence_ik ik (int_congruence r) (int_congruence d1) (int_congruence d2))) \<and>
+     y \<in> gamma_congruence
+            (snd (inv_times_congruence_ik ik (int_congruence r) (int_congruence d1) (int_congruence d2)))"
+    by (rule inv_times_congruence_ik_sound[OF hx(4) hy(4) hr])
+  show ?thesis
+    unfolding inv_times_int_dom_raw_def Let_def case_prod_beta gamma_int_dom_def inv_conservative_def
+    using c hx(1,2,3) hy(1,2,3) by simp
+qed
+
+subsection \<open>Raw plus/minus/times reductiveness\<close>
+
+lemma inv_plus_int_dom_raw_reductive1:
+  "fst (inv_plus_int_dom_raw ik r d1 d2) \<le> d1"
+  unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+    inv_conservative_def
+  using inv_plus_congruence_ik_reductive[of ik "int_congruence r" "int_congruence d1" "int_congruence d2"]
+  by (simp add: le_pair_def del: intersect_ivl_def)
+
+lemma inv_plus_int_dom_raw_reductive2:
+  "snd (inv_plus_int_dom_raw ik r d1 d2) \<le> d2"
+  unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+    inv_conservative_def
+  using inv_plus_congruence_ik_reductive[of ik "int_congruence r" "int_congruence d1" "int_congruence d2"]
+  by (simp add: le_pair_def del: intersect_ivl_def)
+
+lemma inv_minus_int_dom_raw_reductive1:
+  "fst (inv_minus_int_dom_raw ik r d1 d2) \<le> d1"
+  unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+    inv_conservative_def
+  using inv_minus_congruence_ik_reductive[of ik "int_congruence r" "int_congruence d1" "int_congruence d2"]
+  by (simp add: le_pair_def del: intersect_ivl_def)
+
+lemma inv_minus_int_dom_raw_reductive2:
+  "snd (inv_minus_int_dom_raw ik r d1 d2) \<le> d2"
+  unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+    inv_conservative_def
+  using inv_minus_congruence_ik_reductive[of ik "int_congruence r" "int_congruence d1" "int_congruence d2"]
+  by (simp add: le_pair_def del: intersect_ivl_def)
+
+lemma inv_times_int_dom_raw_reductive1:
+  "fst (inv_times_int_dom_raw ik r d1 d2) \<le> d1"
+  unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+    inv_conservative_def
+  using inv_times_congruence_ik_reductive[of ik "int_congruence r" "int_congruence d1" "int_congruence d2"]
+  by (simp add: le_pair_def del: intersect_ivl_def)
+
+lemma inv_times_int_dom_raw_reductive2:
+  "snd (inv_times_int_dom_raw ik r d1 d2) \<le> d2"
+  unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+    inv_conservative_def
+  using inv_times_congruence_ik_reductive[of ik "int_congruence r" "int_congruence d1" "int_congruence d2"]
+  by (simp add: le_pair_def del: intersect_ivl_def)
+
+subsection \<open>Raw plus/minus/times monotonicity\<close>
+
+lemma inv_plus_int_dom_raw_mono:
+  assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
+  shows
+    "fst (inv_plus_int_dom_raw ik r1 d1 e1) \<le> fst (inv_plus_int_dom_raw ik r2 d2 e2) \<and>
+     snd (inv_plus_int_dom_raw ik r1 d1 e1) \<le> snd (inv_plus_int_dom_raw ik r2 d2 e2)"
+proof -
+  have hr: "int_congruence r1 \<le> int_congruence r2"
+    using assms(1) by (simp add: less_eq_int_dom_ext_def)
+  have hd: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
+           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
+    using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
+  have he: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
+           "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
+    using assms(3) by (simp_all add: less_eq_int_dom_ext_def)
+  have c:
+    "fst (inv_plus_congruence_ik ik (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
+     fst (inv_plus_congruence_ik ik (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
+     snd (inv_plus_congruence_ik ik (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
+     snd (inv_plus_congruence_ik ik (int_congruence r2) (int_congruence d2) (int_congruence e2))"
+    using inv_plus_congruence_ik_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
+  show ?thesis
+    unfolding inv_plus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+      inv_conservative_def
+    using c hd(1,2,3) he(1,2,3) by simp
+qed
+
+lemma inv_minus_int_dom_raw_mono:
+  assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
+  shows
+    "fst (inv_minus_int_dom_raw ik r1 d1 e1) \<le> fst (inv_minus_int_dom_raw ik r2 d2 e2) \<and>
+     snd (inv_minus_int_dom_raw ik r1 d1 e1) \<le> snd (inv_minus_int_dom_raw ik r2 d2 e2)"
+proof -
+  have hr: "int_congruence r1 \<le> int_congruence r2"
+    using assms(1) by (simp add: less_eq_int_dom_ext_def)
+  have hd: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
+           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
+    using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
+  have he: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
+           "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
+    using assms(3) by (simp_all add: less_eq_int_dom_ext_def)
+  have c:
+    "fst (inv_minus_congruence_ik ik (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
+     fst (inv_minus_congruence_ik ik (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
+     snd (inv_minus_congruence_ik ik (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
+     snd (inv_minus_congruence_ik ik (int_congruence r2) (int_congruence d2) (int_congruence e2))"
+    using inv_minus_congruence_ik_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
+  show ?thesis
+    unfolding inv_minus_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+      inv_conservative_def
+    using c hd(1,2,3) he(1,2,3) by simp
+qed
+
+lemma inv_times_int_dom_raw_mono:
+  assumes "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
+  shows
+    "fst (inv_times_int_dom_raw ik r1 d1 e1) \<le> fst (inv_times_int_dom_raw ik r2 d2 e2) \<and>
+     snd (inv_times_int_dom_raw ik r1 d1 e1) \<le> snd (inv_times_int_dom_raw ik r2 d2 e2)"
+proof -
+  have hr: "int_congruence r1 \<le> int_congruence r2"
+    using assms(1) by (simp add: less_eq_int_dom_ext_def)
+  have hd: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
+           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
+    using assms(2) by (simp_all add: less_eq_int_dom_ext_def)
+  have he: "int_sign e1 \<le> int_sign e2" "int_ivl e1 \<le> int_ivl e2"
+           "int_parity e1 \<le> int_parity e2" "int_congruence e1 \<le> int_congruence e2"
+    using assms(3) by (simp_all add: less_eq_int_dom_ext_def)
+  have c:
+    "fst (inv_times_congruence_ik ik (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
+     fst (inv_times_congruence_ik ik (int_congruence r2) (int_congruence d2) (int_congruence e2)) \<and>
+     snd (inv_times_congruence_ik ik (int_congruence r1) (int_congruence d1) (int_congruence e1)) \<le>
+     snd (inv_times_congruence_ik ik (int_congruence r2) (int_congruence d2) (int_congruence e2))"
+    using inv_times_congruence_ik_mono[OF hr hd(4) he(4)] by (simp add: le_pair_def)
+  show ?thesis
+    unfolding inv_times_int_dom_raw_def Let_def case_prod_beta less_eq_int_dom_ext_def
+      inv_conservative_def
+    using c hd(1,2,3) he(1,2,3) by simp
+qed
+
+subsection \<open>Mode-aware plus/minus/times wrappers\<close>
+
+definition inv_plus_int_dom ::
+    "refine_mode => ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
+where
+  "inv_plus_int_dom mode ik r d1 d2 =
+     (let (r1, r2) = inv_plus_int_dom_raw ik r d1 d2
+      in (refine mode r1, refine mode r2))"
+
+definition inv_minus_int_dom ::
+    "refine_mode => ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
+where
+  "inv_minus_int_dom mode ik r d1 d2 =
+     (let (r1, r2) = inv_minus_int_dom_raw ik r d1 d2
+      in (refine mode r1, refine mode r2))"
+
+definition inv_times_int_dom ::
+    "refine_mode => ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
+where
+  "inv_times_int_dom mode ik r d1 d2 =
+     (let (r1, r2) = inv_times_int_dom_raw ik r d1 d2
+      in (refine mode r1, refine mode r2))"
+
+subsection \<open>Mode-aware plus/minus/times soundness\<close>
+
+lemma inv_plus_int_dom_sound:
+  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2"
+      and "ik_norm ik (x + y) \<in> gamma_int_dom r"
+  shows
+    "x \<in> gamma_int_dom (fst (inv_plus_int_dom mode ik r d1 d2)) \<and>
+     y \<in> gamma_int_dom (snd (inv_plus_int_dom mode ik r d1 d2))"
+  unfolding inv_plus_int_dom_def Let_def case_prod_beta
+  using inv_plus_int_dom_raw_sound[OF assms] refine_exact by simp
+
+lemma inv_minus_int_dom_sound:
+  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2"
+      and "ik_norm ik (x - y) \<in> gamma_int_dom r"
+  shows
+    "x \<in> gamma_int_dom (fst (inv_minus_int_dom mode ik r d1 d2)) \<and>
+     y \<in> gamma_int_dom (snd (inv_minus_int_dom mode ik r d1 d2))"
+  unfolding inv_minus_int_dom_def Let_def case_prod_beta
+  using inv_minus_int_dom_raw_sound[OF assms] refine_exact by simp
+
+lemma inv_times_int_dom_sound:
+  assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2"
+      and "ik_norm ik (x * y) \<in> gamma_int_dom r"
+  shows
+    "x \<in> gamma_int_dom (fst (inv_times_int_dom mode ik r d1 d2)) \<and>
+     y \<in> gamma_int_dom (snd (inv_times_int_dom mode ik r d1 d2))"
+  unfolding inv_times_int_dom_def Let_def case_prod_beta
+  using inv_times_int_dom_raw_sound[OF assms] refine_exact by simp
+
+subsection \<open>Mode-aware plus/minus/times reductiveness\<close>
+
+lemma inv_plus_int_dom_reductive1:
+  "fst (inv_plus_int_dom mode ik r d1 d2) \<le> d1"
+  unfolding inv_plus_int_dom_def Let_def case_prod_beta
+  using refine_mode_reductive_trans[OF inv_plus_int_dom_raw_reductive1] by simp
+
+lemma inv_plus_int_dom_reductive2:
+  "snd (inv_plus_int_dom mode ik r d1 d2) \<le> d2"
+  unfolding inv_plus_int_dom_def Let_def case_prod_beta
+  using refine_mode_reductive_trans[OF inv_plus_int_dom_raw_reductive2] by simp
+
+lemma inv_minus_int_dom_reductive1:
+  "fst (inv_minus_int_dom mode ik r d1 d2) \<le> d1"
+  unfolding inv_minus_int_dom_def Let_def case_prod_beta
+  using refine_mode_reductive_trans[OF inv_minus_int_dom_raw_reductive1] by simp
+
+lemma inv_minus_int_dom_reductive2:
+  "snd (inv_minus_int_dom mode ik r d1 d2) \<le> d2"
+  unfolding inv_minus_int_dom_def Let_def case_prod_beta
+  using refine_mode_reductive_trans[OF inv_minus_int_dom_raw_reductive2] by simp
+
+lemma inv_times_int_dom_reductive1:
+  "fst (inv_times_int_dom mode ik r d1 d2) \<le> d1"
+  unfolding inv_times_int_dom_def Let_def case_prod_beta
+  using refine_mode_reductive_trans[OF inv_times_int_dom_raw_reductive1] by simp
+
+lemma inv_times_int_dom_reductive2:
+  "snd (inv_times_int_dom mode ik r d1 d2) \<le> d2"
+  unfolding inv_times_int_dom_def Let_def case_prod_beta
+  using refine_mode_reductive_trans[OF inv_times_int_dom_raw_reductive2] by simp
+
+subsection \<open>Mode-aware plus/minus/times monotonicity (Never/Once only)\<close>
+
 lemma inv_plus_int_dom_mono:
   assumes "mode \<noteq> Refine_Fixpoint" and "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
   shows
-    "fst (inv_plus_int_dom mode r1 d1 e1) \<le> fst (inv_plus_int_dom mode r2 d2 e2) \<and>
-     snd (inv_plus_int_dom mode r1 d1 e1) \<le> snd (inv_plus_int_dom mode r2 d2 e2)"
+    "fst (inv_plus_int_dom mode ik r1 d1 e1) \<le> fst (inv_plus_int_dom mode ik r2 d2 e2) \<and>
+     snd (inv_plus_int_dom mode ik r1 d1 e1) \<le> snd (inv_plus_int_dom mode ik r2 d2 e2)"
 proof -
   have raw:
-    "fst (inv_plus_int_dom_raw r1 d1 e1) \<le> fst (inv_plus_int_dom_raw r2 d2 e2) \<and>
-     snd (inv_plus_int_dom_raw r1 d1 e1) \<le> snd (inv_plus_int_dom_raw r2 d2 e2)"
+    "fst (inv_plus_int_dom_raw ik r1 d1 e1) \<le> fst (inv_plus_int_dom_raw ik r2 d2 e2) \<and>
+     snd (inv_plus_int_dom_raw ik r1 d1 e1) \<le> snd (inv_plus_int_dom_raw ik r2 d2 e2)"
     by (rule inv_plus_int_dom_raw_mono[OF assms(2,3,4)])
   show ?thesis
     unfolding inv_plus_int_dom_def Let_def case_prod_beta
@@ -974,12 +840,12 @@ qed
 lemma inv_minus_int_dom_mono:
   assumes "mode \<noteq> Refine_Fixpoint" and "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
   shows
-    "fst (inv_minus_int_dom mode r1 d1 e1) \<le> fst (inv_minus_int_dom mode r2 d2 e2) \<and>
-     snd (inv_minus_int_dom mode r1 d1 e1) \<le> snd (inv_minus_int_dom mode r2 d2 e2)"
+    "fst (inv_minus_int_dom mode ik r1 d1 e1) \<le> fst (inv_minus_int_dom mode ik r2 d2 e2) \<and>
+     snd (inv_minus_int_dom mode ik r1 d1 e1) \<le> snd (inv_minus_int_dom mode ik r2 d2 e2)"
 proof -
   have raw:
-    "fst (inv_minus_int_dom_raw r1 d1 e1) \<le> fst (inv_minus_int_dom_raw r2 d2 e2) \<and>
-     snd (inv_minus_int_dom_raw r1 d1 e1) \<le> snd (inv_minus_int_dom_raw r2 d2 e2)"
+    "fst (inv_minus_int_dom_raw ik r1 d1 e1) \<le> fst (inv_minus_int_dom_raw ik r2 d2 e2) \<and>
+     snd (inv_minus_int_dom_raw ik r1 d1 e1) \<le> snd (inv_minus_int_dom_raw ik r2 d2 e2)"
     by (rule inv_minus_int_dom_raw_mono[OF assms(2,3,4)])
   show ?thesis
     unfolding inv_minus_int_dom_def Let_def case_prod_beta
@@ -991,12 +857,12 @@ qed
 lemma inv_times_int_dom_mono:
   assumes "mode \<noteq> Refine_Fixpoint" and "r1 \<le> r2" and "d1 \<le> d2" and "e1 \<le> e2"
   shows
-    "fst (inv_times_int_dom mode r1 d1 e1) \<le> fst (inv_times_int_dom mode r2 d2 e2) \<and>
-     snd (inv_times_int_dom mode r1 d1 e1) \<le> snd (inv_times_int_dom mode r2 d2 e2)"
+    "fst (inv_times_int_dom mode ik r1 d1 e1) \<le> fst (inv_times_int_dom mode ik r2 d2 e2) \<and>
+     snd (inv_times_int_dom mode ik r1 d1 e1) \<le> snd (inv_times_int_dom mode ik r2 d2 e2)"
 proof -
   have raw:
-    "fst (inv_times_int_dom_raw r1 d1 e1) \<le> fst (inv_times_int_dom_raw r2 d2 e2) \<and>
-     snd (inv_times_int_dom_raw r1 d1 e1) \<le> snd (inv_times_int_dom_raw r2 d2 e2)"
+    "fst (inv_times_int_dom_raw ik r1 d1 e1) \<le> fst (inv_times_int_dom_raw ik r2 d2 e2) \<and>
+     snd (inv_times_int_dom_raw ik r1 d1 e1) \<le> snd (inv_times_int_dom_raw ik r2 d2 e2)"
     by (rule inv_times_int_dom_raw_mono[OF assms(2,3,4)])
   show ?thesis
     unfolding inv_times_int_dom_def Let_def case_prod_beta
@@ -1004,7 +870,6 @@ proof -
           refine_mode_mono_trans[OF assms(1) raw[THEN conjunct2]]
     by simp
 qed
-
 
 subsection \<open>Backward-domain interpretation\<close>
 
@@ -1022,8 +887,10 @@ text \<open>
 abbreviation intersect_int_dom_never :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_never == intersect_int_dom_mode Refine_Never"
 
-abbreviation aval_int_dom_never :: "exp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_never == aval_int_dom Refine_Never"
+abbreviation aval_int_dom_never ::
+    "tyenv => ikind => exp => (vname => int_dom) => int_dom"
+where
+  "aval_int_dom_never \<Gamma> ik e sigma == taval_int_dom \<Gamma> Refine_Never ik e sigma"
 
 abbreviation tobool_int_dom_never :: "int_dom => bool option" where
   "tobool_int_dom_never == int_dom_tobool"
@@ -1038,18 +905,28 @@ abbreviation inv_eq_int_dom_never ::
 where
   "inv_eq_int_dom_never == inv_eq_int_dom Refine_Never"
 
+text \<open>
+  \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close> narrow through \<^const>\<open>inv_plus_int_dom\<close>,
+  \<^const>\<open>inv_minus_int_dom\<close>, and \<^const>\<open>inv_times_int_dom\<close>: Sign, Interval, and
+  Parity stay at \<^const>\<open>inv_conservative\<close> (matching \<open>Sign_Backward\<close> and
+  \<open>Interval_Backward\<close>'s own backward interpretations), while Congruence
+  narrows for real through \<^const>\<open>Congruence_Backward.inv_plus_congruence_ik\<close>
+  and its minus/times siblings, which already reconcile the \<open>ik_norm\<close>-wrapped
+  result register \<open>r\<close> with \<^const>\<open>Congruence_Arithmetic.cong_unwrap\<close>.
+\<close>
+
 abbreviation inv_plus_int_dom_never ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_plus_int_dom_never == inv_plus_int_dom Refine_Never"
 
 abbreviation inv_minus_int_dom_never ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_minus_int_dom_never == inv_minus_int_dom Refine_Never"
 
 abbreviation inv_times_int_dom_never ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_times_int_dom_never == inv_times_int_dom Refine_Never"
 
@@ -1073,10 +950,10 @@ proof unfold_locales
   then show "n \<in> gamma (intersect_int_dom_mode Refine_Never a b)"
     using intersect_int_dom_mode_sound by simp
 next
-  fix s :: store and e :: exp and sigma :: "vname => int_dom"
+  fix s :: store and sigma :: "vname => int_dom" and \<Gamma> :: tyenv and ik :: ikind and e :: exp
   assume "\<forall>x. s x \<in> gamma (sigma x)"
-  then show "aval e s \<in> gamma (aval_int_dom Refine_Never e sigma)"
-    using aval_int_dom_sound by simp
+  then show "taval \<Gamma> ik e s \<in> gamma (aval_int_dom_never \<Gamma> ik e sigma)"
+    using taval_int_dom_sound by simp
 next
   fix n1 n2 :: int and a1 a2 :: int_dom and res :: bool
   assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "(n1 < n2) = res"
@@ -1092,25 +969,25 @@ next
      n2 \<in> gamma (snd (inv_eq_int_dom Refine_Never res a1 a2))"
     using inv_eq_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 + n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 + n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_plus_int_dom Refine_Never r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_plus_int_dom Refine_Never r a1 a2))"
+    "n1 \<in> gamma (fst (inv_plus_int_dom_never ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_plus_int_dom_never ik r a1 a2))"
     using inv_plus_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 - n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 - n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_minus_int_dom Refine_Never r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_minus_int_dom Refine_Never r a1 a2))"
+    "n1 \<in> gamma (fst (inv_minus_int_dom_never ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_minus_int_dom_never ik r a1 a2))"
     using inv_minus_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 * n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 * n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_times_int_dom Refine_Never r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_times_int_dom Refine_Never r a1 a2))"
+    "n1 \<in> gamma (fst (inv_times_int_dom_never ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_times_int_dom_never ik r a1 a2))"
     using inv_times_int_dom_sound by simp
 next
   fix p :: int_dom and b :: bool and i :: int
@@ -1125,11 +1002,11 @@ next
      intersect_int_dom_mode Refine_Never a2 b2"
     using intersect_int_dom_mode_mono[OF ne A B] .
 next
-  fix e :: exp and sigma1 sigma2 :: "vname => int_dom"
+  fix e :: exp and \<Gamma> :: tyenv and ik :: ikind and sigma1 sigma2 :: "vname => int_dom"
   assume S: "sigma1 \<le> sigma2"
   have ne: "Refine_Never \<noteq> Refine_Fixpoint" by simp
-  show "aval_int_dom Refine_Never e sigma1 \<le> aval_int_dom Refine_Never e sigma2"
-    using aval_int_dom_mono[OF ne S] .
+  show "aval_int_dom_never \<Gamma> ik e sigma1 \<le> aval_int_dom_never \<Gamma> ik e sigma2"
+    using taval_int_dom_mono[OF ne S] .
 next
   fix x1 x2 y1 y2 :: int_dom and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1147,29 +1024,23 @@ next
        (inv_eq_int_dom Refine_Never res x2 y2)"
     using inv_eq_int_dom_mono[OF ne A B] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: int_dom
-  assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  fix r1 r2 x1 x2 y1 y2 :: int_dom and ik :: ikind
+  assume A: "r1 \<le> r2" and B: "x1 \<le> x2" and C: "y1 \<le> y2"
   have ne: "Refine_Never \<noteq> Refine_Fixpoint" by simp
-  show
-    "le_pair (inv_plus_int_dom Refine_Never r1 x1 y1)
-       (inv_plus_int_dom Refine_Never r2 x2 y2)"
-    using inv_plus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+  show "le_pair (inv_plus_int_dom_never ik r1 x1 y1) (inv_plus_int_dom_never ik r2 x2 y2)"
+    using inv_plus_int_dom_mono[OF ne A B C] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: int_dom
-  assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  fix r1 r2 x1 x2 y1 y2 :: int_dom and ik :: ikind
+  assume A: "r1 \<le> r2" and B: "x1 \<le> x2" and C: "y1 \<le> y2"
   have ne: "Refine_Never \<noteq> Refine_Fixpoint" by simp
-  show
-    "le_pair (inv_minus_int_dom Refine_Never r1 x1 y1)
-       (inv_minus_int_dom Refine_Never r2 x2 y2)"
-    using inv_minus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+  show "le_pair (inv_minus_int_dom_never ik r1 x1 y1) (inv_minus_int_dom_never ik r2 x2 y2)"
+    using inv_minus_int_dom_mono[OF ne A B C] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: int_dom
-  assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  fix r1 r2 x1 x2 y1 y2 :: int_dom and ik :: ikind
+  assume A: "r1 \<le> r2" and B: "x1 \<le> x2" and C: "y1 \<le> y2"
   have ne: "Refine_Never \<noteq> Refine_Fixpoint" by simp
-  show
-    "le_pair (inv_times_int_dom Refine_Never r1 x1 y1)
-       (inv_times_int_dom Refine_Never r2 x2 y2)"
-    using inv_times_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+  show "le_pair (inv_times_int_dom_never ik r1 x1 y1) (inv_times_int_dom_never ik r2 x2 y2)"
+    using inv_times_int_dom_mono[OF ne A B C] by (simp add: le_pair_def)
 next
   fix a b :: int_dom
   show "intersect_int_dom_mode Refine_Never a b \<le> a"
@@ -1189,18 +1060,18 @@ next
     using inv_eq_int_dom_reductive1 inv_eq_int_dom_reductive2
     by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_plus_int_dom Refine_Never r a1 a2) (a1, a2)"
+  fix ik :: ikind and r a1 a2 :: int_dom
+  show "le_pair (inv_plus_int_dom_never ik r a1 a2) (a1, a2)"
     using inv_plus_int_dom_reductive1 inv_plus_int_dom_reductive2
     by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_minus_int_dom Refine_Never r a1 a2) (a1, a2)"
+  fix ik :: ikind and r a1 a2 :: int_dom
+  show "le_pair (inv_minus_int_dom_never ik r a1 a2) (a1, a2)"
     using inv_minus_int_dom_reductive1 inv_minus_int_dom_reductive2
     by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_times_int_dom Refine_Never r a1 a2) (a1, a2)"
+  fix ik :: ikind and r a1 a2 :: int_dom
+  show "le_pair (inv_times_int_dom_never ik r a1 a2) (a1, a2)"
     using inv_times_int_dom_reductive1 inv_times_int_dom_reductive2
     by (simp add: le_pair_def)
 next
@@ -1212,8 +1083,10 @@ qed
 abbreviation intersect_int_dom_once :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_once == intersect_int_dom_mode Refine_Once"
 
-abbreviation aval_int_dom_once :: "exp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_once == aval_int_dom Refine_Once"
+abbreviation aval_int_dom_once ::
+    "tyenv => ikind => exp => (vname => int_dom) => int_dom"
+where
+  "aval_int_dom_once \<Gamma> ik e sigma == taval_int_dom \<Gamma> Refine_Once ik e sigma"
 
 abbreviation tobool_int_dom_once :: "int_dom => bool option" where
   "tobool_int_dom_once == int_dom_tobool"
@@ -1229,17 +1102,17 @@ where
   "inv_eq_int_dom_once == inv_eq_int_dom Refine_Once"
 
 abbreviation inv_plus_int_dom_once ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_plus_int_dom_once == inv_plus_int_dom Refine_Once"
 
 abbreviation inv_minus_int_dom_once ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_minus_int_dom_once == inv_minus_int_dom Refine_Once"
 
 abbreviation inv_times_int_dom_once ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_times_int_dom_once == inv_times_int_dom Refine_Once"
 
@@ -1263,10 +1136,10 @@ proof unfold_locales
   then show "n \<in> gamma (intersect_int_dom_mode Refine_Once a b)"
     using intersect_int_dom_mode_sound by simp
 next
-  fix s :: store and e :: exp and sigma :: "vname => int_dom"
+  fix s :: store and sigma :: "vname => int_dom" and \<Gamma> :: tyenv and ik :: ikind and e :: exp
   assume "\<forall>x. s x \<in> gamma (sigma x)"
-  then show "aval e s \<in> gamma (aval_int_dom Refine_Once e sigma)"
-    using aval_int_dom_sound by simp
+  then show "taval \<Gamma> ik e s \<in> gamma (aval_int_dom_once \<Gamma> ik e sigma)"
+    using taval_int_dom_sound by simp
 next
   fix n1 n2 :: int and a1 a2 :: int_dom and res :: bool
   assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "(n1 < n2) = res"
@@ -1282,25 +1155,25 @@ next
      n2 \<in> gamma (snd (inv_eq_int_dom Refine_Once res a1 a2))"
     using inv_eq_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 + n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 + n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_plus_int_dom Refine_Once r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_plus_int_dom Refine_Once r a1 a2))"
+    "n1 \<in> gamma (fst (inv_plus_int_dom_once ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_plus_int_dom_once ik r a1 a2))"
     using inv_plus_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 - n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 - n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_minus_int_dom Refine_Once r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_minus_int_dom Refine_Once r a1 a2))"
+    "n1 \<in> gamma (fst (inv_minus_int_dom_once ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_minus_int_dom_once ik r a1 a2))"
     using inv_minus_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 * n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 * n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_times_int_dom Refine_Once r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_times_int_dom Refine_Once r a1 a2))"
+    "n1 \<in> gamma (fst (inv_times_int_dom_once ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_times_int_dom_once ik r a1 a2))"
     using inv_times_int_dom_sound by simp
 next
   fix p :: int_dom and b :: bool and i :: int
@@ -1315,11 +1188,11 @@ next
      intersect_int_dom_mode Refine_Once a2 b2"
     using intersect_int_dom_mode_mono[OF ne A B] .
 next
-  fix e :: exp and sigma1 sigma2 :: "vname => int_dom"
+  fix e :: exp and \<Gamma> :: tyenv and ik :: ikind and sigma1 sigma2 :: "vname => int_dom"
   assume S: "sigma1 \<le> sigma2"
   have ne: "Refine_Once \<noteq> Refine_Fixpoint" by simp
-  show "aval_int_dom Refine_Once e sigma1 \<le> aval_int_dom Refine_Once e sigma2"
-    using aval_int_dom_mono[OF ne S] .
+  show "aval_int_dom_once \<Gamma> ik e sigma1 \<le> aval_int_dom_once \<Gamma> ik e sigma2"
+    using taval_int_dom_mono[OF ne S] .
 next
   fix x1 x2 y1 y2 :: int_dom and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1337,29 +1210,23 @@ next
        (inv_eq_int_dom Refine_Once res x2 y2)"
     using inv_eq_int_dom_mono[OF ne A B] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: int_dom
-  assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  fix r1 r2 x1 x2 y1 y2 :: int_dom and ik :: ikind
+  assume A: "r1 \<le> r2" and B: "x1 \<le> x2" and C: "y1 \<le> y2"
   have ne: "Refine_Once \<noteq> Refine_Fixpoint" by simp
-  show
-    "le_pair (inv_plus_int_dom Refine_Once r1 x1 y1)
-       (inv_plus_int_dom Refine_Once r2 x2 y2)"
-    using inv_plus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+  show "le_pair (inv_plus_int_dom_once ik r1 x1 y1) (inv_plus_int_dom_once ik r2 x2 y2)"
+    using inv_plus_int_dom_mono[OF ne A B C] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: int_dom
-  assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  fix r1 r2 x1 x2 y1 y2 :: int_dom and ik :: ikind
+  assume A: "r1 \<le> r2" and B: "x1 \<le> x2" and C: "y1 \<le> y2"
   have ne: "Refine_Once \<noteq> Refine_Fixpoint" by simp
-  show
-    "le_pair (inv_minus_int_dom Refine_Once r1 x1 y1)
-       (inv_minus_int_dom Refine_Once r2 x2 y2)"
-    using inv_minus_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+  show "le_pair (inv_minus_int_dom_once ik r1 x1 y1) (inv_minus_int_dom_once ik r2 x2 y2)"
+    using inv_minus_int_dom_mono[OF ne A B C] by (simp add: le_pair_def)
 next
-  fix r1 r2 x1 x2 y1 y2 :: int_dom
-  assume RR: "r1 \<le> r2" and A: "x1 \<le> x2" and B: "y1 \<le> y2"
+  fix r1 r2 x1 x2 y1 y2 :: int_dom and ik :: ikind
+  assume A: "r1 \<le> r2" and B: "x1 \<le> x2" and C: "y1 \<le> y2"
   have ne: "Refine_Once \<noteq> Refine_Fixpoint" by simp
-  show
-    "le_pair (inv_times_int_dom Refine_Once r1 x1 y1)
-       (inv_times_int_dom Refine_Once r2 x2 y2)"
-    using inv_times_int_dom_mono[OF ne RR A B] by (simp add: le_pair_def)
+  show "le_pair (inv_times_int_dom_once ik r1 x1 y1) (inv_times_int_dom_once ik r2 x2 y2)"
+    using inv_times_int_dom_mono[OF ne A B C] by (simp add: le_pair_def)
 next
   fix a b :: int_dom
   show "intersect_int_dom_mode Refine_Once a b \<le> a"
@@ -1379,18 +1246,18 @@ next
     using inv_eq_int_dom_reductive1 inv_eq_int_dom_reductive2
     by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_plus_int_dom Refine_Once r a1 a2) (a1, a2)"
+  fix ik :: ikind and r a1 a2 :: int_dom
+  show "le_pair (inv_plus_int_dom_once ik r a1 a2) (a1, a2)"
     using inv_plus_int_dom_reductive1 inv_plus_int_dom_reductive2
     by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_minus_int_dom Refine_Once r a1 a2) (a1, a2)"
+  fix ik :: ikind and r a1 a2 :: int_dom
+  show "le_pair (inv_minus_int_dom_once ik r a1 a2) (a1, a2)"
     using inv_minus_int_dom_reductive1 inv_minus_int_dom_reductive2
     by (simp add: le_pair_def)
 next
-  fix r a1 a2 :: int_dom
-  show "le_pair (inv_times_int_dom Refine_Once r a1 a2) (a1, a2)"
+  fix ik :: ikind and r a1 a2 :: int_dom
+  show "le_pair (inv_times_int_dom_once ik r a1 a2) (a1, a2)"
     using inv_times_int_dom_reductive1 inv_times_int_dom_reductive2
     by (simp add: le_pair_def)
 next
@@ -1402,8 +1269,10 @@ qed
 abbreviation intersect_int_dom_fixpoint :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_fixpoint == intersect_int_dom_mode Refine_Fixpoint"
 
-abbreviation aval_int_dom_fixpoint :: "exp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_fixpoint == aval_int_dom Refine_Fixpoint"
+abbreviation aval_int_dom_fixpoint ::
+    "tyenv => ikind => exp => (vname => int_dom) => int_dom"
+where
+  "aval_int_dom_fixpoint \<Gamma> ik e sigma == taval_int_dom \<Gamma> Refine_Fixpoint ik e sigma"
 
 abbreviation tobool_int_dom_fixpoint :: "int_dom => bool option" where
   "tobool_int_dom_fixpoint == int_dom_tobool"
@@ -1419,17 +1288,17 @@ where
   "inv_eq_int_dom_fixpoint == inv_eq_int_dom Refine_Fixpoint"
 
 abbreviation inv_plus_int_dom_fixpoint ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_plus_int_dom_fixpoint == inv_plus_int_dom Refine_Fixpoint"
 
 abbreviation inv_minus_int_dom_fixpoint ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_minus_int_dom_fixpoint == inv_minus_int_dom Refine_Fixpoint"
 
 abbreviation inv_times_int_dom_fixpoint ::
-    "int_dom => int_dom => int_dom => int_dom * int_dom"
+    "ikind => int_dom => int_dom => int_dom => int_dom * int_dom"
 where
   "inv_times_int_dom_fixpoint == inv_times_int_dom Refine_Fixpoint"
 
@@ -1453,10 +1322,10 @@ proof unfold_locales
   then show "n \<in> gamma (intersect_int_dom_mode Refine_Fixpoint a b)"
     using intersect_int_dom_mode_sound by simp
 next
-  fix s :: store and e :: exp and sigma :: "vname => int_dom"
+  fix s :: store and sigma :: "vname => int_dom" and \<Gamma> :: tyenv and ik :: ikind and e :: exp
   assume "\<forall>x. s x \<in> gamma (sigma x)"
-  then show "aval e s \<in> gamma (aval_int_dom Refine_Fixpoint e sigma)"
-    using aval_int_dom_sound by simp
+  then show "taval \<Gamma> ik e s \<in> gamma (aval_int_dom_fixpoint \<Gamma> ik e sigma)"
+    using taval_int_dom_sound by simp
 next
   fix n1 n2 :: int and a1 a2 :: int_dom and res :: bool
   assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "(n1 < n2) = res"
@@ -1472,25 +1341,25 @@ next
      n2 \<in> gamma (snd (inv_eq_int_dom Refine_Fixpoint res a1 a2))"
     using inv_eq_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 + n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 + n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_plus_int_dom Refine_Fixpoint r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_plus_int_dom Refine_Fixpoint r a1 a2))"
+    "n1 \<in> gamma (fst (inv_plus_int_dom_fixpoint ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_plus_int_dom_fixpoint ik r a1 a2))"
     using inv_plus_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 - n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 - n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_minus_int_dom Refine_Fixpoint r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_minus_int_dom Refine_Fixpoint r a1 a2))"
+    "n1 \<in> gamma (fst (inv_minus_int_dom_fixpoint ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_minus_int_dom_fixpoint ik r a1 a2))"
     using inv_minus_int_dom_sound by simp
 next
-  fix n1 n2 :: int and a1 a2 r :: int_dom
-  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "n1 * n2 \<in> gamma r"
+  fix n1 n2 :: int and a1 a2 r :: int_dom and ik :: ikind
+  assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "ik_norm ik (n1 * n2) \<in> gamma r"
   then show
-    "n1 \<in> gamma (fst (inv_times_int_dom Refine_Fixpoint r a1 a2)) \<and>
-     n2 \<in> gamma (snd (inv_times_int_dom Refine_Fixpoint r a1 a2))"
+    "n1 \<in> gamma (fst (inv_times_int_dom_fixpoint ik r a1 a2)) \<and>
+     n2 \<in> gamma (snd (inv_times_int_dom_fixpoint ik r a1 a2))"
     using inv_times_int_dom_sound by simp
 next
   fix p :: int_dom and b :: bool and i :: int

@@ -51,7 +51,7 @@ lemma loop_cfg_full:
           (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
           (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
           (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
-          (Statement 3, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
+          (Statement 3, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))},
        calls = {},
        cfg_entry = FunctionEntry (STR ''main''),
        checks = {} \<rparr>"
@@ -68,7 +68,7 @@ lemma loop_cfg_intra:
       (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
       (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
       (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
-      (Statement 3, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
+      (Statement 3, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))}"
   by (simp add: loop_cfg_full)
 
 subsection \<open>An exhibited interval post-fixpoint\<close>
@@ -102,10 +102,16 @@ text \<open>
 
 abbreviation "loop_body_entry \<equiv> Statement 2"
 
+text \<open>
+  Instantiated at \<open>default_tyenv\<close>, a genuine last resort: the guard \<open>x < 20\<close> compares
+  against a literal that fits every ikind's range, so \<open>bfilter_ivl\<close>'s narrowing here does
+  not depend on which \<open>tyenv\<close> is chosen -- no \<open>imp_prog\<close> is in scope in this standalone
+  illustration to source a real one from.
+\<close>
 lemma loop_body_x_from_assume:
-  "tf_branch (ivl_tf_for gs) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "tf_branch (ivl_tf_for gs default_tyenv) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
 proof -
-  have "tf_branch (ivl_tf_for gs) = branch_ivl" by (simp add: ivl_tf_for_def)
+  have "tf_branch (ivl_tf_for gs default_tyenv) = branch_ivl default_tyenv" by (simp add: ivl_tf_for_def)
   then show ?thesis unfolding loop_env_def by (simp only:) eval
 qed
 

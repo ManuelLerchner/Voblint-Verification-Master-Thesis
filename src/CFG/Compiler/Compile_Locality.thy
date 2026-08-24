@@ -31,7 +31,7 @@ text \<open>A compiled body reaches a result node only through a return action f
   for every procedure body (its continuation is the epilogue).\<close>
 lemma compile_result_target:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, a, FunctionResult q) \<in> E
-   \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> q = p \<and> (\<exists>e. a = EA_Ret e p)"
+   \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> q = p \<and> (\<exists>e rk. a = EA_Ret e p rk)"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
@@ -178,7 +178,7 @@ proof -
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
 
     by (rule compile_procE)
@@ -197,7 +197,7 @@ proof -
   from cp obtain Eb where
     E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
 
     by (rule compile_procE)
@@ -213,7 +213,7 @@ proof -
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry r, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None r (proc_ret_kind \<Pi> r), FunctionResult r) Eb
                else Eb)"
     and n': "n' = Suc (n + csize (body decl))"
 
@@ -226,7 +226,7 @@ proof -
                  (pfn r n (n + csize (body decl))) \<subseteq> pfn r n n'"
     using n' by (auto simp: pfn_def)
   consider "(u, a, v) = (FunctionEntry r, EA_Nop, Statement n)"
-    | "(u, a, v) = (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r)"
+    | "(u, a, v) = (Statement (n + csize (body decl)), EA_Ret None r (proc_ret_kind \<Pi> r), FunctionResult r)"
     | "(u, a, v) \<in> Eb"
     using e E by (auto split: if_splits)
 
@@ -245,17 +245,17 @@ text \<open>The procedure wrapper preserves the body's result discipline and add
 lemma compile_proc_result_target:
   assumes comp: "compile_proc \<Pi> p decl n = (n', E, K)"
     and edge: "(u, a, FunctionResult q) \<in> E"
-  shows "q = p \<and> (\<exists>e. a = EA_Ret e p)"
+  shows "q = p \<and> (\<exists>e rk. a = EA_Ret e p rk)"
 proof -
   from comp obtain Eb where
     cb: "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
     by (rule compile_procE)
-  show ?thesis using edge E compile_result_target[OF cb] by (auto split: if_splits)
+  show ?thesis using edge E by (auto split: if_splits dest: compile_result_target[OF cb])
 
 qed
 
@@ -354,7 +354,7 @@ proof -
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None q (proc_ret_kind \<Pi> q), FunctionResult q) Eb
                else Eb)"
     by (rule compile_procE)
   have "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
@@ -372,7 +372,7 @@ proof -
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None q (proc_ret_kind \<Pi> q), FunctionResult q) Eb
                else Eb)"
     by (rule compile_procE)
   have nb: "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
@@ -521,7 +521,7 @@ proof -
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
               (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
+               then insert (Statement (n + csize (body decl)), EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
                else Eb)"
     by (rule compile_procE)
   have body: "\<And>b w. (FunctionResult r, b, w) \<notin> Eb"
@@ -564,14 +564,14 @@ qed
 lemma compile_procs_result_target:
   assumes comp: "compile_procs \<Pi> ps n = (n', E, K)"
     and edge: "(u, a, FunctionResult q) \<in> E"
-  shows "\<exists>e. a = EA_Ret e q"
+  shows "\<exists>e rk. a = EA_Ret e q rk"
   using comp edge
   by (induction ps arbitrary: n n' E K)
      (auto split: option.splits prod.splits dest: compile_proc_result_target)
 
 lemma compile_prog_result_target:
   assumes edge: "(u, a, FunctionResult q) \<in> intra (compile_prog \<Pi> ps mnm main)"
-  shows "\<exists>e. a = EA_Ret e q"
+  shows "\<exists>e rk. a = EA_Ret e q rk"
 proof -
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
     procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
@@ -1348,7 +1348,7 @@ lemma frag_okI_frag:
 
 
 lemma sink_in_path_nodes:
-  "t \<in> valid_ltr gs g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
+  "t \<in> valid_ltr \<Gamma> gs g S \<Longrightarrow> sink_node t \<in> fst ` set (path t)"
   using valid_ltr_path_nonempty by (auto simp: sink_node_def)
 
 text \<open>Every activation in the caller chain of a valid trace is fragment-local.  The property is
@@ -1356,7 +1356,7 @@ text \<open>Every activation in the caller chain of a valid trace is fragment-lo
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
 lemma valid_ltr_frag_callers:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
+    and t: "t \<in> valid_ltr \<Gamma> gs (compile_prog \<Pi> ps mnm main) S"
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
 proof -
   let ?g = "compile_prog \<Pi> ps mnm main"
@@ -1373,7 +1373,7 @@ proof -
       by (rule frag_okI_frag[OF mnmdecl cb ent])
          (simp_all add: inv16_entry_is_main pfn_def)
   next
-    fix t a v s' assume ht: "t \<in> valid_ltr gs ?g S" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
+    fix t a v s' assume ht: "t \<in> valid_ltr \<Gamma> gs ?g S" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps mnm main u"
       and e: "(sink_node t, a, v) \<in> intra ?g"
     have ft: "frag_ok \<Pi> ps mnm main t" using ch callers_refl by blast
     from ft[unfolded frag_ok_def] show "frag_ok \<Pi> ps mnm main (extend t (v, s'))"
@@ -1403,7 +1403,7 @@ proof -
     fix caller dst pars args p cont
     assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     show "frag_ok \<Pi> ps mnm main
-            (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])"
+            (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))])"
     proof (cases "\<Pi> p")
       case None
       then show ?thesis unfolding frag_ok_def by fastforce
@@ -1418,15 +1418,15 @@ proof -
     qed
   next
     fix callee caller p dst pars args cont
-    assume cvcallee: "callee \<in> valid_ltr gs ?g S" and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps mnm main u"
+    assume cvcallee: "callee \<in> valid_ltr \<Gamma> gs ?g S" and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps mnm main u"
       and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
-    have cv: "caller \<in> valid_ltr gs ?g S" using valid_ltr_caller_valid[OF cvcallee cof] .
+    have cv: "caller \<in> valid_ltr \<Gamma> gs ?g S" using valid_ltr_caller_valid[OF cvcallee cof] .
     have fc: "frag_ok \<Pi> ps mnm main caller" using ch cin by blast
     from fc[unfolded frag_ok_def]
     show "frag_ok \<Pi> ps mnm main (Resume caller callee
-            (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+            (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))"
     proof (elim disjE exE conjE)
       fix r d mm mm' Ep Kp
       assume decl: "\<Pi> r = Some d"
@@ -1440,7 +1440,7 @@ proof -
         using frag_edge_calls[OF wf decl cb ent snk e] .
       have pne: "path caller \<noteq> []" using valid_ltr_path_nonempty[OF cv] .
       show "frag_ok \<Pi> ps mnm main (Resume caller callee
-              (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+              (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))"
         by (rule frag_okI_frag[OF decl cb ent])
            (use hd_r pne nodes_c cont_in in \<open>auto simp: hd_append\<close>)
     next
@@ -1450,11 +1450,11 @@ proof -
         using e by simp
       with compile_prog_calls_source_stmt
       show "frag_ok \<Pi> ps mnm main (Resume caller callee
-              (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))]))"
+              (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))]))"
         by blast
     qed
   next
-    show "t \<in> valid_ltr gs ?g S" by (rule t)
+    show "t \<in> valid_ltr \<Gamma> gs ?g S" by (rule t)
   qed
 qed
 
@@ -1462,7 +1462,7 @@ text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reac
   \<open>p = q\<close>.\<close>
 lemma valid_ltr_entry_result_eq:
   assumes wf: "wf_compile_input source_global \<Pi> ps mnm main"
-    and t: "t \<in> valid_ltr gs (compile_prog \<Pi> ps mnm main) S"
+    and t: "t \<in> valid_ltr \<Gamma> gs (compile_prog \<Pi> ps mnm main) S"
     and en: "fst (hd (path t)) = FunctionEntry p"
     and sk: "sink_node t = FunctionResult q"
   shows "p = q"

@@ -24,10 +24,11 @@ text \<open>
 \<close>
 
 locale dg_analysis_adapter =
-  routed_context_hetero S gs g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
+  routed_context_hetero S gs \<Gamma> g gk0 route bot0 s0d s0g sigma vars x0 sg seed_key
     "static_resolve g"
   for S :: "('a::sound_domain abs_state lifted, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gs :: "vname \<Rightarrow> bool"
+    and \<Gamma> :: tyenv
     and g gk0
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d s0g
@@ -160,7 +161,7 @@ lemma activation_collect_dg_sound:
   fixes S0 :: "store set" and startcontext :: 'c
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
            \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen)
   fix s0 assume s0mem: "s0 \<in> S0"
@@ -177,7 +178,7 @@ proof (rule activation_collect_sound_gen)
     using entry_cov by (simp add: sg_cov)
 next
   fix u a v' c' s' s''
-  assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
+  assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step \<Gamma> a s'"
   thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
 next
   fix u c' s'
@@ -186,8 +187,8 @@ next
   fix u dst pars args p cont c' s' c''
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
-    and adm: "admiss_exact enterc u c' (call_enter gs (CallEdge dst pars args) s') c''"
-  show "call_enter gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
+    and adm: "admiss_exact enterc u c' (call_enter \<Gamma> gs (CallEdge dst pars args) s') c''"
+  show "call_enter \<Gamma> gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
     using adm routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
 next
   fix cl dst pars args p cont c1 c2 s' t es
@@ -195,8 +196,8 @@ next
     and sm: "s' \<in> gamma_state_lift (sg (Inl (cl, c1)))"
     and adm: "admiss_exact enterc cl c1 es c2"
     and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, c2)))"
-    and ces: "call_enter_store gs g cl s' es"
-  show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
+    and ces: "call_enter_store \<Gamma> gs g cl s' es"
+  show "combine_collect \<Gamma> gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
     using adm tm routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
@@ -217,11 +218,11 @@ lemma analyse_result_node_sound:
   fixes S0 :: "store set" and startcontext :: 'c
   assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
            \<subseteq> gamma_state (case lookup_context analyse_result v ctx of
                              Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 proof -
-  have "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  have "activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
           \<subseteq> gamma_state_lift (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
   also have "\<dots> = gamma_point (lookup_context analyse_result v ctx)"
@@ -267,12 +268,12 @@ theorem analyse_report_ctx_proved_sound:
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "\<And>ctx s. s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
            \<Longrightarrow> truthy (aval c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx"
-  have node_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  assume smem: "s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx"
+  have node_sound: "activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
       \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
@@ -290,12 +291,12 @@ theorem analyse_report_ctx_refuted_sound:
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
-  shows "\<And>ctx s. s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  shows "\<And>ctx s. s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
            \<Longrightarrow> \<not> truthy (aval c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx"
-  have node_sound: "activation_collect gs (admiss_exact enterc) startcontext g S0 v ctx
+  assume smem: "s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx"
+  have node_sound: "activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
       \<subseteq> gamma_state (case lookup_context analyse_result v ctx of Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
   obtain st where reach: "lookup_context analyse_result v ctx = Reachable st"
