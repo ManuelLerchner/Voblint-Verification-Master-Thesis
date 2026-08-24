@@ -1,5 +1,5 @@
-# Build byproducts. `make` regenerates all of these from the tracked
-# .ml/.mly/.mll sources and ../codegen/generated/ml/Voblint_CLI.ml.
+# Build byproducts. `pixi run cli-build` regenerates all of these from the
+# tracked .ml/.mly/.mll sources and ../codegen/generated/ml/Voblint_CLI.ml.
 *.cmi
 *.cmx
 *.o

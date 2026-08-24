@@ -32,5 +32,10 @@ codegen/regression/ocaml/*.cm*
 codegen/regression/ocaml/*.o
 codegen/regression/ocaml/regression-ml
 
-# HTML result directories emitted by scripts/emit_html_report.py
+# HTML result directories emitted by `voblint --html-out` (scripts/mk/report.sh)
 /result/
+
+# Regenerable definitional index: `pixi run docs-overview`.
+# Its own generator calls it "a gitignored, regenerable index -- not a source
+# of truth (the .thy files are)".
+docs/generated/DEFINITIONS_OVERVIEW.md

@@ -281,6 +281,20 @@ jobs:
       - name: VIMP identifier id_position/markup shape (no build needed -- fail fast)
         run: pixi run id-position-check
 
+      # grammar/vimp.yaml is the sole source of truth for VIMP syntax, and both
+      # generated frontends must agree with it. The lefthook pre-commit hook
+      # enforces this locally; without a CI job a hand-edited .mly, or a
+      # vimp.yaml change committed with LEFTHOOK=0, reaches main green.
+      - name: VIMP grammar drift, both frontends (no build needed -- fail fast)
+        run: pixi run grammar-check
+
+      # Every theory reachable from an export root needs a code_identifier
+      # entry; a missing one surfaces later as a module dependency cycle that
+      # names two constants and no theory. Reads the checked-in export, so it
+      # needs no Isabelle.
+      - name: Code-export module map (no build needed -- fail fast)
+        run: pixi run codegen-modules
+
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
         with:

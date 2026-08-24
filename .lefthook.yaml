@@ -17,10 +17,13 @@ pre-commit:
       glob: "*.thy"
       run: pixi run python3 scripts/check_isabelle_ascii.py {staged_files}
 
+    # Any new theory can add a module to the export, so this fires on every
+    # staged .thy -- not just on the generated .ml and the mapping table.
+    # Committing a new theory alone used to trigger nothing.
     - name: codegen-module-map
       glob:
         - "codegen/generated/ml/Voblint_CLI.ml"
-        - "src/CLI/Analyse_Dispatch.thy"
+        - "src/**/*.thy"
       run: pixi run python3 scripts/check_codegen_modules.py
 
     - name: vimp-isabelle-grammar-drift
