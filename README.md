@@ -321,7 +321,7 @@ for the live list). Tasks needing `AFP` fall back to `~/afp/thys` if unset.
 | `cli-build` | opam (`menhir`, `ocamllex`, `zarith`) | Build the `voblint` CLI binary (`cli/voblint`) from the generated OCaml plus the Menhir/ocamllex VIMP frontend |
 | `cli-test` | opam | Run `tests/run.py` against the built CLI, depends on `cli-build` |
 | `voblint` | opam | Rebuild (via `cli-build`) and run the CLI; extra arguments pass straight through, e.g. `pixi run voblint --analysis sign FILE.vimp` |
-| `bench` | opam | Benchmark the CLI with [hyperfine](https://github.com/sharkdp/hyperfine), one timed series per abstract domain over the same fixture, e.g. `pixi run bench FILE.vimp`; `--analysis a,b` narrows the sweep, other CLI flags pass through |
+| `bench` | opam | Benchmark the CLI with [hyperfine](https://github.com/sharkdp/hyperfine), one timed series per abstract domain over the same fixture, e.g. `pixi run bench FILE.vimp`; `--analysis a,b` narrows the sweep, `--plot[=OUT.png]` renders a per-domain whisker + histogram plot, other CLI flags pass through |
 | `gen-grammar-isabelle` / `gen-grammar-menhir` | -- | Regenerate one grammar target from `grammar/vimp.yaml` |
 | `grammar-check` | -- | Regenerate both targets and fail on any diff (drift check) |
 | `property` | -- | Run the Hypothesis property-test suite under `tests/property/`, depends on `property-build` |

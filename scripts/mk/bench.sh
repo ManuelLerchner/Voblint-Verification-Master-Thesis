@@ -10,20 +10,27 @@
 # warm-up. Like voblint-run.sh, omitting FILE interactively opens an fzf
 # picker over the regression corpus; cli/voblint itself stays
 # non-interactive.
+#
+# --plot[=OUT.png] additionally exports the run as JSON next to OUT and
+# renders a per-domain whisker + histogram plot via scripts/plot_bench.py
+# (hyperfine itself only exports; plotting is a documented add-on).
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 VOBLINT="$REPO_ROOT/cli/voblint"
 
 usage() {
-  echo "usage: pixi run bench [voblint flags...] FILE.vimp"
+  echo "usage: pixi run bench [--plot[=OUT.png]] [voblint flags...] FILE.vimp"
   echo "       default domain sweep: sign,interval,int,parity"
   echo "       --analysis a[,b,...] narrows the sweep; other flags pass through"
+  echo "       --plot renders a per-domain whisker + histogram plot (default: voblint-bench.png)"
 }
 
 domains="sign,interval,int,parity"
 passthrough=()
 file=""
+plot=0
+plot_out="voblint-bench.png"
 
 # Flag-arity-aware walk (mirrors cli/main.ml's parse_args) so a flag value
 # like `--context entry-state` is not misread as the FILE positional.
@@ -34,6 +41,8 @@ while [ "$i" -lt "$n" ]; do
   arg="${args[$i]}"
   case "$arg" in
     --help) usage; exit 0 ;;
+    --plot) plot=1 ;;
+    --plot=*) plot=1; plot_out="${arg#--plot=}" ;;
     --analysis) i=$((i + 1)); domains="${args[$i]:-}" ;;
     --context | --context-depth | --context-graph | --solver | --timeout | --html-out)
       passthrough+=("$arg" "${args[$((i + 1))]:-}"); i=$((i + 1)) ;;
@@ -83,5 +92,19 @@ done
 
 # -N skips the intermediate shell: these runs can sit in the low-millisecond
 # range, where shell startup would dominate the measurement.
-exec hyperfine -N -L analysis "$valid" \
-  "$(printf '%q' "$VOBLINT") --analysis {analysis}$quoted"
+if [ "$plot" -eq 0 ]; then
+  exec hyperfine -N -L analysis "$valid" \
+    "$(printf '%q' "$VOBLINT") --analysis {analysis}$quoted"
+fi
+
+plot_json="${plot_out%.png}.json"
+hyperfine -N -L analysis "$valid" --export-json "$plot_json" \
+  "$(printf '%q' "$VOBLINT") --analysis {analysis}$quoted" || exit $?
+
+python3 "$REPO_ROOT/scripts/plot_bench.py" "$plot_json" "$plot_out" \
+  --title "$(basename "$file")" || exit $?
+
+# Interactive convenience only: never block a scripted run on a viewer.
+if [ -t 1 ] && command -v open >/dev/null 2>&1; then
+  open "$plot_out"
+fi

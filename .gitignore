@@ -35,6 +35,10 @@ codegen/regression/ocaml/regression-ml
 # HTML result directories emitted by `voblint --html-out` (scripts/mk/report.sh)
 /result/
 
+# Default `pixi run bench --plot` outputs (scripts/mk/bench.sh)
+voblint-bench.png
+voblint-bench.json
+
 # Regenerable definitional index: `pixi run docs-overview`.
 # Its own generator calls it "a gitignored, regenerable index -- not a source
 # of truth (the .thy files are)".
