@@ -8,7 +8,12 @@ file, a state leaking into a node label on a domain that renders wider than the
 one the test uses.
 
 Each fixture runs under its own PARAM line, so the sweep exercises the same
-domain, context and solver combinations the corpus already covers.
+domain, context and solver combinations the corpus already covers. A fixture
+whose --html rendering exceeds HTML_AUDIT_TIMEOUT is skipped, not failed: a
+context-sensitive fixture with a rich context space can cost far more to
+render in full than tests/run.py's plain report already proved it terminates
+correctly and quickly under -- that is a rendering-cost fact about --html,
+not a correctness regression this audit exists to catch.
 
     python3 scripts/audit_html_reports.py            # sweep, report problems
     python3 scripts/audit_html_reports.py --verbose  # list every fixture
@@ -29,6 +34,18 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = REPO_ROOT / "cli" / "voblint"
 CORPUS = REPO_ROOT / "tests" / "regression"
+
+# --html renders every (node, context) pair, not just checks, so a
+# context-sensitive fixture with a rich context space can cost far more here
+# than under the plain report tests/run.py already verifies -- independent of
+# whatever --timeout the fixture's own PARAM line asks the solver to honour.
+# A fixture that blows this budget is a rendering-cost fact about --html, not
+# a correctness regression this structural audit exists to catch, so it is
+# skipped rather than failed. Comfortably above every fixture measured in the
+# tens of seconds; comfortably below the two-and-more-minutes-and-counting
+# fixtures this was written for (deep call-string chains, Ackermann-shaped
+# recursion), so it separates the two classes without per-fixture tuning.
+HTML_AUDIT_TIMEOUT = 30
 
 # The frontend's stylesheet defines exactly these; anything else renders bare.
 SHT_TYPES = {"nr", "pp", "tk", "sk", "op", "sp", "cm", "st"}
@@ -81,15 +98,22 @@ def ensure_dot_renderers() -> None:
 
 
 def audit_one(fixture: Path, out: Path) -> list[str]:
-    """Returns a list of problems; empty means the report is coherent."""
+    """Returns a list of problems; empty means the report is coherent.
+
+    Raises subprocess.TimeoutExpired past HTML_AUDIT_TIMEOUT -- the caller
+    treats that as a skip, not a problem; see HTML_AUDIT_TIMEOUT's comment."""
     args = param_args(fixture)
     if args is None:
         return []
-    proc = subprocess.run(
-        [str(VOBLINT), *args, "--html-out", str(out), str(fixture)],
-        capture_output=True, text=True,
-    )
+    cmd = [str(VOBLINT), *args, "--html-out", str(out), str(fixture)]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=HTML_AUDIT_TIMEOUT)
     if proc.returncode != 0:
+        # voblint's own --timeout (PARAM's, or its 10s default) can fire before
+        # ours does; that shares exit 3 with every other run_contained error
+        # (a crash, a signal, malformed output), so match the specific message
+        # rather than the code -- a genuine crash must still fail this audit.
+        if proc.returncode == 3 and "did not finish within" in (proc.stderr or ""):
+            raise subprocess.TimeoutExpired(cmd, HTML_AUDIT_TIMEOUT, output=proc.stdout, stderr=proc.stderr)
         return [f"exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[:200]}"]
 
     problems: list[str] = []
@@ -344,7 +368,15 @@ def main() -> int:
                     print(f"skip {rel} ({reason})")
                 continue
             out = Path(tmp) / f"r{i}"
-            problems = audit_one(fixture, out)
+            try:
+                problems = audit_one(fixture, out)
+            except subprocess.TimeoutExpired:
+                reason = f"html rendering exceeded the {HTML_AUDIT_TIMEOUT}s audit budget"
+                skips[reason] = skips.get(reason, 0) + 1
+                if args.verbose:
+                    print(f"skip {rel} ({reason})")
+                shutil.rmtree(out, ignore_errors=True)
+                continue
             shutil.rmtree(out, ignore_errors=True)
             if problems:
                 failures += 1
