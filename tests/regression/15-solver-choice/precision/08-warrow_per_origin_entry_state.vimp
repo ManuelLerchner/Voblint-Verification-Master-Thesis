@@ -1,0 +1,14 @@
+// PARAM: --analysis interval --solver warrow-per-origin --context entry-state
+// warrow-per-origin under entry-state contexts. Each entered state is its
+// own context, so p(1) and p(2) never share a FunctionEntry seed and the
+// update rule has nothing to widen across origins: both activations stay
+// exact. Locks in that the combination is routed at all -- the resolver
+// accepts every solver at every Interval context, and the dispatcher must
+// match every plan the resolver produces.
+void p(n) {
+  __voblint_check(n < 10) // PROVED
+}
+void main() {
+  p(1);
+  p(2)
+}

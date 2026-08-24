@@ -1,0 +1,24 @@
+// PARAM: --analysis interval --solver warrow --context call-string --context-depth 1
+// n is concretely 1 or 2, so n < 10 holds -- but Apinis warrowing under a
+// depth-1 call string cannot establish it. Mechanism: depth 1 keeps only the
+// innermost call site, so both activations of q enter p at the single
+// context [q:p(m)], and that one FunctionEntry seed is written by two
+// origins. The first write leaves it at [1,1]; the second recomputes the
+// join as [1,2] and widens [1,1] against it, and since the upper bound grew
+// it goes to +inf. Neither producer's own contribution ever moved -- the
+// growth is an artifact of widening a value already joined across origins,
+// the same loss as 03-warrow_joins_before_widening.vimp, now reached
+// through the context lifter's collapse rather than two direct call sites.
+//
+// 15-solver-choice/precision/07-warrow_per_origin_call_string.vimp is the
+// same program under --solver warrow-per-origin and answers PROVED.
+void p(n) {
+  __voblint_check(n < 10) // UNKNOWN
+}
+void q(m) {
+  p(m)
+}
+void main() {
+  q(1);
+  q(2)
+}
