@@ -29,9 +29,9 @@ text \<open>
   (\<^const>\<open>int_tf_st_for\<close>, \<^const>\<open>int_dom_enter_st_for\<close>, both fixed here as a genuine
   ``mode'' argument rather than pinned to \<^const>\<open>Refine_Fixpoint\<close>): every commute and
   soundness fact this development needs is already split per mode in
-  \<^theory>\<open>Voblint_Analysis.Int_Exec\<close>/\<^theory>\<open>Voblint_Analysis.Int_Base_DG\<close>, so recombining
-  them into one mode-generic fact is a three-way \<open>cases mode\<close> citing an existing lemma
-  per branch, not new proof content.
+  \<^theory>\<open>Voblint_Analysis.Int_Exec\<close>, so recombining them into one mode-generic
+  fact is a three-way \<open>cases mode\<close> citing an existing lemma per branch, not new
+  proof content.
 
   Soundness below is derived directly from \<^locale>\<open>dg_ctx_activation_base\<close>'s generic
   machinery against the collecting semantics, exactly as Sign's and Interval's own
@@ -276,11 +276,9 @@ definition ictx_sg_exec ::
       | Inr _ \<Rightarrow> Bot)"
 
 text \<open>
-  The abstract-carrier soundness interpretation Section 5's \<open>ictx_dg_base\<close> analogue
-  needs, generic in \<open>mode\<close>: a three-way case split citing Int's own per-mode
-  \<^locale>\<open>sound_dg_spec\<close> registration (\<open>int_never_is_sound_transfer_for\<close> etc.,
-  \<^theory>\<open>Voblint_Analysis.Int_Base_DG\<close>) exactly as \<^theory>\<open>Voblint_Analysis.Int_Base_DG\<close>
-  itself proves per mode.
+  The abstract-carrier soundness interpretation, generic in \<open>mode\<close>: a three-way
+  case split citing Int's own per-mode transfer-soundness facts
+  (\<open>int_never_is_sound_transfer_for\<close> and its siblings), one per branch.
 \<close>
 
 

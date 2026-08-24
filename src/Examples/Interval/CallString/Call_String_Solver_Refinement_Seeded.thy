@@ -61,12 +61,11 @@ lemma nest_1_seeded_pp_st:
 
 section \<open>The refinement theorem\<close>
 
-text \<open>The replacement for \<open>project_sigma_part_post_solution\<close>: a short corollary of
+text \<open>A short corollary of
   \<^theory>\<open>Voblint_Core.Call_String_Solver_Projection\<close>'s fully generic
   \<open>call_string_projection_refinement\<close>, instantiated at this program's own data. No
-  per-node case analysis (\<open>statement3_val\<close>, \<open>result_f_val\<close>, \<open>statement6_val\<close>,
-  \<open>statement7_val\<close>, \<open>result_main_val\<close>, or the ensuing \<open>project_sigma_eq/sides/dep\<close>
-  chains) is needed: the solver's own worklist propagation closes those nodes, and the
+  per-node case analysis is needed: the solver's own worklist propagation closes
+  those nodes, and the
   projection/closure argument itself is proved once, generically, not per concrete
   example.\<close>
 theorem nest_1_seeded_refinement:

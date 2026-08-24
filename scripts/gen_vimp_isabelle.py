@@ -46,8 +46,7 @@ DEFAULT_GRAMMAR = REPO_ROOT / "grammar" / "vimp.yaml"
 DEFAULT_OUT = REPO_ROOT / "src" / "VIMP"
 
 # Isabelle mixfix escaping: '(' ')' '_' need a leading "'" so the mixfix
-# parser doesn't read them as argument-slot/grouping syntax. See
-# scripts/extract_vimp_grammar.py's unescape_template for the inverse.
+# parser doesn't read them as argument-slot/grouping syntax.
 MIXFIX_ESCAPE = {"(": "'(", ")": "')", "_": "'_"}
 
 # result nonterminal -> imp2_* name. `program`/`globals`/`function` aren't

@@ -22,7 +22,7 @@ text \<open>
 
   The result is \<^emph>\<open>query-parametric\<close>: the reached program point \<open>v\<close> is existential and
   matched to where the run actually is, and the D/G collecting endpoint
-  \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close> holds at every covered
+  \<^verbatim>\<open>dg_post_solution_collect_sound_ltr_for\<close> holds at every covered
   point, so no premature specialisation to \<open>cfg_exit\<close> is needed.
 
   \<^bold>\<open>Why the solver step stays a one-line adapter.\<close>  The step \<open>solve_c success ->
@@ -283,11 +283,11 @@ begin
 
 text \<open>
   \<open>gamma\<close> is the caller-facing concretization at \<open>v\<close>: convert the executable
-  post-solution \<open>sigma_st\<close> to its semantic function via \<open>fun_of_dg_st\<close>, then
+  post-solution \<open>sigma_st\<close> to its semantic function via \<open>fun_of_dg_st_for\<close>, then
   read off the set of stores the DG framework's own \<open>dg_gamma\<close> assigns it,
   instantiated at this locale's context-insensitive \<open>gamma_unit\<close>. This is the
   accessor \<open>run_source_sound\<close> states its soundness guarantee in terms of, so
-  no \<open>dg_spec_step\<close>/\<open>fun_of_dg_st\<close>/\<open>part_post_solution\<close> plumbing reaches the
+  no \<open>dg_spec_step\<close>/\<open>fun_of_dg_st_for\<close>/\<open>part_post_solution\<close> plumbing reaches the
   caller.
 \<close>
 definition gamma :: "(pp \<times> unit + unit \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_state) \<Rightarrow> pp \<Rightarrow> store set"

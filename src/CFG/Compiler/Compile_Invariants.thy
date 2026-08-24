@@ -125,6 +125,28 @@ proof -
     using wf_compile_input .
 qed
 
+text \<open>
+  The executable gate resolves the global classifier at \<^const>\<open>prog_main_name\<close>,
+  while every downstream soundness theorem states its hypothesis at
+  \<^const>\<open>declared_global\<close>.  \<^const>\<open>storage_global\<close> and
+  \<^const>\<open>declared_global\<close> agree pointwise, so the gate delivers exactly the
+  premise those theorems take.
+\<close>
+
+lemma wf_program_compile_input_exec_declared_global:
+  assumes "wf_program_compile_input_exec p"
+  shows "wf_compile_input (declared_global p) (prog_table p)
+           (prog_procs p) prog_main_name (prog_main p)"
+proof -
+  have gs_eq: "storage_global p prog_main_name = declared_global p"
+    by (rule ext) simp
+  from wf_program_compile_input_exec_sound[OF assms]
+  have "wf_compile_input (storage_global p prog_main_name) (prog_table p)
+           (prog_procs p) prog_main_name (prog_main p)"
+    by (rule wf_program_compile_inputD)
+  then show ?thesis unfolding gs_eq .
+qed
+
 definition compile_program :: "imp_prog => cfg" where
   "compile_program p =
     compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)"

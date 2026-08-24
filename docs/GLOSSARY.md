@@ -143,7 +143,7 @@ both indistinguishable.
 Named, zero-cost (`abbreviation`) readings of the verified solver's four
 `strategy_tree` constructors (`QueryL`, `QueryG`, `Side`, `Answer`,
 `vendor/td-verification/Basics_side.thy`). Full design and rationale in
-`docs/DG_COMBINATOR_MIGRATION.md`.
+`docs/history/DG_COMBINATOR_MIGRATION.md`.
 
 | Term | Meaning | Source |
 | --- | --- | --- |

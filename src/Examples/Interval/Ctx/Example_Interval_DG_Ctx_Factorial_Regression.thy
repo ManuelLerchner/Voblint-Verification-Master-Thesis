@@ -50,14 +50,20 @@ definition fact_sol ::
   "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
   "fact_sol = entry_state_sol_prog fact_gs prog_main_name fact_prog"
 
+text \<open>The same solution read through the public result table rather than the solver's
+  own unknown space: \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Unreachable\<close> off the
+  covered keys and hands out an \<^typ>\<open>ivl abs_state\<close>, so a value assertion below names
+  neither \<^const>\<open>Inl\<close> nor \<^const>\<open>locals\<close> nor the resolved-store representation.\<close>
+
+definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
+  "fact_result = analyse_interval_entry_state_result_for fact_gs prog_main_name fact_prog"
+
 lemma fact_terminates:
   "TD_side_warrowing_apinis_Interp_solve_c
      (entry_state_eqs_prog fact_gs prog_main_name fact_prog)
      (cfg_exit fact_cfg, []) \<noteq> None"
   by eval
 
-abbreviation fact_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
-  "fact_lookup s x \<equiv> lookup_resolved_st_q s (location_of fact_gs x)"
 
 definition ctx_a :: "ivl list" where
   "ctx_a = entry_state_route fact_gs fact_is_bot_pred
@@ -84,30 +90,31 @@ definition ctx_a2 :: "ivl list" where "ctx_a2 = ctx_rec ctx_a"
 definition ctx_a1 :: "ivl list" where "ctx_a1 = ctx_rec ctx_a2"
 definition ctx_b3 :: "ivl list" where "ctx_b3 = ctx_rec ctx_b"
 
-text \<open>\<open>#ret\<close> at \<open>FunctionResult\<close> for each context -- the leak-detection query. Reads back
-  through the lifted carrier: \<^const>\<open>Bot\<close> would mean the whole activation is unreachable,
-  not merely an imprecise interval; here every context is reachable and exact.\<close>
+text \<open>\<open>#ret\<close> at \<open>FunctionResult\<close> for each context -- the leak-detection query,
+  asked of the result table rather than of the solver's unknown space. \<^const>\<open>Unreachable\<close>
+  would mean the whole activation is unreachable, not merely an imprecise interval; here
+  every context is reachable and exact.\<close>
 lemma fact_return_ctx_a:
-  "(case locals (snd fact_sol (Inl (FunctionResult (STR ''factorial''), ctx_a))) of
-      Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (fact_lookup d (STR ''#ret'')))
+  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_a of
+      Unreachable \<Rightarrow> None | Reachable st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 6) (Fin 6))"
   by eval
 
 lemma fact_return_ctx_b:
-  "(case locals (snd fact_sol (Inl (FunctionResult (STR ''factorial''), ctx_b))) of
-      Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (fact_lookup d (STR ''#ret'')))
+  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_b of
+      Unreachable \<Rightarrow> None | Reachable st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 24) (Fin 24))"
   by eval
 
 lemma fact_return_ctx_a2:
-  "(case locals (snd fact_sol (Inl (FunctionResult (STR ''factorial''), ctx_a2))) of
-      Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (fact_lookup d (STR ''#ret'')))
+  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_a2 of
+      Unreachable \<Rightarrow> None | Reachable st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 2) (Fin 2))"
   by eval
 
 lemma fact_return_ctx_a1:
-  "(case locals (snd fact_sol (Inl (FunctionResult (STR ''factorial''), ctx_a1))) of
-      Bot \<Rightarrow> None | Lifted d \<Rightarrow> Some (fact_lookup d (STR ''#ret'')))
+  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_a1 of
+      Unreachable \<Rightarrow> None | Reachable st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 1) (Fin 1))"
   by eval
 

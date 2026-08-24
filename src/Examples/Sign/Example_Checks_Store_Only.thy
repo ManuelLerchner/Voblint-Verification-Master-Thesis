@@ -10,16 +10,16 @@ text \<open>
   post-solution, discharged node-locally through the generic
   \<^theory>\<open>Voblint_Analysis.Sign_Checks\<close> interface rather than by forwarding each
   check node's stores to the procedure exit. The compiled \<^const>\<open>checks\<close> field
-  comes from a real compiler run (\<open>collect_checks_prog\<close>, \<open>VIMP_Proc_to_CFG\<close>);
+  comes from a real \<^const>\<open>compile_prog\<close> run, not a hand-built table;
   \<open>y\<close> is overwritten (\<open>y := 0\<close>) between the first and second check, and \<open>z\<close> is
   set by a nondeterministic \<open>__voblint_nondet_int()\<close> read, so the three checks land in each
   of the three possible outcomes: the first is \<^term>\<open>Check_Proved\<close>, the second
   --- checking \<open>0 < y\<close> again after \<open>y := 0\<close> --- is \<^term>\<open>Check_Refuted\<close>, and
   the third --- \<open>z = 1\<close> against an unconstrained \<open>z\<close> --- is \<^term>\<open>Check_Unknown\<close>.
-  \<open>sign_exec_prog_sound_collecting_at\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>)
-  connects the computed node-indexed environment back to \<^const>\<open>ltr_collect\<close> at
-  each check's own node, for any node the solver's query seed can reach ---
-  not only the seed itself. No ghost or trace-projection content: the check
+  \<open>sctx_result_node_sound\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>), the
+  per-domain re-export of the adapter's generic node-soundness bridge, connects
+  the computed table back to \<^const>\<open>ltr_collect\<close> at each check's own node ---
+  every covered node, not only the solver's query seed. No ghost or trace-projection content: the check
   condition is a plain \<^typ>\<open>exp\<close>.
 \<close>
 

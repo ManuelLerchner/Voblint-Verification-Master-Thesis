@@ -12,11 +12,15 @@
 // EXPECT-GRAPH block below now shows that directly: three clusters for a
 // 50-deep recursion, the bound's own arithmetic rather than the program's
 // call depth.
-// The check itself stays UNKNOWN, not PROVED: call-string depth bounds
-// *context* growth, not interval's own precision loss on an unbounded
-// recursive multiplication -- a different, known imprecision (see the
-// identical verdict on this same program under plain --analysis interval
-// in tests/regression/11-graph-snapshot/known-imprecision/03-recursion.vimp).
+// The check itself stays UNKNOWN, not PROVED, and for a different reason than
+// the context bound: at depth 1 the recursive call site's own context is
+// truncated to a single entry, so every activation below the first shares one
+// key. The callee-entry seed is again the join over those depths, and interval
+// widening on the accumulating multiplication drives the result to an
+// unbounded bound. Bounding context growth is what this fixture witnesses;
+// recovering the value would need a key that separates depths, which is what
+// --context entry-state does for the shallow case in
+// 03-procedures/precision/06.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

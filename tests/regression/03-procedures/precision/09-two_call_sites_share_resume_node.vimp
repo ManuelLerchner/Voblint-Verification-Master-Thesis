@@ -5,19 +5,17 @@
 // call actions to f, both routing to the same context, so one right-hand-side
 // evaluation performs two side effects to the same callee-entry seed key.
 //
-// The vendored solver applies its per-origin update eagerly per side effect,
-// with the running accumulate rather than the completed one, and
-// update_global_per_origin overwrites the origin's slot. The dead branch's
-// write lands first carrying bottom, dropping the seed below what the live
-// branch established, which destabilizes the callee and re-solves it at
-// bottom; the live write restores it and destabilizes again, forever. The
-// livelock is a fixed 10-step cycle over 11 distinct solver states, not an
-// ascending chain -- the lattice this program reaches is finite.
+// Two side effects to one key from one right-hand-side evaluation used to
+// livelock: the per-origin update was applied eagerly per side effect against
+// the running accumulate, so the dead branch's write landed first carrying
+// bottom, dropped the seed below what the live branch had established, and the
+// two writes destabilized the callee alternately in a fixed 10-step cycle. The
+// contract that settles it -- one right-hand-side evaluation contributes one
+// aggregated value per target key -- is stated in the sibling case 10.
 //
-// Reversing the branch polarity hides it: the live write then lands first and
-// the running accumulate never dips. So this case pins the polarity that
-// exposes the defect, and pins it under --context none, where the default
-// Interval configuration hits it.
+// Reversing the branch polarity hides the ordering entirely, so this case pins
+// the polarity that exercised it, under --context none, where the default
+// Interval configuration reaches this shape.
 void f(n) {
   return n
 }

@@ -145,7 +145,7 @@ and nothing above relates `ivl_ctx_sg_2` to `ivl_ctx_sg_1` — both are
 independently sound upper bounds on the same (now demonstrably related)
 semantic sets, not shown comparable to each other. Closing that gap likely
 needs an optimality/minimality argument (`least_partial_post_solution`,
-already named in `docs/M1_CALLSTRING_CONTEXT_MIGRATION.md` section 1 as a
+already named in `docs/history/M1_CALLSTRING_CONTEXT_MIGRATION.md` section 1 as a
 property `TD_side` retains) — genuinely open, not investigated here, and
 should not be assumed easy.
 

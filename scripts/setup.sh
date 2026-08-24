@@ -7,8 +7,8 @@
 #     property-test suite, lefthook) and the lefthook git hooks
 #   - build + install the I/Q jEdit plugin (skip with --no-iq)
 #
-# Re-run safe. To bump vendor/autocorrode to a newer upstream commit:
-#   pixi run update-autocorrode
+# Re-run safe. vendor/autocorrode is a plain git submodule: bump it with
+# git commands in that directory, not with a pixi task.
 
 set -euo pipefail
 

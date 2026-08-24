@@ -27,14 +27,13 @@ theory Voblint
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Core.DG_Framework"
     "Voblint_Core.DG_Soundness"
-    "Voblint_Analysis.Sign_DG"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Analysis.Sign_Transfer"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Core.Activation_Backbone"
     "Voblint_Core.DG_Ctx_Activation"
     "Voblint_Core.Exec_St"
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Analysis.Sign_Exec_Sound"
     Exec_Sign_DG_Run
     Example_Checks_Store_Only
     Example_Interval_Checks_Store_Only
@@ -274,9 +273,11 @@ text \<open>
     (independent flow-sensitive local domain \<^verbatim>\<open>D\<close> and flow-insensitive global domain \<^verbatim>\<open>G\<close>),
     the canonical context-sensitive backbone.
     \<^item> @{theory Voblint_Core.DG_Framework} --- the \<^verbatim>\<open>dg_spec\<close> record (\<^verbatim>\<open>step : D => G => G x D\<close>), the \<^verbatim>\<open>dg_state\<close> copy lattice, the seeded keyed generator.
-    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>.
-    \<^item> @{theory Voblint_Analysis.Sign_DG} --- Sign as a diagonal \<^verbatim>\<open>sound_dg_spec\<close> instance.
-    \<^item> @{theory Voblint_Analysis.Interval_DG} --- Interval as a diagonal instance (\<^verbatim>\<open>ivl_dg_post_solution_collect_sound\<close>, over \<^const>\<open>ltr_collect\<close>).
+    \<^item> @{theory Voblint_Core.DG_Soundness} --- native heterogeneous soundness over opaque carriers (\<^verbatim>\<open>sound_dg_spec\<close>); the shared closure obligations \<^verbatim>\<open>dg_postfix_gamma_{entry,edge,combine}\<close> feed the trace endpoint \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close> (\<^theory>\<open>Voblint_Core.DG_LTR_Sound\<close>).
+    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} and
+      @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- Sign and Interval as
+      routed \<^verbatim>\<open>sound_dg_spec\<close> instances, each reaching \<^const>\<open>ltr_collect\<close>
+      through the adapter's generic node-soundness bridge.
 
   \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
@@ -286,12 +287,10 @@ text \<open>
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
     \<^item> @{theory Voblint_Core.Exec_St} --- executable abstract-state maps for code generation.
     \<^item> @{theory Voblint_Core.Exec_Refinement} --- commutation bridge from executable states to function states.
-    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
+    \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^const>\<open>fun_of_dg_st_gen\<close>, \<^const>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_seed_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
-    \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- the native D/G runtime API for Sign: \<open>analyse_sign_eqs\<close>, \<open>analyse_sign\<close>, \<open>analyse_sign_env\<close>.
-    \<^item> @{theory Voblint_Analysis.Interval_Exec_Sound} --- the Interval counterpart:
-      \<open>analyse_interval_dg_eqs_for\<close>/\<open>analyse_interval_dg_for\<close>/\<open>analyse_interval_dg_env_for\<close>,
-      plus the join and per-origin solver-choice siblings.
+    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
+    \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Soundness.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
@@ -370,8 +369,9 @@ text \<open>
       context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
       @{thm dep_aux_dg_edge_tree} names the source local unknown and the one
       global slot, nothing else.
-    \<^item> \<^bold>\<open>DOT rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and \<^const>\<open>state_report_dot\<close>
-      (@{theory Voblint_CLI.State_Report_GraphViz}) have no Isabelle-side witness of
+    \<^item> \<^bold>\<open>Rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and the \<open>_graph_snapshot_auto\<close> /
+      \<open>_export_auto\<close> family (@{theory Voblint_CLI.State_Report_GraphViz}) have no
+      Isabelle-side witness of
       their own: rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
       fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
       \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node state labels, and
@@ -456,8 +456,8 @@ text \<open>
       the theorem to a concrete program additionally needs a solver-termination
       witness for that program --- nothing here proves that either solver
       terminates on every input, so termination is a genuine per-program fact,
-      typically discharged \<^verbatim>\<open>by eval\<close> via
-      \<^verbatim>\<open>analyse_interval_td_terminates_via_solve_c\<close> --- and a proof that the
+      typically discharged \<^verbatim>\<open>by eval\<close> through the domain's own
+      \<^verbatim>\<open>*_terminates_prog_via_solve_c\<close> --- and a proof that the
       checked node reaches \<^verbatim>\<open>cfg_exit\<close>, a real structural fact about the
       compiled CFG, not a formality. \<^verbatim>\<open>dispatch_demo_first_check_certified\<close>
       is one complete instance of the whole chain with every hypothesis
@@ -485,7 +485,7 @@ text \<open>
   the mixed flagship are its instances, and context slicing is factored through
   the functional activation spine and its per-context keyed slots. There is one
   such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through
-  \<^verbatim>\<open>dg_post_solution_collect_sound_ltr\<close>, and the routed instances
+  \<^verbatim>\<open>hook_post_solution_collect_sound_ltr\<close>, and the routed instances
   through \<^verbatim>\<open>activation_collect_sound\<close> above it.
 \<close>
 

@@ -63,14 +63,10 @@ text \<open>
   a wider \<open>analyse\<close>: \<open>analyse\<close>/\<open>analyse_with_state\<close> stay untouched (the CLI's
   no-\<open>--context\<close> path, the GraphViz report, and every existing
   \<open>codegen/regression\<close> consumer already pin their exact two-argument shape as a
-  trust boundary). \<open>analyse_ctx\<close>
-  is the additional export for this one new dimension, reusing \<open>analyse\<close>'s own
-  branches unchanged at \<open>Ctx_None\<close> rather than duplicating their logic.
-  Every \<open>analysis_domain\<close>/\<open>context_mode\<close> pairing now resolves to some report here
-  (\<open>analyse_ctx\<close> is total); an unsupported combination shows up one layer down, at
-  \<open>analyse_config_ctx\<close>, where an explicit non-\<open>Solver_Join\<close> selection genuinely
-  answers \<open>None\<close> for Sign or Int at either \<open>Ctx_EntryState\<close> or \<open>Ctx_CallString k\<close> --
-  not a silent fallback to context-insensitive behaviour.
+  trust boundary). \<open>analyse_config_ctx\<close> below is the entry point for this
+  dimension; legality is decided once, by \<open>resolve_analysis_config\<close>, and an
+  unsupported combination answers \<open>None\<close> there rather than falling back
+  silently to context-insensitive behaviour.
 
   The report's verdict is a \<^typ>\<open>contextual_verdict\<close>, not a bare
   \<^typ>\<open>check_result\<close>, because a context-sensitive analysis genuinely has a
@@ -84,29 +80,6 @@ text \<open>
   unreachability flag, not from this dispatcher.
 \<close>
 
-fun analyse_ctx ::
-    "analysis_domain \<Rightarrow> context_mode \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option"
-where
-  "analyse_ctx Sign_Analysis Ctx_None p = Some (decided_report (analyse_sign_report p))"
-| "analyse_ctx Interval_Analysis Ctx_None p = Some (decided_report (analyse_interval_td_report p))"
-| "analyse_ctx Interval_Analysis Ctx_EntryState p = Some (analyse_interval_entry_state p)"
-| "analyse_ctx Sign_Analysis Ctx_EntryState p = Some (analyse_sign_entry_state_report p)"
-| "analyse_ctx Interval_Analysis (Ctx_CallString k) p = Some (analyse_interval_call_string_report k p)"
-| "analyse_ctx Sign_Analysis (Ctx_CallString k) p = Some (analyse_sign_call_string_report k p)"
-| "analyse_ctx Int_Analysis Ctx_None p = Some (decided_report (analyse_int_report p))"
-| "analyse_ctx Int_Analysis Ctx_EntryState p = Some (analyse_int_entry_state_report p)"
-| "analyse_ctx Int_Analysis (Ctx_CallString k) p = Some (analyse_int_call_string_report k p)"
-| "analyse_ctx Parity_Analysis Ctx_None p = Some (decided_report (analyse_parity_report p))"
-| "analyse_ctx Parity_Analysis Ctx_EntryState p = None"
-| "analyse_ctx Parity_Analysis (Ctx_CallString k) p = None"
-
-text \<open>\<open>Ctx_None\<close> is exactly \<open>analyse\<close>, for every domain: the new dispatcher
-  cannot silently drift from the one CLI/regression already exercises.\<close>
-
-lemma analyse_ctx_none_eq_analyse:
-  "analyse_ctx k Ctx_None p = Some (decided_report (analyse k p))"
-  by (cases k) simp_all
-
 subsection \<open>Solver-choice dimension (experimental)\<close>
 
 text \<open>
@@ -116,8 +89,7 @@ text \<open>
   \<^const>\<open>TD_side_warrowing_apinis_Interp_solve\<close>): plain join, per-origin
   join, and Apinis warrowing. \<open>analyse_with_solver\<close> exposes this choice for
   experiments and regression comparisons on the same generated equation
-  system, without touching \<open>analyse\<close>/\<open>analyse_ctx\<close> or any domain's
-  production entry point (issue #131).
+  system, without touching \<open>analyse\<close> or any domain's production entry point.
 
   Not every combination is meaningful: only \<open>ivl\<close> has a \<open>widen\<close> type-class
   instance (\<^theory>\<open>Voblint_Analysis.Interval_Warrowing\<close>), so \<open>Solver_Warrow\<close>
@@ -126,8 +98,8 @@ text \<open>
   scope creep, not a fix. \<open>analyse_with_solver\<close> is therefore a curated,
   explicit list of the valid pairings, not a general compatibility
   predicate over an open solver/domain space: an unsupported pairing
-  returns \<open>None\<close>, the same explicit-gap discipline \<open>analyse_ctx\<close> already
-  uses for \<open>Sign_Analysis\<close>/\<open>Ctx_EntryState\<close>. \<open>int_dom\<close> has a
+  returns \<open>None\<close>, the same explicit-gap discipline \<open>resolve_analysis_config\<close>
+  applies on the context axis. \<open>int_dom\<close> has a
   \<^theory>\<open>Voblint_Analysis.Int_Warrowing\<close> instance already needed for its own
   \<open>Solver_Warrow\<close> production route, so unlike Sign it has no type-level gap
   left on this axis: every \<open>int_dom\<close> pairing is supported. Of the sixteen
@@ -299,13 +271,12 @@ corollary analyse_interval_refuted_sound:
 text \<open>
   \<open>analyse_sign_proved_sound\<close>/\<open>analyse_sign_refuted_sound\<close> restate
   \<open>analyse_sign_report_sound_proved\<close>/\<open>_refuted\<close> (\<open>Sign_Entry\<close>) over \<open>analyse\<close>,
-  matching the routed-unit producer \<open>analyse Sign_Analysis\<close> now dispatches to: solver
+  matching the routed-unit producer \<open>analyse Sign_Analysis\<close> dispatches to: solver
   termination and coverage are stated over \<open>sctx_sol_prog\<close>/\<open>sctx_terminates_prog\<close>
-  (\<open>Sign_Ctx_None_Sound\<close>) rather than the Base family's \<open>analyse_sign\<close>/\<open>analyse_sign_eqs\<close>.
-  \<open>finite (intra (prog_cfg prog_main_name p))\<close>/\<open>finite (calls ...)\<close> are no longer separate
-  hypotheses here: the routed spine's own soundness chain derives both unconditionally from
-  \<open>compile_prog_finite\<close>, so unlike the Base-family route this corollary needs no finiteness
-  premise of its own.
+  (\<open>Sign_Ctx_None_Sound\<close>). \<open>finite (intra (prog_cfg prog_main_name p))\<close>/
+  \<open>finite (calls ...)\<close> are not separate hypotheses here: the routed spine's own
+  soundness chain derives both unconditionally from \<open>compile_prog_finite\<close>, so this
+  corollary needs no finiteness premise of its own.
 \<close>
 
 corollary analyse_sign_proved_sound:
@@ -439,7 +410,8 @@ text \<open>
   \<^theory>\<open>HOL-Library.Code_Abstract_Char\<close> does the same for \<open>char\<close>, relevant
   wherever a \<open>char\<close> is inspected directly (e.g. \<^const>\<open>String.explode\<close>'s
   result) rather than through the opaque \<open>String.literal\<close> above.
-  \<open>char_of_integer\<close>/\<open>integer_of_char\<close> are that bridge.
+  \<open>integer_of_char\<close> is that bridge; only the inspecting direction is exported,
+  since nothing handwritten builds a \<open>char\<close> from an integer.
 
   \<open>string_of_exp\<close> is exported alongside the structured \<open>exp\<close> already in
   every \<open>check_report_entry\<close>: a consumer can pattern-match the AST directly,
@@ -450,11 +422,10 @@ text \<open>
 section \<open>Config-driven dispatch\<close>
 
 text \<open>
-  \<^const>\<open>analyse\<close>/\<^const>\<open>analyse_ctx\<close>/\<^const>\<open>analyse_with_solver\<close>/
+  \<^const>\<open>analyse\<close>/\<^const>\<open>analyse_with_solver\<close>/
   \<^const>\<open>analyse_with_state\<close> above each decide legality over exactly two of
-  \<^type>\<open>analysis_config\<close>'s three axes at a time (domain+solver, domain+context,
-  ...) and stay the lower-level, typed entry points every consumer keeps
-  using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_Config\<close>)
+  \<^type>\<open>analysis_config\<close>'s three axes at a time (domain+solver, ...) and stay
+  the lower-level, typed entry points every consumer keeps using. \<^const>\<open>resolve_analysis_config\<close> (\<^theory>\<open>Voblint_Analysis.Analysis_Config\<close>)
   is the one place all three axes' legality and defaults are decided
   together; the three wrappers below each consume its \<^type>\<open>analysis_plan\<close>
   result and pick the one existing dispatcher call that already produces
@@ -564,14 +535,13 @@ lemma analyse_config_int_default:
 
 lemma analyse_config_ctx_interval_entrystate:
   "analyse_config_ctx (default_config Interval_Analysis Ctx_EntryState) p
-     = analyse_ctx Interval_Analysis Ctx_EntryState p"
+     = Some (analyse_interval_entry_state p)"
   by (simp add: analyse_config_ctx_def default_config_def mk_analysis_config_def)
 
 text \<open>
-  An explicit solver alongside \<open>Ctx_EntryState\<close> is now a valid, routed
-  selection -- the routed equation system underneath is exactly as
-  solver-independent as the flat one -- rather than the unconditional
-  rejection this migration replaces.
+  An explicit solver alongside \<open>Ctx_EntryState\<close> is a valid, routed selection:
+  the routed equation system underneath is exactly as solver-independent as
+  the flat one.
 \<close>
 
 lemma analyse_config_ctx_interval_entrystate_explicit_join_valid:
@@ -678,13 +648,10 @@ lemma analyse_config_ctx_int_entrystate_warrow_invalid:
   by (simp add: analyse_config_ctx_def)
 
 text \<open>
-  Call-string, the same routing-layer-agrees-with-the-existing-dispatcher
-  pattern: \<open>analyse_config_ctx\<close> at \<open>Ctx_CallString k\<close> is exactly
-  \<open>analyse_ctx Interval_Analysis (Ctx_CallString k)\<close>, which is in turn
-  \<^const>\<open>analyse_interval_call_string_report\<close> \<open>k\<close> -- the same generic,
-  runtime-\<open>k\<close> pipeline CS1--CS3 already proved reproduces the fixed
-  \<open>k=1\<close>/\<open>k=2\<close> examples exactly, now reachable through the public
-  configuration path with no second implementation in between.
+  Call-string: \<open>analyse_config_ctx\<close> at \<open>Ctx_CallString k\<close> is exactly
+  \<^const>\<open>analyse_interval_call_string_report\<close> \<open>k\<close> -- the one generic,
+  runtime-\<open>k\<close> pipeline, reachable through the public configuration path with
+  no second implementation in between.
 \<close>
 
 lemma analyse_config_ctx_interval_callstring_eq_report:
@@ -850,9 +817,9 @@ text \<open>
   solver entry-state analysis already uses internally, so a resolver bug
   that special-cased "does the explicit solver already match the implicit
   one" would silently start accepting a combination the CLI has always
-  rejected. Pinned above at the \<^const>\<open>resolve_analysis_config\<close> level
-  (\<open>Analysis_Config\<close>'s \<open>resolver_interval_entrystate_warrow_invalid\<close>) and
-  again here through the wrapper actually reachable from the CLI.
+  rejected. Pinned above at the \<^const>\<open>resolve_analysis_config\<close> level, in
+  \<open>Analysis_Config\<close>'s own resolver regressions, and again here through the
+  wrapper actually reachable from the CLI.
 \<close>
 
 text \<open>
@@ -976,7 +943,6 @@ code_identifier
 | code_module Sign_Backward \<rightharpoonup> (OCaml) Core
 | code_module Sign_Checks \<rightharpoonup> (OCaml) Core
 | code_module Sign_Exec \<rightharpoonup> (OCaml) Core
-| code_module Sign_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Lattice \<rightharpoonup> (OCaml) Core
 | code_module Sign_Numeric_Queries \<rightharpoonup> (OCaml) Core

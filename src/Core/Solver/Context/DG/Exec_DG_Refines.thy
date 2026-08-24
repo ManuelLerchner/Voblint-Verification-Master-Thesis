@@ -4,7 +4,7 @@ text \<open>
   The verified solver uses the executable association-list carrier \<open>'a exec_dg_st\<close>, while
   soundness is stated over function-valued abstract states. This theory is the bottom of the
   bridge: the D/G product's lattice structure, the finite-scope representation the solver
-  hands back, the readback \<open>fun_of_dg_st\<close> that lifts \<open>fun_of_exec_dg_st\<close> to that product,
+  hands back, the readback \<open>fun_of_dg_st_for\<close> that lifts \<open>fun_of_exec_dg_st_for\<close> to that product,
   and the refinement relation between an executable table and an abstract one.
 
   D/G lattice operations are componentwise, so the product inherits the order, join, bottom,
@@ -580,7 +580,7 @@ subsection \<open>Executable unit (diagonal) step and combine\<close>
 
 text \<open>
   Executable diagonal step and combine operations act on \<open>'a exec_dg_st\<close>.  Their proofs are
-  domain-independent: any executable transfer that commutes through \<open>fun_of_exec_dg_st\<close> yields a
+  domain-independent: any executable transfer that commutes through \<open>fun_of_exec_dg_st_for\<close> yields a
   commuting D/G step.
 \<close>
 

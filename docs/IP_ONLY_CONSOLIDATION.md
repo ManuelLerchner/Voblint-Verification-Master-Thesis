@@ -32,7 +32,7 @@ Net removal: ~3500 `.thy` lines (~30% of `src/`).
   (`Binop (int=>int=>int)`) is impossible for an executable abstract
   interpreter (operator dispatch needs a matchable tag; a function is not
   matchable). The structural `aexp`/`bexp` + `aval`/`bval` stay as-is. See
-  `docs/AFP_IMP2_REUSE_DECISION.md`.
+  `docs/history/AFP_IMP2_REUSE_DECISION.md`.
 
 ## CAVEAT (recorded once)
 

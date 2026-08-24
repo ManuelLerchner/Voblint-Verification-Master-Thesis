@@ -1,6 +1,7 @@
 theory Example_Interval_DG_CallString_K1
   imports
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.DG_Base_Exec"
     "Voblint_Analysis.Analysis_GraphViz"

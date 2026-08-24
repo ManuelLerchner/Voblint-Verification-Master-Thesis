@@ -3,7 +3,7 @@
 // identical self-referential global write, now under Solver_Join instead of
 // Interval's production Solver_Warrow.
 //
-// Base-style migration acceptance case: this program used to be the
+// This program is the
 // canonical Solver_Join non-termination reproducer (the OLD flow-insensitive
 // global-summary route folded `total`'s write back into its own current
 // value, an unstable equation plain join alone could never reach a fixpoint

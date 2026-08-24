@@ -31,8 +31,8 @@ text \<open>
   still a key, and reads as \<^const>\<open>Unreachable\<close> through \<^const>\<open>normalize_point\<close>'s
   own structural \<^const>\<open>Bot\<close> case, not through key absence. This keeps
   \<open>monovariant_analysis_result_for\<close>'s public lookup semantics independent
-  of the solver-support membership that a raw-env read (\<open>analyse_sign_env_for\<close>
-  and its siblings) never tested either.
+  of solver-support membership, which a raw environment read never tested
+  either.
 
   No locale: \<open>solve\<close> is already an ordinary function parameter of one
   definition, not a fixed context threaded through several dependent

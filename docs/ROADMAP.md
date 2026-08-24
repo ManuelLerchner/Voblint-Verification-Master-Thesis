@@ -12,7 +12,7 @@ individual work items, dependencies, and scheduling.
 | Open proof placeholders | `rg -n '^\s*sorry' src/` |
 | Session structure | `ROOTS` and the session `ROOT` files |
 | End-to-end proof narrative | `docs/PROOF_OVERVIEW.md` |
-| Procedure-aware architecture | `docs/PROCEDURE_AWARE_CFG_MIGRATION.md` |
+| Procedure-aware architecture | `docs/PROCEDURE_AWARE_CFG_ARCHITECTURE.md` |
 | Deliberate exclusions | `docs/NON_GOALS.md` |
 
 ## Supported architecture

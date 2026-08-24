@@ -92,8 +92,8 @@ text \<open>
   classify an \<^const>\<open>Unreachable\<close> point at \<^const>\<open>bot\<close> -- the same value
   \<^const>\<open>classify_checks\<close> always fed such a node -- rather than introducing a
   fourth, \<open>Dead\<close> outcome \<open>check_result\<close> does not carry. Reusing the exact
-  same warrowing/\<open>analyse_interval_td\<close> naming keeps the still-live
-  \<open>analyse_interval_td_at\<close>/\<open>analyse_interval_td_terminates\<close> family (the
+  same warrowing/\<open>analyse_interval_td\<close> naming keeps the
+  \<open>analyse_interval_td_result\<close>/\<open>analyse_interval_td_report\<close> family (the
   entry-state context analysis, the GraphViz state-report tooling) fully
   unchanged: only this report's own definition is repointed onto the
   result table.

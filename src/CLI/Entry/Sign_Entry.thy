@@ -324,49 +324,17 @@ corollary analyse_sign_report_sound_refuted:
             solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse_sign_report_def]])
 
 text \<open>
-  \<open>gEx\<close>, \<open>dgEx_eqs\<close>, and \<open>dgEx_sol\<close> (\<open>Exec_Sign_DG_Run\<close>, Examples) really are the
+  \<open>gEx\<close>, \<open>dgEx_eqs\<close>, and \<open>dgEx_sol\<close> (\<open>Exec_Sign_DG_Run\<close>, Examples) are the
   \<open>gs = sign_ex_gs\<close>, \<open>p = sign_ex_prog\<close> instance of the arbitrary-classifier,
-  arbitrary-program chain above, not a separate parallel definition; see
-  \<open>Example_Sign_Codegen_Exec_Consistency\<close> for the lemmas confirming it.
+  arbitrary-program chain above, not a separate parallel definition.
 \<close>
 
-subsection \<open>A second program through the same entry point\<close>
-
 text \<open>
-  \<open>analyse_sign_demo2_prog\<close> is a different program from \<open>sign_ex_prog\<close>, run
-  through the very same \<open>analyse_sign\<close>: the entry point above is not
-  specialized to one hard-coded example.
-\<close>
-
-definition analyse_sign_demo2_prog :: imp_prog where
-  "analyse_sign_demo2_prog = program { void main() { a := 1; b := a; c := b } }"
-
-text \<open>
-  Precise, not a coincidence: \<open>a := 1\<close> is exactly \<open>SPos\<close>, and each name is
-  routed to the exec state that owns it at every edge, so the value carries
-  through \<open>b := a; c := b\<close> untouched to the exit. What matters here is that
-  \<open>analyse_sign\<close> computes at all on a program it was never specialized to,
-  and does so precisely.
-\<close>
-
-lemma analyse_sign_demo2_result:
-  "map_option (\<lambda>sol. case map_lift (fun_of_exec_dg_st_for (declared_global analyse_sign_demo2_prog))
-                        (locals (snd sol (Inl (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ()))))
-                      of Lifted s \<Rightarrow> Some (s (STR ''c'')) | Bot \<Rightarrow> None)
-     (TD_side_always_join_Interp_solve_c (analyse_sign_eqs analyse_sign_demo2_prog)
-        (cfg_exit (prog_cfg prog_main_name analyse_sign_demo2_prog), ())) = Some (Some SPos)"
-  by eval
-
-
-text \<open>
-  No per-domain \<open>export_code\<close> here: \<open>dgEx_sol\<close> (\<open>Exec_Sign_DG_Run\<close>, Examples),
-  \<^const>\<open>analyse_sign_for\<close>, and
-  \<^const>\<open>analyse_sign\<close> already export cleanly (confirmed once, historically, as the M1
-  codegen-closure milestone), but a caller reaches the same generic, already-sound
+  No per-domain \<open>export_code\<close> here: a caller reaches the generic, already-sound
   \<^const>\<open>analyse_sign_report\<close> through the unified dispatcher \<open>analyse\<close>
-  (\<open>Analyse_Dispatch\<close>, downstream), which is the one thing actually exported to
-  OCaml --- a second, domain-specific export module here would just be a parallel,
-  redundant API surface for the same computation.
+  (\<open>Analyse_Dispatch\<close>, downstream), which is the one thing exported to OCaml.
+  A second, domain-specific export module would be a parallel, redundant API
+  surface for the same computation.
 \<close>
 subsection \<open>Base-style flow-sensitive global regressions\<close>
 

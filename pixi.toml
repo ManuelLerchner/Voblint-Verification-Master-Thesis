@@ -32,8 +32,8 @@ pyyaml = "*"
 [feature.grammar.tasks]
 gen-grammar-isabelle = "python3 scripts/gen_vimp_isabelle.py"
 gen-grammar-menhir = "python3 scripts/gen_vimp_menhir.py"
-grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && git diff --exit-code -- src/VIMP/VIMP_Grammar_Generated.thy"
-grammar-check-menhir = "python3 scripts/gen_vimp_menhir.py && git diff --exit-code -- cli/vimp_parser.mly cli/vimp_lexer.mll"
+grammar-check-isabelle = "python3 scripts/gen_vimp_isabelle.py && bash scripts/mk/check-clean.sh src/VIMP/VIMP_Grammar_Generated.thy"
+grammar-check-menhir = "python3 scripts/gen_vimp_menhir.py && bash scripts/mk/check-clean.sh cli/vimp_parser.mly cli/vimp_lexer.mll"
 grammar-check = { depends-on = ["grammar-check-isabelle", "grammar-check-menhir"] }
 
 # Hypothesis property-test suite (tests/property/).
@@ -106,7 +106,7 @@ jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = ["vendor"] }
 
 # Codegen (Isabelle export_code -> codegen/generated/)
 codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = ["vendor"] }
-codegen-check = { cmd = "git diff --exit-code -- codegen/generated/", depends-on = ["codegen"] }
+codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", depends-on = ["codegen"] }
 # Reads the checked-in export, so it needs no Isabelle and can run in the
 # pre-commit hook alongside the ASCII and grammar-drift guards.
 codegen-modules = "python3 scripts/check_codegen_modules.py"
@@ -124,6 +124,18 @@ voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = ["cli-build"] }
 # lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
 regression-lint = "python3 tests/run.py --lint"
 
+# Documentation coverage over .thy headings and locales. Regenerable index +
+# a lint; deliberately NOT in `ci` yet -- there is a standing backlog of
+# undocumented headings, and gating on it today would just be a red build.
+# Add it to `ci` once that backlog is cleared.
+docs-lint = "python3 scripts/extract_definitions.py --lint"
+
+# Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
+# cartouches, which Isabelle does not resolve -- so a rename leaves the comment
+# describing something that no longer exists. Gating: the backlog is cleared.
+thy-prose-refs = "python3 scripts/check_thy_prose_refs.py"
+docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
+
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
 # (see the test module's own docstring). Deliberately outside tests/property/
 # and property-build's CLI-build dependency: this only imports the generator
@@ -137,6 +149,7 @@ id-position-check = "python3 -m pytest tests/test_gen_isabelle_id_position.py"
 ci = { depends-on = [
   "lint",
   "grammar-check",
+  "thy-prose-refs",
   "build",
   "codegen-check",
   "regression-lint",

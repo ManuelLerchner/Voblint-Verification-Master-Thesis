@@ -35,7 +35,7 @@ unified the *math*; this doc planned the *retirement* of the intra spine.
 
 The original A/B analysis below predates the execution and is kept for context.
 
-Read first: `docs/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` (U1–U4, done, green).
+Read first: `docs/history/UNIFIED_ANALYSIS_MIGRATION_HANDOFF.md` (U1–U4, done, green).
 
 ## 0. What is already done (do not redo)
 

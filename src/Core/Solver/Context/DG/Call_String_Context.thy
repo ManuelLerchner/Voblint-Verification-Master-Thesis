@@ -48,8 +48,8 @@ lemma cs_route_context_agree: "cs_route k u ctx d ca = cs_context k u ctx s"
 text \<open>Representation independence: \<^const>\<open>cs_route\<close> agrees with itself under \<^emph>\<open>any\<close>
   substitution for its data argument, since \<open>d\<close> never appears on the right-hand side. A
   caller needing \<open>cs_route k u ctx (d::'exec) ca = cs_route k u ctx (repr d) ca\<close> for a
-  specific representation map \<open>repr\<close> (as \<open>route_2_commute\<close> needed for \<open>fun_of_st\<close> in
-  the \<open>k = 2\<close> example) gets it as an instance of this lemma, or just as directly by unfolding
+  specific representation map \<open>repr\<close> -- an executable-to-abstract readback, say --
+  gets it as an instance of this lemma, or just as directly by unfolding
   \<open>cs_route_def\<close> at the call site --- both are one line.\<close>
 
 lemma cs_route_indep_of_data: "cs_route k u ctx d ca = cs_route k u ctx d' ca"

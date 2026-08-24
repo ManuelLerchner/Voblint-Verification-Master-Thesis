@@ -13,15 +13,6 @@ text \<open>
   printers, DOT escaping helpers, and context-expanded analysis builder.
 \<close>
 
-definition prog_cfg_edges ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> (pp \<times> edge_action \<times> pp) list" where
-  "prog_cfg_edges \<Pi> ps mnm main = cfg_intra_list (compile_prog \<Pi> ps mnm main)"
-
-definition prog_cfg_calls ::
-    "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
-     \<Rightarrow> (pp \<times> call_action \<times> pp \<times> pp) list" where
-  "prog_cfg_calls \<Pi> ps mnm main = cfg_calls_list (compile_prog \<Pi> ps mnm main)"
-
 subsection \<open>CFG and DOT helpers\<close>
 
 fun string_of_action :: "edge_action \<Rightarrow> string" where
@@ -158,9 +149,6 @@ text \<open>
 
 datatype graphviz_node_annotation =
   Node_Annotation (annotation_label: string) (annotation_status: node_status)
-
-definition no_annotations :: "pp \<Rightarrow> graphviz_node_annotation option" where
-  "no_annotations _ = None"
 
 text \<open>
   The single status-to-DOT mapping. \<^const>\<open>NS_Unreachable\<close> takes \<open>gray40\<close>, the grey the
@@ -417,51 +405,6 @@ definition compiled_procedure_scope ::
          ls = filter (\<lambda>x. x \<notin> set fs \<and> x \<noteq> ret_var \<and> \<not> gs x)
            (owner_assigned_vars g (compiled_owner_of \<Pi> ps mnm main) owner)
      in \<lparr>scope_formals = fs, scope_locals = ls, scope_return_slot = ret\<rparr>)"
-
-text \<open>
-  The classic abs-state route: any \<^class>\<open>show_val\<close> instance renders its compiled
-  program the same way -- the domain enters only through \<open>is_top_val\<close> (skip an
-  untouched return slot) and \<^const>\<open>show_val\<close> (format a value); everything else reads
-  the compiler's own scope/owner/global bookkeeping. A per-domain config is this
-  specialized at its abstract type, with its own concrete top test.
-
-  \<open>is_top_val\<close> is an explicit parameter, not \<^const>\<open>is_top\<close> from \<^class>\<open>sound_domain\<close>:
-  code generation for one class operation materializes that class's whole dictionary,
-  and \<^class>\<open>sound_domain\<close>'s \<^const>\<open>gamma\<close> has no executable code equation for every
-  instance (an interval domain's, for instance, is a set comprehension over \<^typ>\<open>int\<close>,
-  which is not of sort \<open>enum\<close>). Taking the top test as a plain function keeps this
-  definition's code generation independent of \<^class>\<open>sound_domain\<close> entirely.
-\<close>
-definition compiled_domain_graph_config ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> ('a::show_val \<Rightarrow> bool) \<Rightarrow>
-    (unit, unit, 'a abs_state, 'a abs_state) analysis_graph_config"
-where
-  "compiled_domain_graph_config gs \<Pi> ps mnm main is_top_val =
-    \<lparr> local_of = id,
-      route = (\<lambda>_ _ _ _. Some ()),
-      context_key = (\<lambda>_. STR ''''),
-      show_context = (\<lambda>_. ''''),
-      locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope gs \<Pi> ps mnm main (compile_prog \<Pi> ps mnm main) p
-        in scope_formals sc @ scope_locals sc),
-      return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope gs \<Pi> ps mnm main
-          (compile_prog \<Pi> ps mnm main) p)),
-      globals_to_show = compiled_global_vars gs (compile_prog \<Pi> ps mnm main),
-      show_local = (\<lambda>_ _ vars s.
-        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
-      format_return = (\<lambda>_ _ ret s.
-        if is_top_val (s ret) then [] else [''ret='' @ show_val (s ret)]),
-      show_global = (\<lambda>_ vars s.
-        map (\<lambda>x. String.explode x @ ''='' @ show_val (s x)) vars),
-      show_global_key = (\<lambda>_. ''Globals''),
-      is_shared_global = (\<lambda>_. True),
-      show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of \<Pi> ps mnm main,
-      cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Pi> ps main []),
-      node_annotation = (\<lambda>_ _. None)
-    \<rparr>"
 
 
 definition visible_global ::
@@ -1080,9 +1023,6 @@ fun enter_bindings :: "vname list \<Rightarrow> exp list \<Rightarrow> string li
 | "enter_bindings _ [] = []"
 | "enter_bindings (x # xs) (e # es) =
     (String.explode x @ '' := '' @ string_of_exp 0 e) # enter_bindings xs es"
-
-definition enter_action_label :: "call_action \<Rightarrow> string" where
-  "enter_action_label a = string_of_call_action a"
 
 definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
   "source_action_label g a =

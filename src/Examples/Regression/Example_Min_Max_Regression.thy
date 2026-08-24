@@ -123,4 +123,18 @@ lemma min_wrong_arity_prog_not_wf:
   "\<not> wf_program_compile_input_exec min_wrong_arity_prog"
   by eval
 
+text \<open>
+  The gate the CLI runs delivers exactly the premise the soundness theorems take.
+  \<^const>\<open>wf_program_compile_input_exec\<close> resolves the global classifier at
+  \<^const>\<open>prog_main_name\<close>, while every soundness statement downstream is stated
+  at \<^const>\<open>declared_global\<close>. Composing the evaluated gate above with
+  \<open>wf_program_compile_input_exec_declared_global\<close> pins that step on a
+  concrete program.
+\<close>
+
+lemma min_max_demo_prog_wf_compile_input:
+  "wf_compile_input (declared_global min_max_demo_prog) (prog_table min_max_demo_prog)
+     (prog_procs min_max_demo_prog) prog_main_name (prog_main min_max_demo_prog)"
+  by (rule wf_program_compile_input_exec_declared_global[OF min_max_demo_prog_wf])
+
 end

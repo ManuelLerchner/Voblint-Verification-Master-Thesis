@@ -26,7 +26,7 @@ later simplifications; several new framework results were added.
 1. `digest_beats_flat`, `flat_env_is_digest_sound`, `reaching_global_read_sound`,
    and the entire trace/digest read spine (16 theories) were removed
    2026-07-18 after an audit found the retained soundness path never actually
-   used them (full record: `docs/DIGEST_SPINE_REMOVAL_PLAN.md`). The original
+   used them (full record: `docs/history/DIGEST_SPINE_REMOVAL_PLAN.md`). The original
    memo cites this precision result in the "History-sensitive globals (M4)"
    bullet and the "Recommendation" section below.
 2. `src/VIMP/IMP2_Bridge.thy` (456 lines) and `IMP2_VCG_Example.thy` — the
@@ -34,9 +34,9 @@ later simplifications; several new framework results were added.
    VCG-interop demo the original memo cites as delivered evidence — were
    removed in commit `42b750d8` ("cleanups", 2026-07-20) with no explanatory
    message and no decision doc. At least four other docs
-   (`docs/ARRAY_SYNTAX_EXTENSION.md`, `docs/SESSION_DAG_MIGRATION.md`,
-   `docs/GHOST_INSTRUMENTATION_MIGRATION.md`,
-   `docs/VIMP_PRETTY_NOTATION_MIGRATION.md`) still cite these files as if they
+   (`docs/history/ARRAY_SYNTAX_EXTENSION.md`, `docs/history/SESSION_DAG_MIGRATION.md`,
+   `docs/history/GHOST_INSTRUMENTATION_MIGRATION.md`,
+   `docs/history/VIMP_PRETTY_NOTATION_MIGRATION.md`) still cite these files as if they
    exist — worth a deliberate decision (restore, or correct the citing docs)
    rather than leaving as silent drift.
 3. Likely a third, **unconfirmed**: `Retain_Analysis.thy` (`retain_dg_spec`,
@@ -138,12 +138,15 @@ The soundness chain is closed end-to-end, `0 sorries`, full `isabelle build` gre
     (`digest_beats_flat`, sign domain).
     **[Refresh 2026-08-04: this entire digest layer was deleted 2026-07-18. See
     "Refresh" section above.]**
-- **AFP IMP2 semantic anchor** (`docs/AFP_IMP2_REBASE_MIGRATION.md`, Phase 1–3,
-  full build green): soundness is now expressible against AFP IMP2's standard
-  big-step semantics, not only our bespoke small-step. A one-way bridge
-  (`src/VIMP/IMP2_Bridge.thy`) and a backward simulation (`backward_sim`: every
-  terminating IMP2 run is reproduced by our `pruns_to`) transfer the existing
-  soundness to the recognised reference semantics. A worked example
+- **AFP IMP2 semantic anchor**
+  **[Refresh 2026-08-24: not in the tree. `src/VIMP/IMP2_Bridge.thy`, `to_imp2`
+  and `backward_sim` do not exist, and the migration plan this entry cited is
+  gone; `docs/history/AFP_IMP2_REUSE_DECISION.md` records the decision.
+  Soundness is stated against VIMP's own semantics only.]**
+  The intent was: soundness expressible against AFP IMP2's standard big-step
+  semantics, not only our bespoke small-step, via a one-way bridge and a
+  backward simulation transferring soundness to the recognised reference
+  semantics. A worked example
   (`src/VIMP/IMP2_VCG_Example.thy`) verifies a scalar loop's translation with
   IMP2's own VCG (`vcg_cs`) and pulls the result back via `backward_sim`,
   demonstrating that the verified abstract interpreter and a deductive verifier

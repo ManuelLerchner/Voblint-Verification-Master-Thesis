@@ -5,7 +5,7 @@ These documents describe the supported architecture and its verification.
 
 ## Architecture
 
-- [Procedure-aware CFG architecture](PROCEDURE_AWARE_CFG_MIGRATION.md) — source
+- [Procedure-aware CFG architecture](PROCEDURE_AWARE_CFG_ARCHITECTURE.md) — source
   contract, compiler, activation-local semantics, equations, D/G routing, and
   solver integration.
 - [Proof overview](PROOF_OVERVIEW.md) — end-to-end soundness chain.
@@ -18,9 +18,19 @@ These documents describe the supported architecture and its verification.
   update rules recover, on which unknowns, and where they make no difference.
 - [Glossary](GLOSSARY.md) — current terms and defining layers.
 - [Non-goals](NON_GOALS.md) — claims deliberately outside the framework.
+- [Goblint alignment register](GOBLINT_ALIGNMENT_REGISTER.md) — the living
+  record of where the formalization differs from upstream Goblint, why each
+  difference exists, and what would close it.
+- [Verification chain and trust boundary](VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md)
+  — what is proved, what is generated, and what is handwritten.
 
 ## Work and verification
 
+- [Export-surface audit](EXPORT_SURFACE_AUDIT.md) — what the formalization
+  defines that the exported OCaml never reaches, which of it is legacy, and
+  where definitions and proofs can be unified.
+- [Cleanup migration plan](CLEANUP_MIGRATION_PLAN.md) — the phased execution
+  sequence for that audit.
 - [Roadmap](ROADMAP.md) — stable extension directions and completion criteria.
 - [Next work](NEXT_STEPS.md) — near-term technical directions.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.

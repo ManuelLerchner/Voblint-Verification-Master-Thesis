@@ -2,7 +2,8 @@ theory Interval_Ctx_None_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Analysis.Interval_Classify"
     "Voblint_Core.Routed_Context"

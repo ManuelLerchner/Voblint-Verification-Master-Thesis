@@ -1,5 +1,13 @@
 // PARAM: --analysis interval
-// Several checks in one program with different expected verdicts.
+// Several checks in one program with different expected verdicts: this pins
+// that one report carries all three, not any single verdict.
+//
+// The third check is deliberately a soundness case inside a precision
+// fixture. y is an unconstrained __voblint_nondet_int(), so both a satisfying
+// and a violating execution exist and UNKNOWN is the only sound answer --
+// it is not a precision regression, and "fixing" it to PROVED or REFUTED
+// would be unsound. The standalone version is
+// 01-random/soundness/01-unknown_after_random.vimp.
 void main() {
   x := 5;
   __voblint_check(0 < x); // PROVED

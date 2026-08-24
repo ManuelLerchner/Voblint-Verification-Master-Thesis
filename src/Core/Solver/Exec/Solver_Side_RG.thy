@@ -63,7 +63,7 @@ section \<open>Side-effecting solver keeps \<open>Inr\<close> slots globally res
 text \<open>If every reachable side contribution is fixed by
   @{const restrict_global_resolved_q}, the solver keeps every global slot in that image: slots
   start at bottom, joins preserve the image, and only such contributions reach them.
-  This yields \<open>inr_slot_locals_bot\<close> without a least-solution argument. The proof is
+  This yields the \<open>Inr\<close>-slot invariant without a least-solution argument. The proof is
   domain-generic but intentionally phrased at the executable bridge's state projection.\<close>
 
 definition rg_val :: "('a::bot) resolved_st_q \<Rightarrow> bool" where

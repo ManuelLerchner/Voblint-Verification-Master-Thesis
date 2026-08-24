@@ -2,10 +2,11 @@
 // Canonical CFG snapshot coverage: a single procedure, straight-line CFG,
 // one cluster. See 02-call_return.vimp in this same group for the
 // interprocedural (multi-cluster, call/combine/call-to-return edge) case.
-// These are the only two fixtures carrying an EXPECT-GRAPH block: it's a
-// regression lock on contextual_analysis_canonical_text's shape
-// (Analysis_GraphViz.thy), not a per-case property every corpus fixture
-// needs to also assert.
+// This pair pins the two structural shapes -- single-cluster and
+// interprocedural -- as a regression lock on
+// contextual_analysis_canonical_text (Analysis_GraphViz.thy). Other groups
+// carry EXPECT-GRAPH blocks for their own reasons; these two exist to pin
+// the shape itself.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:

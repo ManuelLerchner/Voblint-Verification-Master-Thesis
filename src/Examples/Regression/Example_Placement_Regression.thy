@@ -2,7 +2,8 @@ section \<open>Placement and storage are independent axes\<close>
 
 theory Example_Placement_Regression
   imports
-    "Voblint_Analysis.Sign_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Sign_Transfer"
     "Voblint_CLI.Sign_Entry"
     "Voblint_VIMP.VIMP_Notation"
 begin
@@ -74,9 +75,8 @@ subsection \<open>5. Conjunctive \<open>keep_local\<close> \<open>\<and>\<close>
 
 text \<open>\<open>total\<close> is both kept locally (a private, precisely strong-updated
   per-activation view) and published (a joined summary for other
-  activations) -- the two-copies shape exclusivity cannot express, and the
-  exact case \<open>Sign_DG.sign_dg_privatized\<close> validates concretely for an
-  assignment step.\<close>
+  activations) -- the two-copies shape exclusivity cannot express. This
+  section validates it concretely for an assignment step.\<close>
 
 definition storage_keep_all :: "vname \<Rightarrow> bool" where
   "storage_keep_all x = True"

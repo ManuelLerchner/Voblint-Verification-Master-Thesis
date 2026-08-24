@@ -1,6 +1,6 @@
 theory Sign_Checks
   imports Sign_Numeric_Queries "Voblint_Core.Abstract_Checks"
-    "Voblint_Core.Analysis_Result" Sign_Exec_Sound
+    "Voblint_Core.Analysis_Result" Sign_Exec
     "Voblint_Core.Monovariant_Analysis_Result"
     "Voblint_Core.DG_Analysis_Adapter"
     Sign_Ctx_None_Sound
@@ -332,7 +332,8 @@ definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> 
      analysis_surface.report (analyse_sign_result_for gs) bot sign_classify_check p"
 
 text \<open>
-  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching \<^const>\<open>analyse_sign\<close>'s shape.
+  Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, the classifier every
+  caller with only an \<^typ>\<open>imp_prog\<close> in hand recomputes anyway.
 \<close>
 
 definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where

@@ -1,7 +1,8 @@
 theory Interval_Ctx_Entry_State_Sound
   imports
     "Voblint_Core.Exec_DG_Bridge"
-    "Voblint_Analysis.Interval_DG"
+    "Voblint_Core.DG_LTR_Sound"
+    "Voblint_Analysis.Interval_Transfer"
     "Voblint_Analysis.Interval_Exec_Sound"
     "Voblint_Analysis.Interval_Checks"
     "Voblint_Core.Routed_Context"
@@ -303,8 +304,7 @@ text \<open>
   \<open>ectx_abs_spec\<close> and every hook below carry the reachability-lifted abstract
   carrier, mirroring \<open>ectx_spec\<close> itself.
   Every commutation fact between the executable and abstract solvers threads
-  the same explicit \<open>is_bot_pred\<close>/\<open>exact\<close> pair the flat pipeline's own
-  \<open>ivl_exec_sound_collecting_at\<close> uses (\<open>Voblint_Analysis.Interval_Exec_Sound\<close>),
+  the same explicit \<open>is_bot_pred\<close>/\<open>exact\<close> pair the flat pipeline uses,
   discharged only once a concrete program supplies \<open>resolved_st_q_is_bot_for\<close>.
   The whole-CFG commute obligations (\<open>Hcmb\<close>/\<open>Hextra\<close> below) are discharged
   through \<open>dg_reader_commute_gen\<close>, the carrier-generic
@@ -608,9 +608,8 @@ text \<open>
   executable solver actually covers, given its own seed/routing/query behavior --
   not of routing ambiguity. \<open>compile_prog_calls_source_unique\<close> does not
   bear on them, and no generic dependency-closure theorem for the keyed D/G solver
-  exists yet in this development (the analogous fact for the \<open>flat\<close>, unkeyed
-  solver, \<open>side_cone_in_vars_eff_cone\<close>, does not transfer to
-  \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>). They are carried here the same way
+  exists yet in this development: the analogous fact for the flat, unkeyed solver
+  does not transfer to \<^const>\<open>side_cfg_T_eff_keyed_seed_dg\<close>. They are carried here the same way
   \<^const>\<open>entry_state_terminates\<close> already is: as \<open>by eval\<close>-checkable hypotheses on
   a concrete, terminated solve, not as a hidden singleton- or exact-entry-style
   premise. Closing that gap with a proved dependency-closure theorem is future

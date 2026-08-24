@@ -88,8 +88,8 @@ text \<open>
   What \<open>resolve_analysis_config\<close> below resolves a legal
   \<^type>\<open>analysis_config\<close> to: exactly enough to pick the one existing,
   already-typed report/result function a caller should run next
-  (\<open>Analyse_Dispatch\<close>'s own \<open>analyse\<close>/\<open>analyse_ctx\<close>/\<open>analyse_with_solver\<close>
-  branches, unchanged). \<open>Plan_Interval_EntryState\<close> and
+  (\<open>Analyse_Dispatch\<close>'s own \<open>analyse\<close>/\<open>analyse_with_solver\<close> branches,
+  unchanged). \<open>Plan_Interval_EntryState\<close> and
   \<open>Plan_Interval_CallString\<close> both carry a \<^typ>\<open>solver_choice\<close>: the routed
   equation system underneath either context (\<open>Interval_Ctx_Entry_State_Sound\<close>'s
   \<open>entry_state_eqs\<close>, \<open>Interval_Ctx_Call_String_Sound\<close>'s

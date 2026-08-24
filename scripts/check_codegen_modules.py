@@ -12,11 +12,19 @@ This check turns that latent breakage into an immediate one. It reads the
 generated OCaml, lists the modules it declares, and compares them against the
 set below. A new name means either the ``code_identifier`` block is missing an
 entry, or the module is genuinely intended and belongs here.
+
+It reads the *checked-in* export, so on its own it is green whenever a theory
+lands without a regeneration -- exactly the case it exists to catch. So it also
+reports theories that appeared since the export was last regenerated and are
+absent from the ``code_identifier`` block. That half is advisory: such a theory
+is only a problem if its constants are reachable from an export root, which
+this check cannot decide without running Isabelle.
 """
 
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -47,6 +55,64 @@ EXPECTED = {
     "Bit_Shifts",
     "Str_Literal",
 }
+
+
+def _git(*args: str) -> str:
+    """Run git in the repo, returning stdout; empty string on any failure."""
+    try:
+        out = subprocess.run(
+            ["git", *args], cwd=REPO, capture_output=True, text=True, check=False
+        )
+    except OSError:
+        return ""
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def theories_newer_than_export() -> list[str]:
+    """Theories added or changed since the export was last regenerated.
+
+    Uses git, not mtimes: a fresh clone has no useful mtimes, and a rebase
+    rewrites them all. Uncommitted theories count as newer.
+    """
+    export_rev = _git("log", "-1", "--format=%H", "--", str(GENERATED.relative_to(REPO)))
+    if not export_rev:
+        return []
+
+    changed: set[str] = set()
+    committed = _git("diff", "--name-only", f"{export_rev}..HEAD", "--", "src")
+    if committed:
+        changed.update(committed.splitlines())
+    dirty = _git("status", "--porcelain", "--", "src")
+    for line in dirty.splitlines():
+        path = line[3:].strip()
+        if path:
+            changed.add(path)
+    return sorted(p for p in changed if p.endswith(".thy"))
+
+
+def report_staleness() -> None:
+    """Say so when a green result does not cover everything in the tree."""
+    newer = theories_newer_than_export()
+    if not newer:
+        return
+
+    mapped = set(CODE_MODULE_RE.findall(MAP_SOURCE.read_text(errors="ignore")))
+    unmapped = [
+        p for p in newer if Path(p).stem not in {m.split(".")[-1] for m in mapped}
+    ]
+
+    print(
+        f"check_codegen_modules: note -- {len(newer)} theory file(s) changed since "
+        "the export was last regenerated, so the result above does not cover them."
+    )
+    if unmapped:
+        print("  not named in the code_identifier block:")
+        for path in unmapped:
+            print(f"    {path}")
+        print(
+            "  Harmless if none of their constants is reachable from an export "
+            "root. Run `pixi run codegen` to decide."
+        )
 
 
 def main() -> int:
@@ -80,6 +146,7 @@ def main() -> int:
         return 1
 
     print(f"check_codegen_modules: {len(emitted)} modules, all expected")
+    report_staleness()
     return 0
 
 

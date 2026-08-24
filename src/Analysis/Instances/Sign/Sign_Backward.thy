@@ -449,7 +449,7 @@ text \<open>
   through @{const fun_of_resolved_st_q_for}. Both come from the generic
   @{locale backward_domain} executable mirror (\<open>Exec_Backward\<close>); no Sign-level
   caller needs the \<open>afilter_st\<close> commutation on its own (only \<open>bfilter_st\<close>'s
-  is used, by \<open>assume_sign_st\<close>/\<open>assume_not_sign_st\<close>), so it stays reachable
+  is used, by \<open>branch_sign_st_for\<close>), so it stays reachable
   as \<open>sign_backward_domain.afilter_st_commute\<close> without a short alias here.
 \<close>
 

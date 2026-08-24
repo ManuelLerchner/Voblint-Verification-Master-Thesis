@@ -20,9 +20,11 @@ VIMP source
     v
 CFG + checks : (pp * bexp) set     -- zero or more compiled checks per node
     |
-    | verified TD solver, per domain (Sign_Exec_Sound / Interval_Exec_Sound)
+    | verified TD solver, per domain (<Domain>_Ctx_None_Sound)
     v
-node-indexed abstract environment  -- <domain>_exec_prog_at :: pname -> imp_prog -> pp -> 'a abs_state
+node-indexed analysis_result       -- analyse_<domain>_ctx_result_for
+                                   ::   (vname => bool) -> pname -> imp_prog
+                                     -> (unit, 'a abs_state) analysis_result
     |
     | domain-specific abstract_numeric_queries instance
     v
@@ -52,8 +54,12 @@ abstract_check_domain (Abstract_Checks.thy)
 The check-classification and discharge layers above the node-indexed
 solver state are domain-generic; each domain supplies its own solver
 frontend and `abstract_numeric_queries` instance below that line.
-`Sign_Checks.thy` and `Interval_Checks.thy` are thin instantiations of the
-generic layers, not separate implementations of the pipeline.
+`Sign_Checks.thy`, `Interval_Checks.thy`, `Parity_Checks.thy` and
+`Int_Checks.thy` are thin instantiations of the generic layers, not separate
+implementations of the pipeline. Each reads its per-node state through
+`analyse_<domain>_ctx_result_for`'s `analysis_result` table -- the routed
+producer's own solved table at `prog_main_name` -- and interprets the generic
+`analysis_surface` locale over it.
 
 ## Layer responsibilities
 
@@ -124,18 +130,27 @@ They differ only in **which four query functions they feed in**:
 | `eq_true`/`eq_false` | derived from `sign_less_false` / semantic intersection (`meet_sign`) | specialized, compares interval bounds directly |
 | Source | `Sign_Numeric_Queries.thy` | `Interval_Numeric_Queries.thy` |
 
-### Solver frontends: `Sign_Exec_Sound.thy` / `Interval_Exec_Sound.thy`
+### Solver frontends: `<Domain>_Ctx_None_Sound.thy`
 
-Domain-specific, not domain-generic: each provides
-`<domain>_exec_prog_at :: pname -> imp_prog -> pp -> 'a abs_state`, a
-node-parametric query into *that domain's own* computed post-solution,
-plus `<domain>_exec_prog_sound_collecting_at` connecting it back to
-`ltr_collect` at *any* reachable node — not only the solver's own query
-seed (`cfg_exit`). The computed environment and transfer soundness are
-necessarily per-domain; what both instantiate is the same domain-generic
-`side_collect_sound_in_eff_cone` theorem underneath. This is what lets a
-check be discharged at its own CFG node without forwarding stores to the
-procedure exit.
+Domain-specific, not domain-generic: each routes its own transfer functions
+and executable mirror through the shared D/G generator, solves with the
+vendored `TD_side` solver, and exposes the result as
+`analyse_<domain>_ctx_result_for`, an `analysis_result` table indexed by
+`(node, context)`.
+
+The node-soundness bridge is generic and proved once:
+`dg_analysis_adapter.analyse_result_node_sound` (`DG_Analysis_Adapter.thy`),
+which each domain re-exports under its own spine prefix — e.g.
+`lemmas sctx_result_node_sound = sctx_adapter.analyse_result_node_sound`
+in `Sign_Checks.thy`. Composed with the unit-context collapse
+`activation_collect_unit_eq_ltr_collect` (`Routed_Context_Unit.thy`), it
+connects the solved table back to `ltr_collect` at *any* covered node — not
+only the solver's own query seed (`cfg_exit`). That is what lets a check be
+discharged at its own CFG node without forwarding stores to the procedure
+exit.
+
+The computed table and transfer soundness are necessarily per-domain; the
+bridge above them is not.
 
 ### `Analysis_GraphViz.thy` — rendering
 
@@ -152,7 +167,7 @@ procedure-exit node.
 
 The natural-looking generalization —
 `sublocale backward_domain \<subseteq> abstract_numeric_queries` — was tried and
-reverted (`docs/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
+reverted (`docs/history/CHECK_DISCHARGE_HANDOFF.md`, "Numeric-query theory split").
 It answers two different questions, both against it:
 
 1. **Should the derived queries be canonical for every backward domain?**

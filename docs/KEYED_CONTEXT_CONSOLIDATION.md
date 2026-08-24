@@ -164,13 +164,13 @@ side solver, and proves the expected separated slots by evaluation.
 - `docs/ROADMAP.md`: matches the implementation. It names the keyed read layer,
   pullback, generator, framed enter contract, sign instance, finite example, and
   the remaining bridge.
-- `docs/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`: matches the implementation and
+- `docs/history/KEYED_CONTEXT_ENTER_FRAMED_MIGRATION.md`: matches the implementation and
   accurately describes why filtering `EA_Enter` needs a framed contract.
 - `docs/GLOBAL_CONTEXT_REDESIGN.md`: mostly historical, but its status header
   correctly says the design landed and points to the finite example. The older
   "decision needed" section is preserved as design history; do not read it as
   current backlog.
-- `docs/EXECUTABLE_CONTEXT_MIGRATION.md` and `docs/SEMANTIC_CONTEXT_MIGRATION.md`:
+- `docs/history/EXECUTABLE_CONTEXT_MIGRATION.md` and `docs/history/SEMANTIC_CONTEXT_MIGRATION.md`:
   correctly mark the old seeded/context-local route as limited and point to the
   keyed/framed solution for the executable precision route.
 - `docs/GLOSSARY.md`: now has keyed-context entries.

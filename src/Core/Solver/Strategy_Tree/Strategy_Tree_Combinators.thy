@@ -98,9 +98,8 @@ text \<open>
   to -- \<open>key\<close>'', not the solver-internal notion of a queued side write. Its
   trailing continuation is what a do-block statement (no \<open>\<leftarrow>\<close>) needs, so
   \<open>depend_on\<close> itself keeps this shape rather than gaining a value-producing
-  twin: statement-form combinators built on it (\<open>publish_global\<close>,
-  \<open>publish_seed\<close>, \<open>DG_Transfer_Combinators\<close>) supply \<open>answer bot\<close> as that
-  continuation.
+  twin: a statement-form combinator built on it (\<open>publish_global\<close>,
+  \<open>DG_Transfer_Combinators\<close>) supplies the neutral answer as that continuation.
 \<close>
 
 abbreviation depend_on ::

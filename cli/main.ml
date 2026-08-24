@@ -113,6 +113,9 @@ let usage =
   \                             textual check report.\n\
   \  --dot-full                 Like --dot, but every node is annotated with its\n\
   \                             own computed abstract state, not just check nodes.\n\
+  \                             No effect under --context call-string or\n\
+  \                             --context-graph expanded: those views already\n\
+  \                             annotate every node with its per-context state.\n\
   \  --html                     Write a browsable HTML result directory (default:\n\
   \                             result/, as Goblint's own --html does)\n\
   \                             (abstract states live in per-node documents, so\n\
@@ -659,6 +662,40 @@ let () =
   (* Prepared here, not inside the contained child: a refusal to write into the
      given directory is an argument error the user should see as one, not as a
      subprocess exit code relayed through the analysis timeout wrapper. *)
+  (* --dot-full widens the collapsed views from check-node annotations to every
+     node's state. The call-string and expanded-context views already carry
+     per-context state at every node, so there is nothing for `full` to add
+     there and both settings select the same renderer -- the shared first two
+     branches below say so once, rather than four times in four near-identical
+     chains where the coincidence was invisible. *)
+  let graph_snapshot_for ~full =
+    if !context_kind = CK_CallString then
+      Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
+    else if !context_graph = Expanded then
+      Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
+    else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
+      (if full then Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto
+       else Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto)
+        kind prog
+    else
+      (if full then Voblint_CLI.State_Report_GraphViz.full_state_graph_snapshot_auto
+       else Voblint_CLI.State_Report_GraphViz.state_report_graph_snapshot_auto)
+        kind prog
+  in
+  let dot_export_for ~full =
+    if !context_kind = CK_CallString then
+      Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto kind (cs_depth ()) prog
+    else if !context_graph = Expanded then
+      Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog
+    else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
+      (if full then Voblint_CLI.State_Report_GraphViz.entry_state_full_state_export_auto
+       else Voblint_CLI.State_Report_GraphViz.entry_state_report_export_auto)
+        kind prog
+    else
+      (if full then Voblint_CLI.State_Report_GraphViz.full_state_export_auto
+       else Voblint_CLI.State_Report_GraphViz.state_report_export_auto)
+        kind prog
+  in
   if !html then prepare_report_dir !html_dir;
   match
     run_contained ~timeout:!timeout (fun () ->
@@ -771,48 +808,9 @@ let () =
         List.iter (fun (f : Html_report.file) -> write_report_file dir f) files;
         Ok_report
           (Printf.sprintf "%d node(s), %d unreachable\n" nodes dead)
-      else if !graph_snapshot && !dot_full then
-        Ok_graph
-          (if !context_kind = CK_CallString then
-             Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
-           else if !context_graph = Expanded then
-             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
-           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_full_state_graph_snapshot_auto kind prog
-           else Voblint_CLI.State_Report_GraphViz.full_state_graph_snapshot_auto kind prog)
-      else if !graph_snapshot then
-        Ok_graph
-          (if !context_kind = CK_CallString then
-             Voblint_CLI.State_Report_GraphViz.cs_ctx_graph_snapshot_auto kind (cs_depth ()) prog
-           else if !context_graph = Expanded then
-             Voblint_CLI.State_Report_GraphViz.entry_state_ctx_graph_snapshot_auto prog
-           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Voblint_CLI.State_Report_GraphViz.entry_state_report_graph_snapshot_auto kind prog
-           else Voblint_CLI.State_Report_GraphViz.state_report_graph_snapshot_auto kind prog)
-      else if !dot_full then
-        Ok_dot
-          (if !context_kind = CK_CallString then
-             Dot_render.render
-               (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto kind (cs_depth ()) prog)
-           else if !context_graph = Expanded then
-             Dot_render.render
-               (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog)
-           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Dot_render.render
-               (Voblint_CLI.State_Report_GraphViz.entry_state_full_state_export_auto kind prog)
-           else Dot_render.render (Voblint_CLI.State_Report_GraphViz.full_state_export_auto kind prog))
-      else if !dot then
-        Ok_dot
-          (if !context_kind = CK_CallString then
-             Dot_render.render
-               (Voblint_CLI.State_Report_GraphViz.cs_ctx_export_auto kind (cs_depth ()) prog)
-           else if !context_graph = Expanded then
-             Dot_render.render
-               (Voblint_CLI.State_Report_GraphViz.entry_state_ctx_export_auto prog)
-           else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
-             Dot_render.render
-               (Voblint_CLI.State_Report_GraphViz.entry_state_report_export_auto kind prog)
-           else Dot_render.render (Voblint_CLI.State_Report_GraphViz.state_report_export_auto kind prog))
+      else if !graph_snapshot then Ok_graph (graph_snapshot_for ~full:!dot_full)
+      else if !dot_full || !dot then
+        Ok_dot (Dot_render.render (dot_export_for ~full:!dot_full))
       else if !context <> Voblint_CLI.Analysis_Config.Ctx_None then
         (match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
          | Some report -> Ok_text (render_ctx_report report check_positions)

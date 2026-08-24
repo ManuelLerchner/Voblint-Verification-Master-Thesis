@@ -5,11 +5,9 @@
 // a non-bottom #ret=[1,1] from an already-unreachable predecessor state,
 // and the exit node's join widened the result to a=[1,500] instead of the
 // exact a=[500,500]. Locks in the fixed, precise result -- flat, no
-// procedure recursion, no --context flag. The recursive-factorial variant
-// of this same pattern under entry-state context sensitivity
-// (03-procedures/known-imprecision/02-recursive_factorial_dead_branch_bottom_leak.vimp)
-// is NOT fixed by the same mechanism and remains UNKNOWN -- see that
-// fixture's own header comment.
+// procedure recursion, no --context flag. The recursive-factorial variant of
+// this same pattern is 06-recursive_factorial_dead_branch_no_bottom_leak.vimp,
+// which proves its results exactly under entry-state context sensitivity.
 void f(n) {
   if (n < 2) {
     return 1

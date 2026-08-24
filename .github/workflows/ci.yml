@@ -281,6 +281,42 @@ jobs:
       - name: VIMP identifier id_position/markup shape (no build needed -- fail fast)
         run: pixi run id-position-check
 
+      # grammar/vimp.yaml is the sole source of truth for VIMP syntax, and both
+      # generated frontends must agree with it. The lefthook pre-commit hook
+      # enforces this locally; without a CI job a hand-edited .mly, or a
+      # vimp.yaml change committed with LEFTHOOK=0, reaches main green.
+      - name: VIMP grammar drift, both frontends (no build needed -- fail fast)
+        run: pixi run grammar-check
+
+      # Every theory reachable from an export root needs a code_identifier
+      # entry; a missing one surfaces later as a module dependency cycle that
+      # names two constants and no theory. Reads the checked-in export, so it
+      # needs no Isabelle.
+      - name: Code-export module map (no build needed -- fail fast)
+        run: pixi run codegen-modules
+
+      # check_thy_prose_refs resolves a cited name against every .thy under src/
+      # AND vendor/, so prose naming a vendored TD constant
+      # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
+      # dangling unless the submodule is present. The checkout above is
+      # submodules: false, so it has to be initialised here -- after the four
+      # checks that genuinely need nothing, so those still fail fast.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
+      # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
+      # leaves prose describing a constant that no longer exists.
+      - name: Theory prose references (no build needed -- fail fast)
+        run: pixi run thy-prose-refs
+
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
         with:

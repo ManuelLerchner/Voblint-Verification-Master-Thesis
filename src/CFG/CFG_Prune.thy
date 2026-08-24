@@ -12,12 +12,12 @@ text \<open>
   \<^item> INTRA: an ordinary edge \<open>(u, a, v) \<in> intra g\<close> gives \<open>u \<rightarrow> v\<close> (ordinary flow).
   \<^item> ENTRY: a call \<open>(c, ca, FunctionEntry p, k) \<in> calls g\<close> gives \<open>c \<rightarrow> FunctionEntry p\<close> ---
     the callee entry's abstract state depends on the caller state routed through
-    \<open>etf_enter\<close>.
+    the analysis's own enter operation.
   \<^item> COMB_CALLER: the same call gives \<open>c \<rightarrow> k\<close> --- the continuation depends on the saved
-    caller state via \<open>etf_combine_collect\<close>.  This is not a concrete execution edge; execution
+    caller state via \<^const>\<open>combine_collect\<close>.  This is not a concrete execution edge; execution
     does not skip the callee.
   \<^item> COMB_RESULT: the same call gives \<open>FunctionResult p \<rightarrow> k\<close> --- the continuation depends
-    on the callee's result, the second \<open>etf_combine_collect\<close> argument.
+    on the callee's result, \<^const>\<open>combine_collect\<close>'s callee-exit argument.
 
   \<open>c \<rightarrow> k\<close> and \<open>FunctionResult p \<rightarrow> k\<close> are combine dependencies of the analysis, kept
   visibly separate from \<open>intra g\<close>.  They are never added to \<open>intra g\<close>.
