@@ -46,7 +46,6 @@ session Voblint_Analysis in "." = "Voblint_Core" +
     Congruence_Arithmetic
     Congruence_Backward
     Sign_Exec
-    Sign_Exec_Sound
     Sign_DG
     Sign_Ctx_None_Sound
     Parity_Domain

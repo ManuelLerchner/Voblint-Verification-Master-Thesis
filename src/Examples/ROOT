@@ -28,7 +28,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
 
     (* Sign *)
     Exec_Sign_DG_Run
-    Example_Sign_Codegen_Exec_Consistency
     (* Check discharge against a computed post-solution, store-only. *)
     Example_Checks_Store_Only
     Example_Side_Execute

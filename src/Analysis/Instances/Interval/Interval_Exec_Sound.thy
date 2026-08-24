@@ -12,11 +12,10 @@ begin
 section \<open>Native D/G runtime API: an arbitrary VIMP program\<close>
 
 text \<open>
-  Interval's Base-style native D/G route, the counterpart of Sign's
-  \<open>analyse_sign_eqs_for\<close>/\<open>analyse_sign_for\<close>/\<open>analyse_sign_env_for\<close>
-  (\<open>Sign_Exec_Sound\<close>): the local unknown is the whole reachability-lifted
-  abstract state (\<open>D\<close>), so a VIMP global lives exactly where a local does, with
-  no separate flow-insensitive solver-global summary to route it through.
+  A whole-state D/G route for Interval: the local unknown is the whole
+  reachability-lifted abstract state (\<open>D\<close>), so a VIMP global lives exactly where
+  a local does, with no separate flow-insensitive solver-global summary to route
+  it through.
 
   Interval's local lattice has infinite height (an unbounded integer bound), so
   unlike Sign this route needs widening for termination: a loop-carried local

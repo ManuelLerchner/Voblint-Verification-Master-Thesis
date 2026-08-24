@@ -16,10 +16,10 @@ text \<open>
   of the three possible outcomes: the first is \<^term>\<open>Check_Proved\<close>, the second
   --- checking \<open>0 < y\<close> again after \<open>y := 0\<close> --- is \<^term>\<open>Check_Refuted\<close>, and
   the third --- \<open>z = 1\<close> against an unconstrained \<open>z\<close> --- is \<^term>\<open>Check_Unknown\<close>.
-  \<open>sign_exec_prog_sound_collecting_at\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>)
-  connects the computed node-indexed environment back to \<^const>\<open>ltr_collect\<close> at
-  each check's own node, for any node the solver's query seed can reach ---
-  not only the seed itself. No ghost or trace-projection content: the check
+  \<open>sctx_result_node_sound\<close> (\<^theory>\<open>Voblint_Analysis.Sign_Checks\<close>), the
+  per-domain re-export of the adapter's generic node-soundness bridge, connects
+  the computed table back to \<^const>\<open>ltr_collect\<close> at each check's own node ---
+  every covered node, not only the solver's query seed. No ghost or trace-projection content: the check
   condition is a plain \<^typ>\<open>exp\<close>.
 \<close>
 

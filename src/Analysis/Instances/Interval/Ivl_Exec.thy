@@ -12,7 +12,7 @@ text \<open>
   the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
   into the generic @{theory Voblint_Core.Exec_Refinement} transport; the certified
   end-to-end soundness theory built on this mirror lives in
-  \<open>Interval_Exec_Sound\<close>, mirroring \<open>Sign_Exec_Sound\<close>.
+  \<open>Interval_Ctx_None_Sound\<close>, mirroring \<open>Sign_Ctx_None_Sound\<close>.
 \<close>
 
 text \<open>

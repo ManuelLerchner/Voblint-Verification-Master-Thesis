@@ -976,7 +976,6 @@ code_identifier
 | code_module Sign_Backward \<rightharpoonup> (OCaml) Core
 | code_module Sign_Checks \<rightharpoonup> (OCaml) Core
 | code_module Sign_Exec \<rightharpoonup> (OCaml) Core
-| code_module Sign_Exec_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Ctx_None_Sound \<rightharpoonup> (OCaml) Core
 | code_module Sign_Lattice \<rightharpoonup> (OCaml) Core
 | code_module Sign_Numeric_Queries \<rightharpoonup> (OCaml) Core

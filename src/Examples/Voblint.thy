@@ -34,7 +34,6 @@ theory Voblint
     "Voblint_Core.Exec_St"
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Analysis.Sign_Exec"
-    "Voblint_Analysis.Sign_Exec_Sound"
     Exec_Sign_DG_Run
     Example_Checks_Store_Only
     Example_Interval_Checks_Store_Only
@@ -288,10 +287,8 @@ text \<open>
     \<^item> @{theory Voblint_Core.Exec_Refinement} --- commutation bridge from executable states to function states.
     \<^item> @{theory Voblint_Core.Exec_DG_Bridge} --- executable transport for the D/G spine (\<^verbatim>\<open>fun_of_dg_st\<close>, \<^verbatim>\<open>dg_gen_of\<close>, \<^verbatim>\<open>part_post_solution_dg_st_to_abs\<close>): the verified solver \<^emph>\<open>runs\<close> on D/G equations.
     \<^item> @{theory Voblint_Analysis.Sign_Exec} --- executable Sign transfer functions.
-    \<^item> @{theory Voblint_Analysis.Sign_Exec_Sound} --- the native D/G runtime API for Sign: \<open>analyse_sign_eqs\<close>, \<open>analyse_sign\<close>, \<open>analyse_sign_env\<close>.
-    \<^item> @{theory Voblint_Analysis.Interval_Exec_Sound} --- the Interval counterpart:
-      \<open>analyse_interval_dg_eqs_for\<close>/\<open>analyse_interval_dg_for\<close>/\<open>analyse_interval_dg_env_for\<close>,
-      plus the join and per-origin solver-choice siblings.
+    \<^item> @{theory Voblint_Analysis.Sign_Ctx_None_Sound} --- the routed D/G runtime for Sign: the equation system, its solved table, and the termination hypothesis each solver discipline turns on.
+    \<^item> @{theory Voblint_Analysis.Interval_Ctx_None_Sound} --- the Interval counterpart, with the join, per-origin and warrowing solver-choice siblings.
 
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Soundness.Source_Activation_Sound} --- the source-adequacy bridge: a reachable VIMP source configuration produces a \<^const>\<open>valid_ltr\<close> trace (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).

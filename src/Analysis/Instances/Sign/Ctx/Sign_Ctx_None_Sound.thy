@@ -4,7 +4,11 @@ theory Sign_Ctx_None_Sound
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Routed_Domain_Exec"
     "Voblint_Analysis.Sign_DG"
-    "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_Analysis.Sign_Exec"
+    "Voblint_Core.Solver_Side_RG"
+    "TD.TD_side_upd_rule"
+    "Voblint_CFG.CFG_Prune"
+    "Voblint_CFG.Compile_Invariants"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"
@@ -44,12 +48,11 @@ datatype gk = Global | Seed (seed_pp: pp) (seed_ctx: unit)
 subsection \<open>The routed unit-context D/G spec\<close>
 
 text \<open>
-  The same Base-style whole-state specification Sign's own production
-  \<^const>\<open>analyse_sign_eqs_for\<close> already solves over (\<^theory>\<open>Voblint_Analysis.Sign_Exec_Sound\<close>),
-  at the same \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> primitives. Only the
-  equation-generator wrapped around this spec changes (\<open>dg_gen_of\<close> there, the routed
-  keyed-seed generator here) --- the spec itself, and every domain-transfer soundness
-  fact about it, is untouched.
+  A whole-state specification over Sign's \<^const>\<open>sign_tf_st_for\<close> /
+  \<^const>\<open>sign_enter_st_for\<close> primitives: the local unknown carries the entire
+  reachability-lifted abstract state, VIMP globals included. The routed
+  keyed-seed generator is wrapped around this spec; the spec itself, and every
+  domain-transfer soundness fact about it, is independent of that choice.
 \<close>
 
 definition sctx_spec ::

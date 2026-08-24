@@ -24,7 +24,11 @@ theory Exec_Sign_DG_Run
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.DG_Base_Exec"
     "Voblint_Core.DG_Coverage"
-    "Voblint_Analysis.Sign_Exec_Sound"
+    "Voblint_Analysis.Sign_Exec"
+    "Voblint_Core.Solver_Side_RG"
+    "TD.TD_side_upd_rule"
+    "Voblint_CFG.CFG_Prune"
+    "Voblint_CFG.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
 begin
