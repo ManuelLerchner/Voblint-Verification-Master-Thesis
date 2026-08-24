@@ -64,6 +64,16 @@ html-report-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on 
 # configuration the legality table accepts must have a surface behind it.
 html-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = ["cli-build"] }
 
+# Benchmarking (`pixi run bench`). hyperfine times cli/voblint once per
+# abstract domain over the same fixture so domain/solver cost can be
+# compared in place -- see scripts/mk/bench.sh's header for the sweep and
+# probe behavior.
+[feature.bench.dependencies]
+hyperfine = "*"
+
+[feature.bench.tasks]
+bench = { cmd = "bash scripts/mk/bench.sh", depends-on = ["cli-build"] }
+
 # Git hooks (.lefthook.yaml).
 [feature.lint.dependencies]
 lefthook = "*"
@@ -73,11 +83,12 @@ lefthook-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
 
 [environments]
-default = ["ir", "grammar", "test", "lint", "report"]
+default = ["ir", "grammar", "test", "lint", "report", "bench"]
 lint = ["lint"]
 test = ["test"]
 grammar = ["grammar"]
 report = ["report"]
+bench = ["bench"]
 
 # --------------------------------------------------------------------------
 # Repository task graph. Tasks here need only python3/bash/git (top-level
