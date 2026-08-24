@@ -4,6 +4,7 @@ theory Example_Interval_DG_IP_Flagship
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.Solver_Menu"
+    "Voblint_Core.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
@@ -59,7 +60,8 @@ text \<open>
   \<open>FunctionEntry (STR ''twice'')\<close> --- this is the monovariant (single-context) view.
 \<close>
 
-lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')" by eval
+lemma twice_entry: "cfg_entry twice_cfg = FunctionEntry (STR ''main'')"
+  unfolding twice_cfg_def by (rule inv16_entry_is_main)
 
 text \<open>The two call edges' shape, computed directly from \<open>twice_cfg\<close>: each call site \<open>u\<close>
   pins down its destination variable, callee, arguments, and continuation. Exported for the
@@ -137,10 +139,7 @@ subsection \<open>Certified solution (reusing solver correctness)\<close>
 lemma twice_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit) TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
      twice_eqs (cfg_exit twice_cfg, ())"
-  using twice_terminates_c
-  unfolding TD_side_warrowing_apinis_Interp.term_equivalence
-            TD_side_warrowing_apinis_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF twice_terminates_c])
 
 lemma twice_pp_st:
   "part_post_solution twice_eqs (cfg_exit twice_cfg, ()) (snd twice_sol) (fst twice_sol)"
@@ -168,29 +167,21 @@ text \<open>
   same collecting-soundness theorem as ordinary intra edges.
 \<close>
 
-lemma twice_cover_entry: "(cfg_entry twice_cfg, ()) \<in> fst twice_sol"
-  unfolding twice_sol_def twice_eqs_def twice_entry by eval
+text \<open>Coverage is not read off the solved key set. Every node of \<open>twice_cfg\<close> ---
+  including both callee entries and both continuations --- reaches
+  \<^const>\<open>cfg_exit\<close>, a structural fact about the graph alone decided by
+  \<^const>\<open>cfg_exit_covers\<close>, and \<^const>\<open>vars_cover\<close> follows from that together with
+  the post-solution the solver already returns.\<close>
 
-lemma twice_cover_edge_ball: "\<forall>(u, a, w) \<in> intra twice_cfg. (w, ()) \<in> fst twice_sol"
-  unfolding twice_sol_def twice_eqs_def by eval
-lemma twice_cover_edge: "\<And>u a w. (u, a, w) \<in> intra twice_cfg \<Longrightarrow> (w, ()) \<in> fst twice_sol"
-  using twice_cover_edge_ball by auto
+lemma twice_wf_cfg: "wf_cfg twice_cfg"
+  unfolding twice_cfg_def by (rule compile_prog_wf)
 
-lemma twice_cover_calls_ball:
-  "\<forall>(c, ca, ce, k) \<in> calls twice_cfg.
-     case ca of CallEdge dst fs as \<Rightarrow>
-       (case ce of FunctionEntry p \<Rightarrow> (FunctionEntry p, ()) \<in> fst twice_sol \<and> (k, ()) \<in> fst twice_sol
-        | _ \<Rightarrow> True)"
-  unfolding twice_sol_def twice_eqs_def by eval
-lemma twice_cover_enter:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls twice_cfg
-     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst twice_sol"
-  using twice_cover_calls_ball by fastforce
-lemma twice_cover_combine:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls twice_cfg
-     \<Longrightarrow> (k, ()) \<in> fst twice_sol"
-  using twice_cover_calls_ball by fastforce
+lemma twice_exit_covers: "cfg_exit_covers twice_cfg" by eval
 
+lemma twice_vars_cover: "vars_cover twice_cfg (fst twice_sol)"
+  by (rule vars_cover_of_dg_gen_of_covers
+        [OF twice_finE twice_finC twice_wf_cfg twice_exit_covers
+            twice_pp_st[unfolded twice_eqs_def]])
 lemma twice_sound0:
   "cinit_stores twice_gs \<subseteq>
      \<lbrakk>combine_env_abs twice_gs (fun_of_exec_dg_st_for twice_gs cinit_ivl_st)
@@ -215,7 +206,7 @@ theorem twice_collect_sound:
      \<subseteq> twice_sds.dg_gamma (fun_of_dg_st_for twice_gs \<circ> snd twice_sol) v"
   by (rule twice_sds.dg_post_solution_collect_sound_ltr_for
         [OF twice_pp_abs
-            vars_coverI[OF twice_cover_entry twice_cover_edge twice_cover_enter twice_cover_combine]
+            twice_vars_cover
             twice_finE twice_finC twice_sound0[folded gamma_unit_def]])
 
 subsection \<open>Inspecting the certified result\<close>
@@ -294,11 +285,7 @@ proof -
     by (rule twice_ex_reg.run_source_sound
           [OF twice_terminates_c[unfolded twice_eqs_def twice_cfg_def]
               twice_wf
-              vars_coverI[OF twice_cover_entry[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
-                             twice_cover_edge[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
-                             twice_cover_enter[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
-                             twice_cover_combine[unfolded twice_sol_def twice_eqs_def twice_cfg_def]]
-              twice_finE[unfolded twice_cfg_def]
+              twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]              twice_finE[unfolded twice_cfg_def]
               twice_finC[unfolded twice_cfg_def]
               twice_sound0[folded gamma_unit_def]
               init run[unfolded src']])

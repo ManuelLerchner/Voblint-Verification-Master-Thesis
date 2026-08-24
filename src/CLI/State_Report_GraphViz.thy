@@ -993,6 +993,15 @@ definition entry_state_ctx_graph :: "imp_prog \<Rightarrow> (ivl list, gk) analy
           (analyse_interval_entry_state_result p))
        (entry_state_ctx_sol (analyse_interval_entry_state_result p))"
 
+text \<open>The rendered graph is well-formed for every program: it is built over a compiled
+  CFG, whose call sites are unique and whose edge relations are finite, which is all
+  \<open>build_analysis_graph_wf\<close> asks for.\<close>
+
+lemma entry_state_ctx_graph_wf: "analysis_graph_wf (entry_state_ctx_graph p)"
+  unfolding entry_state_ctx_graph_def prog_cfg_def
+  by (rule build_analysis_graph_wf
+        [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
+
 declare entry_state_ctx_graph_def [code del]
 
 lemma entry_state_ctx_graph_code [code]:

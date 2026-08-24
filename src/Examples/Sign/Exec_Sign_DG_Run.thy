@@ -23,6 +23,7 @@ theory Exec_Sign_DG_Run
   imports
     "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.DG_Base_Exec"
+    "Voblint_Core.DG_Coverage"
     "Voblint_Analysis.Sign_Exec_Sound"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
@@ -61,8 +62,12 @@ definition sign_ex_pi :: proc_table where
 definition gEx :: cfg where
   "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
 
-lemma gEx_calls: "calls gEx = {}" by eval
-lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')" by eval
+lemma gEx_calls: "calls gEx = {}"
+  unfolding gEx_def sign_ex_pi_def
+  by (rule compile_prog_calls_empty) (simp_all add: sign_ex_prog_def)
+lemma gEx_entry: "cfg_entry gEx = FunctionEntry (STR ''main'')"
+  unfolding gEx_def prog_main_name_def by (rule inv16_entry_is_main)
+lemma gEx_wf_cfg: "wf_cfg gEx" unfolding gEx_def by (rule compile_prog_wf)
 lemma gEx_finE: "finite (intra gEx)" unfolding gEx_def using compile_prog_finite by simp
 lemma gEx_finC: "finite (calls gEx)" unfolding gEx_def using compile_prog_finite by simp
 
@@ -88,9 +93,7 @@ lemma dgEx_terminates_c: "TD_side_always_join_Interp_solve_c dgEx_eqs (cfg_exit 
 
 lemma dgEx_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(unit) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) dgEx_eqs (cfg_exit gEx, ())"
-  using dgEx_terminates_c
-  unfolding TD_side_always_join_Interp.term_equivalence TD_side_always_join_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF dgEx_terminates_c])
 
 lemma dgEx_pp_st:
   "part_post_solution dgEx_eqs (cfg_exit gEx, ()) (snd dgEx_sol) (fst dgEx_sol)"
@@ -110,21 +113,17 @@ lemma dgEx_wf:
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
-lemma dgEx_cover_entry: "(cfg_entry gEx, ()) \<in> fst dgEx_sol"
-  unfolding dgEx_sol_def gEx_entry by eval
+text \<open>Coverage is not read off the solved key set. Every node of \<open>gEx\<close> reaches
+  \<^const>\<open>cfg_exit\<close> --- a structural fact about the graph alone, decided by
+  \<^const>\<open>cfg_exit_covers\<close> --- and \<^const>\<open>vars_cover\<close> follows from that together
+  with the post-solution the solver already returns.\<close>
 
-lemma dgEx_cover_edge_ball: "\<forall>(u, a, w) \<in> intra gEx. (w, ()) \<in> fst dgEx_sol"
-  unfolding dgEx_sol_def by eval
-lemma dgEx_cover_edge: "\<And>u a w. (u, a, w) \<in> intra gEx \<Longrightarrow> (w, ()) \<in> fst dgEx_sol"
-  using dgEx_cover_edge_ball by auto
-lemma dgEx_cover_enter:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
-     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst dgEx_sol"
-  by (simp add: gEx_calls)
-lemma dgEx_cover_combine:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls gEx
-     \<Longrightarrow> (k, ()) \<in> fst dgEx_sol"
-  by (simp add: gEx_calls)
+lemma dgEx_exit_covers: "cfg_exit_covers gEx" by eval
+
+lemma dgEx_vars_cover: "vars_cover gEx (fst dgEx_sol)"
+  by (rule vars_cover_of_dg_gen_of_covers
+        [OF gEx_finE gEx_finC gEx_wf_cfg dgEx_exit_covers
+            dgEx_pp_st[unfolded dgEx_eqs_def]])
 lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
   unfolding wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def
   by (auto simp: source_exp_def source_exp_def proc_decl_of_def ret_var_def
@@ -183,10 +182,7 @@ proof -
     by (rule sign_ex_reg.run_source_sound
           [OF dgEx_terminates_c[unfolded dgEx_eqs_def gEx_def]
               dgEx_wf
-              vars_coverI[OF dgEx_cover_entry[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-                             dgEx_cover_edge[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-                             dgEx_cover_enter[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
-                             dgEx_cover_combine[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]]
+              dgEx_vars_cover[unfolded dgEx_sol_def dgEx_eqs_def gEx_def]
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
               dgEx_sound0

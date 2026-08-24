@@ -63,7 +63,10 @@ lemma checks_ivl_ex_reserved: "reserved_ret_var checks_ivl_ex_gs"
   unfolding reserved_ret_var_def checks_ivl_ex_program_def by (simp add: ret_var_def)
 
 lemma checks_ivl_ex_calls_eval: "calls (prog_cfg prog_main_name checks_ivl_ex_program) = {}"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def
+  by (rule compile_prog_calls_empty)
+     (simp_all add: checks_ivl_ex_program_def special_table_def
+        special_pname_nondet_int_def)
 
 text \<open>The routed-unit solve terminates, and its solved key set is closed under
   the compiled graph -- the four coverage facts the D/G node-soundness bridge
@@ -133,10 +136,10 @@ lemma checks_ivl_ex_intra_eval:
   unfolding prog_cfg_def by eval
 
 lemma checks_ivl_ex_exit_eval: "cfg_exit (prog_cfg (STR ''main'') checks_ivl_ex_program) = FunctionResult (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (rule cfg_exit_compile_prog)
 
 lemma checks_ivl_ex_entry_eval: "cfg_entry (prog_cfg (STR ''main'') checks_ivl_ex_program) = FunctionEntry (STR ''main'')"
-  unfolding prog_cfg_def by eval
+  unfolding prog_cfg_def by (rule inv16_entry_is_main)
 
 text \<open>Node-local collecting soundness at each check node, from the routed D/G
   node-soundness bridge and the four computed coverage facts --- no store is

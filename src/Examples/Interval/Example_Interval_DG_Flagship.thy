@@ -46,6 +46,7 @@ theory Example_Interval_DG_Flagship
     "Voblint_Analysis.Interval_DG"
     "Voblint_Analysis.Ivl_Exec"
     "Voblint_Core.Solver_Menu"
+    "Voblint_Core.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
@@ -99,8 +100,11 @@ definition flagship_pi :: proc_table where
 definition flagship_cfg :: cfg where
   "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
 
-lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')" by eval
-lemma flagship_calls: "calls flagship_cfg = {}" by eval
+lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
+  unfolding flagship_cfg_def prog_main_name_def by (rule inv16_entry_is_main)
+lemma flagship_calls: "calls flagship_cfg = {}"
+  unfolding flagship_cfg_def flagship_pi_def
+  by (rule compile_prog_calls_empty) (simp_all add: flagship_prog_def)
 
 lemma flagship_finE: "finite (intra flagship_cfg)"
   unfolding flagship_cfg_def using compile_prog_finite by simp
@@ -153,25 +157,37 @@ subsection \<open>Soundness premises for the registered endpoint\<close>
 
 text \<open>
   The premises \<open>flagship_ex_reg.run_source_sound\<close> consumes: every program point is
-  covered by the solved variable set (\<^verbatim>\<open>by eval\<close>), the graph is finite and
-  enter-free, and the concrete initial stores are covered by the seed.
+  covered by the solved variable set, the graph is finite and enter-free, and the
+  concrete initial stores are covered by the seed.
+
+  Coverage is not read off the solved key set. Every node of \<open>flagship_cfg\<close> reaches
+  \<^const>\<open>cfg_exit\<close> --- a structural fact about the graph alone, decided by
+  \<^const>\<open>cfg_exit_covers\<close> --- and \<^const>\<open>vars_cover\<close> follows from that together
+  with the post-solution the solver already returns.
 \<close>
 
-lemma flagship_cover_entry: "(cfg_entry flagship_cfg, ()) \<in> fst flagship_sol"
-  unfolding flagship_sol_def flagship_eqs_def flagship_entry by eval
+lemma flagship_solve_dom:
+  "TD_side_warrowing_apinis_Interp.solve_dom TYPE(unit)
+     TYPE((ivl exec_dg_st, ivl exec_dg_st) dg_state)
+     flagship_eqs (cfg_exit flagship_cfg, ())"
+  by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF flagship_terminates_c])
 
-lemma flagship_cover_edge_ball: "\<forall>(u, a, w) \<in> intra flagship_cfg. (w, ()) \<in> fst flagship_sol"
-  unfolding flagship_sol_def flagship_eqs_def by eval
-lemma flagship_cover_edge: "\<And>u a w. (u, a, w) \<in> intra flagship_cfg \<Longrightarrow> (w, ()) \<in> fst flagship_sol"
-  using flagship_cover_edge_ball by auto
-lemma flagship_cover_enter:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls flagship_cfg
-     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst flagship_sol"
-  by (simp add: flagship_calls)
-lemma flagship_cover_combine:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls flagship_cfg
-     \<Longrightarrow> (k, ()) \<in> fst flagship_sol"
-  by (simp add: flagship_calls)
+lemma flagship_pp_st:
+  "part_post_solution flagship_eqs (cfg_exit flagship_cfg, ())
+     (snd flagship_sol) (fst flagship_sol)"
+  using TD_side_warrowing_apinis_Interp.partial_post_solution
+          [OF flagship_solve_dom, of "fst flagship_sol" "snd flagship_sol"]
+  unfolding flagship_sol_def by simp
+
+lemma flagship_wf_cfg: "wf_cfg flagship_cfg"
+  unfolding flagship_cfg_def by (rule compile_prog_wf)
+
+lemma flagship_exit_covers: "cfg_exit_covers flagship_cfg" by eval
+
+lemma flagship_vars_cover: "vars_cover flagship_cfg (fst flagship_sol)"
+  by (rule vars_cover_of_dg_gen_of_covers
+        [OF flagship_finE flagship_finC flagship_wf_cfg flagship_exit_covers
+            flagship_pp_st[unfolded flagship_eqs_def]])
 
 lemma flagship_sound0:
   "cinit_stores flagship_gs \<subseteq>
@@ -272,10 +288,7 @@ proof -
     by (rule flagship_ex_reg.run_source_sound
           [OF flagship_terminates_c[unfolded flagship_eqs_def flagship_cfg_def]
               flagship_wf
-              vars_coverI[OF flagship_cover_entry[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-                             flagship_cover_edge[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-                             flagship_cover_enter[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
-                             flagship_cover_combine[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]]
+              flagship_vars_cover[unfolded flagship_sol_def flagship_eqs_def flagship_cfg_def]
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]

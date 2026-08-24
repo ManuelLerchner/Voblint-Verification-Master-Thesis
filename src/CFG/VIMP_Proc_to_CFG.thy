@@ -820,6 +820,117 @@ proof -
   qed
 qed
 
+subsection \<open>Call-free sources compile to a flat graph\<close>
+
+text \<open>
+  A \<^const>\<open>Call\<close> naming a \<^const>\<open>special_table\<close> entry compiles to an intra edge, not a
+  \<^const>\<open>CallEdge\<close>, so the syntactic condition under which a compiled graph carries no
+  call edges is not \<open>no Call node\<close> but \<open>no call to a compiled procedure\<close>.
+  \<open>no_proc_call\<close> below is that condition: it is what a whole-program  \<^const>\<open>calls\<close>-emptiness claim rests on, in place of evaluating the compiled set.
+\<close>
+
+primrec no_proc_call :: "com \<Rightarrow> bool" where
+  "no_proc_call SKIP = True"
+| "no_proc_call (Assign x a) = True"
+| "no_proc_call (Check c) = True"
+| "no_proc_call (Seq c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
+| "no_proc_call (If b c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
+| "no_proc_call (While b c) = no_proc_call c"
+| "no_proc_call (Call dst q actuals) = (special_table q \<noteq> None)"
+| "no_proc_call (Return e) = True"
+| "no_proc_call Restore = True"
+| "no_proc_call Unwind = True"
+
+lemma compile_no_proc_call_K_empty:
+  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> no_proc_call c \<Longrightarrow> K = {}"
+proof (induction c arbitrary: k n n' en E K)
+  case (Seq c1 c2)
+  from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    and K: "K = K1 \<union> K2"
+    by (auto simp: Let_def split: prod.splits)
+  show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] Seq.prems(2) K by simp
+next
+  case (If b c1 c2)
+  from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
+      c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    and K: "K = K1 \<union> K2"
+    by (auto simp: Let_def split: prod.splits)
+  show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] If.prems(2) K by simp
+next
+  case (While b c)
+  from While.prems(1) obtain n1 en1 E1 K1 where
+      c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    and K: "K = K1"
+    by (auto simp: Let_def split: prod.splits)
+  show ?case using While.IH[OF c1] While.prems(2) K by simp
+next
+  case (Call dst q actuals)
+  then show ?case by (auto split: option.splits)
+qed auto
+
+lemma compile_proc_no_proc_call_K_empty:
+  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> no_proc_call (body decl) \<Longrightarrow> K = {}"
+  unfolding compile_proc_def
+  by (auto simp: Let_def split: prod.splits dest: compile_no_proc_call_K_empty)
+
+lemma compile_procs_no_proc_call_K_empty:
+  "compile_procs \<Pi> ps n = (n', E, K)
+   \<Longrightarrow> (\<forall>q \<in> set ps. \<forall>decl. \<Pi> q = Some decl \<longrightarrow> no_proc_call (body decl))
+   \<Longrightarrow> K = {}"
+proof (induction ps arbitrary: n n' E K)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons p ps)
+  have tail: "\<forall>q \<in> set ps. \<forall>decl. \<Pi> q = Some decl \<longrightarrow> no_proc_call (body decl)"
+    using Cons.prems(2) by simp
+  show ?case
+  proof (cases "\<Pi> p")
+    case None
+    with Cons.prems(1) have "compile_procs \<Pi> ps n = (n', E, K)" by simp
+    from Cons.IH[OF this tail] show ?thesis .
+  next
+    case (Some decl)
+    from Cons.prems(1) Some obtain n1 E1 K1 n2 E2 K2 where
+        one: "compile_proc \<Pi> p decl n = (n1, E1, K1)"
+      and rest: "compile_procs \<Pi> ps n1 = (n2, E2, K2)"
+      and K: "K = K1 \<union> K2"
+      by (auto simp: Let_def split: prod.splits)
+    have "no_proc_call (body decl)" using Cons.prems(2) Some by simp
+    then have "K1 = {}" using compile_proc_no_proc_call_K_empty[OF one] by simp
+    moreover have "K2 = {}" using Cons.IH[OF rest tail] .
+    ultimately show ?thesis using K by simp
+  qed
+qed
+
+theorem compile_prog_calls_empty:
+  assumes main_free: "no_proc_call main"
+      and procs_free: "\<And>q decl. q \<in> set ps \<Longrightarrow> \<Pi> q = Some decl \<Longrightarrow> no_proc_call (body decl)"
+  shows "calls (compile_prog \<Pi> ps mnm main) = {}"
+proof -
+  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+    by (metis prod_cases3)
+  obtain n2 Emain Kmain where
+    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    by (metis prod_cases3)
+  have "Kprocs = {}"
+    using compile_procs_no_proc_call_K_empty[OF procs] procs_free by blast
+  moreover have "Kmain = {}"
+    using compile_proc_no_proc_call_K_empty[OF mainc] main_free by (simp add: proc_decl_of_def)
+  ultimately show ?thesis
+    unfolding compile_prog_def by (simp add: procs mainc Let_def)
+qed
+
+corollary compile_prog_flat_cfg:
+  assumes "no_proc_call main"
+      and "\<And>q decl. q \<in> set ps \<Longrightarrow> \<Pi> q = Some decl \<Longrightarrow> no_proc_call (body decl)"
+  shows "flat_cfg (compile_prog \<Pi> ps mnm main)"
+  unfolding flat_cfg_def by (rule compile_prog_calls_empty[OF assms])
+
+
 subsection \<open>Check-obligation soundness\<close>
 
 text \<open>Now immediate: \<open>checks\<close> is \<^emph>\<open>defined\<close> (\<^const>\<open>compile_prog\<close>) as the projection of

@@ -1,6 +1,7 @@
 theory Example_Sign_Placement
   imports "Voblint_Analysis.Sign_Exec" "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Solver_Menu" "Voblint_CFG.CFG_Prune" "Voblint_Core.DG_LTR_Sound"
+    "Voblint_CFG.Compile_Invariants"
 begin
 
 hide_const phase.N
@@ -331,7 +332,7 @@ lemma sign_placement_dg_td_value:
 subsection \<open>CFG structure facts\<close>
 
 lemma sign_placement_cfg_entry: "cfg_entry sign_placement_cfg = FunctionEntry prog_main_name"
-  unfolding sign_placement_cfg_def by eval
+  unfolding sign_placement_cfg_def by (rule inv16_entry_is_main)
 
 lemma sign_placement_hook_lists:
   "intra_predecessor_list sign_placement_cfg (FunctionEntry prog_main_name) = []"

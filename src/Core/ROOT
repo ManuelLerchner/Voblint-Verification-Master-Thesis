@@ -72,6 +72,9 @@ session Voblint_Core in "." = "Voblint_CFG" +
     Exec_DG_Refines
     Exec_DG_Trees
     Exec_DG_Generator
+    (* Solved-key coverage as a graph property: vars_cover from reachability to
+       the exit, instead of evaluating the solver's own key set. *)
+    DG_Coverage
     Exec_DG_Bridge
     DG_Base_Exec
     Routed_Domain_Exec

@@ -222,7 +222,10 @@ definition twice_ctx_dot :: String.literal where
       (analysis_graph_to_dot twice_ctx_graph_config twice_cfg (snd twice_ctx_sol)
         twice_ctx_graph)"
 
-lemma twice_ctx_graph_wf: "analysis_graph_wf twice_ctx_graph" by eval
+lemma twice_ctx_graph_wf: "analysis_graph_wf twice_ctx_graph"
+  unfolding twice_ctx_graph_def twice_cfg_def
+  by (rule build_analysis_graph_wf
+        [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
 
 lemma twice_ctx_graph_domain_is_covered:
   "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> fst twice_ctx_sol | Inr _ \<Rightarrow> True)

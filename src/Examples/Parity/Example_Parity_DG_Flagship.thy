@@ -33,6 +33,7 @@ theory Example_Parity_DG_Flagship
     "Voblint_Analysis.Parity_Exec"
     "Voblint_Analysis.Parity_Print"
     "Voblint_Core.Solver_Menu"
+    "Voblint_Core.DG_Coverage"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Analysis.Analysis_GraphViz"
     "Voblint_VIMP.VIMP_Notation"
@@ -113,7 +114,9 @@ lemma parity_finE: "finite (intra parity_cfg)" and parity_finC: "finite (calls p
   unfolding parity_cfg_def
   using compile_prog_finite by auto
 
-lemma parity_calls: "calls parity_cfg = {}" by eval
+lemma parity_calls: "calls parity_cfg = {}"
+  unfolding parity_cfg_def parity_pi_def
+  by (rule compile_prog_calls_empty) (simp_all add: parity_prog_def parity_program_def)
 
 subsection \<open>3. Executable parity D/G specification\<close>
 
@@ -147,31 +150,32 @@ definition parity_sol :: "(pp \<times> unit) set \<times> (pp \<times> unit + un
 
 subsection \<open>6. Soundness premises for the registered endpoint\<close>
 
-lemma parity_cover_all:
-  "\<forall>v \<in> {Statement 0, Statement 1, Statement 2, Statement 3,
-           Statement 4, Statement 5, Statement 6,
-           FunctionEntry (STR ''main''), FunctionResult (STR ''main'')}.
-     (v, ()) \<in> fst parity_sol"
-  unfolding parity_sol_def parity_eqs_def by eval
+text \<open>Coverage is not read off the solved key set. Every node of \<open>parity_cfg\<close> reaches
+  \<^const>\<open>cfg_exit\<close> --- a structural fact about the graph alone, decided by
+  \<^const>\<open>cfg_exit_covers\<close> --- and \<^const>\<open>vars_cover\<close> follows from that together
+  with the post-solution the solver already returns.\<close>
 
-lemma parity_cover_entry: "(cfg_entry parity_cfg, ()) \<in> fst parity_sol"
-  using parity_cover_all parity_cfg_def
-  by (metis insert_iff inv16_entry_is_main)
+lemma parity_solve_dom:
+  "TD_side_always_join_Interp.solve_dom TYPE(unit)
+     TYPE((parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)
+     parity_eqs (cfg_exit parity_cfg, ())"
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF parity_terminates_c])
 
-lemma parity_cover_edge_ball: "\<forall>(u, a, w) \<in> intra parity_cfg. (w, ()) \<in> fst parity_sol"
-  unfolding parity_sol_def parity_eqs_def by eval
-lemma parity_cover_edge: "\<And>u a w. (u, a, w) \<in> intra parity_cfg \<Longrightarrow> (w, ()) \<in> fst parity_sol"
-  using parity_cover_edge_ball by auto
+lemma parity_pp_st:
+  "part_post_solution parity_eqs (cfg_exit parity_cfg, ()) (snd parity_sol) (fst parity_sol)"
+  using TD_side_always_join_Interp.partial_post_solution
+          [OF parity_solve_dom, of "fst parity_sol" "snd parity_sol"]
+  unfolding parity_sol_def by simp
 
-lemma parity_cover_enter:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls parity_cfg
-     \<Longrightarrow> (FunctionEntry p, ()) \<in> fst parity_sol"
-  by (simp add: parity_calls)
-lemma parity_cover_combine:
-  "\<And>c dst fs as p k. (c, CallEdge dst fs as, FunctionEntry p, k) \<in> calls parity_cfg
-     \<Longrightarrow> (k, ()) \<in> fst parity_sol"
-  by (simp add: parity_calls)
+lemma parity_wf_cfg: "wf_cfg parity_cfg"
+  unfolding parity_cfg_def by (rule compile_prog_wf)
 
+lemma parity_exit_covers: "cfg_exit_covers parity_cfg" by eval
+
+lemma parity_vars_cover: "vars_cover parity_cfg (fst parity_sol)"
+  by (rule vars_cover_of_dg_gen_of_covers
+        [OF parity_finE parity_finC parity_wf_cfg parity_exit_covers
+            parity_pp_st[unfolded parity_eqs_def]])
 lemma parity_is_bot_exact:
   "\<And>s. resolved_st_q_is_bot_for (declared_global_vars parity_program) s = is_bot_state (fun_of_exec_dg_st_for parity_gs s)"
   by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff, folded fun_of_exec_dg_st_for_def])
@@ -249,10 +253,7 @@ proof -
     by (rule parity_ex_reg.run_source_sound
           [OF parity_terminates_c[unfolded parity_eqs_def parity_cfg_def]
               parity_wf
-              vars_coverI[OF parity_cover_entry[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-                             parity_cover_edge[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-                             parity_cover_enter[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
-                             parity_cover_combine[unfolded parity_sol_def parity_eqs_def parity_cfg_def]]
+              parity_vars_cover[unfolded parity_sol_def parity_eqs_def parity_cfg_def]
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
               parity_sound0

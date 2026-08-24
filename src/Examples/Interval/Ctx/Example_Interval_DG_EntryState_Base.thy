@@ -49,7 +49,8 @@ text \<open>
   statement \<open>0\<close>.  \<open>main\<close> occupies statements \<open>2..4\<close>: \<open>2\<close> draws \<open>x\<close> from \<open>__voblint_nondet_int()\<close> and
   continues at \<open>3\<close>, the single call site, continuing at \<open>4\<close>.\<close>
 
-lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')" by eval
+lemma rc_entry: "cfg_entry rc_cfg = FunctionEntry (STR ''main'')"
+  unfolding rc_cfg_def by (rule inv16_entry_is_main)
 
 text \<open>The one call site's shape, computed directly from \<open>rc_cfg\<close>. Exported for the
   routed-context siblings, which key off this single call rather than case-splitting

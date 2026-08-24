@@ -1,6 +1,7 @@
 theory Example_Interval_Placement
   imports "Voblint_Analysis.Ivl_Exec" "Voblint_Core.Exec_DG_Bridge"
     "Voblint_Core.Solver_Menu" "Voblint_CFG.CFG_Prune" "Voblint_Core.DG_LTR_Sound"
+    "Voblint_CFG.Compile_Invariants"
 begin
 
 hide_const phase.N
@@ -721,7 +722,7 @@ lemma placement_hook_gen_entry:
   by simp_all
 
 lemma placement_cfg_entry: "cfg_entry placement_cfg = FunctionEntry prog_main_name"
-  unfolding placement_cfg_def by eval
+  unfolding placement_cfg_def by (rule inv16_entry_is_main)
 
 lemma placement_hook_lists:
   "intra_predecessor_list placement_cfg (FunctionEntry prog_main_name) = []"

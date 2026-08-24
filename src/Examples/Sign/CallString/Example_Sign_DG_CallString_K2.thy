@@ -81,12 +81,12 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>g\<close>'s call site is now cov
 lemma enter_callers_only_root_main_2:
   "\<forall>(p, ctx)\<in>fst sign_nest_2_sol.
      (p = Statement 5 \<or> p = Statement 6) \<longrightarrow> ctx = []"
-  unfolding sign_nest_2_sol_def sign_nest_2_eqs_def by eval
+  unfolding sign_nest_2_nodes_eq sign_nest_2_nodes_def by simp
 
 lemma enter_callers_g_2:
   "\<forall>(p, ctx)\<in>fst sign_nest_2_sol.
      p = Statement 2 \<longrightarrow> ctx = [Statement 5] \<or> ctx = [Statement 6]"
-  unfolding sign_nest_2_sol_def sign_nest_2_eqs_def by eval
+  unfolding sign_nest_2_nodes_eq sign_nest_2_nodes_def by simp
 
 lemma callee_covered_fpos_2: "(FunctionEntry (STR ''f''), [Statement 5]) \<in> fst sign_nest_2_sol"
   unfolding sign_nest_2_nodes_eq sign_nest_2_nodes_def by simp
@@ -115,10 +115,7 @@ lemma sign_nest_2_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
      TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
      sign_nest_2_eqs (cfg_exit sign_nest_cfg, [])"
-  using sign_nest_2_terminates
-  unfolding TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  by simp
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF sign_nest_2_terminates])
 
 lemma sign_nest_2_pp_st:
   "part_post_solution sign_nest_2_eqs (cfg_exit sign_nest_cfg, [])

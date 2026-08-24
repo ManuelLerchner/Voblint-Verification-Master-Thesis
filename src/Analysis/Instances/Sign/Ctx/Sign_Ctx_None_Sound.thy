@@ -90,9 +90,8 @@ lemma sctx_terminates_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c (sctx_eqs gs is_bot_pred Pi ps mnm main)
              (cfg_exit (compile_prog Pi ps mnm main), ()) \<noteq> None"
   shows "sctx_terminates gs is_bot_pred Pi ps mnm main"
-  unfolding sctx_terminates_def TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  using assms by simp
+  unfolding sctx_terminates_def
+  by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
 
 subsection \<open>Domain commute facts, at the routed unit spec\<close>
 
@@ -138,10 +137,7 @@ begin
 lemma sctx_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
      (sctx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())"
-  using solves
-  unfolding sctx_terminates_def TD_side_always_join_Interp.term_equivalence
-            TD_side_always_join_Interp.solve_c_dom_def
-  by simp
+  using solves[unfolded sctx_terminates_def] .
 
 lemma sctx_pp_st:
   "part_post_solution (sctx_eqs gs is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), ())
