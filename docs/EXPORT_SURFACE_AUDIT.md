@@ -204,13 +204,21 @@ a split. Retiring the emitter is a ~310-line deletion, not a ~1,300-line one.
 ### 2.4 Unconsumed export roots
 
 `export_code` names roots that nothing outside the generated module calls:
-`int_of_integer`, `char_of_integer`, `Restore`, `Unwind`, and the four
-`abstract_value` constructors `SignValue`/`IntervalValue`/`IntDomValue`/
-`ParityValue` (the CLI goes through `string_of_abstract_value`). Harmless —
-naming fewer roots would not shrink the emitted module — but the export block's
-own text claims the roots are "what handwritten OCaml under `cli/`,
-`codegen/regression/ocaml/` and `tests/property/` actually calls", and for these
-seven that is not true.
+`char_of_integer`, `Restore`, `Unwind`, and the four `abstract_value`
+constructors `SignValue`/`IntervalValue`/`IntDomValue`/`ParityValue` (the CLI
+goes through `string_of_abstract_value`). The export block's own text claims the
+roots are "what handwritten OCaml under `cli/`, `codegen/regression/ocaml/` and
+`tests/property/` actually calls", and for these six that is not true.
+
+**Correction, found by executing this.** An earlier draft listed
+`int_of_integer` here too. It is load-bearing: naming it as a root is what keeps
+`type int` *concrete* in the emitted signature, and `cli/vimp_parser.mly`,
+`tests/property/ast_driver.ml` and `codegen/regression/ocaml/main.ml` all
+construct `Int_of_integer` directly. Removing it turned the type abstract and
+broke `cli-build` with `Unbound constructor Voblint_CLI.Core.Int_of_integer`.
+The original search looked for the lowercase function name and missed the
+capitalized constructor — a root can be load-bearing through the *type* it
+exposes, not only through direct calls. Check both spellings.
 
 ### 2.5 `Rel_Order_Domain.thy`
 

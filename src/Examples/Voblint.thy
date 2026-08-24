@@ -367,8 +367,9 @@ text \<open>
       context's own \<open>gkey\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge tree reads:
       @{thm dep_aux_dg_edge_tree} names the source local unknown and the one
       global slot, nothing else.
-    \<^item> \<^bold>\<open>DOT rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and \<^const>\<open>state_report_dot\<close>
-      (@{theory Voblint_CLI.State_Report_GraphViz}) have no Isabelle-side witness of
+    \<^item> \<^bold>\<open>Rendering\<close> --- \<^const>\<open>raw_cfg_dot_lit\<close> and the \<open>_graph_snapshot_auto\<close> /
+      \<open>_export_auto\<close> family (@{theory Voblint_CLI.State_Report_GraphViz}) have no
+      Isabelle-side witness of
       their own: rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
       fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
       \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node state labels, and

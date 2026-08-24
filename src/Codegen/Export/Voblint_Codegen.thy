@@ -36,16 +36,15 @@ text \<open>
   Analysis entry goes through \<^const>\<open>analyse_config\<close>/\<^const>\<open>analyse_config_ctx\<close>/
   \<^const>\<open>analyse_config_with_state\<close>, which consult
   \<^const>\<open>resolve_analysis_config\<close> internally, so the CLI never re-decides legality. The
-  pre-configuration entry points \<open>analyse_ctx\<close>/\<open>analyse_with_state\<close>/\<open>analyse_with_solver\<close>
-  are no longer roots: nothing handwritten calls them, and the configuration path
-  supersedes them. \<^const>\<open>analyse\<close> stays, because the external regression oracle calls it
-  directly as its domain-dispatch check.
+  pre-configuration entry points \<open>analyse_with_state\<close>/\<open>analyse_with_solver\<close> are not
+  roots: nothing handwritten calls them, and the configuration path supersedes them.
+  \<^const>\<open>analyse\<close> stays, because the external regression oracle calls it directly
+  as its domain-dispatch check.
 \<close>
 
 export_code
   analyse Sign_Analysis Interval_Analysis Int_Analysis Parity_Analysis
   Ctx_None Ctx_EntryState Ctx_CallString
-  SignValue IntervalValue IntDomValue ParityValue
   state_report_graph_snapshot_auto full_state_graph_snapshot_auto
   entry_state_report_graph_snapshot_auto entry_state_full_state_graph_snapshot_auto
   entry_state_ctx_graph_snapshot_auto cs_ctx_graph_snapshot_auto
@@ -63,13 +62,13 @@ export_code
   NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
   exp_vnames_list string_of_abstract_value
   mk_program proc_decl_of declared_global_vars pretty_string_of_program
-  SKIP com.Call com.If Assign Seq While Restore Unwind Return Check
+  SKIP com.Call com.If Assign Seq While Return Check
   N V Plus Minus Times
   exp.Not And Or Less exp.Eq
   Check_Proved Check_Refuted Check_Unknown
   int_of_integer nat_of_integer integer_of_int integer_of_nat
   Statement FunctionEntry FunctionResult
-  char_of_integer integer_of_char
+  integer_of_char
   compile_program cfg_intra_list cfg_calls_list prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
   string_of_exp

@@ -24,40 +24,17 @@ fun string_of_abstract_value :: "abstract_value \<Rightarrow> string" where
 | "string_of_abstract_value (ParityValue v) = string_of_parity v"
 
 text \<open>
-  \<open>is_bottom_abstract_value\<close> tests each domain's own \<^class>\<open>order_bot\<close>
-  instance (\<open>x \<le> bot \<longleftrightarrow> x = bot\<close> there) rather than a fresh equality
-  check, so it needs no new instance beyond what \<^const>\<open>analyse_with_state\<close>
-  already exercises. A pointwise abstract state's concretisation is the
-  conjunction of every variable's own concretisation, so one \<^const>\<open>bot\<close>
-  component already forces the whole store empty: querying any single
-  in-scope variable -- \<^const>\<open>ret_var\<close>, always in scope, is a convenient
-  fixed choice -- is enough to test whether a report entry's program point is
-  reachable at all, not just whether that one variable happens to be
-  unconstrained.
-\<close>
+  Used only to suppress an uninformative return-slot line: a \<^const>\<open>top\<close>
+  return value says nothing the reader did not already know, and printing it at
+  every node crowds out the variables that do carry information. Each domain's
+  own \<^class>\<open>order_top\<close> instance decides, so no new instance is needed for a
+  domain added to \<^type>\<open>abstract_value\<close>. Purely a presentation filter ---
+  nothing downstream reads it, and a suppressed line is not a claim that the
+  slot is unset.
 
-text \<open>
-  Dispatches to each domain's own \<^const>\<open>is_bot\<close> (\<^class>\<open>sound_domain\<close>,
-  \<^theory>\<open>Voblint_Core.Abstract_Domain\<close>) rather than a bespoke test per
-  branch: \<open>is_bot\<close> is exact by the class's own \<open>is_bot_correct\<close> axiom for
-  every instance, Sign and Interval today and any future domain added to
-  \<^type>\<open>abstract_value\<close> without this dispatcher changing at all.
-\<close>
-
-fun is_bottom_abstract_value :: "abstract_value \<Rightarrow> bool" where
-  "is_bottom_abstract_value (SignValue s) = is_bot s"
-| "is_bottom_abstract_value (IntervalValue i) = is_bot i"
-| "is_bottom_abstract_value (IntDomValue d) = is_bot d"
-| "is_bottom_abstract_value (ParityValue v) = is_bot v"
-
-text \<open>
-  The \<open>top\<close> counterpart, used only to suppress an uninformative return-slot line: a
-  \<^const>\<open>top\<close> return value says nothing the reader did not already know, and printing it
-  at every node crowds out the variables that do carry information. Each domain's own
-  \<^class>\<open>order_top\<close> instance decides, so this dispatches exactly as
-  \<^const>\<open>is_bottom_abstract_value\<close> does and needs no new instance either. Purely a
-  presentation filter --- nothing downstream reads it, and a suppressed line is not a claim
-  that the slot is unset.
+  Reachability is not read here: \<^const>\<open>analyse_with_state\<close> carries its own
+  unreachability flag, and the renderer reads that flag rather than probing a
+  variable's value for \<^const>\<open>bot\<close>.
 \<close>
 
 fun is_top_abstract_value :: "abstract_value \<Rightarrow> bool" where
@@ -154,21 +131,14 @@ text \<open>
   CLI's text report does.
 \<close>
 
-definition state_report_dot ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> vname list \<Rightarrow> String.literal" where
-  "state_report_dot kind p vars =
-     raw_cfg_dot_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
-       (state_report_node_annotation vars
-          (map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state kind p)))"
-
 text \<open>
   \<open>report_vars\<close> and \<open>exp_vnames_list\<close> turn \<^const>\<open>exp_vnames\<close>'s set of
   variable occurrences into a sorted list, the same idiom
   \<^const>\<open>scope_vnames_list\<close> already uses over \<^typ>\<open>vname\<close> via
-  \<^const>\<open>sorted_list_of_set\<close>. \<open>state_report_dot_auto\<close> is the CLI-facing
-  sibling of \<open>state_report_dot\<close>: instead of a caller-supplied variable
-  list, it renders exactly the variables occurring in some check condition
-  in the report, solving the program once rather than once per call.
+  \<^const>\<open>sorted_list_of_set\<close>. The CLI-facing renderers below take no
+  caller-supplied variable list: each renders exactly the variables occurring
+  in some check condition in the report, solving the program once rather than
+  once per call.
 \<close>
 
 definition exp_vnames_list :: "exp \<Rightarrow> vname list" where
@@ -179,10 +149,9 @@ definition report_vars :: "('n \<times> exp \<times> 'r) list \<Rightarrow> vnam
      sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames c) ` set report))"
 
 text \<open>
-  The canonical-snapshot sibling of \<open>state_report_dot_auto\<close>: same report,
-  same \<open>state_report_node_annotation\<close> hook, but rendered through
-  \<^const>\<open>raw_cfg_canonical_text_lit\<close> instead of \<^const>\<open>raw_cfg_dot_lit\<close> ---
-  a DOT-free regression representation of the same solved analysis.
+  Renders the check report through \<^const>\<open>raw_cfg_canonical_text_lit\<close>: a
+  DOT-free, diff-stable representation of the solved analysis, which is what
+  the regression fixtures compare against.
 \<close>
 
 definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
@@ -192,22 +161,21 @@ definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> im
            (state_report_node_annotation (report_vars report) report))"
 
 text \<open>
-  The codegen session collects this theory's GraphViz surface with the
-  analysis facade from \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>.
-  That narrower facade has no reachable GraphViz-rendering constant, and it
-  precedes this theory in the import order, so \<open>state_report_dot_auto\<close>
-  belongs in the later export declaration. The GraphViz surface uses the
-  same AST constructors and numeral/char bridges, plus
-  \<open>state_report_dot_auto\<close>, \<open>exp_vnames_list\<close>, and
-  \<open>string_of_abstract_value\<close> for CLI-side rendering.
+  The codegen session collects this theory's rendering surface with the
+  analysis facade from \<^theory>\<open>Voblint_CLI.Analyse_Dispatch\<close>. That narrower
+  facade has no reachable rendering constant, and it precedes this theory in
+  the import order, so the renderers belong in the later export declaration.
+  The rendering surface uses the same AST constructors and numeral/char
+  bridges, plus \<open>exp_vnames_list\<close> and \<open>string_of_abstract_value\<close> for CLI-side
+  rendering.
 \<close>
 
 text \<open>
-  \<open>state_report_dot_auto\<close> anchors every node label to a report entry
-  (\<^const>\<open>state_report_node_annotation\<close> looks a point up in
+  \<^const>\<open>state_report_graph_snapshot_auto\<close> anchors every node label to a
+  report entry (\<^const>\<open>state_report_node_annotation\<close> looks a point up in
   \<^const>\<open>analyse_with_state\<close>'s report, which \<^const>\<open>classify_checks_with_state\<close>
   only ever populates at check nodes), so every non-check node renders with no
-  state at all. \<open>full_state_dot_auto\<close> (defined below, once
+  state at all. \<open>full_state_graph_snapshot_auto\<close> (defined below, once
   \<open>point_state_node_annotation\<close> is in scope) instead queries the solved
   \<^type>\<open>analysis_result\<close> table directly at \<^emph>\<open>every\<close> \<^typ>\<open>pp\<close>, so the
   annotation exists independently of whether that point happens to carry a
@@ -215,9 +183,9 @@ text \<open>
 \<close>
 
 text \<open>
-  Entry-state siblings of \<open>state_report_dot_auto\<close>/\<open>full_state_dot_auto\<close>,
-  Interval-only (\<^const>\<open>analyse_ctx\<close> has no Sign entry-state branch, so there
-  is no \<open>analysis_domain\<close> parameter here). Both read
+  Entry-state siblings of \<open>state_report_graph_snapshot_auto\<close> /
+  \<open>full_state_graph_snapshot_auto\<close>, Interval-only (so there is no
+  \<open>analysis_domain\<close> parameter here). Both read
   \<^const>\<open>analyse_interval_entry_state_result\<close>, the canonical solved-result
   table, rather than the solver's own solution map. A \<^typ>\<open>pp\<close> may be covered
   by several entry-state contexts at once, and \<^const>\<open>lookup_joined_state\<close> is
@@ -328,8 +296,9 @@ definition analyse_point_env_for ::
       | Int_Analysis \<Rightarrow> project_env IntDomValue (analyse_int_result p)
       | Parity_Analysis \<Rightarrow> project_env ParityValue (analyse_parity_result p))"
 
-text \<open>Canonical-text sibling, the same DOT-free relationship
-  \<open>state_report_graph_snapshot_auto\<close> already has to \<open>state_report_dot_auto\<close>.\<close>
+text \<open>The whole-table counterpart of \<open>state_report_graph_snapshot_auto\<close>:
+  the same DOT-free canonical text, over every point rather than check nodes
+  only.\<close>
 
 definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p =
@@ -973,8 +942,9 @@ text \<open>
   One solve feeds the node set, every node's state, and every check verdict:
   \<open>r\<close> is bound once and reaches all three. The defining equation names
   \<^const>\<open>analyse_interval_entry_state_result\<close> repeatedly because that reads as
-  the intended meaning; the \<open>[code]\<close> equation binds it, the same fix
-  \<open>entry_state_full_state_dot_auto_code\<close> already applies one section up.
+  the intended meaning; the \<open>[code]\<close> equation binds it once so the generated
+  code solves once, the same shape the entry-state renderers one section up
+  already use.
 \<close>
 
 definition entry_state_ctx_annotated_config ::

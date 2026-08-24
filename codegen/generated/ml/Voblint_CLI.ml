@@ -205,7 +205,6 @@ module Core : sig
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val sup_seta : 'a equal -> 'a set set -> 'a set
   val exp_vnames : exp -> string set
-  val char_of_integer : Z.t -> char
   val explode : string -> char list
   val proc_decl_of : string list -> com -> unit proc_decl_ext
   val char_0x6E : char
