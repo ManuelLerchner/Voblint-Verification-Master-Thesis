@@ -143,7 +143,18 @@ staging in #141.
 ### Numeric precision
 
 Continue improving backward guard refinement, loop precision, widening policy,
-and interval execution examples without changing the semantic reference model.
+and interval execution examples. Refinement work stays within the semantic
+reference model of its time; the one sanctioned change to that model is the
+machine-integer migration below.
+
+### Machine integers (ikinds)
+
+Give VIMP per-variable machine-integer kinds (width + signedness), wraparound
+concrete semantics, and explicit casts, then thread the kind through the
+domain interface so transfers can use `range ik` as a hard bound and
+width-dependent domains (bitfield, DefExc) become definable. Staged plan and
+locked design decisions: `docs/history/IKIND_MIGRATION.md`; register row
+"Integer width and wraparound".
 
 ### Source language
 

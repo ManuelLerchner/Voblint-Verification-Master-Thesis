@@ -1,5 +1,5 @@
 theory VIMP_Special
-  imports VIMP_Expr VIMP_Globals
+  imports VIMP_Expr VIMP_Globals VIMP_Typing
 begin
 
 section \<open>Special-call classification vocabulary\<close>
@@ -54,13 +54,17 @@ text \<open>
   integer; \<open>Min\<close>/\<open>Max\<close> admit exactly one, the evaluated arithmetic
   minimum/maximum of their two arguments.
 \<close>
-fun special_result :: "special_call => store => int => bool" where
-  "special_result Nondet_Int s v = True"
-| "special_result (Min a b) s v = (v = min (aval a s) (aval b s))"
-| "special_result (Max a b) s v = (v = max (aval a s) (aval b s))"
+fun special_result :: "tyenv => special_call => store => int => bool" where
+  "special_result \<Gamma> Nondet_Int s v = True"
+| "special_result \<Gamma> (Min a b) s v =
+     (let k = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))
+      in v = min (taval \<Gamma> k a s) (taval \<Gamma> k b s))"
+| "special_result \<Gamma> (Max a b) s v =
+     (let k = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))
+      in v = max (taval \<Gamma> k a s) (taval \<Gamma> k b s))"
 
-lemma special_result_ex [simp]: "\<exists>v. special_result sc s v"
-  by (cases sc) auto
+lemma special_result_ex [simp]: "\<exists>v. special_result \<Gamma> sc s v"
+  by (cases sc) (auto simp: Let_def)
 
 text \<open>
   \<open>special_mentions_global\<close> is \<open>special_call\<close>'s analogue of \<open>exp_mentions_global\<close>:

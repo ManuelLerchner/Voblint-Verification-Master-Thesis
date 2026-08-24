@@ -190,15 +190,22 @@ definition prog_combine_env :: "imp_prog => store => store => store" where
   "prog_combine_env p s t =
     combine_env (storage_global p prog_main_name) s t"
 
+text \<open>A program's typing environment. Source declarations carry no kind
+  syntax, so every variable has the default kind \<open>I32\<close>.\<close>
+
+definition prog_tyenv :: "imp_prog => tyenv" where
+  "prog_tyenv p = default_tyenv"
+
 definition prog_pstep ::
     "imp_prog => (com \<times> store \<times> frame list) =>
       (com \<times> store \<times> frame list) => bool" where
-  "prog_pstep p = pstep (storage_global p prog_main_name) (prog_table p)"
+  "prog_pstep p =
+    pstep (prog_tyenv p) (storage_global p prog_main_name) (prog_table p)"
 
 definition prog_pcompletes ::
     "imp_prog => com => store => store => bool" where
   "prog_pcompletes p =
-    pcompletes (storage_global p prog_main_name) (prog_table p)"
+    pcompletes (prog_tyenv p) (storage_global p prog_main_name) (prog_table p)"
 
 definition prog_restrict_local :: "imp_prog => pname => store => store" where
   "prog_restrict_local p owner s =

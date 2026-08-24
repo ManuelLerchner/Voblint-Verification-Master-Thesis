@@ -5,7 +5,9 @@ session Voblint_VIMP in "." = HOL +
     "HOL-IMP"
   theories
     VIMP_Settings
+    VIMP_Ikind
     VIMP_Syntax
+    VIMP_Typing
     VIMP_Globals
     VIMP_Expr
     VIMP_Proc
