@@ -51,13 +51,15 @@ Locked decisions:
 | Solver | Vendored verified `TD` solver |
 | Solver interface | `part_post_solution` (vendored, generic over unknown/value types) |
 | Analysis path | Procedure-aware CFG and generic D/G pipeline |
-| Domains | Sign, Interval, then Octagon as a stretch goal |
+| Domains | Sign, Interval, Parity, and the Int product (Sign x Interval x Parity x Congruence); Octagon a stretch goal |
 | Joins | `Finite_Set.fold` with finite edges, commutativity, and associativity |
 | State order | Pointwise `'a::ord` |
 
-The procedure-aware CFG and generic D/G route are the sole analysis path. Sign,
-Interval, and mixed Sign/Interval instances use the side-effecting verified
-solver.
+The procedure-aware CFG and generic D/G route are the sole analysis path. Every
+instance uses the side-effecting verified solver. `analysis_domain` names four
+selectable analyses -- `Sign_Analysis`, `Interval_Analysis`, `Int_Analysis`,
+`Parity_Analysis`. Congruence is not selectable on its own: it is the fourth
+component of `int_dom`, alongside sign, interval and parity.
 
 The session dependency graph is:
 
@@ -181,16 +183,23 @@ a batch build for contextual proof development.
 `module_name`, so the OCaml serializer would distribute output one module per
 contributing theory. `src/CLI/Analyse_Dispatch.thy` remaps almost every
 contributing theory onto `Core` through one `code_identifier` block, because
-the unsplit theories have real mutual code-level dependencies. Four modules
-survive, and only because the handwritten OCaml in `cli/` names them:
+the unsplit theories have real mutual code-level dependencies. Six modules are
+emitted -- four because the handwritten OCaml in `cli/` names them, and two
+that are HOL's own serializer preludes:
 
 ```text
 Core                   everything else, folded into one module
 Analysis_Config        mk_analysis_config, valid_analysis_config
 Analyse_Dispatch       analyse_config, analyse_config_ctx,
                        analyse_config_with_state, abstract_value
-State_Report_GraphViz  the twelve *_dot_auto / *_graph_snapshot_auto
+State_Report_GraphViz  the fifteen *_graph_snapshot_auto / *_export_auto /
+                       *_payload_auto renderer entry points
+Bit_Shifts             HOL runtime support, not a project theory
+Str_Literal            HOL runtime support, not a project theory
 ```
+
+`scripts/check_codegen_modules.py` holds the same six names; keep the two in
+step.
 
 Adding a theory whose constants are reachable from an export root therefore
 requires adding it to that `code_identifier` list. Forget it and the new
