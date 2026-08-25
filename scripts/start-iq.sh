@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Start Isabelle/jEdit with the I/Q plugin auto-loaded. The plugin listens
-# for MCP clients on 127.0.0.1:8765 once jEdit finishes loading. The auth
-# token is pinned via IQ_AUTH_TOKEN so the .mcp.json `isabelle-iq` entry
-# matches.
+# for MCP clients on 127.0.0.1:8765 once jEdit finishes loading. This script
+# is the sole source of the plugin's auth token and mutation/read roots: the
+# bridge that .mcp.json launches is a stdio-to-TCP proxy and reads none of
+# them. Clients present the token to the `authenticate` tool.
 #
 # Requires `./scripts/setup.sh` to have been run at least once.
 

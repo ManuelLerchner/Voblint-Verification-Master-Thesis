@@ -501,10 +501,9 @@ Vendored as a submodule via the private fork
 [`ManuelLerchner/td-verification`](https://github.com/ManuelLerchner/td-verification)
 (CI + local access). GitHub Actions cannot clone the fork with the default
 `GITHUB_TOKEN`; add a classic PAT with `repo` scope as repository secret
-`SUBMODULES_TOKEN`, or make the fork public. A small Isabelle2025 compatibility
-change lives in `vendor/td-verification.patch`; `pixi run vendor` applies it
-(idempotent). To regenerate the patch after changing the submodule's working
-tree: `git -C vendor/td-verification --no-pager diff > vendor/td-verification.patch`.
+`SUBMODULES_TOKEN`, or make the fork public. `pixi run vendor` initializes the
+submodule at the pinned gitlink and is idempotent; every Isabelle task
+depends on it.
 
 `vendor/autocorrode` (the I/Q/I/R MCP servers, see "Agent-assisted
 development" below) is a separate submodule. To fast-forward it to upstream

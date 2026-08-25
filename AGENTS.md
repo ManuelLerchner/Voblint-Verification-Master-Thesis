@@ -394,8 +394,9 @@ error.
 | `\<dots>` | `…` |
 | `\<open>` / `\<close>` | `‹` / `›` |
 
-Unicode in comments is allowed. `.git/hooks/pre-commit` runs
-`scripts/check_isabelle_ascii.py` and rejects non-ASCII theory syntax.
+Unicode in comments is allowed. The `lefthook` pre-commit hook's
+`isabelle-ascii` job runs `scripts/check_isabelle_ascii.py` over staged `.thy`
+files and rejects non-ASCII theory syntax.
 
 I/Q may serialize ASCII input such as `\<lambda>` and `\<open>` as Unicode.
 After every `write_file`:
