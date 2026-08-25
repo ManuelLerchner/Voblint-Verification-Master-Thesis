@@ -1,0 +1,14 @@
+{
+  "facts": {
+    "ltr_collect_semantic_postfix": {
+      "statement": "\\<lbrakk>S0.0 \\<subseteq> B (cfg_entry g);\n \\<And>u a w s s'.\n    \\<lbrakk>(u, a, w) \\<in> intra g; s \\<in> B u;\n     s' \\<in> edge_step \\<Gamma> a s\\<rbrakk>\n    \\<Longrightarrow> s' \\<in> B w;\n \\<And>u dst pars args p cont s.\n    \\<lbrakk>(u, CallEdge dst pars args, FunctionEntry p, cont)\n             \\<in> calls g;\n     s \\<in> B u\\<rbrakk>\n    \\<Longrightarrow> call_enter \\<Gamma> gs (CallEdge dst pars args) s\n                      \\<in> B (FunctionEntry p);\n \\<And>cl dst pars args p cont s t.\n    \\<lbrakk>(cl, CallEdge dst pars args, FunctionEntry p, cont)\n             \\<in> calls g;\n     s \\<in> B cl; t \\<in> B (FunctionResult p)\\<rbrakk>\n    \\<Longrightarrow> combine_collect \\<Gamma> gs dst s t\n                      \\<in> B cont\\<rbrakk>\n\\<Longrightarrow> ltr_collect \\<Gamma> gs g S0.0 v \\<subseteq> B v",
+      "why": "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
+    },
+    "valid_ltr_eq_lfp": {
+      "statement": "valid_ltr \\<Gamma> gs g S = lfp (ltr_F \\<Gamma> gs g S)",
+      "why": "The activation-local trace semantics is the least fixpoint of its rule functional."
+    }
+  },
+  "session": "Voblint_CFG",
+  "theory": "Voblint_CFG.LTR_Abstract"
+}

@@ -1,0 +1,21 @@
+# Every thesis figure whose content is an analyzer result is declared here, not
+# typed into the chapter. `thesis/tools/claims.py --write` runs each command and
+# stores its output under thesis/shared/generated/; `--check` re-runs them and
+# fails when the stored output no longer matches, which is what stops a figure
+# from quietly outliving the behaviour it describes.
+#
+# [claims.<name>]
+#   argv    voblint arguments, without the binary
+#   why     what the figure built from this output claims -- so a diff in CI
+#           says which sentence in the thesis is now wrong
+
+[claims.sign-cannot-bound-magnitude]
+argv = ["--analysis", "sign",
+        "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp"]
+why = "The known-imprecision example: sign tracks Positive exactly but has no magnitude, so total<100 stays UNKNOWN."
+
+[claims.parse-error-shape]
+argv = ["--analysis", "interval",
+        "tests/regression/00-sanity/02-malformed.vimp"]
+why = "The frontend reports file:line:col on a syntax error rather than crashing."
+expect_status = 2

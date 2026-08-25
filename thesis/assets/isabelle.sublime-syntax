@@ -1,0 +1,102 @@
+%YAML 1.2
+---
+# Minimal Isabelle/Isar syntax for Typst's `raw(syntaxes: ...)`.
+# No such definition ships with Sublime or syntect, so the thesis carries its
+# own. It covers what a thesis snippet actually contains: theory and proof
+# keywords, tactic names, inner-syntax strings and cartouches, comments, and
+# type variables.
+name: Isabelle
+file_extensions: [thy]
+scope: source.isabelle
+
+variables:
+  ident: '[A-Za-z][A-Za-z0-9_'']*'
+
+contexts:
+  main:
+    - match: \(\*
+      scope: punctuation.definition.comment.begin.isabelle
+      push: comment
+
+    - match: '‹'
+      scope: punctuation.definition.string.begin.isabelle
+      push: cartouche
+
+    - match: '"'
+      scope: punctuation.definition.string.begin.isabelle
+      push: inner-syntax
+
+    - match: \b(theory|imports|begin|end|context|locale|class|instantiation|instance|interpretation|sublocale|notepad)\b
+      scope: keyword.control.structure.isabelle
+
+    - match: \b(definition|abbreviation|fun|primrec|function|partial_function|inductive|inductive_set|coinductive|datatype|type_synonym|record|typedef|lift_definition|setup_lifting|termination)\b
+      scope: keyword.declaration.isabelle
+
+    - match: \b(lemma|theorem|corollary|proposition|schematic_goal)\b
+      scope: keyword.other.goal.isabelle
+
+    - match: \b(fixes|assumes|shows|defines|obtains|where|and|for|if|then|else|let|in|case|of)\b
+      scope: keyword.operator.isabelle
+
+    - match: \b(proof|qed|by|apply|done|using|unfolding|obtain|show|have|thus|hence|next|fix|assume|also|finally|moreover|ultimately|note|with|from)\b
+      scope: keyword.control.proof.isabelle
+
+    - match: \b(sorry|oops)\b
+      scope: invalid.illegal.admitted.isabelle
+
+    - match: \b(simp|auto|blast|force|fastforce|metis|meson|arith|presburger|induct|induction|cases|rule|erule|drule|intro|elim|subst|clarsimp|linarith|eval|code_simp|normalization|sledgehammer|nitpick)\b
+      scope: support.function.tactic.isabelle
+
+    - match: \b(export_code|code_identifier|value|declare|notation|print_locale|locale_deps|class_deps|thm_deps|thm_oracles)\b
+      scope: support.function.command.isabelle
+
+    - match: '''{{ident}}'
+      scope: storage.type.variable.isabelle
+
+    # Not inside an identifier or a schematic index: `?S0.0` is one variable.
+    - match: '(?<![A-Za-z0-9_''.?])\d+'
+      scope: constant.numeric.isabelle
+
+    - match: '\\<\^?[A-Za-z0-9_]+>'
+      scope: constant.character.escape.isabelle
+
+    # Meta-logical structure, after symbol decoding. Only the connectives are
+    # coloured: they are structure, not identifiers, so highlighting them makes
+    # a long statement scannable without pretending to know which of the
+    # remaining names are constants -- a guess that would sometimes be wrong,
+    # which is worse than plain text.
+    - match: '⟹|⟶|⋀|≡'
+      scope: keyword.operator.logic.isabelle
+
+    # The meta-conjunction brackets are structure too, but colouring them as
+    # loudly as the connectives turns a long statement red. They read as
+    # punctuation.
+    - match: '⟦|⟧'
+      scope: punctuation.section.brackets.isabelle
+
+    - match: '∀|∃|¬|∧|∨|⟷'
+      scope: keyword.operator.logic.isabelle
+
+  comment:
+    - meta_scope: comment.block.isabelle
+    - match: \*\)
+      scope: punctuation.definition.comment.end.isabelle
+      pop: true
+    - match: \(\*
+      push: comment
+
+  cartouche:
+    - meta_scope: string.quoted.other.cartouche.isabelle
+    - match: '›'
+      scope: punctuation.definition.string.end.isabelle
+      pop: true
+    - match: '‹'
+      push: cartouche
+
+  inner-syntax:
+    - meta_scope: string.quoted.double.isabelle
+    - match: '"'
+      scope: punctuation.definition.string.end.isabelle
+      pop: true
+    - match: '\\<\^?[A-Za-z0-9_]+>'
+      scope: constant.character.escape.isabelle
