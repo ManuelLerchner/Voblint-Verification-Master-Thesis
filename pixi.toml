@@ -99,7 +99,7 @@ bench = ["bench"]
 # `dependencies`, present in every environment) plus Isabelle/OCaml
 # already on PATH -- no feature-specific package, so they stay common
 # rather than living under any one feature. Nontrivial shell (Isabelle
-# build invocations, the vendor patch logic, OCaml link steps) lives in
+# build invocations, submodule vendoring, OCaml link steps) lives in
 # small versioned scripts under scripts/mk/ that these tasks call.
 # ISABELLE/AFP/SESSION honor the same env-var overrides the old Makefile's
 # `?=` defaults did, e.g. `AFP=/path/to/afp/thys pixi run build`.
@@ -107,9 +107,8 @@ bench = ["bench"]
 
 [tasks]
 # Vendoring. Rarer maintenance actions (bumping vendor/autocorrode to
-# upstream main, or regenerating vendor/td-verification.patch from the
-# submodule's working-tree diff) are plain git commands, not tasks -- see
-# "Vendoring the TD solver" in README.md.
+# upstream main) are plain git commands, not tasks -- see "Vendoring the TD
+# solver" in README.md.
 vendor = "bash scripts/mk/vendor.sh"
 
 # Isabelle build
