@@ -32,6 +32,22 @@ pre-commit:
       glob: "src/**/*.thy"
       run: pixi run python3 scripts/check_thy_prose_refs.py
 
+    # Same failure mode one layer out: a rename in the theories leaves the
+    # thesis naming something that no longer exists. Runs on both the thesis
+    # sources and the theories, since either side can break the pairing.
+    - name: thesis-refs
+      glob:
+        - "thesis/**/*.typ"
+        - "src/**/*.thy"
+      run: pixi run python3 scripts/check_thesis_refs.py
+
+    - name: thesis-snippets
+      glob:
+        - "thesis/shared/snippets.toml"
+        - "thesis/shared/generated/snippets/*.thy"
+        - "src/**/*.thy"
+      run: pixi run python3 thesis/tools/snippets.py --check
+
     - name: vimp-isabelle-grammar-drift
       glob:
         - "grammar/vimp.yaml"

@@ -1,0 +1,21 @@
+// Stand-in for output of the analyzer's GraphViz renderer. Both templates
+// consume this same file: LaTeX renders it to PDF in the build, Typst renders
+// it inline. Neither hand-copies the graph.
+digraph fac {
+  rankdir=TB;
+  node [fontname="DejaVu Sans Mono", fontsize=10, shape=circle, width=0.34];
+  edge [fontname="DejaVu Sans Mono", fontsize=8];
+
+  entry  [shape=box, style="rounded,filled", fillcolor="#E3F0FB",
+          color="#1565C0", label="Entry fac", width=0.9];
+  result [shape=box, style="rounded,filled", fillcolor="#E3F0FB",
+          color="#1565C0", label="Result fac", width=0.9];
+
+  entry -> u1;
+  u1 -> u2 [label="n<=1"];
+  u1 -> u3 [label="!(n<=1)"];
+  u2 -> u4;
+  u3 -> u4 [label="call fac", style=dashed, color="#1565C0",
+            fontcolor="#1565C0"];
+  u4 -> result;
+}

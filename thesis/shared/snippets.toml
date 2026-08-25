@@ -1,0 +1,12 @@
+# Declarations the thesis shows verbatim. Cited by name, never by line range:
+# the name has to resolve, and the extracted text is committed, so a rename
+# fails the build and an edit to a shown definition surfaces as a diff.
+
+[snippets.sound_domain]
+why = "The domain interface figure: what a domain must supply and prove."
+
+[snippets.combine_env_abs]
+why = "Named in the transfer-function box as the structural default combine."
+
+[snippets.sound_dg_spec]
+why = "The D/G soundness obligations the per-domain instantiations discharge."

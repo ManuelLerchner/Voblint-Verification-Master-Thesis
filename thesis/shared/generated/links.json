@@ -1,0 +1,25 @@
+{
+  "base": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/",
+  "links": {
+    "const:calls": "Unsorted/Voblint_CFG/CFG_Def.html#CFG_Def.cfg.calls%7Cconst",
+    "const:combine_env": "Unsorted/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst",
+    "const:compile": "Unsorted/Voblint_CFG/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile%7Cconst",
+    "const:intra": "Unsorted/Voblint_CFG/CFG_Def.html#CFG_Def.cfg.intra%7Cconst",
+    "const:state_report_export_auto": "Unsorted/Voblint_CLI/State_Report_GraphViz.html#State_Report_GraphViz.state_report_export_auto%7Cconst",
+    "const:valid_ltr": "Unsorted/Voblint_CFG/CFG_Local_Trace.html#CFG_Local_Trace.valid_ltr%7Cconst",
+    "locale:dg_ctx_activation_base": "Unsorted/Voblint_Core/DG_Ctx_Activation.html#DG_Ctx_Activation.dg_ctx_activation_base%7Clocale",
+    "locale:sound_dg_spec": "Unsorted/Voblint_Core/DG_Soundness.html#DG_Soundness.sound_dg_spec%7Clocale",
+    "locale:sound_domain": "Unsorted/Voblint_Core/Abstract_Domain.html#Abstract_Domain.sound_domain%7Clocale",
+    "thm:ltr_collect_semantic_postfix": "Unsorted/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_collect_semantic_postfix%7Cfact",
+    "thm:run_source_sound": "Unsorted/Voblint_CLI/Voblint_Soundness.Run_Analysis_Sound.html#Run_Analysis_Sound.unit_dg_exec_analysis.run_source_sound%7Cfact",
+    "thm:source_activation_sound": "Unsorted/Voblint_CLI/Voblint_Soundness.Source_Activation_Sound.html#Source_Activation_Sound.source_activation_sound%7Cfact",
+    "thm:source_completes_ltr_collect_exit": "Unsorted/Voblint_CLI/Voblint_Soundness.Source_Activation_Sound.html#Source_Activation_Sound.source_completes_ltr_collect_exit%7Cfact",
+    "type:com": "Unsorted/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.com%7Ctype",
+    "type:dg_spec": "Unsorted/Voblint_Core/DG_Framework.html#DG_Framework.dg_spec%7Ctype",
+    "type:dg_state": "Unsorted/Voblint_Core/DG_Framework.html#DG_Framework.dg_state%7Ctype",
+    "type:domain_transfer": "Unsorted/Voblint_Core/Constraint_System.html#Constraint_System.domain_transfer%7Ctype",
+    "type:edge_action": "Unsorted/Voblint_CFG/CFG_Def.html#CFG_Def.edge_action%7Ctype",
+    "type:imp_prog": "Unsorted/Voblint_VIMP/VIMP_Notation.html#VIMP_Notation.imp_prog%7Ctype",
+    "type:ltr": "Unsorted/Voblint_CFG/CFG_Local_Trace.html#CFG_Local_Trace.ltr%7Ctype"
+  }
+}

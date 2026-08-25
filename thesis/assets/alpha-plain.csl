@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LaTeX's `alpha` labels with `plain`-style entries: [TGS26] followed by
+  given-name-first authors and period-separated fields. Written for this thesis
+  because Typst's built-in `alphanumeric` style produces the labels but has no
+  bibliography layout, and the CSL styles that do produce such labels format
+  their entries to German conventions.
+-->
+<style xmlns="http://purl.org/net/xbiblio/csl" class="in-text" version="1.0"
+       default-locale="en-US" demote-non-dropping-particle="never">
+  <info>
+    <title>Alphanumeric (plain)</title>
+    <id>https://voblint.invalid/alpha-plain</id>
+    <category citation-format="label"/>
+    <updated>2026-08-25T00:00:00+00:00</updated>
+  </info>
+
+  <macro name="author">
+    <names variable="author">
+      <!-- Full given names, as LaTeX plain sets them. -->
+      <name and="text" delimiter=", " delimiter-precedes-last="always"/>
+      <label form="short" prefix=", "/>
+      <substitute>
+        <names variable="editor"/>
+        <text variable="title"/>
+      </substitute>
+    </names>
+  </macro>
+
+  <macro name="issued">
+    <date variable="issued">
+      <date-part name="year"/>
+    </date>
+  </macro>
+
+  <macro name="container">
+    <choose>
+      <if type="paper-conference chapter entry-encyclopedia" match="any">
+        <group delimiter=" ">
+          <text value="In"/>
+          <text variable="container-title"/>
+        </group>
+      </if>
+      <else-if type="article-journal article-magazine" match="any">
+        <group delimiter=" ">
+          <text variable="container-title" font-style="italic"/>
+          <text variable="volume"/>
+          <text variable="issue" prefix="(" suffix=")"/>
+        </group>
+      </else-if>
+      <else-if type="thesis">
+        <group delimiter=", ">
+          <text variable="genre"/>
+          <text variable="publisher"/>
+          <text variable="archive"/>
+        </group>
+      </else-if>
+      <else>
+        <text variable="publisher"/>
+      </else>
+    </choose>
+  </macro>
+
+  <citation collapse="year">
+    <layout prefix="[" suffix="]" delimiter=", ">
+      <text variable="citation-label"/>
+    </layout>
+  </citation>
+
+  <bibliography second-field-align="flush" entry-spacing="0"
+                hanging-indent="false">
+    <sort>
+      <key variable="citation-label"/>
+    </sort>
+    <layout suffix=".">
+      <text variable="citation-label" prefix="[" suffix="]"/>
+      <group delimiter=". ">
+        <text macro="author"/>
+        <text variable="title"/>
+        <text macro="container"/>
+        <text variable="page" prefix="pages "/>
+        <text macro="issued"/>
+      </group>
+    </layout>
+  </bibliography>
+</style>

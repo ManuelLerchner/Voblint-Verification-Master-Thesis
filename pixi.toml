@@ -86,8 +86,73 @@ lefthook = "*"
 lefthook-install = "lefthook install"
 lint = "lefthook run pre-commit --all-files"
 
+# ---------------------------------------------------------------- thesis ----
+# The thesis builds with Typst and its drift checks are plain Python, so the
+# whole toolchain is a single conda dependency -- `pixi run thesis-typst` needs
+# nothing installed by hand.
+[feature.thesis.dependencies]
+typst = ">=0.15"
+
+[feature.thesis.tasks]
+# The thesis names constants, lemmas, locales and types that live in the
+# theories. `check_thesis_refs` resolves each one against the command that
+# declares it, so a rename shows up as a build failure rather than as a
+# sentence about something that no longer exists.
+thesis-refs = "python3 scripts/check_thesis_refs.py"
+
+# Figures built from analyzer output are regenerated and diffed, so a thesis
+# claim cannot outlive the behaviour it describes.
+thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = ["cli-build"] }
+thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-on = ["cli-build"] }
+
+# Declarations the thesis shows are lifted out of the theories by name, never
+# retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
+thesis-snippets = "python3 thesis/tools/snippets.py --check"
+thesis-snippets-write = "python3 thesis/tools/snippets.py --write"
+
+# Theorem statements are exported from a built session, which is what gives the
+# Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
+# Needs the session in facts.toml to be built.
+thesis-facts = "python3 thesis/tools/facts.py --check"
+thesis-facts-write = "python3 thesis/tools/facts.py --write"
+
+# Warnings are failures; an unresolved reference must not scroll past unread.
+thesis-typst = "bash thesis/tools/typst-build.sh"
+
+# Same build, but warnings do not stop it -- for drafting.
+thesis-draft = "bash thesis/tools/typst-build.sh --allow-warnings"
+
+# Live rebuild while writing.
+thesis-watch = "typst watch --root thesis --font-path thesis/assets/fonts thesis/thesis.typ thesis/Voblint_Thesis.pdf"
+
+# Isabelle's symbol table, turned into the lookup the template decodes with.
+thesis-symbols = "python3 thesis/tools/gen_isabelle_symbols.py > thesis/lib/isabelle-symbols.typ"
+
+# Everything the thesis quotes from the formalization or the analyzer.
+thesis-generated = { depends-on = [
+  "thesis-snippets-write", "thesis-claims-write", "thesis-facts-write",
+] }
+
+# Every drift check, in one name.
+thesis-check = { depends-on = [
+  "thesis-refs", "thesis-snippets", "thesis-claims", "thesis-facts",
+  "thesis-links",
+] }
+
+# Entity citations link to their definition in the rendered theories, anchor by
+# anchor. Locally this is advisory: a working copy rarely has a current
+# docs/html, and a link cannot be validated before the theories are built.
+thesis-links = "python3 scripts/check_thesis_links.py --check --lenient"
+thesis-links-strict = "python3 scripts/check_thesis_links.py --check"
+thesis-links-write = "python3 scripts/check_thesis_links.py --write"
+
+# The gate that matters, and the only one that can be honest: it runs against
+# the deployed pages, so it cannot run until GitHub Pages has published them.
+thesis-links-live = "python3 scripts/check_thesis_links.py --live"
+
 [environments]
-default = ["ir", "grammar", "test", "lint", "report", "bench"]
+default = ["ir", "grammar", "test", "lint", "report", "bench", "thesis"]
+thesis = ["thesis"]
 lint = ["lint"]
 test = ["test"]
 grammar = ["grammar"]
@@ -149,6 +214,7 @@ docs-lint = "python3 scripts/extract_definitions.py --lint"
 # cartouches, which Isabelle does not resolve -- so a rename leaves the comment
 # describing something that no longer exists. Gating: the backlog is cleared.
 thy-prose-refs = "python3 scripts/check_thy_prose_refs.py"
+
 docs-overview = "python3 scripts/extract_definitions.py --dump docs/generated/DEFINITIONS_OVERVIEW.md"
 
 # Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
@@ -165,12 +231,15 @@ ci = { depends-on = [
   "lint",
   "grammar-check",
   "thy-prose-refs",
+  "thesis-refs",
+  "thesis-snippets",
   "build",
   "codegen-check",
   "regression-lint",
   "id-position-check",
   "cli-test",
   "cli-smoke",
+  "thesis-claims",
   "html-report-check",
   "html-report-audit",
   "html-config-audit",

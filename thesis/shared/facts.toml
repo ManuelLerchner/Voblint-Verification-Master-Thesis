@@ -1,0 +1,15 @@
+# Theorem statements the thesis reproduces. Exported from a built session
+# rather than retyped, so the page shows what Isabelle actually proved.
+#
+# `session` names the heap the export runs against and `theory` the context
+# facts are resolved in; both must be built. Facts from other sessions are
+# reported as unresolved rather than silently dropped.
+
+session = "Voblint_CFG"
+theory = "Voblint_CFG.LTR_Abstract"
+
+[facts.ltr_collect_semantic_postfix]
+why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
+
+[facts.valid_ltr_eq_lfp]
+why = "The activation-local trace semantics is the least fixpoint of its rule functional."
