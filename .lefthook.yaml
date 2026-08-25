@@ -59,6 +59,21 @@ pre-commit:
             glob: "*.thy"
             run: pixi run isabelle-ascii-check -- {staged_files}
 
+          # A rename in the theories can leave the thesis naming something
+          # that no longer exists. Either side can break the pairing.
+          - name: thesis-refs
+            glob:
+              - "thesis/**/*.typ"
+              - "src/**/*.thy"
+            run: pixi run thesis-refs
+
+          - name: thesis-snippets
+            glob:
+              - "thesis/shared/snippets.toml"
+              - "thesis/shared/generated/snippets/*.thy"
+              - "src/**/*.thy"
+            run: pixi run thesis-snippets
+
           # Fires on every staged .thy, not just on the generated .ml: the check
           # also reports theories changed since the export was regenerated.
           - name: codegen-module-map

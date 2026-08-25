@@ -38,7 +38,7 @@ jobs:
       - name: Checkout Goblint Formalization
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           submodules: false
           persist-credentials: false
 
@@ -55,13 +55,34 @@ jobs:
 
       - name: Setup Isabelle
         id: setup-isabelle
-        uses: ./.github/actions/setup-isabelle-action
+        uses: $/.github/actions/setup-isabelle-action
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
+      - name: Detect Isabelle theory changes
+        id: changed
+        shell: bash
+        run: |
+          changed=false
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            changed=true
+          elif [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            files=$(git diff --name-only "origin/$GITHUB_BASE_REF...$GITHUB_SHA")
+            while IFS= read -r path; do
+              case "$path" in *.thy) changed=true; break ;; esac
+            done <<< "$files"
+          else
+            files=$(git diff --name-only "$GITHUB_EVENT_BEFORE" "$GITHUB_SHA")
+            while IFS= read -r path; do
+              case "$path" in *.thy) changed=true; break ;; esac
+            done <<< "$files"
+          fi
+          echo "thy=$changed" >> "$GITHUB_OUTPUT"
+          echo "Isabelle theory changes: $changed"
 
       # Plain incremental build (no -c): the actual cache writer and the
       # thing that validates/warms the heap cache. html.sh's -c flag
@@ -71,7 +92,12 @@ jobs:
       # single run. html generation is its own downstream consumer job
       # below, which pays that -c cost only when actually needed.
       - name: Build (incremental, populates the heap cache)
+        if: steps.changed.outputs.thy == 'true'
         run: pixi run isabelle-build
+
+      - name: Skip build when theories are unchanged
+        if: steps.changed.outputs.thy != 'true'
+        run: echo "No .thy files changed; skipping the Isabelle build."
 
       - name: Report heap store size
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
@@ -120,7 +146,7 @@ jobs:
           git submodule update --init --depth 1 vendor/td-verification
 
       - name: Setup Isabelle
-        uses: ./.github/actions/setup-isabelle-action
+        uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
@@ -128,7 +154,7 @@ jobs:
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Reuse partial heap state from the failed integration build
         continue-on-error: true
@@ -196,7 +222,7 @@ jobs:
           git submodule update --init --depth 1 vendor/td-verification
 
       - name: Setup Isabelle
-        uses: ./.github/actions/setup-isabelle-action
+        uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
@@ -204,7 +230,7 @@ jobs:
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from build-isabelle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -218,6 +244,23 @@ jobs:
       # to this job instead of gating the fast validation jobs on it.
       - name: Build HTML docs (clean build of every session)
         run: pixi run isabelle-docs-build
+
+      # This job has the only freshly rendered tree in CI, so it is where the
+      # link map is regenerated. It reports drift rather than gating: the
+      # authoritative check is thesis-links-live, which runs after the pages
+      # are actually published.
+      - name: Regenerate thesis link map from the fresh HTML
+        run: pixi run thesis-links-write
+
+      - name: Report link-map drift (advisory)
+        run: |
+          if ! git diff --quiet -- thesis/shared/generated/links.json; then
+            echo "::warning::thesis/shared/generated/links.json is out of date."
+            echo "Run: pixi run isabelle-docs-build && pixi run thesis-links-write, then commit."
+            git --no-pager diff -- thesis/shared/generated/links.json | head -60
+          else
+            echo "link map matches the freshly rendered theories"
+          fi
 
       - name: Upload GitHub Pages site
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -256,7 +299,7 @@ jobs:
           git submodule update --init --depth 1 vendor/td-verification
 
       - name: Setup Isabelle
-        uses: ./.github/actions/setup-isabelle-action
+        uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
@@ -264,13 +307,19 @@ jobs:
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from build-isabelle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: isabelle-heaps
           path: ${{ env.ISABELLE_HOME_USER }}/heaps/
+
+      # Theorem statements the thesis reproduces are re-exported from the built
+      # session and diffed. This is the Typst template's replacement for
+      # Isabelle's @{thm} antiquotation, so it needs the heaps this job has.
+      - name: Thesis theorem statements match what Isabelle proves
+        run: pixi run thesis-facts
 
       - name: Isabelle community linter
         run: pixi run isabelle-lint
@@ -304,7 +353,7 @@ jobs:
           git submodule update --init --depth 1 vendor/td-verification
 
       - name: Setup Isabelle
-        uses: ./.github/actions/setup-isabelle-action
+        uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
@@ -312,7 +361,7 @@ jobs:
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Download exact heap state from build-isabelle
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -334,7 +383,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up pixi
-        uses: prefix-dev/setup-pixi@f00437f565399d418b0acc85936d12c1fb668347 # v0.10.1
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Verification task surface
         run: pixi run verification-surface-check
@@ -375,6 +424,19 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules-check
 
+      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
+      # resolved against the command that declares it, so a rename in the
+      # theories fails here instead of leaving the thesis describing something
+      # that no longer exists. Reads .thy sources directly -- no Isabelle.
+      - name: Thesis references resolve against the theories (no build needed)
+        run: pixi run thesis-refs
+
+      # Declarations the thesis shows are lifted out of the theories by name.
+      # Text extraction only, so this catches an edited definition without
+      # waiting for Isabelle.
+      - name: Thesis snippets match the theories (no build needed)
+        run: pixi run thesis-snippets
+
       # check_thy_prose_refs resolves a cited name against every .thy under src/
       # AND vendor/, so prose naming a vendored TD constant
       # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
@@ -404,7 +466,7 @@ jobs:
         run: pixi run locale-parameters-check
 
       - name: Setup OCaml
-        uses: ocaml/setup-ocaml@605a7e998e76e035b82c14d618a6e1010732c4ce # v3.7.1
+        uses: ocaml/setup-ocaml@e89b2ded52a6e13f50162220cf5fe47290162032 # v3.8.0
         with:
           ocaml-compiler: '5'
 
@@ -430,6 +492,13 @@ jobs:
       - name: CLI plumbing smoke tests (exit codes, --help, argument errors)
         run: pixi run cli-smoke
 
+      # Figures built from analyzer output are regenerated and diffed against
+      # what is committed. A behaviour change that a thesis figure describes
+      # fails here, naming the claim, instead of silently making the figure a
+      # record of how the analyzer used to behave.
+      - name: Thesis claims still match the CLI
+        run: pixi run thesis-claims
+
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: pixi run property-test
 
@@ -445,6 +514,36 @@ jobs:
 
       - name: HTML report sweep over the domain/solver/context space
         run: pixi run html-report-config-audit
+
+  thesis-pdf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
+      # Typst comes from the `thesis` pixi feature, so CI and a working copy
+      # build with the same version.
+      # Warnings are failures here: an unresolved reference or an overflowing
+      # box must not reach a PDF a supervisor reads. Graphviz sources are laid
+      # out inside the document, so there is no figure-rendering step.
+      - name: Build the thesis (warnings are errors)
+        run: pixi run thesis-typst
+
+      # Downloadable from the run, so a reviewer never has to install a
+      # toolchain to see what a branch changed.
+      - name: Upload the PDF
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: thesis-pdf
+          path: thesis/Voblint_Thesis.pdf
+          if-no-files-found: error
 
   deploy-pages:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -473,4 +572,28 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # A link in the thesis points at a page on GitHub Pages, so it can only be
+  # validated once that page exists. This is the one check that sees what a
+  # reader sees: it fetches every URL in the link map and verifies the page
+  # responds *and* still carries the anchor the citation targets.
+  thesis-links-live:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: deploy-pages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Goblint Formalization
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          submodules: false
+          persist-credentials: false
+
+      - name: Set up pixi
+        uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
+
+      # Pages serves a new deployment with a short delay; the checker retries
+      # with backoff rather than failing on the first miss.
+      - name: Thesis links reach their definition on the published site
+        run: pixi run thesis-links-live
