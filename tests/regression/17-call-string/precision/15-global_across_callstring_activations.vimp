@@ -1,0 +1,29 @@
+// PARAM: --analysis interval --context call-string --context-depth 1
+// A declared global crossing a call-string-routed call boundary, in the
+// same whole-state slot a local uses. bump reads the global g its caller
+// wrote before the call, writes it, and returns it; main observes both the
+// returned value and the callee's update. The three call sites are
+// syntactically distinct, so a 1-call-string already separates all three
+// activations: g enters bump at 10, 15 and 19 in turn, and each activation
+// returns its own exact value instead of a join of all three.
+//
+// The third call pins one further property: its actual argument is the
+// global g itself, so it holds only if a call argument is evaluated
+// against the caller's real state rather than a globals-bottomed one --
+// bump(19) doubles to 38 on both the returned value and the global.
+global g;
+void bump(n) {
+  g := g + n;
+  return g
+}
+void main() {
+  g := 10;
+  a := bump(5);
+  b := bump(4);
+  __voblint_check(a == 15); // PROVED
+  __voblint_check(b == 19); // PROVED
+  __voblint_check(g == 19); // PROVED
+  c := bump(g);
+  __voblint_check(c == 38); // PROVED
+  __voblint_check(g == 38) // PROVED
+}

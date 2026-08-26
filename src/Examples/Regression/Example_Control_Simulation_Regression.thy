@@ -184,17 +184,19 @@ lemma csim_tailcall_callee_entry:
       and caller: "control_at \<Pi> pc c0c kc nc SKIP cont"
       and callercacc: "compiled_at \<Gamma> \<Pi> g pc c0c kc nc"
       and callerpa: "proc_activation \<Pi> pc c0c"
+      and calleety: "styped \<Gamma> callee"
+      and callerty: "styped \<Gamma> caller"
   shows "csim \<Gamma> \<Pi> g (Seq SKIP Restore, callee, [Frame caller dst (proc_ret_kind \<Pi> pc)],
                      proc_ret_kind \<Pi> p)
                   (v, callee, [(cont, compile_dst \<Gamma> dst, caller)])"
 proof -
   have base: "csim \<Gamma> \<Pi> g (SKIP, callee, [], proc_ret_kind \<Pi> p) (v, callee, [])"
-    by (rule csim.Base[OF callee calleecacc calleepa])
+    by (rule csim.Base[OF callee calleecacc calleepa calleety])
   have caller': "control_at \<Pi> pc c0c kc nc (seq_after SKIP []) cont" using caller by simp
   have "csim \<Gamma> \<Pi> g (seq_after (Seq SKIP Restore) [], callee,
                     [] @ [Frame caller dst (proc_ret_kind \<Pi> pc)], proc_ret_kind \<Pi> p)
                  (v, callee, [] @ [(cont, compile_dst \<Gamma> dst, caller)])"
-    by (rule csim.Nested[OF base caller' callercacc callerpa])
+    by (rule csim.Nested[OF base caller' callercacc callerpa callerty])
   thus ?thesis by simp
 qed
 

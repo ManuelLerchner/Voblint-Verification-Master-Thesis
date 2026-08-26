@@ -51,10 +51,14 @@ lemma inv_times_congruence_nonsingleton_fallback:
 definition congruence_test_env :: "congruence abs_state" where
   "congruence_test_env = (\<lambda>_. top)"
 
+text \<open>Inverting \<open>x + 1 == 3\<close> at \<^const>\<open>I32\<close> pins the residue but not the
+  wrap: the sum is taken modulo \<open>2 ^ 32\<close>, so the recovered class is
+  \<open>2\<close> modulo that same wrap rather than the singleton \<open>{2}\<close>.\<close>
+
 lemma bfilter_congruence_linear_equality_regression:
   "bfilter_congruence
       (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
-      congruence_test_env (STR ''x'') = congruence_of_int 2"
+      congruence_test_env (STR ''x'') = mk_congruence 2 4294967296"
   unfolding congruence_test_env_def
   by eval
 

@@ -433,12 +433,55 @@ and issue #132 for the composite Int_dom domain's broader design.
 
 | Level | Claim | Status |
 | --- | --- | --- |
+| 0 | VIMP's *concrete* semantics faithfully models C's integer semantics | **NOT PROVABLE INSIDE HOL -- see below.** Deliberate, documented divergence on signed overflow; conversion rules implemented but validated only externally |
 | 1 | Mathematical abstract transfer functions are proved sound | **YES** for Sign, Interval, Parity, Int_dom x3; Congruence partial (no branch layer) |
 | 2 | The mathematical solver using those transfers is proved sound | **YES** for the exported domains (`partial_post_solution` + per-domain `*_exec_sound_collecting_at`/`*_dg_post_solution_collect_sound`) |
 | 3 | The executable HOL mirror computes results corresponding to the mathematical analyzer | **YES** for Interval and Int_dom x3; **PARTIAL** for Sign (branch-collapse lemma, section 4); **NO** for Congruence's branch layer (does not exist) |
 | 4 | The functions exported with `export_code` are those executable HOL functions | **YES** for Sign and Interval; **NO** for Congruence/Parity/Int_dom (absent from every `export_code` list) |
 | 5 | The generated OCaml/Haskell analyzer implements the verified analysis, modulo code-generation and compiler/runtime trust | **YES** for Sign and Interval, contingent on the section-4 caveat; **N/A** elsewhere since level 4 already fails |
-| 6 | The entire CLI, including parsing and reporting, is end-to-end formally verified | **NO** -- lexer/parser are hand-written OCaml with no covering theorem. The unreachable-suppression flag is now exported and proved exact to `ltr_collect` (section 9), closing that one gap, but other presentation code (char/string decoding, formatting) remains unverified glue |
+
+
+### Level 0 is a validation obligation, not a proof obligation
+
+Every level above is stated *relative to VIMP's concrete semantics*. Level 0
+asks whether that semantics is the right one, and it cannot be discharged by a
+theorem here: `ik_norm`, `ik_promote` and `usual_kind` are **specifications**,
+not implementations, so there is nothing inside HOL to verify them against.
+Only external artifacts can validate them. Recording that honestly matters more
+than the levels above it, because a reader who sees "YES" five times in a row
+may not notice what the whole column is conditional on.
+
+What the standard actually says, and where this project stands:
+
+- **Signed overflow (C 6.5p5, undefined).** VIMP defines it as two's-complement
+  wraparound. This is *CompCert C's* choice as well -- see the alignment
+  register for Leroy's wording -- and Goblint's under
+  `sem.int.signed_overflow=assume_wraparound`. Deliberate and cited, not
+  accidental.
+- **Integer promotions (6.3.1.1p2) and usual arithmetic conversions
+  (6.3.1.8).** Implemented as `ik_promote` and `usual_kind`, with
+  commutativity, width domination, and the unreachability of the standard's
+  final clause proved. They are *not* proved equivalent to a separate
+  declarative transcription of the standard's text -- which is exactly what
+  CompCert's `ArithConv` module does for its own conversions, and is the
+  highest-value structural addition available here.
+- **Literal typing (6.4.4.1).** Not modelled; a bare literal defaults to
+  `int32`. See the ROADMAP gap.
+
+Mitigations, in the order they are worth doing: cite the external artifacts
+that made the same choices; add the declarative-transcription layer and prove
+conformance to it, mirroring `ArithConv`; differential-test against
+goblint-cil's `integralPromotion`/`arithmeticConversion` and a C compiler under
+`-fwrapv`; cross-check clause by clause against Cerberus's
+`ail/ailTypesAux.lem` and the K semantics' `common/promotion.k`.
+
+For context on how this compares to the nearest Isabelle-native C tooling: the
+seL4 C parser (AFP `AutoCorres2`) resolves 6.3.1.1 and 6.3.1.8 in *unverified
+Standard ML* inside the translator, with no HOL counterpart -- a search for
+`integer_promotions` across AFP theory files finds nothing. So VIMP's
+conversion rules are stated more rigorously than the flagship Isabelle C
+front-end's, which is worth saying plainly rather than leaving level 0 to look
+like a weakness unique to this project.| 6 | The entire CLI, including parsing and reporting, is end-to-end formally verified | **NO** -- lexer/parser are hand-written OCaml with no covering theorem. The unreachable-suppression flag is now exported and proved exact to `ltr_collect` (section 9), closing that one gap, but other presentation code (char/string decoding, formatting) remains unverified glue |
 
 ## What the thesis may claim today
 

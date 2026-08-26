@@ -229,10 +229,15 @@ lemma special_int_dom_sound:
   shows "s(x := v) \<in> \<lbrakk>special_int_dom mode sc x \<sigma>\<rbrakk>"
 proof (cases sc)
   case (Nondet_Int k)
-  show ?thesis
+  have vr: "v \<in> ik_range k" using sr Nondet_Int by simp
+  then have "ik_norm k v = v" by (rule ik_norm_id)
+  moreover have "ik_norm k v \<in> gamma_int_dom (int_dom_cast k (top :: int_dom))"
+    by (rule int_dom_cast_sound) (simp add: gamma_int_dom_top)
+  ultimately have "v \<in> gamma_int_dom (refine mode (int_dom_cast k top))"
+    by (simp add: refine_exact)
+  then show ?thesis
     unfolding Nondet_Int gamma_state_def
-    using gs unfolding gamma_state_def
-    by (simp add: gamma_int_dom_top)
+    using gs unfolding gamma_state_def by simp
 next
   case (Min k a b)
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"

@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/39-signed-overflows/04-cast-unsigned-to-signed.c
+// ("unsigned long x; long y = x; __goblint_check(y >= 0); // UNKNOWN!").
+//
+// ux is written by an unconstrained __voblint_nondet_int(), so every value in
+// uint64's range is a possible run. Converting to int64 maps the upper half
+// of that range to negative values and the lower half to non-negative ones,
+// so both a satisfying and a violating execution exist and UNKNOWN is the
+// only sound answer -- the sign of sy is not determined by the source, and no
+// component of the abstraction is losing anything here.
+//
+// The opposite direction is decidable and is in
+// precision/07-unsigned_conversion_is_nonnegative.vimp.
+global uint64 ux;
+global int64 sy;
+void main() {
+  ux := __voblint_nondet_int();
+  sy := ux;
+  __voblint_check(!(sy < 0)) // UNKNOWN
+}

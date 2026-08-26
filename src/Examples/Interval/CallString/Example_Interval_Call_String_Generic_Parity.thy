@@ -102,11 +102,11 @@ lemma cs_generic_k2_y_after_second_return:
   by eval
 
 text \<open>
-  The precision-separation witness itself, restated against the generic
+  The precision-separation witness itself, stated against the generic
   runtime-\<open>k\<close> interface: \<open>k = 2\<close> is strictly more precise than \<open>k = 1\<close> at
-  every point the two contexts \<^const>\<open>nest_program\<close> exercises, exactly
-  reproducing \<open>nest_k2_strictly_more_precise_than_k1\<close> without a second,
-  independently-instantiated equation system.
+  every point the two contexts \<^const>\<open>nest_program\<close> exercises, out of one
+  equation system parameterised by \<open>k\<close> rather than two independently
+  instantiated ones.
 \<close>
 
 theorem cs_generic_k2_strictly_more_precise_than_k1:

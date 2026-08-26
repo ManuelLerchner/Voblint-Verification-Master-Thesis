@@ -80,7 +80,7 @@ lemma body_step_refined:
 lemma body_step_identity:
   "body_after_identity (STR ''x'') = Ivl (Fin 1) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: assign_ivl_def normalize_ivl_def)
+  by eval
 
 text \<open>
   Joining the initial @{text "[0,0]"} with the body exit is where the gap
@@ -95,7 +95,7 @@ lemma loop_join_refined:
 lemma loop_join_identity:
   "sigma_x (Ivl (Fin 0) (Fin 0)) (STR ''x'') \<squnion> body_after_identity (STR ''x'') = Ivl (Fin 0) (Fin 21)"
   unfolding body_after_identity_def sigma_x_def assume_ivl_identity_def
-  by (simp add: sup_ivl_def assign_ivl_def normalize_ivl_def)
+  by eval
 
 lemma backward_analysis_strictly_tighter:
   "Ivl (Fin 0) (Fin 20) \<le> Ivl (Fin 0) (Fin 21)"

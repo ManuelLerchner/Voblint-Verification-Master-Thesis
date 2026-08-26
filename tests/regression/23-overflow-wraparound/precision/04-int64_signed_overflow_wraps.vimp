@@ -1,0 +1,32 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/31-ikind-aware-ints/09-signed-negate.c,
+// which runs under --set sem.int.signed_overflow assume_wraparound and asserts
+// "signed long long t = s + 2; __goblint_check(t == -9223372036854775807);"
+// for s at int64's maximum. VIMP's concrete semantics is that setting, so the
+// same result holds here.
+//
+// The constants are built by int64 arithmetic rather than written out: a bare
+// VIMP literal synthesizes int32, so anything beyond 2147483647 would be
+// normalized at int32 before reaching an int64 slot. p is 2^32 exactly, h
+// starts one 2^32 step below 2^63 and the next step carries it past int64's
+// maximum onto int64's minimum. Adding int64's minimum to itself is 2^64, a
+// multiple of the modulus, so it wraps to 0; subtracting one from it wraps
+// back to int64's maximum, which is its own negation minus one -- the last
+// check is upstream's, with the constant written as -s.
+global int64 p;
+global int64 h;
+global int64 s;
+global int64 t;
+void main() {
+  p := 65536;
+  p := p * p;
+  h := p * 2147483647;
+  __voblint_check(0 < h); // PROVED
+  h := h + p;
+  __voblint_check(h < 0); // PROVED
+  __voblint_check(h + h == 0); // PROVED
+  s := h - 1;
+  __voblint_check(0 < s); // PROVED
+  t := s + 2;
+  __voblint_check(t == -s) // PROVED
+}

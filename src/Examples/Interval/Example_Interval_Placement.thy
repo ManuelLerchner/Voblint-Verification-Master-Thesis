@@ -72,6 +72,19 @@ abbreviation placement_ret_balance :: texp where
 abbreviation placement_call_args :: "texp list" where
   "placement_call_args \<equiv> compile_actuals placement_ty [(STR ''x'')] [N 3]"
 
+text \<open>The elaborated shapes, computed once. Every variable here is declared at
+  \<^const>\<open>I32\<close>, so each payload is its syntactic skeleton with that kind
+  attached; naming them lets the value-agreement proofs below rewrite through
+  \<^const>\<open>aval_ivl_t\<close>'s own equations instead of re-running elaboration.\<close>
+
+lemma placement_elaborated_shapes [simp]:
+  "placement_rhs_tmp = TPlus I32 (TVar I32 (STR ''balance'')) (TVar I32 (STR ''x''))"
+  "placement_rhs_balance = TVar I32 (STR ''tmp'')"
+  "placement_rhs_count = TPlus I32 (TVar I32 (STR ''request_count'')) (TN I32 1)"
+  "placement_ret_balance = TVar I32 (STR ''balance'')"
+  "placement_call_args = [TN I32 3]"
+  by eval+
+
 definition placement_cfg :: cfg where
   "placement_cfg =
     compile_prog placement_ty (prog_table placement_prog) (prog_procs placement_prog)
@@ -306,7 +319,7 @@ lemma placement_dg_td_values:
     (Global_Location (STR ''balance'')) = Ivl (Fin 3) (Fin 3)"
   "lookup_resolved_st_q
     (globs (snd placement_dg_td_sol (Inr ())))
-    (Global_Location (STR ''request_count'')) = Ivl (Fin 0) PlusInf"
+    (Global_Location (STR ''request_count'')) = Ivl MinInf PlusInf"
   "lookup_resolved_st_q
     (locals (snd placement_dg_td_sol (Inl (Statement 6, ()))))
     (Local_Location (STR ''answer'')) = Ivl (Fin 3) (Fin 3)"
@@ -1559,7 +1572,7 @@ lemma placement_dg_refines_statement1:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (Statement 1, ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_assign[where v = "Statement 1" and u = "Statement 0"
-    and y = "(STR ''tmp'')" and a = "Plus (V (STR ''balance'')) (V (STR ''x''))"])
+    and y = "(STR ''tmp'')" and a = placement_rhs_tmp])
   show "Statement 1 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 1) =
       [(Statement 0, EA_Assign (STR ''tmp'') placement_rhs_tmp)]"
@@ -1615,7 +1628,7 @@ lemma placement_dg_refines_statement2:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (Statement 2, ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_assign[where v = "Statement 2" and u = "Statement 1"
-    and y = "(STR ''balance'')" and a = "V (STR ''tmp'')"])
+    and y = "(STR ''balance'')" and a = placement_rhs_balance])
   show "Statement 2 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 2) =
       [(Statement 1, EA_Assign (STR ''balance'') placement_rhs_balance)]"
@@ -1645,8 +1658,8 @@ proof (rule placement_dg_refines_edge_assign[where v = "Statement 2" and u = "St
          dg_hook_G (snd placement_dg_td_sol))) =
     aval_ivl_t placement_rhs_balance
       (dg_hook_D placement_sigma_abs (Statement 1) \<squnion> dg_hook_G placement_sigma_abs)"
-    unfolding dg_hook_D_def dg_hook_G_def aval_ivl.simps sup_fun_def
-      fun_of_resolved_st_q_for_sup
+    unfolding placement_elaborated_shapes dg_hook_D_def dg_hook_G_def
+      aval_ivl_t.simps sup_fun_def fun_of_resolved_st_q_for_sup
     by (rule tmp)
 qed
 
@@ -1660,7 +1673,7 @@ lemma placement_dg_refines_statement3:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (Statement 3, ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_assign[where v = "Statement 3" and u = "Statement 2"
-    and y = "(STR ''request_count'')" and a = "Plus (V (STR ''request_count'')) (N 1)"])
+    and y = "(STR ''request_count'')" and a = placement_rhs_count])
   show "Statement 3 \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (Statement 3) =
       [(Statement 2, EA_Assign (STR ''request_count'') placement_rhs_count)]"
@@ -1704,7 +1717,7 @@ lemma placement_dg_refines_function_result_add:
         (placement_sound_dg_hooks.hook_gen placement_cfg bot s0d s0g (FunctionResult (STR ''add''), ()))
         placement_sigma_abs (Inr ()))))"
 proof (rule placement_dg_refines_edge_ret_some[where v = "FunctionResult (STR ''add'')"
-    and u = "Statement 3" and a = "V (STR ''balance'')"])
+    and u = "Statement 3" and a = placement_ret_balance])
   show "FunctionResult (STR ''add'') \<noteq> cfg_entry placement_cfg" by (simp add: placement_cfg_entry)
   show "intra_predecessor_list placement_cfg (FunctionResult (STR ''add'')) =
       [(Statement 3, EA_Ret (Some placement_ret_balance) (STR ''add'') (proc_ret_kind (prog_table placement_prog) (STR ''add'')))]"
@@ -1734,6 +1747,7 @@ proof (rule placement_dg_refines_edge_ret_some[where v = "FunctionResult (STR ''
          dg_hook_G (snd placement_dg_td_sol))) =
     aval_ivl_t placement_ret_balance
       (dg_hook_D placement_sigma_abs (Statement 3) \<squnion> dg_hook_G placement_sigma_abs)"
+    unfolding placement_elaborated_shapes
     by (simp add: dg_hook_D_def dg_hook_G_def balance)
 qed
 

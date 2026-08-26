@@ -136,15 +136,15 @@ module Core : sig
   val bot_ivl : ivl bot
   val ivl_top : ivl
   val top_ivla : ivl
-  val semilattice_sup_ivl : ivl semilattice_sup
   val zero_nat : nat
+  val map : ('a -> 'b) -> 'a list -> 'b list
+  val semilattice_sup_ivl : ivl semilattice_sup
   type parity
   val equal_paritya : parity -> parity -> bool
   val bot_parity : parity bot
   val top_paritya : parity
   val semilattice_sup_parity : parity semilattice_sup
   type ('a, 'b) dg_state
-  val map : ('a -> 'b) -> 'a list -> 'b list
   type 'a resolved_st_q
   type gk
   type 'a lifted
@@ -2807,39 +2807,7 @@ let rec widen_ivl
 let widening_ivl =
   ({order_widening = order_ivl; widen = widen_ivl} : ivl widening);;
 
-let rec narrow_ivl_td
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    Ivl ((if equal_eint l1 MinInf then l2 else l1),
-          (if equal_eint u1 PlusInf then u2 else u1));;
-
-let rec narrow_ivl a b = narrow_ivl_td a b;;
-
-let narrowing_ivl =
-  ({order_narrowing = order_ivl; narrow = narrow_ivl} : ivl narrowing);;
-
-let warrowing_ivl =
-  ({narrowing_warrowing = narrowing_ivl; widening_warrowing = widening_ivl} :
-    ivl warrowing);;
-
-let semilattice_sup_ivl =
-  ({sup_semilattice_sup = sup_ivl; order_semilattice_sup = order_ivl} :
-    ivl semilattice_sup);;
-
-let bounded_semilattice_sup_bot_ivl =
-  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_ivl;
-     order_bot_bounded_semilattice_sup_bot = order_bot_ivl}
-    : ivl bounded_semilattice_sup_bot);;
-
-let bounded_warrowing_ivl =
-  ({bounded_semilattice_sup_bot_bounded_warrowing =
-      bounded_semilattice_sup_bot_ivl;
-     warrowing_bounded_warrowing = warrowing_ivl}
-    : ivl bounded_warrowing);;
-
-let rec is_bottom_ivl
-  i = (let Ivl (l, u) = i in
-        equal_eint l PlusInf ||
-          (equal_eint u MinInf || not (less_eq_eint l u)));;
+let ikinds : ikind list = [I8; U8; I16; U16; I32; U32; I64; U64];;
 
 let rec minus_nat
   m n = Nat (max ord_integer Z.zero
@@ -2869,11 +2837,63 @@ let rec ik_half
 let rec ik_min
   ik = (if ik_signed ik then uminus_inta (ik_half ik) else zero_inta);;
 
+let rec map f x1 = match f, x1 with f, [] -> []
+              | f, x21 :: x22 -> f x21 :: map f x22;;
+
+let ik_lo_extremes : int list = map ik_min ikinds;;
+
+let rec membera _A x0 y = match x0, y with [], y -> false
+                     | x :: xs, y -> eq _A x y || membera _A xs y;;
+
+let rec narrow_lo
+  x0 l2 = match x0, l2 with MinInf, l2 -> l2
+    | Fin v, l2 -> (if membera equal_int ik_lo_extremes v then l2 else Fin v)
+    | PlusInf, l2 -> PlusInf;;
+
 let rec ik_mod ik = power power_int (Int_of_integer (Z.of_int 2)) (ik_bits ik);;
 
 let rec ik_max
   ik = (if ik_signed ik then minus_inta (ik_half ik) one_inta
          else minus_inta (ik_mod ik) one_inta);;
+
+let ik_hi_extremes : int list = map ik_max ikinds;;
+
+let rec narrow_hi
+  x0 u2 = match x0, u2 with PlusInf, u2 -> u2
+    | Fin v, u2 -> (if membera equal_int ik_hi_extremes v then u2 else Fin v)
+    | MinInf, u2 -> MinInf;;
+
+let rec narrow_ivl_td
+  (Ivl (l1, u1)) (Ivl (l2, u2)) = Ivl (narrow_lo l1 l2, narrow_hi u1 u2);;
+
+let rec narrow_ivl a b = narrow_ivl_td a b;;
+
+let narrowing_ivl =
+  ({order_narrowing = order_ivl; narrow = narrow_ivl} : ivl narrowing);;
+
+let warrowing_ivl =
+  ({narrowing_warrowing = narrowing_ivl; widening_warrowing = widening_ivl} :
+    ivl warrowing);;
+
+let semilattice_sup_ivl =
+  ({sup_semilattice_sup = sup_ivl; order_semilattice_sup = order_ivl} :
+    ivl semilattice_sup);;
+
+let bounded_semilattice_sup_bot_ivl =
+  ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_ivl;
+     order_bot_bounded_semilattice_sup_bot = order_bot_ivl}
+    : ivl bounded_semilattice_sup_bot);;
+
+let bounded_warrowing_ivl =
+  ({bounded_semilattice_sup_bot_bounded_warrowing =
+      bounded_semilattice_sup_bot_ivl;
+     warrowing_bounded_warrowing = warrowing_ivl}
+    : ivl bounded_warrowing);;
+
+let rec is_bottom_ivl
+  i = (let Ivl (l, u) = i in
+        equal_eint l PlusInf ||
+          (equal_eint u MinInf || not (less_eq_eint l u)));;
 
 let rec ivl_in_range
   ik a =
@@ -3200,9 +3220,6 @@ let rec lookup_resolved_st _A
 
 let rec list_all p x1 = match p, x1 with p, [] -> true
                    | p, x :: xs -> p x && list_all p xs;;
-
-let rec map f x1 = match f, x1 with f, [] -> []
-              | f, x21 :: x22 -> f x21 :: map f x22;;
 
 let rec le_resolved_st_code _A
   s t = (let (dl, (dg, ps)) = s in
@@ -4235,9 +4252,6 @@ let rec removeAll _A
     | x, y :: xs ->
         (if eq _A x y then removeAll _A x xs else y :: removeAll _A x xs);;
 
-let rec membera _A x0 y = match x0, y with [], y -> false
-                     | x :: xs, y -> eq _A x y || membera _A xs y;;
-
 let rec inserta _A x xs = (if membera _A xs x then xs else x :: xs);;
 
 let rec insert _A x xa1 = match x, xa1 with x, Set xs -> Set (inserta _A x xs)
@@ -4656,9 +4670,31 @@ let ivl_ops : (ivl, unit) numeric_ops_ext
 let rec ik_promote
   ik = (if less_nat (ik_bits ik) (ik_bits I32) then I32 else ik);;
 
+let rec ik_unsigned_of = function I8 -> U8
+                         | U8 -> U8
+                         | I16 -> U16
+                         | U16 -> U16
+                         | I32 -> U32
+                         | U32 -> U32
+                         | I64 -> U64
+                         | U64 -> U64;;
+
+let rec usual_kind
+  a0 b0 =
+    (let a = ik_promote a0 in
+     let b = ik_promote b0 in
+      (if equal_ikinda a b then a
+        else (if equal_boola (ik_signed a) (ik_signed b)
+               then (if less_nat (ik_bits a) (ik_bits b) then b else a)
+               else (let s = (if ik_signed a then a else b) in
+                     let u = (if ik_signed a then b else a) in
+                      (if less_eq_nat (ik_bits s) (ik_bits u) then u
+                        else (if less_eq_int (ik_max u) (ik_max s) then s
+                               else ik_unsigned_of s))))));;
+
 let rec kjoin x0 r = match x0, r with None, r -> r
                 | Some v, None -> Some v
-                | Some a, Some b -> Some a;;
+                | Some a, Some b -> Some (usual_kind a b);;
 
 let rec esyn
   gamma x1 = match gamma, x1 with gamma, N n -> None
@@ -5545,7 +5581,7 @@ let rec ivl_tf_st_for
           (aval_ivl_t a (fun_of_resolved_st_q_for bot_ivl source_global s))
     | source_global, EA_Special (sc, x), s ->
         update_resolved_st_q bot_ivl s (location_of source_global x)
-          (match sc with Nondet_Int _ -> ivl_top
+          (match sc with Nondet_Int k -> ivl_cast k ivl_top
             | Min (k, a, b) ->
               ivl_cast k
                 (ivl_min
@@ -6011,7 +6047,7 @@ let rec sign_tf_st_for
           (aval_sign_t a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Special (sc, x), s ->
         update_resolved_st_q bot_sign s (location_of source_global x)
-          (match sc with Nondet_Int _ -> STop
+          (match sc with Nondet_Int k -> sign_cast k STop
             | Min (k, a, b) ->
               sign_cast k
                 (sign_min
@@ -8084,7 +8120,9 @@ let rec int_tf_st_fixpoint_for
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
           (location_of source_global x)
           (match sc
-            with Nondet_Int _ -> top_int_dom_exta int_dom_record_lattice_unit
+            with Nondet_Int k ->
+              refine Refine_Fixpoint
+                (int_dom_cast k (top_int_dom_exta int_dom_record_lattice_unit))
             | Min (k, a, b) ->
               int_dom_cast k
                 (int_dom_min Refine_Fixpoint
@@ -8137,7 +8175,9 @@ let rec int_tf_st_never_for
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
           (location_of source_global x)
           (match sc
-            with Nondet_Int _ -> top_int_dom_exta int_dom_record_lattice_unit
+            with Nondet_Int k ->
+              refine Refine_Never
+                (int_dom_cast k (top_int_dom_exta int_dom_record_lattice_unit))
             | Min (k, a, b) ->
               int_dom_cast k
                 (int_dom_min Refine_Never
@@ -8190,7 +8230,9 @@ let rec int_tf_st_once_for
         update_resolved_st_q (bot_int_dom_ext int_dom_record_lattice_unit) s
           (location_of source_global x)
           (match sc
-            with Nondet_Int _ -> top_int_dom_exta int_dom_record_lattice_unit
+            with Nondet_Int k ->
+              refine Refine_Once
+                (int_dom_cast k (top_int_dom_exta int_dom_record_lattice_unit))
             | Min (k, a, b) ->
               int_dom_cast k
                 (int_dom_min Refine_Once
@@ -8588,7 +8630,7 @@ let rec branch_ivl
 let rec special_ivl
   sc x sigma =
     fun_upd equal_literal sigma x
-      (match sc with Nondet_Int _ -> top_ivla
+      (match sc with Nondet_Int k -> ivl_cast k top_ivla
         | Min (k, a, b) ->
           ivl_cast k (ivl_min (aval_ivl_t a sigma) (aval_ivl_t b sigma))
         | Max (k, a, b) ->
@@ -8621,7 +8663,7 @@ let rec parity_tf_st_for
             (fun_of_resolved_st_q_for bot_parity source_global s))
     | source_global, EA_Special (sc, x), s ->
         update_resolved_st_q bot_parity s (location_of source_global x)
-          (match sc with Nondet_Int _ -> PTop
+          (match sc with Nondet_Int k -> parity_cast k PTop
             | Min (k, a, b) ->
               parity_cast k
                 (parity_min

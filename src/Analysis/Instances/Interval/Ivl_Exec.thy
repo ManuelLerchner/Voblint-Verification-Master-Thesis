@@ -67,7 +67,7 @@ fun ivl_tf_st_for ::
   | "ivl_tf_st_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int k => ivl_top
+            Nondet_Int k => ivl_cast k ivl_top
           | Min k a b => ivl_cast k
               (ivl_min (aval_ivl_t a (fun_of_resolved_st_q_for source_global s))
                         (aval_ivl_t b (fun_of_resolved_st_q_for source_global s)))

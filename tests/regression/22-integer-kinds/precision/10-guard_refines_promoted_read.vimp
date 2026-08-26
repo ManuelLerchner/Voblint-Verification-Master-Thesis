@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// A guard on a sub-int-rank variable refines through the promotion the
+// comparison performs on its operand.
+//
+// Both checks hold concretely and are proved. b is uint8, so the write of an
+// unconstrained value into it yields [0,255] rather than the lattice top
+// (see precision/08-conversion_of_unbounded_keeps_kind_range.vimp), and the
+// guard b < 10 then narrows that to [0,9] in the taken arm. A kind of rank
+// int or wider needs no conversion on the read at all, and the same guard
+// refines normally there.
+global uint8 b;
+void main() {
+  t := __voblint_nondet_int();
+  b := t;
+  if (b < 10) {
+    __voblint_check(b < 10); // PROVED
+    __voblint_check(!(9 < b)) // PROVED
+  } else {
+    skip
+  }
+}

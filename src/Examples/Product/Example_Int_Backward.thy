@@ -13,7 +13,7 @@ text \<open>
 definition test_env_top :: "int_dom abs_state" where
   "test_env_top = (%_. top)"
 
-subsection \<open>x + 1 = 3 ==> x = 2\<close>
+subsection \<open>x + 1 = 3 ==> x = 2 modulo the I32 wrap\<close>
 
 text \<open>
   Each guard is the elaborated \<^typ>\<open>texp\<close> a compiled \<open>EA_Assume\<close> edge
@@ -23,33 +23,40 @@ text \<open>
   register) runs inside \<open>int_dom\<close>'s \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close>,
   so the congruence component narrows even where cross-component refinement
   is switched off.
+
+  What the sum's kind costs is the singleton. The addition is normed at
+  \<^const>\<open>I32\<close>, so the strongest statement about \<open>x\<close> is \<open>2\<close> modulo \<open>2 ^ 32\<close>,
+  not \<open>{2}\<close>; pinning it to \<open>{2}\<close> needs the range fact that \<open>x\<close> is
+  representable at \<^const>\<open>I32\<close>, which \<^const>\<open>test_env_top\<close> deliberately
+  withholds. Refinement therefore reaches Parity -- \<open>2\<close> modulo an even
+  modulus is even -- but Sign and Interval stay at top.
 \<close>
 
-lemma bfilter_int_dom_once_plus_eq_exact:
+lemma bfilter_int_dom_once_plus_eq_congruence:
   "bfilter_int_dom_once
      (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop top PEven (mk_congruence 2 4294967296)"
   by eval
 
-lemma bfilter_int_dom_fixpoint_plus_eq_exact:
+lemma bfilter_int_dom_fixpoint_plus_eq_congruence:
   "bfilter_int_dom_fixpoint
      (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop top PEven (mk_congruence 2 4294967296)"
   by eval
 
 text \<open>
-  \<open>Refine_Never\<close> skips cross-component refinement, so Sign and Interval
-  stay at top; Congruence's own inverse still narrows inside \<open>inv_plus\<close>,
-  which is where this lemma's congruence component comes from.
+  \<open>Refine_Never\<close> skips cross-component refinement, so Parity stays at top
+  too; Congruence's own inverse still narrows inside \<open>inv_plus\<close>, which is
+  where this lemma's congruence component comes from.
 \<close>
 
 lemma bfilter_int_dom_never_plus_eq_congruence_only:
   "bfilter_int_dom_never
      (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 subsection \<open>Distributed information, exact after refinement\<close>

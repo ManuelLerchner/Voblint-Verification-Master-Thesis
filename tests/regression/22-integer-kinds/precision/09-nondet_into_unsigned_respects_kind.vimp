@@ -1,0 +1,16 @@
+// PARAM: --analysis sign
+// Adapted from Goblint tests/regression/21-casts/04-neg-to-unsigned-invariant.c,
+// the invariant that an unsigned-kinded slot never holds a negative value.
+//
+// The check holds concretely and is proved: special_result (Nondet_Int k)
+// admits exactly the values in ik_range k, and uw's declared kind is uint32,
+// so uw is in [0, 4294967295] on every execution. The abstract transfer for
+// Nondet_Int carries that kind through as a_cast k top instead of discarding
+// it, and sign_cast of an unsigned target kind is SNonNeg -- the same fact
+// precision/07-unsigned_conversion_is_nonnegative.vimp proves for a value
+// reaching uw through an ordinary assignment rather than a special call.
+global uint32 uw;
+void main() {
+  uw := __voblint_nondet_int();
+  __voblint_check(!(uw < 0)) // PROVED
+}

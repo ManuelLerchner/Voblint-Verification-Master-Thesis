@@ -1,0 +1,23 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/39-signed-overflows/05-lower-constants.c
+// ("int x = INT_MAX + 1; __goblint_check(x == INT_MIN); //UNKNOWN!" and
+// "int r = - INT_MIN; __goblint_check(r == INT_MIN); //UNKNOWN!").
+//
+// Goblint answers UNKNOWN there because its default sem.int.signed_overflow
+// is assume_top and C leaves signed overflow undefined. VIMP's concrete
+// semantics defines every kind's arithmetic as two's-complement wraparound --
+// Goblint's assume_wraparound setting, which
+// tests/regression/31-ikind-aware-ints/09-signed-negate.c exercises directly
+// -- so the three results are fixed and the verdicts are re-derived
+// accordingly rather than carried over.
+void main() {
+  x := 2147483647;
+  x := x + 1;
+  __voblint_check(x == -2147483648); // PROVED
+  r := -2147483648;
+  r := -r;
+  __voblint_check(r == -2147483648); // PROVED
+  m := -2147483648;
+  m := m - 1;
+  __voblint_check(m == 2147483647) // PROVED
+}

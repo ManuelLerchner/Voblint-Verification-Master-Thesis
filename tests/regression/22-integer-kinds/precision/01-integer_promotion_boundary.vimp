@@ -1,0 +1,48 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/21-casts/03-Exc-overflow.c
+// (its "char b = a+1; // (char)128 = -128" line, which is only -128 because
+// the addition itself happens in int).
+//
+// C's integer promotions (6.3.1.1) run every operand of rank below int up to
+// int before the operation, and leave rank-int-or-wider operands alone.
+// ik_promote models exactly that, so the boundary is observable: c8 + 1 and
+// u8 + 1 are computed in int32 and reach 128 and 256, values neither int8 nor
+// uint8 can hold, while u32 + 1 is computed in uint32 and wraps to 0. Each
+// comparison is against the largest value of the operand's own declared kind,
+// so it separates "promoted, no wrap" from "not promoted, wraps".
+//
+// uint32's maximum is built by wraparound rather than written as a literal:
+// a bare VIMP literal synthesizes int32, so 4294967295 written directly would
+// be normalized at int32 first.
+global int8 c8;
+global uint8 u8;
+global uint32 u32;
+void main() {
+  c8 := 127;
+  a := 0;
+  if (127 < c8 + 1) {
+    a := 1
+  } else {
+    skip
+  };
+  __voblint_check(a == 1); // PROVED
+
+  u8 := 255;
+  b := 0;
+  if (255 < u8 + 1) {
+    b := 1
+  } else {
+    skip
+  };
+  __voblint_check(b == 1); // PROVED
+
+  u32 := 0;
+  u32 := u32 - 1;
+  c := 0;
+  if (4294967295 < u32 + 1) {
+    c := 1
+  } else {
+    skip
+  };
+  __voblint_check(c == 0) // PROVED
+}

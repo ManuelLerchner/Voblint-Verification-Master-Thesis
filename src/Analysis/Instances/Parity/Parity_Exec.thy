@@ -84,7 +84,7 @@ fun parity_tf_st_for ::
   | "parity_tf_st_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int k => PTop
+            Nondet_Int k => parity_cast k PTop
           | Min k a b => parity_cast k
               (parity_min (aval_parity_t a (fun_of_resolved_st_q_for source_global s))
                           (aval_parity_t b (fun_of_resolved_st_q_for source_global s)))

@@ -1,0 +1,26 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/38-int-refinements/02-strange-ulong.c,
+// which runs the same bounded counting loop once per integer type and expects
+// the point after it to stay reachable and analyzable in each.
+//
+// Concretely i counts 0, 1, ..., 200 and the loop exits with i exactly 200.
+//
+// The kind bound survives: i is uint8, every write into it converts with
+// ik_norm U8, and ivl_cast answers a conversion it cannot sharpen with the
+// target kind's own range, so i never leaves [0,255].
+//
+// The exact value survives too. The loop head widens i upwards, and the
+// widened bound is then clamped by that same conversion to the uint8
+// maximum. narrow_ivl_td treats a bound resting on a machine-kind extreme
+// exactly as it treats an infinite one -- it is a bound a widening step
+// could have produced -- so the guard's recomputed value refills it and the
+// exit is [200,200].
+global uint8 i;
+void main() {
+  i := 0;
+  while (i < 200) {
+    i := i + 1
+  };
+  __voblint_check(i == 200); // PROVED
+  __voblint_check(!(i < 0)) // PROVED
+}

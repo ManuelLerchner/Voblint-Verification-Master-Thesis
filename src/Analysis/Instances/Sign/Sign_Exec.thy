@@ -95,7 +95,7 @@ fun sign_tf_st_for ::
   | "sign_tf_st_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int k => STop
+            Nondet_Int k => sign_cast k STop
           | Min k a b => sign_cast k
               (sign_min (aval_sign_t a (fun_of_resolved_st_q_for source_global s))
                         (aval_sign_t b (fun_of_resolved_st_q_for source_global s)))

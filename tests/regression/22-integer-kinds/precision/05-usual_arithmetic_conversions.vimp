@@ -1,0 +1,44 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/37-congruence/05-implicitunsignedconversion-1.c
+// (its "if(plus_one < minus_one)" comparison, taken there from
+// sv-benchmarks/c/bitvector-regression/implicitunsignedconversion-1.c).
+//
+// The usual arithmetic conversions (C 6.3.1.8) bring both operands of a
+// binary operator to one common type before comparing. int against unsigned
+// int has equal rank, so the common type is unsigned int and minus_one
+// participates as 4294967295 -- 1 is genuinely less than it, and the guarded
+// write happens. int against int64 takes the higher rank, so the second
+// comparison runs in int64, where wide is a real 3000000000 and is not less
+// than 0.
+//
+// wide is built by int64 arithmetic rather than written as 3000000000: a bare
+// VIMP literal synthesizes int32, so the constant would be normalized at
+// int32 first. A literal inside an operation that already synthesizes int64
+// -- the one in the last check -- does not go through that step.
+//
+// 06-usual_arithmetic_conversions_operand_order.vimp is the same pair of
+// comparisons with the operands swapped.
+global uint32 plus_one;
+global int64 wide;
+void main() {
+  plus_one := 1;
+  minus_one := -1;
+  v1 := 0;
+  if (plus_one < minus_one) {
+    v1 := 1
+  } else {
+    skip
+  };
+  __voblint_check(v1 == 1); // PROVED
+
+  wide := 1500000000;
+  wide := wide + wide;
+  v2 := 1;
+  if (wide < 0) {
+    v2 := 0
+  } else {
+    skip
+  };
+  __voblint_check(v2 == 1); // PROVED
+  __voblint_check(wide == 3000000000) // PROVED
+}

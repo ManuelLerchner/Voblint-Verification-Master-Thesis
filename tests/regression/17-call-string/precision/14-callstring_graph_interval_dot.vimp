@@ -1,0 +1,17 @@
+// PARAM: --analysis interval --context call-string --context-depth 2 --dot
+// GraphViz coverage for Interval under a call-string context. The same
+// program 02-depth2_separates_shared_callee.vimp pins as a canonical
+// snapshot, rendered through the DOT serializer instead: the snapshot and
+// the DOT output are two different renderers over one solved system, and
+// only this path exercises the second. Every node the contextual graph
+// domain enumerates -- both g clusters, both f clusters, main's root
+// cluster, and the per-context seed keys -- must be a key the solver
+// actually covers, or rendering it reads a state that was never solved.
+void g(p) { return p + p }
+void f(p) { t := g(p); return t }
+void main() {
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6);
+  __voblint_check(y == 20)
+}

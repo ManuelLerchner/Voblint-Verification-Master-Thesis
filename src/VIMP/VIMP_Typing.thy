@@ -74,16 +74,15 @@ text \<open>
   \<open>esyn\<close> returns the kind the variables inside an expression force,
   or \<open>None\<close> for a literal-only expression, which is kind-polymorphic. A
   variable's forced kind is already promoted (\<open>ik_promote\<close>, C's integer
-  promotion, ISO 6.3.1.8): promoting only at this one leaf is enough,
+  promotion, ISO/IEC 9899 6.3.1.1p2): promoting only at this one leaf is enough,
   because \<open>kjoin\<close> only ever selects between two already-forced
   operand kinds, so promoting every leaf promotes every kind \<open>esyn\<close>
   can produce, with no separate promotion step needed anywhere \<open>esyn\<close>,
   \<open>kjoin\<close>, or \<open>opk\<close> is used -- \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>,
   \<open>Less\<close>/\<open>Eq\<close>, \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>, and \<open>special_result\<close>'s
   \<open>Min\<close>/\<open>Max\<close> alike.
-  \<open>kjoin\<close> prefers the left forced kind; the typing judgment requires
-  both sides to check at the joined kind, so the preference is only ever
-  exercised on agreeing kinds or on ill-typed expressions.
+  Where both operands force a kind, \<open>kjoin\<close> combines them by C's usual
+  arithmetic conversions; see its own note below.
 \<close>
 
 text \<open>

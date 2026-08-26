@@ -1,0 +1,19 @@
+// PARAM: --analysis interval
+// The call-boundary form of the assignment conversion in
+// 03-narrowing_conversion_wraps.vimp, which is adapted from Goblint
+// tests/regression/21-casts/03-Exc-overflow.c. C converts each argument to
+// the declared parameter type when a prototype is in scope; VIMP has no cast
+// syntax, so a kind-annotated formal is where that conversion is written.
+//
+// 200 does not fit int8, so take8 sees -56, not 200. The return value takes
+// the reverse trip: a procedure's return kind is int32, so -56 widens back
+// with its sign and r is -56 as well. Both values are constants, so both
+// checks are decidable from the source.
+void take8(int8 p) {
+  __voblint_check(p == -56); // PROVED
+  return p
+}
+void main() {
+  r := take8(200);
+  __voblint_check(r == -56) // PROVED
+}

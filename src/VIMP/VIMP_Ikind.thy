@@ -61,7 +61,9 @@ lemma ik_bits_pos [simp]: "0 < ik_bits ik"
 subsection \<open>Integer promotion\<close>
 
 text \<open>
-  \<open>ik_promote\<close> is C's integer-promotion rule (ISO 6.3.1.8): a kind narrower
+  \<open>ik_promote\<close> is C's integer-promotion rule (ISO/IEC 9899 6.3.1.1p2 --
+  \<^emph>\<open>not\<close> 6.3.1.8, which is the usual arithmetic conversions and is
+  \<open>usual_kind\<close>'s clause below): a kind narrower
   than \<open>I32\<close> is promoted to \<open>I32\<close> before it participates in an arithmetic,
   comparison, or logical operator -- exactly what CIL's \<open>integralPromotion\<close>
   does as the first step of \<open>arithmeticConversion\<close>, before any operator is

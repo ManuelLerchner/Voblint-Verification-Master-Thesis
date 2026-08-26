@@ -47,7 +47,7 @@ text \<open>The executable equation the code generator needs: the locale constan
 lemma special_ivl_code [code]:
   "special_ivl sc x \<sigma> =
      \<sigma>(x := (case sc of
-                Nondet_Int k \<Rightarrow> top
+                Nondet_Int k \<Rightarrow> ivl_cast k top
               | Min k a b \<Rightarrow> ivl_cast k (ivl_min (aval_ivl_t a \<sigma>) (aval_ivl_t b \<sigma>))
               | Max k a b \<Rightarrow> ivl_cast k (ivl_max (aval_ivl_t a \<sigma>) (aval_ivl_t b \<sigma>))))"
   unfolding special_ivl_def

@@ -146,7 +146,7 @@ text \<open>The executable equation the code generator needs: the locale constan
 lemma special_sign_code [code]:
   "special_sign sc x \<sigma> =
      \<sigma>(x := (case sc of
-                Nondet_Int k \<Rightarrow> top
+                Nondet_Int k \<Rightarrow> sign_cast k top
               | Min k a b \<Rightarrow> sign_cast k (sign_min (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>))
               | Max k a b \<Rightarrow> sign_cast k (sign_max (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>))))"
   unfolding special_sign_def

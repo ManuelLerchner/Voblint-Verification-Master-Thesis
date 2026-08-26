@@ -195,14 +195,33 @@ Where the three agree:
 
 Sound but divergent from C, and recorded as such:
 
-- **Usual arithmetic conversions.** `kjoin` is "left operand wins", not C
-  6.3.1.8's rank-and-signedness rule; it disagrees on six ordered operand pairs.
-  See the ROADMAP's "Machine integers" known gap for the witness program and the
-  closure path. Divergence from *C*, not from our own theorems.
 - **Signed overflow.** `ik_norm` wraps at every arithmetic node. C 6.5p5 makes
   out-of-range *arithmetic* undefined (distinct from 6.3.1.3p3, which makes
-  out-of-range *conversion* to a signed type implementation-defined). Ours is
-  `-fwrapv`; Goblint's default is `assume_top` plus a
+  out-of-range *conversion* to a signed type implementation-defined).
+
+  **This is CompCert C's treatment, not an idiosyncrasy.** CompCert's language
+  reference states that "overflow in arithmetic over signed integer types is
+  defined as taking the mathematically-exact result and reducing it modulo
+  2^32 or 2^64 to the range of representable signed integers", and its
+  reference-interpreter section says of a signed-overflow example that "this is
+  an undefined behavior according to the C standards, but the CompCert C
+  semantics fully defines this behavior as computing the result modulo 2^32".
+  The choice is load-bearing there: `Int.add` is total and wrapping in
+  `Csem.v`, so an optimisation assuming `x + 1 > x` is unprovable against the
+  semantics, and CompCert performs none. So the right phrasing is that VIMP
+  *adopts CompCert C's treatment of signed overflow*, not that it deviates from
+  C on a whim. Goblint reaches the same behaviour under
+  `sem.int.signed_overflow=assume_wraparound`.
+
+  What CompCert keeps *undefined* is division and remainder by zero, and
+  `INT_MIN / -1`. Its architecture is total wrapping arithmetic in
+  `Integers.v` with partiality only at the operator layer in `Cop.v` -- the
+  same two-layer split VST, AutoCorres2 and Cerberus independently arrived at.
+  This project has the total half and no partial half. VIMP has no `Div` or
+  `Mod`, so the only live gap is the absent signed-overflow *warning*, recorded
+  below.
+
+  Ours is otherwise `-fwrapv`; Goblint's default is `assume_top` plus a
   `SignedIntegerOverflowInArithmetic` warning through `add_overflow_check`. We
   emit no overflow warning at all.
 - **Non-short-circuit `And`/`Or`.** C 6.5.13p4/6.5.14p4 mandate short-circuit

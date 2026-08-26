@@ -315,63 +315,6 @@ next
 qed
 
 
-section \<open>What the second call-string frame buys\<close>
-
-text \<open>Both \<open>f\<close> activations reach \<open>g\<close> through the same call site \<open>Statement 2\<close>, so at
-  \<open>k = 1\<close> \<open>g\<close>'s entry unknown is updated twice from below and widens; at \<open>k = 2\<close> the
-  retained second frame separates the two activations, each entry unknown is written
-  once, and every value below is exact.\<close>
-
-lemma nest_2_g_entry_first:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-lemma nest_2_g_entry_second:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-lemma nest_2_g_result_first:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 5])))) (STR ''#ret'')
-     = Ivl (Fin 6) (Fin 6)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-lemma nest_2_g_result_second:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionResult (STR ''g''), [Statement 2, Statement 6])))) (STR ''#ret'')
-     = Ivl (Fin 20) (Fin 20)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-lemma nest_2_t_after_inner_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 3, [Statement 5])))) (STR ''t'')
-     = Ivl (Fin 6) (Fin 6)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-lemma nest_2_x_after_first_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-lemma nest_2_y_after_second_return:
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
-  unfolding nest_2_sol_def nest_2_eqs_def by eval
-
-text \<open>The precision witness: at \<open>g\<close>'s entry and at both of \<open>main\<close>'s destinations the
-  \<open>k = 2\<close> value is strictly below the \<open>k = 1\<close> value, so the second retained frame is not
-  merely a different key space --- it is strictly more precise on this program.\<close>
-
-theorem nest_k2_strictly_more_precise_than_k1:
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5])))) (STR ''p'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
-  "nest_lookup (locals (snd nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6])))) (STR ''p'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')"
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 6, [])))) (STR ''x'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'')"
-  "nest_lookup (locals (snd nest_2_sol (Inl (Statement 7, [])))) (STR ''y'')
-     < nest_lookup (locals (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'')"
-  by (simp_all add: nest_1_g_entry_merged nest_1_x_after_first_return nest_1_y_after_second_return
-                    nest_2_g_entry_first nest_2_g_entry_second nest_2_x_after_first_return
-                    nest_2_y_after_second_return less_ivl_def less_eq_ivl_def)
-
 
 section \<open>Call-string-context-expanded analysis graph\<close>
 
@@ -446,11 +389,7 @@ lemma nest_2_graph_wf: "analysis_graph_wf nest_2_graph"
   by (rule build_analysis_graph_wf
         [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
 
-lemma nest_2_graph_domain_is_covered:
-  "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> fst nest_2_sol | Inr _ \<Rightarrow> True)
-    nest_2_graph_domain" by eval
 
-lemma nest_2_dot_nonempty: "String.explode nest_2_dot \<noteq> []" by eval
 
 
 end

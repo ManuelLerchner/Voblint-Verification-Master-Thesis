@@ -85,7 +85,7 @@ fun int_tf_st_never_for ::
   | "int_tf_st_never_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int k => top
+            Nondet_Int k => refine Refine_Never (int_dom_cast k top)
           | Min k a b => int_dom_cast k
               (int_dom_min Refine_Never
                 (aval_int_dom_t Refine_Never a (fun_of_resolved_st_q_for source_global s))
@@ -204,7 +204,7 @@ fun int_tf_st_once_for ::
   | "int_tf_st_once_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int k => top
+            Nondet_Int k => refine Refine_Once (int_dom_cast k top)
           | Min k a b => int_dom_cast k
               (int_dom_min Refine_Once
                 (aval_int_dom_t Refine_Once a (fun_of_resolved_st_q_for source_global s))
@@ -321,7 +321,7 @@ fun int_tf_st_fixpoint_for ::
   | "int_tf_st_fixpoint_for source_global (EA_Special sc x) s =
        update_resolved_st_q s (location_of source_global x)
          (case sc of
-            Nondet_Int k => top
+            Nondet_Int k => refine Refine_Fixpoint (int_dom_cast k top)
           | Min k a b => int_dom_cast k
               (int_dom_min Refine_Fixpoint
                 (aval_int_dom_t Refine_Fixpoint a (fun_of_resolved_st_q_for source_global s))

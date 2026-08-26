@@ -105,7 +105,7 @@ text \<open>The executable equation the code generator needs: the locale constan
 lemma special_parity_code [code]:
   "special_parity sc x \<sigma> =
      \<sigma>(x := (case sc of
-                Nondet_Int k \<Rightarrow> top
+                Nondet_Int k \<Rightarrow> parity_cast k top
               | Min k a b \<Rightarrow> parity_cast k (parity_min (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>))
               | Max k a b \<Rightarrow> parity_cast k (parity_max (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>))))"
   unfolding special_parity_def

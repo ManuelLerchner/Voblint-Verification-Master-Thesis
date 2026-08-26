@@ -516,62 +516,6 @@ next
 qed
 
 
-section \<open>What the 1-call-string context actually computes\<close>
-
-text \<open>\<open>f\<close>'s two activations are kept apart by their own call sites, so the formal \<open>p\<close> binds
-  exactly in each. \<open>g\<close>'s single call site collapses both into one context, so \<open>g\<close>'s entry
-  unknown is updated twice from below --- once per \<open>f\<close> activation --- and the solver's
-  widening turns that second update into an unbounded upper edge rather than the plain
-  join \<open>[3,10]\<close>. The widened callee result then flows back into both \<open>f\<close> activations and
-  therefore into both \<open>x\<close> and \<open>y\<close>.\<close>
-
-lemma nest_1_f_entry_first:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5])))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_f_entry_second:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6])))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_g_entry_merged:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2])))) (STR ''p'')
-     = Ivl (Fin 3) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_g_result_merged:
-  "nest_lookup (locals (snd nest_1_sol (Inl (FunctionResult (STR ''g''), [Statement 2])))) (STR ''#ret'')
-     = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_t_after_inner_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 3, [Statement 5])))) (STR ''t'')
-     = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_x_after_first_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 6, [])))) (STR ''x'') = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_y_after_second_return:
-  "nest_lookup (locals (snd nest_1_sol (Inl (Statement 7, [])))) (STR ''y'') = Ivl (Fin 6) PlusInf"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-
-text \<open>Each call publishes the entered store into its own context's seed slot, on the
-  \<^const>\<open>locals\<close> half the callee entry reads it back from.\<close>
-
-lemma nest_1_seed_f_first:
-  "nest_lookup (locals (snd nest_1_sol (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 5])))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
-lemma nest_1_seed_f_second:
-  "nest_lookup (locals (snd nest_1_sol (Inr (Seed (FunctionEntry (STR ''f'')) [Statement 6])))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding nest_1_sol_def nest_1_eqs_def by eval
-
 
 section \<open>Globals across a call-string-routed call\<close>
 
@@ -651,51 +595,6 @@ lemma nestg_1_call_contexts:
    (FunctionEntry (STR ''bump''), []) \<notin> fst nestg_1_sol"
   unfolding nestg_1_sol_def nestg_1_eqs_def by eval
 
-text \<open>Callee entry, first activation: the formal \<open>n\<close> binds to the argument, and the global
-  \<open>g\<close> arrives at the value \<open>main\<close> wrote before the call.\<close>
-lemma nestg_1_entry_first:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 4])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 4])))) (STR ''n''))
-     = (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Callee entry, second activation: \<open>g\<close> is the value the first activation wrote and
-  returned through, so a callee global write survives the return into the next call.\<close>
-lemma nestg_1_entry_second:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 5])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 5])))) (STR ''n''))
-     = (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Callee entry, third activation: the global-valued argument is evaluated against the
-  caller's real state before entry, so the entered \<open>n\<close> carries the caller's live value.\<close>
-lemma nestg_1_entry_third:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 9])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (FunctionEntry (STR ''bump''), [Statement 9])))) (STR ''n''))
-     = (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-text \<open>Caller state after each return: the callee's global write is visible, the caller's
-  own locals are preserved, and the return destination holds the callee's returned value.\<close>
-lemma nestg_1_after_first_return:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 5, [])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 5, [])))) (STR ''a''))
-     = (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-lemma nestg_1_after_second_return:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 8, [])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 8, [])))) (STR ''a''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 8, [])))) (STR ''b''))
-     = (Ivl (Fin 19) (Fin 19), Ivl (Fin 15) (Fin 15), Ivl (Fin 19) (Fin 19))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
-lemma nestg_1_after_third_return:
-  "(nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 10, [])))) (STR ''g''),
-    nestg_lookup (locals (snd nestg_1_sol (Inl (Statement 10, [])))) (STR ''c''))
-     = (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
-  unfolding nestg_1_sol_def nestg_1_eqs_def by eval
-
 
 
 section \<open>Call-string-context-expanded analysis graph\<close>
@@ -771,11 +670,7 @@ lemma nest_1_graph_wf: "analysis_graph_wf nest_1_graph"
   by (rule build_analysis_graph_wf
         [OF calls_source_unique_compile_prog compile_prog_finite[THEN conjunct2]])
 
-lemma nest_1_graph_domain_is_covered:
-  "list_all (\<lambda>x. case x of Inl pc \<Rightarrow> pc \<in> fst nest_1_sol | Inr _ \<Rightarrow> True)
-    nest_1_graph_domain" by eval
 
-lemma nest_1_dot_nonempty: "String.explode nest_1_dot \<noteq> []" by eval
 
 
 end
