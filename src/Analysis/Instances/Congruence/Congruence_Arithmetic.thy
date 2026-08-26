@@ -673,6 +673,45 @@ definition cong_cast :: "ikind => congruence => congruence" where
           if m = 0 then mk_congruence (ik_norm ik c) 0
           else mk_congruence c (gcd m (ik_mod ik)))"
 
+text \<open>
+  Congruence certifies representability only for \<open>bot\<close>. A class with a
+  non-zero modulus admits values arbitrarily far apart, and a singleton class
+  \<open>(c, 0)\<close> could in principle certify \<open>c \<in> ik_range ik\<close> --
+  but nothing consumes that: guard narrowing at a \<^const>\<open>TVar\<close> leaf goes
+  through the product's own certificate, which is the disjunction over
+  components, so the interval component supplies it there, and congruence is
+  not a selectable analysis on its own.
+\<close>
+
+definition cong_in_range :: "ikind => congruence => bool" where
+  "cong_in_range ik a = (Rep_congruence a = None)"
+
+lemma cong_in_range_sound:
+  assumes "cong_in_range ik a"
+  shows "gamma_congruence a \<subseteq> ik_range ik"
+  using assms by (simp add: cong_in_range_def gamma_congruence_def)
+
+lemma cong_in_range_mono:
+  assumes le: "a \<le> (b :: congruence)" and b: "cong_in_range ik b"
+  shows "cong_in_range ik a"
+proof -
+  have sub: "gamma_congruence a \<subseteq> gamma_congruence b"
+    using le unfolding less_eq_congruence_def congruence_le_iff_gamma .
+  have empty: "gamma_congruence a = {}"
+    using sub b by (simp add: cong_in_range_def gamma_congruence_def)
+  show ?thesis
+  proof (cases "Rep_congruence a")
+    case None
+    then show ?thesis by (simp add: cong_in_range_def)
+  next
+    case (Some q)
+    obtain c m where q: "q = (c, m)" by (cases q)
+    have "c \<in> gamma_congruence a"
+      using Some q by (simp add: gamma_congruence_def)
+    with empty show ?thesis by simp
+  qed
+qed
+
 lemma cong_cast_sound:
   assumes v: "v \<in> gamma_congruence a"
   shows "ik_norm ik v \<in> gamma_congruence (cong_cast ik a)"
@@ -881,23 +920,21 @@ text \<open>
   it should be normed at. Every arithmetic node is normed once through
   \<^const>\<open>cong_cast\<close> at its own kind, mirroring \<^const>\<open>teval\<close>'s own
   structure; \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own
-  \<open>0\<close>/\<open>1\<close>-shaped result. \<open>aval_congruence\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
-  locale this interprets below) is a thin wrapper elaborating its argument
-  once and handing it to \<open>aval_congruence_t\<close>, not a second, independent
-  recursion to keep in sync: \<open>Congruence_Backward\<close>'s \<open>backward_domain\<close>
-  interpretation targets it directly.
+  \<open>0\<close>/\<open>1\<close>-shaped result, and \<open>TCast\<close> norms its operand at the target
+  kind -- the conversion a write site performs. \<open>Congruence_Backward\<close>'s
+  \<open>backward_domain\<close> interpretation targets it directly.
 \<close>
 
 fun aval_congruence_t :: "texp \<Rightarrow> (vname \<Rightarrow> congruence) \<Rightarrow> congruence" where
-    "aval_congruence_t (TN ik n)       sigma = cong_cast ik (congruence_of_int n)"
-  | "aval_congruence_t (TV ik x)       sigma = cong_cast ik (sigma x)"
+    "aval_congruence_t (TN ik n)       sigma = congruence_of_int (ik_norm ik n)"
+  | "aval_congruence_t (TVar ik x)       sigma = sigma x"
   | "aval_congruence_t (TPlus  ik a b) sigma =
        cong_cast ik (aval_congruence_t a sigma + aval_congruence_t b sigma)"
   | "aval_congruence_t (TMinus ik a b) sigma =
        cong_cast ik (aval_congruence_t a sigma - aval_congruence_t b sigma)"
   | "aval_congruence_t (TTimes ik a b) sigma =
        cong_cast ik (aval_congruence_t a sigma * aval_congruence_t b sigma)"
+  | "aval_congruence_t (TCast  ik a)   sigma = cong_cast ik (aval_congruence_t a sigma)"
   | "aval_congruence_t (TLess a b) sigma =
        (if is_bot (aval_congruence_t a sigma) \<or> is_bot (aval_congruence_t b sigma) then bot
         else if congruence_lt (aval_congruence_t a sigma) (aval_congruence_t b sigma) = Some True
@@ -936,59 +973,59 @@ fun aval_congruence_t :: "texp \<Rightarrow> (vname \<Rightarrow> congruence) \<
         then congruence_of_int 0
         else congruence_of_int 0 \<squnion> congruence_of_int 1)"
 
-definition aval_congruence :: "tyenv \<Rightarrow> ikind \<Rightarrow> exp \<Rightarrow> (vname \<Rightarrow> congruence) \<Rightarrow> congruence" where
-  "aval_congruence \<Gamma> ik a sigma = aval_congruence_t (elaborate \<Gamma> ik a) sigma"
-
 interpretation congruence_arith: expression_domain_sound
-    aval_congruence cong_cast congruence_of_int congruence_lt congruence_eqb congruence_tobool
+    aval_congruence_t cong_cast congruence_of_int congruence_lt congruence_eqb congruence_tobool
   apply unfold_locales
-  apply (simp_all add: aval_congruence_def congruence_plus_sound congruence_minus_sound
+  apply (simp_all add: congruence_plus_sound congruence_minus_sound
                         congruence_times_sound congruence_plus_mono congruence_minus_mono
                         congruence_times_mono congruence_lt_sound congruence_eqb_sound
                         congruence_tobool_sound[unfolded truthy_def] gamma_top_congruence
-                        cong_cast_sound cong_cast_mono Let_def
+                        cong_cast_sound cong_cast_mono
                     del: congruence_lt.simps)
   apply (blast intro: congruence_lt_mono[unfolded is_bot_congruence])
   apply (blast intro: congruence_eqb_mono[unfolded is_bot_congruence])
   apply (blast intro: congruence_tobool_mono[unfolded is_bot_congruence])
   done
 
-lemmas aval_congruence_sound = congruence_arith.aval_dom_sound[unfolded gamma_abs_congruence]
-lemmas aval_congruence_mono = congruence_arith.aval_dom_mono
+lemmas aval_congruence_t_sound = congruence_arith.aval_dom_sound[unfolded gamma_abs_congruence]
+lemmas aval_congruence_t_mono = congruence_arith.aval_dom_mono
 
-text \<open>
-  \<open>aval_congruence_t (elaborate \<Gamma> ik a) = aval_congruence \<Gamma> ik a\<close> is
-  immediate from \<open>aval_congruence\<close>'s own definition -- no induction needed,
-  since \<open>aval_congruence_t\<close> is the primitive recursion and
-  \<open>aval_congruence\<close> is defined in terms of it.
-\<close>
 
-lemma aval_congruence_t_elaborate [simp]:
-  "aval_congruence_t (elaborate \<Gamma> ik a) sigma = aval_congruence \<Gamma> ik a sigma"
-  by (simp add: aval_congruence_def)
+subsection \<open>Cast-domain instance\<close>
 
-lemma aval_congruence_t_elaborate_syn [simp]:
-  "aval_congruence_t (elaborate_syn \<Gamma> a) sigma = aval_congruence \<Gamma> (opk (esyn \<Gamma> a)) a sigma"
-  by (simp add: elaborate_syn_def)
+text \<open>\<^const>\<open>cong_cast\<close> realizes the class-wide \<^const>\<open>a_cast\<close>, so every
+  generic write site -- ordinary assignment and call return alike -- converts
+  through this domain's own cast without any signature carrying one.\<close>
 
-lemma aval_congruence_t_sound:
-  assumes "\<forall>x. s x \<in> gamma_congruence (sigma x)"
-  shows "taval \<Gamma> ik a s \<in> gamma_congruence (aval_congruence_t (elaborate \<Gamma> ik a) sigma)"
-  using aval_congruence_sound[OF assms] by simp
+instantiation congruence :: cast_domain
+begin
 
-lemma aval_congruence_t_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_congruence_t (elaborate \<Gamma> ik a) sigma1 \<le> aval_congruence_t (elaborate \<Gamma> ik a) sigma2"
-  using aval_congruence_mono by simp
+definition a_cast_congruence [simp]: "a_cast = cong_cast"
 
-lemma aval_congruence_t_sound_syn:
-  assumes "\<forall>x. s x \<in> gamma_congruence (sigma x)"
-  shows "taval_syn \<Gamma> a s \<in> gamma_congruence (aval_congruence_t (elaborate_syn \<Gamma> a) sigma)"
-  unfolding taval_syn_def elaborate_syn_def using aval_congruence_t_sound[OF assms] .
+definition a_in_range_congruence [simp]: "a_in_range = cong_in_range"
 
-lemma aval_congruence_t_mono_syn:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_congruence_t (elaborate_syn \<Gamma> a) sigma1 \<le> aval_congruence_t (elaborate_syn \<Gamma> a) sigma2"
-  unfolding elaborate_syn_def using aval_congruence_t_mono .
+instance
+proof intro_classes
+  fix a b :: congruence and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_congruence by (rule cong_cast_mono)
+next
+  fix a b :: congruence and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_congruence by (rule cong_in_range_mono)
+qed
+
+end
+
+instance congruence :: sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: congruence and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: cong_cast_sound)
+next
+  fix a :: congruence and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: cong_in_range_sound)
+qed
 
 end

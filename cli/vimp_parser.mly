@@ -212,7 +212,9 @@ program:
         in
         let kind_entries pairs =
           List.filter_map (fun (n, k) ->
-              match k with Some k -> Some (n, k) | None -> None) pairs
+              match k with
+              | Some k -> Some (Voblint_CLI.Core.TV (n, k))
+              | None -> None) pairs
         in
         let kinds =
           kind_entries g

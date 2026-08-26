@@ -40,17 +40,23 @@ definition loop_prog :: imp_prog where
 
 subsection \<open>The compiled CFG\<close>
 
+text \<open>\<open>loop_ty\<close> is the program's own typing environment, the one the compiler
+  elaborates every edge payload against.\<close>
+abbreviation "loop_ty \<equiv> prog_tyenv loop_prog"
+
 abbreviation "loop_cfg \<equiv>
-  compile_prog (prog_table loop_prog) (prog_procs loop_prog) prog_main_name (prog_main loop_prog)"
+  compile_prog loop_ty (prog_table loop_prog) (prog_procs loop_prog) prog_main_name (prog_main loop_prog)"
 
 lemma loop_cfg_full:
   "loop_cfg =
      \<lparr> intra =
          {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-          (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
-          (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
-          (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
-          (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
+          (Statement 0, EA_Assign (STR ''x'') (elaborate_to loop_ty (loop_ty (STR ''x'')) (N 0)),
+             Statement 1),
+          (Statement 1, EA_Assume (elaborate_syn loop_ty (Less (V (STR ''x'')) (N 20))), Statement 2),
+          (Statement 1, EA_AssumeNot (elaborate_syn loop_ty (Less (V (STR ''x'')) (N 20))), Statement 3),
+          (Statement 2, EA_Assign (STR ''x'')
+             (elaborate_to loop_ty (loop_ty (STR ''x'')) (Plus (V (STR ''x'')) (N 1))), Statement 1),
           (Statement 3, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))},
        calls = {},
        cfg_entry = FunctionEntry (STR ''main''),
@@ -64,10 +70,12 @@ lemma loop_cfg_calls: "calls loop_cfg = {}"
 lemma loop_cfg_intra:
   "intra loop_cfg =
      {(FunctionEntry (STR ''main''), EA_Nop, Statement 0),
-      (Statement 0, EA_Assign (STR ''x'') (N 0), Statement 1),
-      (Statement 1, EA_Assume (Less (V (STR ''x'')) (N 20)), Statement 2),
-      (Statement 1, EA_AssumeNot (Less (V (STR ''x'')) (N 20)), Statement 3),
-      (Statement 2, EA_Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)), Statement 1),
+      (Statement 0, EA_Assign (STR ''x'') (elaborate_to loop_ty (loop_ty (STR ''x'')) (N 0)),
+         Statement 1),
+      (Statement 1, EA_Assume (elaborate_syn loop_ty (Less (V (STR ''x'')) (N 20))), Statement 2),
+      (Statement 1, EA_AssumeNot (elaborate_syn loop_ty (Less (V (STR ''x'')) (N 20))), Statement 3),
+      (Statement 2, EA_Assign (STR ''x'')
+         (elaborate_to loop_ty (loop_ty (STR ''x'')) (Plus (V (STR ''x'')) (N 1))), Statement 1),
       (Statement 3, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))}"
   by (simp add: loop_cfg_full)
 
@@ -103,15 +111,15 @@ text \<open>
 abbreviation "loop_body_entry \<equiv> Statement 2"
 
 text \<open>
-  Instantiated at \<open>default_tyenv\<close>, a genuine last resort: the guard \<open>x < 20\<close> compares
-  against a literal that fits every ikind's range, so \<open>bfilter_ivl\<close>'s narrowing here does
-  not depend on which \<open>tyenv\<close> is chosen -- no \<open>imp_prog\<close> is in scope in this standalone
-  illustration to source a real one from.
+  The guard is the elaborated \<^typ>\<open>texp\<close> the \<open>EA_Assume\<close> edge carries, so the
+  narrowing reads the operand kinds off the tree, exactly as the analyzer does
+  on the compiled graph.
 \<close>
 lemma loop_body_x_from_assume:
-  "tf_branch (ivl_tf_for gs default_tyenv) (Less (V (STR ''x'')) (N 20)) True (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
+  "tf_branch (ivl_tf_for gs) (elaborate_syn loop_ty (Less (V (STR ''x'')) (N 20))) True
+     (loop_env (Statement 1)) (STR ''x'') = Ivl (Fin 0) (Fin 19)"
 proof -
-  have "tf_branch (ivl_tf_for gs default_tyenv) = branch_ivl default_tyenv" by (simp add: ivl_tf_for_def)
+  have "tf_branch (ivl_tf_for gs) = branch_ivl" by (simp add: ivl_tf_for_def)
   then show ?thesis unfolding loop_env_def by (simp only:) eval
 qed
 

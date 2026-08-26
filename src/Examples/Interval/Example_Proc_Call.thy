@@ -47,6 +47,14 @@ definition main_prog :: "VIMP_Proc.com" where
 definition main_procs :: "pname list" where
   "main_procs = [(STR ''inc''), (STR ''sqr'')]"
 
+text \<open>The program carries no kind annotations, so every variable is declared at
+  \<^const>\<open>I32\<close> and \<^const>\<open>default_tyenv\<close> is the environment the compiler and
+  the source semantics both elaborate against.\<close>
+
+lemma proc_call_ik_range_I32 [simp]:
+  "(4::int) \<in> ik_range I32" "(5::int) \<in> ik_range I32" "(25::int) \<in> ik_range I32"
+  by eval+
+
 subsection \<open>Concrete run\<close>
 
 text \<open>
@@ -54,25 +62,36 @@ text \<open>
   are restored by @{const combine_env}.
 \<close>
 
+text \<open>The two range premises are what make the machine increment agree with
+  \<open>+ 1\<close>: without them the assignment writes the wrapped successor.\<close>
 lemma call_inc_result:
-  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') + 1))"
+  assumes ty: "s (STR ''Gx'') \<in> ik_range I32"
+      and nov: "s (STR ''Gx'') + 1 \<in> ik_range I32"
+  shows "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
+           (s((STR ''Gx'') := s (STR ''Gx'') + 1)) rk"
 proof -
-  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
+  have run: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) s
                 (VIMP_Globals.combine_env proc_call_gs s
-                  ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)))"
+                  ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))) rk"
   proof (rule pcompletes_Call_parameterless[where c = inc_body])
     show "proc_pi (STR ''inc'') = Some (proc_decl_of [] inc_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
-             ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1))"
+    show "pcompletes default_tyenv proc_call_gs proc_pi inc_body (enter_state proc_call_gs s)
+             ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') + 1)) I32"
     proof -
-      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
+      have "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx + 1 \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
-                 ((STR ''Gx'') := aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s)))"
+                 ((STR ''Gx'') := ik_norm (default_tyenv (STR ''Gx''))
+                    (taval_syn default_tyenv (Plus (V (STR ''Gx'')) (N 1))
+                       (enter_state proc_call_gs s)))) I32"
         by (rule pcompletes_assign)
-      moreover have "aval (Plus (V (STR ''Gx'')) (N 1)) (enter_state proc_call_gs s) = s (STR ''Gx'') + 1"
-        by (simp add: enter_state_def proc_call_gs_def)
+      moreover have "ik_norm (default_tyenv (STR ''Gx''))
+                       (taval_syn default_tyenv (Plus (V (STR ''Gx'')) (N 1))
+                          (enter_state proc_call_gs s))
+                     = s (STR ''Gx'') + 1"
+        using ty nov
+        by (simp add: enter_state_def proc_call_gs_def taval_syn_def opk_def default_tyenv_def)
       ultimately show ?thesis by (simp add: inc_body_def)
     qed
   qed
@@ -84,25 +103,34 @@ proof -
 qed
 
 lemma call_sqr_result:
-  "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s (s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
+  assumes ty: "s (STR ''Gx'') \<in> ik_range I32"
+      and nov: "s (STR ''Gx'') * s (STR ''Gx'') \<in> ik_range I32"
+  shows "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
+           (s((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))) rk"
 proof -
-  have run: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
+  have run: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) s
                 (VIMP_Globals.combine_env proc_call_gs s
-                  ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))))"
+                  ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))) rk"
   proof (rule pcompletes_Call_parameterless[where c = sqr_body])
     show "proc_pi (STR ''sqr'') = Some (proc_decl_of [] sqr_body)"
       by (simp add: proc_pi_def)
-    show "pcompletes proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
-             ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx'')))"
+    show "pcompletes default_tyenv proc_call_gs proc_pi sqr_body (enter_state proc_call_gs s)
+             ((enter_state proc_call_gs s)((STR ''Gx'') := s (STR ''Gx'') * s (STR ''Gx''))) I32"
     proof -
-      have "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
+      have "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> Gx := Gx * Gx \<rbrakk>)
                (enter_state proc_call_gs s)
                ((enter_state proc_call_gs s)
-                 ((STR ''Gx'') := aval (Times (V (STR ''Gx'')) (V (STR ''Gx''))) (enter_state proc_call_gs s)))"
+                 ((STR ''Gx'') := ik_norm (default_tyenv (STR ''Gx''))
+                    (taval_syn default_tyenv (Times (V (STR ''Gx'')) (V (STR ''Gx'')))
+                       (enter_state proc_call_gs s)))) I32"
         by (rule pcompletes_assign)
       moreover have
-        "aval (Times (V (STR ''Gx'')) (V (STR ''Gx''))) (enter_state proc_call_gs s) = s (STR ''Gx'') * s (STR ''Gx'')"
-        by (simp add: enter_state_def proc_call_gs_def)
+        "ik_norm (default_tyenv (STR ''Gx''))
+           (taval_syn default_tyenv (Times (V (STR ''Gx'')) (V (STR ''Gx'')))
+              (enter_state proc_call_gs s))
+         = s (STR ''Gx'') * s (STR ''Gx'')"
+        using ty nov
+        by (simp add: enter_state_def proc_call_gs_def taval_syn_def opk_def default_tyenv_def)
       ultimately show ?thesis by (simp add: sqr_body_def)
     qed
   qed
@@ -118,15 +146,19 @@ text \<open>
   initial store, regardless of @{term \<open>(STR ''Gx'')\<close>}'s starting value.
 \<close>
 theorem main_prog_result:
-  "pcompletes proc_call_gs proc_pi main_prog s (s((STR ''Gx'') := 25))"
+  "pcompletes default_tyenv proc_call_gs proc_pi main_prog s (s((STR ''Gx'') := 25)) rk"
 proof -
-  have step1: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s (s((STR ''Gx'') := 4))"
-    using pcompletes_assign[where gs = proc_call_gs and \<Pi> = proc_pi and x = "(STR ''Gx'')" and a = "N 4" and s = s]
-    by (simp add: pcompletes_def)
-  have step2: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>) (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5))"
+  have step1: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> Gx := 4 \<rbrakk>) s
+                 (s((STR ''Gx'') := 4)) rk"
+    using pcompletes_assign[where \<Gamma> = default_tyenv and gs = proc_call_gs and \<Pi> = proc_pi
+        and x = "(STR ''Gx'')" and a = "N 4" and s = s and rk = rk]
+    by (simp add: pcompletes_def taval_syn_def opk_def default_tyenv_def)
+  have step2: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>)
+                 (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5)) rk"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
     by simp
-  have step3: "pcompletes proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>) (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25))"
+  have step3: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>)
+                 (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25)) rk"
     using call_sqr_result[where s = "s((STR ''Gx'') := 5)"]
     by simp
   show ?thesis
@@ -146,20 +178,24 @@ text \<open>
   @{text "5 -> inc, continue at 6"} and @{text "6 -> sqr, continue at 7"}.
 \<close>
 
-abbreviation "main_cfg \<equiv> compile_prog proc_pi [(STR ''inc''), (STR ''sqr'')] main_cfg_name main_prog"
+abbreviation "main_cfg \<equiv>
+  compile_prog default_tyenv proc_pi [(STR ''inc''), (STR ''sqr'')] main_cfg_name main_prog"
 
 lemma main_cfg_full:
   "main_cfg =
      \<lparr> intra =
          {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
-          (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
-          (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
+          (Statement 0, EA_Assign (STR ''Gx'')
+             (elaborate_to default_tyenv (default_tyenv (STR ''Gx'')) (Plus (V (STR ''Gx'')) (N 1))), Statement 1),
+          (Statement 1, EA_Ret None (STR ''inc'') I32, FunctionResult (STR ''inc'')),
           (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
-          (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
-          (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
+          (Statement 2, EA_Assign (STR ''Gx'')
+             (elaborate_to default_tyenv (default_tyenv (STR ''Gx''))
+                (Times (V (STR ''Gx'')) (V (STR ''Gx'')))), Statement 3),
+          (Statement 3, EA_Ret None (STR ''sqr'') I32, FunctionResult (STR ''sqr'')),
           (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
-          (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
-          (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))},
+          (Statement 4, EA_Assign (STR ''Gx'') (elaborate_to default_tyenv (default_tyenv (STR ''Gx'')) (N 4)), Statement 5),
+          (Statement 7, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))},
        calls =
          {(Statement 5, CallEdge None [] [], FunctionEntry (STR ''inc''), Statement 6),
           (Statement 6, CallEdge None [] [], FunctionEntry (STR ''sqr''), Statement 7)},
@@ -174,14 +210,17 @@ lemma main_cfg_exit: "cfg_exit main_cfg = FunctionResult (STR ''main'')"
 lemma main_cfg_intra:
   "intra main_cfg =
      {(FunctionEntry (STR ''inc''), EA_Nop, Statement 0),
-      (Statement 0, EA_Assign (STR ''Gx'') (Plus (V (STR ''Gx'')) (N 1)), Statement 1),
-      (Statement 1, EA_Ret None (STR ''inc''), FunctionResult (STR ''inc'')),
+      (Statement 0, EA_Assign (STR ''Gx'')
+             (elaborate_to default_tyenv (default_tyenv (STR ''Gx'')) (Plus (V (STR ''Gx'')) (N 1))), Statement 1),
+      (Statement 1, EA_Ret None (STR ''inc'') I32, FunctionResult (STR ''inc'')),
       (FunctionEntry (STR ''sqr''), EA_Nop, Statement 2),
-      (Statement 2, EA_Assign (STR ''Gx'') (Times (V (STR ''Gx'')) (V (STR ''Gx''))), Statement 3),
-      (Statement 3, EA_Ret None (STR ''sqr''), FunctionResult (STR ''sqr'')),
+      (Statement 2, EA_Assign (STR ''Gx'')
+             (elaborate_to default_tyenv (default_tyenv (STR ''Gx''))
+                (Times (V (STR ''Gx'')) (V (STR ''Gx'')))), Statement 3),
+      (Statement 3, EA_Ret None (STR ''sqr'') I32, FunctionResult (STR ''sqr'')),
       (FunctionEntry (STR ''main''), EA_Nop, Statement 4),
-      (Statement 4, EA_Assign (STR ''Gx'') (N 4), Statement 5),
-      (Statement 7, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
+      (Statement 4, EA_Assign (STR ''Gx'') (elaborate_to default_tyenv (default_tyenv (STR ''Gx'')) (N 4)), Statement 5),
+      (Statement 7, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main''))}"
   by (simp add: main_cfg_full)
 lemma main_cfg_calls:
   "calls main_cfg =

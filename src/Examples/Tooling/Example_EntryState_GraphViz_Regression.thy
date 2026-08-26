@@ -173,7 +173,7 @@ lemma dead_check_graph_report_verdicts:
 lemma dead_check_graph_report_annotation_dead:
   "verdict_state_report_node_annotation [STR ''x'']
      (entry_state_report_for_annotation Interval_Analysis dead_check_prog) (Statement 2)
-   = Some (dead_check_annotation (exp.Eq (V (STR ''x'')) (exp.N 99)))"
+   = Some (dead_check_annotation (elaborate_syn (prog_tyenv dead_check_prog) (exp.Eq (V (STR ''x'')) (exp.N 99))))"
   by eval
 
 lemma dead_check_graph_report_annotation_live:
@@ -340,19 +340,23 @@ lemma gcall_ctx_graph_intra_edges_per_context:
   "filter (\<lambda>e. case e of (LocalNode v _, IntraEdge _, _) \<Rightarrow> v = Statement 0 | _ \<Rightarrow> False)
      (analysis_graph_edges gcall_ctx_graph)
    = [(LocalNode (Statement 0) gcall_ctx_third,
-       IntraEdge (EA_Assign (STR ''g'') (Plus (V (STR ''g'')) (V (STR ''n'')))),
+       IntraEdge (EA_Assign (STR ''g'')
+         (elaborate_to (prog_tyenv gcall_prog) ((prog_tyenv gcall_prog) (STR ''g'')) (Plus (V (STR ''g'')) (V (STR ''n''))))),
        LocalNode (Statement 1) gcall_ctx_third),
       (LocalNode (Statement 0) gcall_ctx_second,
-       IntraEdge (EA_Assign (STR ''g'') (Plus (V (STR ''g'')) (V (STR ''n'')))),
+       IntraEdge (EA_Assign (STR ''g'')
+         (elaborate_to (prog_tyenv gcall_prog) ((prog_tyenv gcall_prog) (STR ''g'')) (Plus (V (STR ''g'')) (V (STR ''n''))))),
        LocalNode (Statement 1) gcall_ctx_second),
       (LocalNode (Statement 0) gcall_ctx_first,
-       IntraEdge (EA_Assign (STR ''g'') (Plus (V (STR ''g'')) (V (STR ''n'')))),
+       IntraEdge (EA_Assign (STR ''g'')
+         (elaborate_to (prog_tyenv gcall_prog) ((prog_tyenv gcall_prog) (STR ''g'')) (Plus (V (STR ''g'')) (V (STR ''n''))))),
        LocalNode (Statement 1) gcall_ctx_first)]"
   by eval
 
 lemma gcall_ctx_graph_no_cross_context_intra_edge:
   "(LocalNode (Statement 0) gcall_ctx_first,
-    IntraEdge (EA_Assign (STR ''g'') (Plus (V (STR ''g'')) (V (STR ''n'')))),
+    IntraEdge (EA_Assign (STR ''g'')
+         (elaborate_to (prog_tyenv gcall_prog) ((prog_tyenv gcall_prog) (STR ''g'')) (Plus (V (STR ''g'')) (V (STR ''n''))))),
     LocalNode (Statement 1) gcall_ctx_second)
      \<notin> set (analysis_graph_edges gcall_ctx_graph)"
   by eval
@@ -376,10 +380,10 @@ lemma mixed_ctx_graph_wf: "analysis_graph_wf mixed_ctx_graph"
 lemma mixed_ctx_graph_check_live_and_dead:
   "entry_state_ctx_check_annotation (prog_cfg prog_main_name mixed_ctx_prog)
      (analyse_interval_entry_state_result mixed_ctx_prog) (Statement 1) [Ivl (Fin 1) (Fin 1)]
-   = Some (check_result_annotation Check_Proved (exp.Eq (V (STR ''n'')) (exp.N 1)))"
+   = Some (check_result_annotation Check_Proved (elaborate_syn (prog_tyenv mixed_ctx_prog) (exp.Eq (V (STR ''n'')) (exp.N 1))))"
   "entry_state_ctx_check_annotation (prog_cfg prog_main_name mixed_ctx_prog)
      (analyse_interval_entry_state_result mixed_ctx_prog) (Statement 1) [Ivl (Fin 3) (Fin 3)]
-   = Some (dead_check_annotation (exp.Eq (V (STR ''n'')) (exp.N 1)))"
+   = Some (dead_check_annotation (elaborate_syn (prog_tyenv mixed_ctx_prog) (exp.Eq (V (STR ''n'')) (exp.N 1))))"
   by eval+
 
 lemma mixed_ctx_graph_states_live_and_dead:
@@ -412,7 +416,8 @@ lemma mixed_ctx_graph_bottom_context_is_covered_but_unentered:
   "(FunctionEntry (STR ''f''), [Ivl PlusInf MinInf])
      \<in> result_keys (analyse_interval_entry_state_result mixed_ctx_prog)"
   "(LocalNode (Statement 3) [Ivl (Fin 1) (Fin 1)],
-    EnterEdge ''f'' (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)]),
+    EnterEdge ''f'' (CallEdge (compile_dst (prog_tyenv mixed_ctx_prog) (Some (STR ''r''))) [STR ''n'']
+      (compile_actuals (prog_tyenv mixed_ctx_prog) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])),
     LocalNode (FunctionEntry (STR ''f'')) [Ivl PlusInf MinInf])
      \<notin> set (analysis_graph_edges mixed_ctx_graph)"
   by eval+

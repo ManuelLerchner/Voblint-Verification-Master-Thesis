@@ -112,7 +112,7 @@ definition point_state_lines ::
       | Reachable s \<Rightarrow> map (\<lambda>x. String.implode (state_line s x)) vars)"
 
 definition state_report_node_annotation ::
-    "vname list \<Rightarrow> (pp \<times> exp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
+    "vname list \<Rightarrow> (pp \<times> texp \<times> check_result \<times> (vname \<Rightarrow> abstract_value)) list
      \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
   "state_report_node_annotation vars report v =
      (case find (\<lambda>entry. fst entry = v) report of
@@ -141,12 +141,12 @@ text \<open>
   once per call.
 \<close>
 
-definition exp_vnames_list :: "exp \<Rightarrow> vname list" where
-  "exp_vnames_list b = sorted_list_of_set (exp_vnames b)"
+definition exp_vnames_list :: "texp \<Rightarrow> vname list" where
+  "exp_vnames_list b = sorted_list_of_set (exp_vnames (texp_erase b))"
 
-definition report_vars :: "('n \<times> exp \<times> 'r) list \<Rightarrow> vname list" where
+definition report_vars :: "('n \<times> texp \<times> 'r) list \<Rightarrow> vname list" where
   "report_vars report =
-     sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames c) ` set report))"
+     sorted_list_of_set (\<Union> ((\<lambda>(_, c, _). exp_vnames (texp_erase c)) ` set report))"
 
 text \<open>
   Renders the check report through \<^const>\<open>raw_cfg_canonical_text_lit\<close>: a
@@ -157,7 +157,7 @@ text \<open>
 definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "state_report_graph_snapshot_auto kind p =
      (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
-      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+      in raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
 text \<open>
@@ -243,9 +243,9 @@ text \<open>
 definition unreachable_state_annotation :: graphviz_node_annotation where
   "unreachable_state_annotation = Node_Annotation ''unreachable'' NS_Unreachable"
 
-definition dead_check_annotation :: "exp \<Rightarrow> graphviz_node_annotation" where
+definition dead_check_annotation :: "texp \<Rightarrow> graphviz_node_annotation" where
   "dead_check_annotation cnd =
-     Node_Annotation (''check '' @ string_of_exp 0 cnd @ '' [dead]'') NS_Unreachable"
+     Node_Annotation (''check '' @ string_of_exp 0 (texp_erase cnd) @ '' [dead]'') NS_Unreachable"
 
 text \<open>
   The shared full-state renderer for every \<^typ>\<open>'a point_state\<close>-valued
@@ -302,7 +302,7 @@ text \<open>The whole-table counterpart of \<open>state_report_graph_snapshot_au
 
 definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p =
-     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+     raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
@@ -316,12 +316,12 @@ text \<open>
 definition state_report_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "state_report_export_auto kind p =
      (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
-      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+      in raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (state_report_node_annotation (report_vars report) report))"
 
 definition full_state_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "full_state_export_auto kind p =
-     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+     raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p))"
 
 text \<open>
@@ -339,7 +339,7 @@ text \<open>
 
 definition full_state_checked_node_annotation ::
     "vname list \<Rightarrow> (pp \<Rightarrow> abstract_value abs_state point_state)
-       \<Rightarrow> (pp \<times> exp \<times> check_result) list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
+       \<Rightarrow> (pp \<times> texp \<times> check_result) list \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
   "full_state_checked_node_annotation vars env verdicts v =
      (case env v of
         Unreachable \<Rightarrow> Some unreachable_state_annotation
@@ -370,10 +370,10 @@ text \<open>
 \<close>
 
 definition checked_payload_of ::
-    "('a \<Rightarrow> abstract_value) \<Rightarrow> (exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> 'a abs_state
+    "('a \<Rightarrow> abstract_value) \<Rightarrow> (texp \<Rightarrow> 'a abs_state \<Rightarrow> check_result) \<Rightarrow> 'a abs_state
        \<Rightarrow> (unit, 'a abs_state) analysis_result
        \<Rightarrow> (String.literal \<times> 'a abs_state point_state) list \<Rightarrow> imp_prog
-       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+       \<Rightarrow> export_graph \<times> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
             \<times> (String.literal \<times> String.literal list) list"
 where
   "checked_payload_of into classify bot_state r globals p =
@@ -382,7 +382,7 @@ where
                           Unreachable \<Rightarrow> (True, bot_state)
                         | Reachable st \<Rightarrow> (False, st))
                    (\<lambda>c (_, s). classify c s)
-      in (raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+      in (raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
             (full_state_checked_node_annotation (program_vars p) (project_env into r)
                (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
           map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full,
@@ -416,7 +416,7 @@ text \<open>
 
 definition full_state_checked_payload_auto ::
     "analysis_domain \<Rightarrow> imp_prog
-       \<Rightarrow> export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+       \<Rightarrow> export_graph \<times> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
             \<times> (String.literal \<times> String.literal list) list"
 where
   "full_state_checked_payload_auto kind p =
@@ -471,7 +471,7 @@ text \<open>
 definition entry_state_full_state_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_graph_snapshot_auto kind p =
-     raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+     raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
@@ -491,7 +491,7 @@ text \<open>
 \<close>
 
 definition entry_state_verdicts_for ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
   "entry_state_verdicts_for kind p =
      (case kind of
         Sign_Analysis \<Rightarrow> analyse_sign_entry_state_report p
@@ -632,7 +632,7 @@ definition cs_globals_for ::
 
 definition entry_state_report_for_annotation ::
     "analysis_domain \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list" where
+       \<Rightarrow> (pp \<times> texp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list" where
   "entry_state_report_for_annotation kind p =
      (let env = entry_state_point_env_for kind p
       in map (\<lambda>(v, cnd, verdict). (v, cnd, verdict, env v))
@@ -650,7 +650,7 @@ text \<open>
 
 definition verdict_state_report_node_annotation ::
     "vname list
-       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list
+       \<Rightarrow> (pp \<times> texp \<times> contextual_verdict \<times> abstract_value abs_state point_state) list
        \<Rightarrow> pp \<Rightarrow> graphviz_node_annotation option" where
   "verdict_state_report_node_annotation vars report v =
      (case find (\<lambda>entry. fst entry = v) report of
@@ -667,20 +667,20 @@ definition entry_state_report_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "entry_state_report_graph_snapshot_auto kind p =
      (let report = entry_state_report_for_annotation kind p
-      in raw_cfg_canonical_text_lit (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+      in raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (verdict_state_report_node_annotation (report_vars report) report))"
 
 definition entry_state_report_export_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "entry_state_report_export_auto kind p =
      (let report = entry_state_report_for_annotation kind p
-      in raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+      in raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
            (verdict_state_report_node_annotation (report_vars report) report))"
 
 definition entry_state_full_state_export_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "entry_state_full_state_export_auto kind p =
-     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+     raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p))"
 
 text \<open>
@@ -696,7 +696,7 @@ text \<open>
 \<close>
 
 definition entry_state_checked_verdicts ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result) list" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result) list" where
   "entry_state_checked_verdicts kind p =
      List.map_filter
        (\<lambda>(v, cnd, verdict).
@@ -706,7 +706,7 @@ definition entry_state_checked_verdicts ::
 definition entry_state_full_state_checked_export_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "entry_state_full_state_checked_export_auto kind p =
-     raw_cfg_export (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+     raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
        (full_state_checked_node_annotation (program_vars p)
           (entry_state_point_env_for kind p) (entry_state_checked_verdicts kind p))"
 
@@ -733,7 +733,7 @@ text \<open>
 
 definition solver_checked_payload_auto ::
     "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
-       \<Rightarrow> (export_graph \<times> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
+       \<Rightarrow> (export_graph \<times> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list
             \<times> (String.literal \<times> String.literal list) list)
           option"
 where
@@ -883,11 +883,11 @@ definition entry_state_ctx_graph_config ::
       context_key = String.implode o (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       locals_for_pp = (\<lambda>v.
-        let sc = compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+        let sc = compiled_procedure_scope (declared_global p) (prog_tyenv p) (prog_table p) (prog_procs p)
                    prog_main_name (prog_main p) (prog_cfg prog_main_name p) v
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>v.
-        scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+        scope_return_slot (compiled_procedure_scope (declared_global p) (prog_tyenv p) (prog_table p) (prog_procs p)
           prog_main_name (prog_main p) (prog_cfg prog_main_name p) v)),
       globals_to_show = [],
       show_local = (\<lambda>v ctx vars d.
@@ -902,7 +902,7 @@ definition entry_state_ctx_graph_config ::
       is_shared_global = (\<lambda>k. False),
       show_internal_globals = False,
       owner_of = String.explode o
-        compiled_owner_of (prog_table p) (prog_procs p) prog_main_name (prog_main p),
+        compiled_owner_of (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p),
       cluster_label = (\<lambda>owner ctx.
         if ctx = [] then owner @ '' / root context''
         else owner @ '' / context='' @ concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
@@ -922,7 +922,7 @@ text \<open>
   than a scan of a report built beside it.
 \<close>
 
-definition check_cond_at :: "cfg \<Rightarrow> pp \<Rightarrow> exp option" where
+definition check_cond_at :: "cfg \<Rightarrow> pp \<Rightarrow> texp option" where
   "check_cond_at g v =
      map_option (\<lambda>(u, a, w). ea_check_cond a)
        (find (\<lambda>(u, a, w). u = v \<and> is_EA_Check a) (cfg_intra_list g))"
@@ -1156,11 +1156,11 @@ definition cs_ctx_graph_config ::
       context_key = cs_context_key,
       show_context = cs_show_context,
       locals_for_pp = (\<lambda>v.
-        let sc = compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+        let sc = compiled_procedure_scope (declared_global p) (prog_tyenv p) (prog_table p) (prog_procs p)
                    prog_main_name (prog_main p) (prog_cfg prog_main_name p) v
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>v.
-        scope_return_slot (compiled_procedure_scope (declared_global p) (prog_table p) (prog_procs p)
+        scope_return_slot (compiled_procedure_scope (declared_global p) (prog_tyenv p) (prog_table p) (prog_procs p)
           prog_main_name (prog_main p) (prog_cfg prog_main_name p) v)),
       globals_to_show = [],
       show_local = (\<lambda>v ctx vars d.
@@ -1176,7 +1176,7 @@ definition cs_ctx_graph_config ::
       is_shared_global = (\<lambda>x. False),
       show_internal_globals = False,
       owner_of = String.explode o
-        compiled_owner_of (prog_table p) (prog_procs p) prog_main_name (prog_main p),
+        compiled_owner_of (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p),
       cluster_label = cs_cluster_label,
       source_text = Some (pretty_string_of_program (prog_table p) (prog_procs p) (prog_main p) []),
       node_annotation = (\<lambda>_ _. None)

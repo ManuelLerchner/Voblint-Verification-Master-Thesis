@@ -65,7 +65,8 @@ definition demo_pi :: proc_table where
   "demo_pi = prog_table demo_program"
 
 definition demo_cfg :: cfg where
-  "demo_cfg = compile_prog demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)"
+  "demo_cfg = compile_prog (prog_tyenv demo_program) demo_pi (prog_procs demo_program)
+     prog_main_name (prog_main demo_program)"
 
 lemma demo_finE: "finite (intra demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
 lemma demo_finC: "finite (calls demo_cfg)" unfolding demo_cfg_def using compile_prog_finite by simp
@@ -80,8 +81,8 @@ subsection \<open>Interval, on the same CFG, same generator, same solver menu\<c
 definition demo_ivl_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
   "demo_ivl_eqs =
-     dg_gen_of (unit_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs (prog_tyenv demo_program))
-        (ivl_enter_st_for (prog_tyenv demo_program) demo_gs)) demo_cfg
+     dg_gen_of (unit_dg_spec_st_for demo_gs (ivl_tf_st_for demo_gs)
+        (ivl_enter_st_for demo_gs)) demo_cfg
        bot top_ivl_st (restrict_global_resolved_q top_ivl_st)"
 
 definition demo_ivl_sol ::
@@ -151,7 +152,7 @@ text \<open>The plain compiled CFG, rendered through the same GraphViz backend t
   the two assignments, and the merge into \<open>main\<close>'s exit.\<close>
 
 definition demo_dot :: String.literal where
-  "demo_dot = raw_cfg_dot_lit demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
+  "demo_dot = raw_cfg_dot_lit (prog_tyenv demo_program) demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
     (\<lambda>_. None)"
 
 subsection \<open>Rendering the CFG annotated with the computed relational result\<close>
@@ -169,10 +170,10 @@ definition demo_rel_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
+        scope_locals (compiled_procedure_scope demo_gs (prog_tyenv demo_program) demo_pi (prog_procs demo_program)
           prog_main_name (prog_main demo_program) demo_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope demo_gs demo_pi (prog_procs demo_program)
+        scope_return_slot (compiled_procedure_scope demo_gs (prog_tyenv demo_program) demo_pi (prog_procs demo_program)
           prog_main_name (prog_main demo_program) demo_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ _ d. [string_of_relc d]),

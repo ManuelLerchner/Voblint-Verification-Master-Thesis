@@ -37,8 +37,10 @@ subsection \<open>Edge actions and call actions\<close>
 text \<open>
   \<open>edge_action\<close> labels intra flow.  It has no call constructor: every action is a total
   store transformer within one activation, so an intra edge can never denote a call.  A
-  \<open>EA_Ret e p rk\<close> writes the return value into \<open>ret_var\<close> in the callee's own context,
-  normed at \<open>rk\<close>; its graph target is \<open>FunctionResult p\<close> (enforced by \<open>wf_cfg\<close>), which is
+  \<open>EA_Ret e p rk\<close> writes the return value into \<open>ret_var\<close> in the callee's own context; the
+  value arrives already elaborated with a \<^const>\<open>TCast\<close> to \<open>rk\<close>, and \<open>rk\<close> stays an
+  explicit field so a consumer can read the return kind off the edge without walking into
+  the expression.  Its graph target is \<open>FunctionResult p\<close> (enforced by \<open>wf_cfg\<close>), which is
   why return summarisation is ordinary predecessor folding over \<open>FunctionResult p\<close>.
   \<open>rk\<close> is the OWNING PROCEDURE \<open>p\<close>'s declared return kind (\<open>I32\<close> for \<open>void\<close>), resolved
   once by the compiler from the source declaration and baked into the edge -- the same
@@ -61,18 +63,15 @@ text \<open>
 
 datatype edge_action =
     EA_Nop
-  | EA_Assign   (ea_var: vname) (ea_rhs: exp)
+  | EA_Assign   (ea_var: vname) (ea_rhs: texp)
   | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
-  | EA_Assume   (ea_cond: exp)
-  | EA_AssumeNot (ea_cond: exp)
-  | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname) (ea_ret_kind: ikind)
-  | EA_Check    (ea_check_cond: exp)
+  | EA_Assume   (ea_cond: texp)
+  | EA_AssumeNot (ea_cond: texp)
+  | EA_Ret      (ea_ret_val: "texp option") (ea_ret_proc: pname) (ea_ret_kind: ikind)
+  | EA_Check    (ea_check_cond: texp)
 
 datatype call_action =
-    CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "exp list")
-
-instance ikind :: countable
-  by countable_datatype
+    CallEdge (ce_dst: "typed_var option") (ce_formals: "vname list") (ce_args: "texp list")
 
 instance edge_action :: countable
   by countable_datatype
@@ -95,10 +94,10 @@ text \<open>
   \<open>Queries.ask\<close> over the callee exit has none: there is no query bus.
 \<close>
 record call_info =
-  ci_dst     :: "vname option"
+  ci_dst     :: "typed_var option"
   ci_callee  :: pname
   ci_formals :: "vname list"
-  ci_args    :: "exp list"
+  ci_args    :: "texp list"
 
 definition call_info_of :: "call_action \<Rightarrow> pname \<Rightarrow> call_info" where
   "call_info_of ca p =
@@ -130,7 +129,7 @@ record cfg =
   intra     :: "(cfg_node \<times> edge_action \<times> cfg_node) set"
   calls     :: "(cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
   cfg_entry :: cfg_node
-  checks    :: "(cfg_node \<times> exp) set"
+  checks    :: "(cfg_node \<times> texp) set"
 
 subsection \<open>Intra edge execution\<close>
 
@@ -145,36 +144,37 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>special_step\<close>/\<open>edge_step\<close> take the typing environment \<open>\<Gamma>\<close> as a fixed
-  parameter (not per-configuration state, matching \<open>gs\<close>): an arbitrary
-  subexpression's evaluation walks its whole syntax tree, so no per-edge
-  baked constant can stand in for it the way \<open>EA_Ret\<close>'s return kind can
-  -- \<^const>\<open>taval\<close>'s recursion needs \<open>\<Gamma>\<close> live at every \<^const>\<open>V\<close>
-  leaf it reaches, regardless of what kind the edge's own top-level
-  target happens to be.
+  \<open>special_step\<close>/\<open>edge_step\<close> need no typing environment.  Every action's expression
+  payload is a \<^typ>\<open>texp\<close>, resolved once by the compiler where the source declarations
+  are in scope: each \<^const>\<open>TVar\<close> leaf carries the kind it is read at, and each write
+  site carries the \<^const>\<open>TCast\<close> to its target's declared kind.  Executing the graph
+  then reads those kinds off the edge in hand, the same way \<open>EA_Ret\<close>'s return kind was
+  already a static fact of the edge that produced it rather than a per-activation lookup.
 \<close>
 
-fun special_step :: "tyenv \<Rightarrow> special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
-  "special_step \<Gamma> sc x s = {s(x := ik_norm (\<Gamma> x) v) |v. special_result \<Gamma> sc s v}"
+fun special_step :: "special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
+  "special_step sc x s = {s(x := v) |v. special_result sc s v}"
 
-lemma special_step_nonempty [simp]: "special_step \<Gamma> sc x s \<noteq> {}"
-  by (cases sc) (auto simp: Let_def)
+lemma special_step_nonempty [simp]: "special_step sc x s \<noteq> {}"
+  by auto
 
 text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
   every constructor and has no call case; guards are the only source of \<open>None\<close>.  Every case
-  matches its \<^const>\<open>pstep\<close> counterpart exactly: \<^const>\<open>taval\<close>-evaluated and normed at
-  the target's kind, \<^const>\<open>taval_syn\<close>-evaluated at its own synthesized kind for a
-  condition, and \<open>EA_Ret\<close>'s value normed at the edge's own baked \<open>ea_ret_kind\<close>.\<close>
+  matches its \<^const>\<open>pstep\<close> counterpart exactly: the compiler elaborates an assignment's
+  right-hand side with \<^const>\<open>elaborate_to\<close> at the target variable's declared kind, a
+  condition with \<^const>\<open>elaborate_syn\<close> at its own synthesized kind, and a returned value
+  with \<^const>\<open>elaborate_to\<close> at the owning procedure's return kind, so \<^const>\<open>teval\<close>
+  alone reproduces each of \<^const>\<open>pstep\<close>'s writes.\<close>
 
-fun edge_step :: "tyenv \<Rightarrow> edge_action \<Rightarrow> store \<Rightarrow> store set" where
-  "edge_step \<Gamma> EA_Nop s = {s}"
-| "edge_step \<Gamma> (EA_Assign x a) s = {s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s))}"
-| "edge_step \<Gamma> (EA_Special sc x) s = special_step \<Gamma> sc x s"
-| "edge_step \<Gamma> (EA_Assume b) s = (if truthy (taval_syn \<Gamma> b s) then {s} else {})"
-| "edge_step \<Gamma> (EA_AssumeNot b) s = (if truthy (taval_syn \<Gamma> b s) then {} else {s})"
-| "edge_step \<Gamma> (EA_Ret e p rk) s =
-     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))}"
-| "edge_step \<Gamma> (EA_Check c) s = {s}"
+fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
+  "edge_step EA_Nop s = {s}"
+| "edge_step (EA_Assign x a) s = {s(x := teval a s)}"
+| "edge_step (EA_Special sc x) s = special_step sc x s"
+| "edge_step (EA_Assume b) s = (if truthy (teval b s) then {s} else {})"
+| "edge_step (EA_AssumeNot b) s = (if truthy (teval b s) then {} else {s})"
+| "edge_step (EA_Ret e p rk) s =
+     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))}"
+| "edge_step (EA_Check c) s = {s}"
 
 subsection \<open>Intra-only execution paths\<close>
 
@@ -190,78 +190,95 @@ text \<open>One intra transition on a \<open>(node, store)\<close> pair.  \<open
   from a bespoke closure.  The name avoids \<open>intra_step\<close>, which is the \<^emph>\<open>source\<close>-level
   \<^const>\<open>pstep\<close> fragment.\<close>
 
-definition cfg_intra_step :: "tyenv \<Rightarrow> cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
-  "cfg_intra_step \<Gamma> g p q \<longleftrightarrow>
-     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> snd q \<in> edge_step \<Gamma> a (snd p))"
+definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
+  "cfg_intra_step g p q \<longleftrightarrow>
+     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> snd q \<in> edge_step a (snd p))"
 
-abbreviation intra_path :: "tyenv \<Rightarrow> cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
-  "intra_path \<Gamma> g \<equiv> star (cfg_intra_step \<Gamma> g)"
+abbreviation intra_path :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
+  "intra_path g \<equiv> star (cfg_intra_step g)"
 
 lemma cfg_intra_stepI:
-  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step \<Gamma> a s \<Longrightarrow> cfg_intra_step \<Gamma> g (u, s) (v, s')"
+  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> cfg_intra_step g (u, s) (v, s')"
   by (auto simp: cfg_intra_step_def)
 
 lemma cfg_intra_stepE:
-  assumes "cfg_intra_step \<Gamma> g (u, s) (v, s')"
-  obtains a where "(u, a, v) \<in> intra g" "s' \<in> edge_step \<Gamma> a s"
+  assumes "cfg_intra_step g (u, s) (v, s')"
+  obtains a where "(u, a, v) \<in> intra g" "s' \<in> edge_step a s"
   using assms by (auto simp: cfg_intra_step_def)
 
 lemma intra_path_single:
-  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step \<Gamma> a s \<Longrightarrow> intra_path \<Gamma> g (u, s) (v, s')"
+  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> intra_path g (u, s) (v, s')"
   by (intro star_step1 cfg_intra_stepI)
 
 lemma intra_path_nop:
-  "(u, EA_Nop, v) \<in> intra g \<Longrightarrow> intra_path \<Gamma> g (u, s) (v, s)"
+  "(u, EA_Nop, v) \<in> intra g \<Longrightarrow> intra_path g (u, s) (v, s)"
   by (rule intra_path_single[where a = EA_Nop]) simp_all
 
 text \<open>Widening the graph preserves intra paths: only membership in \<^const>\<open>intra\<close> is used.\<close>
 lemma cfg_intra_step_mono:
-  "cfg_intra_step \<Gamma> g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> cfg_intra_step \<Gamma> g2 x y"
+  "cfg_intra_step g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> cfg_intra_step g2 x y"
   by (auto simp: cfg_intra_step_def)
 
 lemma intra_path_mono:
-  "intra_path \<Gamma> g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> intra_path \<Gamma> g2 x y"
+  "intra_path g1 x y \<Longrightarrow> intra g1 \<subseteq> intra g2 \<Longrightarrow> intra_path g2 x y"
   by (induction rule: star.induct) (auto intro: star.step cfg_intra_step_mono)
 
 subsection \<open>Return-value transfer\<close>
 
 text \<open>Return-value rehydration at the caller: write the callee's \<open>ret_var\<close> into the
-  destination over the combined store (callee globals, caller locals).  It is fixed by the
-  call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
+  destination over the combined store (callee globals, caller locals).  The \<open>CallEdge\<close>
+  records the destination together with the kind it was declared at, resolved once by the
+  compiler --- the same design \<open>EA_Ret\<close>'s return kind already uses, and for the same reason:
+  the conversion a call result undergoes on the way into the caller's variable is a static
+  fact of the call site, so nothing here consults a typing environment.\<close>
+
+fun combine_assign_tv :: "typed_var option \<Rightarrow> int \<Rightarrow> store \<Rightarrow> store" where
+  "combine_assign_tv None _ s = s"
+| "combine_assign_tv (Some tv) v s = s(tv_name tv := ik_norm (tv_kind tv) v)"
+
+lemma combine_assign_tv_in_range [simp, intro]:
+  "combine_assign_tv (Some tv) v s (tv_name tv) \<in> ik_range (tv_kind tv)"
+  by simp
 
 definition combine_collect ::
-    "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect \<Gamma> gs dst s t = combine_assign \<Gamma> dst (t ret_var) (combine_env gs s t)"
+    "(vname \<Rightarrow> bool) \<Rightarrow> typed_var option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
+  "combine_collect gs dst s t = combine_assign_tv dst (t ret_var) (combine_env gs s t)"
 
-lemma combine_collect_None: "combine_collect \<Gamma> gs None s t = combine_env gs s t"
+lemma combine_collect_None: "combine_collect gs None s t = combine_env gs s t"
   by (simp add: combine_collect_def)
+
+text \<open>The compiled destination agrees with the source rule's own conversion exactly when the
+  baked kind is the destination's declared kind --- the one-time compiler fact that lets the
+  graph's combine drop the typing environment \<^const>\<open>pstep\<close>'s \<open>RestoreStep\<close> still consults.\<close>
+lemma combine_assign_tv_eq_combine_assign:
+  "combine_assign_tv (map_option (\<lambda>x. TV x (\<Gamma> x)) dst) v s = combine_assign \<Gamma> dst v s"
+  by (cases dst) simp_all
 
 subsection \<open>Call-entry transfer\<close>
 
-text \<open>Caller-side entry transfer at a call.  Each actual is evaluated in the caller store at
-  its corresponding formal's kind (\<open>map2\<close>, mirroring \<^const>\<open>pstep\<close>'s \<open>Call\<close> rule exactly:
-  \<open>pars\<close> already carries the formal names the edge needs for the pairing, so this still
-  needs no procedure table), the callee locals are reset (\<^const>\<open>enter_state\<close>, globals
+text \<open>Caller-side entry transfer at a call.  Each actual already carries the
+  \<^const>\<open>TCast\<close> to its corresponding formal's declared kind, resolved by the compiler
+  from \<open>pars\<close> at compile time, so evaluating it is a plain \<^const>\<open>teval\<close> and the pairing
+  no longer happens here (mirroring \<^const>\<open>pstep\<close>'s \<open>Call\<close> rule, whose \<open>map2\<close> performs
+  exactly that conversion); the callee locals are reset (\<^const>\<open>enter_state\<close>, globals
   preserved), and the resulting values are bound to the callee formals.  This is exactly the
   callee-entry store produced by the source \<^const>\<open>pstep\<close> \<open>Call\<close> rule (see
   \<open>call_enter_eq_source_call_store\<close>).\<close>
 
-definition call_enter :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter \<Gamma> gs ca s =
+definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
+  "call_enter gs ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        bind_formals pars (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) pars actuals)
-          (enter_state gs s))"
+        bind_formals pars (map (\<lambda>e. teval e s) actuals) (enter_state gs s))"
 
 lemma call_enter_CallEdge:
-  "call_enter \<Gamma> gs (CallEdge dst pars actuals) s
-     = bind_formals pars (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) pars actuals)
-         (enter_state gs s)"
+  "call_enter gs (CallEdge dst pars actuals) s
+     = bind_formals pars (map (\<lambda>e. teval e s) actuals) (enter_state gs s)"
   by (simp add: call_enter_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
   formals to bind.\<close>
 lemma call_enter_Nil [simp]:
-  "call_enter \<Gamma> gs (CallEdge dst [] []) s = enter_state gs s"
+  "call_enter gs (CallEdge dst [] []) s = enter_state gs s"
   by (simp add: call_enter_CallEdge bind_formals_def)
 
 subsection \<open>Structural selectors\<close>
@@ -369,9 +386,9 @@ lemma wf_no_intra_call:
 
 text \<open>Every edge action has a transfer; only an unsatisfied guard returns \<open>None\<close>.\<close>
 lemma edge_step_fail_iff:
-  "edge_step \<Gamma> a s = {} \<longleftrightarrow>
-     (\<exists>b. a = EA_Assume b \<and> \<not> truthy (taval_syn \<Gamma> b s))
-   \<or> (\<exists>b. a = EA_AssumeNot b \<and> truthy (taval_syn \<Gamma> b s))"
+  "edge_step a s = {} \<longleftrightarrow>
+     (\<exists>b. a = EA_Assume b \<and> \<not> truthy (teval b s))
+   \<or> (\<exists>b. a = EA_AssumeNot b \<and> truthy (teval b s))"
   by (cases a) auto
 
 lemma edge_step_ret_target:

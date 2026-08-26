@@ -64,7 +64,8 @@ definition sign_ex_pi :: proc_table where
   "sign_ex_pi = prog_table sign_ex_prog"
 
 definition gEx :: cfg where
-  "gEx = compile_prog sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
+  "gEx = compile_prog (prog_tyenv sign_ex_prog) sign_ex_pi (prog_procs sign_ex_prog)
+     prog_main_name (prog_main sign_ex_prog)"
 
 lemma gEx_calls: "calls gEx = {}"
   unfolding gEx_def sign_ex_pi_def
@@ -176,9 +177,11 @@ proof -
 qed
 
 theorem dgEx_source_run_sound:
-  assumes run: "star (pstep sign_ex_gs sign_ex_pi) (prog_main sign_ex_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep (prog_tyenv sign_ex_prog) sign_ex_gs sign_ex_pi)
+                  (prog_main sign_ex_prog, s, [], proc_ret_kind sign_ex_pi prog_main_name)
+                  (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores sign_ex_gs"
-  shows "\<exists>v stk. csim sign_ex_pi gEx (residual, t, frs) (v, t, stk)
+  shows "\<exists>v stk. csim (prog_tyenv sign_ex_prog) sign_ex_pi gEx (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> sign_ex_reg.gamma (snd dgEx_sol) v"
 proof -
   show ?thesis

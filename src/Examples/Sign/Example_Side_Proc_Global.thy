@@ -68,7 +68,7 @@ lemma inc_comb_fwd_ok:
   using assms inc_call_fwd_ok_ball by (cases c1) fastforce
 
 lemma inc_node_sound:
-  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs) v
+  "ltr_collect (prog_tyenv inc_program) inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for inc_gs inc_program) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -94,7 +94,7 @@ lemma inc_counter_pos: "inc_exit_env (STR ''counter'') = SPos"
   unfolding inc_exit_env_def by eval
 
 corollary inc_certified_sound:
-  "ltr_collect inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs)
+  "ltr_collect (prog_tyenv inc_program) inc_gs (prog_cfg prog_main_name inc_program) (cinit_stores inc_gs)
      (cfg_exit (prog_cfg prog_main_name inc_program))
    \<le> \<lbrakk>inc_exit_env\<rbrakk>"
   unfolding inc_exit_env_def

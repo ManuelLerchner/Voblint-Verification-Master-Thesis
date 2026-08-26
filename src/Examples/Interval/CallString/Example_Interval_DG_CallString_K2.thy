@@ -166,7 +166,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
   for is discharged generically at \<^const>\<open>cs_route\<close>, exactly as at \<open>k = 1\<close>.\<close>
 
 interpretation nest_2_cs: call_string_routed_context
-    nest_S_abs nest_gs nest_pi nest_procs "STR ''main''" nest_main 2
+    nest_S_abs nest_gs "prog_tyenv nest_program" nest_pi nest_procs "STR ''main''" nest_main 2
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Lifted cinit_ivl_st)"
     "map_lift (fun_of_resolved_st_q_for nest_gs) (Bot::ivl exec_dg_st lifted)"
@@ -242,7 +242,7 @@ lemma nest_2_sg_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls nest_cfg"
     and "s \<in> gamma_state_lift (nest_2_sg (Inl (cl, c1)))"
     and "t \<in> gamma_state_lift (nest_2_sg (Inl (FunctionResult p, cs_context 2 cl c1 es)))"
-    and "call_enter_store nest_gs nest_cfg cl s es"
+    and "call_enter_store (prog_tyenv nest_program) nest_gs nest_cfg cl s es"
   shows "combine_collect nest_gs dst s t \<in> gamma_state_lift (nest_2_sg (Inl (v, c1)))"
   by (rule nest_2_cs.routed_context_comb[OF assms[unfolded nest_cfg_def]])
 
@@ -263,7 +263,7 @@ proof -
 qed
 
 theorem nest_2_activation_collect_sound:
-  "activation_collect nest_gs (admiss_exact (cs_context 2)) [] nest_cfg (cinit_stores nest_gs) v ctx
+  "activation_collect (prog_tyenv nest_program) nest_gs (admiss_exact (cs_context 2)) [] nest_cfg (cinit_stores nest_gs) v ctx
      \<subseteq> gamma_state_lift (nest_2_sg (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = nest_2_sg and gammaM = gamma_state_lift
         and admiss = "admiss_exact (cs_context 2)" and startcontext = "[]"
@@ -309,7 +309,7 @@ next
     and sm: "s \<in> gamma_state_lift (nest_2_sg (Inl (cl, c1)))"
     and adm: "admiss_exact (cs_context 2) cl c1 es c2"
     and tm: "t \<in> gamma_state_lift (nest_2_sg (Inl (FunctionResult p, c2)))"
-    and ces: "call_enter_store nest_gs nest_cfg cl s es"
+    and ces: "call_enter_store (prog_tyenv nest_program) nest_gs nest_cfg cl s es"
   show "combine_collect nest_gs dst s t \<in> gamma_state_lift (nest_2_sg (Inl (cont, c1)))"
     using adm tm nest_2_sg_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
@@ -386,11 +386,11 @@ definition nest_2_graph_config ::
         (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       show_context = (\<lambda>ctx. ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
+        let sc = compiled_procedure_scope nest_gs (prog_tyenv nest_program) nest_pi nest_procs (STR ''main'') nest_main
           nest_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope nest_gs nest_pi nest_procs (STR ''main'') nest_main
+        scope_return_slot (compiled_procedure_scope nest_gs (prog_tyenv nest_program) nest_pi nest_procs (STR ''main'') nest_main
           nest_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -402,7 +402,7 @@ definition nest_2_graph_config ::
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main,
+      owner_of = String.explode o compiled_owner_of (prog_tyenv nest_program) nest_pi nest_procs (STR ''main'') nest_main,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
@@ -412,7 +412,7 @@ definition nest_2_graph_config ::
 
 definition nest_2_contexts_for_pp :: "pp \<Rightarrow> cfg_node list list" where
   "nest_2_contexts_for_pp p =
-    (let owner = compiled_owner_of nest_pi nest_procs (STR ''main'') nest_main p
+    (let owner = compiled_owner_of (prog_tyenv nest_program) nest_pi nest_procs (STR ''main'') nest_main p
      in if owner = (STR ''main'') then [[]]
         else if owner = (STR ''f'') then [[Statement 5], [Statement 6]]
         else [[Statement 2, Statement 5], [Statement 2, Statement 6]])"

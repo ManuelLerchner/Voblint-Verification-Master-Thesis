@@ -16,49 +16,38 @@ definition test_env_top :: "int_dom abs_state" where
 subsection \<open>x + 1 = 3 ==> x = 2\<close>
 
 text \<open>
-  Stale, pending the B6/B7 \<open>\<Gamma> :: tyenv\<close> gate: every \<open>bfilter_int_dom_*\<close>
-  call site now needs a leading \<open>\<Gamma> :: tyenv\<close> argument from the
-  \<Gamma>-threading landed in that gate, which this file predates. The RHS
-  values below were computed against a
-  transitional design where \<open>int_dom\<close>'s composite \<open>inv_plus\<close>/
-  \<open>inv_minus\<close>/\<open>inv_times\<close> routed every component -- including Congruence
-  -- through the shared \<open>inv_conservative\<close> no-op; that transitional
-  design is gone. Congruence's own real inverse
-  (\<open>Congruence_Backward.inv_plus_congruence_ik\<close>, composed with
-  \<open>cong_unwrap\<close> to reconcile the \<open>ik_norm\<close>-wrapped result register) now
-  runs inside \<open>int_dom\<close>'s \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close> again, so
-  once the \<open>\<Gamma>\<close> argument lands these lemmas need re-deriving via \<open>by
-  eval\<close>, not merely re-stating with the extra argument.
+  Each guard is the elaborated \<^typ>\<open>texp\<close> a compiled \<open>EA_Assume\<close> edge
+  carries, so the narrowing reads its operand kinds off the tree.
+  Congruence's own inverse (\<open>Congruence_Backward.inv_plus_congruence_ik\<close>,
+  composed with \<open>cong_unwrap\<close> to reconcile the \<open>ik_norm\<close>-wrapped result
+  register) runs inside \<open>int_dom\<close>'s \<open>inv_plus\<close>/\<open>inv_minus\<close>/\<open>inv_times\<close>,
+  so the congruence component narrows even where cross-component refinement
+  is switched off.
 \<close>
 
 lemma bfilter_int_dom_once_plus_eq_exact:
   "bfilter_int_dom_once
-     (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+     (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
   by eval
 
 lemma bfilter_int_dom_fixpoint_plus_eq_exact:
   "bfilter_int_dom_fixpoint
-     (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+     (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
    int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
   by eval
 
 text \<open>
-  Stale for the same reason as above (the \<open>\<Gamma> :: tyenv\<close> gate), but not for
-  a soundness reason any more: \<open>Refine_Never\<close> skips cross-component
-  refinement, but Congruence's own real inverse
-  (\<open>Congruence_Backward.inv_plus_congruence_ik\<close>) narrows unconditionally
-  inside \<open>int_dom\<close>'s \<open>inv_plus\<close> regardless of mode, so this lemma's RHS
-  is expected to show Congruence's own narrowing even here once the \<open>\<Gamma>\<close>
-  argument lands and the value is re-derived via \<open>by eval\<close> -- not the
-  \<open>STop\<close>/\<open>PTop\<close>/no-narrowing shape currently asserted.
+  \<open>Refine_Never\<close> skips cross-component refinement, so Sign and Interval
+  stay at top; Congruence's own inverse still narrows inside \<open>inv_plus\<close>,
+  which is where this lemma's congruence component comes from.
 \<close>
 
 lemma bfilter_int_dom_never_plus_eq_congruence_only:
   "bfilter_int_dom_never
-     (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+     (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
      test_env_top (STR ''x'') =
    int_dom_sipc STop top PTop (congruence_of_int 2)"
   by eval
@@ -82,7 +71,7 @@ text \<open>
 
 lemma bfilter_int_dom_once_self_refine_exact:
   "bfilter_int_dom_once
-     (Eq (V (STR ''x'')) (V (STR ''x'')))
+     (elaborate_syn default_tyenv (Eq (V (STR ''x'')) (V (STR ''x''))))
      True
      ((%_. top)((STR ''x'') := int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven top))
      (STR ''x'') =
@@ -93,7 +82,7 @@ subsection \<open>Congruence precision unavailable from Sign/Interval alone\<clo
 
 lemma bfilter_int_dom_once_congruence_tightens_interval:
   "bfilter_int_dom_once
-     (Eq (V (STR ''x'')) (V (STR ''x'')))
+     (elaborate_syn default_tyenv (Eq (V (STR ''x'')) (V (STR ''x''))))
      True
      ((%_. top)
        ((STR ''x'') :=
@@ -110,7 +99,7 @@ text \<open>
 
 lemma bfilter_int_dom_never_congruence_unused:
   "bfilter_int_dom_never
-     (Eq (V (STR ''x'')) (V (STR ''x'')))
+     (elaborate_syn default_tyenv (Eq (V (STR ''x'')) (V (STR ''x''))))
      True
      ((%_. top)
        ((STR ''x'') :=

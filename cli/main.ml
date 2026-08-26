@@ -174,7 +174,7 @@ let verdict_label = function
    that location), rather than shown with a vacuous PROVED verdict. *)
 let render_text_report (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp
+       * (Voblint_CLI.Core.texp
           * (Voblint_CLI.Core.check_result
              * (bool * (string -> Voblint_CLI.Analyse_Dispatch.abstract_value)))))
       list)
@@ -196,7 +196,7 @@ let render_text_report (report :
          in
          Buffer.add_string buf
            (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
-              (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+              (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) (Voblint_CLI.Core.texp_erase cond)))
               (verdict_label verdict) state)
        end)
     report check_positions;
@@ -205,7 +205,7 @@ let render_text_report (report :
 let report_row buf (line, col) node cond verdict =
   Buffer.add_string buf
     (Printf.sprintf "%d:%-2d %-10s %-20s %-8s\n" line col (node_label node)
-       (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond))
+       (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) (Voblint_CLI.Core.texp_erase cond)))
        (verdict_label verdict))
 
 (* analyse_ctx's report distinguishes Dead -- every context covering the check
@@ -221,7 +221,7 @@ let report_row buf (line, col) node cond verdict =
 let render_ctx_report
     (report :
       (Voblint_CLI.Core.cfg_node
-       * (Voblint_CLI.Core.exp * Voblint_CLI.Core.contextual_verdict))
+       * (Voblint_CLI.Core.texp * Voblint_CLI.Core.contextual_verdict))
       list)
     (check_positions : (int * int) list) =
   let buf = Buffer.create 256 in
@@ -795,7 +795,7 @@ let () =
             verdict = verdict_label verdict;
             cond =
               un_string
-                (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) cond)
+                (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) (Voblint_CLI.Core.texp_erase cond))
           }
         in
         let checks =
@@ -807,11 +807,23 @@ let () =
               (List.combine report check_positions)
           | _ ->
             (* A context-sensitive run has no state-carrying report, but it does
-               have per-context verdicts. Pairing happens before Dead is dropped:
-               entry_state_checked_verdicts filters first, which would shorten the
-               list and misalign every position after the first dead check. *)
+               have per-context verdicts. They come from analyse_config_ctx on
+               the resolved config -- the same route the text report renders --
+               so the source view's annotations and the printed verdicts are two
+               readings of one analysis. Reading them off a fixed entry-state
+               solve instead would answer a call-string run with a different
+               abstraction's verdicts, and would re-solve under a keying the run
+               never asked for: on a program whose entry states are unbounded,
+               that alternative diverges where the requested call-string
+               configuration converges.
+
+               Pairing happens before Dead is dropped: filtering first would
+               shorten the list and misalign every position after the first dead
+               check. *)
             let verdicts =
-              Voblint_CLI.State_Report_GraphViz.entry_state_verdicts_for kind prog
+              match Voblint_CLI.Analyse_Dispatch.analyse_config_ctx cfg prog with
+              | Some report -> report
+              | None -> []
             in
             if List.length verdicts <> List.length check_positions then []
             else

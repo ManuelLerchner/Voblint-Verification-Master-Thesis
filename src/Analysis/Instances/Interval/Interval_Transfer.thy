@@ -9,74 +9,50 @@ subsection \<open>Abstract branch and assignment\<close>
 
 text \<open>
   Guard refinement delegates to the generic @{text bfilter} proved sound in
-  @{locale backward_domain}. @{const bfilter_ivl} narrows on the branch selected
-  by its boolean polarity argument (@{text True} for @{text "truthy (taval_syn \<Gamma> b s)"},
-  @{text False} for @{text "\<not> truthy (taval_syn \<Gamma> b s)"}) -- this is @{text ivl_tf_for}'s
-  @{text tf_branch} instance
-  directly, matching Goblint's single polarity-parametrized @{text Spec.branch}.
+  @{locale backward_domain}; @{thm [source] bfilter_ivl_sound} and
+  @{thm [source] branch_ivl_sound} (\<open>Interval_Backward\<close>) are that fact at
+  this domain. @{const branch_ivl} narrows on the branch selected by its
+  boolean polarity argument, so it is @{text ivl_tf_for}'s @{text tf_branch}
+  instance directly, matching Goblint's single polarity-parametrized
+  @{text Spec.branch}.
+
+  The destination's declared kind rides inside the assigned \<^typ>\<open>texp\<close> as
+  a \<^const>\<open>TCast\<close> node, so \<open>assign_ivl\<close> performs no cast of its own.
 \<close>
-
-lemma bfilter_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>bfilter_ivl \<Gamma> b res \<sigma>\<rbrakk>"
-  using ivl_backward_domain.bfilter_sound by simp
-
-text \<open>
-  @{const branch_ivl} is Interval's \<open>tf_branch\<close> instance: a forward
-  @{const interval_tobool} feasibility check ahead of @{const bfilter_ivl},
-  matching Goblint's \<open>Base.branch\<close> structure. Proved once, generically, as
-  @{thm [source] backward_domain.branch_sound}.
-\<close>
-
-lemma branch_ivl_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>branch_ivl \<Gamma> b res \<sigma>\<rbrakk>"
-  using ivl_backward_domain.branch_sound by simp
 
 definition assign_ivl ::
-    "tyenv => vname => exp => (vname => ivl) => (vname => ivl)"
+    "vname => texp => (vname => ivl) => (vname => ivl)"
 where
-  "assign_ivl \<Gamma> x a \<sigma> = \<sigma>(x := ivl_cast (\<Gamma> x) (aval_ivl_t (elaborate_syn \<Gamma> a) \<sigma>))"
+  "assign_ivl x a \<sigma> = \<sigma>(x := aval_ivl_t a \<sigma>)"
 
 lemma assign_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign_ivl \<Gamma> x a \<sigma>\<rbrakk>"
+  shows "s(x := teval a s) \<in> \<lbrakk>assign_ivl x a \<sigma>\<rbrakk>"
   unfolding assign_ivl_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_ivl (\<sigma> z)"
     using gamma_stateD[OF gs] by simp
-  have av: "taval_syn \<Gamma> a s \<in> gamma_ivl (aval_ivl_t (elaborate_syn \<Gamma> a) \<sigma>)"
-    using aval_ivl_t_sound_syn[OF V] .
-  show "(s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s))) y
-          \<in> gamma ((\<sigma>(x := ivl_cast (\<Gamma> x) (aval_ivl_t (elaborate_syn \<Gamma> a) \<sigma>))) y)"
-  proof (cases "y = x")
-    case True
-    with V av show ?thesis by (simp add: gamma_abs_ivl ivl_cast_sound)
-  next
-    case False
-    with V show ?thesis by simp
-  qed
+  have av: "teval a s \<in> gamma_ivl (aval_ivl_t a \<sigma>)"
+    using aval_ivl_t_sound[OF V] .
+  show "(s(x := teval a s)) y \<in> gamma ((\<sigma>(x := aval_ivl_t a \<sigma>)) y)"
+    using V av by (cases "y = x") simp_all
 qed
 
 text \<open>Nondeterministic and other special-call assignment (\<open>special_ivl\<close>) lives
   in \<open>Interval_Special\<close>, reused below.\<close>
 
 lemma assign_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl \<Gamma> x a sigma1 \<le> assign_ivl \<Gamma> x a sigma2"
-  by (simp add: assign_ivl_def aval_ivl_mono le_funD le_funI ivl_cast_mono)
+  "sigma1 \<le> sigma2 \<Longrightarrow> assign_ivl x a sigma1 \<le> assign_ivl x a sigma2"
+  by (simp add: assign_ivl_def aval_ivl_t_mono le_funD le_funI)
 
 subsection \<open>Skip, body-entry, and return\<close>
 
 text \<open>Interval has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close> are
-  the identity. \<open>return\<^sup>#\<close> cannot reuse \<open>assign_ivl\<close>: \<^const>\<open>apply_tf\<close>'s
-  \<open>EA_Ret\<close> case does not pass the edge's own baked return kind \<open>rk\<close> through
-  to \<open>tf_return\<close> at all (\<open>sound_transfer_for\<close>'s \<open>tf_sound_return_for\<close> quantifies
-  over every \<open>rk\<close> universally), so \<open>return\<^sup>#\<close>'s single output must already be
-  sound for whichever \<open>rk\<close> the compiled edge actually used -- unlike an
-  ordinary assignment, there is no declared kind here to cast against, only
-  an unknown one, so \<open>ret_var\<close> widens to \<^const>\<open>ivl_top\<close> whenever the return
-  carries a value.\<close>
+  the identity. \<open>return\<^sup>#\<close> is an ordinary write to \<^const>\<open>ret_var\<close>: the owning
+  procedure's return kind is already baked into the returned payload as a
+  \<^const>\<open>TCast\<close> node, so evaluating it abstractly is both sound and as precise
+  as the domain allows -- no widening to \<^const>\<open>ivl_top\<close> is needed.\<close>
 
 definition skip_ivl :: "(vname => ivl) => (vname => ivl)" where
   "skip_ivl \<sigma> = \<sigma>"
@@ -85,9 +61,9 @@ definition body_ivl :: "pname => (vname => ivl) => (vname => ivl)" where
   "body_ivl p \<sigma> = \<sigma>"
 
 definition return_ivl ::
-    "exp option => pname => (vname => ivl) => (vname => ivl)"
+    "texp option => pname => (vname => ivl) => (vname => ivl)"
 where
-  "return_ivl e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := ivl_top))"
+  "return_ivl e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := aval_ivl_t a \<sigma>))"
 
 text \<open>A check observes its condition but never refines the state (that is
   \<open>abstract_check_domain\<close>'s job): Interval has no notion of that observation
@@ -106,10 +82,21 @@ lemma event_ivl_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \
 
 lemma return_ivl_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
            \<in> \<lbrakk>return_ivl e p \<sigma>\<rbrakk>"
-  using gs unfolding gamma_state_def
-  by (cases e) (auto simp: return_ivl_def gamma_ivl_top)
+proof (cases e)
+  case None
+  then show ?thesis using gs by (simp add: return_ivl_def)
+next
+  case (Some a)
+  from gs have V: "\<forall>z. s z \<in> gamma_ivl (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  have av: "teval a s \<in> gamma_ivl (aval_ivl_t a \<sigma>)"
+    using aval_ivl_t_sound[OF V] .
+  show ?thesis
+    unfolding gamma_state_def Some
+    using V av by (auto simp: return_ivl_def)
+qed
 
 lemma skip_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_ivl sigma1 \<le> skip_ivl sigma2"
   by (simp add: skip_ivl_def)
@@ -122,7 +109,7 @@ lemma event_ivl_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_ivl ev sigma1
 
 lemma return_ivl_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> return_ivl e p sigma1 \<le> return_ivl e p sigma2"
-  by (cases e) (simp_all add: return_ivl_def le_fun_def)
+  by (cases e) (simp_all add: return_ivl_def aval_ivl_t_mono le_fun_def)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -138,9 +125,9 @@ definition enter_frame_ivl_for ::
   "enter_frame_ivl_for gs = enter_frame_D gs ivl_top"
 
 definition enter_ivl_for ::
-    "(vname => bool) => tyenv => vname list => exp list =>
+    "(vname => bool) => vname list => texp list =>
       ivl abs_state => ivl abs_state" where
-  "enter_ivl_for gs \<Gamma> = enter_D_typed gs ivl_top \<Gamma> ivl_cast aval_ivl_t"
+  "enter_ivl_for gs = enter_D gs ivl_top aval_ivl_t"
 
 lemma enter_frame_ivl_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -152,46 +139,45 @@ qed
 
 lemma enter_ivl_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state cls s)
-           \<in> \<lbrakk>enter_ivl_for cls \<Gamma> xs es \<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state cls s)
+           \<in> \<lbrakk>enter_ivl_for cls xs es \<sigma>\<rbrakk>"
   unfolding enter_ivl_for_def
-proof (rule enter_D_typed_sound[OF gs])
+proof (rule enter_D_sound[OF gs])
   show "gamma ivl_top = UNIV" by (simp add: gamma_ivl_top)
 next
-  fix ik v a show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (ivl_cast ik a)"
-    by (simp add: gamma_abs_ivl ivl_cast_sound)
-next
-  fix ik e' s' \<sigma>' show "(\<forall>x. s' x \<in> gamma (\<sigma>' x)) \<Longrightarrow>
-                          taval \<Gamma> ik e' s' \<in> gamma (aval_ivl_t (elaborate \<Gamma> ik e') \<sigma>')"
-    by (simp add: gamma_abs_ivl aval_ivl_sound)
+  from gs have V: "\<forall>z. s z \<in> gamma_ivl (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. teval e s) es) (map (\<lambda>e. aval_ivl_t e \<sigma>) es)"
+    using aval_ivl_t_sound[OF V]
+    by (simp add: list_all2_conv_all_nth)
 qed
 
-definition ivl_tf_for :: "(vname => bool) => tyenv => ivl domain_transfer" where
-  "ivl_tf_for gs \<Gamma> = (| tf_assign  = assign_ivl \<Gamma>,
-                       tf_special = special_ivl \<Gamma>,
-                       tf_branch  = branch_ivl \<Gamma>,
+definition ivl_tf_for :: "(vname => bool) => ivl domain_transfer" where
+  "ivl_tf_for gs = (| tf_assign  = assign_ivl,
+                       tf_special = special_ivl,
+                       tf_branch  = branch_ivl,
                        tf_skip    = skip_ivl,
                        tf_body    = body_ivl,
                        tf_return  = return_ivl,
-                       tf_enter   = enter_ivl_for gs \<Gamma>,
+                       tf_enter   = enter_ivl_for gs,
                        tf_event   = event_ivl,
                        tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                        tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
 text \<open>
-  The branch obligation below is unresolved: @{thm [source] branch_ivl_sound}
-  requires \<open>styped \<Gamma> s\<close> and \<open>wt_exp \<Gamma> b (opk (esyn \<Gamma> b))\<close>, premises that
-  \<open>sound_transfer_for\<close>'s \<open>tf_sound_branch_for\<close> obligation does not supply.
-  Closing this needs a well-typedness invariant threaded through the whole
-  \<open>sound_transfer_for\<close> soundness chain, not a local fix to this lemma. This is
-  the same gap \<open>sign_is_sound_transfer_for\<close> defers for Sign.
+  \<^const>\<open>branch_ivl\<close> narrows a \<^const>\<open>TVar\<close> leaf only under the
+  domain's own \<^const>\<open>a_in_range\<close> certificate, so
+  @{thm [source] backward_domain.branch_sound} needs no premise about the
+  store and this obligation is discharged outright.
 \<close>
-lemma ivl_is_sound_transfer_for: "sound_transfer_for gs (ivl_tf_for gs \<Gamma>) \<Gamma>"
+lemma ivl_is_sound_transfer_for:
+  "sound_transfer_for gs (ivl_tf_for gs)"
   unfolding ivl_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_ivl_sound)
   subgoal by (simp add: special_ivl_sound)
-  subgoal sorry
+  subgoal by (simp add: branch_ivl_sound)
   subgoal by (simp add: skip_ivl_sound)
   subgoal by (simp add: body_ivl_sound)
   subgoal by (simp add: return_ivl_sound)
@@ -208,20 +194,16 @@ lemma enter_frame_ivl_for_mono:
 
 lemma enter_ivl_for_mono:
   assumes "s1 \<le> s2"
-  shows "enter_ivl_for gs \<Gamma> xs es s1 \<le> enter_ivl_for gs \<Gamma> xs es s2"
+  shows "enter_ivl_for gs xs es s1 \<le> enter_ivl_for gs xs es s2"
   unfolding enter_ivl_for_def
-proof (rule enter_D_typed_mono[OF assms])
-  show "\<And>ik a1 a2. a1 \<le> a2 \<Longrightarrow> ivl_cast ik a1 \<le> ivl_cast ik a2"
-    by (rule ivl_cast_mono)
-next
-  show "\<And>ik e' \<tau>1 \<tau>2. \<tau>1 \<le> \<tau>2 \<Longrightarrow>
-          aval_ivl_t (elaborate \<Gamma> ik e') \<tau>1 \<le> aval_ivl_t (elaborate \<Gamma> ik e') \<tau>2"
-    by (rule aval_ivl_t_mono)
+proof (rule enter_D_mono[OF assms])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_ivl_t e s1) es) (map (\<lambda>e. aval_ivl_t e s2) es)"
+    using aval_ivl_t_mono[OF assms] by (simp add: list_all2_conv_all_nth)
 qed
 
 lemma ivl_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow>
-   apply_tf (ivl_tf_for gs \<Gamma>) a s1 \<le> apply_tf (ivl_tf_for gs \<Gamma>) a s2"
+   apply_tf (ivl_tf_for gs) a s1 \<le> apply_tf (ivl_tf_for gs) a s2"
   by (cases a)
      (auto simp: ivl_tf_for_def assign_ivl_mono special_ivl_mono branch_ivl_mono
                  skip_ivl_mono body_ivl_mono return_ivl_mono enter_ivl_for_mono
@@ -239,7 +221,7 @@ text \<open>
 \<close>
 lemmas ivl_eval_simps =
   ivl_tf_for_def assign_ivl_def
-  aval_ivl_t.simps aval_ivl_def elaborate.simps elaborate_syn_def
+  aval_ivl_t.simps
   plus_ivl.simps plus_eint.simps
   less_eq_ivl_def le_fun_def
 

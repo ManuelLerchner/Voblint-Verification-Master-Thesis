@@ -100,7 +100,8 @@ definition flagship_pi :: proc_table where
   "flagship_pi = prog_table flagship_prog"
 
 definition flagship_cfg :: cfg where
-  "flagship_cfg = compile_prog flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
+  "flagship_cfg = compile_prog (prog_tyenv flagship_prog) flagship_pi (prog_procs flagship_prog)
+     prog_main_name (prog_main flagship_prog)"
 
 lemma flagship_entry: "cfg_entry flagship_cfg = FunctionEntry (STR ''main'')"
   unfolding flagship_cfg_def prog_main_name_def by (rule inv16_entry_is_main)
@@ -136,8 +137,8 @@ text \<open>
 \<close>
 
 definition flagship_eqs :: "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs (prog_tyenv flagship_prog))
-       (ivl_enter_st_for (prog_tyenv flagship_prog) flagship_gs))
+  "flagship_eqs = dg_gen_of (unit_dg_spec_st_for flagship_gs (ivl_tf_st_for flagship_gs)
+       (ivl_enter_st_for flagship_gs))
      flagship_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
@@ -241,39 +242,30 @@ lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
       split: if_splits)
 
 text \<open>
-  \<^bold>\<open>Blocked, not merely unproved.\<close> This interpretation cannot be I/Q-checked at all right
-  now: \<^locale>\<open>unit_dg_exec_analysis\<close> (\<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>) is itself
-  currently undefined, because that theory's own citations of \<open>pstep\<close>/\<open>sound_transfer_for\<close>/
-  \<open>sound_dg_spec_ltr_for\<close> predate those constants' \<open>Gamma :: tyenv\<close> parameter and are out of
-  scope here. Independent of that blocker, the citation below is also stale on its own
-  terms: \<open>ivl_tf_st_for_reduces\<close> no longer exists, for the same reason
-  \<open>sign_tf_st_for_reduces\<close> was deleted (see \<open>Sign_Exec.thy\<close>) --
-  \<^const>\<open>ivl_tf_st_for\<close>'s \<open>EA_Ret (Some a)\<close> case now sets the result to \<open>ivl_top\<close>
-  unconditionally rather than reusing the \<open>EA_Assign\<close> case, so \<open>action_reduces\<close>'s
-  \<open>ret_some\<close> conjunct (\<open>F (EA_Ret (Some a) p rk) = F (EA_Assign ret_var a)\<close>) is genuinely
-  false for it now. \<^locale>\<open>unit_dg_exec_analysis\<close>'s own \<open>reduces\<close> field demands the full
-  \<open>action_reduces\<close> predicate (\<open>Run_Analysis_Sound.dg_spec_step_unit_st_for\<close> only actually
-  needs the weaker fact that \<open>ivl_tf_st_for\<close>'s \<open>EA_Ret\<close> case does not depend on \<open>rk\<close>, which
-  \<^emph>\<open>does\<close> still hold post-fix -- both sides collapse to the same unconditional \<open>ivl_top\<close> --
-  but the locale has no field to state that weaker fact instead), so this interpretation
-  needs either \<open>Run_Analysis_Sound.unit_dg_exec_analysis\<close>'s \<open>reduces\<close> field relaxed to that
-  weaker rk-independence obligation, or this file repointed onto \<open>base_dg_exec_analysis\<close>
-  the way \<open>Exec_Sign_DG_Run.sign_ex_reg\<close> was for an unrelated reason. Both are changes to
-  files outside this example.
+  \<^locale>\<open>unit_dg_exec_analysis\<close>'s \<open>reduces\<close> field asks for \<open>action_reduces
+  (ivl_tf_st_for gs)\<close>: a void return and a check act as \<open>EA_Nop\<close>, and a value
+  return acts as an assignment into \<^const>\<open>ret_var\<close>. All three hold, because
+  \<^const>\<open>ivl_tf_st_for\<close>'s \<open>EA_Ret (Some a) p rk\<close> case evaluates the very
+  \<^typ>\<open>texp\<close> the edge carries, exactly as its \<open>EA_Assign\<close> case does. The
+  action's \<open>rk\<close> plays no part: the compiler already elaborated the returned
+  expression at the procedure's declared return kind, so the conversion sits
+  inside \<open>a\<close> as a \<^const>\<open>TCast\<close> node rather than being applied afterwards
+  from the edge's \<open>rk\<close> field.
+
 \<close>
 interpretation flagship_ex_reg:
   unit_dg_exec_analysis flagship_gs
-    "ivl_tf_for flagship_gs (prog_tyenv flagship_prog)"
-    "ivl_tf_st_for flagship_gs (prog_tyenv flagship_prog)"
-    "ivl_enter_st_for (prog_tyenv flagship_prog) flagship_gs"
+    "ivl_tf_for flagship_gs"
+    "ivl_tf_st_for flagship_gs"
+    "ivl_enter_st_for flagship_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
   interpret flagship_ex_transfer: sound_transfer_for flagship_gs
-    "ivl_tf_for flagship_gs (prog_tyenv flagship_prog)" "prog_tyenv flagship_prog"
+    "ivl_tf_for flagship_gs"
     by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs (prog_tyenv flagship_prog))
-          (ivl_tf_st_for flagship_gs (prog_tyenv flagship_prog))
-          (ivl_enter_st_for (prog_tyenv flagship_prog) flagship_gs)
+  show "unit_dg_exec_analysis flagship_gs (ivl_tf_for flagship_gs)
+          (ivl_tf_st_for flagship_gs)
+          (ivl_enter_st_for flagship_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     apply unfold_locales
        apply (rule flagship_wf_reserved)
@@ -282,7 +274,9 @@ proof -
              flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for)+
       apply (rule ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def])
      apply (rule ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def])
-    sorry
+     apply (rule ivl_tf_st_for_action_reduces)
+    apply (erule TD_side_warrowing_apinis_Interp.solve_c_part_post_solution)
+    done
 qed
 
 text \<open>
@@ -303,9 +297,12 @@ lemma flagship_wf:
       split: if_splits)
 
 theorem flagship_source_run_sound:
-  assumes run: "star (pstep flagship_gs flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"
+  assumes run: "star (pstep (prog_tyenv flagship_prog) flagship_gs flagship_pi)
+                  (prog_main flagship_prog, s, [], proc_ret_kind flagship_pi prog_main_name)
+                  (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores flagship_gs"
-  shows "\<exists>v stk. csim flagship_pi flagship_cfg (residual, t, frs) (v, t, stk)
+  shows "\<exists>v stk. csim (prog_tyenv flagship_prog) flagship_pi flagship_cfg
+                     (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> flagship_ex_reg.gamma (snd flagship_sol) v"
 proof -
   show ?thesis
@@ -357,21 +354,10 @@ proof -
     by (simp add: fun_of_dg_st_for_simps fun_of_exec_dg_st_for_def C L)
 qed
 
-text \<open>
-  \<open>sound_dg_spec_unit_for\<close>'s third premise, \<open>ret_ok: (\<And>x v. ik_norm (\<Gamma> x) v = v)\<close>,
-  is unresolved below: it holds only when every combine-published value already lies in
-  its destination's declared range for every \<open>x\<close>, a well-typedness invariant this file
-  does not carry. Pre-existing gap, unrelated to Gamma-threading -- the same gap
-  \<open>ivl_is_sound_transfer_for\<close>'s own comment and \<open>Sign_Ctx_None_Sound.sctx_dg_base\<close> both
-  flag.
-\<close>
-lemma flagship_ret_ok: "\<And>x v. ik_norm (prog_tyenv flagship_prog x) v = v"
-  sorry
-
 lemma flagship_sound_dg_spec_unit:
-  "sound_dg_spec (unit_dg_spec_for flagship_gs (ivl_tf_for flagship_gs (prog_tyenv flagship_prog)))
-     (gamma_unit flagship_gs) flagship_gs (prog_tyenv flagship_prog)"
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved flagship_ret_ok])
+  "sound_dg_spec (unit_dg_spec_for flagship_gs (ivl_tf_for flagship_gs))
+     (gamma_unit flagship_gs) flagship_gs"
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for flagship_wf_reserved])
 
 theorem flagship_head_bound_proper:
   "(\<lambda>_. 100) \<notin> sound_dg_spec.dg_gamma (gamma_unit flagship_gs)
@@ -402,10 +388,10 @@ definition flagship_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        scope_locals (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_locals (compiled_procedure_scope flagship_gs (prog_tyenv flagship_prog) Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope flagship_gs Map.empty [] prog_main_name (prog_main flagship_prog)
+        scope_return_slot (compiled_procedure_scope flagship_gs (prog_tyenv flagship_prog) Map.empty [] prog_main_name (prog_main flagship_prog)
           flagship_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>_ _ vars d. map (\<lambda>x.

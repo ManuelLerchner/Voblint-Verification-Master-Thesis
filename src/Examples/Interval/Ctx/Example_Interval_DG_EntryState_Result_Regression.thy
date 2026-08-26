@@ -221,13 +221,16 @@ definition gcall_callee_ctx_at :: "pp \<Rightarrow> call_action \<Rightarrow> iv
       | Reachable st \<Rightarrow> entry_state_callee_ctx gcall_gs ca st)"
 
 abbreviation gcall_call_first :: call_action where
-  "gcall_call_first \<equiv> CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5]"
+  "gcall_call_first \<equiv> CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''a''))) [STR ''n'']
+     (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [exp.N 5])"
 
 abbreviation gcall_call_second :: call_action where
-  "gcall_call_second \<equiv> CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]"
+  "gcall_call_second \<equiv> CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''b''))) [STR ''n'']
+     (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [exp.N 4])"
 
 abbreviation gcall_call_third :: call_action where
-  "gcall_call_third \<equiv> CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')]"
+  "gcall_call_third \<equiv> CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''c''))) [STR ''n'']
+     (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [V (STR ''g'')])"
 
 text \<open>Each call site's own context, pinned as a value.\<close>
 
@@ -330,8 +333,8 @@ lemma twin_result_idf_contexts:
 
 lemma twin_analyse_interval_entry_state:
   "analyse_interval_entry_state twin_prog =
-     [(Statement 4, exp.Eq (V (STR ''a'')) (exp.N 6), Decided Check_Proved),
-      (Statement 5, exp.Eq (V (STR ''b'')) (exp.N 6), Decided Check_Proved)]"
+     [(Statement 4, elaborate_syn (prog_tyenv twin_prog) (exp.Eq (V (STR ''a'')) (exp.N 6)), Decided Check_Proved),
+      (Statement 5, elaborate_syn (prog_tyenv twin_prog) (exp.Eq (V (STR ''b'')) (exp.N 6)), Decided Check_Proved)]"
   by eval
 
 end

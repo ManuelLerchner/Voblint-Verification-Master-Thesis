@@ -41,7 +41,8 @@ definition fact_prog :: imp_prog where
 abbreviation fact_gs :: "vname \<Rightarrow> bool" where "fact_gs \<equiv> declared_global fact_prog"
 
 definition fact_cfg :: cfg where
-  "fact_cfg = compile_prog (prog_table fact_prog) (prog_procs fact_prog) prog_main_name (prog_main fact_prog)"
+  "fact_cfg = compile_prog (prog_tyenv fact_prog) (prog_table fact_prog) (prog_procs fact_prog)
+     prog_main_name (prog_main fact_prog)"
 
 definition fact_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
   "fact_is_bot_pred = resolved_st_q_is_bot_for (declared_global_vars fact_prog)"
@@ -69,22 +70,28 @@ definition ctx_a :: "ivl list" where
   "ctx_a = entry_state_route fact_gs fact_is_bot_pred
              (entry_state_entered fact_gs fact_is_bot_pred
                 (locals (snd fact_sol (Inl (Statement 7, []))))
-                (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3]))
-             (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 3])"
+                (CallEdge (compile_dst (prog_tyenv fact_prog) (Some (STR ''a''))) [STR ''n'']
+                   (compile_actuals (prog_tyenv fact_prog) [STR ''n''] [exp.N 3])))
+             (CallEdge (compile_dst (prog_tyenv fact_prog) (Some (STR ''a''))) [STR ''n'']
+                   (compile_actuals (prog_tyenv fact_prog) [STR ''n''] [exp.N 3]))"
 
 definition ctx_b :: "ivl list" where
   "ctx_b = entry_state_route fact_gs fact_is_bot_pred
              (entry_state_entered fact_gs fact_is_bot_pred
                 (locals (snd fact_sol (Inl (Statement 8, []))))
-                (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]))
-             (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
+                (CallEdge (compile_dst (prog_tyenv fact_prog) (Some (STR ''b''))) [STR ''n'']
+                   (compile_actuals (prog_tyenv fact_prog) [STR ''n''] [exp.N 4])))
+             (CallEdge (compile_dst (prog_tyenv fact_prog) (Some (STR ''b''))) [STR ''n'']
+                   (compile_actuals (prog_tyenv fact_prog) [STR ''n''] [exp.N 4]))"
 
 definition ctx_rec :: "ivl list \<Rightarrow> ivl list" where
   "ctx_rec caller_ctx = entry_state_route fact_gs fact_is_bot_pred
                           (entry_state_entered fact_gs fact_is_bot_pred
                              (locals (snd fact_sol (Inl (Statement 3, caller_ctx))))
-                             (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)]))
-                          (CallEdge (Some (STR ''r'')) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])"
+                             (CallEdge (compile_dst (prog_tyenv fact_prog) (Some (STR ''r''))) [STR ''n'']
+                               (compile_actuals (prog_tyenv fact_prog) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)])))
+                          (CallEdge (compile_dst (prog_tyenv fact_prog) (Some (STR ''r''))) [STR ''n'']
+                               (compile_actuals (prog_tyenv fact_prog) [STR ''n''] [Minus (V (STR ''n'')) (exp.N 1)]))"
 
 definition ctx_a2 :: "ivl list" where "ctx_a2 = ctx_rec ctx_a"
 definition ctx_a1 :: "ivl list" where "ctx_a1 = ctx_rec ctx_a2"
@@ -134,10 +141,10 @@ text \<open>Final acceptance value: the production check-report pipeline end to 
   branch never leaking into \<open>FunctionResult\<close>'s join.\<close>
 lemma fact_analyse_interval_entry_state:
   "analyse_interval_entry_state fact_prog =
-     [(Statement 0, Less (exp.N 0) (V (STR ''n'')), Decided Check_Proved),
-      (Statement 4, Less (exp.N 0) (V (STR ''r'')), Decided Check_Proved),
-      (Statement 9, exp.Eq (V (STR ''a'')) (exp.N 6), Decided Check_Proved),
-      (Statement 10, exp.Eq (V (STR ''b'')) (exp.N 24), Decided Check_Proved)]"
+     [(Statement 0, elaborate_syn (prog_tyenv fact_prog) (Less (exp.N 0) (V (STR ''n''))), Decided Check_Proved),
+      (Statement 4, elaborate_syn (prog_tyenv fact_prog) (Less (exp.N 0) (V (STR ''r''))), Decided Check_Proved),
+      (Statement 9, elaborate_syn (prog_tyenv fact_prog) (exp.Eq (V (STR ''a'')) (exp.N 6)), Decided Check_Proved),
+      (Statement 10, elaborate_syn (prog_tyenv fact_prog) (exp.Eq (V (STR ''b'')) (exp.N 24)), Decided Check_Proved)]"
   by eval
 
 end

@@ -128,7 +128,7 @@ lemma ec_comb_fwd_ok:
   using assms ec_calls_cov_ball by (cases c1) fastforce
 
 lemma ec_node_sound:
-  "ltr_collect branch_prog_gs (prog_cfg prog_main_name branch_prog) (cinit_stores branch_prog_gs) v
+  "ltr_collect (prog_tyenv branch_prog) branch_prog_gs (prog_cfg prog_main_name branch_prog) (cinit_stores branch_prog_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for branch_prog_gs branch_prog) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -151,7 +151,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound:
-  "ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
+  "ltr_collect (prog_tyenv branch_prog) branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))
    \<le> \<lbrakk>branch_prog_env\<rbrakk>"
   unfolding branch_prog_env_def
   using ec_node_sound
@@ -164,7 +164,7 @@ text \<open>
 \<close>
 
 corollary ec_certified_sound_store:
-  assumes "s \<in> ltr_collect branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
+  assumes "s \<in> ltr_collect (prog_tyenv branch_prog) branch_prog_gs (prog_cfg (STR ''main'') branch_prog) (cinit_stores branch_prog_gs) (cfg_exit (prog_cfg (STR ''main'') branch_prog))"
   shows "s \<in> \<lbrakk>branch_prog_env\<rbrakk>"
   using assms ec_certified_sound by blast
 

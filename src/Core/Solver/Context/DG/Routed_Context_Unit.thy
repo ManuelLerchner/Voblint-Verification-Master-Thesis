@@ -110,7 +110,7 @@ locale unit_routed_context =
     "\<And>cl s es dst pars args p cont.
        call_enter_store \<Gamma> gs g cl s es
        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-       \<Longrightarrow> es = call_enter \<Gamma> gs (CallEdge dst pars args) s"
+       \<Longrightarrow> es = call_enter gs (CallEdge dst pars args) s"
 begin
 
 sublocale routed: routed_context_base_hetero S gammaDG gs \<Gamma> g gk0 route_unit
@@ -129,7 +129,7 @@ next
   fix u ctx dst pars args p cont s
   show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
             (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
-          = enterc_unit u ctx (call_enter \<Gamma> gs (CallEdge dst pars args) s)"
+          = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
@@ -153,7 +153,7 @@ next
   fix cl s es dst pars args p cont
   assume "call_enter_store \<Gamma> gs g cl s es"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "es = call_enter \<Gamma> gs (CallEdge dst pars args) s"
+  then show "es = call_enter gs (CallEdge dst pars args) s"
     by (rule call_enter_store_agree)
 qed
 
@@ -208,7 +208,7 @@ next
   fix u ctx dst pars args p cont s
   show "route_unit u ctx (enter_local S pars args (locals (sigma (Inl (u, ctx))))
             (globs (sigma (Inr gk0)))) (CallEdge dst pars args)
-          = enterc_unit u ctx (call_enter \<Gamma> gs (CallEdge dst pars args) s)"
+          = enterc_unit u ctx (call_enter gs (CallEdge dst pars args) s)"
     by (rule route_unit_enterc_unit_agree)
 next
   fix u ctx dst pars args p cont
@@ -232,7 +232,7 @@ next
   fix cl s es dst pars args p cont
   assume "call_enter_store \<Gamma> gs g cl s es"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  then show "es = call_enter \<Gamma> gs (CallEdge dst pars args) s"
+  then show "es = call_enter gs (CallEdge dst pars args) s"
     by (rule call_enter_store_agree)
 qed
 

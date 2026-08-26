@@ -6,30 +6,28 @@ section \<open>Parity transfer functions\<close>
 
 subsection \<open>Abstract assignment\<close>
 
+text \<open>
+  The destination's declared kind rides inside the assigned \<^typ>\<open>texp\<close> as a
+  \<^const>\<open>TCast\<close> node, so \<open>assign_parity\<close> performs no cast of its own.
+\<close>
+
 definition assign_parity ::
-    "tyenv => vname => exp => (vname => parity) => (vname => parity)"
+    "vname => texp => (vname => parity) => (vname => parity)"
 where
-  "assign_parity \<Gamma> x a \<sigma> = \<sigma>(x := parity_cast (\<Gamma> x) (aval_parity_t (elaborate_syn \<Gamma> a) \<sigma>))"
+  "assign_parity x a \<sigma> = \<sigma>(x := aval_parity_t a \<sigma>)"
 
 lemma assign_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign_parity \<Gamma> x a \<sigma>\<rbrakk>"
+  shows "s(x := teval a s) \<in> \<lbrakk>assign_parity x a \<sigma>\<rbrakk>"
   unfolding assign_parity_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)"
     using gamma_stateD[OF gs] by simp
-  have av: "taval_syn \<Gamma> a s \<in> gamma_parity (aval_parity_t (elaborate_syn \<Gamma> a) \<sigma>)"
-    using aval_parity_t_sound_syn[OF V] .
-  show "(s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s))) y
-          \<in> gamma ((\<sigma>(x := parity_cast (\<Gamma> x) (aval_parity_t (elaborate_syn \<Gamma> a) \<sigma>))) y)"
-  proof (cases "y = x")
-    case True
-    with V av show ?thesis by (simp add: gamma_abs_parity parity_cast_sound_parity)
-  next
-    case False
-    with V show ?thesis by simp
-  qed
+  have av: "teval a s \<in> gamma_parity (aval_parity_t a \<sigma>)"
+    using aval_parity_t_sound[OF V] .
+  show "(s(x := teval a s)) y \<in> gamma ((\<sigma>(x := aval_parity_t a \<sigma>)) y)"
+    using V av by (cases "y = x") simp_all
 qed
 
 text \<open>Nondeterministic and other special-call assignment (\<open>special_parity\<close>)
@@ -44,34 +42,30 @@ text \<open>
   shape directly (no separate assume/assume-not case, since both bodies coincide).
 \<close>
 
-definition branch_parity :: "tyenv => exp => bool => (vname => parity) => (vname => parity)" where
-  "branch_parity \<Gamma> b pol \<sigma> = \<sigma>"
+definition branch_parity :: "texp => bool => (vname => parity) => (vname => parity)" where
+  "branch_parity b pol \<sigma> = \<sigma>"
 
 lemma branch_parity_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity \<Gamma> b pol \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = pol \<Longrightarrow> s \<in> \<lbrakk>branch_parity b pol \<sigma>\<rbrakk>"
   by (simp add: branch_parity_def)
 
 subsection \<open>Bundled transfer functions\<close>
 
 lemma assign_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity \<Gamma> x a sigma1 \<le> assign_parity \<Gamma> x a sigma2"
-  by (simp add: assign_parity_def aval_parity_mono le_funD le_funI parity_cast_mono)
+  "sigma1 \<le> sigma2 \<Longrightarrow> assign_parity x a sigma1 \<le> assign_parity x a sigma2"
+  by (simp add: assign_parity_def aval_parity_t_mono le_funD le_funI)
 
 lemma branch_parity_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> branch_parity \<Gamma> b pol sigma1 \<le> branch_parity \<Gamma> b pol sigma2"
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_parity b pol sigma1 \<le> branch_parity b pol sigma2"
   by (simp add: branch_parity_def)
 
 subsection \<open>Skip, body-entry, and return\<close>
 
 text \<open>Parity has no lifecycle-specific abstract information: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close> are
-  the identity. \<open>return\<^sup>#\<close> cannot reuse \<open>assign_parity\<close>: \<^const>\<open>apply_tf\<close>'s
-  \<open>EA_Ret\<close> case does not pass the edge's own baked return kind \<open>rk\<close> through
-  to \<open>tf_return\<close> at all (\<open>sound_transfer_for\<close>'s \<open>tf_sound_return_for\<close> quantifies
-  over every \<open>rk\<close> universally), so \<open>return\<^sup>#\<close>'s single output must already be
-  sound for whichever \<open>rk\<close> the compiled edge actually used -- unlike an
-  ordinary assignment, there is no declared kind here to cast against, only
-  an unknown one, so \<open>ret_var\<close> widens to \<^const>\<open>PTop\<close> whenever the return
-  carries a value.\<close>
+  the identity. \<open>return\<^sup>#\<close> is an ordinary write to \<^const>\<open>ret_var\<close>: the owning
+  procedure's return kind is already baked into the returned payload as a
+  \<^const>\<open>TCast\<close> node, so evaluating it abstractly is both sound and as precise
+  as the domain allows -- no widening to \<^const>\<open>PTop\<close> is needed.\<close>
 
 definition skip_parity :: "(vname => parity) => (vname => parity)" where
   "skip_parity \<sigma> = \<sigma>"
@@ -80,9 +74,9 @@ definition body_parity :: "pname => (vname => parity) => (vname => parity)" wher
   "body_parity p \<sigma> = \<sigma>"
 
 definition return_parity ::
-    "exp option => pname => (vname => parity) => (vname => parity)"
+    "texp option => pname => (vname => parity) => (vname => parity)"
 where
-  "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := PTop))"
+  "return_parity e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := aval_parity_t a \<sigma>))"
 
 text \<open>A check observes its condition but never refines the state (that is
   \<open>abstract_check_domain\<close>'s job): Parity has no notion of that observation
@@ -101,10 +95,21 @@ lemma event_parity_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> 
 
 lemma return_parity_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
            \<in> \<lbrakk>return_parity e p \<sigma>\<rbrakk>"
-  using gs unfolding gamma_state_def
-  by (cases e) (auto simp: return_parity_def gamma_parity_top)
+proof (cases e)
+  case None
+  then show ?thesis using gs by (simp add: return_parity_def)
+next
+  case (Some a)
+  from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  have av: "teval a s \<in> gamma_parity (aval_parity_t a \<sigma>)"
+    using aval_parity_t_sound[OF V] .
+  show ?thesis
+    unfolding gamma_state_def Some
+    using V av by (auto simp: return_parity_def)
+qed
 
 lemma skip_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> skip_parity sigma1 \<le> skip_parity sigma2"
   by (simp add: skip_parity_def)
@@ -117,7 +122,7 @@ lemma event_parity_mono: "sigma1 \<le> sigma2 \<Longrightarrow> event_parity ev 
 
 lemma return_parity_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> return_parity e p sigma1 \<le> return_parity e p sigma2"
-  by (cases e) (simp_all add: return_parity_def le_fun_def)
+  by (cases e) (simp_all add: return_parity_def aval_parity_t_mono le_fun_def)
 
 subsection \<open>Classifier-parametric transfer\<close>
 
@@ -133,9 +138,9 @@ definition enter_frame_parity_for ::
   "enter_frame_parity_for gs = enter_frame_D gs PTop"
 
 definition enter_parity_for ::
-    "(vname => bool) => tyenv => vname list => exp list =>
+    "(vname => bool) => vname list => texp list =>
       parity abs_state => parity abs_state" where
-  "enter_parity_for gs \<Gamma> = enter_D_typed gs PTop \<Gamma> parity_cast aval_parity_t"
+  "enter_parity_for gs = enter_D gs PTop aval_parity_t"
 
 lemma enter_frame_parity_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -147,33 +152,33 @@ qed
 
 lemma enter_parity_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state cls s)
-           \<in> \<lbrakk>enter_parity_for cls \<Gamma> xs es \<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state cls s)
+           \<in> \<lbrakk>enter_parity_for cls xs es \<sigma>\<rbrakk>"
   unfolding enter_parity_for_def
-proof (rule enter_D_typed_sound[OF gs])
+proof (rule enter_D_sound[OF gs])
   show "gamma PTop = UNIV" by simp
 next
-  fix ik v a show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (parity_cast ik a)"
-    by (simp add: gamma_abs_parity parity_cast_sound_parity)
-next
-  fix ik e' s' \<sigma>' show "(\<forall>x. s' x \<in> gamma (\<sigma>' x)) \<Longrightarrow>
-                          taval \<Gamma> ik e' s' \<in> gamma (aval_parity_t (elaborate \<Gamma> ik e') \<sigma>')"
-    by (simp add: gamma_abs_parity aval_parity_sound)
+  from gs have V: "\<forall>z. s z \<in> gamma_parity (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. teval e s) es) (map (\<lambda>e. aval_parity_t e \<sigma>) es)"
+    using aval_parity_t_sound[OF V]
+    by (simp add: list_all2_conv_all_nth)
 qed
 
-definition parity_tf_for :: "(vname => bool) => tyenv => parity domain_transfer" where
-  "parity_tf_for gs \<Gamma> = (| tf_assign  = assign_parity \<Gamma>,
-                         tf_special = special_parity \<Gamma>,
-                         tf_branch  = branch_parity \<Gamma>,
+definition parity_tf_for :: "(vname => bool) => parity domain_transfer" where
+  "parity_tf_for gs = (| tf_assign  = assign_parity,
+                         tf_special = special_parity,
+                         tf_branch  = branch_parity,
                          tf_skip    = skip_parity,
                          tf_body    = body_parity,
                          tf_return  = return_parity,
-                         tf_enter   = enter_parity_for gs \<Gamma>,
+                         tf_enter   = enter_parity_for gs,
                          tf_event   = event_parity,
                          tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                          tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
-lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs \<Gamma>) \<Gamma>"
+lemma parity_is_sound_transfer_for: "sound_transfer_for gs (parity_tf_for gs)"
   unfolding parity_tf_for_def
   apply unfold_locales
   subgoal by (simp add: assign_parity_sound)
@@ -195,20 +200,16 @@ lemma enter_frame_parity_for_mono:
 
 lemma enter_parity_for_mono:
   assumes "s1 \<le> s2"
-  shows "enter_parity_for gs \<Gamma> xs es s1 \<le> enter_parity_for gs \<Gamma> xs es s2"
+  shows "enter_parity_for gs xs es s1 \<le> enter_parity_for gs xs es s2"
   unfolding enter_parity_for_def
-proof (rule enter_D_typed_mono[OF assms])
-  show "\<And>ik a1 a2. a1 \<le> a2 \<Longrightarrow> parity_cast ik a1 \<le> parity_cast ik a2"
-    by (rule parity_cast_mono)
-next
-  show "\<And>ik e' \<tau>1 \<tau>2. \<tau>1 \<le> \<tau>2 \<Longrightarrow>
-          aval_parity_t (elaborate \<Gamma> ik e') \<tau>1 \<le> aval_parity_t (elaborate \<Gamma> ik e') \<tau>2"
-    by (rule aval_parity_t_mono)
+proof (rule enter_D_mono[OF assms])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_parity_t e s1) es) (map (\<lambda>e. aval_parity_t e s2) es)"
+    using aval_parity_t_mono[OF assms] by (simp add: list_all2_conv_all_nth)
 qed
 
 lemma parity_tf_for_mono:
   "s1 \<le> s2 \<Longrightarrow>
-   apply_tf (parity_tf_for gs \<Gamma>) a s1 \<le> apply_tf (parity_tf_for gs \<Gamma>) a s2"
+   apply_tf (parity_tf_for gs) a s1 \<le> apply_tf (parity_tf_for gs) a s2"
   by (cases a)
      (auto simp: parity_tf_for_def assign_parity_mono special_parity_mono branch_parity_mono
                  skip_parity_mono body_parity_mono return_parity_mono enter_parity_for_mono

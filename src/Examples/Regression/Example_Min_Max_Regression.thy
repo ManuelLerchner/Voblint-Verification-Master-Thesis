@@ -34,16 +34,29 @@ definition min_max_demo_prog :: imp_prog where
        }
      }"
 
+text \<open>A report entry carries the elaborated \<^typ>\<open>texp\<close> the compiler recorded
+  on the check edge, so the two conditions below name the program's own typing
+  environment.\<close>
+
+abbreviation min_max_demo_ty :: tyenv where
+  "min_max_demo_ty \<equiv> prog_tyenv min_max_demo_prog"
+
+abbreviation min_max_demo_z_neg :: texp where
+  "min_max_demo_z_neg \<equiv> elaborate_syn min_max_demo_ty (Less (V (STR ''z'')) (N 0))"
+
+abbreviation min_max_demo_w_pos :: texp where
+  "min_max_demo_w_pos \<equiv> elaborate_syn min_max_demo_ty (Less (N 0) (V (STR ''w'')))"
+
 lemma min_max_demo_sign_precise:
   "analyse Sign_Analysis min_max_demo_prog =
-     [(Statement 4, Less (V (STR ''z'')) (N 0), Check_Proved),
-      (Statement 5, Less (N 0) (V (STR ''w'')), Check_Proved)]"
+     [(Statement 4, min_max_demo_z_neg, Check_Proved),
+      (Statement 5, min_max_demo_w_pos, Check_Proved)]"
   by eval
 
 lemma min_max_demo_interval_precise:
   "analyse Interval_Analysis min_max_demo_prog =
-     [(Statement 4, Less (V (STR ''z'')) (N 0), Check_Proved),
-      (Statement 5, Less (N 0) (V (STR ''w'')), Check_Proved)]"
+     [(Statement 4, min_max_demo_z_neg, Check_Proved),
+      (Statement 5, min_max_demo_w_pos, Check_Proved)]"
   by eval
 
 subsection \<open>Parity: min/max of two odd constants stays odd, not top\<close>
@@ -76,20 +89,21 @@ lemma min_max_demo_parity_w_odd:
 subsection \<open>Wrong arity is rejected by well-formedness, not silently reinterpreted\<close>
 
 text \<open>
-  \<open>classify_special\<close> only matches an exact two-argument list for \<open>Min\<close>/\<open>Max\<close>;
-  a wrong-arity call such as \<open>min(x)\<close> falls through to its catch-all \<open>None\<close>
-  clause. \<open>wf_source_com\<close> requires \<open>classify_special desc actuals \<noteq> None\<close>
+  Whether a descriptor accepts a call's actual-argument list is a pure arity
+  question: \<^const>\<open>special_arity_ok\<close> decides it with no typing environment
+  and no destination kind, and \<open>Min\<close>/\<open>Max\<close> accept exactly a two-argument
+  list. \<^const>\<open>wf_source_com\<close> requires \<open>special_arity_ok desc actuals\<close>
   whenever the callee resolves through \<open>special_table\<close>, so a wrong-arity
   \<open>min\<close>/\<open>max\<close> call is rejected by source well-formedness -- it never falls
   through to being treated as an ordinary call to an undeclared procedure
   named \<open>min\<close>, since \<open>special_table\<close> already claimed that name first.
   Whether the CLI itself enforces \<open>wf_source_program\<close> before compiling and
-  analyzing a parsed program is a separate, pre-existing question this
-  regression does not address.
+  analyzing a parsed program is a separate question this regression does not
+  address.
 \<close>
 
 lemma min_wrong_arity_not_classified:
-  "classify_special SD_Min [V (STR ''x'')] = None"
+  "special_arity_ok SD_Min [V (STR ''x'')] = False"
   by simp
 
 lemma min_wrong_arity_call_not_wf:

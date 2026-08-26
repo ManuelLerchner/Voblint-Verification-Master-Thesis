@@ -245,7 +245,7 @@ text \<open>
 locale analysis_surface =
   fixes table :: "imp_prog \<Rightarrow> (unit, 'a) analysis_result"
     and bot_state :: 'a
-    and classify :: "exp \<Rightarrow> 'a \<Rightarrow> check_result"
+    and classify :: "texp \<Rightarrow> 'a \<Rightarrow> check_result"
 begin
 
 definition state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> 'a" where
@@ -266,7 +266,7 @@ definition reach_state_at :: "imp_prog \<Rightarrow> pp \<Rightarrow> bool \<tim
   "reach_state_at p v =
      (case lookup_context (table p) v () of Unreachable \<Rightarrow> (True, bot_state) | Reachable st \<Rightarrow> (False, st))"
 
-definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'a) list" where
+definition report_with_state :: "imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> 'a) list" where
   "report_with_state p =
      classify_checks_with_state (prog_cfg prog_main_name p) (reach_state_at p)
        (\<lambda>c (_, s). classify c s)"

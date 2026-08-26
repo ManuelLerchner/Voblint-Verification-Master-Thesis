@@ -41,7 +41,7 @@ definition gcall_prog :: imp_prog where
 abbreviation gcall_gs :: "vname \<Rightarrow> bool" where "gcall_gs \<equiv> declared_global gcall_prog"
 
 definition gcall_cfg :: cfg where
-  "gcall_cfg = compile_prog (prog_table gcall_prog) (prog_procs gcall_prog)
+  "gcall_cfg = compile_prog (prog_tyenv gcall_prog) (prog_table gcall_prog) (prog_procs gcall_prog)
                  prog_main_name (prog_main gcall_prog)"
 
 definition gcall_is_bot_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
@@ -64,15 +64,19 @@ definition gcall_ctx_first :: "ivl list" where
   "gcall_ctx_first = entry_state_route gcall_gs gcall_is_bot_pred
                        (entry_state_entered gcall_gs gcall_is_bot_pred
                           (locals (snd gcall_sol (Inl (Statement 4, []))))
-                          (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5]))
-                       (CallEdge (Some (STR ''a'')) [STR ''n''] [exp.N 5])"
+                          (CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''a''))) [STR ''n'']
+                            (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [exp.N 5])))
+                       (CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''a''))) [STR ''n'']
+                            (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [exp.N 5]))"
 
 definition gcall_ctx_second :: "ivl list" where
   "gcall_ctx_second = entry_state_route gcall_gs gcall_is_bot_pred
                         (entry_state_entered gcall_gs gcall_is_bot_pred
                            (locals (snd gcall_sol (Inl (Statement 5, []))))
-                           (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4]))
-                        (CallEdge (Some (STR ''b'')) [STR ''n''] [exp.N 4])"
+                           (CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''b''))) [STR ''n'']
+                            (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [exp.N 4])))
+                        (CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''b''))) [STR ''n'']
+                            (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [exp.N 4]))"
 
 text \<open>Two call sites, two entry-state contexts: the routed context is the entered value
   of \<open>bump\<close>'s declared formal \<open>n\<close>, so the two activations never share a solver unknown.\<close>
@@ -90,8 +94,10 @@ definition gcall_ctx_third :: "ivl list" where
   "gcall_ctx_third = entry_state_route gcall_gs gcall_is_bot_pred
                        (entry_state_entered gcall_gs gcall_is_bot_pred
                           (locals (snd gcall_sol (Inl (Statement 9, []))))
-                          (CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')]))
-                       (CallEdge (Some (STR ''c'')) [STR ''n''] [V (STR ''g'')])"
+                          (CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''c''))) [STR ''n'']
+                            (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [V (STR ''g'')])))
+                       (CallEdge (compile_dst (prog_tyenv gcall_prog) (Some (STR ''c''))) [STR ''n'']
+                            (compile_actuals (prog_tyenv gcall_prog) [STR ''n''] [V (STR ''g'')]))"
 
 text \<open>A third call site whose actual argument is itself the global \<open>g\<close>, not a literal.
   The routed context is the entered value of that argument, so it locks in that a call
@@ -157,11 +163,11 @@ text \<open>The production check-report pipeline end to end: all five checks are
   global-valued argument and return.\<close>
 lemma gcall_analyse_interval_entry_state:
   "analyse_interval_entry_state gcall_prog =
-     [(Statement 6, exp.Eq (V (STR ''a'')) (exp.N 15), Decided Check_Proved),
-      (Statement 7, exp.Eq (V (STR ''b'')) (exp.N 19), Decided Check_Proved),
-      (Statement 8, exp.Eq (V (STR ''g'')) (exp.N 19), Decided Check_Proved),
-      (Statement 10, exp.Eq (V (STR ''c'')) (exp.N 38), Decided Check_Proved),
-      (Statement 11, exp.Eq (V (STR ''g'')) (exp.N 38), Decided Check_Proved)]"
+     [(Statement 6, elaborate_syn (prog_tyenv gcall_prog) (exp.Eq (V (STR ''a'')) (exp.N 15)), Decided Check_Proved),
+      (Statement 7, elaborate_syn (prog_tyenv gcall_prog) (exp.Eq (V (STR ''b'')) (exp.N 19)), Decided Check_Proved),
+      (Statement 8, elaborate_syn (prog_tyenv gcall_prog) (exp.Eq (V (STR ''g'')) (exp.N 19)), Decided Check_Proved),
+      (Statement 10, elaborate_syn (prog_tyenv gcall_prog) (exp.Eq (V (STR ''c'')) (exp.N 38)), Decided Check_Proved),
+      (Statement 11, elaborate_syn (prog_tyenv gcall_prog) (exp.Eq (V (STR ''g'')) (exp.N 38)), Decided Check_Proved)]"
   by eval
 
 end

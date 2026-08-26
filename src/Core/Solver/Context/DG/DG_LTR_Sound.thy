@@ -11,7 +11,7 @@ text \<open>
 \<close>
 
 
-locale sound_dg_spec_ltr_for = sound_dg_spec S gammaDG gs \<Gamma>
+locale sound_dg_spec_ltr_for = sound_dg_spec S gammaDG gs
   for S :: "('D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec"
     and gammaDG :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
@@ -28,8 +28,8 @@ proof (rule ltr_collect_semantic_postfix)
 next
   fix u a w s s'
   assume e: "(u, a, w) \<in> intra g" and su: "s \<in> dg_gamma sigma u"
-    and st: "s' \<in> edge_step \<Gamma> a s"
-  have "s' \<in> edge_collect \<Gamma> a (dg_gamma sigma u)"
+    and st: "s' \<in> edge_step a s"
+  have "s' \<in> edge_collect a (dg_gamma sigma u)"
     using su st by (auto simp: edge_collect_def)
   then show "s' \<in> dg_gamma sigma w"
     by (rule dg_postfix_gamma_edge[OF pf e])
@@ -37,13 +37,13 @@ next
   fix u dst pars args p cont s
   assume "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> dg_gamma sigma u"
-  then show "call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
+  then show "call_enter gs (CallEdge dst pars args) s \<in> dg_gamma sigma (FunctionEntry p)"
     by (rule dg_postfix_gamma_call[OF pf])
 next
   fix cl dst pars args p cont s t
   assume "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> dg_gamma sigma cl" and "t \<in> dg_gamma sigma (FunctionResult p)"
-  then show "combine_collect \<Gamma> gs dst s t \<in> dg_gamma sigma cont"
+  then show "combine_collect gs dst s t \<in> dg_gamma sigma cont"
     by (rule dg_postfix_gamma_combine[OF pf])
 qed
 
@@ -66,11 +66,10 @@ end
 
 
 locale sound_dg_hooks_ltr =
-  sound_dg_hooks gammaDG gs \<Gamma> edge_tree combine_tree enter_tree
+  sound_dg_hooks gammaDG gs edge_tree combine_tree enter_tree
   for gammaDG :: "'D::bounded_semilattice_sup_bot \<Rightarrow>
       'G::bounded_semilattice_sup_bot \<Rightarrow> store set"
     and gs :: "vname \<Rightarrow> bool"
-    and \<Gamma> :: tyenv
     and edge_tree :: "pp \<Rightarrow> edge_action \<Rightarrow> pp \<Rightarrow>
       (pp \<times> unit, unit, ('D, 'G) dg_state) strategy_tree"
     and combine_tree :: "pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow>
@@ -100,8 +99,8 @@ next
   fix u a w s s'
   assume edge: "(u, a, w) \<in> intra g"
     and sin: "s \<in> dg_hook_gamma gammaDG sigma u"
-    and step: "s' \<in> edge_step \<Gamma> a s"
-  have "s' \<in> edge_collect \<Gamma> a (dg_hook_gamma gammaDG sigma u)"
+    and step: "s' \<in> edge_step a s"
+  have "s' \<in> edge_collect a (dg_hook_gamma gammaDG sigma u)"
     using sin step by (auto simp: edge_collect_def)
   then show "s' \<in> dg_hook_gamma gammaDG sigma w"
     by (rule set_mp[OF hook_postfix_edge[OF pf edge]])
@@ -110,7 +109,7 @@ next
   assume call:
       "(u, CallEdge dst fs args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> dg_hook_gamma gammaDG sigma u"
-  then show "call_enter \<Gamma> gs (CallEdge dst fs args) s \<in>
+  then show "call_enter gs (CallEdge dst fs args) s \<in>
       dg_hook_gamma gammaDG sigma (FunctionEntry p)"
     by (rule hook_postfix_enter[OF pf])
 next
@@ -119,7 +118,7 @@ next
       "(caller, CallEdge dst fs args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> dg_hook_gamma gammaDG sigma caller"
     and tin: "t \<in> dg_hook_gamma gammaDG sigma (FunctionResult p)"
-  then show "combine_collect \<Gamma> gs dst s t \<in>
+  then show "combine_collect gs dst s t \<in>
       dg_hook_gamma gammaDG sigma cont"
     by (rule hook_postfix_combine[OF pf])
 qed
@@ -168,7 +167,7 @@ text \<open>A distinct qualifier from the base \<open>hooks\<close> sublocale in
   \<open>hooks\<close> here would collide with itself at every concrete \<open>sound_dg_spec\<close>
   instance the same way the unqualified sublocale did.\<close>
 
-sublocale sound_dg_spec \<subseteq> hooks_ltr: sound_dg_hooks_ltr gammaDG gs \<Gamma>
+sublocale sound_dg_spec \<subseteq> hooks_ltr: sound_dg_hooks_ltr gammaDG gs
   dg_edge_tree_hook dg_combine_tree_hook dg_enter_tree_hook
   by unfold_locales
 

@@ -27,10 +27,11 @@ value "join_sign SPos SZero"
 value "string_of_sign STop"
 value "string_of_sign SNonPos"
 
-value "aval_sign default_tyenv I32 (Times (N (-2)) (N 3)) (\<lambda>_. SBot)"
-value "aval_sign default_tyenv I32 (Plus (V (STR ''x'')) (V (STR ''x''))) ((\<lambda>_. SBot)((STR ''x'') := SPos))"
+value "aval_sign_t (TTimes I32 (TN I32 (-2)) (TN I32 3)) (\<lambda>_. SBot)"
+value "aval_sign_t (TPlus I32 (TVar I32 (STR ''x'')) (TVar I32 (STR ''x'')))
+        ((\<lambda>_. SBot)((STR ''x'') := SPos))"
 
-value "assign_sign default_tyenv (STR ''x'') (N 1) (\<lambda>_. SBot) (STR ''x'')"
+value "assign_sign (STR ''x'') (TN I32 1) (\<lambda>_. SBot) (STR ''x'')"
 
 text \<open>Backward guard refinement is the abstract spec @{const bfilter_sign}.
   Its executable mirror @{text bfilter_sign_st} on @{text "sign st"} is defined and

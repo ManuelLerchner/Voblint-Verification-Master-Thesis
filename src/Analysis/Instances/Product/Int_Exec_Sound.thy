@@ -64,7 +64,7 @@ fun int_tf_st_for :: "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rig
 | "int_tf_st_for Refine_Fixpoint gs = int_tf_st_fixpoint_for gs"
 
 fun int_dom_enter_st_for ::
-    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow>
+    "refine_mode \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> texp list \<Rightarrow>
       int_dom resolved_st_q \<Rightarrow> int_dom resolved_st_q" where
   "int_dom_enter_st_for Refine_Never gs = int_dom_enter_never_st_for gs"
 | "int_dom_enter_st_for Refine_Once gs = int_dom_enter_once_st_for gs"

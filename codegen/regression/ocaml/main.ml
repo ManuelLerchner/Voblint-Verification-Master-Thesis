@@ -46,6 +46,11 @@ let un_string cs = String.concat "" (List.map (fun c -> String.make 1 (un_char c
    Same program as dispatch_demo_prog in Example_Analysis_Dispatch_Regression.thy. *)
 let check_cond = Less (N (mk_int 0), V "y")
 
+(* The compiled `EA_Check` payload, and hence the report's condition column, is
+   the elaborated form: the program declares no kinds, so every node operates at
+   `I32`, and a comparison relates its operands at their joined synthesized kind. *)
+let check_cond_t = TLess (TN (I32, mk_int 0), TVar (I32, "y"))
+
 let demo_prog =
   mk_program []
     (Seq
@@ -56,12 +61,12 @@ let demo_prog =
     []
 
 let expected_sign =
-  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
-    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
+  [ (Statement (mk_nat 1), (check_cond_t, Check_Proved));
+    (Statement (mk_nat 3), (check_cond_t, Check_Refuted)) ]
 
 let expected_interval =
-  [ (Statement (mk_nat 1), (check_cond, Check_Proved));
-    (Statement (mk_nat 3), (check_cond, Check_Refuted)) ]
+  [ (Statement (mk_nat 1), (check_cond_t, Check_Proved));
+    (Statement (mk_nat 3), (check_cond_t, Check_Refuted)) ]
 
 (* global `total`, procedure `inc` with formal `n`, two calls, two checks.
    Exercises `mk_program`'s procedure list, `proc_decl_of`'s formals, and `Call`
@@ -186,24 +191,30 @@ let rec show_exp_compact = function
   | Less (a, b) -> show_exp_compact a ^ "<" ^ show_exp_compact b
   | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
 
+(* A compiled action's expression payload is a `texp`: the source expression with
+   every operating kind and every target conversion resolved at compile time.
+   The renderings below deliberately show the source expression, via `texp_erase`,
+   so a compiled edge reads the way the program wrote it. *)
+let show_texp_compact t = show_exp_compact (texp_erase t)
+
 let show_edge_action = function
   | EA_Nop -> "nop"
-  | EA_Assign (x, a) -> x ^ " := " ^ show_exp_compact a
-  | EA_Special (Nondet_Int, x) -> x ^ " := __voblint_nondet_int()"
-  | EA_Special (Min (a, b), x) ->
-    x ^ " := min(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
-  | EA_Special (Max (a, b), x) ->
-    x ^ " := max(" ^ show_exp_compact a ^ ", " ^ show_exp_compact b ^ ")"
-  | EA_Assume b -> "[" ^ show_exp_compact b ^ "]"
-  | EA_AssumeNot b -> "![" ^ show_exp_compact b ^ "]"
-  | EA_Ret (None, _) -> "return"
-  | EA_Ret (Some e, _) -> "return " ^ show_exp_compact e
-  | EA_Check b -> "check(" ^ show_exp_compact b ^ ")"
+  | EA_Assign (x, a) -> x ^ " := " ^ show_texp_compact a
+  | EA_Special (Nondet_Int _, x) -> x ^ " := __voblint_nondet_int()"
+  | EA_Special (Min (_, a, b), x) ->
+    x ^ " := min(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b ^ ")"
+  | EA_Special (Max (_, a, b), x) ->
+    x ^ " := max(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b ^ ")"
+  | EA_Assume b -> "[" ^ show_texp_compact b ^ "]"
+  | EA_AssumeNot b -> "![" ^ show_texp_compact b ^ "]"
+  | EA_Ret (None, _, _) -> "return"
+  | EA_Ret (Some e, _, _) -> "return " ^ show_texp_compact e
+  | EA_Check b -> "check(" ^ show_texp_compact b ^ ")"
 
 let show_call_action = function
-  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+  | CallEdge (None, _, es) -> "call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
   | CallEdge (Some x, _, es) ->
-    x ^ " := call(" ^ String.concat "" (List.map show_exp_compact es) ^ ")"
+    x ^ " := call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
 
 let show_intra_list es =
   String.concat "; "

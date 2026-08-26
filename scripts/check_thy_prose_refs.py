@@ -27,6 +27,9 @@ OPEN, CLOSE = r"\<open>", r"\<close>"
 ALLOWED = {
     # Goblint's own vocabulary, cited for comparison.
     "id_binary_log", "id_binary_pred", "id_unary_log",
+    # Goblint's cast-inversion guard (baseInvariant.ml), cited where afilter's
+    # own TCast clause explains that it gates on the same test.
+    "is_dynamically_safe_cast",
     # Metavariable placeholders: X stands for a domain name.
     "bfilter_X_st", "branch_X_st_for",
     # A naming-convention prefix, cited as "the <prefix> family" -- the family

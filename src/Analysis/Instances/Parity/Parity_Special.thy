@@ -73,11 +73,11 @@ subsection \<open>Special-call dispatch\<close>
 definition parity_special_ops :: "parity special_ops" where
   "parity_special_ops = (| special_min = parity_min, special_max = parity_max |)"
 
-interpretation parity_special: sound_special_ops parity_special_ops aval_parity parity_cast
+interpretation parity_special: sound_special_ops parity_special_ops aval_parity_t parity_cast
   by unfold_locales
      (auto simp: parity_special_ops_def gamma_parity_top
            intro: parity_min_sound parity_max_sound parity_min_combine_mono parity_max_combine_mono
-                  aval_parity_sound aval_parity_mono parity_cast_sound_parity parity_cast_mono)
+                  aval_parity_t_sound aval_parity_t_mono parity_cast_sound_parity parity_cast_mono)
 
 lemma parity_special_ops_min [simp]: "special_min parity_special_ops = parity_min"
   by (simp add: parity_special_ops_def)
@@ -87,16 +87,29 @@ lemma parity_special_ops_max [simp]: "special_max parity_special_ops = parity_ma
 
 text \<open>
   \<open>special_parity\<close> is a thin alias for \<^const>\<open>sound_special_ops.special_transfer\<close>
-  at its own \<open>parity_special_ops\<close>/\<open>aval_parity\<close> instance -- \<open>special_transfer\<close>
-  already correctly threads \<open>\<Gamma>\<close>/synthesized-kind evaluation into \<open>Min\<close>/
-  \<open>Max\<close>'s two operands, so there is nothing for a per-domain reimplementation
-  to add.
+  at its own \<open>parity_special_ops\<close>/\<open>aval_parity_t\<close> instance --
+  \<open>special_transfer\<close> already evaluates \<open>Min\<close>/\<open>Max\<close>'s two elaborated operands
+  and casts the result at the call's own destination kind, so there is
+  nothing for a per-domain reimplementation to add.
 \<close>
 
 definition special_parity ::
-    "tyenv => special_call => vname => (vname => parity) => (vname => parity)"
+    "special_call => vname => (vname => parity) => (vname => parity)"
 where
   "special_parity = parity_special.special_transfer"
+
+text \<open>The executable equation the code generator needs: the locale constant
+  carries the locale's parameters, so \<open>export_code\<close> cannot see through the alias
+  on its own.\<close>
+
+lemma special_parity_code [code]:
+  "special_parity sc x \<sigma> =
+     \<sigma>(x := (case sc of
+                Nondet_Int k \<Rightarrow> top
+              | Min k a b \<Rightarrow> parity_cast k (parity_min (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>))
+              | Max k a b \<Rightarrow> parity_cast k (parity_max (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>))))"
+  unfolding special_parity_def
+  by (simp add: parity_special.special_transfer_def split: special_call.splits)
 
 lemmas special_parity_sound = parity_special.special_transfer_sound[folded special_parity_def]
 lemmas special_parity_mono  = parity_special.special_transfer_mono[folded special_parity_def]

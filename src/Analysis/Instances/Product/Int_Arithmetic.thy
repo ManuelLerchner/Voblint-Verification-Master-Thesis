@@ -242,8 +242,8 @@ text \<open>
   \<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close> locale,
   which fixes those as type-class operations. \<open>int_dom_lt\<close>/\<open>int_dom_eqb\<close>/
   \<open>int_dom_tobool\<close> below still follow that locale's query shape exactly
-  (\<open>bool option\<close>, \<open>Some True\<close>/\<open>Some False\<close>/\<open>None\<close>), and \<open>aval_int_dom\<close>'s
-  \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> cases below reuse that same shape by hand;
+  (\<open>bool option\<close>, \<open>Some True\<close>/\<open>Some False\<close>/\<open>None\<close>), and \<open>aval_int_dom_t\<close>'s
+  \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> cases below reuse that same shape by hand;
   only the generic locale interpretation itself does not transfer.
 
   Each query consults the composite's own four components in turn --
@@ -714,12 +714,51 @@ text \<open>
   conjunction.
 \<close>
 
-definition int_dom_cast :: "ikind \<Rightarrow> int_dom \<Rightarrow> int_dom" where
+definition int_dom_cast :: "ikind \<Rightarrow> 'a int_dom_scheme \<Rightarrow> 'a int_dom_scheme" where
   "int_dom_cast ik d =
      d\<lparr>int_sign := sign_cast ik (int_sign d),
         int_ivl := ivl_cast ik (int_ivl d),
         int_parity := parity_cast ik (int_parity d),
         int_congruence := cong_cast ik (int_congruence d)\<rparr>"
+
+text \<open>
+  \<^const>\<open>gamma_int_dom\<close> is the intersection of its components, so a single
+  component certifying representability certifies the product: the interval
+  component supplies the certificate in practice, and the disjunction keeps
+  the product exactly as precise as its sharpest component.
+\<close>
+
+definition int_dom_in_range :: "ikind \<Rightarrow> 'a int_dom_scheme \<Rightarrow> bool" where
+  "int_dom_in_range ik d =
+     (sign_in_range ik (int_sign d) \<or> ivl_in_range ik (int_ivl d) \<or>
+      parity_in_range ik (int_parity d) \<or> cong_in_range ik (int_congruence d))"
+
+lemma int_dom_in_range_sound:
+  assumes "int_dom_in_range ik d"
+  shows "gamma_int_dom d \<subseteq> ik_range ik"
+  using assms
+  unfolding int_dom_in_range_def gamma_int_dom_def
+  using sign_in_range_sound[of ik "int_sign d"]
+        ivl_in_range_sound[of ik "int_ivl d"]
+        parity_in_range_sound[of ik "int_parity d"]
+        cong_in_range_sound[of ik "int_congruence d"]
+  by blast
+
+lemma int_dom_in_range_mono:
+  assumes le: "d1 \<le> (d2 :: 'a::int_dom_record_lattice int_dom_scheme)"
+    and d2: "int_dom_in_range ik d2"
+  shows "int_dom_in_range ik d1"
+proof -
+  have h: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
+          "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
+    using le by (simp_all add: less_eq_int_dom_ext_def)
+  show ?thesis
+    using d2
+    unfolding int_dom_in_range_def
+    using sign_in_range_mono[OF h(1)] ivl_in_range_mono[OF h(2)]
+          parity_in_range_mono[OF h(3)] cong_in_range_mono[OF h(4)]
+    by blast
+qed
 
 lemma int_dom_cast_sound:
   assumes v: "v \<in> gamma_int_dom d"
@@ -736,23 +775,24 @@ proof -
 qed
 
 lemma int_dom_cast_mono:
-  assumes le: "d1 \<le> (d2 :: int_dom)"
+  assumes le: "d1 \<le> (d2 :: 'a::int_dom_record_lattice int_dom_scheme)"
   shows "int_dom_cast ik d1 \<le> int_dom_cast ik d2"
 proof -
   have h: "int_sign d1 \<le> int_sign d2" "int_ivl d1 \<le> int_ivl d2"
           "int_parity d1 \<le> int_parity d2" "int_congruence d1 \<le> int_congruence d2"
+          "int_dom.more d1 \<le> int_dom.more d2"
     using le by (simp_all add: less_eq_int_dom_ext_def)
   show ?thesis
     unfolding int_dom_cast_def less_eq_int_dom_ext_def
     using sign_cast_mono[OF h(1)] ivl_cast_mono[OF h(2)]
-          parity_cast_mono[OF h(3)] cong_cast_mono[OF h(4)]
+          parity_cast_mono[OF h(3)] cong_cast_mono[OF h(4)] h(5)
     by simp
 qed
 
 subsection \<open>Arithmetic-expression evaluation\<close>
 
 text \<open>
-  \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/\<open>Or\<close> mirror the shape
+  \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> mirror the shape
   \<open>Voblint_Core.Abstract_Arithmetic.expression_domain_sound\<close> would assume
   were \<open>int_dom\<close> able to interpret it (see the comment above
   \<open>int_dom_lt\<close>): each operand is recursively evaluated to a whole
@@ -775,501 +815,132 @@ lemma int_dom_of_bool_option_unfold [simp]:
                                 else int_dom_bool_unknown)"
   by (cases r rule: int_dom_of_bool_option.cases) simp_all
 
-fun aval_int_dom ::
-    "refine_mode => exp => (vname => int_dom) => int_dom"
-where
-  "aval_int_dom mode (N n) sigma = int_dom_of_int n"
-| "aval_int_dom mode (V x) sigma = sigma x"
-| "aval_int_dom mode (Plus e1 e2) sigma =
-     plus_int_dom mode
-       (aval_int_dom mode e1 sigma)
-       (aval_int_dom mode e2 sigma)"
-| "aval_int_dom mode (Minus e1 e2) sigma =
-     minus_int_dom mode
-       (aval_int_dom mode e1 sigma)
-       (aval_int_dom mode e2 sigma)"
-| "aval_int_dom mode (Times e1 e2) sigma =
-     times_int_dom mode
-       (aval_int_dom mode e1 sigma)
-       (aval_int_dom mode e2 sigma)"
-| "aval_int_dom mode (Less e1 e2) sigma =
-     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot else int_dom_of_bool_option (int_dom_lt a b))"
-| "aval_int_dom mode (exp.Eq e1 e2) sigma =
-     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot else int_dom_of_bool_option (int_dom_eqb a b))"
-| "aval_int_dom mode (exp.Not e) sigma =
-     (let a = aval_int_dom mode e sigma
-      in if is_bot a then bot
-         else if int_dom_tobool a = Some True then int_dom_of_int 0
-         else if int_dom_tobool a = Some False then int_dom_of_int 1
+text \<open>
+  \<open>aval_int_dom_t\<close> is the sole evaluator for the composite domain: it
+  operates directly on an already-elaborated \<^typ>\<open>texp\<close>, so it needs no
+  \<open>\<Gamma>\<close>/\<open>ik\<close> parameter of its own -- every node already carries the kind it
+  should be normed at. Every arithmetic node is normed once through
+  \<^const>\<open>int_dom_cast\<close> at its own kind, \<open>TCast\<close> norms its operand at the
+  target kind, and \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own
+  \<open>0\<close>/\<open>1\<close>-shaped result, matching \<^const>\<open>teval\<close>.
+
+  Soundness and monotonicity are proved by direct structural induction
+  rather than through an \<open>expression_domain_sound\<close> interpretation, since
+  \<open>int_dom\<close>'s composite \<open>int_dom_lt\<close>/\<open>int_dom_eqb\<close>/\<open>int_dom_tobool\<close> queries
+  fall outside that locale's per-domain shape (see the comment above
+  \<open>int_dom_lt\<close>). Monotonicity additionally needs \<open>mode \<noteq> Refine_Fixpoint\<close>:
+  \<open>refine_fix\<close> has no monotonicity theorem of its own.
+\<close>
+fun aval_int_dom_t :: "refine_mode => texp => (vname => int_dom) => int_dom" where
+  "aval_int_dom_t mode (TN ik n) sigma = int_dom_of_int (ik_norm ik n)"
+| "aval_int_dom_t mode (TVar ik x) sigma = sigma x"
+| "aval_int_dom_t mode (TPlus ik a b) sigma =
+     refine mode
+       (int_dom_cast ik (plus_int_dom mode (aval_int_dom_t mode a sigma) (aval_int_dom_t mode b sigma)))"
+| "aval_int_dom_t mode (TMinus ik a b) sigma =
+     refine mode
+       (int_dom_cast ik (minus_int_dom mode (aval_int_dom_t mode a sigma) (aval_int_dom_t mode b sigma)))"
+| "aval_int_dom_t mode (TTimes ik a b) sigma =
+     refine mode
+       (int_dom_cast ik (times_int_dom mode (aval_int_dom_t mode a sigma) (aval_int_dom_t mode b sigma)))"
+| "aval_int_dom_t mode (TCast ik a) sigma = refine mode (int_dom_cast ik (aval_int_dom_t mode a sigma))"
+| "aval_int_dom_t mode (TLess a b) sigma =
+     (let x = aval_int_dom_t mode a sigma; y = aval_int_dom_t mode b sigma
+      in if is_bot x \<or> is_bot y then bot else int_dom_of_bool_option (int_dom_lt x y))"
+| "aval_int_dom_t mode (TEq a b) sigma =
+     (let x = aval_int_dom_t mode a sigma; y = aval_int_dom_t mode b sigma
+      in if is_bot x \<or> is_bot y then bot else int_dom_of_bool_option (int_dom_eqb x y))"
+| "aval_int_dom_t mode (TNot a) sigma =
+     (let x = aval_int_dom_t mode a sigma
+      in if is_bot x then bot
+         else if int_dom_tobool x = Some True then int_dom_of_int 0
+         else if int_dom_tobool x = Some False then int_dom_of_int 1
          else int_dom_bool_unknown)"
-| "aval_int_dom mode (And e1 e2) sigma =
-     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot
-         else if int_dom_tobool a = Some False \<or> int_dom_tobool b = Some False
+| "aval_int_dom_t mode (TAnd a b) sigma =
+     (let x = aval_int_dom_t mode a sigma; y = aval_int_dom_t mode b sigma
+      in if is_bot x \<or> is_bot y then bot
+         else if int_dom_tobool x = Some False \<or> int_dom_tobool y = Some False
          then int_dom_of_int 0
-         else if int_dom_tobool a = Some True \<and> int_dom_tobool b = Some True
+         else if int_dom_tobool x = Some True \<and> int_dom_tobool y = Some True
          then int_dom_of_int 1
          else int_dom_bool_unknown)"
-| "aval_int_dom mode (Or e1 e2) sigma =
-     (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
-      in if is_bot a \<or> is_bot b then bot
-         else if int_dom_tobool a = Some True \<or> int_dom_tobool b = Some True
+| "aval_int_dom_t mode (TOr a b) sigma =
+     (let x = aval_int_dom_t mode a sigma; y = aval_int_dom_t mode b sigma
+      in if is_bot x \<or> is_bot y then bot
+         else if int_dom_tobool x = Some True \<or> int_dom_tobool y = Some True
          then int_dom_of_int 1
-         else if int_dom_tobool a = Some False \<and> int_dom_tobool b = Some False
+         else if int_dom_tobool x = Some False \<and> int_dom_tobool y = Some False
          then int_dom_of_int 0
          else int_dom_bool_unknown)"
 
-lemma aval_int_dom_sound:
-  assumes "\<forall>x. s x : gamma_int_dom (sigma x)"
-  shows "aval e s : gamma_int_dom (aval_int_dom mode e sigma)"
+lemma aval_int_dom_t_sound:
+  assumes "\<forall>x. s x \<in> gamma_int_dom (sigma x)"
+  shows "teval e s \<in> gamma_int_dom (aval_int_dom_t mode e sigma)"
   using assms
 proof (induction e arbitrary: s sigma)
-  case (Less e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Less.IH(1) Less.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Less.IH(2) Less.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True")
-    case True
-    with int_dom_lt_sound[OF True h1 h2] nb1 nb2 show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some False")
-      case True
-      with int_dom_lt_sound[OF True h1 h2] nb1 nb2 False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (int_dom_lt (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
+  case (TN ik n)
+  then show ?case by (simp add: int_dom_cast_sound refine_exact)
 next
-  case (Eq e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Eq.IH(1) Eq.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Eq.IH(2) Eq.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True")
-    case True
-    with int_dom_eqb_sound[OF True h1 h2] nb1 nb2 show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some False")
-      case True
-      with int_dom_eqb_sound[OF True h1 h2] nb1 nb2 False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (int_dom_eqb (aval_int_dom mode e1 sigma) (aval_int_dom mode e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
+  case (TVar ik x)
+  then show ?case by (simp add: int_dom_cast_sound refine_exact)
 next
-  case (Not e)
-  have h: "aval e s \<in> gamma_int_dom (aval_int_dom mode e sigma)" using Not.IH Not.prems by simp
-  have nb: "\<not> is_bot (aval_int_dom mode e sigma)" using h by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_tobool (aval_int_dom mode e sigma) = Some True")
-    case True
-    with int_dom_tobool_sound[OF True h] nb show ?thesis by simp
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e sigma) = Some False")
-      case True
-      with int_dom_tobool_sound[OF True h] nb False show ?thesis by simp
-    next
-      case False
-      with \<open>\<not> (int_dom_tobool (aval_int_dom mode e sigma) = Some True)\<close> nb
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-next
-  case (And e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using And.IH(1) And.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using And.IH(2) And.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False")
-    case True
-    then have "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
-      using int_dom_tobool_sound h1 h2 by fastforce
-    with True nb1 nb2 show ?thesis by (auto simp: truthy_def)
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
-                \<and> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True")
-      case True
-      then have "truthy (aval e1 s) \<and> truthy (aval e2 s)"
-        using int_dom_tobool_sound h1 h2 by auto
-      with True False nb1 nb2 show ?thesis by (simp add: truthy_def)
-    next
-      case False
-      with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-next
-  case (Or e1 e2)
-  have h1: "aval e1 s \<in> gamma_int_dom (aval_int_dom mode e1 sigma)" using Or.IH(1) Or.prems by simp
-  have h2: "aval e2 s \<in> gamma_int_dom (aval_int_dom mode e2 sigma)" using Or.IH(2) Or.prems by simp
-  have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma)" using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (aval_int_dom mode e2 sigma)" using h2 by (auto simp: is_bottom_int_dom_correct)
-  show ?case
-  proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True")
-    case True
-    then have "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using int_dom_tobool_sound h1 h2 by fastforce
-    with True nb1 nb2 show ?thesis by (auto simp: truthy_def)
-  next
-    case False
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma) = Some False
-                \<and> int_dom_tobool (aval_int_dom mode e2 sigma) = Some False")
-      case True
-      then have "\<not> truthy (aval e1 s) \<and> \<not> truthy (aval e2 s)"
-        using int_dom_tobool_sound h1 h2 by auto
-      with True False nb1 nb2 show ?thesis by (simp add: truthy_def)
-    next
-      case False
-      with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma) = Some True
-              \<or> int_dom_tobool (aval_int_dom mode e2 sigma) = Some True)\<close>
-        nb1 nb2
-      show ?thesis
-        by (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
-    qed
-  qed
-qed (auto intro: plus_int_dom_sound minus_int_dom_sound times_int_dom_sound)
-
-lemma aval_int_dom_mono:
-  assumes "mode ~= Refine_Fixpoint"
-      and "sigma1 <= sigma2"
-  shows "aval_int_dom mode e sigma1 <= aval_int_dom mode e sigma2"
-  using assms
-proof (induction e)
-  case (Less e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using Less.IH(1) Less.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using Less.IH(2) Less.prems by simp
-  show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
-    show ?thesis
-    proof (cases "int_dom_lt (aval_int_dom mode e1 sigma2) (aval_int_dom mode e2 sigma2)")
-      case (Some b)
-      then have "int_dom_lt (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some b"
-        using int_dom_lt_mono[OF nb1 nb2 p_mono q_mono] by simp
-      then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "int_dom_lt (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some True";
-            cases "int_dom_lt (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some False")
-           auto
-    qed
-  qed
-next
-  case (Eq e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using Eq.IH(1) Eq.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using Eq.IH(2) Eq.prems by simp
-  show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
-    show ?thesis
-    proof (cases "int_dom_eqb (aval_int_dom mode e1 sigma2) (aval_int_dom mode e2 sigma2)")
-      case (Some b)
-      then have "int_dom_eqb (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some b"
-        using int_dom_eqb_mono[OF nb1 nb2 p_mono q_mono] by simp
-      then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "int_dom_eqb (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some True";
-            cases "int_dom_eqb (aval_int_dom mode e1 sigma1) (aval_int_dom mode e2 sigma1) = Some False")
-           auto
-    qed
-  qed
-next
-  case (Not e)
-  have p_mono: "aval_int_dom mode e sigma1 \<le> aval_int_dom mode e sigma2"
-    using Not.IH Not.prems by simp
-  show ?case
-  proof (cases "is_bot (aval_int_dom mode e sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb: "\<not> is_bot (aval_int_dom mode e sigma1)" by auto
-    have nb': "\<not> is_bot (aval_int_dom mode e sigma2)" using nb p_mono is_bot_mono by blast
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e sigma2)")
-      case (Some b)
-      then have "int_dom_tobool (aval_int_dom mode e sigma1) = Some b"
-        using int_dom_tobool_mono[OF nb p_mono] by simp
-      then show ?thesis using Some nb nb' by (cases b) simp_all
-    next
-      case None
-      then show ?thesis using nb nb' sup_ge1 sup_ge2
-        by (cases "int_dom_tobool (aval_int_dom mode e sigma1) = Some True";
-            cases "int_dom_tobool (aval_int_dom mode e sigma1) = Some False") auto
-    qed
-  qed
-next
-  case (And e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using And.IH(1) And.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using And.IH(2) And.prems by simp
-  show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False")
-      case True
-      then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False
-               \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False"
-        using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-      with True nb1 nb2 nb1' nb2' show ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
-                  \<and> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True")
-        case True
-        then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True"
-          and "int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True"
-          using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-        with True False nb1 nb2 nb1' nb2' show ?thesis by simp
-      next
-        case False
-        with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False)\<close>
-          nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        show ?thesis
-          by (cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False
-                   \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False";
-              cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True
-                   \<and> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True") auto
-      qed
-    qed
-  qed
-next
-  case (Or e1 e2)
-  have p_mono: "aval_int_dom mode e1 sigma1 \<le> aval_int_dom mode e1 sigma2"
-    using Or.IH(1) Or.prems by simp
-  have q_mono: "aval_int_dom mode e2 sigma1 \<le> aval_int_dom mode e2 sigma2"
-    using Or.IH(2) Or.prems by simp
-  show ?case
-  proof (cases "is_bot (aval_int_dom mode e1 sigma1) \<or> is_bot (aval_int_dom mode e2 sigma1)")
-    case True
-    then show ?thesis by (simp add: bot_least)
-  next
-    case False
-    then have nb1: "\<not> is_bot (aval_int_dom mode e1 sigma1)"
-      and nb2: "\<not> is_bot (aval_int_dom mode e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (aval_int_dom mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (aval_int_dom mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
-    show ?thesis
-    proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True")
-      case True
-      then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True
-               \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True"
-        using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-      with True nb1 nb2 nb1' nb2' show ?thesis by simp
-    next
-      case False
-      show ?thesis
-      proof (cases "int_dom_tobool (aval_int_dom mode e1 sigma2) = Some False
-                  \<and> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some False")
-        case True
-        then have "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False"
-          and "int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False"
-          using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
-        with True False nb1 nb2 nb1' nb2' show ?thesis by simp
-      next
-        case False
-        with \<open>\<not> (int_dom_tobool (aval_int_dom mode e1 sigma2) = Some True
-                \<or> int_dom_tobool (aval_int_dom mode e2 sigma2) = Some True)\<close>
-          nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        show ?thesis
-          by (cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some True
-                   \<or> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some True";
-              cases "int_dom_tobool (aval_int_dom mode e1 sigma1) = Some False
-                   \<and> int_dom_tobool (aval_int_dom mode e2 sigma1) = Some False") auto
-      qed
-    qed
-  qed
-qed (auto simp: le_funD intro: plus_int_dom_mono minus_int_dom_mono times_int_dom_mono)
-
-subsection \<open>Typed, ikind-aware evaluation\<close>
-
-text \<open>
-  \<open>taval_int_dom\<close> mirrors \<open>aval_int_dom\<close>'s own recursion exactly, with two
-  differences: every arithmetic node is normed once through
-  \<^const>\<open>int_dom_cast\<close> at its own \<open>ik\<close>, and \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>
-  evaluate their operands at an \<open>esyn\<close>/\<open>opk\<close>/\<open>kjoin\<close>-synthesized kind rather
-  than the caller's \<open>ik\<close>, matching \<^const>\<open>taval\<close> and every other typed
-  evaluator (\<open>taval_sign\<close>, \<open>aval_ivl\<close>, \<open>taval_congruence\<close>) in this
-  formalization. As with \<open>aval_int_dom_sound\<close>/\<open>aval_int_dom_mono\<close>,
-  soundness and monotonicity are proved by direct structural induction
-  rather than an \<open>expression_domain_sound\<close> interpretation, since \<open>int_dom\<close>'s
-  composite \<open>int_dom_lt\<close>/\<open>int_dom_eqb\<close>/\<open>int_dom_tobool\<close> queries fall outside
-  that locale's per-domain shape (see the comment above \<open>int_dom_lt\<close>).
-\<close>
-fun taval_int_dom ::
-    "tyenv => refine_mode => ikind => exp => (vname => int_dom) => int_dom"
-where
-  "taval_int_dom \<Gamma> mode ik (N n) sigma = int_dom_cast ik (int_dom_of_int n)"
-| "taval_int_dom \<Gamma> mode ik (V x) sigma = int_dom_cast ik (sigma x)"
-| "taval_int_dom \<Gamma> mode ik (Plus e1 e2) sigma =
-     int_dom_cast ik
-       (plus_int_dom mode (taval_int_dom \<Gamma> mode ik e1 sigma) (taval_int_dom \<Gamma> mode ik e2 sigma))"
-| "taval_int_dom \<Gamma> mode ik (Minus e1 e2) sigma =
-     int_dom_cast ik
-       (minus_int_dom mode (taval_int_dom \<Gamma> mode ik e1 sigma) (taval_int_dom \<Gamma> mode ik e2 sigma))"
-| "taval_int_dom \<Gamma> mode ik (Times e1 e2) sigma =
-     int_dom_cast ik
-       (times_int_dom mode (taval_int_dom \<Gamma> mode ik e1 sigma) (taval_int_dom \<Gamma> mode ik e2 sigma))"
-| "taval_int_dom \<Gamma> mode ik (Less e1 e2) sigma =
-     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2));
-          a = taval_int_dom \<Gamma> mode k e1 sigma; b = taval_int_dom \<Gamma> mode k e2 sigma
-      in if is_bot a \<or> is_bot b then bot else int_dom_of_bool_option (int_dom_lt a b))"
-| "taval_int_dom \<Gamma> mode ik (exp.Eq e1 e2) sigma =
-     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2));
-          a = taval_int_dom \<Gamma> mode k e1 sigma; b = taval_int_dom \<Gamma> mode k e2 sigma
-      in if is_bot a \<or> is_bot b then bot else int_dom_of_bool_option (int_dom_eqb a b))"
-| "taval_int_dom \<Gamma> mode ik (exp.Not e) sigma =
-     (let k = opk (esyn \<Gamma> e); a = taval_int_dom \<Gamma> mode k e sigma
-      in if is_bot a then bot
-         else if int_dom_tobool a = Some True then int_dom_of_int 0
-         else if int_dom_tobool a = Some False then int_dom_of_int 1
-         else int_dom_bool_unknown)"
-| "taval_int_dom \<Gamma> mode ik (And e1 e2) sigma =
-     (let k1 = opk (esyn \<Gamma> e1); k2 = opk (esyn \<Gamma> e2);
-          a = taval_int_dom \<Gamma> mode k1 e1 sigma; b = taval_int_dom \<Gamma> mode k2 e2 sigma
-      in if is_bot a \<or> is_bot b then bot
-         else if int_dom_tobool a = Some False \<or> int_dom_tobool b = Some False
-         then int_dom_of_int 0
-         else if int_dom_tobool a = Some True \<and> int_dom_tobool b = Some True
-         then int_dom_of_int 1
-         else int_dom_bool_unknown)"
-| "taval_int_dom \<Gamma> mode ik (Or e1 e2) sigma =
-     (let k1 = opk (esyn \<Gamma> e1); k2 = opk (esyn \<Gamma> e2);
-          a = taval_int_dom \<Gamma> mode k1 e1 sigma; b = taval_int_dom \<Gamma> mode k2 e2 sigma
-      in if is_bot a \<or> is_bot b then bot
-         else if int_dom_tobool a = Some True \<or> int_dom_tobool b = Some True
-         then int_dom_of_int 1
-         else if int_dom_tobool a = Some False \<and> int_dom_tobool b = Some False
-         then int_dom_of_int 0
-         else int_dom_bool_unknown)"
-
-lemma taval_int_dom_sound:
-  assumes "\<forall>x. s x \<in> gamma_int_dom (sigma x)"
-  shows "taval \<Gamma> ik e s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e sigma)"
-  using assms
-proof (induction e arbitrary: s sigma ik)
-  case (N n)
-  then show ?case by (simp add: int_dom_cast_sound)
-next
-  case (V x)
-  then show ?case by (simp add: int_dom_cast_sound)
-next
-  case (Plus e1 e2)
-  have h1: "taval \<Gamma> ik e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e1 sigma)"
-    using Plus.IH(1) Plus.prems by simp
-  have h2: "taval \<Gamma> ik e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e2 sigma)"
-    using Plus.IH(2) Plus.prems by simp
-  have "taval \<Gamma> ik e1 s + taval \<Gamma> ik e2 s \<in>
-        gamma_int_dom (plus_int_dom mode (taval_int_dom \<Gamma> mode ik e1 sigma) (taval_int_dom \<Gamma> mode ik e2 sigma))"
+  case (TPlus ik e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TPlus.IH(1) TPlus.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TPlus.IH(2) TPlus.prems by simp
+  have "teval e1 s + teval e2 s \<in>
+        gamma_int_dom (plus_int_dom mode (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma))"
     using plus_int_dom_sound[OF h1 h2] .
-  then show ?case by (simp add: int_dom_cast_sound)
+  then show ?case by (simp add: int_dom_cast_sound refine_exact)
 next
-  case (Minus e1 e2)
-  have h1: "taval \<Gamma> ik e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e1 sigma)"
-    using Minus.IH(1) Minus.prems by simp
-  have h2: "taval \<Gamma> ik e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e2 sigma)"
-    using Minus.IH(2) Minus.prems by simp
-  have "taval \<Gamma> ik e1 s - taval \<Gamma> ik e2 s \<in>
-        gamma_int_dom (minus_int_dom mode (taval_int_dom \<Gamma> mode ik e1 sigma) (taval_int_dom \<Gamma> mode ik e2 sigma))"
+  case (TMinus ik e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TMinus.IH(1) TMinus.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TMinus.IH(2) TMinus.prems by simp
+  have "teval e1 s - teval e2 s \<in>
+        gamma_int_dom (minus_int_dom mode (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma))"
     using minus_int_dom_sound[OF h1 h2] .
-  then show ?case by (simp add: int_dom_cast_sound)
+  then show ?case by (simp add: int_dom_cast_sound refine_exact)
 next
-  case (Times e1 e2)
-  have h1: "taval \<Gamma> ik e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e1 sigma)"
-    using Times.IH(1) Times.prems by simp
-  have h2: "taval \<Gamma> ik e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ik e2 sigma)"
-    using Times.IH(2) Times.prems by simp
-  have "taval \<Gamma> ik e1 s * taval \<Gamma> ik e2 s \<in>
-        gamma_int_dom (times_int_dom mode (taval_int_dom \<Gamma> mode ik e1 sigma) (taval_int_dom \<Gamma> mode ik e2 sigma))"
+  case (TTimes ik e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TTimes.IH(1) TTimes.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TTimes.IH(2) TTimes.prems by simp
+  have "teval e1 s * teval e2 s \<in>
+        gamma_int_dom (times_int_dom mode (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma))"
     using times_int_dom_sound[OF h1 h2] .
-  then show ?case by (simp add: int_dom_cast_sound)
+  then show ?case by (simp add: int_dom_cast_sound refine_exact)
 next
-  case (Less e1 e2)
-  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
-  have h1: "taval \<Gamma> ?k e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k e1 sigma)"
-    using Less.IH(1) Less.prems by simp
-  have h2: "taval \<Gamma> ?k e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k e2 sigma)"
-    using Less.IH(2) Less.prems by simp
-  have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma)"
+  case (TCast ik a)
+  have h: "teval a s \<in> gamma_int_dom (aval_int_dom_t mode a sigma)"
+    using TCast.IH TCast.prems by simp
+  then show ?case by (simp add: int_dom_cast_sound refine_exact)
+next
+  case (TLess e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TLess.IH(1) TLess.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TLess.IH(2) TLess.prems by simp
+  have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma)"
     using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma)"
+  have nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma)"
     using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
-  proof (cases "int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma) (taval_int_dom \<Gamma> mode ?k e2 sigma) = Some True")
+  proof (cases "int_dom_lt (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma) = Some True")
     case True
     with int_dom_lt_sound[OF True h1 h2] nb1 nb2 show ?thesis by (simp add: Let_def)
   next
     case False
     show ?thesis
-    proof (cases "int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma) (taval_int_dom \<Gamma> mode ?k e2 sigma) = Some False")
+    proof (cases "int_dom_lt (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma) = Some False")
       case True
       with int_dom_lt_sound[OF True h1 h2] nb1 nb2 False show ?thesis by (simp add: Let_def)
     next
       case False
-      with \<open>\<not> (int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma) (taval_int_dom \<Gamma> mode ?k e2 sigma) = Some True)\<close>
+      with \<open>\<not> (int_dom_lt (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma) = Some True)\<close>
         nb1 nb2
       show ?thesis
         by (simp add: Let_def)
@@ -1277,29 +948,28 @@ next
     qed
   qed
 next
-  case (Eq e1 e2)
-  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
-  have h1: "taval \<Gamma> ?k e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k e1 sigma)"
-    using Eq.IH(1) Eq.prems by simp
-  have h2: "taval \<Gamma> ?k e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k e2 sigma)"
-    using Eq.IH(2) Eq.prems by simp
-  have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma)"
+  case (TEq e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TEq.IH(1) TEq.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TEq.IH(2) TEq.prems by simp
+  have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma)"
     using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma)"
+  have nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma)"
     using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
-  proof (cases "int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma) (taval_int_dom \<Gamma> mode ?k e2 sigma) = Some True")
+  proof (cases "int_dom_eqb (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma) = Some True")
     case True
     with int_dom_eqb_sound[OF True h1 h2] nb1 nb2 show ?thesis by (simp add: Let_def)
   next
     case False
     show ?thesis
-    proof (cases "int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma) (taval_int_dom \<Gamma> mode ?k e2 sigma) = Some False")
+    proof (cases "int_dom_eqb (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma) = Some False")
       case True
       with int_dom_eqb_sound[OF True h1 h2] nb1 nb2 False show ?thesis by (simp add: Let_def)
     next
       case False
-      with \<open>\<not> (int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma) (taval_int_dom \<Gamma> mode ?k e2 sigma) = Some True)\<close>
+      with \<open>\<not> (int_dom_eqb (aval_int_dom_t mode e1 sigma) (aval_int_dom_t mode e2 sigma) = Some True)\<close>
         nb1 nb2
       show ?thesis
         by (simp add: Let_def)
@@ -1307,61 +977,59 @@ next
     qed
   qed
 next
-  case (Not e)
-  let ?k = "opk (esyn \<Gamma> e)"
-  have h: "taval \<Gamma> ?k e s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k e sigma)"
-    using Not.IH Not.prems by simp
-  have nb: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e sigma)"
+  case (TNot e)
+  have h: "teval e s \<in> gamma_int_dom (aval_int_dom_t mode e sigma)"
+    using TNot.IH TNot.prems by simp
+  have nb: "\<not> is_bot (aval_int_dom_t mode e sigma)"
     using h by (auto simp: is_bottom_int_dom_correct)
   show ?case
-  proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma) = Some True")
+  proof (cases "int_dom_tobool (aval_int_dom_t mode e sigma) = Some True")
     case True
     with int_dom_tobool_sound[OF True h] nb show ?thesis by (simp add: Let_def)
   next
     case False
     show ?thesis
-    proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma) = Some False")
+    proof (cases "int_dom_tobool (aval_int_dom_t mode e sigma) = Some False")
       case True
       with int_dom_tobool_sound[OF True h] nb False show ?thesis by (simp add: Let_def)
     next
       case False
-      with \<open>\<not> (int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma) = Some True)\<close> nb
+      with \<open>\<not> (int_dom_tobool (aval_int_dom_t mode e sigma) = Some True)\<close> nb
       show ?thesis
         by (simp add: Let_def)
            (auto intro: gamma_int_dom_sup_ub1[THEN subsetD] gamma_int_dom_sup_ub2[THEN subsetD])
     qed
   qed
 next
-  case (And e1 e2)
-  let ?k1 = "opk (esyn \<Gamma> e1)" and ?k2 = "opk (esyn \<Gamma> e2)"
-  have h1: "taval \<Gamma> ?k1 e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k1 e1 sigma)"
-    using And.IH(1) And.prems by simp
-  have h2: "taval \<Gamma> ?k2 e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k2 e2 sigma)"
-    using And.IH(2) And.prems by simp
-  have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma)"
+  case (TAnd e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TAnd.IH(1) TAnd.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TAnd.IH(2) TAnd.prems by simp
+  have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma)"
     using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma)"
+  have nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma)"
     using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
-  proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma) = Some False
-              \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma) = Some False")
+  proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma) = Some False
+              \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma) = Some False")
     case True
-    then have "\<not> truthy (taval \<Gamma> ?k1 e1 s) \<or> \<not> truthy (taval \<Gamma> ?k2 e2 s)"
+    then have "\<not> truthy (teval e1 s) \<or> \<not> truthy (teval e2 s)"
       using int_dom_tobool_sound h1 h2 by fastforce
     with True nb1 nb2 show ?thesis by (simp add: Let_def truthy_def)
   next
     case False
     show ?thesis
-    proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma) = Some True
-                \<and> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma) = Some True")
+    proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma) = Some True
+                \<and> int_dom_tobool (aval_int_dom_t mode e2 sigma) = Some True")
       case True
-      then have "truthy (taval \<Gamma> ?k1 e1 s) \<and> truthy (taval \<Gamma> ?k2 e2 s)"
+      then have "truthy (teval e1 s) \<and> truthy (teval e2 s)"
         using int_dom_tobool_sound h1 h2 by auto
       with True False nb1 nb2 show ?thesis by (simp add: Let_def truthy_def)
     next
       case False
-      with \<open>\<not> (int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma) = Some False
-              \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma) = Some False)\<close>
+      with \<open>\<not> (int_dom_tobool (aval_int_dom_t mode e1 sigma) = Some False
+              \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma) = Some False)\<close>
         nb1 nb2
       show ?thesis
         by (simp add: Let_def)
@@ -1369,36 +1037,35 @@ next
     qed
   qed
 next
-  case (Or e1 e2)
-  let ?k1 = "opk (esyn \<Gamma> e1)" and ?k2 = "opk (esyn \<Gamma> e2)"
-  have h1: "taval \<Gamma> ?k1 e1 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k1 e1 sigma)"
-    using Or.IH(1) Or.prems by simp
-  have h2: "taval \<Gamma> ?k2 e2 s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode ?k2 e2 sigma)"
-    using Or.IH(2) Or.prems by simp
-  have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma)"
+  case (TOr e1 e2)
+  have h1: "teval e1 s \<in> gamma_int_dom (aval_int_dom_t mode e1 sigma)"
+    using TOr.IH(1) TOr.prems by simp
+  have h2: "teval e2 s \<in> gamma_int_dom (aval_int_dom_t mode e2 sigma)"
+    using TOr.IH(2) TOr.prems by simp
+  have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma)"
     using h1 by (auto simp: is_bottom_int_dom_correct)
-  have nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma)"
+  have nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma)"
     using h2 by (auto simp: is_bottom_int_dom_correct)
   show ?case
-  proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma) = Some True
-              \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma) = Some True")
+  proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma) = Some True
+              \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma) = Some True")
     case True
-    then have "truthy (taval \<Gamma> ?k1 e1 s) \<or> truthy (taval \<Gamma> ?k2 e2 s)"
+    then have "truthy (teval e1 s) \<or> truthy (teval e2 s)"
       using int_dom_tobool_sound h1 h2 by fastforce
     with True nb1 nb2 show ?thesis by (simp add: Let_def truthy_def)
   next
     case False
     show ?thesis
-    proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma) = Some False
-                \<and> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma) = Some False")
+    proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma) = Some False
+                \<and> int_dom_tobool (aval_int_dom_t mode e2 sigma) = Some False")
       case True
-      then have "\<not> truthy (taval \<Gamma> ?k1 e1 s) \<and> \<not> truthy (taval \<Gamma> ?k2 e2 s)"
+      then have "\<not> truthy (teval e1 s) \<and> \<not> truthy (teval e2 s)"
         using int_dom_tobool_sound h1 h2 by auto
       with True False nb1 nb2 show ?thesis by (simp add: Let_def truthy_def)
     next
       case False
-      with \<open>\<not> (int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma) = Some True
-              \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma) = Some True)\<close>
+      with \<open>\<not> (int_dom_tobool (aval_int_dom_t mode e1 sigma) = Some True
+              \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma) = Some True)\<close>
         nb1 nb2
       show ?thesis
         by (simp add: Let_def)
@@ -1407,202 +1074,236 @@ next
   qed
 qed
 
-lemma taval_int_dom_mono:
+lemma aval_int_dom_t_mono:
   assumes "mode ~= Refine_Fixpoint"
       and "sigma1 <= sigma2"
-  shows "taval_int_dom \<Gamma> mode ik e sigma1 <= taval_int_dom \<Gamma> mode ik e sigma2"
+  shows "aval_int_dom_t mode e sigma1 <= aval_int_dom_t mode e sigma2"
   using assms
-proof (induction e arbitrary: ik)
-  case (Less e1 e2)
-  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
-  have p_mono: "taval_int_dom \<Gamma> mode ?k e1 sigma1 \<le> taval_int_dom \<Gamma> mode ?k e1 sigma2"
-    using Less.IH(1) Less.prems by simp
-  have q_mono: "taval_int_dom \<Gamma> mode ?k e2 sigma1 \<le> taval_int_dom \<Gamma> mode ?k e2 sigma2"
-    using Less.IH(2) Less.prems by simp
+proof (induction e)
+  case (TLess e1 e2)
+  have p_mono: "aval_int_dom_t mode e1 sigma1 \<le> aval_int_dom_t mode e1 sigma2"
+    using TLess.IH(1) TLess.prems by simp
+  have q_mono: "aval_int_dom_t mode e2 sigma1 \<le> aval_int_dom_t mode e2 sigma2"
+    using TLess.IH(2) TLess.prems by simp
   show ?case
-  proof (cases "is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma1) \<or> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma1)")
+  proof (cases "is_bot (aval_int_dom_t mode e1 sigma1) \<or> is_bot (aval_int_dom_t mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: Let_def bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma1)"
-      and nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma1)"
+      and nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma1)" by auto
+    have nb1': "\<not> is_bot (aval_int_dom_t mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
+    have nb2': "\<not> is_bot (aval_int_dom_t mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
     show ?thesis
-    proof (cases "int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma2) (taval_int_dom \<Gamma> mode ?k e2 sigma2)")
+    proof (cases "int_dom_lt (aval_int_dom_t mode e1 sigma2) (aval_int_dom_t mode e2 sigma2)")
       case (Some b)
-      then have "int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma1) (taval_int_dom \<Gamma> mode ?k e2 sigma1) = Some b"
+      then have "int_dom_lt (aval_int_dom_t mode e1 sigma1) (aval_int_dom_t mode e2 sigma1) = Some b"
         using int_dom_lt_mono[OF nb1 nb2 p_mono q_mono] by simp
       then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) (simp_all add: Let_def)
     next
       case None
       then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma1) (taval_int_dom \<Gamma> mode ?k e2 sigma1) = Some True";
-            cases "int_dom_lt (taval_int_dom \<Gamma> mode ?k e1 sigma1) (taval_int_dom \<Gamma> mode ?k e2 sigma1) = Some False")
+        by (cases "int_dom_lt (aval_int_dom_t mode e1 sigma1) (aval_int_dom_t mode e2 sigma1) = Some True";
+            cases "int_dom_lt (aval_int_dom_t mode e1 sigma1) (aval_int_dom_t mode e2 sigma1) = Some False")
            (auto simp: Let_def)
     qed
   qed
 next
-  case (Eq e1 e2)
-  let ?k = "opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))"
-  have p_mono: "taval_int_dom \<Gamma> mode ?k e1 sigma1 \<le> taval_int_dom \<Gamma> mode ?k e1 sigma2"
-    using Eq.IH(1) Eq.prems by simp
-  have q_mono: "taval_int_dom \<Gamma> mode ?k e2 sigma1 \<le> taval_int_dom \<Gamma> mode ?k e2 sigma2"
-    using Eq.IH(2) Eq.prems by simp
+  case (TEq e1 e2)
+  have p_mono: "aval_int_dom_t mode e1 sigma1 \<le> aval_int_dom_t mode e1 sigma2"
+    using TEq.IH(1) TEq.prems by simp
+  have q_mono: "aval_int_dom_t mode e2 sigma1 \<le> aval_int_dom_t mode e2 sigma2"
+    using TEq.IH(2) TEq.prems by simp
   show ?case
-  proof (cases "is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma1) \<or> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma1)")
+  proof (cases "is_bot (aval_int_dom_t mode e1 sigma1) \<or> is_bot (aval_int_dom_t mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: Let_def bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma1)"
-      and nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma1)"
+      and nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma1)" by auto
+    have nb1': "\<not> is_bot (aval_int_dom_t mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
+    have nb2': "\<not> is_bot (aval_int_dom_t mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
     show ?thesis
-    proof (cases "int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma2) (taval_int_dom \<Gamma> mode ?k e2 sigma2)")
+    proof (cases "int_dom_eqb (aval_int_dom_t mode e1 sigma2) (aval_int_dom_t mode e2 sigma2)")
       case (Some b)
-      then have "int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma1) (taval_int_dom \<Gamma> mode ?k e2 sigma1) = Some b"
+      then have "int_dom_eqb (aval_int_dom_t mode e1 sigma1) (aval_int_dom_t mode e2 sigma1) = Some b"
         using int_dom_eqb_mono[OF nb1 nb2 p_mono q_mono] by simp
       then show ?thesis using Some nb1 nb2 nb1' nb2' by (cases b) (simp_all add: Let_def)
     next
       case None
       then show ?thesis using nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
-        by (cases "int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma1) (taval_int_dom \<Gamma> mode ?k e2 sigma1) = Some True";
-            cases "int_dom_eqb (taval_int_dom \<Gamma> mode ?k e1 sigma1) (taval_int_dom \<Gamma> mode ?k e2 sigma1) = Some False")
+        by (cases "int_dom_eqb (aval_int_dom_t mode e1 sigma1) (aval_int_dom_t mode e2 sigma1) = Some True";
+            cases "int_dom_eqb (aval_int_dom_t mode e1 sigma1) (aval_int_dom_t mode e2 sigma1) = Some False")
            (auto simp: Let_def)
     qed
   qed
 next
-  case (Not e)
-  let ?k = "opk (esyn \<Gamma> e)"
-  have p_mono: "taval_int_dom \<Gamma> mode ?k e sigma1 \<le> taval_int_dom \<Gamma> mode ?k e sigma2"
-    using Not.IH Not.prems by simp
+  case (TNot e)
+  have p_mono: "aval_int_dom_t mode e sigma1 \<le> aval_int_dom_t mode e sigma2"
+    using TNot.IH TNot.prems by simp
   show ?case
-  proof (cases "is_bot (taval_int_dom \<Gamma> mode ?k e sigma1)")
+  proof (cases "is_bot (aval_int_dom_t mode e sigma1)")
     case True
     then show ?thesis by (simp add: Let_def bot_least)
   next
     case False
-    then have nb: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e sigma1)" by auto
-    have nb': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k e sigma2)" using nb p_mono is_bot_mono by blast
+    then have nb: "\<not> is_bot (aval_int_dom_t mode e sigma1)" by auto
+    have nb': "\<not> is_bot (aval_int_dom_t mode e sigma2)" using nb p_mono is_bot_mono by blast
     show ?thesis
-    proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma2)")
+    proof (cases "int_dom_tobool (aval_int_dom_t mode e sigma2)")
       case (Some b)
-      then have "int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma1) = Some b"
+      then have "int_dom_tobool (aval_int_dom_t mode e sigma1) = Some b"
         using int_dom_tobool_mono[OF nb p_mono] by simp
       then show ?thesis using Some nb nb' by (cases b) (simp_all add: Let_def)
     next
       case None
       then show ?thesis using nb nb' sup_ge1 sup_ge2
-        by (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma1) = Some True";
-            cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k e sigma1) = Some False") (auto simp: Let_def)
+        by (cases "int_dom_tobool (aval_int_dom_t mode e sigma1) = Some True";
+            cases "int_dom_tobool (aval_int_dom_t mode e sigma1) = Some False") (auto simp: Let_def)
     qed
   qed
 next
-  case (And e1 e2)
-  let ?k1 = "opk (esyn \<Gamma> e1)" and ?k2 = "opk (esyn \<Gamma> e2)"
-  have p_mono: "taval_int_dom \<Gamma> mode ?k1 e1 sigma1 \<le> taval_int_dom \<Gamma> mode ?k1 e1 sigma2"
-    using And.IH(1) And.prems by simp
-  have q_mono: "taval_int_dom \<Gamma> mode ?k2 e2 sigma1 \<le> taval_int_dom \<Gamma> mode ?k2 e2 sigma2"
-    using And.IH(2) And.prems by simp
+  case (TAnd e1 e2)
+  have p_mono: "aval_int_dom_t mode e1 sigma1 \<le> aval_int_dom_t mode e1 sigma2"
+    using TAnd.IH(1) TAnd.prems by simp
+  have q_mono: "aval_int_dom_t mode e2 sigma1 \<le> aval_int_dom_t mode e2 sigma2"
+    using TAnd.IH(2) TAnd.prems by simp
   show ?case
-  proof (cases "is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) \<or> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma1)")
+  proof (cases "is_bot (aval_int_dom_t mode e1 sigma1) \<or> is_bot (aval_int_dom_t mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: Let_def bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma1)"
-      and nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma1)"
+      and nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma1)" by auto
+    have nb1': "\<not> is_bot (aval_int_dom_t mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
+    have nb2': "\<not> is_bot (aval_int_dom_t mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
     show ?thesis
-    proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma2) = Some False
-                \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma2) = Some False")
+    proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma2) = Some False
+                \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma2) = Some False")
       case True
-      then have "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some False
-               \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some False"
+      then have "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some False
+               \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some False"
         using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
       with True nb1 nb2 nb1' nb2' show ?thesis by (simp add: Let_def)
     next
       case False
       show ?thesis
-      proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma2) = Some True
-                  \<and> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma2) = Some True")
+      proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma2) = Some True
+                  \<and> int_dom_tobool (aval_int_dom_t mode e2 sigma2) = Some True")
         case True
-        then have "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some True"
-          and "int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some True"
+        then have "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some True"
+          and "int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some True"
           using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
         with True False nb1 nb2 nb1' nb2' show ?thesis by (simp add: Let_def)
       next
         case False
-        with \<open>\<not> (int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma2) = Some False
-                \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma2) = Some False)\<close>
+        with \<open>\<not> (int_dom_tobool (aval_int_dom_t mode e1 sigma2) = Some False
+                \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma2) = Some False)\<close>
           nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
         show ?thesis
           apply (simp add: Let_def)
-          apply (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some False
-                      \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some False";
-                 cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some True
-                      \<and> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some True")
+          apply (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some False
+                      \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some False";
+                 cases "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some True
+                      \<and> int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some True")
           apply auto
           done
       qed
     qed
   qed
 next
-  case (Or e1 e2)
-  let ?k1 = "opk (esyn \<Gamma> e1)" and ?k2 = "opk (esyn \<Gamma> e2)"
-  have p_mono: "taval_int_dom \<Gamma> mode ?k1 e1 sigma1 \<le> taval_int_dom \<Gamma> mode ?k1 e1 sigma2"
-    using Or.IH(1) Or.prems by simp
-  have q_mono: "taval_int_dom \<Gamma> mode ?k2 e2 sigma1 \<le> taval_int_dom \<Gamma> mode ?k2 e2 sigma2"
-    using Or.IH(2) Or.prems by simp
+  case (TOr e1 e2)
+  have p_mono: "aval_int_dom_t mode e1 sigma1 \<le> aval_int_dom_t mode e1 sigma2"
+    using TOr.IH(1) TOr.prems by simp
+  have q_mono: "aval_int_dom_t mode e2 sigma1 \<le> aval_int_dom_t mode e2 sigma2"
+    using TOr.IH(2) TOr.prems by simp
   show ?case
-  proof (cases "is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) \<or> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma1)")
+  proof (cases "is_bot (aval_int_dom_t mode e1 sigma1) \<or> is_bot (aval_int_dom_t mode e2 sigma1)")
     case True
     then show ?thesis by (simp add: Let_def bot_least)
   next
     case False
-    then have nb1: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma1)"
-      and nb2: "\<not> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma1)" by auto
-    have nb1': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k1 e1 sigma2)" using nb1 p_mono is_bot_mono by blast
-    have nb2': "\<not> is_bot (taval_int_dom \<Gamma> mode ?k2 e2 sigma2)" using nb2 q_mono is_bot_mono by blast
+    then have nb1: "\<not> is_bot (aval_int_dom_t mode e1 sigma1)"
+      and nb2: "\<not> is_bot (aval_int_dom_t mode e2 sigma1)" by auto
+    have nb1': "\<not> is_bot (aval_int_dom_t mode e1 sigma2)" using nb1 p_mono is_bot_mono by blast
+    have nb2': "\<not> is_bot (aval_int_dom_t mode e2 sigma2)" using nb2 q_mono is_bot_mono by blast
     show ?thesis
-    proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma2) = Some True
-                \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma2) = Some True")
+    proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma2) = Some True
+                \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma2) = Some True")
       case True
-      then have "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some True
-               \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some True"
+      then have "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some True
+               \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some True"
         using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
       with True nb1 nb2 nb1' nb2' show ?thesis by (simp add: Let_def)
     next
       case False
       show ?thesis
-      proof (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma2) = Some False
-                  \<and> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma2) = Some False")
+      proof (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma2) = Some False
+                  \<and> int_dom_tobool (aval_int_dom_t mode e2 sigma2) = Some False")
         case True
-        then have "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some False"
-          and "int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some False"
+        then have "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some False"
+          and "int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some False"
           using int_dom_tobool_mono[OF nb1 p_mono] int_dom_tobool_mono[OF nb2 q_mono] by auto
         with True False nb1 nb2 nb1' nb2' show ?thesis by (simp add: Let_def)
       next
         case False
-        with \<open>\<not> (int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma2) = Some True
-                \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma2) = Some True)\<close>
+        with \<open>\<not> (int_dom_tobool (aval_int_dom_t mode e1 sigma2) = Some True
+                \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma2) = Some True)\<close>
           nb1 nb2 nb1' nb2' sup_ge1 sup_ge2
         show ?thesis
           apply (simp add: Let_def)
-          apply (cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some True
-                      \<or> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some True";
-                 cases "int_dom_tobool (taval_int_dom \<Gamma> mode ?k1 e1 sigma1) = Some False
-                      \<and> int_dom_tobool (taval_int_dom \<Gamma> mode ?k2 e2 sigma1) = Some False")
+          apply (cases "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some True
+                      \<or> int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some True";
+                 cases "int_dom_tobool (aval_int_dom_t mode e1 sigma1) = Some False
+                      \<and> int_dom_tobool (aval_int_dom_t mode e2 sigma1) = Some False")
           apply auto
           done
       qed
     qed
   qed
 qed (auto simp: le_funD Let_def
-          intro: plus_int_dom_mono minus_int_dom_mono times_int_dom_mono int_dom_cast_mono)
+          intro: plus_int_dom_mono minus_int_dom_mono times_int_dom_mono int_dom_cast_mono
+                 monoD[OF refine_nonfixpoint_mono])
+
+
+subsection \<open>Cast-domain instance\<close>
+
+text \<open>The product's cast is componentwise, so \<^const>\<open>a_cast\<close> on
+  \<^typ>\<open>int_dom\<close> is exactly each component domain's own cast applied at the
+  same kind -- the same discipline Goblint's \<open>IntDomTuple.cast_to\<close> follows.\<close>
+
+instantiation int_dom_ext :: (int_dom_record_lattice) cast_domain
+begin
+
+definition a_cast_int_dom_ext [simp]: "a_cast = int_dom_cast"
+
+definition a_in_range_int_dom_ext [simp]: "a_in_range = int_dom_in_range"
+
+instance
+proof intro_classes
+  fix a b :: "'a int_dom_scheme" and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_int_dom_ext by (rule int_dom_cast_mono)
+next
+  fix a b :: "'a int_dom_scheme" and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_int_dom_ext by (rule int_dom_in_range_mono)
+qed
+
+end
+
+instance int_dom_ext :: (int_dom_record_lattice) sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: "'a int_dom_scheme" and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: int_dom_cast_sound)
+next
+  fix a :: "'a int_dom_scheme" and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: int_dom_in_range_sound)
+qed
 
 end

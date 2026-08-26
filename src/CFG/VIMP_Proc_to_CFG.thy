@@ -79,7 +79,7 @@ fun falls_through :: "com \<Rightarrow> bool" where
 
 subsection \<open>Command compilation\<close>
 
-text \<open>\<open>compile \<Pi> p c k n\<close> returns \<open>(n', entry, intra_edges, call_edges)\<close>, allocating
+text \<open>\<open>compile \<Gamma> \<Pi> p c k n\<close> returns \<open>(n', entry, intra_edges, call_edges)\<close>, allocating
   \<open>Statement\<close> indices in the counter range \<open>[n, n')\<close>.  The continuation \<open>k\<close> is an
   \<^emph>\<open>input\<close>: it is the node normal execution reaches when the fragment falls through.  A
   fragment therefore never reports an exit, and a command that cannot fall through simply
@@ -133,55 +133,105 @@ definition proc_ret_kind :: "proc_table \<Rightarrow> pname \<Rightarrow> ikind"
 
 declare proc_ret_kind_def [simp]
 
+text \<open>Each actual argument is elaborated at the kind of the formal it will be bound to,
+  the conversion \<^const>\<open>pstep\<close>'s \<open>Call\<close> rule performs with its own
+  \<open>map2 (\<lambda>x e. ik_norm (\<Gamma> x) \<dots>)\<close>.  Resolving it here, where the callee's formal list is
+  already in hand through \<^const>\<open>call_formals\<close>, is what lets \<^const>\<open>call_enter\<close> bind
+  actuals with a plain \<^const>\<open>teval\<close> and no typing environment.\<close>
+text \<open>A call's destination is recorded together with the kind it was declared at, so the
+  conversion the caller performs on the returned value is a static fact of the call edge, the
+  way \<open>EA_Ret\<close>'s return kind already is.\<close>
+definition compile_dst :: "tyenv \<Rightarrow> vname option \<Rightarrow> typed_var option" where
+  "compile_dst \<Gamma> dst = map_option (\<lambda>x. TV x (\<Gamma> x)) dst"
+
+lemma compile_dst_None [simp]: "compile_dst \<Gamma> None = None"
+  by (simp add: compile_dst_def)
+
+lemma compile_dst_Some [simp]: "compile_dst \<Gamma> (Some x) = Some (TV x (\<Gamma> x))"
+  by (simp add: compile_dst_def)
+
+lemma tv_name_compile_dst [simp]: "map_option tv_name (compile_dst \<Gamma> dst) = dst"
+  by (cases dst) simp_all
+
+text \<open>The compiled call edge's combine reproduces \<^const>\<open>pstep\<close>'s own \<open>RestoreStep\<close> store:
+  the baked kind is the destination's declared kind, so the two conversions coincide.\<close>
+lemma combine_collect_compile_dst [simp]:
+  "combine_collect gs (compile_dst \<Gamma> dst) s t
+     = combine_assign \<Gamma> dst (t ret_var) (combine_env gs s t)"
+  by (cases dst) (simp_all add: combine_collect_def)
+
+definition compile_actuals :: "tyenv \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> texp list" where
+  "compile_actuals \<Gamma> pars actuals = map2 (\<lambda>x e. elaborate_to \<Gamma> (\<Gamma> x) e) pars actuals"
+
+lemma length_compile_actuals [simp]:
+  "length (compile_actuals \<Gamma> pars actuals) = min (length pars) (length actuals)"
+  by (simp add: compile_actuals_def)
+
+text \<open>Evaluating the elaborated actuals reproduces, argument for argument, the conversion
+  \<^const>\<open>pstep\<close>'s \<open>Call\<close> rule performs -- the one fact every call-entry agreement proof
+  needs, and the reason \<^const>\<open>call_enter\<close> can drop its typing environment.\<close>
+lemma map_teval_compile_actuals [simp]:
+  assumes "styped \<Gamma> s"
+  shows "map (\<lambda>e. teval e s) (compile_actuals \<Gamma> pars actuals)
+     = map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) pars actuals"
+  unfolding compile_actuals_def
+  by (induction pars actuals rule: list_induct2') (simp_all add: assms)
+
 fun compile ::
-  "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat
+  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node
         \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
-  "compile \<Pi> p SKIP k n =
+  "compile \<Gamma> \<Pi> p SKIP k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
-| "compile \<Pi> p (Assign x a) k n =
-     (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
-| "compile \<Pi> p (Check c) k n =
-     (Suc n, Statement n, {(Statement n, EA_Check c, k)}, {})"
-| "compile \<Pi> p (Seq c1 c2) k n =
-     (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
-          (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
+| "compile \<Gamma> \<Pi> p (Assign x a) k n =
+     (Suc n, Statement n,
+      {(Statement n, EA_Assign x (elaborate_to \<Gamma> (\<Gamma> x) a), k)}, {})"
+| "compile \<Gamma> \<Pi> p (Check c) k n =
+     (Suc n, Statement n, {(Statement n, EA_Check (elaborate_syn \<Gamma> c), k)}, {})"
+| "compile \<Gamma> \<Pi> p (Seq c1 c2) k n =
+     (let (n1, en1, E1, K1) = compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n;
+          (n2, en2, E2, K2) = compile \<Gamma> \<Pi> p c2 k (n + csize c1)
       in (n2, en1, E1 \<union> E2, K1 \<union> K2))"
-| "compile \<Pi> p (If b c1 c2) k n =
-     (let (n1, en1, E1, K1) = compile \<Pi> p c1 k (Suc n);
-          (n2, en2, E2, K2) = compile \<Pi> p c2 k n1
+| "compile \<Gamma> \<Pi> p (If b c1 c2) k n =
+     (let (n1, en1, E1, K1) = compile \<Gamma> \<Pi> p c1 k (Suc n);
+          (n2, en2, E2, K2) = compile \<Gamma> \<Pi> p c2 k n1
       in (n2, Statement n,
-          {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+          {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+           (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
             \<union> E1 \<union> E2,
           K1 \<union> K2))"
-| "compile \<Pi> p (While b c) k n =
-     (let (n1, en1, E1, K1) = compile \<Pi> p c (Statement n) (Suc n)
+| "compile \<Gamma> \<Pi> p (While b c) k n =
+     (let (n1, en1, E1, K1) = compile \<Gamma> \<Pi> p c (Statement n) (Suc n)
       in (n1, Statement n,
-          {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1,
+          {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+           (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1,
           K1))"
-| "compile \<Pi> p (Call dst q actuals) k n =
+| "compile \<Gamma> \<Pi> p (Call dst q actuals) k n =
      (case special_table q of
         Some desc \<Rightarrow>
-          (case classify_special desc actuals of
+          (case dst of
              None \<Rightarrow> (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})
-           | Some sc \<Rightarrow>
-               (case dst of
-                  Some x \<Rightarrow>
-                    (Suc n, Statement n, {(Statement n, EA_Special sc x, k)}, {})
-                | None \<Rightarrow>
-                    (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})))
+           | Some x \<Rightarrow>
+               (case classify_special \<Gamma> (\<Gamma> x) desc actuals of
+                  None \<Rightarrow> (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})
+                | Some sc \<Rightarrow>
+                    (Suc n, Statement n, {(Statement n, EA_Special sc x, k)}, {})))
       | None \<Rightarrow>
           (Suc n, Statement n, {},
            {(Statement n,
-             CallEdge dst (call_formals \<Pi> q) actuals,
+             CallEdge (compile_dst \<Gamma> dst) (call_formals \<Pi> q)
+               (compile_actuals \<Gamma> (call_formals \<Pi> q) actuals),
              FunctionEntry q, k)}))"
-| "compile \<Pi> p (Return e) k n =
-     (Suc n, Statement n, {(Statement n, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p)}, {})"
-| "compile \<Pi> p Restore k n =
+| "compile \<Gamma> \<Pi> p (Return e) k n =
+     (Suc n, Statement n,
+      {(Statement n,
+        EA_Ret (map_option (elaborate_to \<Gamma> (proc_ret_kind \<Pi> p)) e) p (proc_ret_kind \<Pi> p),
+        FunctionResult p)}, {})"
+| "compile \<Gamma> \<Pi> p Restore k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
-| "compile \<Pi> p Unwind k n =
+| "compile \<Gamma> \<Pi> p Unwind k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 
 subsection \<open>Statement order in the source\<close>
@@ -336,13 +386,13 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   \<^const>\<open>falls_through\<close>.\<close>
 
 definition compile_proc ::
-  "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
+  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
-  "compile_proc \<Pi> p decl n =
+  "compile_proc \<Gamma> \<Pi> p decl n =
      (let r = n + csize (body decl);
-          (n', ben, E, K) = compile \<Pi> p (body decl) (Statement r) n
+          (n', ben, E, K) = compile \<Gamma> \<Pi> p (body decl) (Statement r) n
       in (Suc r,
           insert (FunctionEntry p, EA_Nop, ben)
             (if falls_through (body decl)
@@ -351,17 +401,17 @@ where
           K))"
 
 fun compile_procs ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> nat
+  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
-  "compile_procs \<Pi> [] n = (n, {}, {})"
-| "compile_procs \<Pi> (p # ps) n =
+  "compile_procs \<Gamma> \<Pi> [] n = (n, {}, {})"
+| "compile_procs \<Gamma> \<Pi> (p # ps) n =
      (case \<Pi> p of
-        None \<Rightarrow> compile_procs \<Pi> ps n
+        None \<Rightarrow> compile_procs \<Gamma> \<Pi> ps n
       | Some decl \<Rightarrow>
-          (let (n1, E, K) = compile_proc \<Pi> p decl n;
-               (n2, E', K') = compile_procs \<Pi> ps n1
+          (let (n1, E, K) = compile_proc \<Gamma> \<Pi> p decl n;
+               (n2, E', K') = compile_procs \<Gamma> \<Pi> ps n1
            in (n2, E \<union> E', K \<union> K')))"
 
 text \<open>The whole program: every declared procedure, plus \<open>main\<close> compiled under the
@@ -376,11 +426,11 @@ text \<open>\<open>checks\<close> is not collected by a separate counter-threadi
   itself --- so this field cannot drift from it by construction, not merely by
   a separately proved agreement lemma.\<close>
 definition compile_prog ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg"
+  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg"
 where
-  "compile_prog \<Pi> ps mnm main =
-     (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
-          (n2, Emain, Kmain) = compile_proc \<Pi> mnm (proc_decl_of [] main) n1
+  "compile_prog \<Gamma> \<Pi> ps mnm main =
+     (let (n1, Eprocs, Kprocs) = compile_procs \<Gamma> \<Pi> ps 0;
+          (n2, Emain, Kmain) = compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1
       in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
            checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
              ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
@@ -393,35 +443,35 @@ text \<open>A fragment allocates exactly \<open>csize c\<close> indices.  This i
   The equation subsumes the counter monotonicity used throughout the ownership lemmas.\<close>
 
 lemma compile_next_id:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> n' = n + csize c"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> n' = n + csize c"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and n': "n' = n2"
     by (auto simp: Let_def split: prod.splits)
   from Seq.IH(2)[OF c2] n' show ?case by simp
 next
   case (If b c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)" and n': "n' = n2"
+    c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)" and n': "n' = n2"
     by (auto split: prod.splits)
   from If.IH(1)[OF c1] If.IH(2)[OF c2] n' show ?case by simp
 next
   case (While b c)
   then obtain n1 en1 E1 K1 where
-    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)" and n': "n' = n1"
+    c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)" and n': "n' = n1"
     by (auto split: prod.splits)
   from While.IH[OF c1] n' show ?case by simp
 qed (auto split: prod.splits option.splits)
 
-lemma compile_fst_next_id: "fst (compile \<Pi> p c k n) = n + csize c"
+lemma compile_fst_next_id: "fst (compile \<Gamma> \<Pi> p c k n) = n + csize c"
   by (metis compile_next_id prod_cases4 fst_conv)
 
 lemma compile_counter_mono:
-  assumes "compile \<Pi> p c k n = (n', en, E, K)"
+  assumes "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)"
   shows "n \<le> n'"
   using compile_next_id[OF assms] by simp
 
@@ -430,12 +480,12 @@ text \<open>Every fragment enters at its base counter.  Handing the continuation
   continuation as its entry.\<close>
 
 lemma compile_entry:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> en = Statement n"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> en = Statement n"
   by (induction c arbitrary: k n n' en E K rule: com.induct)
      (auto simp: Let_def split: prod.splits option.splits)
 
 lemma compile_entry_stmt:
-  assumes "compile \<Pi> p c k n = (n', en, E, K)"
+  assumes "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)"
   shows "\<exists>j. en = Statement j \<and> n \<le> j \<and> j < n'"
   using compile_entry[OF assms] compile_next_id[OF assms] csize_pos by auto
 
@@ -447,18 +497,18 @@ text \<open>The composite clauses, packaged as elimination rules.  Every consume
   carried along.\<close>
 
 lemma compile_SeqE:
-  assumes "compile \<Pi> p (Seq c1 c2) k n = (n', en, E, K)"
+  assumes "compile \<Gamma> \<Pi> p (Seq c1 c2) k n = (n', en, E, K)"
   obtains n1 E1 K1 n2 E2 K2 where
-    "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
-    "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
+    "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
+    "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
     "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
 proof -
   obtain n1 en1 E1 K1 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c1 (Statement (n + csize c1)) n") auto
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    by (cases "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n") auto
   obtain n2 en2 E2 K2 where
-    c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
-    by (cases "compile \<Pi> p c2 k (n + csize c1)") auto
+    c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    by (cases "compile \<Gamma> \<Pi> p c2 k (n + csize c1)") auto
   have e1: "en1 = Statement n" using compile_entry[OF c1] .
   have e2: "en2 = Statement (n + csize c1)" using compile_entry[OF c2] .
   from assms c1 c2 have "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
@@ -467,47 +517,47 @@ proof -
 qed
 
 lemma compile_IfE:
-  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+  assumes "compile \<Gamma> \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
   obtains n1 E1 K1 n2 E2 K2 where
-    "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
-    "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
+    "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "compile \<Gamma> \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), Statement (Suc n)),
+          (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
     "K = K1 \<union> K2"
 proof -
-  obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c1 k (Suc n)") auto
+  obtain n1 en1 E1 K1 where c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    by (cases "compile \<Gamma> \<Pi> p c1 k (Suc n)") auto
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   have i1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] by simp
-  obtain n2 en2 E2 K2 where c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    by (cases "compile \<Pi> p c2 k n1") auto
+  obtain n2 en2 E2 K2 where c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    by (cases "compile \<Gamma> \<Pi> p c2 k n1") auto
   have e2: "en2 = Statement (Suc n + csize c1)" using compile_entry[OF c2] i1 by simp
   from assms c1 c2 e1 e2
   have "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
+    "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), Statement (Suc n)),
+          (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), Statement (Suc n + csize c1))} \<union> E1 \<union> E2"
     "K = K1 \<union> K2"
     by (auto simp: Let_def)
   with c1 c2 e1 e2 i1 show ?thesis by (auto intro: that)
 qed
 
 lemma compile_WhileE:
-  assumes "compile \<Pi> p (While b c) k n = (n', en, E, K)"
+  assumes "compile \<Gamma> \<Pi> p (While b c) k n = (n', en, E, K)"
   obtains n1 E1 K1 where
-    "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
+    "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), Statement (Suc n)),
+          (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1"
     "K = K1"
 proof -
-  obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
-    by (cases "compile \<Pi> p c (Statement n) (Suc n)") auto
+  obtain n1 en1 E1 K1 where c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    by (cases "compile \<Gamma> \<Pi> p c (Statement n) (Suc n)") auto
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   from assms c1 e1
   have "en = Statement n"
-    "E = {(Statement n, EA_Assume b, Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), Statement (Suc n)),
+          (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1"
     "K = K1"
     by (auto simp: Let_def)
   with c1 e1 show ?thesis by (auto intro: that)
@@ -526,13 +576,13 @@ text \<open>
 \<close>
 
 lemma compile_calls_source_range:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and n': "n' = n2" and K: "K = K1 \<union> K2"
     by (auto simp: Let_def split: prod.splits)
   have i1: "n1 = n + csize c1" using compile_next_id[OF c1] .
@@ -547,8 +597,8 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+      c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and n': "n' = n2" and K: "K = K1 \<union> K2"
     by (auto split: prod.splits)
   have i1: "n1 = Suc n + csize c1" using compile_next_id[OF c1] by simp
@@ -563,7 +613,7 @@ next
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
-      c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+      c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and n': "n' = n1" and K: "K = K1"
     by (auto split: prod.splits)
   from While.prems(2) K have "(u, act, ce, af) \<in> K1" by simp
@@ -571,13 +621,13 @@ next
 qed (auto split: prod.splits option.splits)
 
 lemma compile_calls_source_unique:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
    \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      cc1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and cc2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      cc1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and cc2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and K: "K = K1 \<union> K2"
     by (auto simp: Let_def split: prod.splits)
   have i1: "n1 = n + csize c1" using compile_next_id[OF cc1] .
@@ -609,8 +659,8 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      cc1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and cc2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+      cc1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and cc2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and K: "K = K1 \<union> K2"
     by (auto split: prod.splits)
   have low: "\<And>u' act' ce' af'. (u', act', ce', af') \<in> K1 \<Longrightarrow> \<exists>j. u' = Statement j \<and> j < n1"
@@ -640,7 +690,7 @@ next
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
-      cc1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+      cc1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and K: "K = K1"
     by (auto split: prod.splits)
   from While.prems(2) K have "(u, ca1, ce1, af1) \<in> K1" by simp
@@ -654,30 +704,30 @@ text \<open>Destructured directly against \<^const>\<open>compile_proc\<close>'s
   fact belongs with the other allocation-arithmetic lemmas instead.\<close>
 
 lemma compile_proc_counter_mono:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> n \<le> n'"
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> n \<le> n'"
 proof -
-  assume h: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assume h: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
   define r where "r = n + csize (body decl)"
   obtain m ben Eb Kb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
-    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Gamma> \<Pi> p (body decl) (Statement r) n") auto
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from h cb i have "n' = Suc r" unfolding compile_proc_def r_def by (auto simp: Let_def)
   then show ?thesis by (simp add: r_def)
 qed
 
 lemma compile_proc_calls_source_range:
-  assumes "compile_proc \<Pi> p decl n = (n', E, K)" and "(u, act, ce, af) \<in> K"
+  assumes "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)" and "(u, act, ce, af) \<in> K"
   shows "\<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
 proof -
   define r where "r = n + csize (body decl)"
   obtain m ben Eb Kb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
-    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Gamma> \<Pi> p (body decl) (Statement r) n") auto
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from assms(1) cb i have K_eq: "K = Kb" and n'_eq: "n' = Suc r"
     unfolding compile_proc_def r_def by (auto simp: Let_def)
-  from cb i have cb': "compile \<Pi> p (body decl) (Statement r) n = (r, ben, Eb, K)"
+  from cb i have cb': "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (r, ben, Eb, K)"
     unfolding K_eq by simp
   obtain j where "u = Statement j" "n \<le> j" "j < r"
     using compile_calls_source_range[OF cb'] assms(2) by blast
@@ -685,24 +735,24 @@ proof -
 qed
 
 lemma compile_proc_calls_source_unique:
-  assumes "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
     and "(u, ca1, ce1, af1) \<in> K" and "(u, ca2, ce2, af2) \<in> K"
   shows "ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
 proof -
   define r where "r = n + csize (body decl)"
   obtain m ben Eb Kb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
-    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Gamma> \<Pi> p (body decl) (Statement r) n") auto
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from assms(1) cb i have K_eq: "K = Kb"
     unfolding compile_proc_def r_def by (auto simp: Let_def)
-  from cb i have cb': "compile \<Pi> p (body decl) (Statement r) n = (r, ben, Eb, K)"
+  from cb i have cb': "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (r, ben, Eb, K)"
     unfolding K_eq by simp
   show ?thesis using compile_calls_source_unique[OF cb'] assms(2,3) K_eq by simp
 qed
 
 lemma compile_procs_counter_mono:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -713,15 +763,15 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-        cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
+        cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
       by (auto split: prod.splits)
     from compile_proc_counter_mono[OF cp] Cons.IH[OF rest] n' show ?thesis by simp
   qed
 qed
 
 lemma compile_procs_calls_source_range:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
@@ -733,8 +783,8 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-        cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+        cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
       and n': "n' = n2" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     from Cons.prems(2) K consider (L) "(u, act, ce, af) \<in> K0" | (R) "(u, act, ce, af) \<in> K'" by auto
@@ -756,7 +806,7 @@ next
 qed
 
 lemma compile_procs_calls_source_unique:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
    \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
@@ -768,8 +818,8 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-        cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
+        cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
         (u', act1', ce1', af1') \<in> K0 \<Longrightarrow> (u', act2', ce2', af2') \<in> K' \<Longrightarrow> False"
@@ -802,16 +852,16 @@ text \<open>Whole-program call-source uniqueness: the fact a routed-context anal
   pass the same way the well-formedness theorem combines its own two passes.\<close>
 
 theorem compile_prog_calls_source_unique:
-  assumes "(u, ca1, ce1, af1) \<in> calls (compile_prog \<Pi> ps mnm main)"
-    and "(u, ca2, ce2, af2) \<in> calls (compile_prog \<Pi> ps mnm main)"
+  assumes "(u, ca1, ce1, af1) \<in> calls (compile_prog \<Gamma> \<Pi> ps mnm main)"
+    and "(u, ca2, ce2, af2) \<in> calls (compile_prog \<Gamma> \<Pi> ps mnm main)"
   shows "ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
 proof -
   obtain n1 Eprocs Kprocs where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
-  have g: "calls (compile_prog \<Pi> ps mnm main) = Kprocs \<union> Kmain"
+  have g: "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = Kprocs \<union> Kmain"
     unfolding compile_prog_def by (simp add: procs mainc Let_def)
   have not_both: "\<And>u' act1' ce1' af1' act2' ce2' af2'.
       (u', act1', ce1', af1') \<in> Kprocs \<Longrightarrow> (u', act2', ce2', af2') \<in> Kmain \<Longrightarrow> False"
@@ -858,27 +908,27 @@ primrec no_proc_call :: "com \<Rightarrow> bool" where
 | "no_proc_call Unwind = True"
 
 lemma compile_no_proc_call_K_empty:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> no_proc_call c \<Longrightarrow> K = {}"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> no_proc_call c \<Longrightarrow> K = {}"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and K: "K = K1 \<union> K2"
     by (auto simp: Let_def split: prod.splits)
   show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] Seq.prems(2) K by simp
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+      c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and K: "K = K1 \<union> K2"
     by (auto simp: Let_def split: prod.splits)
   show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] If.prems(2) K by simp
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
-      c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+      c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and K: "K = K1"
     by (auto simp: Let_def split: prod.splits)
   show ?case using While.IH[OF c1] While.prems(2) K by simp
@@ -888,12 +938,12 @@ next
 qed auto
 
 lemma compile_proc_no_proc_call_K_empty:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> no_proc_call (body decl) \<Longrightarrow> K = {}"
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> no_proc_call (body decl) \<Longrightarrow> K = {}"
   unfolding compile_proc_def
   by (auto simp: Let_def split: prod.splits dest: compile_no_proc_call_K_empty)
 
 lemma compile_procs_no_proc_call_K_empty:
-  "compile_procs \<Pi> ps n = (n', E, K)
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)
    \<Longrightarrow> (\<forall>q \<in> set ps. \<forall>decl. \<Pi> q = Some decl \<longrightarrow> no_proc_call (body decl))
    \<Longrightarrow> K = {}"
 proof (induction ps arbitrary: n n' E K)
@@ -906,13 +956,13 @@ next
   show ?case
   proof (cases "\<Pi> p")
     case None
-    with Cons.prems(1) have "compile_procs \<Pi> ps n = (n', E, K)" by simp
+    with Cons.prems(1) have "compile_procs \<Gamma> \<Pi> ps n = (n', E, K)" by simp
     from Cons.IH[OF this tail] show ?thesis .
   next
     case (Some decl)
     from Cons.prems(1) Some obtain n1 E1 K1 n2 E2 K2 where
-        one: "compile_proc \<Pi> p decl n = (n1, E1, K1)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E2, K2)"
+        one: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E1, K1)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E2, K2)"
       and K: "K = K1 \<union> K2"
       by (auto simp: Let_def split: prod.splits)
     have "no_proc_call (body decl)" using Cons.prems(2) Some by simp
@@ -925,12 +975,12 @@ qed
 theorem compile_prog_calls_empty:
   assumes main_free: "no_proc_call main"
       and procs_free: "\<And>q decl. q \<in> set ps \<Longrightarrow> \<Pi> q = Some decl \<Longrightarrow> no_proc_call (body decl)"
-  shows "calls (compile_prog \<Pi> ps mnm main) = {}"
+  shows "calls (compile_prog \<Gamma> \<Pi> ps mnm main) = {}"
 proof -
-  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
+  obtain n1 Eprocs Kprocs where procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)"
     by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
   have "Kprocs = {}"
     using compile_procs_no_proc_call_K_empty[OF procs] procs_free by blast
@@ -943,7 +993,7 @@ qed
 corollary compile_prog_flat_cfg:
   assumes "no_proc_call main"
       and "\<And>q decl. q \<in> set ps \<Longrightarrow> \<Pi> q = Some decl \<Longrightarrow> no_proc_call (body decl)"
-  shows "flat_cfg (compile_prog \<Pi> ps mnm main)"
+  shows "flat_cfg (compile_prog \<Gamma> \<Pi> ps mnm main)"
   unfolding flat_cfg_def by (rule compile_prog_calls_empty[OF assms])
 
 
@@ -956,8 +1006,8 @@ text \<open>Now immediate: \<open>checks\<close> is \<^emph>\<open>defined\<clos
   passes.\<close>
 
 corollary compile_prog_checks_sound:
-  assumes "(v, ch) \<in> checks (compile_prog \<Pi> ps mnm main)"
-  shows "\<exists>k'. (v, EA_Check ch, k') \<in> intra (compile_prog \<Pi> ps mnm main)"
+  assumes "(v, ch) \<in> checks (compile_prog \<Gamma> \<Pi> ps mnm main)"
+  shows "\<exists>k'. (v, EA_Check ch, k') \<in> intra (compile_prog \<Gamma> \<Pi> ps mnm main)"
   using assms unfolding compile_prog_def by (auto simp: Let_def split: prod.splits)
 
 text \<open>The \<open>Statement\<close> indices a compiled fragment touches.  Sources are always freshly
@@ -1015,13 +1065,13 @@ text \<open>A fragment that cannot complete normally contains an explicit return
   counterpart of the epilogue: where \<^const>\<open>falls_through\<close> fails, the body itself already carries
   an edge into \<^term>\<open>FunctionResult p\<close>, so the procedure keeps a return edge either way.\<close>
 lemma compile_returns_edge:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> \<not> falls_through c
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> \<not> falls_through c
    \<Longrightarrow> \<exists>u e. (u, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2': "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+      c1': "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2': "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and res: "E = E1 \<union> E2"
     using Seq.prems(1) by (auto simp: Let_def split: prod.splits)
   show ?case
@@ -1036,8 +1086,8 @@ proof (induction c arbitrary: k n n' en E K)
 next
   case (If b c1 c2)
   obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-      c1': "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and res: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+      c1': "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and res: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                     \<union> E1 \<union> E2"
     using If.prems(1) by (auto split: prod.splits)
   have "\<not> falls_through c1" using If.prems(2) by simp
@@ -1048,12 +1098,12 @@ next
 qed simp_all
 
 lemma compile_frag_stmts_range:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
   from Seq.prems obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and n': "n' = n2" and E: "E = E1 \<union> E2" and K: "K = K1 \<union> K2"
     by (auto simp: Let_def split: prod.splits)
   have i1: "n1 = n + csize c1" using compile_next_id[OF c1] .
@@ -1066,10 +1116,10 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
 next
   case (If b c1 c2)
   from If.prems obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
     and n': "n' = n2"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                   \<union> (E1 \<union> E2)"
     and K: "K = {} \<union> (K1 \<union> K2)"
     by (auto split: prod.splits)
@@ -1079,12 +1129,12 @@ next
   have i2: "n2 = n1 + csize c2" using compile_next_id[OF c2] .
   have r1: "frag_stmts E1 K1 \<subseteq> {Suc n..<n1} \<union> kstmt k" using If.IH(1)[OF c1] .
   have r2: "frag_stmts E2 K2 \<subseteq> {n1..<n2} \<union> kstmt k" using If.IH(2)[OF c2] .
-  have guard: "frag_stmts {(Statement n, EA_Assume b, en1),
-                           (Statement n, EA_AssumeNot b, en2)} {} \<subseteq> {n..<n2}"
+  have guard: "frag_stmts {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+                           (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)} {} \<subseteq> {n..<n2}"
     using e1 e2 i1 i2 csize_pos[of c1] csize_pos[of c2] by (auto simp: frag_stmts_def)
   have dec: "frag_stmts E K
-               = frag_stmts {(Statement n, EA_Assume b, en1),
-                             (Statement n, EA_AssumeNot b, en2)} {}
+               = frag_stmts {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+                             (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)} {}
                  \<union> frag_stmts (E1 \<union> E2) (K1 \<union> K2)"
     unfolding E K by (rule frag_stmts_Un)
   have body: "frag_stmts (E1 \<union> E2) (K1 \<union> K2) \<subseteq> {n..<n2} \<union> kstmt k"
@@ -1093,20 +1143,20 @@ next
 next
   case (While b c)
   from While.prems obtain n1 en1 E1 K1 where
-    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and n': "n' = n1"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1"
     and K: "K = {} \<union> K1"
     by (auto split: prod.splits)
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   have i1: "n1 = Suc n + csize c" using compile_next_id[OF c1] .
   have r1: "frag_stmts E1 K1 \<subseteq> {Suc n..<n1} \<union> {n}" using While.IH[OF c1] by simp
-  have guard: "frag_stmts {(Statement n, EA_Assume b, en1),
-                           (Statement n, EA_AssumeNot b, k)} {} \<subseteq> {n..<n1} \<union> kstmt k"
+  have guard: "frag_stmts {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+                           (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} {} \<subseteq> {n..<n1} \<union> kstmt k"
     using e1 i1 csize_pos[of c] by (auto simp: frag_stmts_def)
   have dec: "frag_stmts E K
-               = frag_stmts {(Statement n, EA_Assume b, en1),
-                             (Statement n, EA_AssumeNot b, k)} {} \<union> frag_stmts E1 K1"
+               = frag_stmts {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+                             (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} {} \<union> frag_stmts E1 K1"
     unfolding E K by (rule frag_stmts_Un)
   show ?case unfolding n' dec using guard r1 i1 csize_pos[of c] by auto
 qed (auto simp: frag_stmts_def split: option.splits)
@@ -1114,9 +1164,9 @@ text \<open>The procedure layout, packaged as an elimination rule: the body is c
   epilogue as its continuation, the entry bracket points at the body entry \<^term>\<open>Statement n\<close>,
   and the epilogue \<^term>\<open>Statement (n + csize (body decl))\<close> carries the implicit return.\<close>
 lemma compile_procE:
-  assumes "compile_proc \<Pi> p decl n = (n', E, K)"
+  assumes "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
   obtains Eb where
-    "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
+    "compile \<Gamma> \<Pi> p (body decl) (Statement (n + csize (body decl))) n
        = (n + csize (body decl), Statement n, Eb, K)"
     "E = insert (FunctionEntry p, EA_Nop, Statement n)
            (if falls_through (body decl)
@@ -1127,8 +1177,8 @@ lemma compile_procE:
 proof -
   define r where "r = n + csize (body decl)"
   obtain m ben Eb Kb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
-    by (cases "compile \<Pi> p (body decl) (Statement r) n") auto
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (m, ben, Eb, Kb)"
+    by (cases "compile \<Gamma> \<Pi> p (body decl) (Statement r) n") auto
   have e: "ben = Statement n" using compile_entry[OF cb] .
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from assms cb e i
@@ -1145,16 +1195,16 @@ qed
 subsection \<open>Finiteness\<close>
 
 lemma compile_finite:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> finite E \<and> finite K"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> finite E \<and> finite K"
   by (induction c arbitrary: k n n' en E K rule: com.induct)
      (auto simp: Let_def split: prod.splits option.splits)
 
 lemma compile_proc_finite:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
   by (auto simp: compile_proc_def Let_def split: prod.splits dest: compile_finite)
 
 lemma compile_procs_finite:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> finite E \<and> finite K"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -1165,8 +1215,8 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+      cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
       and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     from compile_proc_finite[OF cp] Cons.IH[OF rest] show ?thesis
@@ -1175,8 +1225,8 @@ next
 qed
 
 lemma compile_prog_finite:
-  "finite (intra (compile_prog \<Pi> ps mnm main))
-   \<and> finite (calls (compile_prog \<Pi> ps mnm main))"
+  "finite (intra (compile_prog \<Gamma> \<Pi> ps mnm main))
+   \<and> finite (calls (compile_prog \<Gamma> \<Pi> ps mnm main))"
   unfolding compile_prog_def
   by (auto simp: Let_def split: prod.splits
        dest: compile_procs_finite compile_proc_finite)
@@ -1185,7 +1235,7 @@ subsection \<open>Edge shapes for well-formedness\<close>
 
 text \<open>Every emitted call edge targets a \<open>FunctionEntry\<close>; a call is never an intra edge.\<close>
 lemma compile_call_ce_entry:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
   by (induction c arbitrary: k n n' en E K)
      (auto simp: Let_def split: prod.splits if_splits option.splits)
@@ -1195,14 +1245,14 @@ text \<open>Edge endpoints: a source is always an allocated \<open>Statement\<cl
   disjunct is what continuation passing adds, and it is what lets the two \<^const>\<open>wf_cfg\<close>
   conditions below be discharged without carrying a side condition through the induction.\<close>
 lemma compile_E_shape:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, a, v) \<in> E
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, a, v) \<in> E
    \<Longrightarrow> (\<exists>j. u = Statement j)
        \<and> (v = k \<or> v = FunctionResult p \<or> (\<exists>j. v = Statement j))"
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and E: "E = E1 \<union> E2"
     by (auto simp: Let_def split: prod.splits)
   consider (L) "(u, a, v) \<in> E1" | (R) "(u, a, v) \<in> E2"
@@ -1216,15 +1266,15 @@ proof (induction c arbitrary: k n n' en E K)
 next
   case (If b c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+    c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                   \<union> E1 \<union> E2"
     by (auto split: prod.splits)
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   have e2: "en2 = Statement n1" using compile_entry[OF c2] .
-  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume b, en1),
-                                 (Statement n, EA_AssumeNot b, en2)}"
+  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+                                 (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}"
     | (L) "(u, a, v) \<in> E1" | (R) "(u, a, v) \<in> E2"
     using If.prems(2) E by auto
   then show ?case
@@ -1238,12 +1288,12 @@ next
 next
   case (While b c)
   then obtain n1 en1 E1 K1 where
-    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1"
     by (auto split: prod.splits)
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
-  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume b, en1),
-                                 (Statement n, EA_AssumeNot b, k)}"
+  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1),
+                                 (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)}"
     | (Body) "(u, a, v) \<in> E1"
     using While.prems(2) E by auto
   then show ?case
@@ -1258,7 +1308,7 @@ text \<open>No intra edge enters a \<open>FunctionEntry\<close> node.  \<^const>
   continuation, so at command level this depends on the continuation not being one; at
   procedure level the continuation is the epilogue and the hypothesis is immediate.\<close>
 lemma compile_intra_tgt_not_entry:
-  assumes "compile \<Pi> p c k n = (n', en, E, K)" and "(u, a, v) \<in> E"
+  assumes "compile \<Gamma> \<Pi> p c k n = (n', en, E, K)" and "(u, a, v) \<in> E"
     and "\<forall>r. k \<noteq> FunctionEntry r"
   shows "v \<noteq> FunctionEntry q"
   using compile_E_shape[OF assms(1,2)] assms(3) by auto
@@ -1266,31 +1316,31 @@ lemma compile_intra_tgt_not_entry:
 text \<open>Every \<open>EA_Ret\<close> edge lands on the matching \<open>FunctionResult\<close> --- the enclosing
   procedure name in the action equals the one in the target node.\<close>
 lemma compile_ret_wf:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E
    \<Longrightarrow> \<forall>r. k \<noteq> FunctionResult r \<Longrightarrow> v = FunctionResult q"
   by (induction c arbitrary: k n n' en E K)
      (auto simp: Let_def split: prod.splits if_splits option.splits)
 
 lemma compile_proc_call_ce_entry:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
   by (auto simp: compile_proc_def Let_def split: prod.splits
        dest: compile_call_ce_entry)
 
 lemma compile_proc_intra_tgt_not_entry:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
   by (auto simp: compile_proc_def Let_def split: prod.splits if_splits
        dest: compile_E_shape compile_entry)
 
 lemma compile_proc_ret_wf:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E
    \<Longrightarrow> v = FunctionResult q"
   by (auto simp: compile_proc_def Let_def split: prod.splits if_splits
        dest: compile_ret_wf)
 
 
 lemma compile_procs_call_ce_entry:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -1301,8 +1351,8 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
+      cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     from Cons.prems(2) K
     show ?thesis using compile_proc_call_ce_entry[OF cp] Cons.IH[OF rest] by auto
@@ -1310,7 +1360,7 @@ next
 qed
 
 lemma compile_procs_intra_tgt_not_entry:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -1321,8 +1371,8 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and E: "E = E0 \<union> E'"
+      cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')" and E: "E = E0 \<union> E'"
       by (auto split: prod.splits)
     from Cons.prems(2) E
     show ?thesis using compile_proc_intra_tgt_not_entry[OF cp] Cons.IH[OF rest] by auto
@@ -1330,7 +1380,7 @@ next
 qed
 
 lemma compile_procs_ret_wf:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E \<Longrightarrow> v = FunctionResult q"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q rk, v) \<in> E \<Longrightarrow> v = FunctionResult q"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -1341,8 +1391,8 @@ next
   next
     case (Some decl)
     with Cons.prems(1) obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and E: "E = E0 \<union> E'"
+      cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')" and E: "E = E0 \<union> E'"
       by (auto split: prod.splits)
     from Cons.prems(2) E
     show ?thesis using compile_proc_ret_wf[OF cp] Cons.IH[OF rest] by auto
@@ -1351,14 +1401,14 @@ qed
 
 subsection \<open>The compiled program is well-formed\<close>
 
-theorem compile_prog_wf: "wf_cfg (compile_prog \<Pi> ps mnm main)"
+theorem compile_prog_wf: "wf_cfg (compile_prog \<Gamma> \<Pi> ps mnm main)"
 proof -
   obtain n1 Eprocs Kprocs where
-    procs: "compile_procs \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
+    procs: "compile_procs \<Gamma> \<Pi> ps 0 = (n1, Eprocs, Kprocs)" by (metis prod_cases3)
   obtain n2 Emain Kmain where
-    mainc: "compile_proc \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
+    mainc: "compile_proc \<Gamma> \<Pi> mnm (proc_decl_of [] main) n1 = (n2, Emain, Kmain)"
     by (metis prod_cases3)
-  have g: "compile_prog \<Pi> ps mnm main =
+  have g: "compile_prog \<Gamma> \<Pi> ps mnm main =
              \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain, cfg_entry = FunctionEntry mnm,
               checks = (\<lambda>(u, a, v). (u, ea_check_cond a)) ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>"
     unfolding compile_prog_def by (simp add: procs mainc Let_def)
@@ -1397,8 +1447,11 @@ text \<open>The compiler emits, for a call to a declared procedure, a single \<o
   expressions.\<close>
 lemma compile_Call_calls:
   assumes "\<Pi> q = Some decl" and "special_table q = None"
-  shows "snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))
-           = {(Statement n, CallEdge dst (formals decl) actuals, FunctionEntry q, k)}"
+  shows "snd (snd (snd (compile \<Gamma> \<Pi> p (Call dst q actuals) k n)))
+           = {(Statement n,
+               CallEdge (compile_dst \<Gamma> dst) (formals decl)
+                 (compile_actuals \<Gamma> (formals decl) actuals),
+               FunctionEntry q, k)}"
   using assms by simp
 text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on that edge produces exactly the
   callee-entry store of the source \<^const>\<open>pstep\<close> \<open>Call\<close> rule: the actuals are evaluated in the
@@ -1406,26 +1459,30 @@ text \<open>The caller-side entry transfer \<^const>\<open>call_enter\<close> on
   \<^const>\<open>bind_formals\<close>-bound to the formals.  The resulting store is exactly the
   source \<open>Call\<close> callee store used by the local-trace call rule.\<close>
 lemma call_enter_eq_source_call_store:
-  "call_enter \<Gamma> source_global (CallEdge dst (formals decl) actuals) s
+  assumes "styped \<Gamma> s"
+  shows "call_enter source_global
+       (CallEdge dst (formals decl) (compile_actuals \<Gamma> (formals decl) actuals)) s
      = bind_formals (formals decl)
          (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals)
          (enter_state source_global s)"
-  by (simp add: call_enter_CallEdge)
+  by (simp add: call_enter_CallEdge assms)
 
 text \<open>Combined: traversing the compiled call edge lands the callee at the source callee-entry
   store.\<close>
 lemma compile_call_enter_eq_source:
   assumes "\<Pi> q = Some decl" and "special_table q = None"
-    and "(cs, CallEdge dst pars actuals, FunctionEntry q, af)
-           \<in> snd (snd (snd (compile \<Pi> p (Call dst q actuals) k n)))"
-  shows "call_enter \<Gamma> source_global (CallEdge dst pars actuals) s
+    and "(cs, CallEdge tdst pars targs, FunctionEntry q, af)
+           \<in> snd (snd (snd (compile \<Gamma> \<Pi> p (Call dst q actuals) k n)))"
+    and "styped \<Gamma> s"
+  shows "call_enter source_global (CallEdge tdst pars targs) s
            = bind_formals (formals decl)
                (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) (formals decl) actuals)
                (enter_state source_global s)"
 proof -
   from assms(3) have "pars = formals decl"
-    by (simp add: assms(1,2))
-  then show ?thesis by (simp add: call_enter_eq_source_call_store)
+    and "targs = compile_actuals \<Gamma> (formals decl) actuals"
+    by (simp_all add: assms(1,2))
+  then show ?thesis by (simp add: call_enter_eq_source_call_store assms(4))
 qed
 
 
@@ -1435,7 +1492,8 @@ text \<open>The \<open>EA_Ret\<close> edge publishes the return value into \<^co
   source \<open>Return\<close> step: \<open>Some e\<close> writes \<open>aval e\<close>, \<open>None\<close> leaves the reserved local.\<close>
 lemma return_publishes_ret_var:
   assumes "pstep \<Gamma> source_global \<Pi> (Return e, s, frs, rk) (Unwind, s', frs, rk)"
-  shows "s' \<in> edge_step \<Gamma> (EA_Ret e p rk) s"
+    and "styped \<Gamma> s"
+  shows "s' \<in> edge_step (EA_Ret (map_option (elaborate_to \<Gamma> rk) e) p rk) s"
   using assms by (cases e) auto
 
 text \<open>The caller-side combine \<^const>\<open>combine_collect\<close> reproduces the store built by the source
@@ -1446,8 +1504,8 @@ lemma combine_collect_eq_source_unwind:
   assumes "pstep \<Gamma> source_global \<Pi>
              (Seq Unwind Restore, callee, Frame caller dst rk # frs, rk')
              (SKIP, s', frs, rk)"
-  shows "s' = combine_collect \<Gamma> source_global dst caller callee"
-  using assms by (auto simp: combine_collect_def elim: pstep.cases)
+  shows "s' = combine_collect source_global (compile_dst \<Gamma> dst) caller callee"
+  using assms by (auto simp: combine_collect_def compile_dst_def combine_assign_tv_eq_combine_assign elim: pstep.cases)
 
 text \<open>The same combine also matches the normal-completion \<open>Restore\<close> step, which fires once the
   callee body has reduced to \<^const>\<open>SKIP\<close>: the combined store is fixed by the destination and stores.\<close>
@@ -1455,8 +1513,8 @@ lemma combine_collect_eq_source_restore:
   assumes "pstep \<Gamma> source_global \<Pi>
              (Restore, callee, Frame caller dst rk # frs, rk')
              (SKIP, s', frs, rk)"
-  shows "s' = combine_collect \<Gamma> source_global dst caller callee"
-  using assms by (auto simp: combine_collect_def elim: pstep.cases)
+  shows "s' = combine_collect source_global (compile_dst \<Gamma> dst) caller callee"
+  using assms by (auto simp: combine_collect_def compile_dst_def combine_assign_tv_eq_combine_assign elim: pstep.cases)
 
 
 end

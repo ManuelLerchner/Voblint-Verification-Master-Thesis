@@ -51,7 +51,7 @@ subsection \<open>The Sign specification that uses it\<close>
 definition sign_dg_spec_callee_join ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> texp list \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
    \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_spec" where
   "sign_dg_spec_callee_join gs tf_st enter_st =
      (unit_dg_spec_st_for gs tf_st enter_st)
@@ -277,7 +277,7 @@ abbreviation cj_prog_gs :: "vname \<Rightarrow> bool" where
   "cj_prog_gs \<equiv> declared_global cj_program"
 
 definition cj_cfg :: cfg where
-  "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)
+  "cj_cfg = compile_prog (prog_tyenv cj_program) (prog_table cj_program) (prog_procs cj_program)
               prog_main_name (prog_main cj_program)"
 
 abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
@@ -315,7 +315,8 @@ text \<open>The single call site is \<open>Statement 4\<close>, resuming at \<op
 
 lemma cj_call_site:
   "cfg_calls_list cj_cfg =
-     [(Statement 4, CallEdge (Some (STR ''z'')) [STR ''p''] [VIMP_Syntax.N 7],
+     [(Statement 4, CallEdge (compile_dst (prog_tyenv cj_program) (Some (STR ''z''))) [STR ''p'']
+        (compile_actuals (prog_tyenv cj_program) [STR ''p''] [VIMP_Syntax.N 7]),
        FunctionEntry (STR ''mark''), Statement 5)]"
   by eval
 

@@ -219,6 +219,22 @@ definition sign_cast :: "ikind => sign => sign" where
       else if \<not> ik_signed ik then SNonNeg
       else top)"
 
+text \<open>
+  Sign bounds no magnitude, so the only values it can certify as representable
+  at a machine-integer kind are \<open>bot\<close> (no value at all) and \<open>SZero\<close>
+  (the single value \<open>0\<close>, in every kind's range). Any other sign value
+  admits arbitrarily large magnitudes.
+\<close>
+
+definition sign_in_range :: "ikind => sign => bool" where
+  "sign_in_range ik a = (is_bottom_sign a \<or> a = SZero)"
+
+lemma sign_in_range_sound:
+  assumes "sign_in_range ik a"
+  shows "gamma_sign a \<subseteq> ik_range ik"
+  using assms
+  by (auto simp: sign_in_range_def is_bottom_sign_correct)
+
 lemma sign_cast_sound:
   assumes v: "v \<in> gamma a"
   shows "ik_norm ik v \<in> gamma (sign_cast ik a)"
@@ -248,6 +264,29 @@ next
     qed
   qed
 qed
+
+lemma sign_in_range_mono:
+  assumes le: "a \<le> (b :: sign)" and b: "sign_in_range ik b"
+  shows "sign_in_range ik a"
+proof -
+  have sub: "gamma_sign a \<subseteq> gamma_sign b"
+    using le by (simp add: less_eq_sign_def gamma_sign_mono)
+  show ?thesis
+  proof (cases "is_bottom_sign a")
+    case True
+    then show ?thesis by (simp add: sign_in_range_def)
+  next
+    case False
+    then have ne: "gamma_sign a \<noteq> {}" by (simp add: is_bottom_sign_correct)
+    have "b = SZero"
+      using b ne sub by (auto simp: sign_in_range_def is_bottom_sign_correct)
+    then have "gamma_sign a \<subseteq> {0}" using sub by simp
+    then have "a = SZero" using ne
+      by (cases a) (auto dest: subsetD[of _ _ "- 1"] subsetD[of _ _ "1"])
+    then show ?thesis by (simp add: sign_in_range_def)
+  qed
+qed
+
 
 lemma sign_cast_mono:
   assumes le: "a1 \<le> (a2 :: sign)"
@@ -298,21 +337,20 @@ text \<open>
   an already-elaborated \<^typ>\<open>texp\<close>, so it needs no \<open>\<Gamma>\<close>/\<open>ik\<close> parameter of
   its own -- every node already carries the kind it should be cast/normed
   at. Every arithmetic node is normed once through \<^const>\<open>sign_cast\<close> at
-  its own kind, and \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own
-  0/1-shaped result, matching \<^const>\<open>teval\<close>. \<open>aval_sign\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
-  locale this interprets below) is a thin wrapper elaborating its argument
-  once and handing it to \<open>aval_sign_t\<close>, not a second, independent
-  recursion to keep in sync: both \<open>Sign_Transfer\<close>'s forward obligations
-  and \<open>Sign_Backward\<close>'s \<open>backward_domain\<close> interpretation target it.
+  its own kind, \<open>TCast\<close> norms its operand at the target kind, and
+  \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own 0/1-shaped
+  result, matching \<^const>\<open>teval\<close>. Both \<open>Sign_Transfer\<close>'s forward
+  obligations and \<open>Sign_Backward\<close>'s \<open>backward_domain\<close> interpretation
+  target it directly.
 \<close>
 
 fun aval_sign_t :: "texp => (vname => sign) => sign" where
-    "aval_sign_t (TN ik n)        \<sigma> = sign_cast ik (sign_of_int n)"
-  | "aval_sign_t (TV ik x)        \<sigma> = sign_cast ik (\<sigma> x)"
+    "aval_sign_t (TN ik n)        \<sigma> = sign_of_int (ik_norm ik n)"
+  | "aval_sign_t (TVar ik x)        \<sigma> = \<sigma> x"
   | "aval_sign_t (TPlus  ik a b)  \<sigma> = sign_cast ik (aval_sign_t a \<sigma> + aval_sign_t b \<sigma>)"
   | "aval_sign_t (TMinus ik a b)  \<sigma> = sign_cast ik (aval_sign_t a \<sigma> - aval_sign_t b \<sigma>)"
   | "aval_sign_t (TTimes ik a b)  \<sigma> = sign_cast ik (aval_sign_t a \<sigma> * aval_sign_t b \<sigma>)"
+  | "aval_sign_t (TCast  ik a)    \<sigma> = sign_cast ik (aval_sign_t a \<sigma>)"
   | "aval_sign_t (TLess a b) \<sigma> =
        (if is_bot (aval_sign_t a \<sigma>) \<or> is_bot (aval_sign_t b \<sigma>) then bot
         else if sign_lt (aval_sign_t a \<sigma>) (aval_sign_t b \<sigma>) = Some True then SPos
@@ -346,9 +384,6 @@ fun aval_sign_t :: "texp => (vname => sign) => sign" where
                 \<and> sign_tobool (aval_sign_t b \<sigma>) = Some False
         then SZero
         else SNonNeg)"
-
-definition aval_sign :: "tyenv => ikind => exp => (vname => sign) => sign" where
-  "aval_sign \<Gamma> ik a \<sigma> = aval_sign_t (elaborate \<Gamma> ik a) \<sigma>"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
@@ -409,54 +444,65 @@ lemma sign_times_combine_mono:
   by (meson order.trans sign_times_mono1 sign_times_mono2)
 
 interpretation sign_arith: expression_domain_sound
-    aval_sign sign_cast sign_of_int sign_lt sign_eqb sign_tobool
+    aval_sign_t sign_cast sign_of_int sign_lt sign_eqb sign_tobool
   apply unfold_locales
-  apply (simp_all add: aval_sign_def sign_of_int_gamma sign_plus_sound sign_minus_sound
+  apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound
                         sign_times_sound sign_plus_combine_mono sign_minus_combine_mono
                         sign_times_combine_mono sign_lt_sound sign_eqb_sound
                         sign_tobool_sound[unfolded truthy_def] sup_sign_def join_sign.simps
-                        truthy_def gamma_sign_top Let_def sign_cast_sound_sign sign_cast_mono
+                        truthy_def gamma_sign_top sign_cast_sound_sign sign_cast_mono
                     del: sign_lt.simps sign_eqb.simps sign_tobool.simps)
   apply (blast intro: sign_lt_mono[unfolded is_bot_sign])
   apply (blast intro: sign_eqb_mono[unfolded is_bot_sign])
   apply (blast intro: sign_tobool_mono[unfolded is_bot_sign])
   done
 
-lemmas aval_sign_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]
-lemmas aval_sign_mono = sign_arith.aval_dom_mono
-
 text \<open>
-  \<open>aval_sign_t (elaborate \<Gamma> ik a) = aval_sign \<Gamma> ik a\<close> is immediate from
-  \<open>aval_sign\<close>'s own definition -- no induction needed, since \<open>aval_sign_t\<close>
-  is the primitive recursion and \<open>aval_sign\<close> is defined in terms of it.
+  Soundness and monotonicity of the sole evaluator, stated directly at
+  \<^const>\<open>teval\<close>: both sides now speak the machine semantics, so no bridge
+  between an unbounded and a wrapping interpretation is needed anywhere
+  downstream.
 \<close>
 
-lemma aval_sign_t_elaborate [simp]:
-  "aval_sign_t (elaborate \<Gamma> ik a) \<sigma> = aval_sign \<Gamma> ik a \<sigma>"
-  by (simp add: aval_sign_def)
+lemmas aval_sign_t_sound = sign_arith.aval_dom_sound[unfolded gamma_abs_sign]
+lemmas aval_sign_t_mono = sign_arith.aval_dom_mono
 
-lemma aval_sign_t_elaborate_syn [simp]:
-  "aval_sign_t (elaborate_syn \<Gamma> a) \<sigma> = aval_sign \<Gamma> (opk (esyn \<Gamma> a)) a \<sigma>"
-  by (simp add: elaborate_syn_def)
 
-lemma aval_sign_t_sound:
-  assumes "\<forall>x. s x \<in> gamma_sign (sigma x)"
-  shows "taval \<Gamma> ik a s \<in> gamma_sign (aval_sign_t (elaborate \<Gamma> ik a) sigma)"
-  using aval_sign_sound[OF assms] by simp
+subsection \<open>Cast-domain instance\<close>
 
-lemma aval_sign_t_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_sign_t (elaborate \<Gamma> ik a) sigma1 \<le> aval_sign_t (elaborate \<Gamma> ik a) sigma2"
-  using aval_sign_mono by simp
+text \<open>\<^const>\<open>sign_cast\<close> realizes the class-wide \<^const>\<open>a_cast\<close>, so every
+  generic write site -- ordinary assignment and call return alike -- converts
+  through this domain's own cast without any signature carrying one.\<close>
 
-lemma aval_sign_t_sound_syn:
-  assumes "\<forall>x. s x \<in> gamma_sign (sigma x)"
-  shows "taval_syn \<Gamma> a s \<in> gamma_sign (aval_sign_t (elaborate_syn \<Gamma> a) sigma)"
-  unfolding taval_syn_def elaborate_syn_def using aval_sign_t_sound[OF assms] .
+instantiation sign :: cast_domain
+begin
 
-lemma aval_sign_t_mono_syn:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_sign_t (elaborate_syn \<Gamma> a) sigma1 \<le> aval_sign_t (elaborate_syn \<Gamma> a) sigma2"
-  unfolding elaborate_syn_def using aval_sign_t_mono .
+definition a_cast_sign [simp]: "a_cast = sign_cast"
+
+definition a_in_range_sign [simp]: "a_in_range = sign_in_range"
+
+instance
+proof intro_classes
+  fix a b :: sign and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_sign by (rule sign_cast_mono)
+next
+  fix a b :: sign and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_sign by (rule sign_in_range_mono)
+qed
+
+end
+
+instance sign :: sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: sign and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: sign_cast_sound_sign)
+next
+  fix a :: sign and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: sign_in_range_sound)
+qed
 
 end

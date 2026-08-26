@@ -121,7 +121,7 @@ text \<open>
 \<close>
 
 definition analyse_int_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_for_with_state gs p =
      (let r = analyse_int_result_for gs p
       in classify_checks_with_state (prog_cfg prog_main_name p)
@@ -134,7 +134,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_int_report\<close>'s shape.\<close>
 
 definition analyse_int_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
+    "imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> int_dom abs_state) list" where
   "analyse_int_report_with_state p = analyse_int_report_for_with_state (declared_global p) p"
 
 subsection \<open>Solver-choice variants: always-join and per-origin update rules\<close>

@@ -13,7 +13,7 @@ context sound_transfer_for
 begin
 
 lemma edge_collect_apply_tf_sound_for:
-  "edge_collect \<Gamma> a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
+  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>apply_tf tf a \<sigma>\<rbrakk>"
 proof (cases a)
   case (EA_Special sc x)
   then show ?thesis by (cases sc) auto
@@ -24,7 +24,7 @@ text \<open>A \<open>dg_spec\<close> instance dispatches its own \<open>EA_Check
   dispatch: this is the per-domain soundness bound each such instance needs at
   that dispatch point.\<close>
 lemma edge_collect_check_sound_for:
-  "edge_collect \<Gamma> (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>event\<^sup># tf (Check_Event c) \<sigma>\<rbrakk>"
+  "edge_collect (EA_Check c) \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>event\<^sup># tf (Check_Event c) \<sigma>\<rbrakk>"
   by auto
 
 end

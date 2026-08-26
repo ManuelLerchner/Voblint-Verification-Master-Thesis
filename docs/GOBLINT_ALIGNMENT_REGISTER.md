@@ -145,6 +145,104 @@ scheduling and widening behaviour differ by construction: the proxy carries no
 equation, so contributions join there and widening applies one hop later at the
 local entry unknown.
 
+## What "C-compliant" does and does not mean here
+
+Three claims are routinely conflated. They are not equivalent, and this project
+stands in a different place on each.
+
+| Claim | Status |
+| --- | --- |
+| **Goblint architectural alignment** | Broadly yes, and the target. Elaborated kind-carrying expressions, the cast in the domain signature rather than the analysis spec, `norm`-then-refine at a product domain, `top_of ik` as a conversion's give-up answer. |
+| **C conversion-rule alignment** | Yes for the modelled subset. Integer promotions (6.3.1.1) and the usual arithmetic conversions (6.3.1.8) are implemented and proved commutative; conversions at every write boundary match 6.5.16.1p2, 6.5.2.2p7, 6.8.6.4p3. Literal typing (6.4.4.1) is **not** modelled -- see the ROADMAP gap. |
+| **Strict C concrete semantics** | **No, deliberately.** VIMP *defines* signed overflow as two's-complement wraparound. C 6.5p5 makes an out-of-range signed arithmetic result undefined. |
+
+The accurate statement of the last row is:
+
+> VIMP implements C11 integer promotions and usual arithmetic conversions for
+> its fixed-width subset, and its evaluation agrees with C11 on executions in
+> which no signed arithmetic operation overflows. On signed overflow it
+> deliberately matches Goblint's `assume_wraparound` mode rather than C11.
+
+Two things that statement is careful about. The correspondence premise is
+**per signed arithmetic node**, not a condition on the final result -- a
+program can produce a correct-looking final value through intermediate
+overflow, and the weaker premise would not exclude that. And this is a
+statement about *concrete* semantics; it says nothing about the analyzer,
+which over-approximates whichever concrete semantics it is given.
+
+Do not write "VIMP is C11-compliant" anywhere. It is true of the conversion
+rules and false of the overflow semantics, so unqualified it is simply wrong.
+
+## C-conformance audit of the typing and casting layer (2026-08-26)
+
+Three-way comparison of this project's machine-integer typing against Goblint
+`master` and C11/C17, run after the elaboration migration landed. **No unsound
+abstract operator was found**: every `a_cast` is proved against `ik_norm`, every
+`a_in_range` against `ik_range`, `afilter`'s `TCast` clause is sound, and every
+write boundary (`pstep`'s `Assign`/`Call`/`ReturnSome`, `edge_step`'s
+`EA_Assign`/`EA_Ret`, `combine_assign_tv`) norms at the target kind, matching C
+6.5.16.1p2, 6.5.2.2p7 and 6.8.6.4p3.
+
+Where the three agree:
+
+| Topic | Ours | Goblint | C |
+| --- | --- | --- | --- |
+| Variable read | `teval (TVar ik x) s = s x` | `get_var` = `CPA.find` | 6.3.2.1p2, lvalue conversion only |
+| Integer promotion | `ik_promote`, verified pin-by-pin for all eight kinds | CIL `integralPromotion` | 6.3.1.1p2 |
+| Same-kind cast | node dropped by `elaborate_to`'s guard | identity in every domain (`IntervalDomain.norm`, `Congruence.cast_to`'s `p ikorg`, `DefExc.cast_to`) | not a conversion |
+| Narrowing cast | `ik_norm` | `Size.cast` (`erem` then re-centre) | 6.3.1.3p2 modular; p3 implementation-defined, both pick GCC's choice |
+| Comparison / logical | `esyn = Some I32`, result 0/1 | CIL types them `int` | 6.5.8p6, 6.5.9p3 |
+
+Sound but divergent from C, and recorded as such:
+
+- **Usual arithmetic conversions.** `kjoin` is "left operand wins", not C
+  6.3.1.8's rank-and-signedness rule; it disagrees on six ordered operand pairs.
+  See the ROADMAP's "Machine integers" known gap for the witness program and the
+  closure path. Divergence from *C*, not from our own theorems.
+- **Signed overflow.** `ik_norm` wraps at every arithmetic node. C 6.5p5 makes
+  out-of-range *arithmetic* undefined (distinct from 6.3.1.3p3, which makes
+  out-of-range *conversion* to a signed type implementation-defined). Ours is
+  `-fwrapv`; Goblint's default is `assume_top` plus a
+  `SignedIntegerOverflowInArithmetic` warning through `add_overflow_check`. We
+  emit no overflow warning at all.
+- **Non-short-circuit `And`/`Or`.** C 6.5.13p4/6.5.14p4 mandate short-circuit
+  evaluation; `taval` evaluates both operands. Unobservable, since VIMP
+  expressions are pure and total -- there is no `Div` or `Mod`.
+
+Precision gaps found, all sound:
+
+- `afilter`'s `TCast` guard has only Goblint's *dynamic* disjunct. Upstream's
+  `is_dynamically_safe_cast` is `is_statically_safe_cast || (value fits)`; the
+  static half has no counterpart here, and `texp_kind` -- which would supply it
+  -- is cited nowhere outside `VIMP_Elaborated.thy`.
+- The abstract entry state does not seed a variable at its declared range.
+  Goblint's `Interval.top_of ik` is `Some (range ik)`; our `top` is unbounded, so
+  a guard on a narrow variable loses its refinement at the promotion cast.
+- **Closed 2026-08-26.** `ivl_cast`'s three give-up branches returned the
+  lattice `top` -- an *unbounded* interval, which is not even inside
+  `ik_range ik`, so a conversion did not satisfy its own representability
+  certificate. Upstream's `Interval.top_of ik` is `Some (range ik)`. They now
+  return `ivl_top_of ik = [ik_min ik, ik_max ik]`, and `ivl_in_range_ivl_cast`
+  states that a conversion always lands in its target kind. This was not a
+  cosmetic divergence: it collapsed every half-bounded interval, so a
+  guard-refined `[1, +inf]` or a widened `[3, +inf]` became `[-inf, +inf]` and
+  narrowing had nothing to recover from. Measured against the `main` branch on
+  the CLI fixture corpus, that accounted for roughly a third of a 19-test
+  regression. The monotonicity proof had to be reworked rather than
+  re-typechecked: it used the lattice `top` as the greatest element, and now
+  uses `ivl_top_of ik` as a *local* greatest element via `ivl_cast_le_top_of`.
+- **Closed 2026-08-26.** The `int_dom` product refined *before* normalising
+  (`plus_int_dom = refine o plus_int_dom_raw`, then `int_dom_cast`), and
+  `int_dom_cast` maps components independently -- so `sign_cast` discarded the
+  sign even when the interval component still pinned the value exactly.
+  Goblint's `IntDomTuple` order is operation, then `norm ik`, then refine, so
+  `aval_int_dom_t`'s arithmetic and `TCast` clauses now read
+  `refine mode (int_dom_cast ik ...)`. Soundness is free (`refine_exact`:
+  `gamma (refine mode d) = gamma d`); monotonicity holds only for
+  `mode \<noteq> Refine_Fixpoint`, which `aval_int_dom_t_mono` already assumed.
+- `cong_cast`'s `gcd (m, ik_mod ik)` is strictly sharper than upstream's `top`.
+  Sound, but not the exact upstream mirror its theory comment claims.
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration

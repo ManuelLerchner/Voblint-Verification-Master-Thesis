@@ -61,7 +61,7 @@ export_code
   XE_Intra XE_Enter XE_Combine XE_CallToReturn XE_GlobalRead XE_GlobalWrite
   NS_Plain NS_Proved NS_Refuted NS_Unknown NS_Unreachable NS_Exit
   exp_vnames_list string_of_abstract_value
-  mk_program proc_decl_of declared_global_vars pretty_string_of_program
+  mk_program mk_program_typed TV proc_decl_of declared_global_vars pretty_string_of_program
   SKIP com.Call com.If Assign Seq While Return Check
   N V Plus Minus Times
   exp.Not And Or Less exp.Eq
@@ -70,7 +70,10 @@ export_code
   Statement FunctionEntry FunctionResult
   integer_of_char
   compile_program cfg_intra_list cfg_calls_list prog_stmt_post_order
-  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge Nondet_Int
+  EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Ret EA_Check CallEdge
+  Nondet_Int Min Max
+  TN TVar TPlus TMinus TTimes TCast TLess TEq TNot TAnd TOr texp_erase
+  I8 U8 I16 U16 I32 U32 I64 U64
   string_of_exp
   wf_program_compile_input_exec
   Solver_Join Solver_PerOrigin Solver_Warrow Solver_WarrowPerOrigin

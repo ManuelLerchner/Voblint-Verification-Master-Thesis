@@ -568,12 +568,12 @@ text \<open>
 
 record ('dl, 'dg) dg_spec =
   dgs_skip       :: "'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_assign     :: "vname \<Rightarrow> exp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_assign     :: "vname \<Rightarrow> texp \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_special    :: "special_call \<Rightarrow> vname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_branch     :: "exp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_branch     :: "texp \<Rightarrow> bool \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_body       :: "pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_return     :: "exp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
-  dgs_enter      :: "vname list \<Rightarrow> exp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_return     :: "texp option \<Rightarrow> pname \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
+  dgs_enter      :: "vname list \<Rightarrow> texp list \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_event      :: "analysis_event \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
   dgs_caller_cont    :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dl"
   dgs_combine_env    :: "call_info \<Rightarrow> 'dl \<Rightarrow> 'dl \<Rightarrow> 'dg \<Rightarrow> 'dg \<times> 'dl"
@@ -699,7 +699,7 @@ text \<open>The unit env-merge/assign split (defined below as \<open>unit_combin
   composed.\<close>
 definition unit_combine_step_assign_for ::
   "(vname => bool) =>
-   call_info => 'a::bounded_semilattice_sup_bot abs_state
+   call_info => 'a::cast_domain abs_state
    => 'a abs_state => 'a abs_state \<times> 'a abs_state
    => 'a abs_state \<times> 'a abs_state"
 where
@@ -734,7 +734,7 @@ lemma unit_combine_step_env_for_join:
   by (simp add: Let_def restrict_global_for_local_join)
 
 lemma unit_combine_step_assign_for_mono:
-  fixes de1 de2 :: "'a::bounded_semilattice_sup_bot abs_state"
+  fixes de1 de2 :: "'a::cast_domain abs_state"
   assumes de: "de1 \<le> de2"
     and m: "fst m1 \<squnion> snd m1 \<le> fst m2 \<squnion> snd m2"
   shows "fst (unit_combine_step_assign_for gs ci de1 g m1)
@@ -811,7 +811,7 @@ lemma unit_combine_step_env_for_lifted_agrees:
 definition unit_combine_step_assign_for_lifted ::
   "(vname => bool)
    => call_info
-   => ('a::bounded_semilattice_sup_bot abs_state => bool)
+   => ('a::cast_domain abs_state => bool)
    => 'a abs_state lifted
    => 'a abs_state lifted \<times> 'a abs_state lifted
    => 'a abs_state lifted \<times> 'a abs_state lifted"
@@ -860,7 +860,7 @@ where
 
 definition unit_combine_step_assign_placed ::
   "(vname => bool) => (vname => bool) => call_info =>
-   'a::bounded_semilattice_sup_bot abs_state => 'a abs_state =>
+   'a::cast_domain abs_state => 'a abs_state =>
    'a abs_state \<times> 'a abs_state => 'a abs_state \<times> 'a abs_state"
 where
   "unit_combine_step_assign_placed keep_local publish_side ci de g merged =
@@ -871,7 +871,7 @@ where
 
 definition unit_dg_spec_placed ::
   "(vname => bool) => (vname => bool) => (vname => bool) =>
-   'a::sound_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
+   'a::sound_cast_domain domain_transfer => ('a abs_state, 'a abs_state) dg_spec"
 where
   "unit_dg_spec_placed source_global keep_local publish_side tf = \<lparr>
     dgs_skip       = unit_step_placed keep_local publish_side (apply_tf tf EA_Nop),
@@ -910,7 +910,7 @@ lemma dgs_enter_unit_dg_spec_placed:
 
 
 definition unit_dg_spec_for ::
-  "(vname => bool) => 'a::sound_domain domain_transfer
+  "(vname => bool) => 'a::sound_cast_domain domain_transfer
    => ('a abs_state, 'a abs_state) dg_spec"
 where
   "unit_dg_spec_for gs tf = \<lparr>
@@ -966,7 +966,7 @@ text \<open>
 
 definition unit_dg_spec_for_lifted ::
   "(vname => bool)
-   => ('a::sound_domain abs_state => bool)
+   => ('a::sound_cast_domain abs_state => bool)
    => 'a domain_transfer
    => ('a abs_state lifted, 'a abs_state lifted) dg_spec"
 where

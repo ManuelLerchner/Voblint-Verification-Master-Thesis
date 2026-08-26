@@ -37,11 +37,11 @@ locale dg_analysis_adapter =
     and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'a abs_state lifted"
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k" +
-  fixes classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
+  fixes classify :: "texp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
   assumes classify_proved:
-    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (aval c s)"
+    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> truthy (teval c s)"
     and classify_refuted:
-    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (aval c s)"
+    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> gamma_state d \<Longrightarrow> \<not> truthy (teval c s)"
 begin
 
 subsection \<open>An entry-local bound in the shape \<open>pp_entry_s0g_bound\<close> gives for globals\<close>
@@ -178,7 +178,7 @@ proof (rule activation_collect_sound_gen)
     using entry_cov by (simp add: sg_cov)
 next
   fix u a v' c' s' s''
-  assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step \<Gamma> a s'"
+  assume "(u, a, v') \<in> intra g" "s' \<in> gamma_state_lift (sg (Inl (u, c')))" "s'' \<in> edge_step a s'"
   thus "s'' \<in> gamma_state_lift (sg (Inl (v', c')))" by (rule dg_ctx_act_edge)
 next
   fix u c' s'
@@ -187,8 +187,8 @@ next
   fix u dst pars args p cont c' s' c''
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sm: "s' \<in> gamma_state_lift (sg (Inl (u, c')))"
-    and adm: "admiss_exact enterc u c' (call_enter \<Gamma> gs (CallEdge dst pars args) s') c''"
-  show "call_enter \<Gamma> gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
+    and adm: "admiss_exact enterc u c' (call_enter gs (CallEdge dst pars args) s') c''"
+  show "call_enter gs (CallEdge dst pars args) s' \<in> gamma_state_lift (sg (Inl (FunctionEntry p, c'')))"
     using adm routed_context_call[OF ce sm] by (simp add: admiss_exact_def)
 next
   fix cl dst pars args p cont c1 c2 s' t es
@@ -197,7 +197,7 @@ next
     and adm: "admiss_exact enterc cl c1 es c2"
     and tm: "t \<in> gamma_state_lift (sg (Inl (FunctionResult p, c2)))"
     and ces: "call_enter_store \<Gamma> gs g cl s' es"
-  show "combine_collect \<Gamma> gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
+  show "combine_collect gs dst s' t \<in> gamma_state_lift (sg (Inl (cont, c1)))"
     using adm tm routed_context_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed
 
@@ -242,7 +242,7 @@ qed
 
 subsection \<open>The context-indexed and source-level check reports\<close>
 
-definition analyse_report_ctx :: "(pp \<times> exp \<times> contextual_verdict) list" where
+definition analyse_report_ctx :: "(pp \<times> texp \<times> contextual_verdict) list" where
   "analyse_report_ctx = classify_checks_verdicts g analyse_result classify"
 
 definition analyse_report :: "check_report_entry list" where
@@ -264,12 +264,12 @@ text \<open>
 \<close>
 
 theorem analyse_report_ctx_proved_sound:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: texp
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
   shows "\<And>ctx s. s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
-           \<Longrightarrow> truthy (aval c s)"
+           \<Longrightarrow> truthy (teval c s)"
 proof -
   fix ctx s
   assume smem: "s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx"
@@ -283,16 +283,16 @@ proof -
     using mem unfolding analyse_report_ctx_def .
   have "classify c st = Check_Proved"
     using classify_checks_ctx_proved_sound[OF finE mem_unfold reach] .
-  thus "truthy (aval c s)" using classify_proved[OF _ sst] by blast
+  thus "truthy (teval c s)" using classify_proved[OF _ sst] by blast
 qed
 
 theorem analyse_report_ctx_refuted_sound:
-  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "store set" and startcontext :: 'c and v :: cfg_node and c :: texp
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, startcontext) \<in> vars"
     and s0_sound: "S0 \<subseteq> gamma_dg_base s0d s0g"
   shows "\<And>ctx s. s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx
-           \<Longrightarrow> \<not> truthy (aval c s)"
+           \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
   fix ctx s
   assume smem: "s \<in> activation_collect \<Gamma> gs (admiss_exact enterc) startcontext g S0 v ctx"
@@ -306,7 +306,7 @@ proof -
     using mem unfolding analyse_report_ctx_def .
   have "classify c st = Check_Refuted"
     using classify_checks_ctx_refuted_sound[OF finE mem_unfold reach] .
-  thus "\<not> truthy (aval c s)" using classify_refuted[OF _ sst] by blast
+  thus "\<not> truthy (teval c s)" using classify_refuted[OF _ sst] by blast
 qed
 
 end

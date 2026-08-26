@@ -71,7 +71,7 @@ lemma x1_comb_fwd_ok:
   using assms by (simp add: x1_calls_eval)
 
 lemma x1_node_sound:
-  "ltr_collect x1_gs (prog_cfg prog_main_name x1_prog) (cinit_stores x1_gs) v
+  "ltr_collect (prog_tyenv x1_prog) x1_gs (prog_cfg prog_main_name x1_prog) (cinit_stores x1_gs) v
      \<subseteq> \<lbrakk>case lookup_context (analyse_sign_result_for x1_gs x1_prog) v () of
             Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st\<rbrakk>"
   by (rule analyse_sign_result_node_sound_for
@@ -100,7 +100,7 @@ text \<open>
 \<close>
 
 corollary x1_certified_sound:
-  "ltr_collect x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))
+  "ltr_collect (prog_tyenv x1_prog) x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))
    \<le> \<lbrakk>x1_exit_env\<rbrakk>"
   unfolding x1_exit_env_def
   using x1_node_sound
@@ -110,17 +110,17 @@ definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"
 
 lemma x1_completed:
-  "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
-     (x1_s0((STR ''x'') := 1))"
+  "pcompletes (prog_tyenv x1_prog) x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
+     (x1_s0((STR ''x'') := 1)) rk"
   unfolding pcompletes_def
   apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
   apply (rule star.step)
    apply (rule pstep.Assign)
-  by simp
+  by (simp add: taval_syn_def opk_def prog_tyenv_def x1_prog_def default_tyenv_def)
 
 lemma x1_completed_run_collect:
   "x1_s0((STR ''x'') := 1)
-     \<in> ltr_collect x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))"
+     \<in> ltr_collect (prog_tyenv x1_prog) x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))"
 proof -
   have init: "x1_s0 \<in> cinit_stores x1_gs"
     by (simp add: x1_s0_def cinit_stores_def)
@@ -133,25 +133,27 @@ proof -
           split: if_splits)
 
   have run:
-    "star (pstep x1_gs (prog_table x1_prog)) (prog_main x1_prog, x1_s0, [])
-      (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [])"
+    "star (pstep (prog_tyenv x1_prog) x1_gs (prog_table x1_prog))
+      (prog_main x1_prog, x1_s0, [], proc_ret_kind (prog_table x1_prog) (STR ''main''))
+      (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [],
+       proc_ret_kind (prog_table x1_prog) (STR ''main''))"
     using x1_completed unfolding pcompletes_def .
   from source_completes_ltr_collect_exit[OF wf init run]
   show ?thesis unfolding prog_cfg_def .
 qed
 
 theorem x1_explicit_completed_run_covered:
-  "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
-      (x1_s0((STR ''x'') := 1))
+  "pcompletes (prog_tyenv x1_prog) x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
+      (x1_s0((STR ''x'') := 1)) rk
    \<and> x1_s0((STR ''x'') := 1) \<in> \<lbrakk>x1_exit_env\<rbrakk>"
 proof (rule conjI)
-  show "pcompletes x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
-      (x1_s0((STR ''x'') := 1))"
+  show "pcompletes (prog_tyenv x1_prog) x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
+      (x1_s0((STR ''x'') := 1)) rk"
     by (rule x1_completed)
 next
   have collect:
     "x1_s0((STR ''x'') := 1) \<in>
-      ltr_collect x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))"
+      ltr_collect (prog_tyenv x1_prog) x1_gs (prog_cfg (STR ''main'') x1_prog) (cinit_stores x1_gs) (cfg_exit (prog_cfg (STR ''main'') x1_prog))"
     using x1_completed_run_collect
     by (simp add: prog_cfg_def)
   show "x1_s0((STR ''x'') := 1) \<in> \<lbrakk>x1_exit_env\<rbrakk>"

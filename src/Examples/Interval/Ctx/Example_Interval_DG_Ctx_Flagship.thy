@@ -54,16 +54,16 @@ text \<open>The main context is \<open>[]\<close> (\<open>main\<close> is the ro
 definition twice_ctx_sol ::
   "(pp \<times> ivl list) set
      \<times> (pp \<times> ivl list + gk \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
-  "twice_ctx_sol = entry_state_sol twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+  "twice_ctx_sol = entry_state_sol twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
 
 lemma twice_ctx_terminates_c:
   "TD_side_warrowing_apinis_Interp_solve_c
-     (entry_state_eqs twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main)
+     (entry_state_eqs twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main)
      (cfg_exit twice_cfg, []) \<noteq> None"
   unfolding twice_cfg_def by eval
 
 lemma twice_ctx_terminates:
-  "entry_state_terminates twice_gs twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
+  "entry_state_terminates twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main"
   using twice_ctx_terminates_c[unfolded twice_cfg_def]
   by (rule entry_state_terminates_via_solve_c)
 
@@ -73,15 +73,19 @@ definition ctx_call1 :: "ivl list" where
   "ctx_call1 = entry_state_route twice_gs twice_is_bot_pred
                  (entry_state_entered twice_gs twice_is_bot_pred
                     (locals (snd twice_ctx_sol (Inl (Statement 2, []))))
-                    (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))
-                 (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])"
+                    (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
+                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])))
+                 (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
+                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3]))"
 
 definition ctx_call2 :: "ivl list" where
   "ctx_call2 = entry_state_route twice_gs twice_is_bot_pred
                  (entry_state_entered twice_gs twice_is_bot_pred
                     (locals (snd twice_ctx_sol (Inl (Statement 3, []))))
-                    (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))
-                 (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])"
+                    (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
+                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])))
+                 (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
+                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10]))"
 
 lemma ctx_call1_val: "ctx_call1 = [Ivl (Fin 3) (Fin 3)]"
   unfolding ctx_call1_def twice_ctx_sol_def twice_is_bot_pred_def by eval
@@ -170,11 +174,11 @@ definition twice_ctx_graph_config ::
       context_key = String.implode o (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       show_context = (\<lambda>ctx. concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
+        let sc = compiled_procedure_scope twice_gs (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -186,7 +190,7 @@ definition twice_ctx_graph_config ::
       show_global_key = (\<lambda>k. case k of Global \<Rightarrow> ''Global'' | Seed p ctx \<Rightarrow> ''Seed''),
       is_shared_global = (\<lambda>k. case k of Global \<Rightarrow> True | Seed _ _ \<Rightarrow> False),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
+      owner_of = String.explode o compiled_owner_of (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main,
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / context='' @ concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
@@ -196,7 +200,7 @@ definition twice_ctx_graph_config ::
 
 definition twice_ctx_contexts_for_pp :: "pp \<Rightarrow> ivl list list" where
   "twice_ctx_contexts_for_pp p =
-    (if compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main p = (STR ''main'')
+    (if compiled_owner_of (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main p = (STR ''main'')
      then [[]] else [ctx_call1, ctx_call2])"
 
 definition twice_ctx_local_graph_domain :: "(pp \<times> ivl list + gk) list" where
@@ -254,10 +258,12 @@ lemma twice_ctx_graph_enter_edges:
   "filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
     (analysis_graph_edges twice_ctx_graph) =
     [(LocalNode (Statement 2) [],
-      EnterEdge ''twice'' (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]),
+      EnterEdge ''twice'' (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
+                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])),
       LocalNode (FunctionEntry (STR ''twice'')) ctx_call1),
      (LocalNode (Statement 3) [],
-      EnterEdge ''twice'' (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]),
+      EnterEdge ''twice'' (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
+                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])),
       LocalNode (FunctionEntry (STR ''twice'')) ctx_call2)]" by eval
 
 lemma twice_ctx_graph_combine_edges:

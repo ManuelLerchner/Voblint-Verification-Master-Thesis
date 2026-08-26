@@ -25,6 +25,9 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     Example_LTR_Collect_Regression
     Example_Proc_Recursion_CFG
     Example_VIMP_Proc_Regression
+    (* MAX_INT + 1 wraps at I32: the machine semantics, not the unbounded
+       one, decides a check about it. *)
+    Example_Wraparound_Regression
 
     (* Sign *)
     Exec_Sign_DG_Run

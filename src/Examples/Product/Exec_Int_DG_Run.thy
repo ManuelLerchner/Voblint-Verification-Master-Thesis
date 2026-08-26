@@ -19,7 +19,8 @@ definition int_ex_pi :: proc_table where
   "int_ex_pi = prog_table int_ex_prog"
 
 definition gExI :: cfg where
-  "gExI = compile_prog int_ex_pi (prog_procs int_ex_prog) prog_main_name (prog_main int_ex_prog)"
+  "gExI = compile_prog (prog_tyenv int_ex_prog) int_ex_pi (prog_procs int_ex_prog)
+     prog_main_name (prog_main int_ex_prog)"
 
 text \<open>
   The Base construction routes the whole abstract state through the local

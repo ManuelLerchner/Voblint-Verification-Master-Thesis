@@ -45,6 +45,11 @@ text \<open>
 
 datatype typed_var = TV (tv_name: vname) (tv_kind: ikind)
 
+instance typed_var :: countable
+  by countable_datatype
+
+derive linorder typed_var
+
 definition tv_env :: "typed_var list \<Rightarrow> tyenv" where
   "tv_env tvs =
      (\<lambda>x. case map_of (map (\<lambda>tv. (tv_name tv, tv_kind tv)) tvs) x of
@@ -81,10 +86,22 @@ text \<open>
   exercised on agreeing kinds or on ill-typed expressions.
 \<close>
 
+text \<open>
+  \<open>kjoin\<close> combines the kinds two operands synthesize. Where both synthesize
+  one, that is C's usual arithmetic conversions (\<^const>\<open>usual_kind\<close>,
+  ISO/IEC 9899 6.3.1.8), not a preference for either position: a rule that took
+  the left operand's kind would make evaluation depend on operand order, so
+  \<open>u32 == i64\<close> and \<open>i64 == u32\<close> could disagree. \<open>None\<close> means the operand
+  constrains nothing -- a bare literal -- and contributes no kind.
+\<close>
+
 fun kjoin :: "ikind option \<Rightarrow> ikind option \<Rightarrow> ikind option" where
   "kjoin None r = r"
 | "kjoin l None = l"
-| "kjoin (Some a) (Some b) = Some a"
+| "kjoin (Some a) (Some b) = Some (usual_kind a b)"
+
+lemma kjoin_commute: "kjoin a b = kjoin b a"
+  by (cases a; cases b) (simp_all add: usual_kind_commute)
 
 fun esyn :: "tyenv \<Rightarrow> exp \<Rightarrow> ikind option" where
   "esyn \<Gamma> (N n) = None"
@@ -187,6 +204,15 @@ text \<open>
 
 definition taval_syn :: "tyenv \<Rightarrow> exp \<Rightarrow> store \<Rightarrow> int" where
   "taval_syn \<Gamma> e s = taval \<Gamma> (opk (esyn \<Gamma> e)) e s"
+
+text \<open>\<^const>\<open>taval_syn\<close> already lands in the kind it synthesizes, so
+  norming it there again changes nothing. This is the fact that lets a
+  conversion to an expression's own synthesized kind be dropped rather
+  than emitted.\<close>
+
+lemma ik_norm_taval_syn [simp]:
+  "ik_norm (opk (esyn \<Gamma> e)) (taval_syn \<Gamma> e s) = taval_syn \<Gamma> e s"
+  unfolding taval_syn_def by (rule ik_norm_id[OF taval_in_range])
 
 subsection \<open>Store typedness\<close>
 

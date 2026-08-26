@@ -1092,7 +1092,7 @@ lemma inv_times_congruence_ik_reductive:
 subsection \<open>Backward-domain interpretation\<close>
 
 global_interpretation congruence_backward_domain:
-    backward_domain_refined intersect_congruence aval_congruence congruence_tobool
+    backward_domain_refined intersect_congruence aval_congruence_t congruence_tobool
       inv_less_congruence inv_eq_congruence
       inv_plus_congruence_ik inv_minus_congruence_ik inv_times_congruence_ik
   defines
@@ -1109,11 +1109,10 @@ proof unfold_locales
   show "n : gamma (intersect_congruence a b)"
     using intersect_congruence_sound[OF h1 h2] by simp
 next
-  fix s :: store and e :: exp and \<Gamma> :: tyenv and ik :: ikind
-    and sigma :: "vname => congruence"
+  fix s :: store and e :: texp and sigma :: "vname => congruence"
   assume H: "\<forall>x. s x : gamma (sigma x)"
-  show "taval \<Gamma> ik e s : gamma (aval_congruence \<Gamma> ik e sigma)"
-    using aval_congruence_sound[of s sigma \<Gamma> ik e] H by simp
+  show "teval e s : gamma (aval_congruence_t e sigma)"
+    using aval_congruence_t_sound[of s sigma e] H by simp
 next
   fix n1 n2 :: int and a1 a2 :: congruence and result :: bool
   assume H1: "n1 : gamma a1"
@@ -1184,10 +1183,10 @@ next
      intersect_congruence a2 b2"
     by (rule intersect_congruence_mono)
 next
-  fix e :: exp and \<Gamma> :: tyenv and ik :: ikind and sigma1 sigma2 :: "vname => congruence"
+  fix e :: texp and sigma1 sigma2 :: "vname => congruence"
   assume "sigma1 <= sigma2"
-  then show "aval_congruence \<Gamma> ik e sigma1 <= aval_congruence \<Gamma> ik e sigma2"
-    by (rule aval_congruence_mono)
+  then show "aval_congruence_t e sigma1 <= aval_congruence_t e sigma2"
+    by (rule aval_congruence_t_mono)
 next
   fix x1 x2 y1 y2 :: congruence and result :: bool
   assume "x1 <= x2" and "y1 <= y2"
@@ -1269,14 +1268,13 @@ lemmas bfilter_congruence_st_commute =
 
 lemma afilter_congruence_mono:
   "a1 <= (a2 :: congruence) \<Longrightarrow> sigma1 <= sigma2 \<Longrightarrow>
-   afilter_congruence \<Gamma> ik e a1 sigma1 <= afilter_congruence \<Gamma> ik e a2 sigma2"
+   afilter_congruence e a1 sigma1 <= afilter_congruence e a2 sigma2"
   using congruence_backward_domain.afilter_mono
   by (simp add: afilter_congruence_def)
 
 lemma bfilter_congruence_mono:
   "sigma1 <= sigma2 \<Longrightarrow>
-   bfilter_congruence \<Gamma> b result sigma1 <=
-   bfilter_congruence \<Gamma> b result sigma2"
+   bfilter_congruence b result sigma1 <= bfilter_congruence b result sigma2"
   using congruence_backward_domain.bfilter_mono
   by (simp add: bfilter_congruence_def)
 end

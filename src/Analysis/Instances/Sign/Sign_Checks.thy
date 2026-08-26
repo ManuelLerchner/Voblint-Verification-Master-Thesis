@@ -18,8 +18,8 @@ text \<open>
   (\<open>sign_less_true\<close>/\<open>sign_less_false\<close>/\<open>sign_eq_true\<close>/\<open>sign_eq_false\<close>) and their
   \<^theory>\<open>Voblint_Analysis.Sign_Numeric_Queries\<close> interpretation of
   \<open>abstract_numeric_queries\<close> live in that theory. The Sign expression
-  evaluator \<open>aval_sign\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
-  Boolean recursion over \<^typ>\<open>exp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
+  evaluator \<open>aval_sign_t\<close> lives in \<^theory>\<open>Voblint_Analysis.Sign_Arithmetic\<close>. The
+  Boolean recursion over \<^typ>\<open>texp\<close> (\<open>Not\<close>, \<open>And\<close>, \<open>Or\<close>), the three-way
   classification, and the node-indexed bridge to \<^const>\<open>checks_proven\<close> come
   from interpreting \<open>abstract_check_domain\<close> (\<^theory>\<open>Voblint_Core.Abstract_Checks\<close>)
   once, below, reusing the numeric-query facts already proved sound in
@@ -29,313 +29,27 @@ text \<open>
 \<close>
 
 text \<open>
-  \<open>esyn default_tyenv\<close> always synthesizes \<open>I32\<close> (or nothing, and \<open>opk\<close> then
-  defaults to \<open>I32\<close> too): every declared kind is \<open>I32\<close>, and \<open>ik_promote I32 =
-  I32\<close>. Every \<open>elaborate default_tyenv ik e\<close> therefore elaborates \<open>e\<close> at
-  \<open>I32\<close> throughout, regardless of the outer \<open>ik\<close> -- \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/\<open>And\<close>/
-  \<open>Or\<close>'s own recomputed kind is always \<open>I32\<close> too, the same one \<open>Plus\<close>/
-  \<open>Minus\<close>/\<open>Times\<close> propagate unchanged.
+  The check layer evaluates the very \<^typ>\<open>texp\<close> the compiler recorded on the
+  check edge, so its soundness obligation is \<open>aval_sign_t_sound\<close> verbatim:
+  both sides speak \<^const>\<open>teval\<close>, with no pinned typing environment and no
+  residual gap between an unbounded and a wrapping interpretation.
 \<close>
-
-lemma esyn_default_tyenv_cases:
-  "esyn default_tyenv e = None \<or> esyn default_tyenv e = Some I32"
-  by (induction e) (auto simp: default_tyenv_def ik_promote_pins)
-
-lemma esyn_default_tyenv_I32 [simp]: "opk (esyn default_tyenv e) = I32"
-  using esyn_default_tyenv_cases[of e] by (auto simp: opk_def)
-
-lemma kjoin_default_tyenv_I32 [simp]:
-  "opk (kjoin (esyn default_tyenv e1) (esyn default_tyenv e2)) = I32"
-  using esyn_default_tyenv_cases[of e1] esyn_default_tyenv_cases[of e2]
-  by (auto simp: opk_def)
-
-text \<open>
-  \<open>sign_cast\<close> at a signed kind never needs \<^const>\<open>ik_norm\<close> to justify
-  membership: it is either \<open>bot\<close> (vacuous), the identity at \<open>SZero\<close> (\<open>0\<close>
-  needs no wraparound to fit any kind), or \<open>top\<close> (trivially sound). A raw,
-  un-normed concrete value therefore survives the cast too, not only its
-  \<open>ik_norm\<close>'d image.
-\<close>
-
-lemma sign_cast_signed_raw:
-  assumes "v \<in> gamma_sign a" and "ik_signed ik"
-  shows "v \<in> gamma_sign (sign_cast ik a)"
-proof (cases "is_bot a")
-  case True
-  with assms show ?thesis by (simp add: is_bot_sign is_bottom_sign_correct)
-next
-  case False
-  show ?thesis
-  proof (cases "a = SZero")
-    case True
-    with assms have "v = 0" by simp
-    with True show ?thesis by (simp add: sign_cast_def is_bot_sign is_bottom_sign_correct)
-  next
-    case False
-    with \<open>\<not> is_bot a\<close> \<open>ik_signed ik\<close> show ?thesis
-      by (simp add: sign_cast_def gamma_sign_top)
-  qed
-qed
-
-text \<open>
-  The same fact bundled with the \<open>SZero\<close>-implies-exactly-zero half, matching
-  \<open>sign_cast_signed_combine\<close>'s binary shape for a unary cast.
-\<close>
-
-lemma sign_cast_signed_agree:
-  assumes "v \<in> gamma_sign a" and "ik_signed ik"
-  shows "v \<in> gamma_sign (sign_cast ik a) \<and> (sign_cast ik a = SZero \<longrightarrow> v = 0)"
-proof (cases "is_bot a")
-  case True
-  with assms show ?thesis by (simp add: is_bot_sign is_bottom_sign_correct)
-next
-  case False
-  show ?thesis
-  proof (cases "a = SZero")
-    case True
-    with assms have "v = 0" by simp
-    with True show ?thesis by (simp add: sign_cast_def is_bot_sign is_bottom_sign_correct)
-  next
-    case False
-    with \<open>\<not> is_bot a\<close> \<open>ik_signed ik\<close> show ?thesis
-      by (simp add: sign_cast_def gamma_sign_top top_sign_def)
-  qed
-qed
-
-text \<open>
-  A binary combinator cast at \<open>I32\<close> after the fact: either it lands exactly
-  at \<open>SZero\<close> (forcing the concrete combined value to be exactly \<open>0\<close>,
-  immune to wraparound regardless of kind), or it widens to \<open>top\<close>
-  (trivially sound for any value at all).
-\<close>
-
-lemma sign_cast_signed_combine:
-  fixes op :: "sign \<Rightarrow> sign \<Rightarrow> sign" and cop :: "int \<Rightarrow> int \<Rightarrow> int"
-  assumes combine_sound: "\<And>i j p q. i \<in> gamma_sign p \<Longrightarrow> j \<in> gamma_sign q \<Longrightarrow> cop i j \<in> gamma_sign (op p q)"
-    and h1: "i \<in> gamma_sign p" and h2: "j \<in> gamma_sign q"
-  shows "cop i j \<in> gamma_sign (sign_cast I32 (op p q)) \<and>
-         (sign_cast I32 (op p q) = SZero \<longrightarrow> cop i j = 0)"
-proof -
-  have v: "cop i j \<in> gamma_sign (op p q)" using combine_sound[OF h1 h2] .
-  show ?thesis
-  proof (cases "is_bot (op p q)")
-    case True
-    with v show ?thesis by (simp add: is_bot_sign is_bottom_sign_correct)
-  next
-    case False
-    show ?thesis
-    proof (cases "op p q = SZero")
-      case True
-      with v have "cop i j = 0" by simp
-      with True show ?thesis by (simp add: sign_cast_def is_bot_sign is_bottom_sign_correct)
-    next
-      case False
-      with \<open>\<not> is_bot (op p q)\<close> show ?thesis
-        by (simp add: sign_cast_def gamma_sign_top top_sign_def)
-    qed
-  qed
-qed
-
-text \<open>
-  \<open>aval\<close>'s arithmetic is genuinely unbounded (no \<open>ik_norm\<close> truncation at any
-  node), while \<open>aval_sign_t\<close> casts at every arithmetic node. At \<open>I32\<close> (a
-  signed kind) the two evaluators agree exactly, not merely approximate one
-  another: every node's abstract result collapses to either an exact
-  \<open>SZero\<close> (forcing the underlying concrete value to be exactly \<open>0\<close>, immune
-  to wraparound) or \<open>STop\<close> (trivially sound for any value at all).
-\<close>
-
-lemma aval_sign_t_default_agree:
-  assumes H: "\<forall>x. s x \<in> gamma_sign (\<sigma> x)"
-  shows "aval e s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e) \<sigma>) \<and>
-         (aval_sign_t (elaborate default_tyenv I32 e) \<sigma> = SZero \<longrightarrow> aval e s = 0)"
-using H proof (induction e)
-  case (N n)
-  have v: "n \<in> gamma_sign (sign_of_int n)" by (rule sign_of_int_gamma)
-  show ?case using sign_cast_signed_agree[OF v, of I32] by simp
-next
-  case (V x)
-  from H have hx: "s x \<in> gamma_sign (\<sigma> x)" by simp
-  show ?case using sign_cast_signed_agree[OF hx, of I32] by simp
-next
-  case (Plus e1 e2)
-  from Plus.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from Plus.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  show ?case
-    using sign_cast_signed_combine[OF sign_plus_sound h1 h2] by simp
-next
-  case (Minus e1 e2)
-  from Minus.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from Minus.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  show ?case
-    using sign_cast_signed_combine[OF sign_minus_sound h1 h2] by simp
-next
-  case (Times e1 e2)
-  from Times.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from Times.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  show ?case
-    using sign_cast_signed_combine[OF sign_times_sound h1 h2] by simp
-next
-  case (Less e1 e2)
-  from Less.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from Less.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  let ?c1 = "aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>"
-  let ?c2 = "aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>"
-  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have shape: "aval_sign_t (elaborate default_tyenv I32 (Less e1 e2)) \<sigma> =
-      (if sign_lt ?c1 ?c2 = Some True then SPos
-       else if sign_lt ?c1 ?c2 = Some False then SZero
-       else SNonNeg)"
-    using nb1 nb2 by (simp add: kjoin_default_tyenv_I32 Let_def)
-  show ?case
-  proof (cases "sign_lt ?c1 ?c2")
-    case (Some b)
-    then show ?thesis
-      using sign_lt_sound[OF Some h1 h2] by (cases b) (simp_all add: shape)
-  next
-    case None
-    then show ?thesis by (auto simp: shape)
-  qed
-next
-  case (Eq e1 e2)
-  from Eq.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from Eq.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  let ?c1 = "aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>"
-  let ?c2 = "aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>"
-  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have shape: "aval_sign_t (elaborate default_tyenv I32 (exp.Eq e1 e2)) \<sigma> =
-      (if sign_eqb ?c1 ?c2 = Some True then SPos
-       else if sign_eqb ?c1 ?c2 = Some False then SZero
-       else SNonNeg)"
-    using nb1 nb2 by (simp add: kjoin_default_tyenv_I32 Let_def)
-  show ?case
-  proof (cases "sign_eqb ?c1 ?c2")
-    case (Some b)
-    then show ?thesis
-      using sign_eqb_sound[OF Some h1 h2] by (cases b) (simp_all add: shape)
-  next
-    case None
-    then show ?thesis by (auto simp: shape)
-  qed
-next
-  case (Not e)
-  from Not.IH[OF H] have h: "aval e s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e) \<sigma>)"
-    by auto
-  let ?c = "aval_sign_t (elaborate default_tyenv I32 e) \<sigma>"
-  have nb: "\<not> is_bot ?c" using h by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have shape: "aval_sign_t (elaborate default_tyenv I32 (exp.Not e)) \<sigma> =
-      (if sign_tobool ?c = Some True then SZero
-       else if sign_tobool ?c = Some False then SPos
-       else SNonNeg)"
-    using nb by (simp add: esyn_default_tyenv_I32)
-  show ?case
-  proof (cases "sign_tobool ?c")
-    case (Some b)
-    then show ?thesis
-      using sign_tobool_sound[OF Some h] by (cases b) (simp_all add: shape truthy_def)
-  next
-    case None
-    then show ?thesis by (auto simp: shape)
-  qed
-next
-  case (And e1 e2)
-  from And.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from And.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  let ?c1 = "aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>"
-  let ?c2 = "aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>"
-  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have shape: "aval_sign_t (elaborate default_tyenv I32 (And e1 e2)) \<sigma> =
-      (if sign_tobool ?c1 = Some False \<or> sign_tobool ?c2 = Some False then SZero
-       else if sign_tobool ?c1 = Some True \<and> sign_tobool ?c2 = Some True then SPos
-       else SNonNeg)"
-    using nb1 nb2 by (simp add: esyn_default_tyenv_I32)
-  show ?case
-  proof (cases "sign_tobool ?c1 = Some False \<or> sign_tobool ?c2 = Some False")
-    case True
-    then have "\<not> truthy (aval e1 s) \<or> \<not> truthy (aval e2 s)"
-      using sign_tobool_sound h1 h2 by fastforce
-    with True show ?thesis by (simp add: shape truthy_def)
-  next
-    case False
-    note and_outer_false = False
-    show ?thesis
-    proof (cases "sign_tobool ?c1 = Some True \<and> sign_tobool ?c2 = Some True")
-      case True
-      then have "truthy (aval e1 s) \<and> truthy (aval e2 s)"
-        using sign_tobool_sound h1 h2 by auto
-      with True and_outer_false show ?thesis by (simp add: shape truthy_def)
-    next
-      case False
-      show ?thesis by (simp add: shape)
-    qed
-  qed
-next
-  case (Or e1 e2)
-  from Or.IH[OF H] have h1: "aval e1 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>)"
-    by auto
-  from Or.IH[OF H] have h2: "aval e2 s \<in> gamma_sign (aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>)"
-    by auto
-  let ?c1 = "aval_sign_t (elaborate default_tyenv I32 e1) \<sigma>"
-  let ?c2 = "aval_sign_t (elaborate default_tyenv I32 e2) \<sigma>"
-  have nb1: "\<not> is_bot ?c1" using h1 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have nb2: "\<not> is_bot ?c2" using h2 by (auto simp: is_bot_sign is_bottom_sign_correct)
-  have shape: "aval_sign_t (elaborate default_tyenv I32 (Or e1 e2)) \<sigma> =
-      (if sign_tobool ?c1 = Some True \<or> sign_tobool ?c2 = Some True then SPos
-       else if sign_tobool ?c1 = Some False \<and> sign_tobool ?c2 = Some False then SZero
-       else SNonNeg)"
-    using nb1 nb2 by (simp add: esyn_default_tyenv_I32)
-  show ?case
-  proof (cases "sign_tobool ?c1 = Some True \<or> sign_tobool ?c2 = Some True")
-    case True
-    then have "truthy (aval e1 s) \<or> truthy (aval e2 s)"
-      using sign_tobool_sound h1 h2 by fastforce
-    with True show ?thesis by (simp add: shape truthy_def)
-  next
-    case False
-    note or_outer_false = False
-    show ?thesis
-    proof (cases "sign_tobool ?c1 = Some False \<and> sign_tobool ?c2 = Some False")
-      case True
-      then have "\<not> truthy (aval e1 s) \<and> \<not> truthy (aval e2 s)"
-        using sign_tobool_sound h1 h2 by auto
-      with True or_outer_false show ?thesis by (simp add: shape truthy_def)
-    next
-      case False
-      show ?thesis by (simp add: shape)
-    qed
-  qed
-qed
 
 global_interpretation sign_check_domain:
   abstract_check_domain gamma_sign sign_less_true sign_less_false sign_eq_true sign_eq_false
-    gamma_state "aval_sign default_tyenv I32"
+    gamma_state aval_sign_t
   defines
     sign_check_true = sign_check_domain.check_true
     and sign_check_false = sign_check_domain.check_false
     and sign_classify_check = sign_check_domain.classify_check
     and sign_checks_proven = sign_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "sign abs_state"
+  fix s :: store and e :: texp and \<sigma> :: "sign abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
   then have H: "\<forall>x. s x \<in> gamma_sign (\<sigma> x)" by simp
-  then show "aval e s \<in> gamma_sign (aval_sign default_tyenv I32 e \<sigma>)"
-    using aval_sign_t_default_agree[OF H] by (simp add: aval_sign_def)
+  then show "teval e s \<in> gamma_sign (aval_sign_t e \<sigma>)"
+    by (rule aval_sign_t_sound)
 qed
 
 text \<open>
@@ -376,37 +90,31 @@ context
     and Pi :: proc_table and ps :: "pname list" and mnm :: pname and main :: com
   assumes solves: "sctx_terminates gs \<Gamma> is_bot_pred Pi ps mnm main"
     and exact: "\<And>s. is_bot_pred s = is_bot_state (fun_of_resolved_st_q_for gs s)"
-    and entry_cov: "(cfg_entry (compile_prog Pi ps mnm main), ()) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
+    and entry_cov: "(cfg_entry (compile_prog \<Gamma> Pi ps mnm main), ()) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
-                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog Pi ps mnm main)
+                   \<Longrightarrow> (u, a, v) \<in> intra (compile_prog \<Gamma> Pi ps mnm main)
                    \<Longrightarrow> (v, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and call_fwd_ok: "\<And>u ctx dst pars args p cont.
         (u, ctx) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog \<Gamma> Pi ps mnm main)
         \<Longrightarrow> (FunctionEntry p, ()) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
     and comb_fwd_ok: "\<And>cl c1 dst pars args p cont.
         (cl, c1) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps mnm main)
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog \<Gamma> Pi ps mnm main)
         \<Longrightarrow> (cont, c1) \<in> fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
 begin
 
-text \<open>
-  @{thm [source] base_dg_spec_sound}'s third premise, \<open>ret_ok: (\<And>x v. ik_norm (\<Gamma> x) v = v)\<close>,
-  is unresolved below -- the same pre-existing well-typedness gap flagged in
-  \<open>Sign_Ctx_None_Sound.sctx_dg_base\<close>.
-\<close>
-interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs \<Gamma>" gamma_dg_base gs \<Gamma>
+interpretation sctx_dg_base: sound_dg_spec "sctx_abs_spec gs" gamma_dg_base gs
   unfolding sctx_abs_spec_def
-  apply (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
-  sorry
+  by (rule base_dg_spec_sound[OF sign_is_sound_transfer_for is_bot_state_gamma_state_empty])
 
-interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs \<Gamma>" gs \<Gamma>
-    "compile_prog Pi ps mnm main" Global route_unit
+interpretation sctx_adapter: dg_analysis_adapter enterc_unit "sctx_abs_spec gs" gs \<Gamma>
+    "compile_prog \<Gamma> Pi ps mnm main" Global route_unit
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)"
     "sctx_sigma_abs gs \<Gamma> is_bot_pred Pi ps mnm main" "fst (sctx_sol gs \<Gamma> is_bot_pred Pi ps mnm main)"
-    "(cfg_exit (compile_prog Pi ps mnm main), ())" "sctx_sg gs \<Gamma> is_bot_pred Pi ps mnm main"
+    "(cfg_exit (compile_prog \<Gamma> Pi ps mnm main), ())" "sctx_sg gs \<Gamma> is_bot_pred Pi ps mnm main"
     Seed sign_classify_check
 proof (unfold_locales, goal_cases FinE PP SgCov SgUncov Fwd FinC SeedKey ResolveSound
     RouteEnterc CallFwd CombFwd EnterAgree ClProved ClRefuted)
@@ -455,8 +163,8 @@ next
   case (EnterAgree cl s es dst pars args p cont)
   note ces = EnterAgree(1) and ce = EnterAgree(2)
   obtain dst' pars' args' p' cont' where
-      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog Pi ps mnm main)"
-    and es_eq: "es = call_enter \<Gamma> gs (CallEdge dst' pars' args') s"
+      ce': "(cl, CallEdge dst' pars' args', FunctionEntry p', cont') \<in> calls (compile_prog \<Gamma> Pi ps mnm main)"
+    and es_eq: "es = call_enter gs (CallEdge dst' pars' args') s"
     using ces unfolding call_enter_store_def by blast
   have "CallEdge dst' pars' args' = CallEdge dst pars args"
     using compile_prog_calls_source_unique[OF ce' ce] by simp
@@ -470,8 +178,9 @@ next
 qed
 
 text \<open>
-  The two generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once and for
-  all, re-exported here so a caller cites them without naming the interpretation.
+  The two generic soundness corollaries \<^locale>\<open>dg_analysis_adapter\<close> derives once
+  and for all, re-exported here so a caller cites them without naming the
+  interpretation.
 \<close>
 
 lemmas sctx_report_ctx_proved_sound = sctx_adapter.analyse_report_ctx_proved_sound
@@ -511,29 +220,27 @@ subsection \<open>Executable classification tests\<close>
 
 text \<open>One state per test, built as an override of an otherwise-unconstrained
   (\<open>STop\<close>) environment, so each test exercises exactly the comparison it names.
+  Each guard is written as the elaborated \<^typ>\<open>texp\<close> the compiler records on
+  a check edge, so the pin says exactly which kinds the classification reads.
 
-  Every check below that reads a plain \<open>SPos\<close>/\<open>SNonNeg\<close> variable now resolves to
-  \<open>Check_Unknown\<close> rather than the \<open>Check_Proved\<close>/\<open>Check_Refuted\<close> it demonstrated before
-  \<open>aval_sign\<close> gained ikind-aware casting: sign carries no magnitude, so an unbounded
-  \<open>SPos\<close>/\<open>SNonNeg\<close> value genuinely cannot be shown to fit inside \<open>I32\<close>'s range at cast
-  time -- @{const sign_cast} widens to \<open>STop\<close> for any signed target other than an exact
-  \<open>SZero\<close>, and \<open>default_tyenv\<close>/\<open>I32\<close> is the only concrete instantiation this interpretation
-  can supply -- the same gap flagged at the \<open>sign_check_domain\<close> soundness obligation
-  above, now visible in these executable witnesses too.\<close>
+  A variable read performs no conversion, so a guard reads the declared
+  \<open>SPos\<close>/\<open>SNonNeg\<close> itself. Sign carries no magnitude, but none of these
+  comparisons needs one: they turn on the sign alone, which is exactly what
+  the domain tracks.\<close>
 
 definition test_env_pos :: "sign abs_state" where
   "test_env_pos = (\<lambda>_. STop)((STR ''x'') := SPos)"
 
 lemma sign_classify_less_proved:
-  "sign_classify_check (Less (N 0) (V (STR ''x''))) test_env_pos = Check_Unknown"
+  "sign_classify_check (TLess (TN I32 0) (TVar I32 (STR ''x''))) test_env_pos = Check_Proved"
   unfolding test_env_pos_def by eval
 
 lemma sign_classify_less_refuted:
-  "sign_classify_check (Less (V (STR ''x'')) (N 0)) test_env_pos = Check_Unknown"
+  "sign_classify_check (TLess (TVar I32 (STR ''x'')) (TN I32 0)) test_env_pos = Check_Refuted"
   unfolding test_env_pos_def by eval
 
 lemma sign_classify_eq_unknown:
-  "sign_classify_check (Eq (V (STR ''x'')) (N 1)) test_env_pos = Check_Unknown"
+  "sign_classify_check (TEq (TVar I32 (STR ''x'')) (TN I32 1)) test_env_pos = Check_Unknown"
   unfolding test_env_pos_def by eval
 
 text \<open>Negation: \<open>!(x < 0)\<close> is provable under \<open>SNonNeg\<close>, going through
@@ -544,7 +251,8 @@ definition test_env_nonneg :: "sign abs_state" where
   "test_env_nonneg = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
 
 lemma sign_classify_not_proved:
-  "sign_classify_check (Not (Less (V (STR ''x'')) (N 0))) test_env_nonneg = Check_Unknown"
+  "sign_classify_check (TNot (TLess (TVar I32 (STR ''x'')) (TN I32 0))) test_env_nonneg
+     = Check_Proved"
   unfolding test_env_nonneg_def by eval
 
 text \<open>Nested \<open>And\<close>/\<open>Or\<close>: proved through the \<open>And\<close> branch alone, and unknown
@@ -555,8 +263,10 @@ definition test_env_nested_proved :: "sign abs_state" where
 
 lemma sign_classify_nested_proved:
   "sign_classify_check
-     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
-     test_env_nested_proved = Check_Unknown"
+     (TOr (TAnd (TLess (TN I32 0) (TVar I32 (STR ''x'')))
+                (TLess (TN I32 0) (TVar I32 (STR ''y''))))
+          (TEq (TVar I32 (STR ''z'')) (TN I32 1)))
+     test_env_nested_proved = Check_Proved"
   unfolding test_env_nested_proved_def by eval
 
 definition test_env_nested_unknown :: "sign abs_state" where
@@ -564,11 +274,12 @@ definition test_env_nested_unknown :: "sign abs_state" where
 
 lemma sign_classify_nested_unknown:
   "sign_classify_check
-     (Or (And (Less (N 0) (V (STR ''x''))) (Less (N 0) (V (STR ''y'')))) (Eq (V (STR ''z'')) (N 1)))
+     (TOr (TAnd (TLess (TN I32 0) (TVar I32 (STR ''x'')))
+                (TLess (TN I32 0) (TVar I32 (STR ''y''))))
+          (TEq (TVar I32 (STR ''z'')) (TN I32 1)))
      test_env_nested_unknown = Check_Unknown"
   unfolding test_env_nested_unknown_def by eval
 
-subsection \<open>Solved-result table\<close>
 subsection \<open>Solved-result table\<close>
 
 text \<open>
@@ -583,14 +294,14 @@ text \<open>
 \<close>
 
 definition analyse_sign_result_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
-  "analyse_sign_result_for gs \<Gamma> p = analyse_sign_ctx_result_for gs \<Gamma> prog_main_name p"
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result_for gs p = analyse_sign_ctx_result_for gs prog_main_name p"
 
 text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, matching
   \<open>analyse_sign_report\<close>'s shape.\<close>
 
 definition analyse_sign_result :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
-  "analyse_sign_result p = analyse_sign_result_for (declared_global p) (prog_tyenv p) p"
+  "analyse_sign_result p = analyse_sign_result_for (declared_global p) p"
 
 subsection \<open>Solved-result table: per-origin update rule\<close>
 
@@ -608,13 +319,13 @@ text \<open>
 \<close>
 
 definition analyse_sign_result_per_origin_for ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
-  "analyse_sign_result_per_origin_for gs \<Gamma> p =
-     analyse_sign_ctx_result_per_origin_for gs \<Gamma> prog_main_name p"
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
+  "analyse_sign_result_per_origin_for gs p =
+     analyse_sign_ctx_result_per_origin_for gs prog_main_name p"
 
 definition analyse_sign_result_per_origin :: "imp_prog \<Rightarrow> (unit, sign abs_state) analysis_result" where
   "analyse_sign_result_per_origin p =
-     analyse_sign_result_per_origin_for (declared_global p) (prog_tyenv p) p"
+     analyse_sign_result_per_origin_for (declared_global p) p"
 
 subsection \<open>Whole-program check report: the native D/G runtime API\<close>
 
@@ -640,9 +351,9 @@ text \<open>
   across every check in the report rather than repeated per check.
 \<close>
 
-definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_sign_report_for gs \<Gamma> p =
-     analysis_surface.report (analyse_sign_result_for gs \<Gamma>) bot sign_classify_check p"
+definition analyse_sign_report_for :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> check_report_entry list" where
+  "analyse_sign_report_for gs p =
+     analysis_surface.report (analyse_sign_result_for gs) bot sign_classify_check p"
 
 text \<open>
   Convenience instance at \<^const>\<open>declared_global\<close> \<open>p\<close>, the classifier every
@@ -650,7 +361,7 @@ text \<open>
 \<close>
 
 definition analyse_sign_report :: "imp_prog \<Rightarrow> check_report_entry list" where
-  "analyse_sign_report p = analyse_sign_report_for (declared_global p) (prog_tyenv p) p"
+  "analyse_sign_report p = analyse_sign_report_for (declared_global p) p"
 
 subsection \<open>Solver-choice variant report: per-origin update rule\<close>
 
@@ -706,9 +417,9 @@ text \<open>
 \<close>
 
 definition analyse_sign_report_for_with_state ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
-  "analyse_sign_report_for_with_state gs \<Gamma> p =
-     (let r = analyse_sign_result_for gs \<Gamma> p
+    "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
+  "analyse_sign_report_for_with_state gs p =
+     (let r = analyse_sign_result_for gs p
       in classify_checks_with_state (prog_cfg prog_main_name p)
            (\<lambda>v. case lookup_context r v () of
                   Unreachable \<Rightarrow> (True, bot)
@@ -719,9 +430,9 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
   \<open>analyse_sign_report\<close>'s shape.\<close>
 
 definition analyse_sign_report_with_state ::
-    "imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
+    "imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> (vname \<Rightarrow> sign)) list" where
   "analyse_sign_report_with_state p =
-     analyse_sign_report_for_with_state (declared_global p) (prog_tyenv p) p"
+     analyse_sign_report_for_with_state (declared_global p) p"
 
 end
 

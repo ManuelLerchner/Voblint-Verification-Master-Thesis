@@ -182,8 +182,8 @@ datatype abstract_value =
   SignValue sign | IntervalValue ivl | IntDomValue int_dom | ParityValue parity
 
 definition tag_states ::
-    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 's abs_state) list
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
+    "('s \<Rightarrow> abstract_value) \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> 's abs_state) list
+       \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
   "tag_states tag = map (\<lambda>(u, c, r, unreachable, s). (u, c, r, unreachable, tag \<circ> s))"
 
 text \<open>
@@ -200,7 +200,7 @@ text \<open>
 
 fun analyse_with_state ::
     "analysis_domain \<Rightarrow> solver_choice \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option" where
+       \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option" where
   "analyse_with_state Sign_Analysis Solver_Join p = Some (tag_states SignValue (analyse_sign_report_with_state p))"
 | "analyse_with_state Sign_Analysis Solver_PerOrigin p = Some (tag_states SignValue (sign_per_origin.report_with_state p))"
 | "analyse_with_state Sign_Analysis Solver_Warrow p = None"
@@ -233,7 +233,7 @@ text \<open>
 \<close>
 
 fun analyse_with_state_default ::
-    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
+    "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list" where
   "analyse_with_state_default Sign_Analysis p = tag_states SignValue (analyse_sign_report_with_state p)"
 | "analyse_with_state_default Interval_Analysis p = tag_states IntervalValue (analyse_interval_td_report_with_state p)"
 | "analyse_with_state_default Int_Analysis p = tag_states IntDomValue (analyse_int_report_with_state p)"
@@ -278,7 +278,7 @@ text \<open>
 \<close>
 
 corollary analyse_interval_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
@@ -294,13 +294,13 @@ corollary analyse_interval_proved_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Interval_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           truthy (teval c s)"
   by (rule analyse_interval_td_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_interval_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Interval_Ctx_None_Sound.ictx_terminates_prog_warrow (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
@@ -316,8 +316,8 @@ corollary analyse_interval_refuted_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Interval_Ctx_None_Sound.ictx_sol_prog_warrow (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Interval_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> truthy (teval c s)"
   by (rule analyse_interval_td_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -334,7 +334,7 @@ text \<open>
 \<close>
 
 corollary analyse_sign_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
@@ -350,12 +350,12 @@ corollary analyse_sign_proved_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. truthy (teval c s)"
   by (rule analyse_sign_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_sign_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "sctx_terminates_prog (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
@@ -371,7 +371,7 @@ corollary analyse_sign_refuted_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (sctx_sol_prog (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Sign_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v. \<not> truthy (teval c s)"
   by (rule analyse_sign_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -392,7 +392,7 @@ text \<open>
 \<close>
 
 corollary analyse_int_proved_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
@@ -408,13 +408,13 @@ corollary analyse_int_proved_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Proved) \<in> set (analyse Int_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           truthy (teval c s)"
   by (rule analyse_int_report_sound_proved
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
 corollary analyse_int_refuted_sound:
-  fixes p :: imp_prog and v :: pp and c :: exp
+  fixes p :: imp_prog and v :: pp and c :: texp
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
       and solve: "Int_Ctx_None_Sound.ictx_terminates_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p"
       and entry_cov: "(cfg_entry (prog_cfg prog_main_name p), ()) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
@@ -430,8 +430,8 @@ corollary analyse_int_refuted_sound:
            \<Longrightarrow> (cl, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg prog_main_name p)
            \<Longrightarrow> (k, c1) \<in> fst (Int_Ctx_None_Sound.ictx_sol_prog_warrow Refine_Fixpoint (declared_global p) prog_main_name p)"
       and mem: "(v, c, Check_Refuted) \<in> set (analyse Int_Analysis p)"
-  shows "\<forall>s \<in> ltr_collect (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
-           \<not> truthy (aval c s)"
+  shows "\<forall>s \<in> ltr_collect (prog_tyenv p) (declared_global p) (prog_cfg prog_main_name p) (cinit_stores (declared_global p)) v.
+           \<not> truthy (teval c s)"
   by (rule analyse_int_report_sound_refuted
         [OF wf solve entry_cov fwd_ok call_fwd_ok comb_fwd_ok mem[unfolded analyse.simps]])
 
@@ -486,7 +486,7 @@ text \<open>
   their report shape, rather than re-deciding legality or re-implementing
   a domain/solver/context case split of their own. None of the three
   existing report shapes below is replaced by a fourth, artificially
-  unified one: \<open>check_report_entry list\<close>, \<open>(pp \<times> exp \<times> contextual_verdict)
+  unified one: \<open>check_report_entry list\<close>, \<open>(pp \<times> texp \<times> contextual_verdict)
   list\<close>, and the \<^typ>\<open>abstract_value abs_state\<close>-carrying report genuinely
   differ, and forcing one shape on all three would either lose the
   \<^const>\<open>Dead\<close> distinction the contextual report exists for, or fabricate a
@@ -518,7 +518,7 @@ text \<open>
 \<close>
 
 definition analyse_config_ctx ::
-    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list option" where
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list option" where
   "analyse_config_ctx cfg p =
      (case resolve_analysis_config cfg of
         None \<Rightarrow> None
@@ -561,7 +561,7 @@ text \<open>
 \<close>
 
 fun analyse_config_with_state ::
-    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
+    "analysis_config \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> check_result \<times> bool \<times> abstract_value abs_state) list option"
 where
   "analyse_config_with_state cfg p =
      (case resolve_analysis_config cfg of
@@ -963,7 +963,11 @@ text \<open>
 
 
 code_identifier
-  code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
+  code_module VIMP_Ikind \<rightharpoonup> (OCaml) Core
+| code_module Bit_Operations \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Typing \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Elaborated \<rightharpoonup> (OCaml) Core
+| code_module VIMP_Notation \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Expr \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Proc \<rightharpoonup> (OCaml) Core
 | code_module VIMP_Special \<rightharpoonup> (OCaml) Core

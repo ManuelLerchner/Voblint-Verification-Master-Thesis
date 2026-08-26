@@ -586,6 +586,36 @@ def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):
     assert 'fillcolor="#cdebc5"' in dot, "no proved check shaded"
 
 
+def test_call_string_report_annotates_from_the_requested_keying(tmp_path):
+    """The source view's annotations must come from the configuration the run
+    asked for. This program's entry states are unbounded, so keying contexts by
+    them does not converge, while the bounded call string does -- reading the
+    annotations off an entry-state solve would hang a run whose own keying
+    answers in a moment, and would report a different abstraction's verdicts
+    even where it happens to terminate.
+    """
+    if not VOBLINT.exists():
+        pytest.skip("cli/voblint not built -- run `pixi run cli-build`")
+    out = tmp_path / "cs"
+    src = (
+        REPO_ROOT / "tests/regression/17-call-string/precision"
+        "/13-depth2_unbounded_context_chain_wraps_to_zero.vimp"
+    )
+    # A wall-clock bound rather than voblint's own --timeout: the point is that
+    # this configuration converges, so a regression must surface as a failure
+    # here instead of as a report the analyzer quietly declined to finish.
+    subprocess.run(
+        [str(VOBLINT), "--analysis", "interval", "--context", "call-string",
+         "--context-depth", "2", "--html-out", str(out), str(src)],
+        capture_output=True, text=True, check=True, timeout=60,
+    )
+    texts = [
+        w.findtext("text", "")
+        for w in (ET.parse(d).getroot() for d in (out / "warn").glob("*.xml"))
+    ]
+    assert any("will succeed" in t for t in texts), texts
+
+
 def test_rerun_clears_the_previous_programs_nodes(tmp_path):
     """A stale node document is reachable from the frontend and describes a
     different CFG, so a second run must not leave one behind."""

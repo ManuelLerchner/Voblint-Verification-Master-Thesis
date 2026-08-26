@@ -29,12 +29,12 @@ definition ltr_F :: "tyenv \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow
   "ltr_F \<Gamma> gs g S T =
       {Root [(cfg_entry g, s)] | s. s \<in> S}
     \<union> {extend t (v, s') | t a v s'.
-          t \<in> T \<and> (sink_node t, a, v) \<in> intra g \<and> s' \<in> edge_step \<Gamma> a (sink_store t)}
-    \<union> {Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))]
+          t \<in> T \<and> (sink_node t, a, v) \<in> intra g \<and> s' \<in> edge_step a (sink_store t)}
+    \<union> {Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
           | caller dst pars args p cont.
           caller \<in> T \<and> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g}
     \<union> {Resume caller callee
-          (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))])
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
           | callee caller p dst pars args cont.
           callee \<in> T \<and> caller_of callee = Some caller
           \<and> sink_node callee = FunctionResult p
@@ -87,14 +87,14 @@ proof (rule subsetI)
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (call caller dst pars args p cont)
-    have "Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))]
+    have "Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))]
             \<in> ltr_F \<Gamma> gs g S (lfp (ltr_F \<Gamma> gs g S))"
       unfolding ltr_F_def[of \<Gamma> gs g S "lfp (ltr_F \<Gamma> gs g S)"] using call.hyps call.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
   next
     case (ret callee caller p dst pars args cont)
     have "Resume caller callee
-            (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))])
+            (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
             \<in> ltr_F \<Gamma> gs g S (lfp (ltr_F \<Gamma> gs g S))"
       unfolding ltr_F_def[of \<Gamma> gs g S "lfp (ltr_F \<Gamma> gs g S)"] using ret.hyps ret.IH by blast
     then show ?case by (rule ltr_F_lfp_fold)
@@ -196,7 +196,7 @@ text \<open>
 lemma ltr_collect_intra_step:
   assumes s: "s \<in> ltr_collect \<Gamma> gs g S u"
     and e: "(u, a, v) \<in> intra g"
-    and st: "s' \<in> edge_step \<Gamma> a s"
+    and st: "s' \<in> edge_step a s"
   shows "s' \<in> ltr_collect \<Gamma> gs g S v"
 proof -
   from s obtain t where t: "t \<in> valid_ltr \<Gamma> gs g S" and n: "sink_node t = u" and w: "sink_store t = s"
@@ -209,7 +209,7 @@ qed
 text \<open>The whole-path form: an \<^const>\<open>intra_path\<close> transports a collected store to its endpoint.\<close>
 
 lemma ltr_collect_intra_path_pair:
-  "intra_path \<Gamma> g x y \<Longrightarrow> snd x \<in> ltr_collect \<Gamma> gs g S (fst x) \<Longrightarrow> snd y \<in> ltr_collect \<Gamma> gs g S (fst y)"
+  "intra_path g x y \<Longrightarrow> snd x \<in> ltr_collect \<Gamma> gs g S (fst x) \<Longrightarrow> snd y \<in> ltr_collect \<Gamma> gs g S (fst y)"
 proof (induction rule: star.induct)
   case (refl x)
   then show ?case by simp
@@ -218,7 +218,7 @@ next
   obtain u s where x: "x = (u, s)" by (cases x)
   obtain w s1 where y: "y = (w, s1)" by (cases y)
   from step.hyps(1) x y obtain a where
-    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step \<Gamma> a s"
+    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
     by (auto elim: cfg_intra_stepE)
   have "s1 \<in> ltr_collect \<Gamma> gs g S w"
     using step.prems x by (auto intro: ltr_collect_intra_step[OF _ e st])
@@ -226,7 +226,7 @@ next
 qed
 
 lemma ltr_collect_intra_path:
-  assumes "intra_path \<Gamma> g (u, s) (v, s')" and "s \<in> ltr_collect \<Gamma> gs g S u"
+  assumes "intra_path g (u, s) (v, s')" and "s \<in> ltr_collect \<Gamma> gs g S u"
   shows "s' \<in> ltr_collect \<Gamma> gs g S v"
   using ltr_collect_intra_path_pair[OF assms(1)] assms(2) by simp
 
@@ -238,7 +238,7 @@ text \<open>
 \<close>
 
 lemma valid_ltr_intra_path_extend_pair:
-  "intra_path \<Gamma> g x y \<Longrightarrow> t \<in> valid_ltr \<Gamma> gs g S \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
+  "intra_path g x y \<Longrightarrow> t \<in> valid_ltr \<Gamma> gs g S \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
    \<Longrightarrow> \<exists>t'. t' \<in> valid_ltr \<Gamma> gs g S \<and> sink_node t' = fst y \<and> sink_store t' = snd y
             \<and> caller_of t' = caller_of t \<and> fst (hd (path t')) = fst (hd (path t))"
 proof (induction arbitrary: t rule: star.induct)
@@ -249,7 +249,7 @@ next
   obtain u s where x: "x = (u, s)" by (cases x)
   obtain w s1 where y: "y = (w, s1)" by (cases y)
   from step.hyps(1) x y obtain a where
-    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step \<Gamma> a s"
+    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
     by (auto elim: cfg_intra_stepE)
   have ext: "extend t (w, s1) \<in> valid_ltr \<Gamma> gs g S"
     by (rule valid_ltr.intra[OF step.prems(1)])
@@ -264,7 +264,7 @@ next
 qed
 
 lemma valid_ltr_intra_path_extend:
-  assumes p: "intra_path \<Gamma> g (sink_node t, sink_store t) (v, s')"
+  assumes p: "intra_path g (sink_node t, sink_store t) (v, s')"
     and t: "t \<in> valid_ltr \<Gamma> gs g S"
   obtains t' where "t' \<in> valid_ltr \<Gamma> gs g S" "sink_node t' = v" "sink_store t' = s'"
     "caller_of t' = caller_of t" "fst (hd (path t')) = fst (hd (path t))"
@@ -285,7 +285,7 @@ text \<open>(2) Intra propagation: a collected source state and a successful \<^
   produce a collected target state.\<close>
 lemma ltr_collect_intra:
   assumes "s \<in> ltr_collect \<Gamma> gs g S u" and "(u, a, v) \<in> intra g"
-    and "s' \<in> edge_step \<Gamma> a s"
+    and "s' \<in> edge_step a s"
   shows "s' \<in> ltr_collect \<Gamma> gs g S v"
 proof -
   from assms(1) obtain t where t: "t \<in> valid_ltr \<Gamma> gs g S" "sink_node t = u" "sink_store t = s"
@@ -300,11 +300,11 @@ text \<open>(3) Call entry: a collected call-site state produces the entered sta
 lemma ltr_collect_call:
   assumes "s \<in> ltr_collect \<Gamma> gs g S u"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "call_enter \<Gamma> gs (CallEdge dst pars args) s \<in> ltr_collect \<Gamma> gs g S (FunctionEntry p)"
+  shows "call_enter gs (CallEdge dst pars args) s \<in> ltr_collect \<Gamma> gs g S (FunctionEntry p)"
 proof -
   from assms(1) obtain t where t: "t \<in> valid_ltr \<Gamma> gs g S" "sink_node t = u" "sink_store t = s"
     by (rule ltr_collect_E)
-  have "Call t [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr \<Gamma> gs g S"
+  have "Call t [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store t))] \<in> valid_ltr \<Gamma> gs g S"
     by (rule valid_ltr.call[OF t(1)]) (use assms(2) t(2) in simp)
   from ltr_collect_I[OF this] show ?thesis using t(3) by simp
 qed
@@ -313,7 +313,7 @@ text \<open>(4) Procedure result: \<^const>\<open>EA_Ret\<close> propagation col
   \<^const>\<open>FunctionResult\<close> through the ordinary intra rule --- a specialisation of (2).\<close>
 lemma ltr_collect_result_via_ret:
   assumes "s \<in> ltr_collect \<Gamma> gs g S u" and "(u, EA_Ret e p rk, FunctionResult p) \<in> intra g"
-    and "s' \<in> edge_step \<Gamma> (EA_Ret e p rk) s"
+    and "s' \<in> edge_step (EA_Ret e p rk) s"
   shows "s' \<in> ltr_collect \<Gamma> gs g S (FunctionResult p)"
   by (rule ltr_collect_intra[OF assms])
 
@@ -323,10 +323,10 @@ lemma ltr_collect_resume:
   assumes "callee \<in> valid_ltr \<Gamma> gs g S" and "caller_of callee = Some caller"
     and "sink_node callee = FunctionResult p"
     and "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee) \<in> ltr_collect \<Gamma> gs g S cont"
+  shows "combine_collect gs dst (sink_store caller) (sink_store callee) \<in> ltr_collect \<Gamma> gs g S cont"
 proof -
   have "Resume caller callee
-          (path caller @ [(cont, combine_collect \<Gamma> gs dst (sink_store caller) (sink_store callee))])
+          (path caller @ [(cont, combine_collect gs dst (sink_store caller) (sink_store callee))])
         \<in> valid_ltr \<Gamma> gs g S"
     by (rule valid_ltr.ret[OF assms])
   from ltr_collect_I[OF this] show ?thesis by (simp add: sink_node_def sink_store_def)
@@ -341,9 +341,9 @@ lemma ltr_collect_ctx_intra_pres:
 text \<open>(7) Context transition under call: the child activation receives exactly the context
   produced by the configured enter function.\<close>
 lemma ltr_collect_ctx_call:
-  "key enterc startcontext (Call caller [(FunctionEntry p, call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))])
+  "key enterc startcontext (Call caller [(FunctionEntry p, call_enter gs (CallEdge dst pars args) (sink_store caller))])
      = enterc (sink_node caller) (key enterc startcontext caller)
-         (call_enter \<Gamma> gs (CallEdge dst pars args) (sink_store caller))"
+         (call_enter gs (CallEdge dst pars args) (sink_store caller))"
   by simp
 
 text \<open>(8) Context restoration under resume: a resumed trace has the caller's activation

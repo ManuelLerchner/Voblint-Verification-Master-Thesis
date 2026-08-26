@@ -41,9 +41,9 @@ text \<open>
 locale routed_domain_exec =
   routed_dg_domain_exec gs is_bot_pred tf_st enter_st tf
   for gs :: "vname \<Rightarrow> bool"
-    and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and is_bot_pred :: "'a::sound_cast_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> texp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer" +
   fixes gk0 :: 'k
     and seed_key :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"

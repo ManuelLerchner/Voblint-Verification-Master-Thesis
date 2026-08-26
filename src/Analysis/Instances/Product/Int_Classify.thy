@@ -87,17 +87,18 @@ global_interpretation int_dom_numeric_queries:
 
 global_interpretation int_check_domain:
   abstract_check_domain gamma int_less_true int_less_false int_eq_true int_eq_false
-    gamma_state aval_int_dom_fixpoint
+    gamma_state "aval_int_dom_t Refine_Fixpoint"
   defines
     int_check_true = int_check_domain.check_true
     and int_check_false = int_check_domain.check_false
     and int_classify_check = int_check_domain.classify_check
     and int_checks_proven = int_check_domain.abstract_checks_proven
 proof unfold_locales
-  fix s :: store and e :: exp and \<sigma> :: "int_dom abs_state"
+  fix s :: store and e :: texp and \<sigma> :: "int_dom abs_state"
   assume "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
   then have "\<forall>x. s x \<in> gamma (\<sigma> x)" by (rule gamma_stateD)
-  then show "aval e s \<in> gamma (aval_int_dom_fixpoint e \<sigma>)" using aval_int_dom_sound by simp
+  then show "teval e s \<in> gamma (aval_int_dom_t Refine_Fixpoint e \<sigma>)"
+    using aval_int_dom_t_sound by simp
 qed
 
 text \<open>
@@ -126,15 +127,18 @@ definition test_env_int_bounded :: "int_dom abs_state" where
   "test_env_int_bounded = (\<lambda>_. top)((STR ''x'') := int_dom_sipc SPos (Ivl (Fin 4) (Fin 7)) PTop top)"
 
 lemma int_classify_less_proved:
-  "int_classify_check (Less (V (STR ''x'')) (N 11)) test_env_int_bounded = Check_Proved"
+  "int_classify_check (TLess (TVar I32 (STR ''x'')) (TN I32 11)) test_env_int_bounded
+     = Check_Proved"
   unfolding test_env_int_bounded_def by eval
 
 lemma int_classify_less_refuted:
-  "int_classify_check (Less (V (STR ''x'')) (N 0)) test_env_int_bounded = Check_Refuted"
+  "int_classify_check (TLess (TVar I32 (STR ''x'')) (TN I32 0)) test_env_int_bounded
+     = Check_Refuted"
   unfolding test_env_int_bounded_def by eval
 
 lemma int_classify_eq_unknown:
-  "int_classify_check (Eq (V (STR ''x'')) (N 5)) test_env_int_bounded = Check_Unknown"
+  "int_classify_check (TEq (TVar I32 (STR ''x'')) (TN I32 5)) test_env_int_bounded
+     = Check_Unknown"
   unfolding test_env_int_bounded_def by eval
 
 end

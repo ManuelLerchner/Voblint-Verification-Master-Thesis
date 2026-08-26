@@ -347,6 +347,34 @@ lemma even_ik_norm [simp]: "even (ik_norm ik v) \<longleftrightarrow> even v"
   unfolding ik_norm_def
   by (cases ik) (simp_all add: take_bit_eq_mod signed_take_bit_eq_take_bit_shift even_mod_iff)
 
+text \<open>
+  Parity bounds no magnitude either: every non-bottom parity value admits
+  arbitrarily large values of that parity, so only \<open>bot\<close> certifies
+  representability. Parity's guard transfer is the identity, so nothing in
+  this domain consults the certificate; it exists to complete the
+  \<^locale>\<open>backward_domain\<close> signature wherever parity appears as a product
+  component.
+\<close>
+
+definition parity_in_range :: "ikind => parity => bool" where
+  "parity_in_range ik a = is_bottom_parity a"
+
+lemma parity_in_range_sound:
+  assumes "parity_in_range ik a"
+  shows "gamma_parity a \<subseteq> ik_range ik"
+  using assms by (simp add: parity_in_range_def is_bottom_parity_correct)
+
+lemma parity_in_range_mono:
+  assumes le: "a \<le> (b :: parity)" and b: "parity_in_range ik b"
+  shows "parity_in_range ik a"
+proof -
+  have "gamma_parity a \<subseteq> gamma_parity b"
+    using le by (simp add: less_eq_parity_def gamma_parity_mono)
+  with b show ?thesis
+    by (simp add: parity_in_range_def is_bottom_parity_correct)
+qed
+
+
 lemma parity_cast_sound:
   assumes v: "v \<in> gamma a"
   shows "ik_norm ik v \<in> gamma (parity_cast ik a)"
@@ -368,19 +396,19 @@ text \<open>
   its own -- every node already carries the kind it should be cast at. Every
   arithmetic node is normed once through \<^const>\<open>parity_cast\<close> at its own
   kind, and \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never norm their own 0/1-shaped
-  result, matching \<^const>\<open>teval\<close>. \<open>aval_parity\<close> (\<^theory>\<open>Voblint_Core.Abstract_Arithmetic\<close>'s
-  \<open>expression_domain_sound\<close> locale this interprets below) is a thin wrapper
-  elaborating its argument once and handing it to \<open>aval_parity_t\<close>, not a
-  second, independent recursion to keep in sync: both \<open>Parity_Transfer\<close>'s
-  forward obligations and the domain's special-call dispatch target it.
+  result, matching \<^const>\<open>teval\<close>. \<open>TCast\<close> norms its operand at the target
+  kind, the conversion a write site performs. Both \<open>Parity_Transfer\<close>'s
+  forward obligations and the domain's special-call dispatch target it
+  directly.
 \<close>
 
 fun aval_parity_t :: "texp => (vname => parity) => parity" where
-    "aval_parity_t (TN ik n)        \<sigma> = parity_cast ik (parity_of_int n)"
-  | "aval_parity_t (TV ik x)        \<sigma> = parity_cast ik (\<sigma> x)"
+    "aval_parity_t (TN ik n)        \<sigma> = parity_of_int (ik_norm ik n)"
+  | "aval_parity_t (TVar ik x)        \<sigma> = \<sigma> x"
   | "aval_parity_t (TPlus  ik a b)  \<sigma> = parity_cast ik (aval_parity_t a \<sigma> + aval_parity_t b \<sigma>)"
   | "aval_parity_t (TMinus ik a b)  \<sigma> = parity_cast ik (aval_parity_t a \<sigma> - aval_parity_t b \<sigma>)"
   | "aval_parity_t (TTimes ik a b)  \<sigma> = parity_cast ik (aval_parity_t a \<sigma> * aval_parity_t b \<sigma>)"
+  | "aval_parity_t (TCast  ik a)    \<sigma> = parity_cast ik (aval_parity_t a \<sigma>)"
   | "aval_parity_t (TLess a b) \<sigma> =
        (if is_bot (aval_parity_t a \<sigma>) \<or> is_bot (aval_parity_t b \<sigma>) then bot
         else if parity_lt (aval_parity_t a \<sigma>) (aval_parity_t b \<sigma>) = Some True then POdd
@@ -415,58 +443,59 @@ fun aval_parity_t :: "texp => (vname => parity) => parity" where
         then PEven
         else PTop)"
 
-definition aval_parity :: "tyenv => ikind => exp => (vname => parity) => parity" where
-  "aval_parity \<Gamma> ik a \<sigma> = aval_parity_t (elaborate \<Gamma> ik a) \<sigma>"
-
 interpretation parity_arith: expression_domain_sound
-    aval_parity parity_cast parity_of_int parity_lt parity_eqb parity_tobool
+    aval_parity_t parity_cast parity_of_int parity_lt parity_eqb parity_tobool
   apply unfold_locales
-  apply (simp_all add: aval_parity_def parity_of_int_gamma parity_plus_sound parity_minus_sound
+  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound
                         parity_times_sound parity_plus_combine_mono parity_minus_combine_mono
                         parity_times_combine_mono parity_lt_sound parity_eqb_sound
                         parity_tobool_sound[unfolded truthy_def] sup_parity_def join_parity.simps
-                        truthy_def gamma_parity_top Let_def parity_cast_sound_parity parity_cast_mono
+                        truthy_def gamma_parity_top parity_cast_sound_parity parity_cast_mono
                     del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
   apply (blast intro: parity_lt_mono[unfolded is_bot_parity])
   apply (blast intro: parity_eqb_mono[unfolded is_bot_parity])
   apply (blast intro: parity_tobool_mono[unfolded is_bot_parity])
   done
 
-lemmas aval_parity_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
-lemmas aval_parity_mono = parity_arith.aval_dom_mono
+lemmas aval_parity_t_sound = parity_arith.aval_dom_sound[unfolded gamma_abs_parity]
+lemmas aval_parity_t_mono = parity_arith.aval_dom_mono
 
-text \<open>
-  \<open>aval_parity_t (elaborate \<Gamma> ik a) = aval_parity \<Gamma> ik a\<close> is immediate from
-  \<open>aval_parity\<close>'s own definition -- no induction needed, since \<open>aval_parity_t\<close>
-  is the primitive recursion and \<open>aval_parity\<close> is defined in terms of it.
-\<close>
 
-lemma aval_parity_t_elaborate [simp]:
-  "aval_parity_t (elaborate \<Gamma> ik a) \<sigma> = aval_parity \<Gamma> ik a \<sigma>"
-  by (simp add: aval_parity_def)
+subsection \<open>Cast-domain instance\<close>
 
-lemma aval_parity_t_elaborate_syn [simp]:
-  "aval_parity_t (elaborate_syn \<Gamma> a) \<sigma> = aval_parity \<Gamma> (opk (esyn \<Gamma> a)) a \<sigma>"
-  by (simp add: elaborate_syn_def)
+text \<open>\<^const>\<open>parity_cast\<close> realizes the class-wide \<^const>\<open>a_cast\<close>, so every
+  generic write site -- ordinary assignment and call return alike -- converts
+  through this domain's own cast without any signature carrying one.\<close>
 
-lemma aval_parity_t_sound:
-  assumes "\<forall>x. s x \<in> gamma_parity (sigma x)"
-  shows "taval \<Gamma> ik a s \<in> gamma_parity (aval_parity_t (elaborate \<Gamma> ik a) sigma)"
-  using aval_parity_sound[OF assms] by simp
+instantiation parity :: cast_domain
+begin
 
-lemma aval_parity_t_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_parity_t (elaborate \<Gamma> ik a) sigma1 \<le> aval_parity_t (elaborate \<Gamma> ik a) sigma2"
-  using aval_parity_mono by simp
+definition a_cast_parity [simp]: "a_cast = parity_cast"
 
-lemma aval_parity_t_sound_syn:
-  assumes "\<forall>x. s x \<in> gamma_parity (sigma x)"
-  shows "taval_syn \<Gamma> a s \<in> gamma_parity (aval_parity_t (elaborate_syn \<Gamma> a) sigma)"
-  unfolding taval_syn_def elaborate_syn_def using aval_parity_t_sound[OF assms] .
+definition a_in_range_parity [simp]: "a_in_range = parity_in_range"
 
-lemma aval_parity_t_mono_syn:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_parity_t (elaborate_syn \<Gamma> a) sigma1 \<le> aval_parity_t (elaborate_syn \<Gamma> a) sigma2"
-  unfolding elaborate_syn_def using aval_parity_t_mono .
+instance
+proof intro_classes
+  fix a b :: parity and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_parity by (rule parity_cast_mono)
+next
+  fix a b :: parity and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_parity by (rule parity_in_range_mono)
+qed
+
+end
+
+instance parity :: sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: parity and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: parity_cast_sound_parity)
+next
+  fix a :: parity and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: parity_in_range_sound)
+qed
 
 end

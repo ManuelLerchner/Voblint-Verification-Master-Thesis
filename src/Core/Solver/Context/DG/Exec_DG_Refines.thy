@@ -174,9 +174,9 @@ lemma sides_placed_abs_dg_edge_tree_Inr:
 definition placed_abs_dg_enter_tree ::
   "(vname => bool) => (pp => pname) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
+   (vname list => texp list =>
      ('a::bounded_semilattice_sup_bot) abs_state => 'a abs_state) =>
-   vname list => exp list => pp => pp =>
+   vname list => texp list => pp => pp =>
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_enter_tree source_global owner_of keep_local publish_side
@@ -187,9 +187,9 @@ where
 definition placed_abs_dg_combine_tree ::
   "(vname => bool) => (pp => pname) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname option => ('a::bounded_semilattice_sup_bot) abs_state =>
+   (typed_var option => ('a::bounded_semilattice_sup_bot) abs_state =>
      'a abs_state => 'a abs_state => 'a abs_state) =>
-   vname option => pp => pp => pp =>
+   typed_var option => pp => pp => pp =>
    (pp, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
 where
   "placed_abs_dg_combine_tree source_global owner_of keep_local publish_side
@@ -616,7 +616,8 @@ text \<open>Generic combine-assign: the destination write goes through
   \<^const>\<open>combine_assign_resolved_q\<close> at whatever classifier \<open>gs\<close> the caller's
   writes and reads already agree on.\<close>
 definition unit_combine_step_st_assign_for ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st
+  "(vname \<Rightarrow> bool) \<Rightarrow> typed_var option
+   \<Rightarrow> ('a::cast_domain) exec_dg_st \<Rightarrow> 'a exec_dg_st
    \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st \<times> 'a exec_dg_st"
 where
   "unit_combine_step_st_assign_for gs dst de g merged =
@@ -635,8 +636,8 @@ text \<open>Generic diagonal executable D/G specification: the only classifier-d
   classifier of its own (cf.\ \<open>restrict_local_resolved_q\<close>/\<open>restrict_global_resolved_q\<close>).\<close>
 definition unit_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> ('a::bounded_semilattice_sup_bot) exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (edge_action \<Rightarrow> ('a::cast_domain) exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> texp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st, 'a exec_dg_st) dg_spec"
 where
   "unit_dg_spec_st_for gs tf_st enter_st = \<lparr>
@@ -744,7 +745,7 @@ lemma fun_of_resolved_st_q_for_restrict_global_for:
   by (rule ext) (simp add: restrict_global_for_def fun_of_resolved_st_q_for_restrict_global)
 
 lemma unit_combine_step_st_commute_for:
-  "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
+  shows "map_prod (fun_of_exec_dg_st_for gs) (fun_of_exec_dg_st_for gs)
        (dgs_combine (unit_dg_spec_st_for gs tf_st enter_st) ci dc de g)
      = dgs_combine (unit_dg_spec_for gs tf) ci
          (fun_of_exec_dg_st_for gs dc) (fun_of_exec_dg_st_for gs de) (fun_of_exec_dg_st_for gs g)"

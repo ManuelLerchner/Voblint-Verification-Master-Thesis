@@ -78,7 +78,7 @@ definition cfg_report :: "cfg \<Rightarrow> nat \<times> nat \<times> nat \<time
 subsection \<open>Uniform program builder\<close>
 
 definition prog_cfg :: "imp_prog \<Rightarrow> cfg" where
-  "prog_cfg P = compile_prog (prog_table P) (prog_procs P) (STR ''main'') (prog_main P)"
+  "prog_cfg P = compile_prog (prog_tyenv P) (prog_table P) (prog_procs P) (STR ''main'') (prog_main P)"
 
 subsection \<open>Programs 1--8: intraprocedural shapes\<close>
 
@@ -137,6 +137,7 @@ definition factorial_program :: imp_prog where
 definition factorial_cfg :: cfg where
   "factorial_cfg =
      compile_prog
+       (prog_tyenv factorial_program)
        (prog_table factorial_program)
        (prog_procs factorial_program)
        (STR ''main'')

@@ -1,5 +1,5 @@
 theory VIMP_Special
-  imports VIMP_Expr VIMP_Globals VIMP_Typing
+  imports VIMP_Expr VIMP_Globals VIMP_Typing VIMP_Elaborated
 begin
 
 section \<open>Special-call classification vocabulary\<close>
@@ -31,74 +31,121 @@ text \<open>
 
 datatype special_desc = SD_Nondet_Int | SD_Min | SD_Max
 
+text \<open>
+  A classified special call is already elaborated: its operands are
+  \<^typ>\<open>texp\<close>s and it carries the \<^typ>\<open>ikind\<close> its destination was
+  declared at, so every consumer downstream of classification -- the source
+  small-step semantics, the compiled CFG's own step, each domain's abstract
+  transfer -- reproduces the whole write, destination conversion included,
+  with no typing environment in hand. This matches the \<open>EA_Ret\<close> design the
+  CFG session already uses for a return kind: the kind is resolved once,
+  where the source declaration is in scope, and baked in.
+\<close>
+
 datatype special_call =
-    Nondet_Int
-  | Min exp exp
-  | Max exp exp
+    Nondet_Int (special_dest_kind: ikind)
+  | Min (special_dest_kind: ikind) texp texp
+  | Max (special_dest_kind: ikind) texp texp
 
 instance special_call :: countable
   by countable_datatype
 
-fun classify_special :: "special_desc => exp list => special_call option" where
-  "classify_special SD_Nondet_Int [] = Some Nondet_Int"
-| "classify_special SD_Min [a, b] = Some (Min a b)"
-| "classify_special SD_Max [a, b] = Some (Max a b)"
-| "classify_special _ _ = None"
+text \<open>
+  \<open>classify_special \<Gamma> dk\<close> applies a descriptor to a call's actual
+  arguments at destination kind \<open>dk\<close>. \<open>Min\<close>/\<open>Max\<close> elaborate both operands
+  at the one kind the comparison relates them at (\<^const>\<open>kjoin\<close> of the two
+  synthesized kinds, exactly as \<^const>\<open>taval\<close> types a \<open>Less\<close>), and the
+  destination kind is kept separately because the conversion applies to the
+  \<open>min\<close>/\<open>max\<close> result, not to either operand.
+\<close>
+
+definition special_arg_kind :: "tyenv => exp => exp => ikind" where
+  "special_arg_kind \<Gamma> a b = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))"
+
+fun classify_special :: "tyenv => ikind => special_desc => exp list => special_call option" where
+  "classify_special \<Gamma> dk SD_Nondet_Int [] = Some (Nondet_Int dk)"
+| "classify_special \<Gamma> dk SD_Min [a, b] =
+     Some (Min dk (elaborate \<Gamma> (special_arg_kind \<Gamma> a b) a)
+                  (elaborate \<Gamma> (special_arg_kind \<Gamma> a b) b))"
+| "classify_special \<Gamma> dk SD_Max [a, b] =
+     Some (Max dk (elaborate \<Gamma> (special_arg_kind \<Gamma> a b) a)
+                  (elaborate \<Gamma> (special_arg_kind \<Gamma> a b) b))"
+| "classify_special \<Gamma> dk _ _ = None"
+
+text \<open>
+  Whether a descriptor accepts a call's actual-argument list is a pure arity
+  question, independent of any typing environment or destination kind, so
+  well-formedness checks go through \<open>special_arity_ok\<close> rather than through
+  \<^const>\<open>classify_special\<close> itself.
+\<close>
+
+fun special_arity_ok :: "special_desc => exp list => bool" where
+  "special_arity_ok SD_Nondet_Int [] = True"
+| "special_arity_ok SD_Min [a, b] = True"
+| "special_arity_ok SD_Max [a, b] = True"
+| "special_arity_ok _ _ = False"
+
+lemma classify_special_None_iff [simp]:
+  "classify_special \<Gamma> dk desc es = None \<longleftrightarrow> \<not> special_arity_ok desc es"
+  by (rule classify_special.induct[of "\<lambda>_ _ d e. classify_special \<Gamma> dk d e = None
+        \<longleftrightarrow> \<not> special_arity_ok d e" \<Gamma> dk desc es]) simp_all
+
+lemma special_arity_okD:
+  "special_arity_ok desc es \<Longrightarrow> \<exists>sc. classify_special \<Gamma> dk desc es = Some sc"
+  by (cases "classify_special \<Gamma> dk desc es") simp_all
 
 text \<open>
   \<open>special_result\<close> gives the concrete result value(s) of a classified special
   call in a store, shared by the source small-step semantics (\<open>pstep\<close>'s
   \<open>Special\<close> rule, in \<open>VIMP_Proc\<close>) and the compiled CFG's concrete semantics
   (\<open>special_step\<close>, in the CFG session), so the two concrete semantics cannot
-  drift apart on what a special call computes. \<open>Nondet_Int\<close> admits every
-  integer; \<open>Min\<close>/\<open>Max\<close> admit exactly one, the evaluated arithmetic
-  minimum/maximum of their two arguments.
+  drift apart on what a special call computes. It ranges over the value
+  actually stored, destination conversion included.
 \<close>
-fun special_result :: "tyenv => special_call => store => int => bool" where
-  "special_result \<Gamma> Nondet_Int s v = True"
-| "special_result \<Gamma> (Min a b) s v =
-     (let k = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))
-      in v = min (taval \<Gamma> k a s) (taval \<Gamma> k b s))"
-| "special_result \<Gamma> (Max a b) s v =
-     (let k = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))
-      in v = max (taval \<Gamma> k a s) (taval \<Gamma> k b s))"
+fun special_result :: "special_call => store => int => bool" where
+  "special_result (Nondet_Int k) s v = (v \<in> ik_range k)"
+| "special_result (Min k a b) s v = (v = ik_norm k (min (teval a s) (teval b s)))"
+| "special_result (Max k a b) s v = (v = ik_norm k (max (teval a s) (teval b s)))"
 
-lemma special_result_ex [simp]: "\<exists>v. special_result \<Gamma> sc s v"
-  by (cases sc) (auto simp: Let_def)
+text \<open>\<open>Nondet_Int\<close> admits exactly the destination kind's representable
+  values -- the image of \<^const>\<open>ik_norm\<close> at that kind, so no narrower than
+  an unconstrained integer normed on the way in -- and \<open>Min\<close>/\<open>Max\<close> admit
+  exactly one, their converted arithmetic minimum/maximum.\<close>
+
+lemma special_result_ex [simp]: "\<exists>v. special_result sc s v"
+proof (cases sc)
+  case (Nondet_Int k)
+  have "special_result sc s 0" using Nondet_Int by simp
+  then show ?thesis ..
+qed auto
+
+lemma special_result_in_range:
+  "special_result sc s v \<Longrightarrow> v \<in> ik_range (special_dest_kind sc)"
+  by (cases sc) auto
 
 text \<open>
-  \<open>taval\<close> collapses to the untyped \<open>aval\<close> whenever \<open>ik_norm\<close> never actually
-  truncates any value it is handed: every arithmetic leaf of \<open>taval\<close> norms once
-  more than \<open>aval\<close> does, and nothing else about the recursion differs. This is
-  the bridge a domain interpretation's own \<open>aval\<close>-stated soundness proof needs
-  to discharge the newer \<open>taval_syn\<close>/\<open>ik_norm\<close>-stated obligations a sound
-  transfer function's own soundness locale now states, without restating any
-  of those proofs against the typed evaluator directly.
-  (Lives here, not \<^theory>\<open>Voblint_VIMP.VIMP_Typing\<close>, because that theory
-  precedes \<^theory>\<open>Voblint_VIMP.VIMP_Expr\<close> in the session's layering and so has
-  no \<open>aval\<close> to relate \<open>taval\<close> to; this is the first theory importing both.)
+  A classified call's destination kind is the one classification was handed,
+  so a special write lands in the destination variable's declared range --
+  the store-typedness step \<open>pstep\<close>'s \<open>Special\<close> rule needs now that
+  the conversion is inside \<^const>\<open>special_result\<close> rather than applied
+  afterwards.
 \<close>
-lemma taval_eq_aval:
-  assumes triv: "\<And>ik v. ik_norm ik v = v"
-  shows "taval G ik e s = aval e s"
-  by (induction e arbitrary: ik) (auto simp: Let_def triv)
 
-lemma taval_syn_eq_aval:
-  assumes triv: "\<And>ik v. ik_norm ik v = v"
-  shows "taval_syn G e s = aval e s"
-  unfolding taval_syn_def by (rule taval_eq_aval[OF triv])
+lemma classify_special_dest_kind:
+  "classify_special \<Gamma> dk desc es = Some sc \<Longrightarrow> special_dest_kind sc = dk"
+  by (induction \<Gamma> dk desc es rule: classify_special.induct) auto
 
-text \<open>Companion to \<open>taval_eq_aval\<close>: when \<open>ik_norm\<close> never truncates,
-  \<open>special_result\<close>'s \<open>Min\<close>/\<open>Max\<close> cases collapse to the untyped \<open>aval\<close>
-  minimum/maximum a domain's own soundness proof already establishes.\<close>
-lemma special_result_eq_aval:
-  assumes triv: "\<And>ik v. ik_norm ik v = v"
-  shows "special_result \<Gamma> sc s v \<longleftrightarrow>
-           (case sc of
-              Nondet_Int \<Rightarrow> True
-            | Min a b \<Rightarrow> v = min (aval a s) (aval b s)
-            | Max a b \<Rightarrow> v = max (aval a s) (aval b s))"
-  by (cases sc) (simp_all add: Let_def taval_eq_aval[OF triv])
+lemma special_result_dest_range:
+  assumes "classify_special \<Gamma> dk desc es = Some sc" and "special_result sc s v"
+  shows "v \<in> ik_range dk"
+  using assms special_result_in_range classify_special_dest_kind by fastforce
+
+lemma styped_update_special [intro]:
+  assumes "styped \<Gamma> s"
+    and "classify_special \<Gamma> (\<Gamma> x) desc es = Some sc"
+    and "special_result sc s v"
+  shows "styped \<Gamma> (s(x := v))"
+  using assms by (blast intro: styped_update special_result_dest_range)
 
 text \<open>
   \<open>special_mentions_global\<close> is \<open>special_call\<close>'s analogue of \<open>exp_mentions_global\<close>:
@@ -109,11 +156,11 @@ text \<open>
   argument expressions.
 \<close>
 fun special_mentions_global :: "(vname => bool) => special_call => bool" where
-  "special_mentions_global gs Nondet_Int = False"
-| "special_mentions_global gs (Min a b) =
-     (exp_mentions_global gs a \<or> exp_mentions_global gs b)"
-| "special_mentions_global gs (Max a b) =
-     (exp_mentions_global gs a \<or> exp_mentions_global gs b)"
+  "special_mentions_global gs (Nondet_Int _) = False"
+| "special_mentions_global gs (Min _ a b) =
+     (texp_mentions_global gs a \<or> texp_mentions_global gs b)"
+| "special_mentions_global gs (Max _ a b) =
+     (texp_mentions_global gs a \<or> texp_mentions_global gs b)"
 
 text \<open>
   \<open>special_table\<close> is VIMP's closed analogue of Goblint's open library-function

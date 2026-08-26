@@ -38,23 +38,20 @@ text \<open>
 
 record 'a::bot numeric_ops =
   n_aval    :: "texp => (vname => 'a) => 'a"
-  n_cast    :: "ikind => 'a => 'a"
-  n_bfilter :: "tyenv => (vname => bool) => exp => bool => 'a resolved_st_q => 'a resolved_st_q"
+  n_bfilter :: "(vname => bool) => texp => bool => 'a resolved_st_q => 'a resolved_st_q"
   n_top     :: "'a"
 
 definition generic_branch_st_for ::
-    "'a::bot numeric_ops => tyenv => (vname => bool) => exp => bool =>
+    "'a::bot numeric_ops => (vname => bool) => texp => bool =>
        'a resolved_st_q => 'a resolved_st_q" where
-  "generic_branch_st_for ops \<Gamma> source_global b pol s = n_bfilter ops \<Gamma> source_global b pol s"
+  "generic_branch_st_for ops source_global b pol s = n_bfilter ops source_global b pol s"
 
 definition generic_enter_st_for ::
-    "'a::bot numeric_ops => tyenv => (vname => bool) => vname list => exp list =>
+    "'a::bot numeric_ops => (vname => bool) => vname list => texp list =>
        'a resolved_st_q => 'a resolved_st_q" where
-  "generic_enter_st_for ops \<Gamma> source_global xs es s =
+  "generic_enter_st_for ops source_global xs es s =
      bind_formals_resolved_q source_global xs
-       (map2 (\<lambda>x e. n_cast ops (\<Gamma> x)
-                (n_aval ops (elaborate_syn \<Gamma> e) (fun_of_resolved_st_q_for source_global s)))
-         xs es)
+       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for source_global s)) es)
        (enter_frame_D_resolved_q (n_top ops) s)"
 
 end

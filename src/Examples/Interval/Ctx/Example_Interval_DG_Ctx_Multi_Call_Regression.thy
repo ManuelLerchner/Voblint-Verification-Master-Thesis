@@ -19,16 +19,19 @@ text \<open>
 definition mc_f1 :: pname where "mc_f1 = (STR ''f1'')"
 definition mc_f2 :: pname where "mc_f2 = (STR ''f2'')"
 
+text \<open>The graph is hand-built rather than compiled, so its actual-argument lists are
+  written as the elaborated \<^typ>\<open>texp\<close>s a compiled call edge would carry: each literal
+  at \<^const>\<open>I32\<close>, converted to the formal's declared kind.\<close>
 definition mc_ca1 :: call_action where
-  "mc_ca1 = CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]"
+  "mc_ca1 = CallEdge (Some (TV (STR ''x'') I32)) [(STR ''p'')] [TCast I32 (TN I32 3)]"
 definition mc_ca2 :: call_action where
-  "mc_ca2 = CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]"
+  "mc_ca2 = CallEdge (Some (TV (STR ''y'') I32)) [(STR ''p'')] [TCast I32 (TN I32 10)]"
 
 definition multi_call_cfg :: cfg where
   "multi_call_cfg =
      \<lparr> intra =
-         { (FunctionEntry mc_f1, EA_Ret None mc_f1, FunctionResult mc_f1),
-           (FunctionEntry mc_f2, EA_Ret None mc_f2, FunctionResult mc_f2) },
+         { (FunctionEntry mc_f1, EA_Ret None mc_f1 I32, FunctionResult mc_f1),
+           (FunctionEntry mc_f2, EA_Ret None mc_f2 I32, FunctionResult mc_f2) },
        calls =
          { (Statement 0, mc_ca1, FunctionEntry mc_f1, Statement 1),
            (Statement 0, mc_ca2, FunctionEntry mc_f2, Statement 2) },

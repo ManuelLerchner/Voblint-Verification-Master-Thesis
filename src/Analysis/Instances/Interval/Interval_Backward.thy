@@ -145,15 +145,38 @@ qed
 subsection \<open>Ikind-aware casting\<close>
 
 text \<open>
-  \<open>ivl_cast\<close> mirrors Goblint's own \<open>IntervalDomain.norm ~cast:true\<close> exactly
-  (source-checked 2026-08-25 against \<open>intervalDomain.ml\<close>): an unbounded side
-  cannot be wrapped at all (\<open>top\<close>); a finite range already inside \<open>ik\<close>'s
-  bounds is untouched; a finite range wider than \<open>ik\<close>'s own representable
-  width cannot wrap as one connected interval (\<open>top\<close>, matching Goblint's
-  \<open>resdiff > diff\<close> check); otherwise each bound wraps via \<open>ik_norm\<close>, and if
-  the wrapped bounds come out disordered the wrapped range is disconnected
-  and unrepresentable (\<open>top\<close>, matching Goblint's post-wrap \<open>l \<le> u\<close> check).
+  \<open>ivl_cast\<close> mirrors Goblint's own \<open>IntervalDomain.norm ~cast:true\<close>
+  (source-checked against \<open>intervalDomain.ml\<close>): an unbounded side cannot be
+  wrapped at all; a finite range already inside \<open>ik\<close>'s bounds is untouched; a
+  finite range wider than \<open>ik\<close>'s own representable width cannot wrap as one
+  connected interval (Goblint's \<open>resdiff > diff\<close> check); otherwise each bound
+  wraps via \<open>ik_norm\<close>, and if the wrapped bounds come out disordered the
+  wrapped range is disconnected and unrepresentable (Goblint's post-wrap
+  \<open>l \<le> u\<close> check).
+
+  In each of those three give-up cases the answer is \<open>ivl_top_of ik\<close> --
+  the target kind's own range -- not the lattice \<open>top\<close>. Upstream's
+  \<open>top_of ik\<close> is likewise \<open>Some (range ik)\<close>, and the distinction is not
+  cosmetic: see \<open>ivl_top_of\<close>'s own note below.
 \<close>
+
+text \<open>
+  \<open>ivl_top_of ik\<close> is the kind's own range as an interval -- Goblint's
+  \<^verbatim>\<open>Interval.top_of ik = Some (range ik)\<close>. It is what a conversion
+  answers when it cannot say anything sharper, and it matters that this is
+  \<^emph>\<open>not\<close> the lattice \<open>top\<close>: \<^const>\<open>ik_norm\<close> always lands inside the
+  kind's range, so an unbounded answer would be strictly weaker than the
+  conversion's own postcondition, and would not even satisfy
+  \<open>ivl_in_range\<close>. Returning the lattice \<open>top\<close> here collapses every
+  half-bounded interval -- a guard-refined \<open>[1, +inf]\<close>, a widened
+  \<open>[3, +inf]\<close> -- and leaves narrowing nothing to recover from.
+\<close>
+
+definition ivl_top_of :: "ikind \<Rightarrow> ivl" where
+  "ivl_top_of ik = Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+
+lemma gamma_ivl_top_of [simp]: "gamma_ivl (ivl_top_of ik) = ik_range ik"
+  by (auto simp: ivl_top_of_def ik_range_def eint_le.simps)
 
 definition ivl_cast :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
   "ivl_cast ik a =
@@ -162,10 +185,115 @@ definition ivl_cast :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
         (case (lo, hi) of
            (Fin l, Fin h) \<Rightarrow>
              (if ik_min ik \<le> l \<and> h \<le> ik_max ik then a
-              else if h - l > ik_max ik - ik_min ik then top
+              else if h - l > ik_max ik - ik_min ik then ivl_top_of ik
               else let l' = ik_norm ik l; h' = ik_norm ik h
-                   in if l' \<le> h' then Ivl (Fin l') (Fin h') else top)
-         | _ \<Rightarrow> top))"
+                   in if l' \<le> h' then Ivl (Fin l') (Fin h') else ivl_top_of ik)
+         | _ \<Rightarrow> ivl_top_of ik))"
+
+text \<open>Every branch lands inside the target kind's range, so a conversion
+  satisfies its own representability certificate. This is what lets the
+  monotonicity argument below use \<open>ivl_top_of ik\<close> as the local greatest
+  element in place of the lattice \<open>top\<close>.\<close>
+
+lemma ivl_cast_le_top_of: "ivl_cast ik a \<le> ivl_top_of ik"
+proof (cases "is_bottom_ivl a")
+  case True then show ?thesis by (simp add: ivl_cast_def bot_least)
+next
+  case False
+  show ?thesis
+  proof (cases a)
+    case (Ivl lo hi)
+    show ?thesis
+    proof (cases "\<exists>l h. lo = Fin l \<and> hi = Fin h")
+      case False with \<open>\<not> is_bottom_ivl a\<close> Ivl show ?thesis
+        by (cases lo; cases hi) (simp_all add: ivl_cast_def)
+    next
+      case True
+      then obtain l h where lh: "lo = Fin l" "hi = Fin h" by blast
+      show ?thesis
+        using \<open>\<not> is_bottom_ivl a\<close> Ivl lh ik_norm_in_range[of ik l] ik_norm_in_range[of ik h]
+        by (auto simp: ivl_cast_def ivl_top_of_def ik_range_def Let_def less_eq_ivl_def
+                       eint_le.simps split: if_splits)
+    qed
+  qed
+qed
+
+text \<open>
+  Unlike sign and parity, the interval domain does bound magnitude, so it
+  certifies representability precisely: a bottom interval holds no value, and
+  a finite \<open>[l, h]\<close> inside the kind's own bounds holds only values that
+  \<^const>\<open>ik_norm\<close> leaves alone. An interval with an infinite bound admits
+  values outside every kind's range and certifies nothing.
+\<close>
+
+definition ivl_in_range :: "ikind \<Rightarrow> ivl \<Rightarrow> bool" where
+  "ivl_in_range ik a =
+     (is_bottom_ivl a \<or>
+      (case a of Ivl (Fin l) (Fin h) \<Rightarrow> ik_min ik \<le> l \<and> h \<le> ik_max ik
+       | _ \<Rightarrow> False))"
+
+lemma ivl_in_range_top_of [simp]: "ivl_in_range ik (ivl_top_of ik)"
+  by (simp add: ivl_in_range_def ivl_top_of_def is_bottom_ivl_def)
+
+text \<open>A conversion always satisfies the certificate for its own target kind:
+  \<open>ivl_cast\<close> never answers outside the range it converts into.\<close>
+lemma ivl_in_range_ivl_cast [simp]: "ivl_in_range ik (ivl_cast ik a)"
+  using ik_norm_in_range[of ik]
+  by (auto simp: ivl_cast_def ivl_in_range_def ivl_top_of_def is_bottom_ivl_def
+                 bot_ivl_def ik_range_def Let_def
+           split: ivl.splits eint.splits if_splits)
+
+lemma ivl_in_range_sound:
+  assumes "ivl_in_range ik a"
+  shows "gamma_ivl a \<subseteq> ik_range ik"
+proof (cases "is_bottom_ivl a")
+  case True
+  then show ?thesis by (simp add: is_bottom_ivl_correct)
+next
+  case notbot: False
+  obtain lo hi where a: "a = Ivl lo hi" by (cases a)
+  obtain l h where lo: "lo = Fin l" and hi: "hi = Fin h"
+      and bounds: "ik_min ik \<le> l" "h \<le> ik_max ik"
+    using assms notbot unfolding ivl_in_range_def a
+    by (cases lo; cases hi) auto
+  show ?thesis
+    unfolding a lo hi ik_range_def using bounds by auto
+qed
+
+lemma ivl_in_range_mono:
+  assumes le: "a \<le> (b :: ivl)" and b: "ivl_in_range ik b"
+  shows "ivl_in_range ik a"
+proof (cases "is_bottom_ivl a")
+  case True
+  then show ?thesis by (simp add: ivl_in_range_def)
+next
+  case notbot_a: False
+  have notbot_b: "\<not> is_bottom_ivl b"
+  proof
+    assume "is_bottom_ivl b"
+    then have "gamma_ivl b = {}" by (simp add: is_bottom_ivl_correct)
+    moreover have "gamma_ivl a \<subseteq> gamma_ivl b" using le by (rule gamma_ivl_mono)
+    ultimately show False using notbot_a by (simp add: is_bottom_ivl_correct)
+  qed
+  obtain lb hb where b_eq: "b = Ivl (Fin lb) (Fin hb)"
+      and bounds: "ik_min ik \<le> lb" "hb \<le> ik_max ik"
+    using b notbot_b unfolding ivl_in_range_def
+    by (cases b; cases "ivl_lower b"; cases "ivl_upper b") auto
+  obtain lo hi where a_eq: "a = Ivl lo hi" by (cases a)
+  have le12: "Fin lb \<le> lo" "hi \<le> Fin hb"
+    using le unfolding a_eq b_eq by (auto simp: less_eq_ivl_def)
+  obtain n where n_in: "n \<in> gamma_ivl a"
+    using notbot_a is_bottom_ivl_correct by blast
+  have nlo: "lo \<le> Fin n" and nhi: "Fin n \<le> hi"
+    using n_in unfolding a_eq by auto
+  obtain la where lo_eq: "lo = Fin la" and la: "lb \<le> la"
+    using le12(1) nlo by (cases lo) auto
+  obtain ha where hi_eq: "hi = Fin ha" and ha: "ha \<le> hb"
+    using le12(2) nhi by (cases hi) auto
+  show ?thesis
+    unfolding ivl_in_range_def a_eq lo_eq hi_eq
+    using bounds la ha by simp
+qed
 
 subsection \<open>Abstract expression evaluation\<close>
 
@@ -177,19 +305,18 @@ text \<open>
   its own kind, matching Goblint's own \<open>norm ~cast:true\<close> wraparound-or-widen
   behavior exactly -- a bespoke cast against the interval's own bounds,
   not a generic boundary-conservative fallback -- and \<open>TLess\<close>/\<open>TEq\<close>/\<open>TNot\<close>/\<open>TAnd\<close>/\<open>TOr\<close> never
-  norm their own 0/1-shaped result, matching \<^const>\<open>teval\<close>. \<open>aval_ivl\<close>
-  (\<^theory>\<open>Voblint_Core.Abstract_Arithmetic\<close>'s \<open>expression_domain_sound\<close>
-  locale this interprets below) is a thin wrapper elaborating its argument
-  once and handing it to \<open>aval_ivl_t\<close>, not a second, independent recursion
-  to keep in sync: both \<open>Interval_Transfer\<close>'s forward obligations and the
-  \<open>backward_domain_refined\<close> interpretation below target it.
+  norm their own 0/1-shaped result, matching \<^const>\<open>teval\<close>. \<open>TCast\<close>
+  norms its operand at the target kind, the conversion a write site
+  performs. Both \<open>Interval_Transfer\<close>'s forward obligations and the
+  \<open>backward_domain_refined\<close> interpretation below target it directly.
 \<close>
 fun aval_ivl_t :: "texp => (vname => ivl) => ivl" where
-    "aval_ivl_t (TN ik n)        \<sigma> = ivl_cast ik (Ivl (Fin n) (Fin n))"
-  | "aval_ivl_t (TV ik x)        \<sigma> = ivl_cast ik (\<sigma> x)"
+    "aval_ivl_t (TN ik n)        \<sigma> = Ivl (Fin (ik_norm ik n)) (Fin (ik_norm ik n))"
+  | "aval_ivl_t (TVar ik x)        \<sigma> = \<sigma> x"
   | "aval_ivl_t (TPlus  ik a b)  \<sigma> = ivl_cast ik (aval_ivl_t a \<sigma> + aval_ivl_t b \<sigma>)"
   | "aval_ivl_t (TMinus ik a b)  \<sigma> = ivl_cast ik (aval_ivl_t a \<sigma> - aval_ivl_t b \<sigma>)"
   | "aval_ivl_t (TTimes ik a b)  \<sigma> = ivl_cast ik (aval_ivl_t a \<sigma> * aval_ivl_t b \<sigma>)"
+  | "aval_ivl_t (TCast  ik a)    \<sigma> = ivl_cast ik (aval_ivl_t a \<sigma>)"
   | "aval_ivl_t (TLess a b) \<sigma> =
        (if is_bot (aval_ivl_t a \<sigma>) \<or> is_bot (aval_ivl_t b \<sigma>) then bot
         else if interval_lt (aval_ivl_t a \<sigma>) (aval_ivl_t b \<sigma>) = Some True then Ivl (Fin 1) (Fin 1)
@@ -224,9 +351,6 @@ fun aval_ivl_t :: "texp => (vname => ivl) => ivl" where
         then Ivl (Fin 0) (Fin 0)
         else Ivl (Fin 0) (Fin 1))"
 
-definition aval_ivl :: "tyenv => ikind => exp => (vname => ivl) => ivl" where
-  "aval_ivl \<Gamma> ik a \<sigma> = aval_ivl_t (elaborate \<Gamma> ik a) \<sigma>"
-
 lemma ivl_cast_sound:
   assumes v: "v \<in> gamma_ivl a"
   shows "ik_norm ik v \<in> gamma_ivl (ivl_cast ik a)"
@@ -240,7 +364,7 @@ proof -
     proof (cases "\<exists>l h. lo = Fin l \<and> hi = Fin h")
       case False
       with notbot Ivl show ?thesis
-        by (cases lo; cases hi) (simp_all add: ivl_cast_def top_ivl_def gamma_ivl_top)
+        by (cases lo; cases hi) (simp_all add: ivl_cast_def)
     next
       case True
       then obtain l h where lo_eq: "lo = Fin l" and hi_eq: "hi = Fin h" by blast
@@ -248,9 +372,9 @@ proof -
         using v Ivl lo_eq hi_eq by (auto simp: eint_le.simps)
       have cast_eq: "ivl_cast ik a =
           (if ik_min ik \<le> l \<and> h \<le> ik_max ik then a
-           else if h - l > ik_max ik - ik_min ik then top
+           else if h - l > ik_max ik - ik_min ik then ivl_top_of ik
            else let l' = ik_norm ik l; h' = ik_norm ik h
-                in if l' \<le> h' then Ivl (Fin l') (Fin h') else top)"
+                in if l' \<le> h' then Ivl (Fin l') (Fin h') else ivl_top_of ik)"
         using notbot Ivl lo_eq hi_eq by (simp add: ivl_cast_def)
       show ?thesis
       proof (cases "ik_min ik \<le> l \<and> h \<le> ik_max ik")
@@ -264,9 +388,9 @@ proof -
         show ?thesis
         proof (cases "h - l > ik_max ik - ik_min ik")
           case True
-          have "ivl_cast ik a = top"
+          have "ivl_cast ik a = ivl_top_of ik"
             using cast_eq not_inrange True by simp
-          then show ?thesis by (simp add: top_ivl_def gamma_ivl_top)
+          then show ?thesis by simp
         next
           case width_ok: False
           show ?thesis
@@ -279,9 +403,9 @@ proof -
             with wrap show ?thesis by (simp add: eint_le.simps)
           next
             case False
-            have "ivl_cast ik a = top"
+            have "ivl_cast ik a = ivl_top_of ik"
               using cast_eq not_inrange width_ok False by (simp add: Let_def)
-            then show ?thesis by (simp add: top_ivl_def gamma_ivl_top)
+            then show ?thesis by simp
           qed
         qed
       qed
@@ -299,9 +423,9 @@ proof (cases "is_bottom_ivl a1")
 next
   case notbot1: False
   show ?thesis
-  proof (cases "ivl_cast ik a2 = top")
+  proof (cases "ivl_cast ik a2 = ivl_top_of ik")
     case True
-    then show ?thesis by (simp add: top_greatest)
+    then show ?thesis using ivl_cast_le_top_of[of ik a1] by simp
   next
     case a2_not_top: False
     have notbot2: "\<not> is_bottom_ivl a2"
@@ -324,15 +448,15 @@ next
       using notbot1 a1_eq lo1_eq hi1_eq by (simp add: is_bottom_ivl_def)
     have cast1_eq: "ivl_cast ik a1 =
         (if ik_min ik \<le> l1 \<and> h1 \<le> ik_max ik then a1
-         else if h1 - l1 > ik_max ik - ik_min ik then top
+         else if h1 - l1 > ik_max ik - ik_min ik then ivl_top_of ik
          else let l' = ik_norm ik l1; h' = ik_norm ik h1
-              in if l' \<le> h' then Ivl (Fin l') (Fin h') else top)"
+              in if l' \<le> h' then Ivl (Fin l') (Fin h') else ivl_top_of ik)"
       using notbot1 a1_eq lo1_eq hi1_eq by (simp add: ivl_cast_def)
     have cast2_eq: "ivl_cast ik a2 =
         (if ik_min ik \<le> l2 \<and> h2 \<le> ik_max ik then a2
-         else if h2 - l2 > ik_max ik - ik_min ik then top
+         else if h2 - l2 > ik_max ik - ik_min ik then ivl_top_of ik
          else let l' = ik_norm ik l2; h' = ik_norm ik h2
-              in if l' \<le> h' then Ivl (Fin l') (Fin h') else top)"
+              in if l' \<le> h' then Ivl (Fin l') (Fin h') else ivl_top_of ik)"
       using notbot2 a2_eq lo2_eq hi2_eq by (simp add: ivl_cast_def)
     have le12: "l2 \<le> l1" "h1 \<le> h2"
       using le a1_eq a2_eq lo1_eq hi1_eq lo2_eq hi2_eq by (auto simp: less_eq_ivl_def eint_le.simps)
@@ -392,9 +516,9 @@ next
 qed
 
 interpretation ivl_arith: expression_domain_sound
-    aval_ivl ivl_cast "\<lambda>n. Ivl (Fin n) (Fin n)" interval_lt interval_eqb interval_tobool
+    aval_ivl_t ivl_cast "\<lambda>n. Ivl (Fin n) (Fin n)" interval_lt interval_eqb interval_tobool
   by unfold_locales
-     (simp_all add: aval_ivl_def ivl_plus_sound ivl_minus_sound ivl_times_sound
+     (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound
                      ivl_plus_mono ivl_minus_mono ivl_times_mono
                      interval_lt_sound interval_eqb_sound
                      interval_tobool_sound[unfolded truthy_def]
@@ -402,42 +526,8 @@ interpretation ivl_arith: expression_domain_sound
                      sup_ivl_def join_ivl.simps truthy_def top_ivl_def gamma_ivl_top Let_def
                      ivl_cast_sound ivl_cast_mono)
 
-lemmas aval_ivl_sound = ivl_arith.aval_dom_sound[unfolded gamma_abs_ivl]
-lemmas aval_ivl_mono = ivl_arith.aval_dom_mono
-
-text \<open>
-  \<open>aval_ivl_t (elaborate \<Gamma> ik a) = aval_ivl \<Gamma> ik a\<close> is immediate from
-  \<open>aval_ivl\<close>'s own definition -- no induction needed, since \<open>aval_ivl_t\<close>
-  is the primitive recursion and \<open>aval_ivl\<close> is defined in terms of it.
-\<close>
-
-lemma aval_ivl_t_elaborate [simp]:
-  "aval_ivl_t (elaborate \<Gamma> ik a) \<sigma> = aval_ivl \<Gamma> ik a \<sigma>"
-  by (simp add: aval_ivl_def)
-
-lemma aval_ivl_t_elaborate_syn [simp]:
-  "aval_ivl_t (elaborate_syn \<Gamma> a) \<sigma> = aval_ivl \<Gamma> (opk (esyn \<Gamma> a)) a \<sigma>"
-  by (simp add: elaborate_syn_def)
-
-lemma aval_ivl_t_sound:
-  assumes "\<forall>x. s x \<in> gamma_ivl (sigma x)"
-  shows "taval \<Gamma> ik a s \<in> gamma_ivl (aval_ivl_t (elaborate \<Gamma> ik a) sigma)"
-  using aval_ivl_sound[OF assms] by simp
-
-lemma aval_ivl_t_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_ivl_t (elaborate \<Gamma> ik a) sigma1 \<le> aval_ivl_t (elaborate \<Gamma> ik a) sigma2"
-  using aval_ivl_mono by simp
-
-lemma aval_ivl_t_sound_syn:
-  assumes "\<forall>x. s x \<in> gamma_ivl (sigma x)"
-  shows "taval_syn \<Gamma> a s \<in> gamma_ivl (aval_ivl_t (elaborate_syn \<Gamma> a) sigma)"
-  unfolding taval_syn_def elaborate_syn_def using aval_ivl_t_sound[OF assms] .
-
-lemma aval_ivl_t_mono_syn:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-   aval_ivl_t (elaborate_syn \<Gamma> a) sigma1 \<le> aval_ivl_t (elaborate_syn \<Gamma> a) sigma2"
-  unfolding elaborate_syn_def using aval_ivl_t_mono .
+lemmas aval_ivl_t_sound = ivl_arith.aval_dom_sound[unfolded gamma_abs_ivl]
+lemmas aval_ivl_t_mono = ivl_arith.aval_dom_mono
 
 
 subsection \<open>Backward inverse operators\<close>
@@ -657,8 +747,45 @@ text \<open>
   law; @{thm [source] meet_ivl_normalized_breaks_greatest} is that counterexample.
 \<close>
 
+subsection \<open>Cast-domain instance\<close>
+
+text \<open>\<^const>\<open>ivl_cast\<close> realizes the class-wide \<^const>\<open>a_cast\<close>, so every
+  generic write site -- ordinary assignment and call return alike -- converts
+  through this domain's own cast without any signature carrying one.\<close>
+
+instantiation ivl :: cast_domain
+begin
+
+definition a_cast_ivl [simp]: "a_cast = ivl_cast"
+
+definition a_in_range_ivl [simp]: "a_in_range = ivl_in_range"
+
+instance
+proof intro_classes
+  fix a b :: ivl and ik
+  show "a \<le> b \<Longrightarrow> a_cast ik a \<le> a_cast ik b"
+    unfolding a_cast_ivl by (rule ivl_cast_mono)
+next
+  fix a b :: ivl and ik
+  show "a \<le> b \<Longrightarrow> a_in_range ik b \<Longrightarrow> a_in_range ik a"
+    unfolding a_in_range_ivl by (rule ivl_in_range_mono)
+qed
+
+end
+
+instance ivl :: sound_cast_domain
+proof intro_classes
+  fix v :: int and a :: ivl and ik
+  show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (a_cast ik a)"
+    by (simp add: ivl_cast_sound)
+next
+  fix a :: ivl and ik
+  show "a_in_range ik a \<Longrightarrow> gamma a \<subseteq> ik_range ik"
+    by (simp add: ivl_in_range_sound)
+qed
+
 global_interpretation ivl_backward_domain:
-    backward_domain_refined intersect_ivl aval_ivl interval_tobool
+    backward_domain_refined intersect_ivl aval_ivl_t interval_tobool
                     inv_less_ivl inv_eq_ivl inv_conservative inv_conservative inv_conservative
   defines
     afilter_ivl = ivl_backward_domain.afilter
@@ -677,11 +804,11 @@ proof unfold_locales
   show "n \<in> gamma (intersect_ivl a b)"
     using intersect_ivl_gamma[OF h1 h2] by simp
 next
-  fix s :: store and e :: exp and \<Gamma> :: tyenv and ik :: ikind and \<sigma> :: "vname \<Rightarrow> ivl"
+  fix s :: store and e :: texp and \<sigma> :: "vname \<Rightarrow> ivl"
   assume H: "\<forall>x. s x \<in> gamma (\<sigma> x)"
   have h: "\<forall>x. s x \<in> gamma_ivl (\<sigma> x)" using H by simp
-  show "taval \<Gamma> ik e s \<in> gamma (aval_ivl \<Gamma> ik e \<sigma>)"
-    using aval_ivl_sound[of s \<sigma> \<Gamma> ik e] h by simp
+  show "teval e s \<in> gamma (aval_ivl_t e \<sigma>)"
+    using aval_ivl_t_sound[of s \<sigma> e] h by simp
 next
   fix n1 n2 :: int and a1 a2 :: ivl and res :: bool
   assume H1: "n1 \<in> gamma a1" and H2: "n2 \<in> gamma a2" and H3: "(n1 < n2) = res"
@@ -726,9 +853,9 @@ next
   assume "a1 \<le> a2" and "b1 \<le> b2"
   thus "intersect_ivl a1 b1 \<le> intersect_ivl a2 b2" by (rule intersect_ivl_mono)
 next
-  fix e :: exp and \<Gamma> :: tyenv and ik :: ikind and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
+  fix e :: texp and \<sigma>1 \<sigma>2 :: "vname \<Rightarrow> ivl"
   assume "\<sigma>1 \<le> \<sigma>2"
-  thus "aval_ivl \<Gamma> ik e \<sigma>1 \<le> aval_ivl \<Gamma> ik e \<sigma>2" by (rule aval_ivl_mono)
+  thus "aval_ivl_t e \<sigma>1 \<le> aval_ivl_t e \<sigma>2" by (rule aval_ivl_t_mono)
 next
   fix x1 x2 y1 y2 :: ivl and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -781,19 +908,39 @@ lemmas branch_ivl_st_commute = ivl_backward_domain.branch_st_commute
 
 lemma afilter_ivl_mono:
   "a1 \<le> (a2 :: ivl) \<Longrightarrow> sigma1 \<le> sigma2 \<Longrightarrow>
-   afilter_ivl \<Gamma> ik e a1 sigma1 \<le> afilter_ivl \<Gamma> ik e a2 sigma2"
+   afilter_ivl e a1 sigma1 \<le> afilter_ivl e a2 sigma2"
   using ivl_backward_domain.afilter_mono by (simp add: afilter_ivl_def)
 
 lemma bfilter_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl \<Gamma> b res sigma1 \<le> bfilter_ivl \<Gamma> b res sigma2"
+  "sigma1 \<le> sigma2 \<Longrightarrow> bfilter_ivl b res sigma1 \<le> bfilter_ivl b res sigma2"
   using ivl_backward_domain.bfilter_mono by (simp add: bfilter_ivl_def)
 
 lemma branch_ivl_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> branch_ivl \<Gamma> b res sigma1 \<le> branch_ivl \<Gamma> b res sigma2"
+  "sigma1 \<le> sigma2 \<Longrightarrow> branch_ivl b res sigma1 \<le> branch_ivl b res sigma2"
   using ivl_backward_domain.branch_mono by (simp add: branch_ivl_def)
 
-lemma branch_ivl_le_bfilter_ivl: "branch_ivl \<Gamma> e pol \<sigma> \<le> bfilter_ivl \<Gamma> e pol \<sigma>"
+lemma branch_ivl_le_bfilter_ivl: "branch_ivl e pol \<sigma> \<le> bfilter_ivl e pol \<sigma>"
   using ivl_backward_domain.branch_le_bfilter by (simp add: branch_ivl_def bfilter_ivl_def)
+
+text \<open>
+  \<open>branch_ivl\<close>'s soundness at a concrete store, the shape Interval's
+  \<open>tf_branch\<close> obligation needs. No premise about the store appears: a
+  \<^const>\<open>TVar\<close> leaf is inverted only where \<^const>\<open>ivl_in_range\<close>
+  certifies the slot representable at the leaf's kind, which is exactly where
+  \<open>teval (TVar ik x) s = ik_norm ik (s x)\<close> is the identity.
+\<close>
+
+lemma bfilter_ivl_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>bfilter_ivl b res \<sigma>\<rbrakk>"
+  using ivl_backward_domain.bfilter_sound by simp
+
+lemma branch_ivl_sound:
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>branch_ivl b res \<sigma>\<rbrakk>"
+  using ivl_backward_domain.branch_sound by simp
+
+
 
 end
 

@@ -38,8 +38,8 @@ lemma congruence_negative_modulus_arithmetic_regression:
   by eval
 
 lemma aval_congruence_regression:
-  "aval_congruence
-      (Plus (V (STR ''x'')) (N 1))
+  "aval_congruence_t
+      (elaborate_syn default_tyenv (Plus (V (STR ''x'')) (N 1)))
       (\<lambda>_. mk_congruence 1 2) =
    mk_congruence 0 2"
   by eval

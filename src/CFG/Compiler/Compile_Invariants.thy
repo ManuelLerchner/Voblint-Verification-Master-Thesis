@@ -149,7 +149,7 @@ qed
 
 definition compile_program :: "imp_prog => cfg" where
   "compile_program p =
-    compile_prog (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
+    compile_prog (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)"
 
 text \<open>
   \<^const>\<open>compile_prog\<close> fixes the compiler input to \<^typ>\<open>proc_table\<close> /
@@ -165,7 +165,7 @@ text \<open>
 \<close>
 
 definition prog_cfg :: "pname => imp_prog => cfg" where
-  "prog_cfg mnm p = compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)"
+  "prog_cfg mnm p = compile_prog (prog_tyenv p) (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 lemma compile_program_is_prog_cfg: "compile_program p = prog_cfg prog_main_name p"
   by (simp add: compile_program_def prog_cfg_def)
@@ -218,13 +218,13 @@ subsection \<open>Return edges and call-freeness\<close>
 text \<open>Every source \<open>Return e\<close> in procedure \<open>p\<close> compiles to an intra edge that
   reaches \<open>FunctionResult p\<close> through \<open>EA_Ret e p\<close>.\<close>
 lemma compile_return_edge:
-  "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> returns_in e c
-   \<Longrightarrow> \<exists>j. (Statement j, EA_Ret e p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E"
+  "compile \<Gamma> \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> returns_in e c
+   \<Longrightarrow> \<exists>j. (Statement j, EA_Ret (map_option (elaborate_to \<Gamma> (proc_ret_kind \<Pi> p)) e) p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E"
 proof (induction c arbitrary: k n n' en E K rule: com.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
+    c1: "compile \<Gamma> \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k (n + csize c1) = (n2, en2, E2, K2)"
     and E: "E = E1 \<union> E2"
     by (auto simp: Let_def split: prod.splits)
   from Seq.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
@@ -232,9 +232,9 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
-    c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
-    and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, en2)}
+    c1: "compile \<Gamma> \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
+    and c2: "compile \<Gamma> \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), en2)}
                   \<union> E1 \<union> E2"
     by (auto split: prod.splits)
   from If.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
@@ -242,8 +242,8 @@ next
 next
   case (While b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
-    c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
-    and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1"
+    c1: "compile \<Gamma> \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
+    and E: "E = {(Statement n, EA_Assume (elaborate_syn \<Gamma> b), en1), (Statement n, EA_AssumeNot (elaborate_syn \<Gamma> b), k)} \<union> E1"
     by (auto split: prod.splits)
   from While.prems(2) have "returns_in e c" by simp
   then show ?case using While.IH[OF c1] E by auto
@@ -255,12 +255,12 @@ qed auto
 subsection \<open>Statement-range disjointness of distinct procedures\<close>
 
 lemma compile_proc_frag_range:
-  "compile_proc \<Pi> p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
+  "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
 proof -
-  assume A: "compile_proc \<Pi> p decl n = (n', E, K)"
+  assume A: "compile_proc \<Gamma> \<Pi> p decl n = (n', E, K)"
   define r where "r = n + csize (body decl)"
   from A obtain Eb where
-    cb: "compile \<Pi> p (body decl) (Statement r) n = (r, Statement n, Eb, K)"
+    cb: "compile \<Gamma> \<Pi> p (body decl) (Statement r) n = (r, Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry p, EA_Nop, Statement n)
                   (if falls_through (body decl)
                    then insert (Statement r, EA_Ret None p (proc_ret_kind \<Pi> p), FunctionResult p) Eb
@@ -289,7 +289,7 @@ proof -
 qed
 
 lemma compile_procs_counter_mono:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> n \<le> n'"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by simp
 next
@@ -300,8 +300,8 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
+      cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')" and n': "n' = n2"
       by (auto split: prod.splits)
     have "n \<le> n1"
       using cp by (auto simp: compile_proc_def Let_def split: prod.splits
@@ -311,7 +311,7 @@ next
 qed
 
 lemma compile_procs_frag_range:
-  "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
+  "compile_procs \<Gamma> \<Pi> ps n = (n', E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'}"
 proof (induction ps arbitrary: n n' E K)
   case Nil then show ?case by (simp add: frag_stmts_def)
 next
@@ -322,8 +322,8 @@ next
   next
     case (Some decl)
     with Cons.prems obtain n1 E0 K0 n2 E' K' where
-      cp: "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-      and rest: "compile_procs \<Pi> ps n1 = (n2, E', K')"
+      cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+      and rest: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
       and n': "n' = n2" and E: "E = E0 \<union> E'" and K: "K = K0 \<union> K'"
       by (auto split: prod.splits)
     have m1: "n \<le> n1"
@@ -342,8 +342,8 @@ qed
 text \<open>Statement ranges of distinct procedures are disjoint: one fragment ends at the
   counter from which the next fragment allocates its statements.\<close>
 theorem compile_procs_head_disjoint:
-  assumes "compile_proc \<Pi> p decl n = (n1, E0, K0)"
-    and "compile_procs \<Pi> ps n1 = (n2, E', K')"
+  assumes "compile_proc \<Gamma> \<Pi> p decl n = (n1, E0, K0)"
+    and "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
   shows "frag_stmts E0 K0 \<inter> frag_stmts E' K' = {}"
 proof -
   have "frag_stmts E0 K0 \<subseteq> {n..<n1}" using compile_proc_frag_range[OF assms(1)] .
@@ -357,15 +357,15 @@ subsection \<open>Public compiler invariants\<close>
 text \<open>A \<open>Return\<close> fragment ignores its continuation: it emits its result edge and nothing
   else, so no node exists to carry a control flow the source does not have.\<close>
 theorem inv11_return_ignores_continuation:
-  "compile \<Pi> p (Return e) k n = compile \<Pi> p (Return e) k' n"
+  "compile \<Gamma> \<Pi> p (Return e) k n = compile \<Gamma> \<Pi> p (Return e) k' n"
   by simp
 
 
 text \<open>Return branches of the same procedure converge at \<open>FunctionResult p\<close>.\<close>
 theorem inv13_multi_return_converge:
-  assumes "compile \<Pi> p (If b (Return e1) (Return e2)) k n = (n', en, E, K)"
-  shows "(\<exists>j. (Statement j, EA_Ret e1 p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E)
-       \<and> (\<exists>j. (Statement j, EA_Ret e2 p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E)"
+  assumes "compile \<Gamma> \<Pi> p (If b (Return e1) (Return e2)) k n = (n', en, E, K)"
+  shows "(\<exists>j. (Statement j, EA_Ret (map_option (elaborate_to \<Gamma> (proc_ret_kind \<Pi> p)) e1) p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E)
+       \<and> (\<exists>j. (Statement j, EA_Ret (map_option (elaborate_to \<Gamma> (proc_ret_kind \<Pi> p)) e2) p (proc_ret_kind \<Pi> p), FunctionResult p) \<in> E)"
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
 
 text \<open>A self-call targets the procedure's own entry node; its call site is an ordinary
@@ -376,12 +376,12 @@ theorem inv14_recursion_edge:
   assumes "special_table p = None"
   shows "(Statement n, CallEdge None (call_formals \<Pi> p) [],
     FunctionEntry p, k)
-     \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
-  using assms by simp
+     \<in> snd (snd (snd (compile \<Gamma> \<Pi> p (Call None p []) k n)))"
+  using assms by (simp add: compile_actuals_def)
 
 text \<open>The program entry is the entry node of the distinguished root procedure.\<close>
 theorem inv16_entry_is_main:
-  "cfg_entry (compile_prog \<Pi> ps mnm main) = FunctionEntry mnm"
+  "cfg_entry (compile_prog \<Gamma> \<Pi> ps mnm main) = FunctionEntry mnm"
   unfolding compile_prog_def by (simp add: Let_def split: prod.splits)
 
 
@@ -415,7 +415,7 @@ text \<open>
 \<close>
 
 lemma procs_stmt_next_eq_compile_procs:
-  "procs_stmt_next \<Pi> ps n = fst (compile_procs \<Pi> ps n)"
+  "procs_stmt_next \<Pi> ps n = fst (compile_procs \<Gamma> \<Pi> ps n)"
 proof (induction ps arbitrary: n)
   case (Cons p ps)
   show ?case
@@ -424,13 +424,13 @@ proof (induction ps arbitrary: n)
     then show ?thesis using Cons by simp
   next
     case (Some decl)
-    obtain n1 E K where cp: "compile_proc \<Pi> p decl n = (n1, E, K)"
-      by (cases "compile_proc \<Pi> p decl n") auto
-    obtain n2 E' K' where cps: "compile_procs \<Pi> ps n1 = (n2, E', K')"
-      by (cases "compile_procs \<Pi> ps n1") auto
+    obtain n1 E K where cp: "compile_proc \<Gamma> \<Pi> p decl n = (n1, E, K)"
+      by (cases "compile_proc \<Gamma> \<Pi> p decl n") auto
+    obtain n2 E' K' where cps: "compile_procs \<Gamma> \<Pi> ps n1 = (n2, E', K')"
+      by (cases "compile_procs \<Gamma> \<Pi> ps n1") auto
     have n1: "n1 = Suc (n + csize (body decl))"
       using cp by (simp add: compile_proc_def Let_def split: prod.splits)
-    have "procs_stmt_next \<Pi> (p # ps) n = fst (compile_procs \<Pi> ps n1)"
+    have "procs_stmt_next \<Pi> (p # ps) n = fst (compile_procs \<Gamma> \<Pi> ps n1)"
       using Some Cons n1 by simp
     then show ?thesis using Some cp cps by simp
   qed

@@ -37,28 +37,28 @@ definition scs_eqs ::
   "scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main =
      side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global)
        (cs_route k)
-       (routed_cmb_g_contribution (sctx_spec gs \<Gamma> is_bot_pred)
+       (routed_cmb_g_contribution (sctx_spec gs is_bot_pred)
           Call_String_Context.Global Call_String_Context.Seed
-          (static_resolve (compile_prog Pi ps mnm main)))
+          (static_resolve (compile_prog \<Gamma> Pi ps mnm main)))
        (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-       (compile_prog Pi ps mnm main) (sctx_spec gs \<Gamma> is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
+       (compile_prog \<Gamma> Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot"
 
 definition scs_sol ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
   "scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main =
      TD_side_always_join_Interp_solve (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main)
-       (cfg_exit (compile_prog Pi ps mnm main), [])"
+       (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])"
 
 definition scs_terminates ::
     "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> (sign exec_dg_st \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> bool" where
   "scs_terminates k gs \<Gamma> is_bot_pred Pi ps mnm main =
      TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-       (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])"
+       (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])"
 
 lemma scs_terminates_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main)
-             (cfg_exit (compile_prog Pi ps mnm main), []) \<noteq> None"
+             (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), []) \<noteq> None"
   shows "scs_terminates k gs \<Gamma> is_bot_pred Pi ps mnm main"
   unfolding scs_terminates_def
   by (rule TD_side_always_join_Interp.solve_dom_of_solve_c[OF assms])
@@ -84,7 +84,7 @@ context
 begin
 
 interpretation sign_cs: routed_domain_exec
-  gs is_bot_pred "sign_tf_st_for gs \<Gamma>" "sign_enter_st_for \<Gamma> gs" "sign_tf_for gs \<Gamma>"
+  gs is_bot_pred "sign_tf_st_for gs" "sign_enter_st_for gs" "sign_tf_for gs"
   Call_String_Context.Global Call_String_Context.Seed "cs_route k" "cs_route k"
   static_resolve static_resolve
   by unfold_locales
@@ -106,11 +106,11 @@ begin
 
 lemma scs_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk) TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)
-     (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])"
+     (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])"
   using solves[unfolded scs_terminates_def] .
 
 lemma scs_pp_st:
-  "part_post_solution (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog Pi ps mnm main), [])
+  "part_post_solution (scs_eqs k gs \<Gamma> is_bot_pred Pi ps mnm main) (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])
      (snd (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main)) (fst (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main))"
   using TD_side_always_join_Interp.partial_post_solution
           [OF scs_solve_dom, of "fst (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main)"
@@ -120,14 +120,14 @@ lemma scs_pp_st:
 theorem scs_pp_abs:
   "part_post_solution
      (side_cfg_T_eff_keyed_seed_dg intra_predecessor_addr_list (\<lambda>_. Call_String_Context.Global) (cs_route k)
-        (routed_cmb_g (sctx_abs_spec gs \<Gamma>) Call_String_Context.Global Call_String_Context.Seed
-           (static_resolve (compile_prog Pi ps mnm main)))
+        (routed_cmb_g (sctx_abs_spec gs) Call_String_Context.Global Call_String_Context.Seed
+           (static_resolve (compile_prog \<Gamma> Pi ps mnm main)))
         (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-        (compile_prog Pi ps mnm main) (sctx_abs_spec gs \<Gamma>)
+        (compile_prog \<Gamma> Pi ps mnm main) (sctx_abs_spec gs)
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted))
         (map_lift (fun_of_resolved_st_q_for gs) (Lifted cinit_sign_st))
         (map_lift (fun_of_resolved_st_q_for gs) (Bot::sign exec_dg_st lifted)))
-     (cfg_exit (compile_prog Pi ps mnm main), [])
+     (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])
      (fun_of_dg_st_gen (map_lift (fun_of_resolved_st_q_for gs)) (map_lift (fun_of_resolved_st_q_for gs))
         \<circ> snd (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main))
      (fst (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main))"
@@ -135,12 +135,12 @@ proof -
   have pp_buf: "part_post_solution
        (side_cfg_T_eff_keyed_seed_dg_buffered intra_predecessor_addr_list
           (\<lambda>_. Call_String_Context.Global) (cs_route k)
-          (routed_cmb_g_contribution (sctx_spec gs \<Gamma> is_bot_pred)
+          (routed_cmb_g_contribution (sctx_spec gs is_bot_pred)
              Call_String_Context.Global Call_String_Context.Seed
-             (static_resolve (compile_prog Pi ps mnm main)))
+             (static_resolve (compile_prog \<Gamma> Pi ps mnm main)))
           (routed_extra_g Call_String_Context.Seed Call_String_Context.Global)
-          (compile_prog Pi ps mnm main) (sctx_spec gs \<Gamma> is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
-       (cfg_exit (compile_prog Pi ps mnm main), [])
+          (compile_prog \<Gamma> Pi ps mnm main) (sctx_spec gs is_bot_pred) Bot (Lifted cinit_sign_st) Bot)
+       (cfg_exit (compile_prog \<Gamma> Pi ps mnm main), [])
        (snd (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main))
        (fst (scs_sol k gs \<Gamma> is_bot_pred Pi ps mnm main))"
     using scs_pp_st unfolding scs_eqs_def by simp
@@ -154,29 +154,29 @@ end
 subsection \<open>Whole-program convenience layer\<close>
 
 definition scs_eqs_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string, call_string_gk, (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) eqsT" where
-  "scs_eqs_prog k gs \<Gamma> mnm p =
-     scs_eqs k gs \<Gamma> (resolved_st_q_is_bot_for (declared_global_vars p))
+  "scs_eqs_prog k gs mnm p =
+     scs_eqs k gs (prog_tyenv p) (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 definition scs_sol_prog ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> pname \<Rightarrow> imp_prog
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> call_string) set \<times> (pp \<times> call_string + call_string_gk \<Rightarrow> (sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state)" where
-  "scs_sol_prog k gs \<Gamma> mnm p =
-     scs_sol k gs \<Gamma> (resolved_st_q_is_bot_for (declared_global_vars p))
+  "scs_sol_prog k gs mnm p =
+     scs_sol k gs (prog_tyenv p) (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p) mnm (prog_main p)"
 
-definition scs_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
-  "scs_terminates_prog k gs \<Gamma> mnm p =
-     scs_terminates k gs \<Gamma> (resolved_st_q_is_bot_for (declared_global_vars p))
+definition scs_terminates_prog :: "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> bool" where
+  "scs_terminates_prog k gs mnm p =
+     scs_terminates k gs (prog_tyenv p) (resolved_st_q_is_bot_for (declared_global_vars p))
        (prog_table p) (prog_procs p) mnm (prog_main p)"
 
 lemma scs_terminates_prog_via_solve_c:
   assumes "TD_side_always_join_Interp_solve_c
-             (scs_eqs_prog k gs \<Gamma> mnm p)
-             (cfg_exit (compile_prog (prog_table p) (prog_procs p) mnm (prog_main p)), []) \<noteq> None"
-  shows "scs_terminates_prog k gs \<Gamma> mnm p"
+             (scs_eqs_prog k gs mnm p)
+             (cfg_exit (compile_prog (prog_tyenv p) (prog_table p) (prog_procs p) mnm (prog_main p)), []) \<noteq> None"
+  shows "scs_terminates_prog k gs mnm p"
   using assms
   unfolding scs_terminates_prog_def scs_eqs_prog_def
   by (rule scs_terminates_via_solve_c)
@@ -192,19 +192,19 @@ text \<open>
 \<close>
 
 definition analyse_sign_call_string_result_for ::
-    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> tyenv \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, sign abs_state) analysis_result" where
-  "analyse_sign_call_string_result_for k gs \<Gamma> mnm p =
+    "nat \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (call_string, sign abs_state) analysis_result" where
+  "analyse_sign_call_string_result_for k gs mnm p =
      Analysis_Result
-       (fst (scs_sol_prog k gs \<Gamma> mnm p))
+       (fst (scs_sol_prog k gs mnm p))
        (\<lambda>v ctx. normalize_point gs
                   (canonicalize_lift (resolved_st_q_is_bot_for (declared_global_vars p))
-                    (locals (snd (scs_sol_prog k gs \<Gamma> mnm p) (Inl (v, ctx))))))"
+                    (locals (snd (scs_sol_prog k gs mnm p) (Inl (v, ctx))))))"
 
 declare analyse_sign_call_string_result_for_def [code del]
 
 lemma analyse_sign_call_string_result_for_code [code]:
-  "analyse_sign_call_string_result_for k gs \<Gamma> mnm p =
-     (let sol = scs_sol_prog k gs \<Gamma> mnm p; gl = declared_global_vars p
+  "analyse_sign_call_string_result_for k gs mnm p =
+     (let sol = scs_sol_prog k gs mnm p; gl = declared_global_vars p
       in Analysis_Result (fst sol)
            (\<lambda>v ctx. normalize_point gs
                       (canonicalize_lift (resolved_st_q_is_bot_for gl)
@@ -218,7 +218,7 @@ text \<open>Convenience instance at \<^const>\<open>declared_global\<close> \<op
 definition analyse_sign_call_string_result ::
     "nat \<Rightarrow> imp_prog \<Rightarrow> (call_string, sign abs_state) analysis_result" where
   "analyse_sign_call_string_result k p =
-     analyse_sign_call_string_result_for k (declared_global p) (prog_tyenv p) prog_main_name p"
+     analyse_sign_call_string_result_for k (declared_global p) prog_main_name p"
 
 section \<open>Contextual check report\<close>
 
@@ -231,28 +231,28 @@ text \<open>
 \<close>
 
 definition scs_check_projection ::
-    "nat \<Rightarrow> tyenv \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> (call_string \<times> contextual_verdict) set) list" where
-  "scs_check_projection k \<Gamma> mnm p =
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> (call_string \<times> contextual_verdict) set) list" where
+  "scs_check_projection k mnm p =
      classify_checks_ctx (prog_cfg mnm p)
-       (analyse_sign_call_string_result_for k (declared_global p) \<Gamma> mnm p)
+       (analyse_sign_call_string_result_for k (declared_global p) mnm p)
        sign_classify_check"
 
 definition scs_verdict_report_prog ::
-    "nat \<Rightarrow> tyenv \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "scs_verdict_report_prog k \<Gamma> mnm p =
+    "nat \<Rightarrow> pname \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
+  "scs_verdict_report_prog k mnm p =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs)))
-       (scs_check_projection k \<Gamma> mnm p)"
+       (scs_check_projection k mnm p)"
 
 lemma scs_verdict_report_prog_eq:
-  "scs_verdict_report_prog k \<Gamma> mnm p =
+  "scs_verdict_report_prog k mnm p =
      classify_checks_verdicts (prog_cfg mnm p)
-       (analyse_sign_call_string_result_for k (declared_global p) \<Gamma> mnm p)
+       (analyse_sign_call_string_result_for k (declared_global p) mnm p)
        sign_classify_check"
   unfolding scs_verdict_report_prog_def scs_check_projection_def
   by (rule classify_checks_verdicts_proj)
 
 definition analyse_sign_call_string_report ::
-    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "analyse_sign_call_string_report k p = scs_verdict_report_prog k (prog_tyenv p) prog_main_name p"
+    "nat \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp \<times> contextual_verdict) list" where
+  "analyse_sign_call_string_report k p = scs_verdict_report_prog k prog_main_name p"
 
 end

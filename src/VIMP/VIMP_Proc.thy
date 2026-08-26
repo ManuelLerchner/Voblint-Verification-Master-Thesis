@@ -151,10 +151,10 @@ where
                   Frame s dst rk # frs,
                   rk')"
 | Special: "special_table p = Some desc
-             \<Longrightarrow> classify_special desc actuals = Some sc
-             \<Longrightarrow> special_result \<Gamma> sc s v
+             \<Longrightarrow> classify_special \<Gamma> (\<Gamma> x) desc actuals = Some sc
+             \<Longrightarrow> special_result sc s v
              \<Longrightarrow> pstep \<Gamma> gs \<Pi> (Call (Some x) p actuals, s, frs, rk)
-                 (SKIP, s(x := ik_norm (\<Gamma> x) v), frs, rk)"
+                 (SKIP, s(x := v), frs, rk)"
 | RestoreStep:
     "pstep \<Gamma> gs \<Pi> (Restore, s, Frame fr dst rk # frs, rk')
        (SKIP, combine_assign \<Gamma> dst (s ret_var) (combine_env gs fr s), frs, rk)"
@@ -962,6 +962,37 @@ lemmas mentions_defs [simp] =
 definition source_exp :: "exp => bool" where
   "source_exp a \<longleftrightarrow> \<not> exp_mentions ret_var a"
 
+text \<open>
+  The elaboration bridge again, weakened to the invariant that actually holds
+  across a return. A source expression never names \<^const>\<open>ret_var\<close>
+  (\<^const>\<open>source_exp\<close>), so \<^const>\<open>rstyped\<close> -- every slot but that one
+  inside its declared kind's range -- already gives the elaborated form the
+  same value as \<^const>\<open>taval\<close>. This is what lets the unwinding window,
+  where \<^const>\<open>ret_var\<close> holds a value at the callee's return kind rather
+  than its own declared kind, still relate source and compiled evaluation.
+\<close>
+
+lemma teval_elaborate_rstyped:
+  assumes "rstyped \<Gamma> s" and "\<not> exp_mentions ret_var e"
+  shows "teval (elaborate \<Gamma> ik e) s = taval \<Gamma> ik e s"
+  using assms
+proof (induction e arbitrary: ik)
+  case (V x)
+  then have "x \<noteq> ret_var" by simp
+  then have "s x \<in> ik_range (\<Gamma> x)" using V.prems(1) by (simp add: rstyped_def)
+  then show ?case by (simp add: ik_norm_id)
+qed (simp_all add: Let_def)
+
+lemma teval_elaborate_syn_rstyped:
+  assumes "rstyped \<Gamma> s" and "\<not> exp_mentions ret_var e"
+  shows "teval (elaborate_syn \<Gamma> e) s = taval_syn \<Gamma> e s"
+  using assms by (simp add: elaborate_syn_def taval_syn_def teval_elaborate_rstyped)
+
+lemma teval_elaborate_to_rstyped:
+  assumes "rstyped \<Gamma> s" and "\<not> exp_mentions ret_var e"
+  shows "teval (elaborate_to \<Gamma> ik e) s = ik_norm ik (taval_syn \<Gamma> e s)"
+  using assms by (simp add: elaborate_to_def teval_elaborate_syn_rstyped)
+
 definition valid_formal :: "(vname => bool) => vname => bool" where
   "valid_formal gs x \<longleftrightarrow> \<not> gs x \<and> x ~= ret_var"
 
@@ -1027,7 +1058,7 @@ fun wf_source_com :: "proc_table => com => bool" where
 | "wf_source_com \<Pi> (Call dst p actuals) =
      (case special_table p of
         Some desc \<Rightarrow>
-          classify_special desc actuals \<noteq> None \<and> list_all source_exp actuals \<and>
+          special_arity_ok desc actuals \<and> list_all source_exp actuals \<and>
           (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> ret_var)
       | None \<Rightarrow>
           (case \<Pi> p of

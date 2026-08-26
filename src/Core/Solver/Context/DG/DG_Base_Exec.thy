@@ -21,9 +21,9 @@ text \<open>
 
 definition base_dg_spec_st_for_lifted ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> bool)
+   \<Rightarrow> ('a::cast_domain exec_dg_st \<Rightarrow> bool)
    \<Rightarrow> (edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
+   \<Rightarrow> (vname list \<Rightarrow> texp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
    \<Rightarrow> ('a exec_dg_st lifted, 'g::bounded_semilattice_sup_bot) dg_spec"
 where
   "base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st = (|
@@ -134,7 +134,7 @@ theorem base_dg_spec_st_for_lifted_dgs_caller_cont_commute:
   unfolding base_dg_spec_st_for_lifted_def base_dg_spec_for_lifted_def by simp
 
 theorem base_dg_spec_st_for_lifted_dgs_combine_commute:
-  assumes exact: "\<And>(s::'a::sound_domain resolved_st_q). is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
+  assumes exact: "\<And>(s::'a::sound_cast_domain resolved_st_q). is_bot_pred s = is_bot_state (fun_of_exec_dg_st_for gs s)"
   shows "map_prod (map_lift (fun_of_exec_dg_st_for gs)) (map_lift (fun_of_exec_dg_st_for gs))
            (dgs_combine (base_dg_spec_st_for_lifted gs is_bot_pred tf_st enter_st) ci dc de g) =
          dgs_combine (base_dg_spec_for_lifted gs is_bot_state tf) ci
@@ -177,9 +177,9 @@ lemma dg_reader_commute_gen_lifted_for:
 
 locale routed_dg_domain_exec =
   fixes gs :: "vname \<Rightarrow> bool"
-    and is_bot_pred :: "'a::sound_domain exec_dg_st \<Rightarrow> bool"
+    and is_bot_pred :: "'a::sound_cast_domain exec_dg_st \<Rightarrow> bool"
     and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "vname list \<Rightarrow> exp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and enter_st :: "vname list \<Rightarrow> texp list \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
     and tf :: "'a domain_transfer"
   assumes tf_st_commute:
       "\<And>a s. fun_of_resolved_st_q_for gs (tf_st a s) = apply_tf tf a (fun_of_resolved_st_q_for gs s)"

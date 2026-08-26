@@ -26,18 +26,18 @@ text \<open>
 \<close>
 
 lemma bfilter_int_dom_never_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_never \<Gamma> b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>bfilter_int_dom_never b res \<sigma>\<rbrakk>"
   using int_dom_backward_never.bfilter_sound by simp
 
 lemma bfilter_int_dom_once_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_once \<Gamma> b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>bfilter_int_dom_once b res \<sigma>\<rbrakk>"
   using int_dom_backward_once.bfilter_sound by simp
 
 lemma bfilter_int_dom_fixpoint_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>bfilter_int_dom_fixpoint \<Gamma> b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>bfilter_int_dom_fixpoint b res \<sigma>\<rbrakk>"
   using int_dom_backward_fixpoint.bfilter_sound by simp
 
 text \<open>
@@ -48,65 +48,52 @@ text \<open>
 \<close>
 
 lemma branch_int_dom_never_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_never \<Gamma> b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>branch_int_dom_never b res \<sigma>\<rbrakk>"
   using int_dom_backward_never.branch_sound by simp
 
 lemma branch_int_dom_once_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_once \<Gamma> b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>branch_int_dom_once b res \<sigma>\<rbrakk>"
   using int_dom_backward_once.branch_sound by simp
 
 lemma branch_int_dom_fixpoint_sound:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (taval_syn \<Gamma> b s) = res \<Longrightarrow> styped \<Gamma> s \<Longrightarrow>
-   wt_exp \<Gamma> b (opk (esyn \<Gamma> b)) \<Longrightarrow> s \<in> \<lbrakk>branch_int_dom_fixpoint \<Gamma> b res \<sigma>\<rbrakk>"
+  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (teval b s) = res \<Longrightarrow>
+   s \<in> \<lbrakk>branch_int_dom_fixpoint b res \<sigma>\<rbrakk>"
   using int_dom_backward_fixpoint.branch_sound by simp
 
 subsection \<open>Abstract assignment\<close>
 
 text \<open>
-  \<open>assign_int_dom\<close> casts to the destination's own declared kind via
-  \<^const>\<open>int_dom_cast\<close>, evaluating the right-hand side with
-  \<^const>\<open>taval_int_dom\<close> at its synthesized kind -- the same double-cast
-  shape \<open>assign_sign\<close>/\<open>assign_ivl\<close> use, needed to match
-  \<open>sound_transfer_for\<close>'s \<open>tf_sound_assign_for\<close> obligation
-  (\<open>ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)\<close>) rather than the untyped \<open>aval_int_dom\<close>.
+  The destination's declared kind rides inside the assigned \<^typ>\<open>texp\<close> as a
+  \<^const>\<open>TCast\<close> node, so \<open>assign_int_dom\<close> performs no cast of its own:
+  evaluating the elaborated right-hand side already lands in the target's
+  range, exactly as \<^const>\<open>teval\<close> does concretely.
 \<close>
 definition assign_int_dom ::
-    "tyenv => refine_mode => vname => exp => (vname => int_dom) => (vname => int_dom)"
+    "refine_mode => vname => texp => (vname => int_dom) => (vname => int_dom)"
 where
-  "assign_int_dom \<Gamma> mode x a \<sigma> =
-     \<sigma>(x := int_dom_cast (\<Gamma> x) (taval_int_dom \<Gamma> mode (opk (esyn \<Gamma> a)) a \<sigma>))"
+  "assign_int_dom mode x a \<sigma> = \<sigma>(x := aval_int_dom_t mode a \<sigma>)"
 
 lemma assign_int_dom_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s)) \<in> \<lbrakk>assign_int_dom \<Gamma> mode x a \<sigma>\<rbrakk>"
+  shows "s(x := teval a s) \<in> \<lbrakk>assign_int_dom mode x a \<sigma>\<rbrakk>"
   unfolding assign_int_dom_def gamma_state_def
 proof safe
   fix y
   from gs have V: "\<forall>z. s z \<in> gamma_int_dom (\<sigma> z)"
     using gamma_stateD[OF gs] by simp
-  have av: "taval \<Gamma> (opk (esyn \<Gamma> a)) a s \<in> gamma_int_dom (taval_int_dom \<Gamma> mode (opk (esyn \<Gamma> a)) a \<sigma>)"
-    using taval_int_dom_sound[OF V] .
-  show "(s(x := ik_norm (\<Gamma> x) (taval_syn \<Gamma> a s))) y
-          \<in> gamma ((\<sigma>(x := int_dom_cast (\<Gamma> x) (taval_int_dom \<Gamma> mode (opk (esyn \<Gamma> a)) a \<sigma>))) y)"
-  proof (cases "y = x")
-    case True
-    have "ik_norm (\<Gamma> x) (taval \<Gamma> (opk (esyn \<Gamma> a)) a s)
-            \<in> gamma_int_dom (int_dom_cast (\<Gamma> x) (taval_int_dom \<Gamma> mode (opk (esyn \<Gamma> a)) a \<sigma>))"
-      by (rule int_dom_cast_sound[OF av])
-    with True show ?thesis by (simp add: taval_syn_def)
-  next
-    case False
-    with V show ?thesis by simp
-  qed
+  have av: "teval a s \<in> gamma_int_dom (aval_int_dom_t mode a \<sigma>)"
+    using aval_int_dom_t_sound[OF V] .
+  show "(s(x := teval a s)) y \<in> gamma ((\<sigma>(x := aval_int_dom_t mode a \<sigma>)) y)"
+    using V av by (cases "y = x") simp_all
 qed
 
 lemma assign_int_dom_mono:
   assumes "mode ~= Refine_Fixpoint" and "sigma1 <= sigma2"
-  shows "assign_int_dom \<Gamma> mode x a sigma1 <= assign_int_dom \<Gamma> mode x a sigma2"
+  shows "assign_int_dom mode x a sigma1 <= assign_int_dom mode x a sigma2"
   using assms
-  by (simp add: assign_int_dom_def taval_int_dom_mono le_funD le_funI int_dom_cast_mono)
+  by (simp add: assign_int_dom_def aval_int_dom_t_mono le_funD le_funI)
 
 subsection \<open>Min/Max special-call primitives\<close>
 
@@ -218,133 +205,118 @@ qed
 subsection \<open>Special-call dispatch\<close>
 
 text \<open>
-  \<open>special_int_dom\<close> evaluates \<open>Min\<close>/\<open>Max\<close>'s two operands with
-  \<^const>\<open>taval_int_dom\<close> at their shared synthesized kind (mirroring
-  \<^const>\<open>special_result\<close> and \<open>Special_Ops.special_transfer\<close> exactly), then casts
-  the combined result to the destination \<open>x\<close>'s own declared kind via
-  \<^const>\<open>int_dom_cast\<close> -- the same double-cast shape \<open>assign_int_dom\<close> uses.
+  \<open>special_int_dom\<close> evaluates \<open>Min\<close>/\<open>Max\<close>'s two already-elaborated operands
+  and casts the combined result at the call's own destination kind, exactly
+  the shape \<^const>\<open>special_result\<close> and \<open>Special_Ops.special_transfer\<close> use.
 \<close>
 fun special_int_dom ::
-    "tyenv => refine_mode => special_call => vname => (vname => int_dom) => (vname => int_dom)"
+    "refine_mode => special_call => vname => (vname => int_dom) => (vname => int_dom)"
 where
-  "special_int_dom \<Gamma> mode Nondet_Int x \<sigma> = \<sigma>(x := top)"
-| "special_int_dom \<Gamma> mode (Min a b) x \<sigma> =
-     (let k = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))
-      in \<sigma>(x := int_dom_cast (\<Gamma> x)
-             (int_dom_min mode (taval_int_dom \<Gamma> mode k a \<sigma>) (taval_int_dom \<Gamma> mode k b \<sigma>))))"
-| "special_int_dom \<Gamma> mode (Max a b) x \<sigma> =
-     (let k = opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))
-      in \<sigma>(x := int_dom_cast (\<Gamma> x)
-             (int_dom_max mode (taval_int_dom \<Gamma> mode k a \<sigma>) (taval_int_dom \<Gamma> mode k b \<sigma>))))"
+  "special_int_dom mode (Nondet_Int k) x \<sigma> = \<sigma>(x := refine mode (int_dom_cast k top))"
+| "special_int_dom mode (Min k a b) x \<sigma> =
+     \<sigma>(x := int_dom_cast k
+            (int_dom_min mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>)))"
+| "special_int_dom mode (Max k a b) x \<sigma> =
+     \<sigma>(x := int_dom_cast k
+            (int_dom_max mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>)))"
 
 lemma gamma_int_dom_top: "gamma_int_dom (top :: int_dom) = UNIV"
   by (simp add: gamma_int_dom_def top_int_dom_ext_def top_ivl_def
         gamma_sign_top gamma_ivl_top gamma_parity_top)
 
 lemma special_int_dom_sound:
-  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result \<Gamma> sc s v"
-  shows "s(x := ik_norm (\<Gamma> x) v) \<in> \<lbrakk>special_int_dom \<Gamma> mode sc x \<sigma>\<rbrakk>"
+  assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
+  shows "s(x := v) \<in> \<lbrakk>special_int_dom mode sc x \<sigma>\<rbrakk>"
 proof (cases sc)
-  case Nondet_Int
+  case (Nondet_Int k)
   show ?thesis
     unfolding Nondet_Int gamma_state_def
     using gs unfolding gamma_state_def
     by (simp add: gamma_int_dom_top)
 next
-  case (Min a b)
-  let ?k = "opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))"
+  case (Min k a b)
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
     using gs unfolding gamma_state_def by simp
-  have Va: "taval \<Gamma> ?k a s : gamma_int_dom (taval_int_dom \<Gamma> mode ?k a \<sigma>)"
-    by (rule taval_int_dom_sound[OF V])
-  have Vb: "taval \<Gamma> ?k b s : gamma_int_dom (taval_int_dom \<Gamma> mode ?k b \<sigma>)"
-    by (rule taval_int_dom_sound[OF V])
-  have v: "v = min (taval \<Gamma> ?k a s) (taval \<Gamma> ?k b s)"
-    using sr unfolding Min by (simp add: Let_def)
-  have vmem: "v : gamma_int_dom (int_dom_min mode (taval_int_dom \<Gamma> mode ?k a \<sigma>) (taval_int_dom \<Gamma> mode ?k b \<sigma>))"
-    unfolding v by (rule int_dom_min_sound[OF Va Vb])
-  have "ik_norm (\<Gamma> x) v
-          : gamma_int_dom (int_dom_cast (\<Gamma> x)
-              (int_dom_min mode (taval_int_dom \<Gamma> mode ?k a \<sigma>) (taval_int_dom \<Gamma> mode ?k b \<sigma>)))"
-    by (rule int_dom_cast_sound[OF vmem])
+  have Va: "teval a s : gamma_int_dom (aval_int_dom_t mode a \<sigma>)"
+    by (rule aval_int_dom_t_sound[OF V])
+  have Vb: "teval b s : gamma_int_dom (aval_int_dom_t mode b \<sigma>)"
+    by (rule aval_int_dom_t_sound[OF V])
+  have v: "v = ik_norm k (min (teval a s) (teval b s))"
+    using sr unfolding Min by simp
+  have vmem: "min (teval a s) (teval b s)
+                : gamma_int_dom (int_dom_min mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>))"
+    by (rule int_dom_min_sound[OF Va Vb])
+  have "v : gamma_int_dom (int_dom_cast k
+              (int_dom_min mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>)))"
+    unfolding v by (rule int_dom_cast_sound[OF vmem])
   then show ?thesis
-    unfolding Min gamma_state_def using V by (auto simp: gamma_int_dom_def Let_def)
+    unfolding Min gamma_state_def using V by (auto simp: gamma_int_dom_def)
 next
-  case (Max a b)
-  let ?k = "opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))"
+  case (Max k a b)
   have V: "\<forall>y. s y \<in> gamma_int_dom (\<sigma> y)"
     using gs unfolding gamma_state_def by simp
-  have Va: "taval \<Gamma> ?k a s : gamma_int_dom (taval_int_dom \<Gamma> mode ?k a \<sigma>)"
-    by (rule taval_int_dom_sound[OF V])
-  have Vb: "taval \<Gamma> ?k b s : gamma_int_dom (taval_int_dom \<Gamma> mode ?k b \<sigma>)"
-    by (rule taval_int_dom_sound[OF V])
-  have v: "v = max (taval \<Gamma> ?k a s) (taval \<Gamma> ?k b s)"
-    using sr unfolding Max by (simp add: Let_def)
-  have vmem: "v : gamma_int_dom (int_dom_max mode (taval_int_dom \<Gamma> mode ?k a \<sigma>) (taval_int_dom \<Gamma> mode ?k b \<sigma>))"
-    unfolding v by (rule int_dom_max_sound[OF Va Vb])
-  have "ik_norm (\<Gamma> x) v
-          : gamma_int_dom (int_dom_cast (\<Gamma> x)
-              (int_dom_max mode (taval_int_dom \<Gamma> mode ?k a \<sigma>) (taval_int_dom \<Gamma> mode ?k b \<sigma>)))"
-    by (rule int_dom_cast_sound[OF vmem])
+  have Va: "teval a s : gamma_int_dom (aval_int_dom_t mode a \<sigma>)"
+    by (rule aval_int_dom_t_sound[OF V])
+  have Vb: "teval b s : gamma_int_dom (aval_int_dom_t mode b \<sigma>)"
+    by (rule aval_int_dom_t_sound[OF V])
+  have v: "v = ik_norm k (max (teval a s) (teval b s))"
+    using sr unfolding Max by simp
+  have vmem: "max (teval a s) (teval b s)
+                : gamma_int_dom (int_dom_max mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>))"
+    by (rule int_dom_max_sound[OF Va Vb])
+  have "v : gamma_int_dom (int_dom_cast k
+              (int_dom_max mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>)))"
+    unfolding v by (rule int_dom_cast_sound[OF vmem])
   then show ?thesis
-    unfolding Max gamma_state_def using V by (auto simp: gamma_int_dom_def Let_def)
+    unfolding Max gamma_state_def using V by (auto simp: gamma_int_dom_def)
 qed
 
 lemma special_int_dom_mono:
   assumes mode: "mode ~= Refine_Fixpoint" and le: "sigma1 <= sigma2"
-  shows "special_int_dom \<Gamma> mode sc x sigma1 <= special_int_dom \<Gamma> mode sc x sigma2"
+  shows "special_int_dom mode sc x sigma1 <= special_int_dom mode sc x sigma2"
 proof (cases sc)
-  case Nondet_Int
+  case (Nondet_Int k)
   then show ?thesis
     using le by (auto simp: le_fun_def)
 next
-  case (Min a b)
-  let ?k = "opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))"
-  have A: "taval_int_dom \<Gamma> mode ?k a sigma1 <= taval_int_dom \<Gamma> mode ?k a sigma2"
-    using mode le by (rule taval_int_dom_mono)
-  have B: "taval_int_dom \<Gamma> mode ?k b sigma1 <= taval_int_dom \<Gamma> mode ?k b sigma2"
-    using mode le by (rule taval_int_dom_mono)
-  have M: "int_dom_min mode (taval_int_dom \<Gamma> mode ?k a sigma1) (taval_int_dom \<Gamma> mode ?k b sigma1)
-          <= int_dom_min mode (taval_int_dom \<Gamma> mode ?k a sigma2) (taval_int_dom \<Gamma> mode ?k b sigma2)"
+  case (Min k a b)
+  have A: "aval_int_dom_t mode a sigma1 <= aval_int_dom_t mode a sigma2"
+    using mode le by (rule aval_int_dom_t_mono)
+  have B: "aval_int_dom_t mode b sigma1 <= aval_int_dom_t mode b sigma2"
+    using mode le by (rule aval_int_dom_t_mono)
+  have M: "int_dom_min mode (aval_int_dom_t mode a sigma1) (aval_int_dom_t mode b sigma1)
+          <= int_dom_min mode (aval_int_dom_t mode a sigma2) (aval_int_dom_t mode b sigma2)"
     by (rule int_dom_min_mono[OF mode A B])
-  have C: "int_dom_cast (\<Gamma> x)
-             (int_dom_min mode (taval_int_dom \<Gamma> mode ?k a sigma1) (taval_int_dom \<Gamma> mode ?k b sigma1))
-          <= int_dom_cast (\<Gamma> x)
-             (int_dom_min mode (taval_int_dom \<Gamma> mode ?k a sigma2) (taval_int_dom \<Gamma> mode ?k b sigma2))"
+  have C: "int_dom_cast k (int_dom_min mode (aval_int_dom_t mode a sigma1) (aval_int_dom_t mode b sigma1))
+          <= int_dom_cast k (int_dom_min mode (aval_int_dom_t mode a sigma2) (aval_int_dom_t mode b sigma2))"
     by (rule int_dom_cast_mono[OF M])
   show ?thesis
-    unfolding Min using le C by (auto simp: le_fun_def Let_def)
+    unfolding Min using le C by (auto simp: le_fun_def)
 next
-  case (Max a b)
-  let ?k = "opk (kjoin (esyn \<Gamma> a) (esyn \<Gamma> b))"
-  have A: "taval_int_dom \<Gamma> mode ?k a sigma1 <= taval_int_dom \<Gamma> mode ?k a sigma2"
-    using mode le by (rule taval_int_dom_mono)
-  have B: "taval_int_dom \<Gamma> mode ?k b sigma1 <= taval_int_dom \<Gamma> mode ?k b sigma2"
-    using mode le by (rule taval_int_dom_mono)
-  have M: "int_dom_max mode (taval_int_dom \<Gamma> mode ?k a sigma1) (taval_int_dom \<Gamma> mode ?k b sigma1)
-          <= int_dom_max mode (taval_int_dom \<Gamma> mode ?k a sigma2) (taval_int_dom \<Gamma> mode ?k b sigma2)"
+  case (Max k a b)
+  have A: "aval_int_dom_t mode a sigma1 <= aval_int_dom_t mode a sigma2"
+    using mode le by (rule aval_int_dom_t_mono)
+  have B: "aval_int_dom_t mode b sigma1 <= aval_int_dom_t mode b sigma2"
+    using mode le by (rule aval_int_dom_t_mono)
+  have M: "int_dom_max mode (aval_int_dom_t mode a sigma1) (aval_int_dom_t mode b sigma1)
+          <= int_dom_max mode (aval_int_dom_t mode a sigma2) (aval_int_dom_t mode b sigma2)"
     by (rule int_dom_max_mono[OF mode A B])
-  have C: "int_dom_cast (\<Gamma> x)
-             (int_dom_max mode (taval_int_dom \<Gamma> mode ?k a sigma1) (taval_int_dom \<Gamma> mode ?k b sigma1))
-          <= int_dom_cast (\<Gamma> x)
-             (int_dom_max mode (taval_int_dom \<Gamma> mode ?k a sigma2) (taval_int_dom \<Gamma> mode ?k b sigma2))"
+  have C: "int_dom_cast k (int_dom_max mode (aval_int_dom_t mode a sigma1) (aval_int_dom_t mode b sigma1))
+          <= int_dom_cast k (int_dom_max mode (aval_int_dom_t mode a sigma2) (aval_int_dom_t mode b sigma2))"
     by (rule int_dom_cast_mono[OF M])
   show ?thesis
-    unfolding Max using le C by (auto simp: le_fun_def Let_def)
+    unfolding Max using le C by (auto simp: le_fun_def)
 qed
 
 subsection \<open>Skip, body-entry, return, and event\<close>
 
 text \<open>Composite \<open>int_dom\<close> has no lifecycle-specific abstract information,
   mirroring every other current domain: \<open>skip\<^sup>#\<close>/\<open>body\<^sup>#\<close>/\<open>event\<^sup>#\<close> are
-  the identity. \<open>return\<^sup>#\<close> cannot reuse \<open>assign_int_dom\<close>:
-  \<^const>\<open>apply_tf\<close>'s \<open>EA_Ret\<close> case does not pass the edge's own baked
-  return kind \<open>rk\<close> through to \<open>tf_return\<close> at all (\<open>sound_transfer_for\<close>'s
-  \<open>tf_sound_return_for\<close> quantifies over every \<open>rk\<close> universally), so
-  \<open>return\<^sup>#\<close>'s single output must already be sound for whichever \<open>rk\<close> the
-  compiled edge actually used -- unlike an ordinary assignment, there is no
-  declared kind here to cast against, only an unknown one, so \<open>ret_var\<close>
-  widens to the composite \<^const>\<open>top\<close> whenever the return carries a value.\<close>
+  the identity. \<open>return\<^sup>#\<close> is an ordinary write to \<^const>\<open>ret_var\<close>: the
+  owning procedure's return kind is already baked into the returned payload
+  as a \<^const>\<open>TCast\<close> node, so evaluating it abstractly is both sound and as
+  precise as the domain allows -- no widening to the composite
+  \<^const>\<open>top\<close> is needed.\<close>
 
 definition skip_int_dom :: "(vname => int_dom) => (vname => int_dom)" where
   "skip_int_dom \<sigma> = \<sigma>"
@@ -356,9 +328,10 @@ definition event_int_dom :: "analysis_event => (vname => int_dom) => (vname => i
   "event_int_dom ev \<sigma> = \<sigma>"
 
 definition return_int_dom ::
-    "exp option => pname => (vname => int_dom) => (vname => int_dom)"
+    "refine_mode => texp option => pname => (vname => int_dom) => (vname => int_dom)"
 where
-  "return_int_dom e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := top))"
+  "return_int_dom mode e p \<sigma> =
+     (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> \<sigma>(ret_var := aval_int_dom_t mode a \<sigma>))"
 
 lemma skip_int_dom_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip_int_dom \<sigma>\<rbrakk>"
   by (simp add: skip_int_dom_def)
@@ -371,10 +344,21 @@ lemma event_int_dom_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
 
 lemma return_int_dom_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> ik_norm rk (taval_syn \<Gamma> a s)))
-           \<in> \<lbrakk>return_int_dom e p \<sigma>\<rbrakk>"
-  using gs unfolding gamma_state_def
-  by (cases e) (auto simp: return_int_dom_def gamma_int_dom_top)
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> teval a s))
+           \<in> \<lbrakk>return_int_dom mode e p \<sigma>\<rbrakk>"
+proof (cases e)
+  case None
+  then show ?thesis using gs by (simp add: return_int_dom_def)
+next
+  case (Some a)
+  from gs have V: "\<forall>z. s z \<in> gamma_int_dom (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  have av: "teval a s \<in> gamma_int_dom (aval_int_dom_t mode a \<sigma>)"
+    using aval_int_dom_t_sound[OF V] .
+  show ?thesis
+    unfolding gamma_state_def Some
+    using V av by (auto simp: return_int_dom_def)
+qed
 
 lemma skip_int_dom_mono: "sigma1 <= sigma2 \<Longrightarrow> skip_int_dom sigma1 <= skip_int_dom sigma2"
   by (simp add: skip_int_dom_def)
@@ -386,76 +370,10 @@ lemma event_int_dom_mono: "sigma1 <= sigma2 \<Longrightarrow> event_int_dom ev s
   by (simp add: event_int_dom_def)
 
 lemma return_int_dom_mono:
-  "sigma1 <= sigma2 \<Longrightarrow> return_int_dom e p sigma1 <= return_int_dom e p sigma2"
-  by (cases e) (simp_all add: return_int_dom_def le_fun_def)
-
-subsection \<open>Texp-based evaluation\<close>
-
-text \<open>
-  \<open>aval_int_dom_t\<close> mirrors \<open>taval_int_dom\<close>'s own recursion exactly, node for
-  node, over an already-elaborated \<^typ>\<open>texp\<close> rather than an \<open>exp\<close> paired
-  with a separately-threaded \<open>ikind\<close> -- the same relationship \<open>aval_sign_t\<close>
-  has to \<open>aval_sign\<close>. \<open>Numeric_Ops.numeric_ops\<close>'s \<open>n_aval\<close> field needs this
-  texp-based shape for the executable mirror (\<open>Int_Exec\<close>), and
-  \<^const>\<open>enter_D_typed\<close> needs it here for \<open>enter_int_dom_for\<close>, so it is
-  proved sound and monotone once via the bridge to the already-proved
-  \<open>taval_int_dom\<close> rather than by a second, independent induction.
-\<close>
-fun aval_int_dom_t :: "refine_mode => texp => (vname => int_dom) => int_dom" where
-  "aval_int_dom_t mode (TN ik n) \<sigma> = int_dom_cast ik (int_dom_of_int n)"
-| "aval_int_dom_t mode (TV ik x) \<sigma> = int_dom_cast ik (\<sigma> x)"
-| "aval_int_dom_t mode (TPlus ik a b) \<sigma> =
-     int_dom_cast ik (plus_int_dom mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>))"
-| "aval_int_dom_t mode (TMinus ik a b) \<sigma> =
-     int_dom_cast ik (minus_int_dom mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>))"
-| "aval_int_dom_t mode (TTimes ik a b) \<sigma> =
-     int_dom_cast ik (times_int_dom mode (aval_int_dom_t mode a \<sigma>) (aval_int_dom_t mode b \<sigma>))"
-| "aval_int_dom_t mode (TLess a b) \<sigma> =
-     (let x = aval_int_dom_t mode a \<sigma>; y = aval_int_dom_t mode b \<sigma>
-      in if is_bot x \<or> is_bot y then bot else int_dom_of_bool_option (int_dom_lt x y))"
-| "aval_int_dom_t mode (TEq a b) \<sigma> =
-     (let x = aval_int_dom_t mode a \<sigma>; y = aval_int_dom_t mode b \<sigma>
-      in if is_bot x \<or> is_bot y then bot else int_dom_of_bool_option (int_dom_eqb x y))"
-| "aval_int_dom_t mode (TNot a) \<sigma> =
-     (let x = aval_int_dom_t mode a \<sigma>
-      in if is_bot x then bot
-         else if int_dom_tobool x = Some True then int_dom_of_int 0
-         else if int_dom_tobool x = Some False then int_dom_of_int 1
-         else int_dom_bool_unknown)"
-| "aval_int_dom_t mode (TAnd a b) \<sigma> =
-     (let x = aval_int_dom_t mode a \<sigma>; y = aval_int_dom_t mode b \<sigma>
-      in if is_bot x \<or> is_bot y then bot
-         else if int_dom_tobool x = Some False \<or> int_dom_tobool y = Some False
-         then int_dom_of_int 0
-         else if int_dom_tobool x = Some True \<and> int_dom_tobool y = Some True
-         then int_dom_of_int 1
-         else int_dom_bool_unknown)"
-| "aval_int_dom_t mode (TOr a b) \<sigma> =
-     (let x = aval_int_dom_t mode a \<sigma>; y = aval_int_dom_t mode b \<sigma>
-      in if is_bot x \<or> is_bot y then bot
-         else if int_dom_tobool x = Some True \<or> int_dom_tobool y = Some True
-         then int_dom_of_int 1
-         else if int_dom_tobool x = Some False \<and> int_dom_tobool y = Some False
-         then int_dom_of_int 0
-         else int_dom_bool_unknown)"
-
-lemma aval_int_dom_t_elaborate [simp]:
-  "aval_int_dom_t mode (elaborate \<Gamma> ik e) \<sigma> = taval_int_dom \<Gamma> mode ik e \<sigma>"
-  by (induction e arbitrary: ik) (simp_all add: Let_def)
-
-lemma aval_int_dom_t_elaborate_syn [simp]:
-  "aval_int_dom_t mode (elaborate_syn \<Gamma> e) \<sigma> = taval_int_dom \<Gamma> mode (opk (esyn \<Gamma> e)) e \<sigma>"
-  by (simp add: elaborate_syn_def)
-
-lemma aval_int_dom_t_sound:
-  assumes "\<forall>x. s x \<in> gamma_int_dom (\<sigma> x)"
-  shows "taval \<Gamma> ik e s \<in> gamma_int_dom (aval_int_dom_t mode (elaborate \<Gamma> ik e) \<sigma>)"
-  unfolding aval_int_dom_t_elaborate using taval_int_dom_sound[OF assms] .
-
-lemma aval_int_dom_t_mono:
   assumes "mode ~= Refine_Fixpoint" and "sigma1 <= sigma2"
-  shows "aval_int_dom_t mode (elaborate \<Gamma> ik e) sigma1 <= aval_int_dom_t mode (elaborate \<Gamma> ik e) sigma2"
-  unfolding aval_int_dom_t_elaborate using taval_int_dom_mono[OF assms] .
+  shows "return_int_dom mode e p sigma1 <= return_int_dom mode e p sigma2"
+  using assms
+  by (cases e) (simp_all add: return_int_dom_def aval_int_dom_t_mono le_fun_def)
 
 subsection \<open>Classifier-parametric procedure entry\<close>
 
@@ -464,10 +382,9 @@ definition enter_frame_int_dom_for ::
   "enter_frame_int_dom_for gs = enter_frame_D gs (top :: int_dom)"
 
 definition enter_int_dom_for ::
-    "refine_mode => (vname => bool) => tyenv => vname list => exp list =>
+    "refine_mode => (vname => bool) => vname list => texp list =>
       int_dom abs_state => int_dom abs_state" where
-  "enter_int_dom_for mode gs \<Gamma> =
-     enter_D_typed gs (top :: int_dom) \<Gamma> int_dom_cast (aval_int_dom_t mode)"
+  "enter_int_dom_for mode gs = enter_D gs (top :: int_dom) (aval_int_dom_t mode)"
 
 lemma enter_frame_int_dom_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
@@ -479,18 +396,18 @@ qed
 
 lemma enter_int_dom_for_sound:
   assumes gs: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "bind_formals xs (map2 (\<lambda>x e. ik_norm (\<Gamma> x) (taval_syn \<Gamma> e s)) xs es) (enter_state cls s)
-           \<in> \<lbrakk>enter_int_dom_for mode cls \<Gamma> xs es \<sigma>\<rbrakk>"
+  shows "bind_formals xs (map (\<lambda>e. teval e s) es) (enter_state cls s)
+           \<in> \<lbrakk>enter_int_dom_for mode cls xs es \<sigma>\<rbrakk>"
   unfolding enter_int_dom_for_def
-proof (rule enter_D_typed_sound[OF gs])
+proof (rule enter_D_sound[OF gs])
   show "gamma (top :: int_dom) = UNIV" by (simp add: gamma_int_dom_top)
 next
-  fix ik v a show "v \<in> gamma a \<Longrightarrow> ik_norm ik v \<in> gamma (int_dom_cast ik a)"
-    by (simp add: int_dom_cast_sound)
-next
-  fix ik e' s' \<sigma>' show "(\<forall>x. s' x \<in> gamma (\<sigma>' x)) \<Longrightarrow>
-                          taval \<Gamma> ik e' s' \<in> gamma (aval_int_dom_t mode (elaborate \<Gamma> ik e') \<sigma>')"
-    by (simp add: taval_int_dom_sound)
+  from gs have V: "\<forall>z. s z \<in> gamma_int_dom (\<sigma> z)"
+    using gamma_stateD[OF gs] by simp
+  show "list_all2 (\<lambda>v a. v \<in> gamma a)
+          (map (\<lambda>e. teval e s) es) (map (\<lambda>e. aval_int_dom_t mode e \<sigma>) es)"
+    using aval_int_dom_t_sound[OF V]
+    by (simp add: list_all2_conv_all_nth)
 qed
 
 lemma enter_frame_int_dom_for_mono:
@@ -500,70 +417,65 @@ lemma enter_frame_int_dom_for_mono:
 
 lemma enter_int_dom_for_mono:
   assumes "mode ~= Refine_Fixpoint" and "s1 <= s2"
-  shows "enter_int_dom_for mode gs \<Gamma> xs es s1 <= enter_int_dom_for mode gs \<Gamma> xs es s2"
+  shows "enter_int_dom_for mode gs xs es s1 <= enter_int_dom_for mode gs xs es s2"
   unfolding enter_int_dom_for_def
-proof (rule enter_D_typed_mono[OF assms(2)])
-  show "\<And>ik a1 a2. a1 \<le> a2 \<Longrightarrow> int_dom_cast ik a1 \<le> int_dom_cast ik a2"
-    by (rule int_dom_cast_mono)
-next
-  show "\<And>ik e' \<tau>1 \<tau>2. \<tau>1 \<le> \<tau>2 \<Longrightarrow>
-          aval_int_dom_t mode (elaborate \<Gamma> ik e') \<tau>1 \<le> aval_int_dom_t mode (elaborate \<Gamma> ik e') \<tau>2"
-    using assms(1) by (rule aval_int_dom_t_mono)
+proof (rule enter_D_mono[OF assms(2)])
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_int_dom_t mode e s1) es)
+          (map (\<lambda>e. aval_int_dom_t mode e s2) es)"
+    using aval_int_dom_t_mono[OF assms] by (simp add: list_all2_conv_all_nth)
 qed
 
 subsection \<open>Registered transfer bundles, one per refinement mode\<close>
 
-definition int_tf_never_for :: "(vname => bool) => tyenv => int_dom domain_transfer" where
-  "int_tf_never_for gs \<Gamma> = (| tf_assign  = assign_int_dom \<Gamma> Refine_Never,
-                            tf_special = special_int_dom \<Gamma> Refine_Never,
-                            tf_branch  = branch_int_dom_never \<Gamma>,
+definition int_tf_never_for :: "(vname => bool) => int_dom domain_transfer" where
+  "int_tf_never_for gs = (| tf_assign  = assign_int_dom Refine_Never,
+                            tf_special = special_int_dom Refine_Never,
+                            tf_branch  = branch_int_dom_never,
                             tf_skip    = skip_int_dom,
                             tf_body    = body_int_dom,
-                            tf_return  = return_int_dom,
-                            tf_enter   = enter_int_dom_for Refine_Never gs \<Gamma>,
+                            tf_return  = return_int_dom Refine_Never,
+                            tf_enter   = enter_int_dom_for Refine_Never gs,
                             tf_event   = event_int_dom,
                             tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
                             tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
-definition int_tf_once_for :: "(vname => bool) => tyenv => int_dom domain_transfer" where
-  "int_tf_once_for gs \<Gamma> = (| tf_assign  = assign_int_dom \<Gamma> Refine_Once,
-                           tf_special = special_int_dom \<Gamma> Refine_Once,
-                           tf_branch  = branch_int_dom_once \<Gamma>,
-                           tf_skip    = skip_int_dom,
-                           tf_body    = body_int_dom,
-                           tf_return  = return_int_dom,
-                           tf_enter   = enter_int_dom_for Refine_Once gs \<Gamma>,
-                           tf_event   = event_int_dom,
-                           tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                           tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+definition int_tf_once_for :: "(vname => bool) => int_dom domain_transfer" where
+  "int_tf_once_for gs = (| tf_assign  = assign_int_dom Refine_Once,
+                            tf_special = special_int_dom Refine_Once,
+                            tf_branch  = branch_int_dom_once,
+                            tf_skip    = skip_int_dom,
+                            tf_body    = body_int_dom,
+                            tf_return  = return_int_dom Refine_Once,
+                            tf_enter   = enter_int_dom_for Refine_Once gs,
+                            tf_event   = event_int_dom,
+                            tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
+                            tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
-definition int_tf_fixpoint_for :: "(vname => bool) => tyenv => int_dom domain_transfer" where
-  "int_tf_fixpoint_for gs \<Gamma> = (| tf_assign  = assign_int_dom \<Gamma> Refine_Fixpoint,
-                               tf_special = special_int_dom \<Gamma> Refine_Fixpoint,
-                               tf_branch  = branch_int_dom_fixpoint \<Gamma>,
-                               tf_skip    = skip_int_dom,
-                               tf_body    = body_int_dom,
-                               tf_return  = return_int_dom,
-                               tf_enter   = enter_int_dom_for Refine_Fixpoint gs \<Gamma>,
-                               tf_event   = event_int_dom,
-                               tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
-                               tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
+definition int_tf_fixpoint_for :: "(vname => bool) => int_dom domain_transfer" where
+  "int_tf_fixpoint_for gs = (| tf_assign  = assign_int_dom Refine_Fixpoint,
+                            tf_special = special_int_dom Refine_Fixpoint,
+                            tf_branch  = branch_int_dom_fixpoint,
+                            tf_skip    = skip_int_dom,
+                            tf_body    = body_int_dom,
+                            tf_return  = return_int_dom Refine_Fixpoint,
+                            tf_enter   = enter_int_dom_for Refine_Fixpoint gs,
+                            tf_event   = event_int_dom,
+                            tf_caller_cont = (\<lambda>_ \<sigma>. \<sigma>),
+                            tf_combine_env = (\<lambda>_. combine_env_abs gs) |)"
 
 text \<open>
-  The branch obligation below is unresolved: @{thm [source] branch_int_dom_never_sound}
-  requires \<open>styped \<Gamma> s\<close> and \<open>wt_exp \<Gamma> b (opk (esyn \<Gamma> b))\<close>, premises that
-  \<open>sound_transfer_for\<close>'s \<open>tf_sound_branch_for\<close> obligation does not supply.
-  Closing this needs a well-typedness invariant threaded through the whole
-  \<open>sound_transfer_for\<close> soundness chain, not a local fix to this lemma. This is
-  the same gap \<open>sign_is_sound_transfer_for\<close> defers for Sign, here across all
-  three refinement modes.
+  Reading a variable performs no conversion, so narrowing a \<^const>\<open>TVar\<close>
+  leaf inverts nothing and @{thm [source] backward_domain.branch_sound} needs
+  no premise about the store: each \<open>branch_int_dom_*\<close> obligation is
+  discharged outright.
 \<close>
-lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for gs \<Gamma>) \<Gamma>"
+lemma int_never_is_sound_transfer_for:
+  "sound_transfer_for gs (int_tf_never_for gs)"
   unfolding int_tf_never_for_def
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal sorry
+  subgoal by (auto intro: branch_int_dom_never_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
@@ -573,12 +485,13 @@ lemma int_never_is_sound_transfer_for: "sound_transfer_for gs (int_tf_never_for 
   subgoal by (simp add: combine_env_sound)
   done
 
-lemma int_once_is_sound_transfer_for: "sound_transfer_for gs (int_tf_once_for gs \<Gamma>) \<Gamma>"
+lemma int_once_is_sound_transfer_for:
+  "sound_transfer_for gs (int_tf_once_for gs)"
   unfolding int_tf_once_for_def
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal sorry
+  subgoal by (auto intro: branch_int_dom_once_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
@@ -588,12 +501,13 @@ lemma int_once_is_sound_transfer_for: "sound_transfer_for gs (int_tf_once_for gs
   subgoal by (simp add: combine_env_sound)
   done
 
-lemma int_fixpoint_is_sound_transfer_for: "sound_transfer_for gs (int_tf_fixpoint_for gs \<Gamma>) \<Gamma>"
+lemma int_fixpoint_is_sound_transfer_for:
+  "sound_transfer_for gs (int_tf_fixpoint_for gs)"
   unfolding int_tf_fixpoint_for_def
   apply unfold_locales
   subgoal by (simp add: assign_int_dom_sound)
   subgoal by (simp add: special_int_dom_sound)
-  subgoal sorry
+  subgoal by (auto intro: branch_int_dom_fixpoint_sound)
   subgoal by (simp add: skip_int_dom_sound)
   subgoal by (simp add: body_int_dom_sound)
   subgoal by (simp add: return_int_dom_sound)
@@ -617,7 +531,7 @@ text \<open>
 
 lemma int_tf_never_for_mono:
   "s1 <= s2 \<Longrightarrow>
-   apply_tf (int_tf_never_for gs \<Gamma>) a s1 <= apply_tf (int_tf_never_for gs \<Gamma>) a s2"
+   apply_tf (int_tf_never_for gs) a s1 <= apply_tf (int_tf_never_for gs) a s2"
   by (cases a)
      (auto simp: int_tf_never_for_def assign_int_dom_mono special_int_dom_mono
                  int_dom_backward_never.branch_mono skip_int_dom_mono body_int_dom_mono
@@ -625,7 +539,7 @@ lemma int_tf_never_for_mono:
 
 lemma int_tf_once_for_mono:
   "s1 <= s2 \<Longrightarrow>
-   apply_tf (int_tf_once_for gs \<Gamma>) a s1 <= apply_tf (int_tf_once_for gs \<Gamma>) a s2"
+   apply_tf (int_tf_once_for gs) a s1 <= apply_tf (int_tf_once_for gs) a s2"
   by (cases a)
      (auto simp: int_tf_once_for_def assign_int_dom_mono special_int_dom_mono
                  int_dom_backward_once.branch_mono skip_int_dom_mono body_int_dom_mono

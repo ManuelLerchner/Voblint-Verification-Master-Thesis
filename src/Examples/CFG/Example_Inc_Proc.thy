@@ -48,23 +48,46 @@ lemma inc_program_counter_global [simp]: "declared_global inc_program (STR ''cou
 lemma inc_program_glocal_not_global [simp]: "\<not> declared_global inc_program (STR ''Glocal'')"
   by simp
 
+text \<open>\<open>inc_ty\<close> is the program's own typing environment: the compiler elaborates
+  every edge payload against it, so the edge shapes below name it too.\<close>
+abbreviation inc_ty :: tyenv where
+  "inc_ty \<equiv> prog_tyenv inc_program"
+
 definition inc_g :: cfg where
-  "inc_g = compile_prog (prog_table inc_program) (prog_procs inc_program) (STR ''main'') (prog_main inc_program)"
+  "inc_g = compile_prog (prog_tyenv inc_program) (prog_table inc_program) (prog_procs inc_program)
+     (STR ''main'') (prog_main inc_program)"
 
 lemma inc_g_eq_compile:
-  "inc_g = compile_prog inc_pi [(STR ''p'')] (STR ''main'') (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)"
+  "inc_g = compile_prog (prog_tyenv inc_program) inc_pi [(STR ''p'')] (STR ''main'')
+     (imp \<lbrakk> Glocal := 1 ; p() \<rbrakk>)"
   by (simp add: inc_g_def inc_pi_def inc_program_parts)
 
 lemma edge_collect_assign_enter_state:
-  fixes s :: store and x :: vname and a :: exp and gs :: "vname \<Rightarrow> bool"
+  fixes s :: store and x :: vname and a :: texp and gs :: "vname \<Rightarrow> bool"
   assumes "enter_state gs s \<in> S"
-  shows "(enter_state gs s)(x := aval a (enter_state gs s))
+  shows "(enter_state gs s)(x := teval a (enter_state gs s))
            \<in> edge_collect (EA_Assign x a) S"
   using assms by auto
 
-lemma aval_plus_counter_on_enter_declared:
-  "aval (Plus (V (STR ''counter'')) (N 1)) (enter_state (declared_global inc_program) s) = s (STR ''counter'') + 1"
-  by (simp add: enter_state_def)
+lemma one_in_ik_range_I32 [simp]: "(1::int) \<in> ik_range I32"
+  by eval
+
+text \<open>The increment reads its operand kinds off the elaborated tree and wraps at
+  each of them. The two range premises say the stored counter and its successor
+  are both representable at \<^const>\<open>I32\<close>, which is exactly when the machine
+  increment agrees with the unbounded one.\<close>
+lemma inc_ty_is_default [simp]: "inc_ty = default_tyenv"
+  by (simp add: prog_tyenv_def inc_program_def)
+
+lemma taval_plus_counter_on_enter_declared:
+  assumes ty: "s (STR ''counter'') \<in> ik_range I32"
+      and nov: "s (STR ''counter'') + 1 \<in> ik_range I32"
+  shows "ik_norm (inc_ty (STR ''counter''))
+           (taval_syn inc_ty (Plus (V (STR ''counter'')) (N 1))
+              (enter_state (declared_global inc_program) s))
+         = s (STR ''counter'') + 1"
+  using assms
+  by (simp add: enter_state_def taval_syn_def opk_def default_tyenv_def)
 
 lemma combine_after_enter_global_assign_declared:
   assumes "declared_global inc_program x"
@@ -73,36 +96,38 @@ lemma combine_after_enter_global_assign_declared:
   using assms by (auto simp: combine_env_def enter_state_def)
 
 text \<open>
-  The call completion fact for \<^const>\<open>inc_program\<close>, restated with the declaration-driven
-  classifier \<^term>\<open>declared_global inc_program\<close> as the concrete instance of the generic
-  classifier argument.  The instantiation is the only thing that changed:
-  \<^const>\<open>pstep\<close>/\<^const>\<open>pcompletes\<close> take \<^term>\<open>gs\<close> as an explicit argument, so this proof
-  needed no change to \<open>pcompletes_Call_parameterless\<close> or \<open>pcompletes_assign\<close>
-  themselves, only to which classifier each is applied at.
+  The call completion fact for \<^const>\<open>inc_program\<close>, at the declaration-driven
+  classifier \<^term>\<open>declared_global inc_program\<close>.  The two range premises are
+  what make the machine increment agree with \<open>+ 1\<close>: without them the
+  assignment writes the wrapped successor instead.
 \<close>
 lemma pcompletes_inc_pcall_declared:
   fixes s :: store
-  shows "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
-           (s((STR ''counter'') := s (STR ''counter'') + 1))"
+  assumes ty: "s (STR ''counter'') \<in> ik_range I32"
+      and nov: "s (STR ''counter'') + 1 \<in> ik_range I32"
+  shows "pcompletes inc_ty (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+           (s((STR ''counter'') := s (STR ''counter'') + 1)) rk"
 proof -
   let ?body = "imp \<lbrakk> counter := counter + 1 \<rbrakk>"
   have g: "declared_global inc_program (STR ''counter'')" by simp
-  have run: "pcompletes (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
+  have run: "pcompletes inc_ty (declared_global inc_program) inc_pi (imp \<lbrakk> p() \<rbrakk>) s
                 (combine_env (declared_global inc_program) s
-                  ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1)))"
+                  ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1))) rk"
   proof (rule pcompletes_Call_parameterless[where c = ?body])
     show "inc_pi (STR ''p'') = Some (proc_decl_of [] ?body)"
       by (simp add: inc_pi_def inc_program_parts prog_main_name_def)
-    show "pcompletes (declared_global inc_program) inc_pi ?body
+    show "pcompletes inc_ty (declared_global inc_program) inc_pi ?body
              (enter_state (declared_global inc_program) s)
-             ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1))"
+             ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1)) I32"
     proof -
-      have "pcompletes (declared_global inc_program) inc_pi ?body
+      have "pcompletes inc_ty (declared_global inc_program) inc_pi ?body
                (enter_state (declared_global inc_program) s)
                ((enter_state (declared_global inc_program) s)
-                 ((STR ''counter'') := aval (Plus (V (STR ''counter'')) (N 1)) (enter_state (declared_global inc_program) s)))"
+                 ((STR ''counter'') := ik_norm (inc_ty (STR ''counter''))
+                    (taval_syn inc_ty (Plus (V (STR ''counter'')) (N 1))
+                       (enter_state (declared_global inc_program) s)))) I32"
         by (rule pcompletes_assign)
-      thus ?thesis using aval_plus_counter_on_enter_declared by simp
+      thus ?thesis using taval_plus_counter_on_enter_declared[OF ty nov] by simp
     qed
   qed
   moreover have
@@ -115,42 +140,48 @@ qed
 
 lemma prog_pcompletes_inc_pcall:
   fixes s :: store
+  assumes ty: "s (STR ''counter'') \<in> ik_range I32"
+      and nov: "s (STR ''counter'') + 1 \<in> ik_range I32"
   shows "prog_pcompletes inc_program (imp \<lbrakk> p() \<rbrakk>) s
-          (s((STR ''counter'') := s (STR ''counter'') + 1))"
+          (s((STR ''counter'') := s (STR ''counter'') + 1)) rk"
 proof -
   have storage:
     "storage_global inc_program prog_main_name = declared_global inc_program"
     by (rule ext) simp
   show ?thesis
-    using pcompletes_inc_pcall_declared
+    using pcompletes_inc_pcall_declared[OF ty nov]
     unfolding prog_pcompletes_def inc_pi_def storage by simp
 qed
 
 text \<open>
-  The same regression one layer down, at the compiled CFG: \<^const>\<open>cstep\<close> takes
-  \<^term>\<open>gs\<close> explicitly (the compiler-layer counterpart of \<^const>\<open>pstep\<close>'s classifier
-  parameter above), so \<^const>\<open>inc_g\<close> --- unchanged since it is compiled once from \<^term>\<open>inc_program\<close>
-  and carries no classifier of its own --- executes identically under
-  \<^term>\<open>declared_global inc_program\<close>.  The eight \<^const>\<open>cstep\<close> transitions retrace
-  \<open>inc_g\<close>'s edges: \<open>main\<close>'s entry \<open>Nop\<close>, the \<open>Glocal\<close> assignment, the call into
-  \<open>p\<close>, \<open>p\<close>'s entry \<open>Nop\<close>, the increment assignment, \<open>p\<close>'s return, the call's
-  resume, and \<open>main\<close>'s return. \<open>Glocal\<close>'s value survives untouched through the
-  call, since it plays no role in \<open>p\<close>'s classification-driven local/global
-  split.
+  The same regression one layer down, at the compiled CFG.  The eight
+  \<^const>\<open>cstep\<close> transitions retrace \<open>inc_g\<close>'s edges: \<open>main\<close>'s entry \<open>Nop\<close>,
+  the \<open>Glocal\<close> assignment, the call into \<open>p\<close>, \<open>p\<close>'s entry \<open>Nop\<close>, the increment
+  assignment, \<open>p\<close>'s return, the call's resume, and \<open>main\<close>'s return. \<open>Glocal\<close>'s
+  value survives untouched through the call, since it plays no role in \<open>p\<close>'s
+  classification-driven local/global split.  Each edge payload is the
+  elaborated \<^typ>\<open>texp\<close> the compiler emitted, so \<^const>\<open>edge_step\<close> reproduces
+  the source writes with \<^const>\<open>teval\<close> alone; the range premises are the ones
+  the source-level counterpart above needs, for the same reason.
 \<close>
 lemma cstep_inc_pcall_declared:
   fixes s :: store
+  assumes ty: "s (STR ''counter'') \<in> ik_range I32"
+      and nov: "s (STR ''counter'') + 1 \<in> ik_range I32"
   shows "star (cstep (declared_global inc_program) inc_g) (FunctionEntry (STR ''main''), s, [])
            (FunctionResult (STR ''main''), s((STR ''Glocal'') := 1, (STR ''counter'') := s (STR ''counter'') + 1), [])"
 proof -
   let ?gs = "declared_global inc_program"
   have e1: "(FunctionEntry (STR ''main''), EA_Nop, Statement 2) \<in> intra inc_g"
-    and e2: "(Statement 2, EA_Assign (STR ''Glocal'') (N 1), Statement 3) \<in> intra inc_g"
+    and e2: "(Statement 2, EA_Assign (STR ''Glocal'')
+                (elaborate_to inc_ty (inc_ty (STR ''Glocal'')) (N 1)), Statement 3) \<in> intra inc_g"
     and e3: "(Statement 3, CallEdge None [] [], FunctionEntry (STR ''p''), Statement 4) \<in> calls inc_g"
     and e4: "(FunctionEntry (STR ''p''), EA_Nop, Statement 0) \<in> intra inc_g"
-    and e5: "(Statement 0, EA_Assign (STR ''counter'') (Plus (V (STR ''counter'')) (N 1)), Statement 1) \<in> intra inc_g"
-    and e6: "(Statement 1, EA_Ret None (STR ''p''), FunctionResult (STR ''p'')) \<in> intra inc_g"
-    and e7: "(Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')) \<in> intra inc_g"
+    and e5: "(Statement 0, EA_Assign (STR ''counter'')
+                (elaborate_to inc_ty (inc_ty (STR ''counter'')) (Plus (V (STR ''counter'')) (N 1))),
+              Statement 1) \<in> intra inc_g"
+    and e6: "(Statement 1, EA_Ret None (STR ''p'') I32, FunctionResult (STR ''p'')) \<in> intra inc_g"
+    and e7: "(Statement 4, EA_Ret None (STR ''main'') I32, FunctionResult (STR ''main'')) \<in> intra inc_g"
     by eval+
   have g: "?gs (STR ''counter'')" by simp
   have s1: "cstep ?gs inc_g (FunctionEntry (STR ''main''), s, []) (Statement 2, s, [])"
@@ -169,7 +200,8 @@ proof -
               (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])
               (Statement 1, (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
-    by (rule cstep.Intra[OF e5]) (simp add: enter_state_def)
+    by (rule cstep.Intra[OF e5])
+       (simp add: taval_plus_counter_on_enter_declared[OF ty nov, simplified enter_state_def])
   have s6: "cstep ?gs inc_g
               (Statement 1, (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])

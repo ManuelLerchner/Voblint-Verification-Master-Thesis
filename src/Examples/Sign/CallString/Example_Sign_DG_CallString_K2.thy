@@ -169,7 +169,7 @@ text \<open>Unlike \<open>k = 1\<close>, \<open>call_fwd\<close>'s \<open>Statem
   for is discharged generically at \<^const>\<open>cs_route\<close>, exactly as at \<open>k = 1\<close>.\<close>
 
 interpretation sign_nest_2_cs: call_string_routed_context
-    sign_nest_S_abs sign_nest_gs sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 2
+    sign_nest_S_abs sign_nest_gs "prog_tyenv sign_nest_program" sign_nest_pi sign_nest_procs "STR ''main''" sign_nest_main 2
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Lifted cinit_sign_st)"
     "map_lift (fun_of_resolved_st_q_for sign_nest_gs) (Bot::sign exec_dg_st lifted)"
@@ -245,7 +245,7 @@ lemma sign_ctx_sg_2_comb:
   assumes "(cl, CallEdge dst pars args, FunctionEntry p, v) \<in> calls sign_nest_cfg"
     and "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cl, c1)))"
     and "t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionResult p, cs_context 2 cl c1 es)))"
-    and "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
+    and "call_enter_store (prog_tyenv sign_nest_program) sign_nest_gs sign_nest_cfg cl s es"
   shows "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (v, c1)))"
   by (rule sign_nest_2_cs.routed_context_comb[OF assms[unfolded sign_nest_cfg_def]])
 
@@ -266,7 +266,7 @@ proof -
 qed
 
 theorem sign_nest_2_activation_collect_sound:
-  "activation_collect sign_nest_gs (admiss_exact (cs_context 2)) [] sign_nest_cfg
+  "activation_collect (prog_tyenv sign_nest_program) sign_nest_gs (admiss_exact (cs_context 2)) [] sign_nest_cfg
      (cinit_stores sign_nest_gs) v ctx
      \<subseteq> gamma_state_lift (sign_ctx_sg_2 (Inl (v, ctx)))"
 proof (rule activation_collect_sound_gen[where sg = sign_ctx_sg_2 and gammaM = gamma_state_lift
@@ -312,7 +312,7 @@ next
     and sm: "s \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cl, c1)))"
     and adm: "admiss_exact (cs_context 2) cl c1 es c2"
     and tm: "t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (FunctionResult p, c2)))"
-    and ces: "call_enter_store sign_nest_gs sign_nest_cfg cl s es"
+    and ces: "call_enter_store (prog_tyenv sign_nest_program) sign_nest_gs sign_nest_cfg cl s es"
   show "combine_collect sign_nest_gs dst s t \<in> gamma_state_lift (sign_ctx_sg_2 (Inl (cont, c1)))"
     using adm tm sign_ctx_sg_2_comb[OF ce sm _ ces] by (simp add: admiss_exact_def)
 qed

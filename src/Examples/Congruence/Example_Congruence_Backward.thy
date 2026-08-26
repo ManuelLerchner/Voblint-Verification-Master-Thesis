@@ -53,7 +53,7 @@ definition congruence_test_env :: "congruence abs_state" where
 
 lemma bfilter_congruence_linear_equality_regression:
   "bfilter_congruence
-      (Eq (Plus (V (STR ''x'')) (N 1)) (N 3)) True
+      (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))) True
       congruence_test_env (STR ''x'') = congruence_of_int 2"
   unfolding congruence_test_env_def
   by eval

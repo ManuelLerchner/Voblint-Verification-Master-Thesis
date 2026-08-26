@@ -176,9 +176,9 @@ lemma dg_refines_on_placed_edge_strict:
 definition placed_dg_enter_tree_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
+   (vname list => texp list =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   vname list => exp list => pp => pp =>
+   vname list => texp list => pp => pp =>
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_enter_tree_strict owner_of locations_of keep_local publish_side
@@ -244,10 +244,10 @@ lemma dep_aux_placed_abs_dg_enter_tree:
 
 lemma dg_refines_on_placed_entry_strict:
   fixes executable_enter ::
-    "vname list => exp list =>
+    "vname list => texp list =>
       ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st"
     and abstract_enter ::
-      "vname list => exp list => 'a abs_state => 'a abs_state"
+      "vname list => texp list => 'a abs_state => 'a abs_state"
   assumes raw:
     "\<And>location. location \<in> set (locations_of callee) \<Longrightarrow>
       lookup_resolved_st_q
@@ -323,8 +323,8 @@ definition placed_dg_combine_tree_with ::
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
    (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname option => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
-   vname option => pp => pp => pp =>
+   (typed_var option => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
+   typed_var option => pp => pp => pp =>
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_combine_tree_with proj owner_of locations_of keep_local publish_side
@@ -358,10 +358,10 @@ lemma dep_aux_placed_abs_dg_combine_tree:
 definition placed_dg_combine_tree_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname option =>
+   (typed_var option =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st =>
      'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st) =>
-   vname option => pp => pp => pp =>
+   typed_var option => pp => pp => pp =>
    (pp, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_combine_tree_strict = placed_dg_combine_tree_with project_resolved_on_strict"
@@ -428,10 +428,10 @@ lemma placed_dg_combine_tree_strict_side_default_bot:
 
 lemma dg_refines_on_placed_combine_strict:
   fixes executable_combine ::
-    "vname option => ('a::bounded_semilattice_sup_bot) exec_dg_st =>
+    "typed_var option => ('a::bounded_semilattice_sup_bot) exec_dg_st =>
       'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st"
     and abstract_combine ::
-      "vname option => 'a abs_state => 'a abs_state => 'a abs_state => 'a abs_state"
+      "typed_var option => 'a abs_state => 'a abs_state => 'a abs_state => 'a abs_state"
     and executable_sigma ::
       "pp + unit => ('a exec_dg_st, 'a exec_dg_st) dg_state"
     and abstract_sigma ::
@@ -530,7 +530,7 @@ definition placed_dg_combine_of_strict ::
   "(vname => bool) => (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
    unit => pp => call_action => pp => pp =>
-   (pp \<times> unit, unit, ('a::bounded_semilattice_sup_bot exec_dg_st,
+   (pp \<times> unit, unit, ('a::cast_domain exec_dg_st,
      'a exec_dg_st) dg_state) strategy_tree"
 where
   "placed_dg_combine_of_strict source_global owner_of locations_of keep_local publish_side
@@ -546,7 +546,7 @@ where
 definition placed_dg_enter_of_strict ::
   "(pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (vname list => exp list =>
+   (vname list => texp list =>
      ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
    unit => pp => call_action => pp =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) strategy_tree"
@@ -645,8 +645,8 @@ lemma sides_of_rhs_placed_dg_combine_of_strict:
 definition placed_dg_gen_of_strict ::
   "(vname => bool) => (pp => pname) => (pp => location list) =>
    (scoped_location => bool) => (scoped_location => bool) =>
-   (edge_action => ('a::bounded_semilattice_sup_bot) exec_dg_st => 'a exec_dg_st) =>
-   (vname list => exp list => 'a exec_dg_st => 'a exec_dg_st) =>
+   (edge_action => ('a::cast_domain) exec_dg_st => 'a exec_dg_st) =>
+   (vname list => texp list => 'a exec_dg_st => 'a exec_dg_st) =>
    cfg => 'a exec_dg_st => 'a exec_dg_st => 'a exec_dg_st =>
    (pp \<times> unit, unit, ('a exec_dg_st, 'a exec_dg_st) dg_state) eqsT"
 where
@@ -678,7 +678,7 @@ definition placed_abs_dg_combine_of ::
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
    unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit,
-     ('a::bounded_semilattice_sup_bot abs_state, 'a abs_state) dg_state)
+     ('a::cast_domain abs_state, 'a abs_state) dg_state)
        strategy_tree"
 where
   "placed_abs_dg_combine_of source_global owner_of keep_local publish_side
@@ -696,7 +696,7 @@ where
 definition placed_abs_dg_enter_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
-   (vname list \<Rightarrow> exp list \<Rightarrow>
+   (vname list \<Rightarrow> texp list \<Rightarrow>
      ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
    unit \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) strategy_tree"
@@ -791,8 +791,8 @@ definition placed_abs_dg_gen_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<Rightarrow> pname) \<Rightarrow>
    (scoped_location \<Rightarrow> bool) \<Rightarrow> (scoped_location \<Rightarrow> bool) \<Rightarrow>
    (edge_action \<Rightarrow>
-     ('a::bounded_semilattice_sup_bot) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
-   (vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+     ('a::cast_domain) abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
+   (vname list \<Rightarrow> texp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state) \<Rightarrow>
    cfg \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow>
    (pp \<times> unit, unit, ('a abs_state, 'a abs_state) dg_state) eqsT"
 where

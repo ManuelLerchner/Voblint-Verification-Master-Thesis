@@ -887,11 +887,6 @@ text \<open>
 abbreviation intersect_int_dom_never :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_never == intersect_int_dom_mode Refine_Never"
 
-abbreviation aval_int_dom_never ::
-    "tyenv => ikind => exp => (vname => int_dom) => int_dom"
-where
-  "aval_int_dom_never \<Gamma> ik e sigma == taval_int_dom \<Gamma> Refine_Never ik e sigma"
-
 abbreviation tobool_int_dom_never :: "int_dom => bool option" where
   "tobool_int_dom_never == int_dom_tobool"
 
@@ -932,7 +927,7 @@ where
 
 global_interpretation int_dom_backward_never:
     backward_domain_refined
-      intersect_int_dom_never aval_int_dom_never tobool_int_dom_never
+      intersect_int_dom_never "aval_int_dom_t Refine_Never" tobool_int_dom_never
       inv_less_int_dom_never inv_eq_int_dom_never
       inv_plus_int_dom_never inv_minus_int_dom_never inv_times_int_dom_never
   defines
@@ -950,10 +945,10 @@ proof unfold_locales
   then show "n \<in> gamma (intersect_int_dom_mode Refine_Never a b)"
     using intersect_int_dom_mode_sound by simp
 next
-  fix s :: store and sigma :: "vname => int_dom" and \<Gamma> :: tyenv and ik :: ikind and e :: exp
+  fix s :: store and sigma :: "vname => int_dom" and e :: texp
   assume "\<forall>x. s x \<in> gamma (sigma x)"
-  then show "taval \<Gamma> ik e s \<in> gamma (aval_int_dom_never \<Gamma> ik e sigma)"
-    using taval_int_dom_sound by simp
+  then show "teval e s \<in> gamma (aval_int_dom_t Refine_Never e sigma)"
+    using aval_int_dom_t_sound by simp
 next
   fix n1 n2 :: int and a1 a2 :: int_dom and res :: bool
   assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "(n1 < n2) = res"
@@ -1002,11 +997,11 @@ next
      intersect_int_dom_mode Refine_Never a2 b2"
     using intersect_int_dom_mode_mono[OF ne A B] .
 next
-  fix e :: exp and \<Gamma> :: tyenv and ik :: ikind and sigma1 sigma2 :: "vname => int_dom"
+  fix e :: texp and sigma1 sigma2 :: "vname => int_dom"
   assume S: "sigma1 \<le> sigma2"
   have ne: "Refine_Never \<noteq> Refine_Fixpoint" by simp
-  show "aval_int_dom_never \<Gamma> ik e sigma1 \<le> aval_int_dom_never \<Gamma> ik e sigma2"
-    using taval_int_dom_mono[OF ne S] .
+  show "aval_int_dom_t Refine_Never e sigma1 \<le> aval_int_dom_t Refine_Never e sigma2"
+    using aval_int_dom_t_mono[OF ne S] .
 next
   fix x1 x2 y1 y2 :: int_dom and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1083,11 +1078,6 @@ qed
 abbreviation intersect_int_dom_once :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_once == intersect_int_dom_mode Refine_Once"
 
-abbreviation aval_int_dom_once ::
-    "tyenv => ikind => exp => (vname => int_dom) => int_dom"
-where
-  "aval_int_dom_once \<Gamma> ik e sigma == taval_int_dom \<Gamma> Refine_Once ik e sigma"
-
 abbreviation tobool_int_dom_once :: "int_dom => bool option" where
   "tobool_int_dom_once == int_dom_tobool"
 
@@ -1118,7 +1108,7 @@ where
 
 global_interpretation int_dom_backward_once:
     backward_domain_refined
-      intersect_int_dom_once aval_int_dom_once tobool_int_dom_once
+      intersect_int_dom_once "aval_int_dom_t Refine_Once" tobool_int_dom_once
       inv_less_int_dom_once inv_eq_int_dom_once
       inv_plus_int_dom_once inv_minus_int_dom_once inv_times_int_dom_once
   defines
@@ -1136,10 +1126,10 @@ proof unfold_locales
   then show "n \<in> gamma (intersect_int_dom_mode Refine_Once a b)"
     using intersect_int_dom_mode_sound by simp
 next
-  fix s :: store and sigma :: "vname => int_dom" and \<Gamma> :: tyenv and ik :: ikind and e :: exp
+  fix s :: store and sigma :: "vname => int_dom" and e :: texp
   assume "\<forall>x. s x \<in> gamma (sigma x)"
-  then show "taval \<Gamma> ik e s \<in> gamma (aval_int_dom_once \<Gamma> ik e sigma)"
-    using taval_int_dom_sound by simp
+  then show "teval e s \<in> gamma (aval_int_dom_t Refine_Once e sigma)"
+    using aval_int_dom_t_sound by simp
 next
   fix n1 n2 :: int and a1 a2 :: int_dom and res :: bool
   assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "(n1 < n2) = res"
@@ -1188,11 +1178,11 @@ next
      intersect_int_dom_mode Refine_Once a2 b2"
     using intersect_int_dom_mode_mono[OF ne A B] .
 next
-  fix e :: exp and \<Gamma> :: tyenv and ik :: ikind and sigma1 sigma2 :: "vname => int_dom"
+  fix e :: texp and sigma1 sigma2 :: "vname => int_dom"
   assume S: "sigma1 \<le> sigma2"
   have ne: "Refine_Once \<noteq> Refine_Fixpoint" by simp
-  show "aval_int_dom_once \<Gamma> ik e sigma1 \<le> aval_int_dom_once \<Gamma> ik e sigma2"
-    using taval_int_dom_mono[OF ne S] .
+  show "aval_int_dom_t Refine_Once e sigma1 \<le> aval_int_dom_t Refine_Once e sigma2"
+    using aval_int_dom_t_mono[OF ne S] .
 next
   fix x1 x2 y1 y2 :: int_dom and res :: bool
   assume A: "x1 \<le> x2" and B: "y1 \<le> y2"
@@ -1269,11 +1259,6 @@ qed
 abbreviation intersect_int_dom_fixpoint :: "int_dom => int_dom => int_dom" where
   "intersect_int_dom_fixpoint == intersect_int_dom_mode Refine_Fixpoint"
 
-abbreviation aval_int_dom_fixpoint ::
-    "tyenv => ikind => exp => (vname => int_dom) => int_dom"
-where
-  "aval_int_dom_fixpoint \<Gamma> ik e sigma == taval_int_dom \<Gamma> Refine_Fixpoint ik e sigma"
-
 abbreviation tobool_int_dom_fixpoint :: "int_dom => bool option" where
   "tobool_int_dom_fixpoint == int_dom_tobool"
 
@@ -1304,7 +1289,7 @@ where
 
 global_interpretation int_dom_backward_fixpoint:
     backward_domain
-      intersect_int_dom_fixpoint aval_int_dom_fixpoint tobool_int_dom_fixpoint
+      intersect_int_dom_fixpoint "aval_int_dom_t Refine_Fixpoint" tobool_int_dom_fixpoint
       inv_less_int_dom_fixpoint inv_eq_int_dom_fixpoint
       inv_plus_int_dom_fixpoint inv_minus_int_dom_fixpoint inv_times_int_dom_fixpoint
   defines
@@ -1322,10 +1307,10 @@ proof unfold_locales
   then show "n \<in> gamma (intersect_int_dom_mode Refine_Fixpoint a b)"
     using intersect_int_dom_mode_sound by simp
 next
-  fix s :: store and sigma :: "vname => int_dom" and \<Gamma> :: tyenv and ik :: ikind and e :: exp
+  fix s :: store and sigma :: "vname => int_dom" and e :: texp
   assume "\<forall>x. s x \<in> gamma (sigma x)"
-  then show "taval \<Gamma> ik e s \<in> gamma (aval_int_dom_fixpoint \<Gamma> ik e sigma)"
-    using taval_int_dom_sound by simp
+  then show "teval e s \<in> gamma (aval_int_dom_t Refine_Fixpoint e sigma)"
+    using aval_int_dom_t_sound by simp
 next
   fix n1 n2 :: int and a1 a2 :: int_dom and res :: bool
   assume "n1 \<in> gamma a1" and "n2 \<in> gamma a2" and "(n1 < n2) = res"

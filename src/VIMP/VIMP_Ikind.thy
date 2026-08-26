@@ -1,5 +1,5 @@
 theory VIMP_Ikind
-  imports Main "Deriving.Compare_Order_Instances"
+  imports Main "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
 begin
 
 section \<open>Machine-integer kinds\<close>
@@ -40,6 +40,9 @@ datatype ikind = I8 | U8 | I16 | U16 | I32 | U32 | I64 | U64
 
 derive linorder ikind
 
+instance ikind :: countable
+  by countable_datatype
+
 fun ik_bits :: "ikind \<Rightarrow> nat" where
   "ik_bits I8 = 8" | "ik_bits U8 = 8"
 | "ik_bits I16 = 16" | "ik_bits U16 = 16"
@@ -79,6 +82,7 @@ lemma ik_promote_pins:
   "ik_promote I32 = I32" "ik_promote U32 = U32"
   "ik_promote I64 = I64" "ik_promote U64 = U64"
   by eval+
+
 
 subsection \<open>Range and wraparound\<close>
 
@@ -133,6 +137,12 @@ lemma finite_ik_range [simp, intro]: "finite (ik_range ik)"
   unfolding ik_range_def by simp
 
 lemma zero_in_ik_range [simp, intro]: "0 \<in> ik_range ik"
+  by (cases ik) (simp_all add: ik_min_def ik_max_def ik_half_def ik_mod_def)
+
+text \<open>Every kind this project defines is at least eight bits wide, so \<open>1\<close> is
+  representable at all of them -- the fact a comparison's \<open>0\<close>/\<open>1\<close> result needs
+  in order to lie in its own kind's range.\<close>
+lemma one_in_ik_range [simp, intro]: "1 \<in> ik_range ik"
   by (cases ik) (simp_all add: ik_min_def ik_max_def ik_half_def ik_mod_def)
 
 lemma ik_min_le_zero [simp]: "ik_min ik \<le> 0"
@@ -197,6 +207,127 @@ qed
 
 lemma ik_norm_idem [simp]: "ik_norm ik (ik_norm ik n) = ik_norm ik n"
   by (rule ik_norm_id [OF ik_norm_in_range])
+
+text \<open>
+  \<open>ik_unsigned_of\<close> is C's "corresponding unsigned type" (6.3.1.8's final
+  case): same width, signedness flipped. It is the identity on a kind that is
+  already unsigned.
+\<close>
+
+fun ik_unsigned_of :: "ikind \<Rightarrow> ikind" where
+  "ik_unsigned_of I8 = U8" | "ik_unsigned_of U8 = U8"
+| "ik_unsigned_of I16 = U16" | "ik_unsigned_of U16 = U16"
+| "ik_unsigned_of I32 = U32" | "ik_unsigned_of U32 = U32"
+| "ik_unsigned_of I64 = U64" | "ik_unsigned_of U64 = U64"
+
+lemma ik_bits_ik_unsigned_of [simp]: "ik_bits (ik_unsigned_of ik) = ik_bits ik"
+  by (cases ik) simp_all
+
+lemma ik_signed_ik_unsigned_of [simp]: "\<not> ik_signed (ik_unsigned_of ik)"
+  by (cases ik) simp_all
+
+text \<open>Promotion lands in one of four kinds, whatever it is given. Every
+  statement below about "a promoted kind" is a statement about these four.\<close>
+
+lemma ik_promote_cases:
+  "ik_promote ik = I32 \<or> ik_promote ik = U32 \<or> ik_promote ik = I64 \<or> ik_promote ik = U64"
+  by (cases ik) (simp_all add: ik_promote_def)
+
+lemma ik_promote_idem [simp]: "ik_promote (ik_promote ik) = ik_promote ik"
+  by (cases ik) (simp_all add: ik_promote_def)
+
+text \<open>
+  \<open>usual_kind\<close> is C's usual arithmetic conversions (ISO/IEC 9899 6.3.1.8) on
+  this project's fixed-width kinds: promote both operands, then pick the common
+  kind by signedness and width.
+
+  Width stands in for C's conversion rank. That is faithful for this kind set
+  because, after promotion, each rank class is represented by exactly one
+  width, with the signed and unsigned counterparts of a class sharing that
+  width. Comparing widths therefore compares ranks. It would not be faithful
+  for C's own types, where \<open>int\<close> and \<open>long\<close> may share a width while holding
+  different ranks; introducing platform kinds is exactly the change that would
+  invalidate this paragraph.
+
+  All six branches of the standard's rule are written out, including the final
+  one -- neither width dominates and the signed kind cannot represent the
+  unsigned one, so the result is the signed kind's own unsigned counterpart.
+  That branch is unreachable here, and \<open>promoted_signed_covers_narrower_unsigned\<close>
+  proves it so for arbitrary kinds rather than tabulating instances: whenever a
+  promoted signed kind is strictly wider than a promoted unsigned one, it
+  represents that unsigned kind's whole range, which is the standard's
+  preceding case. The definition is kept in the standard's shape rather than
+  collapsed to what today's kinds happen to allow.
+
+  This replaces a left-biased join, which made evaluation depend on operand
+  order: \<open>u32 == i64\<close> and \<open>i64 == u32\<close> could disagree, which C forbids and
+  which no source language should permit.
+\<close>
+
+definition usual_kind :: "ikind \<Rightarrow> ikind \<Rightarrow> ikind" where
+  "usual_kind a0 b0 =
+     (let a = ik_promote a0; b = ik_promote b0 in
+      if a = b then a
+      else if ik_signed a = ik_signed b
+      then (if ik_bits a < ik_bits b then b else a)
+      else
+        (let s = (if ik_signed a then a else b);
+             u = (if ik_signed a then b else a)
+         in if ik_bits s \<le> ik_bits u then u
+            else if ik_max u \<le> ik_max s then s
+            else ik_unsigned_of s))"
+
+text \<open>The standard's final case cannot arise at a promoted kind pair: a wider
+  promoted signed kind always covers a narrower promoted unsigned one.\<close>
+lemma promoted_signed_covers_narrower_unsigned:
+  assumes "ik_promote s = s" and "ik_promote u = u"
+      and "ik_signed s" and "\<not> ik_signed u"
+      and "ik_bits u < ik_bits s"
+    shows "ik_max u \<le> ik_max s"
+  using assms
+  by (cases s; cases u)
+     (simp_all add: ik_promote_def ik_max_def ik_half_def ik_mod_def)
+
+lemma usual_kind_commute: "usual_kind a b = usual_kind b a"
+  by (cases a; cases b)
+     (simp_all add: usual_kind_def ik_promote_def ik_max_def ik_half_def ik_mod_def Let_def)
+
+text \<open>The result dominates both promoted operands in width -- the fact
+  elaboration needs to know that converting each operand to the common kind is
+  a widening, not a truncation.\<close>
+
+lemma ik_bits_usual_kind_ge_left [simp]: "ik_bits (ik_promote a) \<le> ik_bits (usual_kind a b)"
+  by (cases a; cases b)
+     (simp_all add: usual_kind_def ik_promote_def ik_max_def ik_half_def ik_mod_def Let_def)
+
+lemma ik_bits_usual_kind_ge_right [simp]: "ik_bits (ik_promote b) \<le> ik_bits (usual_kind a b)"
+  using ik_bits_usual_kind_ge_left[of b a] by (simp add: usual_kind_commute)
+
+lemma ik_bits_usual_kind_ge_I32: "ik_bits I32 \<le> ik_bits (usual_kind a b)"
+  by (rule order_trans[OF ik_bits_ik_promote_ge ik_bits_usual_kind_ge_left])
+
+text \<open>\<open>usual_kind\<close> promotes, so it is idempotent only up to promotion: a narrow
+  kind combined with itself yields \<open>I32\<close>, not that kind.\<close>
+
+lemma usual_kind_idem [simp]: "usual_kind a a = ik_promote a"
+  by (cases a) (simp_all add: usual_kind_def ik_promote_def Let_def)
+
+lemma usual_kind_promoted [simp]: "usual_kind (ik_promote a) (ik_promote b) = usual_kind a b"
+  by (cases a; cases b) (simp_all add: usual_kind_def ik_promote_def Let_def)
+
+text \<open>The complete conversion table over the four kinds promotion can produce.
+  Regression evidence for the table above, not the proof of unreachability --
+  that is \<open>promoted_signed_covers_narrower_unsigned\<close>.\<close>
+lemma usual_kind_reachable_pins:
+  "usual_kind I32 I32 = I32" "usual_kind I32 U32 = U32"
+  "usual_kind I32 I64 = I64" "usual_kind I32 U64 = U64"
+  "usual_kind U32 I32 = U32" "usual_kind U32 U32 = U32"
+  "usual_kind U32 I64 = I64" "usual_kind U32 U64 = U64"
+  "usual_kind I64 I32 = I64" "usual_kind I64 U32 = I64"
+  "usual_kind I64 I64 = I64" "usual_kind I64 U64 = U64"
+  "usual_kind U64 I32 = U64" "usual_kind U64 U32 = U64"
+  "usual_kind U64 I64 = U64" "usual_kind U64 U64 = U64"
+  by (simp_all add: usual_kind_def ik_promote_def ik_max_def ik_half_def ik_mod_def Let_def)
 
 subsection \<open>Congruence: moving \<open>ik_norm\<close> through arithmetic\<close>
 

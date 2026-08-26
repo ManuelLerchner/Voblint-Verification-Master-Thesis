@@ -48,7 +48,7 @@ abbreviation twice_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightar
   "twice_lookup s x \<equiv> lookup_resolved_st_q s (location_of twice_gs x)"
 
 definition twice_cfg :: cfg where
-  "twice_cfg = compile_prog twice_pi twice_procs (STR ''main'') twice_main"
+  "twice_cfg = compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main"
 
 text \<open>
   The compiled CFG.  Procedure \<open>twice\<close> runs between
@@ -72,9 +72,11 @@ lemma twice_calls_shape:
   "\<forall>(u, ca, ce, cont) \<in> calls twice_cfg.
      case ca of CallEdge dst pars args \<Rightarrow>
        (case ce of FunctionEntry p \<Rightarrow>
-          (u = Statement 2 \<and> dst = Some (STR ''x'') \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 3]
+          (u = Statement 2 \<and> dst = compile_dst (prog_tyenv twice_program) (Some (STR ''x'')) \<and> pars = [(STR ''p'')]
+             \<and> args = compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3]
              \<and> p = (STR ''twice'') \<and> cont = Statement 3) \<or>
-          (u = Statement 3 \<and> dst = Some (STR ''y'') \<and> pars = [(STR ''p'')] \<and> args = [VIMP_Syntax.N 10]
+          (u = Statement 3 \<and> dst = compile_dst (prog_tyenv twice_program) (Some (STR ''y'')) \<and> pars = [(STR ''p'')]
+             \<and> args = compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10]
              \<and> p = (STR ''twice'') \<and> cont = Statement 4)
         | _ \<Rightarrow> True)"
   unfolding twice_cfg_def by eval
@@ -94,39 +96,27 @@ text \<open>Classifier-parametric commutation mirrors, generic in \<open>gs\<clo
   this file, generic in the classifier rather than fixed to a name-based convention.\<close>
 
 text \<open>
-  \<open>unit_dg_Hstep_for\<close> (\<open>Run_Analysis_Sound\<close>) demands \<open>action_reduces tf_st\<close>, which
-  \<^const>\<open>ivl_tf_st_for\<close> no longer satisfies: its \<open>EA_Ret (Some a)\<close> case sets the result to
-  \<open>ivl_top\<close> unconditionally rather than reusing the \<open>EA_Assign\<close> case (the same fix
-  \<open>return_ivl\<close> needed for \<^const>\<open>apply_tf\<close>'s \<open>EA_Ret\<close> case to be sound for every caller
-  \<open>rk\<close> simultaneously), so \<open>action_reduces\<close>'s \<open>ret_some\<close> conjunct is genuinely false for
-  it. \<open>Hstep\<close> holds anyway, proved directly here instead: \<^const>\<open>dg_spec_step\<close> at
-  \<open>EA_Ret e p rk\<close> routes to \<open>dgs_return e p\<close> for both the executable and abstract D/G
-  specifications, and both hardcode a fixed representative \<open>rk\<close> (\<open>I32\<close> executably,
-  dropped entirely by \<^const>\<open>apply_tf\<close> abstractly) rather than reading the incoming
-  action's own \<open>rk\<close> -- so \<open>Hstep\<close> at an \<open>EA_Ret\<close> action reduces to the same per-action
-  commutation \<open>ivl_tf_st_for_commute\<close> already gives unconditionally, just instantiated at
-  \<open>EA_Ret e p I32\<close> instead of the incoming action's own \<open>rk\<close>. Every other action case
-  matches \<open>dg_spec_step\<close>'s dispatch exactly, so \<open>commute\<close> applies directly there too.
-\<close>
-text \<open>
-  The statement below is true and does not need \<open>action_reduces\<close>: \<^const>\<open>dg_spec_step\<close> at
-  every action but \<open>EA_Ret\<close> matches \<open>ivl_tf_st_for_commute\<close>/\<open>dg_spec_step_unit_for\<close>
-  directly, and at \<open>EA_Ret\<close> both sides route to \<open>dgs_return\<close>, which discards the incoming
-  \<open>rk\<close> and evaluates at a fixed representative (\<open>I32\<close> executably, dropped entirely by
-  \<^const>\<open>apply_tf\<close> abstractly), so \<open>Hstep\<close> there is \<open>ivl_tf_st_for_commute\<close> instantiated at
-  \<open>EA_Ret e p I32\<close> instead of the incoming action's own \<open>rk\<close>. Left \<open>sorry\<close>ed: the mechanical
-  proof needs \<open>unit_step_st_commute_for\<close> applied per \<^const>\<open>dg_spec_step\<close> case together with
-  the combine/restrict bridging lemmas (\<open>fun_of_resolved_st_q_for_combine\<close> and siblings, in
-  \<^theory>\<open>Voblint_Core.Exec_St\<close>) in the right order relative to \<open>fun_eq_iff\<close>'s pointwise split;
-  automation did not close it in one pass, and further tactic search is deferred.
+  \<open>Hstep\<close> is proved here per \<^const>\<open>dg_spec_step\<close> case rather than through
+  \<open>unit_dg_Hstep_for\<close> (\<open>Run_Analysis_Sound\<close>), which routes the return case
+  through \<open>action_reduces\<close>: every case of the dispatch reduces to the single
+  per-action commutation \<^const>\<open>ivl_tf_st_for\<close> already satisfies, so
+  \<open>unit_step_st_commute_for\<close> together with \<open>ivl_tf_st_for_commute\<close> closes each
+  one directly. The action's own \<open>rk\<close> never enters the argument: the compiler
+  elaborated the returned expression at the procedure's declared return kind,
+  so the conversion sits inside the \<^typ>\<open>texp\<close> payload as a \<^const>\<open>TCast\<close>
+  node and both sides read it from there.
 \<close>
 lemma ivl_Hstep_for:
   "map_prod (fun_of_exec_dg_st_for twice_gs) (fun_of_exec_dg_st_for twice_gs)
-     (dg_spec_step (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs (prog_tyenv twice_program))
-                      (ivl_enter_st_for (prog_tyenv twice_program) twice_gs)) a d g)
-   = dg_spec_step (unit_dg_spec_for twice_gs (ivl_tf_for twice_gs (prog_tyenv twice_program))) a
+     (dg_spec_step (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)
+                      (ivl_enter_st_for twice_gs)) a d g)
+   = dg_spec_step (unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)) a
        (fun_of_exec_dg_st_for twice_gs d) (fun_of_exec_dg_st_for twice_gs g)"
-  sorry
+  apply (cases a)
+  apply (simp_all add: unit_dg_spec_st_for_def unit_dg_spec_for_def dg_spec_step.simps)
+  apply ((rule unit_step_st_commute_for,
+          subst ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def], simp))+
+  done
 
 lemmas ivl_Henter_for =
   unit_dg_Henter_for[OF ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def]]
@@ -144,27 +134,18 @@ lemma twice_reserved: "reserved_ret_var twice_gs"
       value_providing_def source_exp_def ret_var_def
       split: if_splits option.splits)
 
-text \<open>
-  \<open>sound_dg_spec_unit_for\<close>'s third premise, \<open>ret_ok: (\<And>x v. ik_norm (\<Gamma> x) v = v)\<close>, is
-  unresolved below -- the same pre-existing well-typedness gap flagged at
-  \<open>flagship_sound_dg_spec_unit\<close> in \<open>Example_Interval_DG_Flagship\<close> and at
-  \<open>Interval_Ctx_None_Sound\<close>'s \<open>sound_dg_spec\<close> interpretation.
-\<close>
-lemma twice_ret_ok: "\<And>x v. ik_norm (prog_tyenv twice_program x) v = v"
-  sorry
-
 interpretation twice_sds:
-  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs (prog_tyenv twice_program))"
+  sound_dg_spec_ltr_for "unit_dg_spec_for twice_gs (ivl_tf_for twice_gs)"
     "gamma_unit twice_gs" twice_gs "prog_tyenv twice_program"
   unfolding sound_dg_spec_ltr_for_def
-  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for twice_reserved twice_ret_ok])
+  by (rule sound_dg_spec_unit_for[OF ivl_is_sound_transfer_for twice_reserved])
 
 subsection \<open>Equation generation\<close>
 
 definition twice_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, unit, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree" where
-  "twice_eqs = dg_gen_of (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs (prog_tyenv twice_program))
-       (ivl_enter_st_for (prog_tyenv twice_program) twice_gs))
+  "twice_eqs = dg_gen_of (unit_dg_spec_st_for twice_gs (ivl_tf_st_for twice_gs)
+       (ivl_enter_st_for twice_gs))
      twice_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
 
 subsection \<open>Executable solve\<close>
@@ -260,14 +241,11 @@ lemma twice_p_at_entry:
   unfolding twice_sol_def twice_eqs_def by eval
 
 text \<open>
-  \<open>#ret\<close> at \<open>twice\<close>'s exit, and \<open>x\<close>/\<open>y\<close> after each call, are \<open>ivl_top\<close> now rather than
-  the exact \<open>[6,20]\<close> the pre-fix analysis reported: \<^const>\<open>return_ivl\<close>'s value-return case
-  sets the result to \<open>ivl_top\<close> unconditionally instead of evaluating and casting \<open>p + p\<close>,
-  because \<^const>\<open>apply_tf\<close>'s \<open>EA_Ret\<close> case drops the caller's \<open>rk\<close> before calling
-  \<open>tf_return\<close> -- \<open>ivl_top\<close> is the only choice sound for every possible \<open>rk\<close>
-  simultaneously, not a precision bug. \<open>p\<close>'s own bound at entry (\<open>twice_p_at_entry\<close>) is
-  unaffected: it is read off the join of the two call sites' arguments, upstream of the
-  return-value fix.
+  \<open>#ret\<close> at \<open>twice\<close>'s exit, and \<open>x\<close>/\<open>y\<close> after each call, are read off
+  \<^const>\<open>return_ivl\<close>, which evaluates the \<^typ>\<open>texp\<close> the \<open>EA_Ret\<close> edge
+  carries -- the elaborated \<open>p + p\<close>, already cast to \<open>twice\<close>'s declared return
+  kind by the compiler. \<open>p\<close>'s own bound at entry (\<open>twice_p_at_entry\<close>) comes
+  from the join of the two call sites' arguments, upstream of the return edge.
 \<close>
 
 lemma twice_ret_at_exit:
@@ -292,27 +270,24 @@ text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here a
   supplies the compiled-input and solver facts.\<close>
 
 text \<open>
-  \<^bold>\<open>Blocked, not merely unproved.\<close> This interpretation cannot be I/Q-checked at all right
-  now: \<^locale>\<open>unit_dg_exec_analysis\<close> (\<^theory>\<open>Voblint_Soundness.Run_Analysis_Sound\<close>) is itself
-  currently undefined, because that theory's own citations of \<open>pstep\<close>/\<open>sound_transfer_for\<close>/
-  \<open>sound_dg_spec_ltr_for\<close> predate those constants' \<open>Gamma :: tyenv\<close> parameter and are out of
-  scope here. Independent of that blocker, the citation below is also stale on its own
-  terms: \<open>ivl_tf_st_for_reduces\<close> no longer exists, for the same reason documented at
-  \<open>ivl_Hstep_for\<close> above and at \<open>flagship_ex_reg\<close> in \<open>Example_Interval_DG_Flagship\<close>.
+  \<open>reduces\<close> is
+  \<open>action_reduces (ivl_tf_st_for twice_gs)\<close>, which holds because
+  \<^const>\<open>ivl_tf_st_for\<close>'s value-return case evaluates the edge's own
+  \<^typ>\<open>texp\<close> exactly as its \<open>EA_Assign\<close> case does.
 \<close>
 interpretation twice_ex_reg:
   unit_dg_exec_analysis twice_gs
-    "ivl_tf_for twice_gs (prog_tyenv twice_program)"
-    "ivl_tf_st_for twice_gs (prog_tyenv twice_program)"
-    "ivl_enter_st_for (prog_tyenv twice_program) twice_gs"
+    "ivl_tf_for twice_gs"
+    "ivl_tf_st_for twice_gs"
+    "ivl_enter_st_for twice_gs"
     "TD_side_warrowing_apinis_Interp.solve" "TD_side_warrowing_apinis_Interp.solve_c"
 proof -
   interpret twice_transfer: sound_transfer_for twice_gs
-    "ivl_tf_for twice_gs (prog_tyenv twice_program)" "prog_tyenv twice_program"
+    "ivl_tf_for twice_gs"
     by (rule ivl_is_sound_transfer_for)
-  show "unit_dg_exec_analysis twice_gs (ivl_tf_for twice_gs (prog_tyenv twice_program))
-          (ivl_tf_st_for twice_gs (prog_tyenv twice_program))
-          (ivl_enter_st_for (prog_tyenv twice_program) twice_gs)
+  show "unit_dg_exec_analysis twice_gs (ivl_tf_for twice_gs)
+          (ivl_tf_st_for twice_gs)
+          (ivl_enter_st_for twice_gs)
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     apply unfold_locales
        apply (rule twice_reserved)
@@ -321,7 +296,9 @@ proof -
              twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_env_for)+
       apply (rule ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def])
      apply (rule ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def])
-    sorry
+     apply (rule ivl_tf_st_for_action_reduces)
+    apply (erule TD_side_warrowing_apinis_Interp.solve_c_part_post_solution)
+    done
 qed
 
 subsection \<open>Source-level soundness\<close>
@@ -336,14 +313,15 @@ lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs (STR ''main'') t
       split: if_splits option.splits)
 
 theorem twice_source_run_sound:
-  assumes run: "star (pstep twice_gs twice_pi) (twice_main, s, []) src'"
+  assumes run: "star (pstep (prog_tyenv twice_program) twice_gs twice_pi)
+                  (twice_main, s, [], proc_ret_kind twice_pi (STR ''main'')) src'"
       and init: "s \<in> cinit_stores twice_gs"
-  shows "\<exists>v t stk. csim twice_pi twice_cfg src' (v, t, stk)
+  shows "\<exists>v t stk. csim (prog_tyenv twice_program) twice_pi twice_cfg src' (v, t, stk)
                    \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
 proof -
-  obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
+  obtain residual t frs rk where src': "src' = (residual, t, frs, rk)" by (cases src')
   have cert:
-    "\<exists>v stk. csim twice_pi twice_cfg (residual, t, frs) (v, t, stk)
+    "\<exists>v stk. csim (prog_tyenv twice_program) twice_pi twice_cfg (residual, t, frs, rk) (v, t, stk)
        \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
     unfolding twice_cfg_def twice_sol_def twice_eqs_def
     by (rule twice_ex_reg.run_source_sound
@@ -376,11 +354,11 @@ definition twice_graph_config ::
       context_key = (\<lambda>_. STR ''unit''),
       show_context = (\<lambda>_. ''unit''),
       locals_for_pp = (\<lambda>p.
-        let sc = compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
+        let sc = compiled_procedure_scope twice_gs (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main
           twice_cfg p
         in scope_formals sc @ scope_locals sc),
       return_slot_for_pp = (\<lambda>p.
-        scope_return_slot (compiled_procedure_scope twice_gs twice_pi twice_procs (STR ''main'') twice_main
+        scope_return_slot (compiled_procedure_scope twice_gs (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main
           twice_cfg p)),
       globals_to_show = [],
       show_local = (\<lambda>p ctx vars d. map (\<lambda>x.
@@ -392,7 +370,7 @@ definition twice_graph_config ::
       show_global_key = (\<lambda>_. ''Global''),
       is_shared_global = (\<lambda>_. True),
       show_internal_globals = False,
-      owner_of = String.explode o compiled_owner_of twice_pi twice_procs (STR ''main'') twice_main,
+      owner_of = String.explode o compiled_owner_of (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main,
       cluster_label = (\<lambda>owner _. owner @ '' / context=unit''),
       source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
       node_annotation = (\<lambda>_ _. None)

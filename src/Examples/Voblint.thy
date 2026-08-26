@@ -250,7 +250,7 @@ text \<open>
       domain may override with sharper, hand-tuned predicates.
     \<^item> @{theory Voblint_Core.Abstract_Checks} --- \<^locale>\<open>abstract_expression_domain\<close>
       and \<^locale>\<open>abstract_check_domain\<close>: mutually recursive
-      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>exp\<close>, the three-way
+      \<^verbatim>\<open>check_true\<close>/\<^verbatim>\<open>check_false\<close> over \<^typ>\<open>texp\<close>, the three-way
       \<^verbatim>\<open>check_result\<close> classification (\<^verbatim>\<open>Check_Proved\<close>/\<^verbatim>\<open>Check_Refuted\<close>/
       \<^verbatim>\<open>Check_Unknown\<close>), and the node-indexed bridge to
       \<^const>\<open>checks_proven\<close>.
@@ -471,14 +471,15 @@ text \<open>
   every step machine-checked, from source to a soundness theorem over the
   \<^emph>\<open>computed\<close> analysis result:
 
-    \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
+    \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG, elaborating every
+      edge payload against the program's typing environment;
     \<^item> the generic D/G generator \<^verbatim>\<open>dg_gen_of\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
     \<^item> the registered endpoint \<open>flagship_ex_reg.run_source_sound\<close>
       (@{theory Voblint_Soundness.Run_Analysis_Sound}'s \<^verbatim>\<open>unit_dg_exec_analysis\<close>
       locale) bundles solver correctness, executable/pure commutation,
       post-solution transport, and D/G collecting soundness into one
-      application, bounding \<open>ltr_collect g S v\<close> at every program point.
+      application, bounding \<open>ltr_collect \<Gamma> gs g S v\<close> at every program point.
 
   \<^bold>\<open>Soundness spine.\<close> The context-sensitive analyses converge on one native
   interface, the carrier-opaque \<^verbatim>\<open>sound_dg_spec\<close>; Sign, Interval, and
