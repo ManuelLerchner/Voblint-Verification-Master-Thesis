@@ -55,6 +55,7 @@ record imp_prog =
   proc_rep :: "(pname * proc_decl) list"
   declared_global_vars :: "vname list"
   declared_kinds :: "typed_var list"
+  declared_locals :: "(pname * typed_var) list"
 
 lemma declared_global_vars_finite [simp]:
   "finite (set (declared_global_vars p))"
@@ -145,9 +146,10 @@ text \<open>
 \<close>
 
 definition mk_program_typed ::
-    "(pname * proc_decl) list => com => vname list => typed_var list => imp_prog" where
-  "mk_program_typed ps m gv ks =
-     imp_prog.make ((prog_main_name, proc_decl_of [] m) # ps) gv ks"
+    "(pname * proc_decl) list => com => vname list => typed_var list =>
+     (pname * typed_var) list => imp_prog" where
+  "mk_program_typed ps m gv ks ls =
+     imp_prog.make ((prog_main_name, proc_decl_of [] m) # ps) gv ks ls"
 
 text \<open>
   \<open>mk_program\<close> is the kind-free special case: a program whose every
@@ -156,7 +158,7 @@ text \<open>
 \<close>
 
 definition mk_program :: "(pname * proc_decl) list => com => vname list => imp_prog" where
-  "mk_program ps m gv = mk_program_typed ps m gv []"
+  "mk_program ps m gv = mk_program_typed ps m gv [] []"
 
 text \<open>
   The finite variable scope of an activation contains every declared global, the
@@ -230,7 +232,7 @@ definition prog_restrict_global :: "imp_prog => store => store" where
 
 lemma prog_procs_make_typed [simp]:
   "prog_main_name ~: set (map fst ps)
-   ==> prog_procs (mk_program_typed ps m gv ks) = map fst ps"
+   ==> prog_procs (mk_program_typed ps m gv ks ls) = map fst ps"
   by (force simp: prog_procs_def mk_program_typed_def imp_prog.make_def filter_id_conv)
 
 lemma prog_procs_make [simp]:
@@ -238,7 +240,7 @@ lemma prog_procs_make [simp]:
   by (simp add: mk_program_def)
 
 lemma prog_table_make_typed [simp]:
-  "prog_table (mk_program_typed ps m gv ks)
+  "prog_table (mk_program_typed ps m gv ks ls)
      = (map_of ps)(prog_main_name |-> proc_decl_of [] m)"
   by (simp add: prog_table_def mk_program_typed_def imp_prog.make_def)
 
@@ -246,24 +248,39 @@ lemma prog_table_make [simp]:
   "prog_table (mk_program ps m gv) = (map_of ps)(prog_main_name |-> proc_decl_of [] m)"
   by (simp add: mk_program_def)
 
-lemma prog_main_make_typed [simp]: "prog_main (mk_program_typed ps m gv ks) = m"
+lemma prog_main_make_typed [simp]: "prog_main (mk_program_typed ps m gv ks ls) = m"
   by (simp add: prog_main_def proc_decl_of_def)
 
 lemma prog_main_make [simp]: "prog_main (mk_program ps m gv) = m"
   by (simp add: mk_program_def)
 
 lemma declared_global_vars_make_typed [simp]:
-  "declared_global_vars (mk_program_typed ps m gv ks) = gv"
+  "declared_global_vars (mk_program_typed ps m gv ks ls) = gv"
   by (simp add: mk_program_typed_def imp_prog.make_def)
 
 lemma declared_global_vars_make [simp]: "declared_global_vars (mk_program ps m gv) = gv"
   by (simp add: mk_program_def)
 
 lemma declared_kinds_make_typed [simp]:
-  "declared_kinds (mk_program_typed ps m gv ks) = ks"
+  "declared_kinds (mk_program_typed ps m gv ks ls) = ks"
   by (simp add: mk_program_typed_def imp_prog.make_def)
 
 lemma declared_kinds_make [simp]: "declared_kinds (mk_program ps m gv) = []"
+  by (simp add: mk_program_def)
+
+text \<open>
+  \<open>declared_locals\<close> pairs each procedure-local declaration with the procedure
+  that binds it, so two procedures may declare the same name at different
+  kinds. \<open>declared_kinds\<close> cannot express that: it is one flat list consulted
+  by name alone, which is why a formal's kind there depends on the order the
+  declarations were collected in.
+\<close>
+
+lemma declared_locals_make_typed [simp]:
+  "declared_locals (mk_program_typed ps m gv ks ls) = ls"
+  by (simp add: mk_program_typed_def imp_prog.make_def)
+
+lemma declared_locals_make [simp]: "declared_locals (mk_program ps m gv) = []"
   by (simp add: mk_program_def)
 
 lemma prog_tyenv_make [simp]: "prog_tyenv (mk_program ps m gv) = default_tyenv"
@@ -419,7 +436,11 @@ parse_translation \<open>
         val kind_entries =
           List.mapPartial (fn (n, k) => Option.map (fn k => (n, k)) k)
             (decls @ List.concat (map (fn (_, formals, _, _) => formals) funcs))
-      in K c_imp_prog $ proc_rep $ main $ decl_globals $ mk_kinds kind_entries end
+      (* No procedure-local declaration syntax on this side yet, so the
+         scoped-locals list is empty; `program { ... }` still declares only
+         globals and formals. *)
+      in K c_imp_prog $ proc_rep $ main $ decl_globals $ mk_kinds kind_entries
+           $ K c_Nil end
   in
     [("_IMP2", fn ctxt => fn [t] => Vimp_Grammar_Tr.stmts_opt_tr ctxt t | _ => raise Match),
      ("_PROGKW0", fn ctxt => fn [fs] => prog_tr ctxt [] fs | _ => raise Match),

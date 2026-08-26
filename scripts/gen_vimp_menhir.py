@@ -48,6 +48,9 @@ match v1 with
     "formal_typed": "(v1, Some v0)",
     "globals_untyped": "List.map (fun n -> (n, None)) v1",
     "globals_typed": "List.map (fun n -> (n, Some v1)) v2",
+    # A local always carries a kind (no untyped form), so it lowers to a
+    # plain (name, kind) pair rather than a `kind option` one.
+    "locals_typed": "List.map (fun n -> (n, v0)) v1",
 }
 
 
@@ -153,10 +156,14 @@ NONTERMINAL_TYPES = {
     "ids": "string list",
     "globals_decl": "(string * Voblint_CLI.Core.ikind option) list",
     "globals_star": "(string * Voblint_CLI.Core.ikind option) list",
+    "local_decl": "(string * Voblint_CLI.Core.ikind) list",
+    "locals_star": "(string * Voblint_CLI.Core.ikind) list",
     "function_decl":
-        "string * (string * Voblint_CLI.Core.ikind option) list * Voblint_CLI.Core.com",
+        "string * (string * Voblint_CLI.Core.ikind option) list"
+        " * (string * Voblint_CLI.Core.ikind) list * Voblint_CLI.Core.com",
     "function_decl_star":
-        "(string * (string * Voblint_CLI.Core.ikind option) list * Voblint_CLI.Core.com) list",
+        "(string * (string * Voblint_CLI.Core.ikind option) list"
+        " * (string * Voblint_CLI.Core.ikind) list * Voblint_CLI.Core.com) list",
 }
 
 
@@ -267,11 +274,11 @@ def gen_program_rule() -> str:
     # diagnostic rather than a deferred well-formedness check.
     return """program:
   | g = globals_star fs = function_decl_star EOF
-      { let mains, procs = List.partition (fun (n, _, _) -> n = "main") fs in
+      { let mains, procs = List.partition (fun (n, _, _, _) -> n = "main") fs in
         let main_body =
           match mains with
-          | [ (_, [], b) ] -> b
-          | [ (_, _ :: _, _) ] -> failwith "'main' must have no formals"
+          | [ (_, [], _, b) ] -> b
+          | [ (_, _ :: _, _, _) ] -> failwith "'main' must have no formals"
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
@@ -283,18 +290,31 @@ def gen_program_rule() -> str:
         in
         let kinds =
           kind_entries g
-          @ List.concat_map (fun (_, formals, _) -> kind_entries formals) fs
+          @ List.concat_map (fun (_, formals, _, _) -> kind_entries formals) fs
+        in
+        (* Locals are procedure-scoped, so they stay keyed by the procedure
+           that declared them instead of joining the flat kind list. main's
+           own locals belong here too, which is why this folds fs, not procs. *)
+        let scoped_locals =
+          List.concat_map (fun (n, _, locals, _) ->
+              List.map (fun (x, k) -> (n, Voblint_CLI.Core.TV (x, k))) locals) fs
         in
         Voblint_CLI.Core.mk_program_typed
-          (List.map (fun (n, formals, b) ->
+          (List.map (fun (n, formals, _, b) ->
                (n, Voblint_CLI.Core.proc_decl_of (List.map fst formals) b)) procs)
-          main_body (List.map fst g) kinds }
+          main_body (List.map fst g) kinds scoped_locals }
 
 globals_star:
   | (* empty *)
       { [] }
   | l = globals_decl g = globals_star
       { l @ g }
+
+locals_star:
+  | (* empty *)
+      { [] }
+  | l = local_decl ls = locals_star
+      { l @ ls }
 
 function_decl_star:
   | (* empty *)
@@ -323,7 +343,7 @@ def gen_parser(g: dict) -> str:
             list_prods.append(p)
         elif p.get("special") == "program_structure":
             pass  # hardcoded via gen_program_rule
-        elif p["result"] in ("globals", "function"):
+        elif p["result"] in ("globals", "local", "function"):
             pass  # single-production nonterminals, emitted directly below
         else:
             regular_by_result.setdefault(p["result"], []).append(p)
@@ -345,6 +365,14 @@ def gen_parser(g: dict) -> str:
         for p in globals_prods
     )
     rule_blocks.append(f"globals_decl:\n{globals_alts}")
+    # `local_decl`, the name gen_program_rule's locals_star references. One
+    # alternative only: a local has no untyped form.
+    local_prods = [p for p in productions if p["result"] == "local"]
+    local_alts = "\n".join(
+        f"  | {rhs_pattern(p['rhs'])}\n      {{ {render_action(p)} }}"
+        for p in local_prods
+    )
+    rule_blocks.append(f"local_decl:\n{local_alts}")
     function_prod = next(p for p in productions if p["name"] == "function_decl")
     rule_blocks.append(gen_named_rule(function_prod))
     rule_blocks.append(gen_program_rule())
@@ -357,11 +385,12 @@ def gen_parser(g: dict) -> str:
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record
 
-(* A function_decl's action builds (name, formals, body); closing the bucket
-   here keeps the name and its positions together without a second traversal. *)
-let close_definition ((name, formals, body) as decl) =
+(* A function_decl's action builds (name, formals, locals, body); closing the
+   bucket here keeps the name and its positions together without a second
+   traversal. *)
+let close_definition ((name, formals, locals, body) as decl) =
   Vimp_positions.close name;
-  ignore formals; ignore body;
+  ignore formals; ignore locals; ignore body;
   decl
 %}}
 
