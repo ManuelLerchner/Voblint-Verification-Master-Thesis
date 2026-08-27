@@ -54,6 +54,9 @@ let check_no_collision owner what names against =
 let unkinded pairs =
   List.filter_map (fun (n, k) -> match k with None -> Some n | Some _ -> None) pairs
 
+let kinded pairs =
+  List.filter_map (fun (n, k) -> match k with Some k -> Some (n, k) | None -> None) pairs
+
 let check_formal_kinds owner formals =
   match unkinded formals with
   | [] -> ()
@@ -68,6 +71,34 @@ let check_global_kinds g =
   | bad ->
     failwith
       (Printf.sprintf "global(s) declared without a kind: %s" (commas_quote bad))
+
+(* Compilation resolves a name through one flat kind environment, so a name
+   carrying two different kinds anywhere in the program has no representation:
+   whichever entry the list happens to hold first would silently win, and the
+   other declaration would be analysed at a kind its source never wrote. That
+   is a wrong answer rather than an imprecise one, so it is rejected here
+   instead. Same name, same kind, in two procedures is fine -- the entries
+   agree, and one of them answering for both is exactly right. *)
+let string_of_kind (k : Voblint_CLI.Core.ikind) =
+  match k with
+  | Voblint_CLI.Core.I8 -> "int8"   | Voblint_CLI.Core.U8 -> "uint8"
+  | Voblint_CLI.Core.I16 -> "int16" | Voblint_CLI.Core.U16 -> "uint16"
+  | Voblint_CLI.Core.I32 -> "int32" | Voblint_CLI.Core.U32 -> "uint32"
+  | Voblint_CLI.Core.I64 -> "int64" | Voblint_CLI.Core.U64 -> "uint64"
+
+let check_kinds_agree entries =
+  let tbl = Hashtbl.create 32 in
+  List.iter
+    (fun (owner, name, k) ->
+       match Hashtbl.find_opt tbl name with
+       | None -> Hashtbl.add tbl name (owner, k)
+       | Some (owner', k') when k' <> k ->
+         failwith
+           (Printf.sprintf
+              "'%s' is declared %s in %s and %s in %s; one name may not carry two kinds, because compilation resolves every name through one flat kind environment"
+              name (string_of_kind k') owner' (string_of_kind k) owner)
+       | Some _ -> ())
+    entries
 
 (* A procedure declared `void` yields no value, so `return e` in its body has
    nowhere to deliver e: the caller's Call carries no destination. A bare
@@ -368,13 +399,25 @@ program:
               | Some k -> Some (Voblint_CLI.Core.TV (n, k))
               | None -> None) pairs
         in
+        (* Locals join the flat kind environment, because that environment is
+           what compilation resolves a name through. Leaving them out of it is
+           what let `uint8 x` in a procedure body be analysed at int32. They
+           are additionally recorded per procedure below, which is what the
+           scoped declaration table reads. *)
         let kinds =
           kind_entries g
           @ List.concat_map (fun (_, formals, _, _, _) -> kind_entries formals) fs
+          @ List.concat_map
+              (fun (_, _, locals, _, _) ->
+                 List.map (fun (x, k) -> Voblint_CLI.Core.TV (x, k)) locals) fs
         in
-        (* Locals are procedure-scoped, so they stay keyed by the procedure
-           that declared them instead of joining the flat kind list. main's
-           own locals belong here too, which is why this folds fs, not procs. *)
+        check_kinds_agree
+          (List.map (fun (n, k) -> ("the globals", n, k)) (kinded g)
+           @ List.concat_map
+               (fun (p, formals, locals, _, _) ->
+                  List.map (fun (n, k) -> (Printf.sprintf "'%s'" p, n, k)) (kinded formals)
+                  @ List.map (fun (n, k) -> (Printf.sprintf "'%s'" p, n, k)) locals)
+               fs);
         let scoped_locals =
           List.concat_map (fun (n, _, locals, _, _) ->
               List.map (fun (x, k) -> (n, Voblint_CLI.Core.TV (x, k))) locals) fs

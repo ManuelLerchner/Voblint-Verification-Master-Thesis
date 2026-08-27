@@ -2,7 +2,7 @@
 // Adapted from Goblint tests/regression/38-int-refinements/02-strange-ulong.c,
 // which runs one bounded counting loop per integer type.
 //
-// The control for known-imprecision/01-uint8_loop_counter_loses_range.vimp:
+// The signed control for 08-uint8_loop_counter_keeps_range.vimp:
 // the identical loop on an unannotated counter, which is int32. Nothing here
 // is promoted, so the read of i carries no conversion, the loop exit's guard
 // refines i directly, and narrowing recovers the exact exit value the uint8

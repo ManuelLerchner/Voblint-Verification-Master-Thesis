@@ -367,6 +367,10 @@ Counts are `python3 tests/run.py` at the commit that added this table.
 | `20-nested-loops/precision/02-nested2_narrowing_recovers_j` | F | move to `soundness/`, assert UNKNOWN | fixture only |
 | `21-context-sensitivity/precision/05-endless_recursion_dead_check` | F | move to `known-imprecision/`, assert UNKNOWN, rewrite header | fixture only |
 
+Three `tests/test_html_report.py` cases fail on the same root cause **C** and
+are not separate defects: they assert `y == 2` PROVED under the int product on
+the program `16-composite-domain/precision/01` uses.
+
 Root causes, all recorded above: **W** widening leaves the kind's range;
 **S** `sign_cast` tops every signed arithmetic result, which follows from
 the locked two's-complement wrap decision; **P** the call-return boundary

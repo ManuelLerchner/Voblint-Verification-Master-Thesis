@@ -214,25 +214,32 @@ def used_vars(com, acc=None):
 # generated program is ever one the frontend must reject.
 
 @st.composite
-def locals_prologue(draw, formals=(), declared=()):
+def locals_prologue(draw, available=(), kind_of=None):
     """Extra declaration groups for one procedure, as [(kind, [name, ...]), ...].
 
-    Names come from VAR_POOL minus the procedure's own formals and minus the
-    locals its body already forces ast_driver to declare (`declared`), drawn
-    without replacement. VAR_POOL is disjoint from GLOBAL_POOL, so a local can
-    never shadow a declared global either, and no name is declared twice. The
-    empty prologue stays the common case -- almost every program in the
-    regression corpus has none.
+    `available` is the set of names the caller has cleared for prologue use
+    program-wide, and `kind_of` fixes each name's kind. Both are decided once
+    per program rather than per procedure, because compilation resolves a name
+    through one flat kind environment: the same name declared at two kinds
+    anywhere in the program is rejected by the frontend, so a generator that
+    drew kinds per procedure would produce programs the language does not
+    have. VAR_POOL is disjoint from GLOBAL_POOL, so a local can never shadow a
+    declared global either. The empty prologue stays the common case -- almost
+    every program in the regression corpus has none.
     """
-    available = [x for x in VAR_POOL if x not in formals and x not in declared]
+    available = list(available)
     if not available:
         return []
     names = draw(st.lists(st.sampled_from(available), max_size=len(available), unique=True))
     groups = []
     while names:
         take = draw(st.integers(min_value=1, max_value=len(names)))
-        groups.append((draw(st.sampled_from(LOCAL_KIND_POOL)), names[:take]))
-        names = names[take:]
+        head, names = names[:take], names[take:]
+        # One group per kind, since a group carries a single kind keyword.
+        by_kind = {}
+        for n in head:
+            by_kind.setdefault(kind_of[n], []).append(n)
+        groups.extend(by_kind.items())
     return groups
 
 
@@ -245,12 +252,23 @@ def programs_with_locals(draw, max_procs=len(PROC_POOL), body_depth=3):
     docstring), so this pair is for parse-level properties, not round-trip.
     """
     procs, main_body, globals_ = draw(programs(max_procs=max_procs, body_depth=body_depth))
+
+    # Every name ast_driver itself declares -- any procedure's formals, any
+    # body's variables -- is off limits to the extra prologue, and off limits
+    # program-wide rather than per procedure. ast_driver declares those at its
+    # own fixed kind, so a prologue re-declaring one elsewhere at a different
+    # kind would be the same flat-environment conflict.
+    taken = set(used_vars(main_body))
+    for _name, formals, body in procs:
+        taken |= set(formals) | set(used_vars(body))
+
+    available = [x for x in VAR_POOL if x not in taken]
+    kind_of = {x: draw(st.sampled_from(LOCAL_KIND_POOL)) for x in available}
+
     prologues = {}
-    for name, formals, body in procs:
-        prologues[name] = draw(
-            locals_prologue(formals=formals, declared=used_vars(body))
-        )
-    prologues[MAIN_NAME] = draw(locals_prologue(declared=used_vars(main_body)))
+    for name, _formals, _body in procs:
+        prologues[name] = draw(locals_prologue(available=available, kind_of=kind_of))
+    prologues[MAIN_NAME] = draw(locals_prologue(available=available, kind_of=kind_of))
     return (procs, main_body, globals_), prologues
 
 

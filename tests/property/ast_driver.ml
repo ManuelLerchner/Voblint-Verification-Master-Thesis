@@ -213,10 +213,17 @@ let program_of (_, main_body, globals) defs =
     | None -> (d.d_name, proc_decl_of d.d_formals d.d_body)
     | Some k -> (d.d_name, proc_decl_of_typed d.d_formals k d.d_body)
   in
+  (* Mirrors the parser's own kind environment: globals, formals *and*
+     locals. A local's declared kind has to reach compilation, so the parser
+     puts it here; a driver that left it out would build an AST the parser
+     never produces and the round trip would compare unequal things. *)
   let kinds =
     List.map (fun g -> TV (g, decl_kind)) globals
     @ List.concat_map
         (fun d -> List.map (fun x -> TV (x, decl_kind)) d.d_formals)
+        defs
+    @ List.concat_map
+        (fun d -> List.map (fun x -> TV (x, decl_kind)) d.d_locals)
         defs
   in
   let scoped_locals =
