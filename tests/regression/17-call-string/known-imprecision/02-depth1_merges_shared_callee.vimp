@@ -3,11 +3,17 @@
 // immediate call site (the call inside f's body), which is the same
 // source location regardless of which f activation reaches it. The two
 // activations of g -- one from f(3), one from f(10) -- therefore collapse
-// onto the same routed context and widen together, so g's result, and
-// everything downstream that reads it, loses precision: both x and y come
-// back as [6,+inf) instead of their exact values 6 and 20. See
-// src/Examples/Interval/CallString/Example_Interval_Call_String_Generic_Parity.thy
-// for the same separation pinned directly against the solved AnalysisResult.
+// onto the same routed context and widen together.
+//
+// Two mechanisms compose to produce what the snapshot shows. Widening the
+// merged entry sends p's upper bound to +inf, so g's entry reads [3,+inf).
+// That value is outside I32's range, so the conversion at every node
+// downstream has an operand it cannot represent and answers the whole kind
+// range: g's #ret, and x and y after it, are [-2147483648,2147483647]
+// rather than the exact 6 and 20. Only the first mechanism is inherent to
+// depth 1; the second is the widening/kind-range gap recorded in the
+// alignment register, and closing it would leave the lower bound 6 standing
+// here. Depth 2 keeps both values exact -- see precision/02.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -35,15 +41,15 @@
 //
 // nodes:
 //   main_pp8_ctx1: pp8
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[-2147483648,2147483647]
+//       y=[-2147483648,2147483647]
 //       check y==20 [unknown]
 //   main_pp9_ctx1: pp9
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[-2147483648,2147483647]
+//       y=[-2147483648,2147483647]
 //   main_result_main_ctx1: exit_main
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[-2147483648,2147483647]
+//       y=[-2147483648,2147483647]
 //   g_pp0_ctx0: pp0
 //       p=[3,+inf]
 //   main_entry_main_ctx1: entry_main
@@ -59,18 +65,18 @@
 //       p=[3,+inf]
 //   f_pp3_ctx2: pp3
 //       p=[3,3]
-//       t=[6,+inf]
+//       t=[-2147483648,2147483647]
 //   f_pp3_ctx3: pp3
 //       p=[10,10]
-//       t=[6,+inf]
+//       t=[-2147483648,2147483647]
 //   g_result_g_ctx0: exit_g
 //       p=[3,+inf]
-//       ret=[6,+inf]
+//       ret=[-2147483648,2147483647]
 //   main_pp5_ctx1: pp5
 //       x=[-inf,+inf]
 //       y=[-inf,+inf]
 //   main_pp6_ctx1: pp6
-//       x=[6,+inf]
+//       x=[-2147483648,2147483647]
 //       y=[-inf,+inf]
 //   f_entry_f_ctx2: entry_f
 //       p=[3,3]
@@ -79,17 +85,17 @@
 //       p=[10,10]
 //       t=[-inf,+inf]
 //   main_pp7_ctx1: pp7
-//       x=[6,+inf]
-//       y=[6,+inf]
+//       x=[-2147483648,2147483647]
+//       y=[-2147483648,2147483647]
 //       check x==6 [unknown]
 //   f_result_f_ctx2: exit_f
 //       p=[3,3]
-//       t=[6,+inf]
-//       ret=[6,+inf]
+//       t=[-2147483648,2147483647]
+//       ret=[-2147483648,2147483647]
 //   f_result_f_ctx3: exit_f
 //       p=[10,10]
-//       t=[6,+inf]
-//       ret=[6,+inf]
+//       t=[-2147483648,2147483647]
+//       ret=[-2147483648,2147483647]
 //
 // edges:
 //   main_pp8_ctx1 -> main_pp9_ctx1: check(y==20)

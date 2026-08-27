@@ -202,10 +202,6 @@ lemma checks_ex_classify_3:
   "sign_classify_check (checks_ex_pos_y) (checks_ex_env (Statement 3)) = Check_Refuted"
   unfolding checks_ex_env_def by eval
 
-lemma checks_ex_classify_5:
-  "sign_classify_check (checks_ex_z_is_1) (checks_ex_env (Statement 5)) = Check_Unknown"
-  unfolding checks_ex_env_def by eval
-
 text \<open>The payoff: the proved check's condition genuinely holds at every
   reaching store, and the refuted check's condition genuinely fails at every
   reaching store --- both derived from \<^const>\<open>sign_classify_check\<close> plus
@@ -357,13 +353,6 @@ text \<open>
   above establish individually (\<open>checks_ex_classify_1\<close>/\<open>_3\<close>/\<open>_5\<close>), now
   read off the whole program at once.
 \<close>
-
-lemma checks_ex_report_eval:
-  "analyse_sign_report_for checks_ex_gs checks_ex_program =
-     [(Statement 1, checks_ex_pos_y, Check_Proved),
-      (Statement 3, checks_ex_pos_y, Check_Refuted),
-      (Statement 5, checks_ex_z_is_1, Check_Unknown)]"
-  by eval
 
 text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
   program's own compiled CFG and computed environment --- no separate

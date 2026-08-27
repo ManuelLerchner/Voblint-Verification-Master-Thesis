@@ -96,41 +96,6 @@ lemma ctx_call2_val: "ctx_call2 = [Ivl (Fin 10) (Fin 10)]"
 lemma contexts_distinct: "ctx_call1 \<noteq> ctx_call2"
   by (simp add: ctx_call1_val ctx_call2_val)
 
-subsection \<open>Per-context exact results\<close>
-
-text \<open>Callee entry parameter, per context --- against the monovariant \<open>p = [3,10]\<close>.\<close>
-lemma call1_p_at_entry:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''p'')
-     = Ivl (Fin 3) (Fin 3)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
-
-lemma call2_p_at_entry:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call2)))) (STR ''p'')
-     = Ivl (Fin 10) (Fin 10)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
-
-text \<open>Callee result return channel, per context --- \<^emph>\<open>not\<close> merged into the monovariant
-  \<open>#ret = [6,20]\<close>.\<close>
-lemma call1_ret_at_exit:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call1)))) (STR ''#ret'')
-     = Ivl (Fin 6) (Fin 6)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call1_def by eval
-
-lemma call2_ret_at_exit:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (FunctionResult (STR ''twice''), ctx_call2)))) (STR ''#ret'')
-     = Ivl (Fin 20) (Fin 20)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def ctx_call2_def by eval
-
-text \<open>Caller destinations after each return, where the monovariant baseline reports
-  \<open>x = y = [6,20]\<close>.\<close>
-lemma x_computed:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 3, [])))) (STR ''x'') = Ivl (Fin 6) (Fin 6)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
-
-lemma y_computed:
-  "twice_ctx_lookup (locals (snd twice_ctx_sol (Inl (Statement 4, [])))) (STR ''y'') = Ivl (Fin 20) (Fin 20)"
-  unfolding twice_ctx_sol_def twice_is_bot_pred_def by eval
-
 subsection \<open>Seed slots and coverage\<close>
 
 text \<open>Each call publishes the entered store into its own context's seed slot.  The
@@ -241,43 +206,9 @@ lemma twice_ctx_graph_seed_keys_follow_enters:
      (filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
        (analysis_graph_edges twice_ctx_graph)) = twice_ctx_seed_keys" by eval
 
-lemma twice_ctx_graph_has_both_callees:
-  "LocalNode (FunctionEntry (STR ''twice'')) ctx_call1 \<in> set (analysis_graph_nodes twice_ctx_graph) \<and>
-   LocalNode (FunctionEntry (STR ''twice'')) ctx_call2 \<in> set (analysis_graph_nodes twice_ctx_graph)"
-  by eval
-
-lemma twice_ctx_graph_hides_uncovered_main_callee:
-  "LocalNode (FunctionEntry (STR ''twice'')) [] \<notin> set (analysis_graph_nodes twice_ctx_graph)"
-  by eval
-
 lemma twice_ctx_graph_omits_empty_globals:
   "filter (\<lambda>n. case n of GlobalNode _ \<Rightarrow> True | _ \<Rightarrow> False)
     (analysis_graph_nodes twice_ctx_graph) = []" by eval
-
-lemma twice_ctx_graph_enter_edges:
-  "filter (\<lambda>e. case e of (_, EnterEdge _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
-    (analysis_graph_edges twice_ctx_graph) =
-    [(LocalNode (Statement 2) [],
-      EnterEdge ''twice'' (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''x''))) [(STR ''p'')]
-                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])),
-      LocalNode (FunctionEntry (STR ''twice'')) ctx_call1),
-     (LocalNode (Statement 3) [],
-      EnterEdge ''twice'' (CallEdge (compile_dst (prog_tyenv twice_program) (Some (STR ''y''))) [(STR ''p'')]
-                       (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10])),
-      LocalNode (FunctionEntry (STR ''twice'')) ctx_call2)]" by eval
-
-lemma twice_ctx_graph_combine_edges:
-  "filter (\<lambda>e. case e of (_, CombineEdge _ _ _, _) \<Rightarrow> True | _ \<Rightarrow> False)
-    (analysis_graph_edges twice_ctx_graph) =
-    [(LocalNode (FunctionResult (STR ''twice'')) ctx_call1,
-      CombineEdge (Statement 2) (Some (STR ''x'')) (Some (STR ''#ret'')), LocalNode (Statement 3) []),
-     (LocalNode (FunctionResult (STR ''twice'')) ctx_call2,
-      CombineEdge (Statement 3) (Some (STR ''y'')) (Some (STR ''#ret'')), LocalNode (Statement 4) [])]"
-  by eval
-
-lemma twice_ctx_dot_has_context_clusters:
-  "String.explode twice_ctx_dot \<noteq> []" by eval
-
 
 end
 

@@ -99,9 +99,6 @@ session Voblint_Examples in "." = "Voblint_CLI" +
     (* Generator-layer Side buffering: the buffered RHS generator terminates
        where issuing two Side writes per evaluation livelocks the solver. *)
     Example_Keyed_Solver_Update_Rule_Regression
-    (* Two producers, one global: warrowing after the join loses the upper
-       bound that warrowing per origin keeps. *)
-    Example_Per_Origin_Widening_Precision
 
     Voblint
   document_files

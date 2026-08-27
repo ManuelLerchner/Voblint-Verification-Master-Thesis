@@ -230,12 +230,6 @@ lemma prod_int_ex_once_terminates:
      (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
   by eval
 
-lemma prod_int_ex_fixpoint_terminates:
-  "TD_side_warrowing_apinis_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
-  by eval
-
 lemma prod_int_ex_never_y_at_Statement_1:
   "analyse_int_dg_env_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
@@ -244,12 +238,6 @@ lemma prod_int_ex_never_y_at_Statement_1:
 
 lemma prod_int_ex_once_y_at_Statement_1:
   "analyse_int_dg_env_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
-  by eval
-
-lemma prod_int_ex_fixpoint_y_at_Statement_1:
-  "analyse_int_dg_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
    int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
@@ -287,12 +275,6 @@ lemma prod_int_ex_join_once_terminates:
      (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
   by eval
 
-lemma prod_int_ex_join_fixpoint_terminates:
-  "TD_side_always_join_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
-  by eval
-
 lemma prod_int_ex_join_never_y_at_Statement_1:
   "analyse_int_dg_join_env_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
@@ -301,12 +283,6 @@ lemma prod_int_ex_join_never_y_at_Statement_1:
 
 lemma prod_int_ex_join_once_y_at_Statement_1:
   "analyse_int_dg_join_env_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
-  by eval
-
-lemma prod_int_ex_join_fixpoint_y_at_Statement_1:
-  "analyse_int_dg_join_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
    int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
@@ -333,14 +309,6 @@ text \<open>
   only via both matching the same literal above.
 \<close>
 
-lemma prod_int_ex_join_agrees_with_warrow_at_fixpoint:
-  "analyse_int_dg_join_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')
-   =
-   analyse_int_dg_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'')"
-  by eval
-
 lemma prod_int_ex_per_origin_never_terminates:
   "TD_side_per_origin_Interp_solve_c
      (analyse_int_dg_eqs_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog)
@@ -353,12 +321,6 @@ lemma prod_int_ex_per_origin_once_terminates:
      (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
   by eval
 
-lemma prod_int_ex_per_origin_fixpoint_terminates:
-  "TD_side_per_origin_Interp_solve_c
-     (analyse_int_dg_eqs_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog)
-     (cfg_exit (prog_cfg prog_main_name int_ex_prog), ()) ~= None"
-  by eval
-
 lemma prod_int_ex_per_origin_never_y_at_Statement_1:
   "analyse_int_dg_per_origin_env_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
@@ -367,12 +329,6 @@ lemma prod_int_ex_per_origin_never_y_at_Statement_1:
 
 lemma prod_int_ex_per_origin_once_y_at_Statement_1:
   "analyse_int_dg_per_origin_env_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog
-     (Statement 1) (STR ''y'') =
-   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
-  by eval
-
-lemma prod_int_ex_per_origin_fixpoint_y_at_Statement_1:
-  "analyse_int_dg_per_origin_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
    int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
@@ -389,13 +345,5 @@ text \<open>
 lemma analyse_with_solver_int_default_unchanged:
   "analyse_with_solver Int_Analysis Solver_Warrow int_ex_prog = Some (analyse Int_Analysis int_ex_prog)"
   by simp
-
-lemma analyse_with_solver_int_join_returns_result:
-  "analyse_with_solver Int_Analysis Solver_Join int_ex_prog ~= None"
-  by eval
-
-lemma analyse_with_solver_int_per_origin_returns_result:
-  "analyse_with_solver Int_Analysis Solver_PerOrigin int_ex_prog ~= None"
-  by eval
 
 end

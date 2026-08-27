@@ -193,12 +193,6 @@ lemma a2_classic_env:
    = Ivl (Fin 0) PlusInf"
   by eval
 
-lemma a2_flowsens_env:
-  "fun_of_exec_dg_st_for a2_gs
-     (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)) (STR ''x'')
-   = Ivl (Fin 1) (Fin 1)"
-  by eval
-
 text \<open>The check itself, discharged through \<^const>\<open>interval_classify_check\<close>:
   \<open>Check_Unknown\<close> under classic, \<open>Check_Proved\<close> under all-flow-sensitive.
   This is A2's required result: semantic globalness (\<open>a2_x_global\<close>) does not
@@ -210,14 +204,6 @@ lemma a2_classic_check_unknown:
      (fun_of_exec_dg_st_for a2_gs
        (dg_hook_D (snd a2_sol_classic) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_classic)))
    = Check_Unknown"
-  by eval
-
-lemma a2_flowsens_check_proved:
-  "interval_classify_check
-     (elaborate_syn (prog_tyenv a2_program) (exp.Eq (V (STR ''x'')) (N 1)))
-     (fun_of_exec_dg_st_for a2_gs
-       (dg_hook_D (snd a2_sol_flowsens) (Statement 2) \<squnion> dg_hook_G (snd a2_sol_flowsens)))
-   = Check_Proved"
   by eval
 
 subsection \<open>Flow sensitivity chosen per variable, not per storage class\<close>

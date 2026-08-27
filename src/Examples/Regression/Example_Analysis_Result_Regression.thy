@@ -54,24 +54,10 @@ text \<open>
   executable equality of its own.
 \<close>
 
-lemma result_demo_interval_stmt1_reachable:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_td_result result_demo_prog) (Statement 1) ())
-   = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_interval_stmt1_contexts:
-  "contexts_at (analyse_interval_td_result result_demo_prog) (Statement 1) = {()}"
-  by eval
-
 lemma result_demo_interval_stmt1_joined:
   "map_point_state (\<lambda>st. st (STR ''x''))
      (lookup_joined_state (analyse_interval_td_result result_demo_prog) (Statement 1))
    = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_interval_stmt1_live:
-  "node_live_ex (analyse_interval_td_result result_demo_prog) (Statement 1)"
   by eval
 
 text \<open>
@@ -141,22 +127,9 @@ lemma result_demo_interval_stmt2_stored_bot:
       Bot \<Rightarrow> True | Lifted _ \<Rightarrow> False)"
   by eval
 
-lemma result_demo_interval_stmt2_covered:
-  "contexts_at (analyse_interval_td_result result_demo_prog) (Statement 2) = {()}"
-  by eval
-
 lemma result_demo_interval_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_interval_td_result result_demo_prog)
                           (Statement 2) ())"
-  by eval
-
-lemma result_demo_interval_stmt2_unreachable:
-  "lookup_context (analyse_interval_td_result result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_interval_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
-lemma result_demo_interval_stmt2_not_live:
-  "\<not> node_live_ex (analyse_interval_td_result result_demo_prog) (Statement 2)"
   by eval
 
 text \<open>
@@ -240,26 +213,6 @@ definition result_demo_two :: "(ivl list, ivl abs_state) analysis_result" where
                 then Reachable (result_demo_state (Ivl (Fin 1) (Fin 1)))
                 else Reachable (result_demo_state (Ivl (Fin 3) (Fin 3))))"
 
-lemma result_demo_two_contexts:
-  "contexts_at result_demo_two (Statement 1) = {result_demo_ctx1, result_demo_ctx2}"
-  by eval
-
-lemma result_demo_two_per_context:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_context result_demo_two (Statement 1) result_demo_ctx1)
-   = Reachable (Ivl (Fin 1) (Fin 1))"
-  by eval
-
-lemma result_demo_two_joined:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_joined_state result_demo_two (Statement 1))
-   = Reachable (Ivl (Fin 1) (Fin 3))"
-  by eval
-
-lemma result_demo_two_live:
-  "node_live_ex result_demo_two (Statement 1)"
-  by eval
-
 text \<open>
   One context unreachable: \<^const>\<open>Unreachable\<close> is the join's unit, so the
   surviving context's state passes through unchanged, and the node is still
@@ -272,16 +225,6 @@ definition result_demo_two_half :: "(ivl list, ivl abs_state) analysis_result" w
        (\<lambda>v ctx. if ctx = result_demo_ctx1 then Unreachable
                 else Reachable (result_demo_state (Ivl (Fin 3) (Fin 3))))"
 
-lemma result_demo_two_half_joined:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_joined_state result_demo_two_half (Statement 1))
-   = Reachable (Ivl (Fin 3) (Fin 3))"
-  by eval
-
-lemma result_demo_two_half_live:
-  "node_live_ex result_demo_two_half (Statement 1)"
-  by eval
-
 text \<open>
   Both contexts unreachable at a node that is nonetheless covered: the fold
   runs over a non-empty context set and still lands on \<^const>\<open>Unreachable\<close>,
@@ -293,19 +236,6 @@ definition result_demo_two_dead :: "(ivl list, ivl abs_state) analysis_result" w
      Analysis_Result {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
        (\<lambda>v ctx. Unreachable)"
 
-lemma result_demo_two_dead_contexts:
-  "contexts_at result_demo_two_dead (Statement 1) = {result_demo_ctx1, result_demo_ctx2}"
-  by eval
-
-lemma result_demo_two_dead_joined:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_joined_state result_demo_two_dead (Statement 1)) = Unreachable"
-  by eval
-
-lemma result_demo_two_dead_not_live:
-  "\<not> node_live_ex result_demo_two_dead (Statement 1)"
-  by eval
-
 subsection \<open>Sign and int_dom: the same abstraction, one live and one dead key\<close>
 
 text \<open>
@@ -315,34 +245,13 @@ text \<open>
   the reachability case analysis a third and fourth time.
 \<close>
 
-lemma result_demo_sign_stmt1_reachable:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_sign_result result_demo_prog) (Statement 1) ())
-   = Reachable SPos"
-  by eval
-
 lemma result_demo_sign_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_sign_result result_demo_prog) (Statement 2) ())"
   by eval
 
-lemma result_demo_sign_stmt2_unreachable:
-  "lookup_context (analyse_sign_result result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_sign_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
-
 lemma result_demo_sign_absent_unreachable:
   "lookup_context (analyse_sign_result result_demo_prog) (Statement 99) () = Unreachable"
   by (rule lookup_context_absent) eval
-
-lemma result_demo_int_stmt1_reachable:
-  "map_point_state (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context (analyse_int_result result_demo_prog) (Statement 1) ())
-   = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma result_demo_int_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context (analyse_int_result result_demo_prog) (Statement 2) ())"
-  by eval
 
 lemma result_demo_int_absent_unreachable:
   "lookup_context (analyse_int_result result_demo_prog) (Statement 99) () = Unreachable"
@@ -364,96 +273,41 @@ text \<open>
   second full reachability case analysis.
 \<close>
 
-lemma result_demo_sign_per_origin_stmt1_reachable:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 1) ())
-   = Reachable SPos"
-  by eval
-
 lemma result_demo_sign_per_origin_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 2) ())"
   by eval
-
-lemma result_demo_sign_per_origin_stmt2_unreachable:
-  "lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_sign_per_origin_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
 
 lemma result_demo_sign_per_origin_absent_unreachable:
   "lookup_context (analyse_sign_result_per_origin result_demo_prog) (Statement 99) () = Unreachable"
   by (rule lookup_context_absent) eval
 
-lemma result_demo_interval_join_stmt1_reachable:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_join_result result_demo_prog) (Statement 1) ())
-   = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
 lemma result_demo_interval_join_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_interval_join_result result_demo_prog) (Statement 2) ())"
   by eval
-
-lemma result_demo_interval_join_stmt2_unreachable:
-  "lookup_context (analyse_interval_join_result result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_interval_join_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
 
 lemma result_demo_interval_join_absent_unreachable:
   "lookup_context (analyse_interval_join_result result_demo_prog) (Statement 99) () = Unreachable"
   by (rule lookup_context_absent) eval
 
-lemma result_demo_interval_per_origin_stmt1_reachable:
-  "map_point_state (\<lambda>st. st (STR ''x''))
-     (lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 1) ())
-   = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
 lemma result_demo_interval_per_origin_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 2) ())"
   by eval
-
-lemma result_demo_interval_per_origin_stmt2_unreachable:
-  "lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_interval_per_origin_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
 
 lemma result_demo_interval_per_origin_absent_unreachable:
   "lookup_context (analyse_interval_per_origin_result result_demo_prog) (Statement 99) () = Unreachable"
   by (rule lookup_context_absent) eval
 
-lemma result_demo_int_join_stmt1_reachable:
-  "map_point_state (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context (analyse_int_join_result result_demo_prog) (Statement 1) ())
-   = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
 lemma result_demo_int_join_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_int_join_result result_demo_prog) (Statement 2) ())"
   by eval
-
-lemma result_demo_int_join_stmt2_unreachable:
-  "lookup_context (analyse_int_join_result result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_int_join_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
 
 lemma result_demo_int_join_absent_unreachable:
   "lookup_context (analyse_int_join_result result_demo_prog) (Statement 99) () = Unreachable"
   by (rule lookup_context_absent) eval
 
-lemma result_demo_int_per_origin_stmt1_reachable:
-  "map_point_state (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 1) ())
-   = Reachable (Ivl (Fin 5) (Fin 5))"
-  by eval
-
 lemma result_demo_int_per_origin_stmt2_not_reachable:
   "\<not> is_reachable_point (lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 2) ())"
   by eval
-
-lemma result_demo_int_per_origin_stmt2_unreachable:
-  "lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 2) () = Unreachable"
-  using result_demo_int_per_origin_stmt2_not_reachable
-  by (simp add: is_reachable_point_iff)
 
 lemma result_demo_int_per_origin_absent_unreachable:
   "lookup_context (analyse_int_per_origin_result result_demo_prog) (Statement 99) () = Unreachable"

@@ -126,7 +126,7 @@ text \<open>
   \<open>Solver_WarrowPerOrigin\<close> breaks that pattern, and is the reason this axis is not purely
   about termination. It widens each origin's own contribution and joins afterwards, where
   \<open>Solver_Warrow\<close> widens the value already joined across every origin. Both terminate;
-  they can still disagree. \<open>Example_Per_Origin_Widening_Precision\<close> is the witness: two
+  they can still disagree. The regression corpus carries the witness: two
   producers writing \<open>[1,1]\<close> and \<open>[2,2]\<close> to one global leave the joined rule at
   \<open>[1, +inf]\<close> --- the second write makes the joined upper bound grow, though neither
   producer's own contribution ever moved --- where the per-origin rule reads \<open>[1,2]\<close>.

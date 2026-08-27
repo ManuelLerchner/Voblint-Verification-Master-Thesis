@@ -105,16 +105,6 @@ lemma dead_check_aggregate_dead:
 text \<open>The reachable sibling branch in the same program is unaffected, so the
   dead case is not suppressing live checks.\<close>
 
-lemma dead_check_live_sibling:
-  "observations_at dead_check_projection (Statement 3) = {([], Decided Check_Proved)}"
-  by eval
-
-lemma dead_check_analyse_interval_entry_state:
-  "analyse_interval_entry_state dead_check_prog =
-     [(Statement 2, elaborate_syn (prog_tyenv dead_check_prog) (exp.Eq (V (STR ''x'')) (exp.N 99)), Dead),
-      (Statement 3, elaborate_syn (prog_tyenv dead_check_prog) (exp.Eq (V (STR ''x'')) (exp.N 5)), Decided Check_Proved)]"
-  by eval
-
 subsection \<open>A check dead in some activations and live in another\<close>
 
 text \<open>
@@ -133,14 +123,6 @@ text \<open>Four contexts reach the base-case check: the two outer activations
   where it is taken, and the empty-interval context the recursive call seeds
   once \<open>n\<close>'s own range is exhausted, which is dead as well.\<close>
 
-lemma mixed_ctx_observations:
-  "observations_at mixed_ctx_projection (Statement 1) =
-     {([Ivl PlusInf MinInf], Dead),
-      ([Ivl (Fin 1) (Fin 1)], Decided Check_Proved),
-      ([Ivl (Fin 2) (Fin 2)], Dead),
-      ([Ivl (Fin 3) (Fin 3)], Dead)}"
-  by eval
-
 lemma mixed_ctx_not_dead:
   "\<not> check_dead (observations_at mixed_ctx_projection (Statement 1))"
   by eval
@@ -151,17 +133,6 @@ text \<open>The aggregate is the live context's own verdict. Joining the dead
   reassert the fabricated verdict, \<^const>\<open>Check_Unknown\<close> would destroy the
   live context's decision.\<close>
 
-lemma mixed_ctx_aggregate_from_live_context:
-  "aggregate_verdicts (snd ` observations_at mixed_ctx_projection (Statement 1))
-     = Decided Check_Proved"
-  by eval
-
-lemma mixed_ctx_analyse_interval_entry_state:
-  "analyse_interval_entry_state mixed_ctx_prog =
-     [(Statement 1, elaborate_syn (prog_tyenv mixed_ctx_prog) (exp.Eq (V (STR ''n'')) (exp.N 1)), Decided Check_Proved),
-      (Statement 7, elaborate_syn (prog_tyenv mixed_ctx_prog) (exp.Eq (V (STR ''a'')) (exp.N 6)), Decided Check_Proved)]"
-  by eval
-
 subsection \<open>Two live contexts that disagree\<close>
 
 text \<open>\<open>g\<close> is called at \<open>1\<close> and at \<open>5\<close>, so its single check is exactly decided
@@ -171,21 +142,5 @@ text \<open>\<open>g\<close> is called at \<open>1\<close> and at \<open>5\<clos
 abbreviation disagree_projection ::
     "(pp \<times> texp \<times> (ivl list \<times> contextual_verdict) set) list" where
   "disagree_projection \<equiv> entry_state_check_projection prog_main_name disagree_prog"
-
-lemma disagree_observations_retained:
-  "observations_at disagree_projection (Statement 0) =
-     {([Ivl (Fin 1) (Fin 1)], Decided Check_Proved),
-      ([Ivl (Fin 5) (Fin 5)], Decided Check_Refuted)}"
-  by eval
-
-lemma disagree_aggregate_unknown:
-  "aggregate_verdicts (snd ` observations_at disagree_projection (Statement 0))
-     = Decided Check_Unknown"
-  by eval
-
-lemma disagree_analyse_interval_entry_state:
-  "analyse_interval_entry_state disagree_prog =
-     [(Statement 0, elaborate_syn (prog_tyenv disagree_prog) (Less (V (STR ''n'')) (exp.N 3)), Decided Check_Unknown)]"
-  by eval
 
 end

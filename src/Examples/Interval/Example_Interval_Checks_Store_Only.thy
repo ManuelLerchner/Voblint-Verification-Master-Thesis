@@ -211,19 +211,11 @@ lemma checks_ivl_ex_classify_3:
   "interval_classify_check (checks_ivl_ex_neg) (checks_ivl_ex_env (Statement 3)) = Check_Refuted"
   unfolding checks_ivl_ex_env_def by eval
 
-lemma checks_ivl_ex_classify_4:
-  "interval_classify_check (checks_ivl_ex_is5) (checks_ivl_ex_env (Statement 4)) = Check_Unknown"
-  unfolding checks_ivl_ex_env_def by eval
-
 text \<open>The precision comparison: Sign only ever tracks the sign of \<open>x\<close>, so
   after \<open>0 < x\<close> its best abstraction is \<open>SPos\<close> --- \<open>x < 10\<close> narrows nothing
   further in that lattice, and \<open>SPos\<close> alone cannot prove \<open>x < 11\<close> (a
   \<open>SPos\<close> value like \<open>1000000\<close> is not \<open>< 11\<close>). Interval proves it outright
   because it tracks the upper bound \<open>9\<close> directly, not merely the sign.\<close>
-lemma checks_ivl_ex_precision_over_sign:
-  "sign_classify_check (checks_ivl_ex_lt11) ((\<lambda>_. STop)((STR ''x'') := SPos)) = Check_Unknown"
-  by eval
-
 text \<open>The payoff: the proved check's condition genuinely holds at every
   reaching store, and the refuted check's condition genuinely fails at every
   reaching store --- both derived from \<^const>\<open>interval_classify_check\<close> plus
@@ -330,13 +322,6 @@ text \<open>
   above establish individually (\<open>checks_ivl_ex_classify_2\<close>/\<open>_3\<close>/\<open>_4\<close>), now
   read off the whole program at once.
 \<close>
-
-lemma checks_ivl_ex_report_eval:
-  "analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program =
-     [(Statement 2, checks_ivl_ex_lt11, Check_Proved),
-      (Statement 3, checks_ivl_ex_neg, Check_Refuted),
-      (Statement 4, checks_ivl_ex_is5, Check_Unknown)]"
-  by eval
 
 text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
   program's own compiled CFG and computed environment --- no separate

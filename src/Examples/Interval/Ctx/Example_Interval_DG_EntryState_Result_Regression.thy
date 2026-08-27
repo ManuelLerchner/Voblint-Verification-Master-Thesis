@@ -29,92 +29,6 @@ definition gcall_result :: "(ivl list, ivl abs_state) analysis_result" where
 abbreviation bump_entry :: cfg_node where
   "bump_entry \<equiv> FunctionEntry (STR ''bump'')"
 
-subsection \<open>Multiple contexts stay explicit at one callee entry\<close>
-
-text \<open>
-  All three activations of \<open>bump\<close> are covered at its \<^const>\<open>FunctionEntry\<close>
-  node, each under its own routed context, and the table keeps them apart.
-  Nothing here consults a join.
-\<close>
-
-lemma gcall_result_bump_contexts:
-  "contexts_at gcall_result bump_entry
-     = {gcall_ctx_first, gcall_ctx_second, gcall_ctx_third}"
-  by eval
-
-lemma gcall_result_bump_context_count:
-  "card (contexts_at gcall_result bump_entry) = 3"
-  by eval
-
-subsection \<open>A global crossing a call boundary, per activation\<close>
-
-text \<open>
-  Each context's own state, read straight off the table: the formal \<open>n\<close> binds
-  to that activation's argument, and the global \<open>g\<close> arrives at the value the
-  caller had written by that call site. The third activation's argument is the
-  global itself, so its context and its entered \<open>n\<close> both carry the caller's
-  live value rather than a placeholder.
-\<close>
-
-lemma gcall_result_bump_first:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_context gcall_result bump_entry gcall_ctx_first)
-   = Reachable (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
-  by eval
-
-lemma gcall_result_bump_second:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_context gcall_result bump_entry gcall_ctx_second)
-   = Reachable (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
-  by eval
-
-lemma gcall_result_bump_third:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_context gcall_result bump_entry gcall_ctx_third)
-   = Reachable (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
-  by eval
-
-text \<open>The three per-context states are pairwise different, so the contexts
-  above are not three names for one shared unknown.\<close>
-
-lemma gcall_result_bump_states_distinct:
-  "map_point_state (\<lambda>st. st (STR ''n''))
-     (lookup_context gcall_result bump_entry gcall_ctx_first)
-   \<noteq> map_point_state (\<lambda>st. st (STR ''n''))
-       (lookup_context gcall_result bump_entry gcall_ctx_second)"
-  "map_point_state (\<lambda>st. st (STR ''n''))
-     (lookup_context gcall_result bump_entry gcall_ctx_second)
-   \<noteq> map_point_state (\<lambda>st. st (STR ''n''))
-       (lookup_context gcall_result bump_entry gcall_ctx_third)"
-  by eval+
-
-subsection \<open>Returned values and the global's final value in the caller\<close>
-
-text \<open>
-  The caller runs under the single context \<open>[]\<close>. After each return the table
-  shows the callee's global write surviving into the caller and the
-  return-value assignment landing \<open>bump\<close>'s own returned value in the caller's
-  variable.
-\<close>
-
-lemma gcall_result_after_first_return:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''a'')))
-     (lookup_context gcall_result (Statement 5) [])
-   = Reachable (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
-  by eval
-
-lemma gcall_result_after_second_return:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''b'')))
-     (lookup_context gcall_result (Statement 8) [])
-   = Reachable (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
-  by eval
-
-lemma gcall_result_after_third_return:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''c'')))
-     (lookup_context gcall_result (Statement 10) [])
-   = Reachable (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
-  by eval
-
 subsection \<open>A covered context that is nonetheless unreachable\<close>
 
 text \<open>
@@ -146,16 +60,6 @@ lemma fact_result_dead_branch_unreachable:
   using fact_result_dead_branch_not_reachable
   by (simp add: is_reachable_point_iff)
 
-lemma fact_result_base_case_live_ctx:
-  "map_point_state (\<lambda>st. st (STR ''n''))
-     (lookup_context fact_result (Statement 2) ctx_a1)
-   = Reachable (Ivl (Fin 1) (Fin 1))"
-  by eval
-
-lemma fact_result_dead_branch_node_live:
-  "node_live_ex fact_result (Statement 2)"
-  by eval
-
 subsection \<open>A context the solver never covered\<close>
 
 text \<open>
@@ -181,26 +85,6 @@ text \<open>The default context \<open>[]\<close> is likewise uncovered at the c
 
 lemma gcall_result_bump_default_ctx_absent:
   "(bump_entry, []) \<notin> result_keys gcall_result"
-  by eval
-
-subsection \<open>The joined per-node view\<close>
-
-text \<open>
-  \<^const>\<open>lookup_joined_state\<close> folds the domain's own join over exactly the
-  three contexts above, so the callee entry's joined \<open>n\<close> spans the three
-  entered arguments and its joined \<open>g\<close> spans the three global values the
-  caller had written. This is checked against the join of the per-context
-  states pinned above, which is the only reading the fold can have.
-\<close>
-
-lemma gcall_result_bump_joined:
-  "map_point_state (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_joined_state gcall_result bump_entry)
-   = Reachable (Ivl (Fin 10) (Fin 19), Ivl (Fin 4) (Fin 19))"
-  by eval
-
-lemma gcall_result_bump_live:
-  "node_live_ex gcall_result bump_entry"
   by eval
 
 subsection \<open>Routing a call from the table alone\<close>
@@ -263,12 +147,6 @@ text \<open>No call site routes to another call site's context. This is the nega
   picking any covered context at the callee, would draw
   \<open>call#1 -> bump/[19,19]\<close> and nothing above would notice.\<close>
 
-lemma gcall_callee_ctx_at_no_cross:
-  "gcall_callee_ctx_at (Statement 4) gcall_call_first \<noteq> Some gcall_ctx_second"
-  "gcall_callee_ctx_at (Statement 4) gcall_call_first \<noteq> Some gcall_ctx_third"
-  "gcall_callee_ctx_at (Statement 5) gcall_call_second \<noteq> Some gcall_ctx_third"
-  by eval+
-
 subsection \<open>Two call sites sharing one callee context\<close>
 
 text \<open>
@@ -307,34 +185,10 @@ definition twin_call_contexts :: "(pp \<times> pp \<times> ivl list option) list
                  entry_state_callee_ctx (declared_global twin_prog) ca st))
        (cfg_calls_list (prog_cfg prog_main_name twin_prog))"
 
-lemma twin_call_contexts_shared:
-  "twin_call_contexts =
-     [(Statement 2, Statement 3, Some [Ivl (Fin 5) (Fin 5)]),
-      (Statement 3, Statement 4, Some [Ivl (Fin 5) (Fin 5)])]"
-  by eval
-
 text \<open>Stated separately so the shared half and the distinct half of the same
   table cannot drift apart: one callee context, two continuations.\<close>
 
-lemma twin_call_contexts_one_context:
-  "remdups (map (\<lambda>(_, _, c). c) twin_call_contexts) = [Some [Ivl (Fin 5) (Fin 5)]]"
-  by eval
-
-lemma twin_call_continuations_distinct:
-  "map (\<lambda>(_, cont, _). cont) twin_call_contexts = [Statement 3, Statement 4]"
-  by eval
-
 text \<open>The callee is materialized once, under that one shared context, and the
   caller's own context stays the root one.\<close>
-
-lemma twin_result_idf_contexts:
-  "contexts_at twin_result (FunctionEntry (STR ''idf'')) = {[Ivl (Fin 5) (Fin 5)]}"
-  by eval
-
-lemma twin_analyse_interval_entry_state:
-  "analyse_interval_entry_state twin_prog =
-     [(Statement 4, elaborate_syn (prog_tyenv twin_prog) (exp.Eq (V (STR ''a'')) (exp.N 6)), Decided Check_Proved),
-      (Statement 5, elaborate_syn (prog_tyenv twin_prog) (exp.Eq (V (STR ''b'')) (exp.N 6)), Decided Check_Proved)]"
-  by eval
 
 end

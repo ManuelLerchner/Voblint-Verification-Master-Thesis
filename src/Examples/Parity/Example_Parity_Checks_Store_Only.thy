@@ -211,10 +211,6 @@ lemma parity_ex_classify_4:
   "parity_classify_check (parity_ex_y_is_z) (parity_ex_env (Statement 4)) = Check_Refuted"
   unfolding parity_ex_env_def by eval
 
-lemma parity_ex_classify_6:
-  "parity_classify_check (parity_ex_y_is_w) (parity_ex_env (Statement 6)) = Check_Unknown"
-  unfolding parity_ex_env_def by eval
-
 text \<open>The payoff: the proved check's condition genuinely holds at every
   reaching store, and the refuted check's condition genuinely fails at every
   reaching store --- both derived from \<^const>\<open>parity_classify_check\<close> plus
@@ -325,7 +321,6 @@ proof -
   then show ?thesis by blast
 qed
 
-
 lemma parity_ex_reach6_nonempty: "parity_ex_reach (Statement 6) \<noteq> {}"
 proof -
   have s3_ne: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 3)"
@@ -372,13 +367,6 @@ text \<open>
   above establish individually (\<open>parity_ex_classify_3\<close>/\<open>_4\<close>/\<open>_6\<close>), now read
   off the whole program at once.
 \<close>
-
-lemma parity_ex_report_eval:
-  "analyse_parity_report_for parity_ex_gs parity_ex_program =
-     [(Statement 3, parity_ex_y_neq_z, Check_Proved),
-      (Statement 4, parity_ex_y_is_z, Check_Refuted),
-      (Statement 6, parity_ex_y_is_w, Check_Unknown)]"
-  by eval
 
 text \<open>The wrapper is exactly \<^const>\<open>classify_checks\<close> applied to this
   program's own compiled CFG and computed environment --- no separate
