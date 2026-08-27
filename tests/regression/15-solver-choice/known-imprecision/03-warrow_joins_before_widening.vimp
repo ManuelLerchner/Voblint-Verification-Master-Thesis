@@ -1,5 +1,5 @@
 // PARAM: --analysis interval --solver warrow
-// n is concretely 1 or 2, so n < 10 genuinely holds -- but Apinis warrowing
+// n is concretely 1 or 2, so n < 3 genuinely holds -- but Apinis warrowing
 // cannot establish it. Mechanism: p's single FunctionEntry seed is written by
 // two distinct call-site origins. The first write leaves the slot at [1,1];
 // the second recomputes the join as [1,2] and widens [1,1] against it, and
@@ -10,8 +10,16 @@
 // Not a limitation of widening as such: 15-solver-choice/precision/
 // 06-warrow_per_origin_keeps_bound.vimp is the same program under
 // --solver warrow-per-origin, which widens per origin and answers PROVED.
+//
+// The same four checks as the exact cases, read against a widened slot. Only
+// `0 < n` survives: `n < 3` is UNKNOWN precisely because the upper bound is
+// gone, which is the difference this case exists to record. Pinning it this
+// way keeps the contrast with the join and per-origin cases legible.
 void p(int32 n) {
-  __voblint_check(n < 10) // UNKNOWN
+  __voblint_check(0 < n);   // PROVED
+  __voblint_check(n < 3);   // UNKNOWN
+  __voblint_check(1 < n);   // UNKNOWN
+  __voblint_check(n < 2)    // UNKNOWN
 }
 void main() {
   p(1);

@@ -2,15 +2,23 @@
 // The precision ceiling of the two-origin slot the widening rules are
 // compared against. p's single FunctionEntry seed is written by two call
 // sites, [1,1] and [2,2]; join accumulates them into the slot without ever
-// widening, so the entry value is exactly [1,2] and n < 10 is decided.
+// widening, so the entry value is exactly [1,2], which the four checks pin.
 //
 // Same program as known-imprecision/03-warrow_joins_before_widening.vimp
 // (warrow, [1,+inf]) and precision/06-warrow_per_origin_keeps_bound.vimp
 // (warrow-per-origin, [1,2]): join has no termination guarantee on a
 // growing chain but loses nothing here, and warrow-per-origin meets this
 // same value while keeping that guarantee.
+//
+// The four checks pin the slot exactly, not just loosely. `0 < n` and `n < 3`
+// fix the two bounds; `1 < n` and `n < 2` are UNKNOWN, which is what rules out
+// [2,2] and [1,1] and leaves [1,2] as the only interval consistent with all
+// four. A single `n < 10` would have been satisfied by [1,9] just as well.
 void p(int32 n) {
-  __voblint_check(n < 10) // PROVED
+  __voblint_check(0 < n);   // PROVED
+  __voblint_check(n < 3);   // PROVED
+  __voblint_check(1 < n);   // UNKNOWN
+  __voblint_check(n < 2)    // UNKNOWN
 }
 void main() {
   p(1);
