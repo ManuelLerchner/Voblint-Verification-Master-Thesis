@@ -1,5 +1,5 @@
 """Hypothesis strategies for VIMP ASTs, and their S-expression serialization
-for ast_driver.ml's build_program/build_com/build_exp (see ast_driver.ml).
+for ast_driver.ml's build_skeleton/build_com/build_exp (see ast_driver.ml).
 
 VIMP has one unified `exp` type -- arithmetic, comparison, and logical
 operators are ordinary exp constructors, not a separate aexp/bexp split
@@ -23,17 +23,20 @@ rather than random identifiers: this sidesteps keyword collisions entirely
 (by construction, not by filtering/assume rejection) while still exercising
 name reuse, shadowing-shaped programs, and multi-procedure call graphs.
 
-Procedure-local declarations live outside the AST strategies, in
-`programs_with_locals`/`source_with_locals`, because they are a source-text
-property here rather than an AST one. VIMP_Source_Print.thy's
-pretty_string_of_program prints no declaration for a local at all (nor the
-kind of a typed global), so an AST carrying `declared_locals` prints to text
-that re-parses with an empty `declared_locals` -- it cannot round-trip. The
-same reason the printer's lossiness keeps `declared_kinds` out of `programs`
-keeps locals out of it: `programs` stays exactly the declaration-free
-fragment the round-trip property is about, and the locals prologue is
-spliced into that program's printed source for the properties that only need
-parse acceptance.
+Declarations are absent from these strategies on purpose. VIMP_Source_Print
+.thy's pretty_string_of_program prints no kind on a global or a formal, no
+procedure return kind, and no local declaration at all, so what it emits is a
+declaration skeleton rather than source the frontend accepts. ast_driver fills
+that skeleton in -- one fixed kind throughout, the locals a body's own variable
+uses imply, a return kind for a value-returning procedure -- and builds the
+AST from the same derivation, so a generated program still round-trips
+exactly. `programs` therefore describes the shape being tested (expressions,
+statement nesting, call graphs) and nothing about which kind a name carries.
+
+`programs_with_locals`/`source_with_locals` add an extra, freely-shaped
+prologue on top of that completed source, for the properties that only need
+parse acceptance: several names per line, varied kinds. Those names avoid
+every name ast_driver already declares, so the two prologues never collide.
 """
 
 import re
@@ -142,6 +145,64 @@ def programs(draw, max_procs=len(PROC_POOL), body_depth=3):
     return (procs, main_body, globals_)
 
 
+# -- variables a body touches ----------------------------------------------
+#
+# Mirrors ast_driver's com_vars: every variable a body reads or writes that is
+# neither a global nor one of the procedure's formals becomes a declared local
+# in the printed source, so an extra prologue spliced on top must avoid those
+# names or the frontend rejects the result as a duplicate declaration. A call's
+# callee is a Call field, never a ("V", _) leaf, so a procedure name never
+# counts as a variable here.
+
+
+def _exp_vars(e, acc):
+    tag = e[0]
+    if tag == "V":
+        acc.add(e[1])
+    elif tag == "N":
+        pass
+    elif tag == "Not":
+        _exp_vars(e[1], acc)
+    else:
+        _exp_vars(e[1], acc)
+        _exp_vars(e[2], acc)
+
+
+def used_vars(com, acc=None):
+    acc = set() if acc is None else acc
+    if com == "Skip":
+        return acc
+    tag = com[0]
+    if tag == "Assign":
+        acc.add(com[1])
+        _exp_vars(com[2], acc)
+    elif tag == "Random":
+        acc.add(com[1])
+    elif tag == "Check":
+        _exp_vars(com[1], acc)
+    elif tag == "Seq":
+        used_vars(com[1], acc)
+        used_vars(com[2], acc)
+    elif tag == "If":
+        _exp_vars(com[1], acc)
+        used_vars(com[2], acc)
+        used_vars(com[3], acc)
+    elif tag == "While":
+        _exp_vars(com[1], acc)
+        used_vars(com[2], acc)
+    elif tag == "Call":
+        if com[1] is not None:
+            acc.add(com[1][1])
+        for actual in com[3]:
+            _exp_vars(actual, acc)
+    elif tag == "Return":
+        if com[1] is not None:
+            _exp_vars(com[1][1], acc)
+    else:
+        raise AssertionError(f"unrecognized com tag: {tag}")
+    return acc
+
+
 # -- procedure-local declarations ------------------------------------------
 #
 # A declaration is `<kind> name1, name2, ...;` with an explicit kind: unlike
@@ -153,16 +214,17 @@ def programs(draw, max_procs=len(PROC_POOL), body_depth=3):
 # generated program is ever one the frontend must reject.
 
 @st.composite
-def locals_prologue(draw, formals=()):
-    """Declaration groups for one procedure, as [(kind, [name, ...]), ...].
+def locals_prologue(draw, formals=(), declared=()):
+    """Extra declaration groups for one procedure, as [(kind, [name, ...]), ...].
 
-    Names come from VAR_POOL minus the procedure's own formals, drawn without
-    replacement. VAR_POOL is disjoint from GLOBAL_POOL, so a local can never
-    shadow a declared global either, and no name is declared twice. The empty
-    prologue stays the common case -- almost every program in the regression
-    corpus has none.
+    Names come from VAR_POOL minus the procedure's own formals and minus the
+    locals its body already forces ast_driver to declare (`declared`), drawn
+    without replacement. VAR_POOL is disjoint from GLOBAL_POOL, so a local can
+    never shadow a declared global either, and no name is declared twice. The
+    empty prologue stays the common case -- almost every program in the
+    regression corpus has none.
     """
-    available = [x for x in VAR_POOL if x not in formals]
+    available = [x for x in VAR_POOL if x not in formals and x not in declared]
     if not available:
         return []
     names = draw(st.lists(st.sampled_from(available), max_size=len(available), unique=True))
@@ -184,24 +246,28 @@ def programs_with_locals(draw, max_procs=len(PROC_POOL), body_depth=3):
     """
     procs, main_body, globals_ = draw(programs(max_procs=max_procs, body_depth=body_depth))
     prologues = {}
-    for name, formals, _ in procs:
-        prologues[name] = draw(locals_prologue(formals=formals))
-    prologues[MAIN_NAME] = draw(locals_prologue())
+    for name, formals, body in procs:
+        prologues[name] = draw(
+            locals_prologue(formals=formals, declared=used_vars(body))
+        )
+    prologues[MAIN_NAME] = draw(locals_prologue(declared=used_vars(main_body)))
     return (procs, main_body, globals_), prologues
 
 
-PROC_HEADER = re.compile(r"^void (\w+)\(")
+# A definition header sits at column zero and opens with its return kind --
+# `void` for a procedure that yields no value, a kind keyword otherwise.
+PROC_HEADER = re.compile(r"^(?:void|" + "|".join(LOCAL_KIND_POOL) + r") (\w+)\(")
 
 
 def source_with_locals(source: str, prologues: dict) -> str:
     """Splice each procedure's locals prologue into printed VIMP source.
 
-    pretty_string_of_program emits a procedure's first statement directly
-    after its `void NAME(...) {` header, so inserting the declaration lines
-    right after that header is exactly the prologue position the grammar
-    requires; the four-space indent matches the printer's own body indent.
-    Body lines are indented, headers are not, so the header regex cannot
-    match inside a body.
+    ast_driver's completed source puts a procedure's own forced local
+    declarations directly after its header, so inserting these lines right
+    after that header keeps them inside the prologue the grammar requires;
+    the four-space indent matches the printer's own body indent. Body lines
+    are indented, headers are not, so the header regex cannot match inside a
+    body.
     """
     out = []
     for line in source.split("\n"):

@@ -297,7 +297,13 @@ def gen_program_rule() -> str:
             check_distinct ("local of " ^ quote n) lnames;
             check_no_collision n "formal(s) as local(s)" lnames (List.map fst formals);
             check_no_collision n "global(s) as local(s)" lnames decl_names) fs;
+        check_global_kinds g;
+        List.iter (fun (n, formals, _, _, _) -> check_formal_kinds n formals) fs;
+        List.iter (fun (n, formals, locals, body, _) ->
+            check_declared n
+              (decl_names @ List.map fst formals @ List.map fst locals) body) fs;
         let mains, procs = List.partition (fun (n, _, _, _, _) -> n = "main") fs in
+        List.iter (fun (n, _, _, body, rk) -> check_void_return n rk body) procs;
         (* main yields no value, so its declaration builds the void form
            whatever kind was written on it. *)
         let main_body =
@@ -462,6 +468,95 @@ let check_no_collision owner what names against =
   | [] -> ()
   | bad ->
     failwith (Printf.sprintf "%s declares %s: %s" (quote owner) what (commas_quote bad))
+
+(* Every declaration is explicit. The grammar still admits the unannotated
+   forms -- Isabelle mixfix has no epsilon, so optionality is two productions
+   and dropping one would change the shared grammar -- so "a formal/global
+   without a kind" is rejected here, where the diagnostic can name it, rather
+   than silently defaulting the name to the compiler's fallback kind. *)
+let unkinded pairs =
+  List.filter_map (fun (n, k) -> match k with None -> Some n | Some _ -> None) pairs
+
+let check_formal_kinds owner formals =
+  match unkinded formals with
+  | [] -> ()
+  | bad ->
+    failwith
+      (Printf.sprintf "%s declares formal parameter(s) without a kind: %s"
+         (quote owner) (commas_quote bad))
+
+let check_global_kinds g =
+  match unkinded g with
+  | [] -> ()
+  | bad ->
+    failwith
+      (Printf.sprintf "global(s) declared without a kind: %s" (commas_quote bad))
+
+(* A procedure declared `void` yields no value, so `return e` in its body has
+   nowhere to deliver e: the caller's Call carries no destination. A bare
+   `return` is the void form and stays legal. main is exempt because it is not
+   a callable procedure here -- "main may not return" is
+   wf_program_compile_input_exec's conjunct, reported by its own path. *)
+let rec returns_value (c : Voblint_CLI.Core.com) =
+  match c with
+  | Voblint_CLI.Core.Return e -> e <> None
+  | Voblint_CLI.Core.Seq (a, b) -> returns_value a || returns_value b
+  | Voblint_CLI.Core.If (_, a, b) -> returns_value a || returns_value b
+  | Voblint_CLI.Core.While (_, a) -> returns_value a
+  | Voblint_CLI.Core.SKIP | Voblint_CLI.Core.Assign _ | Voblint_CLI.Core.Check _
+  | Voblint_CLI.Core.Call _ | Voblint_CLI.Core.Restore | Voblint_CLI.Core.Unwind ->
+    false
+
+let check_void_return owner ret_kind body =
+  match ret_kind with
+  | Some _ -> ()
+  | None ->
+    if returns_value body then
+      failwith (Printf.sprintf "%s is declared void but returns a value" (quote owner))
+
+(* Every variable a body reads or writes must be a declared global, one of the
+   procedure's formals, or one of its declared locals. Classification is per
+   occurrence, not per name: a call's callee is a `Call` field, never a `V`, so
+   a name that is a procedure at one site and a variable at another is read
+   correctly at both. The specials (__voblint_nondet_int, random, min, max)
+   are calls too, and so are never seen here. *)
+let rec exp_vars acc (e : Voblint_CLI.Core.exp) =
+  match e with
+  | Voblint_CLI.Core.V x -> x :: acc
+  | Voblint_CLI.Core.N _ -> acc
+  | Voblint_CLI.Core.Plus (a, b) | Voblint_CLI.Core.Minus (a, b)
+  | Voblint_CLI.Core.Times (a, b) | Voblint_CLI.Core.Less (a, b)
+  | Voblint_CLI.Core.Eq (a, b) | Voblint_CLI.Core.And (a, b)
+  | Voblint_CLI.Core.Or (a, b) -> exp_vars (exp_vars acc a) b
+  | Voblint_CLI.Core.Not a -> exp_vars acc a
+
+let rec com_vars acc (c : Voblint_CLI.Core.com) =
+  match c with
+  | Voblint_CLI.Core.SKIP | Voblint_CLI.Core.Restore | Voblint_CLI.Core.Unwind -> acc
+  | Voblint_CLI.Core.Assign (x, e) -> exp_vars (x :: acc) e
+  | Voblint_CLI.Core.Check e -> exp_vars acc e
+  | Voblint_CLI.Core.Seq (a, b) -> com_vars (com_vars acc a) b
+  | Voblint_CLI.Core.If (e, a, b) -> com_vars (com_vars (exp_vars acc e) a) b
+  | Voblint_CLI.Core.While (e, a) -> com_vars (exp_vars acc e) a
+  | Voblint_CLI.Core.Call (dst, _, args) ->
+    List.fold_left exp_vars
+      (match dst with Some x -> x :: acc | None -> acc)
+      args
+  | Voblint_CLI.Core.Return e ->
+    (match e with Some e -> exp_vars acc e | None -> acc)
+
+let rec dedup = function
+  | [] -> []
+  | x :: rest -> x :: dedup (List.filter (fun y -> y <> x) rest)
+
+let check_declared owner in_scope body =
+  let used = List.rev (com_vars [] body) in
+  match dedup (List.filter (fun x -> not (List.mem x in_scope)) used) with
+  | [] -> ()
+  | bad ->
+    failwith
+      (Printf.sprintf "%s uses undeclared variable(s): %s" (quote owner)
+         (commas_quote bad))
 %}}
 
 {token_decls(g)}

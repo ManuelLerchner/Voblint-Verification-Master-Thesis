@@ -20,8 +20,8 @@ Perturbing valid programs reaches those states while still covering the
 lexer/parser boundary through the punctuation/whitespace/identifier/digit
 mutation characters below.
 
-The base source carries a procedure-local declaration prologue (often empty,
-as in most real programs -- see strategies.programs_with_locals), so the
+The base source is fully declared -- kinds on globals and formals, a return
+kind where a procedure returns a value, a local declaration prologue -- so the
 mutations also land inside and around declaration lines: a kind keyword, a
 declaration's comma list, and the prologue/first-statement boundary the
 parser's locals_star/stmts_opt split hinges on.

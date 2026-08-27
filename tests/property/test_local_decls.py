@@ -8,13 +8,11 @@ positive property below generates that prologue for every procedure of a
 Hypothesis-generated program -- main included -- and asserts the frontend
 accepts the result.
 
-Parse acceptance is the whole property, not a weaker stand-in for the
-round-trip one: VIMP_Source_Print.thy's pretty_string_of_program prints no
-declaration at all, so declaration-carrying source has no printer output to
-compare against. Printing a program whose `declared_locals` is non-empty
-yields text that re-parses with `declared_locals = []`, which is why
-strategies.programs stays declaration-free and the prologue is spliced into
-its printed source here instead.
+Parse acceptance is the whole property: the prologue spliced in here is
+freely shaped -- several names per line, any kind -- so there is no AST it
+came from to compare against, unlike the one-line-per-local prologue
+ast_driver derives for a printed program. The two never collide: these names
+are drawn from what ast_driver leaves undeclared.
 
 The three negative cases are the shapes `programs_with_locals` refuses to
 build, and all three are rejections. The placement one closes structurally:
@@ -62,7 +60,7 @@ void main() {
 """
 
 LOCAL_SHADOWS_FORMAL = """\
-void f(n) {
+int32 f(int32 n) {
     int32 n;
     return n
 }

@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A procedure declared `void`
+// yields no value, so `return e` in its body has nowhere to deliver e: a call
+// to it carries no destination. A bare `return` is the void form and stays
+// legal (see 01-bare_return.vimp).
+void p(int32 n) {
+  return n
+}
+void main() {
+  p(1)
+}

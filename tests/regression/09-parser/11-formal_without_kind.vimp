@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. Every formal declares its
+// kind. An unannotated parameter is not "untyped": it silently takes the
+// compiler's default kind, so the actual bound to it converts to a width the
+// source never names, and a caller reading the signature cannot tell which
+// conversion happens.
+int32 f(n) {
+  return n
+}
+void main() {
+  f(1)
+}

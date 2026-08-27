@@ -2,8 +2,10 @@
    from stdin, builds it via the exported Isabelle constructors (NOT via
    Vimp_parser -- the whole point is an independently-constructed AST, so a
    parser bug can't hide by round-tripping consistently with itself), prints
-   it through the Isabelle-generated pretty_string_of_program, re-parses
-   that text with Vimp_parser, and checks the result is structurally equal
+   it through the Isabelle-generated pretty_string_of_program, completes the
+   declarations that printer leaves out (see "Declaration completion" below),
+   re-parses that text with Vimp_parser, and checks the result is structurally
+   equal
    (OCaml's polymorphic (=), which works across the module's abstract types
    at the value level regardless of the signature hiding constructors) to
    the original.
@@ -115,22 +117,163 @@ let build_names = function
   | s -> failwith ("ast_driver: bad name list sexp: " ^ show_sexp s)
 
 let build_proc = function
-  | Slist [ Atom name; formals; body ] -> (name, proc_decl_of (build_names formals) (build_com body))
+  | Slist [ Atom name; formals; body ] -> (name, build_names formals, build_com body)
   | s -> failwith ("ast_driver: bad proc sexp: " ^ show_sexp s)
 
-let build_program = function
+(* The sexp describes a program the way the printer prints one: procedures and
+   a main body, with no declarations. Completion below turns that skeleton into
+   both a fully declared AST and the matching source text. *)
+let build_skeleton = function
   | Slist [ Slist procs; main_body; globals ] ->
-    mk_program (List.map build_proc procs) (build_com main_body) (build_names globals)
+    (List.map build_proc procs, build_com main_body, build_names globals)
   | s -> failwith ("ast_driver: bad program sexp: " ^ show_sexp s)
+
+(* -- Declaration completion ----------------------------------------------
+
+   Every declaration in VIMP is explicit: a global and a formal each carry a
+   kind, a value-returning procedure declares its return kind, and every other
+   variable a body touches is a declared local. pretty_string_of_program prints
+   none of that -- its output is a declaration skeleton -- so a printed program
+   is not source the frontend accepts until the declarations are put back.
+
+   One fixed kind is used throughout: which kind a declaration carries is not
+   what these properties are about, and holding it constant keeps the AST the
+   text re-parses to exactly the AST that was printed. Locals are the variables
+   a body uses that are neither globals nor its own formals, in first-use
+   order; a procedure gets a return kind exactly when its body returns a value.
+   Both the tree and the text are built from this one derivation, so they
+   cannot drift apart. *)
+
+let decl_kind = I32
+let decl_kind_text = "int32"
+
+let rec exp_vars acc = function
+  | V x -> x :: acc
+  | N _ -> acc
+  | Plus (a, b) | Minus (a, b) | Times (a, b) | Less (a, b) | Eq (a, b)
+  | And (a, b) | Or (a, b) -> exp_vars (exp_vars acc a) b
+  | Not a -> exp_vars acc a
+
+(* A call's callee is a Call field, never a V, so a procedure name is never
+   counted as a variable here -- and neither are the specials, which are
+   calls too. *)
+let rec com_vars acc = function
+  | SKIP | Restore | Unwind -> acc
+  | Assign (x, e) -> exp_vars (x :: acc) e
+  | Check e -> exp_vars acc e
+  | Seq (a, b) -> com_vars (com_vars acc a) b
+  | If (e, a, b) -> com_vars (com_vars (exp_vars acc e) a) b
+  | While (e, a) -> com_vars (exp_vars acc e) a
+  | Call (dst, _, args) ->
+    List.fold_left exp_vars (match dst with Some x -> x :: acc | None -> acc) args
+  | Return (Some e) -> exp_vars acc e
+  | Return None -> acc
+
+let rec returns_value = function
+  | Return e -> e <> None
+  | Seq (a, b) | If (_, a, b) -> returns_value a || returns_value b
+  | While (_, a) -> returns_value a
+  | SKIP | Assign _ | Check _ | Call _ | Restore | Unwind -> false
+
+let rec dedup = function
+  | [] -> []
+  | x :: rest -> x :: dedup (List.filter (fun y -> y <> x) rest)
+
+type definition = {
+  d_name : string;
+  d_formals : string list;
+  d_locals : string list;
+  d_ret : ikind option;
+  d_body : com;
+}
+
+(* main is never value-returning: mk_program_typed builds its entry with
+   proc_decl_of [] and the frontend leaves "main may not return" to
+   wf_program_compile_input_exec, so a generated main keeps the void form
+   whatever its body does. *)
+let definition_of globals is_main (name, formals, body) =
+  let used = dedup (List.rev (com_vars [] body)) in
+  { d_name = name;
+    d_formals = formals;
+    d_locals =
+      List.filter (fun x -> not (List.mem x globals || List.mem x formals)) used;
+    d_ret = (if (not is_main) && returns_value body then Some decl_kind else None);
+    d_body = body }
+
+(* Definitions in printed order: pretty_string_of_program emits the globals
+   line, then prog_procs in order, then main. *)
+let definitions_of (procs, main_body, globals) =
+  List.map (definition_of globals false) procs
+  @ [ definition_of globals true (prog_main_name, [], main_body) ]
+
+let program_of (_, main_body, globals) defs =
+  let proc_defs = List.filter (fun d -> d.d_name <> prog_main_name) defs in
+  let entry d =
+    match d.d_ret with
+    | None -> (d.d_name, proc_decl_of d.d_formals d.d_body)
+    | Some k -> (d.d_name, proc_decl_of_typed d.d_formals k d.d_body)
+  in
+  let kinds =
+    List.map (fun g -> TV (g, decl_kind)) globals
+    @ List.concat_map
+        (fun d -> List.map (fun x -> TV (x, decl_kind)) d.d_formals)
+        defs
+  in
+  let scoped_locals =
+    List.concat_map
+      (fun d -> List.map (fun x -> (d.d_name, TV (x, decl_kind))) d.d_locals)
+      defs
+  in
+  mk_program_typed (List.map entry proc_defs) main_body globals kinds scoped_locals
+
+(* -- Declaration completion, on the printed text -------------------------
+
+   The printer writes the globals line and every procedure header at column
+   zero and indents every body line, so those two line shapes locate the
+   places a declaration belongs without parsing the text back. Headers arrive
+   in the same order `definitions_of` produced. *)
+
+let has_prefix prefix s =
+  String.length s >= String.length prefix && String.sub s 0 (String.length prefix) = prefix
+
+let typed_names names =
+  String.concat ", " (List.map (fun x -> decl_kind_text ^ " " ^ x) names)
+
+let header_line d =
+  Printf.sprintf "%s %s(%s) {"
+    (match d.d_ret with None -> "void" | Some _ -> decl_kind_text)
+    d.d_name (typed_names d.d_formals)
+
+let locals_lines d =
+  List.map (fun x -> "    " ^ decl_kind_text ^ " " ^ x ^ ";") d.d_locals
+
+let complete_source defs text =
+  let pending = ref defs in
+  let rewrite line =
+    if has_prefix "global " line then
+      [ "global " ^ decl_kind_text ^ String.sub line 6 (String.length line - 6) ]
+    else if has_prefix "void " line then
+      match !pending with
+      | d :: rest ->
+        pending := rest;
+        header_line d :: locals_lines d
+      | [] -> failwith "ast_driver: more procedure headers than definitions"
+    else [ line ]
+  in
+  String.concat "\n" (List.concat_map rewrite (String.split_on_char '\n' text))
 
 (* -- Driver --------------------------------------------------------------- *)
 
-let source_text_of_program original =
+let source_text_of_program defs original =
   let source_chars =
     pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
       (declared_global_vars original)
   in
-  String.concat "" (List.map (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c)))) source_chars)
+  complete_source defs
+    (String.concat ""
+       (List.map
+          (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c))))
+          source_chars))
 
 
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
@@ -138,8 +281,10 @@ let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""
 let () =
   let input = In_channel.input_all stdin in
   try
-    let original = build_program (parse_sexp input) in
-    let source_text = source_text_of_program original in
+    let skeleton = build_skeleton (parse_sexp input) in
+    let defs = definitions_of skeleton in
+    let original = program_of skeleton defs in
+    let source_text = source_text_of_program defs original in
     if mode = "--print-source" then (print_string source_text; exit 0);
     match Vimp_frontend.program "<generated>" source_text with
     | reparsed, _, _ when mode = "--print-reprinted" ->
@@ -149,7 +294,7 @@ let () =
          but checking it directly gives a source-text diff on failure instead
          of "the trees differ", and catches the (structural-equality
          assumption) breaking silently. *)
-      print_string (source_text_of_program reparsed);
+      print_string (source_text_of_program defs reparsed);
       exit 0
     | reparsed, _, _ ->
       if original = reparsed then print_endline "OK"

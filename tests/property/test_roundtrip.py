@@ -8,13 +8,14 @@ text that Vimp_parser reads back into the same tree; a mismatch here is a
 real printer or parser bug. test_nonexpressible_regression.py pins a few
 concrete shapes that specifically exercise printer-inserted parentheses.
 
-`programs` is the declaration-free fragment of VIMP on purpose. A program
-carrying procedure-local declarations (or a typed global) is outside this
-property, not accidentally omitted from it: pretty_string_of_program prints
-neither, so such a program's printed source re-parses into an AST with an
-empty `declared_locals`/`declared_kinds` and cannot be structurally equal to
-the original. Declaration-carrying source is covered by parse acceptance
-instead, in test_local_decls.py.
+`programs` generates no declarations itself: pretty_string_of_program emits
+none either, so ast_driver derives them -- one fixed kind throughout, a local
+per variable a body touches, a return kind for a value-returning procedure --
+and builds both the AST and the printed source from that one derivation. Which
+kind a name carries is thus held constant here; that a declaration survives
+printing at all is what the structural comparison below still checks, since
+the parser has to reconstruct exactly the `declared_kinds`/`declared_locals`
+the original was built with.
 
 As a secondary, more readable invariant: printing the re-parsed AST again
 must reproduce the same source text as the first print. Structural equality
