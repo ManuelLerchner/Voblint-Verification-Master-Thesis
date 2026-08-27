@@ -4,9 +4,14 @@
 // the sign alone decides 0 < x in both directions, so the pair pins that
 // sign_lt refutes as precisely as it proves -- a one-sided fixture would let
 // a regression that collapses every comparison to PROVED go unnoticed.
+//
+// The write is a negative literal rather than 0 - 5 on purpose: an
+// arithmetic node norms its result at its kind, and Sign cannot certify a
+// negative abstract value fits int32, so the subtraction would top. That is
+// known-imprecision/01, and it is not what this fixture is about.
 
 void main() {
   int32 x;
-  x := 0 - 5;
+  x := -5;
   __voblint_check(0 < x) // REFUTED
 }

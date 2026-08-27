@@ -1,0 +1,21 @@
+// PARAM: --analysis sign
+// The concrete result is fixed -- 0 - 5 is -5 and 0 < x is false -- and Sign
+// still cannot say so.
+//
+// The mechanism is the domain's concretization, not its arithmetic. sign_sub
+// answers Negative here, correctly. What loses it is the norm at the node's
+// kind: gamma of Negative is every negative integer, with no bound, so the
+// abstract value admits values far below int32's minimum whose wraparound is
+// positive, and topping is the only sound answer. The bound exists in the
+// program -- both operands were evaluated at int32 -- but the abstract value
+// does not carry the kind it was computed at, so nothing at the norm can use
+// it. A kind-tagged cell, whose concretization is intersected with the
+// kind's range, is what makes Negative here mean [-2147483648, -1].
+//
+// 12-uint8_local_in_main.vimp under interval is the same program shape where
+// the domain does carry the bound and the answer is exact.
+void main() {
+  int32 x;
+  x := 0 - 5;
+  __voblint_check(0 < x) // UNKNOWN
+}

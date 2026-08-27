@@ -1,0 +1,21 @@
+// PARAM: --analysis sign
+// The concrete results are fixed -- min(3, -5) is -5 and max(3, -5) is 3 --
+// and sign_min/sign_max answer them exactly: a negative argument on either
+// side pins the minimum negative, and symmetrically for the maximum.
+//
+// What loses it is the norm at the special call's operating kind. min and max
+// return one of their operands, so the result is representable whenever the
+// operands are, and both were evaluated at int32. A Sign value carries no
+// kind, so nothing at the norm can use that: gamma of Negative is unbounded,
+// its wraparound at int32 may be positive, and topping is the only sound
+// answer. 01-min_max_interval.vimp is the same program where the domain does
+// carry the bound.
+void main() {
+  int32 w, x, y, z;
+  x := 3;
+  y := -5;
+  z := min(x, y);
+  w := max(x, y);
+  __voblint_check(z < 0); // UNKNOWN
+  __voblint_check(0 < w)  // UNKNOWN
+}

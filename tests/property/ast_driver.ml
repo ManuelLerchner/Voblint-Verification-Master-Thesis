@@ -238,12 +238,17 @@ let program_of (_, main_body, globals) defs =
         (fun d -> List.map (fun x -> TV (x, decl_kind)) d.d_locals)
         defs
   in
-  let scoped_locals =
+  (* Annotated formals are scoped alongside the locals, exactly as the parser
+     records them: every formal the printer emits carries a kind, so every
+     formal reaches the scoped table too. *)
+  let scoped_decls =
     List.concat_map
-      (fun d -> List.map (fun x -> (d.d_name, TV (x, decl_kind))) d.d_locals)
+      (fun d ->
+         List.map (fun x -> (d.d_name, TV (x, decl_kind))) d.d_formals
+         @ List.map (fun x -> (d.d_name, TV (x, decl_kind))) d.d_locals)
       defs
   in
-  mk_program_typed (List.map entry proc_defs) main_body globals kinds scoped_locals
+  mk_program_typed (List.map entry proc_defs) main_body globals kinds scoped_decls
 
 (* -- Declaration completion, on the printed text -------------------------
 
@@ -262,7 +267,7 @@ let program_of (_, main_body, globals) defs =
 let source_text_of_program _defs original =
   let source_chars =
     pretty_string_of_program
-      (prog_tyenv original) (declared_locals original)
+      (prog_tyenv original) (declared_scoped original)
       (prog_table original) (prog_procs original) (prog_main original)
       (declared_global_vars original)
   in

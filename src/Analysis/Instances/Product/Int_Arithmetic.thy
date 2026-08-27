@@ -706,20 +706,34 @@ subsection \<open>Ikind-aware casting\<close>
 text \<open>
   \<open>int_dom_cast\<close> composes each component's own Goblint-faithful cast:
   \<open>sign_cast\<close>/\<open>ivl_cast\<close>/\<open>parity_cast\<close>/\<open>cong_cast\<close>, applied independently to
-  each field. Soundness and monotonicity both reduce to the corresponding
-  per-component fact applied to each of the four \<open>gamma_int_dom\<close>-intersection
-  members (soundness) or \<open>less_eq_int_dom_ext\<close>-conjunction components
-  (monotonicity) -- no cross-component correlation is needed for either
-  direction, since \<open>gamma_int_dom\<close> is a plain intersection and \<open>\<le>\<close> is a plain
-  conjunction.
+  each field, and then reduces the product against the interval the cast just
+  produced.
+
+  The reduction is what makes the product's cast sharper than its components'.
+  A conversion is exactly where the components disagree most: the interval
+  clamps to the kind's range and stays exact, while sign and parity carry no
+  magnitude and cannot certify their own value is representable, so both
+  widen to top. Reducing afterwards reads the sign and the parity back off the
+  clamped interval, which is the reduced-product behaviour Goblint's
+  \<open>IntDomTuple\<close> gets from refining after every operation. Without it an
+  \<open>int32\<close>-to-\<open>int32\<close> conversion -- the identity on every value -- still lost
+  the sign.
+
+  Soundness reduces to the per-component fact applied to each of the four
+  \<open>gamma_int_dom\<close>-intersection members, plus \<^const>\<open>refine_interval\<close> preserving
+  the concretization exactly; monotonicity composes the per-component
+  monotonicity with \<^const>\<open>refine_interval\<close>'s. No cross-component correlation
+  is needed for either direction, since \<open>gamma_int_dom\<close> is a plain
+  intersection and \<open>\<le>\<close> is a plain conjunction.
 \<close>
 
-definition int_dom_cast :: "ikind \<Rightarrow> 'a int_dom_scheme \<Rightarrow> 'a int_dom_scheme" where
+definition int_dom_cast :: "ikind \<Rightarrow> 'a::int_dom_record_lattice int_dom_scheme \<Rightarrow> 'a int_dom_scheme" where
   "int_dom_cast ik d =
-     d\<lparr>int_sign := sign_cast ik (int_sign d),
-        int_ivl := ivl_cast ik (int_ivl d),
-        int_parity := parity_cast ik (int_parity d),
-        int_congruence := cong_cast ik (int_congruence d)\<rparr>"
+     refine_interval
+       (d\<lparr>int_sign := sign_cast ik (int_sign d),
+           int_ivl := ivl_cast ik (int_ivl d),
+           int_parity := parity_cast ik (int_parity d),
+           int_congruence := cong_cast ik (int_congruence d)\<rparr>)"
 
 text \<open>
   \<^const>\<open>gamma_int_dom\<close> is the intersection of its components, so a single
@@ -768,7 +782,7 @@ proof -
           "v \<in> gamma_parity (int_parity d)" "v \<in> gamma_congruence (int_congruence d)"
     using v by (simp_all add: gamma_int_dom_def)
   show ?thesis
-    unfolding int_dom_cast_def
+    unfolding int_dom_cast_def refine_interval_exact
     using sign_cast_sound_sign[OF h(1)] ivl_cast_sound[OF h(2)]
           parity_cast_sound_parity[OF h(3)] cong_cast_sound[OF h(4)]
     by simp
@@ -783,10 +797,11 @@ proof -
           "int_dom.more d1 \<le> int_dom.more d2"
     using le by (simp_all add: less_eq_int_dom_ext_def)
   show ?thesis
-    unfolding int_dom_cast_def less_eq_int_dom_ext_def
-    using sign_cast_mono[OF h(1)] ivl_cast_mono[OF h(2)]
-          parity_cast_mono[OF h(3)] cong_cast_mono[OF h(4)] h(5)
-    by simp
+    unfolding int_dom_cast_def
+    by (intro refine_interval_mono_le)
+       (simp add: less_eq_int_dom_ext_def
+          sign_cast_mono[OF h(1)] ivl_cast_mono[OF h(2)]
+          parity_cast_mono[OF h(3)] cong_cast_mono[OF h(4)] h(5))
 qed
 
 subsection \<open>Arithmetic-expression evaluation\<close>

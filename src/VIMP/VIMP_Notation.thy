@@ -55,7 +55,7 @@ record imp_prog =
   proc_rep :: "(pname * proc_decl) list"
   declared_global_vars :: "vname list"
   declared_kinds :: "typed_var list"
-  declared_locals :: "(pname * typed_var) list"
+  declared_scoped :: "(pname * typed_var) list"
 
 lemma declared_global_vars_finite [simp]:
   "finite (set (declared_global_vars p))"
@@ -269,18 +269,24 @@ lemma declared_kinds_make [simp]: "declared_kinds (mk_program ps m gv) = []"
   by (simp add: mk_program_def)
 
 text \<open>
-  \<open>declared_locals\<close> pairs each procedure-local declaration with the procedure
-  that binds it, so two procedures may declare the same name at different
-  kinds. \<open>declared_kinds\<close> cannot express that: it is one flat list consulted
-  by name alone, which is why a formal's kind there depends on the order the
+  \<open>declared_scoped\<close> pairs each procedure-scoped declaration -- an annotated
+  formal or a declared local -- with the procedure that binds it, so two
+  procedures may declare the same name at different kinds.
+  \<open>declared_kinds\<close> cannot express that: it is one flat list consulted by name
+  alone, which is why a formal's kind there depends on the order the
   declarations were collected in.
+
+  An annotated formal appears in both lists. They answer different questions:
+  a program compiled without resolution still reads every kind out of the flat
+  list, while resolution reads the scoped one and never consults the flat list
+  for a name a procedure binds.
 \<close>
 
-lemma declared_locals_make_typed [simp]:
-  "declared_locals (mk_program_typed ps m gv ks ls) = ls"
+lemma declared_scoped_make_typed [simp]:
+  "declared_scoped (mk_program_typed ps m gv ks ls) = ls"
   by (simp add: mk_program_typed_def imp_prog.make_def)
 
-lemma declared_locals_make [simp]: "declared_locals (mk_program ps m gv) = []"
+lemma declared_scoped_make [simp]: "declared_scoped (mk_program ps m gv) = []"
   by (simp add: mk_program_def)
 
 lemma prog_tyenv_make [simp]: "prog_tyenv (mk_program ps m gv) = default_tyenv"
@@ -540,12 +546,18 @@ parse_translation \<open>
           List.mapPartial (fn (n, k) => Option.map (fn k => (n, k)) k)
             (decls @ List.concat (map (fn (_, formals, _, _, _) => formals) funcs))
         (* Every function, not only the non-main ones: main declares its own
-           locals like any other procedure. *)
-        val local_entries =
+           formals and locals like any other procedure. An annotated formal is
+           recorded here as well as in the flat list above, since the two
+           answer different questions: the flat list is what an unresolved
+           program still reads kinds out of, the scoped list is what
+           resolution reads. *)
+        val scoped_entries =
           List.concat
-            (map (fn (p, _, locals, _, _) => map (fn (n, k) => (p, n, k)) locals) funcs)
+            (map (fn (p, formals, locals, _, _) =>
+                    List.mapPartial (fn (n, k) => Option.map (fn k => (p, n, k)) k) formals
+                    @ map (fn (n, k) => (p, n, k)) locals) funcs)
       in K c_imp_prog $ proc_rep $ main $ decl_globals $ mk_kinds kind_entries
-           $ mk_scoped_locals local_entries end
+           $ mk_scoped_locals scoped_entries end
   in
     [("_IMP2", fn ctxt => fn [t] => Vimp_Grammar_Tr.stmts_opt_tr ctxt t | _ => raise Match),
      ("_PROGKW0", fn ctxt => fn [fs] => prog_tr ctxt [] fs | _ => raise Match),
@@ -628,18 +640,32 @@ value "(program {
 } :: imp_prog)"
 
 text \<open>
-  Procedure-local declarations are scoped, so one name may be bound at two
-  kinds in two procedures. \<open>declared_kinds\<close> cannot express that -- it answers
-  by name alone -- which is why locals land in \<open>declared_locals\<close> paired with
-  the procedure that binds them.
+  Procedure-scoped declarations carry the procedure that binds them, so one
+  name may be bound at two kinds in two procedures. \<open>declared_kinds\<close> cannot
+  express that -- it answers by name alone -- which is why every local, and
+  every annotated formal, lands in \<open>declared_scoped\<close> paired with its
+  procedure.
 \<close>
 
 lemma scoped_locals_keep_two_kinds_for_one_name [simp]:
-  "declared_locals (program {
+  "declared_scoped (program {
      void f(n) { uint8 acc; acc := n; return acc }
      void g(n) { int64 acc; acc := n; return acc }
      void main() { a := f(1); b := g(2) }
    }) = [(STR ''f'', TV (STR ''acc'') U8), (STR ''g'', TV (STR ''acc'') I64)]"
+  by simp
+
+text \<open>
+  An annotated formal is scoped the same way, so two procedures may take a
+  parameter of one name at two kinds.
+\<close>
+
+lemma scoped_formals_keep_two_kinds_for_one_name [simp]:
+  "declared_scoped (program {
+     uint8 f(uint8 n) { return n }
+     int64 g(int64 n) { return n }
+     void main() { a := f(1); b := g(2) }
+   }) = [(STR ''f'', TV (STR ''n'') U8), (STR ''g'', TV (STR ''n'') I64)]"
   by simp
 
 text \<open>
@@ -648,7 +674,7 @@ text \<open>
 \<close>
 
 lemma scoped_locals_multi_name_and_main [simp]:
-  "declared_locals (program {
+  "declared_scoped (program {
      void main() { int32 x, y; uint8 z; x := 1; y := 2; z := 3 }
    }) = [(STR ''main'', TV (STR ''x'') I32), (STR ''main'', TV (STR ''y'') I32),
          (STR ''main'', TV (STR ''z'') U8)]"

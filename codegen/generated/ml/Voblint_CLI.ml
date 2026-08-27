@@ -170,6 +170,7 @@ module Core : sig
   type ('a, 'b) analysis_cluster
   type call_string_gk
   val equal_call_string_gk : call_string_gk equal
+  type var_id
   type 'a cfg_ext
   type special_desc
   type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint
@@ -214,13 +215,19 @@ module Core : sig
   val map_filter : ('a -> 'b option) -> 'a list -> 'b list
   val sup_seta : 'a equal -> 'a set set -> 'a set
   val exp_vnames : exp -> string set
+  val map_option : ('a -> 'b) -> 'a option -> 'b option
   val explode : string -> char list
+  val declared_scoped : 'a imp_prog_ext -> (string * typed_var) list
+  val prog_tyenv : unit imp_prog_ext -> string -> ikind
   val proc_decl_of : string list -> com -> unit proc_decl_ext
   val char_0x6E : char
-  val prog_main_name : string
   val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
+  val prog_main_name : string
   val prog_main : unit imp_prog_ext -> com
-  val map_option : ('a -> 'b) -> 'a option -> 'b option
+  val sorted_list_of_set : 'a equal * 'a linorder -> 'a set -> 'a list
+  val char_0x74 : char
+  val char_0x72 : char
+  val char_0x65 : char
   val mk_program_typed :
     (string * unit proc_decl_ext) list ->
       com ->
@@ -230,21 +237,18 @@ module Core : sig
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
   val prog_procs : unit imp_prog_ext -> string list
-  val prog_tyenv : unit imp_prog_ext -> string -> ikind
   val declared_global_vars : 'a imp_prog_ext -> string list
   val declared_global : unit imp_prog_ext -> string -> bool
-  val char_0x74 : char
-  val char_0x72 : char
   val char_0x6F : char
-  val char_0x65 : char
   val char_0x61 : char
   val string_of_sign : sign -> char list
+  val resolve_prog : unit imp_prog_ext -> unit imp_prog_ext
   val texp_erase : texp -> exp
+  val display_scoped : string -> string
   val contexts_at : ('a, 'b) analysis_result -> cfg_node -> 'a set
   val ea_check_cond : edge_action -> texp
   val is_EA_Check : edge_action -> bool
   val prog_cfg : string -> unit imp_prog_ext -> unit cfg_ext
-  val sorted_list_of_set : 'a equal * 'a linorder -> 'a set -> 'a list
   val cfg_calls_list :
     unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
   val cfg_intra_list :
@@ -270,6 +274,7 @@ module Core : sig
   val char_0x78 : char
   val bot_fun : 'b bot -> 'a -> 'b
   val proc_decl_of_typed : string list -> ikind -> com -> unit proc_decl_ext
+  val display_vname_in : string list -> string -> string
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val int_classify_check : texp -> (string -> unit int_dom_ext) -> check_result
@@ -360,7 +365,6 @@ module Core : sig
   val xe_label : 'a export_edge_ext -> string
   val xn_label : 'a export_node_ext -> string
   val xn_lines : 'a export_node_ext -> string list
-  val declared_locals : 'a imp_prog_ext -> (string * typed_var) list
   val xg_edges : 'a export_graph_ext -> unit export_edge_ext list
   val xg_nodes : 'a export_graph_ext -> unit export_node_ext list
   val xn_status : 'a export_node_ext -> node_status option
@@ -3792,14 +3796,111 @@ let rec cong_cast
         (if equal_inta m zero_inta then mk_congruence (ik_norm ik c) zero_inta
           else mk_congruence c (gcd_intc m (ik_mod ik))));;
 
-let rec int_dom_cast
-  ik d =
-    int_congruence_update (fun _ -> cong_cast ik (int_congruence d))
-      (int_parity_update (fun _ -> parity_cast ik (int_parity d))
-        (int_ivl_update (fun _ -> ivl_cast ik (int_ivl d))
-          (int_sign_update (fun _ -> sign_cast ik (int_sign d)) d)));;
+let rec interval_parity_fact
+  i = (if is_bottom_ivl i then PBot
+        else (match i with Ivl (MinInf, _) -> PTop | Ivl (Fin _, MinInf) -> PTop
+               | Ivl (Fin l, Fin u) ->
+                 (if equal_inta l u
+                   then (if dvd (equal_int, semidom_modulo_int)
+                              (Int_of_integer (Z.of_int 2)) l
+                          then PEven else POdd)
+                   else PTop)
+               | Ivl (Fin _, PlusInf) -> PTop | Ivl (PlusInf, _) -> PTop));;
 
-let rec a_cast_int_dom_ext _A = int_dom_cast;;
+let rec intersect_parity
+  x0 b = match x0, b with PBot, b -> PBot
+    | PEven, b ->
+        (match b with PBot -> PBot | PEven -> PEven | POdd -> PBot
+          | PTop -> PEven)
+    | POdd, b ->
+        (match b with PBot -> PBot | PEven -> PBot | POdd -> POdd
+          | PTop -> POdd)
+    | PTop, b -> b;;
+
+let rec refine_parity_with_interval
+  fct p = intersect_parity (interval_parity_fact fct) p;;
+
+let rec interval_sign_fact
+  i = (if is_bottom_ivl i then SBot
+        else (let Ivl (l, u) = i in
+               (if less_eint u (Fin zero_inta) then SNeg
+                 else (if equal_eint u (Fin zero_inta)
+                        then (if equal_eint l (Fin zero_inta) then SZero
+                               else SNonPos)
+                        else (if less_eint (Fin zero_inta) l then SPos
+                               else (if equal_eint l (Fin zero_inta)
+                                      then SNonNeg else STop))))));;
+
+let rec intersect_sign
+  x0 b = match x0, b with SBot, b -> SBot
+    | SNeg, b ->
+        (match b with SBot -> SBot | SNeg -> SNeg | SNonPos -> SNeg
+          | SZero -> SBot | SNonNeg -> SBot | SPos -> SBot | STop -> SNeg)
+    | SNonPos, b ->
+        (match b with SBot -> SBot | SNeg -> SNeg | SNonPos -> SNonPos
+          | SZero -> SZero | SNonNeg -> SZero | SPos -> SBot | STop -> SNonPos)
+    | SZero, b ->
+        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SZero
+          | SZero -> SZero | SNonNeg -> SZero | SPos -> SBot | STop -> SZero)
+    | SNonNeg, b ->
+        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SZero
+          | SZero -> SZero | SNonNeg -> SNonNeg | SPos -> SPos
+          | STop -> SNonNeg)
+    | SPos, b ->
+        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SBot
+          | SZero -> SBot | SNonNeg -> SPos | SPos -> SPos | STop -> SPos)
+    | STop, b -> b;;
+
+let rec refine_sign_with_interval
+  fct s = intersect_sign (interval_sign_fact fct) s;;
+
+let rec normalize_ivl
+  v = (let Ivl (l, u) = v in
+        (if less_eq_eint l u &&
+              (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
+          then v else bot_ivla));;
+
+let rec meet_ivl
+  (Ivl (l1, u1)) (Ivl (l2, u2)) =
+    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
+          (if less_eq_eint u1 u2 then u1 else u2));;
+
+let rec intersect_ivl a b = normalize_ivl (meet_ivl a b);;
+
+let rec refine_ivl_with_interval fct i = intersect_ivl fct i;;
+
+let rec interval_fact_of_ivl i = i;;
+
+let rec interval_fact_of_sign
+  = function SBot -> bot_ivla
+    | SNeg -> Ivl (MinInf, Fin (uminus_inta one_inta))
+    | SNonPos -> Ivl (MinInf, Fin zero_inta)
+    | SZero -> Ivl (Fin zero_inta, Fin zero_inta)
+    | SNonNeg -> Ivl (Fin zero_inta, PlusInf)
+    | SPos -> Ivl (Fin one_inta, PlusInf)
+    | STop -> top_ivla;;
+
+let rec interval_fact_of_int_dom
+  d = intersect_ivl (interval_fact_of_sign (int_sign d))
+        (interval_fact_of_ivl (int_ivl d));;
+
+let rec refine_interval
+  d = (let fct = interval_fact_of_int_dom d in
+        int_parity_update
+          (fun _ -> refine_parity_with_interval fct (int_parity d))
+          (int_ivl_update (fun _ -> refine_ivl_with_interval fct (int_ivl d))
+            (int_sign_update
+              (fun _ -> refine_sign_with_interval fct (int_sign d)) d)));;
+
+let rec int_dom_cast _A
+  ik d =
+    refine_interval
+      (int_congruence_update (fun _ -> cong_cast ik (int_congruence d))
+        (int_parity_update (fun _ -> parity_cast ik (int_parity d))
+          (int_ivl_update (fun _ -> ivl_cast ik (int_ivl d))
+            (int_sign_update (fun _ -> sign_cast ik (int_sign d)) d))));;
+
+let rec a_cast_int_dom_ext _A = int_dom_cast _A;;
 
 let rec cast_domain_int_dom_ext _A =
   ({bounded_semilattice_sup_bot_cast_domain =
@@ -3870,28 +3971,6 @@ let rec ivl_congruence_rep_nonempty
 
 let rec ivl_congruence_nonempty
   i c = ivl_congruence_rep_nonempty i (rep_congruence c);;
-
-let rec interval_fact_of_sign
-  = function SBot -> bot_ivla
-    | SNeg -> Ivl (MinInf, Fin (uminus_inta one_inta))
-    | SNonPos -> Ivl (MinInf, Fin zero_inta)
-    | SZero -> Ivl (Fin zero_inta, Fin zero_inta)
-    | SNonNeg -> Ivl (Fin zero_inta, PlusInf)
-    | SPos -> Ivl (Fin one_inta, PlusInf)
-    | STop -> top_ivla;;
-
-let rec normalize_ivl
-  v = (let Ivl (l, u) = v in
-        (if less_eq_eint l u &&
-              (not (equal_eint l PlusInf) && not (equal_eint u MinInf))
-          then v else bot_ivla));;
-
-let rec meet_ivl
-  (Ivl (l1, u1)) (Ivl (l2, u2)) =
-    Ivl ((if less_eq_eint l2 l1 then l1 else l2),
-          (if less_eq_eint u1 u2 then u1 else u2));;
-
-let rec intersect_ivl a b = normalize_ivl (meet_ivl a b);;
 
 let rec is_bottom_int_dom
   d = not (ivl_congruence_nonempty
@@ -4075,6 +4154,9 @@ let equal_call_string_gk =
 type 'a fset = Abs_fset of 'a set;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
+
+type var_id = GlobalId of string | ScopedId of string * string |
+  ReturnId of string;;
 
 type 'a cfg_ext =
   Cfg_ext of
@@ -4287,6 +4369,9 @@ let rec fun_upd _A f a b = (fun x -> (if eq _A x a then b else f x));;
 let rec bind x0 f = match x0, f with None, f -> None
                | Some x, f -> f x;;
 
+let rec tl = function [] -> []
+             | x21 :: x22 -> x22;;
+
 let rec list_ex p x1 = match p, x1 with p, [] -> false
                   | p, x :: xs -> p x || list_ex p xs;;
 
@@ -4302,6 +4387,12 @@ let rec the_elem (Set [x]) = x;;
 
 let rec distinct _A = function [] -> true
                       | x :: xs -> not (membera _A xs x) && distinct _A xs;;
+
+let rec dropWhile p x1 = match p, x1 with p, [] -> []
+                    | p, x :: xs -> (if p x then dropWhile p xs else x :: xs);;
+
+let rec takeWhile p x1 = match p, x1 with p, [] -> []
+                    | p, x :: xs -> (if p x then x :: takeWhile p xs else []);;
 
 let rec implode cs = Str_Literal.literal_of_asciis (map integer_of_char cs);;
 
@@ -4678,9 +4769,6 @@ let rec ik_of_lit
   n = (if less_eq_int (ik_min I32) n && less_eq_int n (ik_max I32) then I32
         else I64);;
 
-let rec ik_promote
-  ik = (if less_nat (ik_bits ik) (ik_bits I32) then I32 else ik);;
-
 let rec ik_unsigned_of = function I8 -> U8
                          | U8 -> U8
                          | I16 -> U16
@@ -4689,6 +4777,9 @@ let rec ik_unsigned_of = function I8 -> U8
                          | U32 -> U32
                          | I64 -> U64
                          | U64 -> U64;;
+
+let rec ik_promote
+  ik = (if less_nat (ik_bits ik) (ik_bits I32) then I32 else ik);;
 
 let rec usual_kind
   a0 b0 =
@@ -4709,7 +4800,7 @@ let rec kjoin x0 r = match x0, r with None, r -> r
 
 let rec esyn
   gamma x1 = match gamma, x1 with gamma, N n -> Some (ik_of_lit n)
-    | gamma, V x -> Some (ik_promote (gamma x))
+    | gamma, V x -> Some (gamma x)
     | gamma, Plus (e1, e2) -> kjoin (esyn gamma e1) (esyn gamma e2)
     | gamma, Minus (e1, e2) -> kjoin (esyn gamma e1) (esyn gamma e2)
     | gamma, Times (e1, e2) -> kjoin (esyn gamma e1) (esyn gamma e2)
@@ -5219,6 +5310,12 @@ let rec no_return = function Seq (c1, c2) -> no_return c1 && no_return c2
                     | Restore -> true
                     | Unwind -> true;;
 
+let char_0x23 : char = Chr (Z.of_int 35);;
+
+let rec not_sep c = not (equal_chara c char_0x23);;
+
+let var_sep : char list = [char_0x23];;
+
 let char_0x0A : char = Chr (Z.of_int 10);;
 
 let nl : char list = [char_0x0A];;
@@ -5281,6 +5378,34 @@ let rec com_vnames
     | Restore -> bot_set
     | Unwind -> bot_set;;
 
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
+
+let rec rename_exp
+  f x1 = match f, x1 with f, N n -> N n
+    | f, V x -> V (f x)
+    | f, Plus (a, b) -> Plus (rename_exp f a, rename_exp f b)
+    | f, Minus (a, b) -> Minus (rename_exp f a, rename_exp f b)
+    | f, Times (a, b) -> Times (rename_exp f a, rename_exp f b)
+    | f, Less (a, b) -> Less (rename_exp f a, rename_exp f b)
+    | f, Eq (a, b) -> Eq (rename_exp f a, rename_exp f b)
+    | f, Not a -> Not (rename_exp f a)
+    | f, And (a, b) -> And (rename_exp f a, rename_exp f b)
+    | f, Or (a, b) -> Or (rename_exp f a, rename_exp f b);;
+
+let rec rename_com
+  f x1 = match f, x1 with f, SKIP -> SKIP
+    | f, Assign (x, e) -> Assign (f x, rename_exp f e)
+    | f, Check e -> Check (rename_exp f e)
+    | f, Seq (c1, c2) -> Seq (rename_com f c1, rename_com f c2)
+    | f, If (b, c1, c2) -> If (rename_exp f b, rename_com f c1, rename_com f c2)
+    | f, While (b, c) -> While (rename_exp f b, rename_com f c)
+    | f, Call (dst, pr, args) ->
+        Call (map_option f dst, pr, map (rename_exp f) args)
+    | f, Return v -> Return (map_option (rename_exp f) v)
+    | f, Restore -> Restore
+    | f, Unwind -> Unwind;;
+
 let rec source_com = function SKIP -> true
                      | Assign (x, a) -> true
                      | Check c -> true
@@ -5328,16 +5453,6 @@ let rec parity_fact_of_congruence_rep
 let rec parity_fact_of_congruence
   fct = parity_fact_of_congruence_rep (rep_congruence fct);;
 
-let rec intersect_parity
-  x0 b = match x0, b with PBot, b -> PBot
-    | PEven, b ->
-        (match b with PBot -> PBot | PEven -> PEven | POdd -> PBot
-          | PTop -> PEven)
-    | POdd, b ->
-        (match b with PBot -> PBot | PEven -> PBot | POdd -> POdd
-          | PTop -> POdd)
-    | PTop, b -> b;;
-
 let rec refine_parity_with_congruence
   fct p = intersect_parity (parity_fact_of_congruence fct) p;;
 
@@ -5380,70 +5495,6 @@ let rec refine_congruence
             (fun _ -> refine_parity_with_congruence fct (int_parity d))
             (int_ivl_update
               (fun _ -> refine_ivl_with_congruence fct (int_ivl d)) d)));;
-
-let rec interval_parity_fact
-  i = (if is_bottom_ivl i then PBot
-        else (match i with Ivl (MinInf, _) -> PTop | Ivl (Fin _, MinInf) -> PTop
-               | Ivl (Fin l, Fin u) ->
-                 (if equal_inta l u
-                   then (if dvd (equal_int, semidom_modulo_int)
-                              (Int_of_integer (Z.of_int 2)) l
-                          then PEven else POdd)
-                   else PTop)
-               | Ivl (Fin _, PlusInf) -> PTop | Ivl (PlusInf, _) -> PTop));;
-
-let rec refine_parity_with_interval
-  fct p = intersect_parity (interval_parity_fact fct) p;;
-
-let rec interval_sign_fact
-  i = (if is_bottom_ivl i then SBot
-        else (let Ivl (l, u) = i in
-               (if less_eint u (Fin zero_inta) then SNeg
-                 else (if equal_eint u (Fin zero_inta)
-                        then (if equal_eint l (Fin zero_inta) then SZero
-                               else SNonPos)
-                        else (if less_eint (Fin zero_inta) l then SPos
-                               else (if equal_eint l (Fin zero_inta)
-                                      then SNonNeg else STop))))));;
-
-let rec intersect_sign
-  x0 b = match x0, b with SBot, b -> SBot
-    | SNeg, b ->
-        (match b with SBot -> SBot | SNeg -> SNeg | SNonPos -> SNeg
-          | SZero -> SBot | SNonNeg -> SBot | SPos -> SBot | STop -> SNeg)
-    | SNonPos, b ->
-        (match b with SBot -> SBot | SNeg -> SNeg | SNonPos -> SNonPos
-          | SZero -> SZero | SNonNeg -> SZero | SPos -> SBot | STop -> SNonPos)
-    | SZero, b ->
-        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SZero
-          | SZero -> SZero | SNonNeg -> SZero | SPos -> SBot | STop -> SZero)
-    | SNonNeg, b ->
-        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SZero
-          | SZero -> SZero | SNonNeg -> SNonNeg | SPos -> SPos
-          | STop -> SNonNeg)
-    | SPos, b ->
-        (match b with SBot -> SBot | SNeg -> SBot | SNonPos -> SBot
-          | SZero -> SBot | SNonNeg -> SPos | SPos -> SPos | STop -> SPos)
-    | STop, b -> b;;
-
-let rec refine_sign_with_interval
-  fct s = intersect_sign (interval_sign_fact fct) s;;
-
-let rec refine_ivl_with_interval fct i = intersect_ivl fct i;;
-
-let rec interval_fact_of_ivl i = i;;
-
-let rec interval_fact_of_int_dom
-  d = intersect_ivl (interval_fact_of_sign (int_sign d))
-        (interval_fact_of_ivl (int_ivl d));;
-
-let rec refine_interval
-  d = (let fct = interval_fact_of_int_dom d in
-        int_parity_update
-          (fun _ -> refine_parity_with_interval fct (int_parity d))
-          (int_ivl_update (fun _ -> refine_ivl_with_interval fct (int_ivl d))
-            (int_sign_update
-              (fun _ -> refine_sign_with_interval fct (int_sign d)) d)));;
 
 let refinement_steps : (unit int_dom_ext -> unit int_dom_ext) list
   = [refine_interval; refine_congruence];;
@@ -5786,6 +5837,31 @@ let rec c_update
   ca (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (ca c, infl, stabl, sigma, more);;
 
+let rec declared_scoped
+  (Imp_prog_ext
+    (proc_rep, declared_global_vars, declared_kinds, declared_scoped, more))
+    = declared_scoped;;
+
+let rec proc_scoped_decls
+  p q = map_filter
+          (fun x -> (if (((fst x) : string) = q) then Some (snd x) else None))
+          (declared_scoped p);;
+
+let rec scoped_kind_of
+  p q = map_of equal_literal
+          (map (fun tv -> (tv_name tv, tv_kind tv)) (proc_scoped_decls p q));;
+
+let rec declared_kinds
+  (Imp_prog_ext
+    (proc_rep, declared_global_vars, declared_kinds, declared_scoped, more))
+    = declared_kinds;;
+
+let rec prog_tyenv p = tv_env (declared_kinds p);;
+
+let rec scoped_kind
+  p q x =
+    (match scoped_kind_of p q x with None -> prog_tyenv p x | Some k -> k);;
+
 let rec proc_decl_of xs bdy = Proc_decl_ext (xs, bdy, None, ());;
 
 let rec valid_formal gs x = not (gs x) && not ((x : string) = ret_var);;
@@ -5920,24 +5996,94 @@ let gv_nl : char list = [char_0x5C; char_0x6E];;
 
 let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
 
-let prog_main_name : string = "main";;
-
 let rec proc_rep
   (Imp_prog_ext
-    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
+    (proc_rep, declared_global_vars, declared_kinds, declared_scoped, more))
     = proc_rep;;
 
 let rec prog_table p = map_of equal_literal (proc_rep p);;
 
+let rec proc_formals
+  p q = (match prog_table p q with None -> [] | Some a -> formals a);;
+
+let prog_main_name : string = "main";;
+
 let rec prog_main p = body (the (prog_table p prog_main_name));;
+
+let rec proc_bound
+  p q = sup_set equal_literal (Set (proc_formals p q))
+          (image tv_name (Set (proc_scoped_decls p q)));;
+
+let rec divide_nat
+  m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));;
+
+let rec part _B
+  f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
+    | f, pivot, x :: xs ->
+        (let (lts, (eqs, gts)) = part _B f pivot xs in
+         let xa = f x in
+          (if less _B.order_linorder.preorder_order.ord_preorder xa pivot
+            then (x :: lts, (eqs, gts))
+            else (if less _B.order_linorder.preorder_order.ord_preorder pivot xa
+                   then (lts, (eqs, x :: gts)) else (lts, (x :: eqs, gts)))));;
+
+let rec sort_key _B
+  f xs =
+    (match xs with [] -> [] | [_] -> xs
+      | [x; y] ->
+        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
+          then xs else [y; x])
+      | _ :: _ :: _ :: _ ->
+        (let (lts, (eqs, gts)) =
+           part _B f
+             (f (nth xs
+                  (divide_nat (size_list xs) (nat_of_integer (Z.of_int 2)))))
+             xs
+           in
+          sort_key _B f lts @ eqs @ sort_key _B f gts));;
+
+let rec sorted_list_of_set (_A1, _A2)
+  (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
+
+let rec proc_names
+  p q = sorted_list_of_set (equal_literal, linorder_literal)
+          (sup_set equal_literal (proc_bound p q)
+            (match prog_table p q with None -> bot_set
+              | Some d -> com_vnames (body d)));;
+
+let char_0x74 : char = Chr (Z.of_int 116);;
+
+let char_0x72 : char = Chr (Z.of_int 114);;
+
+let char_0x65 : char = Chr (Z.of_int 101);;
+
+let rec decode_chars
+  cs = (let owner = takeWhile not_sep cs in
+        let rest = dropWhile not_sep cs in
+         (if null rest then GlobalId (implode cs)
+           else (if equal_lista equal_char (tl rest)
+                      [char_0x23; char_0x72; char_0x65; char_0x74]
+                  then ReturnId (implode owner)
+                  else ScopedId (implode owner, implode (tl rest)))));;
+
+let rec name_var_id x = decode_chars (explode x);;
+
+let rec var_id_bare
+  v = (match v with GlobalId a -> Some a
+        | ScopedId (q, x) -> (if ((q : string) = "") then None else Some x)
+        | ReturnId _ -> None);;
+
+let rec var_id_name
+  = function GlobalId x -> x
+    | ScopedId (p, x) -> implode (explode p @ var_sep @ explode x)
+    | ReturnId p ->
+        implode
+          (explode p @ var_sep @ var_sep @ [char_0x72; char_0x65; char_0x74]);;
 
 let char_0x2D : char = Chr (Z.of_int 45);;
 
 let rec modulo_nat
   m n = Nat (modulo_integer (integer_of_nat m) (integer_of_nat n));;
-
-let rec divide_nat
-  m n = Nat (divide_integer (integer_of_nat m) (integer_of_nat n));;
 
 let rec char_of_nat x = comp char_of_integer integer_of_nat x;;
 
@@ -6046,9 +6192,6 @@ let rec int_dom_min_raw
 
 let rec int_dom_min mode a b = refine mode (int_dom_min_raw a b);;
 
-let rec map_option f x1 = match f, x1 with f, None -> None
-                     | f, Some x2 -> Some (f x2);;
-
 let rec branch_sign_st_for x = generic_branch_st_for bot_sign sign_ops x;;
 
 let rec sign_tf_st_for
@@ -6086,9 +6229,9 @@ let rec sign_tf_st_for
 let rec tcast_to ik k t = (if equal_ikinda ik k then t else TCast (ik, t));;
 
 let rec make
-  proc_rep declared_global_vars declared_kinds declared_locals =
+  proc_rep declared_global_vars declared_kinds declared_scoped =
     Imp_prog_ext
-      (proc_rep, declared_global_vars, declared_kinds, declared_locals, ());;
+      (proc_rep, declared_global_vars, declared_kinds, declared_scoped, ());;
 
 let rec mk_program_typed
   ps m gv ks ls = make ((prog_main_name, proc_decl_of [] m) :: ps) gv ks ls;;
@@ -6099,16 +6242,9 @@ let rec prog_procs
   p = filtera (fun n -> not ((n : string) = prog_main_name))
         (map fst (proc_rep p));;
 
-let rec declared_kinds
-  (Imp_prog_ext
-    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
-    = declared_kinds;;
-
-let rec prog_tyenv p = tv_env (declared_kinds p);;
-
 let rec declared_global_vars
   (Imp_prog_ext
-    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
+    (proc_rep, declared_global_vars, declared_kinds, declared_scoped, more))
     = declared_global_vars;;
 
 let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
@@ -6134,17 +6270,20 @@ let rec elaborate
             (TTimes (k, elaborate gamma k e1, elaborate gamma k e2)))
     | gamma, ik, Less (e1, e2) ->
         (let k = opk (kjoin (esyn gamma e1) (esyn gamma e2)) in
-          TLess (elaborate gamma k e1, elaborate gamma k e2))
+          tcast_to ik I32 (TLess (elaborate gamma k e1, elaborate gamma k e2)))
     | gamma, ik, Eq (e1, e2) ->
         (let k = opk (kjoin (esyn gamma e1) (esyn gamma e2)) in
-          TEq (elaborate gamma k e1, elaborate gamma k e2))
-    | gamma, ik, Not e -> TNot (elaborate gamma (opk (esyn gamma e)) e)
+          tcast_to ik I32 (TEq (elaborate gamma k e1, elaborate gamma k e2)))
+    | gamma, ik, Not e ->
+        tcast_to ik I32 (TNot (elaborate gamma (opk (esyn gamma e)) e))
     | gamma, ik, And (e1, e2) ->
-        TAnd (elaborate gamma (opk (esyn gamma e1)) e1,
-               elaborate gamma (opk (esyn gamma e2)) e2)
+        tcast_to ik I32
+          (TAnd (elaborate gamma (opk (esyn gamma e1)) e1,
+                  elaborate gamma (opk (esyn gamma e2)) e2))
     | gamma, ik, Or (e1, e2) ->
-        TOr (elaborate gamma (opk (esyn gamma e1)) e1,
-              elaborate gamma (opk (esyn gamma e2)) e2);;
+        tcast_to ik I32
+          (TOr (elaborate gamma (opk (esyn gamma e1)) e1,
+                 elaborate gamma (opk (esyn gamma e2)) e2));;
 
 let rec elaborate_syn gamma e = elaborate gamma (opk (esyn gamma e)) e;;
 
@@ -6348,6 +6487,19 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
+
+let rec resolve_name
+  p q x =
+    (if not (member equal_literal x (proc_bound p q)) && declared_global p x
+      then GlobalId x else ScopedId (q, x));;
+
+let rec rename_name p q x = var_id_name (resolve_name p q x);;
+
+let rec rename_proc
+  p q d =
+    Proc_decl_ext
+      (map (rename_name p q) (formals d), rename_com (rename_name p q) (body d),
+        ret_kind d, ());;
 
 let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
                     | Lifted a, f -> f a;;
@@ -6792,21 +6944,23 @@ let rec aval_int_dom_t
     | mode, TVar (ik, x), sigma -> sigma x
     | mode, TPlus (ik, a, b), sigma ->
         refine mode
-          (int_dom_cast ik
+          (int_dom_cast int_dom_record_lattice_unit ik
             (plus_int_dom mode (aval_int_dom_t mode a sigma)
               (aval_int_dom_t mode b sigma)))
     | mode, TMinus (ik, a, b), sigma ->
         refine mode
-          (int_dom_cast ik
+          (int_dom_cast int_dom_record_lattice_unit ik
             (minus_int_dom mode (aval_int_dom_t mode a sigma)
               (aval_int_dom_t mode b sigma)))
     | mode, TTimes (ik, a, b), sigma ->
         refine mode
-          (int_dom_cast ik
+          (int_dom_cast int_dom_record_lattice_unit ik
             (times_int_dom mode (aval_int_dom_t mode a sigma)
               (aval_int_dom_t mode b sigma)))
     | mode, TCast (ik, a), sigma ->
-        refine mode (int_dom_cast ik (aval_int_dom_t mode a sigma))
+        refine mode
+          (int_dom_cast int_dom_record_lattice_unit ik
+            (aval_int_dom_t mode a sigma))
     | mode, TLess (a, b), sigma ->
         (let x = aval_int_dom_t mode a sigma in
          let y = aval_int_dom_t mode b sigma in
@@ -7135,11 +7289,7 @@ let rec buffer_aux _A _B
 
 let char_0x76 : char = Chr (Z.of_int 118);;
 
-let char_0x74 : char = Chr (Z.of_int 116);;
-
 let char_0x73 : char = Chr (Z.of_int 115);;
-
-let char_0x72 : char = Chr (Z.of_int 114);;
 
 let char_0x70 : char = Chr (Z.of_int 112);;
 
@@ -7150,8 +7300,6 @@ let char_0x6D : char = Chr (Z.of_int 109);;
 let char_0x69 : char = Chr (Z.of_int 105);;
 
 let char_0x67 : char = Chr (Z.of_int 103);;
-
-let char_0x65 : char = Chr (Z.of_int 101);;
 
 let char_0x61 : char = Chr (Z.of_int 97);;
 
@@ -7186,6 +7334,34 @@ let rec string_of_sign
 let rec infl_update
   infla (State_ext (c, infl, stabl, sigma, more)) =
     State_ext (c, infla infl, stabl, sigma, more);;
+
+let rec resolved_scoped
+  p = map (fun e ->
+            (fst e,
+              TV (var_id_name (ScopedId (fst e, tv_name (snd e))),
+                   tv_kind (snd e))))
+        (declared_scoped p);;
+
+let rec scoped_names
+  p q = filtera
+          (fun x ->
+            (if not (member equal_literal x (proc_bound p q))
+              then not (declared_global p x) else true))
+          (proc_names p q);;
+
+let rec id_kind_entries
+  p = map (fun x -> (GlobalId x, prog_tyenv p x)) (declared_global_vars p) @
+        maps (fun q ->
+               map (fun x -> (ScopedId (q, x), scoped_kind p q x))
+                 (scoped_names p q))
+          (map fst (proc_rep p));;
+
+let rec resolved_kinds
+  p = map (fun e -> TV (var_id_name (fst e), snd e)) (id_kind_entries p);;
+
+let rec resolve_prog
+  p = make (map (fun e -> (fst e, rename_proc p (fst e) (snd e))) (proc_rep p))
+        (declared_global_vars p) (resolved_kinds p) (resolved_scoped p);;
 
 let rec location_vname = function Local_Location x1 -> x1
                          | Global_Location x2 -> x2;;
@@ -7460,6 +7636,11 @@ let rec exp_prio = function N uu -> nat_of_integer (Z.of_int 1000)
                    | And (vh, vi) -> nat_of_integer (Z.of_int 40)
                    | Or (vj, vk) -> nat_of_integer (Z.of_int 30);;
 
+let rec display_scoped
+  x = (match name_var_id x with GlobalId _ -> x
+        | ScopedId (q, a) -> (if ((q : string) = "") then x else a)
+        | ReturnId _ -> x);;
+
 let rec result_keys (Analysis_Result (x1, x2)) = x1;;
 
 let rec contexts_at
@@ -7649,34 +7830,6 @@ let rec fold_rhs_trees _A
               (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
                 acc res)
               ts);;
-
-let rec part _B
-  f pivot x2 = match f, pivot, x2 with f, pivot, [] -> ([], ([], []))
-    | f, pivot, x :: xs ->
-        (let (lts, (eqs, gts)) = part _B f pivot xs in
-         let xa = f x in
-          (if less _B.order_linorder.preorder_order.ord_preorder xa pivot
-            then (x :: lts, (eqs, gts))
-            else (if less _B.order_linorder.preorder_order.ord_preorder pivot xa
-                   then (lts, (eqs, x :: gts)) else (lts, (x :: eqs, gts)))));;
-
-let rec sort_key _B
-  f xs =
-    (match xs with [] -> [] | [_] -> xs
-      | [x; y] ->
-        (if less_eq _B.order_linorder.preorder_order.ord_preorder (f x) (f y)
-          then xs else [y; x])
-      | _ :: _ :: _ :: _ ->
-        (let (lts, (eqs, gts)) =
-           part _B f
-             (f (nth xs
-                  (divide_nat (size_list xs) (nat_of_integer (Z.of_int 2)))))
-             xs
-           in
-          sort_key _B f lts @ eqs @ sort_key _B f gts));;
-
-let rec sorted_list_of_set (_A1, _A2)
-  (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
 
 let rec cfg_calls_list
   g = sorted_list_of_set
@@ -8144,9 +8297,10 @@ let rec int_tf_st_fixpoint_for
           (match sc
             with Nondet_Int k ->
               refine Refine_Fixpoint
-                (int_dom_cast k (top_int_dom_exta int_dom_record_lattice_unit))
+                (int_dom_cast int_dom_record_lattice_unit k
+                  (top_int_dom_exta int_dom_record_lattice_unit))
             | Min (k, a, b) ->
-              int_dom_cast k
+              int_dom_cast int_dom_record_lattice_unit k
                 (int_dom_min Refine_Fixpoint
                   (aval_int_dom_t Refine_Fixpoint a
                     (fun_of_resolved_st_q_for
@@ -8157,7 +8311,7 @@ let rec int_tf_st_fixpoint_for
                       (bot_int_dom_ext int_dom_record_lattice_unit)
                       source_global s)))
             | Max (k, a, b) ->
-              int_dom_cast k
+              int_dom_cast int_dom_record_lattice_unit k
                 (int_dom_max Refine_Fixpoint
                   (aval_int_dom_t Refine_Fixpoint a
                     (fun_of_resolved_st_q_for
@@ -8199,9 +8353,10 @@ let rec int_tf_st_never_for
           (match sc
             with Nondet_Int k ->
               refine Refine_Never
-                (int_dom_cast k (top_int_dom_exta int_dom_record_lattice_unit))
+                (int_dom_cast int_dom_record_lattice_unit k
+                  (top_int_dom_exta int_dom_record_lattice_unit))
             | Min (k, a, b) ->
-              int_dom_cast k
+              int_dom_cast int_dom_record_lattice_unit k
                 (int_dom_min Refine_Never
                   (aval_int_dom_t Refine_Never a
                     (fun_of_resolved_st_q_for
@@ -8212,7 +8367,7 @@ let rec int_tf_st_never_for
                       (bot_int_dom_ext int_dom_record_lattice_unit)
                       source_global s)))
             | Max (k, a, b) ->
-              int_dom_cast k
+              int_dom_cast int_dom_record_lattice_unit k
                 (int_dom_max Refine_Never
                   (aval_int_dom_t Refine_Never a
                     (fun_of_resolved_st_q_for
@@ -8254,9 +8409,10 @@ let rec int_tf_st_once_for
           (match sc
             with Nondet_Int k ->
               refine Refine_Once
-                (int_dom_cast k (top_int_dom_exta int_dom_record_lattice_unit))
+                (int_dom_cast int_dom_record_lattice_unit k
+                  (top_int_dom_exta int_dom_record_lattice_unit))
             | Min (k, a, b) ->
-              int_dom_cast k
+              int_dom_cast int_dom_record_lattice_unit k
                 (int_dom_min Refine_Once
                   (aval_int_dom_t Refine_Once a
                     (fun_of_resolved_st_q_for
@@ -8267,7 +8423,7 @@ let rec int_tf_st_once_for
                       (bot_int_dom_ext int_dom_record_lattice_unit)
                       source_global s)))
             | Max (k, a, b) ->
-              int_dom_cast k
+              int_dom_cast int_dom_record_lattice_unit k
                 (int_dom_max Refine_Once
                   (aval_int_dom_t Refine_Once a
                     (fun_of_resolved_st_q_for
@@ -8493,6 +8649,11 @@ let rec sign_enter_st_for x = generic_enter_st_for bot_sign sign_ops x;;
 
 let source_nl : char list = [char_0x0A];;
 
+let char_0x3A : char = Chr (Z.of_int 58);;
+
+let rec qualified_vname
+  q x = implode (explode q @ [char_0x3A; char_0x3A] @ explode x);;
+
 let rec join_gv_nl = function [] -> []
                      | [s] -> s
                      | s :: v :: va -> s @ gv_nl @ join_gv_nl (v :: va);;
@@ -8518,8 +8679,6 @@ let char_0x34 : char = Chr (Z.of_int 52);;
 let char_0x36 : char = Chr (Z.of_int 54);;
 
 let char_0x38 : char = Chr (Z.of_int 56);;
-
-let char_0x3A : char = Chr (Z.of_int 58);;
 
 let char_0x3B : char = Chr (Z.of_int 59);;
 
@@ -8769,6 +8928,22 @@ let rec storage_global
     (match storage_of p owner x with LocalVar _ -> false | GlobalVar -> true);;
 
 let rec proc_decl_of_typed xs rk bdy = Proc_decl_ext (xs, bdy, Some rk, ());;
+
+let rec display_vname_in
+  vars x =
+    (match name_var_id x with GlobalId y -> y
+      | ScopedId (q, y) ->
+        (if ((q : string) = "") then x
+          else (if less_eq_nat
+                     (size_list
+                       (filtera
+                         (fun z ->
+                           equal_option equal_literal
+                             (var_id_bare (name_var_id z)) (Some y))
+                         vars))
+                     one_nat
+                 then y else qualified_vname q y))
+      | ReturnId _ -> x);;
 
 let rec split_gv_nl_acc
   acc x1 = match acc, x1 with acc, [] -> [rev acc]
@@ -9446,7 +9621,7 @@ let rec string_of_int
 let rec string_of_exp
   min_prio e =
     (let body =
-       (match e with N a -> string_of_int a | V a -> explode a
+       (match e with N a -> string_of_int a | V x -> explode (display_scoped x)
          | Plus (a, b) ->
            string_of_exp (nat_of_integer (Z.of_int 60)) a @
              [char_0x2B] @ string_of_exp (nat_of_integer (Z.of_int 61)) b
@@ -9479,7 +9654,7 @@ let rec string_of_exp
 let rec string_of_com
   = function SKIP -> [char_0x73; char_0x6B; char_0x69; char_0x70]
     | Assign (x, e) ->
-        explode x @
+        explode (display_scoped x) @
           [char_0x20; char_0x3A; char_0x3D; char_0x20] @
             string_of_exp zero_nat e
     | Check c ->
@@ -9512,7 +9687,7 @@ let rec string_of_com
                   (map (string_of_exp zero_nat) es) @
                   [char_0x29]
           | Some x ->
-            explode x @
+            explode (display_scoped x) @
               [char_0x20; char_0x3A; char_0x3D; char_0x20] @
                 explode p @
                   [char_0x28] @
@@ -9786,25 +9961,25 @@ let rec export_edge_kind_of
 let rec string_of_action
   = function EA_Nop -> [char_0x6E; char_0x6F; char_0x70]
     | EA_Assign (x, a) ->
-        explode x @
+        explode (display_scoped x) @
           [char_0x20; char_0x3A; char_0x3D; char_0x20] @
             string_of_exp zero_nat (texp_erase a)
     | EA_Special (Nondet_Int k, x) ->
-        explode x @
+        explode (display_scoped x) @
           [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x5F; char_0x5F;
             char_0x76; char_0x6F; char_0x62; char_0x6C; char_0x69; char_0x6E;
             char_0x74; char_0x5F; char_0x6E; char_0x6F; char_0x6E; char_0x64;
             char_0x65; char_0x74; char_0x5F; char_0x69; char_0x6E; char_0x74;
             char_0x28; char_0x29]
     | EA_Special (Min (k, a, b), x) ->
-        explode x @
+        explode (display_scoped x) @
           [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x69;
             char_0x6E; char_0x28] @
             string_of_exp zero_nat (texp_erase a) @
               [char_0x2C; char_0x20] @
                 string_of_exp zero_nat (texp_erase b) @ [char_0x29]
     | EA_Special (Max (k, a, b), x) ->
-        explode x @
+        explode (display_scoped x) @
           [char_0x20; char_0x3A; char_0x3D; char_0x20; char_0x6D; char_0x61;
             char_0x78; char_0x28] @
             string_of_exp zero_nat (texp_erase a) @
@@ -9856,10 +10031,12 @@ let rec export_edge_label
                 (map (fun e -> string_of_exp zero_nat (texp_erase e)) es)) @
               [char_0x29]
       | CombineEdge (_, dst, ret) ->
-        (match (dst, ret) with (None, _) -> [] | (Some xa, None) -> explode xa
+        (match (dst, ret) with (None, _) -> []
+          | (Some xa, None) -> explode (display_scoped xa)
           | (Some xa, Some r) ->
-            explode xa @
-              [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
+            explode (display_scoped xa) @
+              [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+                explode (display_scoped r))
       | CallToReturnEdge a -> explode a | GlobalReadEdge -> []
       | GlobalWriteEdge -> []);;
 
@@ -10191,24 +10368,29 @@ let rec string_of_ikind
         [char_0x75; char_0x69; char_0x6E; char_0x74; char_0x36; char_0x34];;
 
 let rec string_of_typed_name
-  gamma x = string_of_ikind (gamma x) @ [char_0x20] @ explode x;;
+  gamma x =
+    string_of_ikind (gamma x) @ [char_0x20] @ explode (display_scoped x);;
 
 let rec string_of_ret_kind
   rk = (match rk with None -> [char_0x76; char_0x6F; char_0x69; char_0x64]
          | Some a -> string_of_ikind a);;
 
 let rec pretty_local_lines
-  n locals p =
-    map (fun tv ->
-          source_indent n @
-            string_of_ikind (tv_kind tv) @
-              [char_0x20] @ explode (tv_name tv) @ [char_0x3B])
+  n scoped fs p =
+    map_filter
+      (fun x ->
+        (if not (membera equal_literal fs (tv_name x))
+          then Some (source_indent n @
+                      string_of_ikind (tv_kind x) @
+                        [char_0x20] @
+                          explode (display_scoped (tv_name x)) @ [char_0x3B])
+          else None))
       (map_filter
         (fun x -> (if (((fst x) : string) = p) then Some (snd x) else None))
-        locals);;
+        scoped);;
 
 let rec pretty_source_lines_proc
-  gamma locals n p decl =
+  gamma scoped n p decl =
     (source_indent n @
       string_of_ret_kind (ret_kind decl) @
         [char_0x20] @
@@ -10217,7 +10399,8 @@ let rec pretty_source_lines_proc
               join_source [char_0x2C; char_0x20]
                 (map (string_of_typed_name gamma) (formals decl)) @
                 [char_0x29; char_0x20; char_0x7B]) ::
-      pretty_local_lines (plus_nat n (nat_of_integer (Z.of_int 2))) locals p @
+      pretty_local_lines (plus_nat n (nat_of_integer (Z.of_int 2))) scoped
+        (formals decl) p @
         pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
           (body decl) @
           [source_indent n @ [char_0x7D]];;
@@ -10245,7 +10428,7 @@ let rec pretty_string_of_program
           [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
              char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
              char_0x7B]] @
-            pretty_local_lines (nat_of_integer (Z.of_int 2)) locals "main" @
+            pretty_local_lines (nat_of_integer (Z.of_int 2)) locals [] "main" @
               pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
                 [[char_0x7D]]);;
 
@@ -11054,11 +11237,6 @@ let rec ics_sol_prog
         (declared_global_vars p))
       (prog_tyenv p) (prog_table p) (prog_procs p) mnm (prog_main p);;
 
-let rec declared_locals
-  (Imp_prog_ext
-    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
-    = declared_locals;;
-
 let rec xg_edges
   (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_edges;;
 
@@ -11139,11 +11317,12 @@ let rec canonical_edge_kind_text
         [char_0x63; char_0x6F; char_0x6D; char_0x62; char_0x69; char_0x6E;
           char_0x65] @
           (match (dst, ret) with (None, _) -> []
-            | (Some xa, None) -> [char_0x20] @ explode xa
+            | (Some xa, None) -> [char_0x20] @ explode (display_scoped xa)
             | (Some xa, Some r) ->
               [char_0x20] @
-                explode xa @
-                  [char_0x20; char_0x3A; char_0x3D; char_0x20] @ explode r)
+                explode (display_scoped xa) @
+                  [char_0x20; char_0x3A; char_0x3D; char_0x20] @
+                    explode (display_scoped r))
       | CallToReturnEdge callee ->
         [char_0x63; char_0x61; char_0x6C; char_0x6C; char_0x2D; char_0x74;
           char_0x6F; char_0x2D; char_0x72; char_0x65; char_0x74; char_0x75;
@@ -13062,107 +13241,111 @@ let rec analyse_with_solver
         -> None;;
 
 let rec analyse_config
-  cfg p =
-    (match Analysis_Config.resolve_analysis_config cfg with None -> None
-      | Some (Analysis_Config.Plan_Sign s) ->
-        analyse_with_solver Analysis_Config.Sign_Analysis s p
-      | Some (Analysis_Config.Plan_Sign_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Sign_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Interval s) ->
-        analyse_with_solver Analysis_Config.Interval_Analysis s p
-      | Some (Analysis_Config.Plan_Interval_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Interval_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Int s) ->
-        analyse_with_solver Analysis_Config.Int_Analysis s p
-      | Some (Analysis_Config.Plan_Int_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Parity s) ->
-        analyse_with_solver Analysis_Config.Parity_Analysis s p);;
+  cfg p0 =
+    (let p = Core.resolve_prog p0 in
+      (match Analysis_Config.resolve_analysis_config cfg with None -> None
+        | Some (Analysis_Config.Plan_Sign s) ->
+          analyse_with_solver Analysis_Config.Sign_Analysis s p
+        | Some (Analysis_Config.Plan_Sign_EntryState _) -> None
+        | Some (Analysis_Config.Plan_Sign_CallString (_, _)) -> None
+        | Some (Analysis_Config.Plan_Interval s) ->
+          analyse_with_solver Analysis_Config.Interval_Analysis s p
+        | Some (Analysis_Config.Plan_Interval_EntryState _) -> None
+        | Some (Analysis_Config.Plan_Interval_CallString (_, _)) -> None
+        | Some (Analysis_Config.Plan_Int s) ->
+          analyse_with_solver Analysis_Config.Int_Analysis s p
+        | Some (Analysis_Config.Plan_Int_EntryState _) -> None
+        | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
+        | Some (Analysis_Config.Plan_Parity s) ->
+          analyse_with_solver Analysis_Config.Parity_Analysis s p));;
 
 let rec analyse_config_ctx
-  cfg p =
-    (match Analysis_Config.resolve_analysis_config cfg with None -> None
-      | Some (Analysis_Config.Plan_Sign s) ->
-        Core.map_option Core.decided_report
-          (analyse_with_solver Analysis_Config.Sign_Analysis s p)
-      | Some (Analysis_Config.Plan_Sign_EntryState Analysis_Config.Solver_Join)
-        -> Some (Core.analyse_sign_entry_state_report p)
-      | Some (Analysis_Config.Plan_Sign_EntryState
-               Analysis_Config.Solver_PerOrigin)
-        -> None
-      | Some (Analysis_Config.Plan_Sign_EntryState
-               Analysis_Config.Solver_Warrow)
-        -> None
-      | Some (Analysis_Config.Plan_Sign_EntryState
-               Analysis_Config.Solver_WarrowPerOrigin)
-        -> None
-      | Some (Analysis_Config.Plan_Sign_CallString
-               (Analysis_Config.Solver_Join, k))
-        -> Some (Core.analyse_sign_call_string_report k p)
-      | Some (Analysis_Config.Plan_Sign_CallString
-               (Analysis_Config.Solver_PerOrigin, _))
-        -> None
-      | Some (Analysis_Config.Plan_Sign_CallString
-               (Analysis_Config.Solver_Warrow, _))
-        -> None
-      | Some (Analysis_Config.Plan_Sign_CallString
-               (Analysis_Config.Solver_WarrowPerOrigin, _))
-        -> None
-      | Some (Analysis_Config.Plan_Interval s) ->
-        Core.map_option Core.decided_report
-          (analyse_with_solver Analysis_Config.Interval_Analysis s p)
-      | Some (Analysis_Config.Plan_Interval_EntryState
-               Analysis_Config.Solver_Join)
-        -> Some (Core.analyse_interval_entry_state_join p)
-      | Some (Analysis_Config.Plan_Interval_EntryState
-               Analysis_Config.Solver_PerOrigin)
-        -> Some (Core.analyse_interval_entry_state_per_origin p)
-      | Some (Analysis_Config.Plan_Interval_EntryState
-               Analysis_Config.Solver_Warrow)
-        -> Some (Core.analyse_interval_entry_state p)
-      | Some (Analysis_Config.Plan_Interval_EntryState
-               Analysis_Config.Solver_WarrowPerOrigin)
-        -> Some (Core.analyse_interval_entry_state_wpo p)
-      | Some (Analysis_Config.Plan_Interval_CallString
-               (Analysis_Config.Solver_Join, k))
-        -> Some (Core.analyse_interval_call_string_report_join k p)
-      | Some (Analysis_Config.Plan_Interval_CallString
-               (Analysis_Config.Solver_PerOrigin, k))
-        -> Some (Core.analyse_interval_call_string_report_per_origin k p)
-      | Some (Analysis_Config.Plan_Interval_CallString
-               (Analysis_Config.Solver_Warrow, k))
-        -> Some (Core.analyse_interval_call_string_report k p)
-      | Some (Analysis_Config.Plan_Interval_CallString
-               (Analysis_Config.Solver_WarrowPerOrigin, k))
-        -> Some (Core.analyse_interval_call_string_report_wpo k p)
-      | Some (Analysis_Config.Plan_Int s) ->
-        Core.map_option Core.decided_report
-          (analyse_with_solver Analysis_Config.Int_Analysis s p)
-      | Some (Analysis_Config.Plan_Int_EntryState Analysis_Config.Solver_Join)
-        -> Some (Core.analyse_int_entry_state_report p)
-      | Some (Analysis_Config.Plan_Int_EntryState
-               Analysis_Config.Solver_PerOrigin)
-        -> None
-      | Some (Analysis_Config.Plan_Int_EntryState Analysis_Config.Solver_Warrow)
-        -> Some (Core.analyse_int_entry_state_report_warrow p)
-      | Some (Analysis_Config.Plan_Int_EntryState
-               Analysis_Config.Solver_WarrowPerOrigin)
-        -> None
-      | Some (Analysis_Config.Plan_Int_CallString
-               (Analysis_Config.Solver_Join, k))
-        -> Some (Core.analyse_int_call_string_report k p)
-      | Some (Analysis_Config.Plan_Int_CallString
-               (Analysis_Config.Solver_PerOrigin, _))
-        -> None
-      | Some (Analysis_Config.Plan_Int_CallString
-               (Analysis_Config.Solver_Warrow, k))
-        -> Some (Core.analyse_int_call_string_report_warrow k p)
-      | Some (Analysis_Config.Plan_Int_CallString
-               (Analysis_Config.Solver_WarrowPerOrigin, _))
-        -> None
-      | Some (Analysis_Config.Plan_Parity s) ->
-        Core.map_option Core.decided_report
-          (analyse_with_solver Analysis_Config.Parity_Analysis s p));;
+  cfg p0 =
+    (let p = Core.resolve_prog p0 in
+      (match Analysis_Config.resolve_analysis_config cfg with None -> None
+        | Some (Analysis_Config.Plan_Sign s) ->
+          Core.map_option Core.decided_report
+            (analyse_with_solver Analysis_Config.Sign_Analysis s p)
+        | Some (Analysis_Config.Plan_Sign_EntryState
+                 Analysis_Config.Solver_Join)
+          -> Some (Core.analyse_sign_entry_state_report p)
+        | Some (Analysis_Config.Plan_Sign_EntryState
+                 Analysis_Config.Solver_PerOrigin)
+          -> None
+        | Some (Analysis_Config.Plan_Sign_EntryState
+                 Analysis_Config.Solver_Warrow)
+          -> None
+        | Some (Analysis_Config.Plan_Sign_EntryState
+                 Analysis_Config.Solver_WarrowPerOrigin)
+          -> None
+        | Some (Analysis_Config.Plan_Sign_CallString
+                 (Analysis_Config.Solver_Join, k))
+          -> Some (Core.analyse_sign_call_string_report k p)
+        | Some (Analysis_Config.Plan_Sign_CallString
+                 (Analysis_Config.Solver_PerOrigin, _))
+          -> None
+        | Some (Analysis_Config.Plan_Sign_CallString
+                 (Analysis_Config.Solver_Warrow, _))
+          -> None
+        | Some (Analysis_Config.Plan_Sign_CallString
+                 (Analysis_Config.Solver_WarrowPerOrigin, _))
+          -> None
+        | Some (Analysis_Config.Plan_Interval s) ->
+          Core.map_option Core.decided_report
+            (analyse_with_solver Analysis_Config.Interval_Analysis s p)
+        | Some (Analysis_Config.Plan_Interval_EntryState
+                 Analysis_Config.Solver_Join)
+          -> Some (Core.analyse_interval_entry_state_join p)
+        | Some (Analysis_Config.Plan_Interval_EntryState
+                 Analysis_Config.Solver_PerOrigin)
+          -> Some (Core.analyse_interval_entry_state_per_origin p)
+        | Some (Analysis_Config.Plan_Interval_EntryState
+                 Analysis_Config.Solver_Warrow)
+          -> Some (Core.analyse_interval_entry_state p)
+        | Some (Analysis_Config.Plan_Interval_EntryState
+                 Analysis_Config.Solver_WarrowPerOrigin)
+          -> Some (Core.analyse_interval_entry_state_wpo p)
+        | Some (Analysis_Config.Plan_Interval_CallString
+                 (Analysis_Config.Solver_Join, k))
+          -> Some (Core.analyse_interval_call_string_report_join k p)
+        | Some (Analysis_Config.Plan_Interval_CallString
+                 (Analysis_Config.Solver_PerOrigin, k))
+          -> Some (Core.analyse_interval_call_string_report_per_origin k p)
+        | Some (Analysis_Config.Plan_Interval_CallString
+                 (Analysis_Config.Solver_Warrow, k))
+          -> Some (Core.analyse_interval_call_string_report k p)
+        | Some (Analysis_Config.Plan_Interval_CallString
+                 (Analysis_Config.Solver_WarrowPerOrigin, k))
+          -> Some (Core.analyse_interval_call_string_report_wpo k p)
+        | Some (Analysis_Config.Plan_Int s) ->
+          Core.map_option Core.decided_report
+            (analyse_with_solver Analysis_Config.Int_Analysis s p)
+        | Some (Analysis_Config.Plan_Int_EntryState Analysis_Config.Solver_Join)
+          -> Some (Core.analyse_int_entry_state_report p)
+        | Some (Analysis_Config.Plan_Int_EntryState
+                 Analysis_Config.Solver_PerOrigin)
+          -> None
+        | Some (Analysis_Config.Plan_Int_EntryState
+                 Analysis_Config.Solver_Warrow)
+          -> Some (Core.analyse_int_entry_state_report_warrow p)
+        | Some (Analysis_Config.Plan_Int_EntryState
+                 Analysis_Config.Solver_WarrowPerOrigin)
+          -> None
+        | Some (Analysis_Config.Plan_Int_CallString
+                 (Analysis_Config.Solver_Join, k))
+          -> Some (Core.analyse_int_call_string_report k p)
+        | Some (Analysis_Config.Plan_Int_CallString
+                 (Analysis_Config.Solver_PerOrigin, _))
+          -> None
+        | Some (Analysis_Config.Plan_Int_CallString
+                 (Analysis_Config.Solver_Warrow, k))
+          -> Some (Core.analyse_int_call_string_report_warrow k p)
+        | Some (Analysis_Config.Plan_Int_CallString
+                 (Analysis_Config.Solver_WarrowPerOrigin, _))
+          -> None
+        | Some (Analysis_Config.Plan_Parity s) ->
+          Core.map_option Core.decided_report
+            (analyse_with_solver Analysis_Config.Parity_Analysis s p)));;
 
 let rec analyse_with_state
   x0 x1 p = match x0, x1, p with
@@ -13225,22 +13408,23 @@ let rec analyse_with_state
         -> None;;
 
 let rec analyse_config_with_state
-  cfg p =
-    (match Analysis_Config.resolve_analysis_config cfg with None -> None
-      | Some (Analysis_Config.Plan_Sign s) ->
-        analyse_with_state Analysis_Config.Sign_Analysis s p
-      | Some (Analysis_Config.Plan_Sign_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Sign_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Interval s) ->
-        analyse_with_state Analysis_Config.Interval_Analysis s p
-      | Some (Analysis_Config.Plan_Interval_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Interval_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Int s) ->
-        analyse_with_state Analysis_Config.Int_Analysis s p
-      | Some (Analysis_Config.Plan_Int_EntryState _) -> None
-      | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
-      | Some (Analysis_Config.Plan_Parity s) ->
-        analyse_with_state Analysis_Config.Parity_Analysis s p);;
+  cfg p0 =
+    (let p = Core.resolve_prog p0 in
+      (match Analysis_Config.resolve_analysis_config cfg with None -> None
+        | Some (Analysis_Config.Plan_Sign s) ->
+          analyse_with_state Analysis_Config.Sign_Analysis s p
+        | Some (Analysis_Config.Plan_Sign_EntryState _) -> None
+        | Some (Analysis_Config.Plan_Sign_CallString (_, _)) -> None
+        | Some (Analysis_Config.Plan_Interval s) ->
+          analyse_with_state Analysis_Config.Interval_Analysis s p
+        | Some (Analysis_Config.Plan_Interval_EntryState _) -> None
+        | Some (Analysis_Config.Plan_Interval_CallString (_, _)) -> None
+        | Some (Analysis_Config.Plan_Int s) ->
+          analyse_with_state Analysis_Config.Int_Analysis s p
+        | Some (Analysis_Config.Plan_Int_EntryState _) -> None
+        | Some (Analysis_Config.Plan_Int_CallString (_, _)) -> None
+        | Some (Analysis_Config.Plan_Parity s) ->
+          analyse_with_state Analysis_Config.Parity_Analysis s p));;
 
 let rec analyse_with_state_default
   x0 p = match x0, p with
@@ -13264,7 +13448,11 @@ module State_Report_GraphViz : sig
   val cs_globals_for :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> (string * string list) list
+  val check_cond_text : Core.texp -> Core.char list
   val exp_vnames_list : Core.texp -> string list
+  val check_state_text :
+    Core.texp ->
+      (string -> Analyse_Dispatch.abstract_value) -> (Core.char list) list
   val cs_ctx_export_auto :
     Analysis_Config.analysis_domain ->
       Core.nat -> unit Core.imp_prog_ext -> unit Core.export_graph_ext
@@ -13343,7 +13531,9 @@ let rec ctx_key_of
         ctx);;
 
 let rec state_line
-  f x = Core.explode x @ [Core.char_0x3D] @ string_of_abstract_value (f x);;
+  vars f x =
+    Core.explode (Core.display_vname_in vars x) @
+      [Core.char_0x3D] @ string_of_abstract_value (f x);;
 
 let rec ctx_show_of
   into ctx =
@@ -13422,7 +13612,7 @@ let rec point_state_lines
   vars st =
     (match st with Core.Unreachable -> ["unreachable"]
       | Core.Reachable s ->
-        Core.map (fun x -> Core.implode (state_line s x)) vars);;
+        Core.map (fun x -> Core.implode (state_line vars s x)) vars);;
 
 let rec ctx_seed_globals _A _B
   into ckey show_ctx r p =
@@ -13459,9 +13649,16 @@ let rec cs_globals_for
           Core.cs_show_context (Core.analyse_int_call_string_result k p) p
       | Analysis_Config.Parity_Analysis -> []);;
 
+let rec check_cond_text
+  cnd = Core.string_of_exp Core.zero_nat (Core.texp_erase cnd);;
+
 let rec exp_vnames_list
   b = Core.sorted_list_of_set (Core.equal_literal, Core.linorder_literal)
         (Core.exp_vnames (Core.texp_erase b));;
+
+let rec check_state_text
+  cnd f =
+    (let vars = exp_vnames_list cnd in Core.map (state_line vars f) vars);;
 
 let rec cs_ctx_domain_for
   kind k p base =
@@ -13496,7 +13693,7 @@ let rec full_state_checked_node_annotation
   vars env verdicts v =
     (match env v with Core.Unreachable -> Some unreachable_state_annotation
       | Core.Reachable st ->
-        (let lines = Core.map (state_line st) vars in
+        (let lines = Core.map (state_line vars st) vars in
           (match
             Core.find (fun entry -> Core.equal_cfg_nodea (Core.fst entry) v)
               verdicts
@@ -13600,7 +13797,7 @@ let rec cs_ctx_graph_config
                     | Core.Reachable st ->
                       Core.map
                         (fun x ->
-                          Core.explode x @
+                          Core.explode (Core.display_scoped x) @
                             [Core.char_0x3D] @ string_of_abstract_value (st x))
                         vars)),
             (fun _ _ ret a ->
@@ -13620,7 +13817,7 @@ let rec cs_ctx_graph_config
                 (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)),
             Core.cs_cluster_label,
             Some (Core.pretty_string_of_program (Core.prog_tyenv p)
-                   (Core.declared_locals p) (Core.prog_table p)
+                   (Core.declared_scoped p) (Core.prog_table p)
                    (Core.prog_procs p) (Core.prog_main p)
                    (Core.declared_global_vars p)),
             (fun _ _ -> None), ());;
@@ -13633,8 +13830,9 @@ let rec cs_ctx_annotated_config
       (cs_ctx_graph_config p k);;
 
 let rec cs_ctx_export_auto
-  kind k p =
-    (let g = Core.prog_cfg Core.prog_main_name p in
+  kind k p0 =
+    (let p = Core.resolve_prog p0 in
+     let g = Core.prog_cfg Core.prog_main_name p in
      let base = cs_ctx_graph_config p k in
      let cfg = cs_ctx_annotated_config kind k p in
      let sol = cs_ctx_sol_for kind k p in
@@ -13744,15 +13942,16 @@ let rec point_state_node_annotation
     (match env v with Core.Unreachable -> Some unreachable_state_annotation
       | Core.Reachable st ->
         Some (Core.Node_Annotation
-               (Core.join_gv_nl (Core.map (state_line st) vars),
+               (Core.join_gv_nl (Core.map (state_line vars st) vars),
                  Core.NS_Plain)));;
 
 let rec full_state_export_auto
-  kind p =
-    Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-      (point_state_node_annotation (program_vars p)
-        (analyse_point_env_for kind p));;
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (point_state_node_annotation (program_vars p)
+          (analyse_point_env_for kind p)));;
 
 let rec entry_state_globals_for
   kind p =
@@ -13800,12 +13999,13 @@ let rec state_report_node_annotation
         (let Core.Node_Annotation (lbl, status) =
            Core.check_result_annotation res cnd in
           Some (Core.Node_Annotation
-                 (Core.join_gv_nl (lbl :: Core.map (state_line f) vars),
+                 (Core.join_gv_nl (lbl :: Core.map (state_line vars f) vars),
                    status))));;
 
 let rec state_report_export_auto
-  kind p =
-    (let report =
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+     let report =
        Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
          (Analyse_Dispatch.analyse_with_state_default kind p)
        in
@@ -13835,8 +14035,9 @@ let rec entry_state_point_env_for
       | Analysis_Config.Parity_Analysis -> (fun _ -> Core.Unreachable));;
 
 let rec cs_ctx_graph_snapshot_auto
-  kind k p =
-    (let g = Core.prog_cfg Core.prog_main_name p in
+  kind k p0 =
+    (let p = Core.resolve_prog p0 in
+     let g = Core.prog_cfg Core.prog_main_name p in
      let base = cs_ctx_graph_config p k in
      let cfg = cs_ctx_annotated_config kind k p in
      let sol = cs_ctx_sol_for kind k p in
@@ -13887,7 +14088,7 @@ let rec entry_state_ctx_graph_config
                   | Core.Reachable st ->
                     Core.map
                       (fun x ->
-                        Core.explode x @
+                        Core.explode (Core.display_scoped x) @
                           [Core.char_0x3D] @ Core.string_of_ivl (st x))
                       vars)),
           (fun _ _ ret a ->
@@ -13922,93 +14123,99 @@ let rec entry_state_ctx_graph_config
                          (fun x -> Core.string_of_ivl x @ [Core.char_0x20])
                          ctx)),
           Some (Core.pretty_string_of_program (Core.prog_tyenv p)
-                 (Core.declared_locals p) (Core.prog_table p)
+                 (Core.declared_scoped p) (Core.prog_table p)
                  (Core.prog_procs p) (Core.prog_main p)
                  (Core.declared_global_vars p)),
           (fun _ _ -> None), ());;
 
 let rec entry_state_ctx_export_auto
-  p = (let r = Core.analyse_interval_entry_state_result p in
-       let g = Core.prog_cfg Core.prog_main_name p in
-       let base = entry_state_ctx_graph_config p in
-       let cfg =
-         Core.node_annotation_update
-           (fun _ -> entry_state_ctx_check_annotation g r) base
-         in
-       let sol = entry_state_ctx_sol r in
-        Core.analysis_graph_to_export (Core.equal_list Core.equal_ivl)
-          Core.equal_gkd cfg g sol
-          (Core.build_analysis_graph (Core.equal_list Core.equal_ivl)
-            Core.equal_gkd cfg g (Core.contextual_result_domain base g r)
-            sol));;
+  p0 = (let p = Core.resolve_prog p0 in
+        let r = Core.analyse_interval_entry_state_result p in
+        let g = Core.prog_cfg Core.prog_main_name p in
+        let base = entry_state_ctx_graph_config p in
+        let cfg =
+          Core.node_annotation_update
+            (fun _ -> entry_state_ctx_check_annotation g r) base
+          in
+        let sol = entry_state_ctx_sol r in
+         Core.analysis_graph_to_export (Core.equal_list Core.equal_ivl)
+           Core.equal_gkd cfg g sol
+           (Core.build_analysis_graph (Core.equal_list Core.equal_ivl)
+             Core.equal_gkd cfg g (Core.contextual_result_domain base g r)
+             sol));;
 
 let rec solver_checked_payload_auto
-  kind sc p =
-    (match (kind, sc)
-      with (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Join) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
-               Core.sign_classify_check (Core.bot_fun Core.bot_sign)
-               (Core.analyse_sign_result p) [] p)
-      | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
-               Core.sign_classify_check (Core.bot_fun Core.bot_sign)
-               (Core.analyse_sign_result_per_origin p) [] p)
-      | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Warrow) -> None
-      | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
-        -> None
-      | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Join) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
-               Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
-               (Core.analyse_interval_join_result p) [] p)
-      | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
-               Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
-               (Core.analyse_interval_per_origin_result p) [] p)
-      | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Warrow) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
-               Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
-               (Core.analyse_interval_td_result p) [] p)
-      | (Analysis_Config.Interval_Analysis,
-          Analysis_Config.Solver_WarrowPerOrigin)
-        -> Some (checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
-                  Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
-                  (Core.analyse_interval_wpo_result p) [] p)
-      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Join) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
-               Core.int_classify_check
-               (Core.bot_fun
-                 (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
-               (Core.analyse_int_join_result p) [] p)
-      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
-               Core.int_classify_check
-               (Core.bot_fun
-                 (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
-               (Core.analyse_int_per_origin_result p) [] p)
-      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
-               Core.int_classify_check
-               (Core.bot_fun
-                 (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
-               (Core.analyse_int_result p) [] p)
-      | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
-        -> Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
-                  Core.int_classify_check
-                  (Core.bot_fun
-                    (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
-                  (Core.analyse_int_wpo_result p) [] p)
-      | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Join) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
-               Core.parity_classify_check (Core.bot_fun Core.bot_parity)
-               (Core.analyse_parity_result p) [] p)
-      | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_PerOrigin) ->
-        Some (checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
-               Core.parity_classify_check (Core.bot_fun Core.bot_parity)
-               (Core.analyse_parity_result_per_origin p) [] p)
-      | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Warrow) -> None
-      | (Analysis_Config.Parity_Analysis,
-          Analysis_Config.Solver_WarrowPerOrigin)
-        -> None);;
+  kind sc p0 =
+    (let p = Core.resolve_prog p0 in
+      (match (kind, sc)
+        with (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Join) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
+                 Core.sign_classify_check (Core.bot_fun Core.bot_sign)
+                 (Core.analyse_sign_result p) [] p)
+        | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_PerOrigin) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
+                 Core.sign_classify_check (Core.bot_fun Core.bot_sign)
+                 (Core.analyse_sign_result_per_origin p) [] p)
+        | (Analysis_Config.Sign_Analysis, Analysis_Config.Solver_Warrow) -> None
+        | (Analysis_Config.Sign_Analysis,
+            Analysis_Config.Solver_WarrowPerOrigin)
+          -> None
+        | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Join) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
+                 Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
+                 (Core.analyse_interval_join_result p) [] p)
+        | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_PerOrigin)
+          -> Some (checked_payload_of
+                    (fun a -> Analyse_Dispatch.IntervalValue a)
+                    Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
+                    (Core.analyse_interval_per_origin_result p) [] p)
+        | (Analysis_Config.Interval_Analysis, Analysis_Config.Solver_Warrow) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
+                 Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
+                 (Core.analyse_interval_td_result p) [] p)
+        | (Analysis_Config.Interval_Analysis,
+            Analysis_Config.Solver_WarrowPerOrigin)
+          -> Some (checked_payload_of
+                    (fun a -> Analyse_Dispatch.IntervalValue a)
+                    Core.interval_classify_check (Core.bot_fun Core.bot_ivl)
+                    (Core.analyse_interval_wpo_result p) [] p)
+        | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Join) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
+                 Core.int_classify_check
+                 (Core.bot_fun
+                   (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                 (Core.analyse_int_join_result p) [] p)
+        | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_PerOrigin) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
+                 Core.int_classify_check
+                 (Core.bot_fun
+                   (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                 (Core.analyse_int_per_origin_result p) [] p)
+        | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_Warrow) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
+                 Core.int_classify_check
+                 (Core.bot_fun
+                   (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                 (Core.analyse_int_result p) [] p)
+        | (Analysis_Config.Int_Analysis, Analysis_Config.Solver_WarrowPerOrigin)
+          -> Some (checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
+                    Core.int_classify_check
+                    (Core.bot_fun
+                      (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+                    (Core.analyse_int_wpo_result p) [] p)
+        | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Join) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
+                 Core.parity_classify_check (Core.bot_fun Core.bot_parity)
+                 (Core.analyse_parity_result p) [] p)
+        | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_PerOrigin) ->
+          Some (checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
+                 Core.parity_classify_check (Core.bot_fun Core.bot_parity)
+                 (Core.analyse_parity_result_per_origin p) [] p)
+        | (Analysis_Config.Parity_Analysis, Analysis_Config.Solver_Warrow) ->
+          None
+        | (Analysis_Config.Parity_Analysis,
+            Analysis_Config.Solver_WarrowPerOrigin)
+          -> None));;
 
 let rec entry_state_checked_verdicts
   kind p =
@@ -14031,7 +14238,8 @@ let rec verdict_state_report_node_annotation
                  (let Core.Node_Annotation (lbl, a) =
                     Core.check_result_annotation res cnd in
                    Core.Node_Annotation
-                     (Core.join_gv_nl (lbl :: Core.map (state_line f) vars),
+                     (Core.join_gv_nl
+                        (lbl :: Core.map (state_line vars f) vars),
                        a))));;
 
 let rec entry_state_report_for_annotation
@@ -14041,58 +14249,62 @@ let rec entry_state_report_for_annotation
         (entry_state_verdicts_for kind p));;
 
 let rec entry_state_report_export_auto
-  kind p =
-    (let report = entry_state_report_for_annotation kind p in
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+     let report = entry_state_report_for_annotation kind p in
       Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
         (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec full_state_graph_snapshot_auto
-  kind p =
-    Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
-      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-      (point_state_node_annotation (program_vars p)
-        (analyse_point_env_for kind p));;
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (point_state_node_annotation (program_vars p)
+          (analyse_point_env_for kind p)));;
 
 let rec full_state_checked_payload_auto
-  kind p =
-    (match kind
-      with Analysis_Config.Sign_Analysis ->
-        (let (r, gvs) =
-           Core.analyse_sign_ctx_solved_for (Core.declared_global p)
-             Core.prog_main_name p
-           in
-          checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
-            Core.sign_classify_check (Core.bot_fun Core.bot_sign) r gvs p)
-      | Analysis_Config.Interval_Analysis ->
-        (let (r, gvs) =
-           Core.analyse_interval_ctx_solved_warrow_for (Core.declared_global p)
-             Core.prog_main_name p
-           in
-          checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
-            Core.interval_classify_check (Core.bot_fun Core.bot_ivl) r gvs p)
-      | Analysis_Config.Int_Analysis ->
-        (let (r, gvs) =
-           Core.analyse_int_ctx_solved_warrow_for Core.Refine_Fixpoint
-             (Core.declared_global p) Core.prog_main_name p
-           in
-          checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
-            Core.int_classify_check
-            (Core.bot_fun
-              (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
-            r gvs p)
-      | Analysis_Config.Parity_Analysis ->
-        (let (r, gvs) =
-           Core.analyse_parity_ctx_solved_for (Core.declared_global p)
-             Core.prog_main_name p
-           in
-          checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
-            Core.parity_classify_check (Core.bot_fun Core.bot_parity) r gvs
-            p));;
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+      (match kind
+        with Analysis_Config.Sign_Analysis ->
+          (let (r, gvs) =
+             Core.analyse_sign_ctx_solved_for (Core.declared_global p)
+               Core.prog_main_name p
+             in
+            checked_payload_of (fun a -> Analyse_Dispatch.SignValue a)
+              Core.sign_classify_check (Core.bot_fun Core.bot_sign) r gvs p)
+        | Analysis_Config.Interval_Analysis ->
+          (let (r, gvs) =
+             Core.analyse_interval_ctx_solved_warrow_for
+               (Core.declared_global p) Core.prog_main_name p
+             in
+            checked_payload_of (fun a -> Analyse_Dispatch.IntervalValue a)
+              Core.interval_classify_check (Core.bot_fun Core.bot_ivl) r gvs p)
+        | Analysis_Config.Int_Analysis ->
+          (let (r, gvs) =
+             Core.analyse_int_ctx_solved_warrow_for Core.Refine_Fixpoint
+               (Core.declared_global p) Core.prog_main_name p
+             in
+            checked_payload_of (fun a -> Analyse_Dispatch.IntDomValue a)
+              Core.int_classify_check
+              (Core.bot_fun
+                (Core.bot_int_dom_ext Core.int_dom_record_lattice_unit))
+              r gvs p)
+        | Analysis_Config.Parity_Analysis ->
+          (let (r, gvs) =
+             Core.analyse_parity_ctx_solved_for (Core.declared_global p)
+               Core.prog_main_name p
+             in
+            checked_payload_of (fun a -> Analyse_Dispatch.ParityValue a)
+              Core.parity_classify_check (Core.bot_fun Core.bot_parity) r gvs
+              p)));;
 
 let rec state_report_graph_snapshot_auto
-  kind p =
-    (let report =
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+     let report =
        Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
          (Analyse_Dispatch.analyse_with_state_default kind p)
        in
@@ -14101,48 +14313,53 @@ let rec state_report_graph_snapshot_auto
         (state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_export_auto
-  kind p =
-    Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-      (point_state_node_annotation (program_vars p)
-        (entry_state_point_env_for kind p));;
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (point_state_node_annotation (program_vars p)
+          (entry_state_point_env_for kind p)));;
 
 let rec entry_state_ctx_graph_snapshot_auto
-  p = (let r = Core.analyse_interval_entry_state_result p in
-       let g = Core.prog_cfg Core.prog_main_name p in
-       let base = entry_state_ctx_graph_config p in
-       let cfg =
-         Core.node_annotation_update
-           (fun _ -> entry_state_ctx_check_annotation g r) base
-         in
-       let sol = entry_state_ctx_sol r in
-        Core.implode
-          (Core.analysis_graph_to_canonical_text
-            (Core.equal_list Core.equal_ivl) Core.equal_gkd cfg g sol
-            (Core.build_analysis_graph (Core.equal_list Core.equal_ivl)
-              Core.equal_gkd cfg g (Core.contextual_result_domain base g r)
-              sol)));;
+  p0 = (let p = Core.resolve_prog p0 in
+        let r = Core.analyse_interval_entry_state_result p in
+        let g = Core.prog_cfg Core.prog_main_name p in
+        let base = entry_state_ctx_graph_config p in
+        let cfg =
+          Core.node_annotation_update
+            (fun _ -> entry_state_ctx_check_annotation g r) base
+          in
+        let sol = entry_state_ctx_sol r in
+         Core.implode
+           (Core.analysis_graph_to_canonical_text
+             (Core.equal_list Core.equal_ivl) Core.equal_gkd cfg g sol
+             (Core.build_analysis_graph (Core.equal_list Core.equal_ivl)
+               Core.equal_gkd cfg g (Core.contextual_result_domain base g r)
+               sol)));;
 
 let rec entry_state_report_graph_snapshot_auto
-  kind p =
-    (let report = entry_state_report_for_annotation kind p in
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+     let report = entry_state_report_for_annotation kind p in
       Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
         (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_checked_export_auto
-  kind p =
-    Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-      (full_state_checked_node_annotation (program_vars p)
-        (entry_state_point_env_for kind p)
-        (entry_state_checked_verdicts kind p));;
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (full_state_checked_node_annotation (program_vars p)
+          (entry_state_point_env_for kind p)
+          (entry_state_checked_verdicts kind p)));;
 
 let rec entry_state_full_state_graph_snapshot_auto
-  kind p =
-    Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
-      (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
-      (point_state_node_annotation (program_vars p)
-        (entry_state_point_env_for kind p));;
+  kind p0 =
+    (let p = Core.resolve_prog p0 in
+      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
+        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+        (point_state_node_annotation (program_vars p)
+          (entry_state_point_env_for kind p)));;
 
 end;; (*struct State_Report_GraphViz*)

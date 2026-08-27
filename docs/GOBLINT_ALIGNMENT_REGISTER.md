@@ -145,6 +145,36 @@ scheduling and widening behaviour differ by construction: the proxy carries no
 equation, so contributions join there and widening applies one hop later at the
 local entry unknown.
 
+## The platform this models
+
+Every conversion rule below is stated against one fixed implementation, not
+against portable C. Naming it is what makes "conversion rank" and "the type of
+a literal" answerable at all, since C leaves both to the implementation.
+
+| Parameter | Value |
+| --- | --- |
+| `CHAR_BIT` | 8 |
+| `int` | 32 bits, two's complement |
+| Scalar types | exactly `int8`/`uint8`/`int16`/`uint16`/`int32`/`uint32`/`int64`/`uint64` |
+| Signed representation | two's complement, no padding, no trap representations |
+| Conversion rank | width, since the eight modelled types have eight distinct widths |
+| Signed conversion of an out-of-range value | wraps (GCC's documented `-fwrapv`-style choice), not implementation-defined |
+| Signed arithmetic overflow | wraps; this is Goblint's `assume_wraparound`, not C11 |
+| Literal type | first of `int32`, `int64` that represents the value; no suffixes, no unsigned literals, decimal only |
+
+Rank deserves the explicit entry. C ranks `int`, `long` and `long long`
+independently of width, so two types may share a width and differ in rank, and
+the usual arithmetic conversions consult rank rather than width. Using width is
+correct **for this platform's type set** and is not a general C rank model. Do
+not lift `usual_kind` out of this setting without replacing width by rank.
+
+The overflow policy is a single, named choice. VIMP freezes the `Wrap` policy:
+every arithmetic operation is total and wraps at its kind. C's other two
+readings -- undefined behavior, and Goblint's `assume_top`/`assume_none` -- are
+not modelled, so no theorem here says anything about a program whose C
+semantics is undefined. Adding them means adding an outcome type that can
+report undefined behavior, not weakening `ik_norm`.
+
 ## What "C-compliant" does and does not mean here
 
 Three claims are routinely conflated. They are not equivalent, and this project
@@ -153,7 +183,7 @@ stands in a different place on each.
 | Claim | Status |
 | --- | --- |
 | **Goblint architectural alignment** | Broadly yes, and the target. Elaborated kind-carrying expressions, the cast in the domain signature rather than the analysis spec, `norm`-then-refine at a product domain, `top_of ik` as a conversion's give-up answer. |
-| **C conversion-rule alignment** | Yes for the modelled subset. Integer promotions (6.3.1.1) and the usual arithmetic conversions (6.3.1.8) are implemented and proved commutative; conversions at every write boundary match 6.5.16.1p2, 6.5.2.2p7, 6.8.6.4p3. Literal typing (6.4.4.1) is **not** modelled -- see the ROADMAP gap. |
+| **C conversion-rule alignment** | Yes for the modelled subset. Integer promotions (6.3.1.1) and the usual arithmetic conversions (6.3.1.8) are implemented and proved commutative; conversions at every write boundary match 6.5.16.1p2, 6.5.2.2p7, 6.8.6.4p3. Literal typing (6.4.4.1) is modelled for unsuffixed decimal constants (`ik_of_lit`): the first of `int32`, `int64` that represents the value, and a value outside `int64` is rejected by the frontend rather than wrapped. Suffixes, hexadecimal and octal bases, and unsigned literal types are not modelled. |
 | **Strict C concrete semantics** | **No, deliberately.** VIMP *defines* signed overflow as two's-complement wraparound. C 6.5p5 makes an out-of-range signed arithmetic result undefined. |
 
 The accurate statement of the last row is:

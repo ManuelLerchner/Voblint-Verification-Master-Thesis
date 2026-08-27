@@ -1,0 +1,14 @@
+// PARAM: --analysis interval
+// 01 with the two procedure definitions swapped. Both verdicts stay the same,
+// which is the property a flat kind environment could not have: there, the
+// declaration the parser emitted first decided the kind for both procedures,
+// so this file and 01 disagreed.
+int64 g(int64 n) { return n + 200 }
+uint8 f(uint8 n) { return n + 200 }
+void main() {
+  int32 a, b;
+  a := f(100);
+  b := g(100);
+  __voblint_check(a == 44); // PROVED
+  __voblint_check(b == 300) // PROVED
+}

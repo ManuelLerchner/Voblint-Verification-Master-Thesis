@@ -212,7 +212,7 @@ Landed and green under `isabelle build Voblint_VIMP`:
 
 - `VIMP_Var_Id.thy` -- `var_id` (`GlobalId` / `ScopedId` / `ReturnId`), `var_info`,
   `decl_table`, partial `kind_of_var`, `origin_fits`, `wf_decls`, `ret_kind_of`.
-- `imp_prog` carries `declared_locals :: (pname * typed_var) list`;
+- `imp_prog` carries `declared_scoped :: (pname * typed_var) list`;
   `mk_program_typed` takes it as a fifth argument.
 - Procedure-local declarations parse on both frontends. `grammar/vimp.yaml`
   gained `local_decl` and a `locals_star` slot in `function_decl`; the Menhir
@@ -237,6 +237,73 @@ own declaration, while the flat name-keyed environment cannot tell them apart.
 Declarations are recorded but not yet consumed: the analysis still reads kinds
 out of `prog_tyenv`, so adding a declaration changes no verdict. That is what
 makes the corpus migration safe to land before enforcement.
+
+### A2 landed: `VIMP_Resolve.thy`
+
+`resolve :: imp_prog => resolve_error list + imp_prog` is the renaming pass.
+It resolves each occurrence to a `var_id` -- formal or local of the enclosing
+procedure, else a declared global, else a synthetic local of that
+procedure -- and rewrites the program to use `var_id_name` of that identity.
+`declared_scoped` now carries annotated formals alongside locals, so a
+formal's kind is decided by its own declaration rather than by the position
+its name took in the flat list.
+
+`resolve_errors` decides exactly what the correctness theorem needs:
+distinct procedures, distinct globals, distinct formals and scoped
+declarations per procedure, no procedure-bound name shadowing a global,
+separator-free names, pairwise distinct identities, and a declared entry
+procedure. On success:
+
+```isabelle
+prog_tyenv (resolve_prog p) (var_id_name (ScopedId q x)) = scoped_kind p q x
+prog_tyenv (resolve_prog p) x                            = prog_tyenv p x     -- x global
+```
+
+so the resolved program's flat environment answers each identity with its own
+declaration. The witness is the reviewer's own example: `uint8 f(uint8 n)` and
+`int64 g(int64 n)` resolve to `U8` and `I64`, where `prog_tyenv` of the source
+answers `U8` for both.
+
+`display_vname_in` (`VIMP_Var_Id.thy`) is the inverse at the reporting
+boundary: it shows a global unchanged, shows a scoped identity as the name the
+source wrote, and qualifies it `proc::name` only where the rendered list holds
+that name for two scopes at once. On a name no resolver produced -- every name
+in an unresolved program -- it is proved to be the identity, so reports over
+unresolved programs read exactly as before.
+
+### A5 landed: every analysis entry point resolves
+
+`analyse_config`, `analyse_config_ctx`, `analyse_config_with_state` and all
+fifteen `*_auto` renderers bind `p = resolve_prog p0` before anything else, so
+no export root compiles an unresolved program. The frontend's
+`check_kinds_agree` -- which rejected two procedures binding one name at two
+kinds, because the flat environment had no representation for it -- is gone:
+`tests/regression/24-scoped-names/` is the same programs, now analysed.
+
+```text
+uint8 f(uint8 n) { return n + 200 }
+int64 g(int64 n) { return n + 200 }
+void main() { int32 a, b; a := f(100); b := g(100);
+  __voblint_check(a == 44); __voblint_check(b == 300) }
+```
+
+```text
+a==44    PROVED   a=[44,44]
+b==300   PROVED   b=[300,300]
+```
+
+Swapping the two definitions changes neither verdict, which
+`02-declaration_order_does_not_matter.vimp` pins.
+
+Reporting shows the source name, not the identity. `display_scoped` drops the
+scope at every leaf a printer renders -- expressions, commands, CFG edge
+labels, per-procedure state lines -- since a printed expression belongs to one
+procedure and cannot collide with itself. `display_vname_in` handles the one
+listing that spans the whole program, a full-state node label, by qualifying
+`proc::name` only where two scopes bind the same name. Both are proved to be
+the identity on a name no resolver produced. The corpus is byte-identical:
+same 15 failures as before, plus one snapshot whose variable lines reordered
+because `main#a` sorts after a global `g` where `a` sorted before it.
 
 ### Isabelle needs one production per kind keyword
 

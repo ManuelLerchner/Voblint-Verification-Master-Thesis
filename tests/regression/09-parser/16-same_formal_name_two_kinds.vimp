@@ -1,9 +1,0 @@
-// PARAM: --analysis interval
-// The formal-parameter half of 12-same_local_name_two_kinds.vimp. Two
-// procedures whose formals share a name at different kinds collide in the
-// same flat environment, and before the check the answer depended on which
-// declaration the parser emitted first -- swapping the two procedures swapped
-// the verdicts.
-void f(uint8 n) { return }
-void g(int64 n) { return }
-void main() { int32 a; a := 1 }

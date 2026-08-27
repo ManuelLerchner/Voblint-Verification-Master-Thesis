@@ -1,0 +1,19 @@
+// PARAM: --analysis sign
+// The concrete result is fixed: foo returns the literal 2, so 0 < y holds.
+//
+// The combine writes the callee's return slot into the caller's destination
+// through the destination's kind conversion, unconditionally. Here that
+// conversion is int32 to int32 and the value it converts was produced at
+// int32, so it cannot change anything -- but a Sign value carries no kind, so
+// nothing at the conversion can see that, and Positive converts to Top.
+// Interval answers [2,2] on the same program because its concretization is
+// bounded and the conversion is provably the identity on it.
+//
+// A kind-tagged cell closes this by construction: a value tagged int32
+// concretizes inside int32's range, so a conversion to int32 is the identity.
+int32 foo() { return 2 }
+void main() {
+  int32 y;
+  y := foo();
+  __voblint_check(0 < y) // UNKNOWN
+}

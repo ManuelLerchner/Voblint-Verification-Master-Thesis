@@ -25,14 +25,14 @@ text \<open>
 fun string_of_action :: "edge_action \<Rightarrow> string" where
   "string_of_action EA_Nop = ''nop''"
 | "string_of_action (EA_Assign x a) =
-    String.explode x @ '' := '' @ string_of_exp 0 (texp_erase a)"
+    String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 (texp_erase a)"
 | "string_of_action (EA_Special (Nondet_Int k) x) =
-    String.explode x @ '' := __voblint_nondet_int()''"
+    String.explode (display_scoped x) @ '' := __voblint_nondet_int()''"
 | "string_of_action (EA_Special (Min k a b) x) =
-    String.explode x @ '' := min('' @ string_of_exp 0 (texp_erase a) @ '', ''
+    String.explode (display_scoped x) @ '' := min('' @ string_of_exp 0 (texp_erase a) @ '', ''
       @ string_of_exp 0 (texp_erase b) @ '')''"
 | "string_of_action (EA_Special (Max k a b) x) =
-    String.explode x @ '' := max('' @ string_of_exp 0 (texp_erase a) @ '', ''
+    String.explode (display_scoped x) @ '' := max('' @ string_of_exp 0 (texp_erase a) @ '', ''
       @ string_of_exp 0 (texp_erase b) @ '')''"
 | "string_of_action (EA_Assume b) = ''['' @ string_of_exp 0 (texp_erase b) @ '']''"
 | "string_of_action (EA_AssumeNot b) = ''!['' @ string_of_exp 0 (texp_erase b) @ '']''"
@@ -1034,7 +1034,7 @@ fun enter_bindings :: "vname list \<Rightarrow> texp list \<Rightarrow> string l
   "enter_bindings [] _ = []"
 | "enter_bindings _ [] = []"
 | "enter_bindings (x # xs) (e # es) =
-    (String.explode x @ '' := '' @ string_of_exp 0 (texp_erase e)) # enter_bindings xs es"
+    (String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 (texp_erase e)) # enter_bindings xs es"
 
 definition source_action_label :: "cfg \<Rightarrow> edge_action \<Rightarrow> string" where
   "source_action_label g a =
@@ -1055,8 +1055,8 @@ definition analysis_edge_attrs :: "cfg \<Rightarrow> analysis_edge_kind \<Righta
           (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es)) @ '')'' @ dq
     | CombineEdge call dst ret \<Rightarrow> ''style=dashed,color=blue,constraint=false,xlabel='' @ dq
         @ (case (dst, ret) of
-             (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode x @ '' := '' @ String.explode r
-           | (Some x, None) \<Rightarrow> ''resume / '' @ String.explode x
+             (Some x, Some r) \<Rightarrow> ''resume / '' @ String.explode (display_scoped x) @ '' := '' @ String.explode (display_scoped r)
+           | (Some x, None) \<Rightarrow> ''resume / '' @ String.explode (display_scoped x)
            | (None, _) \<Rightarrow> ''resume'')
         @ dq
     | CallToReturnEdge callee \<Rightarrow> ''style=dotted,color=gray40,constraint=false,label='' @ dq
@@ -1079,8 +1079,8 @@ definition canonical_edge_kind_text :: "cfg \<Rightarrow> analysis_edge_kind \<R
         @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es)) @ '')''
     | CombineEdge call dst ret \<Rightarrow> ''combine''
         @ (case (dst, ret) of
-             (Some x, Some r) \<Rightarrow> '' '' @ String.explode x @ '' := '' @ String.explode r
-           | (Some x, None) \<Rightarrow> '' '' @ String.explode x
+             (Some x, Some r) \<Rightarrow> '' '' @ String.explode (display_scoped x) @ '' := '' @ String.explode (display_scoped r)
+           | (Some x, None) \<Rightarrow> '' '' @ String.explode (display_scoped x)
            | (None, _) \<Rightarrow> '''')
     | CallToReturnEdge callee \<Rightarrow> ''call-to-return '' @ String.explode callee
     | GlobalReadEdge \<Rightarrow> ''read global''
@@ -1296,8 +1296,8 @@ definition export_edge_label :: "cfg \<Rightarrow> analysis_edge_kind \<Rightarr
         @ (case a of CallEdge _ _ es \<Rightarrow> join_source '', '' (map (\<lambda>e. string_of_exp 0 (texp_erase e)) es)) @ '')''
     | CombineEdge _ dst ret \<Rightarrow>
         (case (dst, ret) of
-           (Some x, Some r) \<Rightarrow> String.explode x @ '' := '' @ String.explode r
-         | (Some x, None) \<Rightarrow> String.explode x
+           (Some x, Some r) \<Rightarrow> String.explode (display_scoped x) @ '' := '' @ String.explode (display_scoped r)
+         | (Some x, None) \<Rightarrow> String.explode (display_scoped x)
          | (None, _) \<Rightarrow> '''')
     | CallToReturnEdge callee \<Rightarrow> String.explode callee
     | GlobalReadEdge \<Rightarrow> ''''

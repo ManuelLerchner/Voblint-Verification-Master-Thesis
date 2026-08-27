@@ -327,13 +327,13 @@ definition refine_parity_with_interval ::
   "refine_parity_with_interval fct p =
      intersect_parity (interval_parity_fact fct) p"
 
-definition interval_fact_of_int_dom :: "int_dom => interval_fact" where
+definition interval_fact_of_int_dom :: "'a int_dom_scheme => interval_fact" where
   "interval_fact_of_int_dom d =
      intersect_ivl
        (interval_fact_of_sign (int_sign d))
        (interval_fact_of_ivl (int_ivl d))"
 
-definition refine_interval :: "int_dom => int_dom" where
+definition refine_interval :: "'a int_dom_scheme => 'a int_dom_scheme" where
   "refine_interval d =
      (let fct = interval_fact_of_int_dom d
       in d\<lparr>
@@ -448,16 +448,17 @@ lemma refine_interval_reductive:
         refine_ivl_with_interval_le
         refine_parity_with_interval_le)
 
-lemma refine_interval_mono:
-  "mono refine_interval"
-proof (rule monoI)
-  fix d e :: int_dom
-  assume de: "d \<le> e"
+lemma refine_interval_mono_le:
+  fixes d e :: "'a::int_dom_record_lattice int_dom_scheme"
+  assumes de: "d \<le> e"
+  shows "refine_interval d \<le> refine_interval e"
+proof -
   from de have components:
     "int_sign d \<le> int_sign e"
     "int_ivl d \<le> int_ivl e"
     "int_parity d \<le> int_parity e"
     "int_congruence d \<le> int_congruence e"
+    "int_dom.more d \<le> int_dom.more e"
     by (simp_all add: less_eq_int_dom_ext_def)
   have fct_le:
     "interval_fact_of_int_dom d \<le> interval_fact_of_int_dom e"
@@ -468,8 +469,11 @@ proof (rule monoI)
           refine_sign_with_interval_mono[OF fct_le components(1)]
           refine_ivl_with_interval_mono[OF fct_le components(2)]
           refine_parity_with_interval_mono[OF fct_le components(3)]
-          components(4))
+          components(4) components(5))
 qed
+
+lemma refine_interval_mono: "mono refine_interval"
+  by (rule monoI) (rule refine_interval_mono_le)
 
 lemma int_reduction_step_refine_interval:
   "int_reduction_step refine_interval"

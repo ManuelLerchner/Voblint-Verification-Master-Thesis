@@ -249,4 +249,74 @@ lemma var_id_name_inj:
   shows "v = w"
   by (metis assms name_var_id_var_id_name)
 
+subsection \<open>Displaying an identity\<close>
+
+text \<open>
+  A report renders the names it is given, and those names are identities.
+  Display undoes the encoding: a global keeps its name, and a procedure-scoped
+  name shows the name the source wrote. The procedure qualifies it only where
+  the rendered list holds that same name for two scopes at once, so a name
+  bound in one place reads exactly as it was written.
+
+  \<^const>\<open>ret_var\<close> is left alone. Its spelling begins with the separator, so it
+  decodes to an identity with an empty scope, which no resolver builds and no
+  source can write; showing it unchanged keeps the reserved slot recognizable
+  in a report.
+\<close>
+
+text \<open>
+  \<open>display_scoped\<close> is the display a printer uses at a leaf. A printed
+  expression or command belongs to one procedure, so every scoped identity in
+  it carries that same procedure and dropping the scope cannot make two names
+  collide -- unlike a state listing, which spans the whole program and needs
+  \<open>display_vname_in\<close>'s disambiguation instead.
+\<close>
+
+definition display_scoped :: "vname \<Rightarrow> vname" where
+  "display_scoped x =
+     (case name_var_id x of
+        ScopedId q y \<Rightarrow> (if q = STR '''' then x else y) | _ \<Rightarrow> x)"
+
+definition var_id_bare :: "var_id \<Rightarrow> vname option" where
+  "var_id_bare v =
+     (case v of GlobalId x \<Rightarrow> Some x
+      | ScopedId q x \<Rightarrow> (if q = STR '''' then None else Some x)
+      | ReturnId _ \<Rightarrow> None)"
+
+definition qualified_vname :: "pname \<Rightarrow> vname \<Rightarrow> vname" where
+  "qualified_vname q x = String.implode (String.explode q @ ''::'' @ String.explode x)"
+
+definition display_vname_in :: "vname list \<Rightarrow> vname \<Rightarrow> vname" where
+  "display_vname_in vars x =
+     (case name_var_id x of
+        GlobalId y \<Rightarrow> y
+      | ReturnId _ \<Rightarrow> x
+      | ScopedId q y \<Rightarrow>
+          (if q = STR ''''
+           then x
+           else if length (filter (\<lambda>z. var_id_bare (name_var_id z) = Some y) vars) \<le> 1
+                then y
+                else qualified_vname q y))"
+
+text \<open>
+  A name no resolver produced -- every name in an unresolved program -- decodes
+  to \<^const>\<open>GlobalId\<close> of itself, so display is the identity on it and a report
+  over such a program reads exactly as it did.
+\<close>
+
+lemma name_var_id_sep_free [simp]:
+  assumes "sep_free x"
+  shows "name_var_id x = GlobalId x"
+  using assms
+  by (simp add: name_var_id_def sep_free_def sep_free_chars_def not_sep_def Let_def
+                takeWhile_eq_all_conv String.implode_explode_eq)
+
+lemma display_vname_in_sep_free:
+  "sep_free x \<Longrightarrow> display_vname_in vars x = x"
+  by (simp add: display_vname_in_def)
+
+lemma display_scoped_sep_free:
+  "sep_free x \<Longrightarrow> display_scoped x = x"
+  by (simp add: display_scoped_def)
+
 end

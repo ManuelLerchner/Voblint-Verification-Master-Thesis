@@ -187,16 +187,18 @@ let render_text_report (report :
   List.iter2
     (fun (node, (cond, (verdict, (unreachable, f)))) (line, col) ->
        if not unreachable then begin
-         let vars = Voblint_CLI.State_Report_GraphViz.exp_vnames_list cond in
+         (* Rendering a name is the inverse of resolving it, so both columns
+            go through State_Report_GraphViz rather than printing the stored
+            identity: check_cond_text and check_state_text disambiguate
+            against the same variable list. *)
          let state =
-           vars
-           |> List.map (fun x ->
-             x ^ "=" ^ un_string (Voblint_CLI.State_Report_GraphViz.string_of_abstract_value (f x)))
+           Voblint_CLI.State_Report_GraphViz.check_state_text cond f
+           |> List.map un_string
            |> String.concat ", "
          in
          Buffer.add_string buf
            (Printf.sprintf "%d:%-2d %-10s %-20s %-8s %s\n" line col (node_label node)
-              (un_string (Voblint_CLI.Core.string_of_exp (Voblint_CLI.Core.nat_of_integer Z.zero) (Voblint_CLI.Core.texp_erase cond)))
+              (un_string (Voblint_CLI.State_Report_GraphViz.check_cond_text cond))
               (verdict_label verdict) state)
        end)
     report check_positions;

@@ -5,20 +5,20 @@ begin
 section \<open>Expression typing\<close>
 
 text \<open>
-  A typing environment assigns every variable a machine-integer kind. The
-  judgment \<open>wt_exp \<Gamma> e ik\<close> checks \<open>e\<close> against an expected kind
-  \<open>ik\<close>: the operands of an arithmetic operator share its kind, so a
-  mixed-kind operation needs an explicit source-level cast, exactly as in a
-  CIL-normalized program where every conversion is an explicit cast node; a
-  comparison or logical operator yields a C-style \<open>I32\<close> truth value;
-  and a literal is admissible at any kind whose range contains its value.
+  A typing environment assigns every variable a machine-integer kind. What
+  this theory settles is the kind each operation computes at, not whether a
+  source expression is admissible: \<open>esyn\<close> synthesizes an expression's
+  own kind, \<open>kjoin\<close> and \<open>opk\<close> combine two operands' kinds into
+  the one their operator uses, and \<open>taval\<close> evaluates at that kind.
 
-  A comparison's operand kind is not part of the expected kind, so it is
-  synthesized from the operands themselves: a variable forces its declared
-  kind, and a literal-only operand pair defaults to \<open>I32\<close>, exactly as
-  C types a bare integer constant \<open>int\<close>. Synthesis is what makes the
-  judgment semantically unambiguous \<comment> \<open>the value of
-  \<open>200 + 100 < 250\<close> depends on the kind the sum wraps at.\<close>
+  Synthesis is what makes the semantics unambiguous \<comment> \<open>the value of
+  \<open>200 + 100 < 250\<close> depends on the kind the sum wraps at\<close> --- and it follows
+  C: an operand keeps its declared kind, a bare decimal constant takes the
+  first kind that represents it, and a comparison or logical operator yields
+  an \<^const>\<open>I32\<close> truth value whatever its operands were.
+
+  Admissibility is checked after elaboration rather than before it, for the
+  reason recorded below.
 \<close>
 
 type_synonym tyenv = "vname \<Rightarrow> ikind"
@@ -71,18 +71,32 @@ lemma tv_env_pins:
 subsection \<open>Kind synthesis\<close>
 
 text \<open>
-  \<open>esyn\<close> returns the kind the variables inside an expression force,
-  or \<open>None\<close> for a literal-only expression, which is kind-polymorphic. A
-  variable's forced kind is already promoted (\<open>ik_promote\<close>, C's integer
-  promotion, ISO/IEC 9899 6.3.1.1p2): promoting only at this one leaf is enough,
-  because \<open>kjoin\<close> only ever selects between two already-forced
-  operand kinds, so promoting every leaf promotes every kind \<open>esyn\<close>
-  can produce, with no separate promotion step needed anywhere \<open>esyn\<close>,
-  \<open>kjoin\<close>, or \<open>opk\<close> is used -- \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>,
-  \<open>Less\<close>/\<open>Eq\<close>, \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>, and \<open>special_result\<close>'s
-  \<open>Min\<close>/\<open>Max\<close> alike.
-  Where both operands force a kind, \<open>kjoin\<close> combines them by C's usual
-  arithmetic conversions; see its own note below.
+  \<open>esyn\<close> returns the kind an expression has of its own accord, before any
+  context converts it: a variable's declared kind, a literal's chosen kind,
+  \<^const>\<open>I32\<close> for a comparison or a logical operator. It is the kind C's
+  grammar assigns the expression, so a \<open>uint8\<close> variable synthesizes
+  \<^const>\<open>U8\<close> and not \<^const>\<open>I32\<close>.
+
+  Integer promotion (\<open>ik_promote\<close>, ISO/IEC 9899 6.3.1.1p2) is not applied
+  here. C promotes in named contexts, not at every occurrence of a narrow
+  operand: the usual arithmetic conversions promote both operands of a binary
+  arithmetic or relational operator, and the unary operators and shifts
+  promote their own. It does not promote across an assignment, so
+  \<open>uint8 b; uint8 a; b := a\<close> converts \<^const>\<open>U8\<close> straight to \<^const>\<open>U8\<close>
+  rather than through \<^const>\<open>I32\<close>. That round trip left the concrete value
+  alone but cost abstract precision at each leg, since a domain must answer a
+  genuine narrowing question at every conversion node it is given.
+
+  The promotion therefore sits in \<^const>\<open>usual_kind\<close>, which \<open>kjoin\<close> calls
+  and which promotes both of its arguments before choosing a common kind.
+  Every context that performs the usual arithmetic conversions reaches it
+  through \<open>kjoin\<close> -- \<open>Plus\<close>/\<open>Minus\<close>/\<open>Times\<close>, \<open>Less\<close>/\<open>Eq\<close>, and
+  \<open>special_result\<close>'s \<open>Min\<close>/\<open>Max\<close> -- while \<open>Not\<close>/\<open>And\<close>/\<open>Or\<close>, which test
+  their operands against zero and convert nothing, do not.
+
+  \<open>None\<close> is left as the answer for an operand that constrains nothing. No
+  clause produces it, since every leaf now names a kind, but \<open>kjoin\<close> still
+  accepts it, and \<open>opk\<close> still supplies \<^const>\<open>I32\<close> for it.
 \<close>
 
 text \<open>
@@ -125,7 +139,7 @@ lemma ik_of_lit_small [simp]: "n \<in> ik_range I32 \<Longrightarrow> ik_of_lit 
 
 fun esyn :: "tyenv \<Rightarrow> exp \<Rightarrow> ikind option" where
   "esyn \<Gamma> (N n) = Some (ik_of_lit n)"
-| "esyn \<Gamma> (V x) = Some (ik_promote (\<Gamma> x))"
+| "esyn \<Gamma> (V x) = Some (\<Gamma> x)"
 | "esyn \<Gamma> (Plus e1 e2) = kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)"
 | "esyn \<Gamma> (Minus e1 e2) = kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)"
 | "esyn \<Gamma> (Times e1 e2) = kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)"
@@ -138,37 +152,26 @@ fun esyn :: "tyenv \<Rightarrow> exp \<Rightarrow> ikind option" where
 definition opk :: "ikind option \<Rightarrow> ikind" where
   "opk k = (case k of None \<Rightarrow> I32 | Some k' \<Rightarrow> k')"
 
-subsection \<open>The typing judgment\<close>
+subsection \<open>Where the typing judgment lives\<close>
 
 text \<open>
-  A variable checks at its own declared kind directly -- the \<open>Plus\<close>/
-  \<open>Minus\<close>/\<open>Times\<close> case below checks both operands at a caller-given
-  \<open>ik\<close>, matching them exactly -- or at its promoted kind, which is the
-  kind \<^const>\<open>esyn\<close> actually reports and so the kind \<open>Less\<close>/\<open>Eq\<close>/\<open>Not\<close>/
-  \<open>And\<close>/\<open>Or\<close> check their own operands at. Both are genuine: \<open>total :=
-  x + 1\<close> checks \<open>x\<close> at its own declared kind (\<open>wt_exp \<Gamma> (Plus (V x) (N
-  1)) (\<Gamma> x)\<close>), while \<open>x < 5\<close> checks it at its promoted one.
-\<close>
+  There is no source-level typing judgment here, and that is the point. An
+  earlier one checked an \<^typ>\<open>exp\<close> against an expected kind and required the
+  operands of an arithmetic operator to share it, so a mixed-kind operation
+  needed a cast the programmer wrote. \<open>elaborate\<close> does not work that
+  way: it inserts the conversion itself, at each operand that reaches an
+  operator at another kind, which is what C's usual arithmetic conversions
+  describe and what CIL emits. A judgment demanding source-level casts
+  therefore described a different language from the one being compiled, and
+  nothing consumed it.
 
-fun wt_exp :: "tyenv \<Rightarrow> exp \<Rightarrow> ikind \<Rightarrow> bool" where
-  "wt_exp \<Gamma> (N n) ik \<longleftrightarrow> n \<in> ik_range ik"
-| "wt_exp \<Gamma> (V x) ik \<longleftrightarrow> ik = \<Gamma> x \<or> ik = ik_promote (\<Gamma> x)"
-| "wt_exp \<Gamma> (Plus e1 e2) ik \<longleftrightarrow> wt_exp \<Gamma> e1 ik \<and> wt_exp \<Gamma> e2 ik"
-| "wt_exp \<Gamma> (Minus e1 e2) ik \<longleftrightarrow> wt_exp \<Gamma> e1 ik \<and> wt_exp \<Gamma> e2 ik"
-| "wt_exp \<Gamma> (Times e1 e2) ik \<longleftrightarrow> wt_exp \<Gamma> e1 ik \<and> wt_exp \<Gamma> e2 ik"
-| "wt_exp \<Gamma> (Less e1 e2) ik \<longleftrightarrow>
-     ik = I32 \<and>
-     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
-      in wt_exp \<Gamma> e1 k \<and> wt_exp \<Gamma> e2 k)"
-| "wt_exp \<Gamma> (Eq e1 e2) ik \<longleftrightarrow>
-     ik = I32 \<and>
-     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
-      in wt_exp \<Gamma> e1 k \<and> wt_exp \<Gamma> e2 k)"
-| "wt_exp \<Gamma> (Not e) ik \<longleftrightarrow> ik = I32 \<and> wt_exp \<Gamma> e (opk (esyn \<Gamma> e))"
-| "wt_exp \<Gamma> (And e1 e2) ik \<longleftrightarrow>
-     ik = I32 \<and> wt_exp \<Gamma> e1 (opk (esyn \<Gamma> e1)) \<and> wt_exp \<Gamma> e2 (opk (esyn \<Gamma> e2))"
-| "wt_exp \<Gamma> (Or e1 e2) ik \<longleftrightarrow>
-     ik = I32 \<and> wt_exp \<Gamma> e1 (opk (esyn \<Gamma> e1)) \<and> wt_exp \<Gamma> e2 (opk (esyn \<Gamma> e2))"
+  The obligation it was reaching for is discharged on the other side of
+  elaboration instead, by \<open>wt_texp\<close> and \<open>wt_texp_elaborate\<close>, which are stated
+  where \<open>elaborate\<close> itself is: whatever source expression and target kind it
+  is given, elaboration produces a typed expression whose nodes agree with
+  each other. That is the property every consumer downstream actually relies
+  on, since each reads an operand's kind off the operand.
+\<close>
 
 text \<open>
   Truthiness is kind-independent (a value is true iff it is nonzero), so
@@ -292,17 +295,6 @@ text \<open>
   it: at an explicit narrower destination kind, not inside the
   comparison itself.
 \<close>
-
-lemma wt_exp_pins:
-  "wt_exp (\<lambda>_. U8) (Plus (V (STR ''x'')) (N 1)) U8"
-  "\<not> wt_exp (\<lambda>_. U8) (N (2 ^ 8)) U8"
-  "wt_exp (\<lambda>_. U8) (N (2 ^ 8)) U16"
-  "wt_exp (\<lambda>_. U8) (Less (V (STR ''x'')) (N 5)) I32"
-  "\<not> wt_exp (\<lambda>_. U8) (Plus (V (STR ''x'')) (N (2 ^ 8))) U8"
-  "\<not> wt_exp (\<lambda>_. I32) (Plus (V (STR ''x'')) (V (STR ''x''))) U8"
-  "wt_exp (\<lambda>_. I32) (And (V (STR ''x'')) (N 1)) I32"
-  "wt_exp (\<lambda>_. U8) (Less (N 300) (N 250)) I32"
-  by eval+
 
 lemma taval_pins:
   "taval (\<lambda>_. U8) U8 (Plus (V (STR ''x'')) (N 1))

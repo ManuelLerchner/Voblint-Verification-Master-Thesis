@@ -14,6 +14,19 @@
 // (--context-graph expanded) renderer is typed in the context type itself
 // and stays Interval-only, explicitly rejected for other domains rather
 // than silently reused.
+//
+// Both checks read UNKNOWN, and that is Sign's honest answer here rather
+// than a rendering fault: square computes n * n and norms it at int32, and
+// a kind-free Positive admits factors whose product wraps negative, so the
+// product tops. See 07-sign-precision/known-imprecision/02 for the same
+// mechanism isolated. What this fixture pins is that the labels are Sign's
+// own values -- Top, Positive, Negative -- and that no interval notation
+// appears anywhere in the graph.
+//
+// One callee context, not two: entry-state keys a context by the callee's
+// entry abstract state, and square(3) and square(4) both enter at Positive.
+// Interval produces two on the same program because [3,3] and [4,4] differ.
+// Both are correct for their domain.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -31,9 +44,9 @@
 //
 // nodes:
 //   main_pp5_ctx0: pp5
-//       check 0<b
-//       a=Positive
-//       b=Positive
+//       check 0<b [unknown]
+//       a=Top
+//       b=Top
 //   main_pp6_ctx0: pp6
 //   main_result_main_ctx0: exit_main
 //   main_entry_main_ctx0: entry_main
@@ -42,9 +55,9 @@
 //   main_pp3_ctx0: pp3
 //   square_entry_square_ctx1: entry_square
 //   main_pp4_ctx0: pp4
-//       check 0<a
-//       a=Positive
-//       b=Positive
+//       check 0<a [unknown]
+//       a=Top
+//       b=Top
 //   square_result_square_ctx1: exit_square
 //
 // edges:
@@ -69,6 +82,6 @@ void main() {
   int32 a, b;
   a := square(3);
   b := square(4);
-  __voblint_check(0 < a); // PROVED
-  __voblint_check(0 < b) // PROVED
+  __voblint_check(0 < a); // UNKNOWN
+  __voblint_check(0 < b) // UNKNOWN
 }

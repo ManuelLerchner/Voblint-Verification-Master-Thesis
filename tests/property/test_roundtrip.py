@@ -14,7 +14,7 @@ per variable a body touches, a return kind for a value-returning procedure --
 and builds both the AST and the printed source from that one derivation. Which
 kind a name carries is thus held constant here; that a declaration survives
 printing at all is what the structural comparison below still checks, since
-the parser has to reconstruct exactly the `declared_kinds`/`declared_locals`
+the parser has to reconstruct exactly the `declared_kinds`/`declared_scoped`
 the original was built with.
 
 As a secondary, more readable invariant: printing the re-parsed AST again

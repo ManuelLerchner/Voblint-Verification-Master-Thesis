@@ -89,15 +89,17 @@ fun elaborate :: "tyenv => ikind => exp => texp" where
       in tcast_to ik k (TTimes k (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2)))"
 | "elaborate \<Gamma> ik (Less e1 e2) =
      (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
-      in TLess (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2))"
+      in tcast_to ik I32 (TLess (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2)))"
 | "elaborate \<Gamma> ik (Eq e1 e2) =
      (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
-      in TEq (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2))"
-| "elaborate \<Gamma> ik (Not e) = TNot (elaborate \<Gamma> (opk (esyn \<Gamma> e)) e)"
+      in tcast_to ik I32 (TEq (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2)))"
+| "elaborate \<Gamma> ik (Not e) = tcast_to ik I32 (TNot (elaborate \<Gamma> (opk (esyn \<Gamma> e)) e))"
 | "elaborate \<Gamma> ik (And e1 e2) =
-     TAnd (elaborate \<Gamma> (opk (esyn \<Gamma> e1)) e1) (elaborate \<Gamma> (opk (esyn \<Gamma> e2)) e2)"
+     tcast_to ik I32
+       (TAnd (elaborate \<Gamma> (opk (esyn \<Gamma> e1)) e1) (elaborate \<Gamma> (opk (esyn \<Gamma> e2)) e2))"
 | "elaborate \<Gamma> ik (Or e1 e2) =
-     TOr (elaborate \<Gamma> (opk (esyn \<Gamma> e1)) e1) (elaborate \<Gamma> (opk (esyn \<Gamma> e2)) e2)"
+     tcast_to ik I32
+       (TOr (elaborate \<Gamma> (opk (esyn \<Gamma> e1)) e1) (elaborate \<Gamma> (opk (esyn \<Gamma> e2)) e2))"
 
 definition elaborate_syn :: "tyenv => exp => texp" where
   "elaborate_syn \<Gamma> e = elaborate \<Gamma> (opk (esyn \<Gamma> e)) e"
@@ -167,6 +169,69 @@ fun texp_kind :: "texp \<Rightarrow> ikind" where
 | "texp_kind (TNot _) = I32"
 | "texp_kind (TAnd _ _) = I32"
 | "texp_kind (TOr _ _) = I32"
+
+subsection \<open>Well-typed elaborated expressions\<close>
+
+text \<open>
+  A \<^typ>\<open>texp\<close> is well-typed when the kinds written on its nodes are
+  internally consistent: an arithmetic node's operands carry the kind it
+  computes at, a comparison's two operands agree with each other, and a
+  variable read carries its declared kind. Nothing here checks a node against
+  an expected kind from outside -- \<^const>\<open>texp_kind\<close> already reads that off
+  the node -- so the judgment says exactly what the abstract transfers rely on
+  when they take an operand's kind from the operand.
+
+  This is the boundary elaboration is responsible for. Conversions are not the
+  programmer's to write: \<^const>\<open>elaborate\<close> inserts one wherever an operand
+  reaches an operator at a kind other than the operator's own, which is what
+  \<^const>\<open>tcast_to\<close> does at each arithmetic node and what the variable case
+  does for a read. A judgment demanding source-level casts would describe a
+  different language from the one being compiled.
+\<close>
+
+fun wt_texp :: "tyenv \<Rightarrow> texp \<Rightarrow> bool" where
+  "wt_texp \<Gamma> (TN ik n) \<longleftrightarrow> True"
+| "wt_texp \<Gamma> (TVar ik x) \<longleftrightarrow> ik = \<Gamma> x"
+| "wt_texp \<Gamma> (TPlus ik a b) \<longleftrightarrow>
+     texp_kind a = ik \<and> texp_kind b = ik \<and> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+| "wt_texp \<Gamma> (TMinus ik a b) \<longleftrightarrow>
+     texp_kind a = ik \<and> texp_kind b = ik \<and> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+| "wt_texp \<Gamma> (TTimes ik a b) \<longleftrightarrow>
+     texp_kind a = ik \<and> texp_kind b = ik \<and> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+| "wt_texp \<Gamma> (TCast ik a) \<longleftrightarrow> wt_texp \<Gamma> a"
+| "wt_texp \<Gamma> (TLess a b) \<longleftrightarrow> texp_kind a = texp_kind b \<and> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+| "wt_texp \<Gamma> (TEq a b) \<longleftrightarrow> texp_kind a = texp_kind b \<and> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+| "wt_texp \<Gamma> (TNot a) \<longleftrightarrow> wt_texp \<Gamma> a"
+| "wt_texp \<Gamma> (TAnd a b) \<longleftrightarrow> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+| "wt_texp \<Gamma> (TOr a b) \<longleftrightarrow> wt_texp \<Gamma> a \<and> wt_texp \<Gamma> b"
+
+text \<open>
+  Elaboration reaches the kind it was asked for, at every node. A comparison
+  or logical operator computes a C truth value, which is an \<^const>\<open>I32\<close>
+  \<open>0\<close>/\<open>1\<close>, so reaching another kind means converting -- the usual arithmetic
+  conversions apply to such an operand exactly as they do to any other, and
+  CIL wraps it in a cast for the same reason. Before this, those five nodes
+  ignored the target, and \<open>(a < b) + x\<close> at a wider kind built an addition
+  whose operand carried a narrower kind than the addition claimed. The value
+  never changed -- \<open>0\<close> and \<open>1\<close> are representable at every kind -- but the
+  tree said something false about itself, and every consumer that reads a kind
+  off a node was entitled to believe it.
+\<close>
+
+lemma texp_kind_elaborate [simp]: "texp_kind (elaborate \<Gamma> ik e) = ik"
+  by (cases e) (auto simp: Let_def tcast_to_def)
+
+text \<open>
+  The boundary theorem the reviewer of this layer asked for: whatever source
+  expression and target kind it is given, elaboration produces a well-typed
+  typed expression. Every consumer downstream -- the concrete evaluator, each
+  domain's abstract evaluator, the backward filters -- reads kinds off the
+  nodes, so this is what entitles them to.
+\<close>
+
+theorem wt_texp_elaborate [intro]: "wt_texp \<Gamma> (elaborate \<Gamma> ik e)"
+proof (induct e arbitrary: ik)
+qed (auto simp: Let_def tcast_to_def texp_kind_elaborate)
 
 theorem teval_in_texp_kind_range [intro]:
   assumes "\<And>ik x. e = TVar ik x \<Longrightarrow> s x \<in> ik_range ik"

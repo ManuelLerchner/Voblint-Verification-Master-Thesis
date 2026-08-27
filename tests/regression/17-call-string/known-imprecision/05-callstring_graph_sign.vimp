@@ -13,6 +13,15 @@
 // two clusters carry genuinely different states (Positive vs Negative).
 // The checks are Sign's own business, not the graph's: doubling preserves
 // sign, so both are PROVED.
+// Both checks read UNKNOWN, and that is Sign's honest answer rather than a
+// context-sensitivity failure: g computes p + p and norms it at int32, and a
+// kind-free Positive admits summands whose sum wraps negative, so the sum
+// tops in either context. 07-sign-precision/known-imprecision/02 isolates
+// the same mechanism without any call machinery.
+//
+// What the fixture still pins is the call-string graph itself: depth 2 keeps
+// f(3) and f(-10) on separate routes all the way through g, which the
+// clusters below show.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0:
@@ -44,15 +53,15 @@
 //
 // nodes:
 //   main_pp8_ctx2: pp8
-//       x=Positive
-//       y=Negative
-//       check y<0
+//       x=Top
+//       y=Top
+//       check y<0 [unknown]
 //   main_pp9_ctx2: pp9
-//       x=Positive
-//       y=Negative
+//       x=Top
+//       y=Top
 //   main_result_main_ctx2: exit_main
-//       x=Positive
-//       y=Negative
+//       x=Top
+//       y=Top
 //   g_pp0_ctx0: pp0
 //       p=Positive
 //   g_pp0_ctx1: pp0
@@ -72,21 +81,19 @@
 //       p=Negative
 //   f_pp3_ctx3: pp3
 //       p=Positive
-//       t=Positive
+//       t=Top
 //   f_pp3_ctx4: pp3
 //       p=Negative
-//       t=Negative
+//       t=Top
 //   g_result_g_ctx0: exit_g
 //       p=Positive
-//       ret=Positive
 //   g_result_g_ctx1: exit_g
 //       p=Negative
-//       ret=Negative
 //   main_pp5_ctx2: pp5
 //       x=Top
 //       y=Top
 //   main_pp6_ctx2: pp6
-//       x=Positive
+//       x=Top
 //       y=Top
 //   f_entry_f_ctx3: entry_f
 //       p=Positive
@@ -95,17 +102,15 @@
 //       p=Negative
 //       t=Top
 //   main_pp7_ctx2: pp7
-//       x=Positive
-//       y=Negative
-//       check 0<x
+//       x=Top
+//       y=Top
+//       check 0<x [unknown]
 //   f_result_f_ctx3: exit_f
 //       p=Positive
-//       t=Positive
-//       ret=Positive
+//       t=Top
 //   f_result_f_ctx4: exit_f
 //       p=Negative
-//       t=Negative
-//       ret=Negative
+//       t=Top
 //
 // edges:
 //   main_pp8_ctx2 -> main_pp9_ctx2: check(y<0)
@@ -140,6 +145,6 @@ void main() {
   int32 x, y;
   x := f(3);
   y := f(-10);
-  __voblint_check(0 < x); // PROVED
-  __voblint_check(y < 0) // PROVED
+  __voblint_check(0 < x); // UNKNOWN
+  __voblint_check(y < 0) // UNKNOWN
 }

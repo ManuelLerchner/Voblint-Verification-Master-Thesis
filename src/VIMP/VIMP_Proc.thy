@@ -889,6 +889,42 @@ fun com_vnames :: "com => vname set" where
 | "com_vnames Restore = {}"
 | "com_vnames Unwind = {}"
 
+text \<open>
+  Renaming every variable occurrence. A call's procedure name is not a
+  variable and is never renamed; its destination and its actuals are.
+\<close>
+
+fun rename_exp :: "(vname \<Rightarrow> vname) \<Rightarrow> exp \<Rightarrow> exp" where
+    "rename_exp f (N n) = N n"
+  | "rename_exp f (V x) = V (f x)"
+  | "rename_exp f (Plus a b) = Plus (rename_exp f a) (rename_exp f b)"
+  | "rename_exp f (Minus a b) = Minus (rename_exp f a) (rename_exp f b)"
+  | "rename_exp f (Times a b) = Times (rename_exp f a) (rename_exp f b)"
+  | "rename_exp f (Less a b) = Less (rename_exp f a) (rename_exp f b)"
+  | "rename_exp f (exp.Eq a b) = exp.Eq (rename_exp f a) (rename_exp f b)"
+  | "rename_exp f (exp.Not a) = exp.Not (rename_exp f a)"
+  | "rename_exp f (And a b) = And (rename_exp f a) (rename_exp f b)"
+  | "rename_exp f (Or a b) = Or (rename_exp f a) (rename_exp f b)"
+
+fun rename_com :: "(vname \<Rightarrow> vname) \<Rightarrow> com \<Rightarrow> com" where
+    "rename_com f SKIP = SKIP"
+  | "rename_com f (Assign x e) = Assign (f x) (rename_exp f e)"
+  | "rename_com f (Check e) = Check (rename_exp f e)"
+  | "rename_com f (Seq c1 c2) = Seq (rename_com f c1) (rename_com f c2)"
+  | "rename_com f (If b c1 c2) = If (rename_exp f b) (rename_com f c1) (rename_com f c2)"
+  | "rename_com f (While b c) = While (rename_exp f b) (rename_com f c)"
+  | "rename_com f (Call dst pr args) =
+       Call (map_option f dst) pr (map (rename_exp f) args)"
+  | "rename_com f (Return v) = Return (map_option (rename_exp f) v)"
+  | "rename_com f Restore = Restore"
+  | "rename_com f Unwind = Unwind"
+
+lemma rename_exp_id [simp]: "rename_exp (\<lambda>x. x) a = a"
+  by (induct a) simp_all
+
+lemma rename_com_id [simp]: "rename_com (\<lambda>x. x) c = c"
+  by (induct c) (simp_all add: map_idI option.map_ident_strong)
+
 lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
   by (induction a) auto
 
