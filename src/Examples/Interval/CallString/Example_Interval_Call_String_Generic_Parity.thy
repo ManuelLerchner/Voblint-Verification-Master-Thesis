@@ -19,6 +19,17 @@ text \<open>
 
 subsection \<open>\<open>k = 1\<close>: the merged-context widening witness\<close>
 
+text \<open>
+  At \<open>k = 1\<close> both call sites share one context, so \<open>p\<close>'s entry value is widened
+  and its upper bound leaves the declared kind's range. Every later conversion
+  to \<^const>\<open>I32\<close> then has an operand it cannot represent and answers
+  \<^term>\<open>ivl_top_of I32\<close>, which is why the returned value and the two variables
+  written from it read as the whole kind range rather than \<open>[6,+inf]\<close>. The
+  bound is still sound and \<open>k = 2\<close> below is still strictly sharper; what is
+  lost is the surviving lower bound, and recovering it means widening to the
+  kind's own extremes instead of to \<^const>\<open>PlusInf\<close>.
+\<close>
+
 lemma cs_generic_k1_g_entry_merged:
   "nest_lookup
      (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
@@ -31,7 +42,7 @@ lemma cs_generic_k1_g_result_merged:
   "nest_lookup
      (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
                 (Inl (FunctionResult (STR ''g''), [Statement 2])))) (STR ''#ret'')
-   = Ivl (Fin 6) PlusInf"
+   = ivl_top_of I32"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
@@ -39,7 +50,7 @@ lemma cs_generic_k1_x_after_first_return:
   "nest_lookup
      (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
                 (Inl (Statement 6, [])))) (STR ''x'')
-   = Ivl (Fin 6) PlusInf"
+   = ivl_top_of I32"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 
@@ -47,7 +58,7 @@ lemma cs_generic_k1_y_after_second_return:
   "nest_lookup
      (locals (snd (cs_call_string_sol_prog 1 nest_gs (STR ''main'') nest_program)
                 (Inl (Statement 7, [])))) (STR ''y'')
-   = Ivl (Fin 6) PlusInf"
+   = ivl_top_of I32"
   unfolding cs_call_string_sol_prog_def cs_call_string_sol_def cs_call_string_eqs_def
   by eval
 

@@ -152,15 +152,15 @@ proof -
                  (s((STR ''Gx'') := 4)) rk"
     using pcompletes_assign[where \<Gamma> = default_tyenv and gs = proc_call_gs and \<Pi> = proc_pi
         and x = "(STR ''Gx'')" and a = "N 4" and s = s and rk = rk]
-    by (simp add: pcompletes_def taval_syn_def opk_def default_tyenv_def)
+    by (simp add: pcompletes_def taval_syn_def opk_def default_tyenv_def ik_bounds_pins)
   have step2: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> inc() \<rbrakk>)
                  (s((STR ''Gx'') := 4)) (s((STR ''Gx'') := 5)) rk"
     using call_inc_result[where s = "s((STR ''Gx'') := 4)"]
-    by simp
+    by (simp add: ik_bounds_pins)
   have step3: "pcompletes default_tyenv proc_call_gs proc_pi (imp \<lbrakk> sqr() \<rbrakk>)
                  (s((STR ''Gx'') := 5)) (s((STR ''Gx'') := 25)) rk"
     using call_sqr_result[where s = "s((STR ''Gx'') := 5)"]
-    by simp
+    by (simp add: ik_bounds_pins)
   show ?thesis
     unfolding main_prog_def
     by (rule pcompletes_Seq[OF pcompletes_Seq[OF step1 step2] step3])

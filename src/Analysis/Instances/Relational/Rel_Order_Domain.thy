@@ -16,7 +16,9 @@ text \<open>
   non-\<open>abs_state\<close> carrier discharges \<^locale>\<open>sound_dg_spec\<close> with zero
   changes to the DG framework.
   Every transfer below is deliberately the most imprecise sound choice
-  (forget on assign, havoc on call, identity on a guard).
+  (forget on assign, havoc on call) except for a precise \<open>assume\<close>/
+  \<open>assume_not\<close> pair, which is enough to make the carrier genuinely
+  relational.
 \<close>
 
 subsection \<open>The carrier and its lattice\<close>
@@ -183,35 +185,97 @@ lemma forget_relc_sound[intro]:
   shows "s(x := v) \<in> gamma_rel (forget_relc x d)"
   using assms by (cases d) auto
 
-subsection \<open>Guard transfer\<close>
+subsection \<open>The one precise transfer: recognizing a bare-variable strict order test\<close>
 
 text \<open>
   \<open>relc\<close>'s pairs constrain the values a store \<^emph>\<open>holds\<close>: \<open>(x, y)\<close> means
-  \<open>s x \<le> s y\<close>. A compiled guard compares the values two reads
-  \<^emph>\<open>convert to\<close>: \<open>teval (TLess (TVar ikx x) (TVar iky y)) s\<close> tests
-  \<open>ik_norm ikx (s x) < ik_norm iky (s y)\<close>, and at a bounded kind that
-  ordering says nothing about \<open>s x\<close> against \<open>s y\<close> -- two stored values
-  either side of the kind's wraparound point compare in the opposite
-  direction once converted. So this carrier records no pair from a guard:
-  both polarities keep the incoming value, the most imprecise sound choice,
-  matching every other transfer here.
+  \<open>s x \<le> s y\<close>. A bare variable read carries a kind but converts nothing --
+  \<^const>\<open>teval\<close> answers \<open>s x\<close> at \<^term>\<open>TVar ik x\<close> -- so
+  \<open>teval (TLess (TVar ikx x) (TVar iky y)) s\<close> tests \<open>s x < s y\<close> on the
+  stored values themselves, whatever the two kinds are. The pair the guard
+  establishes is therefore exactly the pair this carrier records, with no
+  side condition on the store.
 \<close>
 
+fun order_test :: "texp \<Rightarrow> (vname \<times> vname) option" where
+    "order_test (TLess (TVar _ x) (TVar _ y)) = Some (x, y)"
+  | "order_test _ = None"
+
+lemma order_test_teval:
+  assumes "order_test b = Some (x, y)"
+  shows "teval b s = (if s x < s y then 1 else 0)"
+  using assms by (induct b rule: order_test.induct) simp_all
+
 definition assume_step :: "texp \<Rightarrow> relc \<Rightarrow> relc" where
-  "assume_step b d = d"
+  "assume_step b d =
+     (case d of
+        Bot \<Rightarrow> Bot
+      | RelC ps \<Rightarrow>
+          (case order_test b of
+             Some (x, y) \<Rightarrow> RelC (insert (x, y) ps)
+           | None \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound[intro]:
   assumes "s \<in> gamma_rel d" "truthy (teval b s)"
   shows "s \<in> gamma_rel (assume_step b d)"
-  using assms by (simp add: assume_step_def)
+proof (cases d)
+  case Bot
+  with assms(1) show ?thesis by simp
+next
+  case (RelC ps)
+  note d_eq = RelC
+  show ?thesis
+  proof (cases "order_test b")
+    case None
+    then show ?thesis
+      using assms(1) d_eq unfolding assume_step_def d_eq by simp
+  next
+    case (Some xy)
+    obtain x y where xy: "order_test b = Some (x, y)" using Some by (cases xy) simp
+    have "s x < s y"
+      using assms(2) order_test_teval[OF xy, of s] by (simp split: if_splits)
+    then show ?thesis
+      using assms(1) d_eq unfolding assume_step_def d_eq xy by auto
+  qed
+qed
+
+text \<open>The negated-guard counterpart: \<open>\<not>(x < y)\<close> is \<open>y \<le> x\<close>, the mirror image
+  of \<^const>\<open>assume_step\<close>'s one precise case, recorded on the false branch
+  instead of discarded. Every other shape falls back exactly as
+  \<^const>\<open>assume_step\<close> does.\<close>
 
 definition assume_not_step :: "texp \<Rightarrow> relc \<Rightarrow> relc" where
-  "assume_not_step b d = d"
+  "assume_not_step b d =
+     (case d of
+        Bot \<Rightarrow> Bot
+      | RelC ps \<Rightarrow>
+          (case order_test b of
+             Some (x, y) \<Rightarrow> RelC (insert (y, x) ps)
+           | None \<Rightarrow> RelC ps))"
 
 lemma assume_not_step_sound[intro]:
   assumes "s \<in> gamma_rel d" "\<not> truthy (teval b s)"
   shows "s \<in> gamma_rel (assume_not_step b d)"
-  using assms by (simp add: assume_not_step_def)
+proof (cases d)
+  case Bot
+  with assms(1) show ?thesis by simp
+next
+  case (RelC ps)
+  note d_eq = RelC
+  show ?thesis
+  proof (cases "order_test b")
+    case None
+    then show ?thesis
+      using assms(1) d_eq unfolding assume_not_step_def d_eq by simp
+  next
+    case (Some xy)
+    obtain x y where xy: "order_test b = Some (x, y)" using Some by (cases xy) simp
+    have "\<not> s x < s y"
+      using assms(2) order_test_teval[OF xy, of s] by (simp split: if_splits)
+    then show ?thesis
+      using assms(1) d_eq unfolding assume_not_step_def d_eq xy by auto
+  qed
+qed
 
 subsection \<open>The transfer functions\<close>
 

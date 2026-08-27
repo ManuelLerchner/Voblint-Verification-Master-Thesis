@@ -307,6 +307,43 @@ None of the three is a soundness defect against the semantics as it was
 written: `taval` was the reference, and the abstract side matched it. They are
 conformance defects -- the modelled semantics was not C's.
 
+## Three precision gaps against Goblint, all sound (2026-08-27)
+
+Measured by running the regression corpus against the pre-migration binary and
+the current one, case by case. None of the three is unsound; each is a bound
+that Goblint keeps and this formalization now drops.
+
+**Widening leaves the kind's range, and the next conversion then discards what
+widening kept.** `widen_ivl_core` (`src/Analysis/Instances/Interval/Interval_Warrowing.thy`)
+sends a moved bound to `MinInf`/`PlusInf`. That result lies outside
+`ik_range ik`, so the mandatory normalization at the next arithmetic or
+conversion node reaches `ivl_cast`'s give-up branch and answers
+`ivl_top_of ik` -- destroying the bound that survived the widening.
+Goblint never holds an out-of-range interval: `IntDomain.Interval.widen ik`
+saturates at `min_int_of ik`/`max_int_of ik`, so its `norm` is the identity on
+a widened value. Closing it means giving the widening operator the kind, which
+the vendored solver's `warrowing` class signature does not currently carry --
+the same obstacle the kind-tagged carrier addresses. Observed as
+`total=[3,+inf]`, `x=[-inf,40]` and `i=[1,+inf]` all collapsing to the full
+`I32` range.
+
+**The call-return boundary converts without reducing.** `combine_assign_abs`
+(`src/Core/Equations/Constraint_System.thy`) and its executable mirror in
+`src/Core/Domain/Exec_St.thy` apply `a_cast` at the destination's declared
+kind and stop there, where `aval_int_dom_t` reduces after every cast. The
+product therefore keeps a component the reduction could restore: `a := 9`
+gives `sign=Positive, ivl=[9,9]`, while `d := id(9)` through an identity
+procedure gives `sign=Top, ivl=[9,9]`. Core is domain-generic and has no
+`refine`, so the reduction belongs in the `int_dom` cast itself.
+
+**Congruence loses exactness through an arithmetic guard.** Filtering
+`z + 1 == 3` backwards yields modulus `ik_mod I32` rather than `0`, so
+`refine_interval` can no longer read a singleton out of the congruence
+component and `z` stays unconstrained, where the syntactically simpler
+`y == 2` keeps `[2,2]`. A class whose modulus is the kind's own modulus has
+exactly one representative in range; normalizing it to `(ik_norm ik c, 0)` is
+the missing step.
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration

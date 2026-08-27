@@ -269,14 +269,13 @@ proof -
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     apply unfold_locales
        apply (rule flagship_wf_reserved)
-      apply (rule flagship_ex_transfer.tf_sound_assign_for flagship_ex_transfer.tf_sound_special_for
-             flagship_ex_transfer.tf_sound_branch_for
-             flagship_ex_transfer.tf_sound_enter_for flagship_ex_transfer.tf_sound_combine_env_for)+
       apply (rule ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def])
      apply (rule ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def])
-     apply (rule ivl_tf_st_for_action_reduces)
-    apply (erule TD_side_warrowing_apinis_Interp.solve_c_part_post_solution)
-    done
+     apply (simp add: fun_eq_iff)
+    apply (simp add: fun_eq_iff)
+   apply (simp add: fun_eq_iff)
+  apply (erule TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)
+  done
 qed
 
 text \<open>
@@ -301,6 +300,7 @@ theorem flagship_source_run_sound:
                   (prog_main flagship_prog, s, [], proc_ret_kind flagship_pi prog_main_name)
                   (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores flagship_gs"
+      and sty: "styped (prog_tyenv flagship_prog) s"
   shows "\<exists>v stk. csim (prog_tyenv flagship_prog) flagship_pi flagship_cfg
                      (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> flagship_ex_reg.gamma (snd flagship_sol) v"
@@ -314,7 +314,7 @@ proof -
               flagship_finE[unfolded flagship_cfg_def]
               flagship_finC[unfolded flagship_cfg_def]
               flagship_sound0[folded gamma_unit_def]
-              init run[unfolded flagship_cfg_def]])
+              init sty run[unfolded flagship_cfg_def]])
 qed
 
 

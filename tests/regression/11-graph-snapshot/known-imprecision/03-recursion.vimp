@@ -39,7 +39,7 @@
 //   fact_entry_fact_ctx1: entry_fact
 //   main_pp6_ctx0: pp6
 //       check 0<r [unknown]
-//       r=[-inf,+inf]
+//       r=[-2147483648,2147483647]
 //   fact_result_fact_ctx1: exit_fact
 //
 // edges:

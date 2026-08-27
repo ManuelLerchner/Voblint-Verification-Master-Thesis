@@ -247,6 +247,7 @@ theorem parity_source_run_sound:
                   (parity_prog, s, [], proc_ret_kind parity_pi (STR ''main''))
                   (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores parity_gs"
+      and sty: "styped (prog_tyenv parity_program) s"
   shows "\<exists>v stk. csim (prog_tyenv parity_program) parity_pi parity_cfg
                      (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> parity_ex_reg.gamma (snd parity_sol) v"
@@ -260,7 +261,7 @@ proof -
               parity_finE[unfolded parity_cfg_def]
               parity_finC[unfolded parity_cfg_def]
               parity_sound0
-              init run[unfolded parity_cfg_def]])
+              init sty run[unfolded parity_cfg_def]])
 qed
 
 subsection \<open>9. The result is not vacuous\<close>

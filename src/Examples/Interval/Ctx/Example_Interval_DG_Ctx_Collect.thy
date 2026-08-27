@@ -126,9 +126,11 @@ lemma twice_call_fwd_ok:
 proof -
   from ce twice_calls_shape consider
       (c1) "u = Statement 2" "dst = compile_dst (prog_tyenv twice_program) (Some (STR ''x''))" "pars = [(STR ''p'')]"
-           "args = [VIMP_Syntax.N 3]" "p = (STR ''twice'')"
+           "args = compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3]"
+           "p = (STR ''twice'')"
     | (c2) "u = Statement 3" "dst = compile_dst (prog_tyenv twice_program) (Some (STR ''y''))" "pars = [(STR ''p'')]"
-           "args = [VIMP_Syntax.N 10]" "p = (STR ''twice'')"
+           "args = compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10]"
+           "p = (STR ''twice'')"
     by fastforce
   thus ?thesis
   proof cases
@@ -204,14 +206,14 @@ lemma twice_context_at_call1:
      (Statement 2) [] s = ctx_call1"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
                 entry_state_sigma_abs_def[OF twice_entry_state_hyps]
-                twice_call_site_action1 twice_route_abs_at_call1)
+                twice_call_site_action1 twice_route_abs_at_call1[simplified])
 
 lemma twice_context_at_call2:
   "entry_state_context twice_gs (prog_tyenv twice_program) twice_is_bot_pred twice_pi twice_procs (STR ''main'') twice_main
      (Statement 3) [] s = ctx_call2"
   by (simp add: entry_state_context_def[OF twice_entry_state_hyps]
                 entry_state_sigma_abs_def[OF twice_entry_state_hyps]
-                twice_call_site_action2 twice_route_abs_at_call2)
+                twice_call_site_action2 twice_route_abs_at_call2[simplified])
 
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
@@ -235,13 +237,25 @@ lemma twice_formals_at_call_site2: "formals_at_call_site twice_cfg (Statement 2)
 lemma twice_formals_at_call_site3: "formals_at_call_site twice_cfg (Statement 3) = [(STR ''p'')]"
   unfolding formals_at_call_site_def by eval
 
+text \<open>The two call sites' elaborated actuals: each constant argument is bound at the
+  formal's declared kind, so the compiled edge carries a typed literal rather than the
+  source \<^term>\<open>VIMP_Syntax.N\<close> node.\<close>
+
+lemma twice_actuals_call1:
+  "compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3] = [TN I32 3]"
+  by eval
+
+lemma twice_actuals_call2:
+  "compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 10] = [TN I32 10]"
+  by eval
+
 lemma enter_route_exact_call1:
   assumes "u = Statement 2"
     and "s' = call_enter twice_gs (CallEdge dst [(STR ''p'')] (compile_actuals (prog_tyenv twice_program) [(STR ''p'')] [VIMP_Syntax.N 3])) s"
   shows "ivl_context u ctx s' = ctx_call1"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 3)"
-    by (simp add: call_enter_CallEdge bind_formals_def)
+    by (simp add: call_enter_CallEdge bind_formals_def twice_actuals_call1 ik_bounds_pins)
   thus ?thesis
     unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site2 formals_context_def ivl_decode_def ctx_call1_val)
@@ -253,7 +267,7 @@ lemma enter_route_exact_call2:
   shows "ivl_context u ctx s' = ctx_call2"
 proof -
   from assms(2) have "s' = (enter_state twice_gs s)((STR ''p'') := 10)"
-    by (simp add: call_enter_CallEdge bind_formals_def)
+    by (simp add: call_enter_CallEdge bind_formals_def twice_actuals_call2 ik_bounds_pins)
   thus ?thesis
     unfolding assms(1) ivl_context_def formals_context_sem_def
     by (simp add: twice_formals_at_call_site3 formals_context_def ivl_decode_def ctx_call2_val)

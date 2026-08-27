@@ -250,15 +250,17 @@ text \<open>
 
 lemma twice_ret_at_exit:
   "twice_lookup (locals (snd twice_sol (Inl (FunctionResult (STR ''twice''), ())))) (STR ''#ret'')
-     = ivl_top"
+     = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_x_computed:
-  "twice_lookup (locals (snd twice_sol (Inl (Statement 3, ())))) (STR ''x'') = ivl_top"
+  "twice_lookup (locals (snd twice_sol (Inl (Statement 3, ())))) (STR ''x'')
+     = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 lemma twice_y_computed:
-  "twice_lookup (locals (snd twice_sol (Inl (Statement 4, ())))) (STR ''y'') = ivl_top"
+  "twice_lookup (locals (snd twice_sol (Inl (Statement 4, ())))) (STR ''y'')
+     = Ivl (Fin 6) (Fin 20)"
   unfolding twice_sol_def twice_eqs_def by eval
 
 subsection \<open>Registration through the classifier-parametric registration locale\<close>
@@ -291,13 +293,12 @@ proof -
           TD_side_warrowing_apinis_Interp.solve TD_side_warrowing_apinis_Interp.solve_c"
     apply unfold_locales
        apply (rule twice_reserved)
-      apply (rule twice_transfer.tf_sound_assign_for twice_transfer.tf_sound_special_for
-             twice_transfer.tf_sound_branch_for
-             twice_transfer.tf_sound_enter_for twice_transfer.tf_sound_combine_env_for)+
       apply (rule ivl_tf_st_for_commute[folded fun_of_exec_dg_st_for_def])
      apply (rule ivl_enter_st_for_commute[folded fun_of_exec_dg_st_for_def])
-     apply (rule ivl_tf_st_for_action_reduces)
-    apply (erule TD_side_warrowing_apinis_Interp.solve_c_part_post_solution)
+     apply (simp add: fun_eq_iff)
+    apply (simp add: fun_eq_iff)
+   apply (simp add: fun_eq_iff)
+  apply (erule TD_side_warrowing_apinis_Interp.part_post_solution_of_solve_c)
     done
 qed
 
@@ -316,6 +317,7 @@ theorem twice_source_run_sound:
   assumes run: "star (pstep (prog_tyenv twice_program) twice_gs twice_pi)
                   (twice_main, s, [], proc_ret_kind twice_pi (STR ''main'')) src'"
       and init: "s \<in> cinit_stores twice_gs"
+      and sty: "styped (prog_tyenv twice_program) s"
   shows "\<exists>v t stk. csim (prog_tyenv twice_program) twice_pi twice_cfg src' (v, t, stk)
                    \<and> t \<in> twice_ex_reg.gamma (snd twice_sol) v"
 proof -
@@ -327,10 +329,11 @@ proof -
     by (rule twice_ex_reg.run_source_sound
           [OF twice_terminates_c[unfolded twice_eqs_def twice_cfg_def]
               twice_wf
-              twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]              twice_finE[unfolded twice_cfg_def]
+              twice_vars_cover[unfolded twice_sol_def twice_eqs_def twice_cfg_def]
+              twice_finE[unfolded twice_cfg_def]
               twice_finC[unfolded twice_cfg_def]
               twice_sound0[folded gamma_unit_def]
-              init run[unfolded src']])
+              init sty run[unfolded src']])
   show ?thesis using cert src' by blast
 qed
 

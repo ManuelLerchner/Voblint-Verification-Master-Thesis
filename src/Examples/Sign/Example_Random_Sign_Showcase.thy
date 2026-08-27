@@ -217,7 +217,7 @@ text \<open>
   \<open>y\<close>'s kind, and \<^const>\<open>SNonNeg\<close> concretizes to every non-negative integer,
   including ones \<^const>\<open>I32\<close> cannot hold. A magnitude-free domain cannot rule
   out the wrap, so the exit reads \<^const>\<open>STop\<close> and
-  \<^const>\<open>random_guard_exit_sound\<close> constrains nothing.
+  \<open>random_guard_exit_sound\<close> constrains nothing.
 
   The corollary that used to discharge #43 from this chain is therefore gone
   rather than restated: deriving \<open>0 \<le> t (STR ''y'')\<close> from a \<^const>\<open>STop\<close>

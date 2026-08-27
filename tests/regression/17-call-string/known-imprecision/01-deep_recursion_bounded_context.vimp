@@ -51,9 +51,9 @@
 //   fact_pp1_ctx2: pp1
 //       unreachable
 //   main_pp7_ctx0: pp7
-//       r=[-inf,+inf]
+//       r=[-2147483648,2147483647]
 //   main_result_main_ctx0: exit_main
-//       r=[-inf,+inf]
+//       r=[-2147483648,2147483647]
 //   fact_pp0_ctx1: pp0
 //       n=[1,49]
 //       tmp=[-inf,+inf]
@@ -70,10 +70,10 @@
 //       tmp=[-inf,+inf]
 //   fact_pp3_ctx1: pp3
 //       n=[2,49]
-//       tmp=[-inf,+inf]
+//       tmp=[-2147483648,2147483647]
 //   fact_pp3_ctx2: pp3
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=[-2147483648,2147483647]
 //   main_pp5_ctx0: pp5
 //       r=[-inf,+inf]
 //   fact_entry_fact_ctx1: entry_fact
@@ -83,14 +83,16 @@
 //       n=[50,50]
 //       tmp=[-inf,+inf]
 //   main_pp6_ctx0: pp6
-//       r=[-inf,+inf]
+//       r=[-2147483648,2147483647]
 //       check 0<r [unknown]
 //   fact_result_fact_ctx1: exit_fact
 //       n=[1,49]
 //       tmp=[-inf,+inf]
+//       ret=[-2147483648,2147483647]
 //   fact_result_fact_ctx2: exit_fact
 //       n=[50,50]
-//       tmp=[-inf,+inf]
+//       tmp=[-2147483648,2147483647]
+//       ret=[-2147483648,2147483647]
 //
 // edges:
 //   fact_pp1_ctx1 -> fact_result_fact_ctx1: return 1

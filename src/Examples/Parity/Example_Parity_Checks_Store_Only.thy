@@ -314,7 +314,7 @@ proof -
               \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 3)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14)" parity_ex_gs
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14)" parity_ex_ty parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 2" "EA_Assign (STR ''z'')
          (elaborate_to parity_ex_ty (parity_ex_ty (STR ''z'')) (Plus (V (STR ''y'')) (N 1)))" "Statement 3"
@@ -334,7 +334,7 @@ proof -
               \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s4: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_ty parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 3" "EA_Check (parity_ex_y_neq_z)" "Statement 4"]
     using s3_ne e4 unfolding parity_ex_reach_def
@@ -344,7 +344,7 @@ proof -
               \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s5: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15) \<in> parity_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_ty parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 4" "EA_Check (parity_ex_y_is_z)" "Statement 5"]
     using s4 e5 unfolding parity_ex_reach_def
@@ -353,7 +353,7 @@ proof -
   have e6: "(Statement 5, EA_Special (Nondet_Int (parity_ex_ty (STR ''w''))) (STR ''w''), Statement 6) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99) \<in> parity_ex_reach (Statement 6)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_ty parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 5" "EA_Special (Nondet_Int (parity_ex_ty (STR ''w''))) (STR ''w'')" "Statement 6"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99)"]

@@ -31,6 +31,7 @@ theorem twice_source_ctx_run_sound:
                   (twice_main, s0, [], proc_ret_kind twice_pi (STR ''main''))
                   (residual, s, frs, rk)"
     and init: "s0 \<in> cinit_stores twice_gs"
+    and sty: "styped (prog_tyenv twice_program) s0"
   shows "\<exists>v stk t c.
            csim (prog_tyenv twice_program) twice_pi
              (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main)
@@ -43,7 +44,7 @@ proof -
   show ?thesis
     by (rule source_sound_from_collecting_cap[where admiss = "admiss_exact twice_ctx"
             and gammaM = gamma_state_lift,
-          OF twice_wf init run tot twice_activation_collect_sound])
+          OF twice_wf init sty run tot twice_activation_collect_sound])
 qed
 
 text \<open>The witness-free specialisation: a \<open>twice\<close> store reached at the top level (empty source frame
@@ -55,13 +56,14 @@ theorem twice_source_toplevel_at_bot:
                   (twice_main, s0, [], proc_ret_kind twice_pi (STR ''main''))
                   (residual, s, [], rk)"
     and init: "s0 \<in> cinit_stores twice_gs"
+    and sty: "styped (prog_tyenv twice_program) s0"
   shows "\<exists>v. csim (prog_tyenv twice_program) twice_pi
                  (compile_prog (prog_tyenv twice_program) twice_pi twice_procs (STR ''main'') twice_main)
                  (residual, s, [], rk) (v, s, [])
              \<and> s \<in> gamma_state_lift (twice_ctx_sg (Inl (v, [])))"
   by (rule source_sound_toplevel_from_collecting_cap
             [where admiss = "admiss_exact twice_ctx" and gammaM = gamma_state_lift,
-             OF twice_wf init run twice_activation_collect_sound])
+             OF twice_wf init sty run twice_activation_collect_sound])
 
 end
 
