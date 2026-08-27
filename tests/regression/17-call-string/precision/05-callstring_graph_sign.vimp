@@ -135,8 +135,9 @@
 // EXPECT-GRAPH-END
 
 void g(p) { return p + p }
-void f(p) { t := g(p); return t }
+void f(p) { int32 t; t := g(p); return t }
 void main() {
+  int32 x, y;
   x := f(3);
   y := f(-10);
   __voblint_check(0 < x); // PROVED

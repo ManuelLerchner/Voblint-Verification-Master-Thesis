@@ -10,6 +10,7 @@
 // under --context none and --context call-string --context-depth 10.
 global num_iterat;
 void rec() {
+  int32 res;
   if (0 < num_iterat) {
     num_iterat := num_iterat + 1;
     res := rec();
@@ -20,6 +21,7 @@ void rec() {
   }
 }
 void main() {
+  int32 r;
   num_iterat := 2;
   r := rec();
   __voblint_check(r == 5) // NOWARN

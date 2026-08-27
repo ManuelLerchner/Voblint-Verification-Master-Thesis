@@ -9,6 +9,7 @@
 // refining if (i) to [1,+inf] would be a soundness bug, and this fixture is
 // the witness against it.
 void main() {
+  int32 a, b, i, x, z;
   i := __voblint_nondet_int();
   x := __voblint_nondet_int();
   z := __voblint_nondet_int();

@@ -262,6 +262,51 @@ Precision gaps found, all sound:
 - `cong_cast`'s `gcd (m, ik_mod ik)` is strictly sharper than upstream's `top`.
   Sound, but not the exact upstream mirror its theory comment claims.
 
+## Three C-conformance defects closed (2026-08-27)
+
+The audit above compared each operator in isolation and found none unsound. It
+did not compare how an operator's *operand kind* is chosen, and that is where
+all three of these lived. Each was masking the next, so they surfaced in order.
+
+**Binary operations were evaluated at the context's kind, not their own.**
+`taval Gamma ik (Plus e1 e2) s = ik_norm ik (taval Gamma ik e1 s + taval Gamma ik e2 s)`
+pushed the surrounding kind down into the operation, and `elaborate` mirrored
+it. C 6.3.1.8 applies the usual arithmetic conversions per operation: each
+binary operator computes at the kind its own operands agree on, wraps there,
+and the *result* is then converted to whatever the context wants. CIL builds
+each `BinOp` with its own result type and inserts a `CastE` around it. `TLess`
+and `TEq` already derived their operand kind correctly; the arithmetic nodes
+did not. Both `taval` and `elaborate` now do.
+
+The witness is `22-integer-kinds/precision/01`: in `4294967295 < u32 + 1` the
+comparison agrees on a 64-bit kind, but `u32 + 1` is an unsigned 32-bit
+addition that wraps to zero before the comparison sees it. Evaluating the
+addition at the comparison's width answers that the guard is taken; C says it
+is not.
+
+**Integer literals had no type.** `esyn Gamma (N n) = None` left every constant
+to `opk`'s `I32` default, so `4294967296` elaborated as `TN I32 4294967296` and
+`ik_norm` truncated it to `0` before it could reach a 64-bit destination. C
+6.4.4.1p5 gives an unsuffixed decimal constant the first of `int`, `long int`,
+`long long int` that can represent it -- never an unsigned type -- which is
+what CIL's `kinteger64` picks. `ik_of_lit` now does the same over the two
+signed widths VIMP has. A constant that already fitted `I32` still types as
+`I32`, so nothing that previously fitted changes kind.
+
+**Procedures had no return type.** `proc_decl` carried a `ret_kind` field,
+`proc_decl_of_typed` existed to populate it, and the compiler already consumed
+it -- `proc_ret_kind` feeds `elaborate_to`, which inserts the conversion on
+`return`. But no syntax reached it: every procedure was spelled `void`, so
+`ret_kind` was universally `None` and `proc_ret_kind` defaulted to `I32`. Every
+return normalized at 32 bits and a 64-bit result was silently truncated. CIL
+carries the return type in the function's own `TFun`, and Goblint reads the
+result through a return `varinfo` typed by it. The grammar now has
+`function_decl_typed`, so `int64 f(...)` declares what it returns.
+
+None of the three is a soundness defect against the semantics as it was
+written: `taval` was the reference, and the abstract side matched it. They are
+conformance defects -- the modelled semantics was not C's.
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration

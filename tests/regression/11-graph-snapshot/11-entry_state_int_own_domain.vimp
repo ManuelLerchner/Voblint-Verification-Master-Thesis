@@ -57,6 +57,7 @@ void square(n) {
   return n * n
 }
 void main() {
+  int32 a, b;
   a := square(3);
   b := square(4);
   __voblint_check(a == 9); // PROVED

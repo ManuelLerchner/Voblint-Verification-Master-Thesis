@@ -103,6 +103,7 @@ void f(n) {
   return n
 }
 void main() {
+  int32 a, b, x;
   x := 5;
   if (x < 2) {
     a := f(3)

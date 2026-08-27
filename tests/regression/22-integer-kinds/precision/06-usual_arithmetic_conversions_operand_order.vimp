@@ -17,6 +17,7 @@
 global uint32 up;
 global int64 wide;
 void main() {
+  int32 a, b, neg, small;
   up := 1;
   neg := -1;
   a := 1;

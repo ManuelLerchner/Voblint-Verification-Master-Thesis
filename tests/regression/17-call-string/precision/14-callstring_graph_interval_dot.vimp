@@ -8,8 +8,9 @@
 // cluster, and the per-context seed keys -- must be a key the solver
 // actually covers, or rendering it reads a state that was never solved.
 void g(p) { return p + p }
-void f(p) { t := g(p); return t }
+void f(p) { int32 t; t := g(p); return t }
 void main() {
+  int32 x, y;
   x := f(3);
   y := f(10);
   __voblint_check(x == 6);

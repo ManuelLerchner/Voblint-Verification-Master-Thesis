@@ -60,6 +60,7 @@
 // EXPECT-GRAPH-END
 
 void fact(n) {
+  int32 tmp;
   if (n < 2) {
     return 1
   } else {
@@ -68,6 +69,7 @@ void fact(n) {
   }
 }
 void main() {
+  int32 r;
   r := fact(3);
   __voblint_check(0 < r) // UNKNOWN
 }

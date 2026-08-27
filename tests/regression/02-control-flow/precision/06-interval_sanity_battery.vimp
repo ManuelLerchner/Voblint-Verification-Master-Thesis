@@ -12,6 +12,7 @@
 // not are written as: a <= 9 is !(9 < a), b > 7 is 7 < b, b >= 8 is !(b < 8).
 // int gives the same verdicts.
 void main() {
+  int32 a, b, f, t, w, x, z;
   a := 1;
   b := 2;
   x := __voblint_nondet_int();

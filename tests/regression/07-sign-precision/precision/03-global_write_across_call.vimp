@@ -21,6 +21,7 @@ void foo() {
   return 2
 }
 void main() {
+  int32 x, y;
   x := 1;
   y := foo();
   __voblint_check(0 < x); // PROVED

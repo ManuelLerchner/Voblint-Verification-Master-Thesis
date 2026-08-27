@@ -10,6 +10,7 @@
 // conjunct), so the return lives in a helper procedure p instead, called
 // destination-less.
 void p() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x); // PROVED
   return x;

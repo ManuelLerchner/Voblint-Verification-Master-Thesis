@@ -57,13 +57,36 @@ text \<open>
   genuinely differs from the one the expression synthesizes.
 \<close>
 
+text \<open>
+  A binary operation is computed at the kind its own operands agree on under
+  the usual arithmetic conversions, and its \<^emph>\<open>result\<close> is then converted to
+  whatever the context asked for. Pushing the context's kind down into the
+  operation instead would compute it at the wrong width: in
+  \<open>4294967295 < u32 + 1\<close> the comparison agrees on a 64-bit kind, but
+  \<open>u32 + 1\<close> is an unsigned 32-bit addition that wraps to zero before the
+  comparison ever sees it. \<open>TLess\<close> and \<open>TEq\<close> already derive their operand kind
+  this way; the arithmetic nodes now do too.
+\<close>
+
+definition tcast_to :: "ikind => ikind => texp => texp" where
+  "tcast_to ik k t = (if ik = k then t else TCast ik t)"
+
+lemma tcast_to_same [simp]: "tcast_to ik ik t = t"
+  by (simp add: tcast_to_def)
+
 fun elaborate :: "tyenv => ikind => exp => texp" where
   "elaborate \<Gamma> ik (N n) = TN ik n"
 | "elaborate \<Gamma> ik (V x) =
      (if ik = \<Gamma> x then TVar (\<Gamma> x) x else TCast ik (TVar (\<Gamma> x) x))"
-| "elaborate \<Gamma> ik (Plus e1 e2) = TPlus ik (elaborate \<Gamma> ik e1) (elaborate \<Gamma> ik e2)"
-| "elaborate \<Gamma> ik (Minus e1 e2) = TMinus ik (elaborate \<Gamma> ik e1) (elaborate \<Gamma> ik e2)"
-| "elaborate \<Gamma> ik (Times e1 e2) = TTimes ik (elaborate \<Gamma> ik e1) (elaborate \<Gamma> ik e2)"
+| "elaborate \<Gamma> ik (Plus e1 e2) =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
+      in tcast_to ik k (TPlus k (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2)))"
+| "elaborate \<Gamma> ik (Minus e1 e2) =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
+      in tcast_to ik k (TMinus k (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2)))"
+| "elaborate \<Gamma> ik (Times e1 e2) =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
+      in tcast_to ik k (TTimes k (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2)))"
 | "elaborate \<Gamma> ik (Less e1 e2) =
      (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
       in TLess (elaborate \<Gamma> k e1) (elaborate \<Gamma> k e2))"
@@ -182,7 +205,8 @@ proof -
   have norm_id: "ik_norm (\<Gamma> y) (s y) = s y" for y
     by (rule ik_norm_id[OF stypedD[OF assms]])
   show ?thesis
-    by (induction e arbitrary: ik) (simp_all add: Let_def norm_id)
+    by (induction e arbitrary: ik)
+       (simp_all add: Let_def norm_id tcast_to_def ik_norm_idem)
 qed
 
 theorem teval_elaborate_syn [simp]:
@@ -231,7 +255,7 @@ lemmas texp_mentions_global_defs [simp] = texp_mentions_global_def
 
 lemma texp_mentions_where_elaborate [simp]:
   "texp_mentions_where P (elaborate \<Gamma> ik e) = exp_mentions_where P e"
-  by (induction e arbitrary: ik) (simp_all add: Let_def)
+  by (induction e arbitrary: ik) (simp_all add: Let_def tcast_to_def)
 
 lemma texp_mentions_where_elaborate_syn [simp]:
   "texp_mentions_where P (elaborate_syn \<Gamma> e) = exp_mentions_where P e"
@@ -273,7 +297,7 @@ text \<open>
 lemma teval_eq_aval:
   assumes triv: "\<And>ik v. ik_norm ik v = v"
   shows "teval (elaborate \<Gamma> ik e) s = aval e s"
-  by (induction e arbitrary: ik) (auto simp: Let_def triv)
+  by (induction e arbitrary: ik) (auto simp: Let_def tcast_to_def triv)
 
 lemma teval_syn_eq_aval:
   assumes triv: "\<And>ik v. ik_norm ik v = v"
@@ -304,7 +328,7 @@ fun texp_erase :: "texp \<Rightarrow> exp" where
 | "texp_erase (TOr a b) = Or (texp_erase a) (texp_erase b)"
 
 lemma texp_erase_elaborate [simp]: "texp_erase (elaborate \<Gamma> ik e) = e"
-  by (induction e arbitrary: ik) (simp_all add: Let_def)
+  by (induction e arbitrary: ik) (simp_all add: Let_def tcast_to_def)
 
 lemma texp_erase_elaborate_syn [simp]: "texp_erase (elaborate_syn \<Gamma> e) = e"
   by (simp add: elaborate_syn_def)

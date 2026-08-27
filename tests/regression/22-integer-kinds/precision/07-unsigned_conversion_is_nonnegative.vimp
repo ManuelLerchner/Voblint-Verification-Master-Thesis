@@ -15,6 +15,7 @@
 // check on a uw written directly by the nondeterministic call instead.
 global uint32 uw;
 void main() {
+  int32 t;
   t := __voblint_nondet_int();
   uw := t;
   __voblint_check(!(uw < 0)) // PROVED

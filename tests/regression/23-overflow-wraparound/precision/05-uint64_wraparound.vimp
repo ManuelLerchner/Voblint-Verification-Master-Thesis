@@ -12,6 +12,7 @@ global uint64 x;
 global uint64 y;
 global uint64 lim;
 void main() {
+  int32 a;
   x := 0;
   x := x - 1;
   y := x + 4;

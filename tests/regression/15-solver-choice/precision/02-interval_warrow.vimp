@@ -3,6 +3,7 @@
 // default solver (Solver_Warrow) instead of join -- confirms --solver warrow
 // reproduces the plain default CLI invocation's verdict.
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x) // PROVED
 }

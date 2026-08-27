@@ -7,6 +7,7 @@
 // route exactly.
 global g;
 void main() {
+  int32 i, x;
   x := 0;
   while (x < 50) {
     g := 1;

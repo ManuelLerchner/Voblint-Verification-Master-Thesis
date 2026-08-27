@@ -22,6 +22,7 @@
 // (bfilter_or_is_the_gated_join). The conjunctive half of the gate is
 // 05-infeasible_conjunct_dropped.vimp.
 void main() {
+  int32 x, y;
   x := 5;
   y := __voblint_nondet_int();
   if (0 < y || (x < 0) == 1) {

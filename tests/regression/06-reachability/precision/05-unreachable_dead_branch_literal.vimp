@@ -5,6 +5,7 @@
 // other NOWARN mechanism 03-infeasible_guard_nowarn.vimp exercises with a
 // real condition instead of the literal sentinel.
 void main() {
+  int32 x;
   x := 5;
   if (x < 0) {
     __voblint_check(false) // NOWARN (unreachable)

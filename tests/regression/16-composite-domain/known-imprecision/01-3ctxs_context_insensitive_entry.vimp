@@ -23,6 +23,7 @@ void f(j) {
   return j + 1
 }
 void main() {
+  int32 i, t;
   i := 0;
   while (i < 10) {
     t := f(i);

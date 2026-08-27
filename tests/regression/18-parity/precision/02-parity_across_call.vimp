@@ -10,6 +10,7 @@
 // callee's parity result.
 void double(p) { return 2 * p }
 void main() {
+  int32 a, b, n;
   n := __voblint_nondet_int();
   a := double(n);
   b := double(a);

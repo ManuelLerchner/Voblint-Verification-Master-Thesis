@@ -12,6 +12,7 @@
 // congruence fact comes from arithmetic (Int_Arithmetic.thy's Times case)
 // rather than from a solved linear equation.
 void main() {
+  int32 x, y, z;
   y := x * 2;
   if (0 < y) {
     if (y < 3) {

@@ -18,6 +18,7 @@ global int8 c8;
 global uint8 u8;
 global uint32 u32;
 void main() {
+  int32 a, b, c;
   c8 := 127;
   a := 0;
   if (127 < c8 + 1) {

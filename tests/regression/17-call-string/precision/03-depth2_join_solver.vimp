@@ -6,8 +6,9 @@
 // generalization). This routing depth crosses no unbounded loop, so join
 // needs no widening to terminate and reproduces Warrow's exact k=2 result.
 void g(p) { return p + p }
-void f(p) { t := g(p); return t }
+void f(p) { int32 t; t := g(p); return t }
 void main() {
+  int32 x, y;
   x := f(3);
   y := f(10);
   __voblint_check(x == 6); // PROVED

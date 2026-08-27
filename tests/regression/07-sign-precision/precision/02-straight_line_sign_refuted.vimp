@@ -6,6 +6,7 @@
 // a regression that collapses every comparison to PROVED go unnoticed.
 
 void main() {
+  int32 x;
   x := 0 - 5;
   __voblint_check(0 < x) // REFUTED
 }

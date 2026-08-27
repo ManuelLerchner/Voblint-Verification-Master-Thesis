@@ -9,21 +9,25 @@
 // (h(300), 301 levels) takes about 1 s. Under --context none the same
 // program is UNKNOWN throughout; known-imprecision/02 names the mechanism.
 void h(i) {
+  int32 r;
   if (i == 0) { return 3 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 13
 }
 void g(i) {
+  int32 r;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 12
 }
 void f(i) {
+  int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := g(i - 1); return r } else { skip };
   return 11
 }
 void main() {
+  int32 a, b, c, d, e, q, s, t, u, v, w, x, y, z;
   a := f(10); __voblint_check(a == 3);  // PROVED
   b := f(8); __voblint_check(b == 3);   // PROVED
   c := h(5); __voblint_check(c == 3);   // PROVED

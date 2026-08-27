@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A local shares its
+// procedure's scope with that procedure's formals, so a local may not
+// repeat one of them -- the name would carry two declarations, at two
+// kinds, in one scope.
+void f(n) {
+  int32 n;
+  return n
+}
+void main() {
+  f(1)
+}

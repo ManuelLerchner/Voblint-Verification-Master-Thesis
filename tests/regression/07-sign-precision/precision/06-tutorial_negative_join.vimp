@@ -8,6 +8,7 @@
 // NonPositive, enough for y < 1 but not for y < 0, which the nondet branch
 // genuinely leaves open.
 void main() {
+  int32 u, x, y;
   u := __voblint_nondet_int();
   if (u) {
     x := -5

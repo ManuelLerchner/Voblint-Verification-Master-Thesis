@@ -34,10 +34,14 @@
 # present, with no formals" a proof obligation on a given `imp_prog` value;
 # the parser's checks are a UX convenience on top, not what discharges it.
 #
-# Old semantic validation that has no structural encoding (duplicate
-# procedure/global/formal names, global/formal collisions, main-formals,
-# main-return) is not preserved: it was never part of the grammar in the
-# first place, and this investigation's scope note says not to keep it.
+# Semantic validation that has no structural encoding (duplicate
+# procedure/global/formal/local names, global/formal and global/local and
+# formal/local collisions, main-formals) is not expressible here, so it lives
+# in each target's own lowering step rather than in this file: the Menhir
+# generator emits it as checks in the `program` action, VIMP_Notation.thy's
+# prog_tr performs the same checks in the same order. main-return is the one
+# rule the Menhir side leaves to `wf_program_compile_input_exec` instead of
+# diagnosing at parse time.
 #
 # Every production's AST-construction is exactly one of three shapes:
 #
@@ -260,9 +264,18 @@ productions:
   # line optionally carries one kind applying to every name it lists. --
   - {name: globals_decl, result: globals, rhs: [GLOBAL, ids, SEMI], special: globals_untyped}
   - {name: globals_decl_typed, result: globals, rhs: [GLOBAL, ty, ids, SEMI], special: globals_typed}
+  # -- functions. A procedure declared `void` yields no value; one declared
+  # with a kind returns that kind, and its `return e` converts to it, exactly
+  # as C's return statement converts to the function's return type. The two
+  # are separate productions rather than an optional `ty` because Isabelle
+  # mixfix has no epsilon (the same constraint this header records for
+  # zero-argument calls and for optional formal annotations). --
   - {name: function_decl, result: function,
      rhs: [VOID, IDENT, LPAREN, formals, RPAREN, LBRACE, locals_star, stmts_opt, RBRACE],
-     lower: {tuple: [1, 3, 6, 7]}}   # (name, formals, locals, body) -- "main" is just an IDENT here, same as every other name
+     special: function_void}    # (name, formals, locals, body, None)
+  - {name: function_decl_typed, result: function,
+     rhs: [ty, IDENT, LPAREN, formals, RPAREN, LBRACE, locals_star, stmts_opt, RBRACE],
+     special: function_typed}   # (name, formals, locals, body, Some kind)
 
   # Every function parses uniformly via function_decl*; "main" is picked out
   # of the resulting list by string equality during lowering (matching both

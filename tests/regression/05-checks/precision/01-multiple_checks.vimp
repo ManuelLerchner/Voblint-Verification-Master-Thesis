@@ -9,6 +9,7 @@
 // would be unsound. The standalone version is
 // 01-random/soundness/01-unknown_after_random.vimp.
 void main() {
+  int32 x, y;
   x := 5;
   __voblint_check(0 < x); // PROVED
   x := 0 - 1;

@@ -2,6 +2,7 @@
 // min/max special calls on concrete constants: min(3, -5) is negative,
 // max(3, -5) is positive -- exact for concrete constant intervals.
 void main() {
+  int32 w, x, y, z;
   x := 3;
   y := 0 - 5;
   z := min(x, y);

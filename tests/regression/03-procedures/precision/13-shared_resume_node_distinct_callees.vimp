@@ -14,6 +14,7 @@ void g(n) {
   return n + 1
 }
 void main() {
+  int32 a, x;
   x := 5;
   if (x < 2) {
     a := f(1)

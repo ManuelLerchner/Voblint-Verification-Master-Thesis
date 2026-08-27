@@ -16,6 +16,7 @@
 // The then-branch is the sequential "And _ _ True" case, where both conjuncts
 // are narrowed in turn and no join is involved.
 void main() {
+  int32 x, y;
   x := 5;
   y := __voblint_nondet_int();
   if ((x < 0) == 0 && 0 < y) {

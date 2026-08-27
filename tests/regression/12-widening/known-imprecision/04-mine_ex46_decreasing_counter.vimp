@@ -15,6 +15,7 @@
 // The same program under --analysis int (16-composite-domain/precision/
 // 04-mine_ex46_sign_zero_threshold.vimp) proves all three.
 void main() {
+  int32 x;
   x := 40;
   while (!(x == 0)) {
     __voblint_check(!(40 < x)); // PROVED

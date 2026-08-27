@@ -5,6 +5,7 @@
 // rather than leaving REFUTED coverage to a single case buried inside a
 // mixed-verdict file.
 void main() {
+  int32 x;
   x := 0 - 5;
   __voblint_check(0 < x) // REFUTED
 }

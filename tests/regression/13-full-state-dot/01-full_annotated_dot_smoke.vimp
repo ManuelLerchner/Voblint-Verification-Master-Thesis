@@ -52,6 +52,7 @@
 // EXPECT-GRAPH-END
 
 void main() {
+  int32 x;
   x := 0;
   while (x < 10) {
     x := x + 1

@@ -17,6 +17,7 @@
 // 03-procedures/precision/05-dead_branch_no_bottom_leak.vimp for the flat,
 // non-recursive, non-context minimal case of the same dead-branch pattern.
 void factorial(n) {
+  int32 r;
   __voblint_check(0 < n); // PROVED
 
   if (n < 2) {
@@ -29,6 +30,7 @@ void factorial(n) {
 }
 
 void main() {
+  int32 a, b;
   a := factorial(3);
   b := factorial(4);
 

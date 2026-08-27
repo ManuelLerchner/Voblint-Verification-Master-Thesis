@@ -13,16 +13,19 @@
 // --context call-string --context-depth 5 proves only f(0) and g(0);
 // --context none proves nothing.
 void g(i) {
+  int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := f(i + 1); return r } else { skip };
   return 11
 }
 void f(i) {
+  int32 r1, r2;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r1 := g(i - 2); r2 := g(i - 3); return r1 + r2 } else { skip };
   return 12
 }
 void main() {
+  int32 a, b, c, d, e, h, k, l, m, n, o, p;
   a := f(0); __voblint_check(a == 2);      // PROVED
   b := f(7); __voblint_check(b == 101);    // PROVED
   c := f(9); __voblint_check(c == 265);    // PROVED

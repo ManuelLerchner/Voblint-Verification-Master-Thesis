@@ -981,7 +981,7 @@ proof (induction e arbitrary: ik)
   then have "x \<noteq> ret_var" by simp
   then have "s x \<in> ik_range (\<Gamma> x)" using V.prems(1) by (simp add: rstyped_def)
   then show ?case by (simp add: ik_norm_id)
-qed (simp_all add: Let_def)
+qed (simp_all add: Let_def tcast_to_def ik_norm_idem)
 
 lemma teval_elaborate_syn_rstyped:
   assumes "rstyped \<Gamma> s" and "\<not> exp_mentions ret_var e"

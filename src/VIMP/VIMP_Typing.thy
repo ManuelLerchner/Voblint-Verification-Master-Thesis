@@ -102,8 +102,29 @@ fun kjoin :: "ikind option \<Rightarrow> ikind option \<Rightarrow> ikind option
 lemma kjoin_commute: "kjoin a b = kjoin b a"
   by (cases a; cases b) (simp_all add: usual_kind_commute)
 
+text \<open>
+  An unsuffixed decimal constant takes the first of \<open>int\<close>, \<open>long int\<close>,
+  \<open>long long int\<close> that can represent it (ISO/IEC 9899 6.4.4.1p5) -- never an
+  unsigned type, and never a type too narrow for its own value. VIMP collapses
+  the three signed candidates onto \<^const>\<open>I32\<close> and \<^const>\<open>I64\<close>.
+
+  Giving a literal no kind at all, and letting \<open>opk\<close> default it to
+  \<^const>\<open>I32\<close>, silently truncated every constant outside the 32-bit range:
+  \<open>4294967296\<close> elaborated as \<open>TN I32 4294967296\<close> and \<^const>\<open>ik_norm\<close>
+  turned it into \<open>0\<close> before it reached its destination.
+
+  A constant that fits \<^const>\<open>I32\<close> still types as \<^const>\<open>I32\<close>, which is what
+  it defaulted to before, so nothing that already fitted changes kind.
+\<close>
+
+definition ik_of_lit :: "int \<Rightarrow> ikind" where
+  "ik_of_lit n = (if n \<in> ik_range I32 then I32 else I64)"
+
+lemma ik_of_lit_small [simp]: "n \<in> ik_range I32 \<Longrightarrow> ik_of_lit n = I32"
+  by (simp add: ik_of_lit_def)
+
 fun esyn :: "tyenv \<Rightarrow> exp \<Rightarrow> ikind option" where
-  "esyn \<Gamma> (N n) = None"
+  "esyn \<Gamma> (N n) = Some (ik_of_lit n)"
 | "esyn \<Gamma> (V x) = Some (ik_promote (\<Gamma> x))"
 | "esyn \<Gamma> (Plus e1 e2) = kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)"
 | "esyn \<Gamma> (Minus e1 e2) = kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2)"
@@ -166,12 +187,28 @@ text \<open>
   kind's range, with no typing premise.
 \<close>
 
+text \<open>
+  A binary operation evaluates at the kind its operands agree on under the
+  usual arithmetic conversions, wraps there, and only then converts to the
+  kind its context asked for. Evaluating it directly at the context's kind
+  would use the wrong width: in \<open>4294967295 < u32 + 1\<close> the comparison agrees
+  on 64 bits, but \<open>u32 + 1\<close> is an unsigned 32-bit addition that wraps to zero
+  before the comparison sees it. \<open>Less\<close> and \<open>Eq\<close> already derive their operand
+  kind this way.
+\<close>
+
 fun taval :: "tyenv \<Rightarrow> ikind \<Rightarrow> exp \<Rightarrow> store \<Rightarrow> int" where
   "taval \<Gamma> ik (N n) s = ik_norm ik n"
 | "taval \<Gamma> ik (V x) s = ik_norm ik (s x)"
-| "taval \<Gamma> ik (Plus e1 e2) s = ik_norm ik (taval \<Gamma> ik e1 s + taval \<Gamma> ik e2 s)"
-| "taval \<Gamma> ik (Minus e1 e2) s = ik_norm ik (taval \<Gamma> ik e1 s - taval \<Gamma> ik e2 s)"
-| "taval \<Gamma> ik (Times e1 e2) s = ik_norm ik (taval \<Gamma> ik e1 s * taval \<Gamma> ik e2 s)"
+| "taval \<Gamma> ik (Plus e1 e2) s =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
+      in ik_norm ik (ik_norm k (taval \<Gamma> k e1 s + taval \<Gamma> k e2 s)))"
+| "taval \<Gamma> ik (Minus e1 e2) s =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
+      in ik_norm ik (ik_norm k (taval \<Gamma> k e1 s - taval \<Gamma> k e2 s)))"
+| "taval \<Gamma> ik (Times e1 e2) s =
+     (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
+      in ik_norm ik (ik_norm k (taval \<Gamma> k e1 s * taval \<Gamma> k e2 s)))"
 | "taval \<Gamma> ik (Less e1 e2) s =
      (let k = opk (kjoin (esyn \<Gamma> e1) (esyn \<Gamma> e2))
       in if taval \<Gamma> k e1 s < taval \<Gamma> k e2 s then 1 else 0)"

@@ -12,9 +12,11 @@
 // 21-context-sensitivity/01-unbounded_context_chain_diverges.vimp pins
 // through --timeout.
 void f(x) {
+  int32 r;
   if (!(x == 0)) { r := f(x + 1); return r } else { return x }
 }
 void main() {
+  int32 a;
   a := f(1);
   __voblint_check(a == 0) // PROVED
 }

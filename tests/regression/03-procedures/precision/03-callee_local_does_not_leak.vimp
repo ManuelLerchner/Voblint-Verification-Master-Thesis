@@ -10,6 +10,7 @@ void bump(x) {
   return x
 }
 void main() {
+  int32 r, x;
   x := 1;
   r := bump(5);
   __voblint_check(x == 1); // PROVED

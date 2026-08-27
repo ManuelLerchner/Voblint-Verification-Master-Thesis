@@ -6,6 +6,7 @@
 // procedure. Rejected here by the CLI's well-formedness gate rather than
 // reaching the analyzer at all.
 void main() {
+  int32 x, z;
   x := 3;
   z := min(x);
   __voblint_check(0 < z)

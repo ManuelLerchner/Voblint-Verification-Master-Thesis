@@ -17,6 +17,7 @@ void bump(n) {
   return g
 }
 void main() {
+  int32 a, b, c;
   g := 10;
   a := bump(5);
   b := bump(4);

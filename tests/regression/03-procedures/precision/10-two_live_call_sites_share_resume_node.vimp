@@ -18,6 +18,7 @@ void f(n) {
   return n
 }
 void main() {
+  int32 a, x, y;
   x := __voblint_nondet_int();
   y := 7;
   if (x < 2) {

@@ -16,3 +16,4 @@ session Voblint_VIMP in "." = HOL +
     VIMP_Source_Print
     VIMP_Notation
     VIMP_Grammar_Generated
+    VIMP_Decls

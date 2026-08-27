@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. One procedure may not
+// declare the same local twice, whether or not the two lines agree on the
+// kind.
+void main() {
+  int32 a;
+  int32 a;
+  a := 1
+}

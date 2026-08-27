@@ -1,0 +1,10 @@
+// PARAM: --analysis interval
+// No verdict annotations: a parse-rejection case. A procedure may not list
+// the same formal twice; the second binding would shadow the first and the
+// corresponding actual would be unreachable.
+void f(n, n) {
+  return n
+}
+void main() {
+  f(1, 2)
+}

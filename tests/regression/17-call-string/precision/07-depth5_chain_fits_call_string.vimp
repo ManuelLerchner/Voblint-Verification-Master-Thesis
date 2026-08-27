@@ -13,39 +13,47 @@
 // (see precision/08); at depth 5 it fits and is proved.
 // --context entry-state proves all of these as well.
 void a(i) {
+  int32 r;
   if (i == 0) { return 11 } else { skip };
   if (0 < i) { r := a(i - 1); return r } else { skip };
   return 1
 }
 void b(i) {
+  int32 r;
   if (i == 0) { return 12 } else { skip };
   if (0 < i) { r := a(i - 1); return r } else { skip };
   return 2
 }
 void c(i) {
+  int32 r;
   if (i == 0) { return 13 } else { skip };
   if (0 < i) { r := b(i - 1); return r } else { skip };
   return 3
 }
 void f(i) {
+  int32 r;
   if (0 < i) { r := e(i - 1); return r } else { skip };
   return 2
 }
 void e(i) {
+  int32 r;
   r := f(i - 1);
   return r + 1
 }
 void h(i) {
+  int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 0
 }
 void k(i) {
+  int32 r;
   if (i == 2) { r := h(i - 1); return r + 1 } else { skip };
   if (0 < i) { r := k(i - 1); return r } else { skip };
   return 1
 }
 void main() {
+  int32 x0, x1, x2, x3, x4, x5, x6, y0, y1, z0;
   x0 := a(0); __voblint_check(x0 == 11); // PROVED
   x1 := a(1); __voblint_check(x1 == 11); // PROVED
   x2 := a(4); __voblint_check(x2 == 11); // PROVED

@@ -12,6 +12,7 @@
 // assignments because a special call cannot nest inside another call.
 // Solver-invariant across join, per-origin, warrow, warrow-per-origin.
 void main() {
+  int32 a, t, u;
   u := __voblint_nondet_int();
   t := min(9, u);
   a := max(-9, t);

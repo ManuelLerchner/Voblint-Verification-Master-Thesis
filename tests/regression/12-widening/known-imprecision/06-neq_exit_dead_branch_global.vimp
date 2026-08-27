@@ -14,6 +14,7 @@
 // per-origin, warrow, warrow-per-origin.
 global g;
 void main() {
+  int32 i;
   i := 0;
   g := 0;
   while (!(i == 10)) {

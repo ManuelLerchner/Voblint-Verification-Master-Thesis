@@ -73,6 +73,7 @@ void idf(n) {
   return n + 1
 }
 void main() {
+  int32 a, b;
   a := idf(5);
   b := idf(5);
   __voblint_check(a == 6); // PROVED

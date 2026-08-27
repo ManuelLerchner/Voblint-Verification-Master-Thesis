@@ -14,6 +14,7 @@ void p(a) {
   __voblint_check(0 < a) // UNKNOWN
 }
 void main() {
+  int32 x;
   x := __voblint_nondet_int();
   p(x)
 }

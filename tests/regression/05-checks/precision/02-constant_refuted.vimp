@@ -4,6 +4,7 @@
 // code, so the check actually executes and its condition is decidably
 // false every time.
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(false) // REFUTED
 }

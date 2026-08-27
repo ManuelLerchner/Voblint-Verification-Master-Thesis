@@ -3,6 +3,7 @@
 // the other side, and symmetrically for sign_max positive -- exact here
 // even at Sign's coarser granularity.
 void main() {
+  int32 w, x, y, z;
   x := 3;
   y := 0 - 5;
   z := min(x, y);

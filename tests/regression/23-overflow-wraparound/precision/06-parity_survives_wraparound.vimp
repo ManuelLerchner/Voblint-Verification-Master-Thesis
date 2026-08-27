@@ -12,6 +12,7 @@
 // hold the same value.
 global uint8 even8;
 void main() {
+  int32 n, odd;
   n := __voblint_nondet_int();
   even8 := 2 * n;
   odd := 2 * n + 1;

@@ -62,6 +62,7 @@
 // EXPECT-GRAPH-END
 
 void main() {
+  int32 x;
   x := 5;
   if (x < 2) {
     __voblint_check(x == 99) // NOWARN (unreachable)

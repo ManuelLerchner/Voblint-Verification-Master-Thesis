@@ -8,6 +8,7 @@
 // (it only matches the one canonical representative), silently leaving a
 // dead check visible with a vacuous PROVED verdict.
 void main() {
+  int32 x;
   x := 5;
   if (x < 0) {
     __voblint_check(x == 5) // NOWARN

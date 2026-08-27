@@ -11,6 +11,7 @@
 // interprocedural machinery in play; this is the isolated version.
 
 void main() {
+  int32 x, y;
   x := 5;
   y := 1;
   __voblint_check(0 < x) // PROVED

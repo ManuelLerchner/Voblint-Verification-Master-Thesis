@@ -9,6 +9,7 @@
 // an exact guard (see infeasible_guard_nowarn.vimp, where a known-exact x
 // makes one branch provably dead).
 void main() {
+  int32 x;
   x := __voblint_nondet_int();
   __voblint_check(true); // reachable
   if (x < 10) {

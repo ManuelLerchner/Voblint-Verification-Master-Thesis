@@ -11,6 +11,7 @@
 // Same for b. Solver-invariant across join, per-origin, warrow,
 // warrow-per-origin.
 void main() {
+  int32 a, b;
   a := 0;
   while (!(a == 3)) {
     __voblint_check(a < 3); // UNKNOWN

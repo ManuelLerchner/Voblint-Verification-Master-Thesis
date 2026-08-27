@@ -8,6 +8,7 @@
 // refines i directly, and narrowing recovers the exact exit value the uint8
 // version loses.
 void main() {
+  int32 i;
   i := 0;
   while (i < 200) {
     i := i + 1

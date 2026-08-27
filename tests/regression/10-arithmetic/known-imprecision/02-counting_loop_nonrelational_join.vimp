@@ -11,6 +11,7 @@
 // [8,42], and N == 8 is UNKNOWN for the same reason. An octagon or a
 // polyhedron would recover X = N; int agrees with interval.
 void main() {
+  int32 N, X;
   X := 0;
   N := __voblint_nondet_int();
   if (N < 0) {

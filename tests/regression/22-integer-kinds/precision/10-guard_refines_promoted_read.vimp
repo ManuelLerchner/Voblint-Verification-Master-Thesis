@@ -10,6 +10,7 @@
 // refines normally there.
 global uint8 b;
 void main() {
+  int32 t;
   t := __voblint_nondet_int();
   b := t;
   if (b < 10) {

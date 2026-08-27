@@ -11,6 +11,7 @@
 // -- so the three results are fixed and the verdicts are re-derived
 // accordingly rather than carried over.
 void main() {
+  int32 m, r, x;
   x := 2147483647;
   x := x + 1;
   __voblint_check(x == -2147483648); // PROVED

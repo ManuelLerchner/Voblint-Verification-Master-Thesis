@@ -14,6 +14,7 @@ void take8(int8 p) {
   return p
 }
 void main() {
+  int32 r;
   r := take8(200);
   __voblint_check(r == -56) // PROVED
 }

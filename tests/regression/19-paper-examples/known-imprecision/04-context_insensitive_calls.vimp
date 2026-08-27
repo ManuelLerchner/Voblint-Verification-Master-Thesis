@@ -64,6 +64,7 @@
 
 void f(p) { return p + p }
 void main() {
+  int32 x, y;
   x := f(3);
   y := f(10);
   __voblint_check(x == 6);  // UNKNOWN

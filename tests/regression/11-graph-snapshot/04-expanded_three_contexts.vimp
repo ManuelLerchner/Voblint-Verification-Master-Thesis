@@ -155,10 +155,12 @@
 global g;
 
 void bump(n) {
+  int32 m;
   m := n + 1;
   return m
 }
 void main() {
+  int32 a, b, c;
   g := 19;
   a := bump(5);
   b := bump(4);

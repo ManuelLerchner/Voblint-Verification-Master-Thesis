@@ -13,6 +13,7 @@
 // converted into.
 global uint8 ub;
 void main() {
+  int32 t;
   t := __voblint_nondet_int();
   ub := t;
   __voblint_check(!(ub < 0)); // PROVED

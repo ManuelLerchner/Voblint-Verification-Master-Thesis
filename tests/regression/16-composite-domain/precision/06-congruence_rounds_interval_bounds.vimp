@@ -14,6 +14,7 @@
 // branch is on a fresh variable so that r itself is not refined by the
 // condition; only its two constant assignments reach the join.
 void main() {
+  int32 c, k, l, m, r;
   c := __voblint_nondet_int();
   if (c == 0) {
     r := 2

@@ -8,6 +8,7 @@ void foo() {
   __voblint_check(true) // NOWARN (unreachable)
 }
 void main() {
+  int32 x;
   x := 0;
   __voblint_check(x == 0) // PROVED
 }

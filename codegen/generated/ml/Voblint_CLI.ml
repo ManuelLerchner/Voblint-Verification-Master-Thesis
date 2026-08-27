@@ -223,7 +223,9 @@ module Core : sig
   val map_option : ('a -> 'b) -> 'a option -> 'b option
   val mk_program_typed :
     (string * unit proc_decl_ext) list ->
-      com -> string list -> typed_var list -> unit imp_prog_ext
+      com ->
+        string list ->
+          typed_var list -> (string * typed_var) list -> unit imp_prog_ext
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
@@ -267,6 +269,7 @@ module Core : sig
   val char_0x6B : char
   val char_0x78 : char
   val bot_fun : 'b bot -> 'a -> 'b
+  val proc_decl_of_typed : string list -> ikind -> com -> unit proc_decl_ext
   val lookup_context :
     'a equal -> ('a, 'b) analysis_result -> cfg_node -> 'a -> 'b point_state
   val int_classify_check : texp -> (string -> unit int_dom_ext) -> check_result
@@ -4137,7 +4140,8 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 
 type 'a imp_prog_ext =
   Imp_prog_ext of
-    (string * unit proc_decl_ext) list * string list * typed_var list * 'a;;
+    (string * unit proc_decl_ext) list * string list * typed_var list *
+      (string * typed_var) list * 'a;;
 
 type analysis_edge_kind = IntraEdge of edge_action |
   EnterEdge of char list * call_action |
@@ -4667,6 +4671,10 @@ let rec branch_ivl_st
 let ivl_ops : (ivl, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_ivl_t, branch_ivl_st, ivl_top, ());;
 
+let rec ik_of_lit
+  n = (if less_eq_int (ik_min I32) n && less_eq_int n (ik_max I32) then I32
+        else I64);;
+
 let rec ik_promote
   ik = (if less_nat (ik_bits ik) (ik_bits I32) then I32 else ik);;
 
@@ -4697,7 +4705,7 @@ let rec kjoin x0 r = match x0, r with None, r -> r
                 | Some a, Some b -> Some (usual_kind a b);;
 
 let rec esyn
-  gamma x1 = match gamma, x1 with gamma, N n -> None
+  gamma x1 = match gamma, x1 with gamma, N n -> Some (ik_of_lit n)
     | gamma, V x -> Some (ik_promote (gamma x))
     | gamma, Plus (e1, e2) -> kjoin (esyn gamma e1) (esyn gamma e2)
     | gamma, Minus (e1, e2) -> kjoin (esyn gamma e1) (esyn gamma e2)
@@ -5912,8 +5920,9 @@ let cinit_sign_st : sign resolved_st_q = Abs_resolved_st (STop, (SZero, []));;
 let prog_main_name : string = "main";;
 
 let rec proc_rep
-  (Imp_prog_ext (proc_rep, declared_global_vars, declared_kinds, more)) =
-    proc_rep;;
+  (Imp_prog_ext
+    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
+    = proc_rep;;
 
 let rec prog_table p = map_of equal_literal (proc_rep p);;
 
@@ -6071,28 +6080,33 @@ let rec sign_tf_st_for
           (aval_sign_t a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
+let rec tcast_to ik k t = (if equal_ikinda ik k then t else TCast (ik, t));;
+
 let rec make
-  proc_rep declared_global_vars declared_kinds =
-    Imp_prog_ext (proc_rep, declared_global_vars, declared_kinds, ());;
+  proc_rep declared_global_vars declared_kinds declared_locals =
+    Imp_prog_ext
+      (proc_rep, declared_global_vars, declared_kinds, declared_locals, ());;
 
 let rec mk_program_typed
-  ps m gv ks = make ((prog_main_name, proc_decl_of [] m) :: ps) gv ks;;
+  ps m gv ks ls = make ((prog_main_name, proc_decl_of [] m) :: ps) gv ks ls;;
 
-let rec mk_program ps m gv = mk_program_typed ps m gv [];;
+let rec mk_program ps m gv = mk_program_typed ps m gv [] [];;
 
 let rec prog_procs
   p = filtera (fun n -> not ((n : string) = prog_main_name))
         (map fst (proc_rep p));;
 
 let rec declared_kinds
-  (Imp_prog_ext (proc_rep, declared_global_vars, declared_kinds, more)) =
-    declared_kinds;;
+  (Imp_prog_ext
+    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
+    = declared_kinds;;
 
 let rec prog_tyenv p = tv_env (declared_kinds p);;
 
 let rec declared_global_vars
-  (Imp_prog_ext (proc_rep, declared_global_vars, declared_kinds, more)) =
-    declared_global_vars;;
+  (Imp_prog_ext
+    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
+    = declared_global_vars;;
 
 let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
@@ -6105,11 +6119,16 @@ let rec elaborate
         (if equal_ikinda ik (gamma x) then TVar (gamma x, x)
           else TCast (ik, TVar (gamma x, x)))
     | gamma, ik, Plus (e1, e2) ->
-        TPlus (ik, elaborate gamma ik e1, elaborate gamma ik e2)
+        (let k = opk (kjoin (esyn gamma e1) (esyn gamma e2)) in
+          tcast_to ik k (TPlus (k, elaborate gamma k e1, elaborate gamma k e2)))
     | gamma, ik, Minus (e1, e2) ->
-        TMinus (ik, elaborate gamma ik e1, elaborate gamma ik e2)
+        (let k = opk (kjoin (esyn gamma e1) (esyn gamma e2)) in
+          tcast_to ik k
+            (TMinus (k, elaborate gamma k e1, elaborate gamma k e2)))
     | gamma, ik, Times (e1, e2) ->
-        TTimes (ik, elaborate gamma ik e1, elaborate gamma ik e2)
+        (let k = opk (kjoin (esyn gamma e1) (esyn gamma e2)) in
+          tcast_to ik k
+            (TTimes (k, elaborate gamma k e1, elaborate gamma k e2)))
     | gamma, ik, Less (e1, e2) ->
         (let k = opk (kjoin (esyn gamma e1) (esyn gamma e2)) in
           TLess (elaborate gamma k e1, elaborate gamma k e2))
@@ -8733,6 +8752,8 @@ let rec rho (Ug_state_ext (rho, more)) = rho;;
 let rec storage_global
   p owner x =
     (match storage_of p owner x with LocalVar _ -> false | GlobalVar -> true);;
+
+let rec proc_decl_of_typed xs rk bdy = Proc_decl_ext (xs, bdy, Some rk, ());;
 
 let rec split_gv_nl_acc
   acc x1 = match acc, x1 with acc, [] -> [rev acc]

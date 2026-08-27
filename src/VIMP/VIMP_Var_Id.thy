@@ -140,4 +140,113 @@ definition ret_kind_of :: "decl_table \<Rightarrow> pname \<Rightarrow> ikind op
 lemma ret_kind_of_dom: "(ret_kind_of \<Delta> p \<noteq> None) = (ReturnId p \<in> dom \<Delta>)"
   unfolding ret_kind_of_def by (rule kind_of_var_dom)
 
+subsection \<open>Representing an identity as a name\<close>
+
+text \<open>
+  The identity is what the typed core reasons about; a \<^type>\<open>vname\<close> is how it
+  is stored. Every store, abstract state and solver unknown is keyed by
+  \<^type>\<open>vname\<close>, and an identity carries exactly a scope and a name, so it can
+  be injected into that key space instead of replacing it.
+
+  \<open>#\<close> is what makes the injection safe: the lexer's identifier class is
+  \<open>[a-zA-Z_][a-zA-Z_0-9]*\<close>, so no source program can write a name containing
+  one. The reserved return slot \<^const>\<open>ret_var\<close> already relies on that.
+  Globals keep their own name -- they are unique program-wide already -- so an
+  unscoped program is represented exactly as it is today.
+\<close>
+
+definition var_sep :: string where "var_sep = ''#''"
+
+fun var_id_name :: "var_id \<Rightarrow> vname" where
+    "var_id_name (GlobalId x) = x"
+  | "var_id_name (ScopedId p x) =
+       String.implode (String.explode p @ var_sep @ String.explode x)"
+  | "var_id_name (ReturnId p) =
+       String.implode (String.explode p @ var_sep @ var_sep @ ''ret'')"
+
+text \<open>
+  \<^const>\<open>var_id_name\<close> is injective on identities whose scope and name are
+  themselves separator-free, which is every identity a resolver builds from
+  source. \<open>ScopedId p x\<close> and \<open>ReturnId p\<close> stay apart because the return slot
+  doubles the separator and \<open>x\<close> cannot begin with one.
+\<close>
+
+definition sep_free_chars :: "string \<Rightarrow> bool" where
+  "sep_free_chars cs \<longleftrightarrow> CHR ''#'' \<notin> set cs"
+
+definition sep_free :: "vname \<Rightarrow> bool" where
+  "sep_free x \<longleftrightarrow> sep_free_chars (String.explode x)"
+
+definition var_id_sep_free :: "var_id \<Rightarrow> bool" where
+  "var_id_sep_free v \<longleftrightarrow>
+     (case v of GlobalId x \<Rightarrow> sep_free x
+      | ScopedId p x \<Rightarrow> sep_free p \<and> sep_free x
+      | ReturnId p \<Rightarrow> sep_free p)"
+
+text \<open>
+  Injectivity is established by a decoder rather than by comparing encodings:
+  a left inverse gives it immediately, and reporting needs the decoder anyway
+  to recover a display name from a stored key.
+\<close>
+
+definition not_sep :: "char \<Rightarrow> bool" where
+  "not_sep c \<longleftrightarrow> c \<noteq> CHR ''#''"
+
+text \<open>
+  \<^type>\<open>String.literal\<close> is a type of ASCII character lists, so re-encoding a
+  name's characters through \<^const>\<open>String.implode\<close> leaves them alone. Without
+  this the \<^const>\<open>String.ascii_of\<close> that \<^const>\<open>String.implode\<close> introduces
+  blocks every rewrite below.
+\<close>
+
+lemma map_ascii_of_explode [simp]:
+  "map String.ascii_of (String.explode s) = String.explode s"
+  by (metis String.explode_implode_eq String.implode_explode_eq)
+
+lemma takeWhile_not_sep_append:
+  "sep_free_chars cs \<Longrightarrow> takeWhile not_sep (cs @ CHR ''#'' # rest) = cs"
+  by (induct cs) (auto simp: sep_free_chars_def not_sep_def)
+
+lemma dropWhile_not_sep_append:
+  "sep_free_chars cs \<Longrightarrow> dropWhile not_sep (cs @ CHR ''#'' # rest) = CHR ''#'' # rest"
+  by (induct cs) (auto simp: sep_free_chars_def not_sep_def)
+
+fun decode_chars :: "string \<Rightarrow> var_id" where
+  "decode_chars cs =
+     (let owner = takeWhile not_sep cs; rest = dropWhile not_sep cs
+      in if rest = [] then GlobalId (String.implode cs)
+         else if tl rest = CHR ''#'' # ''ret'' then ReturnId (String.implode owner)
+         else ScopedId (String.implode owner) (String.implode (tl rest)))"
+
+definition name_var_id :: "vname \<Rightarrow> var_id" where
+  "name_var_id x = decode_chars (String.explode x)"
+
+lemma name_var_id_var_id_name:
+  assumes "var_id_sep_free v"
+  shows "name_var_id (var_id_name v) = v"
+  using assms
+proof (cases v)
+  case (GlobalId x)
+  then show ?thesis using assms
+    by (auto simp: Let_def name_var_id_def var_id_sep_free_def sep_free_def sep_free_chars_def
+                   not_sep_def takeWhile_eq_all_conv String.implode_explode_eq)
+next
+  case (ScopedId p x)
+  then show ?thesis using assms
+    by (auto simp: Let_def name_var_id_def var_sep_def var_id_sep_free_def sep_free_def
+                   sep_free_chars_def takeWhile_not_sep_append dropWhile_not_sep_append
+                   String.implode_explode_eq)
+next
+  case (ReturnId p)
+  then show ?thesis using assms
+    by (auto simp: Let_def name_var_id_def var_sep_def var_id_sep_free_def sep_free_def
+                   sep_free_chars_def takeWhile_not_sep_append dropWhile_not_sep_append
+                   String.implode_explode_eq)
+qed
+
+lemma var_id_name_inj:
+  assumes "var_id_sep_free v" "var_id_sep_free w" "var_id_name v = var_id_name w"
+  shows "v = w"
+  by (metis assms name_var_id_var_id_name)
+
 end

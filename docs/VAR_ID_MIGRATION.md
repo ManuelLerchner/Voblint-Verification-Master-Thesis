@@ -206,6 +206,129 @@ old `tyenv`, no parser helper constructs a `tprog` directly, resolution errors
 carry procedure, name and source location, and the ambiguous constructors are
 confined to tests or deleted.
 
+## Status
+
+Landed and green under `isabelle build Voblint_VIMP`:
+
+- `VIMP_Var_Id.thy` -- `var_id` (`GlobalId` / `ScopedId` / `ReturnId`), `var_info`,
+  `decl_table`, partial `kind_of_var`, `origin_fits`, `wf_decls`, `ret_kind_of`.
+- `imp_prog` carries `declared_locals :: (pname * typed_var) list`;
+  `mk_program_typed` takes it as a fifth argument.
+- Procedure-local declarations parse on both frontends. `grammar/vimp.yaml`
+  gained `local_decl` and a `locals_star` slot in `function_decl`; the Menhir
+  generator realizes them with zero grammar conflicts, and the hand-written
+  `program { ... }` notation realizes them as eight keyword-initial productions
+  (see below). The CLI parses and analyses a declaration-carrying program end
+  to end.
+- `VIMP_Decls.thy` -- `prog_decls :: imp_prog => decl_table` over globals,
+  formals and locals, with `wf_decls (prog_decls p)` proved.
+
+The payoff is witnessed, not asserted:
+
+```isabelle
+kind_of_var (prog_decls two_kinds_prog) (ScopedId (STR ''f'') (STR ''acc'')) = Some U8
+kind_of_var (prog_decls two_kinds_prog) (ScopedId (STR ''g'') (STR ''acc'')) = Some I64
+prog_tyenv two_kinds_prog (STR ''acc'') = I32
+```
+
+Two procedures bind `acc` at different kinds and each identity answers with its
+own declaration, while the flat name-keyed environment cannot tell them apart.
+
+Declarations are recorded but not yet consumed: the analysis still reads kinds
+out of `prog_tyenv`, so adding a declaration changes no verdict. That is what
+makes the corpus migration safe to land before enforcement.
+
+### Isabelle needs one production per kind keyword
+
+The canonical grammar has a single `local_decl: ty ids SEMI`. Menhir realizes
+it directly -- one token of lookahead on the kind keyword settles where a
+declaration sequence ends. Isabelle's parser does not: a production whose
+template begins with a nonterminal leaves it unable to separate the declaration
+prologue from the statement list, and every such program failed to parse.
+`_gdecl` escapes this only because `global` marks each of its lines. The
+notation therefore declares `_ldecl_int8` ... `_ldecl_uint64`, eight
+keyword-initial productions with identical surface syntax, each mapping back
+onto the generated `_ty_<k>` so the kind names stay listed once. This is a
+target-specific realization of one canonical production, not a second grammar.
+
+### Known gap: the source printer drops kind annotations
+
+`pretty_string_of_program` emits `global g1, g2;` from its globals argument, so
+globals do survive a round trip -- but it prints them untyped, and the parser
+maps an untyped global to no kind at all, so nothing reaches `declared_kinds`.
+Locals are not printed either. The printed form is therefore kind-erased: it
+re-parses into a program whose every variable has the default kind.
+
+The property suite covers declaration-carrying programs for parse acceptance
+only, not for print round-trip, for exactly this reason.
+
+### Representing an identity as a name
+
+Parameterizing the AST over its variable type -- `'v exp`, `'v com`, `'v texp`
+-- would touch roughly 676 type positions and every store, abstract state and
+solver unknown. It is not necessary. A `var_id` carries exactly a scope and a
+name, so it injects into the existing `vname` key space:
+
+```text
+GlobalId x    ->  x
+ScopedId p x  ->  p # x
+ReturnId p    ->  p # # ret
+```
+
+`#` is what makes this safe: the lexer's identifier class is
+`[a-zA-Z_][a-zA-Z_0-9]*`, so no source program can write a name containing one.
+`ret_var = STR ''#ret''` already relies on that, so this is the codebase's own
+idiom rather than a new convention.
+
+The injection is proved invertible -- `name_var_id (var_id_name v) = v` for
+separator-free identities, hence `var_id_name_inj`. Identity remains the
+specification; `vname` remains the representation. Stores, abstract states,
+`pstep` and every existing signature are untouched.
+
+This matters because the cheaper alternative does not work. Compilation is
+per-procedure (`compile_proc Gamma Pi p decl n`), so a per-procedure `tyenv`
+would scope the compiled side correctly -- but `pstep Gamma gs Pi` fixes one
+environment for the whole relation and its configuration carries no procedure
+identity, so the source semantics cannot resolve a name per procedure. `csim`
+would then relate two semantics that disagree. Resolution has to reach the
+commands themselves, which the name injection achieves without changing their
+type.
+
+## Declarations are now explicit corpus-wide
+
+Every declaration in `tests/regression/` carries a kind:
+
+| Class | Added | Was |
+| --- | --- | --- |
+| Locals | 404 | implicit, `I32` by default |
+| Formals | 131 | 131 bare, 1 annotated |
+| Globals | 30 | 30 bare, 36 annotated |
+| Return types | 113 | every procedure spelled `void` |
+
+Each annotation names the kind the declaration already resolved to, so the
+migration is semantically inert: the corpus stayed at 167 passed / 18 failed
+with a byte-identical failing set, lint clean over 185 fixtures, property
+suite green. The transform is idempotent -- running it twice changes nothing,
+which is the check the first locals pass failed, leaving five fixtures with
+doubled prologues that a later parser check caught.
+
+Ordering matters here and is worth stating: annotate first, enforce second.
+Enforcing first rejects 146 fixtures at once with nothing to bisect against.
+
+### Frontend asymmetry, and what closes it
+
+Enforcement lands on the Menhir frontend first, because that is where the
+migrated corpus lives. The Isabelle `program { ... }` notation keeps accepting
+the untyped forms for now: `prog_tr` rejecting them would break every
+`void f(n)` in `src/Examples`, and those 34 program-constructing theories are
+migrated separately.
+
+This is a deliberate, temporary divergence between the two frontends. It closes
+when the Example theories are annotated, at which point the same checks move
+into `prog_tr` and the untyped `formal_untyped` and `globals_decl` productions
+can leave `grammar/vimp.yaml` entirely -- at which point the grammar, rather
+than a check, is the contract.
+
 ## Slices
 
 Each slice ends on a green build. Anything called `tprog` has complete

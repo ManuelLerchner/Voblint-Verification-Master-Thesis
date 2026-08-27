@@ -17,6 +17,7 @@
 // and --analysis interval alone loses !(x < 0), so neither component
 // proves this without the other.
 void main() {
+  int32 x;
   x := 40;
   while (!(x == 0)) {
     __voblint_check(!(40 < x)); // PROVED

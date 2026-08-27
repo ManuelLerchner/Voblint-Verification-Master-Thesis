@@ -6,6 +6,7 @@
 // a raw lattice join against the other component's Top default. A purely
 // local write no longer loses precision through the global slot.
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x) // PROVED
 }

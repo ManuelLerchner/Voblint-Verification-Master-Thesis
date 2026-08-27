@@ -5,6 +5,7 @@
 // analyse_with_solver_interval_default); join is the always-terminating,
 // non-default alternative -- same verdict here regardless of choice.
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x) // PROVED
 }

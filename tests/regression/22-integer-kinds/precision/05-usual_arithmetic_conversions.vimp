@@ -21,6 +21,7 @@
 global uint32 plus_one;
 global int64 wide;
 void main() {
+  int32 minus_one, v1, v2;
   plus_one := 1;
   minus_one := -1;
   v1 := 0;

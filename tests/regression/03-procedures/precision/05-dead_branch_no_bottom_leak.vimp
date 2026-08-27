@@ -17,6 +17,7 @@ void f(n) {
 }
 
 void main() {
+  int32 a;
   a := f(5);
   __voblint_check(a == 500) // PROVED
 }

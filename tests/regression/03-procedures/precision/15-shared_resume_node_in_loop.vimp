@@ -9,6 +9,7 @@ void f(n) {
   return n
 }
 void main() {
+  int32 a, i;
   i := 0;
   while (i < 10) {
     if (i < 5) {

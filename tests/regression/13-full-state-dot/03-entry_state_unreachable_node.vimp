@@ -139,6 +139,7 @@ void f(n) {
 }
 
 void main() {
+  int32 a, b;
   a := f(5);
   b := f(7);
   __voblint_check(a == 5); // PROVED

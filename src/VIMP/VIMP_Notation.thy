@@ -295,7 +295,7 @@ text \<open>
   into directly (\<open>stmts_opt_tr\<close>, \<open>exp_tr\<close>, \<open>formals_of\<close>, \<open>names_of\<close>).
 \<close>
 
-nonterminal imp2_funcs and imp2_gdecl and imp2_gdecls
+nonterminal imp2_funcs and imp2_gdecl and imp2_gdecls and imp2_ldecl and imp2_ldecls and imp2_rty
 
 syntax
   "_IMP2"        :: "imp2_stmts_opt \<Rightarrow> VIMP_Proc.com"        ("imp \<lbrakk> _ \<rbrakk>")
@@ -306,13 +306,46 @@ syntax
   "_gdecl_ty"   :: "imp2_ty \<Rightarrow> imp2_ids \<Rightarrow> imp2_gdecl"      ("global _ _ ;")
   "_gdecls_one"  :: "imp2_gdecl \<Rightarrow> imp2_gdecls"             ("_")
   "_gdecls_cons" :: "imp2_gdecl \<Rightarrow> imp2_gdecls \<Rightarrow> imp2_gdecls" ("_ _")
+  \<comment> \<open>One production per kind keyword, rather than a single
+      \<open>imp2_ty imp2_ids ;\<close> rule. The surface syntax is identical either way,
+      but a declaration whose template starts with a nonterminal leaves the
+      parser unable to tell where a declaration sequence ends and the statement
+      list begins; \<open>_gdecl\<close> escapes that only because \<open>global\<close> marks each of
+      its lines. The Menhir side needs no such split -- one token of lookahead
+      on the kind keyword settles it there.\<close>
+  "_ldecl_int8"   :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("int8 _ ;")
+  "_ldecl_uint8"  :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("uint8 _ ;")
+  "_ldecl_int16"  :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("int16 _ ;")
+  "_ldecl_uint16" :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("uint16 _ ;")
+  "_ldecl_int32"  :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("int32 _ ;")
+  "_ldecl_uint32" :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("uint32 _ ;")
+  "_ldecl_int64"  :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("int64 _ ;")
+  "_ldecl_uint64" :: "imp2_ids \<Rightarrow> imp2_ldecl"                  ("uint64 _ ;")
+  "_ldecls_one"  :: "imp2_ldecl \<Rightarrow> imp2_ldecls"                ("_")
+  "_ldecls_cons" :: "imp2_ldecl \<Rightarrow> imp2_ldecls \<Rightarrow> imp2_ldecls"  ("_ _")
+  \<comment> \<open>A procedure's result kind. \<open>void\<close> yields no value; a kind returns that
+      kind, and \<open>return e\<close> converts to it. Collecting the nine spellings into
+      one nonterminal keeps the four function shapes below at four productions
+      instead of thirty-six.\<close>
+  "_rty_void"   :: imp2_rty                                       ("void")
+  "_rty_int8"   :: imp2_rty                                       ("int8")
+  "_rty_uint8"  :: imp2_rty                                       ("uint8")
+  "_rty_int16"  :: imp2_rty                                       ("int16")
+  "_rty_uint16" :: imp2_rty                                       ("uint16")
+  "_rty_int32"  :: imp2_rty                                       ("int32")
+  "_rty_uint32" :: imp2_rty                                       ("uint32")
+  "_rty_int64"  :: imp2_rty                                       ("int64")
+  "_rty_uint64" :: imp2_rty                                       ("uint64")
   "_funcs_nil"   :: imp2_funcs                                    ("")
-  "_funcs_cons0" :: "id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'(') { _ } _")
-  "_funcs_cons"  :: "id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("void _'( _ ') { _ } _")
+  "_funcs_cons0" :: "imp2_rty \<Rightarrow> id_position \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("_ _'(') { _ } _")
+  "_funcs_cons"  :: "imp2_rty \<Rightarrow> id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("_ _'( _ ') { _ } _")
+  "_funcs_cons0l" :: "imp2_rty \<Rightarrow> id_position \<Rightarrow> imp2_ldecls \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("_ _'(') { _ _ } _")
+  "_funcs_consl"  :: "imp2_rty \<Rightarrow> id_position \<Rightarrow> imp2_formals \<Rightarrow> imp2_ldecls \<Rightarrow> imp2_stmts_opt \<Rightarrow> imp2_funcs \<Rightarrow> imp2_funcs"  ("_ _'( _ ') { _ _ } _")
 
 parse_translation \<open>
   let
     val c_proc_decl_of = "VIMP_Proc.proc_decl_of"
+    val c_proc_decl_of_typed = "VIMP_Proc.proc_decl_of_typed"
     val c_imp_prog = "VIMP_Notation.mk_program_typed"
     val c_Pair    = "Product_Type.Pair"
     val c_TV      = "VIMP_Typing.typed_var.TV"
@@ -340,11 +373,44 @@ parse_translation \<open>
     (* A formal is a (name, kind-term option) pair (Vimp_Grammar_Tr.formal_tr):
        the names build the proc_decl; the annotated kinds join the program's
        declared-kind list below. *)
+    (* A local declaration line lowers like a `global` line: one (name, kind)
+       pair per listed name, the line's kind applying to every name on it.
+       Unlike a global the kind is never absent -- there is no untyped local
+       production -- so the kind term is not wrapped in an option. Each
+       `_ldecl_<k>` maps back onto the generated `_ty_<k>` so the eight kind
+       names stay listed in one place, in VIMP_Grammar_Generated. *)
+    fun ldecl_tr ctxt (Const (c, _) $ ids) =
+          (case try (unprefix "_ldecl_") c of
+             NONE => raise TERM ("VIMP_Notation: ldecl_tr", [Const (c, dummyT)])
+           | SOME sfx =>
+               let val kt = Vimp_Grammar_Tr.ty_tr ctxt (Const ("_ty_" ^ sfx, dummyT))
+               in map (fn n => (n, kt)) (Vimp_Grammar_Tr.names_of ctxt ids) end)
+      | ldecl_tr _ t = raise TERM ("VIMP_Notation: ldecl_tr", [t])
+
+    fun ldecls_tr ctxt (Const ("_ldecls_one", _) $ d) = ldecl_tr ctxt d
+      | ldecls_tr ctxt (Const ("_ldecls_cons", _) $ d $ rest) =
+          ldecl_tr ctxt d @ ldecls_tr ctxt rest
+      | ldecls_tr _ t = raise TERM ("VIMP_Notation: ldecls_tr", [t])
+
+    (* A result kind: NONE for `void`, otherwise the kind term the matching
+       `_ty_<k>` lowers to, so the nine spellings stay listed once in
+       VIMP_Grammar_Generated rather than being repeated here. *)
+    fun rty_tr ctxt (Const ("_rty_void", _)) = NONE
+      | rty_tr ctxt (Const (c, _)) =
+          (case try (unprefix "_rty_") c of
+             NONE => raise TERM ("VIMP_Notation: rty_tr", [Const (c, dummyT)])
+           | SOME sfx => SOME (Vimp_Grammar_Tr.ty_tr ctxt (Const ("_ty_" ^ sfx, dummyT))))
+      | rty_tr _ t = raise TERM ("VIMP_Notation: rty_tr", [t])
+
     fun funcs_tr ctxt (Const ("_funcs_nil", _)) = []
-      | funcs_tr ctxt (Const ("_funcs_cons0", _) $ f $ pbody $ rest) =
-          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, [], SOME pbody, NONE) :: funcs_tr ctxt rest
-      | funcs_tr ctxt (Const ("_funcs_cons", _) $ f $ formals $ pbody $ rest) =
-          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, Vimp_Grammar_Tr.formals_of ctxt formals, SOME pbody, NONE) :: funcs_tr ctxt rest
+      | funcs_tr ctxt (Const ("_funcs_cons0", _) $ rty $ f $ pbody $ rest) =
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, [], [], SOME pbody, rty_tr ctxt rty) :: funcs_tr ctxt rest
+      | funcs_tr ctxt (Const ("_funcs_cons", _) $ rty $ f $ formals $ pbody $ rest) =
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, Vimp_Grammar_Tr.formals_of ctxt formals, [], SOME pbody, rty_tr ctxt rty) :: funcs_tr ctxt rest
+      | funcs_tr ctxt (Const ("_funcs_cons0l", _) $ rty $ f $ ldecls $ pbody $ rest) =
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, [], ldecls_tr ctxt ldecls, SOME pbody, rty_tr ctxt rty) :: funcs_tr ctxt rest
+      | funcs_tr ctxt (Const ("_funcs_consl", _) $ rty $ f $ formals $ ldecls $ pbody $ rest) =
+          (Vimp_Grammar_Tr.dest_id_position (SOME Markup.skolem) ctxt f, Vimp_Grammar_Tr.formals_of ctxt formals, ldecls_tr ctxt ldecls, SOME pbody, rty_tr ctxt rty) :: funcs_tr ctxt rest
       | funcs_tr _ t = raise TERM ("VIMP_Notation: funcs_tr", [t])
 
     (* A `global` line lowers to (name, kind option) pairs, one per listed
@@ -382,11 +448,31 @@ parse_translation \<open>
        formal's per-call binding and the global's cross-call persistence are
        incompatible storage classes for one name. *)
     fun check_no_global_formal_collision decl_names funcs =
-      List.app (fn (n, formals, _, _) =>
+      List.app (fn (n, formals, _, _, _) =>
         case filter (member (op =) decl_names) (map fst formals) of
           [] => ()
         | bad => error ("VIMP program: " ^ quote n ^ " declares global(s) as formal(s): "
                          ^ commas_quote bad)) funcs
+
+    (* A local shares its procedure's scope with that procedure's formals, and
+       shadowing a declared global is the same clash of storage classes for one
+       name that check_no_global_formal_collision rejects for formals. *)
+    fun check_local_collisions decl_names funcs =
+      List.app (fn (n, formals, locals, _, _) =>
+        let
+          val lnames = map fst locals
+          val _ = check_distinct ("local of " ^ quote n) lnames
+          val _ =
+            (case filter (member (op =) (map fst formals)) lnames of
+               [] => ()
+             | bad => error ("VIMP program: " ^ quote n ^ " declares formal(s) as local(s): "
+                              ^ commas_quote bad))
+        in
+          case filter (member (op =) decl_names) lnames of
+            [] => ()
+          | bad => error ("VIMP program: " ^ quote n ^ " declares global(s) as local(s): "
+                           ^ commas_quote bad)
+        end) funcs
 
     fun mk_names [] = K c_Nil
       | mk_names (n :: ns) = K c_Cons $ HOLogic.mk_literal n $ mk_names ns
@@ -397,50 +483,69 @@ parse_translation \<open>
 
     (* A trailing "return e" becomes an explicit Return command appended to the body;
        the procedure declaration carries no separate result field. *)
-    fun mk_body_ret ctxt NONE NONE = K c_SKIP
-      | mk_body_ret ctxt (SOME c) NONE = Vimp_Grammar_Tr.stmts_opt_tr ctxt c
-      | mk_body_ret ctxt NONE (SOME e) = K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e)
-      | mk_body_ret ctxt (SOME c) (SOME e) =
-          K c_Seq $ Vimp_Grammar_Tr.stmts_opt_tr ctxt c $ (K c_Return $ (K c_Some $ Vimp_Grammar_Tr.exp_tr ctxt e))
+    fun mk_body ctxt NONE = K c_SKIP
+      | mk_body ctxt (SOME c) = Vimp_Grammar_Tr.stmts_opt_tr ctxt c
 
-    fun mk_proc_rep ctxt [] = K c_Nil
-      | mk_proc_rep ctxt ((p, formals, body, result) :: rest) =
+    (* Locals stay keyed by the procedure that declared them instead of joining
+       the flat kind list, so one name may be bound at two kinds in two
+       procedures. *)
+    fun mk_scoped_locals [] = K c_Nil
+      | mk_scoped_locals ((p, n, k) :: rest) =
           K c_Cons
-            $ (K c_Pair $ HOLogic.mk_literal p
-                $ ((K c_proc_decl_of $ mk_names (map fst formals)) $ mk_body_ret ctxt body result))
-            $ mk_proc_rep ctxt rest
+            $ (K c_Pair $ HOLogic.mk_literal p $ (K c_TV $ HOLogic.mk_literal n $ k))
+            $ mk_scoped_locals rest
+
+    (* `void` builds the unannotated declaration; a declared kind builds the
+       annotated one, which is what makes `ret_kind` anything but NONE and so
+       what stops every return normalizing at I32. *)
+    fun mk_proc_rep ctxt [] = K c_Nil
+      | mk_proc_rep ctxt ((p, formals, _, body, rk) :: rest) =
+          let
+            val names = mk_names (map fst formals)
+            val decl =
+              (case rk of
+                 NONE => (K c_proc_decl_of $ names) $ mk_body ctxt body
+               | SOME k => ((K c_proc_decl_of_typed $ names) $ k) $ mk_body ctxt body)
+          in
+            K c_Cons $ (K c_Pair $ HOLogic.mk_literal p $ decl) $ mk_proc_rep ctxt rest
+          end
 
     (* dummyT constructors only; type inference runs after the translation. *)
     fun prog_tr ctxt decls funcs_t =
       let
         val funcs = funcs_tr ctxt funcs_t
         val decl_names = map fst decls
-        val _ = check_distinct "procedure" (map (fn (n, _, _, _) => n) funcs)
+        val _ = check_distinct "procedure" (map (fn (n, _, _, _, _) => n) funcs)
         val _ = check_distinct "declared global" decl_names
-        val _ = List.app (fn (n, formals, _, _) =>
+        val _ = List.app (fn (n, formals, _, _, _) =>
                   check_distinct ("formal parameter of " ^ quote n) (map fst formals)) funcs
         val _ = check_no_global_formal_collision decl_names funcs
-        val (mains, procs) = List.partition (fn (n, _, _, _) => n = "main") funcs
+        val _ = check_local_collisions decl_names funcs
+        val (mains, procs) = List.partition (fn (n, _, _, _, _) => n = "main") funcs
+        (* `main` is void and may not return: a declared result kind on it is
+           rejected here rather than left to produce a value nothing reads. *)
         val main_ast =
           (case mains of
-             [("main", [], NONE, NONE)] => NONE
-           | [("main", [], SOME body, NONE)] =>
+             [("main", [], _, _, SOME _)] => error "VIMP program: main may not return"
+           | [("main", [], _, NONE, NONE)] => NONE
+           | [("main", [], _, SOME body, NONE)] =>
                if has_return body then error "VIMP program: main may not return" else SOME body
-           | [("main", _, _, SOME _)] => error "VIMP program: main may not return"
-           | [("main", _, _, NONE)] => error "VIMP program: main must have no formals"
+           | [("main", _, _, _, _)] => error "VIMP program: main must have no formals"
            | [] => error "VIMP program: missing 'void main() { ... }'"
            | _  => error "VIMP program: more than one 'void main()'")
         val proc_rep = mk_proc_rep ctxt procs
-        val main = mk_body_ret ctxt main_ast NONE
+        val main = mk_body ctxt main_ast
         val decl_globals = mk_names decl_names
         val kind_entries =
           List.mapPartial (fn (n, k) => Option.map (fn k => (n, k)) k)
-            (decls @ List.concat (map (fn (_, formals, _, _) => formals) funcs))
-      (* No procedure-local declaration syntax on this side yet, so the
-         scoped-locals list is empty; `program { ... }` still declares only
-         globals and formals. *)
+            (decls @ List.concat (map (fn (_, formals, _, _, _) => formals) funcs))
+        (* Every function, not only the non-main ones: main declares its own
+           locals like any other procedure. *)
+        val local_entries =
+          List.concat
+            (map (fn (p, _, locals, _, _) => map (fn (n, k) => (p, n, k)) locals) funcs)
       in K c_imp_prog $ proc_rep $ main $ decl_globals $ mk_kinds kind_entries
-           $ K c_Nil end
+           $ mk_scoped_locals local_entries end
   in
     [("_IMP2", fn ctxt => fn [t] => Vimp_Grammar_Tr.stmts_opt_tr ctxt t | _ => raise Match),
      ("_PROGKW0", fn ctxt => fn [fs] => prog_tr ctxt [] fs | _ => raise Match),
@@ -521,6 +626,50 @@ value "(program {
   void add(int16 delta) { total := total + delta }
   void main() { add(3) }
 } :: imp_prog)"
+
+text \<open>
+  Procedure-local declarations are scoped, so one name may be bound at two
+  kinds in two procedures. \<open>declared_kinds\<close> cannot express that -- it answers
+  by name alone -- which is why locals land in \<open>declared_locals\<close> paired with
+  the procedure that binds them.
+\<close>
+
+lemma scoped_locals_keep_two_kinds_for_one_name [simp]:
+  "declared_locals (program {
+     void f(n) { uint8 acc; acc := n; return acc }
+     void g(n) { int64 acc; acc := n; return acc }
+     void main() { a := f(1); b := g(2) }
+   }) = [(STR ''f'', TV (STR ''acc'') U8), (STR ''g'', TV (STR ''acc'') I64)]"
+  by simp
+
+text \<open>
+  A declaration line may list several names, and \<open>main\<close> declares its own
+  locals like any other procedure.
+\<close>
+
+lemma scoped_locals_multi_name_and_main [simp]:
+  "declared_locals (program {
+     void main() { int32 x, y; uint8 z; x := 1; y := 2; z := 3 }
+   }) = [(STR ''main'', TV (STR ''x'') I32), (STR ''main'', TV (STR ''y'') I32),
+         (STR ''main'', TV (STR ''z'') U8)]"
+  by simp
+
+text \<open>
+  A procedure declared with a kind records it as its \<open>ret_kind\<close>, which is what
+  \<open>proc_ret_kind\<close> reads and what a \<open>return e\<close> converts to. A \<open>void\<close> procedure
+  records none, and every return in it then normalizes at the \<open>I32\<close> default.
+\<close>
+
+lemma ret_kind_declared [simp]:
+  "ret_kind (the (prog_table (program {
+     int64 wide(n) { return n }
+     void main() { int64 w; w := wide(1) }
+   }) (STR ''wide''))) = Some I64"
+  "ret_kind (the (prog_table (program {
+     void plain(n) { return n }
+     void main() { int32 v; v := plain(1) }
+   }) (STR ''plain''))) = None"
+  by (eval, eval)
 
 lemma typed_example_declared_kinds [simp]:
   "declared_kinds (program {

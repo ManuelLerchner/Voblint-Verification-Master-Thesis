@@ -14,6 +14,7 @@
 // known-imprecision/01-equality_else_arm_no_exclusion_set.vimp. int gives the
 // same verdicts.
 void main() {
+  int32 top, top2, x, y, z;
   top := __voblint_nondet_int();
   top2 := __voblint_nondet_int();
   if (top) {

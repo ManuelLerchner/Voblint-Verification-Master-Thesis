@@ -7,13 +7,44 @@
    from the token stream, and what order they come out in. *)
 let record_stmt_pos = Vimp_positions.record
 
-(* A function_decl's action builds (name, formals, locals, body); closing the
-   bucket here keeps the name and its positions together without a second
-   traversal. *)
-let close_definition ((name, formals, locals, body) as decl) =
+(* A function_decl's action builds (name, formals, locals, body, return kind);
+   closing the bucket here keeps the name and its positions together without a
+   second traversal. *)
+let close_definition ((name, formals, locals, body, ret_kind) as decl) =
   Vimp_positions.close name;
-  ignore formals; ignore locals; ignore body;
+  ignore formals; ignore locals; ignore body; ignore ret_kind;
   decl
+
+(* Name-collision rules the grammar cannot encode structurally: one name may
+   not be introduced twice in the same scope, and a global's cross-call
+   persistence, a formal's per-call binding and a local's procedure scope are
+   incompatible storage classes for one name. Without them a local shadowing a
+   global parses and is then silently ignored -- the name resolves to global
+   storage, at the global's kind. VIMP_Notation.thy's prog_tr rejects all of
+   these, so raising here keeps both frontends accepting the same programs. *)
+let quote n = "\"" ^ n ^ "\""
+
+let commas_quote names = String.concat ", " (List.map quote names)
+
+let duplicates names =
+  let rec go seen dups = function
+    | [] -> List.rev dups
+    | n :: rest when List.mem n seen ->
+      go seen (if List.mem n dups then dups else n :: dups) rest
+    | n :: rest -> go (n :: seen) dups rest
+  in
+  go [] [] names
+
+let check_distinct kind names =
+  match duplicates names with
+  | [] -> ()
+  | ds -> failwith (Printf.sprintf "duplicate %s: %s" kind (commas_quote ds))
+
+let check_no_collision owner what names against =
+  match List.filter (fun n -> List.mem n against) names with
+  | [] -> ()
+  | bad ->
+    failwith (Printf.sprintf "%s declares %s: %s" (quote owner) what (commas_quote bad))
 %}
 
 %token <string> IDENT
@@ -73,8 +104,8 @@ let close_definition ((name, formals, locals, body) as decl) =
 %type <(string * Voblint_CLI.Core.ikind option) list> globals_star
 %type <(string * Voblint_CLI.Core.ikind) list> local_decl
 %type <(string * Voblint_CLI.Core.ikind) list> locals_star
-%type <string * (string * Voblint_CLI.Core.ikind option) list * (string * Voblint_CLI.Core.ikind) list * Voblint_CLI.Core.com> function_decl
-%type <(string * (string * Voblint_CLI.Core.ikind option) list * (string * Voblint_CLI.Core.ikind) list * Voblint_CLI.Core.com) list> function_decl_star
+%type <string * (string * Voblint_CLI.Core.ikind option) list * (string * Voblint_CLI.Core.ikind) list * Voblint_CLI.Core.com * Voblint_CLI.Core.ikind option> function_decl
+%type <(string * (string * Voblint_CLI.Core.ikind option) list * (string * Voblint_CLI.Core.ikind) list * Voblint_CLI.Core.com * Voblint_CLI.Core.ikind option) list> function_decl_star
 
 %start <unit Voblint_CLI.Core.imp_prog_ext> program
 %%
@@ -205,15 +236,34 @@ local_decl:
 (* function_decl: *)
 function_decl:
   | v0 = VOID v1 = IDENT v2 = LPAREN v3 = formals v4 = RPAREN v5 = LBRACE v6 = locals_star v7 = stmts_opt v8 = RBRACE
-      { close_definition ((v1, v3, v6, v7)) }
+      { close_definition ((v1, v3, v6, v7, None)) }
+  | v0 = ty v1 = IDENT v2 = LPAREN v3 = formals v4 = RPAREN v5 = LBRACE v6 = locals_star v7 = stmts_opt v8 = RBRACE
+      { close_definition ((v1, v3, v6, v7, Some v0)) }
 (* program: *)
 program:
   | g = globals_star fs = function_decl_star EOF
-      { let mains, procs = List.partition (fun (n, _, _, _) -> n = "main") fs in
+      { let decl_names = List.map fst g in
+        (* Same checks, in the same order, as VIMP_Notation.thy's prog_tr:
+           which of several simultaneous collisions is reported first is then
+           the same on both frontends too. *)
+        check_distinct "procedure" (List.map (fun (n, _, _, _, _) -> n) fs);
+        check_distinct "declared global" decl_names;
+        List.iter (fun (n, formals, _, _, _) ->
+            check_distinct ("formal parameter of " ^ quote n) (List.map fst formals)) fs;
+        List.iter (fun (n, formals, _, _, _) ->
+            check_no_collision n "global(s) as formal(s)" (List.map fst formals) decl_names) fs;
+        List.iter (fun (n, formals, locals, _, _) ->
+            let lnames = List.map fst locals in
+            check_distinct ("local of " ^ quote n) lnames;
+            check_no_collision n "formal(s) as local(s)" lnames (List.map fst formals);
+            check_no_collision n "global(s) as local(s)" lnames decl_names) fs;
+        let mains, procs = List.partition (fun (n, _, _, _, _) -> n = "main") fs in
+        (* main yields no value, so its declaration builds the void form
+           whatever kind was written on it. *)
         let main_body =
           match mains with
-          | [ (_, [], _, b) ] -> b
-          | [ (_, _ :: _, _, _) ] -> failwith "'main' must have no formals"
+          | [ (_, [], _, b, _) ] -> b
+          | [ (_, _ :: _, _, _, _) ] -> failwith "'main' must have no formals"
           | [] -> failwith "missing 'void main() { ... }'"
           | _ -> failwith "more than one 'void main()'"
         in
@@ -225,18 +275,26 @@ program:
         in
         let kinds =
           kind_entries g
-          @ List.concat_map (fun (_, formals, _, _) -> kind_entries formals) fs
+          @ List.concat_map (fun (_, formals, _, _, _) -> kind_entries formals) fs
         in
         (* Locals are procedure-scoped, so they stay keyed by the procedure
            that declared them instead of joining the flat kind list. main's
            own locals belong here too, which is why this folds fs, not procs. *)
         let scoped_locals =
-          List.concat_map (fun (n, _, locals, _) ->
+          List.concat_map (fun (n, _, locals, _, _) ->
               List.map (fun (x, k) -> (n, Voblint_CLI.Core.TV (x, k))) locals) fs
         in
+        (* An undeclared return kind stays undeclared: proc_decl_of leaves
+           ret_kind None, which the compiler reads as the default kind. Only a
+           procedure written with a return kind records one. *)
+        let proc_decl formals ret_kind body =
+          let xs = List.map fst formals in
+          match ret_kind with
+          | None -> Voblint_CLI.Core.proc_decl_of xs body
+          | Some k -> Voblint_CLI.Core.proc_decl_of_typed xs k body
+        in
         Voblint_CLI.Core.mk_program_typed
-          (List.map (fun (n, formals, _, b) ->
-               (n, Voblint_CLI.Core.proc_decl_of (List.map fst formals) b)) procs)
+          (List.map (fun (n, formals, _, b, rk) -> (n, proc_decl formals rk b)) procs)
           main_body (List.map fst g) kinds scoped_locals }
 
 globals_star:

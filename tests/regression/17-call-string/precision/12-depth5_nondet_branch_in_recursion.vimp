@@ -14,6 +14,7 @@ void nr(x, y) {
   __voblint_check(x == y) // PROVED
 }
 void f(x, y) {
+  int32 r, top;
   if (x == 0) { return y } else { skip };
   top := __voblint_nondet_int();
   if (0 < top) { nr(5, 5) } else { nr(6, 6) };
@@ -21,6 +22,7 @@ void f(x, y) {
   return r
 }
 void main() {
+  int32 a;
   a := f(3, 3);
   __voblint_check(a == 0) // PROVED
 }

@@ -1,6 +1,7 @@
 // PARAM: --analysis interval
 // Counted loop: exercises widening/narrowing on a bounded induction variable.
 void main() {
+  int32 x;
   x := 0;
   while (x < 10) {
     x := x + 1

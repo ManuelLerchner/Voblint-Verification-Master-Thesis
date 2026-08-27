@@ -33,6 +33,7 @@
 // EXPECT-GRAPH-END
 
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x) // PROVED
 }

@@ -3,6 +3,7 @@
 // 00-sanity/precision/01-straight_line_proved.vimp, run with --dot instead
 // of the textual report.
 void main() {
+  int32 x;
   x := 5;
   __voblint_check(0 < x)
 }

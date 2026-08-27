@@ -9,6 +9,7 @@
 // state containing 0, and the recursive arm only forwards that value.
 global num_iterat;
 void rec() {
+  int32 res;
   if (0 < num_iterat) {
     num_iterat := num_iterat - 1;
     res := rec();
@@ -19,6 +20,7 @@ void rec() {
   }
 }
 void main() {
+  int32 r;
   num_iterat := 11;
   r := rec();
   __voblint_check(r == 5) // PROVED
