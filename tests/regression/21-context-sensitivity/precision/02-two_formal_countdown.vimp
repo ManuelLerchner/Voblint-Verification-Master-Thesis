@@ -9,7 +9,7 @@
 // left out to stay clear of the runner's ceiling. --context call-string
 // at any depth up to 5 answers UNKNOWN for all three (the collapsed key
 // joins the remaining (x, y) pairs).
-void f(x, y) {
+int32 f(int32 x, int32 y) {
   int32 r;
   if (x == 0) { return y } else { skip };
   r := f(x - 1, y - 1);

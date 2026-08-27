@@ -116,8 +116,8 @@
 //   main_pp6_ctx1 -> main_pp7_ctx1: call-to-return f
 // EXPECT-GRAPH-END
 
-void g(p) { return p + p }
-void f(p) { int32 t; t := g(p); return t }
+int32 g(int32 p) { return p + p }
+int32 f(int32 p) { int32 t; t := g(p); return t }
 void main() {
   int32 x, y;
   x := f(3);

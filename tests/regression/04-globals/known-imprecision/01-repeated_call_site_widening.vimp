@@ -16,8 +16,8 @@
 // half (0 < total, PROVED from the recovered lower bound); only the check
 // that the widening actually costs lives here.
 
-global total;
-void inc(n) {
+global int32 total;
+void inc(int32 n) {
   total := total + n
 }
 void main() {

@@ -8,7 +8,7 @@
 // case (03-warrow_joins_before_widening.vimp): widening the already-joined
 // value loses the upper bound. This is the one axis on which the update-rule
 // choice is observable as precision rather than only as termination.
-void p(n) {
+void p(int32 n) {
   __voblint_check(n < 10) // PROVED
 }
 void main() {

@@ -11,7 +11,7 @@
 // over the flat default, not a different claim about the concrete program
 // (both checks are true for the same reason in both files: 3*3=9,
 // 4*4=16).
-void square(n) {
+int32 square(int32 n) {
   return n * n
 }
 void main() {

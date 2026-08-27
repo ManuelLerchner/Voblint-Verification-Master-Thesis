@@ -11,8 +11,8 @@
 // global g itself, so it holds only if a call argument is evaluated
 // against the caller's real state rather than a globals-bottomed one --
 // bump(19) doubles to 38 on both the returned value and the global.
-global g;
-void bump(n) {
+global int32 g;
+int32 bump(int32 n) {
   g := g + n;
   return g
 }

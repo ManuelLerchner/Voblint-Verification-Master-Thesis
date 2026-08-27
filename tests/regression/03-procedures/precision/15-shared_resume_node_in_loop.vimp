@@ -5,7 +5,7 @@
 // publication to after every contribution has been read, which reorders the
 // unknowns the solver visits on the first pass; narrowing is sensitive to that
 // order, so a loop is where a reordering that costs precision would surface.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
 void main() {

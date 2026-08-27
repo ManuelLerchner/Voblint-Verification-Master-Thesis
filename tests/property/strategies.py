@@ -22,13 +22,31 @@ Variable/procedure names are drawn from small fixed, keyword-disjoint pools
 rather than random identifiers: this sidesteps keyword collisions entirely
 (by construction, not by filtering/assume rejection) while still exercising
 name reuse, shadowing-shaped programs, and multi-procedure call graphs.
+
+Procedure-local declarations live outside the AST strategies, in
+`programs_with_locals`/`source_with_locals`, because they are a source-text
+property here rather than an AST one. VIMP_Source_Print.thy's
+pretty_string_of_program prints no declaration for a local at all (nor the
+kind of a typed global), so an AST carrying `declared_locals` prints to text
+that re-parses with an empty `declared_locals` -- it cannot round-trip. The
+same reason the printer's lossiness keeps `declared_kinds` out of `programs`
+keeps locals out of it: `programs` stays exactly the declaration-free
+fragment the round-trip property is about, and the locals prologue is
+spliced into that program's printed source for the properties that only need
+parse acceptance.
 """
+
+import re
 
 from hypothesis import strategies as st
 
 VAR_POOL = ["x", "y", "z", "n", "acc"]
 GLOBAL_POOL = ["g1", "g2"]
 PROC_POOL = ["f", "g", "helper"]
+MAIN_NAME = "main"
+LOCAL_KIND_POOL = [
+    "int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64",
+]
 
 
 def sexp(x) -> str:
@@ -122,3 +140,76 @@ def programs(draw, max_procs=len(PROC_POOL), body_depth=3):
     main_body = draw(coms(depth=body_depth))
     globals_ = draw(st.lists(st.sampled_from(GLOBAL_POOL), max_size=len(GLOBAL_POOL), unique=True))
     return (procs, main_body, globals_)
+
+
+# -- procedure-local declarations ------------------------------------------
+#
+# A declaration is `<kind> name1, name2, ...;` with an explicit kind: unlike
+# a global, a local has no untyped form. All of a procedure's declarations
+# form a prologue between the body's `{` and its first statement --
+# grammar/vimp.yaml's function_decl puts `locals_star` before `stmts_opt`,
+# and a declaration after a statement is a parse error. Both the placement
+# and the name-collision rules below are respected by construction, so no
+# generated program is ever one the frontend must reject.
+
+@st.composite
+def locals_prologue(draw, formals=()):
+    """Declaration groups for one procedure, as [(kind, [name, ...]), ...].
+
+    Names come from VAR_POOL minus the procedure's own formals, drawn without
+    replacement. VAR_POOL is disjoint from GLOBAL_POOL, so a local can never
+    shadow a declared global either, and no name is declared twice. The empty
+    prologue stays the common case -- almost every program in the regression
+    corpus has none.
+    """
+    available = [x for x in VAR_POOL if x not in formals]
+    if not available:
+        return []
+    names = draw(st.lists(st.sampled_from(available), max_size=len(available), unique=True))
+    groups = []
+    while names:
+        take = draw(st.integers(min_value=1, max_value=len(names)))
+        groups.append((draw(st.sampled_from(LOCAL_KIND_POOL)), names[:take]))
+        names = names[take:]
+    return groups
+
+
+@st.composite
+def programs_with_locals(draw, max_procs=len(PROC_POOL), body_depth=3):
+    """A program paired with one locals prologue per procedure, main included.
+
+    The AST half is an ordinary `programs()` value: locals are carried
+    separately because they do not survive printing (see the module
+    docstring), so this pair is for parse-level properties, not round-trip.
+    """
+    procs, main_body, globals_ = draw(programs(max_procs=max_procs, body_depth=body_depth))
+    prologues = {}
+    for name, formals, _ in procs:
+        prologues[name] = draw(locals_prologue(formals=formals))
+    prologues[MAIN_NAME] = draw(locals_prologue())
+    return (procs, main_body, globals_), prologues
+
+
+PROC_HEADER = re.compile(r"^void (\w+)\(")
+
+
+def source_with_locals(source: str, prologues: dict) -> str:
+    """Splice each procedure's locals prologue into printed VIMP source.
+
+    pretty_string_of_program emits a procedure's first statement directly
+    after its `void NAME(...) {` header, so inserting the declaration lines
+    right after that header is exactly the prologue position the grammar
+    requires; the four-space indent matches the printer's own body indent.
+    Body lines are indented, headers are not, so the header regex cannot
+    match inside a body.
+    """
+    out = []
+    for line in source.split("\n"):
+        out.append(line)
+        header = PROC_HEADER.match(line)
+        if header:
+            out.extend(
+                f"    {kind} {', '.join(names)};"
+                for kind, names in prologues.get(header.group(1), [])
+            )
+    return "\n".join(out)

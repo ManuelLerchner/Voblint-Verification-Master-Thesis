@@ -10,10 +10,10 @@
 // depth 5 every f activation keeps its own key and a == 0 is exact. At
 // depth 2 the deeper activations f(1,1) and f(0,0) share a key
 // (known-imprecision/04). --context none proves neither check.
-void nr(x, y) {
+void nr(int32 x, int32 y) {
   __voblint_check(x == y) // PROVED
 }
-void f(x, y) {
+int32 f(int32 x, int32 y) {
   int32 r, top;
   if (x == 0) { return y } else { skip };
   top := __voblint_nondet_int();

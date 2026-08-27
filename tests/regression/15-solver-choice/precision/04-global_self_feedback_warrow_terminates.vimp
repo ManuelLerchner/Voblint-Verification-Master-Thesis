@@ -10,7 +10,7 @@
 // abstract state lifted into the local unknown, there is no separate
 // global summary left for the write to fold back into, so the exact
 // value now reaches the check: termination and precision coincide.
-global total;
+global int32 total;
 void main() {
   total := 0;
   total := total + 3;

@@ -2,7 +2,7 @@
 // No verdict annotations: a parse-rejection case. A procedure may not list
 // the same formal twice; the second binding would shadow the first and the
 // corresponding actual would be unreachable.
-void f(n, n) {
+int32 f(int32 n, int32 n) {
   return n
 }
 void main() {

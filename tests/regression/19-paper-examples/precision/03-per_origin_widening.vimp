@@ -17,7 +17,7 @@
 // two together is what distinguishes the recovered [-17,42] from any
 // interval merely narrow enough to decide the error condition.
 
-void f(x) {
+void f(int32 x) {
   __voblint_check(x < 43);      // PROVED
   __voblint_check(-18 < x)      // PROVED
 }

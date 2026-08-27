@@ -40,7 +40,7 @@
 //   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return inc
 // EXPECT-GRAPH-END
 
-void inc(n) {
+int32 inc(int32 n) {
   return n + 1
 }
 void main() {

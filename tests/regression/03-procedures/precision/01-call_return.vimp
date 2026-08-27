@@ -1,6 +1,6 @@
 // PARAM: --analysis interval
 // Procedure call with a formal and a used return value.
-void inc(n) {
+int32 inc(int32 n) {
   return n + 1
 }
 void main() {

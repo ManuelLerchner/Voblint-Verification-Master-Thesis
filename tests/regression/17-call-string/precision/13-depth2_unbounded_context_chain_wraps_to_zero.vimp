@@ -11,7 +11,7 @@
 // same program keys one context per x value, which
 // 21-context-sensitivity/01-unbounded_context_chain_diverges.vimp pins
 // through --timeout.
-void f(x) {
+int32 f(int32 x) {
   int32 r;
   if (!(x == 0)) { r := f(x + 1); return r } else { return x }
 }

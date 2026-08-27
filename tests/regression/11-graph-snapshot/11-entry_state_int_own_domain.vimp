@@ -53,7 +53,7 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return square
 // EXPECT-GRAPH-END
 
-void square(n) {
+int32 square(int32 n) {
   return n * n
 }
 void main() {

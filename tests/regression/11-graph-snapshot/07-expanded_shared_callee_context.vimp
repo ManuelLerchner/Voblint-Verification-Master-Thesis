@@ -69,7 +69,7 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return idf
 // EXPECT-GRAPH-END
 
-void idf(n) {
+int32 idf(int32 n) {
   return n + 1
 }
 void main() {

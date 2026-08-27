@@ -12,13 +12,13 @@
 // value and PROVES the right ones (computed by direct evaluation).
 // --context call-string --context-depth 5 proves only f(0) and g(0);
 // --context none proves nothing.
-void g(i) {
+int32 g(int32 i) {
   int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := f(i + 1); return r } else { skip };
   return 11
 }
-void f(i) {
+int32 f(int32 i) {
   int32 r1, r2;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r1 := g(i - 2); r2 := g(i - 3); return r1 + r2 } else { skip };

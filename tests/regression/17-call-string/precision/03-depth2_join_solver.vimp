@@ -5,8 +5,8 @@
 // disciplines exactly like the flat one (the CS7 solver-axis
 // generalization). This routing depth crosses no unbounded loop, so join
 // needs no widening to terminate and reproduces Warrow's exact k=2 result.
-void g(p) { return p + p }
-void f(p) { int32 t; t := g(p); return t }
+int32 g(int32 p) { return p + p }
+int32 f(int32 p) { int32 t; t := g(p); return t }
 void main() {
   int32 x, y;
   x := f(3);

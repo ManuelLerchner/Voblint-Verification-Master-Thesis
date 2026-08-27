@@ -9,7 +9,7 @@
 // the reverse trip: a procedure's return kind is int32, so -56 widens back
 // with its sign and r is -56 as well. Both values are constants, so both
 // checks are decidable from the source.
-void take8(int8 p) {
+int32 take8(int8 p) {
   __voblint_check(p == -56); // PROVED
   return p
 }

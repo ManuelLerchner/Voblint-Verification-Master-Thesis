@@ -8,7 +8,7 @@
 // K=3 with an explicit --timeout so a solver-level regression surfaces as
 // a structured timeout rather than a hung suite. `reachable` only asserts
 // the check after the call is reported.
-void ack(n, m) {
+int32 ack(int32 n, int32 m) {
   int32 r, t;
   if (n == 0) { return m + 1 } else {
     if (m == 0) { r := ack(n - 1, 1); return r } else {

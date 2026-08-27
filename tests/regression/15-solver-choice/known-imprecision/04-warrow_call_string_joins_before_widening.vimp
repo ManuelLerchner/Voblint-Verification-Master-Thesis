@@ -12,10 +12,10 @@
 //
 // 15-solver-choice/precision/07-warrow_per_origin_call_string.vimp is the
 // same program under --solver warrow-per-origin and answers PROVED.
-void p(n) {
+void p(int32 n) {
   __voblint_check(n < 10) // UNKNOWN
 }
-void q(m) {
+void q(int32 m) {
   p(m)
 }
 void main() {

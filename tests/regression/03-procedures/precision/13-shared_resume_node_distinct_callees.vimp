@@ -7,10 +7,10 @@
 //
 // The complement of 09: 09 pins that two writes to one key become one write,
 // this pins that two writes to two keys stay two writes.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
-void g(n) {
+int32 g(int32 n) {
   return n + 1
 }
 void main() {

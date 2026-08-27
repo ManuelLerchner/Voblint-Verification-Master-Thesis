@@ -19,13 +19,19 @@ states (statement sequencing, block nesting, procedure declarations).
 Perturbing valid programs reaches those states while still covering the
 lexer/parser boundary through the punctuation/whitespace/identifier/digit
 mutation characters below.
+
+The base source carries a procedure-local declaration prologue (often empty,
+as in most real programs -- see strategies.programs_with_locals), so the
+mutations also land inside and around declaration lines: a kind keyword, a
+declaration's comma list, and the prologue/first-statement boundary the
+parser's locals_star/stmts_opt split hinges on.
 """
 
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
 from oracle import dump_source, run_parse_only
-from strategies import programs
+from strategies import programs_with_locals, source_with_locals
 
 MUTATION_CHARS = list(" \t\n(){};,:=+-*<!&|_0123456789abcXYZ@#%\"'")
 
@@ -52,10 +58,11 @@ def apply_mutation(src: str, op: tuple) -> str:
     raise AssertionError(kind)
 
 
-@given(programs(), st.lists(mutation_ops(), min_size=1, max_size=5))
+@given(programs_with_locals(), st.lists(mutation_ops(), min_size=1, max_size=5))
 @settings(max_examples=150, deadline=None)
-def test_parse_only_never_crashes_on_mutated_source(prog, ops):
-    src = dump_source(prog)
+def test_parse_only_never_crashes_on_mutated_source(prog_and_locals, ops):
+    prog, prologues = prog_and_locals
+    src = source_with_locals(dump_source(prog), prologues)
     for op in ops:
         src = apply_mutation(src, op)
 

@@ -28,48 +28,48 @@
 //   chains, warrowing widens its seed to i=[0,+inf], the body writes m := i
 //   from it, and m reads back as [0,+inf] after each call.
 // --context entry-state proves every check in this file.
-global m;
-void a(i) {
+global int32 m;
+int32 a(int32 i) {
   int32 r;
   if (i == 0) { return 11 } else { skip };
   if (0 < i) { r := a(i - 1); return r } else { skip };
   return 1
 }
-void b(i) {
+int32 b(int32 i) {
   int32 r;
   if (i == 0) { return 12 } else { skip };
   if (0 < i) { r := a(i - 1); return r } else { skip };
   return 2
 }
-void c(i) {
+int32 c(int32 i) {
   int32 r;
   if (i == 0) { return 13 } else { skip };
   if (0 < i) { r := b(i - 1); return r } else { skip };
   return 3
 }
-void f(i) {
+int32 f(int32 i) {
   int32 r;
   if (0 < i) { r := e(i - 1); return r } else { skip };
   return 2
 }
-void e(i) {
+int32 e(int32 i) {
   int32 r;
   r := f(i - 1);
   return r + 1
 }
-void h(i) {
+int32 h(int32 i) {
   int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 0
 }
-void k(i) {
+int32 k(int32 i) {
   int32 r;
   if (i == 2) { r := h(i - 1); return r + 1 } else { skip };
   if (0 < i) { r := k(i - 1); return r } else { skip };
   return 1
 }
-void o(i) {
+int32 o(int32 i) {
   if (0 < i) { i := i - 1; m := i; o(i) } else { skip };
   return 0
 }

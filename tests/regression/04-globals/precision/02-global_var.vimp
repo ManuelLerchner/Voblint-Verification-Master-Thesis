@@ -6,8 +6,8 @@
 // through both calls to inc, so its exact value (7) survives to the check
 // -- no separate flow-insensitive global summary exists to join total's
 // prior value against its own write anymore.
-global total;
-void inc(n) {
+global int32 total;
+void inc(int32 n) {
   total := total + n
 }
 void main() {

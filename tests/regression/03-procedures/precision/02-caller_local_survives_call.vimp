@@ -3,7 +3,7 @@
 // must leave the caller's own binding of x untouched across the call --
 // the D/G combine step at the call-to-return edge restores the caller's
 // locals rather than merging in anything from the callee's activation.
-void noop() {
+int32 noop() {
   return 0
 }
 void main() {

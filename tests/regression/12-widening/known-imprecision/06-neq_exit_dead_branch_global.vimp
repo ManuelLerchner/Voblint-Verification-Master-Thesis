@@ -12,7 +12,7 @@
 // to [0,+inf] (measured after the loop). The imprecision escapes the loop
 // through a variable the loop never checks. Solver-invariant across join,
 // per-origin, warrow, warrow-per-origin.
-global g;
+global int32 g;
 void main() {
   int32 i;
   i := 0;

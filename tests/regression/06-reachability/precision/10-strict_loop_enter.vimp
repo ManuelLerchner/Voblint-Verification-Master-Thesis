@@ -12,7 +12,7 @@
 // Solver-invariant: 15/16/17 in this directory are the same program under
 // --solver join/per-origin/warrow-per-origin and agree on both verdicts,
 // the NOWARN included.
-global g;
+global int32 g;
 void main() {
   int32 i, x;
   x := 0;

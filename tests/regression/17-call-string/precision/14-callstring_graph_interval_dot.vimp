@@ -7,8 +7,8 @@
 // domain enumerates -- both g clusters, both f clusters, main's root
 // cluster, and the per-context seed keys -- must be a key the solver
 // actually covers, or rendering it reads a state that was never solved.
-void g(p) { return p + p }
-void f(p) { int32 t; t := g(p); return t }
+int32 g(int32 p) { return p + p }
+int32 f(int32 p) { int32 t; t := g(p); return t }
 void main() {
   int32 x, y;
   x := f(3);

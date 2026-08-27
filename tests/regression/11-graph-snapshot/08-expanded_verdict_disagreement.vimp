@@ -74,7 +74,7 @@
 //   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-void f(n) {
+void f(int32 n) {
   __voblint_check(n == 1) // UNKNOWN (ctx [1]: PROVED, ctx [2]: REFUTED)
 }
 void main() {

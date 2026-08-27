@@ -16,7 +16,7 @@
 // update rule's per-origin gate and never converged. See
 // 03-procedures/precision/05-dead_branch_no_bottom_leak.vimp for the flat,
 // non-recursive, non-context minimal case of the same dead-branch pattern.
-void factorial(n) {
+int32 factorial(int32 n) {
   int32 r;
   __voblint_check(0 < n); // PROVED
 

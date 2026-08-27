@@ -8,7 +8,7 @@
 // Context-insensitive by construction: Parity is Ctx_None only today, and
 // one shared callee context suffices here, since both calls agree on the
 // callee's parity result.
-void double(p) { return 2 * p }
+int32 double(int32 p) { return 2 * p }
 void main() {
   int32 a, b, n;
   n := __voblint_nondet_int();

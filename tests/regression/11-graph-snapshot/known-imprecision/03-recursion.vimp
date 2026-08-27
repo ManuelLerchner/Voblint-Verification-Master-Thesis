@@ -59,7 +59,7 @@
 //   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return fact
 // EXPECT-GRAPH-END
 
-void fact(n) {
+int32 fact(int32 n) {
   int32 tmp;
   if (n < 2) {
     return 1

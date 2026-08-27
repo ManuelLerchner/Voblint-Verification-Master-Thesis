@@ -2,10 +2,10 @@
 // No verdict annotations: a parse-rejection case. Two procedures may not
 // share a name: proc_rep is keyed by name, so the second definition would
 // silently displace the first at every call site.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
-void f(n) {
+int32 f(int32 n) {
   return n + 1
 }
 void main() {

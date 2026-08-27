@@ -11,19 +11,19 @@
 // (--graph-snapshot: h's collapsed context enters with sign=NonNegative,
 // ivl=[0,3] and exits with ret=[3,3]). Interval alone needs
 // --context entry-state for the same result.
-void h(i) {
+int32 h(int32 i) {
   int32 r;
   if (i == 0) { return 3 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 13
 }
-void g(i) {
+int32 g(int32 i) {
   int32 r;
   if (i == 0) { return 2 } else { skip };
   if (0 < i) { r := h(i - 1); return r } else { skip };
   return 12
 }
-void f(i) {
+int32 f(int32 i) {
   int32 r;
   if (i == 0) { return 1 } else { skip };
   if (0 < i) { r := g(i - 1); return r } else { skip };

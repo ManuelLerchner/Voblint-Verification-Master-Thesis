@@ -13,7 +13,7 @@
 // does -- termination and precision coincide here, since this program's
 // global write is not inside a loop and so needs no widening either.
 // --timeout keeps the case fast even though it no longer needs to.
-global total;
+global int32 total;
 void main() {
   total := 0;
   total := total + 3;

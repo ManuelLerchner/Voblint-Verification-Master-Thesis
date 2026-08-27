@@ -8,8 +8,8 @@
 // Because the global is the only state and it only grows, warrowing widens
 // it to [2,+inf] once and the analysis finishes immediately -- the same
 // under --context none and --context call-string --context-depth 10.
-global num_iterat;
-void rec() {
+global int32 num_iterat;
+int32 rec() {
   int32 res;
   if (0 < num_iterat) {
     num_iterat := num_iterat + 1;

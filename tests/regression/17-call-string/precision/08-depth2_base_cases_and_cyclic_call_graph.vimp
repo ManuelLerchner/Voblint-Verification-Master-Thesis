@@ -10,53 +10,53 @@
 // Goblint's k(6) == 2 check from the same file is UNKNOWN here at depth 2
 // (the collapsed k seed admits i=0 and its fall-through `return 1`; see
 // known-imprecision/03) and proved at depth 5 in precision/07.
-void a(i) {
+int32 a(int32 i) {
   int32 r;
   if (i == 0) { return 11 } else { skip };
   if (0 < i) { r := a(i - 1); return r } else { skip };
   return 1
 }
-void b(i) {
+int32 b(int32 i) {
   int32 r;
   if (i == 0) { return 12 } else { skip };
   if (0 < i) { r := a(i - 1); return r } else { skip };
   return 2
 }
-void c(i) {
+int32 c(int32 i) {
   int32 r;
   if (i == 0) { return 13 } else { skip };
   if (0 < i) { r := b(i - 1); return r } else { skip };
   return 3
 }
-void f(i) {
+int32 f(int32 i) {
   int32 r;
   if (0 < i) { r := e(i - 1); return r } else { skip };
   return 2
 }
-void e(i) {
+int32 e(int32 i) {
   int32 r;
   r := f(i - 1);
   return r + 1
 }
-void l(i) {
+int32 l(int32 i) {
   int32 r;
   if (i == 0) { r := q(2); return r } else { return 4 }
 }
-void p(i) { int32 r; r := l(i - 1); return r }
-void s(i) { int32 r; r := p(i - 1); return r }
-void r(i) { int32 t; t := q(i - 1); return t }
-void o(i) {
+int32 p(int32 i) { int32 r; r := l(i - 1); return r }
+int32 s(int32 i) { int32 r; r := p(i - 1); return r }
+int32 r(int32 i) { int32 t; t := q(i - 1); return t }
+int32 o(int32 i) {
   int32 t;
   if (!(0 < i)) { t := r(4); return t } else { t := o(i - 1); return t }
 }
-void q(i) {
+int32 q(int32 i) {
   int32 t;
   if (i == 4) { t := o(3); return t } else { skip };
   if (i == 3) { t := s(2); return t } else { skip };
   t := p(20);
   return t
 }
-void m(i) { int32 t; t := q(i); return t }
+int32 m(int32 i) { int32 t; t := q(i); return t }
 void main() {
   int32 x0, x1, x2, x3, y0, y1, z;
   x0 := a(1); __voblint_check(x0 == 11); // PROVED

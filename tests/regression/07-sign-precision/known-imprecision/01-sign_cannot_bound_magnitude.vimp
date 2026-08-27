@@ -11,8 +11,8 @@
 // Kept next to the PROVED cases so they are not mistaken for general-purpose
 // numeric precision.
 
-global total;
-void inc(n) {
+global int32 total;
+void inc(int32 n) {
   total := total + n
 }
 void main() {

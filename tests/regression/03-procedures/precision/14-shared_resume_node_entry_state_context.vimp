@@ -5,7 +5,7 @@
 // context sensitivity precisely when the two calls agree on the entered
 // formals, which is the case a per-call-site keying would otherwise be assumed
 // to separate.
-void f(n) {
+int32 f(int32 n) {
   return n
 }
 void main() {

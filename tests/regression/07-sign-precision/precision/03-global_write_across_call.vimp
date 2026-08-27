@@ -15,8 +15,8 @@
 // See 04-intervening_write_preserves_local.vimp for the same routing
 // property isolated without any call machinery at all.
 
-global g;
-void foo() {
+global int32 g;
+int32 foo() {
   g := 5;
   return 2
 }

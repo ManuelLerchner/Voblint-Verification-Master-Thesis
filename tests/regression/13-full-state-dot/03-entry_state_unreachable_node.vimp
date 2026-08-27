@@ -128,7 +128,7 @@
 //   main_pp7_ctx0 -> main_pp8_ctx0: call-to-return f
 // EXPECT-GRAPH-END
 
-void f(n) {
+int32 f(int32 n) {
   if (n < 2) {
     __voblint_check(n == 99); // NOWARN (unreachable)
     return 0

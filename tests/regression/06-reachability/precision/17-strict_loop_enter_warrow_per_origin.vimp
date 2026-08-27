@@ -5,7 +5,7 @@
 // the bottom state instead of being suppressed. analyse_config_with_state
 // now carries that flag at every solver, so this agrees with the default
 // route exactly.
-global g;
+global int32 g;
 void main() {
   int32 i, x;
   x := 0;
