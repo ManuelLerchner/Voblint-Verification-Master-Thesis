@@ -1,0 +1,11 @@
+// PARAM: --analysis int --solver warrow
+// Same source as 09-int_join_routes.vimp and 10-int_per_origin_routes.vimp
+// under Int's own production default. No loop means warrowing has nothing
+// to widen, so all three update rules reach the identical fixpoint -- the
+// three fixtures together are the CLI-level statement that the axis is a
+// convergence strategy, not a precision axis, on loop-free source.
+void main() {
+  int32 x;
+  x := 5;
+  __voblint_check(0 < x) // PROVED
+}

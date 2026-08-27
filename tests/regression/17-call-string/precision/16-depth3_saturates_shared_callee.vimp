@@ -1,0 +1,140 @@
+// PARAM: --analysis interval --context call-string --context-depth 3
+// Same source as known-imprecision/02-depth1_merges_shared_callee.vimp and
+// precision/02-depth2_separates_shared_callee.vimp. main's deepest call
+// chain is two frames (main -> f -> g), so no activation ever carries a
+// call string longer than two: raising the bound to 3 has nothing further
+// to separate, and the solved graph below is byte-identical to depth 2's --
+// same five contexts, same values, same edges. Depth is a genuine runtime
+// parameter rather than a dispatch table over the depths the corpus
+// happens to use, and past the program's own chain length it saturates
+// instead of multiplying contexts.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     g_pp0_ctx0
+//     g_entry_g_ctx0
+//     g_result_g_ctx0
+//   cluster_ctx_1:
+//     g_pp0_ctx1
+//     g_entry_g_ctx1
+//     g_result_g_ctx1
+//   cluster_ctx_2:
+//     main_pp8_ctx2
+//     main_pp9_ctx2
+//     main_result_main_ctx2
+//     main_entry_main_ctx2
+//     main_pp5_ctx2
+//     main_pp6_ctx2
+//     main_pp7_ctx2
+//   cluster_ctx_3:
+//     f_pp2_ctx3
+//     f_pp3_ctx3
+//     f_entry_f_ctx3
+//     f_result_f_ctx3
+//   cluster_ctx_4:
+//     f_pp2_ctx4
+//     f_pp3_ctx4
+//     f_entry_f_ctx4
+//     f_result_f_ctx4
+//
+// nodes:
+//   main_pp8_ctx2: pp8
+//       x=[6,6]
+//       y=[20,20]
+//       check y==20
+//   main_pp9_ctx2: pp9
+//       x=[6,6]
+//       y=[20,20]
+//   main_result_main_ctx2: exit_main
+//       x=[6,6]
+//       y=[20,20]
+//   g_pp0_ctx0: pp0
+//       p=[3,3]
+//   g_pp0_ctx1: pp0
+//       p=[10,10]
+//   main_entry_main_ctx2: entry_main
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   f_pp2_ctx3: pp2
+//       p=[3,3]
+//       t=[-inf,+inf]
+//   f_pp2_ctx4: pp2
+//       p=[10,10]
+//       t=[-inf,+inf]
+//   g_entry_g_ctx0: entry_g
+//       p=[3,3]
+//   g_entry_g_ctx1: entry_g
+//       p=[10,10]
+//   f_pp3_ctx3: pp3
+//       p=[3,3]
+//       t=[6,6]
+//   f_pp3_ctx4: pp3
+//       p=[10,10]
+//       t=[20,20]
+//   g_result_g_ctx0: exit_g
+//       p=[3,3]
+//       ret=[6,6]
+//   g_result_g_ctx1: exit_g
+//       p=[10,10]
+//       ret=[20,20]
+//   main_pp5_ctx2: pp5
+//       x=[-inf,+inf]
+//       y=[-inf,+inf]
+//   main_pp6_ctx2: pp6
+//       x=[6,6]
+//       y=[-inf,+inf]
+//   f_entry_f_ctx3: entry_f
+//       p=[3,3]
+//       t=[-inf,+inf]
+//   f_entry_f_ctx4: entry_f
+//       p=[10,10]
+//       t=[-inf,+inf]
+//   main_pp7_ctx2: pp7
+//       x=[6,6]
+//       y=[20,20]
+//       check x==6
+//   f_result_f_ctx3: exit_f
+//       p=[3,3]
+//       t=[6,6]
+//       ret=[6,6]
+//   f_result_f_ctx4: exit_f
+//       p=[10,10]
+//       t=[20,20]
+//       ret=[20,20]
+//
+// edges:
+//   main_pp8_ctx2 -> main_pp9_ctx2: check(y==20)
+//   main_pp9_ctx2 -> main_result_main_ctx2: terminate
+//   g_pp0_ctx0 -> g_result_g_ctx0: return p+p
+//   g_pp0_ctx1 -> g_result_g_ctx1: return p+p
+//   main_entry_main_ctx2 -> main_pp5_ctx2: nop
+//   g_entry_g_ctx0 -> g_pp0_ctx0: nop
+//   g_entry_g_ctx1 -> g_pp0_ctx1: nop
+//   f_pp3_ctx3 -> f_result_f_ctx3: return t
+//   f_pp3_ctx4 -> f_result_f_ctx4: return t
+//   f_entry_f_ctx3 -> f_pp2_ctx3: nop
+//   f_entry_f_ctx4 -> f_pp2_ctx4: nop
+//   main_pp7_ctx2 -> main_pp8_ctx2: check(x==6)
+//   f_pp2_ctx3 -> g_entry_g_ctx0: enter g(p)
+//   f_pp2_ctx4 -> g_entry_g_ctx1: enter g(p)
+//   main_pp5_ctx2 -> f_entry_f_ctx3: enter f(3)
+//   main_pp6_ctx2 -> f_entry_f_ctx4: enter f(10)
+//   g_result_g_ctx0 -> f_pp3_ctx3: combine t := #ret
+//   g_result_g_ctx1 -> f_pp3_ctx4: combine t := #ret
+//   f_result_f_ctx3 -> main_pp6_ctx2: combine x := #ret
+//   f_result_f_ctx4 -> main_pp7_ctx2: combine y := #ret
+//   f_pp2_ctx3 -> f_pp3_ctx3: call-to-return g
+//   f_pp2_ctx4 -> f_pp3_ctx4: call-to-return g
+//   main_pp5_ctx2 -> main_pp6_ctx2: call-to-return f
+//   main_pp6_ctx2 -> main_pp7_ctx2: call-to-return f
+// EXPECT-GRAPH-END
+
+int32 g(int32 p) { return p + p }
+int32 f(int32 p) { int32 t; t := g(p); return t }
+void main() {
+  int32 x, y;
+  x := f(3);
+  y := f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20) // PROVED
+}

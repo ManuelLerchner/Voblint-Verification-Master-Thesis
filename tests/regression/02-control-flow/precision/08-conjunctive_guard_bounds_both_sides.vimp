@@ -1,0 +1,60 @@
+// PARAM: --analysis interval
+// Both conjuncts of one guard narrow the same variable, in sequence, so the
+// branch body sees an exactly bounded interval rather than a half-line.
+// 03-branch_refinement_after_random.vimp narrows one side only; the "And _ _
+// True" case 05-infeasible_conjunct_dropped.vimp exercises has its first
+// conjunct constant, so only the second constrains anything. This is the
+// loop-free isolation of the narrowing
+// 12-widening/precision/03-post_loop2_clamped_doubling.vimp only reaches
+// through a loop guard, where widening and narrowing are also in play.
+//
+// x is unconstrained on entry to the branch; the assume tightens it to
+// [1,9] (checked in the graph block below, not only through the verdicts),
+// and that one range then settles a check above its upper bound and a check
+// below its lower bound in opposite directions.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp1_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp0_ctx0
+//
+// nodes:
+//   main_pp1_ctx0: pp1
+//   main_pp2_ctx0: pp2
+//       check x<11
+//       x=[1,9]
+//   main_pp3_ctx0: pp3
+//       check x<0 [REFUTED]
+//       x=[1,9]
+//   main_pp4_ctx0: pp4
+//   main_pp5_ctx0: pp5
+//   main_result_main_ctx0: exit_main
+//   main_entry_main_ctx0: entry_main
+//   main_pp0_ctx0: pp0
+//
+// edges:
+//   main_pp1_ctx0 -> main_pp2_ctx0: 0<x&&x<10
+//   main_pp1_ctx0 -> main_pp4_ctx0: not (0<x&&x<10)
+//   main_pp2_ctx0 -> main_pp3_ctx0: check(x<11)
+//   main_pp3_ctx0 -> main_pp5_ctx0: check(x<0)
+//   main_pp4_ctx0 -> main_pp5_ctx0: y := 0
+//   main_pp5_ctx0 -> main_result_main_ctx0: terminate
+//   main_entry_main_ctx0 -> main_pp0_ctx0: nop
+//   main_pp0_ctx0 -> main_pp1_ctx0: x := __voblint_nondet_int()
+// EXPECT-GRAPH-END
+void main() {
+  int32 x, y;
+  x := __voblint_nondet_int();
+  if (0 < x && x < 10) {
+    __voblint_check(x < 11); // PROVED
+    __voblint_check(x < 0) // REFUTED
+  } else {
+    y := 0
+  }
+}

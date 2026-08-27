@@ -1,0 +1,14 @@
+// PARAM: --analysis interval --solver per-origin
+// The same two-origin slot as 12-two_origin_join_meets_ceiling.vimp under
+// the per-origin rule: storing one contribution per origin and taking their
+// supremum on read reconstructs exactly what accumulating them into a single
+// slot produces, so per-origin and join agree at [1,2]. Neither widens, which
+// is what makes the pair the ceiling the two widening rules are measured
+// against.
+void p(int32 n) {
+  __voblint_check(n < 10) // PROVED
+}
+void main() {
+  p(1);
+  p(2)
+}

@@ -1,0 +1,15 @@
+// PARAM: --analysis int --solver join
+// Exercises --solver join against the composite integer domain. Int's
+// production default is Solver_Warrow at Refine_Fixpoint; join is the
+// always-terminating alternative, wired to the same
+// analyse_int_dg_eqs_for equation system rather than a separate one, so
+// the update rule is a convergence strategy here and not a different
+// abstract semantics. Straight-line source keeps the verdict independent
+// of that choice: what this pins is that the combination is routed at all
+// and returns a real report, on the domain whose join/per-origin support
+// was the last to be wired up.
+void main() {
+  int32 x;
+  x := 5;
+  __voblint_check(0 < x) // PROVED
+}

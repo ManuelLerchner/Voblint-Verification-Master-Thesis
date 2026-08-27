@@ -1,0 +1,18 @@
+// PARAM: --analysis interval --solver join
+// The precision ceiling of the two-origin slot the widening rules are
+// compared against. p's single FunctionEntry seed is written by two call
+// sites, [1,1] and [2,2]; join accumulates them into the slot without ever
+// widening, so the entry value is exactly [1,2] and n < 10 is decided.
+//
+// Same program as known-imprecision/03-warrow_joins_before_widening.vimp
+// (warrow, [1,+inf]) and precision/06-warrow_per_origin_keeps_bound.vimp
+// (warrow-per-origin, [1,2]): join has no termination guarantee on a
+// growing chain but loses nothing here, and warrow-per-origin meets this
+// same value while keeping that guarantee.
+void p(int32 n) {
+  __voblint_check(n < 10) // PROVED
+}
+void main() {
+  p(1);
+  p(2)
+}

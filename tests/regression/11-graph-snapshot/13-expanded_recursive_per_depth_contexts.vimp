@@ -1,0 +1,301 @@
+// PARAM: --analysis interval --context entry-state --context-graph expanded
+// Same program as 03-procedures/precision/06-recursive_factorial_dead_branch_
+// no_bottom_leak.vimp, which pins its four check verdicts; this fixture pins
+// the per-context states those verdicts rest on, which no verdict surface can
+// show. Entry-state keying gives one context per recursion depth, so
+// factorial's single physical body renders as five clusters: n=[4,4], [3,3],
+// [2,2], [1,1], and the empty-interval context the recursive call seeds once
+// n's own range is exhausted. exit_factorial carries the exact ret=[24,24],
+// [6,6], [2,2] and [1,1] of its own depth -- 24, 6, 2 and 1 are separated
+// values here, not one widened summary interval, which is what
+// known-imprecision/03-recursion.vimp shows the same source collapsing to
+// when every activation shares one context key.
+//
+// The n<2 base-case branch is the dead-branch half: pp2 renders "unreachable"
+// in every n>=2 cluster, so its own "return 1" edge contributes nothing to
+// that depth's exit join, while pp2 in the n=[1,1] cluster is live and returns
+// [1,1]. The same split shows on the two checks: 0<n and 0<r render "[dead]"
+// in the exhausted-range cluster (and 0<r also in n=[1,1], which never makes
+// the recursive call) and decide normally everywhere else, so both source-level
+// verdicts come from the live activations alone.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0:
+//     main_pp10_ctx0
+//     main_pp11_ctx0
+//     main_result_main_ctx0
+//     main_entry_main_ctx0
+//     main_pp7_ctx0
+//     main_pp8_ctx0
+//     main_pp9_ctx0
+//   cluster_ctx_1:
+//     factorial_pp1_ctx1
+//     factorial_pp2_ctx1
+//     factorial_pp5_ctx1
+//     factorial_pp0_ctx1
+//     factorial_pp3_ctx1
+//     factorial_pp4_ctx1
+//     factorial_entry_factorial_ctx1
+//     factorial_result_factorial_ctx1
+//   cluster_ctx_2:
+//     factorial_pp1_ctx2
+//     factorial_pp2_ctx2
+//     factorial_pp5_ctx2
+//     factorial_pp0_ctx2
+//     factorial_pp3_ctx2
+//     factorial_pp4_ctx2
+//     factorial_entry_factorial_ctx2
+//     factorial_result_factorial_ctx2
+//   cluster_ctx_3:
+//     factorial_pp1_ctx3
+//     factorial_pp2_ctx3
+//     factorial_pp5_ctx3
+//     factorial_pp0_ctx3
+//     factorial_pp3_ctx3
+//     factorial_pp4_ctx3
+//     factorial_entry_factorial_ctx3
+//     factorial_result_factorial_ctx3
+//   cluster_ctx_4:
+//     factorial_pp1_ctx4
+//     factorial_pp2_ctx4
+//     factorial_pp5_ctx4
+//     factorial_pp0_ctx4
+//     factorial_pp3_ctx4
+//     factorial_pp4_ctx4
+//     factorial_entry_factorial_ctx4
+//     factorial_result_factorial_ctx4
+//   cluster_ctx_5:
+//     factorial_pp1_ctx5
+//     factorial_pp2_ctx5
+//     factorial_pp5_ctx5
+//     factorial_pp0_ctx5
+//     factorial_pp3_ctx5
+//     factorial_pp4_ctx5
+//     factorial_entry_factorial_ctx5
+//     factorial_result_factorial_ctx5
+//
+// nodes:
+//   factorial_pp1_ctx1: pp1
+//       unreachable
+//   factorial_pp1_ctx2: pp1
+//       n=[1,1]
+//       r=[-inf,+inf]
+//   factorial_pp1_ctx3: pp1
+//       n=[2,2]
+//       r=[-inf,+inf]
+//   factorial_pp1_ctx4: pp1
+//       n=[3,3]
+//       r=[-inf,+inf]
+//   factorial_pp1_ctx5: pp1
+//       n=[4,4]
+//       r=[-inf,+inf]
+//   factorial_pp2_ctx1: pp2
+//       unreachable
+//   factorial_pp2_ctx2: pp2
+//       n=[1,1]
+//       r=[-inf,+inf]
+//   factorial_pp2_ctx3: pp2
+//       unreachable
+//   factorial_pp2_ctx4: pp2
+//       unreachable
+//   factorial_pp2_ctx5: pp2
+//       unreachable
+//   factorial_pp5_ctx1: pp5
+//       unreachable
+//   factorial_pp5_ctx2: pp5
+//       unreachable
+//   factorial_pp5_ctx3: pp5
+//       n=[2,2]
+//       r=[1,1]
+//   factorial_pp5_ctx4: pp5
+//       n=[3,3]
+//       r=[2,2]
+//   factorial_pp5_ctx5: pp5
+//       n=[4,4]
+//       r=[6,6]
+//   main_pp10_ctx0: pp10
+//       a=[6,6]
+//       b=[24,24]
+//       check b==24
+//   main_pp11_ctx0: pp11
+//       a=[6,6]
+//       b=[24,24]
+//   main_result_main_ctx0: exit_main
+//       a=[6,6]
+//       b=[24,24]
+//   factorial_pp0_ctx1: pp0
+//       unreachable
+//       check 0<n [dead]
+//   factorial_pp0_ctx2: pp0
+//       n=[1,1]
+//       r=[-inf,+inf]
+//       check 0<n
+//   factorial_pp0_ctx3: pp0
+//       n=[2,2]
+//       r=[-inf,+inf]
+//       check 0<n
+//   factorial_pp0_ctx4: pp0
+//       n=[3,3]
+//       r=[-inf,+inf]
+//       check 0<n
+//   factorial_pp0_ctx5: pp0
+//       n=[4,4]
+//       r=[-inf,+inf]
+//       check 0<n
+//   main_entry_main_ctx0: entry_main
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//   factorial_pp3_ctx1: pp3
+//       unreachable
+//   factorial_pp3_ctx2: pp3
+//       unreachable
+//   factorial_pp3_ctx3: pp3
+//       n=[2,2]
+//       r=[-inf,+inf]
+//   factorial_pp3_ctx4: pp3
+//       n=[3,3]
+//       r=[-inf,+inf]
+//   factorial_pp3_ctx5: pp3
+//       n=[4,4]
+//       r=[-inf,+inf]
+//   factorial_pp4_ctx1: pp4
+//       unreachable
+//       check 0<r [dead]
+//   factorial_pp4_ctx2: pp4
+//       unreachable
+//       check 0<r [dead]
+//   factorial_pp4_ctx3: pp4
+//       n=[2,2]
+//       r=[1,1]
+//       check 0<r
+//   factorial_pp4_ctx4: pp4
+//       n=[3,3]
+//       r=[2,2]
+//       check 0<r
+//   factorial_pp4_ctx5: pp4
+//       n=[4,4]
+//       r=[6,6]
+//       check 0<r
+//   main_pp7_ctx0: pp7
+//       a=[-inf,+inf]
+//       b=[-inf,+inf]
+//   main_pp8_ctx0: pp8
+//       a=[6,6]
+//       b=[-inf,+inf]
+//   factorial_entry_factorial_ctx1: entry_factorial
+//       unreachable
+//   factorial_entry_factorial_ctx2: entry_factorial
+//       n=[1,1]
+//       r=[-inf,+inf]
+//   factorial_entry_factorial_ctx3: entry_factorial
+//       n=[2,2]
+//       r=[-inf,+inf]
+//   factorial_entry_factorial_ctx4: entry_factorial
+//       n=[3,3]
+//       r=[-inf,+inf]
+//   factorial_entry_factorial_ctx5: entry_factorial
+//       n=[4,4]
+//       r=[-inf,+inf]
+//   main_pp9_ctx0: pp9
+//       a=[6,6]
+//       b=[24,24]
+//       check a==6
+//   factorial_result_factorial_ctx1: exit_factorial
+//       unreachable
+//   factorial_result_factorial_ctx2: exit_factorial
+//       n=[1,1]
+//       r=[-inf,+inf]
+//       ret=[1,1]
+//   factorial_result_factorial_ctx3: exit_factorial
+//       n=[2,2]
+//       r=[1,1]
+//       ret=[2,2]
+//   factorial_result_factorial_ctx4: exit_factorial
+//       n=[3,3]
+//       r=[2,2]
+//       ret=[6,6]
+//   factorial_result_factorial_ctx5: exit_factorial
+//       n=[4,4]
+//       r=[6,6]
+//       ret=[24,24]
+//
+// edges:
+//   factorial_pp1_ctx1 -> factorial_pp2_ctx1: n<2
+//   factorial_pp1_ctx1 -> factorial_pp3_ctx1: not (n<2)
+//   factorial_pp1_ctx2 -> factorial_pp2_ctx2: n<2
+//   factorial_pp1_ctx2 -> factorial_pp3_ctx2: not (n<2)
+//   factorial_pp1_ctx3 -> factorial_pp2_ctx3: n<2
+//   factorial_pp1_ctx3 -> factorial_pp3_ctx3: not (n<2)
+//   factorial_pp1_ctx4 -> factorial_pp2_ctx4: n<2
+//   factorial_pp1_ctx4 -> factorial_pp3_ctx4: not (n<2)
+//   factorial_pp1_ctx5 -> factorial_pp2_ctx5: n<2
+//   factorial_pp1_ctx5 -> factorial_pp3_ctx5: not (n<2)
+//   factorial_pp2_ctx1 -> factorial_result_factorial_ctx1: return 1
+//   factorial_pp2_ctx2 -> factorial_result_factorial_ctx2: return 1
+//   factorial_pp2_ctx3 -> factorial_result_factorial_ctx3: return 1
+//   factorial_pp2_ctx4 -> factorial_result_factorial_ctx4: return 1
+//   factorial_pp2_ctx5 -> factorial_result_factorial_ctx5: return 1
+//   factorial_pp5_ctx1 -> factorial_result_factorial_ctx1: return n*r
+//   factorial_pp5_ctx2 -> factorial_result_factorial_ctx2: return n*r
+//   factorial_pp5_ctx3 -> factorial_result_factorial_ctx3: return n*r
+//   factorial_pp5_ctx4 -> factorial_result_factorial_ctx4: return n*r
+//   factorial_pp5_ctx5 -> factorial_result_factorial_ctx5: return n*r
+//   main_pp10_ctx0 -> main_pp11_ctx0: check(b==24)
+//   main_pp11_ctx0 -> main_result_main_ctx0: terminate
+//   factorial_pp0_ctx1 -> factorial_pp1_ctx1: check(0<n)
+//   factorial_pp0_ctx2 -> factorial_pp1_ctx2: check(0<n)
+//   factorial_pp0_ctx3 -> factorial_pp1_ctx3: check(0<n)
+//   factorial_pp0_ctx4 -> factorial_pp1_ctx4: check(0<n)
+//   factorial_pp0_ctx5 -> factorial_pp1_ctx5: check(0<n)
+//   main_entry_main_ctx0 -> main_pp7_ctx0: nop
+//   factorial_pp4_ctx1 -> factorial_pp5_ctx1: check(0<r)
+//   factorial_pp4_ctx2 -> factorial_pp5_ctx2: check(0<r)
+//   factorial_pp4_ctx3 -> factorial_pp5_ctx3: check(0<r)
+//   factorial_pp4_ctx4 -> factorial_pp5_ctx4: check(0<r)
+//   factorial_pp4_ctx5 -> factorial_pp5_ctx5: check(0<r)
+//   factorial_entry_factorial_ctx1 -> factorial_pp0_ctx1: nop
+//   factorial_entry_factorial_ctx2 -> factorial_pp0_ctx2: nop
+//   factorial_entry_factorial_ctx3 -> factorial_pp0_ctx3: nop
+//   factorial_entry_factorial_ctx4 -> factorial_pp0_ctx4: nop
+//   factorial_entry_factorial_ctx5 -> factorial_pp0_ctx5: nop
+//   main_pp9_ctx0 -> main_pp10_ctx0: check(a==6)
+//   factorial_pp3_ctx3 -> factorial_entry_factorial_ctx2: enter factorial(n-1)
+//   factorial_pp3_ctx4 -> factorial_entry_factorial_ctx3: enter factorial(n-1)
+//   factorial_pp3_ctx5 -> factorial_entry_factorial_ctx4: enter factorial(n-1)
+//   main_pp7_ctx0 -> factorial_entry_factorial_ctx4: enter factorial(3)
+//   main_pp8_ctx0 -> factorial_entry_factorial_ctx5: enter factorial(4)
+//   factorial_result_factorial_ctx2 -> factorial_pp4_ctx3: combine r := #ret
+//   factorial_result_factorial_ctx3 -> factorial_pp4_ctx4: combine r := #ret
+//   factorial_result_factorial_ctx4 -> factorial_pp4_ctx5: combine r := #ret
+//   factorial_result_factorial_ctx4 -> main_pp8_ctx0: combine a := #ret
+//   factorial_result_factorial_ctx5 -> main_pp9_ctx0: combine b := #ret
+//   factorial_pp3_ctx1 -> factorial_pp4_ctx1: call-to-return factorial
+//   factorial_pp3_ctx2 -> factorial_pp4_ctx2: call-to-return factorial
+//   factorial_pp3_ctx3 -> factorial_pp4_ctx3: call-to-return factorial
+//   factorial_pp3_ctx4 -> factorial_pp4_ctx4: call-to-return factorial
+//   factorial_pp3_ctx5 -> factorial_pp4_ctx5: call-to-return factorial
+//   main_pp7_ctx0 -> main_pp8_ctx0: call-to-return factorial
+//   main_pp8_ctx0 -> main_pp9_ctx0: call-to-return factorial
+// EXPECT-GRAPH-END
+
+int32 factorial(int32 n) {
+  int32 r;
+  __voblint_check(0 < n); // PROVED
+
+  if (n < 2) {
+    return 1
+  } else {
+    r := factorial(n - 1);
+    __voblint_check(0 < r); // PROVED
+    return n * r
+  }
+}
+
+void main() {
+  int32 a, b;
+  a := factorial(3);
+  b := factorial(4);
+
+  __voblint_check(a == 6);   // PROVED
+  __voblint_check(b == 24)   // PROVED
+}
