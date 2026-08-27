@@ -145,7 +145,7 @@ qed
 subsection \<open>Ikind-aware casting\<close>
 
 text \<open>
-  \<open>ivl_cast\<close> mirrors Goblint's own \<open>IntervalDomain.norm ~cast:true\<close>
+  \<open>ivl_cast\<close> mirrors Goblint's own \<open>IntervalDomain.norm\<close>
   (source-checked against \<open>intervalDomain.ml\<close>): an unbounded side cannot be
   wrapped at all; a finite range already inside \<open>ik\<close>'s bounds is untouched; a
   finite range wider than \<open>ik\<close>'s own representable width cannot wrap as one
@@ -153,6 +153,15 @@ text \<open>
   wraps via \<open>ik_norm\<close>, and if the wrapped bounds come out disordered the
   wrapped range is disconnected and unrepresentable (Goblint's post-wrap
   \<open>l \<le> u\<close> check).
+
+  It is upstream's \<^emph>\<open>wrapping\<close> branch that is mirrored, the one guarded by
+  \<open>should_wrap ik\<close>: every unsigned kind, and every kind at all under
+  \<open>sem.int.signed_overflow = assume_wraparound\<close>. Goblint's default is
+  \<open>assume_top\<close>, whose branch answers \<open>top_of ik\<close> without attempting the wrap.
+  The two agree on unsigned kinds and diverge on signed overflow, which is the
+  frozen policy difference rather than a modelling gap: VIMP defines signed
+  overflow as wrapping, so its conversion has to wrap wherever upstream's
+  wrapping configuration does.
 
   In each of those three give-up cases the answer is \<open>ivl_top_of ik\<close> --
   the target kind's own range -- not the lattice \<open>top\<close>. Upstream's

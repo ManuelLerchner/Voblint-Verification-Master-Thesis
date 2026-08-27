@@ -425,12 +425,34 @@ without normalizing, so a store holding `2 + 2^32` satisfies the guard while
 in the kind's range by construction, supplies the bound the declaration should
 have supplied, and all four components then pin the single value.
 
-That is the shape of the remaining gap, stated as a defect rather than as a
-count: **a declaration does not bound the values its variable can hold.** The
-seed is `[-inf,+inf]` for every local, the invariant `styped` that every
-source-level theorem assumes reaches no abstract operation, and no cell
-carries the kind it was computed at. Everything below is that one fact seen
-from a different side.
+That is the shape of the remaining gap. Stating it precisely matters, because
+the short version -- "a declaration does not bound the values its variable can
+hold" -- is too strong and would read as an unsoundness. Three separate facts:
+
+**Preservation is proved.** `pstep_preserves_sstyped` and
+`psteps_preserves_sstyped` (`VIMP_Proc.thy`) show every concrete transition,
+interprocedural ones included, preserves typedness. `sstyped` is `styped`
+outside an in-flight unwind and `rstyped` -- every variable except `ret_var` --
+during one, because mid-unwind the return slot holds a value typed by the
+callee's declared return kind rather than by `Gamma ret_var`. So given a typed
+start, declarations *do* bound reachable concrete values.
+
+**Initialization is assumed, not proved.** Every source-facing theorem carries
+`styped Gamma s0` as a hypothesis, and the entry point's initial store set does
+not supply it: `cinit_stores gs = {s. ALL x. gs x --> s x = 0}` pins globals to
+zero and leaves every local unconstrained over all of `int`. The hypothesis is
+discharged onto the caller. Not an unsoundness -- the analysis
+over-approximates the larger set -- but it means "reachable from
+`cinit_stores`" genuinely includes out-of-range stores today.
+
+**The abstraction does not exploit the range.** `styped` occurs nowhere under
+`src/Core/` or in any domain instance; no concretization is intersected with a
+declared range, and the abstract seed is `[-inf,+inf]` for every local. So
+`gamma` includes unreachable out-of-range stores, and every operation must
+assume its operand may be one of them. That is a precision defect.
+
+Everything below is the third fact seen from a different side, and closing it
+means closing the second one too.
 
 ### One root cause behind the reclassified Sign cases
 
@@ -461,6 +483,84 @@ a defect. Entry-state keys a context by the callee's entry abstract state;
 `square(3)` and `square(4)` both enter at `Positive`, so Sign has one context,
 while `[3,3]` and `[4,4]` differ, so Interval has two. The fixture failed for
 the Sign mechanism above and nothing else.
+
+## How Goblint carries a kind on a value (source-checked, 2026-08-27)
+
+Read against `goblint/analyzer` at `b6e06be2aae6109e965af054827fdae9c320fa40`,
+because the fix for the gap above should be upstream's rather than an
+invention.
+
+**The cell carries the kind, and there is no kindless top or bottom.**
+
+```ocaml
+module IntDomLifter (I : S2) = struct
+  type t = { v : I.t; ikind : CilType.Ikind.t }
+  let bot () = failwith "bot () is not implemented for IntDomLifter."
+  let top () = failwith "top () is not implemented for IntDomLifter."
+  let bot_of ikind = { v = I.bot_of ikind; ikind }
+  let top_of ?bitfield ikind = { v = I.top_of ?bitfield ikind; ikind }
+```
+
+`intDomain0.ml:170`. The value domain's `ID` is this lifter: `valueDomain.ml`
+calls `ID.ikind i`, which only the lifter provides.
+
+**Every lattice and arithmetic operation reads the kind off the value.**
+
+```ocaml
+let lift2 op x y = check_ikinds x y; { x with v = op x.ikind x.v y.v }
+let join = lift2 I.join   let widen = lift2 I.widen
+let add  = lift2 I.add    let sub   = lift2 I.sub
+```
+
+Widening obtains its `ik` exactly the way addition does. That is the whole
+mechanism by which Goblint's widening saturates at the kind's bounds.
+
+**Mismatched kinds are excluded by invariant, not by a lattice element.**
+`check_ikinds` raises `IncompatibleIKinds`, and `leq` deliberately skips the
+check with a TODO noting it is called on arguments of different type. So the
+lifter is not a clean partial lattice: it operates under a same-kind invariant
+that the rest of the analyzer is expected to maintain, and enforces it only on
+the operations that would silently produce nonsense.
+
+Isabelle cannot copy that. `warrowing` and the lattice classes quantify over
+all values, so the operation must be total and a mismatch has to land
+somewhere in the lattice. `Kind_Tagged.thy`'s horizontal sum answers `KTop`,
+which is the faithful total encoding, and it converts upstream's implicit
+precondition into an explicit obligation: mismatched tags must be proved
+unreachable, or `KTop` becomes reachable for a valid program.
+
+**The kind reaches a cell from its declaration, at construction.**
+
+```ocaml
+let rec init_value (t: typ) = match t with
+  | TInt (ik,_) -> Int (ID.top_of ?bitfield ik)
+let rec top_value (t: typ) = match t with
+  | TInt (ik,_) -> Int (ID.(cast_to ~kind:Internal ik (top_of ik)))
+```
+
+`valueDomain.ml:202, 222`. This is the piece missing here, and it is the
+ordering lesson: a Goblint cell carries a kind because it was built from a
+`varinfo.vtype`, not because a lattice was redesigned. The carrier is second.
+
+Construction is not only the seed. A cell is also tagged when an expression
+result is stored (from the CIL result type), at an assignment (destination
+type), at a formal binding, at a return, and at a special call's result. The
+invariant is complete only when every write preserves the tag, so a seed-first
+slice is an incremental order and not the whole obligation.
+
+`ret_var` is the one identity whose kind is dynamic: during an unwind it holds
+a value at the *callee's* declared return kind, which is why concrete
+preservation already weakens to `rstyped` there. A tagged state has to allow
+the same, and must show that return slots tagged at two different callee kinds
+never meet at a solver join.
+
+**A caveat on the initial value itself.** `top_of ik` for an uninitialized
+automatic variable is Goblint's abstraction, not ISO C's concrete semantics:
+C leaves the value indeterminate and reading it can be undefined. Seeding at
+the kind's range therefore encodes a VIMP decision -- an uninitialized local
+holds an arbitrary representable value of its declared kind -- which is
+reasonable, matches the frozen total-semantics stance, and has to stay
+documented as VIMP's own rather than as C's.
 
 ## Boundary examples
 

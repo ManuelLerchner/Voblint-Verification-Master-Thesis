@@ -167,19 +167,47 @@ store, and `KTop` is the wrong one: its concretization is `UNIV`, not the
 identifier's `ik_range`, so it violates the invariant A8 establishes on its
 first lookup.
 
-The plumbing to fix this already exists.
-`fun_of_resolved_st_q_for :: (vname => bool) => 'a resolved_st_q => vname => 'a`
-(`Exec_St.thy:1461`) already threads a program-derived classifier through every
-state lookup. Replacing that `vname => bool` with the declaration table is a
-like-for-like substitution at all 458 of its sites, and it makes the absent-cell
-reading kind-aware for free:
+`resolved_st_q` cannot express this by adjusting a default. It compresses a
+state into one default for locals, one for globals, and sparse overrides, and
+locals do not share a kind: no single interval is both `top_of U8 = [0,255]`
+and `top_of I64`. Two ways out, and only one of them is a slice rather than a
+redesign:
+
+- **Explicit entry per resolved declaration.** Build the seed after resolution
+  from `resolved_kinds`, one override per encoded identity. The compression
+  stays, the defaults stop carrying meaning for anything declared, and
+  `fun_of_resolved_st_q_for`'s signature is untouched. Recommended.
+- **Kind-dependent default in the lookup.** Replace the
+  `vname => bool` classifier at all 458 sites of
+  `fun_of_resolved_st_q_for :: (vname => bool) => 'a resolved_st_q => vname => 'a`
+  (`Exec_St.thy:1461`) with the declaration table, so an absent cell reads
+  `KD k top` where `kind_of_var Delta v = Some k`. Much larger, and it buys
+  nothing the first option does not once every declaration has an entry.
+
+Either way no reachable cell is `KTop` or an untagged `KBot`; `KTop` exists
+only so the class laws hold on values the analysis never builds.
+
+Tagging the seed is not the whole invariant. Goblint establishes a cell's kind
+at *every* construction site, not only at `init_value`: an expression result
+takes the CIL result type, an assignment the destination type, a formal
+binding the formal's kind, a return the procedure's return kind, a special
+call its declared result kind. Seed-first is a workable incremental order, but
+the invariant only closes once every write preserves the tag.
+
+`ret_var` is the exception that has to be designed for rather than discovered.
+Its kind is dynamic: during an unwind it holds a value at the *callee's*
+declared return kind, which is exactly why concrete preservation already
+weakens from `styped` to `rstyped` there (`pstep_preserves_sstyped`). The
+tagged invariant must permit the same --
 
 ```text
-absent v  |->  KD k top      where  kind_of_var Delta v = Some k
+ordinary identity  |->  its declaration's kind
+ret_var mid-unwind |->  the current callee's return kind
 ```
 
-No reachable cell is then `KTop` or an untagged `KBot`; `KTop` exists only so
-the class laws hold on values the analysis never builds.
+-- and must show that return slots tagged at two different callee kinds never
+meet at a solver join. Without that, `KTop` becomes reachable for a valid
+program and the whole carrier stops paying for itself.
 
 The obligations this leaves, and they are the highest proof risk in the whole
 migration:
@@ -410,6 +438,7 @@ rather than completing a half-elaborated program.
 | A4 | Re-index `store` and `abs_state` to `var_id`; classifier parameter becomes the declaration table. `gs`, `location_of`, `Global_Location` / `Local_Location`, `reserved_ret_var` all collapse. `lookup_var` confined to test and reporting boundaries. | -- |
 | A5 | Switch and close every production frontend path; order-independence regressions. | order-dependence defect |
 | A6 | Replace the conversion policy with the C-like fixed-width rules: operand promotions, argument binding, return, comparison operands. | C conformance |
+| A6b | Typed concrete initialization and a declaration-derived abstract seed, cell type still plain `ivl`. See below. | initialization half of the `styped` gap |
 | A7 | `kd` horizontal sum; order, bot, top, sup, widen, narrow, `is_bot`, concretization monotonicity. Transfers stay conservative. | -- |
 | A8 | `wf_abs_state` preservation and kind-relative concretization. | Cause B premise |
 | A9 | Precise kind-aware arithmetic, casts, widening and narrowing. Revert the kind-agnostic "recognize every machine-kind extreme" narrowing atomically here. | Cause B |
@@ -427,3 +456,37 @@ definitions.
 `src/Examples` holds roughly 1400 `STR ''...''` variable literals. They keep
 their textual source and gain one `resolve` call rather than being rewritten
 against raw identities.
+
+### A6b in detail: the seed slice
+
+Changing the abstract seed alone does not close the initialization gap. The
+concrete collecting semantics still starts from out-of-range stores, because
+`cinit_stores gs = {s. ALL x. gs x --> s x = 0}` constrains globals only. Both
+halves move together:
+
+```isabelle
+typed_cinit_stores Gamma gs = {s. styped Gamma s AND (ALL x. gs x --> s x = 0)}
+
+typed_cinit_stores Gamma gs SUBSETEQ gamma_state (cinit_ivl_st_for Gamma gs p)
+```
+
+and then `ltr_collect` and the source-facing soundness chain migrate to the
+typed initial set, at which point `styped Gamma s0` stops being a hypothesis
+the caller discharges.
+
+Order:
+
+1. Define the typed concrete initial-store set.
+2. Make the Interval seed depend on the resolved program and `prog_tyenv`.
+3. Populate every declared identity explicitly, per the first option above.
+4. Prove the exact lookup equations for the new seed.
+5. Prove typed-initial-store coverage.
+6. Migrate every Interval entry point and collecting-soundness theorem.
+7. Add mixed-kind local and global regressions.
+8. Keep the cell type plain `ivl`. The carrier is A7.
+
+The choice this bakes in, and it is VIMP's rather than C's: an uninitialized
+local holds an arbitrary representable value of its declared kind. C leaves it
+indeterminate and reading it may be undefined. Goblint's `init_value` makes the
+same abstraction; recording it as a VIMP semantics decision keeps the
+`Wrap`-policy framing honest.
