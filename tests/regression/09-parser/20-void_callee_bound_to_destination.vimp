@@ -1,0 +1,11 @@
+// PARAM: --analysis interval
+// Rejection case. A call may bind a result only from a procedure that
+// declares one: the destination's declared kind is what the compiler converts
+// the returned value to, and a void callee supplies no value to convert.
+void f(int32 n) {
+  return
+}
+void main() {
+  int32 a;
+  a := f(1)
+}

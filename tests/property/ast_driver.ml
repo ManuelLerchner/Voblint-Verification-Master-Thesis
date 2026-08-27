@@ -175,6 +175,18 @@ let rec returns_value = function
   | While (_, a) -> returns_value a
   | SKIP | Assign _ | Check _ | Call _ | Restore | Unwind -> false
 
+(* A procedure declares a return kind only when it delivers a value on every
+   path that can leave it, which is the contract the frontend enforces. The
+   "some path returns" form above is the wrong test for that: an if that
+   returns from one arm only would be declared value-returning and then
+   rejected. A loop never counts, since it may not be entered. *)
+let rec always_returns_value = function
+  | Return e -> e <> None
+  | Seq (a, b) -> always_returns_value a || always_returns_value b
+  | If (_, a, b) -> always_returns_value a && always_returns_value b
+  | While _ -> false
+  | SKIP | Assign _ | Check _ | Call _ | Restore | Unwind -> false
+
 let rec dedup = function
   | [] -> []
   | x :: rest -> x :: dedup (List.filter (fun y -> y <> x) rest)
@@ -197,7 +209,7 @@ let definition_of globals is_main (name, formals, body) =
     d_formals = formals;
     d_locals =
       List.filter (fun x -> not (List.mem x globals || List.mem x formals)) used;
-    d_ret = (if (not is_main) && returns_value body then Some decl_kind else None);
+    d_ret = (if (not is_main) && always_returns_value body then Some decl_kind else None);
     d_body = body }
 
 (* Definitions in printed order: pretty_string_of_program emits the globals

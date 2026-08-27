@@ -5,9 +5,11 @@
 // for s at int64's maximum. VIMP's concrete semantics is that setting, so the
 // same result holds here.
 //
-// The constants are built by int64 arithmetic rather than written out: a bare
-// VIMP literal synthesizes int32, so anything beyond 2147483647 would be
-// normalized at int32 before reaching an int64 slot. p is 2^32 exactly, h
+// The constants are built by int64 arithmetic rather than written out, so
+// that the wraparound itself is what the case exercises rather than a
+// constant already naming the answer. A literal that does not fit int32 takes
+// int64 (C 6.4.4.1p5), so the widest of them could be written directly.
+// p is 2^32 exactly, h
 // starts one 2^32 step below 2^63 and the next step carries it past int64's
 // maximum onto int64's minimum. Adding int64's minimum to itself is 2^64, a
 // multiple of the modulus, so it wraps to 0; subtracting one from it wraps

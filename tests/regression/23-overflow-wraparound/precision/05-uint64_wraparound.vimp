@@ -5,9 +5,11 @@
 // if(x > 18446744073709551612ull){ a = 1; } ... y = x + 4;
 // __goblint_check(y == 3);".
 //
-// uint64's maximum is reached by wraparound instead of by a literal, since a
-// bare VIMP literal synthesizes int32. uint64 has rank above int, so nothing
-// is promoted and 0 - 1 is computed in uint64 itself.
+// uint64's maximum is reached by wraparound instead of by a literal because
+// no literal can name it: C 6.4.4.1p5's ladder for an unsuffixed decimal
+// constant runs int32 then int64 and never an unsigned kind, so a constant
+// above int64's maximum has no type at all. uint64 has rank above int, so
+// nothing is promoted and 0 - 1 is computed in uint64 itself.
 global uint64 x;
 global uint64 y;
 global uint64 lim;

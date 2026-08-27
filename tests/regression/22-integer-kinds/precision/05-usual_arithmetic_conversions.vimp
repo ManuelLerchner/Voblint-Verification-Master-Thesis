@@ -11,10 +11,10 @@
 // comparison runs in int64, where wide is a real 3000000000 and is not less
 // than 0.
 //
-// wide is built by int64 arithmetic rather than written as 3000000000: a bare
-// VIMP literal synthesizes int32, so the constant would be normalized at
-// int32 first. A literal inside an operation that already synthesizes int64
-// -- the one in the last check -- does not go through that step.
+// wide is built by int64 arithmetic rather than written as 3000000000, so the
+// case turns on the operand kinds rather than on how one constant is typed.
+// 3000000000 does not fit int32, so by C 6.4.4.1p5 it would type as int64 if
+// written directly.
 //
 // 06-usual_arithmetic_conversions_operand_order.vimp is the same pair of
 // comparisons with the operands swapped.

@@ -11,9 +11,10 @@
 // comparison is against the largest value of the operand's own declared kind,
 // so it separates "promoted, no wrap" from "not promoted, wraps".
 //
-// uint32's maximum is built by wraparound rather than written as a literal:
-// a bare VIMP literal synthesizes int32, so 4294967295 written directly would
-// be normalized at int32 first.
+// uint32's maximum is built by wraparound rather than written as a literal,
+// which keeps the wrap in the test. 4294967295 does not fit int32, so by
+// C 6.4.4.1p5 it would type as int64 if written directly -- never as an
+// unsigned kind, which is why no literal names a uint32 maximum as such.
 global int8 c8;
 global uint8 u8;
 global uint32 u32;

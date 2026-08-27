@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// The largest literal the language has. C 6.4.4.1p5 gives an unsuffixed
+// decimal constant the first of int, long, long long that represents it,
+// never an unsigned type, so this one types as int64 and reaches the
+// analysis exactly.
+//
+// It used to fail in the lexer with a bare "int_of_string": literals were
+// read through OCaml's native int, which is 63 bits wide here, so the whole
+// top half of int64 was unreachable regardless of what the kind ladder said.
+void main() {
+  int64 x;
+  x := 9223372036854775807;
+  __voblint_check(0 < x);                       // PROVED
+  __voblint_check(x == 9223372036854775807)     // PROVED
+}

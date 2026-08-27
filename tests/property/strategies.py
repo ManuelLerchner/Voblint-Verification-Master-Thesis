@@ -88,7 +88,7 @@ def exps(max_leaves=5):
 # -- com -----------------------------------------------------------------
 
 @st.composite
-def atomic_com(draw, depth):
+def atomic_com(draw, depth, value_procs=(), allow_value_return=False):
     assignable = VAR_POOL + GLOBAL_POOL
     leaf_kinds = ["skip", "assign", "random", "check", "call", "return"]
     kinds = leaf_kinds + (["if", "while"] if depth > 0 else [])
@@ -103,24 +103,41 @@ def atomic_com(draw, depth):
     if kind == "check":
         return ("Check", draw(exps()))
     if kind == "call":
-        dst = draw(st.one_of(st.none(), st.sampled_from(VAR_POOL).map(lambda x: ("Some", x))))
-        proc = draw(st.sampled_from(PROC_POOL))
+        # A destination may only bind a result from a callee that delivers one
+        # on every path, which is the contract the frontend enforces and
+        # ast_driver's d_ret mirrors. `value_procs` is decided once per
+        # program, before any body is drawn, precisely so a call can know it.
         actuals = draw(st.lists(exps(), max_size=2))
-        return ("Call", dst, proc, actuals)
+        if value_procs and draw(st.booleans()):
+            return ("Call",
+                    ("Some", draw(st.sampled_from(VAR_POOL))),
+                    draw(st.sampled_from(sorted(value_procs))),
+                    actuals)
+        return ("Call", None, draw(st.sampled_from(PROC_POOL)), actuals)
     if kind == "return":
-        return ("Return", draw(st.one_of(st.none(), exps().map(lambda a: ("Some", a)))))
+        # Only a procedure that declares a return kind may deliver a value, and
+        # it is `programs` that decides which ones do. Everywhere else -- a
+        # void procedure's body, main's -- a return is the bare form, because
+        # the frontend rejects a value returned from something declared void.
+        if allow_value_return:
+            return ("Return", draw(st.one_of(st.none(), exps().map(lambda a: ("Some", a)))))
+        return ("Return", None)
     if kind == "if":
-        return ("If", draw(exps()), draw(coms(depth - 1)), draw(coms(depth - 1)))
+        return ("If", draw(exps()), draw(coms(depth - 1, value_procs=value_procs, allow_value_return=allow_value_return)),
+                draw(coms(depth - 1, value_procs=value_procs, allow_value_return=allow_value_return)))
     if kind == "while":
-        return ("While", draw(exps()), draw(coms(depth - 1)))
+        return ("While", draw(exps()),
+                draw(coms(depth - 1, value_procs=value_procs, allow_value_return=allow_value_return)))
     raise AssertionError(kind)
 
 
 @st.composite
-def coms(draw, depth=3, max_stmts=3):
-    node = draw(atomic_com(depth))
+def coms(draw, depth=3, max_stmts=3, value_procs=(), allow_value_return=False):
+    node = draw(atomic_com(depth, value_procs=value_procs,
+                           allow_value_return=allow_value_return))
     for _ in range(draw(st.integers(min_value=0, max_value=max_stmts - 1))):
-        node = ("Seq", node, draw(atomic_com(depth)))
+        node = ("Seq", node, draw(atomic_com(depth, value_procs=value_procs,
+                                             allow_value_return=allow_value_return)))
     return node
 
 
@@ -135,12 +152,22 @@ def coms(draw, depth=3, max_stmts=3):
 @st.composite
 def programs(draw, max_procs=len(PROC_POOL), body_depth=3):
     proc_names = draw(st.lists(st.sampled_from(PROC_POOL), max_size=max_procs, unique=True))
+    # Which procedures return a value is settled before any body is drawn, so
+    # that a call inside a body can bind a destination only from one that
+    # does. A value procedure's body ends in `return e`, which is what makes
+    # "returns on every path" true of it whatever the statements before it do.
+    value_procs = set(
+        draw(st.lists(st.sampled_from(proc_names), max_size=len(proc_names), unique=True))
+    ) if proc_names else set()
     procs = []
     for name in proc_names:
         formals = draw(st.lists(st.sampled_from(VAR_POOL), max_size=2, unique=True))
-        body = draw(coms(depth=body_depth - 1))
+        body = draw(coms(depth=body_depth - 1, value_procs=value_procs,
+                         allow_value_return=(name in value_procs)))
+        if name in value_procs:
+            body = ("Seq", body, ("Return", ("Some", draw(exps()))))
         procs.append((name, formals, body))
-    main_body = draw(coms(depth=body_depth))
+    main_body = draw(coms(depth=body_depth, value_procs=value_procs))
     globals_ = draw(st.lists(st.sampled_from(GLOBAL_POOL), max_size=len(GLOBAL_POOL), unique=True))
     return (procs, main_body, globals_)
 

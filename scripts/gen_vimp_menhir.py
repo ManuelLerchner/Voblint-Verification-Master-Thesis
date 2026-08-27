@@ -33,7 +33,7 @@ HEADER = (
 # -- `special: name` productions, keyed by that name (not by production
 # name -- grammar/vimp.yaml's header comment explains what each covers). ---
 SPECIAL_ACTIONS = {
-    "integer_literal": "Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (Z.of_int v0))",
+    "integer_literal": "Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer (int_literal v0))",
     "unary_minus": """\
 match v1 with
       | Voblint_CLI.Core.N (Voblint_CLI.Core.Int_of_integer z) ->
@@ -137,7 +137,7 @@ rule token = parse
 {keyword_rules}
 {punct_rules}
   | ident_start ident_char* as s  {{ IDENT s }}
-  | digit+ as s                   {{ INT (int_of_string s) }}
+  | digit+ as s                   {{ INT s }}
   | eof                           {{ EOF }}
   | _ as c  {{ error lexbuf (Printf.sprintf "unexpected character %C" c) }}
 '''
@@ -181,7 +181,7 @@ def type_decls() -> str:
 
 def token_decls(g: dict) -> str:
     names = list(g["keywords"].values()) + list(g["punctuation"].values()) + ["EOF"]
-    lines = ["%token <string> IDENT", "%token <int> INT"]
+    lines = ["%token <string> IDENT", "%token <string> INT"]
     lines += [f"%token {n}" for n in names]
     return "\n".join(lines)
 
@@ -304,6 +304,14 @@ def gen_program_rule() -> str:
               (decl_names @ List.map fst formals @ List.map fst locals) body) fs;
         let mains, procs = List.partition (fun (n, _, _, _, _) -> n = "main") fs in
         List.iter (fun (n, _, _, body, rk) -> check_void_return n rk body) procs;
+        List.iter (fun (n, _, _, body, rk) -> check_value_return n rk body) procs;
+        List.iter (fun (_, _, _, _, rk) -> check_main_is_void rk) mains;
+        let ret_of callee =
+          match List.find_opt (fun (n, _, _, _, _) -> n = callee) procs with
+          | Some (_, _, _, _, rk) -> Some rk
+          | None -> None
+        in
+        List.iter (fun (n, _, _, body, _) -> check_call_destinations ret_of body n) fs;
         (* main yields no value, so its declaration builds the void form
            whatever kind was written on it. *)
         let main_body =
@@ -500,6 +508,30 @@ let check_formal_kinds owner formals =
       (Printf.sprintf "%s declares formal parameter(s) without a kind: %s"
          (quote owner) (commas_quote bad))
 
+(* A decimal constant is read at arbitrary precision and then range-checked,
+   rather than through OCaml's native int: that is 63 bits wide here, so even
+   a valid int64 literal overflowed it and the frontend reported a bare
+   "int_of_string" with no indication of what was wrong.
+
+   C 6.4.4.1p5 gives an unsuffixed decimal constant the first of int, long,
+   long long that can represent it, and never an unsigned type -- ik_of_lit
+   implements that over the two signed widths VIMP has. A constant too large
+   for the last of them has no type at all, which is a constraint violation
+   rather than a wrapped value, so it is rejected here with both the literal
+   and the bound named. Writing int64's minimum as a bare literal is the
+   familiar C wart and is out of reach for the same reason it is in C: the
+   magnitude exceeds the maximum before the negation applies. *)
+let int_literal (s : string) : Z.t =
+  let z = Z.of_string s in
+  let max_i64 = Z.sub (Z.shift_left Z.one 63) Z.one in
+  if Z.gt z max_i64 then
+    failwith
+      (Printf.sprintf
+         "integer literal %s exceeds the largest kind VIMP has: no unsuffixed \
+decimal constant may exceed int64's maximum %s"
+         s (Z.to_string max_i64))
+  else z
+
 let check_global_kinds g =
   match unkinded g with
   | [] -> ()
@@ -556,6 +588,62 @@ let check_void_return owner ret_kind body =
   | None ->
     if returns_value body then
       failwith (Printf.sprintf "%s is declared void but returns a value" (quote owner))
+
+(* The converse obligation. A procedure that declares a return kind must
+   deliver a value on every path that can leave it, since its callers may bind
+   the result: a path that falls off the end, or ends in a bare `return`, has
+   nothing to assign. A loop never counts as returning, because it may not be
+   entered. This is the parser's own diagnostic for what the compiled-input
+   well-formedness predicate would otherwise reject with no procedure named. *)
+let rec always_returns_value (c : Voblint_CLI.Core.com) =
+  match c with
+  | Voblint_CLI.Core.Return e -> e <> None
+  | Voblint_CLI.Core.Seq (a, b) -> always_returns_value a || always_returns_value b
+  | Voblint_CLI.Core.If (_, a, b) -> always_returns_value a && always_returns_value b
+  | Voblint_CLI.Core.While _ -> false
+  | Voblint_CLI.Core.SKIP | Voblint_CLI.Core.Assign _ | Voblint_CLI.Core.Check _
+  | Voblint_CLI.Core.Call _ | Voblint_CLI.Core.Restore | Voblint_CLI.Core.Unwind ->
+    false
+
+let check_value_return owner ret_kind body =
+  match ret_kind with
+  | None -> ()
+  | Some _ ->
+    if not (always_returns_value body) then
+      failwith
+        (Printf.sprintf
+           "%s declares a return kind but can leave without returning a value"
+           (quote owner))
+
+(* main is not a callable procedure here -- it is the program's entry, held in
+   its own field rather than among the procedures -- so it yields no value and
+   a return kind written on it would have nowhere to go. Silently discarding
+   one let a program say something the language does not mean. *)
+let check_main_is_void ret_kind =
+  match ret_kind with
+  | None -> ()
+  | Some _ ->
+    failwith "'main' must be declared void: it is the program entry, not a procedure that yields a value"
+
+(* A call may bind a result only from a procedure that declares one. The
+   destination's kind is what the compiler converts the returned value to, so
+   a destination on a void callee has no kind to convert to. *)
+let check_call_destinations ret_of body owner =
+  let rec go (c : Voblint_CLI.Core.com) =
+    match c with
+    | Voblint_CLI.Core.Call (Some dst, callee, _) ->
+      (match ret_of callee with
+       | Some None ->
+         failwith
+           (Printf.sprintf
+              "%s assigns to %s from %s, which is declared void and yields no value"
+              (quote owner) (quote dst) (quote callee))
+       | _ -> ())
+    | Voblint_CLI.Core.Seq (a, b) | Voblint_CLI.Core.If (_, a, b) -> go a; go b
+    | Voblint_CLI.Core.While (_, a) -> go a
+    | _ -> ()
+  in
+  go body
 
 (* Every variable a body reads or writes must be a declared global, one of the
    procedure's formals, or one of its declared locals. Classification is per

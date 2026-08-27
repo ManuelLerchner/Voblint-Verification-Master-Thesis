@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// Rejection case. A decimal constant larger than int64's maximum has no type
+// under C 6.4.4.1p5's ladder -- the ladder runs out -- so it is a constraint
+// violation rather than a value that wraps. The diagnostic names the literal
+// and the bound instead of letting it silently become something else.
+//
+// This is also why int64's minimum cannot be written as a bare literal: the
+// magnitude passes the bound before the negation applies. C has the same
+// wart.
+void main() {
+  int64 x;
+  x := 9223372036854775808
+}
