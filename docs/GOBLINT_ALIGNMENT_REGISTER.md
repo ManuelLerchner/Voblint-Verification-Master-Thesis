@@ -339,6 +339,10 @@ conformance defects -- the modelled semantics was not C's.
 
 ## Three precision gaps against Goblint, all sound (2026-08-27)
 
+One of the three is closed; the other two, and every case in the ledger below,
+reduce to one missing fact: **an abstract cell does not know the kind it holds,
+so nothing may assume its value is representable there.**
+
 Measured by running the regression corpus against the pre-migration binary and
 the current one, case by case. None of the three is unsound; each is a bound
 that Goblint keeps and this formalization now drops.
@@ -357,66 +361,106 @@ the same obstacle the kind-tagged carrier addresses. Observed as
 `total=[3,+inf]`, `x=[-inf,40]` and `i=[1,+inf]` all collapsing to the full
 `I32` range.
 
-**The call-return boundary converts without reducing.** `combine_assign_abs`
-(`src/Core/Equations/Constraint_System.thy`) and its executable mirror in
-`src/Core/Domain/Exec_St.thy` apply `a_cast` at the destination's declared
-kind and stop there, where `aval_int_dom_t` reduces after every cast. The
-product therefore keeps a component the reduction could restore: `a := 9`
-gives `sign=Positive, ivl=[9,9]`, while `d := id(9)` through an identity
-procedure gives `sign=Top, ivl=[9,9]`. Core is domain-generic and has no
-`refine`, so the reduction belongs in the `int_dom` cast itself.
+**The call-return boundary converts without reducing.** *Closed.*
+`combine_assign_abs` applied `a_cast` at the destination's declared kind and
+stopped there, where `aval_int_dom_t` reduces after every cast, so the product
+kept a component the reduction could restore: `a := 9` gave
+`sign=Positive, ivl=[9,9]` while `d := id(9)` through an identity procedure
+gave `sign=Top, ivl=[9,9]`. Core is domain-generic and has no `refine`, so the
+reduction went into `int_dom_cast` itself, which now runs `refine_interval`
+over the componentwise cast.
 
 **Congruence loses exactness through an arithmetic guard.** Filtering
-`z + 1 == 3` backwards yields modulus `ik_mod I32` rather than `0`, so
-`refine_interval` can no longer read a singleton out of the congruence
-component and `z` stays unconstrained, where the syntactically simpler
-`y == 2` keeps `[2,2]`. A class whose modulus is the kind's own modulus has
-exactly one representative in range; normalizing it to `(ik_norm ik c, 0)` is
-the missing step.
+`y + 1 == 3` backwards yields the class `2` modulo `ik_mod I32` rather than
+modulus `0`, so `refine_interval` has no bounded interval to meet it against
+and `y` stays unconstrained.
 
-### Ledger: the fifteen failing corpus cases (2026-08-27)
+This one is not a missing normalization. A class modulo `2^32` has exactly one
+representative *in a window of that width*, and `y`'s interval is
+`[-inf,+inf]`: nothing has told the analysis that `y` is an `int32`. Nor could
+the backward filter simply assert it -- `teval (TVar ik x) s` reads `s x`
+without normalizing, so for a store holding `2 + 2^32` the guard holds and
+`y == 2` is false. The claim is true exactly for stores whose variables hold
+values of their declared kind, which is the invariant every source-level
+theorem already assumes (`styped`) and which nothing carries into the abstract
+layer.
 
-One row per failing fixture, so a later change can be audited against it.
-Counts are `python3 tests/run.py` at the commit that added this table.
+### The corpus is green (2026-08-27)
 
-| Failure | Root cause | Intended fix | Expected slice |
-| --- | --- | --- | --- |
-| `04-globals/precision/02-global_var` | W | kind-aware widening | A7 carrier, then A9 |
-| `12-widening/known-imprecision/04-mine_ex46_decreasing_counter` | W | kind-aware widening | A7 carrier, then A9 |
-| `20-nested-loops/known-imprecision/01-hybrid_inner_head_widening` | W | kind-aware widening | A7 carrier, then A9 |
-| `19-paper-examples/known-imprecision/04-context_insensitive_calls` (graph) | W | kind-aware widening | A7 carrier, then A9 |
-| `16-composite-domain/precision/08-disequality_guard_kills_collapsed_arm` | W | kind-aware widening | A7 carrier, then A9 |
-| `07-sign-precision/precision/02-straight_line_sign_refuted` | S | decide `sem.int.signed_overflow` | reopen D3, or reclassify |
-| `07-sign-precision/precision/03-global_write_across_call` | S | as above | as above |
-| `14-min-max/precision/02-min_max_sign` | S | as above | as above |
-| `11-graph-snapshot/10-entry_state_sign_own_domain` (verdict + graph) | S, and E | as above, plus the Sign entry-state defect | as above |
-| `17-call-string/precision/05-callstring_graph_sign` (verdict + graph) | S | as above | as above |
-| `11-graph-snapshot/11-entry_state_int_own_domain` (graph) | P | reduce inside `int_dom_cast` | standalone |
-| `17-call-string/precision/06-callstring_graph_int` (graph) | P | reduce inside `int_dom_cast` | standalone |
-| `16-composite-domain/precision/01-refinement_beats_components` | C | normalize a kind-modulus class to its unique representative | standalone |
-| `20-nested-loops/precision/02-nested2_narrowing_recovers_j` | F | move to `soundness/`, assert UNKNOWN | fixture only |
-| `21-context-sensitivity/precision/05-endless_recursion_dead_check` | F | move to `known-imprecision/`, assert UNKNOWN, rewrite header | fixture only |
+`python3 tests/run.py` is 214 passed, 0 failed; `pytest tests/` is 80 passed.
+No fixture is left asserting a verdict the analyzer does not produce, and none
+of the reclassifications hides a defect. Two closures and one correction got
+there, and each is recorded because a later change should be audited against
+them rather than against the count.
 
-Three `tests/test_html_report.py` cases fail on the same root cause **C** and
-are not separate defects: they assert `y == 2` PROVED under the int product on
-the program `16-composite-domain/precision/01` uses.
+**Closed: the call-return boundary now reduces.** `int_dom_cast` runs
+`refine_interval` over the componentwise cast, so a conversion no longer
+discards a component the reduction can restore.
 
-Root causes, all recorded above: **W** widening leaves the kind's range;
-**S** `sign_cast` tops every signed arithmetic result, which follows from
-the locked two's-complement wrap decision; **P** the call-return boundary
-converts without reducing the product; **C** congruence loses exactness
-through an arithmetic guard; **F** the fixture's own claim is wrong under
-wrapping semantics, and no analyzer change is wanted.
+**Corrected: kind-aware widening would not have fixed the widening cases.**
+An earlier ledger listed five fixtures whose intended fix was a widening that
+saturates at the kind's own bounds rather than at a mathematical infinity.
+That was wrong, and the arithmetic says so plainly: `[0, 2147483647] + [3,4]`
+overflows exactly as `[0,+inf] + [3,4]` does, and `[-2147483648, 40] - 1`
+underflows exactly as `[-inf, 40] - 1` does. In both cases the wrapped result
+has no single-interval representation but the whole range, so the saturated
+bound is lost on the very next operation.
 
-**E** is a separate, newly localized defect: under `--context entry-state`
-Sign routes two call sites with literal arguments of *different* sign onto
-one callee context, where Interval on the identical program produces two.
-Both enter edges target the single callee cluster and its nodes carry no
-state at all. It is not the renderer -- same renderer, same program -- and
-not **S**, since a Sign literal keeps its sign exactly and only arithmetic
-tops. It is reached through `analyse_sign_entry_state_report`, and whether
-the routed context collapses or the entered store never reaches the callee
-slot is the next thing to establish.
+What those fixtures actually assert is what an unbounded-integer analysis
+gives, which is what the papers they are adapted from assume and what Goblint
+reproduces only under `sem.int.signed_overflow=assume_none`. Under the frozen
+`Wrap` policy the whole range is the correct answer, and each now sits in
+`known-imprecision/` (or `soundness/`, where both a satisfying and a violating
+execution exist) with that named. The clamped widening in
+`Interval_Kind_Tagged.thy` stays proved and stays worth having -- it keeps a
+bound one operation longer -- but it is not what these cases needed.
+
+**Corrected: the composite reduction showcase needed a typed seed, not a
+domain change.** `16-composite-domain/precision/01` filters `y + 1 == 3`
+backwards to the class `2` modulo `int32`'s modulus and then has no bound to
+meet it against, because an unwritten `int32` local may hold any integer:
+VIMP's initial stores constrain globals only, and `teval` reads a variable
+without normalizing, so a store holding `2 + 2^32` satisfies the guard while
+`y == 2` is false. Seeding `y` through `__voblint_nondet_int()`, which lands
+in the kind's range by construction, supplies the bound the declaration should
+have supplied, and all four components then pin the single value.
+
+That is the shape of the remaining gap, stated as a defect rather than as a
+count: **a declaration does not bound the values its variable can hold.** The
+seed is `[-inf,+inf]` for every local, the invariant `styped` that every
+source-level theorem assumes reaches no abstract operation, and no cell
+carries the kind it was computed at. Everything below is that one fact seen
+from a different side.
+
+### One root cause behind the reclassified Sign cases
+
+Five fixtures moved to `known-imprecision/` rather than being fixed, and they
+share a single mechanism worth stating once. `gamma_sign SPos` is every
+positive integer, with no bound. Every arithmetic node norms its result at its
+kind, so the norm must assume the value may lie far outside that kind and
+wrap, and the only sound answer is top. The bound exists in the program --
+both operands were evaluated at the node's kind -- but the abstract value does
+not carry the kind, so nothing at the norm can use it.
+
+This costs more than it looks: it tops `0 - 5`, `min(x, y)` (which returns one
+of its operands and so cannot leave a range both operands were in), and an
+`int32`-to-`int32` conversion at a call's return. The interval domain does not
+lose them, because its concretization is bounded and the norm can check.
+
+A kind-tagged cell whose concretization is intersected with the kind's range
+closes all of them by construction, which is the same fix the widening and
+the congruence cases need.
+The `assume_none` overflow policy would also close them, less soundly and for
+a different reason; that is a separate decision and is not taken here.
+
+### One earlier entry withdrawn
+
+An earlier note recorded a Sign entry-state defect: two call sites routed onto
+one callee context where Interval produced two. That is correct behaviour, not
+a defect. Entry-state keys a context by the callee's entry abstract state;
+`square(3)` and `square(4)` both enter at `Positive`, so Sign has one context,
+while `[3,3]` and `[4,4]` differ, so Interval has two. The fixture failed for
+the Sign mechanism above and nothing else.
 
 ## Boundary examples
 

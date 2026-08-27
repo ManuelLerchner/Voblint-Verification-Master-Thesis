@@ -1,0 +1,37 @@
+// PARAM: --analysis interval --context entry-state
+// Adapted from Goblint tests/regression/79-callstring/04-endless_loop_cs.c
+// (ana.context.callString_length 10; Goblint annotates the inner check
+// UNKNOWN). main cannot call itself in VIMP, so the recursion lives in a
+// helper. rec increments the global num_iterat and recurses while it is
+// positive.
+//
+// The recursion is not endless under the frozen wraparound policy. From
+// num_iterat = 2 the increment reaches int32's maximum after 2^31 - 2
+// levels and the next one wraps to int32's minimum, at which point
+// 0 < num_iterat is false, the else arm runs, and every level returns 2. So
+// both checks are live and both are concretely false -- the recursion
+// terminating is what makes them reachable at all.
+//
+// The analysis answers UNKNOWN. It widens num_iterat to the whole int32
+// range in one step, which admits both the positive and the non-positive
+// arm, so the returned value joins 5 and 2 and neither check is decided.
+// Following the wrap to the single reachable arm would need the exact
+// iteration count, which no interval widening keeps.
+global int32 num_iterat;
+int32 rec() {
+  int32 res;
+  if (0 < num_iterat) {
+    num_iterat := num_iterat + 1;
+    res := rec();
+    __voblint_check(res == 5); // UNKNOWN
+    return res
+  } else {
+    if (num_iterat == 0) { return 5 } else { return 2 }
+  }
+}
+void main() {
+  int32 r;
+  num_iterat := 2;
+  r := rec();
+  __voblint_check(r == 5) // UNKNOWN
+}

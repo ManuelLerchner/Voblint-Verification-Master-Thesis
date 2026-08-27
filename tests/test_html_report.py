@@ -337,9 +337,10 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
     """
     src = tmp_path / "seeded.vimp"
     src.write_text(
-        "void bump(n) {\n  m := n + 1;\n  return m\n}\n\n"
-        "void never() {\n  return 0\n}\n\n"
-        "void main() {\n  x := 7;\n  y := bump(x);\n  __voblint_check(y == 8)\n}\n"
+        "int32 bump(int32 n) {\n  int32 m;\n  m := n + 1;\n  return m\n}\n\n"
+        "int32 never() {\n  return 0\n}\n\n"
+        "void main() {\n  int32 x, y;\n  x := 7;\n  y := bump(x);\n"
+        "  __voblint_check(y == 8)\n}\n"
     )
     out = _run(tmp_path, "--analysis", "interval", str(src))
     rows = {
@@ -415,6 +416,7 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     src = tmp_path / "dead_then_live.vimp"
     src.write_text(
         "void main() {\n"
+        "  int32 x;\n"
         "  x := 5;\n"
         "  if (x < 0) {\n"
         "    __voblint_check(x == 99)\n"
@@ -427,10 +429,10 @@ def test_verdicts_pair_with_positions_before_dead_rows_are_dropped(tmp_path):
     warns = sorted((out / "warn").glob("warn*.xml"))
     assert warns, "no findings emitted"
     lines = [int(ET.parse(w).getroot().find("text").get("line")) for w in warns]
-    # The live check is on line 6; the dead one on line 4 is dropped. Reporting
-    # line 4 would mean the surviving verdict took the dropped row's position.
-    assert 6 in lines, f"the live check is not reported on its own line: {lines}"
-    assert 4 not in lines, f"a dead check was reported: {lines}"
+    # The live check is on line 7; the dead one on line 5 is dropped. Reporting
+    # line 5 would mean the surviving verdict took the dropped row's position.
+    assert 7 in lines, f"the live check is not reported on its own line: {lines}"
+    assert 5 not in lines, f"a dead check was reported: {lines}"
 
 
 def test_node_locations_are_real_spans_not_repeated_values(tmp_path):
