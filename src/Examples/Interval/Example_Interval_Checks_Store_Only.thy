@@ -45,6 +45,20 @@ text \<open>\<open>checks_ivl_ex_ty\<close> is the program's own typing environm
 abbreviation checks_ivl_ex_ty :: tyenv where
   "checks_ivl_ex_ty \<equiv> prog_tyenv checks_ivl_ex_program"
 
+text \<open>The program annotates no kinds, so its environment is the default one and
+  every literal it uses is representable there. Pinning those, and the kind's
+  own bounds, lets the edge steps below reduce rather than leaving each
+  conversion and range test standing.\<close>
+
+lemma checks_ivl_ex_ty_is_default [simp]: "checks_ivl_ex_ty = default_tyenv"
+  by (simp add: prog_tyenv_def checks_ivl_ex_program_def)
+
+lemma checks_ivl_ex_lit_facts [simp]:
+  "ik_of_lit 0 = I32" "ik_of_lit 5 = I32" "ik_of_lit 10 = I32" "ik_of_lit 11 = I32"
+  "ik_norm I32 0 = 0" "ik_norm I32 5 = 5" "ik_norm I32 10 = 10" "ik_norm I32 11 = 11"
+  "ik_min I32 = -2147483648" "ik_max I32 = 2147483647"
+  by eval+
+
 abbreviation checks_ivl_ex_lt11 :: texp where
   "checks_ivl_ex_lt11 \<equiv> elaborate_syn checks_ivl_ex_ty (Less (V (STR ''x'')) (N 11))"
 
@@ -280,26 +294,30 @@ proof -
   have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_ty checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
         "cinit_stores checks_ivl_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
-    using s0 e0 unfolding checks_ivl_ex_reach_def by simp
+    using s0 e0 unfolding checks_ivl_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e1: "(Statement 0, EA_Special (Nondet_Int (checks_ivl_ex_ty (STR ''x''))) (STR ''x''), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''x'') := 5) \<in> checks_ivl_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ivl_ex_ty checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
         "cinit_stores checks_ivl_ex_gs" "Statement 0" "EA_Special (Nondet_Int (checks_ivl_ex_ty (STR ''x''))) (STR ''x'')" "Statement 1"
         "(\<lambda>_. 0)((STR ''x'') := 5)"]
-    using s1 e1 unfolding checks_ivl_ex_reach_def by force
+    using s1 e1 unfolding checks_ivl_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   have e2: "(Statement 1, EA_Assume (elaborate_syn checks_ivl_ex_ty
                    (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10)))), Statement 2)
               \<in> intra (prog_cfg (STR ''main'') checks_ivl_ex_program)"
     by (simp add: checks_ivl_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''x'') := 5) \<in> checks_ivl_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 5)" checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 5)" checks_ivl_ex_ty checks_ivl_ex_gs "prog_cfg (STR ''main'') checks_ivl_ex_program"
         "cinit_stores checks_ivl_ex_gs" "Statement 1" "EA_Assume (elaborate_syn checks_ivl_ex_ty
                    (And (Less (N 0) (V (STR ''x''))) (Less (V (STR ''x'')) (N 10))))"
         "Statement 2" "(\<lambda>_. 0)((STR ''x'') := 5)"]
-    using s2 e2 unfolding checks_ivl_ex_reach_def by simp
+    using s2 e2 unfolding checks_ivl_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   then show ?thesis by blast
 qed
 

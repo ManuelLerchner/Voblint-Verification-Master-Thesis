@@ -42,6 +42,19 @@ text \<open>\<open>checks_ex_ty\<close> is the program's own typing environment:
 abbreviation checks_ex_ty :: tyenv where
   "checks_ex_ty \<equiv> prog_tyenv checks_ex_program"
 
+text \<open>\<open>checks_ex_program\<close> annotates no kinds, so its environment is the default
+  one and every literal it writes is representable there. Pinning that lets the
+  edge steps below reduce, rather than leaving each conversion standing.\<close>
+
+lemma checks_ex_ty_is_default [simp]: "checks_ex_ty = default_tyenv"
+  by (simp add: prog_tyenv_def checks_ex_program_def)
+
+lemma checks_ex_lit_kinds [simp]:
+  "ik_of_lit 0 = I32" "ik_of_lit 1 = I32" "ik_of_lit 5 = I32" "ik_of_lit 7 = I32"
+  "ik_norm I32 0 = 0" "ik_norm I32 1 = 1" "ik_norm I32 5 = 5" "ik_norm I32 7 = 7"
+  "ik_min I32 = -2147483648" "ik_max I32 = 2147483647"
+  by eval+
+
 abbreviation checks_ex_pos_y :: texp where
   "checks_ex_pos_y \<equiv> elaborate_syn checks_ex_ty (Less (N 0) (V (STR ''y'')))"
 
@@ -262,16 +275,18 @@ proof -
   have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
-    using s0 e0 unfolding checks_ex_reach_def by simp
+    using s0 e0 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e1: "(Statement 0, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5)), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5))" "Statement 1"
         "(\<lambda>_. 0)((STR ''y'') := 5)"]
-    using s1 e1 unfolding checks_ex_reach_def by simp
+    using s1 e1 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   then show ?thesis by blast
 qed
 
@@ -288,42 +303,48 @@ proof -
   have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> checks_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
-    using s0 e0 unfolding checks_ex_reach_def by simp
+    using s0 e0 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e1: "(Statement 0, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5)), Statement 1) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 0" "EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 5))" "Statement 1"
         "(\<lambda>_. 0)((STR ''y'') := 5)"]
-    using s1 e1 unfolding checks_ex_reach_def by simp
+    using s1 e1 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e2: "(Statement 1, EA_Check (checks_ex_pos_y), Statement 2) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s3: "(\<lambda>_. 0)((STR ''y'') := 5) \<in> checks_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 1" "EA_Check (checks_ex_pos_y)" "Statement 2"]
-    using s2 e2 unfolding checks_ex_reach_def by simp
+    using s2 e2 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e3: "(Statement 2, EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 0)), Statement 3) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s4: "(\<lambda>_. 0)((STR ''y'') := 0) \<in> checks_ex_reach (Statement 3)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 5)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 2" "EA_Assign (STR ''y'') (elaborate_to checks_ex_ty (checks_ex_ty (STR ''y'')) (N 0))" "Statement 3"
         "(\<lambda>_. 0)((STR ''y'') := 0)"]
-    using s3 e3 unfolding checks_ex_reach_def by simp
+    using s3 e3 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e4: "(Statement 3, EA_Check (checks_ex_pos_y), Statement 4) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have s5: "(\<lambda>_. 0)((STR ''y'') := 0) \<in> checks_ex_reach (Statement 4)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 3" "EA_Check (checks_ex_pos_y)" "Statement 4"]
-    using s4 e4 unfolding checks_ex_reach_def by simp
+    using s4 e4 unfolding checks_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e5: "(Statement 4, EA_Special (Nondet_Int (checks_ex_ty (STR ''z''))) (STR ''z''), Statement 5) \<in> intra (prog_cfg (STR ''main'') checks_ex_program)"
     by (simp add: checks_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7) \<in> checks_ex_reach (Statement 5)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''y'') := 0)" checks_ex_ty checks_ex_gs "prog_cfg (STR ''main'') checks_ex_program"
         "cinit_stores checks_ex_gs" "Statement 4" "EA_Special (Nondet_Int (checks_ex_ty (STR ''z''))) (STR ''z'')" "Statement 5"
         "(\<lambda>_. 0)((STR ''y'') := 0, (STR ''z'') := 7)"]
-    using s5 e5 unfolding checks_ex_reach_def by force
+    using s5 e5 unfolding checks_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   then show ?thesis by blast
 qed
 

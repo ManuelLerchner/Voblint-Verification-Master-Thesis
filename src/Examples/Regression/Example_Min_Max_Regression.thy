@@ -47,10 +47,24 @@ abbreviation min_max_demo_z_neg :: texp where
 abbreviation min_max_demo_w_pos :: texp where
   "min_max_demo_w_pos \<equiv> elaborate_syn min_max_demo_ty (Less (N 0) (V (STR ''w'')))"
 
-lemma min_max_demo_sign_precise:
+text \<open>
+  Sign alone no longer decides either check. \<open>min\<close> and \<open>max\<close> combine their
+  operands exactly -- a negative argument does pin \<^const>\<open>SNeg\<close> -- but the
+  write into \<open>z\<close> converts to that variable's kind, and \<^const>\<open>SNeg\<close>
+  concretizes to every negative integer, including ones no \<^const>\<open>I32\<close> can
+  hold. A magnitude-free domain cannot rule out a value that wraps, so the
+  conversion can only answer \<^const>\<open>STop\<close>.
+
+  This is not a defect in the \<open>min\<close>/\<open>max\<close> primitives, which is what
+  \<open>min_max_demo_interval_precise\<close> below shows: Interval carries the magnitude
+  the conversion needs and still proves both. It is why the Int product pairs
+  Sign with Interval rather than shipping Sign on its own.
+\<close>
+
+lemma min_max_demo_sign_unknown:
   "analyse Sign_Analysis min_max_demo_prog =
-     [(Statement 4, min_max_demo_z_neg, Check_Proved),
-      (Statement 5, min_max_demo_w_pos, Check_Proved)]"
+     [(Statement 4, min_max_demo_z_neg, Check_Unknown),
+      (Statement 5, min_max_demo_w_pos, Check_Unknown)]"
   by eval
 
 lemma min_max_demo_interval_precise:

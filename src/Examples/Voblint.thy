@@ -320,8 +320,11 @@ text \<open>
       \<open>x := __voblint_nondet_int()\<close>, closed end to end: \<^const>\<open>special_sign\<close> forgets \<open>x\<close> to \<^term>\<open>STop\<close>, a
       guard on \<open>x\<close> narrows each branch, and the branches join to \<^term>\<open>SNonNeg\<close> rather than
       \<^term>\<open>STop\<close>. Computed by \<^const>\<open>analyse_sign_result_for\<close> and the vendored TD solver, not asserted
-      by hand; \<open>random_guard_exit_sound\<close> over-approximates every reachable exit state and
-      \<open>random_guard_exit_y_nonneg\<close> closes the issue's \<open>y \<ge> 0\<close> claim there.
+      by hand; \<open>random_guard_exit_sound\<close> over-approximates every reachable exit state. The
+      issue's \<open>y \<ge> 0\<close> claim is no longer discharged from that chain: the write into \<open>y\<close>
+      converts to its declared kind, and \<^term>\<open>SNonNeg\<close> denotes non-negative integers a
+      32-bit kind cannot all hold, so the exit reads \<^term>\<open>STop\<close>. The property is true and
+      needs a domain carrying magnitude, or a kind-relative concretization.
       \<open>random_guard_run_42\<close> is a non-vacuity witness at the source semantics: fixing the
       random draw at \<open>v = 42\<close>, \<^const>\<open>pcompletes\<close> derives an actual terminating run
       reaching \<open>y = 42\<close>.

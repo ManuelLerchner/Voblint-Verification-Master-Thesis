@@ -35,7 +35,8 @@ lemma ex_nested_calls:
       \<in> snd (snd (snd (compile \<Gamma> \<Pi> q (Seq (Call (Some r1) p1 []) (Call (Some r2) p2 []))
             (Statement (Suc (Suc (Suc n)))) n)))
    \<and> Statement n \<noteq> Statement (Suc (Suc (Suc n)))"
-  using assms by (simp add: Let_def)
+  using assms
+  by (auto simp: Let_def compile_actuals_def split: prod.splits option.splits)
 
 lemmas ex_recursion = inv14_recursion_edge
 

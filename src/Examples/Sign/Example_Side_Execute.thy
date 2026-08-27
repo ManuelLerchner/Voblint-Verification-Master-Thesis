@@ -109,14 +109,23 @@ corollary x1_certified_sound:
 definition x1_s0 :: store where
   "x1_s0 = (\<lambda>_. 0)"
 
+text \<open>\<open>1\<close> is representable at its own kind, so the assignment's conversion is
+  the identity on it -- without this the wrap stays unevaluated and the reached
+  store fails to match.\<close>
+
+lemma ik_norm_I32_1 [simp]: "ik_norm I32 1 = 1"
+  by eval
+
 lemma x1_completed:
   "pcompletes (prog_tyenv x1_prog) x1_gs (prog_table x1_prog) (prog_main x1_prog) x1_s0
      (x1_s0((STR ''x'') := 1)) rk"
   unfolding pcompletes_def
-  apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make)
+  apply (simp only: x1_prog_def x1_s0_def prog_table_make prog_main_make
+                    prog_table_make_typed prog_main_make_typed)
   apply (rule star.step)
    apply (rule pstep.Assign)
-  by (simp add: taval_syn_def opk_def prog_tyenv_def x1_prog_def default_tyenv_def)
+  by (simp add: taval_syn_def opk_def prog_tyenv_def x1_prog_def default_tyenv_def
+                ik_of_lit_def)
 
 lemma x1_completed_run_collect:
   "x1_s0((STR ''x'') := 1)
@@ -138,7 +147,11 @@ proof -
       (VIMP_Proc.com.SKIP, x1_s0((STR ''x'') := 1), [],
        proc_ret_kind (prog_table x1_prog) (STR ''main''))"
     using x1_completed unfolding pcompletes_def .
-  from source_completes_ltr_collect_exit[OF wf init run]
+  \<comment> \<open>The initial store is all zeroes, which every kind can hold, so the
+      typing premise the soundness endpoint carries is immediate.\<close>
+  have typed: "styped (prog_tyenv x1_prog) x1_s0"
+    by (simp add: x1_s0_def)
+  from source_completes_ltr_collect_exit[OF wf init typed run]
   show ?thesis unfolding prog_cfg_def .
 qed
 

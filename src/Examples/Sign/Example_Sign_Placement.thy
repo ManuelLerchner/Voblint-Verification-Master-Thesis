@@ -624,7 +624,7 @@ next
     "aval_sign_t sign_placement_rhs_x (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 0))) =
       aval_sign_t sign_placement_rhs_x (dg_hook_D sign_placement_sigma_abs (Statement 0))"
-    by simp
+    by (simp add: elaborate_to_def elaborate_syn_def)
   show "lookup_resolved_st_q
       (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''x'') sign_placement_rhs_x)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 0) \<squnion>
@@ -663,7 +663,8 @@ next
     "aval_sign_t sign_placement_rhs_g (fun_of_resolved_st_q_for (declared_global sign_placement_prog)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 1))) =
       aval_sign_t sign_placement_rhs_g (dg_hook_D sign_placement_sigma_abs (Statement 1))"
-    using sign_placement_val_agree[OF mem] by simp
+    using sign_placement_val_agree[OF mem]
+    by (simp add: elaborate_to_def elaborate_syn_def)
   show "lookup_resolved_st_q
       (sign_tf_st_for (declared_global sign_placement_prog) (EA_Assign (STR ''g'') sign_placement_rhs_g)
         (dg_hook_D (snd sign_placement_dg_td_sol) (Statement 1) \<squnion>

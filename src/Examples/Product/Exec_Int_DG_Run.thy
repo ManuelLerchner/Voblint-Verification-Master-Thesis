@@ -46,7 +46,7 @@ subsection \<open>Computed post-solution, one per refinement mode\<close>
 text \<open>
   \<open>y + 1 = 3\<close> is the same composite guard as
   \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close> and
-  \<open>Example_Int_Transfer.apply_tf_once_assume_exact\<close>, now reached through a
+  \<open>Example_Int_Transfer.apply_tf_once_assume_congruence_mod_i32\<close>, now reached through a
   real compiled \<open>if\<close> and the vendored solver instead of a direct
   \<open>bfilter\<close>/\<open>apply_tf\<close> call. \<open>Statement 1\<close> is the interior node right after
   the true branch's guard and before the branches rejoin at \<open>Statement 3\<close>
@@ -80,7 +80,7 @@ lemma dgExI_never_terminates_c:
 
 lemma dgExI_never_inspect_y_at_Statement_1:
   "int_ex_read (locals (snd dgExI_never_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 definition dgExI_once_eqs ::
@@ -102,7 +102,7 @@ lemma dgExI_once_terminates_c:
 
 lemma dgExI_once_inspect_y_at_Statement_1:
   "int_ex_read (locals (snd dgExI_once_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 definition dgExI_fixpoint_eqs ::
@@ -124,7 +124,7 @@ lemma dgExI_fixpoint_terminates_c:
 
 lemma dgExI_fixpoint_inspect_y_at_Statement_1:
   "int_ex_read (locals (snd dgExI_fixpoint_sol (Inl (Statement 1, ())))) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 text \<open>
@@ -157,6 +157,16 @@ text \<open>
   reductions already expose the exact singleton, so \<open>Fixpoint\<close> has no
   further precision to add here.
 \<close>
+
+text \<open>The two modes still agree, but on a weaker value than they used to. Both
+  leave \<open>y\<close> at \<^const>\<open>STop\<close> with an unbounded interval, carrying only Parity's
+  \<open>even\<close> and Congruence's \<open>y \<equiv> 2\<close> -- modulo \<^term>\<open>4294967296::int\<close>, because
+  the guard's addition is an \<^const>\<open>I32\<close> operation. A residue class that wide
+  selects a single value only against a bounded interval, and \<open>y\<close> enters
+  unbounded, so there is nothing for the reduction to close onto however many
+  rounds it runs. Extra rounds cannot manufacture a bound the entry state never
+  had, which is why the two modes coincide here rather than the fixpoint
+  improving on one round.\<close>
 
 corollary dgExI_once_eq_fixpoint:
   "int_ex_read (locals (snd dgExI_once_sol (Inl (Statement 1, ())))) (STR ''y'') =

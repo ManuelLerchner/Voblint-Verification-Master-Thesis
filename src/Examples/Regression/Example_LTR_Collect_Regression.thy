@@ -379,7 +379,7 @@ lemma ltr_collect_flat_demo:
     and "s0 \<in> ltr_collect default_tyenv demo_gs flat_demo {s0} (Statement 2)"
 proof -
   show c0: "s0 \<in> ltr_collect default_tyenv demo_gs flat_demo {s0} (Statement 0)"
-    using ltr_collect_init[of s0 "{s0}" demo_gs flat_demo] by (simp add: flat_demo_def)
+    using ltr_collect_init[of s0 "{s0}" default_tyenv demo_gs flat_demo] by (simp add: flat_demo_def)
   have e0: "(Statement 0, EA_Nop, Statement 1) \<in> intra flat_demo" by (simp add: flat_demo_def)
   show c1: "s0 \<in> ltr_collect default_tyenv demo_gs flat_demo {s0} (Statement 1)"
     using ltr_collect_intra[OF c0 e0] by simp

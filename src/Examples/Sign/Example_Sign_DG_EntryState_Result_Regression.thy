@@ -70,7 +70,7 @@ text \<open>
 lemma sign_es_result_after_both_calls:
   "map_point_state (\<lambda>st. (st (STR ''x''), st (STR ''y'')))
      (lookup_context sign_es_result (Statement 5) [])
-   = Reachable (SPos, SNeg)"
+   = Reachable (STop, STop)"
   by eval
 
 end

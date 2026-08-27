@@ -86,8 +86,9 @@ lemma taval_plus_counter_on_enter_declared:
            (taval_syn inc_ty (Plus (V (STR ''counter'')) (N 1))
               (enter_state (declared_global inc_program) s))
          = s (STR ''counter'') + 1"
-  using assms
-  by (simp add: enter_state_def taval_syn_def opk_def default_tyenv_def)
+  by (simp add: enter_state_def taval_syn_def opk_def default_tyenv_def
+                Let_def ik_of_lit_def ik_norm_idem
+                ik_norm_id[OF ty] ik_norm_id[OF nov])
 
 lemma combine_after_enter_global_assign_declared:
   assumes "declared_global inc_program x"
@@ -120,14 +121,10 @@ proof -
              (enter_state (declared_global inc_program) s)
              ((enter_state (declared_global inc_program) s)((STR ''counter'') := s (STR ''counter'') + 1)) I32"
     proof -
-      have "pcompletes inc_ty (declared_global inc_program) inc_pi ?body
-               (enter_state (declared_global inc_program) s)
-               ((enter_state (declared_global inc_program) s)
-                 ((STR ''counter'') := ik_norm (inc_ty (STR ''counter''))
-                    (taval_syn inc_ty (Plus (V (STR ''counter'')) (N 1))
-                       (enter_state (declared_global inc_program) s)))) I32"
-        by (rule pcompletes_assign)
-      thus ?thesis using taval_plus_counter_on_enter_declared[OF ty nov] by simp
+      show ?thesis
+        by (subst taval_plus_counter_on_enter_declared
+                    [where s = s, OF ty nov, symmetric])
+           (rule pcompletes_assign)
     qed
   qed
   moreover have
@@ -149,7 +146,7 @@ proof -
     "storage_global inc_program prog_main_name = declared_global inc_program"
     by (rule ext) simp
   show ?thesis
-    using pcompletes_inc_pcall_declared[OF ty nov]
+    using pcompletes_inc_pcall_declared[where s = s, OF ty nov]
     unfolding prog_pcompletes_def inc_pi_def storage by simp
 qed
 
@@ -187,7 +184,8 @@ proof -
   have s1: "cstep ?gs inc_g (FunctionEntry (STR ''main''), s, []) (Statement 2, s, [])"
     by (rule cstep.Intra[OF e1]) simp
   have s2: "cstep ?gs inc_g (Statement 2, s, []) (Statement 3, s((STR ''Glocal'') := 1), [])"
-    by (rule cstep.Intra[OF e2]) simp
+    by (rule cstep.Intra[OF e2])
+       (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have s3: "cstep ?gs inc_g (Statement 3, s((STR ''Glocal'') := 1), [])
               (FunctionEntry (STR ''p''), enter_state ?gs (s((STR ''Glocal'') := 1)),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
@@ -196,12 +194,23 @@ proof -
               (FunctionEntry (STR ''p''), enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])
               (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])"
     by (rule cstep.Intra[OF e4]) simp
+  \<comment> \<open>The edge carries the elaborated tree, so the step needs \<open>teval\<close> of it --
+      not the \<open>taval_syn\<close> form above. Writing \<open>Glocal\<close> first leaves \<open>counter\<close>
+      untouched, so the two range premises still apply.\<close>
+  have inc_at_glocal:
+    "teval (elaborate_to inc_ty (inc_ty (STR ''counter''))
+              (Plus (V (STR ''counter'')) (N 1)))
+       (enter_state (declared_global inc_program) (s((STR ''Glocal'') := 1)))
+     = s (STR ''counter'') + 1"
+    by (simp add: elaborate_to_def elaborate_syn_def enter_state_def opk_def
+                  default_tyenv_def Let_def ik_of_lit_def ik_norm_idem
+                  ik_norm_id[OF ty] ik_norm_id[OF nov])
+
   have s5: "cstep ?gs inc_g
               (Statement 0, enter_state ?gs (s((STR ''Glocal'') := 1)), [(Statement 4, None, s((STR ''Glocal'') := 1))])
               (Statement 1, (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])"
-    by (rule cstep.Intra[OF e5])
-       (simp add: taval_plus_counter_on_enter_declared[OF ty nov, simplified enter_state_def])
+    by (rule cstep.Intra[OF e5]) (simp add: inc_at_glocal del: inc_ty_is_default)
   have s6: "cstep ?gs inc_g
               (Statement 1, (enter_state ?gs (s((STR ''Glocal'') := 1)))((STR ''counter'') := s (STR ''counter'') + 1),
                [(Statement 4, None, s((STR ''Glocal'') := 1))])

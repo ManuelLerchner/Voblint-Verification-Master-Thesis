@@ -59,7 +59,12 @@ definition ctx_call :: "ivl list" where
                 (CallEdge (compile_dst (prog_tyenv rc_program) (Some (STR ''y''))) [(STR ''a'')]
                       (compile_actuals (prog_tyenv rc_program) [(STR ''a'')] [V (STR ''x'')]))"
 
-lemma ctx_call_val: "ctx_call = [ivl_top]"
+text \<open>The context the callee is entered under is the formal's own kind range,
+  not the unbounded interval: the actual converts to \<^term>\<open>I32\<close> at the call,
+  and \<^const>\<open>ivl_cast\<close> answers a conversion it cannot sharpen with that kind's
+  range -- Goblint's \<open>top_of ik\<close>.\<close>
+
+lemma ctx_call_val: "ctx_call = [ivl_top_of I32]"
   unfolding ctx_call_def rc_ctx_sol_def rc_is_bot_pred_def by eval
 
 text \<open>The callee entry is materialized once, under the wide context, and never under

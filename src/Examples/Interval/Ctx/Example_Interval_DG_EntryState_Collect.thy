@@ -165,7 +165,7 @@ lemma rc_context_at_call:
      (Statement 3) [] s = ctx_call"
   by (simp add: entry_state_context_def[OF rc_entry_state_hyps]
                 entry_state_sigma_abs_def[OF rc_entry_state_hyps]
-                rc_call_site_action rc_route_abs_at_call)
+                rc_call_site_action rc_route_abs_at_call[simplified])
 
 text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store \<open>s\<close> that reaches the call site
   --- in particular every store obtained by any \<open>__voblint_nondet_int()\<close> outcome, since \<open>x\<close>'s

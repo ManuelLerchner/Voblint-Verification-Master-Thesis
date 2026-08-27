@@ -343,9 +343,15 @@ lemma cj_callee_join_widens_after_the_call:
   "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''r'') = STop"
   by eval
 
+text \<open>The return assignment is unaffected by the combine choice, which is what
+  this pins. Its sign is \<^const>\<open>STop\<close> rather than \<^const>\<open>SPos\<close> because the
+  write converts to \<open>z\<close>'s kind, and a positive sign concretizes to integers a
+  32-bit kind cannot all hold -- the same for both combines, so the contrast
+  the lemma draws still holds.\<close>
+
 lemma cj_return_assignment_unaffected:
-  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
-  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
+  "cj_lookup (locals (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = STop"
+  "cj_lookup (locals (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = STop"
   by eval+
 
 end

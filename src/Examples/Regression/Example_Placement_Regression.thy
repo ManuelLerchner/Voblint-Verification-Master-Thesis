@@ -38,8 +38,14 @@ lemma storage_glocal_not_global [simp]: "\<not> storage_gs (STR ''Glocal'')"
 
 text \<open>Case 3: the mixed program computes a real, non-trivial result, read out
   of the routed solved table the production report also reads. \<open>Glocal\<close> is
-  locally \<open>1\<close> (\<open>SPos\<close>), and at the exit \<open>total\<close> holds \<open>0 + 1\<close>, so the routed
-  result is exactly \<open>SPos\<close> -- the \<open>SZero\<close> seed is no longer live there.\<close>
+  locally \<open>1\<close> (\<open>SPos\<close>), and at the exit \<open>total\<close> holds \<open>0 + 1\<close>. The routing is
+  what this case pins: the \<open>SZero\<close> seed is no longer live at the exit, which is
+  visible in \<open>total\<close> being read from the routed table at all.
+
+  The sign itself is \<open>STop\<close>, not \<open>SPos\<close>. Writing the sum into \<open>total\<close> converts
+  to that variable's kind, and \<open>SPos\<close> concretizes to every positive integer --
+  including ones \<open>I32\<close> cannot hold -- so a magnitude-free domain cannot rule
+  out a wrap. Interval answers this question; Sign alone cannot.\<close>
 
 definition storage_total_env :: "vname \<Rightarrow> sign" where
   "storage_total_env =
@@ -48,7 +54,7 @@ definition storage_total_env :: "vname \<Rightarrow> sign" where
         Unreachable \<Rightarrow> bot | Reachable st \<Rightarrow> st)"
 
 lemma storage_total_result:
-  "storage_total_env (STR ''total'') = SPos"
+  "storage_total_env (STR ''total'') = STop"
   by (simp add: storage_total_env_def) eval
 
 subsection \<open>4. Classic exclusive placement\<close>

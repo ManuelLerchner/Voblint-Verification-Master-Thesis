@@ -176,11 +176,21 @@ proof -
              TD_side_always_join_Interp.part_post_solution_of_solve_c)+
 qed
 
+text \<open>
+  The typing hypothesis is not redundant with \<^const>\<open>cinit_stores\<close>, and that
+  is worth stating plainly: \<open>cinit_stores gs\<close> pins only the declared globals to
+  zero and leaves every other slot arbitrary over \<^typ>\<open>int\<close>, including values
+  no declared kind can hold. The soundness endpoint reasons about conversions,
+  so it needs each slot to start inside its own kind's range. Until the initial
+  store set carries that itself, the caller supplies it.
+\<close>
+
 theorem dgEx_source_run_sound:
   assumes run: "star (pstep (prog_tyenv sign_ex_prog) sign_ex_gs sign_ex_pi)
                   (prog_main sign_ex_prog, s, [], proc_ret_kind sign_ex_pi prog_main_name)
                   (residual, t, frs, rk)"
       and init: "s \<in> cinit_stores sign_ex_gs"
+      and sty: "styped (prog_tyenv sign_ex_prog) s"
   shows "\<exists>v stk. csim (prog_tyenv sign_ex_prog) sign_ex_pi gEx (residual, t, frs, rk) (v, t, stk)
                  \<and> t \<in> sign_ex_reg.gamma (snd dgEx_sol) v"
 proof -
@@ -193,7 +203,7 @@ proof -
               gEx_finE[unfolded gEx_def]
               gEx_finC[unfolded gEx_def]
               dgEx_sound0
-              init run[unfolded gEx_def]])
+              init sty run[unfolded gEx_def]])
 qed
 
 subsection \<open>Inspecting the computed result\<close>

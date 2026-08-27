@@ -31,12 +31,14 @@ definition max_int_succ :: exp where
 subsection \<open>Elaboration records the operating kind and the destination cast\<close>
 
 text \<open>The shape an \<^const>\<open>EA_Assign\<close> edge into an \<^const>\<open>I32\<close> destination
-  carries: the sum wraps at \<^const>\<open>I32\<close>, and the outer \<^const>\<open>TCast\<close> is the
-  write site's own conversion.\<close>
+  carries: both constants type as \<^const>\<open>I32\<close>, the sum is computed and wraps
+  there, and the destination is that same kind -- so the write site adds no
+  conversion. \<^const>\<open>elaborate_to\<close>'s same-kind guard is what drops it: a
+  conversion to the kind an expression already synthesizes is not one.\<close>
 
 lemma elaborate_to_max_int_succ:
   "elaborate_to default_tyenv I32 max_int_succ
-     = TCast I32 (TPlus I32 (TN I32 2147483647) (TN I32 1))"
+     = TPlus I32 (TN I32 2147483647) (TN I32 1)"
   unfolding max_int_succ_def by eval
 
 subsection \<open>The two interpretations of one expression\<close>

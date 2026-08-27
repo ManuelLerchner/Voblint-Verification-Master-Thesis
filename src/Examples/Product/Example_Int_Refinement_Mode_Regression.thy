@@ -172,12 +172,16 @@ text \<open>
   guard's own arithmetic), while \<open>dgExI_once_inspect_y_at_Statement_1\<close> and
   \<open>dgExI_fixpoint_inspect_y_at_Statement_1\<close> both reach the exact singleton
   \<open>SPos\<close>/\<open>[2,2]\<close>/\<open>PEven\<close>/\<open>y \<equiv> 0 (mod 2)\<close> -- the same
-  Never-differs-from-Once-and-Fixpoint pattern \<open>mode_never_ne_once\<close> proves
-  at the raw-domain level above, now reached through the parser, the
-  compiled CFG, and the vendored solver rather than a hand-built \<open>int_dom\<close>
-  value. \<open>dgExI_never_ne_once\<close>/\<open>dgExI_once_eq_fixpoint\<close> are the pinned
+  Never-differs-from-Once pattern \<open>mode_never_ne_once\<close> proves at the
+  raw-domain level above, now reached through the parser, the compiled CFG,
+  and the vendored solver rather than a hand-built \<open>int_dom\<close> value.
+  \<open>dgExI_never_ne_once\<close> and \<open>dgExI_once_eq_fixpoint\<close> are the pinned
   corollaries; this file does not restate them, since restating a fact
   already proved end-to-end elsewhere would only risk drifting from it.
+
+  Once and Fixpoint still coincide on that program, but on a weaker value than
+  before: \<open>y\<close> enters unbounded, so the congruence modulo the kind's width has
+  no interval to select against and extra rounds have nothing to close onto.
 
   The CLI-level regression fixture
   \<open>tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp\<close>
@@ -235,19 +239,19 @@ lemma prod_int_ex_fixpoint_terminates:
 lemma prod_int_ex_never_y_at_Statement_1:
   "analyse_int_dg_env_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_once_y_at_Statement_1:
   "analyse_int_dg_env_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_fixpoint_y_at_Statement_1:
   "analyse_int_dg_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_never_ne_once_y:
@@ -292,19 +296,19 @@ lemma prod_int_ex_join_fixpoint_terminates:
 lemma prod_int_ex_join_never_y_at_Statement_1:
   "analyse_int_dg_join_env_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_join_once_y_at_Statement_1:
   "analyse_int_dg_join_env_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_join_fixpoint_y_at_Statement_1:
   "analyse_int_dg_join_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 text \<open>
@@ -358,19 +362,19 @@ lemma prod_int_ex_per_origin_fixpoint_terminates:
 lemma prod_int_ex_per_origin_never_y_at_Statement_1:
   "analyse_int_dg_per_origin_env_for Refine_Never int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_per_origin_once_y_at_Statement_1:
   "analyse_int_dg_per_origin_env_for Refine_Once int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 lemma prod_int_ex_per_origin_fixpoint_y_at_Statement_1:
   "analyse_int_dg_per_origin_env_for Refine_Fixpoint int_ex_is_bot_pred int_ex_gs int_ex_prog
      (Statement 1) (STR ''y'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 subsection \<open>Reaching \<open>analyse_with_solver\<close>\<close>

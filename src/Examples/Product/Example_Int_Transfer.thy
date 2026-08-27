@@ -55,18 +55,33 @@ text \<open>
   sound in isolation.
 \<close>
 
-lemma apply_tf_once_assume_exact:
+text \<open>
+  \<^const>\<open>test_env_top\<close> starts \<open>x\<close> unbounded, and that is what stops the product
+  pinning it. The guard's backward filter gives congruence the exact answer --
+  \<open>x \<equiv> 2\<close> -- but modulo \<^term>\<open>4294967296::int\<close>, because the operation is an
+  \<^const>\<open>I32\<close> addition. A congruence class that wide selects a single value
+  only against a bounded interval, and the entry interval here has no bounds,
+  so nothing propagates back to sign or interval.
+
+  Seeding \<open>x\<close> at its kind's range instead of at \<^const>\<open>top\<close> would close it:
+  \<^term>\<open>ik_range I32\<close> is exactly one residue wide, so the two together pin
+  \<open>x = 2\<close>. That is a property of the entry state, not of the transfer under
+  test, which is why this witness records the components as they stand rather
+  than asserting a reduction the entry state cannot support.
+\<close>
+
+lemma apply_tf_once_assume_congruence_mod_i32:
   "apply_tf (int_tf_once_for test_gs)
      (EA_Assume (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))))
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 2) (Fin 2)) PEven (congruence_of_int 2)"
+   int_dom_sipc STop (Ivl MinInf PlusInf) PEven (mk_congruence 2 4294967296)"
   by eval
 
 lemma apply_tf_never_assume_congruence_only:
   "apply_tf (int_tf_never_for test_gs)
      (EA_Assume (elaborate_syn default_tyenv (Eq (Plus (V (STR ''x'')) (N 1)) (N 3))))
      test_env_top (STR ''x'') =
-   int_dom_sipc STop top PTop (congruence_of_int 2)"
+   int_dom_sipc STop top PTop (mk_congruence 2 4294967296)"
   by eval
 
 subsection \<open>Min/Max special-call dispatch through the registered bundle\<close>
@@ -80,13 +95,19 @@ text \<open>
   supplies the congruence component here -- from Parity's \<open>POdd\<close>, not from
   Interval's exact singleton, which is why the result is \<open>mk_congruence 1 2\<close>
   (\"odd\") rather than the sharper \<open>congruence_of_int 3\<close> (\"exactly 3\").
+
+  Sign answers \<^const>\<open>STop\<close> rather than \<^const>\<open>SPos\<close>, and that is the write
+  site's conversion, not the \<open>min\<close> primitive: \<^const>\<open>SPos\<close> concretizes to
+  every positive integer, so converting it to \<^const>\<open>I32\<close> cannot rule out a
+  value that wraps negative. A magnitude-free domain has no way to answer that
+  question, which is why the product carries Interval alongside it.
 \<close>
 
 lemma apply_tf_once_special_min:
   "apply_tf (int_tf_once_for test_gs)
      (EA_Special (Min (default_tyenv (STR ''x'')) (TN I32 3) (TN I32 5)) (STR ''x''))
      test_env_top (STR ''x'') =
-   int_dom_sipc SPos (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
+   int_dom_sipc STop (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
   by eval
 
 end

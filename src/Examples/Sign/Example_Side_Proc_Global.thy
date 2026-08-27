@@ -86,11 +86,15 @@ definition inc_exit_env :: "sign abs_state" where
 
 text \<open>The global the callee increments is strictly positive at the exit ---
   computed by the solver, not asserted. \<^const>\<open>cinit_stores\<close> starts every
-  global at zero and the single call increments it once, so \<^const>\<open>SPos\<close> is
-  the exact answer; the routed table resolves it where a merged whole-state
-  environment only reaches \<^const>\<open>SNonNeg\<close>.\<close>
+  global at zero and the single call increments it once. The routing is what
+  this case pins -- a merged whole-state environment would not even reach the
+  incremented value here.
 
-lemma inc_counter_pos: "inc_exit_env (STR ''counter'') = SPos"
+  The sign is \<^const>\<open>STop\<close>: the increment's write converts to \<open>counter\<close>'s
+  kind, and a positive sign concretizes to integers a 32-bit kind cannot all
+  hold, so Sign alone cannot rule out a wrap.\<close>
+
+lemma inc_counter_top: "inc_exit_env (STR ''counter'') = STop"
   unfolding inc_exit_env_def by eval
 
 corollary inc_certified_sound:

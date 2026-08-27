@@ -42,6 +42,19 @@ text \<open>\<open>parity_ex_ty\<close> is the program's own typing environment,
 abbreviation parity_ex_ty :: tyenv where
   "parity_ex_ty \<equiv> prog_tyenv parity_ex_program"
 
+text \<open>The program annotates no kinds, so its environment is the default one and
+  its literals are representable there. Pinning those, and the kind's bounds,
+  lets the edge steps below reduce.\<close>
+
+lemma parity_ex_ty_is_default [simp]: "parity_ex_ty = default_tyenv"
+  by (simp add: prog_tyenv_def parity_ex_program_def)
+
+lemma parity_ex_lit_facts [simp]:
+  "ik_of_lit 1 = I32" "ik_of_lit 2 = I32"
+  "ik_norm I32 1 = 1" "ik_norm I32 2 = 2"
+  "ik_min I32 = -2147483648" "ik_max I32 = 2147483647"
+  by eval+
+
 abbreviation parity_ex_y_neq_z :: texp where
   "parity_ex_y_neq_z \<equiv>
      elaborate_syn parity_ex_ty (Not (Eq (V (STR ''y'')) (V (STR ''z''))))"
@@ -271,26 +284,31 @@ proof -
   have e0: "(FunctionEntry (STR ''main''), EA_Nop, Statement 0) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s1: "(\<lambda>_. 0) \<in> parity_ex_reach (Statement 0)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_ty parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
         "cinit_stores parity_ex_gs" "FunctionEntry (STR ''main'')" EA_Nop "Statement 0"]
-    using s0 e0 unfolding parity_ex_reach_def by simp
+    using s0 e0 unfolding parity_ex_reach_def
+    by (simp add: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def)
   have e1: "(Statement 0, EA_Special (Nondet_Int (parity_ex_ty (STR ''x''))) (STR ''x''), Statement 1) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s2: "(\<lambda>_. 0)((STR ''x'') := 7) \<in> parity_ex_reach (Statement 1)"
-    using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
+    using ltr_collect_intra_step[of "\<lambda>_. 0" parity_ex_ty parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
         "cinit_stores parity_ex_gs" "Statement 0" "EA_Special (Nondet_Int (parity_ex_ty (STR ''x''))) (STR ''x'')" "Statement 1"
         "(\<lambda>_. 0)((STR ''x'') := 7)"]
-    using s1 e1 unfolding parity_ex_reach_def by force
+    using s1 e1 unfolding parity_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   have e2: "(Statement 1, EA_Assign (STR ''y'')
          (elaborate_to parity_ex_ty (parity_ex_ty (STR ''y'')) (Times (V (STR ''x'')) (N 2))), Statement 2)
               \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have s3: "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14) \<in> parity_ex_reach (Statement 2)"
-    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7)" parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
+    using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7)" parity_ex_ty parity_ex_gs "prog_cfg (STR ''main'') parity_ex_program"
         "cinit_stores parity_ex_gs" "Statement 1" "EA_Assign (STR ''y'')
          (elaborate_to parity_ex_ty (parity_ex_ty (STR ''y'')) (Times (V (STR ''x'')) (N 2)))" "Statement 2"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14)"]
-    using s2 e2 unfolding parity_ex_reach_def by force
+    using s2 e2 unfolding parity_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   have e3: "(Statement 2, EA_Assign (STR ''z'')
          (elaborate_to parity_ex_ty (parity_ex_ty (STR ''z'')) (Plus (V (STR ''y'')) (N 1))), Statement 3)
               \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
@@ -301,7 +319,9 @@ proof -
         "Statement 2" "EA_Assign (STR ''z'')
          (elaborate_to parity_ex_ty (parity_ex_ty (STR ''z'')) (Plus (V (STR ''y'')) (N 1)))" "Statement 3"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)"]
-    using s3 e3 unfolding parity_ex_reach_def by force
+    using s3 e3 unfolding parity_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   then show ?thesis by blast
 qed
 
@@ -317,7 +337,9 @@ proof -
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 3" "EA_Check (parity_ex_y_neq_z)" "Statement 4"]
-    using s3_ne e4 unfolding parity_ex_reach_def by force
+    using s3_ne e4 unfolding parity_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   have e5: "(Statement 4, EA_Check (parity_ex_y_is_z), Statement 5)
               \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
@@ -325,7 +347,9 @@ proof -
     using ltr_collect_intra_step[of "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15)" parity_ex_gs
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 4" "EA_Check (parity_ex_y_is_z)" "Statement 5"]
-    using s4 e5 unfolding parity_ex_reach_def by force
+    using s4 e5 unfolding parity_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   have e6: "(Statement 5, EA_Special (Nondet_Int (parity_ex_ty (STR ''w''))) (STR ''w''), Statement 6) \<in> intra (prog_cfg (STR ''main'') parity_ex_program)"
     by (simp add: parity_ex_intra_eval)
   have "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99) \<in> parity_ex_reach (Statement 6)"
@@ -333,7 +357,9 @@ proof -
         "prog_cfg (STR ''main'') parity_ex_program" "cinit_stores parity_ex_gs"
         "Statement 5" "EA_Special (Nondet_Int (parity_ex_ty (STR ''w''))) (STR ''w'')" "Statement 6"
         "(\<lambda>_. 0)((STR ''x'') := 7, (STR ''y'') := 14, (STR ''z'') := 15, (STR ''w'') := 99)"]
-    using s5 e6 unfolding parity_ex_reach_def by force
+    using s5 e6 unfolding parity_ex_reach_def
+    by (force simp: elaborate_to_def elaborate_syn_def opk_def default_tyenv_def
+                    ik_range_def)
   then show ?thesis by blast
 qed
 

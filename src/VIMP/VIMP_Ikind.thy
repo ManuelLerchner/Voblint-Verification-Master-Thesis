@@ -78,7 +78,11 @@ definition ik_promote :: "ikind \<Rightarrow> ikind" where
 lemma ik_bits_ik_promote_ge [simp]: "ik_bits I32 \<le> ik_bits (ik_promote ik)"
   by (simp add: ik_promote_def)
 
-lemma ik_promote_pins:
+text \<open>Tagged \<open>[simp]\<close>: \<^const>\<open>ik_promote\<close> is a \<open>definition\<close>, so without these
+  it never reduces on a concrete kind, and every \<open>ik_norm\<close> layer stated
+  at a promoted kind stays stuck behind it.\<close>
+
+lemma ik_promote_pins [simp]:
   "ik_promote I8 = I32" "ik_promote U8 = I32"
   "ik_promote I16 = I32" "ik_promote U16 = I32"
   "ik_promote I32 = I32" "ik_promote U32 = U32"

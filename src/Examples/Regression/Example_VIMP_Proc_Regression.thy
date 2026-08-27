@@ -16,6 +16,27 @@ text \<open>No source program either, so every variable is declared at \<^const>
 text \<open>Ground facts bridging \<^const>\<open>String.explode\<close> on this file's concrete
   variable names, for the \<open>simp\<close> steps below that unfold \<open>vpr_gs\<close> under
   an otherwise-open store.\<close>
+text \<open>Every literal this theory uses is representable at its own kind, so each
+  assignment's conversion is the identity on it. Without these the wraps stay
+  unevaluated and the reached stores fail to match.\<close>
+
+text \<open>This theory computes with concrete stores throughout, so it wants
+  \<^const>\<open>taval_syn\<close> to reduce rather than stand. Unfolding the evaluation
+  chain once here keeps every witness below a plain \<open>simp\<close>.\<close>
+
+lemmas vpr_eval_simps [simp] =
+  taval_syn_def opk_def default_tyenv_def
+
+lemma vpr_lit_kinds [simp]:
+  "ik_of_lit 0 = I32" "ik_of_lit 1 = I32" "ik_of_lit 5 = I32"
+  "ik_of_lit 7 = I32" "ik_of_lit 9 = I32"
+  by eval+
+
+lemma ik_norm_I32_small [simp]:
+  "ik_norm I32 0 = 0" "ik_norm I32 1 = 1" "ik_norm I32 5 = 5"
+  "ik_norm I32 7 = 7" "ik_norm I32 9 = 9"
+  by eval+
+
 lemma explode_x_hd [simp]: "hd (String.explode (STR ''x'')) \<noteq> CHR ''G''" by eval
 lemma explode_y_hd [simp]: "hd (String.explode (STR ''y'')) \<noteq> CHR ''G''" by eval
 lemma explode_Gg_hd [simp]: "hd (String.explode (STR ''Gg'')) = CHR ''G''" by eval
@@ -33,7 +54,8 @@ proof -
     have "pcompletes default_tyenv vpr_gs \<Pi> (imp \<lbrakk> x := 5 \<rbrakk>) s0
             (s0((STR ''x'') := ik_norm (default_tyenv (STR ''x''))
                   (taval_syn default_tyenv (N 5) s0))) rk" by (rule pcompletes_assign)
-    thus ?thesis by simp
+    thus ?thesis
+      by simp
   qed
   have body: "pcompletes default_tyenv vpr_gs \<Pi> (imp \<lbrakk> x := 9 \<rbrakk>)
                (enter_state vpr_gs ?s1) ((enter_state vpr_gs ?s1)((STR ''x'') := 9)) I32"
@@ -42,7 +64,8 @@ proof -
             ((enter_state vpr_gs ?s1)((STR ''x'') := ik_norm (default_tyenv (STR ''x''))
                 (taval_syn default_tyenv (N 9) (enter_state vpr_gs ?s1)))) I32"
       by (rule pcompletes_assign)
-    thus ?thesis by simp
+    thus ?thesis
+      by simp
   qed
   have call: "pcompletes default_tyenv vpr_gs \<Pi> (Call None pf []) ?s1
                 (combine_env vpr_gs ?s1 ((enter_state vpr_gs ?s1)((STR ''x'') := 9))) rk"
@@ -67,7 +90,8 @@ proof -
             ((enter_state vpr_gs s0)((STR ''Gg'') := ik_norm (default_tyenv (STR ''Gg''))
                 (taval_syn default_tyenv (N 9) (enter_state vpr_gs s0)))) I32"
       by (rule pcompletes_assign)
-    thus ?thesis by simp
+    thus ?thesis
+      by simp
   qed
   have call: "pcompletes default_tyenv vpr_gs \<Pi> (Call None pf []) s0
                 (combine_env vpr_gs s0 ((enter_state vpr_gs s0)((STR ''Gg'') := 9))) rk"
@@ -83,9 +107,14 @@ theorem return_value_propagated:
              \<and> t (STR ''x'') = 7"
 proof -
   let ?e = "N 7"
+  \<comment> \<open>Two conversions, not one: the callee normalizes its result at its own
+      return kind before publishing it, and the caller converts again into the
+      destination's kind.\<close>
   let ?t = "(combine_env vpr_gs s0
-              ((enter_state vpr_gs s0)(ret_var := ik_norm (default_tyenv (STR ''x'')) (taval_syn default_tyenv ?e (enter_state vpr_gs s0)))))
-              ((STR ''x'') := ik_norm (default_tyenv (STR ''x'')) (taval_syn default_tyenv ?e (enter_state vpr_gs s0)))"
+              ((enter_state vpr_gs s0)
+                (ret_var := ik_norm I32 (taval_syn default_tyenv ?e (enter_state vpr_gs s0)))))
+              ((STR ''x'') := ik_norm (default_tyenv (STR ''x''))
+                 (ik_norm I32 (taval_syn default_tyenv ?e (enter_state vpr_gs s0))))"
   have call: "psteps default_tyenv vpr_gs \<Pi> (Call (Some (STR ''x'')) pf [], s0, [], rk)
                 (imp \<lbrakk> skip \<rbrakk>, ?t, [], rk)"
     using p by (rule call_return_completes[where x = "(STR ''x'')" and s = s0 and frs = "[]"])
