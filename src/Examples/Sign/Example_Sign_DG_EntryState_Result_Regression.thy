@@ -62,9 +62,20 @@ lemma sign_es_result_f_entry_contexts_distinct:
 subsection \<open>Each returned value propagates back to the caller, per call site\<close>
 
 text \<open>
-  \<open>main\<close> runs under the single context \<open>[]\<close>. After both calls, \<open>x\<close> and \<open>y\<close>
-  carry the sign each activation of \<open>f\<close> actually computed for \<open>p + p\<close>, not a
-  join of both: \<open>3 + 3\<close> stays \<open>SPos\<close>, \<open>-10 + -10\<close> stays \<open>SNeg\<close>.
+  \<open>main\<close> runs under the single context \<open>[]\<close>, and after both calls \<open>x\<close> and \<open>y\<close>
+  both read \<^const>\<open>STop\<close>. That is not the two activations collapsing into a
+  join -- the contexts above stay separate, and each one's own \<open>p\<close> keeps its
+  own sign. It is what \<open>p + p\<close> denotes at a signed kind: the sum of two
+  values known only to be positive may exceed \<^const>\<open>I32\<close>'s maximum and wrap
+  to a negative one, so \<^const>\<open>SPos\<close> is not sound for it and the conversion
+  answers \<^const>\<open>STop\<close>. The same argument mirrors for the negative
+  activation.
+
+  Sign abstracts each operand before adding rather than folding the constants
+  first, so this holds even where both operands are literals -- the domain
+  carries no magnitude with which to rule the wrap out. Recovering the two
+  signs needs a component that does, which is what the interval and
+  congruence components of the product supply.
 \<close>
 
 lemma sign_es_result_after_both_calls:

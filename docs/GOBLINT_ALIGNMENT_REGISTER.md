@@ -344,6 +344,46 @@ component and `z` stays unconstrained, where the syntactically simpler
 exactly one representative in range; normalizing it to `(ik_norm ik c, 0)` is
 the missing step.
 
+### Ledger: the fifteen failing corpus cases (2026-08-27)
+
+One row per failing fixture, so a later change can be audited against it.
+Counts are `python3 tests/run.py` at the commit that added this table.
+
+| Failure | Root cause | Intended fix | Expected slice |
+| --- | --- | --- | --- |
+| `04-globals/precision/02-global_var` | W | kind-aware widening | A7 carrier, then A9 |
+| `12-widening/known-imprecision/04-mine_ex46_decreasing_counter` | W | kind-aware widening | A7 carrier, then A9 |
+| `20-nested-loops/known-imprecision/01-hybrid_inner_head_widening` | W | kind-aware widening | A7 carrier, then A9 |
+| `19-paper-examples/known-imprecision/04-context_insensitive_calls` (graph) | W | kind-aware widening | A7 carrier, then A9 |
+| `16-composite-domain/precision/08-disequality_guard_kills_collapsed_arm` | W | kind-aware widening | A7 carrier, then A9 |
+| `07-sign-precision/precision/02-straight_line_sign_refuted` | S | decide `sem.int.signed_overflow` | reopen D3, or reclassify |
+| `07-sign-precision/precision/03-global_write_across_call` | S | as above | as above |
+| `14-min-max/precision/02-min_max_sign` | S | as above | as above |
+| `11-graph-snapshot/10-entry_state_sign_own_domain` (verdict + graph) | S, and E | as above, plus the Sign entry-state defect | as above |
+| `17-call-string/precision/05-callstring_graph_sign` (verdict + graph) | S | as above | as above |
+| `11-graph-snapshot/11-entry_state_int_own_domain` (graph) | P | reduce inside `int_dom_cast` | standalone |
+| `17-call-string/precision/06-callstring_graph_int` (graph) | P | reduce inside `int_dom_cast` | standalone |
+| `16-composite-domain/precision/01-refinement_beats_components` | C | normalize a kind-modulus class to its unique representative | standalone |
+| `20-nested-loops/precision/02-nested2_narrowing_recovers_j` | F | move to `soundness/`, assert UNKNOWN | fixture only |
+| `21-context-sensitivity/precision/05-endless_recursion_dead_check` | F | move to `known-imprecision/`, assert UNKNOWN, rewrite header | fixture only |
+
+Root causes, all recorded above: **W** widening leaves the kind's range;
+**S** `sign_cast` tops every signed arithmetic result, which follows from
+the locked two's-complement wrap decision; **P** the call-return boundary
+converts without reducing the product; **C** congruence loses exactness
+through an arithmetic guard; **F** the fixture's own claim is wrong under
+wrapping semantics, and no analyzer change is wanted.
+
+**E** is a separate, newly localized defect: under `--context entry-state`
+Sign routes two call sites with literal arguments of *different* sign onto
+one callee context, where Interval on the identical program produces two.
+Both enter edges target the single callee cluster and its nodes carry no
+state at all. It is not the renderer -- same renderer, same program -- and
+not **S**, since a Sign literal keeps its sign exactly and only arithmetic
+tops. It is reached through `analyse_sign_entry_state_report`, and whether
+the routed context collapses or the entered store never reaches the callee
+slot is the next thing to establish.
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration
