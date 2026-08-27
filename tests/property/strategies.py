@@ -64,9 +64,29 @@ def sexp(x) -> str:
 
 # -- exp: arbitrary nesting over all ten constructors (see module docstring) -
 
+# Every kind's two extremes, and one step either side of each, plus the two
+# widths' unsigned maxima. These are where the literal reader and its kind
+# ladder actually branch, and a range of +/-1000 never reaches any of them.
+#
+# int64's minimum is absent on purpose: it cannot be written as a decimal
+# literal, because the magnitude passes the frontend's bound before the
+# negation applies. That is C's own wart and the frontend reproduces it, so a
+# generator that emitted it would be generating a program the language does
+# not have.
+_BOUNDARIES = sorted({
+    0, 1, -1,
+    127, 128, -128, -129, 255, 256,
+    32767, 32768, -32768, -32769, 65535, 65536,
+    2147483647, 2147483648, -2147483648, -2147483649,
+    4294967295, 4294967296,
+    9223372036854775807,
+})
+
+
 def exps(max_leaves=5):
     leaves = st.one_of(
         st.integers(min_value=-1000, max_value=1000).map(lambda n: ("N", str(n))),
+        st.sampled_from(_BOUNDARIES).map(lambda n: ("N", str(n))),
         st.sampled_from(VAR_POOL).map(lambda x: ("V", x)),
     )
     return st.recursive(

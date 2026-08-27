@@ -906,7 +906,7 @@ definition entry_state_ctx_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if ctx = [] then owner @ '' / root context''
         else owner @ '' / context='' @ concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
-      source_text = Some (pretty_string_of_program (prog_table p) (prog_procs p) (prog_main p) []),
+      source_text = Some (pretty_string_of_program (prog_tyenv p) (declared_locals p) (prog_table p) (prog_procs p) (prog_main p) (declared_global_vars p)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 
@@ -1178,7 +1178,7 @@ definition cs_ctx_graph_config ::
       owner_of = String.explode o
         compiled_owner_of (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p),
       cluster_label = cs_cluster_label,
-      source_text = Some (pretty_string_of_program (prog_table p) (prog_procs p) (prog_main p) []),
+      source_text = Some (pretty_string_of_program (prog_tyenv p) (declared_locals p) (prog_table p) (prog_procs p) (prog_main p) (declared_global_vars p)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

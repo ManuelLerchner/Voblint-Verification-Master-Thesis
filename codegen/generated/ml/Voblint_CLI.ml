@@ -316,8 +316,10 @@ module Core : sig
                   (('a, 'b) analysis_node *
                     (analysis_edge_kind * ('a, 'b) analysis_node)) list)
   val pretty_string_of_program :
-    (string -> unit proc_decl_ext option) ->
-      string list -> com -> string list -> char list
+    (string -> ikind) ->
+      (string * typed_var) list ->
+        (string -> unit proc_decl_ext option) ->
+          string list -> com -> string list -> char list
   val compiled_owner_of :
     (string -> ikind) ->
       (string -> unit proc_decl_ext option) ->
@@ -358,6 +360,7 @@ module Core : sig
   val xe_label : 'a export_edge_ext -> string
   val xn_label : 'a export_node_ext -> string
   val xn_lines : 'a export_node_ext -> string list
+  val declared_locals : 'a imp_prog_ext -> (string * typed_var) list
   val xg_edges : 'a export_graph_ext -> unit export_edge_ext list
   val xg_nodes : 'a export_graph_ext -> unit export_node_ext list
   val xn_status : 'a export_node_ext -> node_status option
@@ -8504,6 +8507,18 @@ let char_0x2A : char = Chr (Z.of_int 42);;
 
 let char_0x2F : char = Chr (Z.of_int 47);;
 
+let char_0x31 : char = Chr (Z.of_int 49);;
+
+let char_0x32 : char = Chr (Z.of_int 50);;
+
+let char_0x33 : char = Chr (Z.of_int 51);;
+
+let char_0x34 : char = Chr (Z.of_int 52);;
+
+let char_0x36 : char = Chr (Z.of_int 54);;
+
+let char_0x38 : char = Chr (Z.of_int 56);;
+
 let char_0x3A : char = Chr (Z.of_int 58);;
 
 let char_0x3B : char = Chr (Z.of_int 59);;
@@ -10164,26 +10179,57 @@ let rec pretty_source_lines_com
            [char_0x3C; char_0x75; char_0x6E; char_0x77; char_0x69; char_0x6E;
              char_0x64; char_0x3E]];;
 
+let rec string_of_ikind
+  = function I8 -> [char_0x69; char_0x6E; char_0x74; char_0x38]
+    | U8 -> [char_0x75; char_0x69; char_0x6E; char_0x74; char_0x38]
+    | I16 -> [char_0x69; char_0x6E; char_0x74; char_0x31; char_0x36]
+    | U16 -> [char_0x75; char_0x69; char_0x6E; char_0x74; char_0x31; char_0x36]
+    | I32 -> [char_0x69; char_0x6E; char_0x74; char_0x33; char_0x32]
+    | U32 -> [char_0x75; char_0x69; char_0x6E; char_0x74; char_0x33; char_0x32]
+    | I64 -> [char_0x69; char_0x6E; char_0x74; char_0x36; char_0x34]
+    | U64 ->
+        [char_0x75; char_0x69; char_0x6E; char_0x74; char_0x36; char_0x34];;
+
+let rec string_of_typed_name
+  gamma x = string_of_ikind (gamma x) @ [char_0x20] @ explode x;;
+
+let rec string_of_ret_kind
+  rk = (match rk with None -> [char_0x76; char_0x6F; char_0x69; char_0x64]
+         | Some a -> string_of_ikind a);;
+
+let rec pretty_local_lines
+  n locals p =
+    map (fun tv ->
+          source_indent n @
+            string_of_ikind (tv_kind tv) @
+              [char_0x20] @ explode (tv_name tv) @ [char_0x3B])
+      (map_filter
+        (fun x -> (if (((fst x) : string) = p) then Some (snd x) else None))
+        locals);;
+
 let rec pretty_source_lines_proc
-  n p decl =
+  gamma locals n p decl =
     (source_indent n @
-      [char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20] @
-        explode p @
-          [char_0x28] @
-            join_source [char_0x2C; char_0x20] (map explode (formals decl)) @
-              [char_0x29; char_0x20; char_0x7B]) ::
-      pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
-        (body decl) @
-        [source_indent n @ [char_0x7D]];;
+      string_of_ret_kind (ret_kind decl) @
+        [char_0x20] @
+          explode p @
+            [char_0x28] @
+              join_source [char_0x2C; char_0x20]
+                (map (string_of_typed_name gamma) (formals decl)) @
+                [char_0x29; char_0x20; char_0x7B]) ::
+      pretty_local_lines (plus_nat n (nat_of_integer (Z.of_int 2))) locals p @
+        pretty_source_lines_com (plus_nat n (nat_of_integer (Z.of_int 2)))
+          (body decl) @
+          [source_indent n @ [char_0x7D]];;
 
 let rec pretty_string_of_program
-  pi ps main globals =
+  gamma locals pi ps main globals =
     join_source source_nl
-      ((if null globals then []
-         else [[char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61;
-                 char_0x6C; char_0x20] @
-                 join_source [char_0x2C; char_0x20] (map explode globals) @
-                   [char_0x3B]]) @
+      (map (fun g ->
+             [char_0x67; char_0x6C; char_0x6F; char_0x62; char_0x61; char_0x6C;
+               char_0x20] @
+               string_of_typed_name gamma g @ [char_0x3B])
+         globals @
         maps (fun p ->
                (match pi p
                  with None ->
@@ -10193,13 +10239,15 @@ let rec pretty_string_of_program
                         [char_0x20; char_0x3C; char_0x6D; char_0x69; char_0x73;
                           char_0x73; char_0x69; char_0x6E; char_0x67;
                           char_0x3E]]
-                 | Some a -> pretty_source_lines_proc zero_nat p a))
+                 | Some a ->
+                   pretty_source_lines_proc gamma locals zero_nat p a))
           ps @
           [[char_0x76; char_0x6F; char_0x69; char_0x64; char_0x20; char_0x6D;
              char_0x61; char_0x69; char_0x6E; char_0x28; char_0x29; char_0x20;
              char_0x7B]] @
-            pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
-              [[char_0x7D]]);;
+            pretty_local_lines (nat_of_integer (Z.of_int 2)) locals "main" @
+              pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
+                [[char_0x7D]]);;
 
 let rec compiled_proc_owner
   gamma pi x2 n k = match gamma, pi, x2, n, k with gamma, pi, [], n, k -> None
@@ -10225,7 +10273,8 @@ let rec raw_cfg_graph_config
         (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
         (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
         false, comp explode (compiled_owner_of gamma pi ps mnm main),
-        (fun owner _ -> owner), Some (pretty_string_of_program pi ps main []),
+        (fun owner _ -> owner),
+        Some (pretty_string_of_program gamma [] pi ps main []),
         (fun p _ -> annotate p), ());;
 
 let rec raw_cfg_export
@@ -11004,6 +11053,11 @@ let rec ics_sol_prog
           (equal_unit, int_dom_record_lattice_unit))
         (declared_global_vars p))
       (prog_tyenv p) (prog_table p) (prog_procs p) mnm (prog_main p);;
+
+let rec declared_locals
+  (Imp_prog_ext
+    (proc_rep, declared_global_vars, declared_kinds, declared_locals, more))
+    = declared_locals;;
 
 let rec xg_edges
   (Export_graph_ext (xg_clusters, xg_nodes, xg_edges, more)) = xg_edges;;
@@ -13565,8 +13619,10 @@ let rec cs_ctx_graph_config
               (Core.compiled_owner_of (Core.prog_tyenv p) (Core.prog_table p)
                 (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)),
             Core.cs_cluster_label,
-            Some (Core.pretty_string_of_program (Core.prog_table p)
-                   (Core.prog_procs p) (Core.prog_main p) []),
+            Some (Core.pretty_string_of_program (Core.prog_tyenv p)
+                   (Core.declared_locals p) (Core.prog_table p)
+                   (Core.prog_procs p) (Core.prog_main p)
+                   (Core.declared_global_vars p)),
             (fun _ _ -> None), ());;
 
 let rec cs_ctx_annotated_config
@@ -13865,8 +13921,10 @@ let rec entry_state_ctx_graph_config
                        Core.maps
                          (fun x -> Core.string_of_ivl x @ [Core.char_0x20])
                          ctx)),
-          Some (Core.pretty_string_of_program (Core.prog_table p)
-                 (Core.prog_procs p) (Core.prog_main p) []),
+          Some (Core.pretty_string_of_program (Core.prog_tyenv p)
+                 (Core.declared_locals p) (Core.prog_table p)
+                 (Core.prog_procs p) (Core.prog_main p)
+                 (Core.declared_global_vars p)),
           (fun _ _ -> None), ());;
 
 let rec entry_state_ctx_export_auto

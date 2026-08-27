@@ -252,47 +252,24 @@ let program_of (_, main_body, globals) defs =
    places a declaration belongs without parsing the text back. Headers arrive
    in the same order `definitions_of` produced. *)
 
-let has_prefix prefix s =
-  String.length s >= String.length prefix && String.sub s 0 (String.length prefix) = prefix
-
-let typed_names names =
-  String.concat ", " (List.map (fun x -> decl_kind_text ^ " " ^ x) names)
-
-let header_line d =
-  Printf.sprintf "%s %s(%s) {"
-    (match d.d_ret with None -> "void" | Some _ -> decl_kind_text)
-    d.d_name (typed_names d.d_formals)
-
-let locals_lines d =
-  List.map (fun x -> "    " ^ decl_kind_text ^ " " ^ x ^ ";") d.d_locals
-
-let complete_source defs text =
-  let pending = ref defs in
-  let rewrite line =
-    if has_prefix "global " line then
-      [ "global " ^ decl_kind_text ^ String.sub line 6 (String.length line - 6) ]
-    else if has_prefix "void " line then
-      match !pending with
-      | d :: rest ->
-        pending := rest;
-        header_line d :: locals_lines d
-      | [] -> failwith "ast_driver: more procedure headers than definitions"
-    else [ line ]
-  in
-  String.concat "\n" (List.concat_map rewrite (String.split_on_char '\n' text))
-
 (* -- Driver --------------------------------------------------------------- *)
 
-let source_text_of_program defs original =
+(* The printer emits strict source: a kind on every global and formal, a
+   return kind on every procedure, and each procedure's locals as a prologue.
+   Nothing is spliced in afterwards, so what the parser reads back is exactly
+   what the printer produced -- which is what makes this an AST -> print ->
+   parse round trip rather than a comparison against a repaired text. *)
+let source_text_of_program _defs original =
   let source_chars =
-    pretty_string_of_program (prog_table original) (prog_procs original) (prog_main original)
+    pretty_string_of_program
+      (prog_tyenv original) (declared_locals original)
+      (prog_table original) (prog_procs original) (prog_main original)
       (declared_global_vars original)
   in
-  complete_source defs
-    (String.concat ""
-       (List.map
-          (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c))))
-          source_chars))
+  String.concat ""
+    (List.map
+       (fun c -> String.make 1 (Char.chr (Z.to_int (integer_of_char c))))
+       source_chars)
 
 
 let mode = if Array.length Sys.argv > 1 then Sys.argv.(1) else ""

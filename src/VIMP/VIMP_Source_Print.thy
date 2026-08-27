@@ -126,10 +126,46 @@ fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list"
 | "pretty_source_lines_com n Restore = [source_indent n @ ''restore'']"
 | "pretty_source_lines_com n Unwind = [source_indent n @ ''<unwind>'']"
 
-definition pretty_source_lines_proc :: "nat \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
-  "pretty_source_lines_proc n p decl =
-    (source_indent n @ ''void '' @ String.explode p @ ''('' @ join_source '', '' (map String.explode (formals decl)) @ '') {'')
-    # pretty_source_lines_com (n + 2) (body decl)
+subsection \<open>Printing declarations\<close>
+
+text \<open>
+  The printed form is the strict syntax the frontend accepts, which means
+  every declaration carries its kind: a global, a formal, a procedure's return
+  and each procedure-local. Printing any of them bare produced source the
+  parser rejects, so what came out was not a program the language has.
+\<close>
+
+fun string_of_ikind :: "ikind \<Rightarrow> string" where
+    "string_of_ikind I8 = ''int8''"   | "string_of_ikind U8 = ''uint8''"
+  | "string_of_ikind I16 = ''int16''" | "string_of_ikind U16 = ''uint16''"
+  | "string_of_ikind I32 = ''int32''" | "string_of_ikind U32 = ''uint32''"
+  | "string_of_ikind I64 = ''int64''" | "string_of_ikind U64 = ''uint64''"
+
+definition string_of_ret_kind :: "ikind option \<Rightarrow> string" where
+  "string_of_ret_kind rk = (case rk of None \<Rightarrow> ''void'' | Some k \<Rightarrow> string_of_ikind k)"
+
+definition string_of_typed_name :: "tyenv \<Rightarrow> vname \<Rightarrow> string" where
+  "string_of_typed_name \<Gamma> x = string_of_ikind (\<Gamma> x) @ '' '' @ String.explode x"
+
+text \<open>
+  One declaration line per name rather than one line listing several. A line
+  carries a single kind, so grouping would have to partition by kind first;
+  one name per line says the same thing and reads the same after a reparse.
+\<close>
+
+definition pretty_local_lines :: "nat \<Rightarrow> (pname \<times> typed_var) list \<Rightarrow> pname \<Rightarrow> string list" where
+  "pretty_local_lines n locals p =
+    map (\<lambda>tv. source_indent n @ string_of_ikind (tv_kind tv) @ '' ''
+                @ String.explode (tv_name tv) @ '';'')
+        (map snd (filter (\<lambda>e. fst e = p) locals))"
+
+definition pretty_source_lines_proc ::
+  "tyenv \<Rightarrow> (pname \<times> typed_var) list \<Rightarrow> nat \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> string list" where
+  "pretty_source_lines_proc \<Gamma> locals n p decl =
+    (source_indent n @ string_of_ret_kind (ret_kind decl) @ '' '' @ String.explode p
+       @ ''('' @ join_source '', '' (map (string_of_typed_name \<Gamma>) (formals decl)) @ '') {'')
+    # pretty_local_lines (n + 2) locals p
+    @ pretty_source_lines_com (n + 2) (body decl)
     @ [source_indent n @ ''}'']"
 
 text \<open>
@@ -142,14 +178,16 @@ text \<open>
 \<close>
 
 definition pretty_string_of_program ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> com \<Rightarrow> vname list \<Rightarrow> string" where
-  "pretty_string_of_program \<Pi> ps main globals =
+  "tyenv \<Rightarrow> (pname \<times> typed_var) list \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> com
+    \<Rightarrow> vname list \<Rightarrow> string" where
+  "pretty_string_of_program \<Gamma> locals \<Pi> ps main globals =
     join_source source_nl
-      ((if globals = [] then []
-        else [''global '' @ join_source '', '' (map String.explode globals) @ '';''])
+      (map (\<lambda>g. ''global '' @ string_of_typed_name \<Gamma> g @ '';'') globals
       @ concat (map (\<lambda>p. case \<Pi> p of
           None \<Rightarrow> [''procedure '' @ String.explode p @ '' <missing>'']
-        | Some decl \<Rightarrow> pretty_source_lines_proc 0 p decl) ps)
-      @ [''void main() {''] @ pretty_source_lines_com 2 main @ [''}''])"
+        | Some decl \<Rightarrow> pretty_source_lines_proc \<Gamma> locals 0 p decl) ps)
+      @ [''void main() {'']
+      @ pretty_local_lines 2 locals (STR ''main'')
+      @ pretty_source_lines_com 2 main @ [''}''])"
 
 end
