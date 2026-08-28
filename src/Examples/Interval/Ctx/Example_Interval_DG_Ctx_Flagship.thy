@@ -159,7 +159,8 @@ definition twice_ctx_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / context='' @ concat (map (\<lambda>x. string_of_ivl x @ '' '') ctx)),
-      source_text = Some (pretty_string_of_program twice_pi twice_procs twice_main []),
+      source_text = Some (pretty_string_of_program (prog_tyenv twice_program) (declared_scoped twice_program)
+        twice_pi twice_procs twice_main (declared_global_vars twice_program)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

@@ -96,18 +96,23 @@ text \<open>
   Interval's exact singleton, which is why the result is \<open>mk_congruence 1 2\<close>
   (\"odd\") rather than the sharper \<open>congruence_of_int 3\<close> (\"exactly 3\").
 
-  Sign answers \<^const>\<open>STop\<close> rather than \<^const>\<open>SPos\<close>, and that is the write
-  site's conversion, not the \<open>min\<close> primitive: \<^const>\<open>SPos\<close> concretizes to
-  every positive integer, so converting it to \<^const>\<open>I32\<close> cannot rule out a
-  value that wraps negative. A magnitude-free domain has no way to answer that
-  question, which is why the product carries Interval alongside it.
+  Sign answers \<^const>\<open>SPos\<close>, and it does not get there on its own. Its own
+  \<open>min\<close> primitive answers \<^const>\<open>SPos\<close>, the write site's conversion to
+  \<^const>\<open>I32\<close> then tops it -- \<^const>\<open>SPos\<close> concretizes to every positive
+  integer, so the conversion cannot rule out a value that wraps negative --
+  and \<^const>\<open>int_dom_cast\<close>'s reduction reads the sign back off the interval
+  the same conversion produced. That is the reduced-product behaviour
+  Goblint's \<open>IntDomTuple\<close> gets from refining after every operation, and it is
+  why the product carries Interval alongside a magnitude-free domain: on
+  \<open>--analysis sign\<close> alone this same program answers \<^const>\<open>STop\<close>, which
+  \<^verbatim>\<open>tests/regression/14-min-max/known-imprecision/01\<close> pins.
 \<close>
 
 lemma apply_tf_once_special_min:
   "apply_tf (int_tf_once_for test_gs)
      (EA_Special (Min (default_tyenv (STR ''x'')) (TN I32 3) (TN I32 5)) (STR ''x''))
      test_env_top (STR ''x'') =
-   int_dom_sipc STop (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
+   int_dom_sipc SPos (Ivl (Fin 3) (Fin 3)) POdd (mk_congruence 1 2)"
   by eval
 
 end

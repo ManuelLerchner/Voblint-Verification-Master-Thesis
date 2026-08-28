@@ -403,7 +403,9 @@ definition flagship_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program Map.empty [] (prog_main flagship_prog) []),
+      source_text =
+        Some (pretty_string_of_program (prog_tyenv flagship_prog) (declared_scoped flagship_prog)
+                Map.empty [] (prog_main flagship_prog) (declared_global_vars flagship_prog)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

@@ -393,7 +393,9 @@ lemma checks_ivl_ex_annotation_unknown:
 
 definition checks_ivl_ex_dot_lit :: String.literal where
   "checks_ivl_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_tyenv checks_ivl_ex_program) (prog_table checks_ivl_ex_program) (prog_procs checks_ivl_ex_program)
+     raw_cfg_dot_with_report_lit (prog_tyenv checks_ivl_ex_program)
+       (prog_decls_view checks_ivl_ex_program)
+       (prog_table checks_ivl_ex_program) (prog_procs checks_ivl_ex_program)
        (STR ''main'') (prog_main checks_ivl_ex_program) checks_ivl_ex_node_annotation
        (analyse_interval_report_for checks_ivl_ex_gs checks_ivl_ex_program)"
 

@@ -319,7 +319,8 @@ definition parity_graph_config ::
       show_internal_globals = False,
       owner_of = (\<lambda>_. ''main''),
       cluster_label = (\<lambda>_ _. ''main / root context''),
-      source_text = Some (pretty_string_of_program parity_pi [] parity_prog []),
+      source_text = Some (pretty_string_of_program (prog_tyenv parity_program) (declared_scoped parity_program)
+        parity_pi [] parity_prog (declared_global_vars parity_program)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

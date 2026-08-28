@@ -349,7 +349,8 @@ definition nest_2_graph_config ::
       cluster_label = (\<lambda>owner ctx.
         if owner = ''main'' \<and> ctx = [] then ''main / root context''
         else owner @ '' / call string='' @ ''['' @ join_source '', '' (map string_of_cfg_node ctx) @ '']''),
-      source_text = Some (pretty_string_of_program nest_pi nest_procs nest_main []),
+      source_text = Some (pretty_string_of_program (prog_tyenv nest_program) (declared_scoped nest_program)
+        nest_pi nest_procs nest_main (declared_global_vars nest_program)),
       node_annotation = (\<lambda>_ _. None)
     \<rparr>"
 

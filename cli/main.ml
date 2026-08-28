@@ -513,7 +513,31 @@ let () =
     | "--timeout" :: v :: rest ->
       (try timeout := float_of_string v with _ -> prerr_endline "--timeout expects a number"; exit 1);
       parse_args rest
-    | f :: rest when String.length f > 0 && f.[0] <> '-' -> file := Some f; parse_args rest
+    (* A second bare word is always a mistake, and silently letting the last one
+       win is the worst way to handle it: `--analysis interval context
+       entry-state F.vimp` then runs context-insensitively on F.vimp, and the
+       report looks like a precision regression rather than a typo. The common
+       shape is a flag written without its dashes, so say so when the word
+       names one. *)
+    | f :: rest when String.length f > 0 && f.[0] <> '-' ->
+      (match !file with
+       | None -> file := Some f; parse_args rest
+       | Some prev ->
+         let flags =
+           [ "analysis"; "context"; "context-depth"; "context-graph"; "solver";
+             "dot"; "dot-full"; "graph-snapshot"; "html"; "html-out";
+             "parse-only"; "timeout"; "help" ]
+         in
+         prerr_endline
+           (Printf.sprintf "voblint: unexpected argument %S after input file %S" f prev);
+         (* The word that was meant to be a flag is usually the earlier one --
+            it is what silently became the file -- so check both. *)
+         List.iter
+           (fun w -> if List.mem w flags then
+              prerr_endline (Printf.sprintf "  did you mean --%s ?" w))
+           [ prev; f ];
+         prerr_endline "  run 'voblint --help' for the full option list";
+         exit 1)
     | arg :: _ -> prerr_endline ("unrecognized argument: " ^ arg); exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
