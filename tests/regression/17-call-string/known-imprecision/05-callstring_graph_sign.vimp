@@ -10,9 +10,8 @@
 // Sign specifically: g is entered under two distinct call strings (via
 // f(3) and via f(-10)), so it gets two separate clusters whose enter and
 // combine edges route to their own context rather than joining, and the
-// two clusters carry genuinely different states (Positive vs Negative).
-// The checks are Sign's own business, not the graph's: doubling preserves
-// sign, so both are PROVED.
+// two clusters carry genuinely different states.
+//
 // Both checks read UNKNOWN, and that is Sign's honest answer rather than a
 // context-sensitivity failure: g computes p + p and norms it at int32, and a
 // kind-free Positive admits summands whose sum wraps negative, so the sum

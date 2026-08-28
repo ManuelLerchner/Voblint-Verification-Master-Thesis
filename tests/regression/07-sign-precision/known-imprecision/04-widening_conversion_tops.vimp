@@ -1,0 +1,28 @@
+// PARAM: --analysis sign
+// A conversion that cannot possibly wrap still tops under Sign, and this is
+// the sharpest form of the missing invariant because no wraparound is even
+// reachable: uint8's range is a subset of int32's, so uint8-to-int32 is the
+// identity on every value a uint8 can hold.
+//
+// Sign still has to give up. Answering NonNegative would claim
+// ik_norm int32 v >= 0 for every v in gamma of NonNegative, and that gamma is
+// unbounded, so v = 2^31 refutes it. The premise that would rescue it -- that
+// z holds a uint8 -- is exactly what no abstract cell records, and teval reads
+// a variable without normalizing, so it does not hold of every store the
+// semantics admits either.
+//
+// The interval domain answers [0,255] on the same program, because its
+// concretization is bounded and its conversion can check. That contrast is
+// the argument for the kind-tagged cell in one line.
+//
+// 22-integer-kinds/precision/07-unsigned_conversion_is_nonnegative.vimp is the
+// case Sign does get: a conversion *to* an unsigned kind, where ik_norm lands
+// in [0, max] whatever the source value was, so no bound on the source is
+// needed.
+void main() {
+  uint8 z;
+  int32 q;
+  z := __voblint_nondet_int();
+  q := z;
+  __voblint_check(!(q < 0)) // UNKNOWN
+}

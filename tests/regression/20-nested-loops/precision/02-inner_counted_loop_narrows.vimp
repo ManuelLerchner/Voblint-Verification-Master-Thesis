@@ -1,0 +1,24 @@
+// PARAM: --analysis interval
+// The narrowing half of the Amato-Scozzari nested2 example, isolated from the
+// endless outer loop that makes the full example's claim false under
+// wraparound (soundness/01-nested2_endless_counter_wraps.vimp).
+//
+// What nested2 is actually about is this: the head widens j to [0,+inf], the
+// guard narrows it back to [0,10], and the exit edge leaves j = [10,10]
+// exactly rather than [0,10]. The step that follows is then 11 - j = 1 and
+// not [1,11]. Without the endless loop around it nothing wraps, so the
+// property is decidable and stays a precision case.
+//
+// Kept because the full example no longer checks it: its only check became
+// UNKNOWN when the counter's wraparound made the outer claim false, which
+// would otherwise have left the narrowing untested by anything.
+void main() {
+  int32 j, k;
+  j := 0;
+  while (j < 10) {
+    j := j + 1
+  };
+  k := 11 - j;
+  __voblint_check(j == 10);  // PROVED
+  __voblint_check(k == 1)    // PROVED
+}
