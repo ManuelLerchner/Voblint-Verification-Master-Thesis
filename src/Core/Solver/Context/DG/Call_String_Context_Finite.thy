@@ -1,5 +1,5 @@
 theory Call_String_Context_Finite
-  imports Call_String_Context "Voblint_CFG.VIMP_Proc_to_CFG"
+  imports Call_String_Context "Voblint_Compile.VIMP_Proc_to_CFG"
 begin
 
 section \<open>Call-string context spaces are finite by construction\<close>

@@ -72,11 +72,19 @@ component of `int_dom`, alongside sign, interval and parity.
 The session dependency graph is:
 
 ```text
-VIMP -> CFG -> Core -> Analysis -+-> Formalization -+
-                                 |                  v
-                                 +----------------> CLI -> Codegen
-                                                     +---> Examples
+VIMP -> CFG -> Compile -> Core -> Analysis -+-> Formalization -+
+                                            |                  v
+                                            +----------------> CLI -> Codegen
+                                                                +---> Examples
 ```
+
+`Voblint_CFG` is the graph model and its activation-local collecting
+semantics: what a soundness claim is stated *about*. It never mentions the
+compiler, so the D/G soundness endpoints hold for an arbitrary CFG rather than
+only for compiled ones, and the session boundary is what keeps that true.
+`Voblint_Compile` is the VIMP-to-CFG compiler and its correctness (structural
+invariants, forward simulation, and the bridge from a source run to a valid
+local trace).
 
 `Voblint_Core` is the abstract framework: domains, constraint systems, and the
 TD solver bridge, with no domain-specific content. `Voblint_Analysis` threads
@@ -89,7 +97,7 @@ leaf: `Voblint_CLI` imports it, and the export in `Voblint_Codegen` reaches
 through it. `Voblint_Examples` contains executable runs, regressions, GraphViz
 output, and the `Voblint` capstone.
 
-`ROOTS` lists eight session directories, one per session in the graph above.
+`ROOTS` lists nine session directories, one per session in the graph above.
 
 The generated OCaml is compile-checked by actually compiling it: both
 `codegen-regression` and `cli-build` run `ocamlfind ocamlopt` over
@@ -100,7 +108,9 @@ The procedural language includes calls, explicit returns, and runtime-only
 restore/unwind commands. CFGs separate local `intra` edges from the `calls`
 relation and use `FunctionEntry` and `FunctionResult` nodes. Concrete transfer
 primitives live in `src/CFG/CFG_Transfer.thy`; activation-local semantics live
-under `src/CFG/Collecting/`.
+under `src/CFG/Collecting/`. The compiler that produces such a graph from a
+VIMP program lives in `src/Compile/`; only `Compile_Locality` and
+`Located_LTR` there mention both the compiler and the collecting semantics.
 
 ## VIMP grammar pipeline
 
@@ -379,10 +389,27 @@ deviates. When a rule here conflicts with the baseline, this file wins.
 
 ### Comments
 
-- Comment only what the definition or statement does not already say: a
-  non-obvious design decision, a Goblint-alignment rationale, a proof step
-  that surprises. A `text` block that restates the lemma it precedes is
-  deleted.
+- **Every theory opens with an orientation block.** Three to ten lines, after
+  the `section` heading, answering: what question does this file settle, what
+  is its main result, and what local vocabulary must the reader already have.
+  This is the one `text` block exempt from the no-restating rule below, and
+  the only one a newcomer is guaranteed to read.
+  - Write it operationally, in plain words, the way `VIMP_Proc` does: "a call
+    evaluates its actuals in the caller store, binds them in a fresh
+    activation, and pushes a frame". Never open with a signature --- a reader
+    who does not yet know the argument order learns nothing from
+    `f a b c d relates ...`.
+  - Define a term the first time the session uses it, in the same sentence.
+    Words like *residual*, *fragment*, *located*, *activation* are local
+    jargon, not English; a header that explains one of them with the others
+    is circular.
+  - The `section` heading states the question, not the machinery: "Where a
+    partly executed command sits in the graph" over "Located control inside a
+    compiled procedure fragment".
+- Beyond that block, comment only what the definition or statement does not
+  already say: a non-obvious design decision, a Goblint-alignment rationale, a
+  proof step that surprises. A `text` block that restates the lemma it
+  precedes is deleted.
 - Explain why, not what. Timeless: describe the theory as it stands, not
   project history, removed theories, former names, migration plans, or
   staged/future work ("TODO", "still needs", "Stage 1").
@@ -391,6 +418,10 @@ deviates. When a rule here conflicts with the baseline, this file wins.
   inline. Comparisons to a still-existing sibling definition are fine.
 - Exposition uses `section`/`subsection`/`text`, one short `text` per
   section at most; `(* *)` only inside proofs.
+- A session's `README.md` carries what no single theory can: the vocabulary
+  table, one worked example carried end to end, and the shape of the
+  dependency graph. A reader who cannot start from the README will not be
+  rescued by the theory headers.
 
 ### Workflow
 

@@ -1,16 +1,21 @@
-theory Control_Simulation
-  imports Control_Emit
+theory Simulation_Relation
+  imports Residual_Edges
 begin
 
-section \<open>Source-to-CFG located simulation\<close>
+section \<open>The relation between a source state and a graph state\<close>
 
 text \<open>
-  The compiled execution \<^const>\<open>cstep\<close> simulates the source small-step \<^const>\<open>pstep\<close>.
-  Both run an activation stack: a source frame carries the caller store and destination,
-  a \<open>cframe\<close> additionally records the CFG continuation node.  The simulation relation
-  \<open>csim\<close> is direct --- literal store equality, \<^const>\<open>control_at\<close> locating the active
-  residual at the CFG node, and the two stacks paired frame by frame, one \<open>csim\<close> layer per
-  suspended caller.
+  \<open>csim\<close> says that a source configuration and a graph configuration are two views of the
+  same execution.  Both carry an activation stack: a source frame holds the caller's store
+  and the destination variable, a \<open>cframe\<close> additionally holds the node to resume at.  The
+  correspondence is direct --- the stores are equal, \<^const>\<open>control_at\<close> puts the running
+  residual at the current node, and the two stacks are paired frame by frame, one \<open>csim\<close>
+  layer per suspended caller.
+
+  It has three shapes: \<open>Base\<close> for an activation running with nothing beneath it, \<open>Nested\<close>
+  for one with callers beneath it, and \<open>Returning\<close> for the window in which the source is
+  still unwinding a finished activation while the graph has already arrived at
+  \<^term>\<open>FunctionResult\<close>.
 \<close>
 
 subsection \<open>Return initiation\<close>

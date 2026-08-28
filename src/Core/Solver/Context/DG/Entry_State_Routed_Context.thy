@@ -1,5 +1,5 @@
 theory Entry_State_Routed_Context
-  imports Routed_Context "Voblint_CFG.VIMP_Proc_to_CFG"
+  imports Routed_Context "Voblint_Compile.VIMP_Proc_to_CFG"
 begin
 
 section \<open>Entry-state routing as a routed-context instance\<close>

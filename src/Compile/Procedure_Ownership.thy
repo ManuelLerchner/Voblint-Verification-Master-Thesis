@@ -1,8 +1,8 @@
-theory Compile_Locality
-  imports Compile_Certificate CFG_Local_Trace
+theory Procedure_Ownership
+  imports Compile_Invariants "Voblint_CFG.CFG_Local_Trace"
 begin
 
-section \<open>Procedure locality of a valid activation\<close>
+section \<open>Each procedure owns a disjoint block of nodes\<close>
 
 text \<open>
   An activation's own local \<^const>\<open>path\<close> stays inside one compiled procedure fragment.  A

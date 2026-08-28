@@ -1,4 +1,4 @@
-session Voblint_Core in "." = "Voblint_CFG" +
+session Voblint_Core in "." = "Voblint_Compile" +
   description "Abstract framework: domains, constraint systems, and TD solver bridge"
   sessions
     TD

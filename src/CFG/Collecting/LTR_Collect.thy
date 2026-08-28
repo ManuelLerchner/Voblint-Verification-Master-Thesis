@@ -2,25 +2,25 @@ theory LTR_Collect
   imports CFG_Local_Trace Activation_Context
 begin
 
-section \<open>Local-trace collecting semantics\<close>
+section \<open>Which stores can occur at each node\<close>
 
 text \<open>
-  The stack-faithful concrete carrier of a procedure-aware CFG is the local-trace set
-  \<^const>\<open>valid_ltr\<close>.  This theory presents it as a least fixed point of an explicit
-  monotone set transformer \<open>ltr_F\<close>, defines the forgetful projection of a trace set to a
-  CFG node (\<open>ltr_collect\<close>, the concrete collector), and proves the collecting equations,
-  the context-sensitive/insensitive bridge to \<^const>\<open>activation_collect\<close>.
+  \<open>ltr_collect gs g S v\<close> is the set of stores a run can actually have at node \<open>v\<close>: take
+  every valid trace that ends there and keep its final store.  This is the concrete set an
+  analysis has to over-approximate, so it is the target of every soundness statement
+  downstream.
 
-  \<open>ltr_F\<close> has exactly the four clauses of \<^const>\<open>valid_ltr\<close> (root, intra step, call,
-  return), each reading exactly the relation for its phenomenon: \<open>intra\<close> for local
-  extension, \<open>calls\<close> for entering a callee and for recovering a continuation.  The return
-  clause mirrors \<open>valid_ltr.ret\<close> literally --- it recovers the caller from the completed
-  callee's own ancestry through \<^const>\<open>caller_of\<close>, never by an independent choice, and
-  matches the callee's \<open>FunctionResult p\<close> against a concrete \<open>calls\<close> edge.
+  \<^const>\<open>valid_ltr\<close> is also re-presented here as the least fixed point of an explicit
+  monotone transformer \<open>ltr_F\<close>, which is what makes induction over "everything reachable"
+  available.  \<open>ltr_F\<close> has exactly the four clauses of \<^const>\<open>valid_ltr\<close> --- root, intra
+  step, call, return --- each reading exactly the relation for its phenomenon: \<open>intra\<close> for
+  local extension, \<open>calls\<close> for entering a callee and for recovering a continuation.  The
+  return clause recovers the caller from the completed callee's own ancestry through
+  \<^const>\<open>caller_of\<close>, never by an independent choice.
 
   There is no global exit node: whole-program completion is collection at
-  \<open>FunctionResult main\<close>, and a procedure result is an ordinary collected node, not a
-  separate summary mechanism.  No solver, DG, or abstract-domain theory is imported.
+  \<open>FunctionResult main\<close>, and a procedure result is an ordinary collected node rather than a
+  separate summary mechanism.
 \<close>
 
 subsection \<open>The constructor transformer\<close>

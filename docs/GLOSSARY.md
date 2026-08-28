@@ -30,10 +30,10 @@ layer without embedding line numbers that drift.
 | `intra` | Ordinary procedure-local CFG edges. | `src/CFG/CFG_Def.thy` |
 | `calls` | Call-site relation containing the call action, callee entry, and continuation. | `src/CFG/CFG_Def.thy` |
 | `wf_cfg` | Generic structural well-formedness conditions for a CFG. | `src/CFG/CFG_Def.thy` |
-| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/CFG/VIMP_Proc_to_CFG.thy` |
-| `wf_compile_input` | Canonical static contract for accepted source programs. | `src/CFG/Compiler/Compile_Invariants.thy` |
+| `compile` | Compiles one source command into local edges and calls over a node interval. | `src/Compile/VIMP_Proc_to_CFG.thy` |
+| `compile_proc` | Adds a procedure entry, result boundary, and fall-through return to a compiled body. | `src/Compile/VIMP_Proc_to_CFG.thy` |
+| `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/Compile/VIMP_Proc_to_CFG.thy` |
+| `wf_compile_input` | Canonical static contract for accepted source programs. | `src/Compile/Compile_Invariants.thy` |
 
 ## Activation-local semantics
 

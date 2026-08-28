@@ -73,12 +73,7 @@ lemma rc_finC: "finite (calls rc_cfg)" unfolding rc_cfg_def using compile_prog_f
 subsection \<open>Source-level well-formedness\<close>
 
 lemma rc_wf: "wf_compile_input rc_gs rc_pi rc_procs (STR ''main'') rc_main"
-  unfolding wf_compile_input_simps
-    rc_pi_def rc_procs_def rc_main_def rc_program_def
-  by (auto simp: prog_main_name_def valid_formal_def reserved_ret_var_def
-      value_providing_def source_exp_def ret_var_def
-      special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
+  by (auto simp: wf_compile_input_simps rc_pi_def rc_procs_def rc_main_def rc_program_def
       split: if_splits option.splits)
 
 end

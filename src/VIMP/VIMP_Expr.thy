@@ -4,8 +4,12 @@ begin
 
 section \<open>Expression evaluation\<close>
 
-text \<open>\<open>truthy\<close> is C's condition test; comparisons and logical operators evaluate
-  to \<open>1\<close>/\<open>0\<close> through it.\<close>
+text \<open>
+  \<open>aval\<close> evaluates an expression in a store.  Every VIMP expression is integer-valued, so
+  there are no booleans: \<open>truthy\<close> is C's condition test (non-zero), and comparisons and
+  logical operators produce \<open>1\<close> or \<open>0\<close> through it.  Evaluation is total and has no
+  effects, which is why a guard can be re-evaluated freely by the transfer functions.
+\<close>
 
 definition truthy :: "int \<Rightarrow> bool" where
   [simp]: "truthy n \<longleftrightarrow> n \<noteq> 0"

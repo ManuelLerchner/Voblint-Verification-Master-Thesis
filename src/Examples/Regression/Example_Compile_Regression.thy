@@ -1,5 +1,5 @@
 theory Example_Compile_Regression
-  imports "Voblint_CFG.Control_Simulation" "Voblint_CFG.Compile_Invariants"
+  imports "Voblint_Compile.Simulation_Relation" "Voblint_Compile.Compile_Invariants"
 begin
 
 section \<open>Examples: procedure-aware CFG compilation\<close>

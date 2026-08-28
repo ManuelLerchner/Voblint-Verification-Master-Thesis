@@ -1,41 +1,34 @@
 # CFG
 
-This session defines procedure-aware control-flow graphs, compiles VIMP source
-programs, and connects compiled executions to activation-local collecting
-semantics.
+This session defines procedure-aware control-flow graphs and gives them their
+concrete interprocedural semantics. It is what a soundness claim is stated
+*about*: nothing here mentions the compiler, so the D/G soundness endpoints
+hold for an arbitrary CFG rather than only for compiled ones. The VIMP-to-CFG
+compiler lives in `Voblint_Compile`.
 
-## Core
+## Graph model
 
 | File | Role |
 | --- | --- |
 | `CFG_Def.thy` | CFG nodes, local edge actions, call relation, graph well-formedness |
 | `CFG_Transfer.thy` | Concrete edge, call-entry, and caller/callee combination operations |
-| `VIMP_Proc_to_CFG.thy` | Command, procedure, and whole-program compilation |
-| `CFG_Prune.thy` | Reachability and graph pruning |
+| `CFG_Prune.thy` | The structural successor relation, reachability, and the dependency cone |
 
 `intra` contains local edges. `calls` records a call site, call action, callee
 entry, and continuation. `FunctionEntry p` and `FunctionResult p` are explicit
 procedure boundaries.
 
-## Compiler proofs
-
-| File | Role |
-| --- | --- |
-| `Compiler/Compile_Certificate.thy` | Reusable facts extracted from one successful compiler run |
-| `Compiler/Compile_Locality.thy` | Procedure ownership, node ranges, and separation |
-| `Compiler/Compile_Invariants.thy` | Static compiler-input contract and generated-CFG invariants |
-| `Compiler/Located_Exec.thy` | Source configurations located at CFG nodes |
-| `Compiler/Control_Residual.thy` | Source residuals associated with compiled nodes |
-| `Compiler/Control_Emit.thy` | Compiled edges of located residuals and the intra-step simulation |
-| `Compiler/Control_Simulation.thy` | Forward simulation from source steps to located CFG execution |
+`cfg_succ_rel` is the derived dependency graph the analysis runs on, not the
+concrete execution relation: it adds the two combine edges (call site to
+continuation, callee result to continuation) that execution never takes.
 
 ## Collecting semantics
 
 | File | Role |
 | --- | --- |
-| `Collecting/CFG_Local_Trace.thy` | `valid_ltr`, activation structure, contexts, and `activation_collect` |
-| `Collecting/LTR_Collect.thy` | `ltr_collect`, keyed projection, and least-fixpoint characterization |
-| `Collecting/LTR_Abstract.thy` | Abstract coverage interface for local-trace collecting semantics |
+| `Collecting/CFG_Local_Trace.thy` | `ltr`, `valid_ltr`, caller and ancestor structure |
+| `Collecting/Activation_Context.thy` | `key`, the context entry invariant, and `activation_collect` |
+| `Collecting/LTR_Collect.thy` | `ltr_collect`, introduction rules, and least-fixpoint characterization |
+| `Collecting/LTR_Abstract.thy` | The `ltr_coverage` locale and its generic postfix soundness theorem |
 
-Core theories contain generic semantics and reusable lemmas. Concrete CFGs and
-trace witnesses live in the `Voblint_Examples` session.
+Concrete CFGs and trace witnesses live in the `Voblint_Examples` session.

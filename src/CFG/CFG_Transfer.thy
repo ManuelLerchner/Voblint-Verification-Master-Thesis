@@ -2,13 +2,19 @@ theory CFG_Transfer
   imports CFG_Def
 begin
 
-section \<open>Per-edge abstract transfer\<close>
+section \<open>What each kind of edge does to the store\<close>
 
-text \<open>\<^const>\<open>edge_step\<close> (from \<^theory>\<open>Voblint_CFG.CFG_Def\<close>) is the primitive intra-edge
-  semantics.  \<open>edge_collect\<close> is its pointwise lift to store sets --- the successors of any
-  source store in \<open>S\<close> --- so the abstract set transformer is derived from the concrete step and the
-  two cannot drift.  This is the per-\<^const>\<open>intra\<close>-edge transfer the constraint system
-  folds over.\<close>
+text \<open>
+  Three transfers, one per thing an edge can do.  \<open>edge_collect\<close> runs an ordinary edge on a
+  whole set of stores at once, by lifting the single-store \<^const>\<open>edge_step\<close> pointwise ---
+  derived from the concrete step rather than restated, so the two cannot drift apart.
+  \<open>call_enter\<close> builds the callee's opening store: evaluate the actuals in the caller,
+  reset the locals, bind the formals.  \<open>combine_collect\<close> does the reverse at a return:
+  keep the callee's globals, restore the caller's locals, and write the callee's return
+  value into the destination.
+
+  All the payload comes from the edge itself, so none of these needs the procedure table.
+\<close>
 
 definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> store set" where
   "edge_collect a S = {t. \<exists>s\<in>S. t \<in> edge_step a s}"

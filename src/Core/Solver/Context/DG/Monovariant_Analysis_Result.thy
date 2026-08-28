@@ -3,7 +3,7 @@ theory Monovariant_Analysis_Result
     "Voblint_Core.Analysis_Result"
     "Voblint_Core.CFG_Enumeration"
     "Voblint_Core.Abstract_Checks"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     Exec_DG_Bridge
 begin
 

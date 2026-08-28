@@ -1,0 +1,22 @@
+session Voblint_Compile in "." = "Voblint_CFG" +
+  description "VIMP-to-CFG compiler, its structural invariants, and forward simulation"
+  directories
+    "Simulation"
+  theories
+    VIMP_Proc_to_CFG
+    (* The static contract on an accepted source program, the invariants of the
+       graph it compiles to, and that graph's connectivity. *)
+    Compile_Invariants
+    (* Source-step to CFG-step forward simulation.  Independent of the
+       collecting semantics: nothing under Simulation/ mentions valid_ltr. *)
+    Residual_Location
+    Residual_Edges
+    Simulation_Relation
+    Simulation_Preservation
+    (* Per-procedure node classification and edge locality; carries
+       valid_ltr_entry_result_eq, the activation procedure-locality theorem.
+       Independent of Simulation/. *)
+    Procedure_Ownership
+    (* The bridge, and the only theory that needs both branches: a source run
+       becomes a valid local trace (csim -> valid_ltr). *)
+    Source_To_Trace

@@ -28,7 +28,7 @@ theory Exec_Sign_DG_Run
     "Voblint_Core.Solver_Side_RG"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Soundness.Run_Analysis_Sound"
     Example_Compile_Call_Free
@@ -109,12 +109,7 @@ subsection \<open>Well-formedness of the compiled input\<close>
 
 lemma dgEx_wf:
   "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog) prog_main_name (prog_main sign_ex_prog)"
-  unfolding wf_compile_input_simps
-    sign_ex_pi_def sign_ex_prog_def
-  by (auto simp: source_exp_def source_exp_def ret_var_def
-      reserved_ret_var_def prog_main_name_def special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
-      split: if_splits)
+  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
 
@@ -130,9 +125,7 @@ lemma dgEx_vars_cover: "vars_cover gEx (fst dgEx_sol)"
         [OF gEx_finE gEx_finC gEx_wf_cfg dgEx_exit_covers
             dgEx_pp_st[unfolded dgEx_eqs_def]])
 lemma dgEx_reserved: "reserved_ret_var sign_ex_gs"
-  unfolding wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def
-  by (auto simp: source_exp_def source_exp_def ret_var_def
-      reserved_ret_var_def split: if_splits)
+  by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 lemma dgEx_is_bot_exact:
   "\<And>s. resolved_st_q_is_bot_for (declared_global_vars sign_ex_prog) s = is_bot_state (fun_of_exec_dg_st_for sign_ex_gs s)"

@@ -2,7 +2,14 @@ theory VIMP_Source_Print
   imports VIMP_Proc "HOL-Library.Char_ord"
 begin
 
-section \<open>Executable source printer\<close>
+section \<open>Printing a program back as source text\<close>
+
+text \<open>
+  Turns an \<^type>\<open>com\<close> back into the concrete syntax it was parsed from, executably, so a
+  check report can quote the line it is talking about.  Nothing is proved about the result
+  --- it is a display function, not the inverse of parsing, and no soundness statement
+  depends on it.
+\<close>
 
 fun string_of_nat :: "nat \<Rightarrow> string" where
   "string_of_nat n =

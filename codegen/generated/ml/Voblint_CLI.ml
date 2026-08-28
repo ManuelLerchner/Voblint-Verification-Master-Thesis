@@ -3655,6 +3655,19 @@ let rec map_filter
 
 let rec c (State_ext (c, infl, stabl, sigma, more)) = c;;
 
+let rec cfg_entry
+  (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
+
+let rec cfg_exit
+  g = (match cfg_entry g
+        with Statement nat ->
+          failwith "cfg_exit: entry is not a procedure entry"
+            (fun _ -> Statement nat)
+        | FunctionEntry a -> FunctionResult a
+        | FunctionResult literal ->
+          failwith "cfg_exit: entry is not a procedure entry"
+            (fun _ -> FunctionResult literal));;
+
 let rec fmadd _A
   (Fmap_of_list m) (Fmap_of_list n) = Fmap_of_list (merge _A m n);;
 
@@ -3993,14 +4006,6 @@ let rec fmdrop _A a = fmfilter (fun aa -> not (eq _A aa a));;
 let rec the (Some x2) = x2;;
 
 let ret_var : string = "#ret";;
-
-let rec cfg_entry
-  (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
-
-let rec cfg_exit
-  g = (match cfg_entry g with Statement a -> Statement a
-        | FunctionEntry a -> FunctionResult a
-        | FunctionResult a -> FunctionResult a);;
 
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 
@@ -5279,7 +5284,12 @@ let rec sign_tf_st_for
           (aval_sign a (fun_of_resolved_st_q_for bot_sign source_global s))
     | source_global, EA_Check cnd, s -> s;;
 
-let rec call_formals pi q = (match pi q with None -> [] | Some a -> formals a);;
+let rec call_formals
+  pi q =
+    (match pi q
+      with None ->
+        failwith "call_formals: call to an undeclared procedure" (fun _ -> [])
+      | Some a -> formals a);;
 
 let rec compile
   pi p x2 k n = match pi, p, x2, k, n with

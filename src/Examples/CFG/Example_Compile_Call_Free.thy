@@ -1,7 +1,7 @@
 section \<open>Call-free sources compile to a flat graph\<close>
 
 theory Example_Compile_Call_Free
-  imports "Voblint_CFG.VIMP_Proc_to_CFG"
+  imports "Voblint_Compile.VIMP_Proc_to_CFG"
 begin
 
 text \<open>

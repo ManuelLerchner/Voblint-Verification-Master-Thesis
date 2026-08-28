@@ -10,7 +10,7 @@ theory Voblint
     "Voblint_VIMP.VIMP_Proc"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Def"
-    "Voblint_CFG.VIMP_Proc_to_CFG"
+    "Voblint_Compile.VIMP_Proc_to_CFG"
     "Voblint_CFG.CFG_Local_Trace"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Core.Abstract_Domain"
@@ -223,7 +223,7 @@ text \<open>
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation-local trace semantics it carries.
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node/edge types, predecessor enumeration, finite code lists.
-    \<^item> @{theory Voblint_CFG.VIMP_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: VIMP programs to interprocedural CFGs.
+    \<^item> @{theory Voblint_Compile.VIMP_Proc_to_CFG} --- \<^verbatim>\<open>compile_prog\<close>: VIMP programs to interprocedural CFGs.
     \<^item> @{theory Voblint_CFG.CFG_Transfer} --- the concrete store transformers shared by the semantics: \<^verbatim>\<open>edge_step\<close>, \<^verbatim>\<open>edge_collect\<close>, \<^verbatim>\<open>edges_collect\<close>, \<^verbatim>\<open>combine_collect\<close>, \<^verbatim>\<open>call_enter_store\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Local_Trace} --- the call-structured activation-local trace \<^const>\<open>valid_ltr\<close> (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/\<^verbatim>\<open>Resume\<close>), the projections \<^const>\<open>ltr_collect\<close> / \<^const>\<open>activation_collect\<close>, and the correlation-preserving interface \<^locale>\<open>ltr_coverage\<close> (with the keystone \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>).
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph reachability (\<^const>\<open>cfg_reaches\<close>) and the backward exit cone (\<^const>\<open>cone\<close>); these feed the cone guard.  No graph is pruned: the cone restriction lives in the abstract concretization, not in a semantics-altering transformation.

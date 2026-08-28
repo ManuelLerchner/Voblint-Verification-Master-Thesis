@@ -2,37 +2,31 @@ theory LTR_Abstract
   imports LTR_Collect
 begin
 
-section \<open>A correlation-preserving abstract interface for valid_ltr\<close>
+section \<open>What an analysis must satisfy to be sound\<close>
 
 text \<open>
-  The smallest domain-free proof interface through which an abstract over-approximation
-  soundly covers the stack-faithful semantics \<^const>\<open>valid_ltr\<close>.  The abstract object is a
-  context-indexed concretization
+  An analysis claims: "at node \<open>v\<close>, in context \<open>c\<close>, only these stores can occur".  This
+  theory says what such a claim must satisfy to be believed, and proves that satisfying it
+  is enough --- every valid trace's final store really does lie in the set claimed for its
+  own node and context.  No domain, solver or dependency graph appears here; they
+  instantiate this.
 
-  \<bullet> \<open>cover :: cfg_node \<Rightarrow> 'c \<Rightarrow> store set\<close>
+  The claim is just a function \<open>cover\<close> from a node and a context to a set of stores, and
+  there are four obligations on it: the seed stores are covered at the entry (\<open>INIT\<close>),
+  each intra edge keeps them covered (\<open>INTRA\<close>), a call covers the entered store at the
+  callee (\<open>CALL\<close>), and a return covers the combined store back at the caller (\<open>RETURN\<close>).
 
-  --- the set of stores the analysis admits at node \<open>v\<close> in abstract context \<open>c\<close>.  No
-  \<open>sound_domain\<close>, \<open>abs_state\<close>, solver, or DG dependency appears here.
+  \<open>RETURN\<close> is the load-bearing one.  The callee is read at exactly the context \<open>enterc\<close>
+  computes from the caller's own context and the callee-entry store, so a return may only
+  compose the callee whose context came from the caller it is resuming --- not any context
+  that happens to cover that callee's entry.  This correlation is not an extra parameter to
+  assume: \<open>key_entry_invariant_eq\<close> makes it a theorem about \<^const>\<open>valid_ltr\<close>, which is
+  why no activation record is needed at proof level.
 
-  The interface fixes four closure obligations --- an init seed (\<open>INIT\<close>), an intra edge
-  (\<open>INTRA\<close>), a call routing (\<open>CALL\<close>), and a return combine (\<open>RETURN\<close>) --- and proves that
-  every valid trace's sink store lands in its own activation slot, keyed by \<^const>\<open>key\<close>.
-  The load-bearing clause is \<open>RETURN\<close>: the callee is read at exactly the context \<open>enterc\<close>
-  computes from the caller's own context and the callee-entry store --- so a return can only
-  compose the callee whose context was derived from the caller it resumes, not any context
-  that happens to cover the callee's concrete entry.  The correlation is not an extra
-  parameter: \<open>key_entry_invariant_eq\<close> makes this a theorem of \<^const>\<open>valid_ltr\<close>, so a
-  proof-level activation record is unnecessary.
-
-  \<open>enterc u c s\<close> means: given a call from \<open>u\<close> under caller context \<open>c\<close> entering at concrete
-  store \<open>s\<close>, this is THE context for the callee.  Every routing instance this project
-  supports (unit, call-site/k-call-string, entry-state) is exactly this shape --- a total
-  function, never a relation admitting several contexts for one concrete call --- and the
-  executable routed solver's own \<open>route\<close> is typed to return a single context.  The abstract
-  context type \<open>'c\<close> is arbitrary; \<^const>\<open>key\<close> may still quotient distinct activations to the
-  same context.  Nothing here claims a context is an exact activation identity --- only that
-  each valid trace lands in its own slot, matched at return via the SAME \<open>enterc\<close>
-  application, not rediscovered afterward.
+  A context is not claimed to identify an activation.  \<^const>\<open>key\<close> may well give two
+  distinct activations the same context; the theorem is only that each trace lands in its
+  own slot, matched at return through the same \<open>enterc\<close> application rather than
+  rediscovered afterwards.
 \<close>
 
 subsection \<open>The abstract interface\<close>

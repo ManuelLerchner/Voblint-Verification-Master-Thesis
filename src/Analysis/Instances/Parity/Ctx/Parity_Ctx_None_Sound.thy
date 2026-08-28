@@ -6,7 +6,7 @@ theory Parity_Ctx_None_Sound
     "Voblint_Core.DG_Base"
     "Voblint_Core.DG_Base_Exec"
     "Voblint_Analysis.Parity_Exec"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Core.Solver_Side_RG"
     "TD.TD_side_upd_rule"

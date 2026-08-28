@@ -9,7 +9,7 @@ theory Sign_Ctx_None_Sound
     "Voblint_Core.Solver_Side_RG"
     "TD.TD_side_upd_rule"
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     "Voblint_Core.Routed_Context"
     "Voblint_Core.Routed_Context_Unit"
     "Voblint_Core.Solver_Menu"

@@ -1,6 +1,6 @@
 theory Analysis_GraphViz
   imports
-    "Voblint_CFG.VIMP_Proc_to_CFG"
+    "Voblint_Compile.VIMP_Proc_to_CFG"
     "Voblint_VIMP.VIMP_Source_Print"
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain

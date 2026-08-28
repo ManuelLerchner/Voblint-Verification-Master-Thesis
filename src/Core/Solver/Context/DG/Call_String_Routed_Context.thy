@@ -1,5 +1,5 @@
 theory Call_String_Routed_Context
-  imports Routed_Context Call_String_Context "Voblint_CFG.VIMP_Proc_to_CFG"
+  imports Routed_Context Call_String_Context "Voblint_Compile.VIMP_Proc_to_CFG"
 begin
 
 section \<open>Call-string routing as a routed-context instance\<close>

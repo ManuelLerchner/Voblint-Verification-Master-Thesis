@@ -3,7 +3,7 @@ section \<open>Compiler baseline: reachability of the current compiled CFG\<clos
 theory Example_Compile_Baseline
   imports
     "Voblint_CFG.CFG_Prune"
-    "Voblint_CFG.Compile_Invariants"
+    "Voblint_Compile.Compile_Invariants"
     "Voblint_Core.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Notation"
 begin

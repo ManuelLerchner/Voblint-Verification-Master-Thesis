@@ -1,5 +1,5 @@
 theory Example_Control_Simulation_Regression
-  imports "Voblint_CFG.Control_Simulation"
+  imports "Voblint_Compile.Simulation_Relation"
 begin
 
 section \<open>Examples: source-to-CFG simulation\<close>

@@ -99,7 +99,7 @@ lemma min_wrong_arity_call_not_wf:
 
 text \<open>
   End-to-end witness for the same fact through \<^const>\<open>wf_program_compile_input_exec\<close>
-  (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>), the executable reformulation the CLI's
+  (\<^theory>\<open>Voblint_Compile.Compile_Invariants\<close>), the executable reformulation the CLI's
   well-formedness gate actually calls: a whole program, not just one bare
   \<open>com\<close> value, confirming the gate itself would reject this program (issue
   tracked for the CLI \<open>wf_source_program\<close> enforcement gate). Contrasted with

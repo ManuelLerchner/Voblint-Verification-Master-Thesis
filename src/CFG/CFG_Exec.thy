@@ -1,32 +1,22 @@
-theory Located_Exec
-  imports Control_Residual
+theory CFG_Exec
+  imports CFG_Transfer
 begin
 
-section \<open>Located CFG execution\<close>
+section \<open>How a control-flow graph runs\<close>
 
 text \<open>
-  \<open>cstep\<close> is the concrete execution of the two-relation procedure-aware CFG, in the
-  activation-stack shape that mirrors the source \<^const>\<open>pstep\<close> and drives the located
-  simulation.  A \<open>cconf\<close> pairs the current node with a store and a stack of pending
-  activations; each \<open>cframe\<close> records the continuation node, the caller destination, and the
-  saved caller store --- exactly the payload the resume transfer \<^const>\<open>combine_collect\<close>
-  needs.
+  \<open>cstep\<close> executes an arbitrary CFG over a node, a store, and a stack of suspended
+  activations.  Each \<open>cframe\<close> records where to resume, which variable receives the
+  result, and the caller's store.  There are three rules, one per graph phenomenon:
+  follow an \<open>intra\<close> edge and apply its transfer; follow a \<open>calls\<close> edge, enter the callee
+  and push a frame; at a \<^term>\<open>FunctionResult\<close>, pop the top frame and combine the
+  callee's store into the caller's.
 
-  There are three transitions, one per graph phenomenon:
-    \<^item> intra flow follows an \<^const>\<open>intra\<close> edge and applies \<^const>\<open>edge_step\<close> (covering
-      \<^term>\<open>EA_Nop\<close>, assignment, both assume forms, and \<^term>\<open>EA_Ret\<close> into
-      \<^term>\<open>FunctionResult\<close>); the stack is unchanged;
-    \<^item> a call follows a \<^const>\<open>calls\<close> edge, applies the caller-side \<^const>\<open>call_enter\<close>,
-      moves to the callee \<^term>\<open>FunctionEntry\<close>, and pushes one activation carrying the
-      continuation;
-    \<^item> a return/resume fires at \<^term>\<open>FunctionResult\<close>, pops the top activation, and lands
-      at its recorded continuation with the combined store \<^const>\<open>combine_collect\<close>.
-
-  A return does not use a \<open>FunctionResult p --> cont\<close> intra edge.  The activation stack
-  supplies the continuation, so one \<^term>\<open>FunctionResult\<close> node serves every caller and
-  the stack contains one entry per call.
+  A return follows no edge.  The stack supplies the continuation, so one
+  \<^term>\<open>FunctionResult\<close> node serves every caller of a procedure and recursion needs no
+  duplicated nodes.  Nothing here mentions the compiler: this is the execution of any
+  graph, just as \<open>valid_ltr\<close> is the trace semantics of any graph.
 \<close>
-
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 

@@ -1,29 +1,17 @@
 session Voblint_CFG in "." = "Voblint_VIMP" +
-  description "Procedure-aware CFG: core, trace, collecting, and structural compiler"
+  description "Procedure-aware CFG: the graph model and its activation-local semantics"
   directories
     "Collecting"
-    "Compiler"
   theories
     CFG_Def
+    CFG_Transfer
+    CFG_Prune
+    (* Small-step located execution of an arbitrary CFG. *)
+    CFG_Exec
+    (* The concrete interprocedural semantics of an arbitrary CFG.  Nothing here
+       mentions the compiler: the analysis soundness statements are about any
+       graph, not only about compiled ones. *)
     CFG_Local_Trace
     Activation_Context
     LTR_Collect
     LTR_Abstract
-    VIMP_Proc_to_CFG
-    CFG_Transfer
-    Compile_Invariants
-    Control_Residual
-    Located_Exec
-    Control_Emit
-    Control_Simulation
-    Control_Simulation_Forward
-    Compile_Certificate
-    CFG_Prune
-    (* Per-procedure node classification and edge locality; carries
-       valid_ltr_entry_result_eq, the activation procedure-locality theorem. *)
-    Compile_Locality
-    (* Source-to-local-trace bridge (csim -> valid_ltr), and the completed-run
-       exit reachability it feeds. *)
-    Located_LTR
-  (* Statement indices are allocated directly in the procedure-aware node space.
-     Located simulation supplies the path structure used by compiler soundness. *)

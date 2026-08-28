@@ -1,21 +1,21 @@
-theory Control_Residual
-  imports VIMP_Proc_to_CFG CFG_Transfer
+theory Residual_Location
+  imports VIMP_Proc_to_CFG "Voblint_CFG.CFG_Transfer"
 begin
 
-section \<open>Located control inside a compiled procedure fragment\<close>
+section \<open>Where a partly executed command sits in the graph\<close>
 
 text \<open>
-  \<open>control_at \<Pi> p c k n residual v\<close> locates a runtime residual at node \<open>v\<close> inside the
-  fragment compiled from command \<open>c\<close> of procedure \<open>p\<close> at base counter \<open>n\<close> with continuation
-  \<open>k\<close>.  The relation describes control only; the simulation states store agreement separately.
+  Running a command part way leaves a \<^emph>\<open>residual\<close>: the piece still to execute.
+  \<open>control_at\<close> relates a residual to the node the graph's program counter has reached.
+  It describes control only --- store agreement is stated separately, by the simulation
+  relation.
 
-  The continuation is the node a completed fragment occupies.  A command that has run to
-  \<^const>\<open>SKIP\<close> is therefore located at \<open>k\<close> itself rather than at a private exit node, which
-  is why the \<open>Done\<close> rules below name no fragment node.
-
-  A call crosses procedure fragments.  The caller fragment records its call site and
-  continuation, while the callee fragment locates the callee body.  The activation stack of
-  \<open>cstep\<close> connects both locations.
+  A residual that has run down to \<^const>\<open>SKIP\<close> sits at the continuation the compiler was
+  handed, not at an exit node of its own, because \<^const>\<open>compile\<close> takes the continuation
+  as an input rather than allocating one.  The \<^const>\<open>falls_through\<close> premises below are
+  semantic rather than proof conveniences: control reaches the second half of a
+  \<^const>\<open>Seq\<close> only if the first half can complete normally, and without them the relation
+  would admit positions no execution can occupy.
 \<close>
 
 subsection \<open>Located residuals\<close>

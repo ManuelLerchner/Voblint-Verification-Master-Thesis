@@ -1,18 +1,19 @@
-theory Located_LTR
-  imports Compile_Locality LTR_Collect
+theory Source_To_Trace
+  imports Procedure_Ownership Simulation_Preservation "Voblint_CFG.LTR_Collect"
 begin
 
-section \<open>Source execution as activation-local traces\<close>
+section \<open>A source run is a local trace\<close>
 
 text \<open>
-  The stack-faithful bridge from compiled source execution to the canonical
-  activation-local semantics \<^const>\<open>valid_ltr\<close>.  A CFG-located configuration
-  \<^type>\<open>cconf\<close> (advanced one edge at a time by \<^const>\<open>cstep\<close>) is related to a valid
-  activation-local trace: the current activation is the trace, and the runtime
-  \<^type>\<open>cframe\<close> stack is its \<^const>\<open>caller_of\<close> chain.  Each \<^const>\<open>cstep\<close> rule maps
-  one-to-one onto a \<^const>\<open>valid_ltr\<close> constructor (\<open>intra\<close> / \<open>call\<close> / \<open>ret\<close>), so a
-  source run --- simulated into a \<^const>\<open>cstep\<close> run by \<^const>\<open>csim\<close> --- extends the
-  accumulated trace.
+  What the session is for.  A graph configuration is tied to a valid local trace: the
+  activation currently running \<^emph>\<open>is\<close> the trace, and the runtime frame stack is exactly
+  its chain of callers.  Each \<^const>\<open>cstep\<close> rule lines up with one \<^const>\<open>valid_ltr\<close>
+  constructor, so advancing the graph by an edge extends the trace by a step.
+
+  Composed with the simulation, this turns a run of the source program into a trace, and
+  so turns any store the source can reach into a member of the collecting semantics at
+  that node.  Those are the statements the soundness session consumes; everything else in
+  this session exists to make them true.
 \<close>
 
 subsection \<open>The representation invariant\<close>

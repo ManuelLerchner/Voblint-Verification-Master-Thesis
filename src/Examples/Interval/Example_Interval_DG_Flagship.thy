@@ -235,10 +235,7 @@ text \<open>Interpret \<^locale>\<open>unit_dg_exec_analysis\<close> once here a
   compiled-input and solver facts.\<close>
 
 lemma flagship_wf_reserved: "reserved_ret_var flagship_gs"
-  unfolding wf_compile_input_simps
-    flagship_pi_def flagship_prog_def
-  by (auto simp: source_exp_def source_exp_def ret_var_def reserved_ret_var_def
-      split: if_splits)
+  by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 interpretation flagship_ex_reg:
   unit_dg_exec_analysis flagship_gs
@@ -273,12 +270,7 @@ text \<open>
 
 lemma flagship_wf:
   "wf_compile_input flagship_gs flagship_pi (prog_procs flagship_prog) prog_main_name (prog_main flagship_prog)"
-  unfolding wf_compile_input_simps
-    flagship_pi_def flagship_prog_def
-  by (auto simp: source_exp_def source_exp_def ret_var_def reserved_ret_var_def
-      prog_main_name_def special_table_def special_pname_nondet_int_def
-      special_pname_min_def special_pname_max_def
-      split: if_splits)
+  by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 theorem flagship_source_run_sound:
   assumes run: "star (pstep flagship_gs flagship_pi) (prog_main flagship_prog, s, []) (residual, t, frs)"

@@ -12,7 +12,7 @@ hide_const phase.N
 
 text \<open>This file compares Sign and Interval classification on the same
   program, so both are in scope, but both now resolve \<open>prog_cfg\<close> to the same
-  shared \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_CFG.Compile_Invariants\<close>) --- no
+  shared \<^const>\<open>prog_cfg\<close> (\<^theory>\<open>Voblint_Compile.Compile_Invariants\<close>) --- no
   hiding needed to disambiguate below, unlike when each domain's
   \<open>*_Exec_Sound\<close> theory defined its own local copy.\<close>
 

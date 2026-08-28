@@ -1,14 +1,18 @@
-theory Control_Emit
-  imports Located_Exec
+theory Residual_Edges
+  imports Residual_Location "Voblint_CFG.CFG_Exec"
 begin
 
-section \<open>Compiled edges of located residuals\<close>
+section \<open>The edge a located residual sits on\<close>
 
 text \<open>
-  A located residual whose head is a base command sits on exactly the CFG edge the compiler
-  generated for it, and the head's source step re-locates the successor residual.  These
-  static compiler-location facts are what the intra, call, and return simulations rest on;
-  \<open>intra_step_simulation\<close> assembles the intra-procedural ones here.
+  If a residual is located at a node and the command about to run is a base one --- an
+  assignment, a check, a call, a return --- then the edge the compiler emitted for it
+  really is in the graph, and taking the source step re-locates the successor residual at
+  that edge's target.  Every simulation step reads its edge off one of these facts.
+
+  \<open>intra_step\<close> collects the source steps that stay inside one activation, and
+  \<open>intra_step_simulation\<close> assembles the facts below into the statement that any such step
+  is matched by a run of \<^const>\<open>cstep\<close>.
 \<close>
 
 subsection \<open>Located base residuals emit their compiled edge\<close>
