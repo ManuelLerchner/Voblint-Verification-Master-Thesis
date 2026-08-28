@@ -127,15 +127,37 @@ text \<open>
   \<open>4294967296\<close> elaborated as \<open>TN I32 4294967296\<close> and \<^const>\<open>ik_norm\<close>
   turned it into \<open>0\<close> before it reached its destination.
 
-  A constant that fits \<^const>\<open>I32\<close> still types as \<^const>\<open>I32\<close>, which is what
-  it defaulted to before, so nothing that already fitted changes kind.
+  The kind is chosen from the constant's \<^emph>\<open>magnitude\<close>, because a constant
+  token is never negative. C has no negative literals: \<open>-2147483648\<close> is unary
+  minus applied to the token \<open>2147483648\<close>, which does not fit \<open>int\<close> and so
+  types as a 64-bit signed type, and the negation inherits it. VIMP's frontend
+  folds the sign into the literal instead, so the value reaching here is
+  already negative and only its magnitude reconstructs the token C typed.
+
+  Reading the folded value directly got exactly one constant wrong, and got it
+  wrong loudly: \<open>-2147483648\<close> lies in \<^const>\<open>I32\<close>'s range although its token
+  does not, so \<open>-2147483648 * 2\<close> was a 32-bit multiplication that wrapped to
+  \<open>0\<close>, where C computes it at 64 bits. Every other constant is unaffected --
+  for a non-negative one the magnitude is the value.
 \<close>
 
 definition ik_of_lit :: "int \<Rightarrow> ikind" where
-  "ik_of_lit n = (if n \<in> ik_range I32 then I32 else I64)"
+  "ik_of_lit n = (if \<bar>n\<bar> \<le> ik_max I32 then I32 else I64)"
 
-lemma ik_of_lit_small [simp]: "n \<in> ik_range I32 \<Longrightarrow> ik_of_lit n = I32"
+lemma ik_of_lit_small [simp]: "\<bar>n\<bar> \<le> ik_max I32 \<Longrightarrow> ik_of_lit n = I32"
   by (simp add: ik_of_lit_def)
+
+text \<open>
+  The chosen kind still represents the constant, for every constant the
+  frontend admits: a token beyond \<^const>\<open>I64\<close>'s maximum has no type in C
+  either, and is rejected before reaching here. The premise is that bound, not
+  a well-formedness condition on \<open>n\<close> as an integer.
+\<close>
+
+lemma ik_of_lit_represents:
+  assumes "\<bar>n\<bar> \<le> ik_max I64"
+  shows "n \<in> ik_range (ik_of_lit n)"
+  using assms by (auto simp: ik_of_lit_def ik_bounds_pins)
 
 fun esyn :: "tyenv \<Rightarrow> exp \<Rightarrow> ikind option" where
   "esyn \<Gamma> (N n) = Some (ik_of_lit n)"

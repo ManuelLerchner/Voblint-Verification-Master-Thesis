@@ -436,7 +436,7 @@ lemma checks_ex_annotation_unknown:
 
 definition checks_ex_dot_lit :: String.literal where
   "checks_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_tyenv checks_ex_program) (prog_table checks_ex_program) (prog_procs checks_ex_program)
+     raw_cfg_dot_with_report_lit (prog_tyenv checks_ex_program) (prog_decls_view checks_ex_program) (prog_table checks_ex_program) (prog_procs checks_ex_program)
        (STR ''main'') (prog_main checks_ex_program) checks_ex_node_annotation
        (analyse_sign_report_for checks_ex_gs checks_ex_program)"
 

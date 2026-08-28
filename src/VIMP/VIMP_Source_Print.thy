@@ -105,7 +105,7 @@ fun append_last :: "string \<Rightarrow> string list \<Rightarrow> string list" 
 fun pretty_source_lines_com :: "nat \<Rightarrow> com \<Rightarrow> string list" where
   "pretty_source_lines_com n SKIP = [source_indent n @ ''skip'']"
 | "pretty_source_lines_com n (Assign x e) =
-    [source_indent n @ String.explode x @ '' := '' @ string_of_exp 0 e]"
+    [source_indent n @ String.explode (display_scoped x) @ '' := '' @ string_of_exp 0 e]"
 | "pretty_source_lines_com n (VIMP_Proc.com.Check c) =
     [source_indent n @ ''__voblint_check('' @ string_of_exp 0 c @ '')'']"
 | "pretty_source_lines_com n (Seq c1 c2) =

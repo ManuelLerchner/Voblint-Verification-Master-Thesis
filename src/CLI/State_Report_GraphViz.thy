@@ -185,7 +185,7 @@ definition state_report_graph_snapshot_auto :: "analysis_domain \<Rightarrow> im
   "state_report_graph_snapshot_auto kind p0 =
      (let p = resolve_prog p0 in
        (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
-        in raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+        in raw_cfg_canonical_text_lit (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
              (state_report_node_annotation (report_vars report) report)))"
 
 text \<open>
@@ -331,7 +331,7 @@ text \<open>The whole-table counterpart of \<open>state_report_graph_snapshot_au
 definition full_state_graph_snapshot_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "full_state_graph_snapshot_auto kind p0 =
      (let p = resolve_prog p0 in
-       raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       raw_cfg_canonical_text_lit (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
          (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p)))"
 
 text \<open>
@@ -346,13 +346,13 @@ definition state_report_export_auto :: "analysis_domain \<Rightarrow> imp_prog \
   "state_report_export_auto kind p0 =
      (let p = resolve_prog p0 in
        (let report = map (\<lambda>(u, c, r, _, s). (u, c, r, s)) (analyse_with_state_default kind p)
-        in raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+        in raw_cfg_export (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
              (state_report_node_annotation (report_vars report) report)))"
 
 definition full_state_export_auto :: "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "full_state_export_auto kind p0 =
      (let p = resolve_prog p0 in
-       raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       raw_cfg_export (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
          (point_state_node_annotation (program_vars p) (analyse_point_env_for kind p)))"
 
 text \<open>
@@ -413,7 +413,7 @@ where
                           Unreachable \<Rightarrow> (True, bot_state)
                         | Reachable st \<Rightarrow> (False, st))
                    (\<lambda>c (_, s). classify c s)
-      in (raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+      in (raw_cfg_export (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
             (full_state_checked_node_annotation (program_vars p) (project_env into r)
                (map (\<lambda>(u, c, res, _, _). (u, c, res)) full)),
           map (\<lambda>(u, c, res, unr, st). (u, c, res, unr, into \<circ> st)) full,
@@ -505,7 +505,7 @@ definition entry_state_full_state_graph_snapshot_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> String.literal" where
   "entry_state_full_state_graph_snapshot_auto kind p0 =
      (let p = resolve_prog p0 in
-       raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       raw_cfg_canonical_text_lit (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
          (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p)))"
 
 text \<open>
@@ -702,7 +702,7 @@ definition entry_state_report_graph_snapshot_auto ::
   "entry_state_report_graph_snapshot_auto kind p0 =
      (let p = resolve_prog p0 in
        (let report = entry_state_report_for_annotation kind p
-        in raw_cfg_canonical_text_lit (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+        in raw_cfg_canonical_text_lit (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
              (verdict_state_report_node_annotation (report_vars report) report)))"
 
 definition entry_state_report_export_auto ::
@@ -710,14 +710,14 @@ definition entry_state_report_export_auto ::
   "entry_state_report_export_auto kind p0 =
      (let p = resolve_prog p0 in
        (let report = entry_state_report_for_annotation kind p
-        in raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+        in raw_cfg_export (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
              (verdict_state_report_node_annotation (report_vars report) report)))"
 
 definition entry_state_full_state_export_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "entry_state_full_state_export_auto kind p0 =
      (let p = resolve_prog p0 in
-       raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       raw_cfg_export (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
          (point_state_node_annotation (program_vars p) (entry_state_point_env_for kind p)))"
 
 text \<open>
@@ -744,7 +744,7 @@ definition entry_state_full_state_checked_export_auto ::
     "analysis_domain \<Rightarrow> imp_prog \<Rightarrow> export_graph" where
   "entry_state_full_state_checked_export_auto kind p0 =
      (let p = resolve_prog p0 in
-       raw_cfg_export (prog_tyenv p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
+       raw_cfg_export (prog_tyenv p) (prog_decls_view p) (prog_table p) (prog_procs p) prog_main_name (prog_main p)
          (full_state_checked_node_annotation (program_vars p)
             (entry_state_point_env_for kind p) (entry_state_checked_verdicts kind p)))"
 

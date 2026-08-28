@@ -454,7 +454,7 @@ lemma parity_ex_annotation_unknown:
 
 definition parity_ex_dot_lit :: String.literal where
   "parity_ex_dot_lit =
-     raw_cfg_dot_with_report_lit (prog_tyenv parity_ex_program) (prog_table parity_ex_program) (prog_procs parity_ex_program)
+     raw_cfg_dot_with_report_lit (prog_tyenv parity_ex_program) (prog_decls_view parity_ex_program) (prog_table parity_ex_program) (prog_procs parity_ex_program)
        (STR ''main'') (prog_main parity_ex_program) parity_ex_node_annotation
        (analyse_parity_report_for parity_ex_gs parity_ex_program)"
 

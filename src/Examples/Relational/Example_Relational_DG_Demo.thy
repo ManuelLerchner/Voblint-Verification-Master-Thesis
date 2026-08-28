@@ -152,7 +152,7 @@ text \<open>The plain compiled CFG, rendered through the same GraphViz backend t
   the two assignments, and the merge into \<open>main\<close>'s exit.\<close>
 
 definition demo_dot :: String.literal where
-  "demo_dot = raw_cfg_dot_lit (prog_tyenv demo_program) demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
+  "demo_dot = raw_cfg_dot_lit (prog_tyenv demo_program) (prog_decls_view demo_program) demo_pi (prog_procs demo_program) prog_main_name (prog_main demo_program)
     (\<lambda>_. None)"
 
 subsection \<open>Rendering the CFG annotated with the computed relational result\<close>

@@ -2,6 +2,7 @@ theory Analysis_GraphViz
   imports
     "Voblint_CFG.VIMP_Proc_to_CFG"
     "Voblint_VIMP.VIMP_Source_Print"
+    "Voblint_VIMP.VIMP_Notation"
     Voblint_Core.Exec_St
     Voblint_Core.Abstract_Domain
     Voblint_Core.Abstract_Checks
@@ -1363,11 +1364,45 @@ definition contextual_analysis_export ::
   "contextual_analysis_export cfg g domain sol =
     analysis_graph_to_export cfg g sol (build_analysis_graph cfg g domain sol)"
 
+text \<open>
+  What the source panel needs beyond the compiler's own arguments: the
+  declared globals and the procedure-scoped declarations. \<^type>\<open>tyenv\<close>
+  supplies each name's kind but not which names were declared, and a panel
+  that omits the declarations does not print a VIMP program at all -- the
+  strict syntax requires every global and every local to be declared, so the
+  rendered text would reference undeclared names and hide their kinds.
+
+  One record rather than two more arguments, because these two always travel
+  together and every renderer below would otherwise thread both. A caller that
+  genuinely has no declarations -- a \<^typ>\<open>proc_table\<close> built by hand in a
+  theory, with no source program behind it -- passes
+  \<open>no_source_decls\<close> and gets exactly the old rendering.
+\<close>
+
+record source_decls =
+  sd_globals :: "vname list"
+  sd_scoped :: "(pname \<times> typed_var) list"
+
+definition no_source_decls :: source_decls where
+  "no_source_decls = \<lparr>sd_globals = [], sd_scoped = []\<rparr>"
+
+text \<open>
+  A program supplies both directly. Every renderer whose caller has an
+  \<^typ>\<open>imp_prog\<close> reads them off it rather than reconstructing them, so the
+  panel prints the declarations the program actually carries -- and, for a
+  resolved program, the scoped list is the renamed one whose identities
+  \<^const>\<open>display_scoped\<close> turns back into source names as it prints.
+\<close>
+
+definition prog_decls_view :: "imp_prog \<Rightarrow> source_decls" where
+  "prog_decls_view p =
+     \<lparr>sd_globals = declared_global_vars p, sd_scoped = declared_scoped p\<rparr>"
+
 definition raw_cfg_graph_config ::
-  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
     \<Rightarrow> (unit, unit, unit, unit) analysis_graph_config" where
-  "raw_cfg_graph_config \<Gamma> \<Pi> ps mnm main annotate =
+  "raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate =
     \<lparr> local_of = id,
       route = (\<lambda>_ _ _ _. Some ()),
       context_key = (\<lambda>_. STR ''''),
@@ -1383,39 +1418,40 @@ definition raw_cfg_graph_config ::
       show_internal_globals = False,
       owner_of = String.explode o compiled_owner_of \<Gamma> \<Pi> ps mnm main,
       cluster_label = (\<lambda>owner _. owner),
-      source_text = Some (pretty_string_of_program \<Gamma> [] \<Pi> ps main []),
+      source_text =
+        Some (pretty_string_of_program \<Gamma> (sd_scoped decls) \<Pi> ps main (sd_globals decls)),
       node_annotation = (\<lambda>p _. annotate p)
     \<rparr>"
 
 definition raw_cfg_dot ::
-  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
-  "raw_cfg_dot \<Gamma> \<Pi> ps mnm main annotate =
+  "raw_cfg_dot \<Gamma> decls \<Pi> ps mnm main annotate =
     (let g = compile_prog \<Gamma> \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Gamma> \<Pi> ps mnm main annotate;
+         cfg = raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_dot cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_dot_lit ::
-  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> String.literal" where
-  "raw_cfg_dot_lit \<Gamma> \<Pi> ps mnm main annotate =
-    String.implode (raw_cfg_dot \<Gamma> \<Pi> ps mnm main annotate)"
+  "raw_cfg_dot_lit \<Gamma> decls \<Pi> ps mnm main annotate =
+    String.implode (raw_cfg_dot \<Gamma> decls \<Pi> ps mnm main annotate)"
 
 definition raw_cfg_canonical_text ::
-  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> string" where
-  "raw_cfg_canonical_text \<Gamma> \<Pi> ps mnm main annotate =
+  "raw_cfg_canonical_text \<Gamma> decls \<Pi> ps mnm main annotate =
     (let g = compile_prog \<Gamma> \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Gamma> \<Pi> ps mnm main annotate;
+         cfg = raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_canonical_text cfg g domain (\<lambda>_. ()))"
 
 definition raw_cfg_canonical_text_lit ::
-  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> String.literal" where
-  "raw_cfg_canonical_text_lit \<Gamma> \<Pi> ps mnm main annotate =
-    String.implode (raw_cfg_canonical_text \<Gamma> \<Pi> ps mnm main annotate)"
+  "raw_cfg_canonical_text_lit \<Gamma> decls \<Pi> ps mnm main annotate =
+    String.implode (raw_cfg_canonical_text \<Gamma> decls \<Pi> ps mnm main annotate)"
 
 text \<open>
   The structured-export sibling of \<^const>\<open>raw_cfg_dot\<close> and
@@ -1426,11 +1462,11 @@ text \<open>
 \<close>
 
 definition raw_cfg_export ::
-  "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+  "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
     \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option) \<Rightarrow> export_graph" where
-  "raw_cfg_export \<Gamma> \<Pi> ps mnm main annotate =
+  "raw_cfg_export \<Gamma> decls \<Pi> ps mnm main annotate =
     (let g = compile_prog \<Gamma> \<Pi> ps mnm main;
-         cfg = raw_cfg_graph_config \<Gamma> \<Pi> ps mnm main annotate;
+         cfg = raw_cfg_graph_config \<Gamma> decls \<Pi> ps mnm main annotate;
          domain = contextual_graph_domain g (\<lambda>_. [()])
      in contextual_analysis_export cfg g domain (\<lambda>_. ()))"
 
@@ -1506,19 +1542,18 @@ definition insert_dot_cluster_before_close :: "string \<Rightarrow> string \<Rig
      take (length dot - 2) dot @ extra @ drop (length dot - 2) dot"
 
 definition raw_cfg_dot_with_report ::
-    "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
      \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
      \<Rightarrow> check_report_entry list \<Rightarrow> string" where
-  "raw_cfg_dot_with_report \<Gamma> \<Pi> ps mnm main annotate report =
+  "raw_cfg_dot_with_report \<Gamma> decls \<Pi> ps mnm main annotate report =
      insert_dot_cluster_before_close (check_report_dot_cluster report)
-       (raw_cfg_dot \<Gamma> \<Pi> ps mnm main annotate)"
+       (raw_cfg_dot \<Gamma> decls \<Pi> ps mnm main annotate)"
 
 definition raw_cfg_dot_with_report_lit ::
-    "tyenv \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
+    "tyenv \<Rightarrow> source_decls \<Rightarrow> proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> com
      \<Rightarrow> (pp \<Rightarrow> graphviz_node_annotation option)
      \<Rightarrow> check_report_entry list \<Rightarrow> String.literal" where
-  "raw_cfg_dot_with_report_lit \<Gamma> \<Pi> ps mnm main annotate report =
-     String.implode (raw_cfg_dot_with_report \<Gamma> \<Pi> ps mnm main annotate report)"
+  "raw_cfg_dot_with_report_lit \<Gamma> decls \<Pi> ps mnm main annotate report =
+     String.implode (raw_cfg_dot_with_report \<Gamma> decls \<Pi> ps mnm main annotate report)"
 
 end
-

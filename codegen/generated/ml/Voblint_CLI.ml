@@ -192,6 +192,7 @@ module Core : sig
   type 'a export_node_ext
   type 'a export_cluster_ext
   type 'a export_graph_ext
+  type 'a source_decls_ext
   type 'a procedure_scope_ext
   type ('a, 'b) domain_transfer_ext
   type ('a, 'b, 'c, 'd, 'e) analysis_graph_config_ext =
@@ -331,12 +332,14 @@ module Core : sig
         string list -> string -> com -> cfg_node -> string
   val raw_cfg_export :
     (string -> ikind) ->
-      (string -> unit proc_decl_ext option) ->
-        string list ->
-          string ->
-            com ->
-              (cfg_node -> graphviz_node_annotation option) ->
-                unit export_graph_ext
+      unit source_decls_ext ->
+        (string -> unit proc_decl_ext option) ->
+          string list ->
+            string ->
+              com ->
+                (cfg_node -> graphviz_node_annotation option) ->
+                  unit export_graph_ext
+  val prog_decls_view : unit imp_prog_ext -> unit source_decls_ext
   val analyse_int_report_wpo :
     unit imp_prog_ext -> (cfg_node * (texp * check_result)) list
   val analyse_int_wpo_result :
@@ -427,10 +430,11 @@ module Core : sig
     unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
   val raw_cfg_canonical_text_lit :
     (string -> ikind) ->
-      (string -> unit proc_decl_ext option) ->
-        string list ->
-          string ->
-            com -> (cfg_node -> graphviz_node_annotation option) -> string
+      unit source_decls_ext ->
+        (string -> unit proc_decl_ext option) ->
+          string list ->
+            string ->
+              com -> (cfg_node -> graphviz_node_annotation option) -> string
   val analyse_interval_join_result :
     unit imp_prog_ext -> (unit, (string -> ivl)) analysis_result
   val scope_locals : 'a procedure_scope_ext -> string list
@@ -4269,6 +4273,9 @@ type 'a export_graph_ext =
     unit export_cluster_ext list * unit export_node_ext list *
       unit export_edge_ext list * 'a;;
 
+type 'a source_decls_ext =
+  Source_decls_ext of string list * (string * typed_var) list * 'a;;
+
 type 'a procedure_scope_ext =
   Procedure_scope_ext of string list * string list * string option * 'a;;
 
@@ -4766,8 +4773,7 @@ let ivl_ops : (ivl, unit) numeric_ops_ext
   = Numeric_ops_ext (aval_ivl_t, branch_ivl_st, ivl_top, ());;
 
 let rec ik_of_lit
-  n = (if less_eq_int (ik_min I32) n && less_eq_int n (ik_max I32) then I32
-        else I64);;
+  n = (if less_eq_int (abs_int n) (ik_max I32) then I32 else I64);;
 
 let rec ik_unsigned_of = function I8 -> U8
                          | U8 -> U8
@@ -10313,7 +10319,7 @@ let rec pretty_source_lines_com
     n, SKIP -> [source_indent n @ [char_0x73; char_0x6B; char_0x69; char_0x70]]
     | n, Assign (x, e) ->
         [source_indent n @
-           explode x @
+           explode (display_scoped x) @
              [char_0x20; char_0x3A; char_0x3D; char_0x20] @
                string_of_exp zero_nat e]
     | n, Check c ->
@@ -10432,6 +10438,11 @@ let rec pretty_string_of_program
               pretty_source_lines_com (nat_of_integer (Z.of_int 2)) main @
                 [[char_0x7D]]);;
 
+let rec sd_globals
+  (Source_decls_ext (sd_globals, sd_scoped, more)) = sd_globals;;
+
+let rec sd_scoped (Source_decls_ext (sd_globals, sd_scoped, more)) = sd_scoped;;
+
 let rec compiled_proc_owner
   gamma pi x2 n k = match gamma, pi, x2, n, k with gamma, pi, [], n, k -> None
     | gamma, pi, p :: ps, n, k ->
@@ -10450,20 +10461,21 @@ let rec compiled_owner_of
       | FunctionEntry owner -> owner | FunctionResult owner -> owner);;
 
 let rec raw_cfg_graph_config
-  gamma pi ps mnm main annotate =
+  gamma decls pi ps mnm main annotate =
     Analysis_graph_config_ext
       (id, (fun _ _ _ _ -> Some ()), (fun _ -> ""), (fun _ -> []),
         (fun _ -> []), (fun _ -> None), [], (fun _ _ _ _ -> []),
         (fun _ _ _ _ -> []), (fun _ _ _ -> []), (fun _ -> []), (fun _ -> false),
         false, comp explode (compiled_owner_of gamma pi ps mnm main),
         (fun owner _ -> owner),
-        Some (pretty_string_of_program gamma [] pi ps main []),
+        Some (pretty_string_of_program gamma (sd_scoped decls) pi ps main
+               (sd_globals decls)),
         (fun p _ -> annotate p), ());;
 
 let rec raw_cfg_export
-  gamma pi ps mnm main annotate =
+  gamma decls pi ps mnm main annotate =
     (let g = compile_prog gamma pi ps mnm main in
-     let cfg = raw_cfg_graph_config gamma pi ps mnm main annotate in
+     let cfg = raw_cfg_graph_config gamma decls pi ps mnm main annotate in
      let domain = contextual_graph_domain g (fun _ -> [()]) in
       contextual_analysis_export equal_unit equal_unit cfg g domain
         (fun _ -> ()));;
@@ -10540,6 +10552,9 @@ let rec ictx_eqsa
         (fun a b -> Seedc (a, b)) Globalc)
       (compile_prog gamma pi ps mnm main) (ictx_speca gs is_bot_pred) Bot
       (Lifted cinit_ivl_st) Bot;;
+
+let rec prog_decls_view
+  p = Source_decls_ext (declared_global_vars p, declared_scoped p, ());;
 
 let rec update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C
   da orig g d state =
@@ -11381,9 +11396,9 @@ let rec contextual_analysis_canonical_text _A _B
       (build_analysis_graph _A _B cfg g domain sol);;
 
 let rec raw_cfg_canonical_text
-  gamma pi ps mnm main annotate =
+  gamma decls pi ps mnm main annotate =
     (let g = compile_prog gamma pi ps mnm main in
-     let cfg = raw_cfg_graph_config gamma pi ps mnm main annotate in
+     let cfg = raw_cfg_graph_config gamma decls pi ps mnm main annotate in
      let domain = contextual_graph_domain g (fun _ -> [()]) in
       contextual_analysis_canonical_text equal_unit equal_unit cfg g domain
         (fun _ -> ()));;
@@ -12037,8 +12052,8 @@ let rec analyse_interval_wpo_result
   p = analyse_interval_wpo_result_for (declared_global p) p;;
 
 let rec raw_cfg_canonical_text_lit
-  gamma pi ps mnm main annotate =
-    implode (raw_cfg_canonical_text gamma pi ps mnm main annotate);;
+  gamma decls pi ps mnm main annotate =
+    implode (raw_cfg_canonical_text gamma decls pi ps mnm main annotate);;
 
 let rec analyse_interval_join_result
   p = analyse_interval_join_result_for (declared_global p) p;;
@@ -13715,8 +13730,9 @@ let rec checked_payload_of
              | Core.Reachable a -> (false, a)))
          (fun c (_, a) -> classify c a)
        in
-      (Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-         (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      (Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_decls_view p)
+         (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+         (Core.prog_main p)
          (full_state_checked_node_annotation (program_vars p)
            (project_env into r)
            (Core.map (fun (u, (c, (res, (_, _)))) -> (u, (c, res))) full)),
@@ -13948,8 +13964,9 @@ let rec point_state_node_annotation
 let rec full_state_export_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
-      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_decls_view p)
+        (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+        (Core.prog_main p)
         (point_state_node_annotation (program_vars p)
           (analyse_point_env_for kind p)));;
 
@@ -14009,8 +14026,9 @@ let rec state_report_export_auto
        Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
          (Analyse_Dispatch.analyse_with_state_default kind p)
        in
-      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_decls_view p)
+        (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+        (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_point_env_for
@@ -14252,15 +14270,17 @@ let rec entry_state_report_export_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
      let report = entry_state_report_for_annotation kind p in
-      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_decls_view p)
+        (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+        (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec full_state_graph_snapshot_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
-      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p)
+        (Core.prog_decls_view p) (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
         (point_state_node_annotation (program_vars p)
           (analyse_point_env_for kind p)));;
 
@@ -14308,15 +14328,17 @@ let rec state_report_graph_snapshot_auto
        Core.map (fun (u, (c, (r, (_, s)))) -> (u, (c, (r, s))))
          (Analyse_Dispatch.analyse_with_state_default kind p)
        in
-      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p)
+        (Core.prog_decls_view p) (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
         (state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_export_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
-      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_decls_view p)
+        (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+        (Core.prog_main p)
         (point_state_node_annotation (program_vars p)
           (entry_state_point_env_for kind p)));;
 
@@ -14341,15 +14363,17 @@ let rec entry_state_report_graph_snapshot_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
      let report = entry_state_report_for_annotation kind p in
-      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p)
+        (Core.prog_decls_view p) (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
         (verdict_state_report_node_annotation (report_vars report) report));;
 
 let rec entry_state_full_state_checked_export_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
-      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_export (Core.prog_tyenv p) (Core.prog_decls_view p)
+        (Core.prog_table p) (Core.prog_procs p) Core.prog_main_name
+        (Core.prog_main p)
         (full_state_checked_node_annotation (program_vars p)
           (entry_state_point_env_for kind p)
           (entry_state_checked_verdicts kind p)));;
@@ -14357,8 +14381,9 @@ let rec entry_state_full_state_checked_export_auto
 let rec entry_state_full_state_graph_snapshot_auto
   kind p0 =
     (let p = Core.resolve_prog p0 in
-      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p) (Core.prog_table p)
-        (Core.prog_procs p) Core.prog_main_name (Core.prog_main p)
+      Core.raw_cfg_canonical_text_lit (Core.prog_tyenv p)
+        (Core.prog_decls_view p) (Core.prog_table p) (Core.prog_procs p)
+        Core.prog_main_name (Core.prog_main p)
         (point_state_node_annotation (program_vars p)
           (entry_state_point_env_for kind p)));;
 
