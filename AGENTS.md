@@ -282,11 +282,14 @@ not by what the analyzer currently reports:
 - `precision/` -- the concrete result is fixed and decidable from the
   source alone. PROVED/REFUTED are the contract; UNKNOWN there generally
   means a regression.
-- `soundness/` -- the concrete result is genuinely not fixed (e.g. an
-  unconstrained `random()` feeds the checked condition): both a satisfying
-  and a violating execution exist. UNKNOWN is the only sound answer here,
-  not a limitation to explain -- asserting PROVED or REFUTED would itself
-  be unsound.
+- `soundness/` -- the concrete program reaches the check in both a
+  satisfying and a violating state. That covers two shapes: an unconstrained
+  `random()` feeding the condition, and a single deterministic execution
+  that visits the check more than once with different states -- an endless
+  counter whose check holds until it wraps is the second, and phrasing the
+  rule as "two different executions" would wrongly exclude it. UNKNOWN is
+  the only sound answer here, not a limitation to explain; asserting PROVED
+  or REFUTED would itself be unsound.
 - `known-imprecision/` -- the concrete result is fixed, but the abstraction
   can't establish it. The case's header comment must name the concrete
   mechanism -- which component loses the information and why -- not just

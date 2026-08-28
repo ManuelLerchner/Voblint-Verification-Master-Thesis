@@ -16,8 +16,10 @@
 // only on values already in int32's range, and nothing carries that fact: an
 // abstract cell does not know the kind it holds, and teval reads a variable
 // without normalizing. So this is not an implementation shortcut that could
-// be removed on its own -- it is the missing invariant, and slices A6b-A9 of
-// docs/VAR_ID_MIGRATION.md are what close it.
+// be removed on its own -- it is the missing invariant. Slices A7-A9 of
+// docs/VAR_ID_MIGRATION.md close it: the tagged cell and the kind-aware
+// operations, not A6b's seed, which bounds Interval cells and does nothing
+// for a Sign value.
 int32 foo() { return 2 }
 void main() {
   int32 y;

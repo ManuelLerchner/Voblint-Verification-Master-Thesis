@@ -454,9 +454,67 @@ assume its operand may be one of them. That is a precision defect.
 Everything below is the third fact seen from a different side, and closing it
 means closing the second one too.
 
-### One root cause behind the reclassified Sign cases
+### What the corpus lost, per check (2026-08-28)
 
-Five fixtures moved to `known-imprecision/` rather than being fixed, and they
+Generated from `git ls-tree` at `main` and at `HEAD`, matching each
+`__voblint_check` occurrence-for-occurrence through an explicit fixture
+lineage (three git-detected renames and five delete/add pairs). Counting the
+words PROVED/UNKNOWN/NOWARN in file text does not work: fixture headers
+contain them too, which inflates every total.
+
+| Checks | main | HEAD |
+| --- | --- | --- |
+| total | 388 | 503 |
+| PROVED | 268 | 346 |
+| REFUTED | 15 | 18 |
+| UNKNOWN | 72 | 107 |
+| NOWARN | 22 | 19 |
+| unannotated | 11 | 13 |
+
+27 checks changed verdict: **24 weakened**, 1 strengthened
+(`17-call-string/precision/13`, `a == 0` NOWARN to PROVED, because the wrap
+makes the chain terminate at zero), and 2 retired in favour of strictly
+sharper probes (`n < 10` replaced by a four-check pinning of `[1,2]` in both
+`15-solver-choice` fixtures).
+
+The 24 weakenings have **three** causes, not one, and they are closed by
+different things:
+
+**W -- wraparound meets a convex interval (13 checks).** `04-globals/01`
+(`0 < total`), `12-widening/04` (`!(40 < x)`), `16-composite-domain/01` (ten
+`== 3` checks), `20-nested-loops/01-hybrid` (`!(i < 0)`). A widened bound
+leaves the kind's range, the next operation wraps, and the wrapped result is
+disjunctive -- so a single interval must answer the whole kind range.
+**A6b-A9 do not close these.** Saturating the widening at the kind's own bound
+does not either: `[0,2147483647] + [3,4]` overflows exactly as
+`[0,+inf] + [3,4]` does. What would: a domain that represents the wrap
+(upstream has `intervalSetDomain.ml`), widening thresholds or a widening-point
+restart, or the `assume_none` overflow policy. These are forced under
+*wraparound plus convex intervals plus the present widening strategy*, not
+forced absolutely.
+
+**K -- the abstract value carries no kind (8 checks).**
+`07-sign-precision/02` (`0 < x`, the only REFUTED lost),
+`07-sign-precision/03` (`0 < y`), `11-graph-snapshot/known-imprecision/02`
+(two), `14-min-max/01` (two), `17-call-string/05` (two). Every one is Sign
+norming a result at a kind it cannot certify the value fits. **A7-A9 close
+these; A6b alone does not** -- the seed slice bounds Interval cells and does
+nothing for a Sign value, which needs the tagged carrier and the kind-aware
+operations.
+
+**S -- the old assertion became unsound (3 checks).**
+`20-nested-loops/soundness/01` (`!(i < 0)`: the endless counter really does
+wrap negative) and `21-context-sensitivity/known-imprecision/03` (two NOWARN:
+the "endless" recursion really does terminate by wrapping, so the checks are
+live and concretely false). Nothing to close here; the fixtures were pinning
+claims the frozen semantics no longer supports, and removing them is the
+point.
+
+13 + 8 + 3 = 24.
+
+### One mechanism behind the eight Sign cases
+
+Six fixtures moved to `known-imprecision/` rather than being fixed, and they
 share a single mechanism worth stating once. `gamma_sign SPos` is every
 positive integer, with no bound. Every arithmetic node norms its result at its
 kind, so the norm must assume the value may lie far outside that kind and
@@ -470,10 +528,11 @@ of its operands and so cannot leave a range both operands were in), and an
 lose them, because its concretization is bounded and the norm can check.
 
 A kind-tagged cell whose concretization is intersected with the kind's range
-closes all of them by construction, which is the same fix the widening and
-the congruence cases need.
-The `assume_none` overflow policy would also close them, less soundly and for
-a different reason; that is a separate decision and is not taken here.
+closes all eight by construction. It does not close the thirteen W checks,
+whose loss is the wrap meeting a convex interval and survives any choice of
+widening bound. The `assume_none` overflow policy would close both groups,
+less soundly and for a different reason; that is a separate decision and is
+not taken here.
 
 ### One earlier entry withdrawn
 
